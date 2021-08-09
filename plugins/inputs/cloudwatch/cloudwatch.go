@@ -189,28 +189,23 @@ func (c *CloudWatch) Init() error {
 		c.Namespaces = append(c.Namespaces, c.Namespace)
 	}
 
+	err := c.initializeCloudWatch()
+	if err != nil {
+		return err
+	}
+
+	// Set config level filter (won't change throughout life of plugin).
+	c.statFilter, err = filter.NewIncludeExcludeFilter(c.StatisticInclude, c.StatisticExclude)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // Gather takes in an accumulator and adds the metrics that the Input
 // gathers. This is called every "interval".
 func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
-	if c.statFilter == nil {
-		var err error
-		// Set config level filter (won't change throughout life of plugin).
-		c.statFilter, err = filter.NewIncludeExcludeFilter(c.StatisticInclude, c.StatisticExclude)
-		if err != nil {
-			return err
-		}
-	}
-
-	if c.client == nil {
-		err := c.initializeCloudWatch()
-		if err != nil {
-			return err
-		}
-	}
-
 	filteredMetrics, err := getFilteredMetrics(c)
 	if err != nil {
 		return err

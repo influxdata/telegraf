@@ -116,9 +116,9 @@ func TestGather(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	c.client = &mockGatherCloudWatchClient{}
 
 	require.NoError(t, c.Init())
+	c.client = &mockGatherCloudWatchClient{}
 	require.NoError(t, acc.GatherError(c.Gather))
 
 	fields := map[string]interface{}{}
@@ -147,8 +147,9 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	c.client = &mockGatherCloudWatchClient{}
 
+	require.NoError(t, c.Init())
+	c.client = &mockGatherCloudWatchClient{}
 	require.NoError(t, acc.GatherError(c.Gather))
 
 	require.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
@@ -235,8 +236,7 @@ func TestSelectMetrics(t *testing.T) {
 			},
 		},
 	}
-	err := c.initializeCloudWatch()
-	require.NoError(t, err)
+	require.NoError(t, c.Init())
 	c.client = &mockSelectMetricsCloudWatchClient{}
 	filtered, err := getFilteredMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
