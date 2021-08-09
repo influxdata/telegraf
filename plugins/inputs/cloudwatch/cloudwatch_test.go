@@ -378,3 +378,10 @@ func TestProxyFunction(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "www.penguins.com", proxyResult.Host)
 }
+
+func TestCombineNamespaces(t *testing.T) {
+	c := &CloudWatch{Namespace: "AWS/ELB", Namespaces: []string{"AWS/EC2", "AWS/Billing"}}
+
+	require.NoError(t, c.Init())
+	require.Equal(t, []string{"AWS/EC2", "AWS/Billing", "AWS/ELB"}, c.Namespaces)
+}
