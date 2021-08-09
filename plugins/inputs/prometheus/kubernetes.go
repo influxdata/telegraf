@@ -123,8 +123,8 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 		default:
 			for event := range watcher.ResultChan() {
 				pod, ok := event.Object.(*corev1.Pod)
-    	  if !ok {
-        	return fmt.Errorf("Unexpected object when getting pods")
+				if !ok {
+					return fmt.Errorf("Unexpected object when getting pods")
 				}
 
 				// If the pod is not "ready", there will be no ip associated with it.
@@ -140,9 +140,9 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 						// To avoid multiple actions for each event, unregister on the first event
 						// in the delete sequence, when the containers are still "ready".
 					if pod.GetDeletionTimestamp() != nil {
-				  	unregisterPod(pod, p)
+						unregisterPod(pod, p)
 					} else {
-				  	registerPod(pod, p)
+						registerPod(pod, p)
 					}
 				}
 			}
