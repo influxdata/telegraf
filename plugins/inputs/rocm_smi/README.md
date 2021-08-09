@@ -28,7 +28,7 @@ This plugin uses a query on the [`rocm-smi`](https://github.com/RadeonOpenComput
     - `memory_used`(integer B)
     - `memory_free`(integer B)
     - `temperature_sensor_edge` (float, Celsius)
-    - `temperature_sensor_sensor_junction` (float, Celsius)
+    - `temperature_sensor_junction` (float, Celsius)
     - `temperature_sensor_memory` (float, Celsius)
     - `utilization_gpu` (integer, percentage)
     - `utilization_memory` (integer, percentage)

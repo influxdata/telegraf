@@ -167,7 +167,7 @@ func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 			setIfUsed("int64", fields, "memory_used", payload.Gpu_VRAM_total_used_memory)
 			setIfUsed("int64", fields, "memory_free", strFree)
 			setIfUsed("float", fields, "temperature_sensor_edge", payload.Gpu_temperature_sensor_edge)
-			setIfUsed("float", fields, "temperature_sensor_sensor_junction", payload.Gpu_temperature_sensor_junction)
+			setIfUsed("float", fields, "temperature_sensor_junction", payload.Gpu_temperature_sensor_junction)
 			setIfUsed("float", fields, "temperature_sensor_memory", payload.Gpu_temperature_sensor_memory)
 			setIfUsed("int", fields, "utilization_gpu", payload.Gpu_use_percentage)
 			setIfUsed("int", fields, "utilization_memory", payload.Gpu_memory_use_percentage)
