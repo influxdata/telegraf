@@ -3,7 +3,6 @@ package rocm_smi
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -123,16 +122,15 @@ func gatherROCmSMI(ret []byte, acc telegraf.Accumulator) error {
 
 	err1 := json.Unmarshal(ret, &gpus)
 	if err1 != nil {
-		log.Fatal(err1)
+		return err1
 	}
 
 	err2 := json.Unmarshal(ret, &sys)
 	if err2 != nil {
-		log.Fatal(err2)
+		return err2
 	}
 
 	metrics := genTagsFields(gpus, sys)
-
 	for _, metric := range metrics {
 		acc.AddFields(measurement, metric.fields, metric.tags)
 	}
@@ -147,33 +145,33 @@ type metric struct {
 
 func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 	metrics := []metric{}
-	for cardId, payload := range gpus {
-		if strings.Contains(cardId, "card") {
+	for cardID, payload := range gpus {
+		if strings.Contains(cardID, "card") {
 			tags := map[string]string{
-				"name": cardId,
+				"name": cardID,
 			}
 			fields := map[string]interface{}{}
 
-			totVRAM, _ := strconv.ParseInt(payload.Gpu_VRAM_total_memory, 10, 64)
-			usdVRAM, _ := strconv.ParseInt(payload.Gpu_VRAM_total_used_memory, 10, 64)
+			totVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalMemory, 10, 64)
+			usdVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalUsedMemory, 10, 64)
 			strFree := strconv.FormatInt(totVRAM-usdVRAM, 10)
 
-			setTagIfUsed(tags, "gpu_id", payload.Gpu_id)
-			setTagIfUsed(tags, "gpu_unique_id", payload.Gpu_unique_id)
+			setTagIfUsed(tags, "gpu_id", payload.GpuID)
+			setTagIfUsed(tags, "gpu_unique_id", payload.GpuUniqueID)
 
-			setIfUsed("int", fields, "driver_version", strings.Replace(system["system"].Driver_version, ".", "", -1))
-			setIfUsed("int", fields, "fan_speed", payload.Gpu_fan_speed_percentage)
-			setIfUsed("int64", fields, "memory_total", payload.Gpu_VRAM_total_memory)
-			setIfUsed("int64", fields, "memory_used", payload.Gpu_VRAM_total_used_memory)
+			setIfUsed("int", fields, "driver_version", strings.Replace(system["system"].DriverVersion, ".", "", -1))
+			setIfUsed("int", fields, "fan_speed", payload.GpuFanSpeedPercentage)
+			setIfUsed("int64", fields, "memory_total", payload.GpuVRAMTotalMemory)
+			setIfUsed("int64", fields, "memory_used", payload.GpuVRAMTotalUsedMemory)
 			setIfUsed("int64", fields, "memory_free", strFree)
-			setIfUsed("float", fields, "temperature_sensor_edge", payload.Gpu_temperature_sensor_edge)
-			setIfUsed("float", fields, "temperature_sensor_junction", payload.Gpu_temperature_sensor_junction)
-			setIfUsed("float", fields, "temperature_sensor_memory", payload.Gpu_temperature_sensor_memory)
-			setIfUsed("int", fields, "utilization_gpu", payload.Gpu_use_percentage)
-			setIfUsed("int", fields, "utilization_memory", payload.Gpu_memory_use_percentage)
-			setIfUsed("int", fields, "clocks_current_sm", strings.Trim(payload.Gpu_sclk_clock_speed, "(Mhz)"))
-			setIfUsed("int", fields, "clocks_current_memory", strings.Trim(payload.Gpu_mclk_clock_speed, "(Mhz)"))
-			setIfUsed("float", fields, "power_draw", payload.Gpu_average_power)
+			setIfUsed("float", fields, "temperature_sensor_edge", payload.GpuTemperatureSensorEdge)
+			setIfUsed("float", fields, "temperature_sensor_junction", payload.GpuTemperatureSensorJunction)
+			setIfUsed("float", fields, "temperature_sensor_memory", payload.GpuTemperatureSensorMemory)
+			setIfUsed("int", fields, "utilization_gpu", payload.GpuUsePercentage)
+			setIfUsed("int", fields, "utilization_memory", payload.GpuMemoryUsePercentage)
+			setIfUsed("int", fields, "clocks_current_sm", strings.Trim(payload.GpuSclkClockSpeed, "(Mhz)"))
+			setIfUsed("int", fields, "clocks_current_memory", strings.Trim(payload.GpuMclkClockSpeed, "(Mhz)"))
+			setIfUsed("float", fields, "power_draw", payload.GpuAveragePower)
 
 			metrics = append(metrics, metric{tags, fields})
 		}
@@ -225,72 +223,72 @@ func setIfUsed(t string, m map[string]interface{}, k, v string) {
 }
 
 type sysInfo struct {
-	Driver_version string `json:"Driver version"`
+	DriverVersion string `json:"Driver version"`
 }
 
 type GPU struct {
-	Gpu_id                          string `json:"GPU ID"`
-	Gpu_unique_id                   string `json:"Unique ID"`
-	Gpu_VBIOS_version               string `json:"VBIOS version"`
-	Gpu_temperature_sensor_edge     string `json:"Temperature (Sensor edge) (C)"`
-	Gpu_temperature_sensor_junction string `json:"Temperature (Sensor junction) (C)"`
-	Gpu_temperature_sensor_memory   string `json:"Temperature (Sensor memory) (C)"`
-	Gpu_dcefclk_clock_speed         string `json:"dcefclk clock speed"`
-	Gpu_dcefclk_clock_level         string `json:"dcefclk clock level"`
-	Gpu_fclk_clock_speed            string `json:"fclk clock speed"`
-	Gpu_fclk_clock_level            string `json:"fclk clock level"`
-	Gpu_mclk_clock_speed            string `json:"mclk clock speed:"`
-	Gpu_mclk_clock_level            string `json:"mclk clock level:"`
-	Gpu_sclk_clock_speed            string `json:"sclk clock speed:"`
-	Gpu_sclk_clock_level            string `json:"sclk clock level:"`
-	Gpu_socclk_clock_speed          string `json:"socclk clock speed"`
-	Gpu_socclk_clock_level          string `json:"socclk clock level"`
-	Gpu_pcie_clock                  string `json:"pcie clock level"`
-	Gpu_fan_speed_level             string `json:"Fan speed (level)"`
-	Gpu_fan_speed_percentage        string `json:"Fan speed (%)"` // int
-	Gpu_fan_RPM                     string `json:"Fan RPM"`
-	Gpu_performance_Level           string `json:"Performance Level"`
-	Gpu_overdrive                   string `json:"GPU OverDrive value (%)"`
-	Gpu_max_power                   string `json:"Max Graphics Package Power (W)"`
-	Gpu_average_power               string `json:"Average Graphics Package Power (W)"`
-	Gpu_use_percentage              string `json:"GPU use (%)"`
-	Gpu_memory_use_percentage       string `json:"GPU memory use (%)"`
-	Gpu_memory_vendor               string `json:"GPU memory vendor"`
-	Gpu_PCIe_replay                 string `json:"PCIe Replay Count"`
-	Gpu_serial_number               string `json:"Serial Number"`
-	Gpu_voltage_mV                  string `json:"Voltage (mV)"`
-	Gpu_PCI_bus                     string `json:"PCI Bus"`
-	Gpu_ASD_firmware                string `json:"ASD firmware version"`
-	Gpu_CE_firmware                 string `json:"CE firmware version"`
-	Gpu_DMCU_firmware               string `json:"DMCU firmware version"`
-	Gpu_MC_firmware                 string `json:"MC firmware version"`
-	Gpu_ME_firmware                 string `json:"ME firmware version"`
-	Gpu_MEC_firmware                string `json:"MEC firmware version"`
-	Gpu_MEC2_firmware               string `json:"MEC2 firmware version"`
-	Gpu_PFP_firmware                string `json:"PFP firmware version"`
-	Gpu_RLC_firmware                string `json:"RLC firmware version"`
-	Gpu_RLC_SRLC                    string `json:"RLC SRLC firmware version"`
-	Gpu_RLC_SRLG                    string `json:"RLC SRLG firmware version"`
-	Gpu_RLC_SRLS                    string `json:"RLC SRLS firmware version"`
-	Gpu_SDMA_firmware               string `json:"SDMA firmware version"`
-	Gpu_SDMA2_firmware              string `json:"SDMA2 firmware version"`
-	Gpu_SMC_firmware                string `json:"SMC firmware version"`
-	Gpu_SOS_firmware                string `json:"SOS firmware version"`
-	Gpu_TA_RAS                      string `json:"TA RAS firmware version"`
-	Gpu_TA_XGMI                     string `json:"TA XGMI firmware version"`
-	Gpu_UVD_firmware                string `json:"UVD firmware version"`
-	Gpu_VCE_firmware                string `json:"VCE firmware version"`
-	Gpu_VCN_firmware                string `json:"VCN firmware version"`
-	Gpu_card_series                 string `json:"Card series"`
-	Gpu_card_model                  string `json:"Card model"`
-	Gpu_card_vendor                 string `json:"Card vendor"`
-	Gpu_card_SKU                    string `json:"Card SKU"`
-	Gpu_NUMA_node                   string `json:"(Topology) Numa Node"`
-	Gpu_NUMA_affinity               string `json:"(Topology) Numa Affinity"`
-	Gpu_vis_VRAM_total_memory       string `json:"VIS_VRAM Total Memory (B)"`
-	Gpu_vis_VRAM_total_used_memory  string `json:"VIS_VRAM Total Used Memory (B)"`
-	Gpu_VRAM_total_memory           string `json:"VRAM Total Memory (B)"`
-	Gpu_VRAM_total_used_memory      string `json:"VRAM Total Used Memory (B)"`
-	Gpu_GTT_total_memory            string `json:"GTT Total Memory (B)"`
-	Gpu_GTT_total_used_memory       string `json:"GTT Total Used Memory (B)"`
+	GpuID                        string `json:"GPU ID"`
+	GpuUniqueID                  string `json:"Unique ID"`
+	GpuVBIOSVersion              string `json:"VBIOS version"`
+	GpuTemperatureSensorEdge     string `json:"Temperature (Sensor edge) (C)"`
+	GpuTemperatureSensorJunction string `json:"Temperature (Sensor junction) (C)"`
+	GpuTemperatureSensorMemory   string `json:"Temperature (Sensor memory) (C)"`
+	GpuDcefClkClockSpeed         string `json:"dcefclk clock speed"`
+	GpuDcefClkClockLevel         string `json:"dcefclk clock level"`
+	GpuFclkClockSpeed            string `json:"fclk clock speed"`
+	GpuFclkClockLevel            string `json:"fclk clock level"`
+	GpuMclkClockSpeed            string `json:"mclk clock speed:"`
+	GpuMclkClockLevel            string `json:"mclk clock level:"`
+	GpuSclkClockSpeed            string `json:"sclk clock speed:"`
+	GpuSclkClockLevel            string `json:"sclk clock level:"`
+	GpuSocclkClockSpeed          string `json:"socclk clock speed"`
+	GpuSocclkClockLevel          string `json:"socclk clock level"`
+	GpuPcieClock                 string `json:"pcie clock level"`
+	GpuFanSpeedLevel             string `json:"Fan speed (level)"`
+	GpuFanSpeedPercentage        string `json:"Fan speed (%)"`
+	GpuFanRPM                    string `json:"Fan RPM"`
+	GpuPerformanceLevel          string `json:"Performance Level"`
+	GpuOverdrive                 string `json:"GPU OverDrive value (%)"`
+	GpuMaxPower                  string `json:"Max Graphics Package Power (W)"`
+	GpuAveragePower              string `json:"Average Graphics Package Power (W)"`
+	GpuUsePercentage             string `json:"GPU use (%)"`
+	GpuMemoryUsePercentage       string `json:"GPU memory use (%)"`
+	GpuMemoryVendor              string `json:"GPU memory vendor"`
+	GpuPCIeReplay                string `json:"PCIe Replay Count"`
+	GpuSerialNumber              string `json:"Serial Number"`
+	GpuVoltagemV                 string `json:"Voltage (mV)"`
+	GpuPCIBus                    string `json:"PCI Bus"`
+	GpuASDDirmware               string `json:"ASD firmware version"`
+	GpuCEFirmware                string `json:"CE firmware version"`
+	GpuDMCUFirmware              string `json:"DMCU firmware version"`
+	GpuMCFirmware                string `json:"MC firmware version"`
+	GpuMEFirmware                string `json:"ME firmware version"`
+	GpuMECFirmware               string `json:"MEC firmware version"`
+	GpuMEC2Firmware              string `json:"MEC2 firmware version"`
+	GpuPFPFirmware               string `json:"PFP firmware version"`
+	GpuRLCFirmware               string `json:"RLC firmware version"`
+	GpuRLCSRLC                   string `json:"RLC SRLC firmware version"`
+	GpuRLCSRLG                   string `json:"RLC SRLG firmware version"`
+	GpuRLCSRLS                   string `json:"RLC SRLS firmware version"`
+	GpuSDMAFirmware              string `json:"SDMA firmware version"`
+	GpuSDMA2Firmware             string `json:"SDMA2 firmware version"`
+	GpuSMCFirmware               string `json:"SMC firmware version"`
+	GpuSOSFirmware               string `json:"SOS firmware version"`
+	GpuTARAS                     string `json:"TA RAS firmware version"`
+	GpuTAXGMI                    string `json:"TA XGMI firmware version"`
+	GpuUVDFirmware               string `json:"UVD firmware version"`
+	GpuVCEFirmware               string `json:"VCE firmware version"`
+	GpuVCNFirmware               string `json:"VCN firmware version"`
+	GpuCardSeries                string `json:"Card series"`
+	GpuCardModel                 string `json:"Card model"`
+	GpuCardVendor                string `json:"Card vendor"`
+	GpuCardSKU                   string `json:"Card SKU"`
+	GpuNUMANode                  string `json:"(Topology) Numa Node"`
+	GpuNUMAAffinity              string `json:"(Topology) Numa Affinity"`
+	GpuVisVRAMTotalMemory        string `json:"VIS_VRAM Total Memory (B)"`
+	GpuVisVRAMTotalUsedMemory    string `json:"VIS_VRAM Total Used Memory (B)"`
+	GpuVRAMTotalMemory           string `json:"VRAM Total Memory (B)"`
+	GpuVRAMTotalUsedMemory       string `json:"VRAM Total Used Memory (B)"`
+	GpuGTTTotalMemory            string `json:"GTT Total Memory (B)"`
+	GpuGTTTotalUsedMemory        string `json:"GTT Total Used Memory (B)"`
 }
