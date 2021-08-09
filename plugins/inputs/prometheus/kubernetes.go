@@ -111,35 +111,43 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 		LabelSelector: p.KubernetesLabelSelector,
 		FieldSelector: p.KubernetesFieldSelector,
 	})
+	defer watcher.Stop()
 	if err != nil {
 		return err
 	}
-	pod := &corev1.Pod{}
-	go func() {
-		for event := range watcher.ResultChan() {
-			pod = &corev1.Pod{}
-			// If the pod is not "ready", there will be no ip associated with it.
-			if pod.Annotations["prometheus.io/scrape"] != "true" ||
-				!podReady(pod.Status.ContainerStatuses) {
-				continue
-			}
 
-			switch event.Type {
-			case watch.Added:
-				registerPod(pod, p)
-			case watch.Modified:
-				// To avoid multiple actions for each event, unregister on the first event
-				// in the delete sequence, when the containers are still "ready".
-				if pod.GetDeletionTimestamp() != nil {
-					unregisterPod(pod, p)
-				} else {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			for event := range watcher.ResultChan() {
+				pod, ok := event.Object.(*corev1.Pod)
+    	  if !ok {
+        	return fmt.Errorf("Unexpected object when getting pods")
+				}
+
+				// If the pod is not "ready", there will be no ip associated with it.
+				if pod.Annotations["prometheus.io/scrape"] != "true" ||
+					!podReady(pod.Status.ContainerStatuses) {
+					continue
+				}
+
+				switch event.Type {
+				case watch.Added:
 					registerPod(pod, p)
+				case watch.Modified:
+						// To avoid multiple actions for each event, unregister on the first event
+						// in the delete sequence, when the containers are still "ready".
+					if pod.GetDeletionTimestamp() != nil {
+				  	unregisterPod(pod, p)
+					} else {
+				  	registerPod(pod, p)
+					}
 				}
 			}
 		}
-	}()
-
-	return nil
+	}
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
