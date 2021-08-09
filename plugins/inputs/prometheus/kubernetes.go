@@ -137,8 +137,8 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 				case watch.Added:
 					registerPod(pod, p)
 				case watch.Modified:
-						// To avoid multiple actions for each event, unregister on the first event
-						// in the delete sequence, when the containers are still "ready".
+					// To avoid multiple actions for each event, unregister on the first event
+					// in the delete sequence, when the containers are still "ready".
 					if pod.GetDeletionTimestamp() != nil {
 						unregisterPod(pod, p)
 					} else {
