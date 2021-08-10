@@ -111,7 +111,6 @@ require (
 	github.com/prometheus/common v0.15.0
 	github.com/prometheus/procfs v0.6.0
 	github.com/prometheus/prometheus v1.8.2-0.20200911110723-e83ef207b6c2
-	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/sensu/sensu-go/api/core/v2 v2.9.0
 	github.com/shirou/gopsutil v3.21.6-0.20210624221800-cb512c850043+incompatible
@@ -159,7 +158,6 @@ require (
 	gopkg.in/olivere/elastic.v5 v5.0.70
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.4.0
-	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.20.4
 	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v0.20.4
