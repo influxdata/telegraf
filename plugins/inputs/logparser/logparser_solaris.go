@@ -1,3 +1,0 @@
-// +build solaris
-
-package logparser
