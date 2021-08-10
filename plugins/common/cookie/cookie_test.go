@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	clockutil "github.com/benbjohnson/clock"
 	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/cookie"
@@ -121,7 +122,7 @@ func TestAuthConfig_Start(t *testing.T) {
 		fields  fields
 		args    args
 		wantErr error
-		assert  func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer)
+		assert  func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer, mock *clockutil.Mock)
 	}{
 		{
 			name: "zero renewal does not renew",
@@ -129,12 +130,11 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  0,
 				endpoint: authEndpointNoCreds,
 			},
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
+			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer, mock *clockutil.Mock) {
 				// should have Cookie Authed once
 				srv.checkAuthCount(t, 1)
 				srv.checkResp(t, http.StatusOK)
-				time.Sleep(renewalCheck)
-				// should have never Cookie Authed again
+				mock.Add(renewalCheck)
 				srv.checkAuthCount(t, 1)
 				srv.checkResp(t, http.StatusOK)
 			},
@@ -145,13 +145,13 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointNoCreds,
 			},
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
+			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer, mock *clockutil.Mock) {
 				// should have Cookie Authed once
 				srv.checkAuthCount(t, 1)
 				// default method set
 				require.Equal(t, http.MethodPost, c.Method)
 				srv.checkResp(t, http.StatusOK)
-				time.Sleep(renewalCheck)
+				mock.Add(renewalCheck)
 				// should have Cookie Authed at least twice more
 				srv.checkAuthCount(t, 3)
 				srv.checkResp(t, http.StatusOK)
@@ -168,11 +168,11 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBasicAuth,
 			},
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
+			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer, mock *clockutil.Mock) {
 				// should have Cookie Authed once
 				srv.checkAuthCount(t, 1)
 				srv.checkResp(t, http.StatusOK)
-				time.Sleep(renewalCheck)
+				mock.Add(renewalCheck)
 				// should have Cookie Authed at least twice more
 				srv.checkAuthCount(t, 3)
 				srv.checkResp(t, http.StatusOK)
@@ -190,11 +190,11 @@ func TestAuthConfig_Start(t *testing.T) {
 				endpoint: authEndpointWithBasicAuth,
 			},
 			wantErr: fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized)"),
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
+			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer, mock *clockutil.Mock) {
 				// should have never Cookie Authed
 				srv.checkAuthCount(t, 0)
 				srv.checkResp(t, http.StatusForbidden)
-				time.Sleep(renewalCheck)
+				mock.Add(renewalCheck)
 				// should have still never Cookie Authed
 				srv.checkAuthCount(t, 0)
 				srv.checkResp(t, http.StatusForbidden)
@@ -210,11 +210,11 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBody,
 			},
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
+			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer, mock *clockutil.Mock) {
 				// should have Cookie Authed once
 				srv.checkAuthCount(t, 1)
 				srv.checkResp(t, http.StatusOK)
-				time.Sleep(renewalCheck)
+				mock.Add(renewalCheck)
 				// should have Cookie Authed at least twice more
 				srv.checkAuthCount(t, 3)
 				srv.checkResp(t, http.StatusOK)
@@ -231,11 +231,11 @@ func TestAuthConfig_Start(t *testing.T) {
 				endpoint: authEndpointWithBody,
 			},
 			wantErr: fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized)"),
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
+			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer, mock *clockutil.Mock) {
 				// should have never Cookie Authed
 				srv.checkAuthCount(t, 0)
 				srv.checkResp(t, http.StatusForbidden)
-				time.Sleep(renewalCheck)
+				mock.Add(renewalCheck)
 				// should have still never Cookie Authed
 				srv.checkAuthCount(t, 0)
 				srv.checkResp(t, http.StatusForbidden)
@@ -255,15 +255,17 @@ func TestAuthConfig_Start(t *testing.T) {
 				Renewal:  config.Duration(tt.args.renewal),
 			}
 
-			if err := c.Start(srv.Client(), testutil.Logger{Name: "cookie_auth"}); tt.wantErr != nil {
+			mock := clockutil.NewMock()
+			if err := c.Start(srv.Client(), testutil.Logger{Name: "cookie_auth"}, mock); tt.wantErr != nil {
 				require.EqualError(t, err, tt.wantErr.Error())
 			} else {
 				require.NoError(t, err)
 			}
 
 			if tt.assert != nil {
-				tt.assert(t, c, srv)
+				tt.assert(t, c, srv, mock)
 			}
+			srv.Close()
 		})
 	}
 }
