@@ -1,13 +1,14 @@
 package kinesis
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/kinesis"
-	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -110,7 +111,7 @@ func TestPartitionKey(t *testing.T) {
 func TestWriteKinesis_WhenSuccess(t *testing.T) {
 	assert := assert.New(t)
 
-	records := []*kinesis.PutRecordsRequestEntry{
+	records := []types.PutRecordsRequestEntry{
 		{
 			PartitionKey: aws.String(testPartitionKey),
 			Data:         []byte{0x65},
@@ -120,7 +121,7 @@ func TestWriteKinesis_WhenSuccess(t *testing.T) {
 	svc := &mockKinesisPutRecords{}
 	svc.SetupResponse(
 		0,
-		[]*kinesis.PutRecordsResultEntry{
+		[]types.PutRecordsResultEntry{
 			{
 				SequenceNumber: aws.String(testSequenceNumber),
 				ShardId:        aws.String(testShardID),
@@ -148,7 +149,7 @@ func TestWriteKinesis_WhenSuccess(t *testing.T) {
 func TestWriteKinesis_WhenRecordErrors(t *testing.T) {
 	assert := assert.New(t)
 
-	records := []*kinesis.PutRecordsRequestEntry{
+	records := []types.PutRecordsRequestEntry{
 		{
 			PartitionKey: aws.String(testPartitionKey),
 			Data:         []byte{0x66},
@@ -158,7 +159,7 @@ func TestWriteKinesis_WhenRecordErrors(t *testing.T) {
 	svc := &mockKinesisPutRecords{}
 	svc.SetupResponse(
 		1,
-		[]*kinesis.PutRecordsResultEntry{
+		[]types.PutRecordsResultEntry{
 			{
 				ErrorCode:    aws.String("InternalFailure"),
 				ErrorMessage: aws.String("Internal Service Failure"),
@@ -186,7 +187,7 @@ func TestWriteKinesis_WhenRecordErrors(t *testing.T) {
 func TestWriteKinesis_WhenServiceError(t *testing.T) {
 	assert := assert.New(t)
 
-	records := []*kinesis.PutRecordsRequestEntry{
+	records := []types.PutRecordsRequestEntry{
 		{
 			PartitionKey: aws.String(testPartitionKey),
 			Data:         []byte{},
@@ -262,7 +263,7 @@ func TestWrite_SingleMetric(t *testing.T) {
 	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
-			Records: []*kinesis.PutRecordsRequestEntry{
+			Records: []types.PutRecordsRequestEntry{
 				{
 					PartitionKey: aws.String(testPartitionKey),
 					Data:         metricData,
@@ -449,7 +450,7 @@ func TestWrite_SerializerError(t *testing.T) {
 	svc.AssertRequests(t, []*kinesis.PutRecordsInput{
 		{
 			StreamName: aws.String(testStreamName),
-			Records: []*kinesis.PutRecordsRequestEntry{
+			Records: []types.PutRecordsRequestEntry{
 				{
 					PartitionKey: aws.String(testPartitionKey),
 					Data:         metric1Data,
@@ -469,20 +470,18 @@ type mockKinesisPutRecordsResponse struct {
 }
 
 type mockKinesisPutRecords struct {
-	kinesisiface.KinesisAPI
-
 	requests  []*kinesis.PutRecordsInput
 	responses []*mockKinesisPutRecordsResponse
 }
 
 func (m *mockKinesisPutRecords) SetupResponse(
-	failedRecordCount int64,
-	records []*kinesis.PutRecordsResultEntry,
+	failedRecordCount int32,
+	records []types.PutRecordsResultEntry,
 ) {
 	m.responses = append(m.responses, &mockKinesisPutRecordsResponse{
 		Err: nil,
 		Output: &kinesis.PutRecordsOutput{
-			FailedRecordCount: aws.Int64(failedRecordCount),
+			FailedRecordCount: aws.Int32(failedRecordCount),
 			Records:           records,
 		},
 	})
@@ -490,25 +489,25 @@ func (m *mockKinesisPutRecords) SetupResponse(
 
 func (m *mockKinesisPutRecords) SetupGenericResponse(
 	successfulRecordCount uint32,
-	failedRecordCount uint32,
+	failedRecordCount int32,
 ) {
-	records := []*kinesis.PutRecordsResultEntry{}
+	records := []types.PutRecordsResultEntry{}
 
 	for i := uint32(0); i < successfulRecordCount; i++ {
-		records = append(records, &kinesis.PutRecordsResultEntry{
+		records = append(records, types.PutRecordsResultEntry{
 			SequenceNumber: aws.String(testSequenceNumber),
 			ShardId:        aws.String(testShardID),
 		})
 	}
 
-	for i := uint32(0); i < failedRecordCount; i++ {
-		records = append(records, &kinesis.PutRecordsResultEntry{
+	for i := int32(0); i < failedRecordCount; i++ {
+		records = append(records, types.PutRecordsResultEntry{
 			ErrorCode:    aws.String("InternalFailure"),
 			ErrorMessage: aws.String("Internal Service Failure"),
 		})
 	}
 
-	m.SetupResponse(int64(failedRecordCount), records)
+	m.SetupResponse(failedRecordCount, records)
 }
 
 func (m *mockKinesisPutRecords) SetupErrorResponse(err error) {
@@ -518,7 +517,7 @@ func (m *mockKinesisPutRecords) SetupErrorResponse(err error) {
 	})
 }
 
-func (m *mockKinesisPutRecords) PutRecords(input *kinesis.PutRecordsInput) (*kinesis.PutRecordsOutput, error) {
+func (m *mockKinesisPutRecords) PutRecords(_ context.Context, input *kinesis.PutRecordsInput, _ ...func(*kinesis.Options)) (*kinesis.PutRecordsOutput, error) {
 	reqNum := len(m.requests)
 	if reqNum > len(m.responses) {
 		return nil, fmt.Errorf("Response for request %+v not setup", reqNum)
@@ -612,12 +611,12 @@ func createTestMetrics(
 
 func createPutRecordsRequestEntries(
 	metricsData [][]byte,
-) []*kinesis.PutRecordsRequestEntry {
+) []types.PutRecordsRequestEntry {
 	count := len(metricsData)
-	records := make([]*kinesis.PutRecordsRequestEntry, count)
+	records := make([]types.PutRecordsRequestEntry, count)
 
 	for i := 0; i < count; i++ {
-		records[i] = &kinesis.PutRecordsRequestEntry{
+		records[i] = types.PutRecordsRequestEntry{
 			PartitionKey: aws.String(testPartitionKey),
 			Data:         metricsData[i],
 		}
