@@ -77,7 +77,7 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	_, err := c.DB.ExecContext(ctx, generatedSQL)
+	_, err = c.DB.ExecContext(ctx, generatedSQL)
 	if err != nil {
 		return err
 	}
