@@ -79,9 +79,6 @@ func (s *ConfigAPIService) createPlugin(w http.ResponseWriter, req *http.Request
 }
 
 func (s *ConfigAPIService) Start() {
-	// if s.server.TLSConfig != nil {
-	// 	s.server.ListenAndServeTLS()
-	// }
 	go func() {
 		_ = s.server.ListenAndServe()
 	}()

@@ -185,7 +185,7 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 	for _, v := range a.agent.RunningInputs() {
 		p := Plugin{
 			ID:     idToString(v.ID),
-			Name:   v.Config.Name,
+			Name:   v.LogName(),
 			Config: map[string]interface{}{},
 		}
 		getFieldConfigValues(v.Config, p.Config)
@@ -215,7 +215,7 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 	for _, v := range a.agent.RunningOutputs() {
 		p := Plugin{
 			ID:     idToString(v.ID),
-			Name:   v.Config.Name,
+			Name:   v.LogName(),
 			Config: map[string]interface{}{},
 		}
 		getFieldConfigValues(v.Config, p.Config)

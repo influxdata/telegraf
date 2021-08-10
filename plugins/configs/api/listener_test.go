@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/require"
 )
 
@@ -108,9 +110,12 @@ func TestStartPlugin(t *testing.T) {
 func TestStopPlugin(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	outputCtx, outputCancel := context.WithCancel(context.Background())
+	defer outputCancel()
+
 	c := config.NewConfig()
 	a := agent.NewAgent(ctx, c)
-	api, outputCancel := newAPI(ctx, c, a)
+	api := newAPI(ctx, outputCtx, c, a)
 	go a.RunWithAPI(outputCancel)
 
 	s := &ConfigAPIService{
@@ -137,6 +142,8 @@ func TestStopPlugin(t *testing.T) {
 
 	require.Regexp(t, `^[\da-f]{8}\d{8}$`, createResp.ID)
 
+	waitForStatus(t, api, models.PluginID(createResp.ID), models.PluginStateRunning.String(), 2*time.Second)
+
 	resp, err = http.Get(srv.URL + "/plugins/running")
 	require.NoError(t, err)
 	require.EqualValues(t, 200, resp.StatusCode)
@@ -161,6 +168,8 @@ func TestStopPlugin(t *testing.T) {
 
 	require.EqualValues(t, 200, resp.StatusCode)
 	require.NoError(t, err)
+
+	waitForStatus(t, api, models.PluginID(createResp.ID), models.PluginStateDead.String(), 2*time.Second)
 
 	resp, err = http.Get(srv.URL + "/plugins/running")
 	require.NoError(t, err)
