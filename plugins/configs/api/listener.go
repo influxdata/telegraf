@@ -45,7 +45,11 @@ func (s *ConfigAPIService) status(w http.ResponseWriter, req *http.Request) {
 	if req.Body != nil {
 		defer req.Body.Close()
 	}
-	_, _ = w.Write([]byte("ok"))
+	_, err := w.Write([]byte("ok"))
+	if err != nil {
+		log.Printf("W! error writing to connection: %v", err)
+		return
+	}
 }
 
 func (s *ConfigAPIService) createPlugin(w http.ResponseWriter, req *http.Request) {
@@ -67,7 +71,11 @@ func (s *ConfigAPIService) createPlugin(w http.ResponseWriter, req *http.Request
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write([]byte(fmt.Sprintf(`{"id": "%s"}`, id)))
+	_, err = w.Write([]byte(fmt.Sprintf(`{"id": "%s"}`, id)))
+	if err != nil {
+		log.Printf("W! error writing to connection: %v", err)
+		return
+	}
 }
 
 func (s *ConfigAPIService) Start() {
