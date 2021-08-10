@@ -158,12 +158,12 @@ type inputGroupUnit struct {
 // they maintain their own internal buffers rather than depending on metrics buffered
 // in a channel)
 func (a *Agent) RunWithAPI(outputCancel context.CancelFunc) {
-	go func() {
+	go func(outputCancel context.CancelFunc) {
 		a.runOutputFanout()
 		// then the fanout closes, notify the outputs that they won't be receiving
 		// more metrics via this cancel function.
-		outputCancel()
-	}()
+		outputCancel() // triggers outputs to finish up
+	}(outputCancel)
 
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
@@ -309,13 +309,6 @@ retry:
 			iu.cancelGather()
 			break
 		}
-	}
-}
-
-// stopRunningOutputs stops all running outputs.
-func stopRunningOutputs(outputs []*models.RunningOutput) {
-	for _, output := range outputs {
-		output.Close()
 	}
 }
 
@@ -635,10 +628,9 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 // RunOutput runs an output; note the context should be a special context that
 // only cancels when it's time for the outputs to close: when the main context
 // has closed AND all the input and processor plugins are done.
-func (a *Agent) RunOutput(ctx context.Context, output *models.RunningOutput) {
-	var cancel context.CancelFunc
+func (a *Agent) RunOutput(outputCtx context.Context, output *models.RunningOutput) {
 	// wrap with a cancel context so that the StopOutput can stop this individual output without stopping all the outputs.
-	ctx, cancel = context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(outputCtx)
 	defer cancel()
 
 	a.outputGroupUnit.Lock()
@@ -707,6 +699,7 @@ func (a *Agent) runOutputFanout() {
 			}
 		}
 	}
+	// closing of outputs is done by RunOutput
 }
 
 // flushLoop runs an output's flush function periodically until the context is done.
@@ -728,11 +721,9 @@ func (a *Agent) flushLoop(
 
 	for {
 		// Favor shutdown over other methods.
-		select {
-		case <-ctx.Done():
+		if ctx.Err() != nil {
 			logError(a.flushOnce(output, ticker, output.Write))
 			return
-		default:
 		}
 
 		select {
@@ -859,7 +850,11 @@ func (a *Agent) waitForMainPluginsToStop() {
 		}
 		break
 	}
-	close(a.inputGroupUnit.dst)
+
+	if a.inputGroupUnit.dst != nil {
+		close(a.inputGroupUnit.dst)
+		a.inputGroupUnit.dst = nil
+	}
 	a.inputGroupUnit.Unlock()
 	for {
 		time.Sleep(100 * time.Millisecond)
@@ -876,7 +871,6 @@ func (a *Agent) waitForMainPluginsToStop() {
 	for {
 		a.outputGroupUnit.Lock()
 		if len(a.outputGroupUnit.outputs) > 0 {
-			// fmt.Printf("waiting for %d outputs\n", len(a.outputGroupUnit.outputs))
 			a.outputGroupUnit.Unlock()
 			time.Sleep(100 * time.Millisecond)
 			continue

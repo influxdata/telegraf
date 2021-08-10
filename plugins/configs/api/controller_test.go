@@ -30,8 +30,7 @@ func TestListPluginTypes(t *testing.T) {
 	cfg := config.NewConfig() // initalizes API
 	a := agent.NewAgent(context.Background(), cfg)
 
-	api, cancel := newAPI(context.Background(), cfg, a)
-	defer cancel()
+	api := newAPI(context.Background(), context.Background(), cfg, a)
 
 	pluginConfigs := api.ListPluginTypes()
 	require.Greater(t, len(pluginConfigs), 10)
@@ -85,10 +84,12 @@ func TestInputPluginLifecycle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	outputCtx, outputCancel := context.WithCancel(context.Background())
+	defer outputCancel()
+
 	cfg := config.NewConfig() // initalizes API
 	a := agent.NewAgent(ctx, cfg)
-	api, outputCancel := newAPI(ctx, cfg, a)
-	defer outputCancel()
+	api := newAPI(ctx, outputCtx, cfg, a)
 
 	go a.RunWithAPI(outputCancel)
 
@@ -127,17 +128,20 @@ func TestInputPluginLifecycle(t *testing.T) {
 	// list running should have none
 	runningPlugins = api.ListRunningPlugins()
 	require.Len(t, runningPlugins, 0)
+	require.Equal(t, []Plugin{}, runningPlugins)
 }
 
 func TestAllPluginLifecycle(t *testing.T) {
 	runCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	outputCtx, outputCancel := context.WithCancel(context.Background())
+	defer outputCancel()
+
 	cfg := config.NewConfig()
 	a := agent.NewAgent(context.Background(), cfg)
 
-	api, outputCancel := newAPI(runCtx, cfg, a)
-	defer outputCancel()
+	api := newAPI(runCtx, outputCtx, cfg, a)
 
 	go a.RunWithAPI(outputCancel)
 

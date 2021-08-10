@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log" // nolint:revive
@@ -33,14 +34,15 @@ type api struct {
 	outputCtx context.Context
 }
 
-func newAPI(ctx context.Context, cfg *config.Config, agent config.AgentController) (_ *api, outputCancel context.CancelFunc) {
+// nolint:revive
+func newAPI(ctx context.Context, outputCtx context.Context, cfg *config.Config, agent config.AgentController) *api {
 	c := &api{
-		config: cfg,
-		agent:  agent,
-		ctx:    ctx,
+		config:    cfg,
+		agent:     agent,
+		ctx:       ctx,
+		outputCtx: outputCtx,
 	}
-	c.outputCtx, outputCancel = context.WithCancel(context.Background())
-	return c, outputCancel
+	return c
 }
 
 // PluginConfig is a plugin name and details about the config fields.
@@ -92,7 +94,7 @@ type Plugin struct {
 	ID   models.PluginID
 	Name string
 	// State()
-	Config map[string]FieldConfig
+	Config map[string]interface{}
 }
 
 func (a *api) ListPluginTypes() []PluginConfigTypeInfo {
@@ -184,32 +186,40 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 		p := Plugin{
 			ID:     idToString(v.ID),
 			Name:   v.Config.Name,
-			Config: map[string]FieldConfig{},
+			Config: map[string]interface{}{},
 		}
-		getFieldConfig(v.Config, p.Config)
+		getFieldConfigValues(v.Config, p.Config)
+		getFieldConfigValues(v.Input, p.Config)
 		runningPlugins = append(runningPlugins, p)
 	}
 	for _, v := range a.agent.RunningProcessors() {
 		p := Plugin{
 			ID:     idToString(v.GetID()),
 			Name:   v.LogName(),
-			Config: map[string]FieldConfig{},
+			Config: map[string]interface{}{},
 		}
 		val := reflect.ValueOf(v)
 		if val.Kind() == reflect.Ptr {
 			val = val.Elem()
 		}
 		pluginCfg := val.FieldByName("Config").Interface()
-		getFieldConfig(pluginCfg, p.Config)
+		getFieldConfigValues(pluginCfg, p.Config)
+		if proc := val.FieldByName("Processor"); proc.IsValid() && !proc.IsNil() {
+			getFieldConfigValues(proc.Interface(), p.Config)
+		}
+		if agg := val.FieldByName("Aggregator"); agg.IsValid() && !agg.IsNil() {
+			getFieldConfigValues(agg.Interface(), p.Config)
+		}
 		runningPlugins = append(runningPlugins, p)
 	}
 	for _, v := range a.agent.RunningOutputs() {
 		p := Plugin{
 			ID:     idToString(v.ID),
 			Name:   v.Config.Name,
-			Config: map[string]FieldConfig{},
+			Config: map[string]interface{}{},
 		}
-		getFieldConfig(v.Config, p.Config)
+		getFieldConfigValues(v.Config, p.Config)
+		getFieldConfigValues(v.Output, p.Config)
 		runningPlugins = append(runningPlugins, p)
 	}
 
@@ -554,7 +564,8 @@ func getFieldByName(destStruct reflect.Value, fieldName string) (reflect.Value, 
 	return reflect.ValueOf(nil), reflect.TypeOf(nil)
 }
 
-// getFieldConfig expects a plugin, p, (of any type) and a map to populate.
+// getFieldConfig builds FieldConfig objects based on the structure of a plugin's struct
+// it expects a plugin, p, (of any type) and a map to populate.
 // it calls itself recursively so p must be an interface{}
 func getFieldConfig(p interface{}, cfg map[string]FieldConfig) {
 	structVal := reflect.ValueOf(p)
@@ -655,6 +666,11 @@ func getFieldConfig(p interface{}, cfg map[string]FieldConfig) {
 
 		cfg[ft.Name] = fc
 	}
+}
+
+func getFieldConfigValues(p interface{}, cfg map[string]interface{}) {
+	b, _ := json.Marshal(p)
+	_ = json.Unmarshal(b, &cfg)
 }
 
 func setObject(from, to reflect.Value, destType reflect.Type) error {

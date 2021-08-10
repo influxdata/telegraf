@@ -17,7 +17,6 @@ type ConfigAPIPlugin struct {
 	tls.ServerConfig
 
 	api    *api
-	cancel context.CancelFunc
 	server *ConfigAPIService
 
 	Log     telegraf.Logger `toml:"-"`
@@ -28,8 +27,10 @@ func (a *ConfigAPIPlugin) GetName() string {
 	return "api"
 }
 
-func (a *ConfigAPIPlugin) Init(ctx context.Context, cfg *config.Config, agent config.AgentController) error {
-	a.api, a.cancel = newAPI(ctx, cfg, agent)
+// Init initializes the config api plugin.
+// nolint:revive
+func (a *ConfigAPIPlugin) Init(ctx context.Context, outputCtx context.Context, cfg *config.Config, agent config.AgentController) error {
+	a.api = newAPI(ctx, outputCtx, cfg, agent)
 	if a.Storage == nil {
 		a.Log.Warn("initializing config-api without storage, changes via the api will not be persisted.")
 	} else {

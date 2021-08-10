@@ -30,9 +30,13 @@ func TestStatus(t *testing.T) {
 func TestStartPlugin(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	outputCtx, outputCancel := context.WithCancel(context.Background())
+	defer outputCancel()
+
 	c := config.NewConfig()
 	a := agent.NewAgent(ctx, c)
-	api, outputCancel := newAPI(ctx, c, a)
+	api := newAPI(ctx, outputCtx, c, a)
 	go a.RunWithAPI(outputCancel)
 
 	s := &ConfigAPIService{

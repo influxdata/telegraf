@@ -18,7 +18,7 @@ var (
 // ConfigPlugin is the interface for implemnting plugins that change how Telegraf works
 type ConfigPlugin interface {
 	GetName() string
-	Init(ctx context.Context, cfg *Config, agent AgentController) error
+	Init(ctx context.Context, outputCtx context.Context, cfg *Config, agent AgentController) error
 	Close() error
 }
 

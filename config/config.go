@@ -899,7 +899,7 @@ func (c *Config) LoadConfigData(ctx context.Context, outputCtx context.Context, 
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addConfigPlugin(ctx, pluginName, t); err != nil {
+						if err = c.addConfigPlugin(ctx, outputCtx, pluginName, t); err != nil {
 							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 						}
 					}
@@ -1019,7 +1019,8 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	return toml.Parse(contents)
 }
 
-func (c *Config) addConfigPlugin(ctx context.Context, name string, table *ast.Table) error {
+// nolint:revive
+func (c *Config) addConfigPlugin(ctx context.Context, outputCtx context.Context, name string, table *ast.Table) error {
 	creator, ok := ConfigPlugins[name]
 	if !ok {
 		return fmt.Errorf("Undefined but requested config plugin: %s", name)
@@ -1047,7 +1048,7 @@ func (c *Config) addConfigPlugin(ctx context.Context, name string, table *ast.Ta
 	logger := models.NewLogger("config", name, name)
 	models.SetLoggerOnPlugin(configPlugin, logger)
 
-	if err := configPlugin.Init(ctx, c, c.controller); err != nil {
+	if err := configPlugin.Init(ctx, outputCtx, c, c.controller); err != nil {
 		return err
 	}
 
