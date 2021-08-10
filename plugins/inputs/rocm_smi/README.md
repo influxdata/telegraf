@@ -54,6 +54,6 @@ Please include the output of this command if opening a GitHub issue, together wi
 ### Limitations and notices
 Please notice that this plugin has been developed and tested on a limited number of versions and small set of GPUs. Currently the latest ROCm version tested is 4.3.0.
 Notice that depending on the device and driver versions the amount of information provided by `rocm-smi` can vary so that some fields would start/stop appearing in the metrics upon updates.
-The `rcom-smi` JSON output is not perfectly homogeneous and is possibly changing in the future, hence parsing and unmarshaling can start failing upon updating ROCm.
+The `rocm-smi` JSON output is not perfectly homogeneous and is possibly changing in the future, hence parsing and unmarshaling can start failing upon updating ROCm.
 
 Inspired by the current state of the art of the `nvidia-smi` plugin.
