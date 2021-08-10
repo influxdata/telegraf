@@ -40,6 +40,7 @@ following works:
 - github.com/aws/aws-sdk-go-v2/feature/s3/manager [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/internal/ini [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/service/cloudwatch [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/cloudwatch/LICENSE.txt)
+- github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/cloudwatchlogs/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/service/ec2 [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/ec2/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/internal/accept-encoding/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/service/internal/presigned-url [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/internal/presigned-url/LICENSE.txt)
