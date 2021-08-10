@@ -38,7 +38,7 @@ following works:
 - github.com/aws/aws-sdk-go-v2/credentials [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/credentials/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/feature/ec2/imds [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/feature/ec2/imds/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/feature/s3/manager [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/LICENSE.txt)
-- github.com/aws/aws-sdk-go-v2/internal/ini [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/ec2/LICENSE.txt)
+- github.com/aws/aws-sdk-go-v2/internal/ini [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/service/ec2 [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/ec2/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/internal/accept-encoding/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/service/internal/presigned-url [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/internal/presigned-url/LICENSE.txt)
