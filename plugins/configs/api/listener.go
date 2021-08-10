@@ -90,7 +90,11 @@ func (s *ConfigAPIService) listPlugins(w http.ResponseWriter, req *http.Request)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(bytes)
+	_, err = w.Write(bytes)
+	if err != nil {
+		log.Printf("W! error writing to connection: %v", err)
+		return
+	}
 }
 
 func (s *ConfigAPIService) runningPlugins(w http.ResponseWriter, req *http.Request) {
@@ -104,7 +108,11 @@ func (s *ConfigAPIService) runningPlugins(w http.ResponseWriter, req *http.Reque
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(bytes)
+	_, err = w.Write(bytes)
+	if err != nil {
+		log.Printf("W! error writing to connection: %v", err)
+		return
+	}
 }
 
 func (s *ConfigAPIService) pluginStatus(w http.ResponseWriter, req *http.Request) {
