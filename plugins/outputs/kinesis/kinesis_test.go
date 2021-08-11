@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -196,7 +195,7 @@ func TestWriteKinesis_WhenServiceError(t *testing.T) {
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupErrorResponse(
-		awserr.New("InvalidArgumentException", "Invalid record", nil),
+		&types.InvalidArgumentException{Message: aws.String("Invalid record")},
 	)
 
 	k := KinesisOutput{
