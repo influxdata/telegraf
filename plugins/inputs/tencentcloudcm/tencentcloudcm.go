@@ -2,6 +2,7 @@ package tencentcloudcm
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -65,7 +66,10 @@ type metricObject struct {
 	Region    string
 	Namespace string
 	Account   *Account
-	Instances []*monitor.Instance
+
+	isDiscovered bool
+
+	MonitorInstances []*monitor.Instance
 }
 
 type cmClient interface {
@@ -142,6 +146,7 @@ func (t *TencentCloudCM) SampleConfig() string {
 		  ## - QCE/REDIS
 		  ## - QCE/LB_PUBLIC
 		  ## - QCE/LB_PRIVATE
+		  ## - QCE/DC
 		  # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances]]
 		  # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances.dimensions]]
 		  #   name = ""
@@ -252,7 +257,6 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 	// requestIDMap contains request ID and metric objects for later aggregation
 	requestIDMap := map[string]metricObject{}
-
 	for _, obj := range metricObjects {
 
 		wg.Add(1)
@@ -265,7 +269,7 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return
 			}
-			request := t.client.NewGetMonitorDataRequest(m.Namespace, m.Metric, m.Instances, *t)
+			request := t.client.NewGetMonitorDataRequest(m.Namespace, m.Metric, m.MonitorInstances, *t)
 
 			result, err := t.client.GatherMetrics(client, request, *t)
 			if err != nil {
@@ -275,7 +279,6 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 			rLock.Lock()
 			requestIDMap[*result.Response.RequestId] = m
-
 			results = append(results, *result)
 			rLock.Unlock()
 
@@ -283,14 +286,27 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 	}
 	wg.Wait()
-
 	for _, result := range results {
 		for _, datapoints := range result.Response.DataPoints {
 			tags := map[string]string{}
+
+			keys := []string{}
 			for _, v := range datapoints.Dimensions {
 				tags[*v.Name] = *v.Value
+				keys = append(keys, *v.Value)
 			}
+
 			metricObject := requestIDMap[*result.Response.RequestId]
+
+			if metricObject.isDiscovered {
+				instance := t.discoverTool.GetInstance(metricObject.Account.Name, metricObject.Namespace, metricObject.Region, newKey(strings.Join(keys, "-")))
+				for k, v := range instance {
+					if v != nil && !strings.Contains(strings.ToLower(k), "time") && fmt.Sprintf("%v", v) != "" {
+						tags[fmt.Sprintf("_%s_%s", metricObject.Namespace, k)] = fmt.Sprintf("%v", v)
+					}
+				}
+			}
+
 			tags["account"] = metricObject.Account.Name
 			tags["namespace"] = metricObject.Namespace
 			tags["region"] = metricObject.Region
@@ -298,11 +314,16 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 			tags["metric"] = *result.Response.MetricName
 			tags["request_id"] = *result.Response.RequestId
 
-			for index := range datapoints.Values {
-				acc.AddFields(metricObject.Namespace, map[string]interface{}{"value": datapoints.Values[index]},
-					tags, time.Unix(int64(*datapoints.Timestamps[index]), 0))
-			}
+			measurement := fmt.Sprintf("tencentcloudcm_%s", metricObject.Namespace)
 
+			for index := range datapoints.Values {
+				acc.AddFields(
+					measurement,
+					map[string]interface{}{*result.Response.MetricName: datapoints.Values[index]},
+					tags,
+					time.Unix(int64(*datapoints.Timestamps[index]), 0),
+				)
+			}
 		}
 	}
 

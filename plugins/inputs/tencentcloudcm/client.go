@@ -22,19 +22,25 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 		for _, namespace := range account.Namespaces {
 			for _, region := range namespace.Regions {
 				for _, metric := range namespace.Metrics {
-					instances := region.Instances
-					if len(instances) == 0 {
-						instances = t.discoverTool.GetInstances(account.Name, namespace.Name, region.RegionName)
+					monitorInstances := region.Instances
+					isDiscovered := false
+					if len(monitorInstances) == 0 {
+						// if instances are not specified. look them up in the discoverTool
+						monitorInstances = t.discoverTool.GetMonitorInstances(account.Name, namespace.Name, region.RegionName)
+						isDiscovered = true
 					}
-					if len(instances) == 0 {
+					if len(monitorInstances) == 0 {
 						continue
 					}
 					metricObjects = append(metricObjects, metricObject{
-						metric,
-						region.RegionName,
-						namespace.Name,
-						account,
-						instances,
+						Metric:    metric,
+						Region:    region.RegionName,
+						Namespace: namespace.Name,
+						Account:   account,
+
+						isDiscovered: isDiscovered,
+
+						MonitorInstances: monitorInstances,
 					})
 				}
 			}

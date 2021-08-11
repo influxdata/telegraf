@@ -74,6 +74,7 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
         ## - QCE/REDIS
         ## - QCE/LB_PUBLIC
         ## - QCE/LB_PRIVATE
+        ## - QCE/DC
         # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances]]
         # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances.dimensions]]
         #   name = ""

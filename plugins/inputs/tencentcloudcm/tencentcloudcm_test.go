@@ -23,7 +23,7 @@ func (m *mockGatherCloudMonitorClient) GetMetricObjects(t TencentCloudCM) []metr
 				Name: "name",
 				crs:  common.NewCredential("secret_id", "secret_key"),
 			},
-			Instances: []*monitor.Instance{{
+			MonitorInstances: []*monitor.Instance{{
 				Dimensions: []*monitor.Dimension{{
 					Name:  common.StringPtr("InstanceId"),
 					Value: common.StringPtr("ins-xxxxxxx1"),
@@ -190,7 +190,7 @@ func TestGather(t *testing.T) {
 	assert.NoError(t, acc.GatherError(cm.Gather))
 
 	fields := map[string]interface{}{
-		"value": common.Float64Ptr(0.1),
+		"CPUUsage": common.Float64Ptr(0.1),
 	}
 
 	tags := map[string]string{
@@ -203,6 +203,6 @@ func TestGather(t *testing.T) {
 		"request_id": "request_id",
 	}
 
-	assert.True(t, acc.HasMeasurement("QCE/CVM"))
-	acc.AssertContainsTaggedFields(t, "QCE/CVM", fields, tags)
+	assert.True(t, acc.HasMeasurement("tencentcloudcm_QCE/CVM"))
+	acc.AssertContainsTaggedFields(t, "tencentcloudcm_QCE/CVM", fields, tags)
 }

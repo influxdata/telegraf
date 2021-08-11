@@ -2,32 +2,39 @@ package tencentcloudcm
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
 )
 
 // discoverTool discovers objects for given regions
 type discoverTool struct {
-	DiscoveredInstances map[string]map[string]map[string][]*monitor.Instance
-	DiscoveredMetrics   map[string][]string
-	rw                  *sync.RWMutex
+	DiscoveredObjects map[string]discoverObject
+	DiscoveredMetrics map[string][]string
+	rw                *sync.RWMutex
 
 	registry map[string]Product
 
 	Log telegraf.Logger `toml:"-"`
 }
 
+type discoverObject struct {
+	Instances        map[string]map[string]interface{} // Discovered Instances with detailed instance information
+	MonitorInstances []*monitor.Instance               // Monitor Instances with information enough for metrics pulling
+}
+
 // NewDiscoverTool Factory
 func NewDiscoverTool(log telegraf.Logger) *discoverTool {
 	discoverTool := &discoverTool{
-		DiscoveredInstances: map[string]map[string]map[string][]*monitor.Instance{},
-		rw:                  &sync.RWMutex{},
-		registry:            map[string]Product{},
-		Log:                 log,
+		DiscoveredObjects: map[string]discoverObject{},
+		rw:                &sync.RWMutex{},
+		registry:          map[string]Product{},
+		Log:               log,
 	}
 	discoverTool.Add("QCE/CVM", &CVM{})
 	discoverTool.Add("QCE/CDB", &CDB{})
@@ -35,6 +42,7 @@ func NewDiscoverTool(log telegraf.Logger) *discoverTool {
 	discoverTool.Add("QCE/LB_PUBLIC", &LBPublic{})
 	discoverTool.Add("QCE/LB_PRIVATE", &LBPrivate{})
 	discoverTool.Add("QCE/CES", &CES{})
+	discoverTool.Add("QCE/DC", &DC{})
 	return discoverTool
 }
 
@@ -49,8 +57,8 @@ func (d *discoverTool) DiscoverMetrics() {
 	}
 }
 
-func (d *discoverTool) discover(accounts []*Account, endpoint string) error {
-	discoveries := map[string]map[string]map[string][]*monitor.Instance{}
+func (d *discoverTool) discoverObjects(accounts []*Account, endpoint string) error {
+	discoveredObjects := map[string]discoverObject{}
 	for _, account := range accounts {
 		for _, namespace := range account.Namespaces {
 			for _, region := range namespace.Regions {
@@ -62,26 +70,17 @@ func (d *discoverTool) discover(accounts []*Account, endpoint string) error {
 				if !ok {
 					continue
 				}
-				instances, err := p.Discover(account.crs, region.RegionName, endpoint)
+				discoveredObject, err := Discover(account.crs, region.RegionName, endpoint, p)
 				if err != nil {
 					return fmt.Errorf("discover account:%s region:%s endpoint:%s failed, error: %s",
 						account.Name, region.RegionName, endpoint, err)
 				}
-				if discoveries[account.Name] == nil {
-					discoveries[account.Name] = map[string]map[string][]*monitor.Instance{}
-				}
-				if discoveries[account.Name][namespace.Name] == nil {
-					discoveries[account.Name][namespace.Name] = map[string][]*monitor.Instance{}
-				}
-				if discoveries[account.Name][namespace.Name][region.RegionName] == nil {
-					discoveries[account.Name][namespace.Name][region.RegionName] = []*monitor.Instance{}
-				}
-				discoveries[account.Name][namespace.Name][region.RegionName] = instances
+				discoveredObjects[newKey(account.Name, namespace.Name, region.RegionName)] = discoveredObject
 			}
 		}
 	}
 	d.rw.Lock()
-	d.DiscoveredInstances = discoveries
+	d.DiscoveredObjects = discoveredObjects
 	d.rw.Unlock()
 	return nil
 }
@@ -91,34 +90,121 @@ func (d *discoverTool) Discover(accounts []*Account, interval config.Duration, e
 	ticker := time.NewTicker(time.Duration(interval))
 	defer ticker.Stop()
 
-	err := d.discover(accounts, endpoint)
+	err := d.discoverObjects(accounts, endpoint)
 	if err != nil {
 		d.Log.Errorf("discovery failed: %v", err)
 	}
 
 	// discover instances periodically
 	for range ticker.C {
-		err = d.discover(accounts, endpoint)
+		err = d.discoverObjects(accounts, endpoint)
 		if err != nil {
 			d.Log.Errorf("discovery failed: %v", err)
 		}
 	}
 }
 
-// GetInstances Get discovered instances
-func (d *discoverTool) GetInstances(account, namespace, region string) []*monitor.Instance {
+// GetInstance Get discovered instance detail
+func (d *discoverTool) GetInstance(account, namespace, region, key string) map[string]interface{} {
 	d.rw.RLock()
 	defer d.rw.RUnlock()
-	v1, ok := d.DiscoveredInstances[account]
+	discoverObject, ok := d.DiscoveredObjects[newKey(account, namespace, region)]
 	if !ok {
 		return nil
 	}
-	v2, ok := v1[namespace]
+	instance, ok := discoverObject.Instances[key]
 	if !ok {
 		return nil
 	}
-	instances, ok := v2[region]
-	return instances
+	return instance
+}
+
+// GetMonitorInstances Get discovered monitor instances
+func (d *discoverTool) GetMonitorInstances(account, namespace, region string) []*monitor.Instance {
+	d.rw.RLock()
+	defer d.rw.RUnlock()
+	discoverObject, ok := d.DiscoveredObjects[newKey(account, namespace, region)]
+	if !ok {
+		return nil
+	}
+	return discoverObject.MonitorInstances
+}
+
+// Discover implements Product interface
+func Discover(crs *common.Credential, region, endpoint string, p Product) (discoverObject, error) {
+	discoverObject := discoverObject{
+		Instances: map[string]map[string]interface{}{},
+	}
+
+	offset, limit := int64(0), int64(100)
+	// dcInstances := []*dc.DirectConnectTunnel{}
+	instances := []map[string]interface{}{}
+
+	total, instancesByPage, err := p.Discover(crs, region, endpoint, offset, limit)
+	if err != nil {
+		return discoverObject, err
+	}
+	instances = append(instances, instancesByPage...)
+
+	// discover all instances if total count is bigger than limit
+	for i := 1; i < int(int64(total)/limit)+1; i++ {
+		_, instancesByPage, err := p.Discover(crs, region, endpoint, offset+(int64(i)*limit), limit)
+		if err != nil {
+			return discoverObject, err
+		}
+		instances = append(instances, instancesByPage...)
+	}
+
+	monitorInstances := []*monitor.Instance{}
+	for _, instance := range instances {
+		keyIsNil := false
+		keyVals := []interface{}{}
+		dimensions := []*monitor.Dimension{}
+
+		// normalized instance have lower case field name
+		normInstance := map[string]interface{}{}
+		for k, v := range instance {
+			normInstance[strings.ToLower(k)] = v
+		}
+
+		for _, key := range p.Keys() {
+			// check if discovered key field is nil
+			if normInstance[strings.ToLower(key)] == nil {
+				keyIsNil = true
+				break
+			} else {
+				// construct keyVals and dimensions based on the key and discovered instance
+				keyVals = append(keyVals, normInstance[strings.ToLower(key)])
+				dimensions = append(dimensions, &monitor.Dimension{
+					Name:  common.StringPtr(key),
+					Value: common.StringPtr(fmt.Sprintf("%v", normInstance[strings.ToLower(key)])),
+				})
+			}
+		}
+
+		// instance with nil key field will be discarded
+		if keyIsNil {
+			continue
+		}
+
+		discoverObject.Instances[newKey(keyVals...)] = instance
+		monitorInstances = append(monitorInstances, &monitor.Instance{Dimensions: dimensions})
+	}
+	discoverObject.MonitorInstances = monitorInstances
+
+	return discoverObject, nil
+}
+
+func newKey(vals ...interface{}) string {
+	key := ""
+	for i, val := range vals {
+		if i != len(vals)-1 {
+			key += fmt.Sprintf("%s-", val)
+		} else {
+			key += fmt.Sprintf("%s", val)
+		}
+	}
+	return key
 }
 
 func (d *discoverTool) Add(namespace string, p Product) {
