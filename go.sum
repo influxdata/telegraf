@@ -313,6 +313,8 @@ github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.5.1/go.mod h1:W1ldHfsgeGlKpJ4xZ
 github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.4.0/go.mod h1:eHwXu2+uE/T6gpnYWwBwqoeqRf9IXyCcolyOWDRAErQ=
 github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.5.3 h1:0O72494cCsazjpsGfo+LXezru6PMSp0HUB1m5UfpaRU=
 github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.5.3/go.mod h1:claNkz2j/N/AZceFcAbR0NyuWnrn+jCYpI+6Ozjsc0k=
+github.com/aws/aws-sdk-go-v2/internal/configsources v1.0.2 h1:XoUsttt4QDoLc6w2jfcpagdViP3SxOcNB4ufMzJqncI=
+github.com/aws/aws-sdk-go-v2/internal/configsources v1.0.2/go.mod h1:1QsSZvLUuaQ6VJsCXolYCEzV0mVBkNBp64pIJy9yRks=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.2.0/go.mod h1:Q5jATQc+f1MfZp3PDMhn6ry18hGvE0i8yvbXoKbnZaE=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.2.0/go.mod h1:Q5jATQc+f1MfZp3PDMhn6ry18hGvE0i8yvbXoKbnZaE=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.2.0/go.mod h1:Q5jATQc+f1MfZp3PDMhn6ry18hGvE0i8yvbXoKbnZaE=
@@ -328,6 +330,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.2.2/go.mod h1:E
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.2.2/go.mod h1:EASdTcM1lGhUe1/p4gkojHwlGJkeoRjjr1sRCzup3Is=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.3.0 h1:gceOysEWNNwLd6cki65IMBZ4WAM0MwgBQq2n7kejoT8=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.3.0/go.mod h1:v8ygadNyATSm6elwJ/4gzJwcFhri9RqS8skgHKiwXPU=
+github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.0.2 h1:aOHBhDyx7yZb+nabCx1GKA2dFzPPtqXbXHSnL/HjPko=
+github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.0.2/go.mod h1:Gej5xRE+MK0r35OnxJJ07iqQ5JC1avTW/4MwGfsC2io=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.0.1/go.mod h1:PISaKWylTYAyruocNk4Lr9miOOJjOcVBd7twCPbydDk=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.2.2/go.mod h1:NXmNI41bdEsJMrD0v9rUvbGCB5GwdBEpKvUvIY3vTFg=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.2.2/go.mod h1:NXmNI41bdEsJMrD0v9rUvbGCB5GwdBEpKvUvIY3vTFg=
@@ -349,6 +353,8 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.6.1/go.mod h1:hLZ/AnkIKHLuPGjEiyghNE
 github.com/aws/aws-sdk-go-v2/service/sts v1.6.1/go.mod h1:hLZ/AnkIKHLuPGjEiyghNEdvJ2PP0MgOxcmv9EBJ4xs=
 github.com/aws/aws-sdk-go-v2/service/sts v1.7.1 h1:7ce9ugapSgBapwLhg7AJTqKW5U92VRX3vX65k2tsB+g=
 github.com/aws/aws-sdk-go-v2/service/sts v1.7.1/go.mod h1:r1i8QwKPzwByXqZb3POQfBs7jozrdnHz8PVbsvyx73w=
+github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.3.2 h1:1s/RRA5Owuz4/G/eWCdCKgC+9zaz2vxFsRSwe7R3cPY=
+github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.3.2/go.mod h1:XoDkdZ5pBf2za2GWbFHQ8Ps0K8fRbmbwrHh7PF5xnzQ=
 github.com/aws/smithy-go v1.0.0/go.mod h1:EzMw8dbp/YJL4A5/sbhGddag+NPT7q084agLbB9LgIw=
 github.com/aws/smithy-go v1.7.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
 github.com/aws/smithy-go v1.7.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
