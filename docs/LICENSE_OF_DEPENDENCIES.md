@@ -176,6 +176,7 @@ following works:
 - github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb [Apache License 2.0](https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/LICENSE)
 - github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common [Apache License 2.0](https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/LICENSE)
 - github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm [Apache License 2.0](https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/LICENSE)
+- github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dc [Apache License 2.0](https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/LICENSE)
 - github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/es [Apache License 2.0](https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/LICENSE)
 - github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor [Apache License 2.0](https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/LICENSE)
 - github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/redis [Apache License 2.0](https://github.com/TencentCloud/tencentcloud-sdk-go/blob/master/LICENSE)
