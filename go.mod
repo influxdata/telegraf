@@ -25,7 +25,6 @@ require (
 	github.com/antchfx/jsonquery v1.1.4
 	github.com/antchfx/xmlquery v1.3.5
 	github.com/antchfx/xpath v1.1.11
-	github.com/apache/thrift v0.13.0
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/aws/aws-sdk-go v1.38.69
@@ -35,7 +34,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
 	github.com/aws/smithy-go v1.3.1
 	github.com/benbjohnson/clock v1.0.3
-	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 	github.com/caio/go-tdigest v3.1.0+incompatible
@@ -44,7 +42,6 @@ require (
 	github.com/couchbase/gomemcached v0.1.3 // indirect
 	github.com/couchbase/goutils v0.1.0 // indirect
 	github.com/denisenkom/go-mssqldb v0.10.0
-	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/docker/docker v20.10.6+incompatible
 	github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60
@@ -71,7 +68,6 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/gosnmp/gosnmp v1.32.0
 	github.com/grid-x/modbus v0.0.0-20210224155242-c4a3d042e99b
-	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
 	github.com/hashicorp/consul/api v1.9.1
 	github.com/hashicorp/go-msgpack v0.5.5 // indirect
@@ -83,7 +79,6 @@ require (
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/jackc/pgx/v4 v4.6.0
-	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
 	github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.0.0
@@ -96,14 +91,12 @@ require (
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/miekg/dns v1.1.31
 	github.com/moby/ipvs v1.0.1
-	github.com/multiplay/go-ts3 v1.0.0
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.2.6
 	github.com/nats-io/nats.go v1.11.0
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.5.1
 	github.com/nsqio/go-nsq v1.0.8
 	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
-	github.com/openzipkin/zipkin-go-opentracing v0.3.4
 	github.com/pion/dtls/v2 v2.0.9
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
@@ -153,9 +146,6 @@ require (
 	google.golang.org/grpc v1.39.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/djherbis/times.v1 v1.2.0
-	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
-	gopkg.in/gorethink/gorethink.v3 v3.0.5
-	gopkg.in/ldap.v3 v3.1.0
 	gopkg.in/olivere/elastic.v5 v5.0.70
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.4.0
