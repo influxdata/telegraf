@@ -152,7 +152,7 @@ type Config struct {
 	CSVTimezone          string   `toml:"csv_timezone"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 	CSVSkipValues        []string `toml:"csv_skip_values"`
-	CSVSkipErrors        bool     `toml:"csv_trim_space"`
+	CSVSkipErrors        bool     `toml:"csv_skip_errors"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
