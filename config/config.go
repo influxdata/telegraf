@@ -1367,6 +1367,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldInt(tbl, "csv_skip_columns", &pc.CSVSkipColumns)
 	c.getFieldBool(tbl, "csv_trim_space", &pc.CSVTrimSpace)
 	c.getFieldStringSlice(tbl, "csv_skip_values", &pc.CSVSkipValues)
+	c.getFieldBool(tbl, "csv_skip_errors", &pc.CSVSkipErrors)
 
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
 

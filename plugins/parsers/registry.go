@@ -152,6 +152,7 @@ type Config struct {
 	CSVTimezone          string   `toml:"csv_timezone"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 	CSVSkipValues        []string `toml:"csv_skip_values"`
+	CSVSkipErrors        bool     `toml:"csv_trim_space"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -247,6 +248,7 @@ func NewParser(config *Config) (Parser, error) {
 			Timezone:          config.CSVTimezone,
 			DefaultTags:       config.DefaultTags,
 			SkipValues:        config.CSVSkipValues,
+			SkipErrors:        config.CSVSkipErrors,
 		}
 
 		return csv.NewParser(config)

@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -32,6 +33,7 @@ type Config struct {
 	Timezone          string   `toml:"csv_timezone"`
 	TrimSpace         bool     `toml:"csv_trim_space"`
 	SkipValues        []string `toml:"csv_skip_values"`
+	SkipErrors        bool     `toml:"csv_skip_errors"`
 
 	gotColumnNames bool
 
@@ -42,6 +44,7 @@ type Config struct {
 // Parser is a CSV parser, you should use NewParser to create a new instance.
 type Parser struct {
 	*Config
+	Log telegraf.Logger
 }
 
 func NewParser(c *Config) (*Parser, error) {
@@ -149,6 +152,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	for _, record := range table {
 		m, err := p.parseRecord(record)
 		if err != nil {
+			if p.SkipErrors {
+				log.Println("[parsers.csv] Malformed csv line", err.Error())
+				continue
+			}
 			return metrics, err
 		}
 		metrics = append(metrics, m)
