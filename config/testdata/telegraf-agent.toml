@@ -86,15 +86,6 @@
 [[inputs.diskio]]
   # no configuration
 
-# Read metrics from one or many disque servers
-[[inputs.disque]]
-  # An array of URI to gather stats about. Specify an ip or hostname
-  # with optional port and password. ie disque://localhost, disque://10.10.3.33:18832,
-  # 10.0.0.1:10000, etc.
-  #
-  # If no servers are specified, then localhost is used as the host.
-  servers = ["localhost"]
-
 # Read stats from one or more Elasticsearch servers or clusters
 [[inputs.elasticsearch]]
   # specify a list of one or more Elasticsearch servers
@@ -168,13 +159,6 @@
   offset = "oldest"
 
 
-# Read metrics from a LeoFS Server via SNMP
-[[inputs.leofs]]
-  # An array of URI to gather stats about LeoFS.
-  # Specify an ip or hostname with port. ie 127.0.0.1:4020
-  #
-  # If no servers are specified, then 127.0.0.1 is used as the host and 4020 as the port.
-  servers = ["127.0.0.1:4021"]
 
 # Read metrics about memory usage
 [[inputs.mem]]
@@ -295,15 +279,6 @@
   #
   # If no servers are specified, then localhost is used as the host.
   servers = ["localhost"]
-
-# Read metrics from one or many RethinkDB servers
-[[inputs.rethinkdb]]
-  # An array of URI to gather stats about. Specify an ip or hostname
-  # with optional port add password. ie rethinkdb://user:auth_key@10.10.3.30:28105,
-  # rethinkdb://10.10.3.33:18832, 10.0.0.1:10000, etc.
-  #
-  # If no servers are specified, then 127.0.0.1 is used as the host and 28015 as the port.
-  servers = ["127.0.0.1:28015"]
 
 # Read metrics about swap memory usage
 [[inputs.swap]]
