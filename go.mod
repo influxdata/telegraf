@@ -171,3 +171,9 @@ replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
 
 // replaced due to https//github.com/mdlayher/apcupsd/issues/10
 replace github.com/mdlayher/apcupsd => github.com/influxdata/apcupsd v0.0.0-20210427145308-694d5caead0e
+
+//proxy.golang.org has versions of golang.zx2c4.com/wireguard with leading v's, whereas the git repo has tags without leading v's: https://git.zx2c4.com/wireguard-go/refs/tags
+//So, fetching this module with version v0.0.20200121 (as done by the transitive dependency
+//https://github.com/WireGuard/wgctrl-go/blob/e35592f146e40ce8057113d14aafcc3da231fbac/go.mod#L12 ) was not working when using GOPROXY=direct.
+//Replacing with the pseudo-version works around this.
+replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v0.0.0-20200121152719-05b03c675090
