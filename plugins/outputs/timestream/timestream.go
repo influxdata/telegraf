@@ -3,6 +3,7 @@ package timestream
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"reflect"
@@ -284,28 +285,35 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 	if err != nil {
 		// Telegraf will retry ingesting the metrics if an error is returned from the plugin.
 		// Therefore, return error only for retryable exceptions: ThrottlingException and 5xx exceptions.
-		switch e := err.(type) {
-		case *types.ResourceNotFoundException:
+		var notFound *types.ResourceNotFoundException
+		if errors.As(err, &notFound) {
 			if resourceNotFoundRetry {
 				t.Log.Warnf("Failed to write to Timestream database '%s' table '%s'. Error: '%s'",
-					t.DatabaseName, *writeRecordsInput.TableName, e)
+					t.DatabaseName, *writeRecordsInput.TableName, notFound)
 				return t.createTableAndRetry(writeRecordsInput)
 			}
-			t.logWriteToTimestreamError(e, writeRecordsInput.TableName)
-		case *types.ThrottlingException:
+			t.logWriteToTimestreamError(notFound, writeRecordsInput.TableName)
+		}
+
+		var throttling *types.ThrottlingException
+		if errors.As(err, &throttling) {
+			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+				t.DatabaseName, *writeRecordsInput.TableName, throttling)
+		}
+
+		var internal *types.InternalServerException
+		if errors.As(err, &internal) {
+			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+				t.DatabaseName, *writeRecordsInput.TableName, internal)
+		}
+
+		var operation *smithy.OperationError
+		if errors.As(err, &operation) {
+			t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
+		} else {
+			// Retry other, non-aws errors.
 			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
 				t.DatabaseName, *writeRecordsInput.TableName, err)
-		case *types.InternalServerException:
-			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
-				t.DatabaseName, *writeRecordsInput.TableName, err)
-		default:
-			if _, ok := err.(smithy.APIError); ok {
-				t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
-			} else {
-				// Retry other, non-aws errors.
-				return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
-					t.DatabaseName, *writeRecordsInput.TableName, err)
-			}
 		}
 	}
 	return nil
