@@ -56,12 +56,12 @@ func TestExponentialBackoffCalculation(t *testing.T) {
 		expected   time.Duration
 	}{
 		{retryCount: 0, expected: 0},
-		{retryCount: 1, expected: 0},
-		{retryCount: 5, expected: 0},
-		{retryCount: 10, expected: 2 * time.Second},
-		{retryCount: 30, expected: 22 * time.Second},
+		{retryCount: 1, expected: 25 * time.Millisecond},
+		{retryCount: 5, expected: 625 * time.Millisecond},
+		{retryCount: 10, expected: 2500 * time.Millisecond},
+		{retryCount: 30, expected: 22500 * time.Millisecond},
 		{retryCount: 40, expected: 40 * time.Second},
-		{retryCount: 50, expected: 60 * time.Second},
+		{retryCount: 50, expected: 60 * time.Second}, // max hit
 		{retryCount: 100, expected: 60 * time.Second},
 		{retryCount: 1000, expected: 60 * time.Second},
 	}

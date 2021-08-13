@@ -326,7 +326,7 @@ func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 	}
 	// take the highest value of backoff and retry-after.
 	retry := math.Max(backoff, retryAfterHeader)
-	return time.Duration(retry) * time.Second
+	return time.Duration(retry*1000) * time.Millisecond
 }
 
 func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
