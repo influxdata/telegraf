@@ -72,3 +72,29 @@ func TestExponentialBackoffCalculation(t *testing.T) {
 		})
 	}
 }
+
+func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
+	c := &httpClient{}
+	tests := []struct {
+		retryCount int
+		retryAfter string
+		expected   time.Duration
+	}{
+		{retryCount: 0, retryAfter: "0", expected: 0},
+		{retryCount: 0, retryAfter: "10", expected: 10 * time.Second},
+		{retryCount: 0, retryAfter: "60", expected: 60 * time.Second},
+		{retryCount: 0, retryAfter: "600", expected: 600 * time.Second},
+		{retryCount: 0, retryAfter: "601", expected: 600 * time.Second}, // max hit
+		{retryCount: 40, retryAfter: "39", expected: 40 * time.Second},  // retryCount wins
+		{retryCount: 40, retryAfter: "41", expected: 41 * time.Second},  // retryAfter wins
+		{retryCount: 100, retryAfter: "100", expected: 100 * time.Second},
+	}
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("%d_retries", test.retryCount), func(t *testing.T) {
+			c.retryCount = test.retryCount
+			hdr := http.Header{}
+			hdr.Add("Retry-After", test.retryAfter)
+			require.EqualValues(t, test.expected, c.getRetryDuration(hdr))
+		})
+	}
+}

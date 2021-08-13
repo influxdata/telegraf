@@ -322,7 +322,7 @@ func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 			retryAfterHeader = 10
 		}
 		// protect against excessively large retry-after
-		retryAfterHeader = math.Max(retryAfterHeader, defaultMaxWaitRetryAfterSeconds)
+		retryAfterHeader = math.Min(retryAfterHeader, defaultMaxWaitRetryAfterSeconds)
 	}
 	// take the highest value of backoff and retry-after.
 	retry := math.Max(backoff, retryAfterHeader)
