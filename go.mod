@@ -19,7 +19,7 @@ require (
 	github.com/Shopify/sarama v1.27.2
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/aerospike/aerospike-client-go v1.27.0
-	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
+	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1004
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.1.4
@@ -116,6 +116,7 @@ require (
 	github.com/sensu/sensu-go/api/core/v2 v2.9.0
 	github.com/shirou/gopsutil v3.21.6-0.20210624221800-cb512c850043+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
+	github.com/showwin/speedtest-go v1.1.4
 	github.com/signalfx/golib/v3 v3.3.34
 	github.com/sirupsen/logrus v1.7.0
 	github.com/sleepinggenius2/gosmi v0.4.3
