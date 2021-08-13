@@ -665,23 +665,33 @@ func TestSkipSpecifiedStringValue(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
 }
 
-func TestSkipErrorOnBadDateFormat(t *testing.T) {
+func TestSkipErrorOnCorruptedCSVLine(t *testing.T) {
 	p, err := NewParser(
 		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimestampColumn:   "first",
-			TimestampFormat:   "02/01/06 03:04:05 PM",
-			TimeFunc:          DefaultTime,
-			SkipErrors:        true,
+			HeaderRowCount:  1,
+			TimestampColumn: "date",
+			TimestampFormat: "02/01/06 03:04:05 PM",
+			TimeFunc:        DefaultTime,
+			SkipErrors:      true,
 		},
 	)
-	testCSV := `line1,line2,line3
-bad_date_format,70,test_name
-07/11/09 04:05:06 PM,80,test_name2`
-	metrics, err := p.Parse([]byte(testCSV))
+	testCSV := `date,a,b
+23/05/09 11:05:06 PM,1,2
+corrupted_line
+07/11/09 04:06:07 PM,3,4`
 
+	expectedFields0 := map[string]interface{}{
+		"a": int64(1),
+		"b": int64(2),
+	}
+
+	expectedFields1 := map[string]interface{}{
+		"a": int64(3),
+		"b": int64(4),
+	}
+
+	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	require.Equal(t, metrics[0].Time().UnixNano(), int64(1257609906000000000))
+	require.Equal(t, expectedFields0, metrics[0].Fields())
+	require.Equal(t, expectedFields1, metrics[1].Fields())
 }
