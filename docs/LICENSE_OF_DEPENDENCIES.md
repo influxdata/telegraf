@@ -199,6 +199,7 @@ following works:
 - github.com/signalfx/golib [Apache License 2.0](https://github.com/signalfx/golib/blob/master/LICENSE)
 - github.com/signalfx/sapm-proto [Apache License 2.0](https://github.com/signalfx/sapm-proto/blob/master/LICENSE)
 - github.com/sirupsen/logrus [MIT License](https://github.com/sirupsen/logrus/blob/master/LICENSE)
+- github.com/showwin/speedtest-go [MIT License](https://github.com/showwin/speedtest-go/blob/master/LICENSE)
 - github.com/sleepinggenius2/gosmi [MIT License](https://github.com/sleepinggenius2/gosmi/blob/master/LICENSE)
 - github.com/snowflakedb/gosnowflake [Apache License 2.0](https://github.com/snowflakedb/gosnowflake/blob/master/LICENSE)
 - github.com/streadway/amqp [BSD 2-Clause "Simplified" License](https://github.com/streadway/amqp/blob/master/LICENSE)
