@@ -5,11 +5,16 @@ COPY . /go/src/github.com/influxdata/telegraf
 RUN make go-install
 
 FROM buildpack-deps:buster-curl
+RUN addgroup -g 1001 -S telegraf \
+    && adduser -S -D -H -u 1000 -h /etc/telegraf -s /sbin/nologin -G telegraf -g telegraf telegraf
 COPY --from=builder /go/bin/* /usr/bin/
-COPY etc/telegraf.conf /etc/telegraf/telegraf.conf
+COPY --chown=telegraf:telegraf etc/telegraf.conf /etc/telegraf/telegraf.conf
 
 EXPOSE 8125/udp 8092/udp 8094
 
 COPY scripts/docker-entrypoint.sh /entrypoint.sh
+
+USER telegraf
+
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["telegraf"]
