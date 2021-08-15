@@ -2,6 +2,7 @@ package podman
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -40,6 +41,9 @@ var sampleConfig = `
   container_name_include = []
   container_name_exclude = []
 
+  ## Timeout for podman list, info, and stats commands
+  timeout = "5s"
+
   `
 
 func (p *Podman) SampleConfig() string { return sampleConfig }
@@ -49,8 +53,7 @@ func (p *Podman) Description() string {
 }
 
 func (p *Podman) Gather(acc telegraf.Accumulator) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(p.Timeout))
-	defer cancel()
+	ctx := context.Background()
 	if p.client == nil {
 		c, err := NewClient(p.Endpoint, ctx)
 		if err != nil {
@@ -77,14 +80,12 @@ func (p *Podman) Gather(acc telegraf.Accumulator) error {
 	}
 
 	fields := map[string]interface{}{
-		"n_cpus": info.Host.CPUs,
-		//"n_used_file_descriptors": info.Host.NFd,
+		"n_cpus":               info.Host.CPUs,
 		"n_containers":         info.Store.ContainerStore.Number,
 		"n_containers_running": info.Store.ContainerStore.Running,
 		"n_containers_stopped": info.Store.ContainerStore.Stopped,
 		"n_containers_paused":  info.Store.ContainerStore.Paused,
 		"n_images":             info.Store.ImageStore.Number,
-		//"n_goroutines":            info.Host.NGoroutines,
 		//"n_listener_events": info.Host.NEventsListener,
 	}
 
@@ -100,7 +101,9 @@ func (p *Podman) Gather(acc telegraf.Accumulator) error {
 		p.filtersCreated = true
 	}
 
-	containers, err := p.client.ContainerList(nil)
+	ctxList, cancel := context.WithTimeout(p.client.Background(), time.Duration(p.Timeout))
+	defer cancel()
+	containers, err := p.client.ContainerList(ctxList, nil)
 	if err != nil {
 		return err
 	}
@@ -151,22 +154,25 @@ func (p *Podman) gatherContainer(container entities.ListContainer, acc telegraf.
 		"container_name":    cname,
 		"container_image":   imageName,
 		"container_version": imageVersion,
+		"pod_name":          container.PodName,
 	}
 
-	containerStats, err := p.client.ContainerStats(cname)
+	ctxStats, cancel := context.WithTimeout(p.client.Background(), time.Duration(p.Timeout))
+	defer cancel()
+	containerStats, err := p.client.ContainerStats(ctxStats, cname)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 
+	fmt.Printf("%#v\n", containerStats)
 	fields := map[string]interface{}{
-		"container_id": containerStats.Stats[0].ContainerID,
-		"cpu":          containerStats.Stats[0].CPU,
-		"mem_usage":    containerStats.Stats[0].MemUsage,
-		"mem_limit":    containerStats.Stats[0].MemLimit,
+		"container_id": containerStats.ContainerID,
+		"cpu":          containerStats.CPU,
+		"mem_usage":    containerStats.MemUsage,
+		"mem_limit":    containerStats.MemLimit,
 	}
 	acc.AddFields("podman", fields, tags, time.Now())
-	log.Println("hello")
 	return nil
 }
 

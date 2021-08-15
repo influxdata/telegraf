@@ -3,7 +3,6 @@ package podman
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/containers/podman/v3/libpod/define"
@@ -15,8 +14,9 @@ import (
 
 type Client interface {
 	Info() (*define.Info, error)
-	ContainerList(filters map[string][]string) ([]entities.ListContainer, error)
-	ContainerStats(string) (*entities.ContainerStatsReport, error)
+	ContainerList(ctx context.Context, filters map[string][]string) ([]entities.ListContainer, error)
+	ContainerStats(context.Context, string) (*define.ContainerStats, error)
+	Background() context.Context
 }
 
 func NewClient(socket string, ctx context.Context) (Client, error) {
@@ -36,20 +36,29 @@ func (c *SocketClient) Info() (*define.Info, error) {
 	return system.Info(c.client, nil)
 }
 
-func (c *SocketClient) ContainerList(filters map[string][]string) ([]entities.ListContainer, error) {
-	return containers.List(c.client, nil)
+func (c *SocketClient) Background() context.Context {
+	return c.client
 }
 
-func (c *SocketClient) ContainerStats(container string) (*entities.ContainerStatsReport, error) {
-	log.Println(container)
-	stats, err := containers.Stats(c.client, []string{container}, nil)
+func (c *SocketClient) ContainerList(ctx context.Context, filters map[string][]string) ([]entities.ListContainer, error) {
+	return containers.List(ctx, nil)
+}
+
+//For now it will return the first recieved container's stat
+func (c *SocketClient) ContainerStats(ctx context.Context, container string) (*define.ContainerStats, error) {
+	stats, err := containers.Stats(ctx, []string{container}, nil)
 	if err != nil {
 		return nil, err
 	}
 	select {
 	case containerStats := <-stats:
-		fmt.Println(containerStats)
-		return &containerStats, nil
+		if containerStats.Error != nil {
+			return nil, containerStats.Error
+		} else if len(containerStats.Stats) <= 0 {
+			return nil, errNoStats
+		}
+		//return last recieved stat
+		return &containerStats.Stats[len(containerStats.Stats)-1], nil
 	case <-time.After(5 * time.Second):
 		return nil, fmt.Errorf("Invalid number of stats")
 	}
