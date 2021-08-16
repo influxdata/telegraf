@@ -6,6 +6,7 @@ import (
 	configV2 "github.com/aws/aws-sdk-go-v2/config"
 	credentialsV2 "github.com/aws/aws-sdk-go-v2/credentials"
 	stscredsV2 "github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -70,6 +71,13 @@ func (c *CredentialConfig) assumeCredentials() (client.ConfigProvider, error) {
 }
 
 func (c *CredentialConfig) CredentialsV2() (awsV2.Config, error) {
+	if c.RoleARN != "" {
+		return c.assumeCredentialsV2()
+	}
+	return c.rootCredentialsV2()
+}
+
+func (c *CredentialConfig) rootCredentialsV2() (awsV2.Config, error) {
 	options := []func(*configV2.LoadOptions) error{
 		configV2.WithRegion(c.Region),
 	}
@@ -97,22 +105,31 @@ func (c *CredentialConfig) CredentialsV2() (awsV2.Config, error) {
 		options = append(options, configV2.WithCredentialsProvider(provider))
 	}
 
-	if c.RoleARN != "" {
-		if c.WebIdentityTokenFile != "" {
-			webIdentityOpts := configV2.WithWebIdentityRoleCredentialOptions(func(opts *stscredsV2.WebIdentityRoleOptions) {
-				opts.RoleARN = c.RoleARN
-				opts.RoleSessionName = c.RoleSessionName
-				opts.TokenRetriever = stscredsV2.IdentityTokenFile(c.WebIdentityTokenFile)
-			})
-			options = append(options, webIdentityOpts)
-		} else {
-			roleArnOpts := configV2.WithAssumeRoleCredentialOptions(func(opts *stscredsV2.AssumeRoleOptions) {
-				opts.RoleARN = c.RoleARN
-				opts.Duration = stscredsV2.DefaultDuration
-			})
-			options = append(options, roleArnOpts)
-		}
+	return configV2.LoadDefaultConfig(context.Background(), options...)
+}
+
+func (c *CredentialConfig) assumeCredentialsV2() (awsV2.Config, error) {
+	rootCredentials, err := c.rootCredentialsV2()
+	if err != nil {
+		return awsV2.Config{}, err
 	}
 
-	return configV2.LoadDefaultConfig(context.Background(), options...)
+	var provider awsV2.CredentialsProvider
+	stsService := sts.NewFromConfig(rootCredentials)
+	if c.WebIdentityTokenFile != "" {
+		provider = stscredsV2.NewWebIdentityRoleProvider(stsService, c.RoleARN, stscredsV2.IdentityTokenFile(c.WebIdentityTokenFile), func(opts *stscredsV2.WebIdentityRoleOptions) {
+			if c.RoleSessionName != "" {
+				opts.RoleSessionName = c.RoleSessionName
+			}
+		})
+	} else {
+		provider = stscredsV2.NewAssumeRoleProvider(stsService, c.RoleARN, func(opts *stscredsV2.AssumeRoleOptions) {
+			if c.RoleSessionName != "" {
+				opts.RoleSessionName = c.RoleSessionName
+			}
+		})
+	}
+
+	rootCredentials.Credentials = awsV2.NewCredentialsCache(provider)
+	return rootCredentials, nil
 }
