@@ -16,6 +16,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const (
+	//Default Endpoint for root environments
+	defaultEndpoint = "/run/podman/podman.sock"
+)
+
 type Podman struct {
 	Endpoint string
 	Timeout  config.Duration
@@ -142,10 +147,6 @@ func (p *Podman) gatherContainer(container entities.ListContainer, acc telegraf.
 		return nil
 	}
 
-	if !p.containerFilter.Match(cname) {
-		return nil
-	}
-
 	imageName, imageVersion := docker.ParseImage(container.Image)
 
 	tags := map[string]string{
@@ -172,7 +173,7 @@ func (p *Podman) gatherContainer(container entities.ListContainer, acc telegraf.
 		"mem_usage":    containerStats.MemUsage,
 		"mem_limit":    containerStats.MemLimit,
 	}
-	acc.AddFields("podman", fields, tags, time.Now())
+	acc.AddFields("podman_container_stats", fields, tags, time.Now())
 	return nil
 }
 
@@ -189,6 +190,8 @@ func init() {
 	inputs.Add("podman", func() telegraf.Input {
 		return &Podman{
 			filtersCreated: false,
+			Timeout:        config.Duration(time.Second * 5),
+			Endpoint:       defaultEndpoint,
 		}
 	})
 }
