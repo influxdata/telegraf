@@ -2,8 +2,6 @@ package podman
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -91,11 +89,11 @@ func (p *Podman) Gather(acc telegraf.Accumulator) error {
 		"n_containers_stopped": info.Store.ContainerStore.Stopped,
 		"n_containers_paused":  info.Store.ContainerStore.Paused,
 		"n_images":             info.Store.ImageStore.Number,
+		"total_mem":            info.Host.MemTotal,
 		//"n_listener_events": info.Host.NEventsListener,
 	}
 
 	acc.AddFields("podman", fields, tags, now)
-	acc.AddFields("podman", map[string]interface{}{"memory_total": info.Host.MemTotal}, tags, now)
 
 	// Create label filters if not already created
 	if !p.filtersCreated {
@@ -162,13 +160,12 @@ func (p *Podman) gatherContainer(container entities.ListContainer, acc telegraf.
 	defer cancel()
 	containerStats, err := p.client.ContainerStats(ctxStats, cname)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 
-	fmt.Printf("%#v\n", containerStats)
 	fields := map[string]interface{}{
 		"container_id": containerStats.ContainerID,
+		"state":        container.State,
 		"cpu":          containerStats.CPU,
 		"mem_usage":    containerStats.MemUsage,
 		"mem_limit":    containerStats.MemLimit,

@@ -83,17 +83,7 @@ func TestPodmanGather(t *testing.T) {
 				"n_containers_stopped": int64(1),
 				"n_cpus":               int64(8),
 				"n_images":             int64(10),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"podman",
-			map[string]string{
-				"engine_host":    "fedora",
-				"server_version": "3.2.0",
-			},
-			map[string]interface{}{
-				"memory_total": int64(0),
+				"total_mem":            int64(0),
 			},
 			time.Unix(0, 0),
 		),
@@ -127,6 +117,7 @@ func TestGatherContainerStats(t *testing.T) {
 					},
 					map[string]interface{}{
 						"container_id": string("9a4f6929b45ee0171b781233ce4c68acd2b7ede4fdf8d1dbe17edc3b07446854"),
+						"state":        string("running"),
 						"cpu":          float64(2.1863381926526583e-09),
 						"mem_limit":    uint64(7966027776),
 						"mem_usage":    uint64(4014080),
@@ -151,6 +142,7 @@ func TestGatherContainerStats(t *testing.T) {
 					},
 					map[string]interface{}{
 						"container_id": string("59897a61355010568bb67c3c4150163b7246648ceae6f64fac77da590dacdc3d"),
+						"state":        string("stopped"),
 						"cpu":          float64(3.687353584388549e-08),
 						"mem_limit":    uint64(7966027776),
 						"mem_usage":    uint64(3330048),
@@ -191,22 +183,3 @@ func FilterMetrics(metrics []telegraf.Metric, f func(telegraf.Metric) bool) []te
 	}
 	return results
 }
-
-/*
-func TestPodman(t *testing.T) {
-	// Get Podman socket location
-	sock_dir := os.Getenv("XDG_RUNTIME_DIR")
-	socket := "unix:" + sock_dir + "/podman/podman.sock"
-	var acc testutil.Accumulator
-	p := &Podman{
-		Log:      testutil.Logger{},
-		Endpoint: socket,
-	}
-	err := p.Gather(&acc)
-	if err != nil {
-		log.Fatal(err)
-	}
-	acc.Wait(1)
-	log.Println(acc.GetTelegrafMetrics())
-}
-*/

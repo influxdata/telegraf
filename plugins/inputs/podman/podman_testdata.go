@@ -70,7 +70,7 @@ var containerList = []entities.ListContainer{
 		Pod:        "0af86f5aca6d5a8fc5628733b99d3e136beb9d859c56c702bc96aab7e5f6e4b7",
 		PodName:    "elastic_pare",
 		Ports:      []ocicni.PortMapping(nil),
-		State:      "running",
+		State:      "stopped",
 		Status:     "",
 	},
 }

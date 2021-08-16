@@ -74,7 +74,7 @@ require (
 	github.com/couchbase/go-couchbase v0.1.0
 	github.com/couchbase/gomemcached v0.1.3 // indirect
 	github.com/couchbase/goutils v0.1.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/cri-o/ocicni v0.2.1-0.20210621164014-d0acc7862283
 	github.com/denisenkom/go-mssqldb v0.10.0
 	github.com/devigned/tab v0.1.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
