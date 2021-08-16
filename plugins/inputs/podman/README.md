@@ -1,10 +1,11 @@
 # Podman Input Plugin
 
-The podman plugin uses the Podman API to gather metrics on running
+The podman plugin uses the Podman API to gather metrics on **running**
 podman containers.
 
 The podman plugin uses the [Official libpod Client](https://pkg.go.dev/github.com/containers/podman/v3@v3.2.3/pkg/bindings)
 to gather stats from the [Engine API](https://pkg.go.dev/github.com/containers/podman/v3@v3.2.3/pkg/api/server).
+
 
 ### Configuration:
 
@@ -64,5 +65,6 @@ Podman creates the default API socket for root environments in `/run/podman/podm
 ### Example Output:
 
 ```
-
+podman,engine_host=ubuntu,host=xps,server_version=3.2.0 n_containers=2i,n_containers_paused=0i,n_containers_running=1i,n_containers_stopped=1i,n_cpus=8i,n_images=18i,total_mem=7966027776i 1629149800000000000
+podman_container_stats,container_image=docker.io/library/nginx,container_name=nginx,container_version=latest,engine_host=ubuntu,host=xps,server_version=3.2.0 container_id="a16fe92067f111642c17e27b6c78c3d728468f162d93a02e554a3eea9326f548",cpu=0.0000000019008074018757257,mem_limit=7966027776i,mem_usage=19124224i,state="running" 1629149801000000000
 ```

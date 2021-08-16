@@ -79,8 +79,8 @@ func TestPodmanGather(t *testing.T) {
 			map[string]interface{}{
 				"n_containers":         int64(2),
 				"n_containers_paused":  int64(0),
-				"n_containers_running": int64(1),
-				"n_containers_stopped": int64(1),
+				"n_containers_running": int64(2),
+				"n_containers_stopped": int64(0),
 				"n_cpus":               int64(8),
 				"n_images":             int64(10),
 				"total_mem":            int64(0),
@@ -142,7 +142,7 @@ func TestGatherContainerStats(t *testing.T) {
 					},
 					map[string]interface{}{
 						"container_id": string("59897a61355010568bb67c3c4150163b7246648ceae6f64fac77da590dacdc3d"),
-						"state":        string("stopped"),
+						"state":        string("running"),
 						"cpu":          float64(3.687353584388549e-08),
 						"mem_limit":    uint64(7966027776),
 						"mem_usage":    uint64(3330048),

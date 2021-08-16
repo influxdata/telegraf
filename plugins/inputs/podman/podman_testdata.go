@@ -24,8 +24,8 @@ var info = define.Info{
 		ContainerStore: define.ContainerStore{
 			Number:  2,
 			Paused:  0,
-			Running: 1,
-			Stopped: 1,
+			Running: 2,
+			Stopped: 0,
 		},
 		ImageStore: define.ImageStore{
 			Number: 10,
@@ -70,7 +70,7 @@ var containerList = []entities.ListContainer{
 		Pod:        "0af86f5aca6d5a8fc5628733b99d3e136beb9d859c56c702bc96aab7e5f6e4b7",
 		PodName:    "elastic_pare",
 		Ports:      []ocicni.PortMapping(nil),
-		State:      "stopped",
+		State:      "running",
 		Status:     "",
 	},
 }
