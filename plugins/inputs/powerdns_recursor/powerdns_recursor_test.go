@@ -102,6 +102,7 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	}
 	// We create a fake server to return test data
 	controlSocket := "/tmp/pdns5724354148158589552.controlsocket"
+	defer os.Remove(controlSocket)
 	addr, err := net.ResolveUnixAddr("unixgram", controlSocket)
 	require.NoError(t, err, "Cannot parse unix socket")
 	socket, err := net.ListenUnixgram("unixgram", addr)
@@ -149,6 +150,110 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 		UnixSockets: []string{controlSocket},
 		SocketDir:   "/tmp",
 		SocketMode:  "0666",
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+
+	require.NoError(t, acc.GatherError(p.Gather))
+
+	wg.Wait()
+
+	intMetrics := []string{"all-outqueries", "answers-slow", "answers0-1", "answers1-10",
+		"answers10-100", "answers100-1000", "auth-zone-queries", "auth4-answers-slow",
+		"auth4-answers0-1", "auth4-answers1-10", "auth4-answers10-100", "auth4-answers100-1000",
+		"auth6-answers-slow", "auth6-answers0-1", "auth6-answers1-10", "auth6-answers10-100",
+		"auth6-answers100-1000", "cache-entries", "cache-hits", "cache-misses", "case-mismatches",
+		"chain-resends", "client-parse-errors", "concurrent-queries", "dlg-only-drops", "dnssec-queries",
+		"dnssec-result-bogus", "dnssec-result-indeterminate", "dnssec-result-insecure", "dnssec-result-nta",
+		"dnssec-result-secure", "dnssec-validations", "dont-outqueries", "ecs-queries", "ecs-responses",
+		"edns-ping-matches", "edns-ping-mismatches", "failed-host-entries", "fd-usage", "ignored-packets",
+		"ipv6-outqueries", "ipv6-questions", "malloc-bytes", "max-cache-entries", "max-mthread-stack",
+		"max-packetcache-entries", "negcache-entries", "no-packet-error", "noedns-outqueries",
+		"noerror-answers", "noping-outqueries", "nsset-invalidations", "nsspeeds-entries",
+		"nxdomain-answers", "outgoing-timeouts", "outgoing4-timeouts", "outgoing6-timeouts",
+		"over-capacity-drops", "packetcache-entries", "packetcache-hits", "packetcache-misses",
+		"policy-drops", "policy-result-custom", "policy-result-drop", "policy-result-noaction",
+		"policy-result-nodata", "policy-result-nxdomain", "policy-result-truncate", "qa-latency",
+		"query-pipe-full-drops", "questions", "real-memory-usage", "resource-limits", "security-status",
+		"server-parse-errors", "servfail-answers", "spoof-prevents", "sys-msec", "tcp-client-overflow",
+		"tcp-clients", "tcp-outqueries", "tcp-questions", "throttle-entries", "throttled-out", "throttled-outqueries",
+		"too-old-drops", "udp-in-errors", "udp-noport-errors", "udp-recvbuf-errors", "udp-sndbuf-errors",
+		"unauthorized-tcp", "unauthorized-udp", "unexpected-packets", "unreachables", "uptime", "user-msec",
+		"x-our-latency", "x-ourtime-slow", "x-ourtime0-1", "x-ourtime1-2", "x-ourtime16-32",
+		"x-ourtime2-4", "x-ourtime4-8", "x-ourtime8-16"}
+
+	for _, metric := range intMetrics {
+		assert.True(t, acc.HasInt64Field("powerdns_recursor", metric), metric)
+	}
+}
+
+func TestNewPowerdnsRecursorGeneratesMetrics(t *testing.T) {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
+		t.Skip("Skipping on windows and darwin, as unixgram sockets are not supported")
+	}
+	// We create a fake server to return test data
+	controlSocket := "/tmp/pdns-new5724354148158589552.controlsocket"
+	defer os.Remove(controlSocket)
+	addr, err := net.ResolveUnixAddr("unixgram", controlSocket)
+	require.NoError(t, err, "Cannot parse unix socket")
+	socket, err := net.ListenUnixgram("unixgram", addr)
+	require.NoError(t, err, "Cannot initialize server on port")
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer func() {
+			// Ignore the returned error as we need to remove the socket file anyway
+			//nolint:errcheck,revive
+			socket.Close()
+			// Ignore the returned error as we want to remove the file and ignore
+			// no-such-file errors
+			//nolint:errcheck,revive
+			os.Remove(controlSocket)
+			wg.Done()
+		}()
+
+		for {
+			status := make([]byte, 4)
+			n, _, err := socket.ReadFromUnix(status)
+
+			if err != nil || n != 4 {
+				// Ignore the returned error as we cannot do anything about it anyway
+				//nolint:errcheck,revive
+				socket.Close()
+				return
+			}
+
+			buf := make([]byte, 1024)
+			n, remote, err := socket.ReadFromUnix(buf)
+			if err != nil {
+				// Ignore the returned error as we cannot do anything about it anyway
+				//nolint:errcheck,revive
+				socket.Close()
+				return
+			}
+
+			data := buf[:n]
+			if string(data) == "get-all" {
+				// Ignore the returned error as we need to close the socket anyway
+				//nolint:errcheck,revive
+				socket.WriteToUnix([]byte{ 0, 0, 0, 0 }, remote)
+				socket.WriteToUnix([]byte(metrics), remote)
+				// Ignore the returned error as we cannot do anything about it anyway
+				//nolint:errcheck,revive
+				socket.Close()
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+
+	p := &PowerdnsRecursor{
+		UnixSockets: []string{controlSocket},
+		SocketDir:   "/tmp",
+		SocketMode:  "0666",
+		NewControlProtocol: true,
 	}
 	require.NoError(t, p.Init())
 

@@ -13,9 +13,19 @@ the unix controlsocket.
   ## Directory to create receive socket.  This default is likely not writable,
   ## please reference the full plugin documentation for a recommended setup.
   # socket_dir = "/var/run/"
+ 
   ## Socket permissions for the receive socket.
   # socket_mode = "0666"
+
+  ## IMPORTANT: Set this to true if you're running PowerDNS 4.5.0 or newer.
+  # new_control_protocol = false
 ```
+
+#### Newer PowerDNS Recursor versions
+
+The control protocol was updated in PowerDNS Recursor 4.5.0. If you're using 
+version 4.5.0 and newer you need to set `new_control_protocol` to `true` in
+your config. If you don't, you will get an `i/o timeout` error.
 
 #### Permissions
 

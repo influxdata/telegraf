@@ -1,7 +1,6 @@
 package powerdns_recursor
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"log"
@@ -21,6 +20,7 @@ type PowerdnsRecursor struct {
 	UnixSockets []string `toml:"unix_sockets"`
 	SocketDir   string   `toml:"socket_dir"`
 	SocketMode  string   `toml:"socket_mode"`
+	NewControlProtocol bool `toml:"new_control_protocol"`
 
 	mode uint32
 }
@@ -34,8 +34,12 @@ var sampleConfig = `
   ## Directory to create receive socket.  This default is likely not writable,
   ## please reference the full plugin documentation for a recommended setup.
   # socket_dir = "/var/run/"
+
   ## Socket permissions for the receive socket.
   # socket_mode = "0666"
+
+  ## IMPORTANT: Set this to true if you're running PowerDNS 4.5.0 or newer.
+  # new_control_protocol = false
 `
 
 func (p *PowerdnsRecursor) SampleConfig() string {
@@ -60,11 +64,11 @@ func (p *PowerdnsRecursor) Init() error {
 
 func (p *PowerdnsRecursor) Gather(acc telegraf.Accumulator) error {
 	if len(p.UnixSockets) == 0 {
-		return p.gatherServer("/var/run/pdns_recursor.controlsocket", acc)
+		return p.gatherServer("/var/run/pdns_recursor.controlsocket", p.NewControlProtocol, acc)
 	}
 
 	for _, serverSocket := range p.UnixSockets {
-		if err := p.gatherServer(serverSocket, acc); err != nil {
+		if err := p.gatherServer(serverSocket, p.NewControlProtocol, acc); err != nil {
 			acc.AddError(err)
 		}
 	}
@@ -72,7 +76,7 @@ func (p *PowerdnsRecursor) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator) error {
+func (p *PowerdnsRecursor) gatherServer(address string, newProtocol bool, acc telegraf.Accumulator) error {
 	randomNumber := rand.Int63()
 	recvSocket := filepath.Join("/", "var", "run", fmt.Sprintf("pdns_recursor_telegraf%d", randomNumber))
 	if p.SocketDir != "" {
@@ -80,11 +84,15 @@ func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator
 	}
 
 	laddr, err := net.ResolveUnixAddr("unixgram", recvSocket)
+
 	if err != nil {
 		return err
 	}
+
 	defer os.Remove(recvSocket)
+
 	raddr, err := net.ResolveUnixAddr("unixgram", address)
+
 	if err != nil {
 		return err
 	}
@@ -101,20 +109,43 @@ func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator
 		return err
 	}
 
-	// Read and write buffer
-	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
+	if newProtocol {
+		// First send a 0 status code.
+		_, err = conn.Write([]byte{0, 0, 0, 0})
 
-	// Send command
-	if _, err := fmt.Fprint(rw, "get-all\n"); err != nil {
-		return err
-	}
-	if err := rw.Flush(); err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
-	// Read data
+	// Then send the get-all command.
+	command := "get-all\n"
+
+	if newProtocol {
+		command = "get-all"
+	}
+
+	_, err = conn.Write([]byte(command))
+
+	if err != nil {
+		return err
+	}
+
+	if newProtocol {
+		// Read the response status code.
+		status := make([]byte, 4)
+		n, err := conn.Read(status)
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return errors.New("no status code received")
+		}
+	}
+
+	// Read the response data.
 	buf := make([]byte, 16384)
-	n, err := rw.Read(buf)
+	n, err := conn.Read(buf)
 	if err != nil {
 		return err
 	}
