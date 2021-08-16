@@ -238,7 +238,7 @@ func TestNewPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 			if string(data) == "get-all" {
 				// Ignore the returned error as we need to close the socket anyway
 				//nolint:errcheck,revive
-				socket.WriteToUnix([]byte{ 0, 0, 0, 0 }, remote)
+				socket.WriteToUnix([]byte{0, 0, 0, 0}, remote)
 				socket.WriteToUnix([]byte(metrics), remote)
 				// Ignore the returned error as we cannot do anything about it anyway
 				//nolint:errcheck,revive
@@ -250,9 +250,9 @@ func TestNewPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	}()
 
 	p := &PowerdnsRecursor{
-		UnixSockets: []string{controlSocket},
-		SocketDir:   "/tmp",
-		SocketMode:  "0666",
+		UnixSockets:        []string{controlSocket},
+		SocketDir:          "/tmp",
+		SocketMode:         "0666",
 		NewControlProtocol: true,
 	}
 	require.NoError(t, p.Init())

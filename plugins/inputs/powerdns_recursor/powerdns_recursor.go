@@ -17,10 +17,10 @@ import (
 )
 
 type PowerdnsRecursor struct {
-	UnixSockets []string `toml:"unix_sockets"`
-	SocketDir   string   `toml:"socket_dir"`
-	SocketMode  string   `toml:"socket_mode"`
-	NewControlProtocol bool `toml:"new_control_protocol"`
+	UnixSockets        []string `toml:"unix_sockets"`
+	SocketDir          string   `toml:"socket_dir"`
+	SocketMode         string   `toml:"socket_mode"`
+	NewControlProtocol bool     `toml:"new_control_protocol"`
 
 	mode uint32
 }
