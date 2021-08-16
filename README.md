@@ -383,7 +383,7 @@ For documentation on the latest development code see the [documentation index][d
 - [Graphite](/plugins/parsers/graphite)
 - [Grok](/plugins/parsers/grok)
 - [JSON](/plugins/parsers/json)
-- [JSON v2)(/plugins/parsers/json_v2)
+- [JSON v2](/plugins/parsers/json_v2)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
 - [Prometheus](/plugins/parsers/prometheus)
