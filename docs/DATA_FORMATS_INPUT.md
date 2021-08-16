@@ -12,6 +12,7 @@ Protocol or in JSON format.
 - [Grok](/plugins/parsers/grok)
 - [InfluxDB Line Protocol](/plugins/parsers/influx)
 - [JSON](/plugins/parsers/json)
+- [JSON v2](/plugins/parsers/json_v2)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
 - [Prometheus](/plugins/parsers/prometheus)
