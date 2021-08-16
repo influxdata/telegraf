@@ -18,7 +18,7 @@ Protocol or in JSON format.
 - [PrometheusRemoteWrite](/plugins/parsers/prometheusremotewrite)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
 - [Wavefront](/plugins/parsers/wavefront)
-- [XML](/plugins/parsers/xml)
+- [XPath](/plugins/parsers/xpath) (supports XML, JSON, MessagePack, Protocol Buffers)
 
 Any input plugin containing the `data_format` option can use it to select the
 desired parser:
