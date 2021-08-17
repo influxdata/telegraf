@@ -3,7 +3,7 @@
 set -eux
 
 GO_ARCH="darwin-amd64"
-GO_VERSION="1.17.0"
+GO_VERSION="1.17"
 GO_VERSION_SHA="355bd544ce08d7d484d9d7de05a71b5c6f5bc10aa4b316688c2192aeb3dacfd1" # from https://golang.org/dl
 
 # This path is cachable. (Saving in /usr/local/ would cause issues restoring the cache.)
