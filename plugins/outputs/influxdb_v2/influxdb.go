@@ -219,12 +219,6 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, u *url.URL, proxy *url.URL
 		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", u, err)
 	}
 
-	if i.CreateBuckets {
-		if err := c.CreateBucket(ctx, c.Bucket); err != nil {
-			i.Log.Warnf("When writing to [%s]: bucket %q creation failed: %v", c.URL(), c.Bucket, err)
-		}
-	}
-
 	return c, nil
 }
 
