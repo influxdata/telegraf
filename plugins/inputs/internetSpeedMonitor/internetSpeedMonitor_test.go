@@ -20,7 +20,6 @@ func TestInternetConfiguration(t *testing.T) {
 	assert.Equal(t, speedMonitor.Measurement, "internet_speed")
 	assert.Equal(t, speedMonitor.EnableFileDownload, false)
 	assert.Equal(t, speedMonitor.Description(), "Monitors internet speed in the network")
-
 }
 
 func TestGathering(t *testing.T) {

@@ -22,29 +22,38 @@ type InternetSpeedMonitor struct {
 func testInternetSpeed(c chan InternetSpeedMonitor, enableFileDownload bool, logger telegraf.Logger) {
 	delimeter := 1000.00
 
-	user, error := speedtest.FetchUserInfo()
-	if error != nil {
-		c <- InternetSpeedMonitor{Error: error}
+	user, err := speedtest.FetchUserInfo()
+	if err != nil {
+		c <- InternetSpeedMonitor{Error: err}
 	}
-	serverList, error := speedtest.FetchServerList(user)
-	if error != nil {
-		c <- InternetSpeedMonitor{Error: error}
+	serverList, err := speedtest.FetchServerList(user)
+	if err != nil {
+		c <- InternetSpeedMonitor{Error: err}
 	}
-	targets, error := serverList.FindServer([]int{})
+	targets, err := serverList.FindServer([]int{})
 
-	if error != nil {
-		c <- InternetSpeedMonitor{Error: error}
+	if err != nil {
+		c <- InternetSpeedMonitor{Error: err}
 	}
 
 	s := targets[0]
 
 	logger.Info("Starting test...")
 	logger.Info("Running Ping...")
-	s.PingTest()
+	err = s.PingTest()
+	if err != nil {
+		c <- InternetSpeedMonitor{Error: err}
+	}
 	logger.Info("Running Download...")
-	s.DownloadTest(enableFileDownload)
+	err = s.DownloadTest(enableFileDownload)
+	if err != nil {
+		c <- InternetSpeedMonitor{Error: err}
+	}
 	logger.Info("Running Upload...")
-	s.UploadTest(enableFileDownload)
+	err = s.UploadTest(enableFileDownload)
+	if err != nil {
+		c <- InternetSpeedMonitor{Error: err}
+	}
 	logger.Info("Test finished.")
 
 	c <- InternetSpeedMonitor{Data: SpeedData{
@@ -52,5 +61,4 @@ func testInternetSpeed(c chan InternetSpeedMonitor, enableFileDownload bool, log
 		Download: (math.Round(s.DLSpeed*delimeter) / delimeter),
 		Upload:   (math.Round(s.ULSpeed*delimeter) / delimeter),
 	}}
-
 }

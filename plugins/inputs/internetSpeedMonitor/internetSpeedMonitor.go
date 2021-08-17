@@ -40,7 +40,6 @@ func (speedMonitor *SpeedMonitor) SampleConfig() string {
 }
 
 func (speedMonitor *SpeedMonitor) Gather(acc telegraf.Accumulator) error {
-
 	enableFileDownload := speedMonitor.EnableFileDownload
 	measurement := speedMonitor.Measurement
 	log := speedMonitor.Log
@@ -48,9 +47,7 @@ func (speedMonitor *SpeedMonitor) Gather(acc telegraf.Accumulator) error {
 	go testInternetSpeed(c, enableFileDownload, log)
 	results := <-c
 
-	if results.Error != nil {
-		return results.Error
-	} else {
+	if results.Error == nil {
 		fields := make(map[string]interface{})
 		fields["download"] = results.Data.Download
 		fields["upload"] = results.Data.Upload
@@ -61,6 +58,7 @@ func (speedMonitor *SpeedMonitor) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields(measurement, fields, tags)
 		return nil
 	}
+	return results.Error
 }
 func init() {
 	inputs.Add("internetSpeedMonitor", func() telegraf.Input {
