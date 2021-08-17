@@ -100,6 +100,14 @@ var (
 					Key:   "int64_two",
 					Value: int64(2345),
 				},
+				{
+					Key:   "bool_one",
+					Value: true,
+				},
+				{
+					Key:   "bool_two",
+					Value: false,
+				},
 			},
 			ts,
 		),
