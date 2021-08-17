@@ -4,16 +4,16 @@ orbs:
   aws-cli: circleci/aws-cli@1.4.0
 
 executors:
-  go-1_15:
-    working_directory: '/go/src/github.com/influxdata/telegraf'
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.15.8'
-    environment:
-      GOFLAGS: -p=8
   go-1_16:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.16.6'
+      - image: 'quay.io/influxdb/telegraf-ci:1.16.7'
+    environment:
+      GOFLAGS: -p=8
+  go-1_17:
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.17.0'
     environment:
       GOFLAGS: -p=8
   mac:
@@ -150,7 +150,7 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt-windows
-      - run: choco upgrade golang --version=1.16.6
+      - run: choco upgrade golang --version=1.17.0
       - run: choco install make
       - run: git config --system core.longpaths true
       - run: make test-windows
