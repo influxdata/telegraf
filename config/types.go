@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -85,4 +86,35 @@ func (s *Size) UnmarshalTOML(b []byte) error {
 
 func (s *Size) UnmarshalText(text []byte) error {
 	return s.UnmarshalTOML(text)
+}
+
+func (s *Size) MarshalText() []byte {
+	if s == nil {
+		return []byte{}
+	}
+	v := *s
+	if v == 0 {
+		return []byte("0")
+	}
+	if v%1024 > 0 {
+		return []byte(fmt.Sprintf("%dB", v))
+	}
+	v = v / 1024
+	if v%1024 > 0 {
+		return []byte(fmt.Sprintf("%dKiB", v))
+	}
+	v = v / 1024
+	if v%1024 > 0 {
+		return []byte(fmt.Sprintf("%dMiB", v))
+	}
+	v = v / 1024
+	if v%1024 > 0 {
+		return []byte(fmt.Sprintf("%dGiB", v))
+	}
+	v = v / 1024
+	if v%1024 > 0 {
+		return []byte(fmt.Sprintf("%dTiB", v))
+	}
+	v = v / 1024
+	return []byte(fmt.Sprintf("%dPiB", v))
 }

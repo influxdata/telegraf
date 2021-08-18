@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -331,12 +332,12 @@ func TestSetFieldConfig(t *testing.T) {
 
 func TestExampleWorstPlugin(t *testing.T) {
 	input := map[string]interface{}{
-		"elapsed":     "3s",
-		"elapsed2":    "4s",
-		"readtimeout": "5s",
-		"size1":       "8MiB",
-		"size2":       "9MiB",
-		"pointerstruct": map[string]interface{}{
+		"elapsed":      "3s",
+		"elapsed2":     "4s",
+		"read_timeout": "5s",
+		"size1":        "8MiB",
+		"size2":        "9MiB",
+		"pointer_struct": map[string]interface{}{
 			"field": "f",
 		},
 		"b":   true,
@@ -358,10 +359,10 @@ func TestExampleWorstPlugin(t *testing.T) {
 			"field2": 1,
 			"field3": float64(5),
 		},
-		"reservedkeys": map[string]bool{
+		"reserved_keys": map[string]bool{
 			"key": true,
 		},
-		"stringtonumber": map[string][]map[string]float64{
+		"string_to_number": map[string][]map[string]float64{
 			"s": {
 				{
 					"n": 1.0,
@@ -379,7 +380,7 @@ func TestExampleWorstPlugin(t *testing.T) {
 			},
 		},
 		"value": "string",
-		"devicetags": map[string][]map[string]string{
+		"device_tags": map[string][]map[string]string{
 			"s": {
 				{
 					"n": "1.0",
@@ -389,10 +390,10 @@ func TestExampleWorstPlugin(t *testing.T) {
 		"percentiles": []interface{}{
 			1,
 		},
-		"floatpercentiles": []interface{}{
+		"float_percentiles": []interface{}{
 			1.0,
 		},
-		"mapofstructs": map[string]interface{}{
+		"map_of_structs": map[string]interface{}{
 			"src": map[string]interface{}{
 				"dest": "d",
 			},
@@ -402,7 +403,7 @@ func TestExampleWorstPlugin(t *testing.T) {
 			1,
 			2.0,
 		},
-		"tagslice": []interface{}{
+		"tag_slice": []interface{}{
 			[]interface{}{
 				"s",
 			},
@@ -531,4 +532,176 @@ type baseopts struct {
 
 func intptr(i int) *int {
 	return &i
+}
+
+func TestGetFieldConfigValues(t *testing.T) {
+	readTimeout := config.Duration(5 * time.Second)
+	b := true
+	i := 1
+	f := float64(6)
+	s := "I am a string pointer"
+	header := http.Header{
+		"Content-Type": []string{"json/application", "text/html"},
+	}
+	input := ExampleWorstPlugin{
+		Elapsed:       config.Duration(3 * time.Second),
+		Elapsed2:      config.Duration(4 * time.Second),
+		ReadTimeout:   &readTimeout,
+		Size1:         config.Size(8 * 1024 * 1024),
+		Size2:         config.Size(9 * 1024 * 1024),
+		PointerStruct: &baseopts{Field: "f"},
+		B:             &b,
+		I:             &i,
+		I8:            2,
+		I32:           3,
+		U8:            4,
+		F:             5,
+		PF:            &f,
+		PS:            &s,
+		Header:        header,
+		DefaultFieldsSets: map[string]interface{}{
+			"field1": "field1",
+			"field2": 1,
+			"field3": float64(5),
+		},
+		ReservedKeys: map[string]bool{
+			"key": true,
+		},
+		StringToNumber: map[string][]map[string]float64{
+			"s": {
+				{
+					"n": 1.0,
+				},
+			},
+		},
+		Clean: []baseopts{
+			{Field: "fieldtest"},
+		},
+		Templates: []*baseopts{
+			{Tag: "tagtest"},
+		},
+		Value: "string",
+		DeviceTags: map[string][]map[string]string{
+			"s": {
+				{
+					"n": "1.0",
+				},
+			},
+		},
+		Percentiles: []int64{
+			1,
+		},
+		FloatPercentiles: []float64{1.0},
+		MapOfStructs: map[string]baseopts{
+			"src": {
+				Dest: "d",
+			},
+		},
+		Command: []interface{}{
+			"string",
+			1,
+			2.0,
+		},
+		TagSlice: [][]string{
+			{"s"},
+		},
+		Address: []uint16{
+			1,
+		},
+	}
+	expected := map[string]interface{}{
+		"elapsed":      "3s",
+		"elapsed2":     "4s",
+		"read_timeout": "5s",
+		"size1":        "8MiB",
+		"size2":        "9MiB",
+		"pointer_struct": map[string]interface{}{
+			"field": "f",
+			"dest":  "",
+			"tag":   "",
+		},
+		"b":   true,
+		"i":   1,
+		"i8":  2,
+		"i32": 3,
+		"u8":  4,
+		"f":   5.0,
+		"pf":  6.0,
+		"ps":  "I am a string pointer",
+		// type Header map[string][]string
+		"header": map[string]interface{}{
+			"Content-Type": []interface{}{
+				"json/application", "text/html",
+			},
+		},
+		"fields": map[string]interface{}{
+			"field1": "field1",
+			"field2": 1,
+			"field3": float64(5),
+		},
+		"reserved_keys": map[string]bool{
+			"key": true,
+		},
+		"string_to_number": map[string][]map[string]float64{
+			"s": {
+				{
+					"n": 1.0,
+				},
+			},
+		},
+		"clean": []map[string]interface{}{
+			{
+				"field": "fieldtest",
+				"dest":  "",
+				"tag":   "",
+			},
+		},
+		"templates": []map[string]interface{}{
+			{
+				"tag":   "tagtest",
+				"dest":  "",
+				"field": "",
+			},
+		},
+		"value": "string",
+		"device_tags": map[string][]map[string]string{
+			"s": {
+				{
+					"n": "1.0",
+				},
+			},
+		},
+		"percentiles": []interface{}{
+			1,
+		},
+		"float_percentiles": []interface{}{
+			1.0,
+		},
+		"map_of_structs": map[string]interface{}{
+			"src": map[string]interface{}{
+				"dest":  "d",
+				"field": "",
+				"tag":   "",
+			},
+		},
+		"command": []interface{}{
+			"string",
+			1,
+			2.0,
+		},
+		"tag_slice": []interface{}{
+			[]interface{}{
+				"s",
+			},
+		},
+		"address": []interface{}{
+			1,
+		},
+	}
+	actual := map[string]interface{}{}
+	getFieldConfigValuesFromStruct(input, actual)
+	// require.Equal(t, expected, actual)
+	expJson, _ := json.Marshal(expected)
+	actualJson, _ := json.Marshal(actual)
+	require.Equal(t, string(expJson), string(actualJson))
 }

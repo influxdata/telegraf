@@ -2,11 +2,11 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log" // nolint:revive
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -188,8 +188,8 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 			Name:   v.LogName(),
 			Config: map[string]interface{}{},
 		}
-		getFieldConfigValues(v.Config, p.Config)
-		getFieldConfigValues(v.Input, p.Config)
+		getFieldConfigValuesFromStruct(v.Config, p.Config)
+		getFieldConfigValuesFromStruct(v.Input, p.Config)
 		runningPlugins = append(runningPlugins, p)
 	}
 	for _, v := range a.agent.RunningProcessors() {
@@ -203,12 +203,12 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 			val = val.Elem()
 		}
 		pluginCfg := val.FieldByName("Config").Interface()
-		getFieldConfigValues(pluginCfg, p.Config)
+		getFieldConfigValuesFromStruct(pluginCfg, p.Config)
 		if proc := val.FieldByName("Processor"); proc.IsValid() && !proc.IsNil() {
-			getFieldConfigValues(proc.Interface(), p.Config)
+			getFieldConfigValuesFromStruct(proc.Interface(), p.Config)
 		}
 		if agg := val.FieldByName("Aggregator"); agg.IsValid() && !agg.IsNil() {
-			getFieldConfigValues(agg.Interface(), p.Config)
+			getFieldConfigValuesFromStruct(agg.Interface(), p.Config)
 		}
 		runningPlugins = append(runningPlugins, p)
 	}
@@ -218,8 +218,8 @@ func (a *api) ListRunningPlugins() (runningPlugins []Plugin) {
 			Name:   v.LogName(),
 			Config: map[string]interface{}{},
 		}
-		getFieldConfigValues(v.Config, p.Config)
-		getFieldConfigValues(v.Output, p.Config)
+		getFieldConfigValuesFromStruct(v.Config, p.Config)
+		getFieldConfigValuesFromStruct(v.Output, p.Config)
 		runningPlugins = append(runningPlugins, p)
 	}
 
@@ -261,13 +261,13 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 		// add an input
 		input, ok := inputs.Inputs[name]
 		if !ok {
-			return "", fmt.Errorf("Error finding plugin with name %s", name)
+			return "", fmt.Errorf("%w: finding plugin with name %s", ErrNotFound, name)
 		}
 		// create a copy
 		i := input()
 		// set the config
 		if err := setFieldConfig(cfg.Config, i); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 		}
 
 		// get parser!
@@ -278,11 +278,11 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 				DataFormat: "influx",
 			}
 			if err := setFieldConfig(cfg.Config, pc); err != nil {
-				return "", err
+				return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 			}
 			parser, err := parsers.NewParser(pc)
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("%w: setting parser %s", ErrBadRequest, err)
 			}
 			t.SetParser(parser)
 		}
@@ -294,7 +294,7 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 				DataFormat: "influx",
 			}
 			if err := setFieldConfig(cfg.Config, pc); err != nil {
-				return "", err
+				return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 			}
 
 			t.SetParserFunc(func() (parsers.Parser, error) {
@@ -305,11 +305,11 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 		// start it and put it into the agent manager?
 		pluginConfig := &models.InputConfig{Name: name}
 		if err := setFieldConfig(cfg.Config, pluginConfig); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 		}
 
 		if err := setFieldConfig(cfg.Config, &pluginConfig.Filter); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 		}
 
 		rp := models.NewRunningInput(i, pluginConfig)
@@ -319,7 +319,7 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 		rp.SetDefaultTags(a.config.Tags)
 
 		if err := rp.Init(); err != nil {
-			return "", fmt.Errorf("could not initialize plugin %w", err)
+			return "", fmt.Errorf("%w: could not initialize plugin %s", ErrBadRequest, err)
 		}
 
 		a.agent.AddInput(rp)
@@ -331,22 +331,22 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 		// add an output
 		output, ok := outputs.Outputs[name]
 		if !ok {
-			return "", fmt.Errorf("Error finding plugin with name %s", name)
+			return "", fmt.Errorf("%w: Error finding plugin with name %s", ErrNotFound, name)
 		}
 		// create a copy
 		o := output()
 		// set the config
 		if err := setFieldConfig(cfg.Config, o); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 		}
 		// start it and put it into the agent manager?
 		pluginConfig := &models.OutputConfig{Name: name}
 		if err := setFieldConfig(cfg.Config, pluginConfig); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 		}
 
 		if err := setFieldConfig(cfg.Config, &pluginConfig.Filter); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 		}
 
 		if t, ok := o.(serializers.SerializerOutput); ok {
@@ -355,11 +355,11 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 				DataFormat:     "influx",
 			}
 			if err := setFieldConfig(cfg.Config, sc); err != nil {
-				return "", err
+				return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 			}
 			serializer, err := serializers.NewSerializer(sc)
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("%w: setting serializer %s", ErrBadRequest, err)
 			}
 			t.SetSerializer(serializer)
 		}
@@ -367,7 +367,7 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 		ro := models.NewRunningOutput(o, pluginConfig, a.config.Agent.MetricBatchSize, a.config.Agent.MetricBufferLimit)
 
 		if err := ro.Init(); err != nil {
-			return "", fmt.Errorf("could not initialize plugin %w", err)
+			return "", fmt.Errorf("%w: could not initialize plugin %s", ErrBadRequest, err)
 		}
 
 		a.agent.AddOutput(ro)
@@ -378,13 +378,13 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 	case "aggregators":
 		aggregator, ok := aggregators.Aggregators[name]
 		if !ok {
-			return "", fmt.Errorf("Error finding aggregator plugin with name %s", name)
+			return "", fmt.Errorf("%w: Error finding aggregator plugin with name %s", ErrNotFound, name)
 		}
 		agg := aggregator()
 
 		// set the config
 		if err := setFieldConfig(cfg.Config, agg); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field", ErrBadRequest)
 		}
 		aggCfg := &models.AggregatorConfig{
 			Name:   name,
@@ -393,16 +393,16 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 			Grace:  time.Second * 0,
 		}
 		if err := setFieldConfig(cfg.Config, aggCfg); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field", ErrBadRequest)
 		}
 
 		if err := setFieldConfig(cfg.Config, &aggCfg.Filter); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field", ErrBadRequest)
 		}
 
 		ra := models.NewRunningAggregator(agg, aggCfg)
 		if err := ra.Init(); err != nil {
-			return "", fmt.Errorf("could not initialize plugin %w", err)
+			return "", fmt.Errorf("%w: could not initialize plugin %s", ErrBadRequest, err)
 		}
 		a.agent.AddProcessor(ra)
 		go a.agent.RunProcessor(ra)
@@ -412,7 +412,7 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 	case "processors":
 		processor, ok := processors.Processors[name]
 		if !ok {
-			return "", fmt.Errorf("Error finding processor plugin with name %s", name)
+			return "", fmt.Errorf("%w: Error finding processor plugin with name %s", ErrNotFound, name)
 		}
 		// create a copy
 		p := processor()
@@ -422,21 +422,21 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 		}
 		// set the config
 		if err := setFieldConfig(cfg.Config, rootp); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field", ErrBadRequest)
 		}
 		// start it and put it into the agent manager?
 		pluginConfig := &models.ProcessorConfig{Name: name}
 		if err := setFieldConfig(cfg.Config, pluginConfig); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field", ErrBadRequest)
 		}
 		if err := setFieldConfig(cfg.Config, &pluginConfig.Filter); err != nil {
-			return "", err
+			return "", fmt.Errorf("%w: setting field", ErrBadRequest)
 		}
 
 		rp := models.NewRunningProcessor(p, pluginConfig)
 
 		if err := rp.Init(); err != nil {
-			return "", fmt.Errorf("could not initialize plugin %w", err)
+			return "", fmt.Errorf("%w: could not initialize plugin %s", ErrBadRequest, err)
 		}
 
 		a.agent.AddProcessor(rp)
@@ -445,7 +445,7 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 
 		return idToString(rp.ID), nil
 	default:
-		return "", errors.New("Unknown plugin type")
+		return "", fmt.Errorf("%w: Unknown plugin type", ErrNotFound)
 	}
 }
 
@@ -490,7 +490,7 @@ func (a *api) DeletePlugin(id models.PluginID) error {
 			return nil
 		}
 	}
-	return nil
+	return ErrNotFound
 }
 
 // func (a *API) PausePlugin(id models.PluginID) {
@@ -556,10 +556,11 @@ func getFieldByName(destStruct reflect.Value, fieldName string) (reflect.Value, 
 		if fieldType.Tag.Get("toml") == fieldName {
 			return field, fieldType.Type
 		}
-		if strings.ToLower(fieldType.Name) == fieldName && unicode.IsUpper(rune(fieldType.Name[0])) {
-			return field, fieldType.Type
+		if name, ok := toSnakeCase(fieldType.Name, fieldType); ok {
+			if name == fieldName && isExported(fieldType) {
+				return field, fieldType.Type
+			}
 		}
-		// handle snake string case conversion
 	}
 	return reflect.ValueOf(nil), reflect.TypeOf(nil)
 }
@@ -612,12 +613,12 @@ func getFieldConfig(p interface{}, cfg map[string]FieldConfig) {
 		// if this field is a struct, get the structure of it.
 		if ftType.Kind() == reflect.Struct && !isInternalStructFieldType(ft.Type) {
 			if ft.Anonymous { // embedded
-				t := getSubTypeType(ft)
+				t := getSubTypeType(ft.Type)
 				i := reflect.New(t)
 				getFieldConfig(i.Interface(), cfg)
 			} else {
 				subCfg := map[string]FieldConfig{}
-				t := getSubTypeType(ft)
+				t := getSubTypeType(ft.Type)
 				i := reflect.New(t)
 				getFieldConfig(i.Interface(), subCfg)
 				cfg[ft.Name] = FieldConfig{
@@ -650,7 +651,7 @@ func getFieldConfig(p interface{}, cfg map[string]FieldConfig) {
 
 		// if we found a slice of objects, get the structure of that object
 		if hasSubType(ft.Type) {
-			t := getSubTypeType(ft)
+			t := getSubTypeType(ft.Type)
 			n := t.Name()
 			_ = n
 			fc.SubType = getFieldType(t)
@@ -668,9 +669,157 @@ func getFieldConfig(p interface{}, cfg map[string]FieldConfig) {
 	}
 }
 
-func getFieldConfigValues(p interface{}, cfg map[string]interface{}) {
-	b, _ := json.Marshal(p)
-	_ = json.Unmarshal(b, &cfg)
+// getFieldConfigValuesFromStruct takes a struct and populates a map.
+func getFieldConfigValuesFromStruct(p interface{}, cfg map[string]interface{}) {
+	structVal := reflect.ValueOf(p)
+	structType := structVal.Type()
+	if structVal.IsZero() {
+		return
+	}
+
+	for structType.Kind() == reflect.Ptr {
+		structVal = structVal.Elem()
+		structType = structType.Elem()
+	}
+
+	// safety check.
+	if structType.Kind() != reflect.Struct {
+		// woah, what?
+		panic(fmt.Sprintf("getFieldConfigValues expected a struct type, but got %v %v", p, structType.String()))
+	}
+
+	for i := 0; i < structType.NumField(); i++ {
+		f := structVal.Field(i)
+		ft := structType.Field(i)
+
+		if !isExported(ft) {
+			continue
+		}
+		if ft.Name == "Log" {
+			continue
+		}
+		ftType := ft.Type
+		if ftType.Kind() == reflect.Ptr {
+			ftType = ftType.Elem()
+			f = f.Elem()
+		}
+		// if struct call self recursively
+		// if it's composed call self recursively
+		if name, ok := toSnakeCase(ft.Name, ft); ok {
+			setMapKey(cfg, name, f)
+		}
+	}
+}
+
+func getFieldConfigValuesFromValue(val reflect.Value) interface{} {
+	typ := val.Type()
+	// typ may be a pointer to a type
+	if typ.Kind() == reflect.Ptr {
+		val = val.Elem()
+		typ = val.Type()
+	}
+
+	switch typ.Kind() {
+	case reflect.Slice:
+		return getFieldConfigValuesFromSlice(val)
+	case reflect.Struct:
+		m := map[string]interface{}{}
+		getFieldConfigValuesFromStruct(val.Interface(), m)
+		return m
+	case reflect.Map:
+		return getFieldConfigValuesFromMap(val)
+	case reflect.Bool:
+		return val.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
+		return val.Int()
+	case reflect.Int64:
+		// special case for config.Duration, time.Duration etc.
+		switch typ.String() {
+		case "time.Duration", "config.Duration":
+			return time.Duration(val.Int()).String()
+		case "config.Size":
+			sz := config.Size(val.Int())
+			return string((&sz).MarshalText())
+		}
+		return val.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return val.Uint()
+	case reflect.Float32, reflect.Float64:
+		return val.Float()
+	case reflect.Interface:
+		return val.Interface() // do we bother to decode this?
+	case reflect.Ptr:
+		return getFieldConfigValuesFromValue(val.Elem())
+	case reflect.String:
+		return val.String()
+	default:
+		return val.Interface() // log that we missed the type?
+	}
+}
+
+func getFieldConfigValuesFromMap(f reflect.Value) map[string]interface{} {
+	obj := map[string]interface{}{}
+	iter := f.MapRange()
+	for iter.Next() {
+		setMapKey(obj, iter.Key().String(), iter.Value())
+	}
+	return obj
+}
+
+func getFieldConfigValuesFromSlice(val reflect.Value) []interface{} {
+	s := []interface{}{}
+	for i := 0; i < val.Len(); i++ {
+		s = append(s, getFieldConfigValuesFromValue(val.Index(i)))
+	}
+	return s
+}
+
+func setMapKey(obj map[string]interface{}, key string, v reflect.Value) {
+	v = reflect.ValueOf(getFieldConfigValuesFromValue(v))
+	switch v.Kind() {
+	case reflect.Bool:
+		obj[key] = v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		obj[key] = v.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		obj[key] = v.Uint()
+	case reflect.Float32, reflect.Float64:
+		obj[key] = v.Float()
+	case reflect.Interface:
+		obj[key] = v.Interface()
+	case reflect.Map:
+		obj[key] = v.Interface().(map[string]interface{})
+	case reflect.Ptr:
+		setMapKey(obj, key, v.Elem())
+	case reflect.Slice:
+		obj[key] = v.Interface()
+	case reflect.String:
+		obj[key] = v.String()
+	case reflect.Struct:
+		obj[key] = v.Interface()
+	default:
+		// obj[key] = v.Interface()
+		panic("unhandled type " + v.Type().String() + " for field " + key)
+	}
+}
+
+func isExported(ft reflect.StructField) bool {
+	return unicode.IsUpper(rune(ft.Name[0]))
+}
+
+var matchFirstCapital = regexp.MustCompile("(.)([A-Z][a-z]+)")
+var matchAllCapitals = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+func toSnakeCase(str string, sf reflect.StructField) (result string, ok bool) {
+	if toml, ok := sf.Tag.Lookup("toml"); ok {
+		if toml == "-" {
+			return "", false
+		}
+		return toml, true
+	}
+	snakeStr := matchFirstCapital.ReplaceAllString(str, "${1}_${2}")
+	snakeStr = matchAllCapitals.ReplaceAllString(snakeStr, "${1}_${2}")
+	return strings.ToLower(snakeStr), true
 }
 
 func setObject(from, to reflect.Value, destType reflect.Type) error {
@@ -918,28 +1067,27 @@ func hasSubType(t reflect.Type) bool {
 //   []string => string
 //   map[string]int => int
 //   User => User
-func getSubTypeType(structField reflect.StructField) reflect.Type {
-	ft := structField.Type
-	if ft.Kind() == reflect.Ptr {
-		ft = ft.Elem()
+func getSubTypeType(typ reflect.Type) reflect.Type {
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
 	}
-	switch ft.Kind() {
+	switch typ.Kind() {
 	case reflect.Slice:
-		t := ft.Elem()
+		t := typ.Elem()
 		if t.Kind() == reflect.Ptr {
 			t = t.Elem()
 		}
 		return t
 	case reflect.Map:
-		t := ft.Elem()
+		t := typ.Elem()
 		if t.Kind() == reflect.Ptr {
 			t = t.Elem()
 		}
 		return t
 	case reflect.Struct:
-		return ft
+		return typ
 	}
-	panic(ft.String() + " is not a type that has subtype information (map, slice, struct)")
+	panic(typ.String() + " is not a type that has subtype information (map, slice, struct)")
 }
 
 // getFieldType translates reflect.Types to our API field types.

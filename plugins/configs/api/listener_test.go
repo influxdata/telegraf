@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -120,6 +121,7 @@ func TestStopPlugin(t *testing.T) {
 
 	s := &ConfigAPIService{
 		api: api,
+		Log: testutil.Logger{},
 	}
 	srv := httptest.NewServer(s.mux())
 
@@ -192,7 +194,53 @@ func TestStopPlugin(t *testing.T) {
 	require.NoError(t, err)
 	_ = resp.Body.Close()
 
-	// still expect 200 response
-	require.EqualValues(t, 200, resp.StatusCode)
+	require.EqualValues(t, 404, resp.StatusCode)
+	require.NoError(t, err)
+}
+
+func TestStatusCodes(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	outputCtx, outputCancel := context.WithCancel(context.Background())
+	defer outputCancel()
+
+	c := config.NewConfig()
+	a := agent.NewAgent(ctx, c)
+	api := newAPI(ctx, outputCtx, c, a)
+	go a.RunWithAPI(outputCancel)
+
+	s := &ConfigAPIService{
+		api: api,
+		Log: testutil.Logger{},
+	}
+	srv := httptest.NewServer(s.mux())
+
+	// Error finding plugin with wrong name
+	buf := bytes.NewBufferString(`{
+			"name": "inputs.blah",
+			"config": {
+				"files": ["testdata.lp"],
+				"data_format": "influx"
+			}
+	}`)
+	resp, err := http.Post(srv.URL+"/plugins/create", "application/json", buf)
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+	require.EqualValues(t, 404, resp.StatusCode)
+	require.NoError(t, err)
+
+	// Error creating plugin with wrong data format
+	buf = bytes.NewBufferString(`{
+			"name": "inputs.file",
+			"config": {
+				"files": ["testdata.lp"],
+				"data_format": "blah"
+			}
+	}`)
+	resp, err = http.Post(srv.URL+"/plugins/create", "application/json", buf)
+	require.NoError(t, err)
+	_ = resp.Body.Close()
+	require.EqualValues(t, 400, resp.StatusCode)
 	require.NoError(t, err)
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log" // nolint:revive
 	"net/http"
@@ -11,6 +12,12 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
+)
+
+var (
+	ClientErr     = errors.New("error")
+	ErrBadRequest = fmt.Errorf("%w bad request", ClientErr)
+	ErrNotFound   = fmt.Errorf("%w not found", ClientErr)
 )
 
 type ConfigAPIService struct {
@@ -60,14 +67,12 @@ func (s *ConfigAPIService) createPlugin(w http.ResponseWriter, req *http.Request
 
 	dec := json.NewDecoder(req.Body)
 	if err := dec.Decode(&cfg); err != nil {
-		s.Log.Error("decode error %v", err)
-		w.WriteHeader(http.StatusBadRequest)
+		s.renderError(fmt.Errorf("%w: decode failed %v", ErrBadRequest, err), w)
 		return
 	}
 	id, err := s.api.CreatePlugin(cfg, "")
 	if err != nil {
-		s.Log.Error("error creating plugin %v", err)
-		w.WriteHeader(http.StatusBadRequest)
+		s.renderError(err, w)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -76,6 +81,20 @@ func (s *ConfigAPIService) createPlugin(w http.ResponseWriter, req *http.Request
 		log.Printf("W! error writing to connection: %v", err)
 		return
 	}
+}
+
+func (s *ConfigAPIService) renderError(err error, w http.ResponseWriter) {
+	if errors.Is(err, ErrBadRequest) {
+		s.Log.Error(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else if errors.Is(err, ErrNotFound) {
+		s.Log.Error(err)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	s.Log.Error(err)
+	w.WriteHeader(http.StatusInternalServerError)
 }
 
 func (s *ConfigAPIService) Start() {
@@ -90,8 +109,7 @@ func (s *ConfigAPIService) listPlugins(w http.ResponseWriter, req *http.Request)
 
 	bytes, err := json.Marshal(typeInfo)
 	if err != nil {
-		log.Printf("!E [configapi] error marshalling json: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		s.renderError(fmt.Errorf("marshal failed %w", err), w)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -108,8 +126,7 @@ func (s *ConfigAPIService) runningPlugins(w http.ResponseWriter, req *http.Reque
 
 	bytes, err := json.Marshal(plugins)
 	if err != nil {
-		log.Printf("!E [configapi] error marshalling json: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		s.renderError(fmt.Errorf("marshal failed %w", err), w)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -163,9 +180,7 @@ func (s *ConfigAPIService) deletePlugin(w http.ResponseWriter, req *http.Request
 		return
 	}
 	if err := s.api.DeletePlugin(models.PluginID(id)); err != nil {
-		s.Log.Error("error deleting plugin %v", err)
-		// TODO: improve error handling? Would like to see status based on error type
-		w.WriteHeader(http.StatusInternalServerError)
+		s.renderError(fmt.Errorf("delete plugin %w", err), w)
 	}
 	w.WriteHeader(http.StatusOK)
 }
