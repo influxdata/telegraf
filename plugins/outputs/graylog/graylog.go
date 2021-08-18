@@ -53,31 +53,31 @@ type gelfTCP struct {
 	gelfCommon
 }
 
-func newGelfWriter(config gelfConfig, dialer *net.Dialer) gelf {
-	if config.GraylogEndpoint == "" {
-		config.GraylogEndpoint = defaultGraylogEndpoint
+func newGelfWriter(cfg gelfConfig, dialer *net.Dialer) gelf {
+	if cfg.GraylogEndpoint == "" {
+		cfg.GraylogEndpoint = defaultGraylogEndpoint
 	}
 
-	if config.Connection == "" {
-		config.Connection = defaultConnection
+	if cfg.Connection == "" {
+		cfg.Connection = defaultConnection
 	}
 
-	if config.MaxChunkSizeWan == 0 {
-		config.MaxChunkSizeWan = defaultMaxChunkSizeWan
+	if cfg.MaxChunkSizeWan == 0 {
+		cfg.MaxChunkSizeWan = defaultMaxChunkSizeWan
 	}
 
-	if config.MaxChunkSizeLan == 0 {
-		config.MaxChunkSizeLan = defaultMaxChunkSizeLan
+	if cfg.MaxChunkSizeLan == 0 {
+		cfg.MaxChunkSizeLan = defaultMaxChunkSizeLan
 	}
 
 	scheme := defaultScheme
-	parts := strings.SplitN(config.GraylogEndpoint, "://", 2)
+	parts := strings.SplitN(cfg.GraylogEndpoint, "://", 2)
 	if len(parts) == 2 {
 		scheme = strings.ToLower(parts[0])
-		config.GraylogEndpoint = parts[1]
+		cfg.GraylogEndpoint = parts[1]
 	}
 	common := gelfCommon{
-		gelfConfig: config,
+		gelfConfig: cfg,
 		dialer:     dialer,
 	}
 
@@ -199,7 +199,7 @@ func (g *gelfUDP) send(b []byte) error {
 }
 
 func (g *gelfTCP) Write(message []byte) (n int, err error) {
-	err = g.write(message)
+	err = g.send(message)
 	if err != nil {
 		return 0, err
 	}
@@ -218,7 +218,7 @@ func (g *gelfTCP) Close() (err error) {
 	return err
 }
 
-func (g *gelfTCP) write(b []byte) error {
+func (g *gelfTCP) send(b []byte) error {
 	if g.conn == nil {
 		conn, err := g.dialer.Dial("tcp", g.gelfConfig.GraylogEndpoint)
 		if err != nil {
