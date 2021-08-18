@@ -47,7 +47,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.10.0
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/dimchansky/utfbom v1.1.1
-	github.com/docker/docker v20.10.6+incompatible
+	github.com/docker/docker v20.10.7+incompatible
 	github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.2.0
 	github.com/eclipse/paho.mqtt.golang v1.3.0
@@ -124,7 +124,7 @@ require (
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
-	github.com/testcontainers/testcontainers-go v0.11.0
+	github.com/testcontainers/testcontainers-go v0.11.1
 	github.com/tidwall/gjson v1.8.0
 	github.com/tinylib/msgp v1.1.5
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
