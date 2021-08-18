@@ -32,6 +32,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.8.0
 	github.com/aws/aws-sdk-go-v2/config v1.1.5
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.0.6
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
 	github.com/aws/smithy-go v1.7.0
 	github.com/benbjohnson/clock v1.0.3
