@@ -295,6 +295,12 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 			t.logWriteToTimestreamError(notFound, writeRecordsInput.TableName)
 		}
 
+		var rejected *types.RejectedRecordsException
+		if errors.As(err, &rejected) {
+			t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
+			return nil
+		}
+
 		var throttling *types.ThrottlingException
 		if errors.As(err, &throttling) {
 			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
