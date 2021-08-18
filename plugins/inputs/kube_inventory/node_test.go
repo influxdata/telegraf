@@ -16,7 +16,6 @@ import (
 func TestNode(t *testing.T) {
 	cli := &client{}
 	now := time.Now()
-	created := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-2, 1, 36, 0, now.Location())
 
 	tests := []struct {
 		name     string
@@ -30,6 +29,16 @@ func TestNode(t *testing.T) {
 				responseMap: map[string]interface{}{
 					"/nodes/": corev1.NodeList{},
 				},
+			},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					nodeMeasurement,
+					map[string]string{},
+					map[string]interface{}{
+						"count": int64(0),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -66,8 +75,7 @@ func TestNode(t *testing.T) {
 										"pods":                    resource.MustParse("110"),
 									},
 									Conditions: []corev1.NodeCondition{
-										{Type: "Ready", Status: "true", LastTransitionTime: metav1.Time{Time: now}},
-										{Type: "OutOfDisk", Status: "false", LastTransitionTime: metav1.Time{Time: created}},
+										{Type: "Ready", Status: "True", LastTransitionTime: metav1.Time{Time: now}},
 									},
 								},
 								Spec: corev1.NodeSpec{
@@ -87,11 +95,14 @@ func TestNode(t *testing.T) {
 								},
 								ObjectMeta: metav1.ObjectMeta{
 									Generation: 11232,
-									Namespace:  "ns1",
 									Name:       "node1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
+									},
+									Namespace: "ns1",
+									Annotations: map[string]string{
+										"cluster.x-k8s.io/cluster-namespace": "ns1",
 									},
 									CreationTimestamp: metav1.Time{Time: now},
 								},
@@ -105,6 +116,20 @@ func TestNode(t *testing.T) {
 					nodeMeasurement,
 					map[string]string{
 						"node_name": "node1",
+						"condition": "Ready",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					nodeMeasurement,
+					map[string]string{
+						"node_name":         "node1",
+						"cluster_namespace": "ns1",
 					},
 					map[string]interface{}{
 						"capacity_cpu_cores":         int64(16),
@@ -115,6 +140,7 @@ func TestNode(t *testing.T) {
 						"allocatable_millicpu_cores": int64(1000),
 						"allocatable_memory_bytes":   int64(1.28732676096e+11),
 						"allocatable_pods":           int64(110),
+						"spec_unschedulable":         int64(0),
 					},
 					time.Unix(0, 0),
 				),
@@ -141,6 +167,10 @@ func TestNode(t *testing.T) {
 		// No error case
 		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
 
+		if v.name == "no nodes" {
+			nodeCount := len((v.handler.responseMap["/nodes/"]).(corev1.NodeList).Items)
+			ks.gatherNodeCount(nodeCount, acc)
+		}
 		require.Len(t, acc.Metrics, len(v.output))
 		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}

@@ -12,6 +12,7 @@ This plugin generates metrics derived from the state of the following Kubernetes
 - pods (containers)
 - services
 - statefulsets
+- resourcequotas
 
 Kubernetes is a fast moving project, with a new minor release every 3 months. As
 such, we will aim to maintain support only for versions that are supported by
@@ -210,6 +211,9 @@ tls_key = "/run/telegraf-kubernetes-key"
 - kubernetes_node
   - tags:
     - node_name
+    - status
+    - condition
+    - cluster_namespace
   - fields:
     - capacity_cpu_cores
     - capacity_millicpu_cores
@@ -219,6 +223,9 @@ tls_key = "/run/telegraf-kubernetes-key"
     - allocatable_millicpu_cores
     - allocatable_memory_bytes
     - allocatable_pods
+    - status_condition
+    - spec_unschedulable
+    - count
 
 * kubernetes_persistentvolume
   - tags:
@@ -248,6 +255,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - phase
     - state
     - readiness
+    - condition
   - fields:
     - restarts_total
     - state_code
@@ -258,6 +266,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - resource_requests_memory_bytes
     - resource_limits_millicpu_units
     - resource_limits_memory_bytes
+    - status_condition
 
 - kubernetes_service
   - tags:
@@ -289,6 +298,18 @@ tls_key = "/run/telegraf-kubernetes-key"
     - spec_replicas
     - observed_generation
 
+* kubernetes_resourcequota
+  - tags:
+    - resource
+    - namespace
+  - fields:
+    - hard_cpu_cores_limit
+    - hard_memory_bytes_limit
+    - hard_pods_limit
+    - used_cpu_cores
+    - used_memory_bytes
+    - used_pods
+
 #### pv `phase_type`
 
 The persistentvolume "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
@@ -319,11 +340,17 @@ The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated 
 kubernetes_configmap,configmap_name=envoy-config,namespace=default,resource_version=56593031 created=1544103867000000000i 1547597616000000000
 kubernetes_daemonset,daemonset_name=telegraf,selector_select1=s1,namespace=logging number_unavailable=0i,desired_number_scheduled=11i,number_available=11i,number_misscheduled=8i,number_ready=11i,updated_number_scheduled=11i,created=1527758699000000000i,generation=16i,current_number_scheduled=11i 1547597616000000000
 kubernetes_deployment,deployment_name=deployd,selector_select1=s1,namespace=default replicas_unavailable=0i,created=1544103082000000000i,replicas_available=1i 1547597616000000000
-kubernetes_node,node_name=ip-172-17-0-2.internal allocatable_pods=110i,capacity_memory_bytes=128837533696,capacity_pods=110i,capacity_cpu_cores=16i,allocatable_cpu_cores=16i,allocatable_memory_bytes=128732676096 1547597616000000000
+kubernetes_node,host=vjain count=8i 1628918652000000000
+kubernetes_node,condition=Ready,host=vjain,node_name=ip-172-17-0-2.internal,status=True status_condition=1i 1629177980000000000
+kubernetes_node,cluster_namespace=tools,condition=Ready,host=vjain,node_name=ip-172-17-0-2.internal,status=True allocatable_cpu_cores=4i,allocatable_memory_bytes=7186567168i,allocatable_millicpu_cores=4000i,allocatable_pods=110i,capacity_cpu_cores=4i,capacity_memory_bytes=7291424768i,capacity_millicpu_cores=4000i,capacity_pods=110i,spec_unschedulable=0i,status_condition=1i 1628918652000000000
+kubernetes_resourcequota,host=vjain,namespace=default,resource=pods-high hard_cpu_cores=1000i,hard_memory_bytes=214748364800i,hard_pods=10i,used_cpu_cores=0i,used_memory_bytes=0i,used_pods=0i 1629110393000000000
+kubernetes_resourcequota,host=vjain,namespace=default,resource=pods-low hard_cpu_cores=5i,hard_memory_bytes=10737418240i,hard_pods=10i,used_cpu_cores=0i,used_memory_bytes=0i,used_pods=0i 1629110393000000000
+kubernetes_resourcequota,host=vjain,namespace=default,resource=pods-medium hard_cpu_cores=10i,hard_memory_bytes=21474836480i,hard_pods=10i,used_cpu_cores=0i,used_memory_bytes=0i,used_pods=0i 1629110393000000000
 kubernetes_persistentvolume,phase=Released,pv_name=pvc-aaaaaaaa-bbbb-cccc-1111-222222222222,storageclass=ebs-1-retain phase_type=3i 1547597616000000000
 kubernetes_persistentvolumeclaim,namespace=default,phase=Bound,pvc_name=data-etcd-0,selector_select1=s1,storageclass=ebs-1-retain phase_type=0i 1547597615000000000
 kubernetes_pod,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1 last_transition_time=1547578322000000000i,ready="false" 1547597616000000000
 kubernetes_service,cluster_ip=172.29.61.80,namespace=redis-cache-0001,port_name=redis,port_protocol=TCP,selector_app=myapp,selector_io.kompose.service=redis,selector_role=slave,service_name=redis-slave created=1588690034000000000i,generation=0i,port=6379i,target_port=0i 1547597616000000000
+kubernetes_pod_container,condition=Ready,host=vjain,pod_name=uefi-5997f76f69-xzljt,status=True status_condition=1i 1629177981000000000
 kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-2.internal,node_selector_node-role.kubernetes.io/compute=true,pod_name=tick1,phase=Running,state=running,readiness=ready resource_requests_cpu_units=0.1,resource_limits_memory_bytes=524288000,resource_limits_cpu_units=0.5,restarts_total=0i,state_code=0i,state_reason="",phase_reason="",resource_requests_memory_bytes=524288000 1547597616000000000
 kubernetes_statefulset,namespace=default,selector_select1=s1,statefulset_name=etcd replicas_updated=3i,spec_replicas=3i,observed_generation=1i,created=1544101669000000000i,generation=1i,replicas=3i,replicas_current=3i,replicas_ready=3i 1547597616000000000
 ```

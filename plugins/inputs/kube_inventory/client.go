@@ -103,3 +103,9 @@ func (c *client) getStatefulSets(ctx context.Context) (*appsv1.StatefulSetList, 
 	defer cancel()
 	return c.AppsV1().StatefulSets(c.namespace).List(ctx, metav1.ListOptions{})
 }
+
+func (c *client) getResourceQuotas(ctx context.Context) (*corev1.ResourceQuotaList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	return c.CoreV1().ResourceQuotas(c.namespace).List(ctx, metav1.ListOptions{})
+}

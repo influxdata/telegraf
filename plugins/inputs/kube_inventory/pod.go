@@ -116,5 +116,29 @@ func gatherPodContainer(ki *KubernetesInventory, p corev1.Pod, cs corev1.Contain
 		}
 	}
 
+	for _, val := range p.Status.Conditions {
+		conditionfields := map[string]interface{}{}
+		conditiontags := map[string]string{}
+		conditiontags["status"] = string(val.Status)
+		conditiontags["condition"] = string(val.Type)
+		conditiontags["pod_name"] = p.Name
+		running := 0
+		podready := 0
+		if val.Status == "True" {
+			if val.Type == "Ready" {
+				podready = 1
+			}
+			running = 1
+		} else if val.Status == "Unknown" {
+			if val.Type == "Ready" {
+				podready = 0
+			}
+			running = 2
+		}
+		conditionfields["status_condition"] = running
+		conditionfields["ready"] = podready
+		acc.AddFields(podContainerMeasurement, conditionfields, conditiontags)
+	}
+
 	acc.AddFields(podContainerMeasurement, fields, tags)
 }

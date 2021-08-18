@@ -216,6 +216,45 @@ func TestPod(t *testing.T) {
 				testutil.MustMetric(
 					podContainerMeasurement,
 					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Initialized",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Ready",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Scheduled",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
 						"namespace":             "ns1",
 						"container_name":        "running",
 						"node_name":             "node1",
@@ -231,6 +270,45 @@ func TestPod(t *testing.T) {
 						"state_code":                       0,
 						"resource_requests_millicpu_units": int64(100),
 						"resource_limits_millicpu_units":   int64(100),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Initialized",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Ready",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Scheduled",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
 					},
 					time.Unix(0, 0),
 				),
@@ -254,6 +332,45 @@ func TestPod(t *testing.T) {
 						"resource_requests_millicpu_units": int64(100),
 						"resource_limits_millicpu_units":   int64(100),
 						"terminated_reason":                "Completed",
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Initialized",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Ready",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Scheduled",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
 					},
 					time.Unix(0, 0),
 				),
@@ -679,6 +796,45 @@ func TestPodPendingContainers(t *testing.T) {
 				testutil.MustMetric(
 					podContainerMeasurement,
 					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Initialized",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Ready",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Scheduled",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
 						"namespace":             "ns1",
 						"container_name":        "waiting",
 						"node_name":             "node1",
@@ -695,6 +851,45 @@ func TestPodPendingContainers(t *testing.T) {
 						"state_code":                       3,
 						"resource_requests_millicpu_units": int64(100),
 						"resource_limits_millicpu_units":   int64(100),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Initialized",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Ready",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":  "pod1",
+						"condition": "Scheduled",
+						"status":    "True",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
 					},
 					time.Unix(0, 0),
 				),
