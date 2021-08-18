@@ -72,8 +72,9 @@ func (d *discoverTool) discoverObjects(accounts []*Account, endpoint string) err
 				}
 				discoveredObject, err := Discover(account.crs, region.RegionName, endpoint, p)
 				if err != nil {
-					return fmt.Errorf("discover account:%s region:%s endpoint:%s failed, error: %s",
+					d.Log.Errorf("discover account:%s region:%s endpoint:%s failed, error: %s",
 						account.Name, region.RegionName, endpoint, err)
+					continue
 				}
 				discoveredObjects[newKey(account.Name, namespace.Name, region.RegionName)] = discoveredObject
 			}
