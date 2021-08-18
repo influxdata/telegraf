@@ -180,6 +180,11 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			if i.CreateBuckets {
 				if err := client.CreateBucket(ctx, apiError.Bucket); err != nil {
 					i.Log.Errorf("When writing to [%s]: bucket %q not found and failed to recreate", client.URL(), apiError.Bucket)
+					continue
+				}
+
+				if err = client.Write(ctx, metrics); err == nil {
+					return nil
 				}
 			}
 		}
