@@ -37,14 +37,15 @@ func scenarioUDP(t *testing.T, server string) {
 	i := Graylog{
 		Servers: []string{server},
 	}
-	i.Connect()
+	err := i.Connect()
+	require.NoError(t, err)
 
 	metrics := testutil.MockMetrics()
 
 	// UDP scenario:
 	// 4 messages are send
 
-	err := i.Write(metrics)
+	err = i.Write(metrics)
 	require.NoError(t, err)
 	err = i.Write(metrics)
 	require.NoError(t, err)
@@ -70,7 +71,8 @@ func scenarioTCP(t *testing.T, server string) {
 	i := Graylog{
 		Servers: []string{server},
 	}
-	i.Connect()
+	err := i.Connect()
+	require.NoError(t, err)
 
 	metrics := testutil.MockMetrics()
 
@@ -80,7 +82,7 @@ func scenarioTCP(t *testing.T, server string) {
 	// -> the 3rd write ends with error
 	// -> in the 4th write connection is restored and write is successful
 
-	err := i.Write(metrics)
+	err = i.Write(metrics)
 	require.NoError(t, err)
 	err = i.Write(metrics)
 	require.NoError(t, err)
@@ -115,11 +117,12 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
 		r, _ := zlib.NewReader(b)
 
 		bufW := bytes.NewBuffer(nil)
-		io.Copy(bufW, r)
-		r.Close()
+		_, _ = io.Copy(bufW, r)
+		_ = r.Close()
 
 		var obj GelfObject
-		json.Unmarshal(bufW.Bytes(), &obj)
+		_ = json.Unmarshal(bufW.Bytes(), &obj)
+		require.NoError(t, err)
 		assert.Equal(t, obj["_value"], float64(1))
 	}
 
@@ -145,8 +148,8 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 
 	accept := func() *net.TCPConn {
 		conn, err := tcpServer.AcceptTCP()
-		conn.SetLinger(0)
 		require.NoError(t, err)
+		_ = conn.SetLinger(0)
 		return conn
 	}
 	conn := accept()
@@ -160,14 +163,14 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 			if n > 0 {
 				if bufR[0] == 0 { // message delimiter found
 					break
-				} else {
-					bufW.Write(bufR)
 				}
+				_, _ = bufW.Write(bufR)
 			}
 		}
 
 		var obj GelfObject
-		json.Unmarshal(bufW.Bytes(), &obj)
+		err = json.Unmarshal(bufW.Bytes(), &obj)
+		require.NoError(t, err)
 		assert.Equal(t, obj["_value"], float64(1))
 	}
 
@@ -175,7 +178,7 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 
 	recv()
 	recv()
-	conn.Close()
+	_ = conn.Close()
 	wg3.Done()
 	conn = accept()
 	defer conn.Close()

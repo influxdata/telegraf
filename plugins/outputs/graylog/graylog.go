@@ -122,7 +122,7 @@ func (g *gelfUDP) Write(message []byte) (n int, err error) {
 
 	n = len(message)
 
-	return
+	return n, nil
 }
 
 func (g *gelfUDP) Close() (err error) {
@@ -131,7 +131,7 @@ func (g *gelfUDP) Close() (err error) {
 		g.conn = nil
 	}
 
-	return
+	return err
 }
 
 func (g *gelfUDP) createChunkedMessage(index int, chunkCountInt int, id []byte, compressed *bytes.Buffer) bytes.Buffer {
@@ -191,7 +191,7 @@ func (g *gelfUDP) send(b []byte) error {
 
 	_, err := g.conn.Write(b)
 	if err != nil {
-		g.conn.Close()
+		_ = g.conn.Close()
 		g.conn = nil
 	}
 
@@ -206,7 +206,7 @@ func (g *gelfTCP) Write(message []byte) (n int, err error) {
 
 	n = len(message)
 
-	return
+	return n, nil
 }
 
 func (g *gelfTCP) Close() (err error) {
@@ -215,7 +215,7 @@ func (g *gelfTCP) Close() (err error) {
 		g.conn = nil
 	}
 
-	return
+	return err
 }
 
 func (g *gelfTCP) write(b []byte) error {
@@ -229,12 +229,12 @@ func (g *gelfTCP) write(b []byte) error {
 
 	_, err := g.conn.Write(b)
 	if err != nil {
-		g.conn.Close()
+		_ = g.conn.Close()
 		g.conn = nil
 	} else {
 		_, err = g.conn.Write([]byte{0}) // message delimiter
 		if err != nil {
-			g.conn.Close()
+			_ = g.conn.Close()
 			g.conn = nil
 		}
 	}
@@ -284,7 +284,7 @@ func (g *Graylog) Connect() error {
 
 func (g *Graylog) Close() error {
 	for _, closer := range g.closers {
-		closer.Close()
+		_ = closer.Close()
 	}
 	return nil
 }
