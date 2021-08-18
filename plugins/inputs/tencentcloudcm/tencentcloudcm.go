@@ -264,23 +264,52 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 		go func(m metricObject) {
 			defer wg.Done()
 
-			client, err := t.client.NewClient(m.Region, m.Account.crs, *t)
-			if err != nil {
-				acc.AddError(err)
-				return
-			}
-			request := t.client.NewGetMonitorDataRequest(m.Namespace, m.Metric, m.MonitorInstances, *t)
+			for {
 
-			result, err := t.client.GatherMetrics(client, request, *t)
-			if err != nil {
-				acc.AddError(err)
-				return
-			}
+				client, err := t.client.NewClient(m.Region, m.Account.crs, *t)
+				if err != nil {
+					acc.AddError(err)
+					break
+				}
 
-			rLock.Lock()
-			requestIDMap[*result.Response.RequestId] = m
-			results = append(results, *result)
-			rLock.Unlock()
+				size := 100
+				if len(m.MonitorInstances) >= size {
+					batch := m.MonitorInstances[:size]
+					if len(batch) == 0 {
+						break
+					}
+
+					request := t.client.NewGetMonitorDataRequest(m.Namespace, m.Metric, batch, *t)
+
+					result, err := t.client.GatherMetrics(client, request, *t)
+					if err != nil {
+						acc.AddError(err)
+						break
+					}
+
+					rLock.Lock()
+					requestIDMap[*result.Response.RequestId] = m
+					results = append(results, *result)
+					rLock.Unlock()
+
+					m.MonitorInstances = m.MonitorInstances[size:]
+				} else {
+					request := t.client.NewGetMonitorDataRequest(m.Namespace, m.Metric, m.MonitorInstances, *t)
+
+					result, err := t.client.GatherMetrics(client, request, *t)
+					if err != nil {
+						acc.AddError(err)
+						break
+					}
+
+					rLock.Lock()
+					requestIDMap[*result.Response.RequestId] = m
+					results = append(results, *result)
+					rLock.Unlock()
+					break
+				}
+
+			}
 
 		}(obj)
 
