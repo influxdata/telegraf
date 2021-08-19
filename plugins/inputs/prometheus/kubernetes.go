@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -303,7 +302,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	log.Printf("D! [inputs.prometheus] will scrape metrics from %q", targetURL.String())
+	p.Log.Debugf("will scrape metrics from %q", targetURL.String())
 	// add annotation as metrics tags
 	tags := pod.Annotations
 	if tags == nil {
@@ -373,13 +372,12 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	log.Printf("D! [inputs.prometheus] registered a delete request for %q in namespace %q",
-		pod.Name, pod.Namespace)
+	p.Log.Debugf("registered a delete request for %q in namespace %q", pod.Name, pod.Namespace)
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	if _, ok := p.kubernetesPods[targetUrl.String()]; ok {
 		delete(p.kubernetesPods, targetUrl.String())
-		log.Printf("D! [inputs.prometheus] will stop scraping for %q", targetUrl.String())
+		p.Log.Debugf("will stop scraping for %q", targetUrl.String())
 	}
 }
