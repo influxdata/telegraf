@@ -295,12 +295,15 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	if p.kubernetesPods == nil {
 		p.kubernetesPods = map[string]URLAndAddress{}
 	}
-	targetURL := getScrapeURL(pod)
-	if targetURL == nil {
+	targetURL, err := getScrapeURL(pod)
+	if err != nil {
+		p.Log.Errorf("could not parse URL: %s", err)
+		return
+	} else if targetURL == nil {
 		return
 	}
 
-	log.Printf("D! [inputs.prometheus] will scrape metrics from %q", *targetURL)
+	log.Printf("D! [inputs.prometheus] will scrape metrics from %q", targetURL.String())
 	// add annotation as metrics tags
 	tags := pod.Annotations
 	if tags == nil {
@@ -312,12 +315,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	for k, v := range pod.Labels {
 		tags[k] = v
 	}
-	URL, err := url.Parse(*targetURL)
-	if err != nil {
-		log.Printf("E! [inputs.prometheus] could not parse URL %q: %s", *targetURL, err.Error())
-		return
-	}
-	podURL := p.AddressToURL(URL, URL.Hostname())
+	podURL := p.AddressToURL(targetURL, targetURL.Hostname())
 
 	// Locks earlier if using cAdvisor calls - makes a new list each time
 	// rather than updating and removing from the same list
@@ -327,22 +325,22 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 	p.kubernetesPods[podURL.String()] = URLAndAddress{
 		URL:         podURL,
-		Address:     URL.Hostname(),
-		OriginalURL: URL,
+		Address:     targetURL.Hostname(),
+		OriginalURL: targetURL,
 		Tags:        tags,
 	}
 }
 
-func getScrapeURL(pod *corev1.Pod) *string {
+func getScrapeURL(pod *corev1.Pod) (*url.URL, error) {
 	ip := pod.Status.PodIP
 	if ip == "" {
 		// return as if scrape was disabled, we will be notified again once the pod
 		// has an IP
-		return nil
+		return nil, nil
 	}
 
 	scheme := pod.Annotations["prometheus.io/scheme"]
-	path := pod.Annotations["prometheus.io/path"]
+	pathAndQuery := pod.Annotations["prometheus.io/path"]
 	port := pod.Annotations["prometheus.io/port"]
 
 	if scheme == "" {
@@ -351,24 +349,27 @@ func getScrapeURL(pod *corev1.Pod) *string {
 	if port == "" {
 		port = "9102"
 	}
-	if path == "" {
-		path = "/metrics"
+	if pathAndQuery == "" {
+		pathAndQuery = "/metrics"
 	}
 
-	u := &url.URL{
-		Scheme: scheme,
-		Host:   net.JoinHostPort(ip, port),
-		Path:   path,
+	base, err := url.Parse(pathAndQuery)
+	if err != nil {
+		return nil, err
 	}
 
-	x := u.String()
+	base.Scheme = scheme
+	base.Host = net.JoinHostPort(ip, port)
 
-	return &x
+	return base, nil
 }
 
 func unregisterPod(pod *corev1.Pod, p *Prometheus) {
-	url := getScrapeURL(pod)
-	if url == nil {
+	targetUrl, err := getScrapeURL(pod)
+	if err != nil {
+		p.Log.Errorf("failed to parse url: %s", err)
+		return
+	} else if targetUrl == nil {
 		return
 	}
 
@@ -377,8 +378,8 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if _, ok := p.kubernetesPods[*url]; ok {
-		delete(p.kubernetesPods, *url)
-		log.Printf("D! [inputs.prometheus] will stop scraping for %q", *url)
+	if _, ok := p.kubernetesPods[targetUrl.String()]; ok {
+		delete(p.kubernetesPods, targetUrl.String())
+		log.Printf("D! [inputs.prometheus] will stop scraping for %q", targetUrl.String())
 	}
 }
