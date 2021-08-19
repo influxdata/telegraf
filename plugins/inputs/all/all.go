@@ -49,6 +49,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/eventhub_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
 	_ "github.com/influxdata/telegraf/plugins/inputs/execd"
+	_ "github.com/influxdata/telegraf/plugins/inputs/f5_load_balancer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fail2ban"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fibaro"
 	_ "github.com/influxdata/telegraf/plugins/inputs/file"
