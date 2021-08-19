@@ -1,3 +1,26 @@
+## v1.19.3 [2021-08-18]
+
+#### Bugfixes
+
+  - [#9639](https://github.com/influxdata/telegraf/pull/9639) Update sirupsen/logrus module from 1.7.0 to 1.8.1
+  - [#9638](https://github.com/influxdata/telegraf/pull/9638) Update testcontainers/testcontainers-go module from 0.11.0 to 0.11.1
+  - [#9637](https://github.com/influxdata/telegraf/pull/9637) Update golang/snappy module from 0.0.3 to 0.0.4
+  - [#9636](https://github.com/influxdata/telegraf/pull/9636) Update aws/aws-sdk-go-v2 module from 1.3.2 to 1.8.0
+  - [#9605](https://github.com/influxdata/telegraf/pull/9605) `inputs.prometheus` Fix prometheus kubernetes pod discovery
+  - [#9606](https://github.com/influxdata/telegraf/pull/9606) `inputs.redis` Improve redis commands documentation
+  - [#9566](https://github.com/influxdata/telegraf/pull/9566) `outputs.cratedb` Replace dots in tag keys with underscores
+  - [#9401](https://github.com/influxdata/telegraf/pull/9401) `inputs.clickhouse` Fix panic, improve handling empty result set
+  - [#9583](https://github.com/influxdata/telegraf/pull/9583) `inputs.opcua` Avoid closing session on a closed connection
+  - [#9576](https://github.com/influxdata/telegraf/pull/9576) `processors.aws` Refactor ec2 init for config-api
+  - [#9571](https://github.com/influxdata/telegraf/pull/9571) `outputs.loki` Sort logs by timestamp before writing to Loki
+  - [#9524](https://github.com/influxdata/telegraf/pull/9524) `inputs.opcua` Fix reconnection regression introduced in 1.19.1
+  - [#9581](https://github.com/influxdata/telegraf/pull/9581) `inputs.kube_inventory` Fix k8s nodes and pods parsing error
+  - [#9577](https://github.com/influxdata/telegraf/pull/9577) Update sensu/go module to v2.9.0
+  - [#9554](https://github.com/influxdata/telegraf/pull/9554) `inputs.postgresql` Normalize unix socket path
+  - [#9565](https://github.com/influxdata/telegraf/pull/9565) Update hashicorp/consul/api module to 1.9.1
+  - [#9552](https://github.com/influxdata/telegraf/pull/9552) `inputs.vsphere` Update vmware/govmomi module to v0.26.0 in order to support vSphere 7.0
+  - [#9550](https://github.com/influxdata/telegraf/pull/9550) `inputs.opcua` Do not skip good quality nodes after a bad quality node is encountered
+
 ## v1.19.2 [2021-07-28]
 
 #### Release Notes
