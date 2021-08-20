@@ -364,7 +364,7 @@ func getScrapeURL(pod *corev1.Pod) (*url.URL, error) {
 }
 
 func unregisterPod(pod *corev1.Pod, p *Prometheus) {
-	targetUrl, err := getScrapeURL(pod)
+	targetURL, err := getScrapeURL(pod)
 	if err != nil {
 		p.Log.Errorf("failed to parse url: %s", err)
 		return
