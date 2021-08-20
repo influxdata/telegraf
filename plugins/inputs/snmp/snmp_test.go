@@ -1252,7 +1252,7 @@ func TestGoSmi(t *testing.T) {
 	// i := strings.Index(oidText, "::")
 	var out gosmi.SmiNode
 	var err error
-	oid := "iso.3.6.1.2.1.1.3"
+	oid := "iso.3.6.1.2.1.1.2.1"
 	s := strings.Split(oid, ".")
 	for i := range s {
 		if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
@@ -1271,9 +1271,6 @@ func TestGoSmi(t *testing.T) {
 	if i == -1 {
 		println("issues")
 	}
-	mibName := oidText[:i]
-	oidText = oidText[i+2:]
 
-	println(mibName, oidText, oidJoin)
 	require.Error(t, err)
 }

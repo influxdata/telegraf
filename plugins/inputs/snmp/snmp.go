@@ -1,12 +1,9 @@
 package snmp
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"os"
@@ -22,7 +19,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/wlog"
 	"github.com/sleepinggenius2/gosmi"
 	"github.com/sleepinggenius2/gosmi/types"
 )
@@ -75,27 +71,6 @@ const sampleConfig = `
 
 // execCommand is so tests can mock out exec.Command usage.
 var execCommand = exec.Command
-
-// execCmd executes the specified command, returning the STDOUT content.
-// If command exits with error status, the output is captured into the returned error.
-func execCmd(arg0 string, args ...string) ([]byte, error) {
-	if wlog.LogLevel() == wlog.DEBUG {
-		quoted := make([]string, 0, len(args))
-		for _, arg := range args {
-			quoted = append(quoted, fmt.Sprintf("%q", arg))
-		}
-		log.Printf("D! [inputs.snmp] executing %q %s", arg0, strings.Join(quoted, " "))
-	}
-
-	out, err := execCommand(arg0, args...).Output()
-	if err != nil {
-		if err, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("%s: %w", bytes.TrimRight(err.Stderr, "\r\n"), err)
-		}
-		return nil, err
-	}
-	return out, nil
-}
 
 // Snmp holds the configuration for the plugin.
 type Snmp struct {
@@ -902,53 +877,34 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	}
 
 	mibPrefix := mibName + "::"
-	oidFullName := mibPrefix + oidText
 
 	// first attempt to get the table's tags
 	tagOids := map[string]struct{}{}
 	// We have to guess that the "entry" oid is `oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
-	if out, err := execCmd("snmptranslate", "-Td", oidFullName+".1"); err == nil {
-		scanner := bufio.NewScanner(bytes.NewBuffer(out))
-		for scanner.Scan() {
-			line := scanner.Text()
+	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
+	submask := oidNum + ".1"
+	node, err := gosmi.GetNodeByOID(types.OidMustFromString(submask))
 
-			if !strings.HasPrefix(line, "  INDEX") {
-				continue
-			}
-
-			i := strings.Index(line, "{ ")
-			if i == -1 { // parse error
-				continue
-			}
-			line = line[i+2:]
-			i = strings.Index(line, " }")
-			if i == -1 { // parse error
-				continue
-			}
-			line = line[:i]
-			for _, col := range strings.Split(line, ", ") {
-				tagOids[mibPrefix+col] = struct{}{}
-			}
-		}
-	}
-
-	// this won't actually try to run a query. The `-Ch` will just cause it to dump headers.
-	out, err := execCmd("snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", oidFullName)
 	if err != nil {
-		return "", "", "", nil, fmt.Errorf("getting table columns: %w", err)
+		return "", "", "", nil, fmt.Errorf("getting submask: %w", err)
 	}
-	scanner := bufio.NewScanner(bytes.NewBuffer(out))
-	scanner.Scan()
-	cols := scanner.Text()
-	if len(cols) == 0 {
-		return "", "", "", nil, fmt.Errorf("could not find any columns in table")
+
+	index := node.GetIndex()
+
+	if index == nil {
+		return "", "", "", nil, fmt.Errorf("getting index")
 	}
-	for _, col := range strings.Split(cols, " ") {
-		if len(col) == 0 {
-			continue
-		}
-		_, isTag := tagOids[mibPrefix+col]
-		fields = append(fields, Field{Name: col, Oid: mibPrefix + col, IsTag: isTag})
+
+	for i := range index {
+		tagOids[mibPrefix+index[i].Name] = struct{}{}
+	}
+
+	// grabs all columns from the table
+	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
+	col := node.GetRow().AsTable().ColumnOrder
+	for i := range col {
+		_, isTag := tagOids[mibPrefix+col[i]]
+		fields = append(fields, Field{Name: col[i], Oid: mibPrefix + col[i], IsTag: isTag})
 	}
 
 	return mibName, oidNum, oidText, fields, err
