@@ -10,13 +10,13 @@ import (
 	"strings"
 	"sync"
 	"strconv"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/tidwall/gjson"
 )
 
-// Example struct should be named the same as the Plugin
 type F5LoadBalancer struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
@@ -25,8 +25,6 @@ type F5LoadBalancer struct {
 	Token string
 }
 
-// Usually the default (example) configuration is contained in this constant.
-// Please use '## '' to denote comments and '# ' to specify default settings and start each line with two spaces.
 const sampleConfig = `
   ## F5 Load Balancer Username
   username = "" # required
@@ -48,9 +46,7 @@ func (f5 *F5LoadBalancer) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init can be implemented to do one-time processing stuff like initializing variables
 func (f5 *F5LoadBalancer) Init() error {
-	// Check your options according to your requirements
 	if f5.Username == "" {
 		return fmt.Errorf("Username cannot be empty")
 	}
@@ -69,22 +65,194 @@ func (f5 *F5LoadBalancer) Init() error {
 }
 
 func (f5 *F5LoadBalancer) Gather(acc telegraf.Accumulator) error {
+	start := time.Now()
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // Due to self signed certificates in many orgs, we don't verify the cert
 	f5.Authenticate()
 	if f5.Token == "" {
 		return fmt.Errorf("No Authentication Token. Exiting...")
 	}
-
-	f5.GatherNode(acc)
-	fields := make(map[string]interface{})
-	fields["f5_node_current_sessions_test"] = "10"
-	tags := map[string]string{}
-	tags["name"] = "testing"
-	acc.AddFields("f5_load_balancer_test", fields, tags)
+	
+	// TODO: Use goroutines here
+	if contains(f5.Collectors,"node") {
+		f5.GatherNode(acc)
+	}
+	if contains(f5.Collectors,"virtual") {
+		f5.GatherVirtual(acc)
+	}
+	if contains(f5.Collectors,"pool") {
+		f5.GatherPool(acc)
+	}
+	if contains(f5.Collectors,"net_interface") {
+		f5.GatherNetInterface(acc)
+	}
 
 	f5.ResetToken()
+	duration := time.Since(start)
+	fmt.Println(duration)
 
 	return nil
+}
+
+func (f5 *F5LoadBalancer) GatherNode(acc telegraf.Accumulator) {
+	urls := f5.GetUrls("/mgmt/tm/ltm/node")
+	var wg sync.WaitGroup
+	for _,url := range urls {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
+			defer wg.Done()
+			resp, tags, err := 	f5.GetTags(url)
+			if err != nil {return}
+			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
+			fields := make(map[string]interface{})
+			fields["node_current_sessions"],_ = strconv.Atoi(gjson.Get(base,"curSessions.value").Raw)
+			fields["node_serverside_bits_in"],_ = strconv.Atoi(gjson.Get(base, "serverside\\.bitsIn.value").Raw)
+			fields["node_serverside_bits_out"],_ = strconv.Atoi(gjson.Get(base, "serverside\\.bitsOut.value").Raw)
+			fields["node_serverside_current_connections"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.curConns.value").Raw)
+			fields["node_serverside_packets_in"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.pktsIn.value").Raw)
+			fields["node_serverside_packets_out"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.pktsOut.value").Raw)
+			fields["node_serverside_total_connections"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.totConns.value").Raw)
+			fields["node_total_requests"],_ = strconv.Atoi(gjson.Get(base,"totRequests.value").Raw)
+			acc.AddFields("f5_load_balancer", fields, tags)
+		}(&wg, url, acc)
+	}
+	wg.Wait()
+}
+
+func (f5 *F5LoadBalancer) GatherPool(acc telegraf.Accumulator) {
+	urls := f5.GetUrls("/mgmt/tm/ltm/pool")
+	var wg sync.WaitGroup
+	for _,url := range urls {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
+			defer wg.Done()
+			resp, tags, err := 	f5.GetTags(url)
+			if err != nil {return}
+			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
+			fields := make(map[string]interface{})
+			fields["pool_active_member_count"],_ = strconv.Atoi(gjson.Get(base,"activeMemberCnt.value").Raw)
+			fields["pool_current_sessions"],_ = strconv.Atoi(gjson.Get(base, "curSessions.value").Raw)
+			fields["pool_serverside_bits_in"],_ = strconv.Atoi(gjson.Get(base, "serverside\\.bitsIn.value").Raw)
+			fields["pool_serverside_bits_out"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.bitsOut.value").Raw)
+			fields["pool_serverside_current_connections"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.curConns.value").Raw)
+			fields["pool_serverside_packets_in"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.pktsIn.value").Raw)
+			fields["pool_serverside_packets_out"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.pktsOut.value").Raw)
+			fields["pool_serverside_total_connections"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.totConns.value").Raw)
+			fields["pool_total_requests"],_ = strconv.Atoi(gjson.Get(base,"totRequests.value").Raw)
+			available := 0
+			if gjson.Get(base,"status\\.availabilityState.description").Str == "available"{
+				available = 1
+			}
+			fields["pool_available"] = available
+
+			acc.AddFields("f5_load_balancer", fields, tags)
+		}(&wg, url, acc)
+	}
+	wg.Wait()
+}
+
+func (f5 *F5LoadBalancer) GatherVirtual(acc telegraf.Accumulator) {
+	urls := f5.GetUrls("/mgmt/tm/ltm/virtual")
+	var wg sync.WaitGroup
+	for _,url := range urls {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
+			defer wg.Done()
+			resp, tags, err := 	f5.GetTags(url)		
+			if err != nil {return}
+			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
+			fields := make(map[string]interface{})
+			fields["virtual_clientside_bits_in"],_ = strconv.Atoi(gjson.Get(base,"clientside\\.bitsIn.value").Raw)
+			fields["virtual_clientside_bits_out"],_ = strconv.Atoi(gjson.Get(base, "clientside\\.bitsOut.value").Raw)
+			fields["virtual_clientside_current_connections"],_ = strconv.Atoi(gjson.Get(base, "clientside\\.curConns.value").Raw)
+			fields["virtual_clientside_packets_in"],_ = strconv.Atoi(gjson.Get(base,"clientside\\.pktsIn.value").Raw)
+			fields["virtual_clientside_packets_out"],_ = strconv.Atoi(gjson.Get(base,"clientside\\.pktsOut.value").Raw)
+			fields["virtual_total_requests"],_ = strconv.Atoi(gjson.Get(base,"totRequests.value").Raw)
+			fields["virtual_one_minute_avg_usage"],_ = strconv.Atoi(gjson.Get(base,"oneMinAvgUsageRatio.value").Raw)
+			available := 0
+			if gjson.Get(base,"status\\.availabilityState.description").Str == "available"{
+				available = 1
+			}
+			fields["virtual_available"] = available
+
+			acc.AddFields("f5_load_balancer", fields, tags)
+		}(&wg, url, acc)
+	}
+	wg.Wait()
+}
+
+func (f5 *F5LoadBalancer) GatherNetInterface(acc telegraf.Accumulator) {
+	urls := f5.GetUrls("/mgmt/tm/net/interface")
+	var wg sync.WaitGroup
+	for _,url := range urls {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
+			defer wg.Done()
+			resp := f5.Call(url)
+			tags := map[string]string{}
+			tags["name"] = gjson.Get(resp, "entries.*.nestedStats.entries.tmName.description").Raw
+			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
+			fields := make(map[string]interface{})
+			fields["net_interface_counter_bits_in"],_ = strconv.Atoi(gjson.Get(base,"counters\\.bitsIn.value").Raw)
+			fields["net_interface_counter_bits_out"],_ = strconv.Atoi(gjson.Get(base, "counters\\.bitsOut.value").Raw)
+			fields["net_interface_counter_packets_in"],_ = strconv.Atoi(gjson.Get(base, "counters\\.pktsIn.value").Raw)
+			fields["net_interface_counter_packets_out"],_ = strconv.Atoi(gjson.Get(base,"counters\\.pktsOut.value").Raw)
+			status := 0
+			if gjson.Get(base,"status.description").Str == "up"{
+				status = 1
+			}
+			fields["net_interface_status"] = status
+
+			acc.AddFields("f5_load_balancer", fields, tags)
+		}(&wg, url, acc)
+	}
+	wg.Wait()
+}
+
+func (f5 *F5LoadBalancer) GetTags(endpoint string) (string, map[string]string, error) {
+	resp := f5.Call(endpoint)
+	selfLinkSplit := strings.Split(gjson.Get(resp,"selfLink").Str,"~")
+	tags := map[string]string{}
+	if len(selfLinkSplit) >= 2 {
+		selfLinkSplit = strings.Split(selfLinkSplit[2],"/")
+		if len(selfLinkSplit) > 0 {
+			tags["name"] = selfLinkSplit[0]
+		}
+	}
+	if _, ok := tags["name"]; !ok {
+		// Bad or malformed response
+		// TODO: Write an actual error here
+		return resp, tags, nil
+	}
+	return resp, tags, nil
+}
+
+func (f5 *F5LoadBalancer) GetUrls(endpoint string) ([]string) {
+	resp := f5.Call(endpoint)
+	urls := make([]string,0,2)
+	for _,item := range gjson.Get(resp,"items").Array() {
+		selfLink := gjson.Get(item.Raw,"selfLink").Str
+		urls = append(urls, strings.Split(strings.Split(selfLink, "localhost")[1],"?")[0]+"/stats")
+	}
+	return urls
+}
+
+func (f5 *F5LoadBalancer) Call(endpoint string) string {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET",f5.Domain+endpoint,nil)
+	req.Header.Set("Content-Type","application/json")
+	req.Header.Set("X-F5-Auth-Token",f5.Token)
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// TODO: Should probably return an error with the data if the call failed
+	// to prevent issues downstream
+	return string(data)
 }
 
 func (f5 *F5LoadBalancer) Authenticate() {
@@ -103,74 +271,20 @@ func (f5 *F5LoadBalancer) Authenticate() {
 		fmt.Println(err)
 	}
 	jsonString := string(data)
-	token := gjson.Get(jsonString, "token.token").Str
-	f5.Token = token
+	f5.Token = gjson.Get(jsonString, "token.token").Str
 }
 
 func (f5 *F5LoadBalancer) ResetToken() {
 	f5.Token = ""
 }
 
-func (f5 *F5LoadBalancer) GatherNode(acc telegraf.Accumulator) {
-	resp := f5.Call("/mgmt/tm/ltm/node")
-	urls := make([]string,0,2)
-	for _,item := range gjson.Get(resp,"items").Array() {
-		selfLink := gjson.Get(item.Raw,"selfLink").Str
-		urls = append(urls, strings.Split(strings.Split(selfLink, "localhost")[1],"?")[0]+"/stats")
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
 	}
-
-	var wg sync.WaitGroup
-	for _,url := range urls {
-		wg.Add(1)
-		go func(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
-			defer wg.Done()
-			resp = f5.Call(url)
-			selfLinkSplit := strings.Split(gjson.Get(resp,"selfLink").Str,"~")
-			tags := map[string]string{}
-			if len(selfLinkSplit) >= 2 {
-				selfLinkSplit = strings.Split(selfLinkSplit[2],"/")
-				if len(selfLinkSplit) > 0 {
-					tags["name"] = selfLinkSplit[0]
-				}
-			}
-			if _, ok := tags["name"]; !ok {
-				// Bad or malformed response
-				return
-			}			
-			
-			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
-			fields := make(map[string]interface{})
-			fields["node_current_sessions"],_ = strconv.Atoi(gjson.Get(base,"curSessions.value").Raw)
-			fields["node_serverside_bits_in"],_ = strconv.Atoi(gjson.Get(base, "serverside\\.bitsIn.value").Raw)
-			fields["node_serverside_bits_out"],_ = strconv.Atoi(gjson.Get(base, "serverside\\.bitsOut.value").Raw)
-			fields["node_serverside_current_connections"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.curConns.value").Raw)
-			fields["node_serverside_packets_in"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.pktsIn.value").Raw)
-			fields["node_serverside_packets_out"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.pktsOut.value").Raw)
-			fields["node_serverside_total_connections"],_ = strconv.Atoi(gjson.Get(base,"serverside\\.totConns.value").Raw)
-			fields["node_total_requests"],_ = strconv.Atoi(gjson.Get(base,"totRequests.value").Raw)
-			acc.AddFields("f5_load_balancer", fields, tags)
-		}(&wg, url, acc)
-	}
-	wg.Wait()
-
-}
-
-func (f5 *F5LoadBalancer) Call(endpoint string) string {
-	client := &http.Client{}
-	req, err := http.NewRequest("GET",f5.Domain+endpoint,nil)
-	req.Header.Set("Content-Type","application/json")
-	req.Header.Set("X-F5-Auth-Token",f5.Token)
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
-	jsonString := string(data)
-	return jsonString
+	return false
 }
 
 func init() {
