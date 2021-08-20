@@ -7,13 +7,14 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/pion/dtls/v2"
 	"io/ioutil"
 	"net"
 	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pion/dtls/v2"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -265,7 +266,7 @@ func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 	var urls []*url.URL
 
 	for _, path := range c.globpaths {
-		files := path.Match()
+		files, _ := path.Match()
 		if len(files) <= 0 {
 			c.Log.Errorf("could not find file: %v", path)
 			continue

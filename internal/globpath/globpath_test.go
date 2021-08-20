@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
@@ -50,7 +51,7 @@ func TestCompileAndMatch(t *testing.T) {
 	for _, tc := range tests {
 		g, err := Compile(tc.path)
 		require.Nil(t, err)
-		matches := g.Match()
+		matches, _ := g.Match()
 		require.Len(t, matches, tc.matches)
 	}
 }
@@ -77,7 +78,7 @@ func TestFindNestedTextFile(t *testing.T) {
 	g1, err := Compile(filepath.Join(testdataDir, "**.txt"))
 	require.NoError(t, err)
 
-	matches := g1.Match()
+	matches, _ := g1.Match()
 	require.Len(t, matches, 1)
 }
 
@@ -97,7 +98,7 @@ func TestMatch_ErrPermission(t *testing.T) {
 	for _, test := range tests {
 		glob, err := Compile(test.input)
 		require.NoError(t, err)
-		actual := glob.Match()
+		actual, _ := glob.Match()
 		require.Equal(t, test.expected, actual)
 	}
 }

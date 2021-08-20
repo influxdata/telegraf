@@ -96,7 +96,7 @@ func (f *File) refreshFilePaths() error {
 		if err != nil {
 			return fmt.Errorf("could not compile glob %v: %v", file, err)
 		}
-		files := g.Match()
+		files, _ := g.Match()
 		if len(files) <= 0 {
 			return fmt.Errorf("could not find file: %v", file)
 		}

@@ -70,7 +70,7 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			f.globs[filepath] = g
 		}
 
-		files := g.Match()
+		files, _ := g.Match()
 		if len(files) == 0 {
 			acc.AddFields("filestat",
 				map[string]interface{}{

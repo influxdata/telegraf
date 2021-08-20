@@ -1,3 +1,4 @@
+//go:build !solaris
 // +build !solaris
 
 package tail
@@ -215,8 +216,14 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
 			t.Log.Errorf("Glob %q failed to compile: %s", filepath, err.Error())
+			continue
 		}
-		for _, file := range g.Match() {
+		files, err := g.Match()
+		if err != nil {
+			t.Log.Errorf("Failed to match for filepath %q: %s", filepath, err.Error())
+			continue
+		}
+		for _, file := range files {
 			if _, ok := t.tailers[file]; ok {
 				// we're already tailing this file
 				continue

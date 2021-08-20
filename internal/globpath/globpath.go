@@ -44,14 +44,17 @@ func Compile(path string) (*GlobPath, error) {
 // Match returns all files matching the expression.
 // If it's a static path, returns path.
 // All returned path will have the host platform separator.
-func (g *GlobPath) Match() []string {
+func (g *GlobPath) Match() ([]string, error) {
 	// This string replacement is for backwards compatibility support
 	// The original implemention allowed **.txt but the double star package requires **/**.txt
 	g.path = strings.ReplaceAll(g.path, "**/**", "**")
 	g.path = strings.ReplaceAll(g.path, "**", "**/**")
 
-	files, _ := doublestar.Glob(g.path)
-	return files
+	files, err := doublestar.Glob(g.path)
+	if err != nil {
+		return nil, err
+	}
+	return files, err
 }
 
 // MatchString tests the path string against the glob.  The path should contain

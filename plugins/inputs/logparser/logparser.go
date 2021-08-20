@@ -1,3 +1,4 @@
+//go:build !solaris
 // +build !solaris
 
 package logparser
@@ -214,7 +215,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 			l.Log.Errorf("Glob %q failed to compile: %s", filepath, err)
 			continue
 		}
-		files := g.Match()
+		files, _ := g.Match()
 
 		for _, file := range files {
 			if _, ok := l.tailers[file]; ok {

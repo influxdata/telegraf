@@ -296,7 +296,7 @@ func globUnixSocket(url string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not compile glob %q: %v", pattern, err)
 	}
-	paths := glob.Match()
+	paths, _ := glob.Match()
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("socket doesn't exist %q", pattern)
 	}
