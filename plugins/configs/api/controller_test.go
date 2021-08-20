@@ -701,7 +701,7 @@ func TestGetFieldConfigValues(t *testing.T) {
 	actual := map[string]interface{}{}
 	getFieldConfigValuesFromStruct(input, actual)
 	// require.Equal(t, expected, actual)
-	expJson, _ := json.Marshal(expected)
-	actualJson, _ := json.Marshal(actual)
-	require.Equal(t, string(expJson), string(actualJson))
+	expJSON, _ := json.Marshal(expected)
+	actualJSON, _ := json.Marshal(actual)
+	require.Equal(t, string(expJSON), string(actualJSON))
 }

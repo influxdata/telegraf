@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	ClientErr     = errors.New("error")
-	ErrBadRequest = fmt.Errorf("%w bad request", ClientErr)
-	ErrNotFound   = fmt.Errorf("%w not found", ClientErr)
+	ErrClient     = errors.New("error")
+	ErrBadRequest = fmt.Errorf("%w bad request", ErrClient)
+	ErrNotFound   = fmt.Errorf("%w not found", ErrClient)
 )
 
 type ConfigAPIService struct {
