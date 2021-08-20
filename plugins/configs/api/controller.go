@@ -700,7 +700,6 @@ func getFieldConfigValuesFromStruct(p interface{}, cfg map[string]interface{}) {
 		}
 		ftType := ft.Type
 		if ftType.Kind() == reflect.Ptr {
-			ftType = ftType.Elem()
 			f = f.Elem()
 		}
 		// if struct call self recursively
