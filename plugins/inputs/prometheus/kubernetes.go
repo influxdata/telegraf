@@ -368,7 +368,7 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 	if err != nil {
 		p.Log.Errorf("failed to parse url: %s", err)
 		return
-	} else if targetUrl == nil {
+	} else if targetURL == nil {
 		return
 	}
 
@@ -376,8 +376,8 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if _, ok := p.kubernetesPods[targetUrl.String()]; ok {
-		delete(p.kubernetesPods, targetUrl.String())
-		p.Log.Debugf("will stop scraping for %q", targetUrl.String())
+	if _, ok := p.kubernetesPods[targetURL.String()]; ok {
+		delete(p.kubernetesPods, targetURL.String())
+		p.Log.Debugf("will stop scraping for %q", targetURL.String())
 	}
 }
