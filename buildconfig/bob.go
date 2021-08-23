@@ -7,6 +7,7 @@ import (
 	"log" // nolint:revive
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/influxdata/toml"
 )
@@ -113,6 +114,7 @@ func generatePluginsFile(category string, plugins []string) error {
 	if _, err := f.WriteString("package all\n\nimport (\n"); err != nil {
 		return err
 	}
+	sort.Strings(plugins)
 	for _, plugin := range plugins {
 		fn := fmt.Sprintf("\t_ \"github.com/influxdata/telegraf/plugins/%s/%s\"\n", category, plugin)
 		if _, err := f.WriteString(fn); err != nil {
