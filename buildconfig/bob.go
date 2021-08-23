@@ -55,6 +55,15 @@ type buildConfig struct {
 	Aggregators map[string]bool
 }
 
+func isExcluded(name string, excludes ...string) bool {
+	for _, e := range excludes {
+		if name == e {
+			return true
+		}
+	}
+	return false
+}
+
 func getPlugins(category string, excludes ...string) ([]string, error) {
 	dirname := filepath.Join("plugins", category)
 	files, err := ioutil.ReadDir(dirname)
@@ -64,19 +73,22 @@ func getPlugins(category string, excludes ...string) ([]string, error) {
 
 	plugins := []string{}
 	for _, file := range files {
-		if !file.IsDir() {
+		if !file.IsDir() || isExcluded(file.Name(), excludes...) {
 			continue
 		}
 
-		include := true
-		for _, e := range excludes {
-			if file.Name() == e {
-				include = false
-				break
-			}
-		}
-		if include {
+		if matches, _ := filepath.Glob(filepath.Join(dirname, file.Name(), "*.go")); matches != nil && len(matches) > 0 {
+			// No subprojects expected
 			plugins = append(plugins, file.Name())
+		} else {
+			// No go files found, check subprojects
+			subprojects, err := getPlugins(filepath.Join(category, file.Name()), excludes...)
+			if err != nil {
+				return nil, err
+			}
+			for _, subproject := range subprojects {
+				plugins = append(plugins, filepath.Join(file.Name(), subproject))
+			}
 		}
 	}
 
