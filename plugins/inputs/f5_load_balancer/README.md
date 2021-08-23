@@ -1,8 +1,6 @@
 # F5 Load Balancer Input Plugin
 
-The `f5_load_balancer` plugin gathers metrics from an F5 Load Balancer's Rest API.  This description
-explains at a high level what the plugin does and provides links to where
-additional information can be found.
+The `f5_load_balancer` plugin gathers metrics from an F5 Load Balancer's Rest API.
 ### Configuration
 
 This section contains the default TOML to configure the plugin.  You can
@@ -66,7 +64,7 @@ generate it using `telegraf --usage f5_load_balancer`.
 - net_interface
   - tags:
     - name
-  fields:
+  - fields:
     - net_interface_counter_bits_in
     - net_interface_counter_bits_out
     - net_interface_counter_packets_in
