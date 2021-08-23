@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"log" // nolint:revive
 	"os"
 	"path/filepath"
 
@@ -77,7 +77,7 @@ func getPlugins(category string, excludes ...string) ([]string, error) {
 			continue
 		}
 
-		if matches, _ := filepath.Glob(filepath.Join(dirname, file.Name(), "*.go")); matches != nil && len(matches) > 0 {
+		if matches, _ := filepath.Glob(filepath.Join(dirname, file.Name(), "*.go")); len(matches) > 0 {
 			// No subprojects expected
 			plugins = append(plugins, file.Name())
 		} else {
@@ -98,7 +98,9 @@ func getPlugins(category string, excludes ...string) ([]string, error) {
 func generatePluginsFile(category string, plugins []string) error {
 	path := filepath.Join("plugins", category, "all")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.Mkdir(path, 0755)
+		if err := os.Mkdir(path, 0755); err != nil {
+			return fmt.Errorf("creating dir %q failed: %v", path, err)
+		}
 	}
 
 	filename := filepath.Join(path, "all.go")
@@ -120,9 +122,7 @@ func generatePluginsFile(category string, plugins []string) error {
 	if _, err := f.WriteString(")\n"); err != nil {
 		return err
 	}
-	f.Sync()
-
-	return nil
+	return f.Sync()
 }
 
 func getAllPlugins(categories []string) (map[string][]string, error) {
@@ -134,9 +134,7 @@ func getAllPlugins(categories []string) (map[string][]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, p := range pluginslist {
-			plugins[category] = append(plugins[category], p)
-		}
+		plugins[category] = append(plugins[category], pluginslist...)
 	}
 
 	return plugins, nil
@@ -165,9 +163,8 @@ func getConfiguredPlugins(cfg buildConfig, allPlugins map[string][]string) map[s
 					log.Printf("W! [bob] No all-plugins list for category %q", category)
 				}
 				break
-			} else {
-				config[category] = append(config[category], k)
 			}
+			config[category] = append(config[category], k)
 		}
 	}
 
@@ -230,16 +227,18 @@ func writeConfig(filename string, config buildConfig) error {
 
 func printPlugins(plugins map[string][]string) {
 	for name, list := range plugins {
+		//nolint:revive
 		fmt.Printf("%s:\n", name)
 		for _, plugin := range list {
+			//nolint:revive
 			fmt.Printf("\t%s\n", plugin)
 		}
 	}
 }
 
 func usage() {
+	//nolint:revive
 	fmt.Println(usageText)
-	os.Exit(0)
 }
 
 func main() {
