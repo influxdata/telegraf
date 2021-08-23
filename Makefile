@@ -97,7 +97,7 @@ help:
 
 .PHONY: allyesconfig
 allyesconfig:
-	go run buildconfig/bob.go --allyesconfig
+	go run buildconfig/bob.go --allyesconfig --save
 
 .PHONY: config
 config:
