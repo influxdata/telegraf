@@ -67,24 +67,32 @@ func (f5 *F5LoadBalancer) Init() error {
 func (f5 *F5LoadBalancer) Gather(acc telegraf.Accumulator) error {
 	start := time.Now()
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // Due to self signed certificates in many orgs, we don't verify the cert
-	f5.Authenticate()
+	err := f5.Authenticate()
+	if err != nil {
+		return err
+	}
 	if f5.Token == "" {
 		return fmt.Errorf("No Authentication Token. Exiting...")
 	}
 	
-	// TODO: Use goroutines here
+	var parentWG sync.WaitGroup
 	if contains(f5.Collectors,"node") {
-		f5.GatherNode(acc)
+		parentWG.Add(1)
+		go f5.GatherNode(acc,&parentWG)
 	}
 	if contains(f5.Collectors,"virtual") {
-		f5.GatherVirtual(acc)
+		parentWG.Add(1)
+		go f5.GatherVirtual(acc,&parentWG)
 	}
 	if contains(f5.Collectors,"pool") {
-		f5.GatherPool(acc)
+		parentWG.Add(1)
+		go f5.GatherPool(acc,&parentWG)
 	}
 	if contains(f5.Collectors,"net_interface") {
-		f5.GatherNetInterface(acc)
+		parentWG.Add(1)
+		go f5.GatherNetInterface(acc,&parentWG)
 	}
+	parentWG.Wait()
 
 	f5.ResetToken()
 	duration := time.Since(start)
@@ -93,15 +101,23 @@ func (f5 *F5LoadBalancer) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (f5 *F5LoadBalancer) GatherNode(acc telegraf.Accumulator) {
-	urls := f5.GetUrls("/mgmt/tm/ltm/node")
+func (f5 *F5LoadBalancer) GatherNode(acc telegraf.Accumulator, parentWG *sync.WaitGroup) {
+	defer parentWG.Done()
+	urls, err := f5.GetUrls("/mgmt/tm/ltm/node")
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
 	var wg sync.WaitGroup
 	for _,url := range urls {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
 			defer wg.Done()
 			resp, tags, err := 	f5.GetTags(url)
-			if err != nil {return}
+			if err != nil {
+				acc.AddError(err)
+				return
+			}
 			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
 			fields := make(map[string]interface{})
 			fields["node_current_sessions"],_ = strconv.Atoi(gjson.Get(base,"curSessions.value").Raw)
@@ -118,15 +134,23 @@ func (f5 *F5LoadBalancer) GatherNode(acc telegraf.Accumulator) {
 	wg.Wait()
 }
 
-func (f5 *F5LoadBalancer) GatherPool(acc telegraf.Accumulator) {
-	urls := f5.GetUrls("/mgmt/tm/ltm/pool")
+func (f5 *F5LoadBalancer) GatherPool(acc telegraf.Accumulator, parentWG *sync.WaitGroup) {
+	defer parentWG.Done()
+	urls, err := f5.GetUrls("/mgmt/tm/ltm/pool")
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
 	var wg sync.WaitGroup
 	for _,url := range urls {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
 			defer wg.Done()
 			resp, tags, err := 	f5.GetTags(url)
-			if err != nil {return}
+			if err != nil {
+				acc.AddError(err)
+				return
+			}
 			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
 			fields := make(map[string]interface{})
 			fields["pool_active_member_count"],_ = strconv.Atoi(gjson.Get(base,"activeMemberCnt.value").Raw)
@@ -150,15 +174,23 @@ func (f5 *F5LoadBalancer) GatherPool(acc telegraf.Accumulator) {
 	wg.Wait()
 }
 
-func (f5 *F5LoadBalancer) GatherVirtual(acc telegraf.Accumulator) {
-	urls := f5.GetUrls("/mgmt/tm/ltm/virtual")
+func (f5 *F5LoadBalancer) GatherVirtual(acc telegraf.Accumulator, parentWG *sync.WaitGroup) {
+	defer parentWG.Done()
+	urls, err := f5.GetUrls("/mgmt/tm/ltm/virtual")
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
 	var wg sync.WaitGroup
 	for _,url := range urls {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
 			defer wg.Done()
-			resp, tags, err := 	f5.GetTags(url)		
-			if err != nil {return}
+			resp, tags, err := 	f5.GetTags(url)
+			if err != nil {
+				acc.AddError(err)
+				return
+			}
 			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
 			fields := make(map[string]interface{})
 			fields["virtual_clientside_bits_in"],_ = strconv.Atoi(gjson.Get(base,"clientside\\.bitsIn.value").Raw)
@@ -180,14 +212,23 @@ func (f5 *F5LoadBalancer) GatherVirtual(acc telegraf.Accumulator) {
 	wg.Wait()
 }
 
-func (f5 *F5LoadBalancer) GatherNetInterface(acc telegraf.Accumulator) {
-	urls := f5.GetUrls("/mgmt/tm/net/interface")
+func (f5 *F5LoadBalancer) GatherNetInterface(acc telegraf.Accumulator, parentWG *sync.WaitGroup) {
+	defer parentWG.Done()
+	urls, err := f5.GetUrls("/mgmt/tm/net/interface")
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
 	var wg sync.WaitGroup
 	for _,url := range urls {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
 			defer wg.Done()
-			resp := f5.Call(url)
+			resp, err := f5.Call(url)
+			if err != nil {
+				acc.AddError(err)
+				return
+			}
 			tags := map[string]string{}
 			tags["name"] = gjson.Get(resp, "entries.*.nestedStats.entries.tmName.description").Raw
 			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
@@ -209,9 +250,12 @@ func (f5 *F5LoadBalancer) GatherNetInterface(acc telegraf.Accumulator) {
 }
 
 func (f5 *F5LoadBalancer) GetTags(endpoint string) (string, map[string]string, error) {
-	resp := f5.Call(endpoint)
-	selfLinkSplit := strings.Split(gjson.Get(resp,"selfLink").Str,"~")
+	resp, err := f5.Call(endpoint)
 	tags := map[string]string{}
+	if err != nil {
+		return resp, tags, err
+	}
+	selfLinkSplit := strings.Split(gjson.Get(resp,"selfLink").Str,"~")
 	if len(selfLinkSplit) >= 2 {
 		selfLinkSplit = strings.Split(selfLinkSplit[2],"/")
 		if len(selfLinkSplit) > 0 {
@@ -219,59 +263,63 @@ func (f5 *F5LoadBalancer) GetTags(endpoint string) (string, map[string]string, e
 		}
 	}
 	if _, ok := tags["name"]; !ok {
-		// Bad or malformed response
-		// TODO: Write an actual error here
-		return resp, tags, nil
+		return resp, tags, fmt.Errorf("Bad or malformed response")
 	}
 	return resp, tags, nil
 }
 
-func (f5 *F5LoadBalancer) GetUrls(endpoint string) ([]string) {
-	resp := f5.Call(endpoint)
+func (f5 *F5LoadBalancer) GetUrls(endpoint string) ([]string, error) {
+	resp, err := f5.Call(endpoint)
 	urls := make([]string,0,2)
+	if err != nil {
+		return urls, err
+	}
 	for _,item := range gjson.Get(resp,"items").Array() {
 		selfLink := gjson.Get(item.Raw,"selfLink").Str
 		urls = append(urls, strings.Split(strings.Split(selfLink, "localhost")[1],"?")[0]+"/stats")
 	}
-	return urls
+	return urls, nil
 }
 
-func (f5 *F5LoadBalancer) Call(endpoint string) string {
+func (f5 *F5LoadBalancer) Call(endpoint string) (string, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET",f5.Domain+endpoint,nil)
 	req.Header.Set("Content-Type","application/json")
 	req.Header.Set("X-F5-Auth-Token",f5.Token)
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		return "", err
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(err)
+		return "", err
 	}
-	// TODO: Should probably return an error with the data if the call failed
-	// to prevent issues downstream
-	return string(data)
+	return string(data), nil
 }
 
-func (f5 *F5LoadBalancer) Authenticate() {
+func (f5 *F5LoadBalancer) Authenticate() error {
+	f5.Token = ""
 	body := map[string]string{"username":f5.Username,"password":f5.Password,"loginProviderName":"tmos"}
 	jsonBody, _ := json.Marshal(body)
 	client := &http.Client{}
 	req, err := http.NewRequest("POST",f5.Domain+"/mgmt/shared/authn/login",bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return err
+	}
 	req.SetBasicAuth(f5.Username,f5.Password)
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
 	jsonString := string(data)
 	f5.Token = gjson.Get(jsonString, "token.token").Str
+	return nil
 }
 
 func (f5 *F5LoadBalancer) ResetToken() {
