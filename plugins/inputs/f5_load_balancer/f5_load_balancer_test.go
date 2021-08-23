@@ -1,12 +1,12 @@
 package f5_load_balancer
 
 import (
-	"testing"
-	"time"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
-	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
@@ -17,8 +17,8 @@ func TestInitDefault(t *testing.T) {
 	plugin := &F5LoadBalancer{
 		Username: "testuser",
 		Password: "testpass",
-		URL: "http://example.com",
-		Log: testutil.Logger{},
+		URL:      "http://example.com",
+		Log:      testutil.Logger{},
 	}
 
 	// Test the initialization succeeds
@@ -43,17 +43,17 @@ func TestInitFail(t *testing.T) {
 		},
 		{
 			name:     "no username",
-			plugin:   &F5LoadBalancer{Password: "testpass",URL: "http://example.com"},
+			plugin:   &F5LoadBalancer{Password: "testpass", URL: "http://example.com"},
 			expected: "Username cannot be empty",
 		},
 		{
 			name:     "no password",
-			plugin:   &F5LoadBalancer{Username: "testuser",URL: "http://example.com"},
+			plugin:   &F5LoadBalancer{Username: "testuser", URL: "http://example.com"},
 			expected: "Password cannot be empty",
 		},
 		{
 			name:     "no url",
-			plugin:   &F5LoadBalancer{Username: "testuser",Password: "testpass"},
+			plugin:   &F5LoadBalancer{Username: "testuser", Password: "testpass"},
 			expected: "URL cannot be empty",
 		},
 	}
@@ -97,9 +97,9 @@ func TestFixedValue(t *testing.T) {
 		{
 			name: "gather pool only",
 			plugin: &F5LoadBalancer{
-				Username: "testuser",
-				Password: "testpass",
-				URL: ts.URL,
+				Username:   "testuser",
+				Password:   "testpass",
+				URL:        ts.URL,
 				Collectors: []string{"pool"},
 			},
 			expected: []telegraf.Metric{
@@ -109,16 +109,16 @@ func TestFixedValue(t *testing.T) {
 						"name": "POOL_TEST_1",
 					},
 					map[string]interface{}{
-						"pool_active_member_count": 6,
-						"pool_available": 1,
-						"pool_current_sessions": 27,
-						"pool_serverside_bits_in": 4335162092552,
-						"pool_serverside_bits_out": 7086935980136,
+						"pool_active_member_count":            6,
+						"pool_available":                      1,
+						"pool_current_sessions":               27,
+						"pool_serverside_bits_in":             4335162092552,
+						"pool_serverside_bits_out":            7086935980136,
 						"pool_serverside_current_connections": 1541,
-						"pool_serverside_packets_in": 1097041172,
-						"pool_serverside_packets_out": 1177604238,
-						"pool_serverside_total_connections": 42132223,
-						"pool_total_requests": 450843983,
+						"pool_serverside_packets_in":          1097041172,
+						"pool_serverside_packets_out":         1177604238,
+						"pool_serverside_total_connections":   42132223,
+						"pool_total_requests":                 450843983,
 					},
 					time.Unix(0, 0),
 				),
@@ -144,7 +144,7 @@ func TestAuthenticationFailed(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
-				_,err := fmt.Fprintln(w, "bad request")
+				_, err := fmt.Fprintln(w, "bad request")
 				require.NoError(t, err)
 			},
 		),
@@ -160,7 +160,7 @@ func TestAuthenticationFailed(t *testing.T) {
 			plugin: &F5LoadBalancer{
 				Username: "usertest",
 				Password: "userpass",
-				URL: ts.URL,
+				URL:      ts.URL,
 			},
 			expected: "No Authentication Token. Exiting...",
 		},
@@ -190,7 +190,7 @@ func TestGetTagsFailed(t *testing.T) {
 					require.NoError(t, err)
 				} else if r.URL.Path == "/mgmt/tm/ltm/pool" {
 					w.WriteHeader(http.StatusOK)
-					_,err := fmt.Fprintln(w, sampleGetPoolsUrlResponse )
+					_, err := fmt.Fprintln(w, sampleGetPoolsUrlResponse)
 					require.NoError(t, err)
 				} else if r.URL.Path == "/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats" {
 					w.WriteHeader(http.StatusOK)
@@ -202,20 +202,20 @@ func TestGetTagsFailed(t *testing.T) {
 	)
 	defer ts.Close()
 	tests := []struct {
-		name     string
-		plugin   *F5LoadBalancer
-		expected []telegraf.Metric
+		name        string
+		plugin      *F5LoadBalancer
+		expected    []telegraf.Metric
 		expectedErr string
 	}{
 		{
 			name: "get tags failed",
 			plugin: &F5LoadBalancer{
-				Username: "usertest",
-				Password: "userpass",
-				URL: ts.URL,
+				Username:   "usertest",
+				Password:   "userpass",
+				URL:        ts.URL,
 				Collectors: []string{"pool"},
 			},
-			expected: []telegraf.Metric{},
+			expected:    []telegraf.Metric{},
 			expectedErr: "Bad or malformed response",
 		},
 	}
