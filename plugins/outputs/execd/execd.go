@@ -69,8 +69,6 @@ func (e *Execd) Init() error {
 }
 
 func (e *Execd) Connect() error {
-	fmt.Println("Hello I am a log!")
-	fmt.Println("I am a process!", e.process)
 	if err := e.process.Start(); err != nil {
 		// if there was only one argument, and it contained spaces, warn the user
 		// that they may have configured it wrong.
