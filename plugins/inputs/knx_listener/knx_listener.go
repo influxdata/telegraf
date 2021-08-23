@@ -148,9 +148,11 @@ func (kl *KNXListener) listen() {
 		// Match GA to DataPointType and measurement name
 		ga := msg.Destination.String()
 		target, ok := kl.gaTargetMap[ga]
-		if !ok && !kl.gaLogbook[ga] {
-			kl.Log.Infof("Ignoring message %+v for unknown GA %q", msg, ga)
-			kl.gaLogbook[ga] = true
+		if !ok {
+			if !kl.gaLogbook[ga] {
+				kl.Log.Infof("Ignoring message %+v for unknown GA %q", msg, ga)
+				kl.gaLogbook[ga] = true
+			}
 			continue
 		}
 

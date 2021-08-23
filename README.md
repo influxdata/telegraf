@@ -1,6 +1,12 @@
 # Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/) [![telegraf](https://snapcraft.io//telegraf/badge.svg)](https://snapcraft.io/telegraf)
 # Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 # Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/) [![Total alerts](https://img.shields.io/lgtm/alerts/g/influxdata/telegraf.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/influxdata/telegraf/alerts/)
+
+# Telegraf
+
+![tiger](TelegrafTiger.png "tiger")
+
+[![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/) [![Total alerts](https://img.shields.io/lgtm/alerts/g/influxdata/telegraf.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/influxdata/telegraf/alerts/)
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack)
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics.
@@ -18,6 +24,8 @@ Telegraf is plugin-driven and has the concept of 4 distinct plugin types:
 
 New plugins are designed to be easy to contribute, pull requests are welcomed
 and we work to incorporate as many pull requests as possible.
+If none of the internal plugins fit your needs, you could have a look at the
+[list of external plugins](EXTERNAL_PLUGINS.md).
 
 ## Try in Browser :rocket:
 
@@ -31,7 +39,7 @@ There are many ways to contribute:
 - [Review code and feature proposals](https://github.com/influxdata/telegraf/pulls)
 - Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
 - [Contribute plugins](CONTRIBUTING.md)
-- [Contribute external plugins](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/execd/shim) *(experimental)*
+- [Contribute external plugins](docs/EXTERNAL_PLUGINS.md)
 
 ## Minimum Requirements
 
@@ -293,6 +301,7 @@ For documentation on the latest development code see the [documentation index][d
 * [openldap](./plugins/inputs/openldap)
 * [openntpd](./plugins/inputs/openntpd)
 * [opensmtpd](./plugins/inputs/opensmtpd)
+* [opentelemetry](./plugins/inputs/opentelemetry)
 * [openweathermap](./plugins/inputs/openweathermap)
 * [pf](./plugins/inputs/pf)
 * [pgbouncer](./plugins/inputs/pgbouncer)
@@ -326,6 +335,7 @@ For documentation on the latest development code see the [documentation index][d
 * [snmp_trap](./plugins/inputs/snmp_trap)
 * [socket_listener](./plugins/inputs/socket_listener)
 * [solr](./plugins/inputs/solr)
+* [sql](./plugins/inputs/sql) (generic SQL query plugin)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [stackdriver](./plugins/inputs/stackdriver) (Google Cloud Monitoring)
 * [sql](./plugins/outputs/sql) (SQL generic output)
@@ -460,6 +470,7 @@ For documentation on the latest development code see the [documentation index][d
 * [nats](./plugins/outputs/nats)
 * [newrelic](./plugins/outputs/newrelic)
 * [nsq](./plugins/outputs/nsq)
+* [opentelemetry](./plugins/outputs/opentelemetry)
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
 * [riemann](./plugins/outputs/riemann)

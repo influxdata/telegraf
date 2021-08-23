@@ -104,6 +104,7 @@ through the convert settings.
   #  timestamp            = "TIMESTAMP"
   #  defaultvalue         = "TEXT"
   #  unsigned             = "UNSIGNED"
+  #  bool                 = "BOOL"
 ```
 
 ## Driver-specific information

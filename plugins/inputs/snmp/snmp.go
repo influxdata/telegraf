@@ -173,6 +173,12 @@ type Table struct {
 
 // Init() builds & initializes the nested fields.
 func (t *Table) Init() error {
+	//makes sure oid or name is set in config file
+	//otherwise snmp will produce metrics with an empty name
+	if t.Oid == "" && t.Name == "" {
+		return fmt.Errorf("SNMP table in config file is not named. One or both of the oid and name settings must be set")
+	}
+
 	if t.initialized {
 		return nil
 	}

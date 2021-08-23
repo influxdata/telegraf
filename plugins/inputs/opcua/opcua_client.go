@@ -31,6 +31,7 @@ type OpcUA struct {
 	RequestTimeout config.Duration `toml:"request_timeout"`
 	RootNodes      []NodeSettings  `toml:"nodes"`
 	Groups         []GroupSettings `toml:"group"`
+	Log            telegraf.Logger `toml:"-"`
 
 	nodes       []Node
 	nodeData    []OPCData
@@ -406,7 +407,9 @@ func Connect(o *OpcUA) error {
 
 		if o.client != nil {
 			if err := o.client.CloseSession(); err != nil {
-				return err
+				// Only log the error but to not bail-out here as this prevents
+				// reconnections for multiple parties (see e.g. #9523).
+				o.Log.Errorf("Closing session failed: %v", err)
 			}
 		}
 
@@ -470,15 +473,16 @@ func (o *OpcUA) getData() error {
 	}
 	o.ReadSuccess.Incr(1)
 	for i, d := range resp.Results {
+		o.nodeData[i].Quality = d.Status
 		if d.Status != ua.StatusOK {
-			return fmt.Errorf("status not OK: %v", d.Status)
+			o.Log.Errorf("status not OK for node %v: %v", o.nodes[i].tag.FieldName, d.Status)
+			continue
 		}
 		o.nodeData[i].TagName = o.nodes[i].tag.FieldName
 		if d.Value != nil {
 			o.nodeData[i].Value = d.Value.Value()
 			o.nodeData[i].DataType = d.Value.Type()
 		}
-		o.nodeData[i].Quality = d.Status
 		o.nodeData[i].TimeStamp = d.ServerTimestamp.String()
 		o.nodeData[i].Time = d.SourceTimestamp.String()
 	}
@@ -503,6 +507,7 @@ func disconnect(o *OpcUA) error {
 	case "opc.tcp":
 		o.state = Disconnected
 		o.client.Close()
+		o.client = nil
 		return nil
 	default:
 		return fmt.Errorf("invalid controller")
@@ -532,17 +537,19 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for i, n := range o.nodes {
-		fields := make(map[string]interface{})
-		tags := map[string]string{
-			"id": n.idStr,
-		}
-		for k, v := range n.metricTags {
-			tags[k] = v
-		}
+		if o.nodeData[i].Quality == ua.StatusOK {
+			fields := make(map[string]interface{})
+			tags := map[string]string{
+				"id": n.idStr,
+			}
+			for k, v := range n.metricTags {
+				tags[k] = v
+			}
 
-		fields[o.nodeData[i].TagName] = o.nodeData[i].Value
-		fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
-		acc.AddFields(n.metricName, fields, tags)
+			fields[o.nodeData[i].TagName] = o.nodeData[i].Value
+			fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
+			acc.AddFields(n.metricName, fields, tags)
+		}
 	}
 	return nil
 }

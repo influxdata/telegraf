@@ -15,15 +15,6 @@ import (
 )
 
 type CloudWatch struct {
-	Region      string `toml:"region"`
-	AccessKey   string `toml:"access_key"`
-	SecretKey   string `toml:"secret_key"`
-	RoleARN     string `toml:"role_arn"`
-	Profile     string `toml:"profile"`
-	Filename    string `toml:"shared_credential_file"`
-	Token       string `toml:"token"`
-	EndpointURL string `toml:"endpoint_url"`
-
 	Namespace             string `toml:"namespace"` // CloudWatch Metrics Namespace
 	HighResolutionMetrics bool   `toml:"high_resolution_metrics"`
 	svc                   *cloudwatch.CloudWatch
@@ -31,6 +22,8 @@ type CloudWatch struct {
 	WriteStatistics bool `toml:"write_statistics"`
 
 	Log telegraf.Logger `toml:"-"`
+
+	internalaws.CredentialConfig
 }
 
 type statisticType int
@@ -159,16 +152,19 @@ var sampleConfig = `
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) explicit credentials from 'access_key' and 'secret_key'
-  ## 3) shared profile from 'profile'
-  ## 4) environment variables
-  ## 5) shared credentials file
-  ## 6) EC2 Instance Profile
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
   #token = ""
   #role_arn = ""
+  #web_identity_token_file = ""
+  #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
 
@@ -202,18 +198,7 @@ func (c *CloudWatch) Description() string {
 }
 
 func (c *CloudWatch) Connect() error {
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      c.Region,
-		AccessKey:   c.AccessKey,
-		SecretKey:   c.SecretKey,
-		RoleARN:     c.RoleARN,
-		Profile:     c.Profile,
-		Filename:    c.Filename,
-		Token:       c.Token,
-		EndpointURL: c.EndpointURL,
-	}
-	configProvider := credentialConfig.Credentials()
-	c.svc = cloudwatch.New(configProvider)
+	c.svc = cloudwatch.New(c.CredentialConfig.Credentials())
 	return nil
 }
 

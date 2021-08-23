@@ -4,8 +4,10 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"github.com/pion/dtls/v2"
 	"io/ioutil"
 	"math/big"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -260,6 +262,36 @@ func TestGatherChain(t *testing.T) {
 	}
 }
 
+func TestGatherUDPCert(t *testing.T) {
+	pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
+	require.NoError(t, err)
+
+	cfg := &dtls.Config{
+		Certificates: []tls.Certificate{pair},
+	}
+
+	addr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0}
+	listener, err := dtls.Listen("udp", addr, cfg)
+	require.NoError(t, err)
+	defer listener.Close()
+
+	go func() {
+		_, _ = listener.Accept()
+	}()
+
+	m := &X509Cert{
+		Sources: []string{"udp://" + listener.Addr().String()},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, m.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+
+	assert.Len(t, acc.Errors, 0)
+	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
 func TestStrings(t *testing.T) {
 	sc := X509Cert{}
 	require.NoError(t, sc.Init())
@@ -314,6 +346,16 @@ func TestGatherCertMustNotTimeout(t *testing.T) {
 	require.NoError(t, m.Gather(&acc))
 	require.Empty(t, acc.Errors)
 	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestSourcesToURLs(t *testing.T) {
+	m := &X509Cert{
+		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
+	}
+	require.NoError(t, m.Init())
+
+	assert.Equal(t, len(m.globpaths), 2)
+	assert.Equal(t, len(m.locations), 2)
 }
 
 func TestServerName(t *testing.T) {
