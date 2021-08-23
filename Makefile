@@ -99,6 +99,9 @@ help:
 allyesconfig:
 	go run buildconfig/bob.go --allyesconfig --save
 
+testconfig:
+	go run buildconfig/bob.go --allyesconfig
+
 .PHONY: config
 config:
 	go run buildconfig/bob.go --fallback
@@ -117,7 +120,7 @@ go-install:
 	go install -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: test
-test: allyesconfig
+test: testconfig
 	go test -short $(race_detector) ./...
 
 .PHONY: test-integration
@@ -139,7 +142,7 @@ fmtcheck:
 	fi
 
 .PHONY: vet
-vet: allyesconfig
+vet: testconfig
 	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
 	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -ne 0 ]; then \
 		echo ""; \
@@ -182,7 +185,7 @@ lint-branch:
 	golangci-lint run --new-from-rev master
 
 .PHONY: tidy
-tidy: allyesconfig
+tidy: testconfig
 	go mod verify
 	go mod tidy
 	@if ! git diff --quiet go.mod go.sum; then \
@@ -198,7 +201,7 @@ test-all: fmtcheck vet
 	go test $(race_detector) ./...
 
 .PHONY: check-deps
-check-deps:
+check-deps: testconfig
 	./scripts/check-deps.sh
 
 .PHONY: clean
