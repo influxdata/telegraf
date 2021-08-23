@@ -1,7 +1,6 @@
 package globpath
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,8 +50,7 @@ func (g *GlobPath) Match() []string {
 	g.path = strings.ReplaceAll(g.path, "**/**", "**")
 	g.path = strings.ReplaceAll(g.path, "**", "**/**")
 
-	files, err := doublestar.Glob(g.path)
-	fmt.Println("doublestar error", err)
+	files, _ := doublestar.Glob(g.path)
 	return files
 }
 

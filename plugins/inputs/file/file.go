@@ -126,7 +126,6 @@ func (f *File) SetParserFunc(fn telegraf.ParserFunc) {
 
 func (f *File) refreshFilePaths() error {
 	var allFiles []string
-	fmt.Println("files", f.Files[0])
 	for _, file := range f.Files {
 		g, err := globpath.Compile(file)
 		if err != nil {

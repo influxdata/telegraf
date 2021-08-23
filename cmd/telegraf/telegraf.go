@@ -388,7 +388,6 @@ func isolatedPlugin(name string, configPath string, ID int) {
 
 	c.Inputs = inputPlugins
 	c.Outputs = outputPlugins
-	// Add [[outputs.file]]
 	if len(c.Inputs) > 0 {
 		c.Outputs = []*models.RunningOutput{}
 		var o telegraf.Output
@@ -409,7 +408,7 @@ func isolatedPlugin(name string, configPath string, ID int) {
 		}
 		parser, err := parsers.NewInfluxParser()
 		if err != nil {
-			fmt.Printf("Issue with new aggent: %v \n", err)
+			fmt.Printf("Issue with new agent: %v \n", err)
 			return
 		}
 		fileInputPlugin.SetParser(parser)
@@ -422,7 +421,7 @@ func isolatedPlugin(name string, configPath string, ID int) {
 
 	ag, err := agent.NewAgent(c)
 	if err != nil {
-		fmt.Printf("Issue with new aggent: %v \n", err)
+		fmt.Printf("Issue with new agent: %v \n", err)
 		return
 	}
 	ag.Run(context.Background())
@@ -430,7 +429,6 @@ func isolatedPlugin(name string, configPath string, ID int) {
 }
 
 func main() {
-	// flag.Var(&fInputPlugins, "input-plugin", "start a input plugin in a separate process")
 	flag.Var(&fConfigs, "config", "configuration file to load")
 	flag.Var(&fConfigDirs, "config-directory", "directory containing additional *.conf files")
 
@@ -506,7 +504,7 @@ func main() {
 		case "plugin":
 			id, err := strconv.Atoi(args[3])
 			if err != nil {
-				log.Fatalf("oh no a problem! %v", err)
+				log.Fatalf("E! %v", err)
 			}
 			isolatedPlugin(args[1], args[2], id)
 			return
