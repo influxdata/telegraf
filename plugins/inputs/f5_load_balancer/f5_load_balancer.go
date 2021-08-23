@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"strconv"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -20,9 +19,10 @@ import (
 type F5LoadBalancer struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-	Domain string `toml:"domain"`
+	URL string `toml:"url"`
 	Collectors []string `toml:"collectors"`
 	Token string
+	Log telegraf.Logger
 }
 
 const sampleConfig = `
@@ -31,7 +31,7 @@ const sampleConfig = `
   ## F5 Load Balancer Password
   password = "" # required
   ## F5 Load Balancer User Interface Endpoint
-  domain = "https://f5.example.com/" # required
+  url = "https://f5.example.com/" # required
   ## Metrics to collect from the F5
   collectors = ["node","virtual","pool","net_interface"]
 `
@@ -53,8 +53,8 @@ func (f5 *F5LoadBalancer) Init() error {
 	if f5.Password == "" {
 		return fmt.Errorf("Password cannot be empty")
 	}
-	if f5.Domain == "" {
-		return fmt.Errorf("Domain cannot be empty")
+	if f5.URL == "" {
+		return fmt.Errorf("URL cannot be empty")
 	}
 	if f5.Collectors == nil {
 		f5.Collectors = []string{"node","virtual","pool","net_interface"}
@@ -65,7 +65,6 @@ func (f5 *F5LoadBalancer) Init() error {
 }
 
 func (f5 *F5LoadBalancer) Gather(acc telegraf.Accumulator) error {
-	start := time.Now()
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // Due to self signed certificates in many orgs, we don't verify the cert
 	err := f5.Authenticate()
 	if err != nil {
@@ -95,8 +94,6 @@ func (f5 *F5LoadBalancer) Gather(acc telegraf.Accumulator) error {
 	parentWG.Wait()
 
 	f5.ResetToken()
-	duration := time.Since(start)
-	fmt.Println(duration)
 
 	return nil
 }
@@ -256,7 +253,7 @@ func (f5 *F5LoadBalancer) GetTags(endpoint string) (string, map[string]string, e
 		return resp, tags, err
 	}
 	selfLinkSplit := strings.Split(gjson.Get(resp,"selfLink").Str,"~")
-	if len(selfLinkSplit) >= 2 {
+	if len(selfLinkSplit) > 2 {
 		selfLinkSplit = strings.Split(selfLinkSplit[2],"/")
 		if len(selfLinkSplit) > 0 {
 			tags["name"] = selfLinkSplit[0]
@@ -283,7 +280,7 @@ func (f5 *F5LoadBalancer) GetUrls(endpoint string) ([]string, error) {
 
 func (f5 *F5LoadBalancer) Call(endpoint string) (string, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET",f5.Domain+endpoint,nil)
+	req, err := http.NewRequest("GET",f5.URL+endpoint,nil)
 	req.Header.Set("Content-Type","application/json")
 	req.Header.Set("X-F5-Auth-Token",f5.Token)
 	resp, err := client.Do(req)
@@ -303,7 +300,7 @@ func (f5 *F5LoadBalancer) Authenticate() error {
 	body := map[string]string{"username":f5.Username,"password":f5.Password,"loginProviderName":"tmos"}
 	jsonBody, _ := json.Marshal(body)
 	client := &http.Client{}
-	req, err := http.NewRequest("POST",f5.Domain+"/mgmt/shared/authn/login",bytes.NewBuffer(jsonBody))
+	req, err := http.NewRequest("POST",f5.URL+"/mgmt/shared/authn/login",bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return err
 	}

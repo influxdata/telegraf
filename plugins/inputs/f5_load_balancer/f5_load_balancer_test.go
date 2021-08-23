@@ -3,63 +3,63 @@ package f5_load_balancer
 import (
 	"testing"
 	"time"
-
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// This file should contain a set of unit-tests to cover your plugin. This will ease
-// spotting bugs and mistakes when later modifying or extending the functionality.
-// To do so, please write one 'TestXYZ' function per 'case' e.g. default init,
-// things that should fail or expected values from a mockup.
-
 func TestInitDefault(t *testing.T) {
 	// This test should succeed with the default initialization.
-
-	// Use whatever you use in the init() function plus the mandatory options.
-	// ATTENTION: Always initialze the "Log" as you will get SIGSEGV otherwise.
-	plugin := &Example{
-		DeviceName: "test",
-		Timeout:    config.Duration(100 * time.Millisecond),
-		Log:        testutil.Logger{},
+	plugin := &F5LoadBalancer{
+		Username: "testuser",
+		Password: "testpass",
+		URL: "http://example.com",
+		Log: testutil.Logger{},
 	}
 
 	// Test the initialization succeeds
 	require.NoError(t, plugin.Init())
 
 	// Also test that default values are set correctly
-	require.Equal(t, config.Duration(100*time.Millisecond), plugin.Timeout)
-	require.Equal(t, "test", plugin.DeviceName)
-	require.Equal(t, int64(2), plugin.NumberFields)
+	require.Equal(t, "testuser", plugin.Username)
+	require.Equal(t, "testpass", plugin.Password)
+	require.Equal(t, "http://example.com", plugin.URL)
 }
 
 func TestInitFail(t *testing.T) {
-	// You should also test for your safety nets to work i.e. you get errors for
-	// invalid configuration-option values. So check your error paths in Init()
-	// and check if you reach them
-
-	// We setup a table-test here to specify "setting" - "expected error" values.
-	// Eventhough it seems overkill here for the example plugin, we reuse this structure
-	// later for checking the metrics
 	tests := []struct {
 		name     string
-		plugin   *Example
+		plugin   *F5LoadBalancer
 		expected string
 	}{
 		{
 			name:     "all empty",
-			plugin:   &Example{},
-			expected: "device name cannot be empty",
+			plugin:   &F5LoadBalancer{},
+			expected: "Username cannot be empty",
+		},
+		{
+			name:     "no username",
+			plugin:   &F5LoadBalancer{Password: "testpass",URL: "http://example.com"},
+			expected: "Username cannot be empty",
+		},
+		{
+			name:     "no password",
+			plugin:   &F5LoadBalancer{Username: "testuser",URL: "http://example.com"},
+			expected: "Password cannot be empty",
+		},
+		{
+			name:     "no url",
+			plugin:   &F5LoadBalancer{Username: "testuser",Password: "testpass"},
+			expected: "URL cannot be empty",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Always initialze the logger to avoid SIGSEGV. This is done automatically by
-			// telegraf during normal operation.
 			tt.plugin.Log = testutil.Logger{}
 			err := tt.plugin.Init()
 			require.Error(t, err)
@@ -67,140 +67,58 @@ func TestInitFail(t *testing.T) {
 		})
 	}
 }
-
 func TestFixedValue(t *testing.T) {
-	// You can organize the test e.g. by operation mode (like we do here random vs. fixed), by features or
-	// by different metrics gathered. Please choose the partitioning most suited for your plugin
+	ts := httptest.NewServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/mgmt/shared/authn/login" {
+					w.WriteHeader(http.StatusOK)
+					_, err := fmt.Fprintln(w, authenticateResponse)
+					require.NoError(t, err)
+				} else if r.URL.Path == "/mgmt/tm/ltm/pool" {
+					w.WriteHeader(http.StatusOK)
+					_, err := fmt.Fprintln(w, sampleGetPoolsUrlResponse)
+					require.NoError(t, err)
+				} else if r.URL.Path == "/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats" {
+					w.WriteHeader(http.StatusOK)
+					_, err := fmt.Fprintln(w, samplePoolResponseOne)
+					require.NoError(t, err)
+				}
+			},
+		),
+	)
+	defer ts.Close()
 
-	// We again setup a table-test here to specify "setting" - "expected output metric" pairs.
 	tests := []struct {
 		name     string
-		plugin   *Example
+		plugin   *F5LoadBalancer
 		expected []telegraf.Metric
 	}{
 		{
-			name: "count only",
-			plugin: &Example{
-				DeviceName:   "test",
-				NumberFields: 1,
+			name: "gather pool only",
+			plugin: &F5LoadBalancer{
+				Username: "testuser",
+				Password: "testpass",
+				URL: ts.URL,
+				Collectors: []string{"pool"},
 			},
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
-					"example",
+					"f5_load_balancer",
 					map[string]string{
-						"device": "test",
+						"name": "POOL_TEST_1",
 					},
 					map[string]interface{}{
-						"count": 1,
-					},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "test",
-					},
-					map[string]interface{}{
-						"count": 2,
-					},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "test",
-					},
-					map[string]interface{}{
-						"count": 3,
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
-		{
-			name: "default settings",
-			plugin: &Example{
-				DeviceName: "test",
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "test",
-					},
-					map[string]interface{}{
-						"count":  1,
-						"field1": float64(0),
-					},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "test",
-					},
-					map[string]interface{}{
-						"count":  2,
-						"field1": float64(0),
-					},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "test",
-					},
-					map[string]interface{}{
-						"count":  3,
-						"field1": float64(0),
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
-		{
-			name: "more fields",
-			plugin: &Example{
-				DeviceName:   "test",
-				NumberFields: 4,
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "test",
-					},
-					map[string]interface{}{
-						"count":  1,
-						"field1": float64(0),
-						"field2": float64(0),
-						"field3": float64(0),
-					},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "test",
-					},
-					map[string]interface{}{
-						"count":  2,
-						"field1": float64(0),
-						"field2": float64(0),
-						"field3": float64(0),
-					},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "test",
-					},
-					map[string]interface{}{
-						"count":  3,
-						"field1": float64(0),
-						"field2": float64(0),
-						"field3": float64(0),
+						"pool_active_member_count": 6,
+						"pool_available": 1,
+						"pool_current_sessions": 27,
+						"pool_serverside_bits_in": 4335162092552,
+						"pool_serverside_bits_out": 7086935980136,
+						"pool_serverside_current_connections": 1541,
+						"pool_serverside_packets_in": 1097041172,
+						"pool_serverside_packets_out": 1177604238,
+						"pool_serverside_total_connections": 42132223,
+						"pool_total_requests": 450843983,
 					},
 					time.Unix(0, 0),
 				),
@@ -211,148 +129,40 @@ func TestFixedValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-
 			tt.plugin.Log = testutil.Logger{}
 			require.NoError(t, tt.plugin.Init())
-
-			// Call gather and check no error occurs. In case you use acc.AddError() somewhere
-			// in your code, it is not sufficient to only check the return value of Gather().
 			require.NoError(t, tt.plugin.Gather(&acc))
 			require.Len(t, acc.Errors, 0, "found errors accumulated by acc.AddError()")
-
-			// Wait for the expected number of metrics to avoid flaky tests due to
-			// race conditions.
 			acc.Wait(len(tt.expected))
-
-			// Compare the metrics in a convenient way. Here we ignore
-			// the metric time during comparision as we cannot inject the time
-			// during test. For more comparision options check testutil package.
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
 
-func TestRandomValue(t *testing.T) {
-	// Sometimes, you cannot know the exact outcome of the gather cycle e.g. if the gathering involves random data.
-	// However, you should check the result nevertheless, applying as many conditions as you can.
-
-	// We again setup a table-test here to specify "setting" - "expected output metric" pairs.
+func TestAuthenticationFailed(t *testing.T) {
+	ts := httptest.NewServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+				_,err := fmt.Fprintln(w, "bad request")
+				require.NoError(t, err)
+			},
+		),
+	)
+	defer ts.Close()
 	tests := []struct {
 		name     string
-		plugin   *Example
-		template telegraf.Metric
-	}{
-		{
-			name: "count only",
-			plugin: &Example{
-				DeviceName:           "test",
-				NumberFields:         1,
-				EnableRandomVariable: true,
-			},
-			template: testutil.MustMetric(
-				"example",
-				map[string]string{
-					"device": "test",
-				},
-				map[string]interface{}{
-					"count": 1,
-				},
-				time.Unix(0, 0),
-			),
-		},
-		{
-			name: "default settings",
-			plugin: &Example{
-				DeviceName:           "test",
-				EnableRandomVariable: true,
-			},
-			template: testutil.MustMetric(
-				"example",
-				map[string]string{
-					"device": "test",
-				},
-				map[string]interface{}{
-					"count":  1,
-					"field1": float64(0),
-				},
-				time.Unix(0, 0),
-			),
-		},
-		{
-			name: "more fields",
-			plugin: &Example{
-				DeviceName:           "test",
-				NumberFields:         4,
-				EnableRandomVariable: true,
-			},
-			template: testutil.MustMetric(
-				"example",
-				map[string]string{
-					"device": "test",
-				},
-				map[string]interface{}{
-					"count":  1,
-					"field1": float64(0),
-					"field2": float64(0),
-					"field3": float64(0),
-				},
-				time.Unix(0, 0),
-			),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
-
-			tt.plugin.Log = testutil.Logger{}
-			require.NoError(t, tt.plugin.Init())
-
-			// Call gather and check no error occurs. In case you use acc.AddError() somewhere
-			// in your code, it is not sufficient to only check the return value of Gather().
-			require.NoError(t, tt.plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0, "found errors accumulated by acc.AddError()")
-
-			// Wait for the expected number of metrics to avoid flaky tests due to
-			// race conditions.
-			acc.Wait(3)
-
-			// Compare all aspects of the metric that are known to you
-			for i, m := range acc.GetTelegrafMetrics() {
-				require.Equal(t, m.Name(), tt.template.Name())
-				require.Equal(t, m.Tags(), tt.template.Tags())
-
-				// Check if all expected fields are there
-				fields := m.Fields()
-				for k := range tt.template.Fields() {
-					if k == "count" {
-						require.Equal(t, fields["count"], int64(i+1))
-						continue
-					}
-					_, found := fields[k]
-					require.Truef(t, found, "field %q not found", k)
-				}
-			}
-		})
-	}
-}
-
-func TestGatherFail(t *testing.T) {
-	// You should also test for error conditions in your Gather() method. Try to cover all error paths.
-
-	// We again setup a table-test here to specify "setting" - "expected error" pair.
-	tests := []struct {
-		name     string
-		plugin   *Example
+		plugin   *F5LoadBalancer
 		expected string
 	}{
 		{
-			name: "too many fields",
-			plugin: &Example{
-				DeviceName:   "test",
-				NumberFields: 11,
+			name: "authentication failed",
+			plugin: &F5LoadBalancer{
+				Username: "usertest",
+				Password: "userpass",
+				URL: ts.URL,
 			},
-			expected: "too many fields",
+			expected: "No Authentication Token. Exiting...",
 		},
 	}
 
@@ -370,47 +180,43 @@ func TestGatherFail(t *testing.T) {
 	}
 }
 
-func TestRandomValueFailPartial(t *testing.T) {
-	// You should also test for error conditions in your Gather() with partial output. This is required when
-	// using acc.AddError() as Gather() might succeed (return nil) but there are some metrics missing.
-
-	// We again setup a table-test here to specify "setting" - "expected output metric" and "errors".
+func TestGetTagsFailed(t *testing.T) {
+	ts := httptest.NewServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/mgmt/shared/authn/login" {
+					w.WriteHeader(http.StatusOK)
+					_, err := fmt.Fprintln(w, authenticateResponse)
+					require.NoError(t, err)
+				} else if r.URL.Path == "/mgmt/tm/ltm/pool" {
+					w.WriteHeader(http.StatusOK)
+					_,err := fmt.Fprintln(w, sampleGetPoolsUrlResponse )
+					require.NoError(t, err)
+				} else if r.URL.Path == "/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats" {
+					w.WriteHeader(http.StatusOK)
+					_, err := fmt.Fprintln(w, samplePoolResponseTwo)
+					require.NoError(t, err)
+				}
+			},
+		),
+	)
+	defer ts.Close()
 	tests := []struct {
-		name        string
-		plugin      *Example
-		expected    []telegraf.Metric
+		name     string
+		plugin   *F5LoadBalancer
+		expected []telegraf.Metric
 		expectedErr string
 	}{
 		{
-			name: "flappy gather",
-			plugin: &Example{
-				DeviceName:           "flappy",
-				NumberFields:         1,
-				EnableRandomVariable: true,
+			name: "get tags failed",
+			plugin: &F5LoadBalancer{
+				Username: "usertest",
+				Password: "userpass",
+				URL: ts.URL,
+				Collectors: []string{"pool"},
 			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "flappy",
-					},
-					map[string]interface{}{
-						"count": 1,
-					},
-					time.Unix(0, 0),
-				),
-				testutil.MustMetric(
-					"example",
-					map[string]string{
-						"device": "flappy",
-					},
-					map[string]interface{}{
-						"count": 2,
-					},
-					time.Unix(0, 0),
-				),
-			},
-			expectedErr: "too many runs for random values",
+			expected: []telegraf.Metric{},
+			expectedErr: "Bad or malformed response",
 		},
 	}
 
@@ -421,19 +227,209 @@ func TestRandomValueFailPartial(t *testing.T) {
 			tt.plugin.Log = testutil.Logger{}
 			require.NoError(t, tt.plugin.Init())
 
-			// Call gather and check no error occurs. However, we expect an error accumulated by acc.AddError()
-			require.NoError(t, tt.plugin.Gather(&acc))
-
-			// Wait for the expected number of metrics to avoid flaky tests due to
-			// race conditions.
-			acc.Wait(len(tt.expected))
-
-			// Check the accumulated errors
+			err := tt.plugin.Gather(&acc)
+			require.NoError(t, err)
 			require.Len(t, acc.Errors, 1)
 			require.EqualError(t, acc.Errors[0], tt.expectedErr)
-
-			// Compare the expected partial metrics.
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
+
+var authenticateResponse = `
+{
+	"loginProviderName": "tmos",
+	"token": {
+		"token": "FUL2V33SRR2JBF4NKKADC8RHGX",
+		"name": "FUL2V33SRR2JBF4NKKADC8RHGX"
+	}
+}
+`
+
+var sampleGetPoolsUrlResponse = `
+{
+	"selfLink": "https://localhost/mgmt/tm/ltm/pool?ver=15.1.2.1",
+	"items": [
+		{
+		"kind": "tm:ltm:pool:poolstate",
+		"name": "POOL_TEST_1",
+		"partition": "Common",
+		"fullPath": "/Common/POOL_TEST_1",
+		"generation": 1,
+		"selfLink": "https://localhost/mgmt/tm/ltm/pool/~Common~POOL_TEST_1?ver=15.1.2.1"
+		}
+	]
+}
+`
+
+var samplePoolResponseOne = `
+{
+	"kind": "tm:ltm:pool:poolstats",
+	"selfLink": "https://localhost/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats?ver=15.1.2.1",
+	"entries": {
+	  "https://localhost/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats": {
+		"nestedStats": {
+		  "kind": "tm:ltm:pool:poolstats",
+		  "selfLink": "https://localhost/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats?ver=15.1.2.1",
+		  "entries": {
+			"activeMemberCnt": {
+			  "value": 6
+			},
+			"availableMemberCnt": {
+			  "value": 6
+			},
+			"curSessions": {
+			  "value": 27
+			},
+			"memberCnt": {
+			  "value": 6
+			},
+			"minActiveMembers": {
+			  "value": 0
+			},
+			"mr.msgIn": {
+			  "value": 0
+			},
+			"mr.msgOut": {
+			  "value": 0
+			},
+			"mr.reqIn": {
+			  "value": 0
+			},
+			"mr.reqOut": {
+			  "value": 0
+			},
+			"mr.respIn": {
+			  "value": 0
+			},
+			"mr.respOut": {
+			  "value": 0
+			},
+			"tmName": {
+			  "description": "/Common/POOL_TEST_1"
+			},
+			"serverside.bitsIn": {
+			  "value": 4335162092552
+			},
+			"serverside.bitsOut": {
+			  "value": 7086935980136
+			},
+			"serverside.curConns": {
+			  "value": 1541
+			},
+			"serverside.maxConns": {
+			  "value": 4005
+			},
+			"serverside.pktsIn": {
+			  "value": 1097041172
+			},
+			"serverside.pktsOut": {
+			  "value": 1177604238
+			},
+			"serverside.totConns": {
+			  "value": 42132223
+			},
+			"status.availabilityState": {
+			  "description": "available"
+			},
+			"status.enabledState": {
+			  "description": "enabled"
+			},
+			"status.statusReason": {
+			  "description": "The pool is available"
+			},
+			"totRequests": {
+			  "value": 450843983
+			}
+		  }
+		}
+	  }
+	}
+  }
+`
+
+var samplePoolResponseTwo = `
+{
+	"kind": "tm:ltm:pool:poolstats",
+	"selfLink": "https://localhost/mgmt/tm/ltm/pool/~POOL_TEST_1/stats?ver=15.1.2.1",
+	"entries": {
+	  "https://localhost/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats": {
+		"nestedStats": {
+		  "kind": "tm:ltm:pool:poolstats",
+		  "selfLink": "https://localhost/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats?ver=15.1.2.1",
+		  "entries": {
+			"activeMemberCnt": {
+			  "value": 6
+			},
+			"availableMemberCnt": {
+			  "value": 6
+			},
+			"curSessions": {
+			  "value": 27
+			},
+			"memberCnt": {
+			  "value": 6
+			},
+			"minActiveMembers": {
+			  "value": 0
+			},
+			"mr.msgIn": {
+			  "value": 0
+			},
+			"mr.msgOut": {
+			  "value": 0
+			},
+			"mr.reqIn": {
+			  "value": 0
+			},
+			"mr.reqOut": {
+			  "value": 0
+			},
+			"mr.respIn": {
+			  "value": 0
+			},
+			"mr.respOut": {
+			  "value": 0
+			},
+			"tmName": {
+			  "description": "/Common/POOL_TEST_1"
+			},
+			"serverside.bitsIn": {
+			  "value": 4335162092552
+			},
+			"serverside.bitsOut": {
+			  "value": 7086935980136
+			},
+			"serverside.curConns": {
+			  "value": 1541
+			},
+			"serverside.maxConns": {
+			  "value": 4005
+			},
+			"serverside.pktsIn": {
+			  "value": 1097041172
+			},
+			"serverside.pktsOut": {
+			  "value": 1177604238
+			},
+			"serverside.totConns": {
+			  "value": 42132223
+			},
+			"status.availabilityState": {
+			  "description": "available"
+			},
+			"status.enabledState": {
+			  "description": "enabled"
+			},
+			"status.statusReason": {
+			  "description": "The pool is available"
+			},
+			"totRequests": {
+			  "value": 450843983
+			}
+		  }
+		}
+	  }
+	}
+  }
+`
