@@ -53,6 +53,7 @@ following works:
 - github.com/cenkalti/backoff [MIT License](https://github.com/cenkalti/backoff/blob/master/LICENSE)
 - github.com/cespare/xxhash [MIT License](https://github.com/cespare/xxhash/blob/master/LICENSE.txt)
 - github.com/cisco-ie/nx-telemetry-proto [Apache License 2.0](https://github.com/cisco-ie/nx-telemetry-proto/blob/master/LICENSE)
+- github.com/ClickHouse/clickhouse-go [MIT License](https://github.com/ClickHouse/clickhouse-go/blob/master/LICENSE)
 - github.com/containerd/containerd [Apache License 2.0](https://github.com/containerd/containerd/blob/master/LICENSE)
 - github.com/couchbase/go-couchbase [MIT License](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT License](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
