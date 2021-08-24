@@ -160,3 +160,24 @@ func pod() *corev1.Pod {
 	p.Namespace = "default"
 	return p
 }
+
+func TestTagAnnotationFilter(t *testing.T) {
+	prom := &Prometheus{
+		Log:                      testutil.Logger{},
+		TagPodAnnotationsExclude: []string{"*"},
+		TagPodLabelsExclude:      []string{"test"},
+	}
+
+	if err := prom.Init(); err != nil {
+		t.Fatalf("failed to initialize: %s", err)
+	}
+
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "exclude/this": "true"}
+	p.Labels = map[string]string{"test": "value", "another": "value"}
+	registerPod(p, prom)
+
+	target := prom.kubernetesPods["http://127.0.0.1:9102/metrics"]
+	assert.NotContains(t, target.Tags, "exclude/this", "prometheus.io/scrape", "test")
+	assert.Contains(t, target.Tags, "another")
+}

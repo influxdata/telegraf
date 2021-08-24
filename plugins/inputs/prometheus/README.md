@@ -50,6 +50,16 @@ in Prometheus format.
   ## Default is 60 seconds.
   # pod_scrape_interval = 60
   
+  ## Exclude subset of annotations from being used as metric tags.
+  ## An empty include list will accept all annotations and an empty exclude list will not exclude any annotation.
+  # tag_pod_annotations_include = []
+  # tag_pod_annotations_exclude = ["prometheus.io/*"]
+
+  ## Exclude subset of labels from being used as metric tags.
+  ## An empty include list will accept all labels and an empty exclude list will not exclude any labels.
+  # tag_pod_labels_include = []
+  # tag_pod_labels_exclude = []
+
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""

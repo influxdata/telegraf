@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -71,10 +72,19 @@ type Prometheus struct {
 	NodeIP            string `toml:"node_ip"`
 	PodScrapeInterval int    `toml:"pod_scrape_interval"`
 	PodNamespace      string `toml:"monitor_kubernetes_pods_namespace"`
-	lock              sync.Mutex
-	kubernetesPods    map[string]URLAndAddress
-	cancel            context.CancelFunc
-	wg                sync.WaitGroup
+
+	TagPodAnnotationsInclude []string `toml:"tag_pod_annotations_include"`
+	TagPodAnnotationsExclude []string `toml:"tag_pod_annotations_exclude"`
+	TagPodLabelsInclude      []string `toml:"tag_pod_labels_include"`
+	TagPodLabelsExclude      []string `toml:"tag_pod_labels_exclude"`
+
+	tagPodAnnotationsFilter filter.Filter
+	tagPodLabelsFilter      filter.Filter
+
+	lock           sync.Mutex
+	kubernetesPods map[string]URLAndAddress
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
 
 	// Only for monitor_kubernetes_pods=true and pod_scrape_scope="node"
 	podLabelSelector  labels.Selector
@@ -132,6 +142,16 @@ var sampleConfig = `
   # field selector to target pods
   # eg. To scrape pods on a specific node
   # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
+
+  ## Exclude subset of annotations from being used as metric tags.
+  ## An empty include list will accept all annotations and an empty exclude list will not exclude any annotation.
+  # tag_pods_annotations_include = []
+  # tag_pods_annotations_exclude = ["prometheus.io/*"]
+
+  ## Exclude subset of labels from being used as metric tags.
+  ## An empty include list will accept all labels and an empty exclude list will not exclude any labels.
+  # tag_pod_labels_include = []
+  # tag_pod_labels_exclude = []
 
   ## Scrape Services available in Consul Catalog
   # [inputs.prometheus.consul]
@@ -211,6 +231,17 @@ func (p *Prometheus) Init() error {
 
 		p.Log.Infof("Using pod scrape scope at node level to get pod list using cAdvisor.")
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
+	}
+
+	var err error
+	p.tagPodAnnotationsFilter, err = filter.NewIncludeExcludeFilter(p.TagPodAnnotationsInclude, p.TagPodAnnotationsExclude)
+	if err != nil {
+		return fmt.Errorf("error constructing annotations filter: %s", err.Error())
+	}
+
+	p.tagPodLabelsFilter, err = filter.NewIncludeExcludeFilter(p.TagPodLabelsInclude, p.TagPodLabelsExclude)
+	if err != nil {
+		return fmt.Errorf("error constructing label filter: %s", err.Error())
 	}
 
 	return nil
