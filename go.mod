@@ -28,6 +28,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.0 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/BurntSushi/toml v0.3.1
+	github.com/ClickHouse/clickhouse-go v1.4.5 // indirect
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Microsoft/go-winio v0.4.17-0.20210211115548-6eac466e5fa3 // indirect
 	github.com/Microsoft/hcsshim v0.8.16 // indirect
