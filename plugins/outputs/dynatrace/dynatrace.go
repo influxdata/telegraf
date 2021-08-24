@@ -122,16 +122,10 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			dims = append(dims, dimensions.NewDimension(tag.Key, tag.Value))
 		}
 
-		metricType := tm.Type()
 		for _, field := range tm.FieldList() {
 			metricName := tm.Name() + "." + field.Key
-			for _, i := range d.AddCounterMetrics {
-				if metricName == i {
-					metricType = telegraf.Counter
-				}
-			}
 
-			typeOpt := getTypeOption(metricType, field)
+			typeOpt := d.getTypeOption(tm, field)
 
 			if typeOpt == nil {
 				// Unsupported type. Log only once per unsupported metric name
@@ -267,17 +261,20 @@ func init() {
 	})
 }
 
-func getTypeOption(metricType telegraf.ValueType, field *telegraf.Field) dtMetric.MetricOption {
-	if metricType == telegraf.Counter {
-		switch v := field.Value.(type) {
-		case float64:
-			return dtMetric.WithFloatCounterValueTotal(v)
-		case uint64:
-			return dtMetric.WithIntCounterValueTotal(int64(v))
-		case int64:
-			return dtMetric.WithIntCounterValueTotal(v)
-		default:
-			return nil
+func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.MetricOption {
+	metricName := metric.Name() + "." + field.Key
+	for _, i := range d.AddCounterMetrics {
+		if metricName == i {
+			switch v := field.Value.(type) {
+			case float64:
+				return dtMetric.WithFloatCounterValueDelta(v)
+			case uint64:
+				return dtMetric.WithIntCounterValueDelta(int64(v))
+			case int64:
+				return dtMetric.WithIntCounterValueDelta(v)
+			default:
+				return nil
+			}
 		}
 	}
 
@@ -287,7 +284,7 @@ func getTypeOption(metricType telegraf.ValueType, field *telegraf.Field) dtMetri
 	case uint64:
 		return dtMetric.WithIntGaugeValue(int64(v))
 	case int64:
-		return dtMetric.WithIntGaugeValue(32)
+		return dtMetric.WithIntGaugeValue(v)
 	case bool:
 		if v {
 			return dtMetric.WithIntGaugeValue(1)
