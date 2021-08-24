@@ -112,8 +112,8 @@ func TestFixedValue(t *testing.T) {
 						"pool_active_member_count":            6,
 						"pool_available":                      1,
 						"pool_current_sessions":               27,
-						"pool_serverside_bits_in":             4335162092552,
-						"pool_serverside_bits_out":            7086935980136,
+						"pool_serverside_bits_in":             433516209,
+						"pool_serverside_bits_out":            708693598,
 						"pool_serverside_current_connections": 1541,
 						"pool_serverside_packets_in":          1097041172,
 						"pool_serverside_packets_out":         1177604238,
@@ -309,10 +309,10 @@ var samplePoolResponseOne = `
 			  "description": "/Common/POOL_TEST_1"
 			},
 			"serverside.bitsIn": {
-			  "value": 4335162092552
+			  "value": 433516209
 			},
 			"serverside.bitsOut": {
-			  "value": 7086935980136
+			  "value": 708693598
 			},
 			"serverside.curConns": {
 			  "value": 1541
