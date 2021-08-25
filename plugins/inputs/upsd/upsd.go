@@ -80,7 +80,7 @@ func (h *Upsd) GatherUps(accumulator telegraf.Accumulator, name string, variable
 		"input_voltage":          metrics["input.voltage"],
 		"load_percent":           metrics["ups.load"],
 		"battery_charge_percent": metrics["battery.charge"],
-		"time_left_ns":           timeLeftS * 1_000_000,
+		"time_left_ns":           timeLeftS * 1_000_000_000,
 		"output_voltage":         metrics["output.voltage"],
 		"internal_temp":          metrics["ups.temperature"],
 		"battery_voltage":        metrics["battery.voltage"],
