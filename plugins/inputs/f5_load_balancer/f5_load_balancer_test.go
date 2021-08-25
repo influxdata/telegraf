@@ -77,7 +77,7 @@ func TestFixedValue(t *testing.T) {
 					require.NoError(t, err)
 				} else if r.URL.Path == "/mgmt/tm/ltm/pool" {
 					w.WriteHeader(http.StatusOK)
-					_, err := fmt.Fprintln(w, sampleGetPoolsUrlResponse)
+					_, err := fmt.Fprintln(w, sampleGetPoolsURLResponse)
 					require.NoError(t, err)
 				} else if r.URL.Path == "/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats" {
 					w.WriteHeader(http.StatusOK)
@@ -162,7 +162,7 @@ func TestAuthenticationFailed(t *testing.T) {
 				Password: "userpass",
 				URL:      ts.URL,
 			},
-			expected: "No Authentication Token. Exiting...",
+			expected: "no authentication token set",
 		},
 	}
 
@@ -190,7 +190,7 @@ func TestGetTagsFailed(t *testing.T) {
 					require.NoError(t, err)
 				} else if r.URL.Path == "/mgmt/tm/ltm/pool" {
 					w.WriteHeader(http.StatusOK)
-					_, err := fmt.Fprintln(w, sampleGetPoolsUrlResponse)
+					_, err := fmt.Fprintln(w, sampleGetPoolsURLResponse)
 					require.NoError(t, err)
 				} else if r.URL.Path == "/mgmt/tm/ltm/pool/~Common~POOL_TEST_1/stats" {
 					w.WriteHeader(http.StatusOK)
@@ -246,7 +246,7 @@ var authenticateResponse = `
 }
 `
 
-var sampleGetPoolsUrlResponse = `
+var sampleGetPoolsURLResponse = `
 {
 	"selfLink": "https://localhost/mgmt/tm/ltm/pool?ver=15.1.2.1",
 	"items": [

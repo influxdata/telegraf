@@ -72,7 +72,7 @@ func (f5 *F5LoadBalancer) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	if f5.Token == "" {
-		return fmt.Errorf("No Authentication Token. Exiting...")
+		return fmt.Errorf("no authentication token set")
 	}
 
 	var parentWG sync.WaitGroup
@@ -282,6 +282,9 @@ func (f5 *F5LoadBalancer) GetUrls(endpoint string) ([]string, error) {
 func (f5 *F5LoadBalancer) Call(endpoint string) (string, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", f5.URL+endpoint, nil)
+	if err != nil {
+		return "", err
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-F5-Auth-Token", f5.Token)
 	resp, err := client.Do(req)
