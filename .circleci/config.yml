@@ -340,6 +340,7 @@ jobs:
         name: win/default
         shell: powershell.exe
     steps:
+      - checkout
       - attach_workspace:
           at: '/build'
       - run:
@@ -461,6 +462,9 @@ workflows:
       - update-sample-config-win
           requires:
             - 'windows-package'
+          # filters:
+          #   branches:
+          #       - master
       - 'share-artifacts':
           requires:
             - 'i386-package'

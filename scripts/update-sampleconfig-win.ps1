@@ -17,4 +17,7 @@ $pathToTelegrafWindowsConf = "\etc\telegraf_windows.conf"
 
 if((Get-FileHash "telegraf_windows_new.conf").Hash -ne (Get-FileHash $pathToTelegrafWindowsConf).Hash){
     Write-Output "Difference found, creating pull request"
+    choco install gh
+    # gh auth login --with-token xxxx
+    # gh pr create
 }
