@@ -287,7 +287,7 @@ func getTypeOption(metricType telegraf.ValueType, field *telegraf.Field) dtMetri
 	case uint64:
 		return dtMetric.WithIntGaugeValue(int64(v))
 	case int64:
-		return dtMetric.WithIntGaugeValue(32)
+		return dtMetric.WithIntGaugeValue(v)
 	case bool:
 		if v {
 			return dtMetric.WithIntGaugeValue(1)
