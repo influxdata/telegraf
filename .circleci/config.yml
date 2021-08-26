@@ -46,7 +46,7 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make'
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
-      - run: 'GOARCH=<< parameters.goarch >> make test-packages PACKAGE_NAMES=$(go list ./... | tr "\n" " " | circleci tests split --split-by=timings --timings-type=classname)'
+      - run: 'GOARCH=<< parameters.goarch >> PACKAGE_NAMES=$(go list ./... | tr "\n" " " | circleci tests split --split-by=timings --timings-type=classname) make test-packages'
   package-build:
     parameters:
       release:
@@ -146,7 +146,7 @@ jobs:
       - run: 'make tidy'
       - run: 'make'
       - run: 'make check'
-      - run: 'make test-packages PACKAGE_NAMES=$(go list ./... | tr "\n" " " | circleci tests split --split-by=timings --timings-type=classname)'
+      - run: 'PACKAGE_NAMES=$(go list ./... | tr "\n" " " | circleci tests split --split-by=timings --timings-type=classname) make test-packages'
     parallelism: 4
   test-go-windows:
     executor:
