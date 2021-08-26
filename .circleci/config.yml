@@ -335,6 +335,18 @@ jobs:
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
             curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
+  update-sample-config-win:
+    executor:
+        name: win/default
+        shell: powershell.exe
+    steps:
+      - attach_workspace:
+          at: '/build'
+      - run:
+          name: "Update Windows Sample Config"
+          shell: powershell.exe
+          command: |
+            ./scripts/update-sampleconfig-win.ps1
 
 commonjobs:
   - &test-awaiter
@@ -446,6 +458,9 @@ workflows:
       - *static-package
       - *mipsel-package
       - *mips-package
+      - update-sample-config-win
+          requires:
+            - 'windows-package'
       - 'share-artifacts':
           requires:
             - 'i386-package'
