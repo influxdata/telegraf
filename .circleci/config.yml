@@ -39,8 +39,8 @@ commands:
         type: string
         default: "amd64"
     steps:
-      - run: PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - checkout
+      - run: PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
