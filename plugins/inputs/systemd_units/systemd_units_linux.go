@@ -18,10 +18,11 @@ import (
 type SystemdUnits struct {
 	Timeout   config.Duration
 	UnitType  string `toml:"unittype"`
+	Pattern   string `toml:"pattern"`
 	systemctl systemctl
 }
 
-type systemctl func(timeout config.Duration, unitType string) (*bytes.Buffer, error)
+type systemctl func(timeout config.Duration, unitType string, pattern string) (*bytes.Buffer, error)
 
 const measurement = "systemd_units"
 
@@ -115,6 +116,7 @@ var subMap = map[string]int{
 var (
 	defaultTimeout  = config.Duration(time.Second)
 	defaultUnitType = "service"
+	defaultPattern  = ""
 )
 
 // Description returns a short description of the plugin
@@ -132,12 +134,19 @@ func (s *SystemdUnits) SampleConfig() string {
   ## values are "socket", "target", "device", "mount", "automount", "swap",
   ## "timer", "path", "slice" and "scope ":
   # unittype = "service"
+  #
+  ## Filter for a specific pattern, default is "" (i.e. all), other possible
+  ## values are valid pattern for systemctl, e.g. "a*" for all units with
+  ## names starting with "a"
+  # pattern = ""
+  ## pattern = "telegraf* influxdb*"
+  ## pattern = "a*"
 `
 }
 
 // Gather parses systemctl outputs and adds counters to the Accumulator
 func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
-	out, err := s.systemctl(s.Timeout, s.UnitType)
+	out, err := s.systemctl(s.Timeout, s.UnitType, s.Pattern)
 	if err != nil {
 		return err
 	}
@@ -192,22 +201,32 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setSystemctl(timeout config.Duration, unitType string) (*bytes.Buffer, error) {
+func setSystemctl(timeout config.Duration, unitType string, pattern string) (*bytes.Buffer, error) {
 	// is systemctl available ?
 	systemctlPath, err := exec.LookPath("systemctl")
 	if err != nil {
 		return nil, err
 	}
-
-	cmd := exec.Command(systemctlPath, "list-units", "--all", "--plain", fmt.Sprintf("--type=%s", unitType), "--no-legend")
-
+	// build parameters for systemctl call
+	params := []string{"list-units"}
+	// create patterns parameters if provided in config
+	if pattern != "" {
+		psplit := strings.SplitN(pattern, " ", -1)
+		for v := range psplit {
+			params = append(params, psplit[v])
+		}
+	}
+	params = append(params, "--all", "--plain")
+	// add type as configured in config
+	params = append(params, fmt.Sprintf("--type=%s", unitType))
+	params = append(params, "--no-legend")
+	cmd := exec.Command(systemctlPath, params...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err = internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
-		return &out, fmt.Errorf("error running systemctl list-units --all --plain --type=%s --no-legend: %s", unitType, err)
+		return &out, fmt.Errorf("error running systemctl %s: %s", strings.Join(params, " "), err)
 	}
-
 	return &out, nil
 }
 
@@ -217,6 +236,7 @@ func init() {
 			systemctl: setSystemctl,
 			Timeout:   defaultTimeout,
 			UnitType:  defaultUnitType,
+			Pattern:   defaultPattern,
 		}
 	})
 }
