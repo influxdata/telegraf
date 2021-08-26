@@ -48,7 +48,9 @@ endif
 
 # Go built-in race detector works only for 64 bits architectures.
 ifneq ($(GOARCH), 386)
-	race_detector := -race
+	ifneq ($(GOOS), windows)
+		race_detector := -race
+	endif
 endif
 
 
@@ -122,10 +124,6 @@ fmtcheck:
 		echo "Run make fmt to fix them." ; \
 		exit 1 ;\
 	fi
-
-.PHONY: test-windows
-test-windows:
-	go test -short ./...
 
 .PHONY: vet
 vet:

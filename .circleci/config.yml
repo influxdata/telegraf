@@ -40,14 +40,13 @@ commands:
         default: "amd64"
     steps:
       - checkout
-      - run: PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       - run: 'GOARCH=<< parameters.goarch >> make'
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
-      - run: 'GOARCH=<< parameters.goarch >> make test-packages'
+      - run: 'GOARCH=<< parameters.goarch >> make test-packages PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)'
   package-build:
     parameters:
       release:
@@ -110,11 +109,13 @@ jobs:
     executor: go-1_16
     steps:
       - test-go
+    parallelism: 4
   test-go-1_16-386:
     executor: go-1_16
     steps:
       - test-go:
           goarch: "386"
+    parallelism: 4
   test-go-1_17:
     executor: go-1_17
     steps:
@@ -125,10 +126,12 @@ jobs:
     steps:
       - test-go:
           goarch: "386"
+    parallelism: 4
   test-go-mac:
     executor: mac
     steps:
       - checkout
+      - run: PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - restore_cache:
           key: mac-go-mod-v0-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
@@ -144,7 +147,8 @@ jobs:
       - run: 'make tidy'
       - run: 'make'
       - run: 'make check'
-      - run: 'make test'
+      - run: 'make test-packages PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)'
+    parallelism: 4
   test-go-windows:
     executor:
         name: win/default
@@ -155,7 +159,8 @@ jobs:
       - run: choco upgrade golang --version=1.17.0
       - run: choco install make
       - run: git config --system core.longpaths true
-      - run: make test-windows
+      - run: make test-packages PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+    parallelism: 4
 
   windows-package:
     executor: go-1_17
