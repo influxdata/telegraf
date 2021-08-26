@@ -69,7 +69,7 @@ const sampleConfig = `
   ## Connection timeout, defaults to "5s" if not set.
   timeout = "5s"
 
-  ## If you want to convert values represented as gauges to counters, add the metric names here
+  ## If you want to convert values represented as gauges to delta counters, add the metric names here
   additional_counters = [ ]
 
   ## Optional dimensions to be added to every metric
