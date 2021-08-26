@@ -131,7 +131,6 @@ jobs:
     executor: mac
     steps:
       - checkout
-      - run: PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - restore_cache:
           key: mac-go-mod-v0-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
