@@ -61,6 +61,22 @@ func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
 	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", url.String())
 }
 
+func TestScrapeURLAnnotationsCustomPathWithQueryParameters(t *testing.T) {
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/v1/agent/metrics?format=prometheus"}
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics?format=prometheus", url.String())
+}
+
+func TestScrapeURLAnnotationsCustomPathWithFragment(t *testing.T) {
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/v1/agent/metrics#prometheus"}
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics#prometheus", url.String())
+}
+
 func TestAddPod(t *testing.T) {
 	prom := &Prometheus{Log: testutil.Logger{}}
 
