@@ -356,7 +356,7 @@ func makeTableNoMock(fieldName string) (*si.Table, error) {
 		},
 	}
 
-	err = tab.Init()
+	err = tab.Init(&si.Snmp{})
 	if err != nil {
 		//Init already wraps
 		return nil, err

@@ -1,11 +1,9 @@
-//go:generate go run -tags generate snmp_mocks_generate.go
 package snmp
 
 import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -143,8 +141,9 @@ func TestFieldInit(t *testing.T) {
 
 	for _, txl := range translations {
 		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
-		err := f.init()
+		err := f.init(f.snmp)
 		if !assert.NoError(t, err, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName) {
+			println("I am an error")
 			continue
 		}
 		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
@@ -160,7 +159,13 @@ func TestTableInit(t *testing.T) {
 			{Oid: "TEST::description", Name: "description", IsTag: true},
 		},
 	}
-	err := tbl.Init()
+	s := &Snmp{
+		ClientConfig: snmp.ClientConfig{
+			Path: []string{"/testdata"},
+		},
+	}
+	err := tbl.Init(s)
+	fmt.Printf("%v\n", s)
 	require.NoError(t, err)
 
 	assert.Equal(t, "testTable", tbl.Name)
@@ -201,10 +206,10 @@ func TestSnmpInit(t *testing.T) {
 
 func TestSnmpInit_noTranslate(t *testing.T) {
 	// override execCommand so it returns exec.ErrNotFound
-	defer func(ec func(string, ...string) *exec.Cmd) { execCommand = ec }(execCommand)
-	execCommand = func(_ string, _ ...string) *exec.Cmd {
-		return exec.Command("snmptranslateExecErrNotFound")
-	}
+	// defer func(ec func(string, ...string) *exec.Cmd) { execCommand = ec }(execCommand)
+	// execCommand = func(_ string, _ ...string) *exec.Cmd {
+	// 	return exec.Command("snmptranslateExecErrNotFound")
+	// }
 
 	s := &Snmp{
 		Fields: []Field{
@@ -910,39 +915,6 @@ func TestFieldConvert(t *testing.T) {
 	}
 }
 
-// func TestSnmpTranslateCache_miss(t *testing.T) {
-// 	snmpTranslateCaches = nil
-// 	oid := "IF-MIB::ifPhysAddress.1"
-// 	mibName, oidNum, oidText, conversion, err := SnmpTranslate(oid)
-// 	assert.Len(t, snmpTranslateCaches, 1)
-// 	stc := snmpTranslateCaches[oid]
-// 	require.NotNil(t, stc)
-// 	assert.Equal(t, mibName, stc.mibName)
-// 	assert.Equal(t, oidNum, stc.oidNum)
-// 	assert.Equal(t, oidText, stc.oidText)
-// 	assert.Equal(t, conversion, stc.conversion)
-// 	assert.Equal(t, err, stc.err)
-// }
-
-// func TestSnmpTranslateCache_hit(t *testing.T) {
-// 	snmpTranslateCaches = map[string]snmpTranslateCache{
-// 		"foo": {
-// 			mibName:    "a",
-// 			oidNum:     "b",
-// 			oidText:    "c",
-// 			conversion: "d",
-// 			err:        fmt.Errorf("e"),
-// 		},
-// 	}
-// 	mibName, oidNum, oidText, conversion, err := SnmpTranslate("foo")
-// 	assert.Equal(t, "a", mibName)
-// 	assert.Equal(t, "b", oidNum)
-// 	assert.Equal(t, "c", oidText)
-// 	assert.Equal(t, "d", conversion)
-// 	assert.Equal(t, fmt.Errorf("e"), err)
-// 	snmpTranslateCaches = nil
-// }
-
 func TestSnmpTableCache_miss(t *testing.T) {
 	snmpTableCaches = nil
 	oid := ".1.0.0.0"
@@ -1272,5 +1244,5 @@ func TestGoSmi(t *testing.T) {
 		println("issues")
 	}
 
-	require.Error(t, err)
+	require.NoError(t, err)
 }

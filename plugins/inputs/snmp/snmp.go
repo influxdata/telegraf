@@ -7,7 +7,6 @@ import (
 	"math"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -69,17 +68,11 @@ const sampleConfig = `
   ## full plugin documentation for configuration details.
 `
 
-// execCommand is so tests can mock out exec.Command usage.
-var execCommand = exec.Command
-
 // Snmp holds the configuration for the plugin.
 type Snmp struct {
 	// The SNMP agent to query. Format is [SCHEME://]ADDR[:PORT] (e.g.
 	// udp://1.2.3.4:161).  If the scheme is not specified then "udp" is used.
 	Agents []string `toml:"agents"`
-
-	// The path to the mib files
-	//Path []string `toml:"path"`
 
 	// The tag used to name the agent host
 	AgentHostTag string `toml:"agent_host_tag"`
@@ -113,13 +106,13 @@ func (s *Snmp) init() error {
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
-		if err := s.Tables[i].Init(); err != nil {
+		if err := s.Tables[i].Init(s); err != nil {
 			return fmt.Errorf("initializing table %s: %w", s.Tables[i].Name, err)
 		}
 	}
 
 	for i := range s.Fields {
-		if err := s.Fields[i].init(); err != nil {
+		if err := s.Fields[i].init(s); err != nil {
 			return fmt.Errorf("initializing field %s: %w", s.Fields[i].Name, err)
 		}
 	}
@@ -189,10 +182,12 @@ type Table struct {
 	Oid string
 
 	initialized bool
+	snmp        *Snmp
 }
 
 // Init() builds & initializes the nested fields.
-func (t *Table) Init() error {
+func (t *Table) Init(parent *Snmp) error {
+	t.snmp = parent
 	//makes sure oid or name is set in config file
 	//otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
@@ -210,7 +205,7 @@ func (t *Table) Init() error {
 	secondaryIndexTablePresent := false
 	// initialize all the nested fields
 	for i := range t.Fields {
-		if err := t.Fields[i].init(); err != nil {
+		if err := t.Fields[i].init(t.snmp); err != nil {
 			return fmt.Errorf("initializing field %s: %w", t.Fields[i].Name, err)
 		}
 		if t.Fields[i].SecondaryIndexTable {
@@ -294,10 +289,12 @@ type Field struct {
 	SecondaryOuterJoin bool
 
 	initialized bool
+	snmp        *Snmp
 }
 
 // init() converts OID names to numbers, and sets the .Name attribute if unset.
-func (f *Field) init() error {
+func (f *Field) init(parent *Snmp) error {
+	f.snmp = parent
 	if f.initialized {
 		return nil
 	}
