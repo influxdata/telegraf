@@ -102,7 +102,7 @@ test:
 	go test -short $(race_detector) ./...
 	
 .PHONY: test-packages
-test:
+test-packages:
 	go test -short $(race_detector) $(PACKAGE_NAMES)
 
 .PHONY: test-integration
