@@ -39,6 +39,7 @@ commands:
         type: string
         default: "amd64"
     steps:
+      - run: PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - checkout
       - check-changed-files-or-halt
       - attach_workspace:
@@ -46,7 +47,7 @@ commands:
       - run: 'GOARCH=<< parameters.goarch >> make'
       - run: 'GOARCH=<< parameters.goarch >> make check'
       - run: 'GOARCH=<< parameters.goarch >> make check-deps'
-      - run: 'GOARCH=<< parameters.goarch >> make test'
+      - run: 'GOARCH=<< parameters.goarch >> make test-packages'
   package-build:
     parameters:
       release:
@@ -118,6 +119,7 @@ jobs:
     executor: go-1_17
     steps:
       - test-go
+    parallelism: 4
   test-go-1_17-386:
     executor: go-1_17
     steps:
