@@ -6,7 +6,7 @@ $artifactDirectory = "./build/dist"
 $extractDirectory = $artifactDirectory + "\" + "extracted"
 
 # Get telegraf.exe from windows artifact zip file
-$windowsZip = $artifactDirectory + "\" + ($Get-ChildItem "./Sandbox/" | where {$_.name -like "telegraf*"} | Select-Object -first 1).Name
+$windowsZip = $artifactDirectory + "\" + (Get-ChildItem "./Sandbox/" | where {$_.name -like "*windows*"} | Select-Object -first 1).Name
 Expand-Archive -LiteralPath $windowsZip -DestinationPath $extractDirectory -Force
 $subDirectoryPath = $extractDirectory + "\" + (Get-ChildItem -Path $extractDirectory | Select-Object -First 1).Name
 $telegrafExePath = $subDirectoryPath + "\" + "telegraf.exe"
