@@ -1029,14 +1029,14 @@ func (c *Config) addConfigPlugin(ctx context.Context, outputCtx context.Context,
 
 	if stCfg, ok := table.Fields["storage"]; ok {
 		storageCfgTable := stCfg.(*ast.Table)
-		if cfg, ok := storageCfgTable.Fields["internal"]; ok {
-			// create internal storage plugin
-			// set cfg
-			sp := StoragePlugins["internal"]()
-			if err := c.toml.UnmarshalTable(cfg.(*ast.Table), sp); err != nil {
-				return err
+		for name, cfg := range storageCfgTable.Fields {
+			if spc, ok := StoragePlugins[name]; ok {
+				sp := spc()
+				if err := c.toml.UnmarshalTable(cfg.(*ast.Table), sp); err != nil {
+					return err
+				}
+				reflect.ValueOf(configPlugin).Elem().FieldByName("Storage").Set(reflect.ValueOf(sp))
 			}
-			reflect.ValueOf(configPlugin).Elem().FieldByName("Storage").Set(reflect.ValueOf(sp))
 		}
 		delete(table.Fields, "storage")
 	}

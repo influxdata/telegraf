@@ -66,6 +66,7 @@ func (rp *RunningProcessor) Log() telegraf.Logger {
 	return rp.log
 }
 
+// LogName returns the name of the processor as the logs would see it, with any alias.
 func (rp *RunningProcessor) LogName() string {
 	return logName("processors", rp.Config.Name, rp.Config.Alias)
 }

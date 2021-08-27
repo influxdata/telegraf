@@ -32,6 +32,9 @@ type api struct {
 	// api shutdown context
 	ctx       context.Context
 	outputCtx context.Context
+
+	addHooks    []PluginCallbackEvent
+	removeHooks []PluginCallbackEvent
 }
 
 // nolint:revive
@@ -45,7 +48,7 @@ func newAPI(ctx context.Context, outputCtx context.Context, cfg *config.Config, 
 	return c
 }
 
-// PluginConfig is a plugin name and details about the config fields.
+// PluginConfigTypeInfo is a plugin name and details about the config fields.
 type PluginConfigTypeInfo struct {
 	Name   string                 `json:"name"`
 	Config map[string]FieldConfig `json:"config"`
@@ -312,21 +315,25 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 			return "", fmt.Errorf("%w: setting field %s", ErrBadRequest, err)
 		}
 
-		rp := models.NewRunningInput(i, pluginConfig)
+		ri := models.NewRunningInput(i, pluginConfig)
 		if len(forcedID) > 0 {
-			rp.ID = forcedID.Uint64()
+			ri.ID = forcedID.Uint64()
 		}
-		rp.SetDefaultTags(a.config.Tags)
+		ri.SetDefaultTags(a.config.Tags)
 
-		if err := rp.Init(); err != nil {
+		if err := ri.Init(); err != nil {
 			return "", fmt.Errorf("%w: could not initialize plugin %s", ErrBadRequest, err)
 		}
 
-		a.agent.AddInput(rp)
+		a.agent.AddInput(ri)
+		a.addPluginHook(PluginConfig{ID: string(idToString(ri.ID)), PluginConfigCreate: PluginConfigCreate{
+			Name:   "inputs." + name, // TODO: use PluginName() or something
+			Config: cfg.Config,
+		}})
 
-		go a.agent.RunInput(rp, time.Now())
+		go a.agent.RunInput(ri, time.Now())
 
-		return idToString(rp.ID), nil
+		return idToString(ri.ID), nil
 	case "outputs":
 		// add an output
 		output, ok := outputs.Outputs[name]
@@ -372,6 +379,11 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 
 		a.agent.AddOutput(ro)
 
+		a.addPluginHook(PluginConfig{ID: string(idToString(ro.ID)), PluginConfigCreate: PluginConfigCreate{
+			Name:   "outputs." + name, // TODO: use PluginName() or something
+			Config: cfg.Config,
+		}})
+
 		go a.agent.RunOutput(a.outputCtx, ro)
 
 		return idToString(ro.ID), nil
@@ -405,6 +417,12 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 			return "", fmt.Errorf("%w: could not initialize plugin %s", ErrBadRequest, err)
 		}
 		a.agent.AddProcessor(ra)
+
+		a.addPluginHook(PluginConfig{ID: string(idToString(ra.ID)), PluginConfigCreate: PluginConfigCreate{
+			Name:   "aggregators." + name, // TODO: use PluginName() or something
+			Config: cfg.Config,
+		}})
+
 		go a.agent.RunProcessor(ra)
 
 		return idToString(ra.ID), nil
@@ -441,6 +459,11 @@ func (a *api) CreatePlugin(cfg PluginConfigCreate, forcedID models.PluginID) (mo
 
 		a.agent.AddProcessor(rp)
 
+		a.addPluginHook(PluginConfig{ID: string(idToString(rp.ID)), PluginConfigCreate: PluginConfigCreate{
+			Name:   "processors." + name, // TODO: use PluginName() or something
+			Config: cfg.Config,
+		}})
+
 		go a.agent.RunProcessor(rp)
 
 		return idToString(rp.ID), nil
@@ -469,6 +492,8 @@ func (a *api) GetPluginStatus(id models.PluginID) models.PluginState {
 }
 
 func (a *api) DeletePlugin(id models.PluginID) error {
+	a.removePluginHook(PluginConfig{ID: string(id)})
+
 	for _, v := range a.agent.RunningInputs() {
 		if v.ID == id.Uint64() {
 			log.Printf("I! [configapi] stopping plugin %q", v.LogName())
@@ -493,13 +518,31 @@ func (a *api) DeletePlugin(id models.PluginID) error {
 	return ErrNotFound
 }
 
-// func (a *API) PausePlugin(id models.PluginID) {
+type PluginCallbackEvent func(p PluginConfig)
 
-// }
+// addPluginHook triggers the hook to fire this event
+func (a *api) addPluginHook(p PluginConfig) {
+	for _, h := range a.addHooks {
+		h(p)
+	}
+}
 
-// func (a *API) ResumePlugin(id models.PluginID) {
+// removePluginHook triggers the hook to fire this event
+func (a *api) removePluginHook(p PluginConfig) {
+	for _, h := range a.removeHooks {
+		h(p)
+	}
+}
 
-// }
+// OnPluginAdded adds a hook to get notified of this event
+func (a *api) OnPluginAdded(f PluginCallbackEvent) {
+	a.addHooks = append(a.addHooks, f)
+}
+
+// OnPluginRemoved adds a hook to get notified of this event
+func (a *api) OnPluginRemoved(f PluginCallbackEvent) {
+	a.removeHooks = append(a.removeHooks, f)
+}
 
 // setFieldConfig takes a map of field names to field values and sets them on the plugin
 func setFieldConfig(cfg map[string]interface{}, p interface{}) error {
@@ -525,7 +568,7 @@ func setFieldConfig(cfg map[string]interface{}, p interface{}) error {
 		}
 		val := reflect.ValueOf(v)
 		if err := setObject(val, destField, destFieldType); err != nil {
-			return fmt.Errorf("Could not set field %s: %w", k, err)
+			return fmt.Errorf("Could not set field %q: %w", k, err)
 		}
 	}
 	return nil
@@ -853,18 +896,6 @@ func setObject(from, to reflect.Value, destType reflect.Type) error {
 				return fmt.Errorf("Couldn't parse duration %q: %w", from.Interface().(string), err)
 			}
 			to.SetInt(int64(d))
-		case "internal.Duration":
-			d, err := time.ParseDuration(from.Interface().(string))
-			if err != nil {
-				return fmt.Errorf("Couldn't parse duration %q: %w", from.Interface().(string), err)
-			}
-			to.FieldByName("Duration").SetInt(int64(d))
-		case "internal.Size":
-			size, err := units.ParseStrictBytes(from.Interface().(string))
-			if err != nil {
-				return fmt.Errorf("Couldn't parse size %q: %w", from.Interface().(string), err)
-			}
-			to.FieldByName("Size").SetInt(size)
 		case "config.Size":
 			size, err := units.ParseStrictBytes(from.Interface().(string))
 			if err != nil {
