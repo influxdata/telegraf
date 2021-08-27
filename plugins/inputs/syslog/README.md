@@ -158,3 +158,14 @@ E! Error in plugin [inputs.syslog]: expecting a version value in the range 1-999
 ```
 
 You can use rsyslog to translate RFC3164 syslog messages into RFC5424 format.
+Add the following lines to your `/etc/rsyslog.d/50-telegraf.conf`
+after the
+`$ActionQueueSaveOnShutdown on # save in-memory data if rsyslog shuts down`
+line.
+```
+# This makes rsyslog listen on 127.0.01:514 to receive RFC3164 udp messages which can them be forwared to telegraf as RFC5424
+$ModLoad imudp #loads the udp module
+$UDPServerAddress 10.8.80.118
+$UDPServerRun 514
+```
+Make adjustments to the target address as needed and sent your RFC3164 messages to port 514.
