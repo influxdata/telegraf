@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/influxdata/telegraf/plugins/parsers/opentsdb"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
@@ -65,7 +66,7 @@ type Parser interface {
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
-	// Dataformat can be one of: json, influx, graphite, value, nagios
+	// Dataformat can be one of: json, influx, graphite, value, nagios, opentsdb
 	DataFormat string `toml:"data_format"`
 
 	// Separator only applied to Graphite data.
@@ -258,6 +259,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys,
 		)
+	case "opentsdb":
+		parser, err = NewOpenTSDBParser()
 	case "prometheus":
 		parser, err = NewPrometheusParser(config.DefaultTags)
 	case "prometheusremotewrite":
@@ -295,6 +298,10 @@ func newGrokParser(metricName string,
 
 	err := parser.Compile()
 	return &parser, err
+}
+
+func NewOpenTSDBParser() (Parser, error) {
+	return &opentsdb.OpenTSDBParser{}, nil
 }
 
 func NewNagiosParser() (Parser, error) {

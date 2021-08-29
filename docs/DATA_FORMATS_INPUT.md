@@ -15,6 +15,7 @@ Protocol or in JSON format.
 - [JSON v2](/plugins/parsers/json_v2)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
+- [OpenTSDB](/plugins/parsers/opentsdb)
 - [Prometheus](/plugins/parsers/prometheus)
 - [PrometheusRemoteWrite](/plugins/parsers/prometheusremotewrite)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"

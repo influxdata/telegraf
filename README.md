@@ -386,6 +386,7 @@ For documentation on the latest development code see the [documentation index][d
 - [JSON v2](/plugins/parsers/json_v2)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
+- [OpenTSDB](/plugins/parsers/OpenTSDB)
 - [Prometheus](/plugins/parsers/prometheus)
 - [Prometheus Remote Write](/plugins/parsers/prometheusremotewrite)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
