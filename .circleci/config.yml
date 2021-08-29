@@ -4,16 +4,16 @@ orbs:
   aws-cli: circleci/aws-cli@1.4.0
 
 executors:
-  go-1_15:
-    working_directory: '/go/src/github.com/influxdata/telegraf'
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.15.8'
-    environment:
-      GOFLAGS: -p=8
   go-1_16:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.16.6'
+      - image: 'quay.io/influxdb/telegraf-ci:1.16.7'
+    environment:
+      GOFLAGS: -p=8
+  go-1_17:
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.17.0'
     environment:
       GOFLAGS: -p=8
   mac:
@@ -88,7 +88,7 @@ commands:
             - 'dist'
 jobs:
   deps:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - checkout
       - restore_cache:
@@ -105,21 +105,21 @@ jobs:
           root: '/go'
           paths:
             - '*'
-  test-go-1_15:
-    executor: go-1_15
-    steps:
-      - test-go
-  test-go-1_15-386:
-    executor: go-1_15
-    steps:
-      - test-go:
-          goarch: "386"
   test-go-1_16:
     executor: go-1_16
     steps:
       - test-go
   test-go-1_16-386:
     executor: go-1_16
+    steps:
+      - test-go:
+          goarch: "386"
+  test-go-1_17:
+    executor: go-1_17
+    steps:
+      - test-go
+  test-go-1_17-386:
+    executor: go-1_17
     steps:
       - test-go:
           goarch: "386"
@@ -150,79 +150,79 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt-windows
-      - run: choco upgrade golang --version=1.16.6
+      - run: choco upgrade golang --version=1.17.0
       - run: choco install make
       - run: git config --system core.longpaths true
       - run: make test-windows
 
   windows-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: windows
   darwin-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: darwin
   i386-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: i386
   ppc641e-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: ppc641e
   s390x-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: s390x
   armel-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: armel
   amd64-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: amd64
   arm64-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: arm64
   mipsel-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: mipsel
   mips-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: mips
   static-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: static
   armhf-package:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           type: armhf
 
   release:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           release: true
   nightly:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - package-build:
           nightly: true
@@ -277,7 +277,7 @@ jobs:
           path: './dist'
           destination: 'build/dist'
   test-awaiter:
-    executor: go-1_16
+    executor: go-1_17
     steps:
       - run:
           command: |
@@ -299,18 +299,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-go-1_15':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
       - 'test-go-1_16':
           requires:
             - 'deps'
@@ -318,6 +306,18 @@ workflows:
             tags:
               only: /.*/
       - 'test-go-1_16-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_17':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_17-386':
           requires:
             - 'deps'
           filters:
@@ -333,10 +333,10 @@ workflows:
               only: /.*/
       - 'test-awaiter': 
           requires:
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
             - 'test-go-1_16'
             - 'test-go-1_16-386'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'windows-package':
           requires: 
             - 'test-go-windows'
@@ -395,10 +395,10 @@ workflows:
           requires:
             - 'test-go-windows'
             - 'test-go-mac'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
             - 'test-go-1_16'
             - 'test-go-1_16-386'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
@@ -420,16 +420,16 @@ workflows:
   nightly:
     jobs:
       - 'deps'
-      - 'test-go-1_15':
-          requires:
-            - 'deps'
-      - 'test-go-1_15-386':
-          requires:
-            - 'deps'
       - 'test-go-1_16':
           requires:
             - 'deps'
       - 'test-go-1_16-386':
+          requires:
+            - 'deps'
+      - 'test-go-1_17':
+          requires:
+            - 'deps'
+      - 'test-go-1_17-386':
           requires:
             - 'deps'
       - 'test-go-mac'
@@ -438,10 +438,10 @@ workflows:
           requires:
             - 'test-go-windows'
             - 'test-go-mac'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
             - 'test-go-1_16'
             - 'test-go-1_16-386'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
     triggers:
       - schedule:
           cron: "0 7 * * *"
