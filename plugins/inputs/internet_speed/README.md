@@ -14,14 +14,10 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
 
 ```toml
 # Monitors internet speed in the network
-[[inputs.internetSpeedMonitor]]
+[[inputs.internet_speed]]
 ## Sets if runs file download test
 ## Default: false
-enableFileDownload = false
-	
-## Sets measurement name
-## Default: internet_speed
-measurement = "internet_speed"
+enable_file_download = false
 ```
 
 ## Metrics
@@ -33,7 +29,7 @@ It collects latency, download speed and upload speed
 | -------------- | ---------- | ------- | ---- |
 | Download Speed | download   | float64 | Mbps |
 | Upload Speed   | upload     | float64 | Mbps |
-| Upload Speed   | upload     | float64 | ms   |
+| Latency        | latency    | float64 | ms   |
 
 ## Example Output
 
