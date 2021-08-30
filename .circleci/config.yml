@@ -171,13 +171,13 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: windows-go-{{ checksum "go.sum" }}
+          key: windows-go-v0-{{ checksum "go.sum" }}
       - check-changed-files-or-halt-windows
       - run: choco upgrade golang --version=1.17.0
       - run: choco install make
       - save_cache:
           name: 'Saving cache'
-          key: windows-go-{{ checksum "go.sum" }}
+          key: windows-go-v0-{{ checksum "go.sum" }}
           paths:
             - 'C:\Program Files\Go\bin\go.exe'
             - 'C:\Program Files\Go\bin\gofmt.exe'
