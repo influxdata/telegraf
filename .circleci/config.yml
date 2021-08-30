@@ -26,8 +26,12 @@ executors:
 
 commands:
   install-gotestsum:
+    parameters:
+      type:
+        type: string
+        default: "linux"
     steps:
-      - run: curl -L https://github.com/gotestyourself/gotestsum/releases/download/v1.7.0/gotestsum_1.7.0_linux_amd64.tar.gz --output gotestsum.tar.gz
+      - run: curl -L https://github.com/gotestyourself/gotestsum/releases/download/v1.7.0/gotestsum_1.7.0_<< parameters.type >>_amd64.tar.gz --output gotestsum.tar.gz
       - run: tar --extract --file=gotestsum.tar.gz gotestsum
   check-changed-files-or-halt:
       steps:
@@ -57,7 +61,7 @@ commands:
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
           ./gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
       - store_test_results: # upload test results for display in Test Summary
-                path: /tmp/test-results
+          path: /tmp/test-results
   package-build:
     parameters:
       release:
@@ -157,13 +161,15 @@ jobs:
       # - run: 'make tidy'
       # - run: 'make'
       # - run: 'make check'
-      - install-gotestsum
+      - install-gotestsum:
+          type:
+              darwin
       - run: |
           mkdir -p /tmp/test-results
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
           ./gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
       - store_test_results: # upload test results for display in Test Summary
-                path: /tmp/test-results
+          path: /tmp/test-results
     parallelism: 4
   test-go-windows:
     executor:
@@ -175,13 +181,14 @@ jobs:
       - run: choco upgrade golang --version=1.17.0
       - run: choco install make
       - run: git config --system core.longpaths true
-      - install-gotestsum
+      - run: Invoke-WebRequest -Uri https://github.com/gotestyourself/gotestsum/releases/download/v1.7.0/gotestsum_1.7.0_windows_amd64.tar.gz -OutFile gotestsum.tar.gz
+      - run: tar --extract --file=gotestsum.tar.gz gotestsum.exe
       - run: |
-          mkdir -p /tmp/test-results
+          New-Item -Path . -ItemType "directory" -Name "test-results"
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          ./gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
+          ./gotestsum --junitfile test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
       - store_test_results: # upload test results for display in Test Summary
-                path: /tmp/test-results
+          path: test-results
     parallelism: 10
 
   windows-package:
