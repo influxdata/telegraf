@@ -174,7 +174,9 @@ jobs:
           key: windows-go-v0-{{ checksum "go.sum" }}
       - check-changed-files-or-halt-windows
       - run: |
-         choco upgrade golang --version=1.17.0
+         go version
+         if([regex]::Match($(go version), '((\d+\.\d+))').captures.groups[1].value -ne "1.17") {choco upgrade golang --version=1.17.0}
+         make --help
          choco install make
          git config --system core.longpaths true
          ./scripts/install-gotestsum.ps1 1.7.0 C:\Users\circleci\
