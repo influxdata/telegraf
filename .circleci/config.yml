@@ -28,7 +28,7 @@ commands:
   install-gotestsum:
     steps:
       - run: curl -L https://github.com/gotestyourself/gotestsum/releases/download/v1.7.0/gotestsum_1.7.0_linux_amd64.tar.gz --output gotestsum.tar.gz
-      - run: tar -C /usr/local/bin --extract --file=gotestsum.tar.gz gotestsum
+      - run: tar --extract --file=gotestsum.tar.gz gotestsum
   check-changed-files-or-halt:
       steps:
         - run: ./scripts/check-file-changes.sh
@@ -53,8 +53,9 @@ commands:
       # - run: 'GOARCH=<< parameters.goarch >> make check-deps'
       # - run: 'GOARCH=<< parameters.goarch >> PACKAGE_NAMES=$(go list ./... | tr "\n" " " | circleci tests split --split-by=timings --timings-type=classname) make test-ci'
       - run: |
+          mkdir -p /tmp/test-results
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
+          ./gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
       - store_test_results: # upload test results for display in Test Summary
                 path: /tmp/test-results
   package-build:
@@ -158,8 +159,9 @@ jobs:
       # - run: 'make check'
       - install-gotestsum
       - run: |
+          mkdir -p /tmp/test-results
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
+          ./gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
       - store_test_results: # upload test results for display in Test Summary
                 path: /tmp/test-results
     parallelism: 4
@@ -175,8 +177,9 @@ jobs:
       - run: git config --system core.longpaths true
       - install-gotestsum
       - run: |
+          mkdir -p /tmp/test-results
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
+          ./gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
       - store_test_results: # upload test results for display in Test Summary
                 path: /tmp/test-results
     parallelism: 10
