@@ -36,16 +36,16 @@ commands:
       steps:
         - run: 
             command: ./scripts/check-file-changes.sh
-            shell: bash.exe
+            shell: bash.exe   
   test-go:
     parameters:
       goarch:
         type: string
         default: "amd64"
     steps:
-      - install-gotestsum
       - checkout
-      # - check-changed-files-or-halt
+      - install-gotestsum
+      # # - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       # - run: 'GOARCH=<< parameters.goarch >> make'
@@ -156,7 +156,11 @@ jobs:
       # - run: 'make tidy'
       # - run: 'make'
       # - run: 'make check'
-      - test-go
+      - run: |
+          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- $PACKAGE_NAMES
+      - store_test_results: # upload test results for display in Test Summary
+                path: /tmp/test-results
     parallelism: 4
   test-go-windows:
     executor:
@@ -168,7 +172,11 @@ jobs:
       - run: choco upgrade golang --version=1.17.0
       - run: choco install make
       - run: git config --system core.longpaths true
-      - test-go
+      - run: |
+          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- $PACKAGE_NAMES
+      - store_test_results: # upload test results for display in Test Summary
+                path: /tmp/test-results
     parallelism: 10
 
   windows-package:
