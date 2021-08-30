@@ -103,8 +103,8 @@ go-install:
 test:
 	go test -short $(race_detector) ./...
 	
-.PHONY: test-packages
-test-packages:
+.PHONY: test-ci
+test-ci:
 	go test -short $(race_detector) $(PACKAGE_NAMES)
 
 .PHONY: test-integration
