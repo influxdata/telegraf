@@ -171,12 +171,11 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: windows-go-v0-{{ checksum "go.sum" }}
+          key: windows-go-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt-windows
       - run: |
          go version
-         if([regex]::Match($(go version), '((\d+\.\d+))').captures.groups[1].value -ne "1.17") {choco upgrade golang --version=1.17.0}
-         make --help
+         choco upgrade golang --version=1.17.0
          choco install make
          git config --system core.longpaths true
          ./scripts/install-gotestsum.ps1 1.7.0 C:\Users\circleci\
@@ -185,12 +184,11 @@ jobs:
           C:\Users\circleci\gotestsum --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - save_cache:
           name: 'Saving cache'
-          key: windows-go-v0-{{ checksum "go.sum" }}
+          key: windows-go-v1-{{ checksum "go.sum" }}
           paths:
             - 'C:\Users\circleci\gotestsum.exe'
-            - 'C:\Program Files\Go\bin\go.exe'
-            - 'C:\Program Files\Go\bin\gofmt.exe'
-            - 'C:\ProgramData\chocolatey\bin\make.exe'
+            - 'C:\Program Files\Go'
+            - 'C:\ProgramData\chocolatey\lib\make\tools\install\bin\make.exe'
       - store_test_results:
           path: test-results
     parallelism: 6
