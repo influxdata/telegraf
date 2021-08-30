@@ -410,27 +410,29 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cwClient.Metric, error) {
 	default:
 		recentlyActive = nil
 	}
-	params = &cwClient.ListMetricsInput{
-		Dimensions:     []*cwClient.DimensionFilter{},
-		NextToken:      token,
-		MetricName:     nil,
-		RecentlyActive: recentlyActive,
-	}
 	for _, namespace := range c.Namespaces {
-		params.Namespace = aws.String(namespace)
+
+		params = &cwClient.ListMetricsInput{
+			Dimensions:     []*cwClient.DimensionFilter{},
+			NextToken:      token,
+			MetricName:     nil,
+			RecentlyActive: recentlyActive,
+	    	}
+	    	params.Namespace = aws.String(namespace)
+		
 		for {
-			resp, err := c.client.ListMetrics(params)
-			if err != nil {
-				return nil, err
-			}
+				resp, err := c.client.ListMetrics(params)
+				if err != nil {
+					return nil, err
+				}
 
-			metrics = append(metrics, resp.Metrics...)
-			if resp.NextToken == nil {
-				break
-			}
+				metrics = append(metrics, resp.Metrics...)
+				if resp.NextToken == nil {
+					break
+				}
 
-			params.NextToken = resp.NextToken
-		}
+				params.NextToken = resp.NextToken
+			}
 	}
 
 	return metrics, nil
