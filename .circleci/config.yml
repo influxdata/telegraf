@@ -187,7 +187,7 @@ jobs:
           key: windows-go-v1-{{ checksum "go.sum" }}
           paths:
             - 'C:\Users\circleci\gotestsum.exe'
-            - 'C:\ProgramData\chocolatey\lib\make\tools\install\bin\make.exe'
+            - 'C:\Users\circleci\AppData\Local\Temp\chocolatey\golang\1.17\go1.17.windows-amd64.msi'
       - store_test_results:
           path: test-results
     parallelism: 4
