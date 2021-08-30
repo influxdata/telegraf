@@ -179,14 +179,15 @@ jobs:
           name: 'Saving cache'
           key: windows-go-{{ checksum "go.sum" }}
           paths:
-            - 'C:\Users\circleci\AppData\Local\Temp\chocolatey\golang\1.17'
+            - 'C:\Program Files\Go\bin\go.exe'
+            - 'C:\Program Files\Go\bin\gofmt.exe'
+            - 'C:\ProgramData\chocolatey\bin\make.exe'
       - run: git config --system core.longpaths true
       - run: Invoke-WebRequest -Uri https://github.com/gotestyourself/gotestsum/releases/download/v1.7.0/gotestsum_1.7.0_windows_amd64.tar.gz -OutFile gotestsum.tar.gz
       - run: tar --extract --file=gotestsum.tar.gz gotestsum.exe
       - run: |
           New-Item -Path . -ItemType "directory" -Name "test-results"
-          $Env:PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          ./gotestsum --junitfile test-results/gotestsum-report.xml -- -short $Env:PACKAGE_NAMES
+          ./gotestsum --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - store_test_results:
           path: test-results
     parallelism: 4
