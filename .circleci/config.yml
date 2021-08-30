@@ -28,7 +28,7 @@ commands:
   install-gotestsum:
     steps:
       - run: curl -L https://github.com/gotestyourself/gotestsum/releases/download/v1.7.0/gotestsum_1.7.0_linux_amd64.tar.gz --output gotestsum.tar.gz
-      - run: tar -C /usr/local/bin --file=gotestsum -xzf gotestsum.tar.gz
+      - run: tar -C /usr/local/bin --extract --file=gotestsum.tar.gz gotestsum
   check-changed-files-or-halt:
       steps:
         - run: ./scripts/check-file-changes.sh
