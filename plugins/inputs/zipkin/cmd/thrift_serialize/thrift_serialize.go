@@ -32,7 +32,7 @@ import (
 	"log"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore"
+	"github.com/openzipkin-contrib/zipkin-go-opentracing/thrift/gen-go/zipkincore"
 )
 
 var (

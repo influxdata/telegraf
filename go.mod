@@ -42,7 +42,7 @@ require (
 	github.com/antchfx/xmlquery v1.3.5
 	github.com/antchfx/xpath v1.1.11
 	github.com/apache/arrow/go/arrow v0.0.0-20200601151325-b2287a20f230 // indirect
-	github.com/apache/thrift v0.13.0
+	github.com/apache/thrift v0.14.2
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-metrics v0.3.3 // indirect
@@ -206,7 +206,7 @@ require (
 	github.com/opencontainers/runc v1.0.0-rc93 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/openzipkin/zipkin-go-opentracing v0.3.4
+	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pion/dtls/v2 v2.0.9
