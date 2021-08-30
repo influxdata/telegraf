@@ -17,7 +17,7 @@ if(-not(Test-Path -Path $exePath)){
    Download-Gotestsum
 } else {
     $version_output = [string] (& $exePath --version)
-    $expected_version_output = "gotestsum version 1.6.0"
+    $expected_version_output = "gotestsum version 1.7.0"
     Write-Output $version_output
     if(-not($version_output -eq $expected_version_output) ){
         Write-Output "Removing old version, and getting new version $version"

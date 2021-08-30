@@ -40,7 +40,7 @@ commands:
       steps:
         - run: 
             command: ./scripts/check-file-changes.sh
-            shell: bash.exe   
+            shell: bash.exe
   test-go:
     parameters:
       goarch:
@@ -49,7 +49,7 @@ commands:
     steps:
       - checkout
       - install-gotestsum
-      # # - check-changed-files-or-halt
+      - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       - run: |
@@ -108,6 +108,7 @@ jobs:
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
+      - run: 'make check-deps'
       - save_cache:
           name: 'go module cache'
           key: go-mod-v1-{{ checksum "go.sum" }}
@@ -174,7 +175,6 @@ jobs:
           key: windows-go-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt-windows
       - run: |
-         go version
          choco upgrade golang --version=1.17.0
          choco install make
          git config --system core.longpaths true
@@ -187,11 +187,10 @@ jobs:
           key: windows-go-v1-{{ checksum "go.sum" }}
           paths:
             - 'C:\Users\circleci\gotestsum.exe'
-            - 'C:\Program Files\Go'
             - 'C:\ProgramData\chocolatey\lib\make\tools\install\bin\make.exe'
       - store_test_results:
           path: test-results
-    parallelism: 6
+    parallelism: 4
 
   windows-package:
     executor: go-1_17
