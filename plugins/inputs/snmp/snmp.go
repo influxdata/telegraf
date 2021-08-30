@@ -952,6 +952,17 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		}
 	}
 
+	tc := out.GetSubtree()
+
+	for i := range tc {
+		switch tc[i].Type.Name {
+		case "MacAddress", "PhysAddress":
+			conversion = "hwaddr"
+		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
+			conversion = "ipaddr"
+		}
+	}
+
 	oidText = out.RenderQualified()
 	i := strings.Index(oidText, "::")
 	if i == -1 {
@@ -960,5 +971,5 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	mibName = oidText[:i]
 	oidText = oidText[i+2:]
 
-	return mibName, oidNum, oidText, "", nil
+	return mibName, oidNum, oidText, conversion, nil
 }

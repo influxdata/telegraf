@@ -1243,6 +1243,28 @@ func TestGoSmi(t *testing.T) {
 	if i == -1 {
 		println("issues")
 	}
+	// mibName := oidText[:i]
+	// mibPrefix := mibName + "::"
+	// tagOids := map[string]struct{}{}
+	oidNum := "1.3.6.1.2.1.2.2.1.6"
+	var conversion string
+	// We have to guess that the "entry" oid is `oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
+	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
+	//submask := oidNum + ".1"
+	node, err := gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
 
-	require.NoError(t, err)
+	tc := node.GetSubtree()
+
+	for i := range tc {
+		switch tc[i].Type.Name {
+		case "MacAddress", "PhysAddress":
+			conversion = "hwaddr"
+		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
+			conversion = "ipaddr"
+		}
+	}
+
+	println(conversion)
+
+	require.Error(t, err)
 }
