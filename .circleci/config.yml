@@ -173,24 +173,25 @@ jobs:
       - restore_cache:
           key: windows-go-v0-{{ checksum "go.sum" }}
       - check-changed-files-or-halt-windows
-      - run: choco upgrade golang --version=1.17.0
-      - run: choco install make
+      - run: |
+         choco upgrade golang --version=1.17.0
+         choco install make
+         git config --system core.longpaths true
+         ./scripts/install-gotestsum.ps1 1.7.0 C:\Users\circleci\
+      - run: |
+          New-Item -Path . -ItemType "directory" -Name "test-results"
+          C:\Users\circleci\gotestsum --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - save_cache:
           name: 'Saving cache'
           key: windows-go-v0-{{ checksum "go.sum" }}
           paths:
+            - 'C:\Users\circleci\gotestsum.exe'
             - 'C:\Program Files\Go\bin\go.exe'
             - 'C:\Program Files\Go\bin\gofmt.exe'
             - 'C:\ProgramData\chocolatey\bin\make.exe'
-      - run: git config --system core.longpaths true
-      - run: Invoke-WebRequest -Uri https://github.com/gotestyourself/gotestsum/releases/download/v1.7.0/gotestsum_1.7.0_windows_amd64.tar.gz -OutFile gotestsum.tar.gz
-      - run: tar --extract --file=gotestsum.tar.gz gotestsum.exe
-      - run: |
-          New-Item -Path . -ItemType "directory" -Name "test-results"
-          ./gotestsum --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - store_test_results:
           path: test-results
-    parallelism: 4
+    parallelism: 6
 
   windows-package:
     executor: go-1_17
