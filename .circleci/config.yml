@@ -54,7 +54,7 @@ commands:
       # - run: 'GOARCH=<< parameters.goarch >> PACKAGE_NAMES=$(go list ./... | tr "\n" " " | circleci tests split --split-by=timings --timings-type=classname) make test-ci'
       - run: |
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- $PACKAGE_NAMES
+          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
       - store_test_results: # upload test results for display in Test Summary
                 path: /tmp/test-results
   package-build:
@@ -176,7 +176,7 @@ jobs:
       - install-gotestsum
       - run: |
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- $PACKAGE_NAMES
+          gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
       - store_test_results: # upload test results for display in Test Summary
                 path: /tmp/test-results
     parallelism: 10
