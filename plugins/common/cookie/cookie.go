@@ -39,6 +39,7 @@ func (c *CookieAuthConfig) Start(client *http.Client, log telegraf.Logger, clock
 	// continual auth renewal if set
 	if c.Renewal > 0 {
 		ticker := clock.Ticker(time.Duration(c.Renewal))
+		// this context is used in the tests only, it is to cancel the goroutine
 		go c.authRenewal(context.Background(), ticker, log)
 	}
 
