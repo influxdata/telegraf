@@ -205,8 +205,9 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v1.0.0-rc95 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/openzipkin/zipkin-go-opentracing v0.3.4
+	github.com/opentracing/opentracing-go v1.2.0
+	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
+	github.com/openzipkin/zipkin-go v0.2.5
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pion/dtls/v2 v2.0.9
