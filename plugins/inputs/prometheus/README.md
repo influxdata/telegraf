@@ -160,15 +160,15 @@ Authorization header.
 
 If you want to monitor Caddy, you need to use Caddy with its Prometheus plugin:
 
-* Download Caddy+Prometheus plugin [here](https://caddyserver.com/download/linux/amd64?plugins=http.prometheus)
-* Add the `prometheus` directive in your `CaddyFile`
+* Download [Caddy](https://caddyserver.com/download)
+* Download Prometheus and set up [monitoring Caddy with Prometheus metrics](https://caddyserver.com/docs/metrics#monitoring-caddy-with-prometheus-metrics)
 * Restart Caddy
 * Configure Telegraf to fetch metrics on it:
 
 ```toml
 [[inputs.prometheus]]
 #   ## An array of urls to scrape metrics from.
-  urls = ["http://localhost:9180/metrics"]
+  urls = ["http://localhost:2019/metrics"]
 ```
 
 > This is the default URL where Caddy Prometheus plugin will send data.
