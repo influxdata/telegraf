@@ -119,7 +119,7 @@ func TestFixedValue(t *testing.T) {
 						"bbus_power":                    244,
 						"bbus_average_daily_temp":       23,
 						"bbus_enabled":                  1,
-						"ups_need_battery_replacement":  0,
+						"bbus_ups_need_battery_replacement":  0,
 						"bbus_ups_low_battery_no_input": 0,
 					},
 					time.Unix(0, 0),

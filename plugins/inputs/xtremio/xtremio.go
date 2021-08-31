@@ -25,9 +25,9 @@ type XtremIO struct {
 
 const sampleConfig = `
   ## XtremIO Username
-  username = "" # required
+  username = "user1" # required
   ## XtremIO Password
-  password = "" # required
+  password = "pass123" # required
   ## XtremIO User Interface Endpoint
   url = "https://xtremio.example.com/" # required
   ## Metrics to collect from the XtremIO
@@ -155,9 +155,9 @@ func (xio *XtremIO) GatherBBUs(wg *sync.WaitGroup, url string, acc telegraf.Accu
 		fields["bbus_enabled"] = 1
 	}
 
-	fields["ups_need_battery_replacement"] = 0
+	fields["bbus_ups_need_battery_replacement"] = 0
 	if gjson.Get(resp, "content.ups-need-battery-replacement").Str == "true" {
-		fields["ups_need_battery_replacement"] = 1
+		fields["bbus_ups_need_battery_replacement"] = 1
 	}
 
 	fields["bbus_ups_low_battery_no_input"] = 0
