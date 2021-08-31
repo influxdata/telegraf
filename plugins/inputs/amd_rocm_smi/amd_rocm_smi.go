@@ -1,4 +1,4 @@
-package rocm_smi
+package amd_rocm_smi
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const measurement = "rocm_smi"
+const measurement = "amd_rocm_smi"
 
 type ROCmSMI struct {
 	BinPath string
@@ -60,7 +60,7 @@ func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("rocm_smi", func() telegraf.Input {
+	inputs.Add("amd_rocm_smi", func() telegraf.Input {
 		return &ROCmSMI{
 			BinPath: "/opt/rocm/bin/rocm-smi",
 			Timeout: config.Duration(5 * time.Second),

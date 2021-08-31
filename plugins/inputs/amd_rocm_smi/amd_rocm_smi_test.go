@@ -1,4 +1,4 @@
-package rocm_smi
+package amd_rocm_smi
 
 import (
 	"io/ioutil"
@@ -22,7 +22,7 @@ func TestGatherValidJSON(t *testing.T) {
 			filename: "vega-10-XT.json",
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
-					"rocm_smi",
+					"amd_rocm_smi",
 					map[string]string{
 						"gpu_id":        "0x6861",
 						"gpu_unique_id": "0x2150e7d042a1124",
@@ -50,7 +50,7 @@ func TestGatherValidJSON(t *testing.T) {
 			filename: "vega-20-WKS-GL-XE.json",
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
-					"rocm_smi",
+					"amd_rocm_smi",
 					map[string]string{
 						"gpu_id":        "0x66a1",
 						"gpu_unique_id": "0x2f048617326b1ea",
