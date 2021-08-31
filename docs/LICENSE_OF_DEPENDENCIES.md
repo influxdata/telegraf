@@ -60,7 +60,7 @@ following works:
 - github.com/davecgh/go-spew [ISC License](https://github.com/davecgh/go-spew/blob/master/LICENSE)
 - github.com/denisenkom/go-mssqldb [BSD 3-Clause "New" or "Revised" License](https://github.com/denisenkom/go-mssqldb/blob/master/LICENSE.txt)
 - github.com/devigned/tab [MIT License](https://github.com/devigned/tab/blob/master/LICENSE)
-- github.com/dgrijalva/jwt-go [MIT License](https://github.com/dgrijalva/jwt-go/blob/master/LICENSE)
+- github.com/golang-jwt/jwt/v4 [MIT License](https://github.com/golang-jwt/jwt/blob/master/LICENSE)
 - github.com/dimchansky/utfbom [Apache License 2.0](https://github.com/dimchansky/utfbom/blob/master/LICENSE)
 - github.com/docker/distribution [Apache License 2.0](https://github.com/docker/distribution/blob/master/LICENSE)
 - github.com/docker/docker [Apache License 2.0](https://github.com/docker/docker/blob/master/LICENSE)
