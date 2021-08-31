@@ -13,7 +13,7 @@ $telegrafExePath = $subDirectoryPath + "\" + "telegraf.exe"
 
 # Generate a new windows config and compare with current, if different create pull request
 & $telegrafExePath config > telegraf_windows_new.conf
-$pathToTelegrafWindowsConf = "\etc\telegraf_windows.conf"
+$pathToTelegrafWindowsConf = "etc\telegraf_windows.conf"
 
 if((Get-FileHash "telegraf_windows_new.conf").Hash -ne (Get-FileHash $pathToTelegrafWindowsConf).Hash){
     Write-Output "Difference found, creating pull request"
