@@ -9,6 +9,7 @@ The plugin uses the Telegraf serializers to format the metric data sent in the m
 ## Configuration
 
 ```toml
+[[ outputs.event_hubs ]]
 ## The full connection string to the Event Hub (required)
 ## The shared access key must have "Send" permissions on the target Event Hub.
 connection_string = "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=superSecret1234=;EntityPath=hubName"
