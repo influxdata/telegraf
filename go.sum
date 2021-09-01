@@ -950,8 +950,8 @@ github.com/influxdata/line-protocol v0.0.0-20180522152040-32c6aa80de5e/go.mod h1
 github.com/influxdata/line-protocol-corpus v0.0.0-20210519164801-ca6fa5da0184 h1:modYba1g1we+YJf0yGTwmohVWVAxcAch18nPg3e24OY=
 github.com/influxdata/line-protocol-corpus v0.0.0-20210519164801-ca6fa5da0184/go.mod h1:03nmhxzZ7Xk2pdG+lmMd7mHDfeVOYFyhOgwO61qWU98=
 github.com/influxdata/line-protocol/v2 v2.0.0-20210312151457-c52fdecb625a/go.mod h1:6+9Xt5Sq1rWx+glMgxhcg2c0DUaehK+5TDcPZ76GypY=
-github.com/influxdata/line-protocol/v2 v2.0.0 h1:4bFR4h6sxVvfBdnqWeUnjVp5qHz8cOhFpW+inXbvGi8=
-github.com/influxdata/line-protocol/v2 v2.0.0/go.mod h1:QKw43hdUBg3GTk2iC3iyCxksNj7PX9aUSeYOYE/ceHY=
+github.com/influxdata/line-protocol/v2 v2.0.1-0.20210901123813-a12b539bfc76 h1:NbpFR9i9defHIfUvcIVgs/3CBUfoQiPOHLOVj8MzyaM=
+github.com/influxdata/line-protocol/v2 v2.0.1-0.20210901123813-a12b539bfc76/go.mod h1:QKw43hdUBg3GTk2iC3iyCxksNj7PX9aUSeYOYE/ceHY=
 github.com/influxdata/promql/v2 v2.12.0/go.mod h1:fxOPu+DY0bqCTCECchSRtWfc+0X19ybifQhZoQNF5D8=
 github.com/influxdata/roaring v0.4.13-0.20180809181101-fc520f41fab6/go.mod h1:bSgUQ7q5ZLSO+bKBGqJiCBGAl+9DxyW63zLTujjUlOE=
 github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7 h1:0rQOs1VHLVFpAAOIR0mJEvVOIaMYFgYdreeVbgI9sII=

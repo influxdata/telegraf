@@ -704,7 +704,7 @@ func TestSeriesParser(t *testing.T) {
 			err: &ParseError{
 				LineNumber: 1,
 				Column:     1031,
-				msg:        `expected '=' after tag key "", but got '\r' instead`,
+				msg:        `expected tag key or field but found '\r' instead`,
 				buf:        "cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b",
 			},
 		},
