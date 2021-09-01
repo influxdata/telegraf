@@ -126,9 +126,11 @@ type Pipeline struct {
 }
 
 type Plugin struct {
-	ID     string      `json:"id"`
-	Events interface{} `json:"events"`
-	Name   string      `json:"name"`
+	ID           string                 `json:"id"`
+	Events       interface{}            `json:"events"`
+	Name         string                 `json:"name"`
+	BulkRequests map[string]interface{} `json:"bulk_requests"`
+	Documents    map[string]interface{} `json:"documents"`
 }
 
 type PipelinePlugins struct {
@@ -290,6 +292,20 @@ func (logstash *Logstash) gatherPluginsStats(
 			return err
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+		if pluginType == "output" && plugin.Name == "elasticsearch" {
+			flattener := jsonParser.JSONFlattener{}
+			err := flattener.FlattenJSON("", plugin.BulkRequests)
+			if err != nil {
+				return err
+			}
+			accumulator.AddFields("logstash_plugins_bulk_requests", flattener.Fields, pluginTags)
+			flattener = jsonParser.JSONFlattener{}
+			err = flattener.FlattenJSON("", plugin.Documents)
+			if err != nil {
+				return err
+			}
+			accumulator.AddFields("logstash_plugins_documents", flattener.Fields, pluginTags)
+		}
 	}
 
 	return nil
