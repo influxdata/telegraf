@@ -632,7 +632,7 @@ func TestStreamParser(t *testing.T) {
 			for {
 				m, err := parser.Next()
 				if err != nil {
-					if err == EOF {
+					if err == ErrEOF {
 						break
 					}
 					require.Equal(t, tt.err, err)
@@ -813,7 +813,7 @@ func TestStreamParserErrorString(t *testing.T) {
 			var errs []error
 			for i := 0; i < 20; i++ {
 				_, err := parser.Next()
-				if err == EOF {
+				if err == ErrEOF {
 					break
 				}
 
@@ -852,7 +852,7 @@ func TestStreamParserReaderError(t *testing.T) {
 	require.Equal(t, err, readerErr)
 
 	_, err = parser.Next()
-	require.Equal(t, err, EOF)
+	require.Equal(t, err, ErrEOF)
 }
 
 func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {

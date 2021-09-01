@@ -318,7 +318,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 				continue
 			} else if err != nil {
 				// Either we're exiting cleanly (err ==
-				// influx.EOF) or there's an unexpected error
+				// influx.ErrEOF) or there's an unexpected error
 				break
 			}
 
@@ -332,7 +332,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 			h.acc.AddMetric(m)
 		}
-		if err != influx.EOF {
+		if err != influx.ErrEOF {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)

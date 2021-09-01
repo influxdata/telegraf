@@ -278,7 +278,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 
 		metrics, err = parser.Parse(bytes)
 
-		if err != influx.EOF && err != nil {
+		if err != influx.ErrEOF && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, Invalid, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)
