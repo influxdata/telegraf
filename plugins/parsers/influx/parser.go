@@ -18,7 +18,7 @@ const (
 
 var (
 	ErrNoMetric = errors.New("no metric in line")
-	ErrEOF         = errors.New("EOF")
+	ErrEOF      = errors.New("EOF")
 )
 
 type TimeFunc func() time.Time
