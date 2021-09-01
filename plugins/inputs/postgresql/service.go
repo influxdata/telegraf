@@ -97,6 +97,8 @@ type Service struct {
 	IsPgBouncer   bool
 }
 
+var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)
+
 // Start starts the ServiceInput's service, whatever that may be
 func (p *Service) Start(telegraf.Accumulator) (err error) {
 	const localhost = "host=localhost sslmode=disable"
@@ -105,23 +107,23 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 		p.Address = localhost
 	}
 
-	connectionString := p.Address
+	connConfig, err := pgx.ParseConfig(p.Address)
+	if err != nil {
+		return err
+	}
+
+	// Remove the socket name from the path
+	connConfig.Host = socketRegexp.ReplaceAllLiteralString(connConfig.Host, "")
 
 	// Specific support to make it work with PgBouncer too
 	// See https://github.com/influxdata/telegraf/issues/3253#issuecomment-357505343
 	if p.IsPgBouncer {
 		// Remove DriveConfig and revert it by the ParseConfig method
 		// See https://github.com/influxdata/telegraf/issues/9134
-		d, err := pgx.ParseConfig(p.Address)
-		if err != nil {
-			return err
-		}
-
-		d.PreferSimpleProtocol = true
-
-		connectionString = stdlib.RegisterConnConfig(d)
+		connConfig.PreferSimpleProtocol = true
 	}
 
+	connectionString := stdlib.RegisterConnConfig(connConfig)
 	if p.DB, err = sql.Open("pgx", connectionString); err != nil {
 		return err
 	}

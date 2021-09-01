@@ -210,17 +210,18 @@ func (d *Dynatrace) send(msg string) error {
 	}
 	defer resp.Body.Close()
 
-	// print metric line results as info log
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusBadRequest {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			d.Log.Errorf("Dynatrace error reading response")
-		}
-		bodyString := string(bodyBytes)
-		d.Log.Debugf("Dynatrace returned: %s", bodyString)
-	} else {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusBadRequest {
 		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
 	}
+
+	// print metric line results as info log
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		d.Log.Errorf("Dynatrace error reading response")
+	}
+	bodyString := string(bodyBytes)
+	d.Log.Debugf("Dynatrace returned: %s", bodyString)
+
 	return nil
 }
 
@@ -253,6 +254,7 @@ func (d *Dynatrace) Init() error {
 	}
 	d.normalizedDefaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
 	d.normalizedStaticDimensions = dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dt.metrics.source", "telegraf"))
+	d.loggedMetrics = make(map[string]bool)
 
 	return nil
 }
@@ -285,7 +287,7 @@ func getTypeOption(metricType telegraf.ValueType, field *telegraf.Field) dtMetri
 	case uint64:
 		return dtMetric.WithIntGaugeValue(int64(v))
 	case int64:
-		return dtMetric.WithIntGaugeValue(32)
+		return dtMetric.WithIntGaugeValue(v)
 	case bool:
 		if v {
 			return dtMetric.WithIntGaugeValue(1)

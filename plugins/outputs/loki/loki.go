@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -136,6 +137,10 @@ func (l *Loki) Close() error {
 
 func (l *Loki) Write(metrics []telegraf.Metric) error {
 	s := Streams{}
+
+	sort.SliceStable(metrics, func(i, j int) bool {
+		return metrics[i].Time().Before(metrics[j].Time())
+	})
 
 	for _, m := range metrics {
 		tags := m.TagList()

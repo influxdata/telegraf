@@ -55,6 +55,11 @@ Syslog messages should be formatted according to
   ## By default best effort parsing is off.
   # best_effort = false
 
+  ## The RFC standard to use for message parsing
+  ## By default RFC5424 is used. RFC3164 only supports UDP transport (no streaming support)
+  ## Must be one of "RFC5424", or "RFC3164".
+  # syslog_standard = "RFC5424"
+
   ## Character to prepend to SD-PARAMs (default = "_").
   ## A syslog message can contain multiple parameters and multiple identifiers within structured data section.
   ## Eg., [id1 name1="val1" name2="val2"][id2 name1="val1" nameA="valA"]
@@ -155,9 +160,12 @@ echo "<13>1 2018-10-01T12:00:00.0Z example.org root - - - test" | nc -u 127.0.0.
 
 #### RFC3164
 
-RFC3164 encoded messages are not currently supported.  You may see the following error if a message encoded in this format:
-```
-E! Error in plugin [inputs.syslog]: expecting a version value in the range 1-999 [col 5]
-```
+RFC3164 encoded messages are supported for UDP only, but not all vendors output valid RFC3164 messages by default
 
-You can use rsyslog to translate RFC3164 syslog messages into RFC5424 format.
+- E.g. Cisco IOS
+
+If you see the following error, it is due to a message encoded in this format:
+ ```
+ E! Error in plugin [inputs.syslog]: expecting a version value in the range 1-999 [col 5]
+ ```
+ You can use rsyslog to translate RFC3164 syslog messages into RFC5424 format.

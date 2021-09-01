@@ -22,6 +22,7 @@ generate it using `telegraf --usage <plugin-name>`.
   dsn = "username:password@mysqlserver:3307/dbname?param=value"
 
   ## Timeout for any operation
+  ## Note that the timeout for queries is per query not per gather.
   # timeout = "5s"
 
   ## Connection time limits
