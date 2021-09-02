@@ -132,7 +132,7 @@ commands:
                 name: 'Saving cache'
                 key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
-                  - '~/project/gotestsum.exe'
+                  - '~/go/src/github.com/influxdata/telegraf/gotestsum'
       - when:
           condition:
             equal: [ darwin, << parameters.os >> ]
@@ -141,7 +141,7 @@ commands:
                 name: 'Saving cache'
                 key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
-                  - '~/project/gotestsum.exe'
+                  - '/go/src/github.com/influxdata/telegraf/gotestsum'
                   - '/usr/local/Cellar/go'
                   - '/usr/local/bin/go'
                   - '/usr/local/bin/gofmt'            
@@ -153,7 +153,7 @@ commands:
                 name: 'Saving cache'
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
-                  - 'C:\Users\circleci\projects\gotestsum.exe'
+                  - 'C:\Users\circleci\project\gotestsum.exe'
                   - 'C:\Users\circleci\AppData\Local\Temp\chocolatey\golang\<< parameters.go_version >>\go<< parameters.go_version >>.windows-amd64.msi' 
 
   package-build:
