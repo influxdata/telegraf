@@ -137,8 +137,7 @@ jobs:
   test-go-1_16-386:
     executor: go-1_16
     steps:
-      - test-go:
-          goarch: "386"
+      - test-go
     parallelism: 4
   test-go-1_17:
     executor: go-1_17
@@ -148,8 +147,7 @@ jobs:
   test-go-1_17-386:
     executor: go-1_17
     steps:
-      - test-go:
-          goarch: "386"
+      - test-go
     parallelism: 4
   test-go-mac:
     executor: mac
