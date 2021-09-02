@@ -27,12 +27,27 @@ executors:
 commands:
   install-gotestsum:
     parameters:
-      type:
+      os:
         type: string
         default: "linux"
+      version:
+        type: string
+        default: "1.7.0"
     steps:
-      - run: curl -L https://github.com/gotestyourself/gotestsum/releases/download/v1.7.0/gotestsum_1.7.0_<< parameters.type >>_amd64.tar.gz --output gotestsum.tar.gz
-      - run: tar --extract --file=gotestsum.tar.gz gotestsum
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: ./scripts/install-gotestsum.ps1 << parameters.version >> C:\Users\circleci\
+      - when:
+          condition:
+            or:
+              - equal: [ linux, << parameters.os >> ]
+              - equal: [ darwin, << parameters.os >> ]
+          steps:
+            - run: VERSION=<< parameters.version >>
+            - run: curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${VERSION}/gotestsum_${VERSION}_<< parameters.os >>_amd64.tar.gz --output gotestsum.tar.gz
+            - run: tar --extract --file=gotestsum.tar.gz gotestsum
   check-changed-files-or-halt:
       steps:
         - run: ./scripts/check-file-changes.sh
@@ -156,8 +171,7 @@ jobs:
             - '/usr/local/bin/go'
             - '/usr/local/bin/gofmt'
       - install-gotestsum:
-          type:
-              darwin
+          os: darwin
       - run: |
           mkdir -p /tmp/test-results
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
@@ -178,7 +192,8 @@ jobs:
          choco upgrade golang --version=1.17.0
          choco install make
          git config --system core.longpaths true
-         ./scripts/install-gotestsum.ps1 1.7.0 C:\Users\circleci\
+      - install-gotestsum:
+          os: windows
       - run: |
           New-Item -Path . -ItemType "directory" -Name "test-results"
           C:\Users\circleci\gotestsum --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)

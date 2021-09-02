@@ -48,9 +48,7 @@ endif
 
 # Go built-in race detector works only for 64 bits architectures.
 ifneq ($(GOARCH), 386)
-	ifneq ($(GOOS), windows)
-		race_detector := -race
-	endif
+	race_detector := -race
 endif
 
 

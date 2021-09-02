@@ -2,8 +2,8 @@
 # Link to gotestsum: https://github.com/gotestyourself/gotestsum
 # Execution example: ./scripts/install-gotestsum.ps1 1.7.0 C:\Users\circleci\
 
-$version=$args[0]
-$path=$args[1]
+$version = $args[0]
+$path = $args[1]
 $exePath = Join-Path -Path $path -ChildPath gotestsum.exe
 $tarPath = Join-Path -Path $path -ChildPath gotestsum.tar.gz
 
@@ -13,13 +13,14 @@ function Download-Gotestsum {
     tar -v -C $path --extract --file=$tarPath gotestsum.exe   
 }
 
-if(-not(Test-Path -Path $exePath)){
-   Download-Gotestsum
-} else {
+if (-not(Test-Path -Path $exePath)) {
+    Download-Gotestsum
+}
+else {
     $version_output = [string] (& $exePath --version)
-    $expected_version_output = "gotestsum version 1.7.0"
+    $expected_version_output = "gotestsum version $version"
     Write-Output $version_output
-    if(-not($version_output -eq $expected_version_output) ){
+    if (-not($version_output -eq $expected_version_output) ) {
         Write-Output "Removing old version, and getting new version $version"
         Remove-Item $exePath
         Download-Gotestsum
