@@ -2,7 +2,6 @@ package f5_load_balancer
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/tidwall/gjson"
 )
@@ -23,6 +23,8 @@ type F5LoadBalancer struct {
 	Collectors []string `toml:"collectors"`
 	Token      string
 	Log        telegraf.Logger
+
+	tls.ClientConfig
 }
 
 const sampleConfig = `
@@ -34,6 +36,13 @@ const sampleConfig = `
   url = "https://f5.example.com/" # required
   ## Metrics to collect from the F5
   collectors = ["node","virtual","pool","net_interface"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -61,9 +70,12 @@ func (f5 *F5LoadBalancer) Init() error {
 }
 
 func (f5 *F5LoadBalancer) Gather(acc telegraf.Accumulator) error {
-	// Due to self signed certificates in many orgs, we don't verify the cert
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	err := f5.Authenticate()
+	tlsCfg, err := f5.ClientConfig.TLSConfig()
+	if err != nil {
+		return fmt.Errorf("error parsing TLS config: %v", err)
+	}
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = tlsCfg
+	err = f5.Authenticate()
 	if err != nil {
 		return err
 	}
