@@ -1,6 +1,8 @@
 #!/bin/bash
 # To prevent the tests/builds to run for only a doc change, this script checks what files have changed in a pull request.
 
+exit 0
+
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 echo $BRANCH
 if [[ "$BRANCH" != "master" ]] && [[ "$BRANCH" != release* ]]; then # This should never skip for master and release branches
