@@ -22,7 +22,7 @@ setup_gotestsum () {
         SHA=$LINUX_SHA
     fi
     
-    if ! echo "${SHA}  gotestsum.tar.gz" | shasum -a 256 -c -; then
+    if ! echo "${SHA}  gotestsum.tar.gz" | sha256sum -c -; then
         echo "Checksum failed" >&2
         exit 1
     fi
