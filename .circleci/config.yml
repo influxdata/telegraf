@@ -38,7 +38,7 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
-            - run: ./scripts/install-gotestsum.ps1 << parameters.version >> C:\Users\circleci\
+            - run: ./scripts/install-gotestsum.ps1 << parameters.version >>
       - when:
           condition:
             or:
@@ -57,18 +57,47 @@ commands:
             command: ./scripts/check-file-changes.sh
             shell: bash.exe
   test-go:
+    parameters:
+      os:
+        type: string
+        default: "linux"
     steps:
       - checkout
-      - install-gotestsum
-      - check-changed-files-or-halt
-      - attach_workspace:
-          at: '/go'
-      - run: |
-          mkdir -p /tmp/test-results
-          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          ./gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
-      - store_test_results: # upload test results for display in Test Summary
-          path: /tmp/test-results
+      - when:
+          condition:
+            equal: [ linux, << parameters.os >> ]
+          steps:
+            - attach_workspace:
+                at: '/go'
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - run: 'sh ./scripts/mac_installgo.sh'            
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - check-changed-files-or-halt-windows
+            - run: |
+                choco upgrade golang --version=1.17.0
+                choco install make
+                git config --system core.longpaths true
+            - run: |
+                New-Item -Path . -ItemType "directory" -Name "test-results"
+      - when: 
+          condition:
+            or:
+              - equal: [ linux, << parameters.os >> ]
+              - equal: [ darwin, << parameters.os >> ]
+          steps:
+            - check-changed-files-or-halt
+            - run: mkdir -p /tmp/test-results
+      - install-gotestsum:
+          os: << parameters.os >>
+      - run: gotestsum --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+      - store_test_results:
+          path: test-results
   package-build:
     parameters:
       release:
@@ -152,11 +181,10 @@ jobs:
   test-go-mac:
     executor: mac
     steps:
-      - checkout
       - restore_cache:
           key: mac-go-mod-v0-{{ checksum "go.sum" }}
-      - check-changed-files-or-halt
-      - run: 'sh ./scripts/mac_installgo.sh'
+      - test-go:
+          os: darwin
       - save_cache:
           name: 'Saving cache'
           key: mac-go-mod-v0-{{ checksum "go.sum" }}
@@ -164,41 +192,22 @@ jobs:
             - '/usr/local/Cellar/go'
             - '/usr/local/bin/go'
             - '/usr/local/bin/gofmt'
-      - install-gotestsum:
-          os: darwin
-      - run: |
-          mkdir -p /tmp/test-results
-          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          ./gotestsum --junitfile /tmp/test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
-      - store_test_results:
-          path: /tmp/test-results
     parallelism: 4
   test-go-windows:
     executor:
         name: win/default
         shell: powershell.exe
     steps:
-      - checkout
       - restore_cache:
           key: windows-go-v1-{{ checksum "go.sum" }}
-      - check-changed-files-or-halt-windows
-      - run: |
-         choco upgrade golang --version=1.17.0
-         choco install make
-         git config --system core.longpaths true
-      - install-gotestsum:
+      - test-go:
           os: windows
-      - run: |
-          New-Item -Path . -ItemType "directory" -Name "test-results"
-          C:\Users\circleci\gotestsum --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - save_cache:
           name: 'Saving cache'
           key: windows-go-v1-{{ checksum "go.sum" }}
           paths:
             - 'C:\Users\circleci\gotestsum.exe'
             - 'C:\Users\circleci\AppData\Local\Temp\chocolatey\golang\1.17\go1.17.windows-amd64.msi'
-      - store_test_results:
-          path: test-results
     parallelism: 4
 
   windows-package:
