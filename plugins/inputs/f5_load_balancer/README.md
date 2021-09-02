@@ -1,6 +1,6 @@
 # F5 Load Balancer Input Plugin
 
-The `f5_load_balancer` plugin gathers metrics from an F5 Load Balancer's Rest API.
+The `f5_load_balancer` plugin gathers metrics from an F5 Load Balancer's iControl Rest API. Versions 15.1+ are supported, although some functionality might work on older versions. Version specific documentation can be found [here](https://clouddocs.f5.com/api/icontrol-rest/).
 ### Configuration
 
 This section contains the default TOML to configure the plugin.  You can

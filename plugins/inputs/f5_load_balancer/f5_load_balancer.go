@@ -56,10 +56,6 @@ func (f5 *F5LoadBalancer) Init() error {
 	if f5.URL == "" {
 		return fmt.Errorf("URL cannot be empty")
 	}
-	if f5.Collectors == nil {
-		f5.Collectors = []string{"node", "virtual", "pool", "net_interface"}
-	}
-	f5.Token = ""
 
 	return nil
 }
@@ -116,7 +112,11 @@ func (f5 *F5LoadBalancer) GatherNode(acc telegraf.Accumulator, parentWG *sync.Wa
 				acc.AddError(err)
 				return
 			}
-			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
+			selfLink := strings.Split(gjson.Get(resp, "selfLink").Str, "?")
+			if len(selfLink) < 2 {
+				acc.AddError(fmt.Errorf("couldnt split selfLink. value was: " + gjson.Get(resp, "selfLink").Str))
+			}
+			base := gjson.Get(resp, "entries."+selfLink[0]+".nestedStats.entries").Raw
 			fields := make(map[string]interface{})
 			fields["node_current_sessions"], _ = strconv.Atoi(gjson.Get(base, "curSessions.value").Raw)
 			fields["node_serverside_bits_in"], _ = strconv.Atoi(gjson.Get(base, "serverside\\.bitsIn.value").Raw)
@@ -149,7 +149,11 @@ func (f5 *F5LoadBalancer) GatherPool(acc telegraf.Accumulator, parentWG *sync.Wa
 				acc.AddError(err)
 				return
 			}
-			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
+			selfLink := strings.Split(gjson.Get(resp, "selfLink").Str, "?")
+			if len(selfLink) < 2 {
+				acc.AddError(fmt.Errorf("couldnt split selfLink. value was: " + gjson.Get(resp, "selfLink").Str))
+			}
+			base := gjson.Get(resp, "entries."+selfLink[0]+".nestedStats.entries").Raw
 			fields := make(map[string]interface{})
 			fields["pool_active_member_count"], _ = strconv.Atoi(gjson.Get(base, "activeMemberCnt.value").Raw)
 			fields["pool_current_sessions"], _ = strconv.Atoi(gjson.Get(base, "curSessions.value").Raw)
@@ -189,7 +193,11 @@ func (f5 *F5LoadBalancer) GatherVirtual(acc telegraf.Accumulator, parentWG *sync
 				acc.AddError(err)
 				return
 			}
-			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
+			selfLink := strings.Split(gjson.Get(resp, "selfLink").Str, "?")
+			if len(selfLink) < 2 {
+				acc.AddError(fmt.Errorf("couldnt split selfLink. value was: " + gjson.Get(resp, "selfLink").Str))
+			}
+			base := gjson.Get(resp, "entries."+selfLink[0]+".nestedStats.entries").Raw
 			fields := make(map[string]interface{})
 			fields["virtual_clientside_bits_in"], _ = strconv.Atoi(gjson.Get(base, "clientside\\.bitsIn.value").Raw)
 			fields["virtual_clientside_bits_out"], _ = strconv.Atoi(gjson.Get(base, "clientside\\.bitsOut.value").Raw)
@@ -228,8 +236,12 @@ func (f5 *F5LoadBalancer) GatherNetInterface(acc telegraf.Accumulator, parentWG 
 				return
 			}
 			tags := map[string]string{}
-			tags["name"] = gjson.Get(resp, "entries.*.nestedStats.entries.tmName.description").Raw
-			base := gjson.Get(resp, "entries.*.nestedStats.entries").Raw
+			selfLink := strings.Split(gjson.Get(resp, "selfLink").Str, "?")
+			if len(selfLink) < 2 {
+				acc.AddError(fmt.Errorf("couldnt split selfLink. value was: " + gjson.Get(resp, "selfLink").Str))
+			}
+			base := gjson.Get(resp, "entries."+selfLink[0]+".nestedStats.entries").Raw
+			tags["name"] = gjson.Get(resp, "entries."+selfLink[0]+".nestedStats.entries.tmName.description").Raw
 			fields := make(map[string]interface{})
 			fields["net_interface_counter_bits_in"], _ = strconv.Atoi(gjson.Get(base, "counters\\.bitsIn.value").Raw)
 			fields["net_interface_counter_bits_out"], _ = strconv.Atoi(gjson.Get(base, "counters\\.bitsOut.value").Raw)
@@ -338,6 +350,6 @@ func contains(s []string, str string) bool {
 
 func init() {
 	inputs.Add("f5_load_balancer", func() telegraf.Input {
-		return &F5LoadBalancer{}
+		return &F5LoadBalancer{Collectors: []string{"node", "virtual", "pool", "net_interface"}, Token: ""}
 	})
 }
