@@ -86,6 +86,9 @@ commands:
       os:
         type: string
         default: "linux"
+      gotestsum:
+        type: string
+        default: "./gotestsum"
     steps:    
       - when:
           condition:
@@ -98,10 +101,10 @@ commands:
               - equal: [ linux, << parameters.os >> ]
               - equal: [ darwin, << parameters.os >> ]
           steps:
-            - run: mkdir -p /tmp/test-results
+            - run: mkdir -p test-results
       - install-gotestsum:
           os: << parameters.os >>
-      - run: ./gotestsum --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+      - run: << parapmeters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - store_test_results:
           path: test-results
   
@@ -211,6 +214,7 @@ jobs:
       - setup-test-go-windows
       - test-go:
           os: windows
+          gotestsum: "./gotestsum.exe"
       - save_cache:
           name: 'Saving cache'
           key: windows-go-{{ checksum "go.sum" }}
