@@ -104,7 +104,7 @@ commands:
             - run: mkdir -p test-results
       - install-gotestsum:
           os: << parameters.os >>
-      - run: << parapmeters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+      - run: << parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - store_test_results:
           path: test-results
   
