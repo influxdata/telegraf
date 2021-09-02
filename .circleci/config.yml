@@ -30,13 +30,16 @@ commands:
       os:
         type: string
         default: "linux"
+      gotestsum:
+        type: string
+        default: "gotestsum"
     steps:
       - when:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
             - run: 
-                command: ./scripts/install_gotestsum.sh
+                command: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
                 shell: bash.exe
       - when:
           condition:
@@ -44,7 +47,7 @@ commands:
               - equal: [ linux, << parameters.os >> ]
               - equal: [ darwin, << parameters.os >> ]
           steps:
-            - run: ./scripts/install_gotestsum.sh
+            - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
 
   check-changed-files-or-halt:
     parameters:
@@ -112,6 +115,7 @@ commands:
             - run: mkdir -p test-results
       - install-gotestsum:
           os: << parameters.os >>
+          gotestsum: << parameters.gotestsum >>
       - run: ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
       - store_test_results:
           path: test-results
