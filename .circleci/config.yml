@@ -45,9 +45,9 @@ commands:
               - equal: [ linux, << parameters.os >> ]
               - equal: [ darwin, << parameters.os >> ]
           steps:
-            - run: VERSION=<< parameters.version >>
-            - run: curl -L https://github.com/gotestyourself/gotestsum/releases/download/v${VERSION}/gotestsum_${VERSION}_<< parameters.os >>_amd64.tar.gz --output gotestsum.tar.gz
-            - run: tar --extract --file=gotestsum.tar.gz gotestsum
+            - run: |
+                curl -L https://github.com/gotestyourself/gotestsum/releases/download/v<< parameters.version >>/gotestsum_<< parameters.version >>_<< parameters.os >>_amd64.tar.gz --output gotestsum.tar.gz
+                tar --extract --file=gotestsum.tar.gz gotestsum
   check-changed-files-or-halt:
       steps:
         - run: ./scripts/check-file-changes.sh
@@ -57,10 +57,6 @@ commands:
             command: ./scripts/check-file-changes.sh
             shell: bash.exe
   test-go:
-    parameters:
-      goarch:
-        type: string
-        default: "amd64"
     steps:
       - checkout
       - install-gotestsum
