@@ -14,7 +14,11 @@ path="/usr/local/Cellar"
 setup_go () {
     echo "installing go"
     curl -L https://golang.org/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz --output go${GO_VERSION}.${GO_ARCH}.tar.gz
-    echo "${GO_VERSION_SHA}  go${GO_VERSION}.${GO_ARCH}.tar.gz" | shasum -a 256 --check
+    if ! echo "${GO_VERSION_SHA}  go${GO_VERSION}.${GO_ARCH}.tar.gz" | shasum -a 256 -c -; then
+        echo "Checksum failed" >&2
+        exit 1
+    fi
+    
     sudo rm -rf ${path}/go
     sudo tar -C $path -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
     ln -sf ${path}/go/bin/go /usr/local/bin/go
