@@ -79,7 +79,7 @@ commands:
       - checkout
       - check-changed-files-or-halt:
           os: << parameters.os >>
-       - when:
+      - when:
           condition:
             equal: [ linux, << parameters.os >> ]
           steps:
