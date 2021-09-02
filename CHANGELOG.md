@@ -1,3 +1,56 @@
+## v1.20.0-rc0 [2021-09-02]
+
+#### Release Notes
+
+  - [#9642](https://github.com/influxdata/telegraf/pull/9642) Build with Golang 1.17
+
+#### Bugfixes
+
+  - [#9700](https://github.com/influxdata/telegraf/pull/9700) Update thrift module to 0.14.2 and zipkin-go-opentracing 0.4.5
+  - [#9587](https://github.com/influxdata/telegraf/pull/9587) `outputs.opentelemetry` Use headers config in grpc requests
+  - [#9713](https://github.com/influxdata/telegraf/pull/9713) Update runc module to v1.0.0-rc95 to address CVE-2021-30465
+  - [#9699](https://github.com/influxdata/telegraf/pull/9699) Migrate dgrijalva/jwt-go to golang-jwt/jwt/v4
+  - [#9139](https://github.com/influxdata/telegraf/pull/9139) `serializers.prometheus` Update timestamps and expiration time as new data arrives
+  - [#9625](https://github.com/influxdata/telegraf/pull/9625) `outputs.graylog` Output timestamp with fractional seconds
+  - [#9655](https://github.com/influxdata/telegraf/pull/9655) Update cloud.google.com/go/pubsub module from 1.2.0 to 1.15.0
+  - [#9674](https://github.com/influxdata/telegraf/pull/9674) `inputs.mongodb` Change command based on server version
+  - [#9676](https://github.com/influxdata/telegraf/pull/9676) `outputs.dynatrace` Remove hardcoded int value
+  - [#9619](https://github.com/influxdata/telegraf/pull/9619) `outputs.influxdb_v2` Increase accepted retry-after header values.
+  - [#9652](https://github.com/influxdata/telegraf/pull/9652) Update github.com/tinylib/msgp module from 1.1.5 to 1.1.6
+  - [#9471](https://github.com/influxdata/telegraf/pull/9471) `inputs.sql` Make timeout apply to single query
+
+#### Features
+
+  - [#9665](https://github.com/influxdata/telegraf/pull/9665) `inputs.systemd_units` feat(plugins/inputs/systemd_units): add pattern support
+  - [#9598](https://github.com/influxdata/telegraf/pull/9598) `outputs.sql` Add bool datatype
+  - [#9386](https://github.com/influxdata/telegraf/pull/9386) `inputs.cloudwatch` Pull metrics from multiple AWS CloudWatch namespaces
+  - [#9411](https://github.com/influxdata/telegraf/pull/9411) `inputs.cloudwatch` Support AWS Web Identity Provider
+  - [#9570](https://github.com/influxdata/telegraf/pull/9570) `inputs.modbus` Add support for RTU over TCP
+  - [#9488](https://github.com/influxdata/telegraf/pull/9488) `inputs.procstat` Support cgroup globs and include systemd unit children
+  - [#9322](https://github.com/influxdata/telegraf/pull/9322) `inputs.suricata` Support alert event type
+  - [#5464](https://github.com/influxdata/telegraf/pull/5464) `inputs.prometheus` Add ability to query Consul Service catalog
+  - [#8641](https://github.com/influxdata/telegraf/pull/8641) `outputs.prometheus_client` Add Landing page
+  - [#9529](https://github.com/influxdata/telegraf/pull/9529) `inputs.http_listener_v2` Allows multiple paths and add path_tag
+  - [#9395](https://github.com/influxdata/telegraf/pull/9395) Add cookie authentication to HTTP input and output plugins
+  - [#8454](https://github.com/influxdata/telegraf/pull/8454) `inputs.syslog` Add RFC3164 support
+  - [#9351](https://github.com/influxdata/telegraf/pull/9351) `inputs.jenkins` Add option to include nodes by name
+  - [#9277](https://github.com/influxdata/telegraf/pull/9277) Add JSON, MessagePack, and Protocol-buffers format support to the XPath parser
+  - [#9343](https://github.com/influxdata/telegraf/pull/9343) `inputs.snmp_trap` Improve MIB lookup performance
+  - [#9342](https://github.com/influxdata/telegraf/pull/9342) `outputs.newrelic` Add option to override metric_url
+  - [#9306](https://github.com/influxdata/telegraf/pull/9306) `inputs.smart` Add power mode status
+
+#### New Input Plugins
+
+  - [#9602](https://github.com/influxdata/telegraf/pull/9602) Add rocm_smi input to monitor AMD GPUs
+  - [#9101](https://github.com/influxdata/telegraf/pull/9101) Add mdstat input to gather from /proc/mdstat collection
+  - [#3536](https://github.com/influxdata/telegraf/pull/3536) Add Elasticsearch query input
+
+#### New Output Plugins
+
+  - [#9228](https://github.com/influxdata/telegraf/pull/9228) Add OpenTelemetry output
+  - [#9426](https://github.com/influxdata/telegraf/pull/9426) Add Azure Data Explorer(ADX) output
+
+
 ## v1.19.3 [2021-08-18]
 
 #### Bugfixes
