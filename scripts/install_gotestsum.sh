@@ -16,13 +16,16 @@ setup_gotestsum () {
     
     if [ $OS = "windows" ]; then
         SHA=$WINDOWS_SHA
+        SHATOOL="sha256sum"
     elif [ $OS = "darwin" ]; then
         SHA=$DARWIN_SHA
+        SHATOOL="shasum -a 256"
     elif [ $OS = "linux" ]; then
         SHA=$LINUX_SHA
+        SHATOOL="sha256sum"
     fi
     
-    if ! echo "${SHA}  gotestsum.tar.gz" | sha256sum -c -; then
+    if ! echo "${SHA}  gotestsum.tar.gz" | ${SHATOOL} -c -; then
         echo "Checksum failed" >&2
         exit 1
     fi
