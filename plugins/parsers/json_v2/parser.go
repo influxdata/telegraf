@@ -384,7 +384,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 func (p *Parser) existsInpathResults(index int, raw string) *PathResult {
 	for _, f := range p.pathResults {
 		if f.result.Index == 0 {
-			for _, i := range f.result.HashtagIndexes {
+			for _, i := range f.result.Indexes {
 				if i == index {
 					return &f
 				}
