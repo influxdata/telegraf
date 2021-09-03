@@ -1,6 +1,6 @@
 # XtremIO Input Plugin
 
-The `xtremio` plugin gathers metrics from a Dell EMC XtremIO Storage Array's V3 Rest API.
+The `xtremio` plugin gathers metrics from a Dell EMC XtremIO Storage Array's V3 Rest API. Documentation can be found [here](https://dl.dell.com/content/docu96624_xtremio-storage-array-x1-and-x2-cluster-types-with-xms-6-3-0-to-6-3-3-and-xios-4-0-15-to-4-0-31-and-6-0-0-to-6-3-3-restful-api-3-x-guide.pdf?language=en_us)
 ### Configuration
 
 This section contains the default TOML to configure the plugin.  You can
@@ -16,6 +16,13 @@ generate it using `telegraf --usage xtremio`.
   url = "https://xtremio.example.com/" # required
   ## Metrics to collect from the XtremIO
   collectors = ["bbus","clusters","ssds","volumes","xms"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 ### Metrics
