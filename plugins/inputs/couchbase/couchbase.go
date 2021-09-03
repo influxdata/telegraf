@@ -20,6 +20,8 @@ type Couchbase struct {
 
 	BucketStatsIncluded []string `toml:"bucket_stats_included"`
 
+	ClusterBucketStats bool `toml:"cluster_bucket_stats"`
+
 	bucketInclude filter.Filter
 	client        *http.Client
 
@@ -87,12 +89,14 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 		cb.addBucketField(fields, "data_used", bs["dataUsed"])
 		cb.addBucketField(fields, "mem_used", bs["memUsed"])
 
-		err := cb.gatherDetailedBucketStats(addr, bucketName, fields)
-		if err != nil {
-			return err
-		}
+		if cb.ClusterBucketStats {
+			err := cb.gatherDetailedBucketStats(addr, bucketName, fields)
+			if err != nil {
+				return err
+			}
 
-		acc.AddFields("couchbase_bucket", fields, tags)
+			acc.AddFields("couchbase_bucket", fields, tags)
+		}
 	}
 
 	return nil
@@ -391,6 +395,7 @@ func init() {
 	inputs.Add("couchbase", func() telegraf.Input {
 		return &Couchbase{
 			BucketStatsIncluded: []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"},
+			ClusterBucketStats:  true,
 		}
 	})
 }

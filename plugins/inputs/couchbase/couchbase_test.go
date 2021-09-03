@@ -2,10 +2,11 @@ package couchbase
 
 import (
 	"encoding/json"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/influxdata/telegraf/plugins/common/tls"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -28,17 +29,14 @@ func TestGatherServer(t *testing.T) {
 	}))
 
 	cb := Couchbase{
+		ClusterBucketStats:  true,
 		BucketStatsIncluded: []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"},
-		ClientConfig: tls.ClientConfig{
-			InsecureSkipVerify: true,
-		},
 	}
-	err := cb.Init()
-	require.NoError(t, err)
+	require.NoError(t, cb.Init())
 
 	var acc testutil.Accumulator
-	err = cb.gatherServer(&acc, fakeServer.URL)
-	require.NoError(t, err)
+	require.NoError(t, cb.gatherServer(&acc, fakeServer.URL))
+
 	acc.AssertContainsTaggedFields(t, "couchbase_node",
 		map[string]interface{}{"memory_free": 23181365248.0, "memory_total": 64424656896.0},
 		map[string]string{"cluster": fakeServer.URL, "hostname": "172.16.10.187:8091"})
@@ -132,6 +130,24 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 			require.Equal(t, len(acc.Metrics[0].Fields), 1)
 		})
 	}
+}
+
+func TestGatherNodeOnly(t *testing.T) {
+	faker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+
+	cb := Couchbase{
+		Servers: []string{faker.URL},
+	}
+	require.NoError(t, cb.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, cb.gatherServer(&acc, faker.URL))
+
+	require.Equal(t, 0, len(acc.Errors))
+	require.Equal(t, 7, len(acc.Metrics))
+	acc.AssertDoesNotContainMeasurement(t, "couchbase_bucket")
 }
 
 // From `/pools`
