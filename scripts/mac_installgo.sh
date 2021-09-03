@@ -14,7 +14,7 @@ path="/usr/local/Cellar"
 setup_go () {
     echo "installing go"
     curl -L https://golang.org/dl/go${GO_VERSION}.${GO_ARCH}.tar.gz --output go${GO_VERSION}.${GO_ARCH}.tar.gz
-    if ! echo "${GO_VERSION_SHA}  go${GO_VERSION}.${GO_ARCH}.tar.gz" | shasum -a 256 -c -; then
+    if ! echo "${GO_VERSION_SHA}  go${GO_VERSION}.${GO_ARCH}.tar.gz" | shasum --algorithm 256 --check -; then
         echo "Checksum failed" >&2
         exit 1
     fi
@@ -25,9 +25,9 @@ setup_go () {
     ln -sf ${path}/go/bin/gofmt /usr/local/bin/gofmt
 }
 
-if command -v go &> /dev/null; then
+if command -v go >/dev/null 2>&1; then
     echo "Go is already installed"
-    v=`go version | { read _ _ v _; echo ${v#go}; }`
+    v=$("go version | { read _ _ v _; echo ${v#go}; }")
     echo "$v is installed, required version is ${GO_VERSION}"
     if [ "$v" != ${GO_VERSION} ]; then
         setup_go
