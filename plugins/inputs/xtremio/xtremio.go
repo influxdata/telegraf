@@ -1,7 +1,6 @@
 package xtremio
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/tidwall/gjson"
 )
@@ -20,7 +20,8 @@ type XtremIO struct {
 	URL        string   `toml:"url"`
 	Collectors []string `toml:"collectors"`
 	Cookie     *http.Cookie
-	Log        telegraf.Logger
+	tls.ClientConfig
+	Log telegraf.Logger
 }
 
 const sampleConfig = `
@@ -32,6 +33,13 @@ const sampleConfig = `
   url = "https://xtremio.example.com/" # required
   ## Metrics to collect from the XtremIO
   collectors = ["bbus","clusters","ssds","volumes","xms"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -54,18 +62,17 @@ func (xio *XtremIO) Init() error {
 	if xio.URL == "" {
 		return fmt.Errorf("URL cannot be empty")
 	}
-	if xio.Collectors == nil {
-		xio.Collectors = []string{"bbus", "clusters", "ssds", "volumes", "xms"}
-	}
-	xio.Cookie = nil
 
 	return nil
 }
 
 func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
-	// Due to self signed certificates in many orgs, we don't verify the cert
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	err := xio.Authenticate()
+	tlsCfg, err := xio.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = tlsCfg
+	err = xio.Authenticate()
 	if err != nil {
 		return err
 	}
@@ -312,6 +319,6 @@ func contains(s []string, str string) bool {
 
 func init() {
 	inputs.Add("xtremio", func() telegraf.Input {
-		return &XtremIO{}
+		return &XtremIO{Collectors: []string{"bbus", "clusters", "ssds", "volumes", "xms"}, Cookie: nil}
 	})
 }
