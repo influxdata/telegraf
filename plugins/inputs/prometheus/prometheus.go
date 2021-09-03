@@ -65,6 +65,8 @@ type Prometheus struct {
 	client  *http.Client
 	headers map[string]string
 
+	MetricFilter []string `toml:"metric_filter"`
+
 	// Should we scrape Kubernetes services for prometheus annotations
 	MonitorPods       bool   `toml:"monitor_kubernetes_pods"`
 	PodScrapeScope    string `toml:"pod_scrape_scope"`
@@ -158,6 +160,9 @@ var sampleConfig = `
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
+
+  ## Optional metric filter. If specified, only metrics in the filter will be gathered.
+  # metric_filter = []
 
   ## Optional TLS Config
   # tls_ca = /path/to/cafile
@@ -340,6 +345,20 @@ func (p *Prometheus) createHTTPClient() (*http.Client, error) {
 	return client, nil
 }
 
+func (p *Prometheus) filterMetrics(metrics []telegraf.Metric) (filteredMetrics []telegraf.Metric) {
+	if len(p.MetricFilter) > 0 {
+		for _, metricWant := range p.MetricFilter {
+			for _, metricHas := range metrics {
+				if metricHas.HasField(metricWant) {
+					filteredMetrics = append(filteredMetrics, metricHas)
+				}
+			}
+		}
+		return filteredMetrics
+	}
+	return filteredMetrics
+}
+
 func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error {
 	var req *http.Request
 	var err error
@@ -423,6 +442,10 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	if err != nil {
 		return fmt.Errorf("error reading metrics for %s: %s",
 			u.URL, err)
+	}
+
+	if len(p.MetricFilter) > 0 {
+		metrics = p.filterMetrics(metrics)
 	}
 
 	for _, metric := range metrics {

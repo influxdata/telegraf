@@ -85,6 +85,9 @@ in Prometheus format.
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
   
+  ## Optional metric filter. If specified, only metrics in the filter will be gathered.
+  # metric_filter = []
+
   ## Optional TLS Config
   # tls_ca = /path/to/cafile
   # tls_cert = /path/to/certfile
