@@ -111,14 +111,6 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 	return nil
 }
 
-func copyFields(fields map[string]interface{}) map[string]interface{} {
-	cpy := make(map[string]interface{})
-	for k, v := range fields {
-		cpy[k] = v
-	}
-	return cpy
-}
-
 // basicBucketStats gets the basic bucket statistics
 func (cb *Couchbase) basicBucketStats(basicStats map[string]interface{}) map[string]interface{} {
 	fields := make(map[string]interface{})
