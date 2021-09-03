@@ -29,6 +29,14 @@ This plugin gets metrics for each Couchbase node, as well as detailed metrics fo
   ## Use TLS but skip chain & host verification (defaults to false)
   ## If set to false, tls_cert and tls_key are required
   # insecure_skip_verify = false
+  
+  ## Whether to collect cluster-wide bucket statistics
+  ## It is recommended to disable this in favor of node_stats
+  ## to get a better view of the cluster.
+  cluster_bucket_stats = true
+  
+  ## Whether to collect bucket stats for each individual node
+  node_bucket_stats = false
 ```
 
 ## Measurements
@@ -45,12 +53,13 @@ Fields:
 - memory_free (unit: bytes, example: 23181365248.0)
 - memory_total (unit: bytes, example: 64424656896.0)
 
-### couchbase_bucket
+### couchbase_bucket and couchbase_node_bucket
 
 Tags:
 
 - cluster: whatever you called it in `servers` in the configuration, e.g.: `http://couchbase-0.example.com/`)
 - bucket: the name of the couchbase bucket, e.g., `blastro-df`
+- hostname: the hostname of the node the bucket metrics were collected from, e.g., `172.16.10.187:8091` (only present in `couchbase_node_bucket`)
 
 Default bucket fields:
 
