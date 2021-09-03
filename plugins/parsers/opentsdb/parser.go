@@ -1,8 +1,8 @@
 package opentsdb
 
 import (
+	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,45 +24,43 @@ func NewOpenTSDBParser() (*OpenTSDBParser, error) {
 }
 
 func (p *OpenTSDBParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	// parse even if the buffer begins with a newline
-	if len(buf) != 0 && buf[0] == '\n' {
-		buf = buf[1:]
+	metrics := make([]telegraf.Metric, 0)
+
+	scanner := bufio.NewScanner(bytes.NewReader(buf))
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// delete LF and CR
+		if line[len(line)-1] == '\n' {
+			line = line[:len(line)-1]
+		}
+		if line[len(line)-1] == '\r' {
+			line = line[:len(line)-1]
+		}
+
+		m, err := p.ParseLine(line)
+		if err != nil {
+			return nil, err
+		}
+
+		if m != nil {
+			metrics = append(metrics, m)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
 	}
 
-	var metrics []telegraf.Metric
-	var errs []string
-
-	for {
-		n := bytes.IndexByte(buf, '\n')
-		var line []byte
-		if n >= 0 {
-			line = bytes.TrimSpace(buf[:n:n])
-		} else {
-			line = bytes.TrimSpace(buf) // last line
-		}
-		if len(line) != 0 {
-			metric, err := p.ParseLine(string(line))
-			if err == nil {
-				metrics = append(metrics, metric)
-			} else {
-				errs = append(errs, err.Error())
-			}
-		}
-		if n < 0 {
-			break
-		}
-		buf = buf[n+1:]
-	}
-	if len(errs) != 0 {
-		return metrics, errors.New(strings.Join(errs, "\n"))
-	}
 	return metrics, nil
 }
 
-// Parse performs OpenTSDB parsing of a single line.
+// ParseLine performs OpenTSDB parsing of a single line.
 func (p *OpenTSDBParser) ParseLine(line string) (telegraf.Metric, error) {
 	// Break into fields ("put", name, timestamp, value, tag1, tag2, ..., tagN).
 	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return nil, nil
+	}
 	if len(fields) < 4 || fields[0] != "put" {
 		return nil, fmt.Errorf("received %q which doesn't have required fields", line)
 	}

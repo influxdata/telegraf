@@ -103,7 +103,6 @@ func TestParseLine(t *testing.T) {
 			require.NoError(t, err)
 
 			testutil.RequireMetricEqual(t, tt.expected, actual)
-
 		})
 	}
 }
