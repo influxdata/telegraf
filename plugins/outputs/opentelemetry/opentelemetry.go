@@ -181,7 +181,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 const (
 	defaultServiceAddress = "localhost:4317"
 	defaultTimeout        = config.Duration(5 * time.Second)
-	defaultCompression    = "gzip"
+	defaultCompression    = "none"
 )
 
 func init() {
