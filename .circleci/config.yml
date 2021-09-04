@@ -41,7 +41,7 @@ commands:
         default: "1.17"
       cache_version:
         type: string
-        default: "v2"
+        default: "v3"
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -70,7 +70,8 @@ commands:
                 choco upgrade golang --version=<< parameters.go_version >>.0
                 choco install make
                 git config --system core.longpaths true
-                PATH=$PATH:/c/Program\ Files/Go/bin
+                rm -rf /c/Go/*
+                cp -r /c/Program\ Files/Go /c/
       - run: mkdir -p test-results
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - run: |
@@ -107,8 +108,8 @@ commands:
                 name: 'Saving cache'
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
                 paths:
+                  - 'C:\Go'
                   - 'C:\Users\circleci\project\gotestsum.exe'
-                  - 'C:\Users\circleci\AppData\Local\Temp\chocolatey\golang\<< parameters.go_version >>\go<< parameters.go_version >>.windows-amd64.msi'
 
   package-build:
     parameters:
