@@ -35,7 +35,7 @@ setup_gotestsum () {
 
 if test -f "${EXE}"; then
     echo "gotestsum is already installed"
-    v=$("./${EXE} --version")
+    v=$(./"${EXE}" --version)
     echo "$v is installed, required version is ${VERSION}"
     if [ "$v" != "gotestsum version ${VERSION}" ]; then
         setup_gotestsum
