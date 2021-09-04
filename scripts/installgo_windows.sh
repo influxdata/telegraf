@@ -5,10 +5,10 @@ set -eux
 GO_VERSION="1.17"
 
 setup_go () {
-    choco upgrade golang --version=${GO_VERSION}.0
+    choco upgrade golang --version=${GO_VERSION}
     choco install make
     git config --system core.longpaths true
-    rm -rf /c/Go/*
+    rm -rf /c/Go
     cp -r /c/Program\ Files/Go /c/
 }
 

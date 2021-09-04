@@ -61,6 +61,7 @@ commands:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
+            - rm -rf /c/Go
             - restore_cache:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
