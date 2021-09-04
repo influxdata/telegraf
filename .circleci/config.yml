@@ -70,6 +70,7 @@ commands:
                 choco upgrade golang --version=<< parameters.go_version >>.0
                 choco install make
                 git config --system core.longpaths true
+                PATH=$PATH:/c/Program\ Files/Go/bin
       - run: mkdir -p test-results
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - run: |
