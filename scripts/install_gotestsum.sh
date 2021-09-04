@@ -13,7 +13,7 @@ LINUX_SHA="b5c98cc408c75e76a097354d9487dca114996e821b3af29a0442aa6c9159bd40"
 setup_gotestsum () {
     echo "installing gotestsum"
     curl -L "https://github.com/gotestyourself/gotestsum/releases/download/v${VERSION}/gotestsum_${VERSION}_${OS}_amd64.tar.gz" --output gotestsum.tar.gz
-    
+
     if [ "$OS" = "windows" ]; then
         SHA=$WINDOWS_SHA
         SHATOOL="sha256sum"
@@ -24,18 +24,18 @@ setup_gotestsum () {
         SHA=$LINUX_SHA
         SHATOOL="sha256sum"
     fi
-    
+
     if ! echo "${SHA}  gotestsum.tar.gz" | ${SHATOOL} --check -; then
         echo "Checksum failed" >&2
         exit 1
     fi
-    
+
     tar --extract --file=gotestsum.tar.gz "${EXE}"
 }
 
 if test -f "${EXE}"; then
     echo "gotestsum is already installed"
-    v=$("./{EXE} --version")
+    v=$("./${EXE} --version")
     echo "$v is installed, required version is ${VERSION}"
     if [ "$v" != "gotestsum version ${VERSION}" ]; then
         setup_gotestsum

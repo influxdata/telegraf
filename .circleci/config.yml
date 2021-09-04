@@ -36,9 +36,6 @@ commands:
       gotestsum:
         type: string
         default: "gotestsum"
-      go_version:
-        type: string
-        default: "1.17"
       cache_version:
         type: string
         default: "v3"
@@ -59,19 +56,14 @@ commands:
           steps:
             - restore_cache:
                 key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-            - run: 'sh ./scripts/mac_installgo.sh'
+            - run: 'sh ./scripts/installgo_mac.sh'
       - when:
           condition:
             equal: [ windows, << parameters.os >> ]
           steps:
             - restore_cache:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
-            - run: |
-                choco upgrade golang --version=<< parameters.go_version >>.0
-                choco install make
-                git config --system core.longpaths true
-                rm -rf /c/Go/*
-                cp -r /c/Program\ Files/Go /c/
+            - run: 'sh ./scripts/installgo_windows.sh'
       - run: mkdir -p test-results
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - run: |
