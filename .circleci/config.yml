@@ -25,50 +25,9 @@ executors:
       GOFLAGS: -p=8
 
 commands:     
-  install-gotestsum:
-    parameters:
-      os:
-        type: string
-        default: "linux"
-      gotestsum:
-        type: string
-        default: "gotestsum"
-    steps:
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: 
-                command: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
-                shell: bash.exe
-      - when:
-          condition:
-            or:
-              - equal: [ linux, << parameters.os >> ]
-              - equal: [ darwin, << parameters.os >> ]
-          steps:
-            - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
-
   check-changed-files-or-halt:
-    parameters:
-      os:
-        type: string
-        default: "linux"
     steps:
-      - when:
-          condition:
-            equal: [ windows, << parameters.os >> ]
-          steps:
-            - run: 
-                command: ./scripts/check-file-changes.sh
-                shell: bash.exe
-      - when:
-          condition:
-            or:
-              - equal: [ linux, << parameters.os >> ]
-              - equal: [ darwin, << parameters.os >> ]
-          steps:
-            - run: ./scripts/check-file-changes.sh
+      - run: ./scripts/check-file-changes.sh
   test-go:
     parameters:
       os:
@@ -85,6 +44,7 @@ commands:
         default: "v2"
     steps:
       - checkout
+      - check-changed-files-or-halt
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -118,10 +78,10 @@ commands:
               - equal: [ darwin, << parameters.os >> ]
           steps:
             - run: mkdir -p test-results
-      - install-gotestsum:
-          os: << parameters.os >>
-          gotestsum: << parameters.gotestsum >>
-      - run: ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- -short $(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+      - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
+      - run: |
+          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+          ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
       - store_test_results:
           path: test-results
       - when:
@@ -245,7 +205,7 @@ jobs:
   test-go-windows:
     executor:
         name: win/default
-        shell: powershell.exe
+        shell: bash.exe
     steps:
       - test-go:
           os: windows
