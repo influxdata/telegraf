@@ -1,0 +1,12 @@
+file,hostname=testhost1,outputname=1A-CC01-PC01 systemVoltage=-54.1,systemCurrent=-3.8
+file,hostname=testhost1,outputname=2A-CC01-KA01 systemVoltage=-54.1,systemCurrent=-3.8
+file,hostname=testhost1,outputname=3A-CC01-CC02 systemVoltage=-54.1,systemCurrent=-3.8
+file,hostname=testhost1,outputname=4A systemVoltage=-54.1,systemCurrent=-3.8
+file,hostname=testhost1,outputname=5A systemVoltage=-54.1,systemCurrent=-3.8
+file,hostname=testhost1,outputname=6A-CC01-88-INV01-A systemVoltage=-54.1,systemCurrent=-3.8
+file,hostname=testhost2,outputname=1A systemVoltage=27.5,systemCurrent=9.5
+file,hostname=testhost2,outputname=2A systemVoltage=27.5,systemCurrent=9.5
+file,hostname=testhost2,outputname=3A systemVoltage=27.5,systemCurrent=9.5
+file,hostname=testhost2,outputname=4A systemVoltage=27.5,systemCurrent=9.5
+file,hostname=testhost2,outputname=5A systemVoltage=27.5,systemCurrent=9.5
+file,hostname=testhost2,outputname=6A systemVoltage=27.5,systemCurrent=9.5

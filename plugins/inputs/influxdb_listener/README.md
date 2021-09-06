@@ -75,5 +75,5 @@ Metrics are created from InfluxDB Line Protocol in the request body.
 curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 ```
 
-[influxdb_http_api]: https://docs.influxdata.com/influxdb/latest/guides/writing_data/
+[influxdb_http_api]: https://docs.influxdata.com/influxdb/v1.8/guides/write_data/
 [http_listener_v2]: /plugins/inputs/http_listener_v2/README.md

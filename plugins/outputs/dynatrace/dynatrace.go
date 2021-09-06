@@ -4,11 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
-	"regexp"
-	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,33 +12,30 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-)
 
-const (
-	oneAgentMetricsURL   = "http://127.0.0.1:14499/metrics/ingest"
-	dtIngestAPILineLimit = 1000
-)
-
-var (
-	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.-]+")
-	maxDimKeyLen          = 100
-	maxMetricKeyLen       = 250
+	dtMetric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
 )
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL               string          `toml:"url"`
-	APIToken          string          `toml:"api_token"`
-	Prefix            string          `toml:"prefix"`
-	Log               telegraf.Logger `toml:"-"`
-	Timeout           config.Duration `toml:"timeout"`
-	AddCounterMetrics []string        `toml:"additional_counters"`
-	State             map[string]string
-	SendCounter       int
+	URL               string            `toml:"url"`
+	APIToken          string            `toml:"api_token"`
+	Prefix            string            `toml:"prefix"`
+	Log               telegraf.Logger   `toml:"-"`
+	Timeout           config.Duration   `toml:"timeout"`
+	AddCounterMetrics []string          `toml:"additional_counters"`
+	DefaultDimensions map[string]string `toml:"default_dimensions"`
+
+	normalizedDefaultDimensions dimensions.NormalizedDimensionList
+	normalizedStaticDimensions  dimensions.NormalizedDimensionList
 
 	tls.ClientConfig
 
 	client *http.Client
+
+	loggedMetrics map[string]bool // New empty set
 }
 
 const sampleConfig = `
@@ -61,8 +54,8 @@ const sampleConfig = `
   ## The API token needs data ingest scope permission. When using OneAgent, no API token is required.
   api_token = "" 
 
-  ## Optional prefix for metric names (e.g.: "telegraf.")
-  prefix = "telegraf."
+  ## Optional prefix for metric names (e.g.: "telegraf")
+  prefix = "telegraf"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -78,6 +71,10 @@ const sampleConfig = `
 
   ## If you want to convert values represented as gauges to counters, add the metric names here
   additional_counters = [ ]
+
+  ## Optional dimensions to be added to every metric
+  # [outputs.dynatrace.default_dimensions]
+  # default_key = "default value"
 `
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
@@ -101,163 +98,99 @@ func (d *Dynatrace) Description() string {
 	return "Send telegraf metrics to a Dynatrace environment"
 }
 
-// Normalizes a metric keys or metric dimension identifiers
-// according to Dynatrace format.
-func (d *Dynatrace) normalize(s string, max int) (string, error) {
-	s = reNameAllowedCharList.ReplaceAllString(s, "_")
-
-	// Strip Digits and underscores if they are at the beginning of the string
-	normalizedString := strings.TrimLeft(s, "_0123456789")
-
-	for strings.HasPrefix(normalizedString, "_") {
-		normalizedString = normalizedString[1:]
-	}
-
-	if len(normalizedString) > max {
-		normalizedString = normalizedString[:max]
-	}
-
-	for strings.HasSuffix(normalizedString, "_") {
-		normalizedString = normalizedString[:len(normalizedString)-1]
-	}
-
-	normalizedString = strings.ReplaceAll(normalizedString, "..", "_")
-
-	if len(normalizedString) == 0 {
-		return "", fmt.Errorf("error normalizing the string: %s", s)
-	}
-	return normalizedString, nil
-}
-
-func (d *Dynatrace) escape(v string) string {
-	return strconv.Quote(v)
-}
-
 func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
-	var buf bytes.Buffer
-	metricCounter := 1
-	var tagb bytes.Buffer
 	if len(metrics) == 0 {
 		return nil
 	}
 
-	for _, metric := range metrics {
-		// first write the tags into a buffer
-		tagb.Reset()
-		if len(metric.Tags()) > 0 {
-			keys := make([]string, 0, len(metric.Tags()))
-			for k := range metric.Tags() {
-				keys = append(keys, k)
-			}
-			// sort tag keys to expect the same order in ech run
-			sort.Strings(keys)
+	lines := []string{}
 
-			for _, k := range keys {
-				tagKey, err := d.normalize(k, maxDimKeyLen)
-				if err != nil {
+	for _, tm := range metrics {
+		dims := []dimensions.Dimension{}
+		for _, tag := range tm.TagList() {
+			// Ignore special tags for histogram and summary types.
+			switch tm.Type() {
+			case telegraf.Histogram:
+				if tag.Key == "le" || tag.Key == "gt" {
 					continue
 				}
-				if len(metric.Tags()[k]) > 0 {
-					fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(metric.Tags()[k]))
+			case telegraf.Summary:
+				if tag.Key == "quantile" {
+					continue
 				}
 			}
+			dims = append(dims, dimensions.NewDimension(tag.Key, tag.Value))
 		}
-		if len(metric.Fields()) > 0 {
-			for k, v := range metric.Fields() {
-				var value string
-				switch v := v.(type) {
-				case string:
-					continue
-				case float64:
-					if !math.IsNaN(v) && !math.IsInf(v, 0) {
-						value = fmt.Sprintf("%f", v)
-					} else {
-						continue
-					}
-				case uint64:
-					value = strconv.FormatUint(v, 10)
-				case int64:
-					value = strconv.FormatInt(v, 10)
-				case bool:
-					if v {
-						value = "1"
-					} else {
-						value = "0"
-					}
-				default:
-					d.Log.Debugf("Dynatrace type not supported! %s", v)
-					continue
+
+		metricType := tm.Type()
+		for _, field := range tm.FieldList() {
+			metricName := tm.Name() + "." + field.Key
+			for _, i := range d.AddCounterMetrics {
+				if metricName == i {
+					metricType = telegraf.Counter
 				}
+			}
 
-				// metric name
-				metricKey, err := d.normalize(k, maxMetricKeyLen)
-				if err != nil {
-					continue
+			typeOpt := getTypeOption(metricType, field)
+
+			if typeOpt == nil {
+				// Unsupported type. Log only once per unsupported metric name
+				if !d.loggedMetrics[metricName] {
+					d.Log.Warnf("Unsupported type for %s", metricName)
+					d.loggedMetrics[metricName] = true
 				}
+				continue
+			}
 
-				metricID, err := d.normalize(d.Prefix+metric.Name()+"."+metricKey, maxMetricKeyLen)
-				// write metric name combined with its field
-				if err != nil {
-					continue
-				}
-				// write metric id,tags and value
+			name := tm.Name() + "." + field.Key
+			dm, err := dtMetric.NewMetric(
+				name,
+				dtMetric.WithPrefix(d.Prefix),
+				dtMetric.WithDimensions(
+					dimensions.MergeLists(
+						d.normalizedDefaultDimensions,
+						dimensions.NewNormalizedDimensionList(dims...),
+						d.normalizedStaticDimensions,
+					),
+				),
+				dtMetric.WithTimestamp(tm.Time()),
+				typeOpt,
+			)
 
-				metricType := metric.Type()
-				for _, i := range d.AddCounterMetrics {
-					if metric.Name()+"."+metricKey == i {
-						metricType = telegraf.Counter
-					}
-				}
+			if err != nil {
+				d.Log.Warn(fmt.Sprintf("failed to normalize metric: %s - %s", name, err.Error()))
+				continue
+			}
 
-				switch metricType {
-				case telegraf.Counter:
-					var delta float64
+			line, err := dm.Serialize()
 
-					// Check if LastValue exists
-					if lastvalue, ok := d.State[metricID+tagb.String()]; ok {
-						// Convert Strings to Floats
-						floatLastValue, err := strconv.ParseFloat(lastvalue, 32)
-						if err != nil {
-							d.Log.Debugf("Could not parse last value: %s", lastvalue)
-						}
-						floatCurrentValue, err := strconv.ParseFloat(value, 32)
-						if err != nil {
-							d.Log.Debugf("Could not parse current value: %s", value)
-						}
-						if floatCurrentValue >= floatLastValue {
-							delta = floatCurrentValue - floatLastValue
-							fmt.Fprintf(&buf, "%s%s count,delta=%f\n", metricID, tagb.String(), delta)
-						}
-					}
-					d.State[metricID+tagb.String()] = value
+			if err != nil {
+				d.Log.Warn(fmt.Sprintf("failed to serialize metric: %s - %s", name, err.Error()))
+				continue
+			}
 
-				default:
-					fmt.Fprintf(&buf, "%s%s %v\n", metricID, tagb.String(), value)
-				}
+			lines = append(lines, line)
+		}
+	}
 
-				if metricCounter%dtIngestAPILineLimit == 0 {
-					err = d.send(buf.Bytes())
-					if err != nil {
-						return err
-					}
-					buf.Reset()
-				}
-				metricCounter++
+	limit := apiconstants.GetPayloadLinesLimit()
+	for i := 0; i < len(lines); i += limit {
+		batch := lines[i:min(i+limit, len(lines))]
+
+		output := strings.Join(batch, "\n")
+		if output != "" {
+			if err := d.send(output); err != nil {
+				return fmt.Errorf("error processing data:, %s", err.Error())
 			}
 		}
 	}
-	d.SendCounter++
-	// in typical interval of 10s, we will clean the counter state once in 24h which is 8640 iterations
 
-	if d.SendCounter%8640 == 0 {
-		d.State = make(map[string]string)
-	}
-	return d.send(buf.Bytes())
+	return nil
 }
 
-func (d *Dynatrace) send(msg []byte) error {
+func (d *Dynatrace) send(msg string) error {
 	var err error
-	req, err := http.NewRequest("POST", d.URL, bytes.NewBuffer(msg))
+	req, err := http.NewRequest("POST", d.URL, bytes.NewBufferString(msg))
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
 		return fmt.Errorf("error while creating HTTP request:, %s", err.Error())
@@ -277,27 +210,27 @@ func (d *Dynatrace) send(msg []byte) error {
 	}
 	defer resp.Body.Close()
 
-	// print metric line results as info log
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusBadRequest {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			d.Log.Errorf("Dynatrace error reading response")
-		}
-		bodyString := string(bodyBytes)
-		d.Log.Debugf("Dynatrace returned: %s", bodyString)
-	} else {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusBadRequest {
 		return fmt.Errorf("request failed with response code:, %d", resp.StatusCode)
 	}
+
+	// print metric line results as info log
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		d.Log.Errorf("Dynatrace error reading response")
+	}
+	bodyString := string(bodyBytes)
+	d.Log.Debugf("Dynatrace returned: %s", bodyString)
+
 	return nil
 }
 
 func (d *Dynatrace) Init() error {
-	d.State = make(map[string]string)
 	if len(d.URL) == 0 {
 		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
-		d.URL = oneAgentMetricsURL
+		d.URL = apiconstants.GetDefaultOneAgentEndpoint()
 	}
-	if d.URL != oneAgentMetricsURL && len(d.APIToken) == 0 {
+	if d.URL != apiconstants.GetDefaultOneAgentEndpoint() && len(d.APIToken) == 0 {
 		d.Log.Errorf("Dynatrace api_token is a required field for Dynatrace output")
 		return fmt.Errorf("api_token is a required field for Dynatrace output")
 	}
@@ -314,14 +247,60 @@ func (d *Dynatrace) Init() error {
 		},
 		Timeout: time.Duration(d.Timeout),
 	}
+
+	dims := []dimensions.Dimension{}
+	for key, value := range d.DefaultDimensions {
+		dims = append(dims, dimensions.NewDimension(key, value))
+	}
+	d.normalizedDefaultDimensions = dimensions.NewNormalizedDimensionList(dims...)
+	d.normalizedStaticDimensions = dimensions.NewNormalizedDimensionList(dimensions.NewDimension("dt.metrics.source", "telegraf"))
+	d.loggedMetrics = make(map[string]bool)
+
 	return nil
 }
 
 func init() {
 	outputs.Add("dynatrace", func() telegraf.Output {
 		return &Dynatrace{
-			Timeout:     config.Duration(time.Second * 5),
-			SendCounter: 0,
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
+}
+
+func getTypeOption(metricType telegraf.ValueType, field *telegraf.Field) dtMetric.MetricOption {
+	if metricType == telegraf.Counter {
+		switch v := field.Value.(type) {
+		case float64:
+			return dtMetric.WithFloatCounterValueTotal(v)
+		case uint64:
+			return dtMetric.WithIntCounterValueTotal(int64(v))
+		case int64:
+			return dtMetric.WithIntCounterValueTotal(v)
+		default:
+			return nil
+		}
+	}
+
+	switch v := field.Value.(type) {
+	case float64:
+		return dtMetric.WithFloatGaugeValue(v)
+	case uint64:
+		return dtMetric.WithIntGaugeValue(int64(v))
+	case int64:
+		return dtMetric.WithIntGaugeValue(v)
+	case bool:
+		if v {
+			return dtMetric.WithIntGaugeValue(1)
+		}
+		return dtMetric.WithIntGaugeValue(0)
+	}
+
+	return nil
+}
+
+func min(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
 }

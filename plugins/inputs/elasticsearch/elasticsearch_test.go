@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func defaultTags() map[string]string {
@@ -206,8 +206,8 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	info.masterID = masterID
 	es.serverInfo["http://example.com:9200"] = info
 
-	IsMasterResultTokens := strings.Split(string(IsMasterResult), " ")
-	require.Equal(t, masterID, IsMasterResultTokens[0], "catmaster is incorrect")
+	isMasterResultTokens := strings.Split(IsMasterResult, " ")
+	require.Equal(t, masterID, isMasterResultTokens[0], "catmaster is incorrect")
 
 	// now get node status, which determines whether we're master
 	var acc testutil.Accumulator
@@ -244,8 +244,8 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	masterID, err := es.getCatMaster("junk")
 	require.NoError(t, err)
 
-	IsNotMasterResultTokens := strings.Split(string(IsNotMasterResult), " ")
-	require.Equal(t, masterID, IsNotMasterResultTokens[0], "catmaster is incorrect")
+	isNotMasterResultTokens := strings.Split(IsNotMasterResult, " ")
+	require.Equal(t, masterID, isNotMasterResultTokens[0], "catmaster is incorrect")
 
 	// now get node status, which determines whether we're master
 	var acc testutil.Accumulator

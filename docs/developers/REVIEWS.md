@@ -39,6 +39,7 @@ So in case you expect a longer period of inactivity or you want to abandon a pul
 ```
 (in tests, you can do `myPlugin.Log = testutil.Logger{}`)
 - Initialization and config checking should be done on the `Init() error` function, not in the Connect, Gather, or Start functions.
+- `Init() error` should not contain connections to external services. If anything fails in Init, Telegraf will consider it a configuration error and refuse to start.
 - plugins should avoid synchronization code if they are not starting goroutines. Plugin functions are never called in parallel.
 - avoid goroutines when you don't need them and removing them would simplify the code
 - errors should almost always be checked.

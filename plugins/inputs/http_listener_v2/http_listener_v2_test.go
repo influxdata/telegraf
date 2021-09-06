@@ -230,6 +230,62 @@ func TestWriteHTTP(t *testing.T) {
 	)
 }
 
+// http listener should add request path as configured path_tag
+func TestWriteHTTPWithPathTag(t *testing.T) {
+	listener := newTestHTTPListenerV2()
+	listener.PathTag = true
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to listener
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
+	)
+}
+
+// http listener should add request path as configured path_tag (trimming it before)
+func TestWriteHTTPWithMultiplePaths(t *testing.T) {
+	listener := newTestHTTPListenerV2()
+	listener.Paths = []string{"/alternative_write"}
+	listener.PathTag = true
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to /write
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	// post single message to /alternative_write
+	resp, err = http.Post(createURL(listener, "http", "/alternative_write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
+	)
+
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/alternative_write"},
+	)
+}
+
 // http listener should add a newline at the end of the buffer if it's not there
 func TestWriteHTTPNoNewline(t *testing.T) {
 	listener := newTestHTTPListenerV2()

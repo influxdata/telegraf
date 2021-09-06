@@ -8,7 +8,10 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 * Datastores
 
 ## Supported versions of vSphere
-This plugin supports vSphere version 5.5 through 6.7.
+
+This plugin supports vSphere version 6.5, 6.7 and 7.0. It may work with versions 5.1, 5.5 and 6.0, but neither are officially supported.
+
+Compatibility information was found [here](https://github.com/vmware/govmomi/tree/v0.26.0#compatibility)
 
 ## Configuration
 

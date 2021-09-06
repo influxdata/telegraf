@@ -1,0 +1,40 @@
+{
+    "type": "FeatureCollection",
+    "metadata": {
+      "generated": 1623710450000,
+      "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson",
+      "title": "USGS All Earthquakes, Past Hour",
+      "status": 200,
+      "api": "1.10.3",
+      "count": 10
+    },
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "mag": 1.5,
+          "place": "63 km N of Petersville, Alaska",
+          "time": 1623708726566,
+          "updated": 1623709998223,
+          "tz": null,
+          "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ak0217l8ue0x",
+          "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/ak0217l8ue0x.geojson",
+          "felt": null,
+          "cdi": null,
+          "mmi": null,
+          "alert": null,
+          "status": "automatic"
+        },
+        "id": "ak0217l8ue0x"
+      }
+    ],
+    "bbox": [
+      -157.5749,
+      32.9001667,
+      0.25,
+      -115.6211667,
+      66.331,
+      132.5
+    ]
+  }
+  

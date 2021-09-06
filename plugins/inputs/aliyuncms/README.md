@@ -1,4 +1,4 @@
-# Alibaba (aka Aliyun) CloudMonitor Service Statistics Input
+# Alibaba (Aliyun) CloudMonitor Service Statistics Input Plugin
 Here and after we use `Aliyun` instead `Alibaba` as it is default naming across web console and docs.
 
 This plugin will pull Metric Statistics from Aliyun CMS.

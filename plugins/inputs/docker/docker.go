@@ -15,11 +15,12 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/influxdata/telegraf/internal/docker"
+	dockerint "github.com/influxdata/telegraf/internal/docker"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -74,7 +75,7 @@ const (
 
 	defaultEndpoint = "unix:///var/run/docker.sock"
 
-	perDeviceIncludeDeprecationWarning = "'perdevice' setting is set to 'true' so 'blkio' and 'network' metrics will" +
+	perDeviceIncludeDeprecationWarning = "'perdevice' setting is set to 'true' so 'blkio' and 'network' metrics will " +
 		"be collected. Please set it to 'false' and use 'perdevice_include' instead to control this behaviour as " +
 		"'perdevice' will be deprecated"
 
@@ -123,7 +124,7 @@ var sampleConfig = `
   ## Whether to report for each container per-device blkio (8:0, 8:1...),
   ## network (eth0, eth1, ...) and cpu (cpu0, cpu1, ...) stats or not.
   ## Usage of this setting is discouraged since it will be deprecated in favor of 'perdevice_include'.
-  ## Default value is 'true' for backwards compatibility, please set it to 'false' so that 'perdevice_include' setting 
+  ## Default value is 'true' for backwards compatibility, please set it to 'false' so that 'perdevice_include' setting
   ## is honored.
   perdevice = true
 
@@ -134,12 +135,12 @@ var sampleConfig = `
 
   ## Whether to report for each container total blkio and network stats or not.
   ## Usage of this setting is discouraged since it will be deprecated in favor of 'total_include'.
-  ## Default value is 'false' for backwards compatibility, please set it to 'true' so that 'total_include' setting 
+  ## Default value is 'false' for backwards compatibility, please set it to 'true' so that 'total_include' setting
   ## is honored.
   total = false
 
   ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice' values.
-  ## Possible values are 'cpu', 'blkio' and 'network'  
+  ## Possible values are 'cpu', 'blkio' and 'network'
   ## Total 'cpu' is reported directly by Docker daemon, and 'network' and 'blkio' totals are aggregated by this plugin.
   ## Please note that this setting has no effect if 'total' is set to 'false'
   # total_include = ["cpu", "blkio", "network"]
@@ -212,6 +213,9 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}
 		d.client = c
 	}
+
+	// Close any idle connections in the end of gathering
+	defer d.client.Close()
 
 	// Create label filters if not already created
 	if !d.filtersCreated {
@@ -510,7 +514,7 @@ func (d *Docker) gatherContainer(
 		return nil
 	}
 
-	imageName, imageVersion := docker.ParseImage(container.Image)
+	imageName, imageVersion := dockerint.ParseImage(container.Image)
 
 	tags := map[string]string{
 		"engine_host":       d.engineHost,
@@ -625,18 +629,16 @@ func (d *Docker) gatherContainerInspect(
 		}
 	}
 
-	parseContainerStats(v, acc, tags, container.ID, d.PerDeviceInclude, d.TotalInclude, daemonOSType)
+	d.parseContainerStats(v, acc, tags, container.ID, daemonOSType)
 
 	return nil
 }
 
-func parseContainerStats(
+func (d *Docker) parseContainerStats(
 	stat *types.StatsJSON,
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	id string,
-	perDeviceInclude []string,
-	totalInclude []string,
 	daemonOSType string,
 ) {
 	tm := stat.Read
@@ -705,7 +707,7 @@ func parseContainerStats(
 
 	acc.AddFields("docker_container_mem", memfields, tags, tm)
 
-	if choice.Contains("cpu", totalInclude) {
+	if choice.Contains("cpu", d.TotalInclude) {
 		cpufields := map[string]interface{}{
 			"usage_total":                  stat.CPUStats.CPUUsage.TotalUsage,
 			"usage_in_usermode":            stat.CPUStats.CPUUsage.UsageInUsermode,
@@ -732,7 +734,7 @@ func parseContainerStats(
 		acc.AddFields("docker_container_cpu", cpufields, cputags, tm)
 	}
 
-	if choice.Contains("cpu", perDeviceInclude) && len(stat.CPUStats.CPUUsage.PercpuUsage) > 0 {
+	if choice.Contains("cpu", d.PerDeviceInclude) && len(stat.CPUStats.CPUUsage.PercpuUsage) > 0 {
 		// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
 		// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
 		var percpuusage []uint64
@@ -767,12 +769,12 @@ func parseContainerStats(
 			"container_id": id,
 		}
 		// Create a new network tag dictionary for the "network" tag
-		if choice.Contains("network", perDeviceInclude) {
+		if choice.Contains("network", d.PerDeviceInclude) {
 			nettags := copyTags(tags)
 			nettags["network"] = network
 			acc.AddFields("docker_container_net", netfields, nettags, tm)
 		}
-		if choice.Contains("network", totalInclude) {
+		if choice.Contains("network", d.TotalInclude) {
 			for field, value := range netfields {
 				if field == "container_id" {
 					continue
@@ -799,17 +801,14 @@ func parseContainerStats(
 	}
 
 	// totalNetworkStatMap could be empty if container is running with --net=host.
-	if choice.Contains("network", totalInclude) && len(totalNetworkStatMap) != 0 {
+	if choice.Contains("network", d.TotalInclude) && len(totalNetworkStatMap) != 0 {
 		nettags := copyTags(tags)
 		nettags["network"] = "total"
 		totalNetworkStatMap["container_id"] = id
 		acc.AddFields("docker_container_net", totalNetworkStatMap, nettags, tm)
 	}
 
-	perDeviceBlkio := choice.Contains("blkio", perDeviceInclude)
-	totalBlkio := choice.Contains("blkio", totalInclude)
-
-	gatherBlockIOMetrics(stat, acc, tags, tm, id, perDeviceBlkio, totalBlkio)
+	d.gatherBlockIOMetrics(acc, stat, tags, tm, id)
 }
 
 // Make a map of devices to their block io stats
@@ -874,27 +873,27 @@ func getDeviceStatMap(blkioStats types.BlkioStats) map[string]map[string]interfa
 	return deviceStatMap
 }
 
-func gatherBlockIOMetrics(
-	stat *types.StatsJSON,
+func (d *Docker) gatherBlockIOMetrics(
 	acc telegraf.Accumulator,
+	stat *types.StatsJSON,
 	tags map[string]string,
 	tm time.Time,
 	id string,
-	perDevice bool,
-	total bool,
 ) {
+	perDeviceBlkio := choice.Contains("blkio", d.PerDeviceInclude)
+	totalBlkio := choice.Contains("blkio", d.TotalInclude)
 	blkioStats := stat.BlkioStats
 	deviceStatMap := getDeviceStatMap(blkioStats)
 
 	totalStatMap := make(map[string]interface{})
 	for device, fields := range deviceStatMap {
 		fields["container_id"] = id
-		if perDevice {
+		if perDeviceBlkio {
 			iotags := copyTags(tags)
 			iotags["device"] = device
 			acc.AddFields("docker_container_blkio", fields, iotags, tm)
 		}
-		if total {
+		if totalBlkio {
 			for field, value := range fields {
 				if field == "container_id" {
 					continue
@@ -919,7 +918,7 @@ func gatherBlockIOMetrics(
 			}
 		}
 	}
-	if total {
+	if totalBlkio {
 		totalStatMap["container_id"] = id
 		iotags := copyTags(tags)
 		iotags["device"] = "total"
@@ -962,20 +961,20 @@ func (d *Docker) createContainerFilters() error {
 		d.ContainerInclude = append(d.ContainerInclude, d.ContainerNames...)
 	}
 
-	filter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
+	containerFilter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
 	if err != nil {
 		return err
 	}
-	d.containerFilter = filter
+	d.containerFilter = containerFilter
 	return nil
 }
 
 func (d *Docker) createLabelFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
+	labelFilter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
 	if err != nil {
 		return err
 	}
-	d.labelFilter = filter
+	d.labelFilter = labelFilter
 	return nil
 }
 
@@ -983,11 +982,11 @@ func (d *Docker) createContainerStateFilters() error {
 	if len(d.ContainerStateInclude) == 0 && len(d.ContainerStateExclude) == 0 {
 		d.ContainerStateInclude = []string{"running"}
 	}
-	filter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
+	stateFilter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
 	if err != nil {
 		return err
 	}
-	d.stateFilter = filter
+	d.stateFilter = stateFilter
 	return nil
 }
 
