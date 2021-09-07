@@ -214,7 +214,7 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 
 	m := make(map[string]interface{})
 	m["version"] = "1.1"
-	m["timestamp"] = metric.Time().UnixNano() / 1000000000
+	m["timestamp"] = float64(metric.Time().UnixNano()) / 1_000_000_000
 	m["short_message"] = "telegraf"
 	m["name"] = metric.Name()
 

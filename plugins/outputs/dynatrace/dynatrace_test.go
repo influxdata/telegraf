@@ -388,11 +388,11 @@ func TestSendMetricWithDefaultDimensions(t *testing.T) {
 		require.NoError(t, err)
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Equal(t, len(bodyString), 79)
+		require.Equal(t, len(bodyString), 78)
 		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
 		require.Regexp(t, regexp.MustCompile("dt.metrics.source=telegraf"), bodyString)
 		require.Regexp(t, regexp.MustCompile("dim=value"), bodyString)
-		require.Regexp(t, regexp.MustCompile("gauge,32 1289430000000$"), bodyString)
+		require.Regexp(t, regexp.MustCompile("gauge,2 1289430000000$"), bodyString)
 		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
 		require.NoError(t, err)
 	}))
@@ -413,7 +413,7 @@ func TestSendMetricWithDefaultDimensions(t *testing.T) {
 	m1 := metric.New(
 		"mymeasurement",
 		map[string]string{},
-		map[string]interface{}{"value": 32},
+		map[string]interface{}{"value": 2},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 

@@ -40,3 +40,45 @@ func TestAddDefaultStats(t *testing.T) {
 		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }
+
+func TestPoolStatsVersionCompatibility(t *testing.T) {
+	tests := []struct {
+		name            string
+		version         string
+		expectedCommand string
+		err             bool
+	}{
+		{
+			name:            "mongodb v3",
+			version:         "3.0.0",
+			expectedCommand: "shardConnPoolStats",
+		},
+		{
+			name:            "mongodb v4",
+			version:         "4.0.0",
+			expectedCommand: "shardConnPoolStats",
+		},
+		{
+			name:            "mongodb v5",
+			version:         "5.0.0",
+			expectedCommand: "connPoolStats",
+		},
+		{
+			name:    "invalid version",
+			version: "v4",
+			err:     true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			command, err := poolStatsCommand(test.version)
+			require.Equal(t, test.expectedCommand, command)
+			if test.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
