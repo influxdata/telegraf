@@ -53,7 +53,7 @@ func (cb *Couchbase) Description() string {
 // Returns one of the errors encountered while gathering stats (if any).
 func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 	if len(cb.Servers) == 0 {
-		return cb.gatherServer(acc, "http://localhost:8091/", nil)
+		return cb.gatherServer(acc, "http://localhost:8091/")
 	}
 
 	var wg sync.WaitGroup
@@ -61,7 +61,7 @@ func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			acc.AddError(cb.gatherServer(acc, serv, nil))
+			acc.AddError(cb.gatherServer(acc, serv))
 		}(serv)
 	}
 
@@ -70,26 +70,26 @@ func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string, pool *couchbaseClient.Pool) error {
-	if pool == nil {
-		client, err := couchbaseClient.Connect(addr)
-		if err != nil {
-			return err
-		}
+func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
+	escapedAddr := regexpURI.ReplaceAllString(addr, "${1}")
 
-		// `default` is the only possible pool name. It's a
-		// placeholder for a possible future Couchbase feature. See
-		// http://stackoverflow.com/a/16990911/17498.
-		p, err := client.GetPool("default")
-		if err != nil {
-			return err
-		}
-		pool = &p
+	client, err := couchbaseClient.Connect(addr)
+	if err != nil {
+		return err
 	}
+
+	// `default` is the only possible pool name. It's a
+	// placeholder for a possible future Couchbase feature. See
+	// http://stackoverflow.com/a/16990911/17498.
+	pool, err := client.GetPool("default")
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
 
 	for i := 0; i < len(pool.Nodes); i++ {
 		node := pool.Nodes[i]
-		tags := map[string]string{"cluster": regexpURI.ReplaceAllString(addr, "${1}"), "hostname": node.Hostname}
+		tags := map[string]string{"cluster": escapedAddr, "hostname": node.Hostname}
 		fields := make(map[string]interface{})
 		fields["memory_free"] = node.MemoryFree
 		fields["memory_total"] = node.MemoryTotal
@@ -97,7 +97,7 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string, pool *c
 	}
 
 	for bucketName := range pool.BucketMap {
-		tags := map[string]string{"cluster": regexpURI.ReplaceAllString(addr, "${1}"), "bucket": bucketName}
+		tags := map[string]string{"cluster": escapedAddr, "bucket": bucketName}
 		bs := pool.BucketMap[bucketName].BasicStats
 		fields := make(map[string]interface{})
 		cb.addBucketField(fields, "quota_percent_used", bs["quotaPercentUsed"])
