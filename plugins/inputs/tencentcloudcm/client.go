@@ -74,8 +74,7 @@ func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, 
 func (c *cloudmonitorClient) GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error) {
 	response, err := client.GetMonitorData(request)
 	if err != nil {
-		t.Log.Errorf("getting monitoring data for namespace %q failed: %v", *request.Namespace, err)
-		return nil, err
+		return nil, fmt.Errorf("getting monitoring data for namespace %q failed: %v", *request.Namespace, err)
 	}
 	return response, nil
 }
