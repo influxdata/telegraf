@@ -2,8 +2,6 @@ package internet_speed
 
 import (
 	"fmt"
-	"math"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -16,73 +14,63 @@ type InternetSpeed struct {
 	Log                telegraf.Logger `toml:"-"`
 }
 
-var InternetSpeedConfig = `
-## Sets if runs file download test
-## Default: false  
-enable_file_download = false
+const sampleConfig = `
+  ## Sets if runs file download test
+  ## Default: false  
+  enable_file_download = false
 `
 
 // Description returns information about the plugin.
-func (internetSpeed *InternetSpeed) Description() string {
+func (is *InternetSpeed) Description() string {
 	return "Monitors internet speed using speedtest.net service"
 }
 
 // SampleConfig displays configuration instructions.
-func (internetSpeed *InternetSpeed) SampleConfig() string {
-	return InternetSpeedConfig
+func (is *InternetSpeed) SampleConfig() string {
+	return sampleConfig
 }
 
 const measurement = "internet_speed"
-const delimeter = 1000.00
 
-func (internetSpeed *InternetSpeed) Gather(acc telegraf.Accumulator) error {
-	enableFileDownload := internetSpeed.EnableFileDownload
-	log := internetSpeed.Log
+func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 
 	user, err := speedtest.FetchUserInfo()
 	if err != nil {
-		acc.AddError(err)
-		return fmt.Errorf("gathering speed failed: %v", err)
+		return fmt.Errorf("fetching user info failed: %v", err)
 	}
 	serverList, err := speedtest.FetchServerList(user)
 	if err != nil {
-		acc.AddError(err)
-		return fmt.Errorf("gathering speed failed: %v", err)
-	}
-	targets, err := serverList.FindServer([]int{})
-	if err != nil {
-		acc.AddError(err)
-		return fmt.Errorf("gathering speed failed: %v", err)
+		return fmt.Errorf("fetching server list failed: %v", err)
 	}
 
-	s := targets[0]
+	if len(serverList.Servers) < 1 {
+		return fmt.Errorf("no servers found")
+	}
+	s := serverList.Servers[0]
 
-	log.Info("Starting Speed Test")
-	log.Info("Running Ping...")
+	is.Log.Debug("Starting Speed Test")
+	is.Log.Debug("Running Ping...")
 	err = s.PingTest()
 	if err != nil {
-		acc.AddError(err)
-		return fmt.Errorf("gathering speed failed: %v", err)
+		return fmt.Errorf("ping test failed: %v", err)
 	}
-	log.Info("Running Download...")
-	err = s.DownloadTest(enableFileDownload)
+	is.Log.Debug("Running Download...")
+	err = s.DownloadTest(is.EnableFileDownload)
 	if err != nil {
-		acc.AddError(err)
-		return fmt.Errorf("gathering speed failed: %v", err)
+		return fmt.Errorf("download test failed: %v", err)
 	}
-	log.Info("Running Upload...")
-	err = s.UploadTest(enableFileDownload)
+	is.Log.Debug("Running Upload...")
+	err = s.UploadTest(is.EnableFileDownload)
 	if err != nil {
-		acc.AddError(err)
-		return fmt.Errorf("gathering speed failed: %v", err)
+		return fmt.Errorf("upload test failed failed: %v", err)
 	}
 
-	log.Info("Test finished.")
+	is.Log.Debug("Test finished.")
 
 	fields := make(map[string]interface{})
-	fields["download"] = (math.Round(s.DLSpeed*delimeter) / delimeter)
-	fields["upload"] = (math.Round(s.ULSpeed*delimeter) / delimeter)
-	fields["latency"] = (math.Round(float64(s.Latency)/float64(time.Millisecond)*delimeter) / delimeter)
+	fields["download"] = s.DLSpeed
+	fields["upload"] = s.ULSpeed
+	fields["latency"] = s.Latency
 
 	tags := make(map[string]string)
 
@@ -91,8 +79,6 @@ func (internetSpeed *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 }
 func init() {
 	inputs.Add("internet_speed", func() telegraf.Input {
-		return &InternetSpeed{
-			EnableFileDownload: false,
-		}
+		return &InternetSpeed{}
 	})
 }
