@@ -264,17 +264,18 @@ func init() {
 func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.MetricOption {
 	metricName := metric.Name() + "." + field.Key
 	for _, i := range d.AddCounterMetrics {
-		if metricName == i {
-			switch v := field.Value.(type) {
-			case float64:
-				return dtMetric.WithFloatCounterValueDelta(v)
-			case uint64:
-				return dtMetric.WithIntCounterValueDelta(int64(v))
-			case int64:
-				return dtMetric.WithIntCounterValueDelta(v)
-			default:
-				return nil
-			}
+		if metricName != i {
+			continue
+		}
+		switch v := field.Value.(type) {
+		case float64:
+			return dtMetric.WithFloatCounterValueDelta(v)
+		case uint64:
+			return dtMetric.WithIntCounterValueDelta(int64(v))
+		case int64:
+			return dtMetric.WithIntCounterValueDelta(v)
+		default:
+			return nil
 		}
 	}
 
