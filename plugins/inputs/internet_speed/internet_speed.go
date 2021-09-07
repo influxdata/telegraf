@@ -46,7 +46,6 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("no servers found")
 	}
 	s := serverList.Servers[0]
-
 	is.Log.Debug("Starting Speed Test")
 	is.Log.Debug("Running Ping...")
 	err = s.PingTest()
