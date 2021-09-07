@@ -57,7 +57,7 @@ func (d *discoverTool) DiscoverMetrics() {
 	}
 }
 
-func (d *discoverTool) discoverObjects(accounts []*Account, endpoint string) error {
+func (d *discoverTool) discoverObjects(accounts []*Account, endpoint string) {
 	discoveredObjects := map[string]discoverObject{}
 	for _, account := range accounts {
 		for _, namespace := range account.Namespaces {
@@ -70,7 +70,7 @@ func (d *discoverTool) discoverObjects(accounts []*Account, endpoint string) err
 				if !ok {
 					continue
 				}
-				discoveredObject, err := Discover(account.crs, region.RegionName, endpoint, p)
+				discoveredObject, err := discover(account.crs, region.RegionName, endpoint, p)
 				if err != nil {
 					d.Log.Errorf("discover account:%s region:%s endpoint:%s failed, error: %s",
 						account.Name, region.RegionName, endpoint, err)
@@ -83,7 +83,6 @@ func (d *discoverTool) discoverObjects(accounts []*Account, endpoint string) err
 	d.rw.Lock()
 	d.DiscoveredObjects = discoveredObjects
 	d.rw.Unlock()
-	return nil
 }
 
 // Discover discovers instances of registered products
@@ -91,17 +90,11 @@ func (d *discoverTool) Discover(accounts []*Account, interval config.Duration, e
 	ticker := time.NewTicker(time.Duration(interval))
 	defer ticker.Stop()
 
-	err := d.discoverObjects(accounts, endpoint)
-	if err != nil {
-		d.Log.Errorf("discovery failed: %v", err)
-	}
+	d.discoverObjects(accounts, endpoint)
 
 	// discover instances periodically
 	for range ticker.C {
-		err = d.discoverObjects(accounts, endpoint)
-		if err != nil {
-			d.Log.Errorf("discovery failed: %v", err)
-		}
+		d.discoverObjects(accounts, endpoint)
 	}
 }
 
@@ -127,14 +120,12 @@ func (d *discoverTool) GetMonitorInstances(account, namespace, region string) []
 	return discoverObject.MonitorInstances
 }
 
-// Discover implements Product interface
-func Discover(crs *common.Credential, region, endpoint string, p Product) (discoverObject, error) {
+func discover(crs *common.Credential, region, endpoint string, p Product) (discoverObject, error) {
 	discoverObject := discoverObject{
 		Instances: map[string]map[string]interface{}{},
 	}
 
-	offset, limit := int64(0), int64(100)
-	// dcInstances := []*dc.DirectConnectTunnel{}
+	const offset, limit = int64(0), int64(100)
 	instances := []map[string]interface{}{}
 
 	total, instancesByPage, err := p.Discover(crs, region, endpoint, offset, limit)
@@ -169,14 +160,14 @@ func Discover(crs *common.Credential, region, endpoint string, p Product) (disco
 			if normInstance[strings.ToLower(key)] == nil {
 				keyIsNil = true
 				break
-			} else {
-				// construct keyVals and dimensions based on the key and discovered instance
-				keyVals = append(keyVals, normInstance[strings.ToLower(key)])
-				dimensions = append(dimensions, &monitor.Dimension{
-					Name:  common.StringPtr(key),
-					Value: common.StringPtr(fmt.Sprintf("%v", normInstance[strings.ToLower(key)])),
-				})
 			}
+			// construct keyVals and dimensions based on the key and discovered instance
+			keyVals = append(keyVals, normInstance[strings.ToLower(key)])
+			dimensions = append(dimensions, &monitor.Dimension{
+				Name:  common.StringPtr(key),
+				Value: common.StringPtr(fmt.Sprintf("%v", normInstance[strings.ToLower(key)])),
+			})
+
 		}
 
 		// instance with nil key field will be discarded
@@ -193,15 +184,11 @@ func Discover(crs *common.Credential, region, endpoint string, p Product) (disco
 }
 
 func newKey(vals ...interface{}) string {
-	key := ""
-	for i, val := range vals {
-		if i != len(vals)-1 {
-			key += fmt.Sprintf("%s-", val)
-		} else {
-			key += fmt.Sprintf("%s", val)
-		}
+	vs := []string{}
+	for _, v := range vals {
+		vs = append(vs, fmt.Sprintf("%v", v))
 	}
-	return key
+	return strings.Join(vs, "-")
 }
 
 func (d *discoverTool) Add(namespace string, p Product) {

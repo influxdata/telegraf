@@ -4,13 +4,22 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
 )
 
+type cmClient interface {
+	GetMetricObjects(t TencentCloudCM) []metricObject
+	NewClient(region string, crs *common.Credential, t TencentCloudCM) (monitor.Client, error)
+	NewGetMonitorDataRequest(namespace, metric string, instances []*monitor.Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest
+	GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error)
+}
+
 type cloudmonitorClient struct {
 	Accounts []*Account
+	Log      telegraf.Logger `toml:"-"`
 }
 
 func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
@@ -21,17 +30,18 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 	for _, account := range t.Accounts {
 		for _, namespace := range account.Namespaces {
 			for _, region := range namespace.Regions {
+				monitorInstances := region.Instances
+				isDiscovered := false
+				if len(monitorInstances) == 0 {
+					// if instances are not specified. look them up in the discoverTool
+					monitorInstances = t.discoverTool.GetMonitorInstances(account.Name, namespace.Name, region.RegionName)
+					isDiscovered = true
+				}
+				if len(monitorInstances) == 0 {
+					c.Log.Debugf("discover 0 instance for account:%s namespace:%s region:%s", account.Name, namespace.Name, region.RegionName)
+					continue
+				}
 				for _, metric := range namespace.Metrics {
-					monitorInstances := region.Instances
-					isDiscovered := false
-					if len(monitorInstances) == 0 {
-						// if instances are not specified. look them up in the discoverTool
-						monitorInstances = t.discoverTool.GetMonitorInstances(account.Name, namespace.Name, region.RegionName)
-						isDiscovered = true
-					}
-					if len(monitorInstances) == 0 {
-						continue
-					}
 					metricObjects = append(metricObjects, metricObject{
 						Metric:    metric,
 						Region:    region.RegionName,
@@ -77,4 +87,15 @@ func (c *cloudmonitorClient) GatherMetrics(client monitor.Client, request *monit
 		return nil, fmt.Errorf("getting monitoring data for namespace %q failed: %v", *request.Namespace, err)
 	}
 	return response, nil
+}
+
+type metricObject struct {
+	Metric    string
+	Region    string
+	Namespace string
+	Account   *Account
+
+	isDiscovered bool
+
+	MonitorInstances []*monitor.Instance
 }

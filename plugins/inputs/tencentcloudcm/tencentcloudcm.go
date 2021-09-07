@@ -61,24 +61,6 @@ type Region struct {
 	Instances  []*monitor.Instance `toml:"instances"`
 }
 
-type metricObject struct {
-	Metric    string
-	Region    string
-	Namespace string
-	Account   *Account
-
-	isDiscovered bool
-
-	MonitorInstances []*monitor.Instance
-}
-
-type cmClient interface {
-	GetMetricObjects(t TencentCloudCM) []metricObject
-	NewClient(region string, crs *common.Credential, t TencentCloudCM) (monitor.Client, error)
-	NewGetMonitorDataRequest(namespace, metric string, instances []*monitor.Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest
-	GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error)
-}
-
 // SampleConfig implements telegraf.Input interface
 func (t *TencentCloudCM) SampleConfig() string {
 	return `
@@ -227,7 +209,7 @@ func (t *TencentCloudCM) Init() error {
 		}
 	}
 
-	t.client = &cloudmonitorClient{Accounts: t.Accounts}
+	t.client = &cloudmonitorClient{Accounts: t.Accounts, Log: t.Log}
 
 	return nil
 
