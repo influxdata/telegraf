@@ -113,11 +113,7 @@ func (d *discoverTool) GetInstance(account, namespace, region, key string) map[s
 	if !ok {
 		return nil
 	}
-	instance, ok := discoverObject.Instances[key]
-	if !ok {
-		return nil
-	}
-	return instance
+	return discoverObject.Instances[key]
 }
 
 // GetMonitorInstances Get discovered monitor instances
