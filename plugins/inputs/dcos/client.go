@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go/v4"
+	jwt "github.com/golang-jwt/jwt/v4"
 )
 
 const (
@@ -329,7 +329,7 @@ func (c *ClusterClient) createLoginToken(sa *ServiceAccount) (string, error) {
 		UID: sa.AccountID,
 		StandardClaims: jwt.StandardClaims{
 			// How long we have to login with this token
-			ExpiresAt: jwt.At(time.Now().Add(5 * time.Minute)),
+			ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
 		},
 	})
 	return token.SignedString(sa.PrivateKey)
