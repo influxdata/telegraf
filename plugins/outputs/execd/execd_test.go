@@ -2,6 +2,7 @@ package execd
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -87,7 +88,7 @@ func runOutputConsumerProgram() {
 	for {
 		metric, err := parser.Next()
 		if err != nil {
-			if err == influx.ErrEOF {
+			if errors.Is(err, influx.ErrEOF) {
 				return // stream ended
 			}
 			if parseErr, isParseError := err.(*influx.ParseError); isParseError {

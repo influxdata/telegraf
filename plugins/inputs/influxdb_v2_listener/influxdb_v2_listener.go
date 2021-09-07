@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -278,7 +279,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 
 		metrics, err = parser.Parse(bytes)
 
-		if err != influx.ErrEOF && err != nil {
+		if !errors.Is(err, influx.ErrEOF) && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, Invalid, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)

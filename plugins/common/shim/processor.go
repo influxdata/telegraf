@@ -1,6 +1,7 @@
 package shim
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -52,7 +53,7 @@ func (s *Shim) RunProcessor() error {
 	for {
 		m, err := parser.Next()
 		if err != nil {
-			if err == influx.ErrEOF {
+			if errors.Is(err, influx.ErrEOF) {
 				break // stream ended
 			}
 			if parseErr, isParseError := err.(*influx.ParseError); isParseError {

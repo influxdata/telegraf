@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -332,7 +333,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 			h.acc.AddMetric(m)
 		}
-		if err != influx.ErrEOF {
+		if !errors.Is(err, influx.ErrEOF) {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)

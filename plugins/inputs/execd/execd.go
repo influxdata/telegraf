@@ -124,7 +124,7 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 	for {
 		metric, err := parser.Next()
 		if err != nil {
-			if err == influx.ErrEOF {
+			if errors.Is(err, influx.ErrEOF) {
 				break // stream ended
 			}
 			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
