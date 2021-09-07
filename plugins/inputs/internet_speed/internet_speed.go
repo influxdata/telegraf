@@ -33,7 +33,6 @@ func (is *InternetSpeed) SampleConfig() string {
 const measurement = "internet_speed"
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
-
 	user, err := speedtest.FetchUserInfo()
 	if err != nil {
 		return fmt.Errorf("fetching user info failed: %v", err)
