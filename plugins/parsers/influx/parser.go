@@ -45,10 +45,8 @@ func nthIndexAny(s, chars string, n int) int {
 
 // ParseError indicates a error in the parsing of the text.
 type ParseError struct {
-	LineNumber int
-	Column     int
-	msg        string
-	buf        string
+	*lineprotocol.DecodeError
+	buf string
 }
 
 func (e *ParseError) Error() string {
@@ -56,10 +54,10 @@ func (e *ParseError) Error() string {
 	// to the internal buffer, so we cannot display the contents of the invalid
 	// metric
 	if e.buf == "" {
-		return fmt.Sprintf("metric parse error: %s at %d:%d", e.msg, e.LineNumber, e.Column)
+		return fmt.Sprintf("metric parse error: %s at %d:%d", e.Err, e.Line, e.Column)
 	}
 
-	lineStart := nthIndexAny(e.buf, "\n", e.LineNumber-1) + 1
+	lineStart := nthIndexAny(e.buf, "\n", int(e.Line-1)) + 1
 	buffer := e.buf[lineStart:]
 	eol := strings.IndexAny(buffer, "\n")
 	if eol >= 0 {
@@ -81,7 +79,7 @@ func (e *ParseError) Error() string {
 			buffer = "..." + buffer
 		}
 	}
-	return fmt.Sprintf("metric parse error: %s at %d:%d: %q", e.msg, e.LineNumber, e.Column, buffer)
+	return fmt.Sprintf("metric parse error: %s at %d:%d: %q", e.Err, e.Line, e.Column, buffer)
 }
 
 // convertToParseError attempts to convert a lineprotocol.DecodeError to a ParseError
@@ -92,10 +90,8 @@ func convertToParseError(input []byte, rawErr error) error {
 	}
 
 	return &ParseError{
-		LineNumber: int(err.Line),
-		Column:     err.Column,
-		msg:        err.Err.Error(),
-		buf:        string(input),
+		DecodeError: err,
+		buf:         string(input),
 	}
 }
 

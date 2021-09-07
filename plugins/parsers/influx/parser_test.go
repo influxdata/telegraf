@@ -3,6 +3,7 @@ package influx
 import (
 	"bytes"
 	"errors"
+	"github.com/influxdata/line-protocol/v2/lineprotocol"
 	"io"
 	"strings"
 	"testing"
@@ -306,10 +307,12 @@ func parseTests(stream bool) []parseTest {
 			input:   []byte("cpu value=9223372036854775808i"),
 			metrics: nil,
 			err: &ParseError{
-				LineNumber: 1,
-				Column:     11,
-				msg:        `cannot parse value for field key "value": line-protocol value out of range`,
-				buf:        intOverflowBuf,
+				DecodeError: &lineprotocol.DecodeError{
+					Line:   1,
+					Column: 11,
+					Err:    errors.New(`cannot parse value for field key "value": line-protocol value out of range`),
+				},
+				buf: intOverflowBuf,
 			},
 		},
 		{
@@ -347,10 +350,12 @@ func parseTests(stream bool) []parseTest {
 			input:   []byte("cpu value=18446744073709551616u"),
 			metrics: nil,
 			err: &ParseError{
-				LineNumber: 1,
-				Column:     11,
-				msg:        `cannot parse value for field key "value": line-protocol value out of range`,
-				buf:        uintOverflowBuf,
+				DecodeError: &lineprotocol.DecodeError{
+					Line:   1,
+					Column: 11,
+					Err:    errors.New(`cannot parse value for field key "value": line-protocol value out of range`),
+				},
+				buf: uintOverflowBuf,
 			},
 		},
 		{
@@ -504,10 +509,12 @@ func parseTests(stream bool) []parseTest {
 			input:   []byte("cpu"),
 			metrics: nil,
 			err: &ParseError{
-				LineNumber: 1,
-				Column:     4,
-				msg:        "empty tag name",
-				buf:        invalidMeasurementBuf,
+				DecodeError: &lineprotocol.DecodeError{
+					Line:   1,
+					Column: 4,
+					Err:    errors.New("empty tag name"),
+				},
+				buf: invalidMeasurementBuf,
 			},
 		},
 		{
@@ -592,7 +599,11 @@ func TestParser(t *testing.T) {
 			}
 
 			metrics, err := parser.Parse(tt.input)
-			require.Equal(t, tt.err, err)
+			if tt.err == nil {
+				require.NoError(t, err)
+			} else {
+				require.Equal(t, tt.err.Error(), err.Error())
+			}
 
 			require.Equal(t, len(tt.metrics), len(metrics))
 			for i, expected := range tt.metrics {
@@ -635,7 +646,7 @@ func TestStreamParser(t *testing.T) {
 					if err == ErrEOF {
 						break
 					}
-					require.Equal(t, tt.err, err)
+					require.Equal(t, tt.err.Error(), err.Error())
 					break
 				}
 
@@ -691,10 +702,12 @@ func TestSeriesParser(t *testing.T) {
 			input:   []byte("cpu,a="),
 			metrics: []telegraf.Metric{},
 			err: &ParseError{
-				LineNumber: 1,
-				Column:     7,
-				msg:        `expected tag value after tag key "a", but none found`,
-				buf:        "cpu,a=",
+				DecodeError: &lineprotocol.DecodeError{
+					Line:   1,
+					Column: 7,
+					Err:    errors.New(`expected tag value after tag key "a", but none found`),
+				},
+				buf: "cpu,a=",
 			},
 		},
 		{
@@ -702,10 +715,12 @@ func TestSeriesParser(t *testing.T) {
 			input:   []byte("cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b"),
 			metrics: []telegraf.Metric{},
 			err: &ParseError{
-				LineNumber: 1,
-				Column:     1031,
-				msg:        `expected tag key or field but found '\r' instead`,
-				buf:        "cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b",
+				DecodeError: &lineprotocol.DecodeError{
+					Line:   1,
+					Column: 1031,
+					Err:    errors.New(`expected tag key or field but found '\r' instead`),
+				},
+				buf: "cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b",
 			},
 		},
 	}
