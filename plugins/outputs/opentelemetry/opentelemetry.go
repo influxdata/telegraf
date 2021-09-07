@@ -160,6 +160,14 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	if len(o.Attributes) > 0 {
+		for i := 0; i < md.ResourceMetrics().Len(); i++ {
+			for k, v := range o.Attributes {
+				md.ResourceMetrics().At(i).Resource().Attributes().UpsertString(k, v)
+			}
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))
 
 	if len(o.Headers) > 0 {
