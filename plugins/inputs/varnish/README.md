@@ -383,12 +383,12 @@ the following values:
 
 When `metric_version=2` is enabled, the plugin runs `varnishstat -j` command and parses the JSON output into metrics.
 
-Varnish stats will be grouped into measurements by their lowercase prefix. For better organization
-`varnish_` prefix will be appended.
+Plugin uses `varnishadm vcl.list -j` commandline to find the active VCL. Metrics that are related to the nonactive 
+VCL are excluded from monitoring.
 
 By default, suffix after the last "." is a field name. The middle part splits into tags.
 
-Examples:
+#### Examples:
 Varnish counter:
 ```
   "MAIN.cache_hit": {
@@ -398,10 +398,44 @@ Varnish counter:
   },
 ```
 Influx metric:
+`varnish,section=MAIN cache_hit=51i 1462765437090957980`
 
-* measurement: varnish_main 
-* field cache_hit=51i
+### Advanced customizations using regexps
 
+VMODs extensions written for Varnish Cache can produce 
+
+Finding the VCL name in a varnish measurement can be adjusted by using custom GO regular expressions. By default, the plugin has a
+builtin list of regexps for following VMODs
+
+* KVSTORE, 
+* Dynamic Backends (goto) 
+* XCNT metrics types. 
+
+Additional regexps can be specified in configuration:
+
+#### Example for (libvmod-xcounter):
+
+Joy can extend the telegraf config like:
+
+```toml
+[[inputs.varnish]]
+    regexps = ['^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<my_tag>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
+```
+Then varnish counters like
+```
+  "XCNT.1234.ABCD-EFG.hit.val": {
+    "description": "hit",
+    "flag": "c", "format": "i",
+    "value": 1
+  },
+```
+will be converted into following line protocol: 
+`varnish,section=XCNT,my-tag="ABCD-EFG" hit=1`
+
+Regexps use a special named group `(?P<_vcl>[\w\-]*)(\.)` to extract VCL name. `(?P<_field>[\w\-.+]*)\.val` regexp group
+extracts the field name. All other named regexp groups like `(?P<my_tag>[\w\-.+]*)` are tags.
+
+_Tip: It is useful to verify regexps using online tools like https://regoio.herokuapp.com/._
 
 ### Custom arguments
 You can change the default binary location and custom arguments for `varnishstat` and `varnishadm` command output. 
@@ -497,15 +531,12 @@ Please use the solution you see as most appropriate.
 
 ```
 telegraf --config etc/telegraf.conf --input-filter varnish --test
-> varnish_vbe,backend=server_test1,host=kozel.local fail_econnrefused=5907i 1627285728000000000
-> varnish_main,host=kozel.local fetch_eof=0i 1627285728000000000
-> varnish_main,host=kozel.local sc_rx_timeout=0i 1627285728000000000
-> varnish_main,host=kozel.local n_vcl=7i 1627285728000000000
-> varnish_main,host=kozel.local n_objecthead=40i 1627285728000000000
-> varnish_main,host=kozel.local bans_lurker_tested=0i 1627285728000000000
-> varnish_vbe,backend=server2,host=kozel.local pipe_in=0i 1627285728000000000
-> varnish_vbe,backend=server1,host=kozel.local beresp_hdrbytes=0i 1627285728000000000
-
+> varnish,host=kozel.local,section=MAIN n_vampireobject=0i 1631121567000000000
+> varnish,backend=server_test1,host=kozel.local,section=VBE fail_eacces=0i 1631121567000000000
+> varnish,backend=default,host=kozel.local,section=VBE req=0i 1631121567000000000
+> varnish,host=kozel.local,section=MAIN client_req_400=0i 1631121567000000000
+> varnish,host=kozel.local,section=MAIN shm_cycles=10i 1631121567000000000
+> varnish,backend=default,host=kozel.local,section=VBE pipe_hdrbytes=0i 1631121567000000000
 ```
 You can merge metrics together into a metric with multiple fields into the most
 memory and network transfer efficient form using `aggregators.merge`
@@ -518,9 +549,9 @@ The output will be:
 
 ```
 telegraf --config etc/telegraf.conf --input-filter varnish --test
-> varnish_main,host=kozel.local backend_busy=0i,backend_conn=19i,backend_fail=0i,backend_recycle=8i,backend_req=19i,backend_retry=0i,backend_reuse=0i,backend_unhealthy=0i,bans=1i,bans_added=1i,bans_completed=1i,bans_deleted=0i,bans_dups=0i,bans_lurker_contention=0i,bans_lurker_obj_killed=0i,bans_lurker_obj_killed_cutoff=0i,bans_lurker_tested=0i,bans_lurker_tests_tested=0i,bans_obj=0i,bans_obj_killed=0i,bans_persisted_bytes=16i,bans_persisted_fragmentation=0i,bans_req=0i,bans_tested=0i,bans_tests_tested=0i,busy_killed=0i,busy_sleep=0i,busy_wakeup=0i,cache_hit=643999i,cache_hit_grace=22i,cache_hitmiss=0i,cache_hitpass=0i,cache_miss=1i,client_req=644000i,client_req_400=0i,client_req_417=0i,client_resp_500=0i,esi_errors=0i,esi_warnings=0i,exp_mailed=37i,exp_received=37i,fetch_1xx=0i,fetch_204=0i,fetch_304=2i,fetch_bad=0i,fetch_chunked=6i,fetch_eof=0i,fetch_failed=0i,fetch_head=0i,fetch_length=11i,fetch_no_thread=0i,fetch_none=0i,hcb_insert=1i,hcb_lock=1i,hcb_nolock=644000i,losthdr=0i,n_backend=19i,n_expired=1i,n_gunzip=289204i,n_gzip=0i,n_lru_limited=0i,n_lru_moved=843i,n_lru_nuked=0i,n_obj_purged=0i,n_object=0i,n_objectcore=40i,n_objecthead=40i,n_purges=0i,n_test_gunzip=6i,n_vampireobject=0i,n_vcl=7i,n_vcl_avail=7i,n_vcl_discard=0i,pools=2i,req_dropped=0i,s_fetch=1i,s_pass=0i,s_pipe=0i,s_pipe_hdrbytes=0i,s_pipe_in=0i,s_pipe_out=0i,s_req_bodybytes=0i,s_req_hdrbytes=54740000i,s_resp_bodybytes=341618192i,s_resp_hdrbytes=190035576i,s_sess=651038i,s_synth=0i,sc_overload=0i,sc_pipe_overflow=0i,sc_range_short=0i,sc_rem_close=7038i,sc_req_close=0i,sc_req_http10=644000i,sc_req_http20=0i,sc_resp_close=0i,sc_rx_bad=0i,sc_rx_body=0i,sc_rx_junk=0i,sc_rx_overflow=0i,sc_rx_timeout=0i,sc_tx_eof=0i,sc_tx_error=0i,sc_tx_pipe=0i,sc_vcl_failure=0i,sess_closed=644000i,sess_closed_err=644000i,sess_conn=651038i,sess_drop=0i,sess_dropped=0i,sess_fail=0i,sess_fail_ebadf=0i,sess_fail_econnaborted=0i,sess_fail_eintr=0i,sess_fail_emfile=0i,sess_fail_enomem=0i,sess_fail_other=0i,sess_herd=11i,sess_queued=0i,sess_readahead=0i,shm_cont=3572i,shm_cycles=10i,shm_flushes=0i,shm_records=30430340i,shm_writes=4364453i,summs=1810182i,thread_queue_len=0i,threads=200i,threads_created=200i,threads_destroyed=0i,threads_failed=0i,threads_limited=0i,uptime=580470i,vcl_fail=0i,vmods=2i,ws_backend_overflow=0i,ws_client_overflow=0i,ws_session_overflow=0i,ws_thread_overflow=0i 1627285818000000000
-> varnish_vbe,backend=server_test1,host=kozel.local bereq_bodybytes=0i,bereq_hdrbytes=0i,beresp_bodybytes=0i,beresp_hdrbytes=0i,busy=0i,conn=0i,fail=0i,fail_eacces=0i,fail_eaddrnotavail=0i,fail_econnrefused=5934i,fail_enetunreach=0i,fail_etimedout=0i,fail_other=0i,happy=0i,helddown=1i,pipe_hdrbytes=0i,pipe_in=0i,pipe_out=0i,req=0i,unhealthy=0i 1627285818000000000
-> varnish_vbe,backend=default,host=kozel.local bereq_bodybytes=0i,bereq_hdrbytes=0i,beresp_bodybytes=0i,beresp_hdrbytes=0i,busy=0i,conn=0i,fail=0i,fail_eacces=0i,fail_eaddrnotavail=0i,fail_econnrefused=0i,fail_enetunreach=0i,fail_etimedout=0i,fail_other=0i,happy=9223372036854775807i,helddown=0i,pipe_hdrbytes=0i,pipe_in=0i,pipe_out=0i,req=0i,unhealthy=0i 1627285818000000000
-> varnish_vbe,backend=server2,host=kozel.local bereq_bodybytes=0i,bereq_hdrbytes=0i,beresp_bodybytes=0i,beresp_hdrbytes=0i,busy=0i,conn=0i,fail=0i,fail_eacces=0i,fail_eaddrnotavail=0i,fail_econnrefused=3943i,fail_enetunreach=0i,fail_etimedout=0i,fail_other=0i,happy=0i,helddown=1i,pipe_hdrbytes=0i,pipe_in=0i,pipe_out=0i,req=0i,unhealthy=0i 1627285818000000000
-> varnish_vbe,backend=server1,host=kozel.local bereq_bodybytes=0i,bereq_hdrbytes=0i,beresp_bodybytes=0i,beresp_hdrbytes=0i,busy=0i,conn=0i,fail=0i,fail_eacces=0i,fail_eaddrnotavail=0i,fail_econnrefused=3943i,fail_enetunreach=0i,fail_etimedout=0i,fail_other=0i,happy=0i,helddown=1i,pipe_hdrbytes=0i,pipe_in=0i,pipe_out=0i,req=0i,unhealthy=0i 1627285818000000000
-``
+> varnish,host=kozel.local,section=MAIN backend_busy=0i,backend_conn=19i,backend_fail=0i,backend_recycle=8i,backend_req=19i,backend_retry=0i,backend_reuse=0i,backend_unhealthy=0i,bans=1i,bans_added=1i,bans_completed=1i,bans_deleted=0i,bans_dups=0i,bans_lurker_contention=0i,bans_lurker_obj_killed=0i,bans_lurker_obj_killed_cutoff=0i,bans_lurker_tested=0i,bans_lurker_tests_tested=0i,bans_obj=0i,bans_obj_killed=0i,bans_persisted_bytes=16i,bans_persisted_fragmentation=0i,bans_req=0i,bans_tested=0i,bans_tests_tested=0i,busy_killed=0i,busy_sleep=0i,busy_wakeup=0i,cache_hit=643999i,cache_hit_grace=22i,cache_hitmiss=0i,cache_hitpass=0i,cache_miss=1i,client_req=644000i,client_req_400=0i,client_req_417=0i,client_resp_500=0i,esi_errors=0i,esi_warnings=0i,exp_mailed=37i,exp_received=37i,fetch_1xx=0i,fetch_204=0i,fetch_304=2i,fetch_bad=0i,fetch_chunked=6i,fetch_eof=0i,fetch_failed=0i,fetch_head=0i,fetch_length=11i,fetch_no_thread=0i,fetch_none=0i,hcb_insert=1i,hcb_lock=1i,hcb_nolock=644000i,losthdr=0i,n_backend=19i,n_expired=1i,n_gunzip=289204i,n_gzip=0i,n_lru_limited=0i,n_lru_moved=843i,n_lru_nuked=0i,n_obj_purged=0i,n_object=0i,n_objectcore=40i,n_objecthead=40i,n_purges=0i,n_test_gunzip=6i,n_vampireobject=0i,n_vcl=7i,n_vcl_avail=7i,n_vcl_discard=0i,pools=2i,req_dropped=0i,s_fetch=1i,s_pass=0i,s_pipe=0i,s_pipe_hdrbytes=0i,s_pipe_in=0i,s_pipe_out=0i,s_req_bodybytes=0i,s_req_hdrbytes=54740000i,s_resp_bodybytes=341618192i,s_resp_hdrbytes=190035576i,s_sess=651038i,s_synth=0i,sc_overload=0i,sc_pipe_overflow=0i,sc_range_short=0i,sc_rem_close=7038i,sc_req_close=0i,sc_req_http10=644000i,sc_req_http20=0i,sc_resp_close=0i,sc_rx_bad=0i,sc_rx_body=0i,sc_rx_junk=0i,sc_rx_overflow=0i,sc_rx_timeout=0i,sc_tx_eof=0i,sc_tx_error=0i,sc_tx_pipe=0i,sc_vcl_failure=0i,sess_closed=644000i,sess_closed_err=644000i,sess_conn=651038i,sess_drop=0i,sess_dropped=0i,sess_fail=0i,sess_fail_ebadf=0i,sess_fail_econnaborted=0i,sess_fail_eintr=0i,sess_fail_emfile=0i,sess_fail_enomem=0i,sess_fail_other=0i,sess_herd=11i,sess_queued=0i,sess_readahead=0i,shm_cont=3572i,shm_cycles=10i,shm_flushes=0i,shm_records=30727866i,shm_writes=4661979i,summs=2225754i,thread_queue_len=0i,threads=200i,threads_created=200i,threads_destroyed=0i,threads_failed=0i,threads_limited=0i,uptime=4416326i,vcl_fail=0i,vmods=2i,ws_backend_overflow=0i,ws_client_overflow=0i,ws_session_overflow=0i,ws_thread_overflow=0i 1631121675000000000
+> varnish,backend=default,host=kozel.local,section=VBE bereq_bodybytes=0i,bereq_hdrbytes=0i,beresp_bodybytes=0i,beresp_hdrbytes=0i,busy=0i,conn=0i,fail=0i,fail_eacces=0i,fail_eaddrnotavail=0i,fail_econnrefused=0i,fail_enetunreach=0i,fail_etimedout=0i,fail_other=0i,happy=9223372036854775807i,helddown=0i,pipe_hdrbytes=0i,pipe_in=0i,pipe_out=0i,req=0i,unhealthy=0i 1631121675000000000
+> varnish,backend=server1,host=kozel.local,section=VBE bereq_bodybytes=0i,bereq_hdrbytes=0i,beresp_bodybytes=0i,beresp_hdrbytes=0i,busy=0i,conn=0i,fail=0i,fail_eacces=0i,fail_eaddrnotavail=0i,fail_econnrefused=30609i,fail_enetunreach=0i,fail_etimedout=0i,fail_other=0i,happy=0i,helddown=3i,pipe_hdrbytes=0i,pipe_in=0i,pipe_out=0i,req=0i,unhealthy=0i 1631121675000000000
+> varnish,backend=server2,host=kozel.local,section=VBE bereq_bodybytes=0i,bereq_hdrbytes=0i,beresp_bodybytes=0i,beresp_hdrbytes=0i,busy=0i,conn=0i,fail=0i,fail_eacces=0i,fail_eaddrnotavail=0i,fail_econnrefused=30609i,fail_enetunreach=0i,fail_etimedout=0i,fail_other=0i,happy=0i,helddown=3i,pipe_hdrbytes=0i,pipe_in=0i,pipe_out=0i,req=0i,unhealthy=0i 1631121675000000000
+> varnish,backend=server_test1,host=kozel.local,section=VBE bereq_bodybytes=0i,bereq_hdrbytes=0i,beresp_bodybytes=0i,beresp_hdrbytes=0i,busy=0i,conn=0i,fail=0i,fail_eacces=0i,fail_eaddrnotavail=0i,fail_econnrefused=49345i,fail_enetunreach=0i,fail_etimedout=0i,fail_other=0i,happy=0i,helddown=2i,pipe_hdrbytes=0i,pipe_in=0i,pipe_out=0i,req=0i,unhealthy=0i 1631121675000000000
+```
