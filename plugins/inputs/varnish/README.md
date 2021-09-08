@@ -15,18 +15,18 @@ binary = "/usr/bin/varnishstat"
 ## Additional custom arguments for the varnishstat command
 # binary_args = ["-f", "MAIN.*"]
 
-## The default location of the varnishadm binary can be overriden with:
+## The default location of the varnishadm binary can be overridden with:
 adm_binary = "/usr/bin/varnishadm"
 
 ## Custom arguments for the varnishadm command 
 # adm_binary_args = [""] 
 
-## Metric version
-metric_version = 2
+## Metric version defaults to metric_version=1, use metric_version=2 for removal of nonactive vcls.
+metric_version = 1
 
-## Additional regexps to override builtin conversion varnish metric into telegraf metrics. 
-## Regexp group "_vcl" is used for extracting VCL name. Metrics that contains not active VCL are skipped.  
-## Regexp group "_field" overides field name. Other named regexp groups are used as tags.
+## Additional regexps to override builtin conversion of varnish metrics into telegraf metrics. 
+## Regexp group "_vcl" is used for extracting the VCL name. Metrics that contain nonactive VCL's are skipped.  
+## Regexp group "_field" overrides the field name. Other named regexp groups are used as tags.
 # regexps = ['^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<group>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
 
 ## By default, telegraf gather stats for 3 metric points.
@@ -44,10 +44,10 @@ stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
 ```
 
 ### Finding Active VCL
-Plugin uses `varnishadm` commandline to find the active VCL. Metrics that are related to not active VCL are excluded from 
+Plugin uses `varnishadm` commandline to find the active VCL. Metrics that are related to the nonactive VCL are excluded from 
 monitoring. 
 
-Finding VCL name in varnish measurement can be adjusted by using custom GO regular expressions. By default, the plugin has
+Finding the VCL name in a varnish measurement can be adjusted by using custom GO regular expressions. By default, the plugin has a
 builtin list of regexps for KVSTORE, Dynamic Backends (goto) and XCNT metrics types. Additional regexps can be 
 specified in configuration: 
 
@@ -381,7 +381,7 @@ the following values:
 ## Permissions
 ## Measurements & Fields (metric_version=2):
 
-When `metric_version=2` is enable, the plugin runs `varnishstat -j` command and parses the JSON output into metrics.
+When `metric_version=2` is enabled, the plugin runs `varnishstat -j` command and parses the JSON output into metrics.
 
 Varnish stats will be grouped into measurements by their lowercase prefix. For better organization
 `varnish_` prefix will be appended.
@@ -404,8 +404,8 @@ Influx metric:
 
 
 ### Custom arguments
-You can change the default binary location and custom arguments get `varnishstat` and `varnishadm` command output. 
-This is useful when running varnish in docker or executing using varnish by SSH on different machine.
+You can change the default binary location and custom arguments for `varnishstat` and `varnishadm` command output. 
+This is useful when running varnish in docker or executing using varnish by SSH on a different machine.
 
 #### Example for SSH 
 ```toml
