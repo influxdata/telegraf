@@ -1,12 +1,14 @@
 package cookie
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
+	"sync"
 	"time"
 
 	clockutil "github.com/benbjohnson/clock"
@@ -26,9 +28,25 @@ type CookieAuthConfig struct {
 	Renewal config.Duration `toml:"cookie_auth_renewal"`
 
 	client *http.Client
+	wg     sync.WaitGroup
 }
 
 func (c *CookieAuthConfig) Start(client *http.Client, log telegraf.Logger, clock clockutil.Clock) (err error) {
+	if err = c.initializeClient(client); err != nil {
+		return err
+	}
+
+	// continual auth renewal if set
+	if c.Renewal > 0 {
+		ticker := clock.Ticker(time.Duration(c.Renewal))
+		// this context is used in the tests only, it is to cancel the goroutine
+		go c.authRenewal(context.Background(), ticker, log)
+	}
+
+	return nil
+}
+
+func (c *CookieAuthConfig) initializeClient(client *http.Client) (err error) {
 	c.client = client
 
 	if c.Method == "" {
@@ -40,23 +58,21 @@ func (c *CookieAuthConfig) Start(client *http.Client, log telegraf.Logger, clock
 		return err
 	}
 
-	if err = c.auth(); err != nil {
-		return err
-	}
+	return c.auth()
+}
 
-	// continual auth renewal if set
-	if c.Renewal > 0 {
-		ticker := clock.Ticker(time.Duration(c.Renewal))
-		go func() {
-			for range ticker.C {
-				if err := c.auth(); err != nil && log != nil {
-					log.Errorf("renewal failed for %q: %v", c.URL, err)
-				}
+func (c *CookieAuthConfig) authRenewal(ctx context.Context, ticker *clockutil.Ticker, log telegraf.Logger) {
+	for {
+		select {
+		case <-ctx.Done():
+			c.wg.Done()
+			return
+		case <-ticker.C:
+			if err := c.auth(); err != nil && log != nil {
+				log.Errorf("renewal failed for %q: %v", c.URL, err)
 			}
-		}()
+		}
 	}
-
-	return nil
 }
 
 func (c *CookieAuthConfig) auth() error {
