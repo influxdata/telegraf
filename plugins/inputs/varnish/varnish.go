@@ -138,6 +138,19 @@ func varnishRunner(cmdName string, useSudo bool, cmdArgs []string, timeout confi
 	return &out, nil
 }
 
+func (s *Varnish) Init() error {
+	var customRegexps []*regexp.Regexp
+	for _, re := range s.Regexps {
+		compiled, err := regexp.Compile(re)
+		if err != nil {
+			return fmt.Errorf("error parsing regexp: %s", err)
+		}
+		customRegexps = append(customRegexps, compiled)
+	}
+	s.regexpsCompiled = append(customRegexps, s.regexpsCompiled...)
+	return nil
+}
+
 // Gather collects the configured stats from varnish_stat and adds them to the
 // Accumulator
 //
@@ -160,48 +173,36 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-	//Add custom regexpsCompiled
-	var customRegexps []*regexp.Regexp
-	for _, re := range s.Regexps {
-		compiled, err := regexp.Compile(re)
-		if err != nil {
-			return fmt.Errorf("error parsing regexp: %s", err)
-		}
-		customRegexps = append(customRegexps, compiled)
-	}
-	s.regexpsCompiled = append(customRegexps, s.regexpsCompiled...)
 
 	admArgs, statsArgs := s.prepareCmdArgs()
-	var err error
-
-	//run varnishadm to get active vcl
-	var activeVcl = "boot"
-	if s.admRun != nil {
-		admOut, err := s.admRun(s.AdmBinary, s.UseSudo, admArgs, s.Timeout)
-		if err != nil {
-			return fmt.Errorf("error gathering metrics: %s", err)
-		}
-		activeVcl = getActiveVCL(admOut)
-	}
 
 	statOut, err := s.run(s.Binary, s.UseSudo, statsArgs, s.Timeout)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
 
-	if s.MetricVersion == 0 || s.MetricVersion == 1 {
-		return s.processMetricsV1(activeVcl, acc, statOut)
-	} else if s.MetricVersion == 2 {
+	if s.MetricVersion == 2 {
+		//run varnishadm to get active vcl
+		var activeVcl = "boot"
+		if s.admRun != nil {
+			admOut, err := s.admRun(s.AdmBinary, s.UseSudo, admArgs, s.Timeout)
+			if err != nil {
+				return fmt.Errorf("error gathering metrics: %s", err)
+			}
+			activeVcl, err = getActiveVCLJson(admOut)
+			if err != nil {
+				return fmt.Errorf("error gathering metrics: %s", err)
+			}
+		}
 		return s.processMetricsV2(activeVcl, acc, statOut)
-	} else {
-		return fmt.Errorf("unsupported metrics_version: %v", s.MetricVersion)
 	}
+	return s.processMetricsV1(acc, statOut)
 }
 
 // Prepare varnish cli tools arguments
 func (s *Varnish) prepareCmdArgs() ([]string, []string) {
 	//default varnishadm arguments
-	admArgs := []string{"vcl.list"}
+	admArgs := []string{"vcl.list", "-j"}
 
 	//default varnish stats arguments
 	statsArgs := []string{"-j"}
@@ -226,7 +227,7 @@ func (s *Varnish) prepareCmdArgs() ([]string, []string) {
 	return admArgs, statsArgs
 }
 
-func (s *Varnish) processMetricsV1(activeVcl string, acc telegraf.Accumulator, out *bytes.Buffer) error {
+func (s *Varnish) processMetricsV1(acc telegraf.Accumulator, out *bytes.Buffer) error {
 	sectionMap := make(map[string]map[string]interface{})
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
@@ -243,16 +244,6 @@ func (s *Varnish) processMetricsV1(activeVcl string, acc telegraf.Accumulator, o
 
 		if s.filter != nil && !s.filter.Match(stat) {
 			continue
-		}
-
-		//skip not active vcls
-		vMetric := parseMetricV2(stat)
-		if vMetric.vclName != "" && activeVcl != "" && vMetric.vclName != activeVcl {
-			continue
-		}
-		// strip vclName from metrics name
-		if vMetric.vclName != "" {
-			stat = strings.ReplaceAll(stat, vMetric.vclName+".", "")
 		}
 
 		parts := strings.SplitN(stat, ".", 2)
@@ -338,7 +329,7 @@ func (s *Varnish) processMetricsV2(activeVcl string, acc telegraf.Accumulator, o
 			continue
 		}
 
-		vMetric := parseMetricV2(vFieldName)
+		vMetric := parseMetricV2(vFieldName, s.regexpsCompiled)
 
 		if vMetric.vclName != "" && activeVcl != "" && vMetric.vclName != activeVcl {
 			//skip not active vcl
@@ -359,18 +350,46 @@ func (s *Varnish) processMetricsV2(activeVcl string, acc telegraf.Accumulator, o
 	return nil
 }
 
-// Parse the output of "varnishadm vcl.list" and find active vcls
-func getActiveVCL(reader io.Reader) string {
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		line := scanner.Text()
-		words := strings.Fields(line)
-		// filter "active" row vcl
-		if len(words) >= 5 && "active" == words[0] {
-			return words[4]
+// Parse the output of "varnishadm vcl.list -j" and find active vcls
+func getActiveVCLJson(out io.Reader) (string, error) {
+	var output = ""
+	if b, err := io.ReadAll(out); err == nil {
+		output = string(b)
+	}
+	// workaround for non valid json in varnish 6.6.1 https://github.com/varnishcache/varnish-cache/issues/3687
+	if strings.HasPrefix(output, "200") {
+		output = strings.TrimPrefix(output, "200")
+	}
+
+	var jsonOut []interface{}
+	err := json.Unmarshal([]byte(output), &jsonOut)
+	if err != nil {
+		return "", err
+	}
+
+	//check vcl.list output
+	if jsonOut[0].(float64) != 2 {
+		return "", fmt.Errorf("unsupported varnishadm format %v", jsonOut[0])
+	}
+
+	command := jsonOut[1].([]interface{})
+
+	if command[0] != "vcl.list" {
+		return "", fmt.Errorf("unsupported varnishadm command %v", jsonOut[1])
+	}
+	for _, s := range jsonOut {
+		switch s.(type) {
+		case map[string]interface{}:
+			vclStruct := s.(map[string]interface{})
+			if vclStruct["status"] == "active" {
+				return vclStruct["name"].(string), nil
+			}
+		default:
+			//ignore
+			continue
 		}
 	}
-	return ""
+	return "", nil
 }
 
 // Gets the "counters" section from varnishstat json (there is change in schema structure in varnish 6.5+)
@@ -383,17 +402,19 @@ func getCountersJSON(rootJSON map[string]interface{}) map[string]interface{} {
 }
 
 // converts varnish metrics name into field and list of tags
-func parseMetricV2(vName string) (vMetric vMetric) {
-	vMetric.measurement = measurementNamespace + "_" + strings.Split(strings.ToLower(vName), ".")[0]
-	vMetric.vclName = ""
+func parseMetricV2(vName string, regexps []*regexp.Regexp) (vMetric vMetric) {
+	vMetric.measurement = measurementNamespace
 	if strings.Count(vName, ".") == 0 {
 		return vMetric
 	}
 	vMetric.fieldName = vName[strings.LastIndex(vName, ".")+1:]
-	vMetric.tags = make(map[string]string)
+	var section = strings.Split(vName, ".")[0]
+	vMetric.tags = map[string]string{
+		"section": section,
+	}
 
 	//parse vName using regexpsCompiled
-	for _, re := range defaultRegexps {
+	for _, re := range regexps {
 		submatch := re.FindStringSubmatch(vName)
 		if len(submatch) < 1 {
 			continue

@@ -431,112 +431,103 @@ LCK.pipestat.locks                                       0         0.00 Lock Ope
 `
 
 type testConfig struct {
-	vName       string
-	measurement string
-	tags        map[string]string
-	field       string
-	activeVcl   string
-	value       interface{}
+	vName     string
+	tags      map[string]string
+	field     string
+	activeVcl string
 }
 
 func TestV2ParseVarnishNames(t *testing.T) {
 	for _, c := range []testConfig{
 		{
-			vName:       "MGT.uptime",
-			measurement: "varnish_mgt",
-			tags:        map[string]string{},
-			field:       "uptime",
+			vName: "MGT.uptime",
+			tags:  map[string]string{"section": "MGT"},
+			field: "uptime",
 		},
 		{
-			vName:       "VBE.boot.default.fail",
-			measurement: "varnish_vbe",
-			tags:        map[string]string{"backend": "default"},
-			field:       "fail",
-			activeVcl:   "boot",
+			vName:     "VBE.boot.default.fail",
+			tags:      map[string]string{"backend": "default", "section": "VBE"},
+			field:     "fail",
+			activeVcl: "boot",
 		},
 		{
-			vName:       "MEMPOOL.req1.allocs",
-			measurement: "varnish_mempool",
-			tags:        map[string]string{"id": "req1"},
-			field:       "allocs",
+			vName: "MEMPOOL.req1.allocs",
+			tags:  map[string]string{"id": "req1", "section": "MEMPOOL"},
+			field: "allocs",
 		},
 		{
-			vName:       "SMF.s0.c_bytes",
-			measurement: "varnish_smf",
-			tags:        map[string]string{"id": "s0"},
-			field:       "c_bytes",
+			vName: "SMF.s0.c_bytes",
+			tags:  map[string]string{"id": "s0", "section": "SMF"},
+			field: "c_bytes",
 		},
 		{
-			vName: "VBE.reload_20210622_153544_23757.server1.happy", measurement: "varnish_vbe",
-			tags:      map[string]string{"backend": "server1"},
+			vName:     "VBE.reload_20210622_153544_23757.server1.happy",
+			tags:      map[string]string{"backend": "server1", "section": "VBE"},
 			field:     "happy",
 			activeVcl: "reload_20210622_153544_23757",
 		},
 		{
-			vName:       "XXX.YYY.AAA",
-			measurement: "varnish_xxx",
-			tags:        map[string]string{"id": "YYY"},
-			field:       "AAA",
+			vName: "XXX.YYY.AAA",
+			tags:  map[string]string{"id": "YYY", "section": "XXX"},
+			field: "AAA",
 		},
 		{
-			vName:       "VBE.vcl_20211502_214503.goto.000007d4.(10.100.0.1).(https://example.com:443).(ttl:10.000000).beresp_bodybytes",
-			measurement: "varnish_vbe",
-			tags:        map[string]string{"backend": "10.100.0.1", "server": "https://example.com:443"},
-			activeVcl:   "vcl_20211502_214503",
-			field:       "beresp_bodybytes",
+			vName:     "VBE.vcl_20211502_214503.goto.000007d4.(10.100.0.1).(https://example.com:443).(ttl:10.000000).beresp_bodybytes",
+			tags:      map[string]string{"backend": "10.100.0.1", "server": "https://example.com:443", "section": "VBE"},
+			activeVcl: "vcl_20211502_214503",
+			field:     "beresp_bodybytes",
 		},
 		{
-			vName:       "VBE.VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx.default.bereq_hdrbytes",
-			measurement: "varnish_vbe",
-			tags:        map[string]string{"backend": "default"},
-			activeVcl:   "VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx",
-			field:       "bereq_hdrbytes",
+			vName:     "VBE.VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx.default.bereq_hdrbytes",
+			tags:      map[string]string{"backend": "default", "section": "VBE"},
+			activeVcl: "VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx",
+			field:     "bereq_hdrbytes",
 		},
 		{
-			vName:       "VBE.VCL_ROUTER_V123_123.default.happy",
-			tags:        map[string]string{"backend": "default"},
-			field:       "happy",
-			activeVcl:   "VCL_ROUTER_V123_123",
-			measurement: "varnish_vbe"},
-		{
-			vName:       "KVSTORE.ds_stats.VCL_xxxx_xxx_A_B_C.shield",
-			tags:        map[string]string{"id": "ds_stats"},
-			field:       "shield",
-			activeVcl:   "VCL_xxxx_xxx_A_B_C",
-			measurement: "varnish_kvstore",
+			vName:     "VBE.VCL_ROUTER_V123_123.default.happy",
+			tags:      map[string]string{"backend": "default", "section": "VBE"},
+			field:     "happy",
+			activeVcl: "VCL_ROUTER_V123_123",
 		},
 		{
-			vName:       "LCK.goto.director.destroy",
-			tags:        map[string]string{"id": "goto.director"},
-			field:       "destroy",
-			activeVcl:   "",
-			measurement: "varnish_lck",
+			vName:     "KVSTORE.ds_stats.VCL_xxxx_xxx_A_B_C.shield",
+			tags:      map[string]string{"id": "ds_stats", "section": "KVSTORE"},
+			field:     "shield",
+			activeVcl: "VCL_xxxx_xxx_A_B_C",
 		},
 		{
-			vName:       "XCNT.1111.XXX+_LINE.cr.deliver_stub_restart.val",
-			tags:        map[string]string{"group": "XXX+_LINE.cr"},
-			field:       "deliver_stub_restart",
-			activeVcl:   "1111",
-			measurement: "varnish_xcnt",
+			vName:     "LCK.goto.director.destroy",
+			tags:      map[string]string{"id": "goto.director", "section": "LCK"},
+			field:     "destroy",
+			activeVcl: "",
 		},
 		{
-			vName:       "XCNT.vcl123.my_field.val",
-			tags:        map[string]string{},
-			field:       "my_field",
-			activeVcl:   "vcl123",
-			measurement: "varnish_xcnt",
+			vName:     "XCNT.1111.XXX+_LINE.cr.deliver_stub_restart.val",
+			tags:      map[string]string{"group": "XXX+_LINE.cr", "section": "XCNT"},
+			field:     "deliver_stub_restart",
+			activeVcl: "1111",
+		},
+		{
+			vName:     "XCNT.vcl123.my_field.val",
+			tags:      map[string]string{"section": "XCNT"},
+			field:     "my_field",
+			activeVcl: "vcl123",
 		},
 	} {
-		vMetric := parseMetricV2(c.vName)
+		v := &Varnish{regexpsCompiled: defaultRegexps}
+		assert.NoError(t, v.Init())
+		t.Logf(c.vName)
+		vMetric := parseMetricV2(c.vName, v.regexpsCompiled)
 		require.Equal(t, c.activeVcl, vMetric.vclName)
-		require.Equal(t, c.measurement, vMetric.measurement, c.vName)
+		require.Equal(t, "varnish", vMetric.measurement, c.vName)
 		require.Equal(t, c.field, vMetric.fieldName)
 		require.Equal(t, c.tags, vMetric.tags)
 	}
 }
 
 func TestVersions(t *testing.T) {
-	server := &Varnish{}
+	server := &Varnish{regexpsCompiled: defaultRegexps}
+	assert.NoError(t, server.Init())
 	require.Equal(t, "A plugin to collect stats from Varnish HTTP Cache", server.Description())
 	acc := &testutil.Accumulator{}
 
@@ -561,7 +552,7 @@ func TestVersions(t *testing.T) {
 		require.Equal(t, c.size, len(acc.Metrics))
 		for _, m := range acc.Metrics {
 			require.NotEmpty(t, m.Fields)
-			require.Contains(t, m.Measurement, "varnish_")
+			require.Equal(t, m.Measurement, "varnish")
 			for field := range m.Fields {
 				require.NotContains(t, field, "reload_")
 			}
@@ -596,45 +587,36 @@ func TestJsonTypes(t *testing.T) {
 					"value": 12345
 			}
 		}}`
-	exp := []testConfig{
-		{measurement: "varnish_xxx", field: "floatTest", value: 123.45},
-		{measurement: "varnish_xxx", field: "stringTest", value: "abc_def"},
-		{measurement: "varnish_xxx", field: "intTest", value: int64(12345)},
+	exp := map[string]interface{}{
+		"floatTest":  123.45,
+		"stringTest": "abc_def",
+		"intTest":    int64(12345),
 	}
-	//output, _ := ioutil.ReadFile("test_data/" + "varnish_types.json")
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:           fakeVarnishRunner(json),
-		Stats:         []string{"*"},
-		MetricVersion: 2,
+		run:             fakeVarnishRunner(json),
+		regexpsCompiled: defaultRegexps,
+		Stats:           []string{"*"},
+		MetricVersion:   2,
 	}
 	assert.NoError(t, v.Gather(acc))
 	require.Equal(t, 3, len(acc.Metrics))
-
-	for i, m := range acc.Metrics {
-		c := exp[i]
-		require.Equal(t, c.measurement, m.Measurement)
-		require.Equal(t, c.value, m.Fields[c.field])
+	for _, metric := range acc.Metrics {
+		require.Equal(t, "varnish", metric.Measurement)
+		for fieldName, value := range metric.Fields {
+			require.Equal(t, exp[fieldName], value)
+		}
 	}
 }
 
-func TestV1Dump(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	file, _ := ioutil.ReadFile("test_data/" + "varnish_v1_reload.txt")
-	output := string(file)
-	v := &Varnish{
-		run: fakeVarnishRunner(output),
-		admRun: fakeVarnishRunner(`available   cold    cold         0    boot
-available   cold    cold         0    reload_20210719_143559_60674
-available   cold    cold         0    test
-available   cold    cold         0    test2
-available   cold    cold         0    test3
-available   auto    warm         0    reload_20210722_162225_1979744
-active      auto    warm         0    reload_20210723_091821_2056185
-`),
-		MetricVersion: 1,
-		Stats:         []string{"*"},
-	}
-	assert.NoError(t, v.Gather(acc))
-	assert.Len(t, acc.Metrics, 6)
+func TestVarnishAdmJson(t *testing.T) {
+	admJSON, _ := ioutil.ReadFile("test_data/" + "varnishadm-200.json")
+	activeVcl, err := getActiveVCLJson(bytes.NewBuffer(admJSON))
+	assert.NoError(t, err)
+	assert.Equal(t, activeVcl, "boot-123")
+
+	admJSON, _ = ioutil.ReadFile("test_data/" + "varnishadm-reload.json")
+	activeVcl, err = getActiveVCLJson(bytes.NewBuffer(admJSON))
+	assert.NoError(t, err)
+	assert.Equal(t, activeVcl, "reload_20210723_091821_2056185")
 }
