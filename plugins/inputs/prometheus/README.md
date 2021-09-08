@@ -23,6 +23,9 @@ in Prometheus format.
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "url"
   
+  ## Whether the timestamps of the scraped metrics will be used. (defaults to true)
+  # honor_timestamps = true
+  
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
   

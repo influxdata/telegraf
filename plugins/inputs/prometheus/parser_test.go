@@ -1,8 +1,10 @@
 package prometheus
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -42,7 +44,7 @@ apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025
 
 func TestParseValidPrometheus(t *testing.T) {
 	// Gauge value
-	metrics, err := Parse([]byte(validUniqueGauge), http.Header{})
+	metrics, err := Parse([]byte(validUniqueGauge), http.Header{}, true)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "cadvisor_version_info", metrics[0].Name())
@@ -58,7 +60,7 @@ func TestParseValidPrometheus(t *testing.T) {
 	}, metrics[0].Tags())
 
 	// Counter value
-	metrics, err = Parse([]byte(validUniqueCounter), http.Header{})
+	metrics, err = Parse([]byte(validUniqueCounter), http.Header{}, true)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "get_token_fail_count", metrics[0].Name())
@@ -69,7 +71,7 @@ func TestParseValidPrometheus(t *testing.T) {
 
 	// Summary data
 	//SetDefaultTags(map[string]string{})
-	metrics, err = Parse([]byte(validUniqueSummary), http.Header{})
+	metrics, err = Parse([]byte(validUniqueSummary), http.Header{}, true)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "http_request_duration_microseconds", metrics[0].Name())
@@ -83,7 +85,7 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t, map[string]string{"handler": "prometheus"}, metrics[0].Tags())
 
 	// histogram data
-	metrics, err = Parse([]byte(validUniqueHistogram), http.Header{})
+	metrics, err = Parse([]byte(validUniqueHistogram), http.Header{}, true)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "apiserver_request_latencies", metrics[0].Name())
@@ -102,4 +104,39 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t,
 		map[string]string{"verb": "POST", "resource": "bindings"},
 		metrics[0].Tags())
+}
+
+func TestMetricsWithTimestamp(t *testing.T) {
+	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
+	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
+	metricsWithTimestamps := fmt.Sprintf(`
+# TYPE test_counter counter
+test_counter{label="test"} 1 %d
+`, testTimeUnix)
+
+	// HonorTimestamps is true
+	metrics, err := Parse([]byte(metricsWithTimestamps), http.Header{}, true)
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "test_counter", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"counter": float64(1),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{
+		"label": "test",
+	}, metrics[0].Tags())
+	assert.Equal(t, testTime, metrics[0].Time().UTC())
+
+	// HonorTimestamps is false
+	metrics, err = Parse([]byte(metricsWithTimestamps), http.Header{}, false)
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "test_counter", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"counter": float64(1),
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{
+		"label": "test",
+	}, metrics[0].Tags())
+	assert.WithinDuration(t, time.Now(), metrics[0].Time().UTC(), 5*time.Second)
 }

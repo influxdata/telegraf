@@ -58,6 +58,8 @@ type Prometheus struct {
 
 	URLTag string `toml:"url_tag"`
 
+	HonorTimestamps bool `toml:"honor_timestamps"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger
@@ -100,6 +102,9 @@ var sampleConfig = `
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "url"
+
+  ## Whether the timestamps of the scraped metrics will be used. (defaults to true)
+  # honor_timestamps = true
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -414,10 +419,13 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if p.MetricVersion == 2 {
-		parser := parser_v2.Parser{Header: resp.Header}
+		parser := parser_v2.Parser{
+			Header: resp.Header,
+			HonorTimestamps: p.HonorTimestamps,
+		}
 		metrics, err = parser.Parse(body)
 	} else {
-		metrics, err = Parse(body, resp.Header)
+		metrics, err = Parse(body, resp.Header, p.HonorTimestamps)
 	}
 
 	if err != nil {
@@ -517,6 +525,7 @@ func init() {
 			kubernetesPods:  map[string]URLAndAddress{},
 			consulServices:  map[string]URLAndAddress{},
 			URLTag:          "url",
+			HonorTimestamps: true,
 		}
 	})
 }

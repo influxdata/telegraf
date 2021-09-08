@@ -156,6 +156,9 @@ type Config struct {
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 
+	// Prometheus configuration
+	PrometheusHonorTimestamps bool `toml:"prometheus_honor_timestamps"`
+
 	// Value configuration
 	ValueFieldName string `toml:"value_field_name"`
 
@@ -259,7 +262,10 @@ func NewParser(config *Config) (Parser, error) {
 			config.FormUrlencodedTagKeys,
 		)
 	case "prometheus":
-		parser, err = NewPrometheusParser(config.DefaultTags)
+		parser, err = NewPrometheusParser(
+			config.DefaultTags,
+			config.PrometheusHonorTimestamps,
+		)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
@@ -378,9 +384,10 @@ func NewFormUrlencodedParser(
 	}, nil
 }
 
-func NewPrometheusParser(defaultTags map[string]string) (Parser, error) {
+func NewPrometheusParser(defaultTags map[string]string, honorTimestamps bool) (Parser, error) {
 	return &prometheus.Parser{
 		DefaultTags: defaultTags,
+		HonorTimestamps: honorTimestamps,
 	}, nil
 }
 

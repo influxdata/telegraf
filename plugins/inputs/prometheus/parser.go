@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
-func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
+func Parse(buf []byte, header http.Header, honorTimestamps bool) ([]telegraf.Metric, error) {
 	var parser expfmt.TextParser
 	var metrics []telegraf.Metric
 	var err error
@@ -76,7 +76,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 			// converting to telegraf metric
 			if len(fields) > 0 {
 				var t time.Time
-				if m.TimestampMs != nil && *m.TimestampMs > 0 {
+				if honorTimestamps && m.TimestampMs != nil && *m.TimestampMs > 0 {
 					t = time.Unix(0, *m.TimestampMs*1000000)
 				} else {
 					t = now
