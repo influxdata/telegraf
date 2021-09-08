@@ -1,5 +1,7 @@
 # MongoDB Input Plugin
 
+All MongoDB server versions from 2.6 and higher are supported.
+
 ### Configuration:
 
 ```toml

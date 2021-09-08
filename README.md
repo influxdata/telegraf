@@ -265,6 +265,7 @@ For documentation on the latest development code see the [documentation index][d
 * [mailchimp](./plugins/inputs/mailchimp)
 * [marklogic](./plugins/inputs/marklogic)
 * [mcrouter](./plugins/inputs/mcrouter)
+* [mdstat](./plugins/inputs/mdstat)
 * [memcached](./plugins/inputs/memcached)
 * [mem](./plugins/inputs/mem)
 * [mesos](./plugins/inputs/mesos)
@@ -383,10 +384,14 @@ For documentation on the latest development code see the [documentation index][d
 - [Graphite](/plugins/parsers/graphite)
 - [Grok](/plugins/parsers/grok)
 - [JSON](/plugins/parsers/json)
+- [JSON v2](/plugins/parsers/json_v2)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
+- [Prometheus](/plugins/parsers/prometheus)
+- [Prometheus Remote Write](/plugins/parsers/prometheusremotewrite)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
 - [Wavefront](/plugins/parsers/wavefront)
+- [XPath](/plugins/parsers/xpath) (supports XML, JSON, MessagePack, Protocol Buffers)
 
 ## Serializers
 
@@ -395,6 +400,8 @@ For documentation on the latest development code see the [documentation index][d
 - [Graphite](/plugins/serializers/graphite)
 - [JSON](/plugins/serializers/json)
 - [MessagePack](/plugins/serializers/msgpack)
+- [Prometheus](/plugins/serializers/prometheus)
+- [Prometheus Remote Write](/plugins/serializers/prometheusremotewrite)
 - [ServiceNow](/plugins/serializers/nowmetric)
 - [SplunkMetric](/plugins/serializers/splunkmetric)
 - [Wavefront](/plugins/serializers/wavefront)
@@ -429,10 +436,12 @@ For documentation on the latest development code see the [documentation index][d
 ## Aggregator Plugins
 
 * [basicstats](./plugins/aggregators/basicstats)
+* [derivative](./plugins/aggregators/derivative)
 * [final](./plugins/aggregators/final)
 * [histogram](./plugins/aggregators/histogram)
 * [merge](./plugins/aggregators/merge)
 * [minmax](./plugins/aggregators/minmax)
+* [quantile](./plugins/aggregators/quantile)
 * [valuecounter](./plugins/aggregators/valuecounter)
 
 ## Output Plugins
