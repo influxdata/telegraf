@@ -147,6 +147,7 @@ require (
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
+	github.com/intel/iaevents v1.0.0
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.5.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
