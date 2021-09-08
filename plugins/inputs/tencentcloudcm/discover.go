@@ -2,6 +2,7 @@ package tencentcloudcm
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -154,6 +155,8 @@ func discover(crs *common.Credential, region, endpoint string, p Product) (disco
 		for k, v := range instance {
 			normInstance[strings.ToLower(k)] = v
 		}
+
+		sort.Strings(p.Keys())
 
 		for _, key := range p.Keys() {
 			// check if discovered key field is nil

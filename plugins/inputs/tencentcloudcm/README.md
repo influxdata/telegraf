@@ -16,18 +16,18 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
   ##   ex: endpoint = "tencentcloudapi.com"
   # endpoint = ""
 
-  # The default period for Tencent Cloud Cloud Monitor metrics is 1 minute (60s). However not all
-  # metrics are made available to the 1 minute period. Some are collected at
-  # 5 minute, 60 minute, or larger intervals.
-  # See: https://intl.cloud.tencent.com/document/product/248/33882
-  # Note that if a period is configured that is smaller than the default for a
-  # particular metric, that metric will not be returned by the Tencent Cloud API
-  # and will not be collected by Telegraf.
-  #
-  # Requested Tencent Cloud Cloud Monitor aggregation Period (required - must be a multiple of 60s)
-  # period = "5m"
+  ## The default period for Tencent Cloud Cloud Monitor metrics is 1 minute (60s). However not all
+  ## metrics are made available to the 1 minute period. Some are collected at
+  ## 5 minute, 60 minute, or larger intervals.
+  ## See: https://intl.cloud.tencent.com/document/product/248/33882
+  ## Note that if a period is configured that is smaller than the default for a
+  ## particular metric, that metric will not be returned by the Tencent Cloud API
+  ## and will not be collected by Telegraf.
+  ##
+  ## Requested Tencent Cloud Cloud Monitor aggregation Period (required - must be a multiple of 60s)
+  ## period = "5m"
 
-  # Collection Delay (must account for metrics availability via Tencent Cloud API)
+  ## Collection Delay (must account for metrics availability via Tencent Cloud API)
   # delay = "0m"
 
   ## Maximum requests per second. Note that the global default Tencent Cloud API rate limit is
@@ -36,8 +36,8 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
   ## See https://intl.cloud.tencent.com/document/product/248/33881
   # ratelimit = 20
 
-  # Timeout for http requests made by the Tencent Cloud client.
-  timeout = "5s"
+  ## Timeout for http requests made by the Tencent Cloud client.
+  # timeout = "5s"
 
   ## By default, Tencent Cloud CM Input plugin will automatically discover instances in specified regions
   ## This sets the interval for discover and update the instances discovered.
@@ -45,24 +45,24 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
   ## how often the discovery API call executed (default 1m)
   # discovery_interval = "1m"
 
-  # Tencent Cloud Account (required - you can provide multiple entries and distinguish them using
-  # optional name field, if name is empty, index number will be used as default)
+  ## Tencent Cloud Account (required - you can provide multiple entries and distinguish them using
+  ## optional name field, if name is empty, index number will be used as default)
   [[inputs.tencentcloudcm.accounts]]
     name = ""
     secret_id = ""
     secret_key = ""
 
-    # Namespaces to Pull
+    ## Namespaces to Pull
     [[inputs.tencentcloudcm.accounts.namespaces]]
-      # Tencent Cloud CM Namespace (required - see https://intl.cloud.tencent.com/document/product/248/34716#namespace)
+      ## Tencent Cloud CM Namespace (required - see https://intl.cloud.tencent.com/document/product/248/34716#namespace)
       namespace = "QCE/CVM"
 
-      # Metrics filter, all metrics will be pulled if not left empty. Different namespaces may have different
-      # metric names, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843
+      ## Metrics filter, all metrics will be pulled if not left empty. Different namespaces may have different
+      ## metric names, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843
       # metrics = ["CPUUsage", "MemUsage"]
 
       [[inputs.tencentcloudcm.accounts.namespaces.regions]]
-        # Tencent Cloud regions (required - Allowed values: https://intl.cloud.tencent.com/document/api/248/33876)
+        ## Tencent Cloud regions (required - Allowed values: https://intl.cloud.tencent.com/document/api/248/33876)
         region = "ap-guangzhou"
 
         ## Dimension filters for Metric. Different namespaces may have different

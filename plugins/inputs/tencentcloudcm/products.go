@@ -59,8 +59,11 @@ func (d DC) Discover(crs *common.Credential, region, endpoint string, offset, li
 		return 0, nil, fmt.Errorf("discover instances for namespace %s failed: %s", d.Namespace(), err)
 	}
 
-	instances := []map[string]interface{}{}
-	instancesJSON, _ := json.Marshal(response.Response.DirectConnectTunnelSet)
+	var instances []map[string]interface{}
+	instancesJSON, err := json.Marshal(response.Response.DirectConnectTunnelSet)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", d.Namespace(), err)
+	}
 	json.Unmarshal(instancesJSON, &instances)
 	return uint64(*response.Response.TotalCount), instances, nil
 }
@@ -115,8 +118,11 @@ func (c CVM) Discover(crs *common.Credential, region, endpoint string, offset, l
 		return 0, nil, fmt.Errorf("discover instances for namespace %s failed: %s", c.Namespace(), err)
 	}
 
-	instances := []map[string]interface{}{}
-	instancesJSON, _ := json.Marshal(response.Response.InstanceSet)
+	var instances []map[string]interface{}
+	instancesJSON, err := json.Marshal(response.Response.InstanceSet)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", c.Namespace(), err)
+	}
 	json.Unmarshal(instancesJSON, &instances)
 
 	return uint64(*response.Response.TotalCount), instances, nil
@@ -177,8 +183,11 @@ func (c CDB) Discover(crs *common.Credential, region, endpoint string, offset, l
 		return 0, nil, fmt.Errorf("discover instances for namespace %s failed: %s", c.Namespace(), err)
 	}
 
-	instances := []map[string]interface{}{}
-	instancesJSON, _ := json.Marshal(response.Response.Items)
+	var instances []map[string]interface{}
+	instancesJSON, err := json.Marshal(response.Response.Items)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", c.Namespace(), err)
+	}
 	json.Unmarshal(instancesJSON, &instances)
 
 	return uint64(*response.Response.TotalCount), instances, nil
@@ -231,8 +240,11 @@ func (r Redis) Discover(crs *common.Credential, region, endpoint string, offset,
 		return 0, nil, fmt.Errorf("discover instances for namespace %s failed: %s", r.Namespace(), err)
 	}
 
-	instances := []map[string]interface{}{}
-	instancesJSON, _ := json.Marshal(response.Response.InstanceSet)
+	var instances []map[string]interface{}
+	instancesJSON, err := json.Marshal(response.Response.InstanceSet)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", r.Namespace(), err)
+	}
 	json.Unmarshal(instancesJSON, &instances)
 
 	return uint64(*response.Response.TotalCount), instances, nil
@@ -282,8 +294,11 @@ func (l LBPublic) Discover(crs *common.Credential, region, endpoint string, offs
 		return 0, nil, fmt.Errorf("discover instances for namespace %s failed: %s", l.Namespace(), err)
 	}
 
-	instances := []map[string]interface{}{}
-	instancesJSON, _ := json.Marshal(response.Response.LoadBalancerSet)
+	var instances []map[string]interface{}
+	instancesJSON, err := json.Marshal(response.Response.LoadBalancerSet)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", l.Namespace(), err)
+	}
 	json.Unmarshal(instancesJSON, &instances)
 
 	return uint64(*response.Response.TotalCount), instances, nil
@@ -330,8 +345,11 @@ func (l *LBPrivate) Discover(crs *common.Credential, region, endpoint string, of
 		return 0, nil, fmt.Errorf("discover instances for namespace %s failed: %s", l.Namespace(), err)
 	}
 
-	instances := []map[string]interface{}{}
-	instancesJSON, _ := json.Marshal(response.Response.LoadBalancerSet)
+	var instances []map[string]interface{}
+	instancesJSON, err := json.Marshal(response.Response.LoadBalancerSet)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", l.Namespace(), err)
+	}
 	json.Unmarshal(instancesJSON, &instances)
 
 	return uint64(*response.Response.TotalCount), instances, nil
@@ -379,8 +397,11 @@ func (c *CES) Discover(crs *common.Credential, region, endpoint string, offset, 
 		return 0, nil, fmt.Errorf("discover instances for namespace %s failed: %s", c.Namespace(), err)
 	}
 
-	instances := []map[string]interface{}{}
-	instancesJSON, _ := json.Marshal(response.Response.InstanceList)
+	var instances []map[string]interface{}
+	instancesJSON, err := json.Marshal(response.Response.InstanceList)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", c.Namespace(), err)
+	}
 	json.Unmarshal(instancesJSON, &instances)
 
 	return uint64(*response.Response.TotalCount), instances, nil
