@@ -292,19 +292,56 @@ func (logstash *Logstash) gatherPluginsStats(
 			return err
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+		/*
+			The elasticsearch output produces additional stats around
+			bulk requests and document writes (that are elasticsearch specific).
+			Collect those here
+		*/
 		if pluginType == "output" && plugin.Name == "elasticsearch" {
+			/*
+				The "bulk_requests" section has details about batch writes
+				into Elasticsearch
+
+				  "bulk_requests" : {
+					"successes" : 2870,
+					"responses" : {
+					  "200" : 2870
+					},
+					"failures": 262,
+					"with_errors": 9089
+				  },
+			*/
 			flattener := jsonParser.JSONFlattener{}
 			err := flattener.FlattenJSON("", plugin.BulkRequests)
 			if err != nil {
 				return err
 			}
-			accumulator.AddFields("logstash_plugins_bulk_requests", flattener.Fields, pluginTags)
+			for k, v := range flattener.Fields {
+				newKey := fmt.Sprintf("bulk_requests_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
+			}
+			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+
+			/*
+				The "documents" section has counts of individual documents
+				written/retried/etc.
+				  "documents" : {
+					"successes" : 2665549,
+					"retryable_failures": 13733
+				  }
+			*/
 			flattener = jsonParser.JSONFlattener{}
 			err = flattener.FlattenJSON("", plugin.Documents)
 			if err != nil {
 				return err
 			}
-			accumulator.AddFields("logstash_plugins_documents", flattener.Fields, pluginTags)
+			for k, v := range flattener.Fields {
+				newKey := fmt.Sprintf("documents_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
+			}
+			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
 		}
 	}
 
