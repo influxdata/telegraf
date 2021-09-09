@@ -34,5 +34,4 @@ func TestTemperature(t *testing.T) {
 		"sensor": "coretemp_sensor1_crit",
 	}
 	acc.AssertContainsTaggedFields(t, "temp", expectedFields, expectedTags)
-
 }

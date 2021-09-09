@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -19,7 +20,7 @@ const measurement = "nvidia_smi"
 // NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
 	BinPath string
-	Timeout internal.Duration
+	Timeout config.Duration
 }
 
 // Description returns the description of the NvidiaSMI plugin
@@ -61,14 +62,14 @@ func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
 			BinPath: "/usr/bin/nvidia-smi",
-			Timeout: internal.Duration{Duration: 5 * time.Second},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }
 
 func (smi *NvidiaSMI) pollSMI() ([]byte, error) {
 	// Construct and execute metrics query
-	ret, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, "-q", "-x"), smi.Timeout.Duration)
+	ret, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, "-q", "-x"), time.Duration(smi.Timeout))
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +110,8 @@ func (s *SMI) genTagsFields() []metric {
 		setTagIfUsed(tags, "uuid", gpu.UUID)
 		setTagIfUsed(tags, "compute_mode", gpu.ComputeMode)
 
+		setIfUsed("str", fields, "driver_version", s.DriverVersion)
+		setIfUsed("str", fields, "cuda_version", s.CUDAVersion)
 		setIfUsed("int", fields, "fan_speed", gpu.FanSpeed)
 		setIfUsed("int", fields, "memory_total", gpu.Memory.Total)
 		setIfUsed("int", fields, "memory_used", gpu.Memory.Used)
@@ -169,12 +172,18 @@ func setIfUsed(t string, m map[string]interface{}, k, v string) {
 				m[k] = i
 			}
 		}
+	case "str":
+		if val != "" {
+			m[k] = val
+		}
 	}
 }
 
 // SMI defines the structure for the output of _nvidia-smi -q -x_.
 type SMI struct {
-	GPU GPU `xml:"gpu"`
+	GPU           GPU    `xml:"gpu"`
+	DriverVersion string `xml:"driver_version"`
+	CUDAVersion   string `xml:"cuda_version"`
 }
 
 // GPU defines the structure of the GPU portion of the smi output.

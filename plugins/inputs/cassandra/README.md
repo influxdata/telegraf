@@ -1,5 +1,4 @@
-
-# Telegraf plugin: Cassandra
+# Cassandra Input Plugin
 
 ### **Deprecated in version 1.7**: Please use the [jolokia2](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2) plugin with the [cassandra.conf](/plugins/inputs/jolokia2/examples/cassandra.conf) example configuration.
 
@@ -20,10 +19,26 @@ Cassandra plugin produces one or more measurements for each metric configured, a
 Given a configuration like:
 
 ```toml
+# Read Cassandra metrics through Jolokia
 [[inputs.cassandra]]
+  ## DEPRECATED: The cassandra plugin has been deprecated.  Please use the
+  ## jolokia2 plugin instead.
+  ##
+  ## see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2
+
   context = "/jolokia/read"
-  servers = [":8778"]
-  metrics = ["/java.lang:type=Memory/HeapMemoryUsage"]
+  ## List of cassandra servers exposing jolokia read service
+  servers = ["myuser:mypassword@10.10.10.1:8778","10.10.10.2:8778",":8778"]
+  ## List of metrics collected on above servers
+  ## Each metric consists of a jmx path.
+  ## This will collect all heap memory usage metrics from the jvm and
+  ## ReadLatency metrics for all keyspaces and tables.
+  ## "type=Table" in the query works with Cassandra3.0. Older versions might
+  ## need to use "type=ColumnFamily"
+  metrics  = [
+    "/java.lang:type=Memory/HeapMemoryUsage",
+    "/org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=ReadLatency"
+  ]
 ```
 
 The collected metrics will be:

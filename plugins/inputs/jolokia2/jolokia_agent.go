@@ -3,9 +3,10 @@ package jolokia2
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
@@ -17,7 +18,7 @@ type JolokiaAgent struct {
 	URLs            []string `toml:"urls"`
 	Username        string
 	Password        string
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
 
@@ -83,9 +84,8 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 
 			err := ja.gatherer.Gather(client, acc)
 			if err != nil {
-				acc.AddError(fmt.Errorf("Unable to gather metrics for %s: %v", client.URL, err))
+				acc.AddError(fmt.Errorf("unable to gather metrics for %s: %v", client.URL, err))
 			}
-
 		}(client)
 	}
 
@@ -109,7 +109,7 @@ func (ja *JolokiaAgent) createClient(url string) (*Client, error) {
 	return NewClient(url, &ClientConfig{
 		Username:        ja.Username,
 		Password:        ja.Password,
-		ResponseTimeout: ja.ResponseTimeout.Duration,
+		ResponseTimeout: time.Duration(ja.ResponseTimeout),
 		ClientConfig:    ja.ClientConfig,
 	})
 }

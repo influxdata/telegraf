@@ -12,7 +12,6 @@ import (
 
 // MetricHandler implements the Handler interface and produces telegraf.Metric.
 type MetricHandler struct {
-	err           error
 	timePrecision time.Duration
 	timeFunc      TimeFunc
 	metric        telegraf.Metric
@@ -47,10 +46,9 @@ func (h *MetricHandler) Metric() (telegraf.Metric, error) {
 }
 
 func (h *MetricHandler) SetMeasurement(name []byte) error {
-	var err error
-	h.metric, err = metric.New(nameUnescape(name),
+	h.metric = metric.New(nameUnescape(name),
 		nil, nil, time.Time{})
-	return err
+	return nil
 }
 
 func (h *MetricHandler) AddTag(key []byte, value []byte) error {

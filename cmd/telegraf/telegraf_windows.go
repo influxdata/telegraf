@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package main
@@ -11,30 +12,27 @@ import (
 	"github.com/kardianos/service"
 )
 
-func run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
+func run(inputFilters, outputFilters []string) {
+	// Register the eventlog logging target for windows.
+	logger.RegisterEventLogger(*fServiceName)
+
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		runAsWindowsService(
 			inputFilters,
 			outputFilters,
-			aggregatorFilters,
-			processorFilters,
 		)
 	} else {
 		stop = make(chan struct{})
 		reloadLoop(
 			inputFilters,
 			outputFilters,
-			aggregatorFilters,
-			processorFilters,
 		)
 	}
 }
 
 type program struct {
-	inputFilters      []string
-	outputFilters     []string
-	aggregatorFilters []string
-	processorFilters  []string
+	inputFilters  []string
+	outputFilters []string
 }
 
 func (p *program) Start(s service.Service) error {
@@ -46,8 +44,6 @@ func (p *program) run() {
 	reloadLoop(
 		p.inputFilters,
 		p.outputFilters,
-		p.aggregatorFilters,
-		p.processorFilters,
 	)
 }
 func (p *program) Stop(s service.Service) error {
@@ -55,7 +51,7 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
-func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
+func runAsWindowsService(inputFilters, outputFilters []string) {
 	programFiles := os.Getenv("ProgramFiles")
 	if programFiles == "" { // Should never happen
 		programFiles = "C:\\Program Files"
@@ -69,10 +65,8 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 	}
 
 	prg := &program{
-		inputFilters:      inputFilters,
-		outputFilters:     outputFilters,
-		aggregatorFilters: aggregatorFilters,
-		processorFilters:  processorFilters,
+		inputFilters:  inputFilters,
+		outputFilters: outputFilters,
 	}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
@@ -81,12 +75,17 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 	// Handle the --service flag here to prevent any issues with tooling that
 	// may not have an interactive session, e.g. installing from Ansible.
 	if *fService != "" {
-		if *fConfig != "" {
-			svcConfig.Arguments = []string{"--config", *fConfig}
+		if len(fConfigs) > 0 {
+			svcConfig.Arguments = []string{}
 		}
-		if *fConfigDirectory != "" {
-			svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", *fConfigDirectory)
+		for _, fConfig := range fConfigs {
+			svcConfig.Arguments = append(svcConfig.Arguments, "--config", fConfig)
 		}
+
+		for _, fConfigDirectory := range fConfigDirs {
+			svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", fConfigDirectory)
+		}
+
 		//set servicename to service cmd line, to have a custom name after relaunch as a service
 		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", *fServiceName)
 
@@ -96,12 +95,7 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 		}
 		os.Exit(0)
 	} else {
-		winlogger, err := s.Logger(nil)
-		if err == nil {
-			//When in service mode, register eventlog target andd setup default logging to eventlog
-			logger.RegisterEventLogger(winlogger)
-			logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
-		}
+		logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
 		err = s.Run()
 
 		if err != nil {

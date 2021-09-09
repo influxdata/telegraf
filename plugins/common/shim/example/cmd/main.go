@@ -13,7 +13,7 @@ import (
 )
 
 var pollInterval = flag.Duration("poll_interval", 1*time.Second, "how often to send metrics")
-var pollIntervalDisabled = flag.Bool("poll_interval_disabled", false, "how often to send metrics")
+var pollIntervalDisabled = flag.Bool("poll_interval_disabled", false, "set to true to disable polling. You want to use this when you are sending metrics on your own schedule")
 var configFile = flag.String("config", "", "path to the config file for this plugin")
 var err error
 
@@ -30,7 +30,7 @@ var err error
 //
 // shim.AddInput(myInput)
 //
-// // now the shim.Run() call as below.
+// // now the shim.Run() call as below. Note the shim is only intended to run a single plugin.
 //
 func main() {
 	// parse command line options
@@ -52,7 +52,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// run the input plugin(s) until stdin closes or we receive a termination signal
+	// run a single plugin until stdin closes or we receive a termination signal
 	if err := shim.Run(*pollInterval); err != nil {
 		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
 		os.Exit(1)

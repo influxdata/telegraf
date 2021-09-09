@@ -15,12 +15,20 @@ var sampleConfig = `
 [[processors.port_name]]
   ## Name of tag holding the port number
   # tag = "port"
+  ## Or name of the field holding the port number
+  # field = "port"
 
-  ## Name of output tag where service name will be added
+  ## Name of output tag or field (depending on the source) where service name will be added
   # dest = "service"
 
   ## Default tcp or udp
   # default_protocol = "tcp"
+
+  ## Tag containing the protocol (tcp or udp, case-insensitive)
+  # protocol_tag = "proto"
+
+  ## Field containing the protocol (tcp or udp, case-insensitive)
+  # protocol_field = "proto"
 `
 
 type sMap map[string]map[int]string // "https" == services["tcp"][443]
@@ -29,18 +37,21 @@ var services sMap
 
 type PortName struct {
 	SourceTag       string `toml:"tag"`
-	DestTag         string `toml:"dest"`
+	SourceField     string `toml:"field"`
+	Dest            string `toml:"dest"`
 	DefaultProtocol string `toml:"default_protocol"`
+	ProtocolTag     string `toml:"protocol_tag"`
+	ProtocolField   string `toml:"protocol_field"`
 
 	Log telegraf.Logger `toml:"-"`
 }
 
-func (d *PortName) SampleConfig() string {
+func (pn *PortName) SampleConfig() string {
 	return sampleConfig
 }
 
-func (d *PortName) Description() string {
-	return "Given a tag of a TCP or UDP port number, add a tag of the service name looked up in the system services file"
+func (pn *PortName) Description() string {
+	return "Given a tag/field of a TCP or UDP port number, add a tag/field of the service name looked up in the system services file"
 }
 
 func readServicesFile() {
@@ -95,19 +106,43 @@ func readServices(r io.Reader) sMap {
 	return services
 }
 
-func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
+func (pn *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	for _, m := range metrics {
-		portProto, ok := m.GetTag(d.SourceTag)
-		if !ok {
-			// Nonexistent tag
+		var portProto string
+		var fromField bool
+
+		if len(pn.SourceTag) > 0 {
+			if tag, ok := m.GetTag(pn.SourceTag); ok {
+				portProto = tag
+			}
+		}
+		if len(pn.SourceField) > 0 {
+			if field, ok := m.GetField(pn.SourceField); ok {
+				switch v := field.(type) {
+				default:
+					pn.Log.Errorf("Unexpected type %t in source field; must be string or int", v)
+					continue
+				case int64:
+					portProto = strconv.FormatInt(v, 10)
+				case uint64:
+					portProto = strconv.FormatUint(v, 10)
+				case string:
+					portProto = v
+				}
+				fromField = true
+			}
+		}
+
+		if len(portProto) == 0 {
 			continue
 		}
+
 		portProtoSlice := strings.SplitN(portProto, "/", 2)
 		l := len(portProtoSlice)
 
 		if l == 0 {
 			// Empty tag
-			d.Log.Errorf("empty port tag: %v", d.SourceTag)
+			pn.Log.Errorf("empty port tag: %v", pn.SourceTag)
 			continue
 		}
 
@@ -118,15 +153,32 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			port, err = strconv.Atoi(val)
 			if err != nil {
 				// Can't convert port to string
-				d.Log.Errorf("error converting port to integer: %v", val)
+				pn.Log.Errorf("error converting port to integer: %v", val)
 				continue
 			}
 		}
 
-		proto := d.DefaultProtocol
+		proto := pn.DefaultProtocol
 		if l > 1 && len(portProtoSlice[1]) > 0 {
 			proto = portProtoSlice[1]
 		}
+		if len(pn.ProtocolTag) > 0 {
+			if tag, ok := m.GetTag(pn.ProtocolTag); ok {
+				proto = tag
+			}
+		}
+		if len(pn.ProtocolField) > 0 {
+			if field, ok := m.GetField(pn.ProtocolField); ok {
+				switch v := field.(type) {
+				default:
+					pn.Log.Errorf("Unexpected type %t in protocol field; must be string", v)
+					continue
+				case string:
+					proto = v
+				}
+			}
+		}
+
 		proto = strings.ToLower(proto)
 
 		protoMap, ok := services[proto]
@@ -137,7 +189,7 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			// normally has entries for both, so our map does too.  If
 			// not, it's very likely the source tag or the services
 			// file doesn't make sense.
-			d.Log.Errorf("protocol not found in services map: %v", proto)
+			pn.Log.Errorf("protocol not found in services map: %v", proto)
 			continue
 		}
 
@@ -147,17 +199,21 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			//
 			// Not all ports are named so this isn't an error, but
 			// it's helpful to know when debugging.
-			d.Log.Debugf("port not found in services map: %v", port)
+			pn.Log.Debugf("port not found in services map: %v", port)
 			continue
 		}
 
-		m.AddTag(d.DestTag, service)
+		if fromField {
+			m.AddField(pn.Dest, service)
+		} else {
+			m.AddTag(pn.Dest, service)
+		}
 	}
 
 	return metrics
 }
 
-func (h *PortName) Init() error {
+func (pn *PortName) Init() error {
 	services = make(sMap)
 	readServicesFile()
 	return nil
@@ -167,8 +223,11 @@ func init() {
 	processors.Add("port_name", func() telegraf.Processor {
 		return &PortName{
 			SourceTag:       "port",
-			DestTag:         "service",
+			SourceField:     "port",
+			Dest:            "service",
 			DefaultProtocol: "tcp",
+			ProtocolTag:     "proto",
+			ProtocolField:   "proto",
 		}
 	})
 }

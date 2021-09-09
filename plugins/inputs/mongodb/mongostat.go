@@ -37,9 +37,12 @@ type MongoStatus struct {
 	ColStats      *ColStats
 	ShardStats    *ShardStats
 	OplogStats    *OplogStats
+	TopStats      *TopStats
 }
 
 type ServerStatus struct {
+	SampleTime         time.Time              `bson:""`
+	Flattened          map[string]interface{} `bson:""`
 	Host               string                 `bson:"host"`
 	Version            string                 `bson:"version"`
 	Process            string                 `bson:"process"`
@@ -63,7 +66,7 @@ type ServerStatus struct {
 	Mem                *MemStats              `bson:"mem"`
 	Repl               *ReplStatus            `bson:"repl"`
 	ShardCursorType    map[string]interface{} `bson:"shardCursorType"`
-	StorageEngine      map[string]string      `bson:"storageEngine"`
+	StorageEngine      *StorageEngine         `bson:"storageEngine"`
 	WiredTiger         *WiredTiger            `bson:"wiredTiger"`
 	Metrics            *MetricsStats          `bson:"metrics"`
 	TCMallocStats      *TCMallocStats         `bson:"tcmalloc"`
@@ -169,6 +172,27 @@ type ShardHostStatsData struct {
 	Refreshing int64 `bson:"refreshing"`
 }
 
+type TopStats struct {
+	Totals map[string]TopStatCollection `bson:"totals"`
+}
+
+type TopStatCollection struct {
+	Total     TopStatCollectionData `bson:"total"`
+	ReadLock  TopStatCollectionData `bson:"readLock"`
+	WriteLock TopStatCollectionData `bson:"writeLock"`
+	Queries   TopStatCollectionData `bson:"queries"`
+	GetMore   TopStatCollectionData `bson:"getmore"`
+	Insert    TopStatCollectionData `bson:"insert"`
+	Update    TopStatCollectionData `bson:"update"`
+	Remove    TopStatCollectionData `bson:"remove"`
+	Commands  TopStatCollectionData `bson:"commands"`
+}
+
+type TopStatCollectionData struct {
+	Time  int64 `bson:"time"`
+	Count int64 `bson:"count"`
+}
+
 type ConcurrentTransactions struct {
 	Write ConcurrentTransStats `bson:"write"`
 	Read  ConcurrentTransStats `bson:"read"`
@@ -203,12 +227,17 @@ type CacheStats struct {
 	PagesEvictedByAppThread   int64 `bson:"pages evicted by application threads"`
 	PagesQueuedForEviction    int64 `bson:"pages queued for eviction"`
 	PagesReadIntoCache        int64 `bson:"pages read into cache"`
+	PagesWrittenFromCache     int64 `bson:"pages written from cache"`
 	PagesRequestedFromCache   int64 `bson:"pages requested from the cache"`
 	ServerEvictingPages       int64 `bson:"eviction server evicting pages"`
 	WorkerThreadEvictingPages int64 `bson:"eviction worker thread evicting pages"`
 	InternalPagesEvicted      int64 `bson:"internal pages evicted"`
 	ModifiedPagesEvicted      int64 `bson:"modified pages evicted"`
 	UnmodifiedPagesEvicted    int64 `bson:"unmodified pages evicted"`
+}
+
+type StorageEngine struct {
+	Name string `bson:"name"`
 }
 
 // TransactionStats stores transaction checkpoints in WiredTiger.
@@ -219,7 +248,7 @@ type TransactionStats struct {
 
 // ReplStatus stores data related to replica sets.
 type ReplStatus struct {
-	SetName      interface{} `bson:"setName"`
+	SetName      string      `bson:"setName"`
 	IsMaster     interface{} `bson:"ismaster"`
 	Secondary    interface{} `bson:"secondary"`
 	IsReplicaSet interface{} `bson:"isreplicaset"`
@@ -703,6 +732,7 @@ type StatLine struct {
 	PagesEvictedByAppThread   int64
 	PagesQueuedForEviction    int64
 	PagesReadIntoCache        int64
+	PagesWrittenFromCache     int64
 	PagesRequestedFromCache   int64
 	ServerEvictingPages       int64
 	WorkerThreadEvictingPages int64
@@ -766,6 +796,8 @@ type StatLine struct {
 	// Shard Hosts stats field
 	ShardHostStatsLines map[string]ShardHostStatLine
 
+	TopStatLines []TopStatLine
+
 	// TCMalloc stats field
 	TCMallocCurrentAllocatedBytes        int64
 	TCMallocHeapSize                     int64
@@ -821,6 +853,19 @@ type ShardHostStatLine struct {
 	Available  int64
 	Created    int64
 	Refreshing int64
+}
+
+type TopStatLine struct {
+	CollectionName                string
+	TotalTime, TotalCount         int64
+	ReadLockTime, ReadLockCount   int64
+	WriteLockTime, WriteLockCount int64
+	QueriesTime, QueriesCount     int64
+	GetMoreTime, GetMoreCount     int64
+	InsertTime, InsertCount       int64
+	UpdateTime, UpdateCount       int64
+	RemoveTime, RemoveCount       int64
+	CommandsTime, CommandsCount   int64
 }
 
 func parseLocks(stat ServerStatus) map[string]LockUsage {
@@ -889,8 +934,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	returnVal.TotalCreatedC = newStat.Connections.TotalCreated
 
 	// set the storage engine appropriately
-	if newStat.StorageEngine != nil && newStat.StorageEngine["name"] != "" {
-		returnVal.StorageEngine = newStat.StorageEngine["name"]
+	if newStat.StorageEngine != nil && newStat.StorageEngine.Name != "" {
+		returnVal.StorageEngine = newStat.StorageEngine.Name
 	} else {
 		returnVal.StorageEngine = "mmapv1"
 	}
@@ -1080,6 +1125,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.PagesEvictedByAppThread = newStat.WiredTiger.Cache.PagesEvictedByAppThread
 		returnVal.PagesQueuedForEviction = newStat.WiredTiger.Cache.PagesQueuedForEviction
 		returnVal.PagesReadIntoCache = newStat.WiredTiger.Cache.PagesReadIntoCache
+		returnVal.PagesWrittenFromCache = newStat.WiredTiger.Cache.PagesWrittenFromCache
 		returnVal.PagesRequestedFromCache = newStat.WiredTiger.Cache.PagesRequestedFromCache
 		returnVal.ServerEvictingPages = newStat.WiredTiger.Cache.ServerEvictingPages
 		returnVal.WorkerThreadEvictingPages = newStat.WiredTiger.Cache.WorkerThreadEvictingPages
@@ -1098,7 +1144,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	returnVal.Time = newMongo.SampleTime
 	returnVal.IsMongos =
-		(newStat.ShardCursorType != nil || strings.HasPrefix(newStat.Process, MongosProcess))
+		newStat.ShardCursorType != nil || strings.HasPrefix(newStat.Process, MongosProcess)
 
 	// BEGIN code modification
 	if oldStat.Mem.Supported.(bool) {
@@ -1115,10 +1161,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	}
 
 	if newStat.Repl != nil {
-		setName, isReplSet := newStat.Repl.SetName.(string)
-		if isReplSet {
-			returnVal.ReplSetName = setName
-		}
+		returnVal.ReplSetName = newStat.Repl.SetName
 		// BEGIN code modification
 		if newStat.Repl.IsMaster.(bool) {
 			returnVal.NodeType = "PRI"
@@ -1128,8 +1171,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			returnVal.NodeType = "ARB"
 		} else {
 			returnVal.NodeType = "UNK"
-		}
-		// END code modification
+		} // END code modification
 	} else if returnVal.IsMongos {
 		returnVal.NodeType = "RTR"
 	}
@@ -1177,9 +1219,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				// Get the entry with the highest lock
 				highestLocked := lockdiffs[len(lockdiffs)-1]
 
-				var timeDiffMillis int64
-				timeDiffMillis = newStat.UptimeMillis - oldStat.UptimeMillis
-
+				timeDiffMillis := newStat.UptimeMillis - oldStat.UptimeMillis
 				lockToReport := highestLocked.Writes
 
 				// if the highest locked namespace is not '.'
@@ -1207,7 +1247,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	}
 
 	if newStat.GlobalLock != nil {
-		hasWT := (newStat.WiredTiger != nil && oldStat.WiredTiger != nil)
+		hasWT := newStat.WiredTiger != nil && oldStat.WiredTiger != nil
 		//If we have wiredtiger stats, use those instead
 		if newStat.GlobalLock.CurrentQueue != nil {
 			if hasWT {
@@ -1359,6 +1399,33 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			}
 
 			returnVal.ShardHostStatsLines[host] = *shardStatLine
+		}
+	}
+
+	if newMongo.TopStats != nil {
+		for collection, data := range newMongo.TopStats.Totals {
+			topStatDataLine := &TopStatLine{
+				CollectionName: collection,
+				TotalTime:      data.Total.Time,
+				TotalCount:     data.Total.Count,
+				ReadLockTime:   data.ReadLock.Time,
+				ReadLockCount:  data.ReadLock.Count,
+				WriteLockTime:  data.WriteLock.Time,
+				WriteLockCount: data.WriteLock.Count,
+				QueriesTime:    data.Queries.Time,
+				QueriesCount:   data.Queries.Count,
+				GetMoreTime:    data.GetMore.Time,
+				GetMoreCount:   data.GetMore.Count,
+				InsertTime:     data.Insert.Time,
+				InsertCount:    data.Insert.Count,
+				UpdateTime:     data.Update.Time,
+				UpdateCount:    data.Update.Count,
+				RemoveTime:     data.Remove.Time,
+				RemoveCount:    data.Remove.Count,
+				CommandsTime:   data.Commands.Time,
+				CommandsCount:  data.Commands.Count,
+			}
+			returnVal.TopStatLines = append(returnVal.TopStatLines, *topStatDataLine)
 		}
 	}
 

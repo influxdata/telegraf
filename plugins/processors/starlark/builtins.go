@@ -9,21 +9,18 @@ import (
 	"go.starlark.net/starlark"
 )
 
-func newMetric(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func newMetric(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var name starlark.String
 	if err := starlark.UnpackPositionalArgs("Metric", args, kwargs, 1, &name); err != nil {
 		return nil, err
 	}
 
-	m, err := metric.New(string(name), nil, nil, time.Now())
-	if err != nil {
-		return nil, err
-	}
+	m := metric.New(string(name), nil, nil, time.Now())
 
 	return &Metric{metric: m}, nil
 }
 
-func deepcopy(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func deepcopy(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var sm *Metric
 	if err := starlark.UnpackPositionalArgs("deepcopy", args, kwargs, 1, &sm); err != nil {
 		return nil, err
@@ -32,6 +29,19 @@ func deepcopy(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple,
 	dup := sm.metric.Copy()
 	dup.Drop()
 	return &Metric{metric: dup}, nil
+}
+
+// catch(f) evaluates f() and returns its evaluation error message
+// if it failed or None if it succeeded.
+func catch(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var fn starlark.Callable
+	if err := starlark.UnpackArgs("catch", args, kwargs, "fn", &fn); err != nil {
+		return nil, err
+	}
+	if _, err := starlark.Call(thread, fn, nil, nil); err != nil {
+		return starlark.String(err.Error()), nil
+	}
+	return starlark.None, nil
 }
 
 type builtinMethod func(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error)
@@ -58,16 +68,10 @@ func builtinAttrNames(methods map[string]builtinMethod) []string {
 	return names
 }
 
-// nameErr returns an error message of the form "name: msg"
-// where name is b.Name() and msg is a string or error.
-func nameErr(b *starlark.Builtin, msg interface{}) error {
-	return fmt.Errorf("%s: %v", b.Name(), msg)
-}
-
 // --- dictionary methods ---
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·clear
-func dict_clear(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func dictClear(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 	}
@@ -79,7 +83,7 @@ func dict_clear(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tupl
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·pop
-func dict_pop(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func dictPop(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var k, d starlark.Value
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &k, &d); err != nil {
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
@@ -99,7 +103,7 @@ func dict_pop(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple)
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·popitem
-func dict_popitem(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func dictPopitem(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 	}
@@ -111,7 +115,7 @@ func dict_popitem(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tu
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·get
-func dict_get(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func dictGet(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var key, dflt starlark.Value
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &key, &dflt); err != nil {
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
@@ -127,7 +131,7 @@ func dict_get(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple)
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·setdefault
-func dict_setdefault(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func dictSetdefault(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var key, dflt starlark.Value = nil, starlark.None
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &key, &dflt); err != nil {
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
@@ -148,7 +152,7 @@ func dict_setdefault(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·update
-func dict_update(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func dictUpdate(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	// Unpack the arguments
 	if len(args) > 1 {
 		return nil, fmt.Errorf("update: got %d arguments, want at most 1", len(args))
@@ -178,7 +182,6 @@ func dict_update(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tup
 				iter2 := starlark.Iterate(pair)
 				if iter2 == nil {
 					return nil, fmt.Errorf("dictionary update sequence element #%d is not iterable (%s)", i, pair.Type())
-
 				}
 				defer iter2.Done()
 				len := starlark.Len(pair)
@@ -221,7 +224,7 @@ func dict_update(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tup
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·items
-func dict_items(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func dictItems(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 	}
@@ -234,7 +237,7 @@ func dict_items(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tupl
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·keys
-func dict_keys(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func dictKeys(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 	}
@@ -248,7 +251,7 @@ func dict_keys(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·update
-func dict_values(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func dictValues(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 	}

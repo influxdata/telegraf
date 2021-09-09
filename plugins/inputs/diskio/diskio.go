@@ -30,7 +30,7 @@ type DiskIO struct {
 	initialized  bool
 }
 
-func (_ *DiskIO) Description() string {
+func (d *DiskIO) Description() string {
 	return "Read metrics about disk IO by device"
 }
 
@@ -62,61 +62,60 @@ var diskIOsampleConfig = `
   # name_templates = ["$ID_FS_LABEL","$DM_VG_NAME/$DM_LV_NAME"]
 `
 
-func (_ *DiskIO) SampleConfig() string {
+func (d *DiskIO) SampleConfig() string {
 	return diskIOsampleConfig
 }
 
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
-	return strings.IndexAny(s, "*?[") >= 0
+	return strings.ContainsAny(s, "*?[")
 }
 
-func (s *DiskIO) init() error {
-	for _, device := range s.Devices {
+func (d *DiskIO) init() error {
+	for _, device := range d.Devices {
 		if hasMeta(device) {
-			filter, err := filter.Compile(s.Devices)
+			deviceFilter, err := filter.Compile(d.Devices)
 			if err != nil {
 				return fmt.Errorf("error compiling device pattern: %s", err.Error())
 			}
-			s.deviceFilter = filter
+			d.deviceFilter = deviceFilter
 		}
 	}
-	s.initialized = true
+	d.initialized = true
 	return nil
 }
 
-func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
-	if !s.initialized {
-		err := s.init()
+func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
+	if !d.initialized {
+		err := d.init()
 		if err != nil {
 			return err
 		}
 	}
 
 	devices := []string{}
-	if s.deviceFilter == nil {
-		devices = s.Devices
+	if d.deviceFilter == nil {
+		devices = d.Devices
 	}
 
-	diskio, err := s.ps.DiskIO(devices)
+	diskio, err := d.ps.DiskIO(devices)
 	if err != nil {
 		return fmt.Errorf("error getting disk io info: %s", err.Error())
 	}
 
 	for _, io := range diskio {
-
 		match := false
-		if s.deviceFilter != nil && s.deviceFilter.Match(io.Name) {
+		if d.deviceFilter != nil && d.deviceFilter.Match(io.Name) {
 			match = true
 		}
 
 		tags := map[string]string{}
 		var devLinks []string
-		tags["name"], devLinks = s.diskName(io.Name)
+		tags["name"], devLinks = d.diskName(io.Name)
 
-		if s.deviceFilter != nil && !match {
+		if d.deviceFilter != nil && !match {
 			for _, devLink := range devLinks {
-				if s.deviceFilter.Match(devLink) {
+				if d.deviceFilter.Match(devLink) {
 					match = true
 					break
 				}
@@ -126,11 +125,11 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		for t, v := range s.diskTags(io.Name) {
+		for t, v := range d.diskTags(io.Name) {
 			tags[t] = v
 		}
 
-		if !s.SkipSerialNumber {
+		if !d.SkipSerialNumber {
 			if len(io.SerialNumber) != 0 {
 				tags["serial"] = io.SerialNumber
 			} else {
@@ -157,23 +156,23 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *DiskIO) diskName(devName string) (string, []string) {
-	di, err := s.diskInfo(devName)
+func (d *DiskIO) diskName(devName string) (string, []string) {
+	di, err := d.diskInfo(devName)
 	devLinks := strings.Split(di["DEVLINKS"], " ")
 	for i, devLink := range devLinks {
 		devLinks[i] = strings.TrimPrefix(devLink, "/dev/")
 	}
 
-	if len(s.NameTemplates) == 0 {
+	if len(d.NameTemplates) == 0 {
 		return devName, devLinks
 	}
 
 	if err != nil {
-		s.Log.Warnf("Error gathering disk info: %s", err)
+		d.Log.Warnf("Error gathering disk info: %s", err)
 		return devName, devLinks
 	}
 
-	for _, nt := range s.NameTemplates {
+	for _, nt := range d.NameTemplates {
 		miss := false
 		name := varRegex.ReplaceAllStringFunc(nt, func(sub string) string {
 			sub = sub[1:] // strip leading '$'
@@ -195,19 +194,19 @@ func (s *DiskIO) diskName(devName string) (string, []string) {
 	return devName, devLinks
 }
 
-func (s *DiskIO) diskTags(devName string) map[string]string {
-	if len(s.DeviceTags) == 0 {
+func (d *DiskIO) diskTags(devName string) map[string]string {
+	if len(d.DeviceTags) == 0 {
 		return nil
 	}
 
-	di, err := s.diskInfo(devName)
+	di, err := d.diskInfo(devName)
 	if err != nil {
-		s.Log.Warnf("Error gathering disk info: %s", err)
+		d.Log.Warnf("Error gathering disk info: %s", err)
 		return nil
 	}
 
 	tags := map[string]string{}
-	for _, dt := range s.DeviceTags {
+	for _, dt := range d.DeviceTags {
 		if v, ok := di[dt]; ok {
 			tags[dt] = v
 		}

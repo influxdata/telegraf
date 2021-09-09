@@ -3,7 +3,7 @@
 There are no additional configuration options for InfluxDB [line protocol][]. The
 metrics are parsed directly into Telegraf metrics.
 
-[line protocol]: https://docs.influxdata.com/influxdb/latest/write_protocols/line/
+[line protocol]: https://docs.influxdata.com/influxdb/latest/reference/syntax/line-protocol/
 
 ### Configuration
 

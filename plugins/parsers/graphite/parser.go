@@ -103,15 +103,17 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, fmt.Errorf("received %q which doesn't have required fields", line)
 	}
 
+	parts := strings.Split(fields[0], ";")
+
 	// decode the name and tags
-	measurement, tags, field, err := p.templateEngine.Apply(fields[0])
+	measurement, tags, field, err := p.templateEngine.Apply(parts[0])
 	if err != nil {
 		return nil, err
 	}
 
 	// Could not extract measurement, use the raw value
 	if measurement == "" {
-		measurement = fields[0]
+		measurement = parts[0]
 	}
 
 	// Parse value.
@@ -147,6 +149,24 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 			}
 		}
 	}
+
+	// Split name and tags
+	if len(parts) >= 2 {
+		for _, tag := range parts[1:] {
+			tagValue := strings.Split(tag, "=")
+			if len(tagValue) != 2 || len(tagValue[0]) == 0 || len(tagValue[1]) == 0 {
+				continue
+			}
+			if strings.ContainsAny(tagValue[0], "!^") {
+				continue
+			}
+			if strings.Index(tagValue[1], "~") == 0 {
+				continue
+			}
+			tags[tagValue[0]] = tagValue[1]
+		}
+	}
+
 	// Set the default tags on the point if they are not already set
 	for k, v := range p.DefaultTags {
 		if _, ok := tags[k]; !ok {
@@ -154,7 +174,7 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	return metric.New(measurement, tags, fieldValues, timestamp)
+	return metric.New(measurement, tags, fieldValues, timestamp), nil
 }
 
 // ApplyTemplate extracts the template fields from the given line and

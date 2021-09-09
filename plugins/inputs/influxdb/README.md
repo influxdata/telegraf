@@ -1,6 +1,8 @@
-# influxdb plugin
+# InfluxDB Input Plugin
 
-The InfluxDB plugin will collect metrics on the given InfluxDB servers.
+The InfluxDB plugin will collect metrics on the given InfluxDB servers. Read our 
+[documentation](https://docs.influxdata.com/platform/monitoring/influxdata-platform/tools/measurements-internal/) 
+for detailed information about `influxdb` metrics. 
 
 This plugin can also gather metrics from endpoints that expose
 InfluxDB-formatted endpoints. See below for more information.
@@ -37,46 +39,56 @@ InfluxDB-formatted endpoints. See below for more information.
 
 ### Measurements & Fields
 
-**Note:** The measurements and fields are dynamically built from the InfluxDB source,
-and may vary between versions.
+**Note:** The measurements and fields included in this plugin are dynamically built from the InfluxDB source, and may vary between versions:
 
 - influxdb
-  - n_shards
-- influxdb_database
-- influxdb_httpd
-- influxdb_measurement
-- influxdb_memstats
-  - heap_inuse
-  - heap_released
-  - mspan_inuse
-  - total_alloc
-  - sys
-  - mallocs
-  - frees
-  - heap_idle
-  - pause_total_ns
-  - lookups
-  - heap_sys
-  - mcache_sys
-  - next_gc
-  - gc_cpu_fraction
-  - other_sys
-  - alloc
-  - stack_inuse
-  - stack_sys
-  - buck_hash_sys
-  - gc_sys
-  - num_gc
-  - heap_alloc
-  - heap_objects
-  - mspan_sys
-  - mcache_inuse
-  - last_gc
-- influxdb_shard
-- influxdb_subscriber
-- influxdb_tsm1_cache
-- influxdb_tsm1_wal
-- influxdb_write
+  - n_shards: The total number of shards in the specified database.
+- influxdb_ae _(Enterprise Only)_ : Statistics related to the Anti-Entropy (AE) engine in InfluxDB Enterprise clusters.
+- influxdb_cluster _(Enterprise Only)_ : Statistics related to the clustering features of the data nodes in InfluxDB Enterprise clusters.
+- influxdb_cq: The metrics related to continuous queries (CQs).
+- influxdb_database: The database metrics are being collected from.
+- influxdb_hh _(Enterprise Only)_ : Events resulting in new hinted handoff (HH) processors in InfluxDB Enterprise clusters.
+- influxdb_hh_database _(Enterprise Only)_ : Aggregates all hinted handoff queues for a single database and node.
+- influxdb_hh_processor _(Enterprise Only)_ : Statistics stored for a single queue (shard).
+- influxdb_httpd: The URL to listen for network requests. By default, `http://localhost:8086/debug/var`.
+- influxdb_measurement: The measurement that metrics are collected from.
+- influxdb_memstats: Statistics about the memory allocator in the specified database.
+  - heap_inuse: The number of bytes in in-use spans.
+  - heap_released: The number of bytes of physical memory returned to the OS.
+  - mspan_inuse: The number of bytes in in-use mspans.
+  - total_alloc: The cumulative bytes allocated for heap objects.
+  - sys: The total number of bytes of memory obtained from the OS. Measures the virtual address space reserved by the Go runtime for the heap, stacks, and other internal data structures.
+  - mallocs: The total number of heap objects allocated. (The total number of live objects are frees.)
+  - frees: The cumulative number of freed (live) heap objects.
+  - heap_idle: The number of bytes of idle heap objects.
+  - pause_total_ns: The total time garbage collection cycles are paused in nanoseconds.
+  - lookups: The number of pointer lookups performed by the runtime. Primarily useful for debugging runtime internals.
+  - heap_sys: The number of bytes of heap memory obtained from the OS. Measures the amount of virtual address space reserved for the heap.
+  - mcache_sys: The bytes of memory obtained from the OS for mcache structures.
+  - next_gc: The target heap size of the next garbage collection cycle.
+  - gc_cpu_fraction: The fraction of CPU time used by the garbage collection cycle.
+  - other_sys: The number of bytes of memory used other than heap_sys, stacks_sys, mspan_sys, mcache_sys, buckhash_sys, and gc_sys.
+  - alloc: The currently allocated number of bytes of heap objects.
+  - stack_inuse: The number of bytes in in-use stacks.
+  - stack_sys: The total number of bytes of memory obtained from the stack in use.
+  - buck_hash_sys: The bytes of memory in profiling bucket hash tables.
+  - gc_sys: The bytes of memory in garbage collection metadata.
+  - num_gc: The number of completed garbage collection cycles.
+  - heap_alloc: The size, in bytes, of all heap objects.
+  - heap_objects: The number of allocated heap objects.
+  - mspan_sys: The bytes of memory obtained from the OS for mspan.
+  - mcache_inuse: The bytes of allocated mcache structures.
+  - last_gc: Time the last garbage collection finished, as nanoseconds since 1970 (the UNIX epoch).
+- influxdb_queryExecutor: Query Executor metrics of the InfluxDB engine.
+- influxdb_rpc _(Enterprise Only)_ : Statistics are related to the use of RPC calls within InfluxDB Enterprise clusters.
+- influxdb_runtime: The shard metrics are collected from.
+- influxdb_shard: The shard metrics are collected from.
+- influxdb_subscriber: The InfluxDB subscription that metrics are collected from.
+- influxdb_tsm1_cache: The TSM cache that metrics are collected from.
+- influxdb_tsm1_engine: The TSM storage engine that metrics are collected from.
+- influxdb_tsm1_filestore: The TSM file store that metrics are collected from.
+- influxdb_tsm1_wal: The TSM Write Ahead Log (WAL) that metrics are collected from.
+- influxdb_write: The total writes to the specified database.
 
 ### Example Output:
 

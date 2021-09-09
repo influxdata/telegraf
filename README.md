@@ -1,4 +1,10 @@
-# Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
+
+# Telegraf
+
+![tiger](TelegrafTiger.png "tiger")
+
+[![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/) [![Total alerts](https://img.shields.io/lgtm/alerts/g/influxdata/telegraf.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/influxdata/telegraf/alerts/)
+[![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack)
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics.
 
@@ -15,6 +21,8 @@ Telegraf is plugin-driven and has the concept of 4 distinct plugin types:
 
 New plugins are designed to be easy to contribute, pull requests are welcomed
 and we work to incorporate as many pull requests as possible.
+If none of the internal plugins fit your needs, you could have a look at the
+[list of external plugins](EXTERNAL_PLUGINS.md).
 
 ## Try in Browser :rocket:
 
@@ -28,7 +36,7 @@ There are many ways to contribute:
 - [Review code and feature proposals](https://github.com/influxdata/telegraf/pulls)
 - Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
 - [Contribute plugins](CONTRIBUTING.md)
-- [Contribute external plugins](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/execd/shim) *(experimental)*
+- [Contribute external plugins](docs/EXTERNAL_PLUGINS.md)
 
 ## Minimum Requirements
 
@@ -51,9 +59,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires Go version 1.13 or newer, the Makefile requires GNU make.
+Telegraf requires Go version 1.14 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.13 (1.14 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.14 (1.15 recommended)
 2. Clone the Telegraf repository:
    ```
    cd ~/src
@@ -73,30 +81,45 @@ version.
 ### Nightly Builds
 
 These builds are generated from the master branch:
-- [telegraf-nightly_darwin_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_darwin_amd64.tar.gz)
+
+FreeBSD - .tar.gz
+- [telegraf-nightly_freebsd_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_amd64.tar.gz)
+- [telegraf-nightly_freebsd_armv7.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_armv7.tar.gz)
+- [telegraf-nightly_freebsd_i386.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_i386.tar.gz)
+
+Linux - .rpm
+- [telegraf-nightly.arm64.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.arm64.rpm)
+- [telegraf-nightly.armel.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.armel.rpm)
+- [telegraf-nightly.armv6hl.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.armv6hl.rpm)
+- [telegraf-nightly.i386.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.i386.rpm)
+- [telegraf-nightly.ppc64le.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.ppc64le.rpm)
+- [telegraf-nightly.s390x.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.s390x.rpm)
+- [telegraf-nightly.x86_64.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.x86_64.rpm)
+
+Linux - .deb
 - [telegraf_nightly_amd64.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_amd64.deb)
 - [telegraf_nightly_arm64.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_arm64.deb)
-- [telegraf-nightly.arm64.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.arm64.rpm)
 - [telegraf_nightly_armel.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_armel.deb)
-- [telegraf-nightly.armel.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.armel.rpm)
 - [telegraf_nightly_armhf.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_armhf.deb)
-- [telegraf-nightly.armv6hl.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.armv6hl.rpm)
-- [telegraf-nightly_freebsd_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_amd64.tar.gz)
-- [telegraf-nightly_freebsd_i386.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_i386.tar.gz)
 - [telegraf_nightly_i386.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_i386.deb)
-- [telegraf-nightly.i386.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.i386.rpm)
+- [telegraf_nightly_ppc64el.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_ppc64el.deb)
+- [telegraf_nightly_s390x.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_s390x.deb)
+
+Linux - .tar.gz
 - [telegraf-nightly_linux_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_amd64.tar.gz)
 - [telegraf-nightly_linux_arm64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_arm64.tar.gz)
 - [telegraf-nightly_linux_armel.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_armel.tar.gz)
 - [telegraf-nightly_linux_armhf.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_armhf.tar.gz)
 - [telegraf-nightly_linux_i386.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_i386.tar.gz)
 - [telegraf-nightly_linux_s390x.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_s390x.tar.gz)
-- [telegraf_nightly_s390x.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_s390x.deb)
-- [telegraf-nightly.s390x.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.s390x.rpm)
-- [telegraf-nightly_windows_amd64.zip](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_amd64.zip)
-- [telegraf-nightly_windows_i386.zip](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_i386.zip)
-- [telegraf-nightly.x86_64.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.x86_64.rpm)
 - [telegraf-static-nightly_linux_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-static-nightly_linux_amd64.tar.gz)
+
+OSX - .tar.gz
+- [telegraf-nightly_darwin_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_darwin_amd64.tar.gz)
+
+Windows - .zip
+- [telegraf-nightly_windows_i386.zip](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_i386.zip)
+- [telegraf-nightly_windows_amd64.zip](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_amd64.zip)
 
 ## How to use it:
 
@@ -183,6 +206,7 @@ For documentation on the latest development code see the [documentation index][d
 * [docker](./plugins/inputs/docker)
 * [docker_log](./plugins/inputs/docker_log)
 * [dovecot](./plugins/inputs/dovecot)
+* [dpdk](./plugins/inputs/dpdk)
 * [aws ecs](./plugins/inputs/ecs) (Amazon Elastic Container Service, Fargate)
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [ethtool](./plugins/inputs/ethtool)
@@ -210,6 +234,9 @@ For documentation on the latest development code see the [documentation index][d
 * [infiniband](./plugins/inputs/infiniband)
 * [influxdb](./plugins/inputs/influxdb)
 * [influxdb_listener](./plugins/inputs/influxdb_listener)
+* [influxdb_v2_listener](./plugins/inputs/influxdb_v2_listener)
+* [intel_powerstat](plugins/inputs/intel_powerstat)
+* [intel_rdt](./plugins/inputs/intel_rdt)
 * [internal](./plugins/inputs/internal)
 * [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
@@ -226,6 +253,7 @@ For documentation on the latest development code see the [documentation index][d
 * [kernel](./plugins/inputs/kernel)
 * [kernel_vmstat](./plugins/inputs/kernel_vmstat)
 * [kibana](./plugins/inputs/kibana)
+* [knx_listener](./plugins/inputs/knx_listener)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [kube_inventory](./plugins/inputs/kube_inventory)
 * [lanz](./plugins/inputs/lanz)
@@ -237,6 +265,7 @@ For documentation on the latest development code see the [documentation index][d
 * [mailchimp](./plugins/inputs/mailchimp)
 * [marklogic](./plugins/inputs/marklogic)
 * [mcrouter](./plugins/inputs/mcrouter)
+* [mdstat](./plugins/inputs/mdstat)
 * [memcached](./plugins/inputs/memcached)
 * [mem](./plugins/inputs/mem)
 * [mesos](./plugins/inputs/mesos)
@@ -253,20 +282,24 @@ For documentation on the latest development code see the [documentation index][d
 * [net](./plugins/inputs/net)
 * [net_response](./plugins/inputs/net_response)
 * [netstat](./plugins/inputs/net)
+* [nfsclient](./plugins/inputs/nfsclient)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus_api](./plugins/inputs/nginx_plus_api)
 * [nginx_plus](./plugins/inputs/nginx_plus)
 * [nginx_sts](./plugins/inputs/nginx_sts)
 * [nginx_upstream_check](./plugins/inputs/nginx_upstream_check)
 * [nginx_vts](./plugins/inputs/nginx_vts)
+* [nsd](./plugins/inputs/nsd)
 * [nsq_consumer](./plugins/inputs/nsq_consumer)
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
 * [nvidia_smi](./plugins/inputs/nvidia_smi)
+* [opcua](./plugins/inputs/opcua)
 * [openldap](./plugins/inputs/openldap)
 * [openntpd](./plugins/inputs/openntpd)
 * [opensmtpd](./plugins/inputs/opensmtpd)
+* [opentelemetry](./plugins/inputs/opentelemetry)
 * [openweathermap](./plugins/inputs/openweathermap)
 * [pf](./plugins/inputs/pf)
 * [pgbouncer](./plugins/inputs/pgbouncer)
@@ -281,9 +314,12 @@ For documentation on the latest development code see the [documentation index][d
 * [processes](./plugins/inputs/processes)
 * [procstat](./plugins/inputs/procstat)
 * [prometheus](./plugins/inputs/prometheus) (can be used for [Caddy server](./plugins/inputs/prometheus/README.md#usage-for-caddy-http-server))
+* [proxmox](./plugins/inputs/proxmox)
 * [puppetagent](./plugins/inputs/puppetagent)
 * [rabbitmq](./plugins/inputs/rabbitmq)
 * [raindrops](./plugins/inputs/raindrops)
+* [ras](./plugins/inputs/ras)
+* [ravendb](./plugins/inputs/ravendb)
 * [redfish](./plugins/inputs/redfish)
 * [redis](./plugins/inputs/redis)
 * [rethinkdb](./plugins/inputs/rethinkdb)
@@ -297,8 +333,10 @@ For documentation on the latest development code see the [documentation index][d
 * [snmp_trap](./plugins/inputs/snmp_trap)
 * [socket_listener](./plugins/inputs/socket_listener)
 * [solr](./plugins/inputs/solr)
+* [sql](./plugins/inputs/sql) (generic SQL query plugin)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [stackdriver](./plugins/inputs/stackdriver) (Google Cloud Monitoring)
+* [sql](./plugins/outputs/sql) (SQL generic output)
 * [statsd](./plugins/inputs/statsd)
 * [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
@@ -326,6 +364,7 @@ For documentation on the latest development code see the [documentation index][d
   * [papertrail](./plugins/inputs/webhooks/papertrail)
   * [particle](./plugins/inputs/webhooks/particle)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
+* [win_eventlog](./plugins/inputs/win_eventlog)
 * [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
 * [win_services](./plugins/inputs/win_services)
 * [wireguard](./plugins/inputs/wireguard)
@@ -345,19 +384,26 @@ For documentation on the latest development code see the [documentation index][d
 - [Graphite](/plugins/parsers/graphite)
 - [Grok](/plugins/parsers/grok)
 - [JSON](/plugins/parsers/json)
+- [JSON v2](/plugins/parsers/json_v2)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
+- [Prometheus](/plugins/parsers/prometheus)
+- [Prometheus Remote Write](/plugins/parsers/prometheusremotewrite)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
 - [Wavefront](/plugins/parsers/wavefront)
+- [XPath](/plugins/parsers/xpath) (supports XML, JSON, MessagePack, Protocol Buffers)
 
 ## Serializers
 
 - [InfluxDB Line Protocol](/plugins/serializers/influx)
-- [JSON](/plugins/serializers/json)
+- [Carbon2](/plugins/serializers/carbon2)
 - [Graphite](/plugins/serializers/graphite)
+- [JSON](/plugins/serializers/json)
+- [MessagePack](/plugins/serializers/msgpack)
+- [Prometheus](/plugins/serializers/prometheus)
+- [Prometheus Remote Write](/plugins/serializers/prometheusremotewrite)
 - [ServiceNow](/plugins/serializers/nowmetric)
 - [SplunkMetric](/plugins/serializers/splunkmetric)
-- [Carbon2](/plugins/serializers/carbon2)
 - [Wavefront](/plugins/serializers/wavefront)
 
 ## Processor Plugins
@@ -390,10 +436,12 @@ For documentation on the latest development code see the [documentation index][d
 ## Aggregator Plugins
 
 * [basicstats](./plugins/aggregators/basicstats)
+* [derivative](./plugins/aggregators/derivative)
 * [final](./plugins/aggregators/final)
 * [histogram](./plugins/aggregators/histogram)
 * [merge](./plugins/aggregators/merge)
 * [minmax](./plugins/aggregators/minmax)
+* [quantile](./plugins/aggregators/quantile)
 * [valuecounter](./plugins/aggregators/valuecounter)
 
 ## Output Plugins
@@ -406,10 +454,12 @@ For documentation on the latest development code see the [documentation index][d
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [azure_monitor](./plugins/outputs/azure_monitor)
+* [bigquery](./plugins/outputs/bigquery)
 * [cloud_pubsub](./plugins/outputs/cloud_pubsub) Google Cloud Pub/Sub
 * [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
+* [dynatrace](./plugins/outputs/dynatrace)
 * [elasticsearch](./plugins/outputs/elasticsearch)
 * [exec](./plugins/outputs/exec)
 * [execd](./plugins/outputs/execd)
@@ -421,14 +471,18 @@ For documentation on the latest development code see the [documentation index][d
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
 * [librato](./plugins/outputs/librato)
+* [logz.io](./plugins/outputs/logzio)
 * [mqtt](./plugins/outputs/mqtt)
 * [nats](./plugins/outputs/nats)
 * [newrelic](./plugins/outputs/newrelic)
 * [nsq](./plugins/outputs/nsq)
+* [opentelemetry](./plugins/outputs/opentelemetry)
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
+* [sensu](./plugins/outputs/sensu)
+* [signalfx](./plugins/outputs/signalfx)
 * [socket_writer](./plugins/outputs/socket_writer)
 * [stackdriver](./plugins/outputs/stackdriver) (Google Cloud Monitoring)
 * [syslog](./plugins/outputs/syslog)
@@ -436,3 +490,6 @@ For documentation on the latest development code see the [documentation index][d
 * [udp](./plugins/outputs/socket_writer)
 * [warp10](./plugins/outputs/warp10)
 * [wavefront](./plugins/outputs/wavefront)
+* [websocket](./plugins/outputs/websocket) 
+* [sumologic](./plugins/outputs/sumologic)
+* [yandex_cloud_monitoring](./plugins/outputs/yandex_cloud_monitoring)

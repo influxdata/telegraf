@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package ethtool
@@ -6,19 +7,19 @@ import (
 	"net"
 	"sync"
 
+	"github.com/pkg/errors"
+	ethtoolLib "github.com/safchain/ethtool"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/pkg/errors"
-	"github.com/safchain/ethtool"
 )
 
 type CommandEthtool struct {
-	ethtool *ethtool.Ethtool
+	ethtool *ethtoolLib.Ethtool
 }
 
 func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
-
 	// Get the list of interfaces
 	interfaces, err := e.command.Interfaces()
 	if err != nil {
@@ -35,7 +36,6 @@ func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for _, iface := range interfaces {
-
 		// Check this isn't a loop back and that its matched by the filter
 		if (iface.Flags&net.FlagLoopback == 0) && interfaceFilter.Match(iface.Name) {
 			wg.Add(1)
@@ -59,7 +59,6 @@ func (e *Ethtool) Init() error {
 
 // Gather the stats for the interface.
 func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulator) {
-
 	tags := make(map[string]string)
 	tags[tagInterface] = iface.Name
 
@@ -80,6 +79,7 @@ func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulat
 		return
 	}
 
+	fields[fieldInterfaceUp] = e.interfaceUp(iface)
 	for k, v := range stats {
 		fields[k] = v
 	}
@@ -87,17 +87,20 @@ func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulat
 	acc.AddFields(pluginName, fields, tags)
 }
 
+func (e *Ethtool) interfaceUp(iface net.Interface) bool {
+	return (iface.Flags & net.FlagUp) != 0
+}
+
 func NewCommandEthtool() *CommandEthtool {
 	return &CommandEthtool{}
 }
 
 func (c *CommandEthtool) Init() error {
-
 	if c.ethtool != nil {
 		return nil
 	}
 
-	e, err := ethtool.NewEthtool()
+	e, err := ethtoolLib.NewEthtool()
 	if err == nil {
 		c.ethtool = e
 	}
@@ -114,7 +117,6 @@ func (c *CommandEthtool) Stats(intf string) (map[string]uint64, error) {
 }
 
 func (c *CommandEthtool) Interfaces() ([]net.Interface, error) {
-
 	// Get the list of interfaces
 	interfaces, err := net.Interfaces()
 	if err != nil {
@@ -125,7 +127,6 @@ func (c *CommandEthtool) Interfaces() ([]net.Interface, error) {
 }
 
 func init() {
-
 	inputs.Add(pluginName, func() telegraf.Input {
 		return &Ethtool{
 			InterfaceInclude: []string{},

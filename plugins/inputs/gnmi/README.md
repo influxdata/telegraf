@@ -1,4 +1,4 @@
-# gNMI (gRPC Network Management Interface)
+# gNMI (gRPC Network Management Interface) Input Plugin
 
 This plugin consumes telemetry data based on the [gNMI](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md) Subscribe method. TLS is supported for authentication and encryption.  This input plugin is vendor-agnostic and is supported on any platform that supports the gNMI spec.
 
@@ -17,7 +17,7 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
   username = "cisco"
   password = "cisco"
 
-  ## gNMI encoding requested (one of: "proto", "json", "json_ietf")
+  ## gNMI encoding requested (one of: "proto", "json", "json_ietf", "bytes")
   # encoding = "proto"
 
   ## redial in case of failures after

@@ -8,12 +8,15 @@ the [upgrading steps][upgrading].
 
 ### Configuration:
 
-```
+```toml
 # Read metrics about dovecot servers
 [[inputs.dovecot]]
   ## specify dovecot servers via an address:port list
   ##  e.g.
   ##    localhost:24242
+  ## or as an UDS socket
+  ##  e.g.
+  ##    /var/run/dovecot/old-stats
   ##
   ## If no servers are specified, then localhost is used as the host.
   servers = ["localhost:24242"]

@@ -1,4 +1,4 @@
-# Jolokia2 Input Plugins
+# Jolokia2 Input Plugin
 
 The [Jolokia](http://jolokia.org) _agent_ and _proxy_ input plugins collect JMX metrics from an HTTP endpoint using Jolokia's [JSON-over-HTTP protocol](https://jolokia.org/reference/html/protocol.html).
 
@@ -179,6 +179,7 @@ Both `jolokia2_agent` and `jolokia2_proxy` plugins support default configuration
 - [Java JVM](/plugins/inputs/jolokia2/examples/java.conf)
 - [JBoss](/plugins/inputs/jolokia2/examples/jboss.conf)
 - [Kafka](/plugins/inputs/jolokia2/examples/kafka.conf)
+- [Kafka Connect](/plugins/inputs/jolokia2/examples/kafka-connect.conf)
 - [Tomcat](/plugins/inputs/jolokia2/examples/tomcat.conf)
 - [Weblogic](/plugins/inputs/jolokia2/examples/weblogic.conf)
 - [ZooKeeper](/plugins/inputs/jolokia2/examples/zookeeper.conf)

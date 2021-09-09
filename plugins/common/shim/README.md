@@ -48,7 +48,7 @@ execd plugins:
 1. Configure Telegraf to call your new plugin binary. For an input, this would
   look something like:
 
-```
+```toml
 [[inputs.execd]]
   command = ["/path/to/rand", "-config", "/path/to/plugin.conf"]
   signal = "none"

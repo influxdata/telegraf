@@ -16,12 +16,12 @@ const (
 
 // Test ingesting InfluxDB-format PubSub message
 func TestRunParse(t *testing.T) {
-	subId := "sub-run-parse"
+	subID := "sub-run-parse"
 
 	testParser, _ := parsers.NewInfluxParser()
 
 	sub := &stubSub{
-		id:       subId,
+		id:       subID,
 		messages: make(chan *testMsg, 100),
 	}
 	sub.receiver = testMessagesReceive(sub)
@@ -31,7 +31,7 @@ func TestRunParse(t *testing.T) {
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
-		Subscription:           subId,
+		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 	}
 
@@ -60,12 +60,12 @@ func TestRunParse(t *testing.T) {
 
 // Test ingesting InfluxDB-format PubSub message
 func TestRunBase64(t *testing.T) {
-	subId := "sub-run-base64"
+	subID := "sub-run-base64"
 
 	testParser, _ := parsers.NewInfluxParser()
 
 	sub := &stubSub{
-		id:       subId,
+		id:       subID,
 		messages: make(chan *testMsg, 100),
 	}
 	sub.receiver = testMessagesReceive(sub)
@@ -75,7 +75,7 @@ func TestRunBase64(t *testing.T) {
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
-		Subscription:           subId,
+		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		Base64Data:             true,
 	}
@@ -104,12 +104,12 @@ func TestRunBase64(t *testing.T) {
 }
 
 func TestRunInvalidMessages(t *testing.T) {
-	subId := "sub-invalid-messages"
+	subID := "sub-invalid-messages"
 
 	testParser, _ := parsers.NewInfluxParser()
 
 	sub := &stubSub{
-		id:       subId,
+		id:       subID,
 		messages: make(chan *testMsg, 100),
 	}
 	sub.receiver = testMessagesReceive(sub)
@@ -119,7 +119,7 @@ func TestRunInvalidMessages(t *testing.T) {
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
-		Subscription:           subId,
+		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 	}
 
@@ -149,14 +149,14 @@ func TestRunInvalidMessages(t *testing.T) {
 }
 
 func TestRunOverlongMessages(t *testing.T) {
-	subId := "sub-message-too-long"
+	subID := "sub-message-too-long"
 
 	acc := &testutil.Accumulator{}
 
 	testParser, _ := parsers.NewInfluxParser()
 
 	sub := &stubSub{
-		id:       subId,
+		id:       subID,
 		messages: make(chan *testMsg, 100),
 	}
 	sub.receiver = testMessagesReceive(sub)
@@ -166,7 +166,7 @@ func TestRunOverlongMessages(t *testing.T) {
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
-		Subscription:           subId,
+		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		// Add MaxMessageLen Param
 		MaxMessageLen: 1,
@@ -196,25 +196,25 @@ func TestRunOverlongMessages(t *testing.T) {
 }
 
 func TestRunErrorInSubscriber(t *testing.T) {
-	subId := "sub-unexpected-error"
+	subID := "sub-unexpected-error"
 
 	acc := &testutil.Accumulator{}
 
 	testParser, _ := parsers.NewInfluxParser()
 
 	sub := &stubSub{
-		id:       subId,
+		id:       subID,
 		messages: make(chan *testMsg, 100),
 	}
 	fakeErrStr := "a fake error"
-	sub.receiver = testMessagesError(sub, errors.New("a fake error"))
+	sub.receiver = testMessagesError(errors.New("a fake error"))
 
 	ps := &PubSub{
 		Log:                      testutil.Logger{},
 		parser:                   testParser,
 		stubSub:                  func() subscription { return sub },
 		Project:                  "projectIDontMatterForTests",
-		Subscription:             subId,
+		Subscription:             subID,
 		MaxUndeliveredMessages:   defaultMaxUndeliveredMessages,
 		RetryReceiveDelaySeconds: 1,
 	}

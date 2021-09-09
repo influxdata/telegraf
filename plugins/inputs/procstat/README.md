@@ -26,8 +26,9 @@ Processes can be selected for monitoring using one of several methods:
   # pattern = "nginx"
   ## user as argument for pgrep (ie, pgrep -u <user>)
   # user = "nginx"
-  ## Systemd unit name
+  ## Systemd unit name, supports globs when include_systemd_children is set to true
   # systemd_unit = "nginx.service"
+  # include_systemd_children = false
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
 
@@ -43,6 +44,9 @@ Processes can be selected for monitoring using one of several methods:
 
   ## When true add the full cmdline as a tag.
   # cmdline_tag = false
+
+  ## Mode to use when calculating CPU usage. Can be one of 'solaris' or 'irix'.
+  # mode = "irix"
 
   ## Add the PID as a tag instead of as a field.  When collecting multiple
   ## processes with otherwise matching tags this setting should be enabled to
@@ -64,15 +68,6 @@ Processes can be selected for monitoring using one of several methods:
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
 
-When using the `pid_finder = "native"` in Windows, the pattern lookup method is
-implemented as a WMI query.  The pattern allows fuzzy matching using only
-[WMI query patterns](https://msdn.microsoft.com/en-us/library/aa392263(v=vs.85).aspx):
-```toml
-[[inputs.procstat]]
-  pattern = "%influx%"
-  pid_finder = "native"
-```
-
 ### Metrics:
 
 - procstat
@@ -86,6 +81,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - user (when selected)
     - systemd_unit (when defined)
     - cgroup (when defined)
+    - cgroup_full (when cgroup or systemd_unit is used with glob)
     - win_service (when defined)
   - fields:
     - child_major_faults (int)

@@ -1,7 +1,9 @@
-# X509 Cert Input Plugin
+# x509 Certificate Input Plugin
 
 This plugin provides information about X509 certificate accessible via local
 file or network connection.
+
+When using a UDP address as a certificate source, the server must support [DTLS](https://en.wikipedia.org/wiki/Datagram_Transport_Layer_Security).
 
 
 ### Configuration
@@ -9,13 +11,18 @@ file or network connection.
 ```toml
 # Reads metrics from a SSL certificate
 [[inputs.x509_cert]]
-  ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org:443"]
+  ## List certificate sources, support wildcard expands for files
+  ## Prefix your entry with 'file://' if you intend to use relative paths
+  sources = ["tcp://example.org:443", "https://influxdata.com:443",
+            "udp://127.0.0.1:4433", "/etc/ssl/certs/ssl-cert-snakeoil.pem",
+            "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
 
-  ## Pass a different name into the TLS request (Server Name Indication)
+  ## Pass a different name into the TLS request (Server Name Indication).
+  ## This is synonymous with tls_server_name, and only one of the two
+  ## options may be specified at one time.
   ##   example: server_name = "myhost.example.org"
   # server_name = "myhost.example.org"
 
@@ -23,6 +30,7 @@ file or network connection.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+  # tls_server_name = "myhost.example.org"
 ```
 
 

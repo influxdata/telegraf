@@ -1,7 +1,6 @@
 package cloudwatch
 
 import (
-	"log"
 	"math"
 	"sort"
 	"strings"
@@ -16,20 +15,15 @@ import (
 )
 
 type CloudWatch struct {
-	Region      string `toml:"region"`
-	AccessKey   string `toml:"access_key"`
-	SecretKey   string `toml:"secret_key"`
-	RoleARN     string `toml:"role_arn"`
-	Profile     string `toml:"profile"`
-	Filename    string `toml:"shared_credential_file"`
-	Token       string `toml:"token"`
-	EndpointURL string `toml:"endpoint_url"`
-
 	Namespace             string `toml:"namespace"` // CloudWatch Metrics Namespace
 	HighResolutionMetrics bool   `toml:"high_resolution_metrics"`
 	svc                   *cloudwatch.CloudWatch
 
 	WriteStatistics bool `toml:"write_statistics"`
+
+	Log telegraf.Logger `toml:"-"`
+
+	internalaws.CredentialConfig
 }
 
 type statisticType int
@@ -63,15 +57,14 @@ func (f *statisticField) addValue(sType statisticType, value float64) {
 }
 
 func (f *statisticField) buildDatum() []*cloudwatch.MetricDatum {
-
 	var datums []*cloudwatch.MetricDatum
 
 	if f.hasAllFields() {
 		// If we have all required fields, we build datum with StatisticValues
-		min, _ := f.values[statisticTypeMin]
-		max, _ := f.values[statisticTypeMax]
-		sum, _ := f.values[statisticTypeSum]
-		count, _ := f.values[statisticTypeCount]
+		min := f.values[statisticTypeMin]
+		max := f.values[statisticTypeMax]
+		sum := f.values[statisticTypeSum]
+		count := f.values[statisticTypeCount]
 
 		datum := &cloudwatch.MetricDatum{
 			MetricName: aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
@@ -87,7 +80,6 @@ func (f *statisticField) buildDatum() []*cloudwatch.MetricDatum {
 		}
 
 		datums = append(datums, datum)
-
 	} else {
 		// If we don't have all required fields, we build each field as independent datum
 		for sType, value := range f.values {
@@ -119,7 +111,6 @@ func (f *statisticField) buildDatum() []*cloudwatch.MetricDatum {
 }
 
 func (f *statisticField) hasAllFields() bool {
-
 	_, hasMin := f.values[statisticTypeMin]
 	_, hasMax := f.values[statisticTypeMax]
 	_, hasSum := f.values[statisticTypeSum]
@@ -144,7 +135,6 @@ func (f *valueField) addValue(sType statisticType, value float64) {
 }
 
 func (f *valueField) buildDatum() []*cloudwatch.MetricDatum {
-
 	return []*cloudwatch.MetricDatum{
 		{
 			MetricName:        aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
@@ -162,16 +152,19 @@ var sampleConfig = `
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) explicit credentials from 'access_key' and 'secret_key'
-  ## 3) shared profile from 'profile'
-  ## 4) environment variables
-  ## 5) shared credentials file
-  ## 6) EC2 Instance Profile
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
   #token = ""
   #role_arn = ""
+  #web_identity_token_file = ""
+  #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
 
@@ -205,18 +198,7 @@ func (c *CloudWatch) Description() string {
 }
 
 func (c *CloudWatch) Connect() error {
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      c.Region,
-		AccessKey:   c.AccessKey,
-		SecretKey:   c.SecretKey,
-		RoleARN:     c.RoleARN,
-		Profile:     c.Profile,
-		Filename:    c.Filename,
-		Token:       c.Token,
-		EndpointURL: c.EndpointURL,
-	}
-	configProvider := credentialConfig.Credentials()
-	c.svc = cloudwatch.New(configProvider)
+	c.svc = cloudwatch.New(c.CredentialConfig.Credentials())
 	return nil
 }
 
@@ -225,7 +207,6 @@ func (c *CloudWatch) Close() error {
 }
 
 func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
-
 	var datums []*cloudwatch.MetricDatum
 	for _, m := range metrics {
 		d := BuildMetricDatum(c.WriteStatistics, c.HighResolutionMetrics, m)
@@ -253,7 +234,7 @@ func (c *CloudWatch) WriteToCloudWatch(datums []*cloudwatch.MetricDatum) error {
 	_, err := c.svc.PutMetricData(params)
 
 	if err != nil {
-		log.Printf("E! CloudWatch: Unable to write to CloudWatch : %+v \n", err.Error())
+		c.Log.Errorf("Unable to write to CloudWatch : %+v", err.Error())
 	}
 
 	return err
@@ -262,10 +243,9 @@ func (c *CloudWatch) WriteToCloudWatch(datums []*cloudwatch.MetricDatum) error {
 // Partition the MetricDatums into smaller slices of a max size so that are under the limit
 // for the AWS API calls.
 func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch.MetricDatum {
-
 	numberOfPartitions := len(datums) / size
 	if len(datums)%size != 0 {
-		numberOfPartitions += 1
+		numberOfPartitions++
 	}
 
 	partitions := make([][]*cloudwatch.MetricDatum, numberOfPartitions)
@@ -287,7 +267,6 @@ func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch
 // cloudwatch.StatisticSet are available. If so, it would build MetricDatum from statistic values.
 // Otherwise, fields would still been built independently.
 func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point telegraf.Metric) []*cloudwatch.MetricDatum {
-
 	fields := make(map[string]cloudwatchField)
 	tags := point.Tags()
 	storageResolution := int64(60)
@@ -296,7 +275,6 @@ func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point tel
 	}
 
 	for k, v := range point.Fields() {
-
 		val, ok := convert(v)
 		if !ok {
 			// Only fields with values that can be converted to float64 (and within CloudWatch boundary) are supported.
@@ -411,7 +389,6 @@ func getStatisticType(name string) (sType statisticType, fieldName string) {
 }
 
 func convert(v interface{}) (value float64, ok bool) {
-
 	ok = true
 
 	switch t := v.(type) {

@@ -1,13 +1,8 @@
-ifeq ($(OS), Windows_NT)
-	devnull := nul
-else
-	devnull := /dev/null
-endif
-
-next_version := 1.16.0
-tag := $(shell git describe --exact-match --tags 2>$(devnull))
+next_version :=  $(shell cat build_version.txt)
+tag := $(shell git describe --exact-match --tags 2>git_describe_error.tmp; rm -f git_describe_error.tmp)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
+glibc_version := 2.17
 
 ifdef NIGHTLY
 	version := $(next_version)
@@ -46,7 +41,7 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 
-LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch)
+LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
 	LDFLAGS += -X main.version=$(version)
 endif
@@ -74,29 +69,41 @@ all:
 .PHONY: help
 help:
 	@echo 'Targets:'
-	@echo '  all        - download dependencies and compile telegraf binary'
-	@echo '  deps       - download dependencies'
-	@echo '  telegraf   - compile telegraf binary'
-	@echo '  test       - run short unit tests'
-	@echo '  fmt        - format source files'
-	@echo '  tidy       - tidy go modules'
-	@echo '  check-deps - check docs/LICENSE_OF_DEPENDENCIES.md'
-	@echo '  clean      - delete build artifacts'
+	@echo '  all          - download dependencies and compile telegraf binary'
+	@echo '  deps         - download dependencies'
+	@echo '  telegraf     - compile telegraf binary'
+	@echo '  test         - run short unit tests'
+	@echo '  fmt          - format source files'
+	@echo '  tidy         - tidy go modules'
+	@echo '  lint         - run linter'
+	@echo '  lint-branch  - run linter on changes in current branch since master'
+	@echo '  lint-install - install linter'
+	@echo '  check-deps   - check docs/LICENSE_OF_DEPENDENCIES.md'
+	@echo '  clean        - delete build artifacts'
 	@echo ''
 	@echo 'Package Targets:'
 	@$(foreach dist,$(dists),echo "  $(dist)";)
 
 .PHONY: deps
 deps:
-	go mod download
+	go mod download -x
 
 .PHONY: telegraf
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
+# Used by dockerfile builds
+.PHONY: go-install
+go-install:
+	go install -mod=mod -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
+
 .PHONY: test
 test:
 	go test -short $(race_detector) ./...
+
+.PHONY: test-integration
+test-integration:
+	go test -run Integration $(race_detector) ./...
 
 .PHONY: fmt
 fmt:
@@ -114,12 +121,7 @@ fmtcheck:
 
 .PHONY: test-windows
 test-windows:
-	go test -short $(race_detector) ./plugins/inputs/ping/...
-	go test -short $(race_detector) ./plugins/inputs/win_perf_counters/...
-	go test -short $(race_detector) ./plugins/inputs/win_services/...
-	go test -short $(race_detector) ./plugins/inputs/procstat/...
-	go test -short $(race_detector) ./plugins/inputs/ntpq/...
-	go test -short $(race_detector) ./plugins/processors/port_name/...
+	go test -short ./...
 
 .PHONY: vet
 vet:
@@ -131,18 +133,40 @@ vet:
 		exit 1; \
 	fi
 
+.PHONY: lint-install
+lint-install:
+
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.38.0
+
+.PHONY: lint
+lint:
+ifeq (, $(shell which golangci-lint))
+	$(info golangci-lint can't be found, please run: make lint-install)
+	exit 1
+endif
+
+	golangci-lint run
+
+.PHONY: lint-branch
+lint-branch:
+ifeq (, $(shell which golangci-lint))
+	$(info golangci-lint can't be found, please run: make lint-install)
+	exit 1
+endif
+
+	golangci-lint run --new-from-rev master
+
 .PHONY: tidy
 tidy:
 	go mod verify
 	go mod tidy
 	@if ! git diff --quiet go.mod go.sum; then \
-		echo "please run go mod tidy and check in changes"; \
+		echo "please run go mod tidy and check in changes, you might have to use the same version of Go as the CI"; \
 		exit 1; \
 	fi
 
 .PHONY: check
 check: fmtcheck vet
-	@$(MAKE) --no-print-directory tidy
 
 .PHONY: test-all
 test-all: fmtcheck vet
@@ -160,7 +184,7 @@ clean:
 
 .PHONY: docker-image
 docker-image:
-	docker build -f scripts/stretch.docker -t "telegraf:$(COMMIT)" .
+	docker build -f scripts/buster.docker -t "telegraf:$(commit)" .
 
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
@@ -170,15 +194,15 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
-.PHONY: ci-1.14
-ci-1.14:
-	docker build -t quay.io/influxdb/telegraf-ci:1.14.5 - < scripts/ci-1.14.docker
-	docker push quay.io/influxdb/telegraf-ci:1.14.5
-
-.PHONY: ci-1.13
-ci-1.13:
-	docker build -t quay.io/influxdb/telegraf-ci:1.13.13 - < scripts/ci-1.13.docker
-	docker push quay.io/influxdb/telegraf-ci:1.13.13
+.PHONY: ci-1.16
+ci-1.16:
+	docker build -t quay.io/influxdb/telegraf-ci:1.16.7 - < scripts/ci-1.16.docker
+	docker push quay.io/influxdb/telegraf-ci:1.16.7
+	
+.PHONY: ci-1.17
+ci-1.17:
+	docker build -t quay.io/influxdb/telegraf-ci:1.17.0 - < scripts/ci-1.17.docker
+	docker push quay.io/influxdb/telegraf-ci:1.17.0
 
 .PHONY: install
 install: $(buildbin)
@@ -192,6 +216,7 @@ install: $(buildbin)
 	@if [ $(GOOS) != "windows" ]; then cp -fv etc/telegraf.conf $(DESTDIR)$(sysconfdir)/telegraf/telegraf.conf$(conf_suffix); fi
 	@if [ $(GOOS) != "windows" ]; then cp -fv etc/logrotate.d/telegraf $(DESTDIR)$(sysconfdir)/logrotate.d; fi
 	@if [ $(GOOS) = "windows" ]; then cp -fv etc/telegraf_windows.conf $(DESTDIR)/telegraf.conf; fi
+	@if [ $(GOOS) = "linux" ]; then scripts/check-dynamic-glibc-versions.sh $(buildbin) $(glibc_version); fi
 	@if [ $(GOOS) = "linux" ]; then mkdir -pv $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
 	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/telegraf.service $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
 	@if [ $(GOOS) = "linux" ]; then cp -fv scripts/init.sh $(DESTDIR)$(prefix)/lib/telegraf/scripts; fi
@@ -203,37 +228,73 @@ $(buildbin):
 	@mkdir -pv $(dir $@)
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-debs := telegraf_$(deb_version)_amd64.deb
-debs += telegraf_$(deb_version)_arm64.deb
-debs += telegraf_$(deb_version)_armel.deb
-debs += telegraf_$(deb_version)_armhf.deb
-debs += telegraf_$(deb_version)_i386.deb
+ifdef mips
 debs += telegraf_$(deb_version)_mips.deb
-debs += telegraf_$(deb_version)_mipsel.deb
-debs += telegraf_$(deb_version)_s390x.deb
-
-rpms += telegraf-$(rpm_version).aarch64.rpm
-rpms += telegraf-$(rpm_version).armel.rpm
-rpms += telegraf-$(rpm_version).armv6hl.rpm
-rpms += telegraf-$(rpm_version).i386.rpm
-rpms += telegraf-$(rpm_version).s390x.rpm
-rpms += telegraf-$(rpm_version).x86_64.rpm
-
-tars += telegraf-$(tar_version)_darwin_amd64.tar.gz
-tars += telegraf-$(tar_version)_freebsd_amd64.tar.gz
-tars += telegraf-$(tar_version)_freebsd_i386.tar.gz
-tars += telegraf-$(tar_version)_linux_amd64.tar.gz
-tars += telegraf-$(tar_version)_linux_arm64.tar.gz
-tars += telegraf-$(tar_version)_linux_armel.tar.gz
-tars += telegraf-$(tar_version)_linux_armhf.tar.gz
-tars += telegraf-$(tar_version)_linux_i386.tar.gz
 tars += telegraf-$(tar_version)_linux_mips.tar.gz
-tars += telegraf-$(tar_version)_linux_mipsel.tar.gz
-tars += telegraf-$(tar_version)_linux_s390x.tar.gz
-tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
+endif
 
-zips += telegraf-$(tar_version)_windows_amd64.zip
+ifdef mipsel
+debs += telegraf_$(deb_version)_mipsel.deb
+tars += telegraf-$(tar_version)_linux_mipsel.tar.gz
+endif
+
+ifdef arm64
+tars += telegraf-$(tar_version)_linux_arm64.tar.gz
+debs += telegraf_$(deb_version)_arm64.deb
+rpms += telegraf-$(rpm_version).aarch64.rpm
+endif
+
+ifdef amd64
+tars += telegraf-$(tar_version)_freebsd_amd64.tar.gz
+tars += telegraf-$(tar_version)_linux_amd64.tar.gz
+debs += telegraf_$(deb_version)_amd64.deb
+rpms += telegraf-$(rpm_version).x86_64.rpm
+endif
+
+ifdef static
+tars += telegraf-$(tar_version)_static_linux_amd64.tar.gz
+endif
+
+ifdef armel
+tars += telegraf-$(tar_version)_linux_armel.tar.gz
+rpms += telegraf-$(rpm_version).armel.rpm
+debs += telegraf_$(deb_version)_armel.deb
+endif
+
+ifdef armhf
+tars += telegraf-$(tar_version)_linux_armhf.tar.gz
+tars += telegraf-$(tar_version)_freebsd_armv7.tar.gz
+debs += telegraf_$(deb_version)_armhf.deb
+rpms += telegraf-$(rpm_version).armv6hl.rpm
+endif
+
+ifdef s390x
+tars += telegraf-$(tar_version)_linux_s390x.tar.gz
+debs += telegraf_$(deb_version)_s390x.deb
+rpms += telegraf-$(rpm_version).s390x.rpm
+endif
+
+ifdef ppc641e
+tars += telegraf-$(tar_version)_linux_ppc64le.tar.gz
+rpms += telegraf-$(rpm_version).ppc64le.rpm
+debs += telegraf_$(deb_version)_ppc64el.deb
+endif
+
+ifdef i386
+tars += telegraf-$(tar_version)_freebsd_i386.tar.gz
+debs += telegraf_$(deb_version)_i386.deb
+tars += telegraf-$(tar_version)_linux_i386.tar.gz
+rpms += telegraf-$(rpm_version).i386.rpm
+endif
+
+ifdef windows
 zips += telegraf-$(tar_version)_windows_i386.zip
+zips += telegraf-$(tar_version)_windows_amd64.zip
+endif
+
+ifdef darwin
+tars += telegraf-$(tar_version)_darwin_amd64.tar.gz
+endif
 
 dists := $(debs) $(rpms) $(tars) $(zips)
 
@@ -243,6 +304,7 @@ package: $(dists)
 rpm_amd64 := amd64
 rpm_386 := i386
 rpm_s390x := s390x
+rpm_ppc64le := ppc64le
 rpm_arm5 := armel
 rpm_arm6 := armv6hl
 rpm_arm647 := aarch64
@@ -279,6 +341,7 @@ $(rpms):
 deb_amd64 := amd64
 deb_386 := i386
 deb_s390x := s390x
+deb_ppc64le := ppc64el
 deb_arm5 := armel
 deb_arm6 := armhf
 deb_arm647 := arm64
@@ -364,11 +427,18 @@ upload-nightly:
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOOS := linux
 %s390x.deb %s390x.rpm %linux_s390x.tar.gz: export GOARCH := s390x
 
+%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOOS := linux
+%ppc64el.deb %ppc64le.rpm %linux_ppc64le.tar.gz: export GOARCH := ppc64le
+
 %freebsd_amd64.tar.gz: export GOOS := freebsd
 %freebsd_amd64.tar.gz: export GOARCH := amd64
 
 %freebsd_i386.tar.gz: export GOOS := freebsd
 %freebsd_i386.tar.gz: export GOARCH := 386
+
+%freebsd_armv7.tar.gz: export GOOS := freebsd
+%freebsd_armv7.tar.gz: export GOARCH := arm
+%freebsd_armv7.tar.gz: export GOARM := 7
 
 %windows_amd64.zip: export GOOS := windows
 %windows_amd64.zip: export GOARCH := amd64

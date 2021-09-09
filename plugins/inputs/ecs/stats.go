@@ -284,7 +284,6 @@ func blkstats(id string, stats types.StatsJSON, acc telegraf.Accumulator, tags m
 			} else {
 				totalStatMap[field] = uintV
 			}
-
 		}
 	}
 

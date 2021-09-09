@@ -20,6 +20,7 @@ not enable support for JSON statistics in their BIND packages.
   trailing slash in the URL. Default is "http://localhost:8053/xml/v3".
 - **gather_memory_contexts** bool: Report per-context memory statistics.
 - **gather_views** bool: Report per-view query statistics.
+- **timeout** Timeout for http requests made by bind nameserver (example: "4s").
 
 The following table summarizes the URL formats which should be used, depending on your BIND
 version and configured statistics channel.
@@ -77,7 +78,7 @@ for more information.
 These are some useful queries (to generate dashboards or other) to run against data from this
 plugin:
 
-```
+```sql
 SELECT non_negative_derivative(mean(/^A$|^PTR$/), 5m) FROM bind_counter \
 WHERE "url" = 'localhost:8053' AND "type" = 'qtype' AND time > now() - 1h \
 GROUP BY time(5m), "type"

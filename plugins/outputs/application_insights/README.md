@@ -7,6 +7,9 @@ This plugin writes telegraf metrics to [Azure Application Insights](https://azur
 [[outputs.application_insights]]
   ## Instrumentation key of the Application Insights resource.
   instrumentation_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
+  
+  ## Regions that require endpoint modification https://docs.microsoft.com/en-us/azure/azure-monitor/app/custom-endpoints
+  # endpoint_url = "https://dc.services.visualstudio.com/v2/track"
 
   ## Timeout for closing (default: 5s).
   # timeout = "5s"
@@ -17,7 +20,7 @@ This plugin writes telegraf metrics to [Azure Application Insights](https://azur
   ## Context Tag Sources add Application Insights context tags to a tag value.
   ##
   ## For list of allowed context tag keys see:
-  ## https://github.com/Microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
+  ## https://github.com/microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
   # [outputs.application_insights.context_tag_sources]
   #   "ai.cloud.role" = "kubernetes_container_name"
   #   "ai.cloud.roleInstance" = "kubernetes_pod_name"

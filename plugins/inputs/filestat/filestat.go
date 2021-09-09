@@ -35,11 +35,18 @@ type FileStat struct {
 
 	// maps full file paths to globmatch obj
 	globs map[string]*globpath.GlobPath
+
+	// files that were missing - we only log the first time it's not found.
+	missingFiles map[string]bool
+	// files that had an error in Stat - we only log the first error.
+	filesWithErrors map[string]bool
 }
 
 func NewFileStat() *FileStat {
 	return &FileStat{
-		globs: make(map[string]*globpath.GlobPath),
+		globs:           make(map[string]*globpath.GlobPath),
+		missingFiles:    make(map[string]bool),
+		filesWithErrors: make(map[string]bool),
 	}
 }
 
@@ -85,22 +92,33 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			fileInfo, err := os.Stat(fileName)
 			if os.IsNotExist(err) {
 				fields["exists"] = int64(0)
+				acc.AddFields("filestat", fields, tags)
+				if !f.missingFiles[fileName] {
+					f.Log.Warnf("File %q not found", fileName)
+					f.missingFiles[fileName] = true
+				}
+				continue
 			}
+			f.missingFiles[fileName] = false
 
 			if fileInfo == nil {
-				f.Log.Errorf("Unable to get info for file %q, possible permissions issue",
-					fileName)
+				if !f.filesWithErrors[fileName] {
+					f.filesWithErrors[fileName] = true
+					f.Log.Errorf("Unable to get info for file %q: %v",
+						fileName, err)
+				}
 			} else {
+				f.filesWithErrors[fileName] = false
 				fields["size_bytes"] = fileInfo.Size()
 				fields["modification_time"] = fileInfo.ModTime().UnixNano()
 			}
 
 			if f.Md5 {
-				md5, err := getMd5(fileName)
+				md5Hash, err := getMd5(fileName)
 				if err != nil {
 					acc.AddError(err)
 				} else {
-					fields["md5_sum"] = md5
+					fields["md5_sum"] = md5Hash
 				}
 			}
 

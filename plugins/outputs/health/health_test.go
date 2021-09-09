@@ -106,6 +106,7 @@ func TestHealth(t *testing.T) {
 			output.ServiceAddress = "tcp://127.0.0.1:0"
 			output.Compares = tt.options.Compares
 			output.Contains = tt.options.Contains
+			output.Log = testutil.Logger{}
 
 			err := output.Init()
 			require.NoError(t, err)
@@ -140,6 +141,7 @@ func TestInitServiceAddress(t *testing.T) {
 			name: "port without scheme is not allowed",
 			plugin: &health.Health{
 				ServiceAddress: ":8080",
+				Log:            testutil.Logger{},
 			},
 			err: true,
 		},
@@ -147,6 +149,7 @@ func TestInitServiceAddress(t *testing.T) {
 			name: "path without scheme is not allowed",
 			plugin: &health.Health{
 				ServiceAddress: "/tmp/telegraf",
+				Log:            testutil.Logger{},
 			},
 			err: true,
 		},
@@ -154,6 +157,7 @@ func TestInitServiceAddress(t *testing.T) {
 			name: "tcp with port maps to http",
 			plugin: &health.Health{
 				ServiceAddress: "tcp://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 		{
@@ -161,30 +165,35 @@ func TestInitServiceAddress(t *testing.T) {
 			plugin: &health.Health{
 				ServiceAddress: "tcp://:8080",
 				ServerConfig:   *pki.TLSServerConfig(),
+				Log:            testutil.Logger{},
 			},
 		},
 		{
 			name: "tcp4 is allowed",
 			plugin: &health.Health{
 				ServiceAddress: "tcp4://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 		{
 			name: "tcp6 is allowed",
 			plugin: &health.Health{
 				ServiceAddress: "tcp6://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 		{
 			name: "http scheme",
 			plugin: &health.Health{
 				ServiceAddress: "http://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 		{
 			name: "https scheme",
 			plugin: &health.Health{
 				ServiceAddress: "https://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 	}
@@ -192,6 +201,7 @@ func TestInitServiceAddress(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := health.NewHealth()
 			output.ServiceAddress = tt.plugin.ServiceAddress
+			output.Log = testutil.Logger{}
 
 			err := output.Init()
 			if tt.err {

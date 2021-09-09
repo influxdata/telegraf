@@ -8,6 +8,8 @@ The command should be defined similar to docker's `exec` form:
 
 On non-zero exit stderr will be logged at error level.
 
+For better performance, consider execd, which runs continuously.
+
 ### Configuration
 
 ```toml
