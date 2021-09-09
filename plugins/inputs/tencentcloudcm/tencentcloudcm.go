@@ -216,12 +216,9 @@ func (t *TencentCloudCM) Init() error {
 }
 
 func (t *TencentCloudCM) updateWindow(relativeTo time.Time) {
-
 	windowEnd := relativeTo.Add(-time.Duration(t.Delay))
-
 	// starting point is two times the aggregation period to make sure all points are covered
 	t.windowStart = windowEnd.Add(-time.Duration(t.Period) * 2)
-
 	t.windowEnd = windowEnd
 }
 
@@ -240,7 +237,6 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 	// requestIDMap contains request ID and metric objects for later aggregation
 	requestIDMap := map[string]metricObject{}
 	for _, obj := range metricObjects {
-
 		wg.Add(1)
 		<-lmtr.C
 		go func(m metricObject) {
@@ -251,10 +247,10 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 				client, err := t.client.NewClient(m.Region, m.Account.crs, *t)
 				if err != nil {
 					acc.AddError(err)
-					break
+					return
 				}
 
-				size := 100
+				const size = 100
 				if len(m.MonitorInstances) >= size {
 					batch := m.MonitorInstances[:size]
 					if len(batch) == 0 {
