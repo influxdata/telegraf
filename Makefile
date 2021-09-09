@@ -228,7 +228,7 @@ $(buildbin):
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
-mips += linux_mips.tar.gz mips.deb 
+mips += linux_mips.tar.gz mips.deb
 .PHONY: mips
 mips:
 	@ echo $(mips)
@@ -260,10 +260,10 @@ s390x += linux_s390x.tar.gz s390x.deb s390x.rpm
 .PHONY: s390x
 s390x:
 	@ echo $(s390x)
-ppc641e += linux_ppc64le.tar.gz ppc64le.rpm ppc64el.deb
-.PHONY: ppc641e
-ppc641e:
-	@ echo $(ppc641e)
+ppc64le += linux_ppc64le.tar.gz ppc64le.rpm ppc64el.deb
+.PHONY: ppc64le
+ppc64le:
+	@ echo $(ppc64le)
 i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gzi386.rpm
 .PHONY: i386
 i386:
@@ -277,7 +277,7 @@ darwin += darwin_amd64.tar.gz
 darwin:
 	@ echo $(darwin)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc641e) $(i386) $(windows) $(darwin) 
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin)
 
 .PHONY: package
 package: $(include_packages)
