@@ -85,6 +85,13 @@ help:
 	@echo ''
 	@echo 'Possible values for include_packages variable'
 	@$(foreach package,$(include_packages),echo "  $(package)";)
+	@echo ''
+	@echo 'Resulting package name format (where arch will be the arch of the package):'
+	@echo '   telegraf_$(deb_version)_arch.deb'
+	@echo '   telegraf-$(rpm_version).arch.rpm'
+	@echo '   telegraf-$(tar_version)_arch.tar.gz'
+	@echo '   telegraf-$(tar_version)_arch.zip'
+
 
 .PHONY: deps
 deps:
