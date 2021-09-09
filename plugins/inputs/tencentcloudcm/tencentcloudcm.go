@@ -195,14 +195,14 @@ func (t *TencentCloudCM) Init() error {
 	// start discovery
 	go t.discoverTool.Discover(t.Accounts, t.DiscoveryInterval, t.Endpoint)
 	t.discoverTool.DiscoverMetrics()
-	for i := range t.Accounts {
-		for j := range t.Accounts[i].Namespaces {
+	for i, account := range t.Accounts {
+		for j, namespace := range account.Namespaces {
 			// use discovered metrics if not specified
-			if len(t.Accounts[i].Namespaces[j].Metrics) == 0 {
-				metrics, ok := t.discoverTool.DiscoveredMetrics[t.Accounts[i].Namespaces[j].Name]
+			if len(namespace.Metrics) == 0 {
+				metrics, ok := t.discoverTool.DiscoveredMetrics[namespace.Name]
 				if !ok {
 					return fmt.Errorf("unsupported namespace %s for discovering metrics, please specify metrics",
-						t.Accounts[i].Namespaces[j].Name)
+						namespace.Name)
 				}
 				t.Accounts[i].Namespaces[j].Metrics = metrics
 			}
