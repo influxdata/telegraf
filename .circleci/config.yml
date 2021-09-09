@@ -215,11 +215,11 @@ jobs:
     steps:
       - package-build:
           type: i386
-  ppc641e-package:
-    executor: go-1_17
+  ppc64le-package:
+    executor: go-1_16
     steps:
       - package-build:
-          type: ppc641e
+          type: ppc64le
   s390x-package:
     executor: go-1_17
     steps:
@@ -391,7 +391,7 @@ workflows:
       - 'i386-package':
           requires:
             - 'test-awaiter'
-      - 'ppc641e-package':
+      - 'ppc64le-package':
           requires:
             - 'test-awaiter'
       - 's390x-package':
@@ -421,7 +421,7 @@ workflows:
       - 'share-artifacts':
           requires:
             - 'i386-package'
-            - 'ppc641e-package'
+            - 'ppc64le-package'
             - 's390x-package'
             - 'armel-package'
             - 'amd64-package'
