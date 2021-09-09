@@ -338,7 +338,7 @@ jobs:
   update-sample-config-win:
     executor:
         name: win/default
-        shell: powershell.exe
+        shell: bash.exe
     steps:
       - checkout
       - attach_workspace:
