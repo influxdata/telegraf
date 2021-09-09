@@ -386,7 +386,7 @@ func NewFormUrlencodedParser(
 
 func NewPrometheusParser(defaultTags map[string]string, honorTimestamps bool) (Parser, error) {
 	return &prometheus.Parser{
-		DefaultTags: defaultTags,
+		DefaultTags:     defaultTags,
 		HonorTimestamps: honorTimestamps,
 	}, nil
 }

@@ -46,7 +46,6 @@ apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="+Inf"} 20
 apiserver_request_latencies_sum{resource="bindings",verb="POST"} 1.02726334e+08
 apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025
 `
-
 )
 
 func TestParsingValidGauge(t *testing.T) {
@@ -350,16 +349,16 @@ func TestMetricsWithoutHonorTimestamps(t *testing.T) {
 test_counter{label="test"} 1 %d
 `, testTimeUnix)
 	expected := testutil.MustMetric(
-			"prometheus",
-			map[string]string{
-				"label": "test",
-			},
-			map[string]interface{}{
-				"test_counter": float64(1.0),
-			},
-			testTime,
-			telegraf.Counter,
-		)
+		"prometheus",
+		map[string]string{
+			"label": "test",
+		},
+		map[string]interface{}{
+			"test_counter": float64(1.0),
+		},
+		testTime,
+		telegraf.Counter,
+	)
 
 	parser := Parser{HonorTimestamps: false}
 	metric, _ := parser.ParseLine(metricsWithTimestamps)
