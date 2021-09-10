@@ -86,8 +86,8 @@ var sampleConfig = `
   ## Custom arguments for the varnishadm command 
   # adm_binary_args = [""] 
 
-  ## Metric version
-  metric_version = 2
+  ## Metric version defaults to metric_version=1, use metric_version=2 for removal of nonactive vcls.
+  metric_version = 1
 
   ## Additional regexps to override builtin conversion varnish metric into telegraf metrics. 
   ## Regexp group "_vcl" is used for extracting VCL name. Metrics that contains not active VCL are skipped.  
