@@ -84,5 +84,8 @@ elif [[ -f /etc/os-release ]]; then
     elif [[ "$NAME" = "Solus" ]]; then
         # Solus logic
         install_systemd /usr/lib/systemd/system/telegraf.service
+    elif [[ "$ID" == *"sles"* ]] || [[ "$ID_LIKE" == *"suse"*  ]] || [[  "$ID_LIKE" = *"opensuse"* ]]; then
+        # Modern SuSE logic
+        install_systemd /usr/lib/systemd/system/telegraf.service
     fi
 fi

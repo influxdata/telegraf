@@ -44,5 +44,9 @@ elif [[ -f /etc/os-release ]]; then
     elif [[ "$NAME" = "Solus" ]]; then
         rm -f /etc/default/telegraf
         disable_systemd /usr/lib/systemd/system/telegraf.service
+/usr/bin/whisper-dump.py
+    elif [[ "$ID" == *"sles"* ]] || [[ "$ID_LIKE" == *"suse"*  ]] || [[  "$ID_LIKE" = *"opensuse"* ]]; then
+        # Modern SuSE logic
+        disable_systemd /usr/lib/systemd/system/telegraf.service
     fi
 fi
