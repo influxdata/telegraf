@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/model/otlpgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -181,7 +182,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 const (
 	defaultServiceAddress = "localhost:4317"
 	defaultTimeout        = config.Duration(5 * time.Second)
-	defaultCompression    = "none"
+	defaultCompression    = "gzip"
 )
 
 func init() {
