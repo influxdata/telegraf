@@ -431,10 +431,11 @@ LCK.pipestat.locks                                       0         0.00 Lock Ope
 `
 
 type testConfig struct {
-	vName     string
-	tags      map[string]string
-	field     string
-	activeVcl string
+	vName         string
+	tags          map[string]string
+	field         string
+	activeVcl     string
+	customRegexps []string
 }
 
 func TestV2ParseVarnishNames(t *testing.T) {
@@ -508,16 +509,19 @@ func TestV2ParseVarnishNames(t *testing.T) {
 			activeVcl: "1111",
 		},
 		{
-			vName:     "XCNT.vcl123.my_field.val",
-			tags:      map[string]string{"section": "XCNT"},
-			field:     "my_field",
-			activeVcl: "vcl123",
+			vName:     "VBE.VCL_1023_DIS_VOD_SHIELD_V1629295401194_1629295437531.goto.00000000.(111.112.113.114).(http://abc-ede.xyz.yyy.com:80).(ttl:3600.000000).is_healthy",
+			tags:      map[string]string{"section": "VBE", "serial_1": "0", "backend_1": "111.112.113.114", "server_1": "http://abc-ede.xyz.yyy.com:80", "ttl": "3600.000000"},
+			field:     "is_healthy",
+			activeVcl: "VCL_1023_DIS_VOD_SHIELD_V1629295401194_1629295437531",
+			customRegexps: []string{
+				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_1>[[:alnum:]])+\.\((?P<backend_1>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_1>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
+				`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.(?P<serial_2>[[:alnum:]])+\.\((?P<backend_2>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server_2>.*)\)\.\(ttl:(?P<ttl>\d*\.\d*.)*\)`,
+			},
 		},
 	} {
-		v := &Varnish{regexpsCompiled: defaultRegexps}
+		v := &Varnish{regexpsCompiled: defaultRegexps, Regexps: c.customRegexps}
 		assert.NoError(t, v.Init())
-		t.Logf(c.vName)
-		vMetric := parseMetricV2(c.vName, v.regexpsCompiled)
+		vMetric := v.parseMetricV2(c.vName)
 		require.Equal(t, c.activeVcl, vMetric.vclName)
 		require.Equal(t, "varnish", vMetric.measurement, c.vName)
 		require.Equal(t, c.field, vMetric.fieldName)
@@ -585,12 +589,19 @@ func TestJsonTypes(t *testing.T) {
 					"flag": "c",
 					"format": "d",
 					"value": 12345
+			},
+			"XXX.uintTest": {
+				"description": "intTest",
+					"flag": "b",
+					"format": "b",
+					"value": 18446744073709551615
 			}
 		}}`
 	exp := map[string]interface{}{
 		"floatTest":  123.45,
 		"stringTest": "abc_def",
 		"intTest":    int64(12345),
+		"uintTest":   uint64(18446744073709551615),
 	}
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
@@ -600,7 +611,7 @@ func TestJsonTypes(t *testing.T) {
 		MetricVersion:   2,
 	}
 	assert.NoError(t, v.Gather(acc))
-	require.Equal(t, 3, len(acc.Metrics))
+	require.Equal(t, len(exp), len(acc.Metrics))
 	for _, metric := range acc.Metrics {
 		require.Equal(t, "varnish", metric.Measurement)
 		for fieldName, value := range metric.Fields {

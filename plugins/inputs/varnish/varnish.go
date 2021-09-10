@@ -285,66 +285,61 @@ func (s *Varnish) processMetricsV2(activeVcl string, acc telegraf.Accumulator, o
 	}
 	countersJSON := getCountersJSON(rootJSON)
 	timestamp := time.Now()
-	for vFieldName, raw := range countersJSON {
-		if vFieldName == "timestamp" {
+	for fieldName, raw := range countersJSON {
+		if fieldName == "timestamp" {
 			continue
 		}
-
-		if s.filter != nil && !s.filter.Match(vFieldName) {
+		if s.filter != nil && !s.filter.Match(fieldName) {
 			continue
 		}
-
 		data, ok := raw.(map[string]interface{})
-
 		if !ok {
-			acc.AddError(fmt.Errorf("unexpected data from json: %s: %#v", vFieldName, raw))
+			acc.AddError(fmt.Errorf("unexpected data from json: %s: %#v", fieldName, raw))
 			continue
 		}
-		var (
-			vValue interface{}
-			vErr   error
-		)
 
+		var metricValue interface{}
+		var parseError error
 		flag := data["flag"]
 
 		if value, ok := data["value"]; ok {
 			if number, ok := value.(json.Number); ok {
+				//parse bitmap value
 				if flag == "b" {
-					if vValue, vErr = strconv.ParseUint(number.String(), 10, 64); vErr != nil {
-						vErr = fmt.Errorf("%s value uint64 error: %s", vFieldName, vErr)
+					if metricValue, parseError = strconv.ParseUint(number.String(), 10, 64); parseError != nil {
+						parseError = fmt.Errorf("%s value uint64 error: %s", fieldName, parseError)
 					}
-				} else if vValue, vErr = number.Int64(); vErr != nil {
+				} else if metricValue, parseError = number.Int64(); parseError != nil {
 					//try parse float
-					if vValue, vErr = number.Float64(); vErr != nil {
-						vErr = fmt.Errorf("stat %s value %v is not valid number: %s", vFieldName, value, vErr)
+					if metricValue, parseError = number.Float64(); parseError != nil {
+						parseError = fmt.Errorf("stat %s value %v is not valid number: %s", fieldName, value, parseError)
 					}
 				}
 			} else {
-				vValue = value
+				metricValue = value
 			}
 		}
 
-		if vErr != nil {
-			acc.AddError(vErr)
+		if parseError != nil {
+			acc.AddError(parseError)
 			continue
 		}
 
-		vMetric := parseMetricV2(vFieldName, s.regexpsCompiled)
-
-		if vMetric.vclName != "" && activeVcl != "" && vMetric.vclName != activeVcl {
+		metric := s.parseMetricV2(fieldName)
+		if metric.vclName != "" && activeVcl != "" && metric.vclName != activeVcl {
 			//skip not active vcl
 			continue
 		}
 
 		fields := make(map[string]interface{})
-		fields[vMetric.fieldName] = vValue
+		fields[metric.fieldName] = metricValue
 		switch flag {
 		case "c", "a":
-			acc.AddCounter(vMetric.measurement, fields, vMetric.tags, timestamp)
+			acc.AddCounter(metric.measurement, fields, metric.tags, timestamp)
 		case "g":
-			acc.AddGauge(vMetric.measurement, fields, vMetric.tags, timestamp)
+			acc.AddGauge(metric.measurement, fields, metric.tags, timestamp)
 		default:
-			acc.AddGauge(vMetric.measurement, fields, vMetric.tags, timestamp)
+			acc.AddGauge(metric.measurement, fields, metric.tags, timestamp)
 		}
 	}
 	return nil
@@ -402,20 +397,20 @@ func getCountersJSON(rootJSON map[string]interface{}) map[string]interface{} {
 }
 
 // converts varnish metrics name into field and list of tags
-func parseMetricV2(vName string, regexps []*regexp.Regexp) (vMetric vMetric) {
-	vMetric.measurement = measurementNamespace
-	if strings.Count(vName, ".") == 0 {
-		return vMetric
+func (s *Varnish) parseMetricV2(name string) (metric varnishMetric) {
+	metric.measurement = measurementNamespace
+	if strings.Count(name, ".") == 0 {
+		return metric
 	}
-	vMetric.fieldName = vName[strings.LastIndex(vName, ".")+1:]
-	var section = strings.Split(vName, ".")[0]
-	vMetric.tags = map[string]string{
+	metric.fieldName = name[strings.LastIndex(name, ".")+1:]
+	var section = strings.Split(name, ".")[0]
+	metric.tags = map[string]string{
 		"section": section,
 	}
 
-	//parse vName using regexpsCompiled
-	for _, re := range regexps {
-		submatch := re.FindStringSubmatch(vName)
+	//parse name using regexpsCompiled
+	for _, re := range s.regexpsCompiled {
+		submatch := re.FindStringSubmatch(name)
 		if len(submatch) < 1 {
 			continue
 		}
@@ -425,19 +420,19 @@ func parseMetricV2(vName string, regexps []*regexp.Regexp) (vMetric vMetric) {
 			}
 			val := submatch[re.SubexpIndex(sub)]
 			if sub == "_vcl" {
-				vMetric.vclName = val
+				metric.vclName = val
 			} else if sub == "_field" {
-				vMetric.fieldName = val
+				metric.fieldName = val
 			} else if val != "" {
-				vMetric.tags[sub] = val
+				metric.tags[sub] = val
 			}
 		}
 		break
 	}
-	return vMetric
+	return metric
 }
 
-type vMetric struct {
+type varnishMetric struct {
 	measurement string
 	fieldName   string
 	tags        map[string]string

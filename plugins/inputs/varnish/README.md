@@ -402,42 +402,39 @@ Influx metric:
 
 ### Advanced customizations using regexps
 
-VMODs extensions written for Varnish Cache can produce 
-
-Finding the VCL name in a varnish measurement can be adjusted by using custom GO regular expressions. By default, the plugin has a
-builtin list of regexps for following VMODs
-
-* KVSTORE, 
-* Dynamic Backends (goto) 
-* XCNT metrics types. 
-
-Additional regexps can be specified in configuration:
-
-#### Example for (libvmod-xcounter):
-
-Joy can extend the telegraf config like:
-
-```toml
-[[inputs.varnish]]
-    regexps = ['^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<my_tag>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
-```
-Then varnish counters like
-```
-  "XCNT.1234.ABCD-EFG.hit.val": {
-    "description": "hit",
-    "flag": "c", "format": "i",
-    "value": 1
-  },
-```
-will be converted into following line protocol: 
-`varnish,section=XCNT,my-tag="ABCD-EFG" hit=1`
+Finding the VCL in a varnish measurement and parsing into tags can be adjusted by using GO regular expressions.
 
 Regexps use a special named group `(?P<_vcl>[\w\-]*)(\.)` to extract VCL name. `(?P<_field>[\w\-.+]*)\.val` regexp group
 extracts the field name. All other named regexp groups like `(?P<my_tag>[\w\-.+]*)` are tags.
 
 _Tip: It is useful to verify regexps using online tools like https://regoio.herokuapp.com/._
 
-### Custom arguments
+By default, the plugin has a builtin list of regexps for following VMODs:
+
+* Dynamic Backends (goto)
+  * regexp: `^VBE\.(?P<_vcl>[\w\-]*)\.goto\.[[:alnum:]]+\.\((?P<backend>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server>.*)\)\.\(ttl:\d*\.\d*.*\)`
+      * `VBE.VCL12323.goto.000007c8.(123.123.123.123).(http://aaa.xxcc:80).(ttl:3600.000000).cache_hit` -> `varnish,section=VBE,backend="123.123.123.123",server="http://aaa.xxcc:80" cache_hit=51i 1462765437090957980`
+* Key value storage (kvstore)
+  * regexp `^KVSTORE\.(?P<id>[\w\-]*)\.(?P<_vcl>[\w\-]*)\.([\w\-]*)`
+      * `KVSTORE.object_name.vcl_name.key` -> `varnish,section=KVSTORE,id=object_name key=5i`
+* XCNT (libvmod-xcounter). 
+  * regexp `^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<group>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val`
+    * `XCNT.abc1234.XXX+_YYYY.cr.pass.val` -> `varnish,section=XCNT,group="XXX+_YYYY.cr" pass=5i`
+* standard VBE metrics
+  * regexp `^VBE\.(?P<_vcl>[\w\-]*)\.(?P<backend>[\w\-]*)\.([\w\-]*)`
+    * `VBE.reload_20210622_153544_23757.default.unhealthy` -> `varnish,section=VBE,backend="default" unhealthy=51i 1462765437090957980`
+* default generic metric 
+  * regexp `([\w\-]*)\.(?P<id>[\w\-.]*)\.([\w\-]*)`
+    * `MSE_STORE.store-1-1.g_aio_running_bytes_write` -> `varnish,section=MSE_STORE,id="store-1-1" g_aio_running_bytes_write=5i`
+    
+Default regexps list can be extended in telegraf config like:
+
+```toml
+[[inputs.varnish]]
+    regexps = ['^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<my_tag>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
+```
+
+ ### Custom arguments
 You can change the default binary location and custom arguments for `varnishstat` and `varnishadm` command output. 
 This is useful when running varnish in docker or executing using varnish by SSH on a different machine.
 
