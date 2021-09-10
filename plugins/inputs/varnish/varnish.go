@@ -89,9 +89,9 @@ var sampleConfig = `
   ## Metric version defaults to metric_version=1, use metric_version=2 for removal of nonactive vcls.
   metric_version = 1
 
-  ## Additional regexps to override builtin conversion varnish metric into telegraf metrics. 
-  ## Regexp group "_vcl" is used for extracting VCL name. Metrics that contains not active VCL are skipped.  
-  ## Regexp group "_field" overides field name. Other named regexp groups are used as tags.
+  ## Additional regexps to override builtin conversion of varnish metrics into telegraf metrics. 
+  ## Regexp group "_vcl" is used for extracting the VCL name. Metrics that contains nonactive VCL's are skipped.  
+  ## Regexp group "_field" overrides field name. Other named regexp groups are used as tags.
   # regexps = ['XCNT\.(?P<_vcl>[\w\-]*)\.(?P<group>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
 
   ## By default, telegraf gather stats for 3 metric points.
