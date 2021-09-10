@@ -117,6 +117,14 @@ func TestSampleConfig(t *testing.T) {
 }
 
 func TestFieldInit(t *testing.T) {
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
+	s := &Snmp{
+		ClientConfig: snmp.ClientConfig{
+			Path: []string{testDataPath},
+		},
+	}
+
 	translations := []struct {
 		inputOid           string
 		inputName          string
@@ -128,8 +136,7 @@ func TestFieldInit(t *testing.T) {
 		{".1.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".iso.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".1.0.0.0.1.1", "", "", ".1.0.0.0.1.1", "server", ""},
-		{".1.0.0.0.1.1.0", "", "", ".1.0.0.0.1.1.0", "server.0", ""},
-		{".999", "", "", ".999", ".999", ""},
+		{".1.0.0.0.1.1.0", "", "", ".1.0.0.0.1.1.0", "server", ""},
 		{"TEST::server", "", "", ".1.0.0.0.1.1", "server", ""},
 		{"TEST::server.0", "", "", ".1.0.0.0.1.1.0", "server.0", ""},
 		{"TEST::server", "foo", "", ".1.0.0.0.1.1", "foo", ""},
@@ -140,10 +147,9 @@ func TestFieldInit(t *testing.T) {
 	}
 
 	for _, txl := range translations {
-		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
+		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion, snmp: s}
 		err := f.init(f.snmp)
 		if !assert.NoError(t, err, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName) {
-			println("I am an error")
 			continue
 		}
 		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
@@ -152,26 +158,26 @@ func TestFieldInit(t *testing.T) {
 }
 
 func TestTableInit(t *testing.T) {
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
+
 	tbl := Table{
 		Oid: ".1.0.0.0",
 		Fields: []Field{
-			{Oid: ".999", Name: "foo"},
 			{Oid: "TEST::description", Name: "description", IsTag: true},
 		},
 	}
 	s := &Snmp{
 		ClientConfig: snmp.ClientConfig{
-			Path: []string{"/testdata"},
+			Path: []string{testDataPath},
 		},
 	}
-	err := tbl.Init(s)
-	fmt.Printf("%v\n", s)
+	err = tbl.Init(s)
 	require.NoError(t, err)
 
 	assert.Equal(t, "testTable", tbl.Name)
 
-	assert.Len(t, tbl.Fields, 5)
-	assert.Contains(t, tbl.Fields, Field{Oid: ".999", Name: "foo", initialized: true})
+	assert.Len(t, tbl.Fields, 4)
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.1", Name: "server", IsTag: true, initialized: true})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.2", Name: "connections", initialized: true})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.3", Name: "latency", initialized: true})
@@ -186,6 +192,9 @@ func TestSnmpInit(t *testing.T) {
 		Fields: []Field{
 			{Oid: "TEST::hostname"},
 		},
+		// ClientConfig: snmp.ClientConfig{
+		// 	Path: []string{"/testdata"},
+		// },
 	}
 
 	err := s.init()
@@ -205,6 +214,7 @@ func TestSnmpInit(t *testing.T) {
 }
 
 func TestSnmpInit_noTranslate(t *testing.T) {
+	// write another mib
 	// override execCommand so it returns exec.ErrNotFound
 	// defer func(ec func(string, ...string) *exec.Cmd) { execCommand = ec }(execCommand)
 	// execCommand = func(_ string, _ ...string) *exec.Cmd {
@@ -1215,56 +1225,75 @@ func TestGoSmi(t *testing.T) {
 		}
 		folders = []string{}
 	}
-	// println("path", gosmi.GetPath())
-	// _, err := gosmi.GetModule("RFC1213-MIB")
-	// require.NoError(t, err)
-	// out, err := gosmi.GetNode("sysUpTime")
-	// require.NoError(t, err)
-	// oidText := out.RenderQualified()
-	// i := strings.Index(oidText, "::")
+	oid := "BRIDGE-MIB::dot1dTpFdbAddress.1"
 	var out gosmi.SmiNode
 	var err error
-	oid := "iso.3.6.1.2.1.1.2.1"
-	s := strings.Split(oid, ".")
-	for i := range s {
-		if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
-			out, _ = gosmi.GetNode(s[i])
-			s[i] = out.RenderNumeric()
-
+	if strings.ContainsAny(oid, "::") {
+		// slpit given oid
+		// for example RFC1213-MIB::sysUpTime.0
+		s := strings.Split(oid, "::")
+		// node becomes sysUpTime.0
+		node := s[1]
+		if strings.ContainsAny(node, ".") {
+			s = strings.Split(node, ".")
+			// node becomes sysUpTime
+			node = s[0]
 		}
-	}
-	oidJoin := strings.Join(s, ".")
-	println(oidJoin)
-	out, _ = gosmi.GetNodeByOID(types.OidMustFromString(oidJoin))
-	//println(out)
-	oidText := out.RenderQualified()
-	i := strings.Index(oidText, "::")
-	fmt.Printf("oid:%v\n", oidText)
-	if i == -1 {
-		println("issues")
-	}
-	// mibName := oidText[:i]
-	// mibPrefix := mibName + "::"
-	// tagOids := map[string]struct{}{}
-	oidNum := "1.3.6.1.2.1.2.2.1.6"
-	var conversion string
-	// We have to guess that the "entry" oid is `oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
-	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
-	//submask := oidNum + ".1"
-	node, err := gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
 
-	tc := node.GetSubtree()
+		out, err = gosmi.GetNode(node)
+		fmt.Printf("%v\n", out)
+		require.NoError(t, err)
 
-	for i := range tc {
-		switch tc[i].Type.Name {
-		case "MacAddress", "PhysAddress":
-			conversion = "hwaddr"
-		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
-			conversion = "ipaddr"
+		oidNum := out.RenderNumeric()
+		fmt.Printf("%v\n", oidNum)
+	}
+
+	require.Error(t, err)
+}
+
+func TestFakeMibs(t *testing.T) {
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
+
+	gosmi.Init()
+	Path := []string{testDataPath}
+	var folders []string
+	for _, mibPath := range Path {
+		gosmi.AppendPath(mibPath)
+		folders = append(folders, mibPath)
+		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
+			if info.Mode()&os.ModeSymlink != 0 {
+				s, _ := os.Readlink(path)
+				folders = append(folders, s)
+			}
+			return nil
+		})
+		require.NoError(t, err)
+		for _, folder := range folders {
+			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+				if info.IsDir() {
+					gosmi.AppendPath(path)
+				} else if info.Mode()&os.ModeSymlink == 0 {
+					gosmi.LoadModule(info.Name())
+					//println(load)
+				}
+				return nil
+			})
+			require.NoError(t, err)
 		}
+		folders = []string{}
 	}
+	oidNum := "1.3.6.1.2.1.2.2.1.6.1"
+	submask := oidNum + ".1"
+	node, err := gosmi.GetNodeByOID(types.OidMustFromString(submask))
 
-	println(conversion)
+	index := node.GetIndex()
+
+	fmt.Printf("%v\n", index)
+
+	for i := range index {
+		fmt.Printf("%v\n", index[i].Name)
+	}
 
 	require.Error(t, err)
 }

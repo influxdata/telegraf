@@ -98,11 +98,6 @@ func (s *Snmp) init() error {
 		return nil
 	}
 
-	err := s.getMibsPath()
-	if err != nil {
-		s.Log.Errorf("Could not get path %v", err)
-	}
-
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
@@ -188,6 +183,10 @@ type Table struct {
 // Init() builds & initializes the nested fields.
 func (t *Table) Init(parent *Snmp) error {
 	t.snmp = parent
+	err := t.snmp.getMibsPath()
+	if err != nil {
+		return fmt.Errorf("could not get path %v", err)
+	}
 	//makes sure oid or name is set in config file
 	//otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
@@ -298,7 +297,10 @@ func (f *Field) init(parent *Snmp) error {
 	if f.initialized {
 		return nil
 	}
-
+	err := f.snmp.getMibsPath()
+	if err != nil {
+		return fmt.Errorf("could not get path %v", err)
+	}
 	// check if oid needs translation or name is not set
 	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
 		_, oidNum, oidText, conversion, err := snmpTranslateCall(f.Oid)
@@ -888,9 +890,9 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 
 	index := node.GetIndex()
 
-	if index == nil {
-		return "", "", "", nil, fmt.Errorf("getting index")
-	}
+	// if index == nil {
+	// 	return "", "", "", nil, fmt.Errorf("getting index")
+	// }
 
 	for i := range index {
 		tagOids[mibPrefix+index[i].Name] = struct{}{}
@@ -911,6 +913,7 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 // slice on :: begining is module and after is node - write a function
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	var out gosmi.SmiNode
+	var end string
 	if strings.ContainsAny(oid, "::") {
 		// slpit given oid
 		// for example RFC1213-MIB::sysUpTime.0
@@ -921,6 +924,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			s = strings.Split(node, ".")
 			// node becomes sysUpTime
 			node = s[0]
+			end = "." + s[1]
 		}
 
 		out, err = gosmi.GetNode(node)
@@ -928,11 +932,11 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			return "", "", "", "", err
 		}
 
-		oidNum = out.RenderNumeric()
+		oidNum = "." + out.RenderNumeric() + end
+
 	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
 		//handle mixed oid ex. .iso.2.3
 		s := strings.Split(oid, ".")
-		//oidNum := make([]string, len(s))
 		for i := range s {
 			if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
 				out, err = gosmi.GetNode(s[i])
@@ -942,10 +946,11 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 				s[i] = out.RenderNumeric()
 			}
 		}
-		oidNum := strings.Join(s, ".")
+		oidNum = strings.Join(s, ".")
 		out, _ = gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
 	} else {
 		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+		oidNum = oid
 		// ensure modules are loaded or node will be empty (might not error)
 		if err != nil {
 			return "", "", "", "", err
@@ -955,6 +960,11 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	tc := out.GetSubtree()
 
 	for i := range tc {
+		// case where the mib doesn't have a conversion so Type struct will be nil
+		// prevents seg fault
+		if tc[i].Type == nil {
+			break
+		}
 		switch tc[i].Type.Name {
 		case "MacAddress", "PhysAddress":
 			conversion = "hwaddr"
@@ -969,7 +979,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		return "", oid, oid, "", fmt.Errorf("not found")
 	}
 	mibName = oidText[:i]
-	oidText = oidText[i+2:]
+	oidText = oidText[i+2:] + end
 
 	return mibName, oidNum, oidText, conversion, nil
 }
