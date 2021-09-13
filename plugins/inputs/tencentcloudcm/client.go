@@ -30,7 +30,8 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 	for _, account := range t.Accounts {
 		for _, namespace := range account.Namespaces {
 			for _, region := range namespace.Regions {
-				monitorInstances := region.Instances
+				region.instancesToMonitor()
+				monitorInstances := region.monitorInstances
 				isDiscovered := false
 				if len(monitorInstances) == 0 {
 					// if instances are not specified. look them up in the discoverTool

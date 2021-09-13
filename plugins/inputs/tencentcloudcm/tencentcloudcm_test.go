@@ -150,10 +150,9 @@ func TestGetMetricObjects(t *testing.T) {
 				Metrics: []string{"CPUUsage", "MemUsage", "MemUsed"},
 				Regions: []*Region{{
 					RegionName: "ap-hongkong",
-					Instances: []*monitor.Instance{{
-						Dimensions: []*monitor.Dimension{{
-							Name:  common.StringPtr("InstanceId"),
-							Value: common.StringPtr("ins-xxxxxxx1"),
+					Instances: []*Instance{{
+						Dimensions: []map[string]string{{
+							"InstanceId": "ins-xxxxxxx1",
 						}},
 					}},
 				}}}, {
@@ -161,10 +160,9 @@ func TestGetMetricObjects(t *testing.T) {
 				Metrics: []string{"CPUUseRate", "MemoryUseRate", "RealCapacity"},
 				Regions: []*Region{{
 					RegionName: "ap-hongkong",
-					Instances: []*monitor.Instance{{
-						Dimensions: []*monitor.Dimension{{
-							Name:  common.StringPtr("InstanceId"),
-							Value: common.StringPtr("cdb-xxxxxxx1"),
+					Instances: []*Instance{{
+						Dimensions: []map[string]string{{
+							"InstanceId": "cdb-xxxxxxx1",
 						}},
 					}},
 				}},

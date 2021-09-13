@@ -77,8 +77,7 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
         ## - QCE/DC
         # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances]]
         # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances.dimensions]]
-        #   name = ""
-        #   value = ""
+        #   name = "value"
 ```
 
 #### Requirements and Terminology

@@ -57,8 +57,31 @@ type Namespace struct {
 
 // Region defines a Tencent Cloud region
 type Region struct {
-	RegionName string              `toml:"region"`
-	Instances  []*monitor.Instance `toml:"instances"`
+	RegionName       string      `toml:"region"`
+	Instances        []*Instance `toml:"instances"`
+	monitorInstances []*monitor.Instance
+}
+
+func (r *Region) instancesToMonitor() {
+	if r.monitorInstances == nil {
+		r.monitorInstances = []*monitor.Instance{}
+	}
+	for _, instance := range r.Instances {
+		monitorInstance := &monitor.Instance{}
+		for _, dimension := range instance.Dimensions {
+			for k, v := range dimension {
+				monitorInstance.Dimensions = append(monitorInstance.Dimensions, &monitor.Dimension{
+					Name:  common.StringPtr(k),
+					Value: common.StringPtr(v),
+				})
+			}
+		}
+		r.monitorInstances = append(r.monitorInstances, monitorInstance)
+	}
+}
+
+type Instance struct {
+	Dimensions []map[string]string `toml:"dimensions"`
 }
 
 // SampleConfig implements telegraf.Input interface
@@ -131,8 +154,7 @@ func (t *TencentCloudCM) SampleConfig() string {
 		  ## - QCE/DC
 		  # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances]]
 		  # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances.dimensions]]
-		  #   name = ""
-		  #   value = ""
+		  #   name = "value"
 `
 }
 

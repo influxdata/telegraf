@@ -64,7 +64,7 @@ func (d *discoverTool) discoverObjects(accounts []*Account, endpoint string) {
 		for _, namespace := range account.Namespaces {
 			for _, region := range namespace.Regions {
 				// skip discover if instances are explicitly specified
-				if len(region.Instances) != 0 {
+				if len(region.monitorInstances) != 0 {
 					continue
 				}
 				p, ok := d.registry[namespace.Name]
