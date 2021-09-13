@@ -410,7 +410,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cwClient.Metric, error) {
 	default:
 		recentlyActive = nil
 	}
-	
+
 	for _, namespace := range c.Namespaces {
 
 		params = &cwClient.ListMetricsInput{
