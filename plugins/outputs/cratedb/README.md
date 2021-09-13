@@ -35,4 +35,6 @@ config option, see below.
   table = "metrics"
   # If true, and the metrics table does not exist, create it automatically.
   table_create = true
+  # The character(s) to replace any '.' in an object key with
+  key_separator = "_"
 ```

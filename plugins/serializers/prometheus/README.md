@@ -8,7 +8,11 @@ use the `metric_version = 2` option in order to properly round trip metrics.
 not be correct if the metric spans multiple batches.  This issue can be
 somewhat, but not fully, mitigated by using outputs that support writing in
 "batch format".  When using histogram and summary types, it is recommended to
-use only the `prometheus_client` output.
+use only the `prometheus_client` output. Histogram and Summary types
+also update their expiration time based on the most recently received data.
+If incoming metrics stop updating specific buckets or quantiles but continue
+reporting others every bucket/quantile will continue to exist.
+
 
 ### Configuration
 

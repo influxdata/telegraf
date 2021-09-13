@@ -58,6 +58,19 @@ in Prometheus format.
   # field selector to target pods
   # eg. To scrape pods on a specific node
   # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
+
+  ## Scrape Services available in Consul Catalog
+  # [inputs.prometheus.consul]
+  #   enabled = true
+  #   agent = "http://localhost:8500"
+  #   query_interval = "5m"
+
+  #   [[inputs.prometheus.consul.query]]
+  #     name = "a service name"
+  #     tag = "a service tag"
+  #     url = 'http://{{if ne .ServiceAddress ""}}{{.ServiceAddress}}{{else}}{{.Address}}{{end}}:{{.ServicePort}}/{{with .ServiceMeta.metrics_path}}{{.}}{{else}}metrics{{end}}'
+  #     [inputs.prometheus.consul.query.tags]
+  #       host = "{{.Node}}"
   
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
@@ -116,6 +129,26 @@ env:
  ```
 
 If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated. If not specified, the default is 60 seconds.
+
+#### Consul Service Discovery
+
+Enabling this option and configuring consul `agent` url will allow the plugin to query
+consul catalog for available services. Using `query_interval` the plugin will periodically
+query the consul catalog for services with `name` and `tag` and refresh the list of scraped urls.
+It can use the information from the catalog to build the scraped url and additional tags from a template.
+
+Multiple consul queries can be configured, each for different service.
+The following example fields can be used in url or tag templates:
+* Node
+* Address
+* NodeMeta
+* ServicePort
+* ServiceAddress
+* ServiceTags
+* ServiceMeta
+
+For full list of available fields and their type see struct CatalogService in
+https://github.com/hashicorp/consul/blob/master/api/catalog.go
 
 #### Bearer Token
 
