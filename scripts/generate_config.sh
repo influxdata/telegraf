@@ -12,16 +12,15 @@ if [ "$os" = "windows" ]; then
     unzip "$zip" -d "$exe_path"
     telegraf="telegraf.exe"
     config_name="telegraf_windows.conf"
-    exe_path="$exe_path/telegraf*"
+    exe_path=$(/bin/find "$exe_path" -maxdepth 1 -name "telegraf*" -print)
 else
-    tar=$(find /build/dist -maxdepth 1 -name "*linux_amd64.tar.gz" -print)
-    tar -xfc "$tar" "$exe_path"
-    exe_path="$exe_path/./telegraf*/usr/bin"
+    tar_path=$(find /build/dist -maxdepth 1 -name "*linux_amd64.tar.gz" -print | grep -v ".*static.*")
+    mkdir "$exe_path"
+    tar --extract --file="$tar_path" --directory "$exe_path"
+    exe_path=$(find "$exe_path" -name telegraf -type f -print | grep ".*usr/bin/.*")
 fi
 
-shopt -s extglob
 cd "$exe_path" || exit
-ls
 ./exe_path/$telegraf config > $config_name
 
 mkdir ./new-config
