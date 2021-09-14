@@ -319,11 +319,10 @@ func (logstash *Logstash) gatherPluginsStats(
 			for k, v := range flattener.Fields {
 				if strings.HasPrefix(k, "bulk_requests") {
 					continue
-				} else {
-					newKey := fmt.Sprintf("bulk_requests_%s", k)
-					flattener.Fields[newKey] = v
-					delete(flattener.Fields, k)
 				}
+				newKey := fmt.Sprintf("bulk_requests_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
 			}
 			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
 
@@ -343,11 +342,10 @@ func (logstash *Logstash) gatherPluginsStats(
 			for k, v := range flattener.Fields {
 				if strings.HasPrefix(k, "documents") {
 					continue
-				} else {
-					newKey := fmt.Sprintf("documents_%s", k)
-					flattener.Fields[newKey] = v
-					delete(flattener.Fields, k)
 				}
+				newKey := fmt.Sprintf("documents_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
 			}
 			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
 		}
