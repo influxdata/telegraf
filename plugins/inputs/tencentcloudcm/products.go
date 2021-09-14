@@ -64,7 +64,11 @@ func (d DC) Discover(crs *common.Credential, region, endpoint string, offset, li
 	if err != nil {
 		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", d.Namespace(), err)
 	}
-	json.Unmarshal(instancesJSON, &instances)
+	err = json.Unmarshal(instancesJSON, &instances)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", d.Namespace(), err)
+	}
+
 	return uint64(*response.Response.TotalCount), instances, nil
 }
 
@@ -123,7 +127,10 @@ func (c CVM) Discover(crs *common.Credential, region, endpoint string, offset, l
 	if err != nil {
 		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", c.Namespace(), err)
 	}
-	json.Unmarshal(instancesJSON, &instances)
+	err = json.Unmarshal(instancesJSON, &instances)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", c.Namespace(), err)
+	}
 
 	return uint64(*response.Response.TotalCount), instances, nil
 }
@@ -188,7 +195,10 @@ func (c CDB) Discover(crs *common.Credential, region, endpoint string, offset, l
 	if err != nil {
 		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", c.Namespace(), err)
 	}
-	json.Unmarshal(instancesJSON, &instances)
+	err = json.Unmarshal(instancesJSON, &instances)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", c.Namespace(), err)
+	}
 
 	return uint64(*response.Response.TotalCount), instances, nil
 }
@@ -245,7 +255,10 @@ func (r Redis) Discover(crs *common.Credential, region, endpoint string, offset,
 	if err != nil {
 		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", r.Namespace(), err)
 	}
-	json.Unmarshal(instancesJSON, &instances)
+	err = json.Unmarshal(instancesJSON, &instances)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", r.Namespace(), err)
+	}
 
 	return uint64(*response.Response.TotalCount), instances, nil
 }
@@ -299,7 +312,10 @@ func (l LBPublic) Discover(crs *common.Credential, region, endpoint string, offs
 	if err != nil {
 		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", l.Namespace(), err)
 	}
-	json.Unmarshal(instancesJSON, &instances)
+	err = json.Unmarshal(instancesJSON, &instances)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", l.Namespace(), err)
+	}
 
 	return uint64(*response.Response.TotalCount), instances, nil
 }
@@ -350,7 +366,10 @@ func (l *LBPrivate) Discover(crs *common.Credential, region, endpoint string, of
 	if err != nil {
 		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", l.Namespace(), err)
 	}
-	json.Unmarshal(instancesJSON, &instances)
+	err = json.Unmarshal(instancesJSON, &instances)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", l.Namespace(), err)
+	}
 
 	return uint64(*response.Response.TotalCount), instances, nil
 }
@@ -402,7 +421,10 @@ func (c *CES) Discover(crs *common.Credential, region, endpoint string, offset, 
 	if err != nil {
 		return 0, nil, fmt.Errorf("json.Marshal response for namespace %s failed: %s", c.Namespace(), err)
 	}
-	json.Unmarshal(instancesJSON, &instances)
+	err = json.Unmarshal(instancesJSON, &instances)
+	if err != nil {
+		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", c.Namespace(), err)
+	}
 
 	return uint64(*response.Response.TotalCount), instances, nil
 }
