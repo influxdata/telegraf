@@ -121,7 +121,7 @@ require (
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/googleapis/gnostic v0.4.1 // indirect
-	github.com/gopcua/opcua v0.1.13
+	github.com/gopcua/opcua v0.2.0-rc2.0.20210409063412-baabb9b14fd2
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/websocket v1.4.2
 	github.com/gosnmp/gosnmp v1.32.0
