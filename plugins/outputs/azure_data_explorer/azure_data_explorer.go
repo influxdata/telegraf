@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
@@ -27,6 +28,7 @@ type AzureDataExplorer struct {
 	Timeout         config.Duration `toml:"timeout"`
 	MetricsGrouping string          `toml:"metrics_grouping_type"`
 	TableName       string          `toml:"table_name"`
+	DataFormat      string          `toml:"data_format"`
 	client          localClient
 	ingesters       map[string]localIngestor
 	serializer      serializers.Serializer
@@ -48,8 +50,10 @@ type localClient interface {
 
 type ingestorFactory func(localClient, string, string) (localIngestor, error)
 
-const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+const createTableJsonCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
+const createTableJsonMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
+
+const createTableCommand = `.create-merge table ['%s']  (['metrics']:string);`
 
 func (adx *AzureDataExplorer) Description() string {
 	return "Sends metrics to Azure Data Explorer"
@@ -77,7 +81,9 @@ func (adx *AzureDataExplorer) SampleConfig() string {
   ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
   # table_name = ""
 
-`
+  ## Data format in which metrics will be sent to Azure Data Explorer. This option is required and its supported values are "json" or "txt".
+  # data_format = "json"
+  `
 }
 
 func (adx *AzureDataExplorer) Connect() error {
@@ -96,14 +102,12 @@ func (adx *AzureDataExplorer) Connect() error {
 	adx.client = client
 	adx.ingesters = make(map[string]localIngestor)
 	adx.createIngestor = createRealIngestor
-
 	return nil
 }
 
 func (adx *AzureDataExplorer) Close() error {
 	adx.client = nil
 	adx.ingesters = nil
-
 	return nil
 }
 
@@ -134,13 +138,21 @@ func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) err
 	defer cancel()
 
 	// Push the metrics for each table
-	format := ingest.FileFormat(ingest.JSON)
-	for tableName, tableMetrics := range tableMetricGroups {
-		if err := adx.pushMetrics(ctx, format, tableName, tableMetrics); err != nil {
-			return err
+	if adx.DataFormat == "json" {
+		format := ingest.FileFormat(ingest.JSON)
+		for tableName, tableMetrics := range tableMetricGroups {
+			if err := adx.pushMetrics(ctx, format, tableName, tableMetrics); err != nil {
+				return err
+			}
+		}
+	} else {
+		format := ingest.FileFormat(ingest.TXT)
+		for tableName, tableMetrics := range tableMetricGroups {
+			if err := adx.pushMetrics(ctx, format, tableName, tableMetrics); err != nil {
+				return err
+			}
 		}
 	}
-
 	return nil
 }
 
@@ -160,9 +172,15 @@ func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error 
 	defer cancel()
 
 	//push metrics to a single table
-	format := ingest.FileFormat(ingest.JSON)
-	err := adx.pushMetrics(ctx, format, adx.TableName, metricsArray)
-	return err
+	if adx.DataFormat == "json" {
+		format := ingest.FileFormat(ingest.JSON)
+		err := adx.pushMetrics(ctx, format, adx.TableName, metricsArray)
+		return err
+	} else {
+		format := ingest.FileFormat(ingest.TXT)
+		err := adx.pushMetrics(ctx, format, adx.TableName, metricsArray)
+		return err
+	}
 }
 
 func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.FileOption, tableName string, metricsArray []byte) error {
@@ -172,9 +190,15 @@ func (adx *AzureDataExplorer) pushMetrics(ctx context.Context, format ingest.Fil
 	}
 
 	reader := bytes.NewReader(metricsArray)
-	mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", tableName), ingest.JSON)
-	if _, err := ingestor.FromReader(ctx, reader, format, mapping); err != nil {
-		adx.Log.Errorf("sending ingestion request to Azure Data Explorer for table %q failed: %v", tableName, err)
+	if adx.DataFormat == "json" {
+		mapping := ingest.IngestionMappingRef(fmt.Sprintf("%s_mapping", tableName), ingest.JSON)
+		if _, err := ingestor.FromReader(ctx, reader, format, mapping); err != nil {
+			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for table %q failed: %v", tableName, err)
+		}
+	} else {
+		if _, err := ingestor.FromReader(ctx, reader, format); err != nil {
+			adx.Log.Errorf("sending ingestion request to Azure Data Explorer for table %q failed: %v", tableName, err)
+		}
 	}
 	return nil
 }
@@ -198,16 +222,22 @@ func (adx *AzureDataExplorer) getIngestor(ctx context.Context, tableName string)
 }
 
 func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, tableName string) error {
-	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
-	if _, err := adx.client.Mgmt(ctx, adx.Database, createStmt); err != nil {
-		return err
-	}
+	if adx.DataFormat == "json" {
+		createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableJsonCommand, tableName))
+		if _, err := adx.client.Mgmt(ctx, adx.Database, createStmt); err != nil {
+			return err
+		}
 
-	createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableMappingCommand, tableName, tableName))
-	if _, err := adx.client.Mgmt(ctx, adx.Database, createTableMappingstmt); err != nil {
-		return err
+		createTableMappingstmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableJsonMappingCommand, tableName, tableName))
+		if _, err := adx.client.Mgmt(ctx, adx.Database, createTableMappingstmt); err != nil {
+			return err
+		}
+	} else {
+		createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
+		if _, err := adx.client.Mgmt(ctx, adx.Database, createStmt); err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 
@@ -218,7 +248,9 @@ func (adx *AzureDataExplorer) Init() error {
 	if adx.Database == "" {
 		return errors.New("Database configuration cannot be empty")
 	}
-
+	if !(adx.DataFormat == "json" || adx.DataFormat == "txt") {
+		return errors.New("Azure Data Explorer plugin supports json and txt data format only, pleaes make sure to add the format in the output configuration e.g. 'data_format=\"json\"'")
+	}
 	adx.MetricsGrouping = strings.ToLower(adx.MetricsGrouping)
 	if adx.MetricsGrouping == singleTable && adx.TableName == "" {
 		return errors.New("Table name cannot be empty for SingleTable metrics grouping type")
@@ -230,11 +262,16 @@ func (adx *AzureDataExplorer) Init() error {
 		return errors.New("Metrics grouping type is not valid")
 	}
 
-	serializer, err := json.NewSerializer(time.Second)
-	if err != nil {
-		return err
+	if adx.DataFormat == "json" {
+		serializer, err := json.NewSerializer(time.Second)
+		adx.serializer = serializer
+		if err != nil {
+			return err
+		}
+	} else {
+		serializer := influx.NewSerializer()
+		adx.serializer = serializer
 	}
-	adx.serializer = serializer
 	return nil
 }
 

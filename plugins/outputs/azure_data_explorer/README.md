@@ -21,7 +21,7 @@ This plugin writes metrics collected by any of the input plugins of Telegraf to 
   # database = ""
 
   ## Timeout for Azure Data Explorer operations
-  # timeout = "15s"
+  # timeout = "20s"
   
   ## Type of metrics grouping used when pushing to Azure Data Explorer. 
   ## Default is "TablePerMetric" for one table per different metric. 
@@ -31,7 +31,8 @@ This plugin writes metrics collected by any of the input plugins of Telegraf to 
   ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
   # table_name = ""
 
-  # timeout = "20s"
+  ## Data format in which metrics will be sent to Azure Data Explorer. This option is required and its supported values are "json" or "txt".
+  # data_format = "json"
 
 ```
 
@@ -48,7 +49,7 @@ The table name will match the `name` property of the metric, this means that the
 
 ### SingleTable
 
-The plugin will send all the metrics received to a single Azure Data Explorer table. The name of the table must be supplied via `table_name` the config file. If the table doesn't exist the plugin will create the table, if the table exists then the plugin will try to merge the Telegraf metric schema to the existing table. For more information about the merge process check the [`.create-merge` documentation](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command). 
+The plugin will send all the metrics received to a single Azure Data Explorer table. The name of the table must be supplied via `table_name` in the config file. If the table doesn't exist the plugin will create the table, if the table exists then the plugin will try to merge the Telegraf metric schema to the existing table. For more information about the merge process check the [`.create-merge` documentation](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command). 
 
 
 ## Tables Schema
@@ -63,7 +64,7 @@ The corresponding table mapping would be like the following:
 .create-or-alter table ['table-name'] ingestion json mapping 'table-name_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'
 ```
 
-**Note**: This plugin will automatically create Azure Data Explorer tables and corresponding table mapping as per the above mentioned commands. Since the `Metric` object is a complex type, the only output format supported is JSON.
+**Note**: This plugin will automatically create Azure Data Explorer tables and corresponding table mapping as per the above mentioned commands. 
 
 ## Authentiation
 
@@ -126,8 +127,10 @@ following configurations, **it's important to understand that the assessment, an
 [arm]: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview
 
 
-## Querying collected metrics data in Azure Data Explorer
-With all above configurations, you will have data stored in following standard format for each metric type stored as an Azure Data Explorer table -
+## Querying collected data in Azure Data Explorer
+Few examples of transformations and queries -
+1. Data collected using SQL input plugin 
+Data will be stored in following format in Azure Data Explorer table -
 ColumnName | ColumnType
 ---------- | ----------
 fields	|	dynamic
@@ -135,38 +138,43 @@ name	|	string
 tags	|	dynamic
 timestamp	|	datetime
 
-As "fields" and "tags" are of dynamic data type so following multiple ways to query this data -
-1. **Query JSON attributes directly**: This is one of the coolest feature of Azure Data Explorer so you can run query like this -
+Since collected metrics object is a complex type, use JSON format in config. As "fields" and "tags" columns are of dynamic data type, multiple ways to query this data -
+1. **Query JSON attributes directly**: Azure Data Explorer provides an ability to query JSON data without parsing it, so you can run queries on JSON attributes like this -
    ```
    Tablename
-   | where fields.size_kb == 9120
+   | where name == "sqlserver_azure_db_resource_stats" and todouble(fields.avg_cpu_percent) > 7
    ```
-2. **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: to transform data, in this case, to flatten dynamic data type columns. This is the recommended performant way for querying over large data volumes compared to querying directly over JSON attributes. 
+   ```
+   TelegrafAzureSQLMetrics
+   | distinct tostring(tags.database_name)
+   ```
+**Note** - This approach will have performance impact for large data volumes so use approach 2 for such cases.
+2. **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: to transform data. In this case, parsing dynamic data type columns using update policy. This is the recommended performant way for querying over large data volumes compared to querying directly over JSON attributes. 
       ```
       // Function to transform data
       .create-or-alter function Transform_TargetTableName() {
-             SourceTableName 
-             | extend clerk_type = tags.clerk_type
-             | extend host = tags.host
+            SourceTableName 
+            | mv-apply fields on (extend key = tostring(bag_keys(fields)[0]))
+            | project fieldname=key, value=todouble(fields[key]), name, tags, timestamp
       } 
 
-      // Create the destination table (if it doesn't exist already)
+      // Create destination table with above query's results schema (if it doesn't exist already)
       .set-or-append TargetTableName <| Transform_TargetTableName() | limit 0
 
       // Apply update policy on destination table
       .alter table TargetTableName policy update
-      @'[{"IsEnabled": true, "Source": "SourceTableName", "Query": "Transform_TargetTableName()", "IsTransactional": false, "PropagateIngestionProperties": false}]'
+      @'[{"IsEnabled": true, "Source": "SourceTableName", "Query": "Transform_TargetTableName()", "IsTransactional": true, "PropagateIngestionProperties": false}]'
 
       ```
-      There are two ways to flatten dynamic columns as explained below. You can use either of these ways in above mentioned update policy function - 'Transform_TargetTableName()'
-    - Use [bag_unpack plugin](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/bag-unpackplugin) to unpack the dynamic columns as shown below. This method will unpack all columns, it could lead to issues in case source schema changes.
+      There are other ways to flatten dynamic columns using 'bag_unpack' or 'extend' operator. You can use either of these ways in above mentioned update policy function - 'Transform_TargetTableName()'
+    - Use [bag_unpack plugin](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/bag-unpackplugin) to unpack the dynamic columns. This method will unpack all columns, it could lead to issues in case source schema changes.
        ```
        Tablename
        | evaluate bag_unpack(tags)
        | evaluate bag_unpack(fields)
        ```
     
-    - Use [extend](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/extendoperator) operator as shown below. This is the best way provided you know what columns are needed in the final destination table. Another benefit of this method is even if schema changes, it will not break your queries or dashboards.
+    - Use [extend](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/extendoperator) operator as shown below. Even if schema changes, it will not break your queries or dashboards with this method.
        ```
        Tablename
        | extend clerk_type = tags.clerk_type
