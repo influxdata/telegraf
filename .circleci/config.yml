@@ -25,6 +25,19 @@ executors:
       GOFLAGS: -p=8
 
 commands:
+  generate-config:
+    parameters:
+      os:
+        type: string
+        default: "linux"
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '/build'
+      - run: ./scripts/generate_config.sh << parameters.os >>
+      - store_artifacts:
+          path: './new-config'
+          destination: 'new-config'
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
@@ -335,19 +348,21 @@ jobs:
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
             curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
-  update-sample-config-win:
+  generate-config:
+    executor: go-1_17
+    steps:
+      - generate-config
+  generate-config-win:
     executor:
         name: win/default
         shell: bash.exe
     steps:
-      - checkout
-      - attach_workspace:
-          at: '/build'
-      - run:
-          name: "Update Windows Sample Config"
-          shell: powershell.exe
-          command: |
-            ./scripts/update-sampleconfig-win.ps1
+      - generate-config
+  update-config:
+    executor: go-1_17
+    steps:
+      - run: echo "I am a test!"
+      #- run: curl -H "Authorization: Bearer ${TOKEN}" -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/updateconfig"
 
 commonjobs:
   - &test-awaiter
@@ -462,6 +477,13 @@ workflows:
       - update-sample-config-win
           requires:
             - 'windows-package'
+          # filters:
+          #   branches:
+          #       - master
+      - 'update-config':
+          requires:
+            - 'generate-config-win'
+            - 'generate-config'
           # filters:
           #   branches:
           #       - master
