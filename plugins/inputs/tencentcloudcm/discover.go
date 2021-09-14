@@ -147,7 +147,7 @@ func discover(crs *common.Credential, region, endpoint string, p Product) (disco
 	monitorInstances := []*monitor.Instance{}
 	for _, instance := range instances {
 		keyIsNil := false
-		keyVals := []interface{}{}
+		keyVals := []string{}
 		dimensions := []*monitor.Dimension{}
 
 		// normalized instance have lower case field name
@@ -156,8 +156,6 @@ func discover(crs *common.Credential, region, endpoint string, p Product) (disco
 			normInstance[strings.ToLower(k)] = v
 		}
 
-		sort.Strings(p.Keys())
-
 		for _, key := range p.Keys() {
 			// check if discovered key field is nil
 			if normInstance[strings.ToLower(key)] == nil {
@@ -165,7 +163,7 @@ func discover(crs *common.Credential, region, endpoint string, p Product) (disco
 				break
 			}
 			// construct keyVals and dimensions based on the key and discovered instance
-			keyVals = append(keyVals, normInstance[strings.ToLower(key)])
+			keyVals = append(keyVals, fmt.Sprintf("%v", normInstance[strings.ToLower(key)]))
 			dimensions = append(dimensions, &monitor.Dimension{
 				Name:  common.StringPtr(key),
 				Value: common.StringPtr(fmt.Sprintf("%v", normInstance[strings.ToLower(key)])),
@@ -186,7 +184,8 @@ func discover(crs *common.Credential, region, endpoint string, p Product) (disco
 	return discoverObject, nil
 }
 
-func newKey(vals ...interface{}) string {
+func newKey(vals ...string) string {
+	sort.Strings(vals)
 	vs := []string{}
 	for _, v := range vals {
 		vs = append(vs, fmt.Sprintf("%v", v))
