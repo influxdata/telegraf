@@ -113,7 +113,6 @@ const logstash7PipelinesJSON = `
             },
             "failures": 262,
             "with_errors": 9089
-
           },
           "documents" : {
             "successes" : 2665549,
