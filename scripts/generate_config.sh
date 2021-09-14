@@ -14,7 +14,7 @@ if [ "$os" = "windows" ]; then
     config_name="telegraf_windows.conf"
 else
     tar=$(find $artifact_dir -maxdepth 1 -name "*linux_amd64.tar.gz" -print)
-    tar -xf "$tar" -c $extracted_path || exit
+    tar -xf "$tar" -c $extracted_path
 fi
 
 cd $extracted_path || exit

@@ -38,6 +38,10 @@ commands:
       - store_artifacts:
           path: './new-config'
           destination: 'new-config'
+      - persist_to_workspace:
+          root: './new-config'
+          paths:
+            - 'new-config'
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
@@ -357,12 +361,15 @@ jobs:
         name: win/default
         shell: bash.exe
     steps:
-      - generate-config
+      - generate-config:
+          os: windows
   update-config:
     executor: go-1_17
     steps:
-      - run: echo "I am a test!"
-      #- run: curl -H "Authorization: Bearer ${TOKEN}" -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/updateconfig"
+      - checkout
+      - attach_workspace:
+          at: '/new-config'
+      - run: ./scripts/update_config.sh ${UPDATE_CONFIG_TOKEN}
 
 commonjobs:
   - &test-awaiter
@@ -476,7 +483,7 @@ workflows:
       - *mips-package
       - update-sample-config-win
           requires:
-            - 'windows-package'
+            - 'share-artifacts'
           # filters:
           #   branches:
           #       - master
