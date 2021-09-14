@@ -1023,7 +1023,7 @@ func TestParseMetricQuery(t *testing.T) {
 			configs: []Config{
 				{
 					MetricDefaultName: "test",
-					MetricQuery:       "string('the_metric')",
+					MetricQuery:       "'the_metric'",
 					Timestamp:         "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"value": "/Device_1/Metric/@*[1]",

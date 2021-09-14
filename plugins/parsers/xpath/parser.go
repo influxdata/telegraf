@@ -168,6 +168,9 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		}
 		var ok bool
 		if metricname, ok = v.(string); !ok {
+			if v == nil {
+				p.Log.Infof("Hint: Empty metric-name-node. If you wanted to set a constant please use `metric_name = \"'name'\"`.")
+			}
 			return nil, fmt.Errorf("failed to query metric name: query result is of type %T not 'string'", v)
 		}
 	}
