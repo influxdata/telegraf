@@ -140,9 +140,9 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/serf v0.9.5 // indirect
 	github.com/influxdata/go-syslog/v3 v3.0.0
-	github.com/influxdata/influxdb-observability/common v0.2.4
-	github.com/influxdata/influxdb-observability/influx2otel v0.2.4
-	github.com/influxdata/influxdb-observability/otel2influx v0.2.4
+	github.com/influxdata/influxdb-observability/common v0.2.7
+	github.com/influxdata/influxdb-observability/influx2otel v0.2.7
+	github.com/influxdata/influxdb-observability/otel2influx v0.2.7
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
@@ -269,7 +269,7 @@ require (
 	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
 	go.mongodb.org/mongo-driver v1.5.3
 	go.opencensus.io v0.23.0 // indirect
-	go.opentelemetry.io/collector/model v0.0.0-20210723184018-3b7d6ce4830c
+	go.opentelemetry.io/collector/model v0.35.0
 	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
@@ -290,7 +290,7 @@ require (
 	google.golang.org/api v0.54.0
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210813162853-db860fec028c
-	google.golang.org/grpc v1.39.1
+	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/djherbis/times.v1 v1.2.0
