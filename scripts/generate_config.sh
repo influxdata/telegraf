@@ -16,9 +16,10 @@ if [ "$os" = "windows" ]; then
 else
     tar=$(find /build/dist -maxdepth 1 -name "*linux_amd64.tar.gz" -print)
     tar -xfc "$tar" "$exe_path"
-    exe_path="$exe_path./telegraf*/usr/bin"
+    exe_path="$exe_path/./telegraf*/usr/bin"
 fi
 
+shopt -s extglob
 cd "$exe_path" || exit
 ls
 ./exe_path/$telegraf config > $config_name
