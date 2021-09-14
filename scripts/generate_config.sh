@@ -17,7 +17,7 @@ else
     exe_path=$(find "$exe_path" -name telegraf -type f -print | grep ".*usr/bin/.*")
 fi
 
-./"$exe_path" config > $config_name
+."$exe_path" config > $config_name
 
 mkdir ./new-config
 mv $config_name ./new-config
