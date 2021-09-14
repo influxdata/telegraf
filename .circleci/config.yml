@@ -41,7 +41,7 @@ commands:
       - persist_to_workspace:
           root: './new-config'
           paths:
-            - 'new-config'
+            - '*'
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh

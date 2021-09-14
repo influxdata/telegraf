@@ -14,10 +14,10 @@ else
     tar_path=$(find /build/dist -maxdepth 1 -name "*linux_amd64.tar.gz" -print | grep -v ".*static.*")
     mkdir "$exe_path"
     tar --extract --file="$tar_path" --directory "$exe_path"
-    exe_path=.$(find "$exe_path" -name telegraf -type f -print | grep ".*usr/bin/.*")
+    exe_path=$(find "$exe_path" -name telegraf -type f -print | grep ".*usr/bin/.*")
 fi
 
-"$exe_path" config > $config_name
+$exe_path config > $config_name
 
 mkdir ./new-config
 mv $config_name ./new-config
