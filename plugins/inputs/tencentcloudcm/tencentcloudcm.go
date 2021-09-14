@@ -345,10 +345,10 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 			measurement := fmt.Sprintf("tencentcloudcm_%s", metricObject.Namespace)
 
-			for index := range datapoints.Values {
+			for index, value := range datapoints.Values {
 				acc.AddFields(
 					measurement,
-					map[string]interface{}{*result.Response.MetricName: datapoints.Values[index]},
+					map[string]interface{}{*result.Response.MetricName: value},
 					tags,
 					time.Unix(int64(*datapoints.Timestamps[index]), 0),
 				)
