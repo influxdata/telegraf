@@ -35,14 +35,14 @@ type Parser struct {
 }
 
 type Config struct {
-	MetricName   string
-	MetricQuery  string            `toml:"metric_name"`
-	Selection    string            `toml:"metric_selection"`
-	Timestamp    string            `toml:"timestamp"`
-	TimestampFmt string            `toml:"timestamp_format"`
-	Tags         map[string]string `toml:"tags"`
-	Fields       map[string]string `toml:"fields"`
-	FieldsInt    map[string]string `toml:"fields_int"`
+	MetricDefaultName string            `toml:"-"`
+	MetricQuery       string            `toml:"metric_name"`
+	Selection         string            `toml:"metric_selection"`
+	Timestamp         string            `toml:"timestamp"`
+	TimestampFmt      string            `toml:"timestamp_format"`
+	Tags              map[string]string `toml:"tags"`
+	Fields            map[string]string `toml:"fields"`
+	FieldsInt         map[string]string `toml:"fields_int"`
 
 	FieldSelection  string `toml:"field_selection"`
 	FieldNameQuery  string `toml:"field_name"`
@@ -160,13 +160,16 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 
 	// Determine the metric name. If a query was specified, use the result of this query and the default metric name
 	// otherwise.
-	metricname = config.MetricName
+	metricname = config.MetricDefaultName
 	if len(config.MetricQuery) > 0 {
 		v, err := p.executeQuery(doc, selected, config.MetricQuery)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query metric name: %v", err)
 		}
-		metricname = v.(string)
+		var ok bool
+		if metricname, ok = v.(string); !ok {
+			return nil, fmt.Errorf("failed to query metric name: query result is of type %T not 'string'", v)
+		}
 	}
 
 	// By default take the time the parser was invoked and override the value
