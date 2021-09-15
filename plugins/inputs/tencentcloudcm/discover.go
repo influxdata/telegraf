@@ -25,8 +25,8 @@ type discoverTool struct {
 }
 
 type discoverObject struct {
-	Instances        map[string]map[string]interface{} // Discovered Instances with detailed instance information
-	MonitorInstances []*monitor.Instance               // Monitor Instances with information enough for metrics pulling
+	Instances        map[string]map[string]string // Discovered Instances with detailed instance information
+	MonitorInstances []*monitor.Instance          // Monitor Instances with information enough for metrics pulling
 }
 
 // NewDiscoverTool Factory
@@ -71,7 +71,7 @@ func (d *discoverTool) discoverObjects(accounts []*Account, endpoint string) {
 				if !ok {
 					continue
 				}
-				discoveredObject, err := discover(account.crs, region.RegionName, endpoint, p)
+				discoveredObject, err := discover(account.crs, region.RegionName, endpoint, p, d.Log)
 				if err != nil {
 					d.Log.Errorf("discover account:%s region:%s endpoint:%s failed, error: %s",
 						account.Name, region.RegionName, endpoint, err)
@@ -100,7 +100,7 @@ func (d *discoverTool) Discover(accounts []*Account, interval config.Duration, e
 }
 
 // GetInstance Get discovered instance detail
-func (d *discoverTool) GetInstance(account, namespace, region, key string) map[string]interface{} {
+func (d *discoverTool) GetInstance(account, namespace, region, key string) map[string]string {
 	d.rw.RLock()
 	defer d.rw.RUnlock()
 	discoverObject, ok := d.DiscoveredObjects[newKey(account, namespace, region)]
@@ -121,13 +121,13 @@ func (d *discoverTool) GetMonitorInstances(account, namespace, region string) []
 	return discoverObject.MonitorInstances
 }
 
-func discover(crs *common.Credential, region, endpoint string, p Product) (discoverObject, error) {
+func discover(crs *common.Credential, region, endpoint string, p Product, l telegraf.Logger) (discoverObject, error) {
 	discoverObject := discoverObject{
-		Instances: map[string]map[string]interface{}{},
+		Instances: map[string]map[string]string{},
 	}
 
 	const offset, limit = int64(0), int64(100)
-	instances := []map[string]interface{}{}
+	instances := []map[string]string{}
 
 	total, instancesByPage, err := p.Discover(crs, region, endpoint, offset, limit)
 	if err != nil {
@@ -150,25 +150,20 @@ func discover(crs *common.Credential, region, endpoint string, p Product) (disco
 		keyVals := []string{}
 		dimensions := []*monitor.Dimension{}
 
-		// normalized instance have lower case field name
-		normInstance := map[string]interface{}{}
-		for k, v := range instance {
-			normInstance[strings.ToLower(k)] = v
-		}
-
-		for _, key := range p.Keys() {
+		for instanceKey, dimensionKey := range p.Keys() {
 			// check if discovered key field is nil
-			if normInstance[strings.ToLower(key)] == nil {
+			value := instance[instanceKey]
+			if value == "" {
 				keyIsNil = true
+				l.Debugf("instance key: %s has empty value", instanceKey)
 				break
 			}
-			// construct keyVals and dimensions based on the key and discovered instance
-			keyVals = append(keyVals, fmt.Sprintf("%v", normInstance[strings.ToLower(key)]))
-			dimensions = append(dimensions, &monitor.Dimension{
-				Name:  common.StringPtr(key),
-				Value: common.StringPtr(fmt.Sprintf("%v", normInstance[strings.ToLower(key)])),
-			})
 
+			keyVals = append(keyVals, value)
+			dimensions = append(dimensions, &monitor.Dimension{
+				Name:  common.StringPtr(dimensionKey),
+				Value: common.StringPtr(value),
+			})
 		}
 
 		// instance with nil key field will be discarded

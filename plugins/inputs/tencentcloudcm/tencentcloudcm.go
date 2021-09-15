@@ -119,7 +119,6 @@ func (t *TencentCloudCM) SampleConfig() string {
   
 	## Batch instance size for intiating a GetMonitorData API call.
 	# batch_size = 100
-
 	## By default, Tencent Cloud CM Input plugin will automatically discover instances in specified regions
 	## This sets the interval for discover and update the instances discovered.
 	##
@@ -336,9 +335,7 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 			if metricObject.isDiscovered {
 				instance := t.discoverTool.GetInstance(metricObject.Account.Name, metricObject.Namespace, metricObject.Region, newKey(strings.Join(keys, "-")))
 				for k, v := range instance {
-					if v != nil && !strings.Contains(strings.ToLower(k), "time") && fmt.Sprintf("%v", v) != "" {
-						tags[fmt.Sprintf("_%s_%s", metricObject.Namespace, k)] = fmt.Sprintf("%v", v)
-					}
+					tags[fmt.Sprintf("_%s_%s", metricObject.Namespace, k)] = fmt.Sprintf("%v", v)
 				}
 			}
 

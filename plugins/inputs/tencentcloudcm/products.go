@@ -3,6 +3,8 @@ package tencentcloudcm
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
 
 	cdb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cdb/v20170320"
 	clb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
@@ -16,10 +18,22 @@ import (
 
 // Product defines cloud product
 type Product interface {
-	Namespace() string // Tencent Cloud CM Product Namespace
-	Metrics() []string // Supported metrics
-	Keys() []string    // Product Dimension Key fields
-	Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]interface{}, error)
+	// Namespace returns the namespac for the product, which can be found
+	// in https://intl.cloud.tencent.com/document/product/248/6140
+	Namespace() string
+
+	// Metrics returns the supported metrics for the product, which can
+	// be found in https://intl.cloud.tencent.com/document/product/248/6140
+	Metrics() []string
+
+	// Keys maps the instance key name to the Cloud Monitor required
+	// dimension key name, e.g., product DC(Direct Connect) has instance
+	// key name 'DirectConnectId' which maps to 'directConnectId' as the
+	// dimension key name for Cloud Monitor request.
+	Keys() map[string]string
+
+	// Discover discovers the product instances
+	Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]string, error)
 }
 
 // DC defines Direct Connect, see: https://intl.cloud.tencent.com/document/product/216
@@ -37,12 +51,47 @@ func (d DC) Metrics() []string {
 }
 
 // Keys implements Product interface
-func (d DC) Keys() []string {
-	return []string{"directConnectId"}
+func (d DC) Keys() map[string]string {
+	return map[string]string{
+		"DirectConnectId": "directConnectId",
+	}
+}
+
+func mapInterfaceToString(mInterfaceList []map[string]interface{}) []map[string]string {
+	mStringList := []map[string]string{}
+	for _, mInterface := range mInterfaceList {
+		mString := map[string]string{}
+		for k, v := range mInterface {
+			if v != nil && !strings.Contains(strings.ToLower(k), "time") && fmt.Sprintf("%v", v) != "" {
+				valueType := reflect.TypeOf(v)
+				switch valueType.Kind() {
+				case reflect.String, reflect.Bool, reflect.Float32, reflect.Float64,
+					reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+					reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					mString[k] = fmt.Sprintf("%v", v)
+				case reflect.Slice:
+					val, ok := v.([]interface{})
+					if ok {
+						if len(val) > 0 {
+							mString[k] = fmt.Sprintf("%v", val[0])
+						}
+					}
+				case reflect.Map:
+					vJSON, err := json.Marshal(v)
+					if err != nil {
+						continue
+					}
+					mString[k] = string(vJSON)
+				}
+			}
+		}
+		mStringList = append(mStringList, mString)
+	}
+	return mStringList
 }
 
 // Discover implements Product interface
-func (d DC) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]interface{}, error) {
+func (d DC) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]string, error) {
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("%s.%s", "dc", endpoint)
 	client, err := dc.NewClient(crs, region, cpf)
@@ -69,7 +118,7 @@ func (d DC) Discover(crs *common.Credential, region, endpoint string, offset, li
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", d.Namespace(), err)
 	}
 
-	return uint64(*response.Response.TotalCount), instances, nil
+	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
 }
 
 // CVM defines Cloud Virtual Machine, see: https://intl.cloud.tencent.com/document/product/213
@@ -101,11 +150,14 @@ func (c CVM) Metrics() []string {
 	}
 }
 
-func (c CVM) Keys() []string {
-	return []string{"InstanceId"}
+// Keys implements Product interface
+func (c CVM) Keys() map[string]string {
+	return map[string]string{
+		"InstanceId": "InstanceId",
+	}
 }
 
-func (c CVM) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]interface{}, error) {
+func (c CVM) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]string, error) {
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("%s.%s", "cvm", endpoint)
 	client, err := cvm.NewClient(crs, region, cpf)
@@ -132,7 +184,7 @@ func (c CVM) Discover(crs *common.Credential, region, endpoint string, offset, l
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", c.Namespace(), err)
 	}
 
-	return uint64(*response.Response.TotalCount), instances, nil
+	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
 }
 
 // CDB defines TencentDB for MySQL, see: https://intl.cloud.tencent.com/document/product/236
@@ -167,12 +219,14 @@ func (c CDB) Metrics() []string {
 }
 
 // Keys implements Product interface
-func (c CDB) Keys() []string {
-	return []string{"InstanceId"}
+func (c CDB) Keys() map[string]string {
+	return map[string]string{
+		"InstanceId": "InstanceId",
+	}
 }
 
 // Discover implements Product interface
-func (c CDB) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]interface{}, error) {
+func (c CDB) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]string, error) {
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("%s.%s", "cdb", endpoint)
 	client, err := cdb.NewClient(crs, region, cpf)
@@ -200,7 +254,7 @@ func (c CDB) Discover(crs *common.Credential, region, endpoint string, offset, l
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", c.Namespace(), err)
 	}
 
-	return uint64(*response.Response.TotalCount), instances, nil
+	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
 }
 
 // Redis defines TencentDB for Redis, see: https://intl.cloud.tencent.com/document/product/239
@@ -228,12 +282,14 @@ func (r Redis) Metrics() []string {
 }
 
 // Keys implements Product interface
-func (r Redis) Keys() []string {
-	return []string{"instanceid"}
+func (r Redis) Keys() map[string]string {
+	return map[string]string{
+		"InstanceId": "instanceid",
+	}
 }
 
 // Discover implements Product interface
-func (r Redis) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]interface{}, error) {
+func (r Redis) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]string, error) {
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("%s.%s", "redis", endpoint)
 	client, err := redis.NewClient(crs, region, cpf)
@@ -260,7 +316,7 @@ func (r Redis) Discover(crs *common.Credential, region, endpoint string, offset,
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", r.Namespace(), err)
 	}
 
-	return uint64(*response.Response.TotalCount), instances, nil
+	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
 }
 
 // LBPublic defines Cloud Load Balancer, see: https://intl.cloud.tencent.com/document/product/214
@@ -284,12 +340,14 @@ func (l LBPublic) Metrics() []string {
 }
 
 // Keys implements Product interface
-func (l LBPublic) Keys() []string {
-	return []string{"vip"}
+func (l LBPublic) Keys() map[string]string {
+	return map[string]string{
+		"LoadBalancerVips": "vip",
+	}
 }
 
 // Discover implements Product interface
-func (l LBPublic) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]interface{}, error) {
+func (l LBPublic) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]string, error) {
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("%s.%s", "clb", endpoint)
 	client, err := clb.NewClient(crs, region, cpf)
@@ -316,8 +374,7 @@ func (l LBPublic) Discover(crs *common.Credential, region, endpoint string, offs
 	if err != nil {
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", l.Namespace(), err)
 	}
-
-	return uint64(*response.Response.TotalCount), instances, nil
+	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
 }
 
 // LBPrivate defines Cloud Load Balancer, see: https://intl.cloud.tencent.com/document/product/214
@@ -337,12 +394,15 @@ func (l *LBPrivate) Metrics() []string {
 }
 
 // Keys implements Product interface
-func (l LBPrivate) Keys() []string {
-	return []string{"vip", "vpcId"}
+func (l LBPrivate) Keys() map[string]string {
+	return map[string]string{
+		"LoadBalancerVips": "vip",
+		"VpcId":            "vpcId",
+	}
 }
 
 // Discover implements Product interface
-func (l *LBPrivate) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]interface{}, error) {
+func (l *LBPrivate) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]string, error) {
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("%s.%s", "clb", endpoint)
 	client, err := clb.NewClient(crs, region, cpf)
@@ -371,7 +431,7 @@ func (l *LBPrivate) Discover(crs *common.Credential, region, endpoint string, of
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", l.Namespace(), err)
 	}
 
-	return uint64(*response.Response.TotalCount), instances, nil
+	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
 }
 
 // CES defines Elasticsearch Service, see: https://intl.cloud.tencent.com/document/product/845
@@ -395,11 +455,13 @@ func (c *CES) Metrics() []string {
 }
 
 // Keys implements Product interface
-func (c CES) Keys() []string {
-	return []string{"uInstanceId"}
+func (c CES) Keys() map[string]string {
+	return map[string]string{
+		"InstanceId": "uInstanceId",
+	}
 }
 
-func (c *CES) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]interface{}, error) {
+func (c *CES) Discover(crs *common.Credential, region, endpoint string, offset, limit int64) (uint64, []map[string]string, error) {
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("%s.%s", "es", endpoint)
 	client, err := es.NewClient(crs, region, cpf)
@@ -426,5 +488,5 @@ func (c *CES) Discover(crs *common.Credential, region, endpoint string, offset, 
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", c.Namespace(), err)
 	}
 
-	return uint64(*response.Response.TotalCount), instances, nil
+	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
 }

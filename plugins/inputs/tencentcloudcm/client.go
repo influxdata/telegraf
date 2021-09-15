@@ -42,6 +42,7 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 					c.Log.Debugf("discover 0 instance for account:%s namespace:%s region:%s", account.Name, namespace.Name, region.RegionName)
 					continue
 				}
+				c.Log.Debugf("discover %v instance for account:%s namespace:%s region:%s", len(monitorInstances), account.Name, namespace.Name, region.RegionName)
 				for _, metric := range namespace.Metrics {
 					metricObjects = append(metricObjects, metricObject{
 						Metric:    metric,
