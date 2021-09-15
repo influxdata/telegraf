@@ -160,10 +160,10 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 		}
 	}
 	fields := map[string]interface{}{
-		"count":   slaveCount,
+		"count": slaveCount,
 	}
 	tags := map[string]string{
-		"bond":      bondName,
+		"bond": bondName,
 	}
 	acc.AddFields("bond_slave", fields, tags)
 
