@@ -98,11 +98,6 @@ func (s *Snmp) init() error {
 		return nil
 	}
 
-	// err := s.getMibsPath()
-	// if err != nil {
-	// 	return fmt.Errorf("could not get path %v", err)
-	// }
-
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
@@ -852,25 +847,12 @@ type snmpTableCache struct {
 	err     error
 }
 
-var snmpTableCaches map[string]snmpTableCache
-var snmpTableCachesLock sync.Mutex
-
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
 func snmpTable(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	snmpTableCachesLock.Lock()
-	if snmpTableCaches == nil {
-		snmpTableCaches = map[string]snmpTableCache{}
-	}
-
 	var stc snmpTableCache
-	var ok bool
-	if stc, ok = snmpTableCaches[oid]; !ok {
-		stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err = snmpTableCall(oid)
-		snmpTableCaches[oid] = stc
-	}
-
-	snmpTableCachesLock.Unlock()
+	stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err = snmpTableCall(oid)
+	println(stc.fields)
 	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
 }
 
@@ -910,8 +892,6 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	return mibName, oidNum, oidText, fields, err
 }
 
-// make this work using gosmi getNode
-// slice on :: begining is module and after is node - write a function
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	var out gosmi.SmiNode
 	var end string
