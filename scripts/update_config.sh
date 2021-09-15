@@ -17,4 +17,4 @@ if cmp -s "$config_path/telegraf.conf" "etc/telegraf.conf" && cmp -s "$config_pa
     echo "Both telegraf.conf and telegraf_windows.conf haven't changed"
 fi
 
-# curl -H "Authorization: Bearer $token" -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/updateconfig"
+curl -H "Authorization: Bearer $token" -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/updateConfig"
