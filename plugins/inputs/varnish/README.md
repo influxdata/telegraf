@@ -388,6 +388,10 @@ VCL are excluded from monitoring.
 
 By default, suffix after the last "." is a field name. The middle part splits into tags.
 
+### Requirements
+
+* Varnish 6.0.2+ is required (older versions do not support JSON output from CLI tools) 
+
 #### Examples:
 Varnish counter:
 ```
