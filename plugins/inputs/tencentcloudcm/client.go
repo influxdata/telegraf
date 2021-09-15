@@ -76,8 +76,6 @@ func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, 
 	request.Period = &period
 	request.StartTime = common.StringPtr(t.windowStart.Format(time.RFC3339))
 	request.EndTime = common.StringPtr(t.windowEnd.Format(time.RFC3339))
-	request.Instances = []*monitor.Instance{}
-	// Transform instances and dimensions from config to monitor struct
 	request.Instances = instances
 	return request
 }

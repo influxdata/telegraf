@@ -24,6 +24,7 @@ type TencentCloudCM struct {
 
 	RateLimit int             `toml:"ratelimit"`
 	Timeout   config.Duration `toml:"timeout"`
+	BatchSize int             `toml:"batch_size"`
 
 	DiscoveryInterval config.Duration `toml:"discovery_interval"`
 
@@ -116,6 +117,9 @@ func (t *TencentCloudCM) SampleConfig() string {
 	## Timeout for http requests made by the Tencent Cloud client.
 	# timeout = "5s"
   
+	## Batch instance size for intiating a GetMonitorData API call.
+	# batch_size = 100
+
 	## By default, Tencent Cloud CM Input plugin will automatically discover instances in specified regions
 	## This sets the interval for discover and update the instances discovered.
 	##
@@ -170,6 +174,9 @@ func (t *TencentCloudCM) Init() error {
 	}
 	if t.Delay <= 0 {
 		t.Delay = config.Duration(0 * time.Minute)
+	}
+	if t.BatchSize <= 0 {
+		t.BatchSize = 100
 	}
 
 	if len(t.Accounts) == 0 {
@@ -272,9 +279,8 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 					return
 				}
 
-				const size = 100
-				if len(m.MonitorInstances) >= size {
-					batch := m.MonitorInstances[:size]
+				if len(m.MonitorInstances) >= t.BatchSize {
+					batch := m.MonitorInstances[:t.BatchSize]
 					if len(batch) == 0 {
 						break
 					}
@@ -292,7 +298,7 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 					results = append(results, *result)
 					rLock.Unlock()
 
-					m.MonitorInstances = m.MonitorInstances[size:]
+					m.MonitorInstances = m.MonitorInstances[t.BatchSize:]
 				} else {
 					request := t.client.NewGetMonitorDataRequest(m.Namespace, m.Metric, m.MonitorInstances, *t)
 
@@ -364,6 +370,7 @@ func init() {
 		return &TencentCloudCM{
 			Endpoint:          "tencentcloudapi.com",
 			RateLimit:         20,
+			BatchSize:         100,
 			Timeout:           config.Duration(5 * time.Second),
 			DiscoveryInterval: config.Duration(5 * time.Minute),
 		}

@@ -39,6 +39,9 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
   ## Timeout for http requests made by the Tencent Cloud client.
   # timeout = "5s"
 
+	## Batch instance size for intiating a GetMonitorData API call.
+	# batch_size = 100
+
   ## By default, Tencent Cloud CM Input plugin will automatically discover instances in specified regions
   ## This sets the interval for discover and update the instances discovered.
   ##
