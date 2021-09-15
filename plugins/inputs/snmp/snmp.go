@@ -914,7 +914,6 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		}
 
 		oidNum = "." + out.RenderNumeric() + end
-
 	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
 		//handle mixed oid ex. .iso.2.3
 		s := strings.Split(oid, ".")
