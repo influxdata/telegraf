@@ -85,8 +85,6 @@ func newGelfWriter(cfg gelfConfig, dialer *net.Dialer) gelf {
 	switch scheme {
 	case "tcp":
 		g = &gelfTCP{gelfCommon: common}
-	case "udp":
-		fallthrough
 	default:
 		g = &gelfUDP{gelfCommon: common}
 	}
