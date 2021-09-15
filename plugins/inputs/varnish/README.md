@@ -21,7 +21,8 @@ adm_binary = "/usr/bin/varnishadm"
 ## Custom arguments for the varnishadm command 
 # adm_binary_args = [""] 
 
-## Metric version defaults to metric_version=1, use metric_version=2 for removal of nonactive vcls.
+## Metric version defaults to metric_version=1, use metric_version=2 for removal of nonactive vcls
+## Varnish 6.0.2 and newer is required for metric_version=2.
 metric_version = 1
 
 ## Additional regexps to override builtin conversion of varnish metrics into telegraf metrics. 
