@@ -484,18 +484,18 @@ workflows:
       - update-sample-config-win
           requires:
             - 'windows-package'
-          filters:
-            branches:
-              only:
-                - master
+          # filters:
+          #   branches:
+          #     only:
+          #       - master
       - 'update-config':
           requires:
             - 'generate-config-win'
             - 'generate-config'
-          filters:
-            branches:
-              only:
-                - master
+          # filters:
+          #   branches:
+          #     only:
+          #       - master
       - 'share-artifacts':
           requires:
             - 'i386-package'
