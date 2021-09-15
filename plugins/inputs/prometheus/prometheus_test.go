@@ -57,10 +57,9 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Log:             testutil.Logger{},
-		URLs:            []string{ts.URL},
-		URLTag:          "url",
-		HonorTimestamps: true,
+		Log:    testutil.Logger{},
+		URLs:   []string{ts.URL},
+		URLTag: "url",
 	}
 
 	var acc testutil.Accumulator
@@ -87,7 +86,6 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
 		URLTag:             "url",
-		HonorTimestamps:    true,
 	}
 	u, _ := url.Parse(ts.URL)
 	tsAddress := u.Hostname()
@@ -120,7 +118,6 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 		Log:                testutil.Logger{},
 		URLs:               []string{ts.URL},
 		KubernetesServices: []string{"http://random.telegraf.local:88/metrics"},
-		HonorTimestamps:    true,
 	}
 
 	var acc testutil.Accumulator
@@ -142,10 +139,9 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		URLs:            []string{ts.URL},
-		URLTag:          "url",
-		MetricVersion:   2,
-		HonorTimestamps: true,
+		URLs:          []string{ts.URL},
+		URLTag:        "url",
+		MetricVersion: 2,
 	}
 
 	var acc testutil.Accumulator
@@ -174,10 +170,9 @@ go_gc_duration_seconds_count 42
 	defer ts.Close()
 
 	p := &Prometheus{
-		URLs:            []string{ts.URL},
-		URLTag:          "",
-		MetricVersion:   2,
-		HonorTimestamps: true,
+		URLs:          []string{ts.URL},
+		URLTag:        "",
+		MetricVersion: 2,
 	}
 
 	var acc testutil.Accumulator
@@ -232,10 +227,9 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		URLs:            []string{ts.URL},
-		URLTag:          "url",
-		MetricVersion:   2,
-		HonorTimestamps: true,
+		URLs:          []string{ts.URL},
+		URLTag:        "url",
+		MetricVersion: 2,
 	}
 
 	var acc testutil.Accumulator
@@ -248,7 +242,7 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	assert.True(t, acc.HasTimestamp("prometheus", time.Unix(1490802350, 0)))
 }
 
-func TestPrometheusGeneratesMetricsWithHonorTimestampsIsFalse(t *testing.T) {
+func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintln(w, sampleTextFormat)
 		require.NoError(t, err)
@@ -259,7 +253,7 @@ func TestPrometheusGeneratesMetricsWithHonorTimestampsIsFalse(t *testing.T) {
 		Log:             testutil.Logger{},
 		URLs:            []string{ts.URL},
 		URLTag:          "url",
-		HonorTimestamps: false,
+		IgnoreTimestamp: true,
 	}
 
 	var acc testutil.Accumulator

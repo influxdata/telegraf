@@ -44,7 +44,7 @@ apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025
 
 func TestParseValidPrometheus(t *testing.T) {
 	// Gauge value
-	metrics, err := Parse([]byte(validUniqueGauge), http.Header{}, true)
+	metrics, err := Parse([]byte(validUniqueGauge), http.Header{}, false)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "cadvisor_version_info", metrics[0].Name())
@@ -60,7 +60,7 @@ func TestParseValidPrometheus(t *testing.T) {
 	}, metrics[0].Tags())
 
 	// Counter value
-	metrics, err = Parse([]byte(validUniqueCounter), http.Header{}, true)
+	metrics, err = Parse([]byte(validUniqueCounter), http.Header{}, false)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "get_token_fail_count", metrics[0].Name())
@@ -71,7 +71,7 @@ func TestParseValidPrometheus(t *testing.T) {
 
 	// Summary data
 	//SetDefaultTags(map[string]string{})
-	metrics, err = Parse([]byte(validUniqueSummary), http.Header{}, true)
+	metrics, err = Parse([]byte(validUniqueSummary), http.Header{}, false)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "http_request_duration_microseconds", metrics[0].Name())
@@ -85,7 +85,7 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t, map[string]string{"handler": "prometheus"}, metrics[0].Tags())
 
 	// histogram data
-	metrics, err = Parse([]byte(validUniqueHistogram), http.Header{}, true)
+	metrics, err = Parse([]byte(validUniqueHistogram), http.Header{}, false)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "apiserver_request_latencies", metrics[0].Name())
@@ -114,8 +114,8 @@ func TestMetricsWithTimestamp(t *testing.T) {
 test_counter{label="test"} 1 %d
 `, testTimeUnix)
 
-	// HonorTimestamps is true
-	metrics, err := Parse([]byte(metricsWithTimestamps), http.Header{}, true)
+	// IgnoreTimestamp is false
+	metrics, err := Parse([]byte(metricsWithTimestamps), http.Header{}, false)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "test_counter", metrics[0].Name())
@@ -127,8 +127,8 @@ test_counter{label="test"} 1 %d
 	}, metrics[0].Tags())
 	assert.Equal(t, testTime, metrics[0].Time().UTC())
 
-	// HonorTimestamps is false
-	metrics, err = Parse([]byte(metricsWithTimestamps), http.Header{}, false)
+	// IgnoreTimestamp is true
+	metrics, err = Parse([]byte(metricsWithTimestamps), http.Header{}, true)
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "test_counter", metrics[0].Name())

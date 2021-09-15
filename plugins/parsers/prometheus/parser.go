@@ -23,7 +23,7 @@ import (
 type Parser struct {
 	DefaultTags     map[string]string
 	Header          http.Header
-	HonorTimestamps bool
+	IgnoreTimestamp bool
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -180,7 +180,7 @@ func getNameAndValue(m *dto.Metric, metricName string) map[string]interface{} {
 
 func (p *Parser) GetTimestamp(m *dto.Metric, now time.Time) time.Time {
 	var t time.Time
-	if p.HonorTimestamps && m.TimestampMs != nil && *m.TimestampMs > 0 {
+	if !p.IgnoreTimestamp && m.TimestampMs != nil && *m.TimestampMs > 0 {
 		t = time.Unix(0, m.GetTimestampMs()*1000000)
 	} else {
 		t = now

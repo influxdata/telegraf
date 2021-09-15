@@ -306,7 +306,6 @@ func TestDefautTags(t *testing.T) {
 			"defaultTag":    "defaultTagValue",
 			"dockerVersion": "to_be_overriden",
 		},
-		HonorTimestamps: true,
 	}
 	metrics, err := parser.Parse([]byte(validUniqueGauge))
 
@@ -341,7 +340,7 @@ test_counter{label="test"} 1 %d
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
 }
 
-func TestMetricsWithoutHonorTimestamps(t *testing.T) {
+func TestMetricsWithoutIgnoreTimestamp(t *testing.T) {
 	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
 	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
 	metricsWithTimestamps := fmt.Sprintf(`
@@ -360,7 +359,7 @@ test_counter{label="test"} 1 %d
 		telegraf.Counter,
 	)
 
-	parser := Parser{HonorTimestamps: false}
+	parser := Parser{IgnoreTimestamp: true}
 	metric, _ := parser.ParseLine(metricsWithTimestamps)
 
 	testutil.RequireMetricEqual(t, expected, metric, testutil.IgnoreTime(), testutil.SortMetrics())
@@ -368,7 +367,7 @@ test_counter{label="test"} 1 %d
 }
 
 func parse(buf []byte) ([]telegraf.Metric, error) {
-	parser := Parser{HonorTimestamps: true}
+	parser := Parser{}
 	return parser.Parse(buf)
 }
 
@@ -466,7 +465,7 @@ func TestParserProtobufHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error reading body: %s", err)
 	}
-	parser := Parser{Header: resp.Header, HonorTimestamps: true}
+	parser := Parser{Header: resp.Header}
 	metrics, err := parser.Parse(body)
 	if err != nil {
 		t.Fatalf("error reading metrics for %s: %s", ts.URL, err)
