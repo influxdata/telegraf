@@ -18,17 +18,9 @@ testingObjects OBJECT IDENTIFIER ::= { iso 0 }
 testObjects OBJECT IDENTIFIER ::= { testingObjects 0 }
 hostnameone OBJECT IDENTIFIER ::= {testObjects 1 }
 hostname OBJECT IDENTIFIER ::= { hostnameone 1 }
-testingTable OBJECT IDENTIFIER ::= { testObjects 0 }
-testMIBObjects OBJECT IDENTIFIER ::= { testingTable 1 }
+testTable OBJECT IDENTIFIER ::= { testObjects 0 }
+testMIBObjects OBJECT IDENTIFIER ::= { testTable 1 }
 
-testTable OBJECT-TYPE
-    SYNTAX      SEQUENCE OF server
-    MAX-ACCESS  not-accessible
-    STATUS      current
-    DESCRIPTION
-            "A list of interface entries.  The number of entries is
-            given by the value of ifNumber."
-    ::= { testObjects 2 }
 
 server OBJECT-TYPE 
             SYNTAX Integer32

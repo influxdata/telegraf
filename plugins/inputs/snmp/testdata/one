@@ -1,0 +1,26 @@
+ONE DEFINITIONS ::= BEGIN
+
+IMPORTS
+        MODULE-IDENTITY, OBJECT-TYPE, Integer32  FROM fooImports;
+
+TestMIB MODULE-IDENTITY
+    LAST-UPDATED "2021090800Z"
+    ORGANIZATION "influx"
+    CONTACT-INFO
+        "EMail:  influx@email.com"
+    DESCRIPTION
+        "MIB module for testing snmp plugin
+        for telegraf
+        "
+    ::= { iso 1 }
+
+start OBJECT IDENTIFIER ::= { iso 1 }
+next OBJECT IDENTIFIER ::= { start 1 }
+one OBJECT IDENTIFIER ::= { next 1 }
+two OBJECT IDENTIFIER ::= { next 2 }
+three OBJECT IDENTIFIER ::= { next 3 }
+four OBJECT IDENTIFIER ::= { next 4 }
+five OBJECT IDENTIFIER ::= { next 5 }
+
+
+END

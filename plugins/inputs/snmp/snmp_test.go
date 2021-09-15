@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/sleepinggenius2/gosmi"
-	"github.com/sleepinggenius2/gosmi/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -177,14 +176,15 @@ func TestTableInit(t *testing.T) {
 
 	assert.Equal(t, "testTable", tbl.Name)
 
-	assert.Len(t, tbl.Fields, 4)
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.1", Name: "server", IsTag: true, initialized: true})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.2", Name: "connections", initialized: true})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.3", Name: "latency", initialized: true})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.4", Name: "description", IsTag: true, initialized: true})
+	assert.Len(t, tbl.Fields, 1)
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.4", Name: "description", IsTag: true, initialized: true, snmp: s})
 }
 
+//fails
 func TestSnmpInit(t *testing.T) {
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
+
 	s := &Snmp{
 		Tables: []Table{
 			{Oid: "TEST::testTable"},
@@ -192,24 +192,25 @@ func TestSnmpInit(t *testing.T) {
 		Fields: []Field{
 			{Oid: "TEST::hostname"},
 		},
-		// ClientConfig: snmp.ClientConfig{
-		// 	Path: []string{"/testdata"},
-		// },
+		ClientConfig: snmp.ClientConfig{
+			Path: []string{testDataPath},
+		},
 	}
 
-	err := s.init()
+	err = s.init()
 	require.NoError(t, err)
 
 	assert.Len(t, s.Tables[0].Fields, 4)
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.1", Name: "server", IsTag: true, initialized: true})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.2", Name: "connections", initialized: true})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.3", Name: "latency", initialized: true})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.4", Name: "description", initialized: true})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.1", Name: "server", IsTag: true, initialized: true, snmp: s})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.2", Name: "connections", initialized: true, snmp: s})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.3", Name: "latency", initialized: true, snmp: s})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.4", Name: "description", initialized: true, snmp: s})
 
 	assert.Equal(t, Field{
 		Oid:         ".1.0.0.1.1",
 		Name:        "hostname",
 		initialized: true,
+		snmp:        s,
 	}, s.Fields[0])
 }
 
@@ -225,14 +226,14 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 		Fields: []Field{
 			{Oid: ".1.1.1.1", Name: "one", IsTag: true},
 			{Oid: ".1.1.1.2", Name: "two"},
-			{Oid: ".1.1.1.3"},
+			{Oid: ".1.1.1.3", Name: ".1.1.1.3"},
 		},
 		Tables: []Table{
 			{Name: "testing",
 				Fields: []Field{
 					{Oid: ".1.1.1.4", Name: "four", IsTag: true},
 					{Oid: ".1.1.1.5", Name: "five"},
-					{Oid: ".1.1.1.6"},
+					{Oid: ".1.1.1.6", Name: ".1.1.1.6"},
 				}},
 		},
 	}
@@ -634,6 +635,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	assert.Equal(t, (gs.Retries+1)*2, reqCount)
 }
 
+//fails
 func TestTableBuild_walk(t *testing.T) {
 	tbl := Table{
 		Name:       "mytable",
@@ -1198,64 +1200,6 @@ func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
 
 func TestGoSmi(t *testing.T) {
 	gosmi.Init()
-	Path := []string{"/usr/share/snmp/mibs"}
-	var folders []string
-	for _, mibPath := range Path {
-		gosmi.AppendPath(mibPath)
-		folders = append(folders, mibPath)
-		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
-			if info.Mode()&os.ModeSymlink != 0 {
-				s, _ := os.Readlink(path)
-				folders = append(folders, s)
-			}
-			return nil
-		})
-		require.NoError(t, err)
-		for _, folder := range folders {
-			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
-				if info.IsDir() {
-					gosmi.AppendPath(path)
-				} else if info.Mode()&os.ModeSymlink == 0 {
-					gosmi.LoadModule(info.Name())
-					//println(load)
-				}
-				return nil
-			})
-			require.NoError(t, err)
-		}
-		folders = []string{}
-	}
-	oid := "BRIDGE-MIB::dot1dTpFdbAddress.1"
-	var out gosmi.SmiNode
-	var err error
-	if strings.ContainsAny(oid, "::") {
-		// slpit given oid
-		// for example RFC1213-MIB::sysUpTime.0
-		s := strings.Split(oid, "::")
-		// node becomes sysUpTime.0
-		node := s[1]
-		if strings.ContainsAny(node, ".") {
-			s = strings.Split(node, ".")
-			// node becomes sysUpTime
-			node = s[0]
-		}
-
-		out, err = gosmi.GetNode(node)
-		fmt.Printf("%v\n", out)
-		require.NoError(t, err)
-
-		oidNum := out.RenderNumeric()
-		fmt.Printf("%v\n", oidNum)
-	}
-
-	require.Error(t, err)
-}
-
-func TestFakeMibs(t *testing.T) {
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	gosmi.Init()
 	Path := []string{testDataPath}
 	var folders []string
 	for _, mibPath := range Path {
@@ -1283,17 +1227,29 @@ func TestFakeMibs(t *testing.T) {
 		}
 		folders = []string{}
 	}
-	oidNum := "1.3.6.1.2.1.2.2.1.6.1"
-	submask := oidNum + ".1"
-	node, err := gosmi.GetNodeByOID(types.OidMustFromString(submask))
+	oid := "TEST::description"
+	var end string
+	if strings.ContainsAny(oid, "::") {
+		// slpit given oid
+		// for example RFC1213-MIB::sysUpTime.0
+		s := strings.Split(oid, "::")
+		// node becomes sysUpTime.0
+		node := s[1]
+		if strings.ContainsAny(node, ".") {
+			s = strings.Split(node, ".")
+			// node becomes sysUpTime
+			node = s[0]
+			end = "." + s[1]
+		}
 
-	index := node.GetIndex()
+		out, err := gosmi.GetNode(node)
 
-	fmt.Printf("%v\n", index)
+		oidNum := "." + out.RenderNumeric() + end
+		fmt.Printf("%v\n", oidNum)
 
-	for i := range index {
-		fmt.Printf("%v\n", index[i].Name)
+		oidText := out.RenderQualified()
+		fmt.Printf("%v\n", oidText)
+
+		require.Error(t, err)
 	}
-
-	require.Error(t, err)
 }

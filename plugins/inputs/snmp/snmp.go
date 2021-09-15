@@ -98,6 +98,11 @@ func (s *Snmp) init() error {
 		return nil
 	}
 
+	// err := s.getMibsPath()
+	// if err != nil {
+	// 	return fmt.Errorf("could not get path %v", err)
+	// }
+
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
@@ -889,10 +894,6 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	}
 
 	index := node.GetIndex()
-
-	// if index == nil {
-	// 	return "", "", "", nil, fmt.Errorf("getting index")
-	// }
 
 	for i := range index {
 		tagOids[mibPrefix+index[i].Name] = struct{}{}
