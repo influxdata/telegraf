@@ -395,7 +395,7 @@ func NewXPathParserConfigs(metricName string, cfgs []XPathConfig) []xpath.Config
 	configs := make([]xpath.Config, 0, len(cfgs))
 	for _, cfg := range cfgs {
 		config := xpath.Config(cfg)
-		config.MetricName = metricName
+		config.MetricDefaultName = metricName
 		configs = append(configs, config)
 	}
 	return configs
