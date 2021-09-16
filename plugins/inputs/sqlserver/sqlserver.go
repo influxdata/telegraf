@@ -184,7 +184,7 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
 	} else if s.DatabaseType == typeAzureSQLPool {
 		queries["AzureSQLPoolResourceStats"] = Query{ScriptName: "AzureSQLPoolResourceStats", Script: sqlAzurePoolResourceStats, ResultByRow: false}
-		queries["AzureSQLPoolResourceGouvernance"] = Query{ScriptName: "AzureSQLPoolResourceGouvernance", Script: sqlAzurePoolResourceGouvernance, ResultByRow: false}
+		queries["AzureSQLPoolResourceGovernance"] = Query{ScriptName: "AzureSQLPoolResourceGovernance", Script: sqlAzurePoolResourceGovernance, ResultByRow: false}
 		queries["AzureSQLPoolDatabaseIO"] = Query{ScriptName: "AzureSQLPoolDatabaseIO", Script: sqlAzurePoolDatabaseIO, ResultByRow: false}
 		queries["AzureSQLPoolWaitStats"] = Query{ScriptName: "AzureSQLPoolWaitStats", Script: sqlAzurePoolWaitStats, ResultByRow: false}
 		queries["AzureSQLPoolMemoryClerks"] = Query{ScriptName: "AzureSQLPoolMemoryClerks", Script: sqlAzurePoolMemoryClerks, ResultByRow: false}

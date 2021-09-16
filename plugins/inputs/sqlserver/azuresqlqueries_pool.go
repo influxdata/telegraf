@@ -10,7 +10,7 @@ import (
 const sqlAzurePoolResourceStats = `
 `
 
-const sqlAzurePoolResourceGouvernance = `
+const sqlAzurePoolResourceGovernance = `
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
