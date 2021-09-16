@@ -19,23 +19,22 @@ func TestGather(t *testing.T) {
 	err := lvm.Gather(&acc)
 	require.NoError(t, err)
 
-	pvs_tags := map[string]string{
+	pvsTags := map[string]string{
 		"path":      "/dev/sdb",
 		"vol_group": "docker",
 	}
-	pvs_fields := map[string]interface{}{
+	pvsFields := map[string]interface{}{
 		"size":         uint64(128316342272),
 		"free":         uint64(3858759680),
 		"used":         uint64(124457582592),
 		"used_percent": 96.99277612525741,
 	}
-	acc.AssertContainsFields(t, "lvm_physical_vol", pvs_fields)
-	acc.AssertContainsTaggedFields(t, "lvm_physical_vol", pvs_fields, pvs_tags)
+	acc.AssertContainsTaggedFields(t, "lvm_physical_vol", pvsFields, pvsTags)
 
-	vgs_tags := map[string]string{
+	vgsTags := map[string]string{
 		"name": "docker",
 	}
-	vgs_fields := map[string]interface{}{
+	vgsFields := map[string]interface{}{
 		"size":                  uint64(128316342272),
 		"free":                  uint64(3858759680),
 		"used_percent":          96.99277612525741,
@@ -43,18 +42,18 @@ func TestGather(t *testing.T) {
 		"logical_volume_count":  uint64(1),
 		"snapshot_count":        uint64(0),
 	}
-	acc.AssertContainsTaggedFields(t, "lvm_vol_group", vgs_fields, vgs_tags)
+	acc.AssertContainsTaggedFields(t, "lvm_vol_group", vgsFields, vgsTags)
 
-	lvs_tags := map[string]string{
+	lvsTags := map[string]string{
 		"name":      "thinpool",
 		"vol_group": "docker",
 	}
-	lvs_fields := map[string]interface{}{
+	lvsFields := map[string]interface{}{
 		"size":             uint64(121899057152),
 		"data_percent":     0.36000001430511475,
 		"metadata_percent": 1.3300000429153442,
 	}
-	acc.AssertContainsTaggedFields(t, "lvm_logical_vol", lvs_fields, lvs_tags)
+	acc.AssertContainsTaggedFields(t, "lvm_logical_vol", lvsFields, lvsTags)
 }
 
 // Used as a helper function that mock the exec.Command call
@@ -130,12 +129,12 @@ func TestHelperProcess(_ *testing.T) {
 
 // test when no lvm devices exist
 func TestGatherNoLVM(t *testing.T) {
-	var no_lvm LVM = LVM{UseSudo: false}
+	var noLVM LVM = LVM{UseSudo: false}
 	var acc testutil.Accumulator
 
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommandNoLVM
-	err := no_lvm.Gather(&acc)
+	err := noLVM.Gather(&acc)
 	require.NoError(t, err)
 
 	acc.AssertDoesNotContainMeasurement(t, "lvm_physical_vol")

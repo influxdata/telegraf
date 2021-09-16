@@ -41,13 +41,9 @@ func (lvm *LVM) Init() error {
 func (lvm *LVM) Gather(acc telegraf.Accumulator) error {
 	if err := lvm.gatherPhysicalVolumes(acc); err != nil {
 		return err
-	}
-
-	if err := lvm.gatherVolumeGroups(acc); err != nil {
+	} else if err := lvm.gatherVolumeGroups(acc); err != nil {
 		return err
-	}
-
-	if err := lvm.gatherLogicalVolumes(acc); err != nil {
+	} else if err := lvm.gatherLogicalVolumes(acc); err != nil {
 		return err
 	}
 
@@ -60,7 +56,7 @@ func (lvm *LVM) gatherPhysicalVolumes(acc telegraf.Accumulator) error {
 		"--reportformat", "json", "--units", "b", "--nosuffix",
 		"-o", "pv_name,vg_name,pv_size,pv_free,pv_used",
 	}
-	out, err := lvm.exec(pvsCmd, args)
+	out, err := lvm.runCmd(pvsCmd, args)
 	if err != nil {
 		return err
 	}
@@ -92,7 +88,7 @@ func (lvm *LVM) gatherPhysicalVolumes(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		var usedPercent float64 = float64(used) / float64(size) * 100
+		usedPercent := float64(used) / float64(size) * 100
 
 		fields := map[string]interface{}{
 			"size":         size,
@@ -113,7 +109,7 @@ func (lvm *LVM) gatherVolumeGroups(acc telegraf.Accumulator) error {
 		"--reportformat", "json", "--units", "b", "--nosuffix",
 		"-o", "vg_name,pv_count,lv_count,snap_count,vg_size,vg_free",
 	}
-	out, err := lvm.exec(cmd, args)
+	out, err := lvm.runCmd(cmd, args)
 	if err != nil {
 		return err
 	}
@@ -152,7 +148,7 @@ func (lvm *LVM) gatherVolumeGroups(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		var usedPercent float64 = (float64(size) - float64(free)) / float64(size) * 100
+		usedPercent := (float64(size) - float64(free)) / float64(size) * 100
 
 		fields := map[string]interface{}{
 			"size":                  size,
@@ -175,7 +171,7 @@ func (lvm *LVM) gatherLogicalVolumes(acc telegraf.Accumulator) error {
 		"--reportformat", "json", "--units", "b", "--nosuffix",
 		"-o", "lv_name,vg_name,lv_size,data_percent,metadata_percent",
 	}
-	out, err := lvm.exec(cmd, args)
+	out, err := lvm.runCmd(cmd, args)
 	if err != nil {
 		return err
 	}
@@ -227,13 +223,13 @@ func (lvm *LVM) gatherLogicalVolumes(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (lvm *LVM) exec(cmd string, args []string) ([]byte, error) {
+func (lvm *LVM) runCmd(cmd string, args []string) ([]byte, error) {
 	execCmd := execCommand(cmd, args...)
 	if lvm.UseSudo {
 		execCmd = execCommand("sudo", append([]string{"-n", cmd}, args...)...)
 	}
 
-	out, err := internal.StdOutputTimeout(execCmd, time.Duration(5*time.Second))
+	out, err := internal.StdOutputTimeout(execCmd, 5*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to run command %s: %s - %s",
