@@ -29,7 +29,7 @@ func TestData(t *testing.T) {
 			test: "array_of_objects",
 		},
 		{
-			name: "test",
+			name: "Test having multiple JSON inputs",
 			test: "multiple_json_input",
 		},
 		{
