@@ -54,6 +54,7 @@ const defaultServer = "Server=.;app name=telegraf;log=1;"
 const (
 	typeAzureSQLDB              = "AzureSQLDB"
 	typeAzureSQLManagedInstance = "AzureSQLManagedInstance"
+	typeAzureSQLPool            = "AzureSQLPool"
 	typeSQLServer               = "SQLServer"
 )
 
@@ -156,9 +157,10 @@ func initQueries(s *SQLServer) error {
 
 	// New config option database_type
 	// To prevent query definition conflicts
-	// Constant defintiions for type "AzureSQLDB" start with sqlAzureDB
-	// Constant defintiions for type "AzureSQLManagedInstance" start with sqlAzureMI
-	// Constant defintiions for type "SQLServer" start with sqlServer
+	// Constant definitions for type "AzureSQLDB" start with sqlAzureDB
+	// Constant definitions for type "AzureSQLManagedInstance" start with sqlAzureMI
+	// Constant definitions for type "AzureSQLPool" start with sqlAzurePool
+	// Constant definitions for type "SQLServer" start with sqlServer
 	if s.DatabaseType == typeAzureSQLDB {
 		queries["AzureSQLDBResourceStats"] = Query{ScriptName: "AzureSQLDBResourceStats", Script: sqlAzureDBResourceStats, ResultByRow: false}
 		queries["AzureSQLDBResourceGovernance"] = Query{ScriptName: "AzureSQLDBResourceGovernance", Script: sqlAzureDBResourceGovernance, ResultByRow: false}
@@ -180,6 +182,14 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMIPerformanceCounters"] = Query{ScriptName: "AzureSQLMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLMIRequests"] = Query{ScriptName: "AzureSQLMIRequests", Script: sqlAzureMIRequests, ResultByRow: false}
 		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
+	} else if s.DatabaseType == typeAzureSQLPool {
+		queries["AzureSQLPoolResourceStats"] = Query{ScriptName: "AzureSQLPoolResourceStats", Script: sqlAzurePoolResourceStats, ResultByRow: false}
+		queries["AzureSQLPoolResourceGouvernance"] = Query{ScriptName: "AzureSQLPoolResourceGouvernance", Script: sqlAzurePoolResourceGouvernance, ResultByRow: false}
+		queries["AzureSQLPoolDatabaseIO"] = Query{ScriptName: "AzureSQLPoolDatabaseIO", Script: sqlAzurePoolDatabaseIO, ResultByRow: false}
+		queries["AzureSQLPoolWaitStats"] = Query{ScriptName: "AzureSQLPoolWaitStats", Script: sqlAzurePoolWaitStats, ResultByRow: false}
+		queries["AzureSQLPoolMemoryClerks"] = Query{ScriptName: "AzureSQLPoolMemoryClerks", Script: sqlAzurePoolMemoryClerks, ResultByRow: false}
+		queries["AzureSQLPoolPerformanceCounters"] = Query{ScriptName: "AzureSQLPoolPerformanceCounters", Script: sqlAzurePoolPerformanceCounters, ResultByRow: false}
+		queries["AzureSQLPoolSchedulers"] = Query{ScriptName: "AzureSQLPoolSchedulers", Script: sqlAzurePoolSchedulers, ResultByRow: false}
 	} else if s.DatabaseType == typeSQLServer { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
 		queries["SQLServerWaitStatsCategorized"] = Query{ScriptName: "SQLServerWaitStatsCategorized", Script: sqlServerWaitStatsCategorized, ResultByRow: false}
