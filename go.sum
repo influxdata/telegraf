@@ -1441,8 +1441,6 @@ github.com/sensu/sensu-go/api/core/v2 v2.9.0 h1:NanHMIWbrHP/L4Ge0V1x2+0G9bxFHpvh
 github.com/sensu/sensu-go/api/core/v2 v2.9.0/go.mod h1:QcgxKxydmScE66hLBTzbFhhiPSR/JHqUjNi/+Lelh6E=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/shirou/gopsutil v2.18.10+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
-github.com/shirou/gopsutil v3.21.6-0.20210624221800-cb512c850043+incompatible h1:Rucj22V2P6ktUBqN5auqjyxRHLXqNX6CteXBXifRrgY=
-github.com/shirou/gopsutil v3.21.6-0.20210624221800-cb512c850043+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/shirou/gopsutil v3.21.8+incompatible h1:sh0foI8tMRlCidUJR+KzqWYWxrkuuPIGiO6Vp+KXdCU=
 github.com/shirou/gopsutil v3.21.8+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4/go.mod h1:qsXQc7+bwAM3Q1u/4XEfrquwF8Lw7D7y5cD8CuHnfIc=
