@@ -180,7 +180,7 @@ require (
 	github.com/mdlayher/genetlink v1.0.0 // indirect
 	github.com/mdlayher/netlink v1.1.0 // indirect
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
-	github.com/miekg/dns v1.1.31
+	github.com/miekg/dns v1.1.43
 	github.com/minio/highwayhash v1.0.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.2.2 // indirect
