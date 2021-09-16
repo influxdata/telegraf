@@ -67,12 +67,16 @@ type JSONObject struct {
 }
 
 type MetricNode struct {
-	ParentIndex       int
-	OutputName        string
-	SetName           string
-	Tag               bool
-	DesiredType       string      // Can be "int", "uint", "float", "bool", "string"
-	IncludeCollection *PathResult // If set to true, it should be auto included
+	ParentIndex int
+	OutputName  string
+	SetName     string
+	Tag         bool
+	DesiredType string // Can be "int", "uint", "float", "bool", "string"
+	/*
+		IncludeCollection is only used when processing objects and is responsible for containing the gjson results
+		found by the gjson paths provided in the FieldPaths and TagPaths configs.
+	*/
+	IncludeCollection *PathResult
 
 	Metric telegraf.Metric
 	gjson.Result
@@ -339,9 +343,11 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 
 				if len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0 {
 					var pathResult *PathResult
+					// When IncludeCollection isn't nil, that means the current result is included in the collection.
 					if result.IncludeCollection != nil {
 						pathResult = result.IncludeCollection
 					} else {
+						// Verify that the result should be included based on the results of fieldpaths and tag paths
 						pathResult = p.existsInpathResults(result.ParentIndex, result.Raw)
 					}
 					if pathResult == nil {
@@ -350,11 +356,9 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 					if pathResult.tag {
 						result.Tag = true
 					}
-
 					if !pathResult.tag {
 						desiredType = pathResult.Type
 					}
-
 					if pathResult.Rename != "" {
 						outputName = pathResult.Rename
 					}
@@ -408,7 +412,6 @@ func (p *Parser) processObjects(objects []JSONObject) ([]telegraf.Metric, error)
 		}
 		result := gjson.GetBytes(p.InputJSON, c.Path)
 
-		// hastag doesn't return index! idea: replace all hastags with index, and find lenght of array
 		scopedJSON := []byte(result.Raw)
 		for _, f := range c.FieldPaths {
 			var r PathResult
