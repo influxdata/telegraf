@@ -21,4 +21,4 @@
 [profiling]: /docs/PROFILING.md
 [winsvc]: /docs/WINDOWS_SERVICE.md
 [faq]: /docs/FAQ.md
-[nightlies]: /docs/NIGHLIES.md
+[nightlies]: /docs/NIGHTLIES.md
