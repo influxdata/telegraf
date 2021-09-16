@@ -110,6 +110,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/memcached"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mesos"
 	_ "github.com/influxdata/telegraf/plugins/inputs/minecraft"
+	_ "github.com/influxdata/telegraf/plugins/inputs/mock"
 	_ "github.com/influxdata/telegraf/plugins/inputs/modbus"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mongodb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/monit"
