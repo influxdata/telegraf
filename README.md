@@ -82,6 +82,17 @@ version.
 
 [Nightly](/docs/NIGHTLIES.md) builds are available, generated from the master branch.
 
+### 3rd Party Builds
+
+Builds for other platforms or package formats are provided by members of the Telegraf community. These packages are not built, tested or supported by the Telegraf project or InfluxData, we make no guarantees that they will work. Please get in touch with the package author if you need support.
+
+* Windows
+  * [Chocolatey](https://chocolatey.org/packages/telegraf) by [ripclawffb](https://chocolatey.org/profiles/ripclawffb)
+  * [Scoop](https://github.com/ScoopInstaller/Main/blob/master/bucket/telegraf.json)
+* Linux
+  * [Snap](https://snapcraft.io/telegraf) by Laurent Sesquès (sajoupa)
+
+
 ## How to use it:
 
 See usage with:
