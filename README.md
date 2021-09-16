@@ -80,7 +80,7 @@ version.
 
 ### Nightly Builds
 
-[Nightly])(/docs/NIGHTLIES.md) builds are available, generated from the master branch.
+[Nightly](/docs/NIGHTLIES.md) builds are available, generated from the master branch.
 
 ## How to use it:
 
