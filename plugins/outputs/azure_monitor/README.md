@@ -40,7 +40,7 @@ written as a dimension on each Azure Monitor metric.
   ## The Azure Resource ID against which metric will be logged, e.g.
   ##   ex: resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   # resource_id = ""
-  
+
   ## Optionally, if in Azure US Government, China, or other sovereign
   ## cloud environment, set the appropriate REST endpoint for receiving
   ## metrics. (Note: region may be  unused in this context)
@@ -76,7 +76,7 @@ preferred authentication methods are different from the *order* in which each
 authentication is checked. Here are the preferred authentication methods:
 
 1. Managed Service Identity (MSI) token
-    - This is the prefered authentication method. Telegraf will automatically
+    - This is the preferred authentication method. Telegraf will automatically
       authenticate using this method when running on Azure VMs.
 2. AAD Application Tokens (Service Principals)
     - Primarily useful if Telegraf is writing metrics for other resources.
@@ -132,7 +132,7 @@ authenticate when running Telegraf on Azure VMs.
 Azure Monitor only accepts values with a numeric type. The plugin will drop
 fields with a string type by default. The plugin can set all string type fields
 as extra dimensions in the Azure Monitor custom metric by setting the
-configuration option `strings_as_dimensions` to `true`. 
+configuration option `strings_as_dimensions` to `true`.
 
 Keep in mind, Azure Monitor allows a maximum of 10 dimensions per metric. The
 plugin will deterministically dropped any dimensions that exceed the 10

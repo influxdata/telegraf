@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/collector/model/otlpgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	// This causes the gRPC library to register gzip compression.
+	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -158,6 +160,14 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	md := batch.GetMetrics()
 	if md.ResourceMetrics().Len() == 0 {
 		return nil
+	}
+
+	if len(o.Attributes) > 0 {
+		for i := 0; i < md.ResourceMetrics().Len(); i++ {
+			for k, v := range o.Attributes {
+				md.ResourceMetrics().At(i).Resource().Attributes().UpsertString(k, v)
+			}
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.Timeout))

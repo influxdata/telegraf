@@ -406,10 +406,10 @@ func Connect(o *OpcUA) error {
 		o.state = Connecting
 
 		if o.client != nil {
-			if err := o.client.CloseSession(); err != nil {
+			if err := o.client.Close(); err != nil {
 				// Only log the error but to not bail-out here as this prevents
 				// reconnections for multiple parties (see e.g. #9523).
-				o.Log.Errorf("Closing session failed: %v", err)
+				o.Log.Errorf("Closing connection failed: %v", err)
 			}
 		}
 
@@ -445,8 +445,10 @@ func Connect(o *OpcUA) error {
 }
 
 func (o *OpcUA) setupOptions() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.ConnectTimeout))
+	defer cancel()
 	// Get a list of the endpoints for our target server
-	endpoints, err := opcua.GetEndpoints(o.Endpoint)
+	endpoints, err := opcua.GetEndpoints(ctx, o.Endpoint)
 	if err != nil {
 		return err
 	}
