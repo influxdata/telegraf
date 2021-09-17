@@ -47,6 +47,7 @@ type InfluxDBListener struct {
 
 	acc telegraf.Accumulator
 
+	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
 	writesServed    selfstat.Stat
 	queriesServed   selfstat.Stat
@@ -127,6 +128,7 @@ func (h *InfluxDBListener) Init() error {
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
+	h.bytesRecv = selfstat.Register("influxdb_listener", "bytes_received", tags)
 	h.requestsServed = selfstat.Register("influxdb_listener", "requests_served", tags)
 	h.writesServed = selfstat.Register("influxdb_listener", "writes_served", tags)
 	h.queriesServed = selfstat.Register("influxdb_listener", "queries_served", tags)
@@ -292,6 +294,10 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		if precisionStr != "" {
 			precision := getPrecisionMultiplier(precisionStr)
 			parser.SetTimePrecision(precision)
+		}
+
+		if req.ContentLength >= 0 {
+			h.bytesRecv.Incr(req.ContentLength)
 		}
 
 		var m telegraf.Metric
