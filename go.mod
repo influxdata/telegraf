@@ -398,6 +398,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.2 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/jsipprell/keyctl v1.0.0 // indirect
 	github.com/keybase/go-keychain v0.0.0-20190712205309-48d3d31d256d // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
@@ -422,3 +423,7 @@ replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemet
 
 // replaced due to open PR updating protobuf https://github.com/riemann/riemann-go-client/pull/27
 replace github.com/riemann/riemann-go-client => github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754
+
+replace github.com/99designs/keyring v1.1.6 => github.com/DocLambda/keyring v1.1.7-0.20210917161040-3689e23c5b4d
+
+replace github.com/jsipprell/keyctl v1.0.0 => github.com/DocLambda/keyctl v1.0.1-0.20210917150535-0dde376d07d0
