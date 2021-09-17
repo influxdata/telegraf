@@ -278,7 +278,7 @@ func (c *CloudWatch) initializeCloudWatch() error {
 		return err
 	}
 
-	cfg, err := c.CredentialConfig.CredentialsV2()
+	cfg, err := c.CredentialConfig.Credentials()
 	if err != nil {
 		return err
 	}

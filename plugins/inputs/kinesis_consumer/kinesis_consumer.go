@@ -153,7 +153,7 @@ func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
-	cfg, err := k.CredentialConfig.CredentialsV2()
+	cfg, err := k.CredentialConfig.Credentials()
 	if err != nil {
 		return err
 	}

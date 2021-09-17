@@ -131,7 +131,7 @@ func (k *KinesisOutput) Connect() error {
 		k.Log.Infof("Establishing a connection to Kinesis in %s", k.Region)
 	}
 
-	cfg, err := k.CredentialConfig.CredentialsV2()
+	cfg, err := k.CredentialConfig.Credentials()
 	if err != nil {
 		return err
 	}

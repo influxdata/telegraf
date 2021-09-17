@@ -7,11 +7,6 @@ import (
 	credentialsV2 "github.com/aws/aws-sdk-go-v2/credentials"
 	stscredsV2 "github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 type CredentialConfig struct {
@@ -27,57 +22,14 @@ type CredentialConfig struct {
 	WebIdentityTokenFile string `toml:"web_identity_token_file"`
 }
 
-func (c *CredentialConfig) Credentials() (client.ConfigProvider, error) {
+func (c *CredentialConfig) Credentials() (awsV2.Config, error) {
 	if c.RoleARN != "" {
 		return c.assumeCredentials()
 	}
-
 	return c.rootCredentials()
 }
 
-func (c *CredentialConfig) rootCredentials() (client.ConfigProvider, error) {
-	config := &aws.Config{
-		Region: aws.String(c.Region),
-	}
-	if c.EndpointURL != "" {
-		config.Endpoint = &c.EndpointURL
-	}
-	if c.AccessKey != "" || c.SecretKey != "" {
-		config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, c.Token)
-	} else if c.Profile != "" || c.Filename != "" {
-		config.Credentials = credentials.NewSharedCredentials(c.Filename, c.Profile)
-	}
-
-	return session.NewSession(config)
-}
-
-func (c *CredentialConfig) assumeCredentials() (client.ConfigProvider, error) {
-	rootCredentials, err := c.rootCredentials()
-	if err != nil {
-		return nil, err
-	}
-	config := &aws.Config{
-		Region:   aws.String(c.Region),
-		Endpoint: &c.EndpointURL,
-	}
-
-	if c.WebIdentityTokenFile != "" {
-		config.Credentials = stscreds.NewWebIdentityCredentials(rootCredentials, c.RoleARN, c.RoleSessionName, c.WebIdentityTokenFile)
-	} else {
-		config.Credentials = stscreds.NewCredentials(rootCredentials, c.RoleARN)
-	}
-
-	return session.NewSession(config)
-}
-
-func (c *CredentialConfig) CredentialsV2() (awsV2.Config, error) {
-	if c.RoleARN != "" {
-		return c.assumeCredentialsV2()
-	}
-	return c.rootCredentialsV2()
-}
-
-func (c *CredentialConfig) rootCredentialsV2() (awsV2.Config, error) {
+func (c *CredentialConfig) rootCredentials() (awsV2.Config, error) {
 	options := []func(*configV2.LoadOptions) error{
 		configV2.WithRegion(c.Region),
 	}
@@ -108,8 +60,8 @@ func (c *CredentialConfig) rootCredentialsV2() (awsV2.Config, error) {
 	return configV2.LoadDefaultConfig(context.Background(), options...)
 }
 
-func (c *CredentialConfig) assumeCredentialsV2() (awsV2.Config, error) {
-	rootCredentials, err := c.rootCredentialsV2()
+func (c *CredentialConfig) assumeCredentials() (awsV2.Config, error) {
+	rootCredentials, err := c.rootCredentials()
 	if err != nil {
 		return awsV2.Config{}, err
 	}
