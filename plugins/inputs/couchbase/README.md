@@ -25,7 +25,7 @@ This plugin gets metrics for each Couchbase node, as well as detailed metrics fo
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification (defaults to true)
+  ## Use TLS but skip chain & host verification (defaults to false)
   ## If set to false, tls_cert and tls_key are required
   # insecure_skip_verify = false
 ```
