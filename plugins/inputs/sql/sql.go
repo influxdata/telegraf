@@ -197,7 +197,7 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *dbsql
 
 type SQL struct {
 	Driver             string          `toml:"driver"`
-	Dsn                string          `toml:"dsn"`
+	Dsn                string          `toml:"dsn" telegraf:"secret"`
 	Timeout            config.Duration `toml:"timeout"`
 	MaxIdleTime        config.Duration `toml:"connection_max_idle_time"`
 	MaxLifetime        config.Duration `toml:"connection_max_life_time"`
