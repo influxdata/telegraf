@@ -210,26 +210,9 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	var err error
-	// providing no "config" flag should load default config
-	if len(fConfigs) == 0 {
-		err = c.LoadConfig("")
-		if err != nil {
-			return err
-		}
-	}
-	for _, fConfig := range fConfigs {
-		err = c.LoadConfig(fConfig)
-		if err != nil {
-			return err
-		}
-	}
 
-	for _, fConfigDirectory := range fConfigDirs {
-		err = c.LoadDirectory(fConfigDirectory)
-		if err != nil {
-			return err
-		}
+	if err := c.LoadAllConfigs(fConfigs, fConfigDirs); err != nil {
+		return err
 	}
 
 	if !*fTest && len(c.Outputs) == 0 {
@@ -429,6 +412,75 @@ func main() {
 				processorFilters,
 			)
 			return
+		case "secret":
+			if len(args) < 2 {
+				log.Fatal("E! Not enough arguments!")
+			}
+
+			// Load the config file to get the secret store
+			c := config.NewConfig()
+			if err := c.LoadAllConfigs(fConfigs, fConfigDirs); err != nil {
+				log.Fatalf("E! Loading config failed: %v", err)
+			}
+
+			if c.SecretStore == nil {
+				log.Fatal("E! No secretstore configured in config!")
+			}
+
+			switch args[1] {
+			case "list":
+				keys, err := c.SecretStore.List()
+				if err != nil {
+					log.Fatalf("E! Listing keys failed: %v", err)
+				}
+				fmt.Println("Known secrets:")
+				for _, k := range keys {
+					fmt.Printf("    %s\n", k)
+				}
+				return
+			case "get":
+				keys := args[2:]
+				if len(args) < 3 {
+					var err error
+					keys, err = c.SecretStore.List()
+					if err != nil {
+						log.Fatalf("E! Listing keys failed: %v", err)
+					}
+				}
+				sort.Strings(keys)
+				if len(keys) > 1 {
+					fmt.Println("+" + strings.Repeat("-", 32) + "+" + strings.Repeat("-", 32) + "+")
+					fmt.Printf("| %-30s | %-30s |\n", "key", "secret")
+					fmt.Println("+" + strings.Repeat("-", 32) + "+" + strings.Repeat("-", 32) + "+")
+				}
+				for _, k := range keys {
+					v, err := c.SecretStore.Get(k)
+					if err != nil {
+						log.Fatalf("E! Getting key %q failed: %v", k, err)
+					}
+					if len(keys) > 1 {
+						fmt.Printf("| %-30s | %-30s |\n", k, v)
+					} else {
+						fmt.Println(v)
+					}
+				}
+				if len(keys) > 1 {
+					fmt.Println("+" + strings.Repeat("-", 32) + "+" + strings.Repeat("-", 32) + "+")
+				}
+				return
+			case "set":
+				if len(args) < 4 {
+					log.Fatal("E! Invalid number of arguments!")
+				}
+				key := args[2]
+				value := args[3]
+				if err := c.SecretStore.Set(key, value); err != nil {
+					log.Fatalf("E! Setting key %q failed: %v", key, err)
+				}
+				return
+			default:
+				log.Fatal("E! Invalid operation %q!", args[1])
+			}
 		}
 	}
 

@@ -11,8 +11,13 @@ Usage:
 
 The commands & flags are:
 
-  config              print out full sample configuration to stdout
-  version             print the version to stdout
+  config                         print out full sample configuration to stdout
+  secret list                    list all keys stored in the secretstore on stdout
+  secret get [key [...]]         print secret(s) for the given keys to stdout.
+                                 If no key is given, print secrets for all keys.
+  secret set <key> <value>       store the given secret for a key in the secretstore.
+                                 If the key already exists, it will be overwritten.
+  version                        print the version to stdout
 
   --aggregator-filter <filter>   filter the aggregators to enable, separator is :
   --config <file>                configuration file to load
