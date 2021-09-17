@@ -26,25 +26,25 @@ func (s *SecretStore) Init() error {
 	}
 
 	// Determine the service type and map it to the implementation configuration
-	url, err := url.Parse(s.Service)
+	u, err := url.Parse(s.Service)
 	if err != nil {
 		return fmt.Errorf("parsing service failed: %v", err)
 	}
 
 	// Determine the additional arguments
-	path := strings.TrimPrefix(strings.TrimPrefix(s.Service, url.Scheme+":"), "//")
+	path := strings.TrimPrefix(strings.TrimPrefix(s.Service, u.Scheme+":"), "//")
 	if path == "" {
 		path = "telegraf"
 	}
 
-	switch url.Scheme {
+	switch u.Scheme {
 	case "file", "kwallet", "os", "secret-service":
-		s.store, err = NewKeyringStore(url.Scheme, path)
+		s.store, err = NewKeyringStore(u.Scheme, path)
 		if err != nil {
-			return fmt.Errorf("creating keyring store for service %q failed: %v", url.Scheme, err)
+			return fmt.Errorf("creating keyring store for service %q failed: %v", u.Scheme, err)
 		}
 	default:
-		return fmt.Errorf("unknown service %q", url.Scheme)
+		return fmt.Errorf("unknown service %q", u.Scheme)
 	}
 
 	return nil

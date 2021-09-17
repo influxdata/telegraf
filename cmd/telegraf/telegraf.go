@@ -433,8 +433,10 @@ func main() {
 				if err != nil {
 					log.Fatalf("E! Listing keys failed: %v", err)
 				}
+				//nolint:revive  // If print fails we will notice
 				fmt.Println("Known secrets:")
 				for _, k := range keys {
+					//nolint:revive  // If print fails we will notice
 					fmt.Printf("    %s\n", k)
 				}
 				return
@@ -449,8 +451,11 @@ func main() {
 				}
 				sort.Strings(keys)
 				if len(keys) > 1 {
+					//nolint:revive  // If print fails we will notice
 					fmt.Println("+" + strings.Repeat("-", 32) + "+" + strings.Repeat("-", 32) + "+")
+					//nolint:revive  // If print fails we will notice
 					fmt.Printf("| %-30s | %-30s |\n", "key", "secret")
+					//nolint:revive  // If print fails we will notice
 					fmt.Println("+" + strings.Repeat("-", 32) + "+" + strings.Repeat("-", 32) + "+")
 				}
 				for _, k := range keys {
@@ -459,12 +464,15 @@ func main() {
 						log.Fatalf("E! Getting key %q failed: %v", k, err)
 					}
 					if len(keys) > 1 {
+						//nolint:revive  // If print fails we will notice
 						fmt.Printf("| %-30s | %-30s |\n", k, v)
 					} else {
+						//nolint:revive  // If print fails we will notice
 						fmt.Println(v)
 					}
 				}
 				if len(keys) > 1 {
+					//nolint:revive  // If print fails we will notice
 					fmt.Println("+" + strings.Repeat("-", 32) + "+" + strings.Repeat("-", 32) + "+")
 				}
 				return

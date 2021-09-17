@@ -686,15 +686,18 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 
 func printFilteredGlobalSections(sectionFilters []string) {
 	if sliceContains("global_tags", sectionFilters) {
+		//nolint:revive  // If print fails we will notice
 		fmt.Print(globalTagsConfig)
 	}
 
 	if sliceContains("agent", sectionFilters) {
+		//nolint:revive  // If print fails we will notice
 		fmt.Print(agentConfig)
 	}
 
 	if sliceContains("secretstore", sectionFilters) {
-		fmt.Printf(secretStoreConfig)
+		//nolint:revive  // If print fails we will notice
+		fmt.Println(secretStoreConfig)
 	}
 }
 
