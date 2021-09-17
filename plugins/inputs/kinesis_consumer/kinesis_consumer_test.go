@@ -2,7 +2,8 @@ package kinesis_consumer
 
 import (
 	"encoding/base64"
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	consumer "github.com/harlow/kinesis-consumer"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -53,7 +54,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           notZippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -69,7 +75,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           notZippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -85,7 +96,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           notZippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -100,7 +116,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records: make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: notZippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           notZippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -116,7 +137,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: gzippedBytes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           gzippedBytes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
@@ -132,7 +158,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 				records:         make(map[telegraf.TrackingID]string),
 			},
 			args: args{
-				r: &consumer.Record{Data: zlibBytpes, SequenceNumber: aws.String("anything")},
+				r: &consumer.Record{
+					Record: types.Record{
+						Data:           zlibBytpes,
+						SequenceNumber: aws.String("anything"),
+					},
+				},
 			},
 			wantErr: false,
 			expected: expected{
