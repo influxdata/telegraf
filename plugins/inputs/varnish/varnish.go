@@ -362,22 +362,16 @@ func getActiveVCLJson(out io.Reader) (string, error) {
 		return "", err
 	}
 
-	//check vcl.list output
-	if jsonOut[0].(float64) != 2 {
-		return "", fmt.Errorf("unsupported varnishadm format %v", jsonOut[0])
-	}
-
-	command := jsonOut[1].([]interface{})
-
-	if command[0] != "vcl.list" {
-		return "", fmt.Errorf("unsupported varnishadm command %v", jsonOut[1])
-	}
-	for _, s := range jsonOut {
-		switch s.(type) {
+	for _, item := range jsonOut {
+		switch s := item.(type) {
+		case []interface{}:
+			command := s[0]
+			if command != "vcl.list" {
+				return "", fmt.Errorf("unsupported varnishadm command %v", jsonOut[1])
+			}
 		case map[string]interface{}:
-			vclStruct := s.(map[string]interface{})
-			if vclStruct["status"] == "active" {
-				return vclStruct["name"].(string), nil
+			if s["status"] == "active" {
+				return s["name"].(string), nil
 			}
 		default:
 			//ignore

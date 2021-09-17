@@ -439,7 +439,7 @@ Default regexps list can be extended in telegraf config like:
     regexps = ['^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<my_tag>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
 ```
 
- ### Custom arguments
+### Custom arguments
 You can change the default binary location and custom arguments for `varnishstat` and `varnishadm` command output. 
 This is useful when running varnish in docker or executing using varnish by SSH on a different machine.
 
