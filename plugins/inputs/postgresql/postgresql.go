@@ -17,7 +17,7 @@ type Postgresql struct {
 	Service
 	Databases          []string
 	IgnoredDatabases   []string
-	PreparedStatements bool `toml:"prepared-statements"`
+	PreparedStatements bool `toml:"prepared_statements"`
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
