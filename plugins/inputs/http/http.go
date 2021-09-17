@@ -24,11 +24,11 @@ type HTTP struct {
 	Headers map[string]string `toml:"headers"`
 
 	// HTTP Basic Auth Credentials
-	Username string `toml:"username"`
-	Password string `toml:"password"`
+	Username string `toml:"username" telegraf:"secret"`
+	Password string `toml:"password" telegraf:"secret"`
 
 	// Absolute path to file with Bearer token
-	BearerToken string `toml:"bearer_token"`
+	BearerToken string `toml:"bearer_token" telegraf:"secret"`
 
 	SuccessStatusCodes []int `toml:"success_status_codes"`
 
