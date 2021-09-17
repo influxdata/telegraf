@@ -31,14 +31,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/secretstore"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
 
 var (
 	// Default sections
-	sectionDefaults = []string{"global_tags", "agent", "outputs",
-		"processors", "aggregators", "inputs"}
+	sectionDefaults = []string{"global_tags", "agent", "secretstore",
+		"outputs", "processors", "aggregators", "inputs"}
 
 	// Default input plugins
 	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
@@ -59,6 +60,9 @@ var (
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
+
+	// secretPattern is a regex to extract references to secrets stored in a secret-store.
+	secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -74,6 +78,8 @@ type Config struct {
 	OutputFilters []string
 
 	Agent       *AgentConfig
+	SecretStore *secretstore.SecretStore
+
 	Inputs      []*models.RunningInput
 	Outputs     []*models.RunningOutput
 	Aggregators []*models.RunningAggregator
@@ -429,6 +435,21 @@ var agentConfig = `
   # snmp_translator = "netsnmp"
 `
 
+const secretStoreConfig = `
+# Store secrets like credentials using a service external to telegraf
+# [secretstore]
+  ## Define the service for storing the credentials, can be one of
+  ##     file://<path>
+  ##       Encrypted file at the given "path" (mandatory) for storing the secrets.
+  ##     kwallet://[[application]/folder]   (default: "kwallet://telegraf")
+  ##       kWallet with the given "application" ID and an optional subfolder.
+  ##     os://[collection]                  (default: "os://telegraf")
+  ##       OS's native secret store with "collection" being the keychain/keyring name or Windows' credential prefix
+  ##     secret-service://[collection]      (default: "secret-service://telegraf")
+  ##       Freedesktop secret-service implementation.
+  # service = "os://telegraf"
+`
+
 var outputHeader = `
 ###############################################################################
 #                            OUTPUT PLUGINS                                   #
@@ -671,6 +692,10 @@ func printFilteredGlobalSections(sectionFilters []string) {
 	if sliceContains("agent", sectionFilters) {
 		fmt.Print(agentConfig)
 	}
+
+	if sliceContains("secretstore", sectionFilters) {
+		fmt.Printf(secretStoreConfig)
+	}
 }
 
 func printConfig(name string, p telegraf.PluginDescriber, op string, commented bool, di telegraf.DeprecationInfo) {
@@ -874,6 +899,24 @@ func (c *Config) LoadConfigData(data []byte) error {
 		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
 	}
 
+	// Parse the secretstore config:
+	if val, ok := tbl.Fields["secretstore"]; ok {
+		subTable, ok := val.(*ast.Table)
+		if !ok {
+			return fmt.Errorf("invalid configuration, error parsing secretstore table")
+		}
+
+		log.Print("D! [secretstore] Initialiting secret-store...")
+		c.SecretStore = &secretstore.SecretStore{}
+		if err := c.toml.UnmarshalTable(subTable, c.SecretStore); err != nil {
+			return fmt.Errorf("error parsing [secretstore]: %w", err)
+		}
+
+		if err := c.SecretStore.Init(); err != nil {
+			return fmt.Errorf("error initializing secretstore: %w", err)
+		}
+	}
+
 	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
@@ -882,7 +925,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 
 		switch name {
-		case "agent", "global_tags", "tags":
+		case "agent", "global_tags", "tags", "secretstore":
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {
@@ -1386,6 +1429,9 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return err
 		}
 	}
+
+	// Replace the secrets in the plugin with the values of the secret-store
+	c.replaceSecrets("inputs."+name, input)
 
 	rp := models.NewRunningInput(input, pluginConfig)
 	rp.SetDefaultTags(c.Tags)
@@ -2044,4 +2090,60 @@ func (c *Config) addError(tbl *ast.Table, err error) {
 // look inside composed types.
 type unwrappable interface {
 	Unwrap() telegraf.Processor
+}
+
+func (c *Config) replaceSecrets(pluginType string, plugin interface{}) {
+	v := reflect.Indirect(reflect.ValueOf(plugin))
+	switch v.Kind() {
+	case reflect.Struct:
+		fields := reflect.VisibleFields(v.Type())
+		for _, field := range fields {
+			if !field.IsExported() {
+				continue
+			}
+			switch field.Type.Kind() {
+			case reflect.Struct:
+				c.replaceSecrets(pluginType, v.FieldByIndex(field.Index).Interface())
+			case reflect.Slice:
+				s := v.FieldByIndex(field.Index)
+				for i := 0; i < s.Len(); i++ {
+					c.replaceSecrets(pluginType, s.Index(i).Interface())
+				}
+			}
+			tags := strings.Split(field.Tag.Get("telegraf"), ",")
+			if !choice.Contains("secret", tags) {
+				continue
+			}
+
+			// We only support string replacement
+			if field.Type.Kind() != reflect.String {
+				log.Printf("W! [secretstore] unsupported type %q for field %q of %q", field.Type.Kind().String(), field.Name, pluginType)
+				continue
+			}
+
+			// Secret references are in the form @{<store name>:<keyname>}
+			value := v.FieldByIndex(field.Index).String()
+			matches := secretPattern.FindStringSubmatch(value)
+			if len(matches) < 2 {
+				continue
+			}
+
+			// There should _ALWAYS_ be two parts due to the regular expression match
+			parts := strings.SplitN(matches[1], ":", 2)
+			_ = parts[0] // Ignore the storename for now. This is in preparation for using multiple stores
+			keyname := parts[1]
+
+			log.Printf("D! [secretstore] Replacing secret %q in %q of %q...", keyname, field.Name, pluginType)
+			secret, err := c.SecretStore.Get(keyname)
+			if err != nil {
+				log.Printf("E! [secretstore] Retrieving secret for %q of %q failed: %v", field.Name, pluginType, err)
+				continue
+			}
+			v.FieldByIndex(field.Index).SetString(secret)
+		}
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			c.replaceSecrets(pluginType, v.Index(i).Interface())
+		}
+	}
 }
