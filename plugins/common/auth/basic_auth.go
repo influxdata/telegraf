@@ -6,8 +6,8 @@ import (
 )
 
 type BasicAuth struct {
-	Username string
-	Password string
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 }
 
 func (b *BasicAuth) Verify(r *http.Request) bool {
