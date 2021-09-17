@@ -479,7 +479,7 @@ func main() {
 				}
 				return
 			default:
-				log.Fatal("E! Invalid operation %q!", args[1])
+				log.Fatalf("E! Invalid operation %q!", args[1])
 			}
 		}
 	}
