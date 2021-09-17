@@ -827,6 +827,29 @@ func isURL(str string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
+// LoadAllConfigs loads all given config file and directories
+func (c *Config) LoadAllConfigs(paths []string, directories []string) error {
+	// providing no "config" flag should load default config
+	if len(paths) == 0 {
+		if err := c.LoadConfig(""); err != nil {
+			return err
+		}
+	}
+	for _, cfg := range paths {
+		if err := c.LoadConfig(cfg); err != nil {
+			return err
+		}
+	}
+
+	for _, cfgDir := range directories {
+		if err := c.LoadDirectory(cfgDir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // LoadConfig loads the given config file and applies it to c
 func (c *Config) LoadConfig(path string) error {
 	var err error
