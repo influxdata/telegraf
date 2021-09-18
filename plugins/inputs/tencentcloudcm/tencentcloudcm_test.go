@@ -140,7 +140,9 @@ func TestGetMetricObjects(t *testing.T) {
 	cm := &TencentCloudCM{
 		Period: config.Duration(1 * time.Minute),
 		Delay:  config.Duration(5 * time.Minute),
-		client: &cloudmonitorClient{},
+		client: &cloudmonitorClient{
+			Log: testutil.Logger{},
+		},
 		Accounts: []*Account{{
 			Name:      "name",
 			SecretID:  "secret_id",
@@ -179,6 +181,7 @@ func TestGather(t *testing.T) {
 	cm := &TencentCloudCM{
 		Period:    config.Duration(1 * time.Minute),
 		Delay:     config.Duration(5 * time.Minute),
+		BatchSize: 100,
 		RateLimit: 20,
 	}
 
