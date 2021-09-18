@@ -61,6 +61,7 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 	return metricObjects
 }
 
+// NewClient implements cmClient interface
 func (c *cloudmonitorClient) NewClient(region string, crs *common.Credential, t TencentCloudCM) (monitor.Client, error) {
 	cpf := profile.NewClientProfile()
 	cpf.HttpProfile.Endpoint = fmt.Sprintf("monitor.%s", t.Endpoint)
@@ -69,6 +70,7 @@ func (c *cloudmonitorClient) NewClient(region string, crs *common.Credential, t 
 	return *client, err
 }
 
+// NewGetMonitorDataRequest implements cmClient interface
 func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, instances []*monitor.Instance, t TencentCloudCM) *monitor.GetMonitorDataRequest {
 	request := monitor.NewGetMonitorDataRequest()
 	request.Namespace = common.StringPtr(namespace)
@@ -81,6 +83,7 @@ func (c *cloudmonitorClient) NewGetMonitorDataRequest(namespace, metric string, 
 	return request
 }
 
+// GatherMetrics implements cmClient interface
 func (c *cloudmonitorClient) GatherMetrics(client monitor.Client, request *monitor.GetMonitorDataRequest, t TencentCloudCM) (*monitor.GetMonitorDataResponse, error) {
 	response, err := client.GetMonitorData(request)
 	if err != nil {
