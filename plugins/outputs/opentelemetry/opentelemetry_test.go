@@ -26,15 +26,16 @@ func TestOpenTelemetry(t *testing.T) {
 	{
 		rm := expect.ResourceMetrics().AppendEmpty()
 		rm.Resource().Attributes().InsertString("host.name", "potato")
+		rm.Resource().Attributes().InsertString("attr-key", "attr-val")
 		ilm := rm.InstrumentationLibraryMetrics().AppendEmpty()
 		ilm.InstrumentationLibrary().SetName("My Library Name")
 		m := ilm.Metrics().AppendEmpty()
 		m.SetName("cpu_temp")
 		m.SetDataType(pdata.MetricDataTypeGauge)
 		dp := m.Gauge().DataPoints().AppendEmpty()
-		dp.LabelsMap().Insert("foo", "bar")
+		dp.Attributes().InsertString("foo", "bar")
 		dp.SetTimestamp(pdata.Timestamp(1622848686000000000))
-		dp.SetValue(87.332)
+		dp.SetDoubleVal(87.332)
 	}
 	m := newMockOtelService(t)
 	t.Cleanup(m.Cleanup)
@@ -45,6 +46,7 @@ func TestOpenTelemetry(t *testing.T) {
 		ServiceAddress:       m.Address(),
 		Timeout:              config.Duration(time.Second),
 		Headers:              map[string]string{"test": "header1"},
+		Attributes:           map[string]string{"attr-key": "attr-val"},
 		metricsConverter:     metricsConverter,
 		grpcClientConn:       m.GrpcClient(),
 		metricsServiceClient: otlpgrpc.NewMetricsClient(m.GrpcClient()),

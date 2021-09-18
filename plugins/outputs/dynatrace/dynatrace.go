@@ -69,7 +69,7 @@ const sampleConfig = `
   ## Connection timeout, defaults to "5s" if not set.
   timeout = "5s"
 
-  ## If you want to convert values represented as gauges to counters, add the metric names here
+  ## If you want metrics to be treated and reported as delta counters, add the metric names here
   additional_counters = [ ]
 
   ## Optional dimensions to be added to every metric
@@ -122,16 +122,10 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			dims = append(dims, dimensions.NewDimension(tag.Key, tag.Value))
 		}
 
-		metricType := tm.Type()
 		for _, field := range tm.FieldList() {
 			metricName := tm.Name() + "." + field.Key
-			for _, i := range d.AddCounterMetrics {
-				if metricName == i {
-					metricType = telegraf.Counter
-				}
-			}
 
-			typeOpt := getTypeOption(metricType, field)
+			typeOpt := d.getTypeOption(tm, field)
 
 			if typeOpt == nil {
 				// Unsupported type. Log only once per unsupported metric name
@@ -267,15 +261,19 @@ func init() {
 	})
 }
 
-func getTypeOption(metricType telegraf.ValueType, field *telegraf.Field) dtMetric.MetricOption {
-	if metricType == telegraf.Counter {
+func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.MetricOption {
+	metricName := metric.Name() + "." + field.Key
+	for _, i := range d.AddCounterMetrics {
+		if metricName != i {
+			continue
+		}
 		switch v := field.Value.(type) {
 		case float64:
-			return dtMetric.WithFloatCounterValueTotal(v)
+			return dtMetric.WithFloatCounterValueDelta(v)
 		case uint64:
-			return dtMetric.WithIntCounterValueTotal(int64(v))
+			return dtMetric.WithIntCounterValueDelta(int64(v))
 		case int64:
-			return dtMetric.WithIntCounterValueTotal(v)
+			return dtMetric.WithIntCounterValueDelta(v)
 		default:
 			return nil
 		}

@@ -450,89 +450,86 @@ func TestCharacterEncoding(t *testing.T) {
 		),
 	}
 
+	watchMethod := defaultWatchMethod
+	if runtime.GOOS == "windows" {
+		watchMethod = "poll"
+	}
+
 	tests := []struct {
-		name     string
-		plugin   *Tail
-		offset   int64
-		expected []telegraf.Metric
+		name              string
+		testfiles         string
+		fromBeginning     bool
+		characterEncoding string
+		offset            int64
+		expected          []telegraf.Metric
 	}{
 		{
-			name: "utf-8",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-8.influx")},
-				FromBeginning:       true,
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-8",
-			},
-			expected: full,
+			name:              "utf-8",
+			testfiles:         "cpu-utf-8.influx",
+			fromBeginning:     true,
+			characterEncoding: "utf-8",
+			expected:          full,
 		},
 		{
-			name: "utf-8 seek",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-8.influx")},
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-8",
-			},
-			offset:   0x33,
-			expected: full[1:],
+			name:              "utf-8 seek",
+			testfiles:         "cpu-utf-8.influx",
+			characterEncoding: "utf-8",
+			offset:            0x33,
+			expected:          full[1:],
 		},
 		{
-			name: "utf-16le",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16le.influx")},
-				FromBeginning:       true,
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-16le",
-			},
-			expected: full,
+			name:              "utf-16le",
+			testfiles:         "cpu-utf-16le.influx",
+			fromBeginning:     true,
+			characterEncoding: "utf-16le",
+			expected:          full,
 		},
 		{
-			name: "utf-16le seek",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16le.influx")},
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-16le",
-			},
-			offset:   0x68,
-			expected: full[1:],
+			name:              "utf-16le seek",
+			testfiles:         "cpu-utf-16le.influx",
+			characterEncoding: "utf-16le",
+			offset:            0x68,
+			expected:          full[1:],
 		},
 		{
-			name: "utf-16be",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16be.influx")},
-				FromBeginning:       true,
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-16be",
-			},
-			expected: full,
+			name:              "utf-16be",
+			testfiles:         "cpu-utf-16be.influx",
+			fromBeginning:     true,
+			characterEncoding: "utf-16be",
+			expected:          full,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.plugin.SetParserFunc(func() (parsers.Parser, error) {
+
+			plugin := &Tail{
+				Files:               []string{filepath.Join(testdataDir, tt.testfiles)},
+				FromBeginning:       tt.fromBeginning,
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   tt.characterEncoding,
+				WatchMethod:         watchMethod,
+			}
+
+			plugin.SetParserFunc(func() (parsers.Parser, error) {
 				handler := influx.NewMetricHandler()
 				return influx.NewParser(handler), nil
 			})
 
 			if tt.offset != 0 {
-				tt.plugin.offsets = map[string]int64{
-					tt.plugin.Files[0]: tt.offset,
+				plugin.offsets = map[string]int64{
+					plugin.Files[0]: tt.offset,
 				}
 			}
 
-			err := tt.plugin.Init()
+			err := plugin.Init()
 			require.NoError(t, err)
 
 			var acc testutil.Accumulator
-			err = tt.plugin.Start(&acc)
+			err = plugin.Start(&acc)
 			require.NoError(t, err)
 			acc.Wait(len(tt.expected))
-			tt.plugin.Stop()
+			plugin.Stop()
 
 			actual := acc.GetTelegrafMetrics()
 			for _, m := range actual {

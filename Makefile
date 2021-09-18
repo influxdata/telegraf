@@ -119,10 +119,6 @@ fmtcheck:
 		exit 1 ;\
 	fi
 
-.PHONY: test-windows
-test-windows:
-	go test -short ./...
-
 .PHONY: vet
 vet:
 	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
