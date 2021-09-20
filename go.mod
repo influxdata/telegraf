@@ -3,9 +3,10 @@ module github.com/influxdata/telegraf
 go 1.17
 
 require (
-	cloud.google.com/go v0.90.0
+	cloud.google.com/go v0.93.3 // indirect
 	cloud.google.com/go/bigquery v1.8.0
-	cloud.google.com/go/pubsub v1.15.0
+	cloud.google.com/go/monitoring v0.2.0
+	cloud.google.com/go/pubsub v1.17.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.5.0
 	github.com/Azure/azure-amqp-common-go/v3 v3.0.1 // indirect
@@ -161,7 +162,6 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
-	github.com/jstemmer/go-junit-report v0.9.1 // indirect
 	github.com/kardianos/service v1.0.0
 	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -275,7 +275,6 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
-	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20210610132358-84b48f89b13b
 	golang.org/x/oauth2 v0.0.0-20210805134026-6f1e6394065a
@@ -290,7 +289,7 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	google.golang.org/api v0.54.0
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20210813162853-db860fec028c
+	google.golang.org/genproto v0.0.0-20210827211047-25e5f791fe06
 	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
