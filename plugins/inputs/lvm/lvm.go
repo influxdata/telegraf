@@ -67,37 +67,39 @@ func (lvm *LVM) gatherPhysicalVolumes(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to unmarshal physical volume JSON: %s", err)
 	}
 
-	for _, pv := range report.Report[0].Pv {
-		tags := map[string]string{
-			"path":      pv.Name,
-			"vol_group": pv.VolGroup,
+	if len(report.Report) > 0 {
+		for _, pv := range report.Report[0].Pv {
+			tags := map[string]string{
+				"path":      pv.Name,
+				"vol_group": pv.VolGroup,
+			}
+
+			size, err := strconv.ParseUint(pv.Size, 10, 64)
+			if err != nil {
+				return err
+			}
+
+			free, err := strconv.ParseUint(pv.Free, 10, 64)
+			if err != nil {
+				return err
+			}
+
+			used, err := strconv.ParseUint(pv.Used, 10, 64)
+			if err != nil {
+				return err
+			}
+
+			usedPercent := float64(used) / float64(size) * 100
+
+			fields := map[string]interface{}{
+				"size":         size,
+				"free":         free,
+				"used":         used,
+				"used_percent": usedPercent,
+			}
+
+			acc.AddFields("lvm_physical_vol", fields, tags)
 		}
-
-		size, err := strconv.ParseUint(pv.Size, 10, 64)
-		if err != nil {
-			return err
-		}
-
-		free, err := strconv.ParseUint(pv.Free, 10, 64)
-		if err != nil {
-			return err
-		}
-
-		used, err := strconv.ParseUint(pv.Used, 10, 64)
-		if err != nil {
-			return err
-		}
-
-		usedPercent := float64(used) / float64(size) * 100
-
-		fields := map[string]interface{}{
-			"size":         size,
-			"free":         free,
-			"used":         used,
-			"used_percent": usedPercent,
-		}
-
-		acc.AddFields("lvm_physical_vol", fields, tags)
 	}
 
 	return nil
@@ -120,46 +122,48 @@ func (lvm *LVM) gatherVolumeGroups(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to unmarshal vol group JSON: %s", err)
 	}
 
-	for _, vg := range report.Report[0].Vg {
-		tags := map[string]string{
-			"name": vg.Name,
-		}
+	if len(report.Report) > 0 {
+		for _, vg := range report.Report[0].Vg {
+			tags := map[string]string{
+				"name": vg.Name,
+			}
 
-		size, err := strconv.ParseUint(vg.Size, 10, 64)
-		if err != nil {
-			return err
-		}
+			size, err := strconv.ParseUint(vg.Size, 10, 64)
+			if err != nil {
+				return err
+			}
 
-		free, err := strconv.ParseUint(vg.Free, 10, 64)
-		if err != nil {
-			return err
-		}
+			free, err := strconv.ParseUint(vg.Free, 10, 64)
+			if err != nil {
+				return err
+			}
 
-		pvCount, err := strconv.ParseUint(vg.PvCount, 10, 64)
-		if err != nil {
-			return err
-		}
-		lvCount, err := strconv.ParseUint(vg.LvCount, 10, 64)
-		if err != nil {
-			return err
-		}
-		snapCount, err := strconv.ParseUint(vg.SnapCount, 10, 64)
-		if err != nil {
-			return err
-		}
+			pvCount, err := strconv.ParseUint(vg.PvCount, 10, 64)
+			if err != nil {
+				return err
+			}
+			lvCount, err := strconv.ParseUint(vg.LvCount, 10, 64)
+			if err != nil {
+				return err
+			}
+			snapCount, err := strconv.ParseUint(vg.SnapCount, 10, 64)
+			if err != nil {
+				return err
+			}
 
-		usedPercent := (float64(size) - float64(free)) / float64(size) * 100
+			usedPercent := (float64(size) - float64(free)) / float64(size) * 100
 
-		fields := map[string]interface{}{
-			"size":                  size,
-			"free":                  free,
-			"used_percent":          usedPercent,
-			"physical_volume_count": pvCount,
-			"logical_volume_count":  lvCount,
-			"snapshot_count":        snapCount,
+			fields := map[string]interface{}{
+				"size":                  size,
+				"free":                  free,
+				"used_percent":          usedPercent,
+				"physical_volume_count": pvCount,
+				"logical_volume_count":  lvCount,
+				"snapshot_count":        snapCount,
+			}
+
+			acc.AddFields("lvm_vol_group", fields, tags)
 		}
-
-		acc.AddFields("lvm_vol_group", fields, tags)
 	}
 
 	return nil
@@ -182,42 +186,44 @@ func (lvm *LVM) gatherLogicalVolumes(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to unmarshal logical vol JSON: %s", err)
 	}
 
-	for _, lv := range report.Report[0].Lv {
-		tags := map[string]string{
-			"name":      lv.Name,
-			"vol_group": lv.VolGroup,
-		}
+	if len(report.Report) > 0 {
+		for _, lv := range report.Report[0].Lv {
+			tags := map[string]string{
+				"name":      lv.Name,
+				"vol_group": lv.VolGroup,
+			}
 
-		size, err := strconv.ParseUint(lv.Size, 10, 64)
-		if err != nil {
-			return err
-		}
+			size, err := strconv.ParseUint(lv.Size, 10, 64)
+			if err != nil {
+				return err
+			}
 
-		// Does not apply to all logical volumes, set default value
-		if lv.DataPercent == "" {
-			lv.DataPercent = "0.0"
-		}
-		dataPercent, err := strconv.ParseFloat(lv.DataPercent, 32)
-		if err != nil {
-			return err
-		}
+			// Does not apply to all logical volumes, set default value
+			if lv.DataPercent == "" {
+				lv.DataPercent = "0.0"
+			}
+			dataPercent, err := strconv.ParseFloat(lv.DataPercent, 32)
+			if err != nil {
+				return err
+			}
 
-		// Does not apply to all logical volumes, set default value
-		if lv.MetadataPercent == "" {
-			lv.MetadataPercent = "0.0"
-		}
-		metadataPercent, err := strconv.ParseFloat(lv.MetadataPercent, 32)
-		if err != nil {
-			return err
-		}
+			// Does not apply to all logical volumes, set default value
+			if lv.MetadataPercent == "" {
+				lv.MetadataPercent = "0.0"
+			}
+			metadataPercent, err := strconv.ParseFloat(lv.MetadataPercent, 32)
+			if err != nil {
+				return err
+			}
 
-		fields := map[string]interface{}{
-			"size":             size,
-			"data_percent":     dataPercent,
-			"metadata_percent": metadataPercent,
-		}
+			fields := map[string]interface{}{
+				"size":             size,
+				"data_percent":     dataPercent,
+				"metadata_percent": metadataPercent,
+			}
 
-		acc.AddFields("lvm_logical_vol", fields, tags)
+			acc.AddFields("lvm_logical_vol", fields, tags)
+		}
 	}
 
 	return nil
