@@ -13,6 +13,7 @@ type storeImpl interface {
 }
 
 type SecretStore struct {
+	Name    string `toml:"name"`
 	Service string `toml:"service"`
 
 	store storeImpl
@@ -20,6 +21,10 @@ type SecretStore struct {
 
 // Init initializes all internals of the secret-store
 func (s *SecretStore) Init() error {
+	if s.Name == "" {
+		return fmt.Errorf("name missing")
+	}
+
 	// Default
 	if s.Service == "" {
 		s.Service = "os://telegraf"
