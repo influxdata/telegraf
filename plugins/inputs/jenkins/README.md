@@ -59,7 +59,6 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
 
 - jenkins
   - tags:
-    - host
     - source
     - port
   - fields:
@@ -68,7 +67,6 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
 
 + jenkins_node
   - tags:
-    - host
     - arch
     - disk_path
     - temp_path
@@ -88,7 +86,6 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
 
 - jenkins_job
   - tags:
-    - host
     - name
     - parents
     - result
