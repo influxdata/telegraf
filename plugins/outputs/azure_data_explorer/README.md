@@ -1,10 +1,11 @@
 # Azure Data Explorer output plugin
 
-This plugin writes metrics collected by any of the input plugins of Telegraf to [Azure Data Explorer](https://azure.microsoft.com/en-au/services/data-explorer/). 
+This plugin writes data collected by any of the input plugins of Telegraf to [Azure Data Explorer](https://azure.microsoft.com/en-au/services/data-explorer/). 
+Azure Data Explorer is a distributed columnar, store purpose built for any type of logs, metrics and time series data.
 
 ## Pre-requisites:
 - [Create Azure Data Explorer cluster and database](https://docs.microsoft.com/en-us/azure/data-explorer/create-cluster-database-portal)
-- VM/compute or container to host Telegraf - it could be hosted locally where an app/services to be monitored are deployed or remotely on a dedicated monitoring compute/container.
+- VM/compute or container to host Telegraf - it could be hosted locally where an app/service to be monitored is deployed or remotely on a dedicated monitoring compute/container.
 
 
 ## Configuration:
@@ -30,10 +31,6 @@ This plugin writes metrics collected by any of the input plugins of Telegraf to 
   
   ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
   # table_name = ""
-
-  ## Data format in which metrics will be sent to Azure Data Explorer. This option is required and its supported values are "json" or "txt".
-  # data_format = "json"
-
 ```
 
 ## Metrics Grouping
@@ -127,18 +124,17 @@ following configurations, **it's important to understand that the assessment, an
 [arm]: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview
 
 
-## Querying collected data in Azure Data Explorer
-Few examples of transformations and queries -
-1. Data collected using SQL input plugin 
+## Querying data collected in Azure Data Explorer
+Few examples of collected data transformations, queries that would be useful to gain insights quickly and efficiently -
+1. Data collected using SQL input plugin
 Data will be stored in following format in Azure Data Explorer table -
-ColumnName | ColumnType
----------- | ----------
-fields	|	dynamic
-name	|	string
-tags	|	dynamic
-timestamp	|	datetime
 
-Since collected metrics object is a complex type, use JSON format in config. As "fields" and "tags" columns are of dynamic data type, multiple ways to query this data -
+fields | name | tags | timestamp
+------ | -----|------|----------
+{"current_size_mb":16,"database_id":2,"file_id":1,"read_bytes":2965504,"read_latency_ms":68,"reads":47,"rg_read_stall_ms":42,"rg_write_stall_ms":0,"space_used_mb":0,"write_bytes":1220608,"write_latency_ms":103,"writes":149}|sqlserver_database_io|{"database_name":"azure-sql-db2","file_type":"DATA","host":"adx-vm","logical_filename":"tempdev","measurement_db_type":"AzureSQLDB","physical_filename":"tempdb.mdf","replica_updateability":"READ_WRITE","sql_instance":"adx-sql-server"}|2021-09-09T13:51:20Z
+{"max_wait_time_ms":15,"resource_wait_ms":4469,"signal_wait_time_ms":0,"wait_time_ms":4469,"waiting_tasks_count":1464}|sqlserver_waitstats|{"database_name":"azure-sql-db2","host":"adx-vm","measurement_db_type":"AzureSQLDB","replica_updateability":"READ_WRITE","sql_instance":"adx-sql-server","wait_category":"Worker Thread","wait_type":"THREADPOOL"}|2021-09-09T13:51:20Z
+
+Since collected metrics object is a complex type, . As "fields" and "tags" columns are of dynamic data type, multiple ways to query this data -
 1. **Query JSON attributes directly**: Azure Data Explorer provides an ability to query JSON data without parsing it, so you can run queries on JSON attributes like this -
    ```
    Tablename
