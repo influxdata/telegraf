@@ -23,7 +23,7 @@ use_sudo = false
 `
 
 type LVM struct {
-	UseSudo bool
+	UseSudo bool `toml:"use_sudo"`
 }
 
 func (lvm *LVM) Description() string {
