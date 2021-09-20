@@ -39,6 +39,7 @@ func NewKeyringStore(scheme, path string) (*KeyringStore, error) {
 		case "linux":
 			config.AllowedBackends = []keyring.BackendType{keyring.KeyCtlBackend}
 			config.KeyCtlScope = "user"
+			config.KeyCtlPerm = 0x3f3f0000 // "alswrvalswrv------------"
 			config.ServiceName = path
 		case "windows":
 			config.AllowedBackends = []keyring.BackendType{keyring.WinCredBackend}
