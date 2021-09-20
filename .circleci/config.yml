@@ -209,7 +209,10 @@ jobs:
     steps:
       - run: yum install git go tar -y
       - test-go
-    parallelism: 4
+      - store_artifacts:
+          path: './test-results'
+          destination: 'test-results'
+    parallelism: 1
   windows-package:
     executor: go-1_17
     steps:
@@ -378,15 +381,17 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - 'test-go-awslinux2':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
       - 'test-go-mac':
           filters:
             tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'test-go-windows':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-awslinux2':
           filters:
             tags:
               only: /.*/
