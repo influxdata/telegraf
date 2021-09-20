@@ -1302,6 +1302,9 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		}
 	}
 
+	// Replace the secrets in the plugin with the values of the secret-store
+	c.replaceSecrets("outputs."+name, output)
+
 	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
