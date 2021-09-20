@@ -204,10 +204,10 @@ jobs:
           os: windows
           gotestsum: "gotestsum.exe"
     parallelism: 4
-    test-go-awslinux2:
-      executor: awslinux2
-      steps:
-        - test-go
+  test-go-awslinux2:
+    executor: awslinux2
+    steps:
+      - test-go
     parallelism: 4
   windows-package:
     executor: go-1_17
