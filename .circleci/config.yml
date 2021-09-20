@@ -23,7 +23,12 @@ executors:
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
       GOFLAGS: -p=8
-
+  awslinux2:
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+    docker:
+      - image: 'amazonlinux:2.0.20210813.1'
+    environment:
+      GOFLAGS: -p=8
 commands:
   check-changed-files-or-halt:
     steps:
@@ -199,7 +204,11 @@ jobs:
           os: windows
           gotestsum: "gotestsum.exe"
     parallelism: 4
-
+    test-go-awslinux2:
+      executor: awslinux2
+      steps:
+        - test-go
+    parallelism: 4
   windows-package:
     executor: go-1_17
     steps:
@@ -373,6 +382,10 @@ workflows:
             tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-awslinux2':
           filters:
             tags:
               only: /.*/
