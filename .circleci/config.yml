@@ -207,6 +207,7 @@ jobs:
   test-go-awslinux2:
     executor: awslinux2
     steps:
+      - run: yum install git go
       - test-go
     parallelism: 4
   windows-package:
