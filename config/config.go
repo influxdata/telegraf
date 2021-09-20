@@ -75,7 +75,7 @@ type Config struct {
 	OutputFilters []string
 
 	Agent       *AgentConfig
-	SecretStore *secretstore.SecretStore
+	SecretStore map[string]secretstore.SecretStore
 
 	Inputs      []*models.RunningInput
 	Outputs     []*models.RunningOutput
@@ -922,33 +922,43 @@ func (c *Config) LoadConfigData(data []byte) error {
 		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
 	}
 
-	// Parse the secretstore config:
-	if val, ok := tbl.Fields["secretstore"]; ok {
-		subTable, ok := val.(*ast.Table)
+	c.SecretStore = make(map[string]secretstore.SecretStore)
+	if _, ok := tbl.Fields["secretstore"]; ok {
+		secretTbls, ok := tbl.Fields["secretstore"].([]*ast.Table)
 		if !ok {
 			return fmt.Errorf("invalid configuration, error parsing secretstore table")
 		}
+		for _, subTable := range secretTbls {
+			// Parse the secretstore config:
+			log.Print("D! [secretstore] Initialiting secret-store...")
+			store := secretstore.SecretStore{}
+			if err := c.toml.UnmarshalTable(subTable, &store); err != nil {
+				return fmt.Errorf("error parsing [secretstore]: %w", err)
+			}
 
-		log.Print("D! [secretstore] Initialiting secret-store...")
-		c.SecretStore = &secretstore.SecretStore{}
-		if err := c.toml.UnmarshalTable(subTable, c.SecretStore); err != nil {
-			return fmt.Errorf("error parsing [secretstore]: %w", err)
-		}
+			if err := store.Init(); err != nil {
+				return fmt.Errorf("error initializing secretstore: %w", err)
+			}
 
-		if err := c.SecretStore.Init(); err != nil {
-			return fmt.Errorf("error initializing secretstore: %w", err)
+			if _, found := c.SecretStore[store.Name]; found {
+				return fmt.Errorf("duplicate name %q for secretstore", store.Name)
+			}
+			c.SecretStore[store.Name] = store
 		}
 	}
 
 	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
+		if name == "secretstore" {
+			continue
+		}
 		subTable, ok := val.(*ast.Table)
 		if !ok {
 			return fmt.Errorf("invalid configuration, error parsing field %q as table", name)
 		}
 
 		switch name {
-		case "agent", "global_tags", "tags", "secretstore":
+		case "agent", "global_tags", "tags":
 		case "outputs":
 			for pluginName, pluginVal := range subTable.Fields {
 				switch pluginSubTable := pluginVal.(type) {

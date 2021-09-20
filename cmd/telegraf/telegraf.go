@@ -423,13 +423,24 @@ func main() {
 				log.Fatalf("E! Loading config failed: %v", err)
 			}
 
-			if c.SecretStore == nil {
+			if len(c.SecretStore) == 0 {
 				log.Fatal("E! No secretstore configured in config!")
 			}
 
 			switch args[1] {
 			case "list":
-				keys, err := c.SecretStore.List()
+				if len(args) < 3 {
+					fmt.Println("Known secret stores:")
+					for k := range c.SecretStore {
+						//nolint:revive  // If print fails we will notice
+						fmt.Printf("    %s\n", k)
+					}
+				}
+				store, found := c.SecretStore[args[2]]
+				if !found {
+					log.Fatalf("E! Unknown secret store %q", args[2])
+				}
+				keys, err := store.List()
 				if err != nil {
 					log.Fatalf("E! Listing keys failed: %v", err)
 				}
@@ -441,10 +452,18 @@ func main() {
 				}
 				return
 			case "get":
-				keys := args[2:]
 				if len(args) < 3 {
+					log.Fatal("E! Missing secret store argument")
+				}
+				store, found := c.SecretStore[args[2]]
+				if !found {
+					log.Fatalf("E! Unknown secret store %q", args[2])
+				}
+
+				keys := args[3:]
+				if len(args) < 4 {
 					var err error
-					keys, err = c.SecretStore.List()
+					keys, err = store.List()
 					if err != nil {
 						log.Fatalf("E! Listing keys failed: %v", err)
 					}
@@ -459,7 +478,7 @@ func main() {
 					fmt.Println("+" + strings.Repeat("-", 32) + "+" + strings.Repeat("-", 32) + "+")
 				}
 				for _, k := range keys {
-					v, err := c.SecretStore.Get(k)
+					v, err := store.Get(k)
 					if err != nil {
 						log.Fatalf("E! Getting key %q failed: %v", k, err)
 					}
@@ -477,12 +496,16 @@ func main() {
 				}
 				return
 			case "set":
-				if len(args) < 4 {
+				if len(args) < 5 {
 					log.Fatal("E! Invalid number of arguments!")
 				}
-				key := args[2]
-				value := args[3]
-				if err := c.SecretStore.Set(key, value); err != nil {
+				store, found := c.SecretStore[args[2]]
+				if !found {
+					log.Fatalf("E! Unknown secret store %q", args[2])
+				}
+				key := args[3]
+				value := args[4]
+				if err := store.Set(key, value); err != nil {
 					log.Fatalf("E! Setting key %q failed: %v", key, err)
 				}
 				return

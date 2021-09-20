@@ -38,13 +38,18 @@ func (c *Config) replaceFieldSecret(pluginType string, field reflect.StructField
 
 	// There should _ALWAYS_ be two parts due to the regular expression match
 	parts := strings.SplitN(matches[1], ":", 2)
-	_ = parts[0] // Ignore the storename for now. This is in preparation for using multiple stores
+	storename := parts[0] // Ignore the storename for now. This is in preparation for using multiple stores
 	keyname := parts[1]
 
 	log.Printf("I! [secretstore] Replacing secret %q in %q of %q...", keyname, field.Name, pluginType)
-	secret, err := c.SecretStore.Get(keyname)
+	store, found := c.SecretStore[storename]
+	if !found {
+		log.Printf("E! [secretstore] Unknown store %q for secret %q of %q", storename, matches[1], pluginType)
+		return
+	}
+	secret, err := store.Get(keyname)
 	if err != nil {
-		log.Printf("E! [secretstore] Retrieving secret for %q of %q failed: %v", field.Name, pluginType, err)
+		log.Printf("E! [secretstore] Retrieving secret %q in %q of %q failed: %v", matches[1], field.Name, pluginType, err)
 		return
 	}
 	value.SetString(secret)
