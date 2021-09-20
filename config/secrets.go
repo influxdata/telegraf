@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log"
+	"log" //nolint:revive  // This is a subpart of config which is allowed to have log imported.
 	"reflect"
 	"regexp"
 	"strings"
@@ -58,31 +58,29 @@ func (c *Config) replaceFieldSecret(pluginType string, field reflect.StructField
 func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv reflect.Value)) {
 	v := reflect.Indirect(value)
 	t := v.Type()
-	switch t.Kind() {
-	case reflect.Struct:
-		for i := 0; i < t.NumField(); i++ {
-			field := t.Field(i)
-			fieldValue := v.Field(i)
 
-			if field.PkgPath != "" {
-				continue
-			}
-			switch field.Type.Kind() {
-			case reflect.Struct:
-				walkPluginStruct(fieldValue, fn)
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		fieldValue := v.Field(i)
 
-			case reflect.Array, reflect.Slice:
-				for j := 0; j < fieldValue.Len(); j++ {
-					fn(field, fieldValue.Index(j))
-				}
-			case reflect.Map:
-				iter := fieldValue.MapRange()
-				for iter.Next() {
-					fn(field, iter.Value())
-				}
-			default:
-				fn(field, fieldValue)
+		if field.PkgPath != "" {
+			continue
+		}
+		switch field.Type.Kind() {
+		case reflect.Struct:
+			walkPluginStruct(fieldValue, fn)
+
+		case reflect.Array, reflect.Slice:
+			for j := 0; j < fieldValue.Len(); j++ {
+				fn(field, fieldValue.Index(j))
 			}
+		case reflect.Map:
+			iter := fieldValue.MapRange()
+			for iter.Next() {
+				fn(field, iter.Value())
+			}
+		default:
+			fn(field, fieldValue)
 		}
 	}
 }

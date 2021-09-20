@@ -430,6 +430,7 @@ func main() {
 			switch args[1] {
 			case "list":
 				if len(args) < 3 {
+					//nolint:revive  // If print fails we will notice
 					fmt.Println("Known secret stores:")
 					for k := range c.SecretStore {
 						//nolint:revive  // If print fails we will notice
