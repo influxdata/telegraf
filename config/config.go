@@ -60,9 +60,6 @@ var (
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
-
-	// secretPattern is a regex to extract references to secrets stored in a secret-store.
-	secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -2116,60 +2113,4 @@ func (c *Config) addError(tbl *ast.Table, err error) {
 // look inside composed types.
 type unwrappable interface {
 	Unwrap() telegraf.Processor
-}
-
-func (c *Config) replaceSecrets(pluginType string, plugin interface{}) {
-	v := reflect.Indirect(reflect.ValueOf(plugin))
-	switch v.Kind() {
-	case reflect.Struct:
-		fields := reflect.VisibleFields(v.Type())
-		for _, field := range fields {
-			if !field.IsExported() {
-				continue
-			}
-			switch field.Type.Kind() {
-			case reflect.Struct:
-				c.replaceSecrets(pluginType, v.FieldByIndex(field.Index).Interface())
-			case reflect.Slice:
-				s := v.FieldByIndex(field.Index)
-				for i := 0; i < s.Len(); i++ {
-					c.replaceSecrets(pluginType, s.Index(i).Interface())
-				}
-			}
-			tags := strings.Split(field.Tag.Get("telegraf"), ",")
-			if !choice.Contains("secret", tags) {
-				continue
-			}
-
-			// We only support string replacement
-			if field.Type.Kind() != reflect.String {
-				log.Printf("W! [secretstore] unsupported type %q for field %q of %q", field.Type.Kind().String(), field.Name, pluginType)
-				continue
-			}
-
-			// Secret references are in the form @{<store name>:<keyname>}
-			value := v.FieldByIndex(field.Index).String()
-			matches := secretPattern.FindStringSubmatch(value)
-			if len(matches) < 2 {
-				continue
-			}
-
-			// There should _ALWAYS_ be two parts due to the regular expression match
-			parts := strings.SplitN(matches[1], ":", 2)
-			_ = parts[0] // Ignore the storename for now. This is in preparation for using multiple stores
-			keyname := parts[1]
-
-			log.Printf("D! [secretstore] Replacing secret %q in %q of %q...", keyname, field.Name, pluginType)
-			secret, err := c.SecretStore.Get(keyname)
-			if err != nil {
-				log.Printf("E! [secretstore] Retrieving secret for %q of %q failed: %v", field.Name, pluginType, err)
-				continue
-			}
-			v.FieldByIndex(field.Index).SetString(secret)
-		}
-	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			c.replaceSecrets(pluginType, v.Index(i).Interface())
-		}
-	}
 }
