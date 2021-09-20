@@ -123,11 +123,11 @@ commands:
       - when:
           condition: << parameters.release >>
           steps:
-            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 make package'
+            - run: 'make package'
       - when:
           condition: << parameters.nightly >>
           steps:
-            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 NIGHTLY=1 make package'
+            - run: 'make package'
             - run: 'make upload-nightly'
       - unless:
           condition:
@@ -135,7 +135,7 @@ commands:
               - << parameters.nightly >>
               - << parameters.release >>
           steps:
-            - run: '<< parameters.type >>=1 make package'
+            - run: 'make package include_packages="$(make << parameters.type >>)"'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -215,11 +215,11 @@ jobs:
     steps:
       - package-build:
           type: i386
-  ppc641e-package:
-    executor: go-1_17
+  ppc64le-package:
+    executor: go-1_16
     steps:
       - package-build:
-          type: ppc641e
+          type: ppc64le
   s390x-package:
     executor: go-1_17
     steps:
@@ -391,7 +391,7 @@ workflows:
       - 'i386-package':
           requires:
             - 'test-awaiter'
-      - 'ppc641e-package':
+      - 'ppc64le-package':
           requires:
             - 'test-awaiter'
       - 's390x-package':
@@ -421,7 +421,7 @@ workflows:
       - 'share-artifacts':
           requires:
             - 'i386-package'
-            - 'ppc641e-package'
+            - 'ppc64le-package'
             - 's390x-package'
             - 'armel-package'
             - 'amd64-package'
