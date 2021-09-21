@@ -158,7 +158,7 @@ Authorization header.
 
 ### Usage for Caddy HTTP server
 
-If you want to monitor Caddy, you need to use Caddy with its Prometheus plugin:
+Steps to monitor Caddy with Telegraf's Prometheus input plugin:
 
 * Download [Caddy](https://caddyserver.com/download)
 * Download Prometheus and set up [monitoring Caddy with Prometheus metrics](https://caddyserver.com/docs/metrics#monitoring-caddy-with-prometheus-metrics)
@@ -171,7 +171,7 @@ If you want to monitor Caddy, you need to use Caddy with its Prometheus plugin:
   urls = ["http://localhost:2019/metrics"]
 ```
 
-> This is the default URL where Caddy Prometheus plugin will send data.
+> This is the default URL where Caddy will send data.
 > For more details, please read the [Caddy Prometheus documentation](https://github.com/miekg/caddy-prometheus/blob/master/README.md).
 
 ### Metrics:
