@@ -13,10 +13,10 @@ Design goal:
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugin types:
 
-1. [Input Plugins](#input-plugins) collect metrics from the system, services, or 3rd party APIs
-2. [Processor Plugins](#processor-plugins) transform, decorate, and/or filter metrics
-3. [Aggregator Plugins](#aggregator-plugins) create aggregate metrics (e.g. mean, min, max, quantiles, etc.)
-4. [Output Plugins](#output-plugins) write metrics to various destinations
+1. [Input Plugins](/docs/INPUTS.md) collect metrics from the system, services, or 3rd party APIs
+2. [Processor Plugins](/docs/PROCESSORS.md) transform, decorate, and/or filter metrics
+3. [Aggregator Plugins](/docs/AGGREGATORS.md) create aggregate metrics (e.g. mean, min, max, quantiles, etc.)
+4. [Output Plugins](/docs/OUTPUTS.md) write metrics to various destinations
 
 New plugins are designed to be easy to contribute, pull requests are welcomed and we work to incorporate as many pull requests as possible. If none of the internal plugins fit your needs, you could have a look at the
 [list of external plugins](EXTERNAL_PLUGINS.md).
@@ -117,14 +117,14 @@ telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 
 [Latest Release Documentation][release docs].
 
-For documentation on the latest development code see the [documentation index][devel docs].
+For documentation on the latest development code see the [documentation index](/docs).
 
 [release docs]: https://docs.influxdata.com/telegraf
 [developer docs]: docs
-- [Input Plugins](/telegraf/docs/INPUTS.md)
-- [Output Plugins](/telegraf/docs/OUTPUTS.md)
-- [Processor Plugins](/telegraf/docs/PROCESSORS.md)
-- [Aggregator Plugins](/telegraf/docs/AGGREGATORS.md)
+- [Input Plugins](/docs/INPUTS.md)
+- [Output Plugins](/docs/OUTPUTS.md)
+- [Processor Plugins](/docs/PROCESSORS.md)
+- [Aggregator Plugins](/docs/AGGREGATORS.md)
 
 
 ## Contributing
