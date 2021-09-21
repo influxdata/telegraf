@@ -8,20 +8,20 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-type serializer struct {
+type Serializer struct {
 	TimestampUnits  time.Duration
 	TimestampFormat string
 }
 
-func NewSerializer(timestampUnits time.Duration, timestampformat string) (*serializer, error) {
-	s := &serializer{
+func NewSerializer(timestampUnits time.Duration, timestampformat string) (*Serializer, error) {
+	s := &Serializer{
 		TimestampUnits:  truncateDuration(timestampUnits),
 		TimestampFormat: timestampformat,
 	}
 	return s, nil
 }
 
-func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	m := s.createObject(metric)
 	serialized, err := json.Marshal(m)
 	if err != nil {
@@ -32,7 +32,7 @@ func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	return serialized, nil
 }
 
-func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	objects := make([]interface{}, 0, len(metrics))
 	for _, metric := range metrics {
 		m := s.createObject(metric)
@@ -50,7 +50,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return serialized, nil
 }
 
-func (s *serializer) createObject(metric telegraf.Metric) map[string]interface{} {
+func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{} {
 	m := make(map[string]interface{}, 4)
 
 	tags := make(map[string]string, len(metric.TagList()))
