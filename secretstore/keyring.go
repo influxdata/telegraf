@@ -13,15 +13,22 @@ type KeyringStore struct {
 }
 
 // Init initializes all internals of the secret-store
-func NewKeyringStore(scheme, path string) (*KeyringStore, error) {
+func NewKeyringStore(name, scheme, path, passwd string) (*KeyringStore, error) {
 	config := keyring.Config{
 		ServiceName: "telegraf",
+	}
+
+	// Create the prompt-function in case we need it
+	promptFunc := keyring.TerminalPrompt
+	if passwd != "" {
+		promptFunc = keyring.FixedStringPrompt(passwd)
 	}
 
 	switch scheme {
 	case "file":
 		config.AllowedBackends = []keyring.BackendType{keyring.FileBackend}
 		config.FileDir = path
+		config.FilePasswordFunc = promptFunc
 	case "kwallet":
 		params := strings.SplitN(path, "/", 2)
 		folder := ""
@@ -36,6 +43,7 @@ func NewKeyringStore(scheme, path string) (*KeyringStore, error) {
 		case "darwin":
 			config.AllowedBackends = []keyring.BackendType{keyring.KeychainBackend}
 			config.KeychainName = path
+			config.KeychainPasswordFunc = promptFunc
 		case "linux":
 			config.AllowedBackends = []keyring.BackendType{keyring.KeyCtlBackend}
 			config.KeyCtlScope = "user"

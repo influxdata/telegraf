@@ -13,14 +13,21 @@ type storeImpl interface {
 }
 
 type SecretStore struct {
-	Name    string `toml:"name"`
-	Service string `toml:"service"`
+	Name     string `toml:"name"`
+	Service  string `toml:"service"`
+	Password string `toml:"password"`
 
 	store storeImpl
 }
 
 // Init initializes all internals of the secret-store
 func (s *SecretStore) Init() error {
+	// Remove the password from memory when leaving
+	defer func() {
+		s.Password = strings.Repeat("*", len(s.Password))
+		s.Password = ""
+	}()
+
 	if s.Name == "" {
 		return fmt.Errorf("name missing")
 	}
@@ -44,7 +51,7 @@ func (s *SecretStore) Init() error {
 
 	switch u.Scheme {
 	case "file", "kwallet", "os", "secret-service":
-		s.store, err = NewKeyringStore(u.Scheme, path)
+		s.store, err = NewKeyringStore(s.Name, u.Scheme, path, s.Password)
 		if err != nil {
 			return fmt.Errorf("creating keyring store for service %q failed: %v", u.Scheme, err)
 		}

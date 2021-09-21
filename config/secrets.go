@@ -25,6 +25,11 @@ const secretStoreConfig = `
   ##     secret-service://[collection]      (default: "secret-service://telegraf")
   ##       Freedesktop secret-service implementation.
   # service = "os://telegraf"
+
+	## Password to be used for unlocking secret-stores (e.g. encrypted files).
+	## If omitted, you will be prompted for the password when starting telegraf.
+	## You may use environment-variables here to allow non-interactive starts.
+	# password = "$SECRETSTORE_PASSWD"
 `
 
 // secretPattern is a regex to extract references to secrets stored in a secret-store.
