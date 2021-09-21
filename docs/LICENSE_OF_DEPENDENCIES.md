@@ -193,6 +193,7 @@ following works:
 - github.com/safchain/ethtool [Apache License 2.0](https://github.com/safchain/ethtool/blob/master/LICENSE)
 - github.com/samuel/go-zookeeper [BSD 3-Clause Clear License](https://github.com/samuel/go-zookeeper/blob/master/LICENSE)
 - github.com/shirou/gopsutil [BSD 3-Clause Clear License](https://github.com/shirou/gopsutil/blob/master/LICENSE)
+- github.com/showwin/speedtest-go [MIT License](https://github.com/showwin/speedtest-go/blob/master/LICENSE)
 - github.com/signalfx/com_signalfx_metrics_protobuf [Apache License 2.0](https://github.com/signalfx/com_signalfx_metrics_protobuf/blob/master/LICENSE)
 - github.com/signalfx/gohistogram [MIT License](https://github.com/signalfx/gohistogram/blob/master/LICENSE)
 - github.com/signalfx/golib [Apache License 2.0](https://github.com/signalfx/golib/blob/master/LICENSE)
