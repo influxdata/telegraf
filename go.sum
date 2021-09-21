@@ -182,6 +182,8 @@ github.com/HdrHistogram/hdrhistogram-go v0.9.0/go.mod h1:nxrse8/Tzg2tg3DZcZjm6qE
 github.com/HdrHistogram/hdrhistogram-go v1.0.1/go.mod h1:BWJ+nMSHY3L41Zj7CA3uXnloDp7xxV0YvstAE7nKTaM=
 github.com/DocLambda/keyring v1.1.7-0.20210921084351-2b305d694039 h1:iUnWQOUMs1mL3OZCa1baDXbdDMefwSVIe/gZz/zd0jo=
 github.com/DocLambda/keyring v1.1.7-0.20210921084351-2b305d694039/go.mod h1:m7+0wQ3MZuvi0ep5q9dpS6jwNSuCFLruyh6uBpkc2k8=
+github.com/DocLambda/keyring v1.1.7-0.20210921092524-4349be896098 h1:SE7rCRPyYwPsClh3t+nFbnEVGrE9knMxc7wkJWEj7/0=
+github.com/DocLambda/keyring v1.1.7-0.20210921092524-4349be896098/go.mod h1:m7+0wQ3MZuvi0ep5q9dpS6jwNSuCFLruyh6uBpkc2k8=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
