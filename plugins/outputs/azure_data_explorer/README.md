@@ -125,17 +125,19 @@ following configurations, **it's important to understand that the assessment, an
 
 
 ## Querying data collected in Azure Data Explorer
-Few examples of collected data transformations, queries that would be useful to gain insights quickly and efficiently -
-1. Data collected using SQL input plugin
-Data will be stored in following format in Azure Data Explorer table -
+Examples of data transformations, queries that would be useful to gain insights quickly and efficiently -
+  1. **Data collected using SQL input plugin**
+  SQL metrics will be stored in Azure Data Explorer table in following format -
 
-fields | name | tags | timestamp
------- | -----|------|----------
-{"current_size_mb":16,"database_id":2,"file_id":1,"read_bytes":2965504,"read_latency_ms":68,"reads":47,"rg_read_stall_ms":42,"rg_write_stall_ms":0,"space_used_mb":0,"write_bytes":1220608,"write_latency_ms":103,"writes":149}|sqlserver_database_io|{"database_name":"azure-sql-db2","file_type":"DATA","host":"adx-vm","logical_filename":"tempdev","measurement_db_type":"AzureSQLDB","physical_filename":"tempdb.mdf","replica_updateability":"READ_WRITE","sql_instance":"adx-sql-server"}|2021-09-09T13:51:20Z
-{"max_wait_time_ms":15,"resource_wait_ms":4469,"signal_wait_time_ms":0,"wait_time_ms":4469,"waiting_tasks_count":1464}|sqlserver_waitstats|{"database_name":"azure-sql-db2","host":"adx-vm","measurement_db_type":"AzureSQLDB","replica_updateability":"READ_WRITE","sql_instance":"adx-sql-server","wait_category":"Worker Thread","wait_type":"THREADPOOL"}|2021-09-09T13:51:20Z
+  name | tags | timestamp | fields
+  -----|------|-----------|-------
+  sqlserver_database_io|{"database_name":"azure-sql-db2","file_type":"DATA","host":"adx-vm","logical_filename":"tempdev","measurement_db_type":"AzureSQLDB","physical_filename":"tempdb.mdf","replica_updateability":"READ_WRITE","sql_instance":"adx-sql-server"}|2021-09-09T13:51:20Z|{"current_size_mb":16,"database_id":2,"file_id":1,"read_bytes":2965504,"read_latency_ms":68,"reads":47,"rg_read_stall_ms":42,"rg_write_stall_ms":0,"space_used_mb":0,"write_bytes":1220608,"write_latency_ms":103,"writes":149}
+  sqlserver_waitstats|{"database_name":"azure-sql-db2","host":"adx-vm","measurement_db_type":"AzureSQLDB","replica_updateability":"READ_WRITE","sql_instance":"adx-sql-server","wait_category":"Worker Thread","wait_type":"THREADPOOL"}|2021-09-09T13:51:20Z|{"max_wait_time_ms":15,"resource_wait_ms":4469,"signal_wait_time_ms":0,"wait_time_ms":4469,"waiting_tasks_count":1464}
 
-Since collected metrics object is a complex type, . As "fields" and "tags" columns are of dynamic data type, multiple ways to query this data -
-1. **Query JSON attributes directly**: Azure Data Explorer provides an ability to query JSON data without parsing it, so you can run queries on JSON attributes like this -
+
+   Since collected metrics object is of complex type so "fields" and "tags" are stored as dynamic data type, multiple ways to query this data-
+   a. **Query JSON attributes directly**: Azure Data Explorer provides an ability to query JSON data in raw format without parsing it, so JSON attributes can be queried directly in following way -
+     
    ```
    Tablename
    | where name == "sqlserver_azure_db_resource_stats" and todouble(fields.avg_cpu_percent) > 7
@@ -144,36 +146,42 @@ Since collected metrics object is a complex type, . As "fields" and "tags" colum
    TelegrafAzureSQLMetrics
    | distinct tostring(tags.database_name)
    ```
-**Note** - This approach will have performance impact for large data volumes so use approach 2 for such cases.
-2. **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: to transform data. In this case, parsing dynamic data type columns using update policy. This is the recommended performant way for querying over large data volumes compared to querying directly over JSON attributes. 
-      ```
-      // Function to transform data
-      .create-or-alter function Transform_TargetTableName() {
-            SourceTableName 
-            | mv-apply fields on (extend key = tostring(bag_keys(fields)[0]))
-            | project fieldname=key, value=todouble(fields[key]), name, tags, timestamp
-      } 
+         
+   **Note** - This approach could have performance impact in case of large volumes of data, use approach b for such cases.
+   
+   b. **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: to transform data. Transform dynamic data type columns using update policy. This is the recommended performant way for querying over large volumes of data compared to querying directly over JSON attributes. 
+     
+  ```
+  // Function to transform data
+  .create-or-alter function Transform_TargetTableName() {
+        SourceTableName 
+        | mv-apply fields on (extend key = tostring(bag_keys(fields)[0]))
+        | project fieldname=key, value=todouble(fields[key]), name, tags, timestamp
+  } 
 
-      // Create destination table with above query's results schema (if it doesn't exist already)
-      .set-or-append TargetTableName <| Transform_TargetTableName() | limit 0
+  // Create destination table with above query's results schema (if it doesn't exist already)
+  .set-or-append TargetTableName <| Transform_TargetTableName() | limit 0
 
-      // Apply update policy on destination table
-      .alter table TargetTableName policy update
-      @'[{"IsEnabled": true, "Source": "SourceTableName", "Query": "Transform_TargetTableName()", "IsTransactional": true, "PropagateIngestionProperties": false}]'
+  // Apply update policy on destination table
+  .alter table TargetTableName policy update
+  @'[{"IsEnabled": true, "Source": "SourceTableName", "Query": "Transform_TargetTableName()", "IsTransactional": true, "PropagateIngestionProperties": false}]'
+  ```
+            
+   2. **Data collected using syslog input plugin**
 
-      ```
-      There are other ways to flatten dynamic columns using 'bag_unpack' or 'extend' operator. You can use either of these ways in above mentioned update policy function - 'Transform_TargetTableName()'
-    - Use [bag_unpack plugin](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/bag-unpackplugin) to unpack the dynamic columns. This method will unpack all columns, it could lead to issues in case source schema changes.
-       ```
-       Tablename
-       | evaluate bag_unpack(tags)
-       | evaluate bag_unpack(fields)
-       ```
-    
-    - Use [extend](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/extendoperator) operator as shown below. Even if schema changes, it will not break your queries or dashboards with this method.
-       ```
-       Tablename
-       | extend clerk_type = tags.clerk_type
-       | extend host = tags.host
-       ```
+
+            There are other ways to flatten dynamic columns using 'bag_unpack' or 'extend' operator. You can use either of these ways in above mentioned update policy function - 'Transform_TargetTableName()'
+          - Use [bag_unpack plugin](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/bag-unpackplugin) to unpack the dynamic columns. This method will unpack all columns, it could lead to issues in case source schema changes.
+             ```
+             Tablename
+             | evaluate bag_unpack(tags)
+             | evaluate bag_unpack(fields)
+             ```
+
+          - Use [extend](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/extendoperator) operator as shown below. Even if schema changes, it will not break your queries or dashboards with this method.
+             ```
+             Tablename
+             | extend clerk_type = tags.clerk_type
+             | extend host = tags.host
+             ```
 
