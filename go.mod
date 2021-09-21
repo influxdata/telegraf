@@ -424,6 +424,4 @@ replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemet
 // replaced due to open PR updating protobuf https://github.com/riemann/riemann-go-client/pull/27
 replace github.com/riemann/riemann-go-client => github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754
 
-replace github.com/99designs/keyring v1.1.6 => github.com/DocLambda/keyring v1.1.7-0.20210917161040-3689e23c5b4d
-
-replace github.com/jsipprell/keyctl v1.0.0 => github.com/DocLambda/keyctl v1.0.1-0.20210917150535-0dde376d07d0
+replace github.com/99designs/keyring v1.1.6 => github.com/DocLambda/keyring v1.1.7-0.20210921084351-2b305d694039
