@@ -1,4 +1,6 @@
 #!/bin/bash
+# This script is responsible for triggering the Tiger Bot endpoint that will create the pull request with the newly generated configs.
+# This script is meant to be only ran in within the Circle CI pipeline.
 
 token=$1
 

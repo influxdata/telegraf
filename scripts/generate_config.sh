@@ -1,4 +1,8 @@
 #!/bin/bash
+# This script is responsible for generating the Telegraf config found under the `etc` directory.
+# This script is meant to be only ran in within the Circle CI pipeline so that the Tiger Bot can update them automatically.
+# It supports Windows and Linux because the configs are different depending on the OS.
+
 
 os=$1 # windows or linux
 exe_path="/build/extracted" # Path will contain telegraf binary
