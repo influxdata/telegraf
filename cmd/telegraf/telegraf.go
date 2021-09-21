@@ -419,6 +419,8 @@ func main() {
 
 			// Load the config file to get the secret store
 			c := config.NewConfig()
+			c.OutputFilters = []string{"-"}
+			c.InputFilters = []string{"-"}
 			if err := c.LoadAllConfigs(fConfigs, fConfigDirs); err != nil {
 				log.Fatalf("E! Loading config failed: %v", err)
 			}
