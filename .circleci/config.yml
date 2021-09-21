@@ -481,7 +481,14 @@ workflows:
       - *static-package
       - *mipsel-package
       - *mips-package
-      - update-sample-config-win
+      - 'generate-config':
+          requires:
+            - 'amd64-package'
+          filters:
+            branches:
+              only:
+                - master
+      - 'generate-config-win':
           requires:
             - 'windows-package'
           filters:
