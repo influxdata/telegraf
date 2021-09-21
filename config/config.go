@@ -432,21 +432,6 @@ var agentConfig = `
   # snmp_translator = "netsnmp"
 `
 
-const secretStoreConfig = `
-# Store secrets like credentials using a service external to telegraf
-# [secretstore]
-  ## Define the service for storing the credentials, can be one of
-  ##     file://<path>
-  ##       Encrypted file at the given "path" (mandatory) for storing the secrets.
-  ##     kwallet://[[application]/folder]   (default: "kwallet://telegraf")
-  ##       kWallet with the given "application" ID and an optional subfolder.
-  ##     os://[collection]                  (default: "os://telegraf")
-  ##       OS's native secret store with "collection" being the keychain/keyring name or Windows' credential prefix
-  ##     secret-service://[collection]      (default: "secret-service://telegraf")
-  ##       Freedesktop secret-service implementation.
-  # service = "os://telegraf"
-`
-
 var outputHeader = `
 ###############################################################################
 #                            OUTPUT PLUGINS                                   #

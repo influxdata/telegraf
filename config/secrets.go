@@ -9,6 +9,24 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 )
 
+const secretStoreConfig = `
+# Store secrets like credentials using a service external to telegraf
+# [[secretstore]]
+  ## Name of the secret-store used to reference the secrets later via @{name:secret_key} (mandatory)
+  name = secretstore
+
+  ## Define the service for storing the credentials, can be one of
+  ##     file://<path>
+  ##       Encrypted file at the given "path" (mandatory) for storing the secrets.
+  ##     kwallet://[[application]/folder]   (default: "kwallet://telegraf")
+  ##       kWallet with the given "application" ID and an optional subfolder.
+  ##     os://[collection]                  (default: "os://telegraf")
+  ##       OS's native secret store with "collection" being the keychain/keyring name or Windows' credential prefix
+  ##     secret-service://[collection]      (default: "secret-service://telegraf")
+  ##       Freedesktop secret-service implementation.
+  # service = "os://telegraf"
+`
+
 // secretPattern is a regex to extract references to secrets stored in a secret-store.
 var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
 
