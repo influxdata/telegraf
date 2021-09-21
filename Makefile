@@ -203,7 +203,7 @@ plugin-%:
 ci-1.16:
 	docker build -t quay.io/influxdb/telegraf-ci:1.16.7 - < scripts/ci-1.16.docker
 	docker push quay.io/influxdb/telegraf-ci:1.16.7
-	
+
 .PHONY: ci-1.17
 ci-1.17:
 	docker build -t quay.io/influxdb/telegraf-ci:1.17.0 - < scripts/ci-1.17.docker
@@ -345,16 +345,6 @@ $(include_packages):
 	elif [ "$(suffix $@)" = ".gz" ]; then \
 		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
 	fi
-
-.PHONY: upload-nightly
-upload-nightly:
-	aws s3 sync $(pkgdir) s3://dl.influxdata.com/telegraf/nightlies/ \
-		--exclude "*" \
-		--include "*.tar.gz" \
-		--include "*.deb" \
-		--include "*.rpm" \
-		--include "*.zip" \
-		--acl public-read
 
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOOS := linux
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOARCH := amd64
