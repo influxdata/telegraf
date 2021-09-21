@@ -279,6 +279,11 @@ func (k *Kafka) Init() error {
 		return err
 	}
 
+	config.Producer.Retry.Max = 100
+	config.Producer.Retry.Backoff = 10 * time.Second
+	config.Admin.Retry.Max = 100
+	config.Admin.Retry.Backoff = 10 * time.Second
+
 	k.saramaConfig = config
 
 	// Legacy support ssl config
