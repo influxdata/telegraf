@@ -421,7 +421,9 @@ replace github.com/mdlayher/apcupsd => github.com/influxdata/apcupsd v0.0.0-2021
 // replaced due to open PR updating protobuf https://github.com/cisco-ie/nx-telemetry-proto/pull/1
 replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemetry-proto v0.0.0-20210629125746-3c19a51b1abc
 
-replace github.com/99designs/keyring v1.1.6 => github.com/DocLambda/keyring v1.1.7-0.20210921100719-007b0f6acbe4
-
 // replaced due to open PR updating protobuf https://github.com/riemann/riemann-go-client/pull/27
 replace github.com/riemann/riemann-go-client => github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754
+
+replace github.com/99designs/keyring v1.1.6 => github.com/DocLambda/keyring v1.1.7-0.20210921123854-3c26ce9620d4
+
+replace github.com/jsipprell/keyctl v1.0.0 => github.com/DocLambda/keyctl v1.0.1-0.20210921123644-c0d0c2bd0612

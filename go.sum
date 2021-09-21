@@ -186,6 +186,10 @@ github.com/DocLambda/keyring v1.1.7-0.20210921092524-4349be896098 h1:SE7rCRPyYwP
 github.com/DocLambda/keyring v1.1.7-0.20210921092524-4349be896098/go.mod h1:m7+0wQ3MZuvi0ep5q9dpS6jwNSuCFLruyh6uBpkc2k8=
 github.com/DocLambda/keyring v1.1.7-0.20210921100719-007b0f6acbe4 h1:Smt8lvnXwSIA9XnCG1K4IBtelHX0oVNUtdvCf4uGzQQ=
 github.com/DocLambda/keyring v1.1.7-0.20210921100719-007b0f6acbe4/go.mod h1:m7+0wQ3MZuvi0ep5q9dpS6jwNSuCFLruyh6uBpkc2k8=
+github.com/DocLambda/keyctl v1.0.1-0.20210921123644-c0d0c2bd0612 h1:euRiElI31j6rTFT7IZqfinc8m4D1pu71Ux4J7n3Ts2c=
+github.com/DocLambda/keyctl v1.0.1-0.20210921123644-c0d0c2bd0612/go.mod h1:64s6WpBtruURX3w8W/vhWj1/uh+nOm7vUXSJlK5+KMs=
+github.com/DocLambda/keyring v1.1.7-0.20210921123854-3c26ce9620d4 h1:ETvL7OgNoZZM6fQjbv/62Xt1+5m//a9PdrzVEDlupZw=
+github.com/DocLambda/keyring v1.1.7-0.20210921123854-3c26ce9620d4/go.mod h1:MqWZulb57U61HHUErA5LM0lu3/AGJulPZKXRxg78avY=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
