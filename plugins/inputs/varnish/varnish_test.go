@@ -453,13 +453,13 @@ func TestV2ParseVarnishNames(t *testing.T) {
 		},
 		{
 			vName: "MEMPOOL.req1.allocs",
-			tags:  map[string]string{"id": "req1", "section": "MEMPOOL"},
-			field: "allocs",
+			tags:  map[string]string{"section": "MEMPOOL"},
+			field: "req1.allocs",
 		},
 		{
 			vName: "SMF.s0.c_bytes",
-			tags:  map[string]string{"id": "s0", "section": "SMF"},
-			field: "c_bytes",
+			tags:  map[string]string{"section": "SMF"},
+			field: "s0.c_bytes",
 		},
 		{
 			vName:     "VBE.reload_20210622_153544_23757.server1.happy",
@@ -469,8 +469,8 @@ func TestV2ParseVarnishNames(t *testing.T) {
 		},
 		{
 			vName: "XXX.YYY.AAA",
-			tags:  map[string]string{"id": "YYY", "section": "XXX"},
-			field: "AAA",
+			tags:  map[string]string{"section": "XXX"},
+			field: "YYY.AAA",
 		},
 		{
 			vName:     "VBE.vcl_20211502_214503.goto.000007d4.(10.100.0.1).(https://example.com:443).(ttl:10.000000).beresp_bodybytes",
@@ -498,8 +498,8 @@ func TestV2ParseVarnishNames(t *testing.T) {
 		},
 		{
 			vName:     "LCK.goto.director.destroy",
-			tags:      map[string]string{"id": "goto.director", "section": "LCK"},
-			field:     "destroy",
+			tags:      map[string]string{"section": "LCK"},
+			field:     "goto.director.destroy",
 			activeVcl: "",
 		},
 		{

@@ -45,7 +45,7 @@ var (
 		regexp.MustCompile(`^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<group>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val`),
 
 		//generic metric like MSE_STORE.store-1-1.g_aio_running_bytes_write
-		regexp.MustCompile(`([\w\-]*)\.(?P<id>[\w\-.]*)\.([\w\-]*)`),
+		regexp.MustCompile(`([\w\-]*)\.(?P<_field>[\w\-.]*)`),
 	}
 )
 

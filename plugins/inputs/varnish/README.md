@@ -387,8 +387,6 @@ When `metric_version=2` is enabled, the plugin runs `varnishstat -j` command and
 Plugin uses `varnishadm vcl.list -j` commandline to find the active VCL. Metrics that are related to the nonactive 
 VCL are excluded from monitoring.
 
-By default, suffix after the last "." is a field name. The middle part splits into tags.
-
 ### Requirements
 
 * Varnish 6.0.2+ is required (older versions do not support JSON output from CLI tools) 
@@ -429,8 +427,8 @@ By default, the plugin has a builtin list of regexps for following VMODs:
   * regexp `^VBE\.(?P<_vcl>[\w\-]*)\.(?P<backend>[\w\-]*)\.([\w\-]*)`
     * `VBE.reload_20210622_153544_23757.default.unhealthy` -> `varnish,section=VBE,backend="default" unhealthy=51i 1462765437090957980`
 * default generic metric 
-  * regexp `([\w\-]*)\.(?P<id>[\w\-.]*)\.([\w\-]*)`
-    * `MSE_STORE.store-1-1.g_aio_running_bytes_write` -> `varnish,section=MSE_STORE,id="store-1-1" g_aio_running_bytes_write=5i`
+  * regexp `([\w\-]*)\.(?P<_field>[\w\-.]*)`
+    * `MSE_STORE.store-1-1.g_aio_running_bytes_write` -> `varnish,section=MSE_STORE store-1-1.g_aio_running_bytes_write=5i`
     
 Default regexps list can be extended in telegraf config like:
 
