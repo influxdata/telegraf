@@ -1,8 +1,9 @@
 
 # This Starlark processor is used when loading Sparkplug B protobuf #
 # messages into InfluxDB.  The data source is a Opto22 Groov EPIC controller.  
+#
 # This processor does the following:
-#   - Resolves the metric name using a numeric alias
+#   - Resolves the metric name using a numeric alias.
 #     When the EPIC MQTT client is started it sends a DBIRTH message 
 #     that lists all metrics configured on the controller and includes 
 #     a sequential numeric alias to reference it by.  
@@ -10,8 +11,22 @@
 
 #     When subsequent DDATA messages are published, the numeric alias is 
 #     used to find the stored metric name in the array states["aliases"].
-#  - Splits the MQTT topic into 5 fields which are used as tags in InfluxDB.
-#  - Splits the metric name into 5 fields which are used as tags in InfluxDB.
+#  - Splits the MQTT topic into 5 fields which can be used as tags in InfluxDB.
+#  - Splits the metric name into 6 fields which are be used as tags in InfluxDB.
+#  - Deletes the host, type, topic, name and alias tags
+#
+# TODO:
+#   The requirment that a DBIRTH message has to be received before DDATA messages
+#   can be used creates a significant reliability issue and a debugging mess.
+#   I have to go into the Groov EPIC controller and restart the MQTT client everytime
+#   I restart the telegraf loader.  This has caused many hours of needless frustration.
+#   
+#   I see two possible solutions:
+#      - Opto 22 changes their software making it optional to drop the alias 
+#        and simply include the name in the DDATA messages.  In my case it's never more
+#        than 15 characters.  This is the simplest and most reliable solution.
+#      - Make a system call from telegraf and using SSH to remotely restart the MQTT client.
+#      - Have telegraf send a message through MQTT requesting a DBIRTH message from the EPIC Controller.
 #
 # Example Input:
 # edge,host=firefly,topic=spBv1.0/SF/DDATA/epiclc/Exp501 type=9i,value=22.247711,alias=10i 1626475876000000000
@@ -165,7 +180,6 @@ def buildNameTags(metric,name):
     if nfields > 0: 
         metric.tags["Source"] = fields[0]
     if nfields > 1:
-        # Shorten excessively long datatype strings
         metric.tags["Datatype"] = fields[1]
     if nfields > 2: 
         metric.tags["Metric"] = fields[2]
@@ -177,13 +191,15 @@ def buildNameTags(metric,name):
         # How this is defined is site specific.  
         # Customize this as you wish
 
-        # The following demonstrates dividing the metric name into 4 new tags
-        # A metric name can have from 2-5 underscore separated fields 
+        # The following demonstrates dividing the metric name into 3, 4 or 5 new tags
+        # A metric name must have between 3-5 underscore separated fields 
         
-        # If there is only one field then the only tag created is 'metric'
+        # If there is only one or two fields then the only tag created is 'metric' 
+        # which has the full name
         #
-        # The last field is Units is filled before fields 3, 4 and 5
+        # The last field is Units and is filled before fields 3, 4 and 5
         # Ex: C, V, Torr, W, psi, RPM, On....
+        # The units are used in Influx as the 'measurement' name.
         #
         # 
         # Fields 3, 4 and 5 (device, position, composition) are optional
@@ -193,12 +209,14 @@ def buildNameTags(metric,name):
         #         Measurement   I
         #         Component     FuelTank1   
         #         Units         C
+        #
         #      I_FuelTank1_TC_Outlet_C          (5 fields)           
         #         Measurement   I
         #         Component     FuelTank1   
         #         Device        TC
         #         Position      Outlet
         #         Units         C
+        #
         #      I_FuelTank1_TC_Outlet_Premium_C  (6 fields) 
         #         Measurement   I
         #         Component     FuelTank1   
@@ -260,7 +278,7 @@ def apply(metric):
                 state["unresolved"] = [m for mid, m in unresolved if mid != id]
 
                 log.debug("    found {} matching unresolved metrics".format(len(matching)))
-                # Process the matching metrics and output - needs work
+                # Process the matching metrics and output - TODO - needs debugging
                 # for mid, m in matching:
                 #     buildTopicTags(m,topicFields)
                 #     buildNameTags(m)
