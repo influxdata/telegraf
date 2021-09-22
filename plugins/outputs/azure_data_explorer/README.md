@@ -127,7 +127,8 @@ following configurations, **it's important to understand that the assessment, an
 ## Querying data collected in Azure Data Explorer
 Examples of data transformations and queries that would be useful to gain insights -
 1. **Data collected using SQL input plugin**
-  Sample of SQL metrics -
+  
+    Sample SQL metrics data -
 
     name | tags | timestamp | fields
     -----|------|-----------|-------
@@ -135,39 +136,40 @@ Examples of data transformations and queries that would be useful to gain insigh
     sqlserver_waitstats|{"database_name":"azure-sql-db2","host":"adx-vm","measurement_db_type":"AzureSQLDB","replica_updateability":"READ_WRITE","sql_instance":"adx-sql-server","wait_category":"Worker Thread","wait_type":"THREADPOOL"}|2021-09-09T13:51:20Z|{"max_wait_time_ms":15,"resource_wait_ms":4469,"signal_wait_time_ms":0,"wait_time_ms":4469,"waiting_tasks_count":1464}
 
 
-Since collected metrics object is of complex type so "fields" and "tags" are stored as dynamic data type, multiple ways to query this data-
-   
-- **Query JSON attributes directly**: Azure Data Explorer provides an ability to query JSON data in raw format without parsing it, so JSON attributes can be queried directly in following way -
-  ```
-  Tablename
-  | where name == "sqlserver_azure_db_resource_stats" and todouble(fields.avg_cpu_percent) > 7
-  ```
-  ```
-  Tablename
-  | distinct tostring(tags.database_name)
-  ```
-  **Note** - This approach could have performance impact in case of large volumes of data, use belwo mentioned approach for such cases.
+    Since collected metrics object is of complex type so "fields" and "tags" are stored as dynamic data type, multiple ways to query this data-
 
-- **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: Transform dynamic data type columns using update policy. This is the recommended performant way for querying over large volumes of data compared to querying directly over JSON attributes. 
+    - **Query JSON attributes directly**: Azure Data Explorer provides an ability to query JSON data in raw format without parsing it, so JSON attributes can be queried directly in following way -
+      ```
+      Tablename
+      | where name == "sqlserver_azure_db_resource_stats" and todouble(fields.avg_cpu_percent) > 7
+      ```
+      ```
+      Tablename
+      | distinct tostring(tags.database_name)
+      ```
+      **Note** - This approach could have performance impact in case of large volumes of data, use belwo mentioned approach for such cases.
 
-  ```
-  // Function to transform data
-  .create-or-alter function Transform_TargetTableName() {
-        SourceTableName 
-        | mv-apply fields on (extend key = tostring(bag_keys(fields)[0]))
-        | project fieldname=key, value=todouble(fields[key]), name, tags, timestamp
-  } 
+    - **Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: Transform dynamic data type columns using update policy. This is the recommended performant way for querying over large volumes of data compared to querying directly over JSON attributes. 
 
-  // Create destination table with above query's results schema (if it doesn't exist already)
-  .set-or-append TargetTableName <| Transform_TargetTableName() | limit 0
+      ```
+      // Function to transform data
+      .create-or-alter function Transform_TargetTableName() {
+            SourceTableName 
+            | mv-apply fields on (extend key = tostring(bag_keys(fields)[0]))
+            | project fieldname=key, value=todouble(fields[key]), name, tags, timestamp
+      } 
 
-  // Apply update policy on destination table
-  .alter table TargetTableName policy update
-  @'[{"IsEnabled": true, "Source": "SourceTableName", "Query": "Transform_TargetTableName()", "IsTransactional": true, "PropagateIngestionProperties": false}]'
-  ```
+      // Create destination table with above query's results schema (if it doesn't exist already)
+      .set-or-append TargetTableName <| Transform_TargetTableName() | limit 0
+
+      // Apply update policy on destination table
+      .alter table TargetTableName policy update
+      @'[{"IsEnabled": true, "Source": "SourceTableName", "Query": "Transform_TargetTableName()", "IsTransactional": true, "PropagateIngestionProperties": false}]'
+      ```
 
 2. **Data collected using syslog input plugin**
-   Sample of SQL metrics -
+   
+      Sample syslog data -
 
       name | tags | timestamp | fields
       -----|------|-----------|-------
