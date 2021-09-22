@@ -85,9 +85,10 @@ var sampleConfig = `
 `
 
 const (
-	defaultClientTimeout = 5 * time.Second
-	defaultContentType   = "text/plain; charset=utf-8"
-	defaultMethod        = http.MethodPost
+	defaultClientTimeout  = 5 * time.Second
+	defaultContentType    = "text/plain; charset=utf-8"
+	defaultMethod         = http.MethodPost
+	defaultUseBatchFormat = true
 )
 
 type HTTP struct {
@@ -229,8 +230,9 @@ func (h *HTTP) write(reqBody []byte) error {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &HTTP{
-			Method: defaultMethod,
-			URL:    defaultURL,
+			Method:         defaultMethod,
+			URL:            defaultURL,
+			UseBatchFormat: defaultUseBatchFormat,
 		}
 	})
 }
