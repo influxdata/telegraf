@@ -479,16 +479,15 @@ func TestBatchedUnbatched(t *testing.T) {
 		Method: defaultMethod,
 	}
 
-	var serializers = map[string]serializers.Serializer{
+	var s = map[string]serializers.Serializer{
 		"influx": influx.NewSerializer(),
 		"json": func(s serializers.Serializer, err error) serializers.Serializer {
 			require.NoError(t, err)
 			return s
-		}(json.NewSerializer(time.Second)),
+		}(json.NewSerializer(time.Second, "")),
 	}
 
-	for name, serializer := range serializers {
-
+	for name, serializer := range s {
 		var requests int
 		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requests++
@@ -496,7 +495,6 @@ func TestBatchedUnbatched(t *testing.T) {
 		})
 
 		t.Run(name, func(t *testing.T) {
-
 			for _, mode := range [...]bool{false, true} {
 				requests = 0
 				client.UseBatchFormat = mode
