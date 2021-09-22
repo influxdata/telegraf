@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -85,7 +84,6 @@ var sampleConfig = `
 `
 
 const (
-	defaultClientTimeout  = 5 * time.Second
 	defaultContentType    = "text/plain; charset=utf-8"
 	defaultMethod         = http.MethodPost
 	defaultUseBatchFormat = true
