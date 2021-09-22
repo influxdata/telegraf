@@ -24,7 +24,7 @@ type OpenTelemetry struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	listener net.Listener // overridden in tests
+	listener   net.Listener // overridden in tests
 	grpcServer *grpc.Server
 
 	wg sync.WaitGroup
