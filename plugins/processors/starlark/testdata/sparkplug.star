@@ -91,8 +91,12 @@
 #   # sparkplug_b.star file.
 #
 #   [processors.starlark.constants]     
+#
+#     # NOTE: The remaining fields can be specified either here or in the starlark script.
+#     
 #     # Tags used to identify message type - 3rd field of topic
 #     BIRTH_TAG = "BIRTH/"
+#     DEATH_TAG = "DEATH/"
 #     DATA_TAG = "DATA/"
 # 
 #     # Number of messages to hold if alias cannot be resolved 
