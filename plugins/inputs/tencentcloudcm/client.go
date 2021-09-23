@@ -22,6 +22,17 @@ type cloudmonitorClient struct {
 	Log      telegraf.Logger `toml:"-"`
 }
 
+type metricObject struct {
+	Metric    string
+	Region    string
+	Namespace string
+	Account   *Account
+
+	isDiscovered bool
+
+	MonitorInstances []*monitor.Instance
+}
+
 func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 	// holds all metrics with it's corresponding region, namespace, credential and instances(dimensions) information.
 	metricObjects := []metricObject{}
@@ -45,13 +56,11 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 				c.Log.Debugf("discover %v instance for account:%s namespace:%s region:%s", len(monitorInstances), account.Name, namespace.Name, region.RegionName)
 				for _, metric := range namespace.Metrics {
 					metricObjects = append(metricObjects, metricObject{
-						Metric:    metric,
-						Region:    region.RegionName,
-						Namespace: namespace.Name,
-						Account:   account,
-
-						isDiscovered: isDiscovered,
-
+						Metric:           metric,
+						Region:           region.RegionName,
+						Namespace:        namespace.Name,
+						Account:          account,
+						isDiscovered:     isDiscovered,
 						MonitorInstances: monitorInstances,
 					})
 				}
@@ -90,15 +99,4 @@ func (c *cloudmonitorClient) GatherMetrics(client monitor.Client, request *monit
 		return nil, fmt.Errorf("getting monitoring data for namespace %q failed: %v", *request.Namespace, err)
 	}
 	return response, nil
-}
-
-type metricObject struct {
-	Metric    string
-	Region    string
-	Namespace string
-	Account   *Account
-
-	isDiscovered bool
-
-	MonitorInstances []*monitor.Instance
 }

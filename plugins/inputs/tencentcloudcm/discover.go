@@ -23,7 +23,7 @@ type discoverTool struct {
 
 	registry map[string]Product
 
-	Log telegraf.Logger `toml:"-"`
+	Log telegraf.Logger
 }
 
 type discoverObject struct {
@@ -39,13 +39,15 @@ func NewDiscoverTool(log telegraf.Logger) *discoverTool {
 		registry:          map[string]Product{},
 		Log:               log,
 	}
-	discoverTool.Add("QCE/CVM", &CVM{})
-	discoverTool.Add("QCE/CDB", &CDB{})
-	discoverTool.Add("QCE/REDIS", &Redis{})
-	discoverTool.Add("QCE/LB_PUBLIC", &LBPublic{})
-	discoverTool.Add("QCE/LB_PRIVATE", &LBPrivate{})
-	discoverTool.Add("QCE/CES", &CES{})
-	discoverTool.Add("QCE/DC", &DC{})
+	discoverTool.registry = map[string]Product{
+		"QCE/CVM":        &CVM{},
+		"QCE/CDB":        &CDB{},
+		"QCE/REDIS":      &Redis{},
+		"QCE/LB_PUBLIC":  &LBPublic{},
+		"QCE/LB_PRIVATE": &LBPrivate{},
+		"QCE/CES":        &CES{},
+		"QCE/DC":         &DC{},
+	}
 	return discoverTool
 }
 
@@ -71,6 +73,7 @@ func (d *discoverTool) discoverObjects(accounts []*Account, endpoint string) {
 				}
 				p, ok := d.registry[namespace.Name]
 				if !ok {
+					d.Log.Debugf("discover registration for namespace: %s not found", namespace.Name)
 					continue
 				}
 				discoveredObject, err := discover(account.crs, region.RegionName, endpoint, p, d.Log)
@@ -190,8 +193,4 @@ func newKey(vals ...string) string {
 		vs = append(vs, fmt.Sprintf("%v", v))
 	}
 	return strings.Join(vs, "-")
-}
-
-func (d *discoverTool) Add(namespace string, p Product) {
-	d.registry[namespace] = p
 }
