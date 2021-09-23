@@ -105,6 +105,7 @@ const sampleConfig = `
   # transmission_mode = "RTU"
 
   ## Trace the connection to the modbus device as debug messages
+  ## Note: You have to enable telegraf's debug mode to see those messages!
   # debug_connection = false
 
   ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and "ASCIIoverTCP"

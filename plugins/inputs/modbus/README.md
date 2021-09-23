@@ -43,6 +43,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   # transmission_mode = "RTU"
 
   ## Trace the connection to the modbus device as debug messages
+  ## Note: You have to enable telegraf's debug mode to see those messages!
   # trace_connection = false
 
   ## Measurements
