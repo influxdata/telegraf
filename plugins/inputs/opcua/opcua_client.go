@@ -426,6 +426,9 @@ func Connect(o *OpcUA) error {
 		o.Log.Debugf("{OPCUA} [Connect] New client: %v", o.client)
 
 		o.Log.Debugf("{OPCUA} [Connect] Register nodes: %v", o.nodeIDs)
+		for i, nid := range o.nodeIDs {
+			o.Log.Debugf("{OPCUA} [Connect]   %d: %v", i, nid)
+		}
 		regResp, err := o.client.RegisterNodes(&ua.RegisterNodesRequest{
 			NodesToRegister: o.nodeIDs,
 		})
