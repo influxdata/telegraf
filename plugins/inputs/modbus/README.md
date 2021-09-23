@@ -162,7 +162,7 @@ If your data still looks corrupted, please post your configuration, error messag
 Some Modbus devices need special read characteristics when reading data and will fail otherwise. For example, there are certain serial devices that need a certain pause between register read requests. Others might only offer a limited number of simultaneously connected devices, like serial devices or some ModbusTCP devices. In case you need to access those devices in parallel you might want to disconnect immediately after the plugin finished reading.
 
 To allow this plugin to also handle those "special" devices there is the `workarounds` configuration options. In case your documentation states certain read requirements or you get read timeouts or other read errors you might want to try one or more workaround options.
-If you find that workarounds are required for your device, please let us know.
+If you find that other/more workarounds are required for your device, please let us know.
 
 In case your device needs a workaround that is not yet implemented, please open an issue or submit a pull-request.
 
