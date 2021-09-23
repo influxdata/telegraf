@@ -33,15 +33,6 @@ type cloudWatchLogs interface {
 
 // CloudWatchLogs plugin object definition
 type CloudWatchLogs struct {
-	Region      string `toml:"region"`
-	AccessKey   string `toml:"access_key"`
-	SecretKey   string `toml:"secret_key"`
-	RoleARN     string `toml:"role_arn"`
-	Profile     string `toml:"profile"`
-	Filename    string `toml:"shared_credential_file"`
-	Token       string `toml:"token"`
-	EndpointURL string `toml:"endpoint_url"`
-
 	LogGroup string                   `toml:"log_group"`
 	lg       *cloudwatchlogs.LogGroup //log group data
 
@@ -59,6 +50,8 @@ type CloudWatchLogs struct {
 	svc cloudWatchLogs //cloudwatch logs service
 
 	Log telegraf.Logger `toml:"-"`
+
+	internalaws.CredentialConfig
 }
 
 const (
@@ -91,16 +84,19 @@ region = "us-east-1"
 
 ## Amazon Credentials
 ## Credentials are loaded in the following order
-## 1) Assumed credentials via STS if role_arn is specified
-## 2) explicit credentials from 'access_key' and 'secret_key'
-## 3) shared profile from 'profile'
-## 4) environment variables
-## 5) shared credentials file
-## 6) EC2 Instance Profile
+## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+## 2) Assumed credentials via STS if role_arn is specified
+## 3) explicit credentials from 'access_key' and 'secret_key'
+## 4) shared profile from 'profile'
+## 5) environment variables
+## 6) shared credentials file
+## 7) EC2 Instance Profile
 #access_key = ""
 #secret_key = ""
 #token = ""
 #role_arn = ""
+#web_identity_token_file = ""
+#role_session_name = ""
 #profile = ""
 #shared_credential_file = ""
 
@@ -191,19 +187,7 @@ func (c *CloudWatchLogs) Connect() error {
 	var logGroupsOutput = &cloudwatchlogs.DescribeLogGroupsOutput{NextToken: &dummyToken}
 	var err error
 
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      c.Region,
-		AccessKey:   c.AccessKey,
-		SecretKey:   c.SecretKey,
-		RoleARN:     c.RoleARN,
-		Profile:     c.Profile,
-		Filename:    c.Filename,
-		Token:       c.Token,
-		EndpointURL: c.EndpointURL,
-	}
-	configProvider := credentialConfig.Credentials()
-
-	c.svc = cloudwatchlogs.New(configProvider)
+	c.svc = cloudwatchlogs.New(c.CredentialConfig.Credentials())
 	if c.svc == nil {
 		return fmt.Errorf("can't create cloudwatch logs service endpoint")
 	}

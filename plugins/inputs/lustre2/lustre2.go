@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // Package lustre2 (doesn't aim for Windows)

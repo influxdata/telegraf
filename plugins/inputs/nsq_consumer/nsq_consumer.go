@@ -2,6 +2,7 @@ package nsq_consumer
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -134,15 +135,28 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 		return nil
 	}))
 
+	// For backward compatibility
+	if n.Server != "" {
+		n.Nsqd = append(n.Nsqd, n.Server)
+	}
+
+	// Check if we have anything to connect to
+	if len(n.Nsqlookupd) == 0 && len(n.Nsqd) == 0 {
+		return fmt.Errorf("either 'nsqd' or 'nsqlookupd' needs to be specified")
+	}
+
 	if len(n.Nsqlookupd) > 0 {
 		err := n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
 		if err != nil && err != nsq.ErrAlreadyConnected {
 			return err
 		}
 	}
-	err := n.consumer.ConnectToNSQDs(append(n.Nsqd, n.Server))
-	if err != nil && err != nsq.ErrAlreadyConnected {
-		return err
+
+	if len(n.Nsqd) > 0 {
+		err := n.consumer.ConnectToNSQDs(n.Nsqd)
+		if err != nil && err != nsq.ErrAlreadyConnected {
+			return err
+		}
 	}
 
 	n.wg.Add(1)

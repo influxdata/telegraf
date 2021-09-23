@@ -6,14 +6,11 @@ import (
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/otel2influx"
-	otlpcollectorlogs "github.com/influxdata/influxdb-observability/otlp/collector/logs/v1"
-	otlpcollectormetrics "github.com/influxdata/influxdb-observability/otlp/collector/metrics/v1"
-	otlpcollectortrace "github.com/influxdata/influxdb-observability/otlp/collector/trace/v1"
+	"go.opentelemetry.io/collector/model/otlpgrpc"
+	"go.opentelemetry.io/collector/model/pdata"
 )
 
 type traceService struct {
-	otlpcollectortrace.UnimplementedTraceServiceServer
-
 	converter *otel2influx.OtelTracesToLineProtocol
 	writer    *writeToAccumulator
 }
@@ -26,24 +23,19 @@ func newTraceService(logger common.Logger, writer *writeToAccumulator) *traceSer
 	}
 }
 
-func (s *traceService) Export(ctx context.Context, req *otlpcollectortrace.ExportTraceServiceRequest) (*otlpcollectortrace.ExportTraceServiceResponse, error) {
-	err := s.converter.WriteTraces(ctx, req.ResourceSpans, s.writer)
-	if err != nil {
-		return nil, err
-	}
-	return &otlpcollectortrace.ExportTraceServiceResponse{}, nil
+func (s *traceService) Export(ctx context.Context, req pdata.Traces) (otlpgrpc.TracesResponse, error) {
+	err := s.converter.WriteTraces(ctx, req, s.writer)
+	return otlpgrpc.NewTracesResponse(), err
 }
 
 type metricsService struct {
-	otlpcollectormetrics.UnimplementedMetricsServiceServer
-
 	converter *otel2influx.OtelMetricsToLineProtocol
 	writer    *writeToAccumulator
 }
 
-var metricsSchemata = map[string]otel2influx.MetricsSchema{
-	"prometheus-v1": otel2influx.MetricsSchemaTelegrafPrometheusV1,
-	"prometheus-v2": otel2influx.MetricsSchemaTelegrafPrometheusV2,
+var metricsSchemata = map[string]common.MetricsSchema{
+	"prometheus-v1": common.MetricsSchemaTelegrafPrometheusV1,
+	"prometheus-v2": common.MetricsSchemaTelegrafPrometheusV2,
 }
 
 func newMetricsService(logger common.Logger, writer *writeToAccumulator, schema string) (*metricsService, error) {
@@ -62,17 +54,12 @@ func newMetricsService(logger common.Logger, writer *writeToAccumulator, schema 
 	}, nil
 }
 
-func (s *metricsService) Export(ctx context.Context, req *otlpcollectormetrics.ExportMetricsServiceRequest) (*otlpcollectormetrics.ExportMetricsServiceResponse, error) {
-	err := s.converter.WriteMetrics(ctx, req.ResourceMetrics, s.writer)
-	if err != nil {
-		return nil, err
-	}
-	return &otlpcollectormetrics.ExportMetricsServiceResponse{}, nil
+func (s *metricsService) Export(ctx context.Context, req pdata.Metrics) (otlpgrpc.MetricsResponse, error) {
+	err := s.converter.WriteMetrics(ctx, req, s.writer)
+	return otlpgrpc.NewMetricsResponse(), err
 }
 
 type logsService struct {
-	otlpcollectorlogs.UnimplementedLogsServiceServer
-
 	converter *otel2influx.OtelLogsToLineProtocol
 	writer    *writeToAccumulator
 }
@@ -85,10 +72,7 @@ func newLogsService(logger common.Logger, writer *writeToAccumulator) *logsServi
 	}
 }
 
-func (s *logsService) Export(ctx context.Context, req *otlpcollectorlogs.ExportLogsServiceRequest) (*otlpcollectorlogs.ExportLogsServiceResponse, error) {
-	err := s.converter.WriteLogs(ctx, req.ResourceLogs, s.writer)
-	if err != nil {
-		return nil, err
-	}
-	return &otlpcollectorlogs.ExportLogsServiceResponse{}, nil
+func (s *logsService) Export(ctx context.Context, req pdata.Logs) (otlpgrpc.LogsResponse, error) {
+	err := s.converter.WriteLogs(ctx, req, s.writer)
+	return otlpgrpc.NewLogsResponse(), err
 }

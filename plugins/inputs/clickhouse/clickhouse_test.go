@@ -337,8 +337,8 @@ func TestGather(t *testing.T) {
 	)
 	acc.AssertContainsFields(t, "clickhouse_asynchronous_metrics",
 		map[string]interface{}{
-			"test_system_asynchronous_metric":  uint64(1000),
-			"test_system_asynchronous_metric2": uint64(2000),
+			"test_system_asynchronous_metric":  float64(1000),
+			"test_system_asynchronous_metric2": float64(2000),
 		},
 	)
 	acc.AssertContainsFields(t, "clickhouse_zookeeper",

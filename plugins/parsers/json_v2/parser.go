@@ -184,11 +184,7 @@ func (p *Parser) processMetric(data []DataSet, input []byte, tag bool) ([]telegr
 			return nil, err
 		}
 
-		var m []telegraf.Metric
-		for _, n := range nodes {
-			m = append(m, n.Metric)
-		}
-		metrics = append(metrics, m)
+		metrics = append(metrics, nodes)
 	}
 
 	for i := 1; i < len(metrics); i++ {
@@ -229,8 +225,8 @@ func mergeMetric(a telegraf.Metric, m telegraf.Metric) {
 }
 
 // expandArray will recursively create a new MetricNode for each element in a JSON array or single value
-func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
-	var results []MetricNode
+func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
+	var results []telegraf.Metric
 
 	if result.IsObject() {
 		if !p.iterateObjects {
@@ -262,8 +258,7 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 						Metric:  m,
 						Result:  val,
 					}
-					var r []MetricNode
-					r, err = p.combineObject(n)
+					r, err := p.combineObject(n)
 					if err != nil {
 						return false
 					}
@@ -274,7 +269,7 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 				}
 				if len(results) != 0 {
 					for _, newResult := range results {
-						mergeMetric(result.Metric, newResult.Metric)
+						mergeMetric(result.Metric, newResult)
 					}
 				}
 				return true
@@ -294,8 +289,7 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 				Metric:      m,
 				Result:      val,
 			}
-			var r []MetricNode
-			r, err = p.expandArray(n)
+			r, err := p.expandArray(n)
 			if err != nil {
 				return false
 			}
@@ -323,7 +317,7 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 				if result.Tag {
 					result.DesiredType = "string"
 				}
-				v, err := p.convertType(result.Value(), result.DesiredType, result.SetName)
+				v, err := p.convertType(result.Result, result.DesiredType, result.SetName)
 				if err != nil {
 					return nil, err
 				}
@@ -335,7 +329,7 @@ func (p *Parser) expandArray(result MetricNode) ([]MetricNode, error) {
 			}
 		}
 
-		results = append(results, result)
+		results = append(results, result.Metric)
 	}
 
 	return results, nil
@@ -369,9 +363,7 @@ func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.
 		if err != nil {
 			return nil, err
 		}
-		for _, m := range metrics {
-			t = append(t, m.Metric)
-		}
+		t = append(t, metrics...)
 	}
 
 	return t, nil
@@ -379,12 +371,10 @@ func (p *Parser) processObjects(objects []JSONObject, input []byte) ([]telegraf.
 
 // combineObject will add all fields/tags to a single metric
 // If the object has multiple array's as elements it won't comine those, they will remain separate metrics
-func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
-	var results []MetricNode
-	var combineObjectResult []MetricNode
+func (p *Parser) combineObject(result MetricNode) ([]telegraf.Metric, error) {
+	var results []telegraf.Metric
 	if result.IsArray() || result.IsObject() {
 		var err error
-		var prevArray bool
 		result.ForEach(func(key, val gjson.Result) bool {
 			// Determine if field/tag set name is configured
 			var setName string
@@ -436,38 +426,18 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 			}
 
 			arrayNode.Tag = tag
+
 			if val.IsObject() {
-				prevArray = false
-				combineObjectResult, err = p.combineObject(arrayNode)
+				results, err = p.combineObject(arrayNode)
 				if err != nil {
 					return false
 				}
 			} else {
-				var r []MetricNode
-				r, err = p.expandArray(arrayNode)
+				r, err := p.expandArray(arrayNode)
 				if err != nil {
 					return false
 				}
-				if prevArray {
-					if !arrayNode.IsArray() {
-						// If another non-array element was found, merge it into all previous gathered metrics
-						if len(results) != 0 {
-							for _, newResult := range results {
-								mergeMetric(result.Metric, newResult.Metric)
-							}
-						}
-					} else {
-						// Multiple array's won't be merged but kept separate, add additional metrics gathered from an array
-						results = append(results, r...)
-					}
-				} else {
-					// Continue using the same metric if its an object
-					results = r
-				}
-
-				if val.IsArray() {
-					prevArray = true
-				}
+				results = cartesianProduct(results, r)
 			}
 
 			return true
@@ -477,13 +447,6 @@ func (p *Parser) combineObject(result MetricNode) ([]MetricNode, error) {
 			return nil, err
 		}
 	}
-
-	if len(results) == 0 {
-		// If the results are empty, use the results of the call to combine object
-		// This happens with nested objects in array's, see the test array_of_objects
-		results = combineObjectResult
-	}
-
 	return results, nil
 }
 
@@ -525,8 +488,8 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 // convertType will convert the value parsed from the input JSON to the specified type in the config
-func (p *Parser) convertType(input interface{}, desiredType string, name string) (interface{}, error) {
-	switch inputType := input.(type) {
+func (p *Parser) convertType(input gjson.Result, desiredType string, name string) (interface{}, error) {
+	switch inputType := input.Value().(type) {
 	case string:
 		if desiredType != "string" {
 			switch desiredType {
@@ -537,7 +500,7 @@ func (p *Parser) convertType(input interface{}, desiredType string, name string)
 				}
 				return r, nil
 			case "int":
-				r, err := strconv.Atoi(inputType)
+				r, err := strconv.ParseInt(inputType, 10, 64)
 				if err != nil {
 					return nil, fmt.Errorf("Unable to convert field '%s' to type int: %v", name, err)
 				}
@@ -579,9 +542,9 @@ func (p *Parser) convertType(input interface{}, desiredType string, name string)
 			case "string":
 				return fmt.Sprint(inputType), nil
 			case "int":
-				return int64(inputType), nil
+				return input.Int(), nil
 			case "uint":
-				return uint64(inputType), nil
+				return input.Uint(), nil
 			case "bool":
 				if inputType == 0 {
 					return false, nil
@@ -596,5 +559,5 @@ func (p *Parser) convertType(input interface{}, desiredType string, name string)
 		return nil, fmt.Errorf("unknown format '%T' for field  '%s'", inputType, name)
 	}
 
-	return input, nil
+	return input.Value(), nil
 }

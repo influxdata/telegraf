@@ -191,6 +191,8 @@ func ToBool(value interface{}) (bool, error) {
 		return v > 0, nil
 	case float64:
 		return v > 0, nil
+	case bool:
+		return v, nil
 	case nil:
 		return false, nil
 	}

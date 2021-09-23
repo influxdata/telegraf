@@ -409,6 +409,8 @@ SELECT DISTINCT
 			,'Mirrored Write Transactions/sec'
 			,'Group Commit Time'
 			,'Group Commits/Sec'
+			,'Workfiles Created/sec'
+			,'Worktables Created/sec'
 			,'Distributed Query'
 			,'DTC calls'
 			,'Query Store CPU usage'

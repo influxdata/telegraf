@@ -2,10 +2,12 @@
 
 This plugin sends Telegraf metrics to [Dynatrace](https://www.dynatrace.com) via the [Dynatrace Metrics API V2](https://www.dynatrace.com/support/help/dynatrace-api/environment-api/metric-v2/). It may be run alongside the Dynatrace OneAgent for automatic authentication or it may be run standalone on a host without a OneAgent by specifying a URL and API Token.
 More information on the plugin can be found in the [Dynatrace documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/telegraf/).
+All metrics are reported as gauges, unless they are specified to be delta counters using the `additional_counters` config option (see below).
+See the [Dynatrace Metrics ingestion protocol documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol) for details on the types defined there.
 
 ## Requirements
 
-You will either need a Dynatrace OneAgent (version 1.201 or higher) installed on the same host as Telegraf; or a Dynatrace environment with version 1.202 or higher. Monotonic counters (e.g. `diskio.reads`, `system.uptime`) require Dynatrace 208 or later.
+You will either need a Dynatrace OneAgent (version 1.201 or higher) installed on the same host as Telegraf; or a Dynatrace environment with version 1.202 or higher.
 
 - Telegraf minimum version: Telegraf 1.16
 
@@ -65,7 +67,7 @@ You can learn more about how to use the Dynatrace API [here](https://www.dynatra
   prefix = "telegraf"
   ## Flag for skipping the tls certificate check, just for testing purposes, should be false by default
   insecure_skip_verify = false
-  ## If you want to convert values represented as gauges to counters, add the metric names here
+  ## If you want metrics to be treated and reported as delta counters, add the metric names here
   additional_counters = [ ]
 
   ## Optional dimensions to be added to every metric
@@ -119,7 +121,7 @@ insecure_skip_verify = false
 
 *required*: `false`
 
-If you want to convert values represented as gauges to counters, add the metric names here.
+If you want a metric to be treated and reported as a delta counter, add its name to this list.
 
 ```toml
 additional_counters = [ ]
