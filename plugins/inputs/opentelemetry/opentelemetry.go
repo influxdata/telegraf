@@ -24,6 +24,7 @@ type OpenTelemetry struct {
 
 	Log telegraf.Logger `toml:"-"`
 
+	listener   net.Listener // overridden in tests
 	grpcServer *grpc.Server
 
 	wg sync.WaitGroup
@@ -89,14 +90,16 @@ func (o *OpenTelemetry) Start(accumulator telegraf.Accumulator) error {
 	otlpgrpc.RegisterMetricsServer(o.grpcServer, ms)
 	otlpgrpc.RegisterLogsServer(o.grpcServer, newLogsService(logger, influxWriter))
 
-	listener, err := net.Listen("tcp", o.ServiceAddress)
-	if err != nil {
-		return err
+	if o.listener == nil {
+		o.listener, err = net.Listen("tcp", o.ServiceAddress)
+		if err != nil {
+			return err
+		}
 	}
 
 	o.wg.Add(1)
 	go func() {
-		if err := o.grpcServer.Serve(listener); err != nil {
+		if err := o.grpcServer.Serve(o.listener); err != nil {
 			accumulator.AddError(fmt.Errorf("failed to stop OpenTelemetry gRPC service: %w", err))
 		}
 		o.wg.Done()
