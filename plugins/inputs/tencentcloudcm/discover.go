@@ -13,6 +13,8 @@ import (
 	monitor "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor/v20180724"
 )
 
+const limit = 100
+
 // discoverTool discovers objects for given regions
 type discoverTool struct {
 	DiscoveredObjects map[string]discoverObject
