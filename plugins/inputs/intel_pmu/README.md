@@ -16,7 +16,7 @@ They form a basis for profiling applications to trace dynamic control flow and i
   ## List of filesystem locations of JSON files that contain PMU event definitions.
   event_definitions = ["/var/cache/pmu/GenuineIntel-6-55-4-core.json", "/var/cache/pmu/GenuineIntel-6-55-4-uncore.json"]
   
-  ## List of core events measurement entities.
+  ## List of core events measurement entities. There can be more than one core_events sections.
   [[inputs.intel_pmu.core_events]]
     ## List of events to be counted. Single entry can contain name of the event (case insensitive)
     ## augmented with config options and perf modifiers.
@@ -39,7 +39,7 @@ They form a basis for profiling applications to trace dynamic control flow and i
     ## Can be applied to any group of events, unrelated to perf_group setting.
     # events_tag = ""
 
-  ## List of uncore event measurement entities.
+  ## List of uncore event measurement entities. There can be more than one uncore_events sections.
   [[inputs.intel_pmu.uncore_events]]
     ## List of events to be counted. Single entry can contain name of the event (case insensitive)
     ## augmented with config options and perf modifiers.
@@ -91,9 +91,9 @@ The plugin is using [iaevents](https://github.com/intel/iaevents) library which 
 
 Intel PMU plugin, is only intended for use on **linux 64-bit** systems.
 
-Event definitions JSON files for specific architecture, could be obtained from: https://download.01.org/perfmon/. 
-Auto downloading proper events definitions could be executed with *event_download.py* script from: https://github.com/andikleen/pmu-tools. 
-We recommend keeping this files in the safe place within your system.
+Event definition JSON files for specific architectures can be found at https://download.01.org/perfmon/.
+A script to download the event definitions that are appropriate for your system (event_download.py) is available at https://github.com/andikleen/pmu-tools.
+Please keep these files in a safe place on your system.
 
 ### Measuring
 

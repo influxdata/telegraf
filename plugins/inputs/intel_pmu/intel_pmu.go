@@ -119,7 +119,7 @@ func (i *IntelPMU) SampleConfig() string {
   ## List of filesystem locations of JSON files that contain PMU event definitions.
   event_definitions = ["/var/cache/pmu/GenuineIntel-6-55-4-core.json", "/var/cache/pmu/GenuineIntel-6-55-4-uncore.json"]
   
-  ## List of core events measurement entities.
+  ## List of core events measurement entities. There can be more than one core_events sections.
   [[inputs.intel_pmu.core_events]]
     ## List of events to be counted. Single entry can contain name of the event (case insensitive)
     ## augmented with config options and perf modifiers.
@@ -142,7 +142,7 @@ func (i *IntelPMU) SampleConfig() string {
     ## Can be applied to any group of events, unrelated to perf_group setting.
     # events_tag = ""
 
-  ## List of uncore event measurement entities.
+  ## List of uncore event measurement entities. There can be more than one uncore_events sections.
   [[inputs.intel_pmu.uncore_events]]
     ## List of events to be counted. Single entry can contain name of the event (case insensitive)
     ## augmented with config options and perf modifiers.
