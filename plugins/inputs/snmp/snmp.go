@@ -33,20 +33,28 @@ const sampleConfig = `
   ##            agents = ["tcp://127.0.0.1:161"]
   ##            agents = ["udp4://v4only-snmp-agent"]
   agents = ["udp://127.0.0.1:161"]
+
   ## Timeout for each request.
   # timeout = "5s"
+
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
+
   ## Path to mib files
   # path = ["/usr/share/snmp/mibs"]
+
   ## Agent host tag; the tag used to reference the source host
   # agent_host_tag = "agent_host"
+
   ## SNMP community string.
   # community = "public"
+
   ## Number of retries to attempt.
   # retries = 3
+
   ## The GETBULK max-repetitions parameter.
   # max_repetitions = 10
+
   ## SNMPv3 authentication and encryption options.
   ##
   ## Security Name.
@@ -63,6 +71,7 @@ const sampleConfig = `
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
   # priv_password = ""
+  
   ## Add fields and tables defining the variables you wish to collect.  This
   ## example collects the system uptime and interface variables.  Reference the
   ## full plugin documentation for configuration details.
