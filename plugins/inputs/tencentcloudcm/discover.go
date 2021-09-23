@@ -35,6 +35,7 @@ type discoverObject struct {
 func NewDiscoverTool(log telegraf.Logger) *discoverTool {
 	discoverTool := &discoverTool{
 		DiscoveredObjects: map[string]discoverObject{},
+		DiscoveredMetrics: map[string][]string{},
 		rw:                &sync.RWMutex{},
 		registry:          map[string]Product{},
 		Log:               log,
@@ -55,9 +56,6 @@ func NewDiscoverTool(log telegraf.Logger) *discoverTool {
 func (d *discoverTool) DiscoverMetrics() {
 	// discover metrics once
 	for namespace, p := range d.registry {
-		if d.DiscoveredMetrics == nil {
-			d.DiscoveredMetrics = map[string][]string{}
-		}
 		d.DiscoveredMetrics[namespace] = p.Metrics()
 	}
 }
