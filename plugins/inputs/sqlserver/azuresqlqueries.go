@@ -38,7 +38,7 @@ ORDER BY
 	[end_time] DESC;
 `
 
-// Resource Governamce is only relevant to Azure SQL DB into separate collector
+// Resource Governance is only relevant to Azure SQL DB into separate collector
 // This will only be collected for Azure SQL Database.
 const sqlAzureDBResourceGovernance string = `
 IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
