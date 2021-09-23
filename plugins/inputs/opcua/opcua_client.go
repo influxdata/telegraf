@@ -396,6 +396,7 @@ func BuildNodeID(tag NodeSettings) string {
 
 // Connect to a OPCUA device
 func Connect(o *OpcUA) error {
+	o.Log.Debugf("{OPCUA} [Connect] Entering with %v", o)
 	u, err := url.Parse(o.Endpoint)
 	if err != nil {
 		return err
@@ -403,9 +404,11 @@ func Connect(o *OpcUA) error {
 
 	switch u.Scheme {
 	case "opc.tcp":
+		o.Log.Debugf("{OPCUA} [Connect] Got TCP with state %v and client %v", o.state, o.client)
 		o.state = Connecting
 
 		if o.client != nil {
+			o.Log.Debugf("{OPCUA} [Connect] Closing client...")
 			if err := o.client.Close(); err != nil {
 				// Only log the error but to not bail-out here as this prevents
 				// reconnections for multiple parties (see e.g. #9523).
@@ -413,19 +416,23 @@ func Connect(o *OpcUA) error {
 			}
 		}
 
+		o.Log.Debugf("{OPCUA} [Connect] New client...")
 		o.client = opcua.NewClient(o.Endpoint, o.opts...)
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.ConnectTimeout))
 		defer cancel()
 		if err := o.client.Connect(ctx); err != nil {
 			return fmt.Errorf("error in Client Connection: %s", err)
 		}
+		o.Log.Debugf("{OPCUA} [Connect] New client: %v", o.client)
 
+		o.Log.Debugf("{OPCUA} [Connect] Register nodes: %v", o.nodeIDs)
 		regResp, err := o.client.RegisterNodes(&ua.RegisterNodesRequest{
 			NodesToRegister: o.nodeIDs,
 		})
 		if err != nil {
 			return fmt.Errorf("registerNodes failed: %v", err)
 		}
+		o.Log.Debugf("{OPCUA} [Connect] Register nodes respone: %v", regResp)
 
 		o.req = &ua.ReadRequest{
 			MaxAge:             2000,
@@ -433,6 +440,7 @@ func Connect(o *OpcUA) error {
 			TimestampsToReturn: ua.TimestampsToReturnBoth,
 		}
 
+		o.Log.Debugf("{OPCUA} [Connect] Get data: %v", o.req)
 		err = o.getData()
 		if err != nil {
 			return fmt.Errorf("get Data Failed: %v", err)
@@ -461,41 +469,59 @@ func (o *OpcUA) setupOptions() error {
 			}
 		}
 	}
-
+	o.Log.Debugf("{OPCUA} [setupOptions] Options: ")
+	o.Log.Debugf("{OPCUA} [setupOptions]   Certificate:    %v", o.Certificate)
+	o.Log.Debugf("{OPCUA} [setupOptions]   PrivateKey:     %v", o.PrivateKey)
+	o.Log.Debugf("{OPCUA} [setupOptions]   SecurityPolicy: %v", o.SecurityPolicy)
+	o.Log.Debugf("{OPCUA} [setupOptions]   SecurityMode:   %v", o.SecurityMode)
+	o.Log.Debugf("{OPCUA} [setupOptions]   AuthMethod:     %v", o.AuthMethod)
+	o.Log.Debugf("{OPCUA} [setupOptions]   RequestTimeout: %v", time.Duration(o.RequestTimeout))
 	o.opts, err = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
 
 	return err
 }
 
 func (o *OpcUA) getData() error {
+	o.Log.Debugf("{OPCUA} [getData] Request: %v", o.req)
 	resp, err := o.client.Read(o.req)
 	if err != nil {
 		o.ReadError.Incr(1)
 		return fmt.Errorf("RegisterNodes Read failed: %v", err)
 	}
 	o.ReadSuccess.Incr(1)
+	o.Log.Debugf("{OPCUA} [getData] Results: %v", resp.Results)
 	for i, d := range resp.Results {
+		o.Log.Debugf("{OPCUA} [getData]   %d: %v", i, d)
+		o.Log.Debugf("{OPCUA} [getData]     Quality: %v", d.Status)
 		o.nodeData[i].Quality = d.Status
 		if d.Status != ua.StatusOK {
 			o.Log.Errorf("status not OK for node %v: %v", o.nodes[i].tag.FieldName, d.Status)
 			continue
 		}
+		o.Log.Debugf("{OPCUA} [getData]     TagName: %v", o.nodes[i].tag.FieldName)
 		o.nodeData[i].TagName = o.nodes[i].tag.FieldName
+		o.Log.Debugf("{OPCUA} [getData]     Value: %v", d.Value.Value())
+		o.Log.Debugf("{OPCUA} [getData]     Value Type: %v", d.Value.Type())
 		if d.Value != nil {
 			o.nodeData[i].Value = d.Value.Value()
 			o.nodeData[i].DataType = d.Value.Type()
 		}
+		o.Log.Debugf("{OPCUA} [getData]     TimeStamp: %v", d.ServerTimestamp.String())
 		o.nodeData[i].TimeStamp = d.ServerTimestamp.String()
+		o.Log.Debugf("{OPCUA} [getData]     Time: %v", d.SourceTimestamp.String())
 		o.nodeData[i].Time = d.SourceTimestamp.String()
 	}
 	return nil
 }
 
 func readvalues(ids []*ua.NodeID) []*ua.ReadValueID {
+	fmt.Printf("{OPCUA} [readvalues] ids: %v", ids)
 	rvids := make([]*ua.ReadValueID, len(ids))
 	for i, v := range ids {
+		fmt.Printf("{OPCUA} [readvalues]   %d: %v", i, v)
 		rvids[i] = &ua.ReadValueID{NodeID: v}
 	}
+	fmt.Printf("{OPCUA} [readvalues] rvids: %v", rvids)
 	return rvids
 }
 
