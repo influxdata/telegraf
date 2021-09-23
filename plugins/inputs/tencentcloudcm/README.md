@@ -41,12 +41,11 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
 
   ## Batch instance size for intiating a GetMonitorData API call.
   # batch_size = 100
-
   ## By default, Tencent Cloud CM Input plugin will automatically discover instances in specified regions
   ## This sets the interval for discover and update the instances discovered.
   ##
   ## how often the discovery API call executed (default 1m)
-  # discovery_interval = "1m"
+  # discovery_interval = "5m"
 
   ## Tencent Cloud Account (required - you can provide multiple entries and distinguish them using
   ## optional name field, if name is empty, index number will be used as default)
@@ -57,30 +56,30 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
 
     ## Namespaces to Pull
     [[inputs.tencentcloudcm.accounts.namespaces]]
-      ## Tencent Cloud CM Namespace (required - see https://intl.cloud.tencent.com/document/product/248/34716#namespace)
-      namespace = "QCE/CVM"
+    ## Tencent Cloud CM Namespace (required - see https://intl.cloud.tencent.com/document/product/248/34716#namespace)
+    namespace = "QCE/CVM"
 
-      ## Metrics filter, all metrics will be pulled if not left empty. Different namespaces may have different
-      ## metric names, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843
-      # metrics = ["CPUUsage", "MemUsage"]
+    ## Metrics filter, all metrics will be pulled if not left empty. Different namespaces may have different
+    ## metric names, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843
+    # metrics = ["CPUUsage", "MemUsage"]
 
-      [[inputs.tencentcloudcm.accounts.namespaces.regions]]
-        ## Tencent Cloud regions (required - Allowed values: https://intl.cloud.tencent.com/document/api/248/33876)
-        region = "ap-guangzhou"
-
-        ## Dimension filters for Metric. Different namespaces may have different
-        ## dimension requirements, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843It must be specified if the namespace does not support instance auto discovery
-        ## Currently, discovery supported for the following namespaces:
-        ## - QCE/CVM
-        ## - QCE/CDB
-        ## - QCE/CES
-        ## - QCE/REDIS
-        ## - QCE/LB_PUBLIC
-        ## - QCE/LB_PRIVATE
-        ## - QCE/DC
-        # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances]]
-        # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances.dimensions]]
-        #   name = "value"
+    [[inputs.tencentcloudcm.accounts.namespaces.regions]]
+      ## Tencent Cloud regions (required - Allowed values: https://intl.cloud.tencent.com/document/api/248/33876)
+      region = "ap-guangzhou"
+  
+      ## Dimension filters for Metric. Different namespaces may have different
+      ## dimension requirements, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843It must be specified if the namespace does not support instance auto discovery
+      ## Currently, discovery supported for the following namespaces:
+      ## - QCE/CVM
+      ## - QCE/CDB
+      ## - QCE/CES
+      ## - QCE/REDIS
+      ## - QCE/LB_PUBLIC
+      ## - QCE/LB_PRIVATE
+      ## - QCE/DC
+      # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances]]
+      # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances.dimensions]]
+      #   name = "value"
 ```
 
 #### Requirements and Terminology
