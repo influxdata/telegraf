@@ -196,4 +196,6 @@ func (kl *KNXListener) listen() {
 
 func init() {
 	inputs.Add("knx_listener", func() telegraf.Input { return &KNXListener{ServiceType: "tunnel"} })
+	// Register for backward compatibility
+	inputs.Add("KNXListener", func() telegraf.Input { return &KNXListener{ServiceType: "tunnel"} })
 }
