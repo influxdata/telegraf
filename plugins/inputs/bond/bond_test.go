@@ -75,4 +75,5 @@ func TestGatherBondInterface(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "bond", map[string]interface{}{"active_slave": "eth2", "status": 1}, map[string]string{"bond": "bondAB"})
 	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 2, "status": 0}, map[string]string{"bond": "bondAB", "interface": "eth3"})
 	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 0, "status": 1}, map[string]string{"bond": "bondAB", "interface": "eth2"})
+	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"count": 2}, map[string]string{"bond": "bondAB"})
 }

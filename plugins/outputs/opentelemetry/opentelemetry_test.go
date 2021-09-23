@@ -33,9 +33,9 @@ func TestOpenTelemetry(t *testing.T) {
 		m.SetName("cpu_temp")
 		m.SetDataType(pdata.MetricDataTypeGauge)
 		dp := m.Gauge().DataPoints().AppendEmpty()
-		dp.LabelsMap().Insert("foo", "bar")
+		dp.Attributes().InsertString("foo", "bar")
 		dp.SetTimestamp(pdata.Timestamp(1622848686000000000))
-		dp.SetValue(87.332)
+		dp.SetDoubleVal(87.332)
 	}
 	m := newMockOtelService(t)
 	t.Cleanup(m.Cleanup)
