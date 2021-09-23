@@ -44,7 +44,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 
   ## Trace the connection to the modbus device as debug messages
   ## Note: You have to enable telegraf's debug mode to see those messages!
-  # trace_connection = false
+  # debug_connection = false
 
   ## Measurements
   ##
@@ -102,6 +102,11 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
     ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
     # close_connection_after_gather = false
 ```
+
+### Notes
+You can debug Modbus connection issues by enabling `debug_connection`. To see those debug messages Telegraf has to be started with debugging enabled (i.e. with `--debug` option). Please be aware that connection tracing will produce a lot of messages and should **NOT** be used in production environments.
+
+Please use `pause_between_requests` with care. Especially make sure that the total gather time, including the pause(s), does not exceed the configured collection interval. Note, that pauses add up if multiple requests are sent!
 
 ### Metrics
 
