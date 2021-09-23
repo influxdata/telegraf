@@ -126,7 +126,7 @@ func discover(crs *common.Credential, region, endpoint string, p Product, l tele
 		Instances: map[string]map[string]string{},
 	}
 
-	const offset, limit = int64(0), int64(100)
+	var offset int64
 	instances := []map[string]string{}
 
 	total, instancesByPage, err := p.Discover(crs, region, endpoint, offset, limit)
@@ -134,14 +134,16 @@ func discover(crs *common.Credential, region, endpoint string, p Product, l tele
 		return discoverObject, err
 	}
 	instances = append(instances, instancesByPage...)
+	offset += limit
 
 	// discover all instances if total count is bigger than limit
-	for i := 1; i < int(int64(total)/limit)+1; i++ {
-		_, instancesByPage, err := p.Discover(crs, region, endpoint, offset+(int64(i)*limit), limit)
+	for i := int64(1); i < int64(total-1)/limit+1; i++ {
+		_, instancesByPage, err := p.Discover(crs, region, endpoint, offset, limit)
 		if err != nil {
 			return discoverObject, err
 		}
 		instances = append(instances, instancesByPage...)
+		offset += limit
 	}
 
 	monitorInstances := []*monitor.Instance{}
