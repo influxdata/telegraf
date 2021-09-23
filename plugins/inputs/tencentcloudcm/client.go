@@ -19,7 +19,7 @@ type cmClient interface {
 
 type cloudmonitorClient struct {
 	Accounts []*Account
-	Log      telegraf.Logger `toml:"-"`
+	Log      telegraf.Logger
 }
 
 type metricObject struct {
