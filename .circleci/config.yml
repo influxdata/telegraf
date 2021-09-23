@@ -577,7 +577,20 @@ workflows:
       - *static-package
       - *mipsel-package
       - *mips-package
-      - nightly
+      - nightly:
+          requires:
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'darwin-package'
+            - 'windows-package'
+            - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
     triggers:
       - schedule:
           cron: "0 7 * * *"
