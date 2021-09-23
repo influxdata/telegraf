@@ -8,6 +8,32 @@ import (
 //------------------ Azure Sql Elastic Pool ------------------------------------------------------
 //------------------------------------------------------------------------------------------------
 const sqlAzurePoolResourceStats = `
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+SELECT TOP(1)
+   'sqlserver_pool_resource_stats' AS [measurement]
+  ,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+  ,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
+  ,[snapshot_time]
+  ,[cap_vcores_used_percent] AS [avg_cpu_percent]
+  ,[avg_data_io_percent] AS [avg_data_io_percent]
+  ,[avg_log_write_percent] AS [avg_log_write_percent]
+  ,[avg_storage_percent] AS [avg_storage_percent]
+  ,[max_worker_percent] AS [max_worker_percent]
+  ,[max_session_percent] AS [max_session_percent]
+  ,[max_data_space_kb]/1024 AS [storage_limit_mb]
+  ,[avg_instance_cpu_percent] AS [avg_instance_cpu_percent]
+  ,[avg_allocated_storage_percent] AS [avg_allocated_storage_percent]
+FROM 
+  sys.dm_resource_governor_resource_pools_history_ex WITH (NOLOCK)
+WHERE 
+  [name] = 'SloSharedPool1'
+ORDER BY
+  [snapshot_time] DESC;
 `
 
 const sqlAzurePoolResourceGovernance = `
@@ -18,7 +44,7 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 END
 
 SELECT
-	'sqlserver_pool_resource_governance' AS [measurement]
+	 'sqlserver_pool_resource_governance' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
 	,[database_name]
@@ -65,7 +91,7 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 END
 
 SELECT
-	'sqlserver_pool_database_io' AS [measurement]
+	 'sqlserver_database_io' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
 	,CASE
@@ -106,7 +132,7 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 END
 
 SELECT
-	'sqlserver_pool_waitstats' AS [measurement]
+	 'sqlserver_waitstats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
 	,[wait_type]
@@ -219,7 +245,7 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 END
 
 SELECT
-	'sqlserver_pool_memory_clerks' AS [measurement]
+	 'sqlserver_memory_clerks' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
 	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
 	,mc.[type] AS [clerk_type]
@@ -234,6 +260,166 @@ OPTION(RECOMPILE);
 `
 
 const sqlAzurePoolPerformanceCounters = `
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
+	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@SERVERNAME + ',Database:' + DB_NAME() +' is not an Azure SQL DB. Check the database_type parameter in the telegraf configuration.';
+	RAISERROR (@ErrorMessage,11,1)
+	RETURN
+END
+
+DECLARE @PCounters TABLE
+(
+	[object_name] nvarchar(128),
+	[counter_name] nvarchar(128),
+	[instance_name] nvarchar(128),
+	[cntr_value] bigint,
+	[cntr_type] int
+	Primary Key([object_name],[counter_name],[instance_name])
+);
+
+WITH PerfCounters AS (
+	SELECT DISTINCT 
+		 RTRIM(pc.[object_name]) AS [object_name]
+		,RTRIM(pc.[counter_name]) AS [counter_name]
+		,ISNULL(gov.[database_name],RTRIM(pc.instance_name)) AS [instance_name]
+		,pc.[cntr_value]
+		,pc.[cntr_type]
+	FROM sys.dm_os_performance_counters AS pc
+	LEFT JOIN sys.dm_user_db_resource_governance AS gov
+	ON 
+		TRY_CONVERT([uniqueidentifier], pc.[instance_name]) = gov.[physical_database_guid]
+	WHERE
+		/*filter out unnecessary SQL DB system database counters, other than master and tempdb*/
+		NOT (pc.[object_name] LIKE 'MSSQL%:Databases%' AND pc.[instance_name] IN ('model','model_masterdb','model_userdb','msdb','mssqlsystemresource'))
+		AND
+		(
+			pc.[counter_name] IN (
+				 'SQL Compilations/sec'
+				,'SQL Re-Compilations/sec'
+				,'User Connections'
+				,'Batch Requests/sec'
+				,'Logouts/sec'
+				,'Logins/sec'
+				,'Processes blocked'
+				,'Latch Waits/sec'
+				,'Full Scans/sec'
+				,'Index Searches/sec'
+				,'Page Splits/sec'
+				,'Page lookups/sec'
+				,'Page reads/sec'
+				,'Page writes/sec'
+				,'Readahead pages/sec'
+				,'Lazy writes/sec'
+				,'Checkpoint pages/sec'
+				,'Table Lock Escalations/sec'
+				,'Page life expectancy'
+				,'Log File(s) Size (KB)'
+				,'Log File(s) Used Size (KB)'
+				,'Data File(s) Size (KB)'
+				,'Transactions/sec'
+				,'Write Transactions/sec'
+				,'Active Transactions'
+				,'Log Growths'
+				,'Active Temp Tables'
+				,'Logical Connections'
+				,'Temp Tables Creation Rate'
+				,'Temp Tables For Destruction'
+				,'Free Space in tempdb (KB)'
+				,'Version Store Size (KB)'
+				,'Memory Grants Pending'
+				,'Memory Grants Outstanding'
+				,'Free list stalls/sec'
+				,'Buffer cache hit ratio'
+				,'Buffer cache hit ratio base'
+				,'Backup/Restore Throughput/sec'
+				,'Total Server Memory (KB)'
+				,'Target Server Memory (KB)'
+				,'Log Flushes/sec'
+				,'Log Flush Wait Time'
+				,'Memory broker clerk size'
+				,'Log Bytes Flushed/sec'
+				,'Bytes Sent to Replica/sec'
+				,'Log Send Queue'
+				,'Bytes Sent to Transport/sec'
+				,'Sends to Replica/sec'
+				,'Bytes Sent to Transport/sec'
+				,'Sends to Transport/sec'
+				,'Bytes Received from Replica/sec'
+				,'Receives from Replica/sec'
+				,'Flow Control Time (ms/sec)'
+				,'Flow Control/sec'
+				,'Resent Messages/sec'
+				,'Redone Bytes/sec'
+				,'XTP Memory Used (KB)'
+				,'Transaction Delay'
+				,'Log Bytes Received/sec'
+				,'Log Apply Pending Queue'
+				,'Redone Bytes/sec'
+				,'Recovery Queue'
+				,'Log Apply Ready Queue'
+				,'CPU usage %'
+				,'CPU usage % base'
+				,'Queued requests'
+				,'Requests completed/sec'
+				,'Blocked tasks'
+				,'Active memory grant amount (KB)'
+				,'Disk Read Bytes/sec'
+				,'Disk Read IO Throttled/sec'
+				,'Disk Read IO/sec'
+				,'Disk Write Bytes/sec'
+				,'Disk Write IO Throttled/sec'
+				,'Disk Write IO/sec'
+				,'Used memory (KB)'
+				,'Forwarded Records/sec'
+				,'Background Writer pages/sec'
+				,'Percent Log Used'
+				,'Log Send Queue KB'
+				,'Redo Queue KB'
+				,'Mirrored Write Transactions/sec'
+				,'Group Commit Time'
+				,'Group Commits/Sec'
+				,'Workfiles Created/sec'
+				,'Worktables Created/sec'
+				,'Query Store CPU usage'
+			) OR (
+				pc.[object_name] LIKE '%User Settable%'
+				OR pc.[object_name] LIKE '%SQL Errors%'
+				OR pc.[object_name] LIKE '%Batch Resp Statistics%'
+			) OR (
+				pc.[instance_name] IN ('_Total')
+				AND pc.[counter_name] IN (
+					 'Lock Timeouts/sec'
+					,'Lock Timeouts (timeout > 0)/sec'
+					,'Number of Deadlocks/sec'
+					,'Lock Waits/sec'
+					,'Latch Waits/sec'
+				)
+			)
+		)
+)
+
+INSERT INTO @PCounters select * from PerfCounters
+
+SELECT
+	 'sqlserver_performance' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,pc.[object_name] AS [object]
+	,pc.[counter_name] AS [counter]
+	,CASE pc.[instance_name] WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.[instance_name],'') END AS [instance]
+	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
+	,CAST(pc.[cntr_type] AS varchar(25)) AS [counter_type]
+FROM @PCounters AS pc
+LEFT OUTER JOIN @PCounters AS pc1
+	ON (
+		pc.[counter_name] = REPLACE(pc1.[counter_name],' base','')
+		OR pc.[counter_name] = REPLACE(pc1.[counter_name],' base',' (ms)')
+	)
+	AND pc.[object_name] = pc1.[object_name]
+	AND pc.[instance_name] = pc1.[instance_name]
+	AND pc1.[counter_name] LIKE '%base'
+WHERE
+	pc.[counter_name] NOT LIKE '% base'
+OPTION(RECOMPILE)
 `
 
 const sqlAzurePoolSchedulers = `
@@ -244,7 +430,7 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 END
 
 SELECT
-	'sqlserver_pool_schedulers' AS [measurement]
+	 'sqlserver_schedulers' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
 	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
 	,[scheduler_id]
