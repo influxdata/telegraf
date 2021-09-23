@@ -275,14 +275,14 @@ func (k *Kafka) Init() error {
 	}
 	config := sarama.NewConfig()
 
-	if err := k.SetConfig(config); err != nil {
-		return err
-	}
-
 	config.Producer.Retry.Max = 100
 	config.Producer.Retry.Backoff = 10 * time.Second
 	config.Admin.Retry.Max = 100
 	config.Admin.Retry.Backoff = 10 * time.Second
+
+	if err := k.SetConfig(config); err != nil {
+		return err
+	}
 
 	k.saramaConfig = config
 
