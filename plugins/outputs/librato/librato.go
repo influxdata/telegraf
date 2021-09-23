@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"time"
@@ -151,7 +151,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 || l.Debug {
-			htmlData, err := ioutil.ReadAll(resp.Body)
+			htmlData, err := io.ReadAll(resp.Body)
 			if err != nil {
 				l.Log.Debugf("Couldn't get response! (%v)", err)
 			}

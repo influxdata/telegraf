@@ -2,7 +2,6 @@ package burrow
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -28,7 +27,7 @@ func getResponseJSON(requestURI string) ([]byte, int) {
 	}
 
 	// respond with file
-	b, _ := ioutil.ReadFile(jsonFile)
+	b, _ := os.ReadFile(jsonFile)
 	return b, code
 }
 

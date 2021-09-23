@@ -3,7 +3,7 @@ package cookie
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -50,7 +50,7 @@ func newFakeServer(t *testing.T) fakeServer {
 			case authEndpointNoCreds:
 				authed()
 			case authEndpointWithBody:
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				if !cmp.Equal([]byte(reqBody), body) {
 					w.WriteHeader(http.StatusUnauthorized)

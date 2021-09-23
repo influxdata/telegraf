@@ -3,7 +3,6 @@ package json_v2_test
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -90,7 +89,7 @@ func TestData(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Process the telegraf config file for the test
-			buf, err := ioutil.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", tc.test))
+			buf, err := os.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", tc.test))
 			require.NoError(t, err)
 			inputs.Add("file", func() telegraf.Input {
 				return &file.File{}

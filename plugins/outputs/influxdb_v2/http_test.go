@@ -2,7 +2,7 @@ package influxdb_v2_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -63,7 +63,7 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 				r.ParseForm()
 				require.Equal(t, r.Form["bucket"], []string{"foo"})
 
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu value=42")
 

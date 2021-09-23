@@ -2,8 +2,8 @@ package dcos
 
 import (
 	"context"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -370,7 +370,7 @@ func (d *DCOS) createClient() (Client, error) {
 
 func (d *DCOS) createCredentials() (Credentials, error) {
 	if d.ServiceAccountID != "" && d.ServiceAccountPrivateKey != "" {
-		bs, err := ioutil.ReadFile(d.ServiceAccountPrivateKey)
+		bs, err := os.ReadFile(d.ServiceAccountPrivateKey)
 		if err != nil {
 			return nil, err
 		}
