@@ -24,6 +24,7 @@ in Prometheus format.
   # url_tag = "url"
   
   ## Whether the timestamp of the scraped metrics will be ignored.
+  ## If set to true, the gather time will be used.
   # ignore_timestamp = false
   
   ## An array of Kubernetes services to scrape metrics from.
