@@ -141,7 +141,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.38.0
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
 
 .PHONY: lint
 lint:
