@@ -55,8 +55,7 @@ func (k *DmesgConf) Gather(acc telegraf.Accumulator) error {
 	}
 	output, err := exec.Command(k.Binary, k.Options...).Output()
 	if err != nil {
-		fmt.Errorf("Execution of dmesg binary failed: %s", k.Binary)
-		return err
+		return fmt.Errorf("Execution of dmesg binary failed: %s", k.Binary)
 	}
 	fields := make(map[string]interface{})
 	for _, re := range realRegexes {

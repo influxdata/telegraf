@@ -4,7 +4,6 @@
 package dmesg
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -20,11 +19,9 @@ func TestDmesg(t *testing.T) {
 			{Filter: ".*oom_reaper.*|.*Out of memory.*", Field: "oom.count"},
 		},
 	}
-	fmt.Sprintf("Options: %v", k)
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
 	assert.NoError(t, err)
-	fmt.Sprintf("DMESG OUTPUT: %v", t)
 
 	fields := map[string]interface{}{
 		"hostname":  int(1),
