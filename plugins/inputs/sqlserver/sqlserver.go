@@ -108,8 +108,22 @@ servers = [
 
 # database_type = "AzureSQLManagedInstance"
 
+## A list of queries to include. If not specified, all the above listed queries are used.
 # include_query = []
 
+## A list of queries to explicitly ignore.
+# exclude_query = []
+
+## Queries enabled by default for database_type = "AzureSQLPool" are - 
+## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats, 
+## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
+
+# database_type = "AzureSQLPool"
+
+## A list of queries to include. If not specified, all the above listed queries are used.
+# include_query = []
+
+## A list of queries to explicitly ignore.
 # exclude_query = []
 
 ## Queries enabled by default for database_type = "SQLServer" are - 
@@ -186,7 +200,7 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLPoolResourceStats"] = Query{ScriptName: "AzureSQLPoolResourceStats", Script: sqlAzurePoolResourceStats, ResultByRow: false}
 		queries["AzureSQLPoolResourceGovernance"] = Query{ScriptName: "AzureSQLPoolResourceGovernance", Script: sqlAzurePoolResourceGovernance, ResultByRow: false}
 		queries["AzureSQLPoolDatabaseIO"] = Query{ScriptName: "AzureSQLPoolDatabaseIO", Script: sqlAzurePoolDatabaseIO, ResultByRow: false}
-		queries["AzureSQLPoolWaitStats"] = Query{ScriptName: "AzureSQLPoolWaitStats", Script: sqlAzurePoolWaitStats, ResultByRow: false}
+		queries["AzureSQLPoolOsWaitStats"] = Query{ScriptName: "AzureSQLPoolOsWaitStats", Script: sqlAzurePoolOsWaitStats, ResultByRow: false}
 		queries["AzureSQLPoolMemoryClerks"] = Query{ScriptName: "AzureSQLPoolMemoryClerks", Script: sqlAzurePoolMemoryClerks, ResultByRow: false}
 		queries["AzureSQLPoolPerformanceCounters"] = Query{ScriptName: "AzureSQLPoolPerformanceCounters", Script: sqlAzurePoolPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLPoolSchedulers"] = Query{ScriptName: "AzureSQLPoolSchedulers", Script: sqlAzurePoolSchedulers, ResultByRow: false}
