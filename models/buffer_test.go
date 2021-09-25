@@ -34,7 +34,7 @@ func Metric() telegraf.Metric {
 }
 
 func MetricTime(sec int64) telegraf.Metric {
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -42,9 +42,6 @@ func MetricTime(sec int64) telegraf.Metric {
 		},
 		time.Unix(sec, 0),
 	)
-	if err != nil {
-		panic(err)
-	}
 	return m
 }
 

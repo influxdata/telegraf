@@ -15,15 +15,16 @@ import (
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
-	"github.com/golang/protobuf/proto"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck // Cannot switch to "google.golang.org/protobuf/proto", "github.com/golang/protobuf/proto" is used by "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Register GRPC gzip decoder to support compressed telemetry
 	"google.golang.org/grpc/peer"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const (
@@ -51,15 +52,15 @@ type CiscoTelemetryMDT struct {
 	listener   net.Listener
 
 	// Internal state
-	aliases   map[string]string
-	dmesFuncs map[string]string
-	warned    map[string]struct{}
-	extraTags map[string]map[string]struct{}
-	nxpathMap map[string]map[string]string //per path map
-	propMap   map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}
-	mutex     sync.Mutex
-	acc       telegraf.Accumulator
-	wg        sync.WaitGroup
+	internalAliases map[string]string
+	dmesFuncs       map[string]string
+	warned          map[string]struct{}
+	extraTags       map[string]map[string]struct{}
+	nxpathMap       map[string]map[string]string //per path map
+	propMap         map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}
+	mutex           sync.Mutex
+	acc             telegraf.Accumulator
+	wg              sync.WaitGroup
 }
 
 type NxPayloadXfromStructure struct {
@@ -87,16 +88,16 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 
 	// Invert aliases list
 	c.warned = make(map[string]struct{})
-	c.aliases = make(map[string]string, len(c.Aliases))
-	for alias, path := range c.Aliases {
-		c.aliases[path] = alias
+	c.internalAliases = make(map[string]string, len(c.Aliases))
+	for alias, encodingPath := range c.Aliases {
+		c.internalAliases[encodingPath] = alias
 	}
 	c.initDb()
 
 	c.dmesFuncs = make(map[string]string, len(c.Dmes))
-	for dme, path := range c.Dmes {
-		c.dmesFuncs[path] = dme
-		switch path {
+	for dme, dmeKey := range c.Dmes {
+		c.dmesFuncs[dmeKey] = dme
+		switch dmeKey {
 		case "uint64 to int":
 			c.propMap[dme] = nxosValueXformUint64Toint64
 		case "uint64 to string":
@@ -115,7 +116,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 			}
 
 			var jsStruct NxPayloadXfromStructure
-			err := json.Unmarshal([]byte(path), &jsStruct)
+			err := json.Unmarshal([]byte(dmeKey), &jsStruct)
 			if err != nil {
 				continue
 			}
@@ -152,6 +153,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		var opts []grpc.ServerOption
 		tlsConfig, err := c.ServerConfig.TLSConfig()
 		if err != nil {
+			//nolint:errcheck,revive // we cannot do anything if the closing fails
 			c.listener.Close()
 			return err
 		} else if tlsConfig != nil {
@@ -167,11 +169,14 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 
 		c.wg.Add(1)
 		go func() {
-			c.grpcServer.Serve(c.listener)
+			if err := c.grpcServer.Serve(c.listener); err != nil {
+				c.Log.Errorf("serving GRPC server failed: %v", err)
+			}
 			c.wg.Done()
 		}()
 
 	default:
+		//nolint:errcheck,revive // we cannot do anything if the closing fails
 		c.listener.Close()
 		return fmt.Errorf("invalid Cisco MDT transport: %s", c.Transport)
 	}
@@ -210,7 +215,9 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 			delete(clients, conn)
 			mutex.Unlock()
 
-			conn.Close()
+			if err := conn.Close(); err != nil {
+				c.Log.Warnf("closing connection failed: %v", err)
+			}
 			c.wg.Done()
 		}()
 	}
@@ -270,9 +277,9 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 
 // MdtDialout RPC server method for grpc-dialout transport
 func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
-	peer, peerOK := peer.FromContext(stream.Context())
+	peerInCtx, peerOK := peer.FromContext(stream.Context())
 	if peerOK {
-		c.Log.Debugf("Accepted Cisco MDT GRPC dialout connection from %s", peer.Addr)
+		c.Log.Debugf("Accepted Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
 	}
 
 	var chunkBuffer bytes.Buffer
@@ -295,7 +302,9 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 		if packet.TotalSize == 0 {
 			c.handleTelemetry(packet.Data)
 		} else if int(packet.TotalSize) <= c.MaxMsgSize {
-			chunkBuffer.Write(packet.Data)
+			if _, err := chunkBuffer.Write(packet.Data); err != nil {
+				c.acc.AddError(fmt.Errorf("writing packet %q failed: %v", packet.Data, err))
+			}
 			if chunkBuffer.Len() >= int(packet.TotalSize) {
 				c.handleTelemetry(chunkBuffer.Bytes())
 				chunkBuffer.Reset()
@@ -306,7 +315,7 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 	}
 
 	if peerOK {
-		c.Log.Debugf("Closed Cisco MDT GRPC dialout connection from %s", peer.Addr)
+		c.Log.Debugf("Closed Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
 	}
 
 	return nil
@@ -367,8 +376,8 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		}
 	}
 
-	for _, metric := range grouper.Metrics() {
-		c.acc.AddMetric(metric)
+	for _, groupedMetric := range grouper.Metrics() {
+		c.acc.AddMetric(groupedMetric)
 	}
 }
 
@@ -449,9 +458,10 @@ func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemet
 	}
 }
 
-func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string, path string, tags map[string]string, timestamp time.Time) {
+func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField,
+	encodingPath string, tags map[string]string, timestamp time.Time) {
 	// RIB
-	measurement := path
+	measurement := encodingPath
 	for _, subfield := range field.Fields {
 		//For Every table fill the keys which are vrfName, address and masklen
 		switch subfield.Name {
@@ -459,7 +469,9 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 			tags[subfield.Name] = decodeTag(subfield)
 		}
 		if value := decodeValue(subfield); value != nil {
-			grouper.Add(measurement, tags, timestamp, subfield.Name, value)
+			if err := grouper.Add(measurement, tags, timestamp, subfield.Name, value); err != nil {
+				c.Log.Errorf("adding field %q to group failed: %v", subfield.Name, err)
+			}
 		}
 		if subfield.Name != "nextHop" {
 			continue
@@ -474,20 +486,23 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 				}
 				if value := decodeValue(ff); value != nil {
 					name := "nextHop/" + ff.Name
-					grouper.Add(measurement, tags, timestamp, name, value)
+					if err := grouper.Add(measurement, tags, timestamp, name, value); err != nil {
+						c.Log.Errorf("adding field %q to group failed: %v", name, err)
+					}
 				}
 			}
 		}
 	}
 }
 
-func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string, path string, tags map[string]string, timestamp time.Time) {
+func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField,
+	encodingPath string, tags map[string]string, timestamp time.Time) {
 	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
 	var nxAttributes *telemetry.TelemetryField
-	isDme := strings.Contains(path, "sys/")
-	if path == "rib" {
+	isDme := strings.Contains(encodingPath, "sys/")
+	if encodingPath == "rib" {
 		//handle native data path rib
-		c.parseRib(grouper, field, prefix, path, tags, timestamp)
+		c.parseRib(grouper, field, encodingPath, tags, timestamp)
 		return
 	}
 	if field == nil || !isDme || len(field.Fields) == 0 || len(field.Fields[0].Fields) == 0 || len(field.Fields[0].Fields[0].Fields) == 0 {
@@ -503,13 +518,13 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 		if subfield.Name == "dn" {
 			tags["dn"] = decodeTag(subfield)
 		} else {
-			c.parseContentField(grouper, subfield, "", path, tags, timestamp)
+			c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
 		}
 	}
 }
 
 func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string,
-	path string, tags map[string]string, timestamp time.Time) {
+	encodingPath string, tags map[string]string, timestamp time.Time) {
 	name := strings.Replace(field.Name, "-", "_", -1)
 
 	if (name == "modTs" || name == "createTs") && decodeValue(field) == "never" {
@@ -521,26 +536,30 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		name = prefix + "/" + name
 	}
 
-	extraTags := c.extraTags[strings.Replace(path, "-", "_", -1)+"/"+name]
+	extraTags := c.extraTags[strings.Replace(encodingPath, "-", "_", -1)+"/"+name]
 
 	if value := decodeValue(field); value != nil {
 		// Do alias lookup, to shorten measurement names
-		measurement := path
-		if alias, ok := c.aliases[path]; ok {
+		measurement := encodingPath
+		if alias, ok := c.internalAliases[encodingPath]; ok {
 			measurement = alias
 		} else {
 			c.mutex.Lock()
-			if _, haveWarned := c.warned[path]; !haveWarned {
-				c.Log.Debugf("No measurement alias for encoding path: %s", path)
-				c.warned[path] = struct{}{}
+			if _, haveWarned := c.warned[encodingPath]; !haveWarned {
+				c.Log.Debugf("No measurement alias for encoding path: %s", encodingPath)
+				c.warned[encodingPath] = struct{}{}
 			}
 			c.mutex.Unlock()
 		}
 
-		if val := c.nxosValueXform(field, value, path); val != nil {
-			grouper.Add(measurement, tags, timestamp, name, val)
+		if val := c.nxosValueXform(field, value, encodingPath); val != nil {
+			if err := grouper.Add(measurement, tags, timestamp, name, val); err != nil {
+				c.Log.Errorf("adding field %q to group failed: %v", name, err)
+			}
 		} else {
-			grouper.Add(measurement, tags, timestamp, name, value)
+			if err := grouper.Add(measurement, tags, timestamp, name, value); err != nil {
+				c.Log.Errorf("adding field %q to group failed: %v", name, err)
+			}
 		}
 		return
 	}
@@ -554,8 +573,8 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	}
 
 	var nxAttributes, nxChildren, nxRows *telemetry.TelemetryField
-	isNXOS := !strings.ContainsRune(path, ':') // IOS-XR and IOS-XE have a colon in their encoding path, NX-OS does not
-	isEVENT := isNXOS && strings.Contains(path, "EVENT-LIST")
+	isNXOS := !strings.ContainsRune(encodingPath, ':') // IOS-XR and IOS-XE have a colon in their encoding path, NX-OS does not
+	isEVENT := isNXOS && strings.Contains(encodingPath, "EVENT-LIST")
 	nxChildren = nil
 	nxAttributes = nil
 	for _, subfield := range field.Fields {
@@ -574,13 +593,13 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 			if nxAttributes == nil {
 				//call function walking over walking list.
 				for _, sub := range subfield.Fields {
-					c.parseClassAttributeField(grouper, sub, name, path, tags, timestamp)
+					c.parseClassAttributeField(grouper, sub, encodingPath, tags, timestamp)
 				}
 			}
 		} else if isNXOS && strings.HasPrefix(subfield.Name, "ROW_") {
 			nxRows = subfield
 		} else if _, isExtraTag := extraTags[subfield.Name]; !isExtraTag { // Regular telemetry decoding
-			c.parseContentField(grouper, subfield, name, path, tags, timestamp)
+			c.parseContentField(grouper, subfield, name, encodingPath, tags, timestamp)
 		}
 	}
 
@@ -595,10 +614,10 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 					//We can have subfield so recursively handle it.
 					if len(row.Fields) == 1 {
 						tags["row_number"] = strconv.FormatInt(int64(i), 10)
-						c.parseContentField(grouper, subfield, "", path, tags, timestamp)
+						c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
 					}
 				} else {
-					c.parseContentField(grouper, subfield, "", path, tags, timestamp)
+					c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
 				}
 				// Nxapi we can't identify keys always from prefix
 				tags["row_number"] = strconv.FormatInt(int64(i), 10)
@@ -629,14 +648,14 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 
 	for _, subfield := range nxAttributes.Fields {
 		if subfield.Name != "rn" {
-			c.parseContentField(grouper, subfield, "", path, tags, timestamp)
+			c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
 		}
 	}
 
 	if nxChildren != nil {
 		// This is a nested structure, children will inherit relative name keys of parent
 		for _, subfield := range nxChildren.Fields {
-			c.parseContentField(grouper, subfield, prefix, path, tags, timestamp)
+			c.parseContentField(grouper, subfield, prefix, encodingPath, tags, timestamp)
 		}
 	}
 	delete(tags, prefix)
@@ -650,9 +669,11 @@ func (c *CiscoTelemetryMDT) Address() net.Addr {
 func (c *CiscoTelemetryMDT) Stop() {
 	if c.grpcServer != nil {
 		// Stop server and terminate all running dialout routines
+		//nolint:errcheck,revive // we cannot do anything if the stopping fails
 		c.grpcServer.Stop()
 	}
 	if c.listener != nil {
+		//nolint:errcheck,revive // we cannot do anything if the closing fails
 		c.listener.Close()
 	}
 	c.wg.Wait()

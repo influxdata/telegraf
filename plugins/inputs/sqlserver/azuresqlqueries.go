@@ -527,8 +527,8 @@ WITH PerfCounters AS (
 				,'Mirrored Write Transactions/sec'
 				,'Group Commit Time'
 				,'Group Commits/Sec'
-				,'Distributed Query'
-				,'DTC calls'
+				,'Workfiles Created/sec'
+				,'Worktables Created/sec'
 				,'Query Store CPU usage'
 			) OR (
 				spi.[object_name] LIKE '%User Settable%'
@@ -606,6 +606,7 @@ SELECT
 	,s.[program_name]
 	,s.[host_name]
 	,s.[nt_user_name]
+	,s.[login_name]
 	,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]
 	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
 		WHEN 0 THEN '0-Read Committed' 
@@ -1067,6 +1068,8 @@ WITH PerfCounters AS (
 			,'Mirrored Write Transactions/sec'
 			,'Group Commit Time'
 			,'Group Commits/Sec'
+			,'Workfiles Created/sec'
+			,'Worktables Created/sec'
 			,'Distributed Query'
 			,'DTC calls'
 			,'Query Store CPU usage'
@@ -1143,6 +1146,7 @@ SELECT
 	,s.[program_name]
 	,s.[host_name]
 	,s.[nt_user_name]
+	,s.[login_name]
 	,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]
 	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
 		WHEN 0 THEN '0-Read Committed' 

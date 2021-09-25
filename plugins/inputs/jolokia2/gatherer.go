@@ -46,7 +46,7 @@ func (g *Gatherer) Gather(client *Client, acc telegraf.Accumulator) error {
 // gatherResponses adds points to an accumulator from the ReadResponse objects
 // returned by a Jolokia agent.
 func (g *Gatherer) gatherResponses(responses []ReadResponse, tags map[string]string, acc telegraf.Accumulator) {
-	series := make(map[string][]point, 0)
+	series := make(map[string][]point)
 
 	for _, metric := range g.metrics {
 		points, ok := series[metric.Name]
@@ -55,11 +55,7 @@ func (g *Gatherer) gatherResponses(responses []ReadResponse, tags map[string]str
 		}
 
 		responsePoints, responseErrors := g.generatePoints(metric, responses)
-
-		for _, responsePoint := range responsePoints {
-			points = append(points, responsePoint)
-		}
-
+		points = append(points, responsePoints...)
 		for _, err := range responseErrors {
 			acc.AddError(err)
 		}
@@ -88,7 +84,7 @@ func (g *Gatherer) generatePoints(metric Metric, responses []ReadResponse) ([]po
 		case 404:
 			continue
 		default:
-			errors = append(errors, fmt.Errorf("Unexpected status in response from target %s (%q): %d",
+			errors = append(errors, fmt.Errorf("unexpected status in response from target %s (%q): %d",
 				response.RequestTarget, response.RequestMbean, response.Status))
 			continue
 		}

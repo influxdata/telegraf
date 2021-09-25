@@ -183,11 +183,11 @@ var Mappings = []*Mapping{
 }
 
 func ParseValue(value sql.RawBytes) (float64, bool) {
-	if bytes.Compare(value, []byte("Yes")) == 0 || bytes.Compare(value, []byte("ON")) == 0 {
+	if bytes.Equal(value, []byte("Yes")) || bytes.Equal(value, []byte("ON")) {
 		return 1, true
 	}
 
-	if bytes.Compare(value, []byte("No")) == 0 || bytes.Compare(value, []byte("OFF")) == 0 {
+	if bytes.Equal(value, []byte("No")) || bytes.Equal(value, []byte("OFF")) {
 		return 0, true
 	}
 	n, err := strconv.ParseFloat(string(value), 64)

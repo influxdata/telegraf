@@ -19,15 +19,6 @@ import (
 
 type (
 	Timestream struct {
-		Region      string `toml:"region"`
-		AccessKey   string `toml:"access_key"`
-		SecretKey   string `toml:"secret_key"`
-		RoleARN     string `toml:"role_arn"`
-		Profile     string `toml:"profile"`
-		Filename    string `toml:"shared_credential_file"`
-		Token       string `toml:"token"`
-		EndpointURL string `toml:"endpoint_url"`
-
 		MappingMode             string `toml:"mapping_mode"`
 		DescribeDatabaseOnStart bool   `toml:"describe_database_on_start"`
 		DatabaseName            string `toml:"database_name"`
@@ -42,6 +33,8 @@ type (
 
 		Log telegraf.Logger
 		svc WriteClient
+
+		internalaws.CredentialConfig
 	}
 
 	WriteClient interface {
@@ -67,16 +60,19 @@ var sampleConfig = `
   
   ## Amazon Credentials
   ## Credentials are loaded in the following order:
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) Explicit credentials from 'access_key' and 'secret_key'
-  ## 3) Shared profile from 'profile'
-  ## 4) Environment variables
-  ## 5) Shared credentials file
-  ## 6) EC2 Instance Profile
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
   #token = ""
   #role_arn = ""
+  #web_identity_token_file = ""
+  #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
   
@@ -225,17 +221,7 @@ func (t *Timestream) Connect() error {
 
 	t.Log.Infof("Constructing Timestream client for '%s' mode", t.MappingMode)
 
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      t.Region,
-		AccessKey:   t.AccessKey,
-		SecretKey:   t.SecretKey,
-		RoleARN:     t.RoleARN,
-		Profile:     t.Profile,
-		Filename:    t.Filename,
-		Token:       t.Token,
-		EndpointURL: t.EndpointURL,
-	}
-	svc := WriteFactory(credentialConfig)
+	svc := WriteFactory(&t.CredentialConfig)
 
 	if t.DescribeDatabaseOnStart {
 		t.Log.Infof("Describing database '%s' in region '%s'", t.DatabaseName, t.Region)

@@ -122,6 +122,7 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
 	var slave string
 	var status int
+	var slaveCount int
 
 	scanner := bufio.NewScanner(strings.NewReader(rawFile))
 	for scanner.Scan() {
@@ -155,8 +156,16 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 				"interface": slave,
 			}
 			acc.AddFields("bond_slave", fields, tags)
+			slaveCount++
 		}
 	}
+	fields := map[string]interface{}{
+		"count": slaveCount,
+	}
+	tags := map[string]string{
+		"bond": bondName,
+	}
+	acc.AddFields("bond_slave", fields, tags)
 
 	return scanner.Err()
 }

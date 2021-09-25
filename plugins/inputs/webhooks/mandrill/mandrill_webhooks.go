@@ -25,7 +25,7 @@ func (md *MandrillWebhook) Register(router *mux.Router, acc telegraf.Accumulator
 	md.acc = acc
 }
 
-func (md *MandrillWebhook) returnOK(w http.ResponseWriter, r *http.Request) {
+func (md *MandrillWebhook) returnOK(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 

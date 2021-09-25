@@ -104,7 +104,7 @@ func (r *ReverseDNS) Stop() error {
 	return nil
 }
 
-func (r *ReverseDNS) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+func (r *ReverseDNS) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	r.parallel.Enqueue(metric)
 	return nil
 }

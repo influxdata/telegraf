@@ -12,23 +12,17 @@ import (
 	"net/url"
 	"os/user"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/kubernetes/apimachinery/pkg/fields"
-	"github.com/kubernetes/apimachinery/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
-
-type payload struct {
-	eventype string
-	pod      *corev1.Pod
-}
 
 type podMetadata struct {
 	ResourceVersion string `json:"resourceVersion"`
@@ -37,7 +31,7 @@ type podMetadata struct {
 
 type podResponse struct {
 	Kind       string        `json:"kind"`
-	ApiVersion string        `json:"apiVersion"`
+	APIVersion string        `json:"apiVersion"`
 	Metadata   podMetadata   `json:"metadata"`
 	Items      []*corev1.Pod `json:"items,string,omitempty"`
 }
@@ -60,16 +54,16 @@ func loadClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(&config)
 }
 
-func (p *Prometheus) start(ctx context.Context) error {
+func (p *Prometheus) startK8s(ctx context.Context) error {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return fmt.Errorf("Failed to get InClusterConfig - %v", err)
+		return fmt.Errorf("failed to get InClusterConfig - %v", err)
 	}
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		u, err := user.Current()
 		if err != nil {
-			return fmt.Errorf("Failed to get current user - %v", err)
+			return fmt.Errorf("failed to get current user - %v", err)
 		}
 
 		configLocation := filepath.Join(u.HomeDir, ".kube/config")
@@ -82,8 +76,6 @@ func (p *Prometheus) start(ctx context.Context) error {
 		}
 	}
 
-	p.wg = sync.WaitGroup{}
-
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
@@ -93,7 +85,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 				return
 			case <-time.After(time.Second):
 				if p.isNodeScrapeScope {
-					err = p.cAdvisor(ctx)
+					err = p.cAdvisor(ctx, config.BearerToken)
 					if err != nil {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
@@ -119,49 +111,60 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 		LabelSelector: p.KubernetesLabelSelector,
 		FieldSelector: p.KubernetesFieldSelector,
 	})
+	defer watcher.Stop()
 	if err != nil {
 		return err
 	}
-	pod := &corev1.Pod{}
-	go func() {
-		for event := range watcher.ResultChan() {
-			pod = &corev1.Pod{}
-			// If the pod is not "ready", there will be no ip associated with it.
-			if pod.Annotations["prometheus.io/scrape"] != "true" ||
-				!podReady(pod.Status.ContainerStatuses) {
-				continue
-			}
 
-			switch event.Type {
-			case watch.Added:
-				registerPod(pod, p)
-			case watch.Modified:
-				// To avoid multiple actions for each event, unregister on the first event
-				// in the delete sequence, when the containers are still "ready".
-				if pod.GetDeletionTimestamp() != nil {
-					unregisterPod(pod, p)
-				} else {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			for event := range watcher.ResultChan() {
+				pod, ok := event.Object.(*corev1.Pod)
+				if !ok {
+					return fmt.Errorf("Unexpected object when getting pods")
+				}
+
+				// If the pod is not "ready", there will be no ip associated with it.
+				if pod.Annotations["prometheus.io/scrape"] != "true" ||
+					!podReady(pod.Status.ContainerStatuses) {
+					continue
+				}
+
+				switch event.Type {
+				case watch.Added:
 					registerPod(pod, p)
+				case watch.Modified:
+					// To avoid multiple actions for each event, unregister on the first event
+					// in the delete sequence, when the containers are still "ready".
+					if pod.GetDeletionTimestamp() != nil {
+						unregisterPod(pod, p)
+					} else {
+						registerPod(pod, p)
+					}
 				}
 			}
 		}
-	}()
-
-	return nil
+	}
 }
 
-func (p *Prometheus) cAdvisor(ctx context.Context) error {
+func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
 	// The request will be the same each time
 	podsURL := fmt.Sprintf("https://%s:10250/pods", p.NodeIP)
 	req, err := http.NewRequest("GET", podsURL, nil)
+	req.Header.Set("Authorization", "Bearer "+bearerToken)
+	req.Header.Add("Accept", "application/json")
+
 	if err != nil {
-		return fmt.Errorf("Error when creating request to %s to get pod list: %w", podsURL, err)
+		return fmt.Errorf("error when creating request to %s to get pod list: %w", podsURL, err)
 	}
 
 	// Update right away so code is not waiting the length of the specified scrape interval initially
 	err = updateCadvisorPodList(p, req)
 	if err != nil {
-		return fmt.Errorf("Error initially updating pod list: %w", err)
+		return fmt.Errorf("error initially updating pod list: %w", err)
 	}
 
 	scrapeInterval := cAdvisorPodListDefaultInterval
@@ -176,7 +179,7 @@ func (p *Prometheus) cAdvisor(ctx context.Context) error {
 		case <-time.After(time.Duration(scrapeInterval) * time.Second):
 			err := updateCadvisorPodList(p, req)
 			if err != nil {
-				return fmt.Errorf("Error updating pod list: %w", err)
+				return fmt.Errorf("error updating pod list: %w", err)
 			}
 		}
 	}
@@ -188,12 +191,12 @@ func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("Error when making request for pod list: %w", err)
+		return fmt.Errorf("error when making request for pod list: %w", err)
 	}
 
 	// If err is nil, still check response code
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Error when making request for pod list with status %s", resp.Status)
+		return fmt.Errorf("error when making request for pod list with status %s", resp.Status)
 	}
 
 	defer resp.Body.Close()
@@ -202,7 +205,9 @@ func updateCadvisorPodList(p *Prometheus, req *http.Request) error {
 
 	// Will have expected type errors for some parts of corev1.Pod struct for some unused fields
 	// Instead have nil checks for every used field in case of incorrect decoding
-	json.NewDecoder(resp.Body).Decode(&cadvisorPodsResponse)
+	if err := json.NewDecoder(resp.Body).Decode(&cadvisorPodsResponse); err != nil {
+		return fmt.Errorf("decoding response failed: %v", err)
+	}
 	pods := cadvisorPodsResponse.Items
 
 	// Updating pod list to be latest cadvisor response

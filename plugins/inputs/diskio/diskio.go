@@ -68,17 +68,17 @@ func (d *DiskIO) SampleConfig() string {
 
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
-	return strings.IndexAny(s, "*?[") >= 0
+	return strings.ContainsAny(s, "*?[")
 }
 
 func (d *DiskIO) init() error {
 	for _, device := range d.Devices {
 		if hasMeta(device) {
-			filter, err := filter.Compile(d.Devices)
+			deviceFilter, err := filter.Compile(d.Devices)
 			if err != nil {
 				return fmt.Errorf("error compiling device pattern: %s", err.Error())
 			}
-			d.deviceFilter = filter
+			d.deviceFilter = deviceFilter
 		}
 	}
 	d.initialized = true

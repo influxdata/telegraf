@@ -89,3 +89,5 @@ nvidia_smi,compute_mode=Default,host=8218cf,index=2,name=GeForce\ GTX\ 1080,psta
 ### Limitations
 Note that there seems to be an issue with getting current memory clock values when the memory is overclocked.
 This may or may not apply to everyone but it's confirmed to be an issue on an EVGA 2080 Ti.
+
+**NOTE:** For use with docker either generate your own custom docker image based on nvidia/cuda which also installs a telegraf package or use [volume mount binding](https://docs.docker.com/storage/bind-mounts/) to inject the required binary into the docker container.

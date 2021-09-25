@@ -3,14 +3,19 @@
 This plugin provides information about X509 certificate accessible via local
 file or network connection.
 
+When using a UDP address as a certificate source, the server must support [DTLS](https://en.wikipedia.org/wiki/Datagram_Transport_Layer_Security).
+
 
 ### Configuration
 
 ```toml
 # Reads metrics from a SSL certificate
 [[inputs.x509_cert]]
-  ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org:443"]
+  ## List certificate sources, support wildcard expands for files
+  ## Prefix your entry with 'file://' if you intend to use relative paths
+  sources = ["tcp://example.org:443", "https://influxdata.com:443",
+            "udp://127.0.0.1:4433", "/etc/ssl/certs/ssl-cert-snakeoil.pem",
+            "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
 
   ## Timeout for SSL connection
   # timeout = "5s"

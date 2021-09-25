@@ -1,0 +1,31 @@
+{
+  "memory": {
+    "connection_readers": 1246768,
+    "connection_writers": 72108,
+    "connection_channels": 308588,
+    "connection_other": 4883596,
+    "queue_procs": 780996,
+    "queue_slave_procs": 0,
+    "quorum_queue_procs": 0,
+    "plugins": 11932828,
+    "other_proc": 39203520,
+    "metrics": 626932,
+    "mgmt_db": 3341264,
+    "mnesia": 396016,
+    "quorum_ets": 47920,
+    "other_ets": 3771384,
+    "binary": 209324208,
+    "msg_index": 32648,
+    "code": 32810827,
+    "atom": 1458513,
+    "other_system": 14284124,
+    "allocated_unused": 61026048,
+    "reserved_unallocated": 0,
+    "strategy": "rss",
+    "total": {
+      "erlang": 324522240,
+      "rss": 385548288,
+      "allocated": 385548288
+    }
+  }
+}

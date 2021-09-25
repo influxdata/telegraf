@@ -26,8 +26,8 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 		Query:     q,
 	}
 	var acc testutil.Accumulator
-	p.Start(&acc)
-	p.Init()
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Start(&acc))
 	require.NoError(t, acc.GatherError(p.Gather))
 	return &acc
 }
@@ -231,8 +231,8 @@ func TestPostgresqlSqlScript(t *testing.T) {
 		Query:     q,
 	}
 	var acc testutil.Accumulator
-	p.Start(&acc)
-	p.Init()
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Start(&acc))
 
 	require.NoError(t, acc.GatherError(p.Gather))
 }
@@ -289,15 +289,15 @@ type fakeRow struct {
 
 func (f fakeRow) Scan(dest ...interface{}) error {
 	if len(f.fields) != len(dest) {
-		return errors.New("Nada matchy buddy")
+		return errors.New("nada matchy buddy")
 	}
 
 	for i, d := range dest {
-		switch d.(type) {
-		case (*interface{}):
-			*d.(*interface{}) = f.fields[i]
+		switch d := d.(type) {
+		case *interface{}:
+			*d = f.fields[i]
 		default:
-			return fmt.Errorf("Bad type %T", d)
+			return fmt.Errorf("bad type %T", d)
 		}
 	}
 	return nil

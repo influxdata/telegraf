@@ -24,11 +24,6 @@ func (s *PointScanner) read() rune {
 	return ch
 }
 
-// unread places the previously read rune back on the reader.
-func (s *PointScanner) unread() {
-	_ = s.r.UnreadRune()
-}
-
 // Scan returns the next token and literal value.
 func (s *PointScanner) Scan() (Token, string) {
 	// Read the next rune

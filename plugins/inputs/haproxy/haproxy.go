@@ -95,9 +95,7 @@ func (h *haproxy) Gather(acc telegraf.Accumulator) error {
 		if len(matches) == 0 {
 			endpoints = append(endpoints, socketPath)
 		} else {
-			for _, match := range matches {
-				endpoints = append(endpoints, match)
-			}
+			endpoints = append(endpoints, matches...)
 		}
 	}
 

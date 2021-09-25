@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package intel_powerstat
@@ -196,9 +197,9 @@ func TestAddMetricsForSingleCoreNegative(t *testing.T) {
 
 func TestAddCPUFrequencyMetric(t *testing.T) {
 	var acc testutil.Accumulator
-	cpuID := "0"
-	coreID := "2"
-	packageID := "1"
+	cpuID := "1"
+	coreID := "3"
+	packageID := "0"
 	frequency := 1200000.2
 	power, _, _, msrMock := getPowerWithMockedServices()
 	prepareCPUInfoForSingleCPU(power, cpuID, coreID, packageID)

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
@@ -17,10 +17,11 @@ import (
 
 // NewRelic nr structure
 type NewRelic struct {
-	InsightsKey  string            `toml:"insights_key"`
-	MetricPrefix string            `toml:"metric_prefix"`
-	Timeout      internal.Duration `toml:"timeout"`
-	HTTPProxy    string            `toml:"http_proxy"`
+	InsightsKey  string          `toml:"insights_key"`
+	MetricPrefix string          `toml:"metric_prefix"`
+	Timeout      config.Duration `toml:"timeout"`
+	HTTPProxy    string          `toml:"http_proxy"`
+	MetricURL    string          `toml:"metric_url"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
@@ -49,6 +50,10 @@ func (nr *NewRelic) SampleConfig() string {
   ## HTTP Proxy override. If unset use values from the standard
   ## proxy environment variables to determine proxy, if any.
   # http_proxy = "http://corporate.proxy:3128"
+
+  ## Metric URL override to enable geographic location endpoints.
+  # If not set use values from the standard 
+  # metric_url = "https://metric-api.newrelic.com/metric/v1"
 `
 }
 
@@ -67,7 +72,7 @@ func (nr *NewRelic) Connect() error {
 		func(cfg *telemetry.Config) {
 			cfg.Product = "NewRelic-Telegraf-Plugin"
 			cfg.ProductVersion = "1.0"
-			cfg.HarvestTimeout = nr.Timeout.Duration
+			cfg.HarvestTimeout = time.Duration(nr.Timeout)
 			cfg.Client = &nr.client
 			cfg.ErrorLogger = func(e map[string]interface{}) {
 				var errorString string
@@ -76,6 +81,9 @@ func (nr *NewRelic) Connect() error {
 				}
 				nr.errorCount++
 				nr.savedErrors[nr.errorCount] = errorString
+			}
+			if nr.MetricURL != "" {
+				cfg.MetricsURLOverride = nr.MetricURL
 			}
 		})
 	if err != nil {
@@ -161,7 +169,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
 		return &NewRelic{
-			Timeout: internal.Duration{Duration: time.Second * 15},
+			Timeout: config.Duration(time.Second * 15),
 		}
 	})
 }

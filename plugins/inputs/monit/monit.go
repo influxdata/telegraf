@@ -4,9 +4,10 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/net/html/charset"
@@ -178,7 +179,7 @@ type Monit struct {
 	Password string `toml:"password"`
 	client   http.Client
 	tls.ClientConfig
-	Timeout internal.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 }
 
 type Messagebody struct {
@@ -223,7 +224,7 @@ func (m *Monit) Init() error {
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
 		},
-		Timeout: m.Timeout.Duration,
+		Timeout: time.Duration(m.Timeout),
 	}
 	return nil
 }

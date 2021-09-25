@@ -10,9 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -39,7 +40,7 @@ type poolStat map[string]metric
 
 type phpfpm struct {
 	Urls    []string
-	Timeout internal.Duration
+	Timeout config.Duration
 	tls.ClientConfig
 
 	client *http.Client
@@ -96,7 +97,7 @@ func (p *phpfpm) Init() error {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: p.Timeout.Duration,
+		Timeout: time.Duration(p.Timeout),
 	}
 	return nil
 }
@@ -219,7 +220,7 @@ func (p *phpfpm) gatherHTTP(addr string, acc telegraf.Accumulator) error {
 }
 
 // Import stat data into Telegraf system
-func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) poolStat {
+func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
 	stats := make(poolStat)
 	var currentPool string
 
@@ -271,8 +272,6 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) poolStat {
 		}
 		acc.AddFields("phpfpm", fields, tags)
 	}
-
-	return stats
 }
 
 func expandUrls(urls []string) ([]string, error) {

@@ -15,11 +15,13 @@ func TestKubernetesStats(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/stats/summary" {
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, responseStatsSummery)
+			_, err := fmt.Fprintln(w, responseStatsSummery)
+			require.NoError(t, err)
 		}
 		if r.RequestURI == "/pods" {
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, responsePods)
+			_, err := fmt.Fprintln(w, responsePods)
+			require.NoError(t, err)
 		}
 	}))
 	defer ts.Close()
@@ -139,6 +141,8 @@ func TestKubernetesStats(t *testing.T) {
 		"volume_name": "volume1",
 		"namespace":   "foons",
 		"pod_name":    "foopod",
+		"app":         "foo",
+		"superkey":    "foobar",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_volume", fields, tags)
 
@@ -152,6 +156,8 @@ func TestKubernetesStats(t *testing.T) {
 		"node_name": "node1",
 		"namespace": "foons",
 		"pod_name":  "foopod",
+		"app":       "foo",
+		"superkey":  "foobar",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_network", fields, tags)
 }

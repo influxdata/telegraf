@@ -183,7 +183,7 @@ func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string
 		if err != nil {
 			t.Fatalf("Unable to decode expected base64-encoded message: %s", err)
 		}
-		data = []byte(v)
+		data = v
 	}
 
 	parsed, err := p.Parse(data)

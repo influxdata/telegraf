@@ -6,8 +6,6 @@ import (
 )
 
 type (
-	topicFactory func(string) (topic, error)
-
 	topic interface {
 		ID() string
 		Stop()
