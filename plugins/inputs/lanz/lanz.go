@@ -43,7 +43,7 @@ func (l *Lanz) Description() string {
 	return "Read metrics off Arista LANZ, via socket"
 }
 
-func (l *Lanz) Gather(acc telegraf.Accumulator) error {
+func (l *Lanz) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

@@ -1,4 +1,5 @@
-//+build windows
+//go:build windows
+// +build windows
 
 //revive:disable-next-line:var-naming
 // Package win_eventlog Input plugin to collect Windows Event Log messages
@@ -100,7 +101,6 @@ func UnrollXMLFields(data []byte, fieldsUsage map[string]int, separator string) 
 			break
 		}
 		if err != nil {
-			// log.Fatal(err)
 			break
 		}
 		var parents []string

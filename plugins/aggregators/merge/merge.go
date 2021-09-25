@@ -19,7 +19,6 @@ const (
 
 type Merge struct {
 	grouper *metric.SeriesGrouper
-	log     telegraf.Logger
 }
 
 func (a *Merge) Init() error {

@@ -141,6 +141,7 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 			})
 			require.NoError(t, err)
 			data, err := s.Serialize(tt.metric)
+			require.NoError(t, err)
 			actual, err := prompbToText(data)
 			require.NoError(t, err)
 
@@ -614,6 +615,28 @@ rpc_duration_seconds_count 2693
 rpc_duration_seconds_sum 17560473
 `),
 		},
+		{
+			name: "empty label string value",
+			config: FormatConfig{
+				MetricSortOrder: SortMetrics,
+				StringHandling:  StringAsLabel,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{
+						"cpu": "",
+					},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+			time_idle 42
+`),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -647,7 +670,10 @@ func prompbToText(data []byte) ([]byte, error) {
 	}
 	samples := protoToSamples(&req)
 	for _, sample := range samples {
-		buf.Write([]byte(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String())))
+		_, err = buf.Write([]byte(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String())))
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err != nil {
 		return nil, err

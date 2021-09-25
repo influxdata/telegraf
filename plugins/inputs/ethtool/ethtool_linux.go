@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package ethtool
@@ -6,15 +7,16 @@ import (
 	"net"
 	"sync"
 
+	"github.com/pkg/errors"
+	ethtoolLib "github.com/safchain/ethtool"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/pkg/errors"
-	"github.com/safchain/ethtool"
 )
 
 type CommandEthtool struct {
-	ethtool *ethtool.Ethtool
+	ethtool *ethtoolLib.Ethtool
 }
 
 func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
@@ -98,7 +100,7 @@ func (c *CommandEthtool) Init() error {
 		return nil
 	}
 
-	e, err := ethtool.NewEthtool()
+	e, err := ethtoolLib.NewEthtool()
 	if err == nil {
 		c.ethtool = e
 	}

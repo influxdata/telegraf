@@ -19,7 +19,6 @@ import (
 )
 
 type ResponseMetrics struct {
-	total   int
 	Metrics []Metric `json:"metrics"`
 }
 
@@ -129,12 +128,12 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			ResponseHeaderTimeout: 3 * time.Second,
 			TLSClientConfig:       tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+			Timeout:   4 * time.Second,
 		}
 		h.client.SetHTTPClient(client)
 	}
@@ -204,13 +203,13 @@ func (h *GrayLog) flatten(item map[string]interface{}, fields map[string]interfa
 		id = id + "_"
 	}
 	for k, i := range item {
-		switch i.(type) {
+		switch i := i.(type) {
 		case int:
-			fields[id+k] = i.(float64)
+			fields[id+k] = float64(i)
 		case float64:
-			fields[id+k] = i.(float64)
+			fields[id+k] = i
 		case map[string]interface{}:
-			h.flatten(i.(map[string]interface{}), fields, id+k)
+			h.flatten(i, fields, id+k)
 		default:
 		}
 	}
@@ -234,7 +233,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
-		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
+		return "", -1, fmt.Errorf("invalid server URL \"%s\"", serverURL)
 	}
 	// Add X-Requested-By header
 	headers["X-Requested-By"] = "Telegraf"
@@ -243,7 +242,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 		m := &Messagebody{Metrics: h.Metrics}
 		httpBody, err := json.Marshal(m)
 		if err != nil {
-			return "", -1, fmt.Errorf("Invalid list of Metrics %s", h.Metrics)
+			return "", -1, fmt.Errorf("invalid list of Metrics %s", h.Metrics)
 		}
 		method = "POST"
 		content = bytes.NewBuffer(httpBody)
@@ -272,7 +271,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			requestURL.String(),
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),

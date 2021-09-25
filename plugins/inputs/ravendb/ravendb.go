@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -28,7 +28,7 @@ type RavenDB struct {
 	URL  string `toml:"url"`
 	Name string `toml:"name"`
 
-	Timeout internal.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 
 	StatsInclude       []string `toml:"stats_include"`
 	DbStatsDbs         []string `toml:"db_stats_dbs"`
@@ -40,10 +40,10 @@ type RavenDB struct {
 	Log telegraf.Logger `toml:"-"`
 
 	client               *http.Client
-	requestUrlServer     string
-	requestUrlDatabases  string
-	requestUrlIndexes    string
-	requestUrlCollection string
+	requestURLServer     string
+	requestURLDatabases  string
+	requestURLIndexes    string
+	requestURLCollection string
 }
 
 var sampleConfig = `
@@ -133,12 +133,12 @@ func (r *RavenDB) ensureClient() error {
 		return err
 	}
 	tr := &http.Transport{
-		ResponseHeaderTimeout: r.Timeout.Duration,
+		ResponseHeaderTimeout: time.Duration(r.Timeout),
 		TLSClientConfig:       tlsCfg,
 	}
 	r.client = &http.Client{
 		Transport: tr,
-		Timeout:   r.Timeout.Duration,
+		Timeout:   time.Duration(r.Timeout),
 	}
 
 	return nil
@@ -168,20 +168,20 @@ func (r *RavenDB) requestJSON(u string, target interface{}) error {
 func (r *RavenDB) gatherServer(acc telegraf.Accumulator) {
 	serverResponse := &serverMetricsResponse{}
 
-	err := r.requestJSON(r.requestUrlServer, &serverResponse)
+	err := r.requestJSON(r.requestURLServer, &serverResponse)
 	if err != nil {
 		acc.AddError(err)
 		return
 	}
 
 	tags := map[string]string{
-		"cluster_id": serverResponse.Cluster.Id,
+		"cluster_id": serverResponse.Cluster.ID,
 		"node_tag":   serverResponse.Cluster.NodeTag,
 		"url":        r.URL,
 	}
 
-	if serverResponse.Config.PublicServerUrl != nil {
-		tags["public_server_url"] = *serverResponse.Config.PublicServerUrl
+	if serverResponse.Config.PublicServerURL != nil {
+		tags["public_server_url"] = *serverResponse.Config.PublicServerURL
 	}
 
 	fields := map[string]interface{}{
@@ -192,13 +192,13 @@ func (r *RavenDB) gatherServer(acc telegraf.Accumulator) {
 		"cluster_index":                                                 serverResponse.Cluster.Index,
 		"cluster_node_state":                                            serverResponse.Cluster.NodeState,
 		"config_server_urls":                                            strings.Join(serverResponse.Config.ServerUrls, ";"),
-		"cpu_assigned_processor_count":                                  serverResponse.Cpu.AssignedProcessorCount,
-		"cpu_machine_io_wait":                                           serverResponse.Cpu.MachineIoWait,
-		"cpu_machine_usage":                                             serverResponse.Cpu.MachineUsage,
-		"cpu_process_usage":                                             serverResponse.Cpu.ProcessUsage,
-		"cpu_processor_count":                                           serverResponse.Cpu.ProcessorCount,
-		"cpu_thread_pool_available_worker_threads":                      serverResponse.Cpu.ThreadPoolAvailableWorkerThreads,
-		"cpu_thread_pool_available_completion_port_threads":             serverResponse.Cpu.ThreadPoolAvailableCompletionPortThreads,
+		"cpu_assigned_processor_count":                                  serverResponse.CPU.AssignedProcessorCount,
+		"cpu_machine_io_wait":                                           serverResponse.CPU.MachineIoWait,
+		"cpu_machine_usage":                                             serverResponse.CPU.MachineUsage,
+		"cpu_process_usage":                                             serverResponse.CPU.ProcessUsage,
+		"cpu_processor_count":                                           serverResponse.CPU.ProcessorCount,
+		"cpu_thread_pool_available_worker_threads":                      serverResponse.CPU.ThreadPoolAvailableWorkerThreads,
+		"cpu_thread_pool_available_completion_port_threads":             serverResponse.CPU.ThreadPoolAvailableCompletionPortThreads,
 		"databases_loaded_count":                                        serverResponse.Databases.LoadedCount,
 		"databases_total_count":                                         serverResponse.Databases.TotalCount,
 		"disk_remaining_storage_space_percentage":                       serverResponse.Disk.RemainingStorageSpacePercentage,
@@ -208,7 +208,7 @@ func (r *RavenDB) gatherServer(acc telegraf.Accumulator) {
 		"license_expiration_left_in_sec":                                serverResponse.License.ExpirationLeftInSec,
 		"license_max_cores":                                             serverResponse.License.MaxCores,
 		"license_type":                                                  serverResponse.License.Type,
-		"license_utilized_cpu_cores":                                    serverResponse.License.UtilizedCpuCores,
+		"license_utilized_cpu_cores":                                    serverResponse.License.UtilizedCPUCores,
 		"memory_allocated_in_mb":                                        serverResponse.Memory.AllocatedMemoryInMb,
 		"memory_installed_in_mb":                                        serverResponse.Memory.InstalledMemoryInMb,
 		"memory_low_memory_severity":                                    serverResponse.Memory.LowMemorySeverity,
@@ -221,20 +221,20 @@ func (r *RavenDB) gatherServer(acc telegraf.Accumulator) {
 		"network_last_authorized_non_cluster_admin_request_time_in_sec": serverResponse.Network.LastAuthorizedNonClusterAdminRequestTimeInSec,
 		"network_last_request_time_in_sec":                              serverResponse.Network.LastRequestTimeInSec,
 		"network_requests_per_sec":                                      serverResponse.Network.RequestsPerSec,
-		"network_tcp_active_connections":                                serverResponse.Network.TcpActiveConnections,
+		"network_tcp_active_connections":                                serverResponse.Network.TCPActiveConnections,
 		"network_total_requests":                                        serverResponse.Network.TotalRequests,
 		"server_full_version":                                           serverResponse.ServerFullVersion,
-		"server_process_id":                                             serverResponse.ServerProcessId,
+		"server_process_id":                                             serverResponse.ServerProcessID,
 		"server_version":                                                serverResponse.ServerVersion,
 		"uptime_in_sec":                                                 serverResponse.UpTimeInSec,
 	}
 
-	if serverResponse.Config.TcpServerUrls != nil {
-		fields["config_tcp_server_urls"] = strings.Join(serverResponse.Config.TcpServerUrls, ";")
+	if serverResponse.Config.TCPServerURLs != nil {
+		fields["config_tcp_server_urls"] = strings.Join(serverResponse.Config.TCPServerURLs, ";")
 	}
 
-	if serverResponse.Config.PublicTcpServerUrls != nil {
-		fields["config_public_tcp_server_urls"] = strings.Join(serverResponse.Config.PublicTcpServerUrls, ";")
+	if serverResponse.Config.PublicTCPServerURLs != nil {
+		fields["config_public_tcp_server_urls"] = strings.Join(serverResponse.Config.PublicTCPServerURLs, ";")
 	}
 
 	if serverResponse.Certificate.WellKnownAdminCertificates != nil {
@@ -247,7 +247,7 @@ func (r *RavenDB) gatherServer(acc telegraf.Accumulator) {
 func (r *RavenDB) gatherDatabases(acc telegraf.Accumulator) {
 	databasesResponse := &databasesMetricResponse{}
 
-	err := r.requestJSON(r.requestUrlDatabases, &databasesResponse)
+	err := r.requestJSON(r.requestURLDatabases, &databasesResponse)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -255,14 +255,14 @@ func (r *RavenDB) gatherDatabases(acc telegraf.Accumulator) {
 
 	for _, dbResponse := range databasesResponse.Results {
 		tags := map[string]string{
-			"database_id":   dbResponse.DatabaseId,
+			"database_id":   dbResponse.DatabaseID,
 			"database_name": dbResponse.DatabaseName,
 			"node_tag":      databasesResponse.NodeTag,
 			"url":           r.URL,
 		}
 
-		if databasesResponse.PublicServerUrl != nil {
-			tags["public_server_url"] = *databasesResponse.PublicServerUrl
+		if databasesResponse.PublicServerURL != nil {
+			tags["public_server_url"] = *databasesResponse.PublicServerURL
 		}
 
 		fields := map[string]interface{}{
@@ -306,7 +306,7 @@ func (r *RavenDB) gatherDatabases(acc telegraf.Accumulator) {
 func (r *RavenDB) gatherIndexes(acc telegraf.Accumulator) {
 	indexesResponse := &indexesMetricResponse{}
 
-	err := r.requestJSON(r.requestUrlIndexes, &indexesResponse)
+	err := r.requestJSON(r.requestURLIndexes, &indexesResponse)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -321,8 +321,8 @@ func (r *RavenDB) gatherIndexes(acc telegraf.Accumulator) {
 				"url":           r.URL,
 			}
 
-			if indexesResponse.PublicServerUrl != nil {
-				tags["public_server_url"] = *indexesResponse.PublicServerUrl
+			if indexesResponse.PublicServerURL != nil {
+				tags["public_server_url"] = *indexesResponse.PublicServerURL
 			}
 
 			fields := map[string]interface{}{
@@ -347,7 +347,7 @@ func (r *RavenDB) gatherIndexes(acc telegraf.Accumulator) {
 func (r *RavenDB) gatherCollections(acc telegraf.Accumulator) {
 	collectionsResponse := &collectionsMetricResponse{}
 
-	err := r.requestJSON(r.requestUrlCollection, &collectionsResponse)
+	err := r.requestJSON(r.requestURLCollection, &collectionsResponse)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -362,8 +362,8 @@ func (r *RavenDB) gatherCollections(acc telegraf.Accumulator) {
 				"url":             r.URL,
 			}
 
-			if collectionsResponse.PublicServerUrl != nil {
-				tags["public_server_url"] = *collectionsResponse.PublicServerUrl
+			if collectionsResponse.PublicServerURL != nil {
+				tags["public_server_url"] = *collectionsResponse.PublicServerURL
 			}
 
 			fields := map[string]interface{}{
@@ -379,7 +379,7 @@ func (r *RavenDB) gatherCollections(acc telegraf.Accumulator) {
 	}
 }
 
-func prepareDbNamesUrlPart(dbNames []string) string {
+func prepareDBNamesURLPart(dbNames []string) string {
 	if len(dbNames) == 0 {
 		return ""
 	}
@@ -396,10 +396,10 @@ func (r *RavenDB) Init() error {
 		r.URL = defaultURL
 	}
 
-	r.requestUrlServer = r.URL + "/admin/monitoring/v1/server"
-	r.requestUrlDatabases = r.URL + "/admin/monitoring/v1/databases" + prepareDbNamesUrlPart(r.DbStatsDbs)
-	r.requestUrlIndexes = r.URL + "/admin/monitoring/v1/indexes" + prepareDbNamesUrlPart(r.IndexStatsDbs)
-	r.requestUrlCollection = r.URL + "/admin/monitoring/v1/collections" + prepareDbNamesUrlPart(r.IndexStatsDbs)
+	r.requestURLServer = r.URL + "/admin/monitoring/v1/server"
+	r.requestURLDatabases = r.URL + "/admin/monitoring/v1/databases" + prepareDBNamesURLPart(r.DbStatsDbs)
+	r.requestURLIndexes = r.URL + "/admin/monitoring/v1/indexes" + prepareDBNamesURLPart(r.IndexStatsDbs)
+	r.requestURLCollection = r.URL + "/admin/monitoring/v1/collections" + prepareDBNamesURLPart(r.IndexStatsDbs)
 
 	err := choice.CheckSlice(r.StatsInclude, []string{"server", "databases", "indexes", "collections"})
 	if err != nil {
@@ -418,7 +418,7 @@ func (r *RavenDB) Init() error {
 func init() {
 	inputs.Add("ravendb", func() telegraf.Input {
 		return &RavenDB{
-			Timeout:      internal.Duration{Duration: defaultTimeout * time.Second},
+			Timeout:      config.Duration(defaultTimeout * time.Second),
 			StatsInclude: []string{"server", "databases", "indexes", "collections"},
 		}
 	})

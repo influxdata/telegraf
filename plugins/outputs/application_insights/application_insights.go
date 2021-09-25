@@ -6,10 +6,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/Microsoft/ApplicationInsights-Go/appinsights"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 )
 
 type TelemetryTransmitter interface {
@@ -24,7 +24,7 @@ type DiagnosticsMessageSubscriber interface {
 type ApplicationInsights struct {
 	InstrumentationKey      string            `toml:"instrumentation_key"`
 	EndpointURL             string            `toml:"endpoint_url"`
-	Timeout                 internal.Duration `toml:"timeout"`
+	Timeout                 config.Duration   `toml:"timeout"`
 	EnableDiagnosticLogging bool              `toml:"enable_diagnostic_logging"`
 	ContextTagSources       map[string]string `toml:"context_tag_sources"`
 	Log                     telegraf.Logger   `toml:"-"`
@@ -51,7 +51,7 @@ var (
   ## Context Tag Sources add Application Insights context tags to a tag value.
   ##
   ## For list of allowed context tag keys see:
-  ## https://github.com/Microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
+  ## https://github.com/microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
   # [outputs.application_insights.context_tag_sources]
   #   "ai.cloud.role" = "kubernetes_container_name"
   #   "ai.cloud.roleInstance" = "kubernetes_pod_name"
@@ -112,8 +112,8 @@ func (a *ApplicationInsights) Close() error {
 	select {
 	case <-a.transmitter.Close():
 		a.Log.Info("Closed")
-	case <-time.After(a.Timeout.Duration):
-		a.Log.Warnf("Close operation timed out after %v", a.Timeout.Duration)
+	case <-time.After(time.Duration(a.Timeout)):
+		a.Log.Warnf("Close operation timed out after %v", time.Duration(a.Timeout))
 	}
 
 	return nil
@@ -337,7 +337,7 @@ func toInt(value interface{}) (int, error) {
 func init() {
 	outputs.Add("application_insights", func() telegraf.Output {
 		return &ApplicationInsights{
-			Timeout:           internal.Duration{Duration: time.Second * 5},
+			Timeout:           config.Duration(time.Second * 5),
 			diagMsgSubscriber: diagnosticsMessageSubscriber{},
 			// It is very common to set Cloud.RoleName and Cloud.RoleInstance context properties, hence initial capacity of two
 			ContextTagSources: make(map[string]string, 2),

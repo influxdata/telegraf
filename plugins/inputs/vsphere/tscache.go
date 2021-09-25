@@ -27,7 +27,7 @@ func (t *TSCache) Purge() {
 	defer t.mux.Unlock()
 	n := 0
 	for k, v := range t.table {
-		if time.Now().Sub(v) > t.ttl {
+		if time.Since(v) > t.ttl {
 			delete(t.table, k)
 			n++
 		}

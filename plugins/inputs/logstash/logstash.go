@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -59,7 +59,7 @@ type Logstash struct {
 	Username string            `toml:"username"`
 	Password string            `toml:"password"`
 	Headers  map[string]string `toml:"headers"`
-	Timeout  internal.Duration `toml:"timeout"`
+	Timeout  config.Duration   `toml:"timeout"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -72,7 +72,7 @@ func NewLogstash() *Logstash {
 		SinglePipeline: false,
 		Collect:        []string{"pipelines", "process", "jvm"},
 		Headers:        make(map[string]string),
-		Timeout:        internal.Duration{Duration: time.Second * 5},
+		Timeout:        config.Duration(time.Second * 5),
 	}
 }
 
@@ -126,9 +126,11 @@ type Pipeline struct {
 }
 
 type Plugin struct {
-	ID     string      `json:"id"`
-	Events interface{} `json:"events"`
-	Name   string      `json:"name"`
+	ID           string                 `json:"id"`
+	Events       interface{}            `json:"events"`
+	Name         string                 `json:"name"`
+	BulkRequests map[string]interface{} `json:"bulk_requests"`
+	Documents    map[string]interface{} `json:"documents"`
 }
 
 type PipelinePlugins struct {
@@ -138,10 +140,13 @@ type PipelinePlugins struct {
 }
 
 type PipelineQueue struct {
-	Events   float64     `json:"events"`
-	Type     string      `json:"type"`
-	Capacity interface{} `json:"capacity"`
-	Data     interface{} `json:"data"`
+	Events              float64     `json:"events"`
+	EventsCount         *float64    `json:"events_count"`
+	Type                string      `json:"type"`
+	Capacity            interface{} `json:"capacity"`
+	Data                interface{} `json:"data"`
+	QueueSizeInBytes    *float64    `json:"queue_size_in_bytes"`
+	MaxQueueSizeInBytes *float64    `json:"max_queue_size_in_bytes"`
 }
 
 const jvmStats = "/_node/stats/jvm"
@@ -168,7 +173,7 @@ func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: logstash.Timeout.Duration,
+		Timeout: time.Duration(logstash.Timeout),
 	}
 
 	return client, nil
@@ -287,6 +292,63 @@ func (logstash *Logstash) gatherPluginsStats(
 			return err
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+		/*
+			The elasticsearch output produces additional stats around
+			bulk requests and document writes (that are elasticsearch specific).
+			Collect those here
+		*/
+		if pluginType == "output" && plugin.Name == "elasticsearch" {
+			/*
+				The "bulk_requests" section has details about batch writes
+				into Elasticsearch
+
+				  "bulk_requests" : {
+					"successes" : 2870,
+					"responses" : {
+					  "200" : 2870
+					},
+					"failures": 262,
+					"with_errors": 9089
+				  },
+			*/
+			flattener := jsonParser.JSONFlattener{}
+			err := flattener.FlattenJSON("", plugin.BulkRequests)
+			if err != nil {
+				return err
+			}
+			for k, v := range flattener.Fields {
+				if strings.HasPrefix(k, "bulk_requests") {
+					continue
+				}
+				newKey := fmt.Sprintf("bulk_requests_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
+			}
+			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+
+			/*
+				The "documents" section has counts of individual documents
+				written/retried/etc.
+				  "documents" : {
+					"successes" : 2665549,
+					"retryable_failures": 13733
+				  }
+			*/
+			flattener = jsonParser.JSONFlattener{}
+			err = flattener.FlattenJSON("", plugin.Documents)
+			if err != nil {
+				return err
+			}
+			for k, v := range flattener.Fields {
+				if strings.HasPrefix(k, "documents") {
+					continue
+				}
+				newKey := fmt.Sprintf("documents_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
+			}
+			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+		}
 	}
 
 	return nil
@@ -304,8 +366,13 @@ func (logstash *Logstash) gatherQueueStats(
 		queueTags[tag] = value
 	}
 
+	events := queue.Events
+	if queue.EventsCount != nil {
+		events = *queue.EventsCount
+	}
+
 	queueFields := map[string]interface{}{
-		"events": queue.Events,
+		"events": events,
 	}
 
 	if queue.Type != "memory" {
@@ -320,6 +387,14 @@ func (logstash *Logstash) gatherQueueStats(
 		}
 		for field, value := range flattener.Fields {
 			queueFields[field] = value
+		}
+
+		if queue.MaxQueueSizeInBytes != nil {
+			queueFields["max_queue_size_in_bytes"] = *queue.MaxQueueSizeInBytes
+		}
+
+		if queue.QueueSizeInBytes != nil {
+			queueFields["queue_size_in_bytes"] = *queue.QueueSizeInBytes
 		}
 	}
 

@@ -34,7 +34,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 	orig := now
 	metrics := []telegraf.Metric{}
 	for i := 0; i < 10; i++ {
-		m, err := metric.New("test",
+		m := metric.New("test",
 			map[string]string{
 				"city": "Toronto",
 			},
@@ -43,7 +43,6 @@ func TestExternalProcessorWorks(t *testing.T) {
 				"count":      1,
 			},
 			now)
-		require.NoError(t, err)
 		metrics = append(metrics, m)
 		now = now.Add(1)
 
@@ -96,7 +95,7 @@ func TestParseLinesWithNewLines(t *testing.T) {
 	now := time.Now()
 	orig := now
 
-	m, err := metric.New("test",
+	m := metric.New("test",
 		map[string]string{
 			"author": "Mr. Gopher",
 		},
@@ -105,8 +104,6 @@ func TestParseLinesWithNewLines(t *testing.T) {
 			"count":  3,
 		},
 		now)
-
-	require.NoError(t, err)
 
 	e.Add(m, acc)
 

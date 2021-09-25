@@ -90,10 +90,7 @@ func (ac *accumulator) addFields(
 	tp telegraf.ValueType,
 	t ...time.Time,
 ) {
-	m, err := metric.New(measurement, tags, fields, ac.getTime(t), tp)
-	if err != nil {
-		return
-	}
+	m := metric.New(measurement, tags, fields, ac.getTime(t), tp)
 	if m := ac.maker.MakeMetric(m); m != nil {
 		ac.metrics <- m
 	}

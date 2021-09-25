@@ -8,9 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/james4k/rcon"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/james4k/rcon"
 )
 
 type statsData struct {
@@ -30,7 +31,7 @@ type CSGO struct {
 	Servers [][]string `toml:"servers"`
 }
 
-func (_ *CSGO) Description() string {
+func (*CSGO) Description() string {
 	return "Fetch metrics from a CSGO SRCDS"
 }
 
@@ -45,7 +46,7 @@ var sampleConfig = `
   servers = []
 `
 
-func (_ *CSGO) SampleConfig() string {
+func (*CSGO) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -57,7 +58,7 @@ func (s *CSGO) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(ss []string) {
 			defer wg.Done()
-			acc.AddError(s.gatherServer(ss, requestServer, acc))
+			acc.AddError(s.gatherServer(acc, ss, requestServer))
 		}(server)
 	}
 
@@ -72,9 +73,9 @@ func init() {
 }
 
 func (s *CSGO) gatherServer(
+	acc telegraf.Accumulator,
 	server []string,
 	request func(string, string) (string, error),
-	acc telegraf.Accumulator,
 ) error {
 	if len(server) != 2 {
 		return errors.New("incorrect server config")
@@ -176,15 +177,15 @@ func requestServer(url string, rconPw string) (string, error) {
 	}
 	defer remoteConsole.Close()
 
-	reqId, err := remoteConsole.Write("stats")
+	reqID, err := remoteConsole.Write("stats")
 	if err != nil {
 		return "", err
 	}
 
-	resp, respReqId, err := remoteConsole.Read()
+	resp, respReqID, err := remoteConsole.Read()
 	if err != nil {
 		return "", err
-	} else if reqId != respReqId {
+	} else if reqID != respReqID {
 		return "", errors.New("response/request mismatch")
 	} else {
 		return resp, nil

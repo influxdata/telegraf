@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package intel_rdt
@@ -245,7 +246,6 @@ func (r *IntelRDT) createArgsAndStartPQOS(ctx context.Context) {
 		args = append(args, processArg)
 		go r.readData(ctx, args, r.processesPIDsMap)
 	}
-	return
 }
 
 func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAssociation map[string]string) {

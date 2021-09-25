@@ -17,58 +17,58 @@ import (
 )
 
 func TestResolveEventEndpointUrl(t *testing.T) {
-	agentApiUrl := "http://127.0.0.1:3031"
-	backendApiUrl := "http://127.0.0.1:8080"
+	agentAPIURL := "http://127.0.0.1:3031"
+	backendAPIURL := "http://127.0.0.1:8080"
 	entityNamespace := "test-namespace"
 	emptyString := ""
 	tests := []struct {
 		name                string
 		plugin              *Sensu
-		expectedEndpointUrl string
+		expectedEndpointURL string
 	}{
 		{
 			name: "agent event endpoint",
 			plugin: &Sensu{
-				AgentApiUrl: &agentApiUrl,
+				AgentAPIURL: &agentAPIURL,
 				Log:         testutil.Logger{},
 			},
-			expectedEndpointUrl: "http://127.0.0.1:3031/events",
+			expectedEndpointURL: "http://127.0.0.1:3031/events",
 		},
 		{
 			name: "backend event endpoint with default namespace",
 			plugin: &Sensu{
-				AgentApiUrl:   &agentApiUrl,
-				BackendApiUrl: &backendApiUrl,
+				AgentAPIURL:   &agentAPIURL,
+				BackendAPIURL: &backendAPIURL,
 				Log:           testutil.Logger{},
 			},
-			expectedEndpointUrl: "http://127.0.0.1:8080/api/core/v2/namespaces/default/events",
+			expectedEndpointURL: "http://127.0.0.1:8080/api/core/v2/namespaces/default/events",
 		},
 		{
 			name: "backend event endpoint with namespace declared",
 			plugin: &Sensu{
-				AgentApiUrl:   &agentApiUrl,
-				BackendApiUrl: &backendApiUrl,
+				AgentAPIURL:   &agentAPIURL,
+				BackendAPIURL: &backendAPIURL,
 				Entity: &SensuEntity{
 					Namespace: &entityNamespace,
 				},
 				Log: testutil.Logger{},
 			},
-			expectedEndpointUrl: "http://127.0.0.1:8080/api/core/v2/namespaces/test-namespace/events",
+			expectedEndpointURL: "http://127.0.0.1:8080/api/core/v2/namespaces/test-namespace/events",
 		},
 		{
-			name: "agent event endpoint due to empty AgentApiUrl",
+			name: "agent event endpoint due to empty AgentAPIURL",
 			plugin: &Sensu{
-				AgentApiUrl: &emptyString,
+				AgentAPIURL: &emptyString,
 				Log:         testutil.Logger{},
 			},
-			expectedEndpointUrl: "http://127.0.0.1:3031/events",
+			expectedEndpointURL: "http://127.0.0.1:3031/events",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.plugin.setEndpointUrl()
+			err := tt.plugin.setEndpointURL()
 			require.Equal(t, err, error(nil))
-			require.Equal(t, tt.expectedEndpointUrl, tt.plugin.EndpointUrl)
+			require.Equal(t, tt.expectedEndpointURL, tt.plugin.EndpointURL)
 		})
 	}
 }
@@ -77,23 +77,23 @@ func TestConnectAndWrite(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	testUrl := fmt.Sprintf("http://%s", ts.Listener.Addr().String())
-	testApiKey := "a0b1c2d3-e4f5-g6h7-i8j9-k0l1m2n3o4p5"
+	testURL := fmt.Sprintf("http://%s", ts.Listener.Addr().String())
+	testAPIKey := "a0b1c2d3-e4f5-g6h7-i8j9-k0l1m2n3o4p5"
 	testCheck := "telegraf"
 	testEntity := "entity1"
 	testNamespace := "default"
 	testHandler := "influxdb"
 	testTagName := "myTagName"
 	testTagValue := "myTagValue"
-	expectedAuthHeader := fmt.Sprintf("Key %s", testApiKey)
-	expectedUrl := fmt.Sprintf("/api/core/v2/namespaces/%s/events", testNamespace)
+	expectedAuthHeader := fmt.Sprintf("Key %s", testAPIKey)
+	expectedURL := fmt.Sprintf("/api/core/v2/namespaces/%s/events", testNamespace)
 	expectedPointName := "cpu"
 	expectedPointValue := float64(42)
 
 	plugin := &Sensu{
-		AgentApiUrl:   nil,
-		BackendApiUrl: &testUrl,
-		ApiKey:        &testApiKey,
+		AgentAPIURL:   nil,
+		BackendAPIURL: &testURL,
+		APIKey:        &testAPIKey,
 		Check: &SensuCheck{
 			Name: &testCheck,
 		},
@@ -115,8 +115,8 @@ func TestConnectAndWrite(t *testing.T) {
 
 	t.Run("write", func(t *testing.T) {
 		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			require.Equal(t, expectedUrl, r.URL.String())
-			require.Equal(t, expectedAuthHeader, (r.Header.Get("Authorization")))
+			require.Equal(t, expectedURL, r.URL.String())
+			require.Equal(t, expectedAuthHeader, r.Header.Get("Authorization"))
 			// let's make sure what we received is a valid Sensu event that contains all of the expected data
 			body, err := ioutil.ReadAll(r.Body)
 			require.NoError(t, err)

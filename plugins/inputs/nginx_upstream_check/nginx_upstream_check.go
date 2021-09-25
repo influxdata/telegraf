@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -55,7 +55,7 @@ type NginxUpstreamCheck struct {
 	Method     string            `toml:"method"`
 	Headers    map[string]string `toml:"headers"`
 	HostHeader string            `toml:"host_header"`
-	Timeout    internal.Duration `toml:"timeout"`
+	Timeout    config.Duration   `toml:"timeout"`
 
 	tls.ClientConfig
 	client *http.Client
@@ -67,7 +67,7 @@ func NewNginxUpstreamCheck() *NginxUpstreamCheck {
 		Method:     "GET",
 		Headers:    make(map[string]string),
 		HostHeader: "",
-		Timeout:    internal.Duration{Duration: time.Second * 5},
+		Timeout:    config.Duration(time.Second * 5),
 	}
 }
 
@@ -115,7 +115,7 @@ func (check *NginxUpstreamCheck) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: check.Timeout.Duration,
+		Timeout: time.Duration(check.Timeout),
 	}
 
 	return client, nil

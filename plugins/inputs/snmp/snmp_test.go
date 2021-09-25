@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	config "github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
@@ -93,8 +92,8 @@ func TestSampleConfig(t *testing.T) {
 	expected := &Snmp{
 		Agents:       []string{"udp://127.0.0.1:161"},
 		AgentHostTag: "",
-		ClientConfig: config.ClientConfig{
-			Timeout:        internal.Duration{Duration: 5 * time.Second},
+		ClientConfig: snmp.ClientConfig{
+			Timeout:        config.Duration(5 * time.Second),
 			Version:        2,
 			Community:      "public",
 			MaxRepetitions: 10,
@@ -200,11 +199,12 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 			{Oid: ".1.1.1.3"},
 		},
 		Tables: []Table{
-			{Fields: []Field{
-				{Oid: ".1.1.1.4", Name: "four", IsTag: true},
-				{Oid: ".1.1.1.5", Name: "five"},
-				{Oid: ".1.1.1.6"},
-			}},
+			{Name: "testing",
+				Fields: []Field{
+					{Oid: ".1.1.1.4", Name: "four", IsTag: true},
+					{Oid: ".1.1.1.5", Name: "five"},
+					{Oid: ".1.1.1.6"},
+				}},
 		},
 	}
 
@@ -236,11 +236,26 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
 }
 
+func TestSnmpInit_noName_noOid(t *testing.T) {
+	s := &Snmp{
+		Tables: []Table{
+			{Fields: []Field{
+				{Oid: ".1.1.1.4", Name: "four", IsTag: true},
+				{Oid: ".1.1.1.5", Name: "five"},
+				{Oid: ".1.1.1.6"},
+			}},
+		},
+	}
+
+	err := s.init()
+	require.Error(t, err)
+}
+
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
-		ClientConfig: config.ClientConfig{
-			Timeout:   internal.Duration{Duration: 3 * time.Second},
+		ClientConfig: snmp.ClientConfig{
+			Timeout:   config.Duration(3 * time.Second),
 			Retries:   4,
 			Version:   2,
 			Community: "foo",
@@ -308,7 +323,7 @@ func stubTCPServer(wg *sync.WaitGroup) {
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4"},
-		ClientConfig: config.ClientConfig{
+		ClientConfig: snmp.ClientConfig{
 			Version:        3,
 			MaxRepetitions: 20,
 			ContextName:    "mycontext",
@@ -356,7 +371,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES192,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -377,7 +392,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES192C,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -398,7 +413,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES256,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -419,7 +434,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES256C,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -488,8 +503,8 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 		t.Skip("Skipping test due to random failures.")
 	}
 	srvr, err := net.ListenUDP("udp4", &net.UDPAddr{})
-	defer srvr.Close()
 	require.NoError(t, err)
+	defer srvr.Close()
 	reqCount := 0
 	// Set up a WaitGroup to wait for the server goroutine to exit and protect
 	// reqCount.
@@ -507,7 +522,10 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 			}
 			reqCount++
 
-			srvr.WriteTo([]byte{'X'}, addr) // will cause decoding error
+			// will cause decoding error
+			if _, err := srvr.WriteTo([]byte{'X'}, addr); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -527,7 +545,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 		GoSNMP: gs,
 	}
 	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
-	srvr.Close()
+	assert.NoError(t, srvr.Close())
 	wg.Wait()
 	assert.Error(t, err)
 	assert.False(t, gs.Conn == conn)
@@ -538,8 +556,8 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	// TODO: Fix this test
 	t.Skip("Test failing too often, skip for now and revisit later.")
 	srvr, err := net.ListenUDP("udp4", &net.UDPAddr{})
-	defer srvr.Close()
 	require.NoError(t, err)
+	defer srvr.Close()
 	reqCount := 0
 	// Set up a WaitGroup to wait for the server goroutine to exit and protect
 	// reqCount.
@@ -557,7 +575,10 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 			}
 			reqCount++
 
-			srvr.WriteTo([]byte{'X'}, addr) // will cause decoding error
+			// will cause decoding error
+			if _, err := srvr.WriteTo([]byte{'X'}, addr); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -577,7 +598,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 		GoSNMP: gs,
 	}
 	_, err = gsw.Get([]string{".1.0.0"})
-	srvr.Close()
+	require.NoError(t, srvr.Close())
 	wg.Wait()
 	assert.Error(t, err)
 	assert.False(t, gs.Conn == conn)
@@ -760,7 +781,7 @@ func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	tstart := time.Now()
-	s.Gather(acc)
+	require.NoError(t, s.Gather(acc))
 	tstop := time.Now()
 
 	require.Len(t, acc.Metrics, 2)
@@ -807,7 +828,7 @@ func TestGather_host(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	s.Gather(acc)
+	require.NoError(t, s.Gather(acc))
 
 	require.Len(t, acc.Metrics, 1)
 	m := acc.Metrics[0]

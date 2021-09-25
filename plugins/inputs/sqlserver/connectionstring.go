@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	emptySqlInstance  = "<empty-sql-instance>"
+	emptySQLInstance  = "<empty-sql-instance>"
 	emptyDatabaseName = "<empty-database-name>"
 )
 
@@ -15,7 +15,7 @@ const (
 // If the connection string could not be parsed or sqlInstance/databaseName were not present, a placeholder value is returned
 func getConnectionIdentifiers(connectionString string) (sqlInstance string, databaseName string) {
 	if len(connectionString) == 0 {
-		return emptySqlInstance, emptyDatabaseName
+		return emptySQLInstance, emptyDatabaseName
 	}
 
 	trimmedConnectionString := strings.TrimSpace(connectionString)
@@ -61,7 +61,7 @@ func parseConnectionStringKeyValue(connectionString string) (sqlInstance string,
 	}
 
 	if sqlInstance == "" {
-		sqlInstance = emptySqlInstance
+		sqlInstance = emptySQLInstance
 	}
 	if databaseName == "" {
 		databaseName = emptyDatabaseName
@@ -72,12 +72,12 @@ func parseConnectionStringKeyValue(connectionString string) (sqlInstance string,
 
 // parseConnectionStringURL parses a URL-formatted connection string and returns the SQL instance and database name
 func parseConnectionStringURL(connectionString string) (sqlInstance string, databaseName string) {
-	sqlInstance = emptySqlInstance
+	sqlInstance = emptySQLInstance
 	databaseName = emptyDatabaseName
 
 	u, err := url.Parse(connectionString)
 	if err != nil {
-		return emptySqlInstance, emptyDatabaseName
+		return emptySQLInstance, emptyDatabaseName
 	}
 
 	sqlInstance = u.Hostname()

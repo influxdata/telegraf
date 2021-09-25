@@ -109,7 +109,7 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 
 	wb.srv = &http.Server{Handler: r}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s", wb.ServiceAddress))
+	ln, err := net.Listen("tcp", wb.ServiceAddress)
 	if err != nil {
 		return fmt.Errorf("error starting server: %v", err)
 	}
@@ -128,6 +128,8 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 }
 
 func (wb *Webhooks) Stop() {
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	wb.srv.Close()
 	wb.Log.Infof("Stopping the Webhooks service")
 }

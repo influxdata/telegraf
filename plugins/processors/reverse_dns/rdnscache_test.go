@@ -125,12 +125,12 @@ func TestLookupTimeout(t *testing.T) {
 
 type timeoutResolver struct{}
 
-func (r *timeoutResolver) LookupAddr(ctx context.Context, addr string) (names []string, err error) {
+func (r *timeoutResolver) LookupAddr(_ context.Context, _ string) (names []string, err error) {
 	return nil, errors.New("timeout")
 }
 
 type localResolver struct{}
 
-func (r *localResolver) LookupAddr(ctx context.Context, addr string) (names []string, err error) {
+func (r *localResolver) LookupAddr(_ context.Context, _ string) (names []string, err error) {
 	return []string{"localhost"}, nil
 }
