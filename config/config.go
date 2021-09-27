@@ -1331,6 +1331,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldString(tbl, "json_time_format", &pc.JSONTimeFormat)
 	c.getFieldString(tbl, "json_timezone", &pc.JSONTimezone)
 	c.getFieldBool(tbl, "json_strict", &pc.JSONStrict)
+	c.getFieldBool(tbl, "json_escape", &pc.JSONEscape)
 	c.getFieldString(tbl, "data_type", &pc.DataType)
 	c.getFieldString(tbl, "collectd_auth_file", &pc.CollectdAuthFile)
 	c.getFieldString(tbl, "collectd_security_level", &pc.CollectdSecurityLevel)
@@ -1569,7 +1570,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"grace", "graphite_separator", "graphite_tag_sanitize_mode", "graphite_tag_support",
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
 		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields",
-		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
+		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict", "json_escape",
 		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_format", "json_timestamp_units", "json_timezone", "json_v2",
 		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
 		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",

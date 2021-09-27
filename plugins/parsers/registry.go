@@ -97,6 +97,9 @@ type Config struct {
 	// Whether to continue if a JSON object can't be coerced
 	JSONStrict bool `toml:"json_strict"`
 
+	// Whether json is escaped or not
+	JSONEscape bool `toml:"json_escape"`
+
 	// Authentication file for collectd
 	CollectdAuthFile string `toml:"collectd_auth_file"`
 	// One of none (default), sign, or encrypt

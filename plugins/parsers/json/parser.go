@@ -32,6 +32,7 @@ type Config struct {
 	Timezone     string
 	DefaultTags  map[string]string
 	Strict       bool
+	Escape       bool
 }
 
 type Parser struct {
@@ -45,6 +46,7 @@ type Parser struct {
 	timezone     string
 	defaultTags  map[string]string
 	strict       bool
+	escape       bool
 }
 
 func New(config *Config) (*Parser, error) {
@@ -69,6 +71,7 @@ func New(config *Config) (*Parser, error) {
 		timezone:     config.Timezone,
 		defaultTags:  config.DefaultTags,
 		strict:       config.Strict,
+		escape:       config.Escape,
 	}, nil
 }
 
@@ -209,6 +212,13 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	var data interface{}
+	if p.escape {
+		s, err := strconv.Unquote(string(buf))
+		if err != nil {
+			return nil, err
+		}
+		buf = []byte(s)
+	}
 	err := json.Unmarshal(buf, &data)
 	if err != nil {
 		return nil, err

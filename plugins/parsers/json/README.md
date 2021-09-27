@@ -71,6 +71,9 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ##   2. "America/New_York"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   ##   3. UTC                 -- or blank/unspecified, will return timestamp in UTC
   json_timezone = ""
+  
+  ## Whether json is escaped or not
+  json_escape = false
 ```
 
 #### json_query
