@@ -37,7 +37,7 @@ func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregatio
 
 	src, err := query.Source()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get query soruce - %v", err)
+		return nil, fmt.Errorf("failed to get query source - %v", err)
 	}
 	data, err := json.Marshal(src)
 	if err != nil {
