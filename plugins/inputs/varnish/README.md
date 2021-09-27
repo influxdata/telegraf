@@ -430,11 +430,13 @@ By default, the plugin has a builtin list of regexps for following VMODs:
   * regexp `([\w\-]*)\.(?P<_field>[\w\-.]*)`
     * `MSE_STORE.store-1-1.g_aio_running_bytes_write` -> `varnish,section=MSE_STORE store-1-1.g_aio_running_bytes_write=5i`
     
-Default regexps list can be extended in telegraf config like:
+The default regexps list can be extended in the telegraf config. The following example shows a config with a custom regexp 
+for parsing of `accounting` VMOD metrics in `ACCG.<namespace>.<key>.<stat_name>` format. The namespace value will be used as
+a tag.
 
 ```toml
 [[inputs.varnish]]
-    regexps = ['^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<my_tag>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
+    regexps = ['^ACCG.(?P<namespace>[\w-]*).(?P<_field>[\w-.]*)']
 ```
 
 ### Custom arguments
