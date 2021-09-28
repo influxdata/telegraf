@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -108,7 +107,7 @@ func (monitor *DirectoryMonitor) Description() string {
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 	// Get all files sitting in the directory.
-	files, err := ioutil.ReadDir(monitor.Directory)
+	files, err := os.ReadDir(monitor.Directory)
 	if err != nil {
 		return fmt.Errorf("unable to monitor the targeted directory: %w", err)
 	}
@@ -183,7 +182,7 @@ func (monitor *DirectoryMonitor) Monitor() {
 	}
 }
 
-func (monitor *DirectoryMonitor) processFile(file os.FileInfo) {
+func (monitor *DirectoryMonitor) processFile(file os.DirEntry) {
 	if file.IsDir() {
 		return
 	}

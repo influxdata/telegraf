@@ -3,7 +3,7 @@ package elasticsearch
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"sort"
@@ -702,7 +702,7 @@ func (e *Elasticsearch) getCatMaster(url string) (string, error) {
 		// future calls.
 		return "", fmt.Errorf("elasticsearch: Unable to retrieve master node information. API responded with status-code %d, expected %d", r.StatusCode, http.StatusOK)
 	}
-	response, err := ioutil.ReadAll(r.Body)
+	response, err := io.ReadAll(r.Body)
 
 	if err != nil {
 		return "", err

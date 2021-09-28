@@ -6,7 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -284,7 +284,7 @@ func TestHTTP_Write(t *testing.T) {
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.FormValue("db"), "telegraf")
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu value=42")
 				w.WriteHeader(http.StatusNoContent)
@@ -573,7 +573,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 
 				gr, err := gzip.NewReader(r.Body)
 				require.NoError(t, err)
-				body, err := ioutil.ReadAll(gr)
+				body, err := io.ReadAll(gr)
 				require.NoError(t, err)
 
 				require.Contains(t, string(body), "cpu value=42")
@@ -618,7 +618,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 }
 
 func TestHTTP_UnixSocket(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf-test")
+	tmpdir, err := os.MkdirTemp("", "telegraf-test")
 	if err != nil {
 		require.NoError(t, err)
 	}
@@ -700,7 +700,7 @@ func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
 				r.ParseForm()
 				require.Equal(t, r.Form["db"], []string{"foo"})
 
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu value=42")
 
@@ -835,7 +835,7 @@ func TestDBRPTags(t *testing.T) {
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.FormValue("db"), "telegraf")
 				require.Equal(t, r.FormValue("rp"), "foo")
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu,rp=foo value=42")
 				w.WriteHeader(http.StatusNoContent)
@@ -917,7 +917,7 @@ func TestDBRPTags(t *testing.T) {
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.FormValue("db"), "telegraf")
 				require.Equal(t, r.FormValue("rp"), "foo")
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu value=42")
 				w.WriteHeader(http.StatusNoContent)
@@ -948,7 +948,7 @@ func TestDBRPTags(t *testing.T) {
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.FormValue("db"), "telegraf")
 				require.Equal(t, r.FormValue("rp"), "foo")
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu,rp=foo value=42")
 				w.WriteHeader(http.StatusNoContent)

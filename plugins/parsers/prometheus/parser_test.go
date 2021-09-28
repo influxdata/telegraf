@@ -2,7 +2,7 @@ package prometheus
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -435,7 +435,7 @@ func TestParserProtobufHeader(t *testing.T) {
 		t.Fatalf("error making HTTP request to %s: %s", ts.URL, err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("error reading body: %s", err)
 	}

@@ -4,7 +4,6 @@
 package mdstat
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -134,7 +133,7 @@ unused devices: <none>
 `
 
 func makeFakeMDStatFile(content []byte) (filename string) {
-	fileobj, err := ioutil.TempFile("", "mdstat")
+	fileobj, err := os.CreateTemp("", "mdstat")
 	if err != nil {
 		panic(err)
 	}

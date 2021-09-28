@@ -2,7 +2,7 @@ package cassandra
 
 import (
 	_ "fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -109,7 +109,7 @@ type jolokiaClientStub struct {
 func (c jolokiaClientStub) MakeRequest(_ *http.Request) (*http.Response, error) {
 	resp := http.Response{}
 	resp.StatusCode = c.statusCode
-	resp.Body = ioutil.NopCloser(strings.NewReader(c.responseBody))
+	resp.Body = io.NopCloser(strings.NewReader(c.responseBody))
 	return &resp, nil
 }
 
