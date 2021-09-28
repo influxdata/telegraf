@@ -25,15 +25,15 @@ SELECT TOP(1)
   ,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
   ,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
   ,[snapshot_time]
-  ,[cap_vcores_used_percent] AS [avg_cpu_percent]
-  ,[avg_data_io_percent] AS [avg_data_io_percent]
-  ,[avg_log_write_percent] AS [avg_log_write_percent]
-  ,[avg_storage_percent] AS [avg_storage_percent]
-  ,[max_worker_percent] AS [max_worker_percent]
-  ,[max_session_percent] AS [max_session_percent]
+  ,cast([cap_vcores_used_percent] as float) AS [avg_cpu_percent]
+  ,cast([avg_data_io_percent] as float) AS [avg_data_io_percent]
+  ,cast([avg_log_write_percent] as float) AS [avg_log_write_percent]
+  ,cast([avg_storage_percent] as float) AS [avg_storage_percent]
+  ,cast([max_worker_percent] as float) AS [max_worker_percent]
+  ,cast([max_session_percent] as float) AS [max_session_percent]
   ,[max_data_space_kb]/1024 AS [storage_limit_mb]
-  ,[avg_instance_cpu_percent] AS [avg_instance_cpu_percent]
-  ,[avg_allocated_storage_percent] AS [avg_allocated_storage_percent]
+  ,cast([avg_instance_cpu_percent] as float) AS [avg_instance_cpu_percent]
+  ,cast([avg_allocated_storage_percent] as float) AS [avg_allocated_storage_percent]
 FROM 
   sys.dm_resource_governor_resource_pools_history_ex WITH (NOLOCK)
 WHERE 
@@ -289,6 +289,14 @@ HAVING
 OPTION(RECOMPILE);
 `
 
+
+// Specific case on this query when cntr_type = 537003264 to return a percentage value between 0 and 100
+// cf. https://docs.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-os-performance-counters-transact-sql?view=azuresqldb-current
+// Performance counters where the cntr_type column value is 537003264 display the ratio of a subset to its set as a percentage. 
+// For example, the Buffer Manager:Buffer cache hit ratio counter compares the total number of cache hits and the total number of cache lookups. 
+// As such, to get a snapshot-like reading of the last second only, you must compare the delta between the current value and the base value (denominator) 
+// between two collection points that are one second apart. 
+// The corresponding base value is the performance counter Buffer Manager:Buffer cache hit ratio base where the cntr_type column value is 1073939712.
 const sqlAzurePoolPerformanceCounters = `
 SET DEADLOCK_PRIORITY -10;
 DECLARE @ErrorMessage AS nvarchar(500)
@@ -317,9 +325,9 @@ WITH PerfCounters AS (
 	SELECT DISTINCT 
 		 RTRIM(pc.[object_name]) AS [object_name]
 		,RTRIM(pc.[counter_name]) AS [counter_name]
-		,ISNULL(gov.[database_name],RTRIM(pc.instance_name)) AS [instance_name]
-		,pc.[cntr_value]
-		,pc.[cntr_type]
+		,ISNULL(gov.[database_name], RTRIM(pc.instance_name)) AS [instance_name]
+		,pc.[cntr_value] AS [cntr_value]
+		,pc.[cntr_type] AS [cntr_type]
 	FROM sys.dm_os_performance_counters AS pc
 	LEFT JOIN sys.dm_user_db_resource_governance AS gov
 	ON 
@@ -418,11 +426,11 @@ WITH PerfCounters AS (
 				,'Worktables Created/sec'
 				,'Query Store CPU usage'
 			) OR (
-				pc.[object_name] LIKE '%User Settable%'
+				   pc.[object_name] LIKE '%User Settable%'
 				OR pc.[object_name] LIKE '%SQL Errors%'
 				OR pc.[object_name] LIKE '%Batch Resp Statistics%'
 			) OR (
-				pc.[instance_name] IN ('_Total')
+				    pc.[instance_name] IN ('_Total')
 				AND pc.[counter_name] IN (
 					 'Lock Timeouts/sec'
 					,'Lock Timeouts (timeout > 0)/sec'
@@ -442,19 +450,22 @@ SELECT
 	,pc.[object_name] AS [object]
 	,pc.[counter_name] AS [counter]
 	,CASE pc.[instance_name] WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.[instance_name],'') END AS [instance]
-	,CAST(CASE WHEN pc.[cntr_type] = 537003264 AND pc1.[cntr_value] > 0 THEN (pc.[cntr_value] * 1.0) / (pc1.[cntr_value] * 1.0) * 100 ELSE pc.[cntr_value] END AS float(10)) AS [value]
+	,CAST(
+		 CASE WHEN pc.[cntr_type] = 537003264 AND base.[cntr_value] > 0 
+			THEN (pc.[cntr_value] * 1.0) / (base.[cntr_value] * 1.0) * 100 
+			ELSE pc.[cntr_value] 
+		 END 
+	 AS float) AS [value]
 	,CAST(pc.[cntr_type] AS varchar(25)) AS [counter_type]
 FROM @PCounters AS pc
-LEFT OUTER JOIN @PCounters AS pc1
-	ON (
-		pc.[counter_name] = REPLACE(pc1.[counter_name],' base','')
-		OR pc.[counter_name] = REPLACE(pc1.[counter_name],' base',' (ms)')
-	)
-	AND pc.[object_name] = pc1.[object_name]
-	AND pc.[instance_name] = pc1.[instance_name]
-	AND pc1.[counter_name] LIKE '%base'
+LEFT OUTER JOIN @PCounters AS base
+ON 
+	pc.[counter_name] = REPLACE(base.[counter_name],' base','')
+	AND pc.[object_name] = base.[object_name]
+	AND pc.[instance_name] = base.[instance_name]
+	AND base.[cntr_type] = 1073939712
 WHERE
-	pc.[counter_name] NOT LIKE '% base'
+	pc.[cntr_type] <> 1073939712
 OPTION(RECOMPILE)
 `
 
