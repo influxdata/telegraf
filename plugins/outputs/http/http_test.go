@@ -3,7 +3,7 @@ package http
 import (
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -272,7 +272,7 @@ func TestContentEncodingGzip(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				payload, err := ioutil.ReadAll(body)
+				payload, err := io.ReadAll(body)
 				require.NoError(t, err)
 				require.Contains(t, string(payload), "cpu value=42")
 

@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -221,7 +221,7 @@ func vmInstanceMetadata(c *http.Client) (string, string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", "", err
 	}
@@ -356,7 +356,7 @@ func (a *AzureMonitor) send(body []byte) error {
 	}
 	defer resp.Body.Close()
 
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}

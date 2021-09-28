@@ -3,7 +3,6 @@ package bond
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -53,7 +52,7 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 	}
 	for _, bondName := range bondNames {
 		bondAbsPath := bond.HostProc + "/net/bonding/" + bondName
-		file, err := ioutil.ReadFile(bondAbsPath)
+		file, err := os.ReadFile(bondAbsPath)
 		if err != nil {
 			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondAbsPath, err))
 			continue
