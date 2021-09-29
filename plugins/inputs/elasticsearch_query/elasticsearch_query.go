@@ -60,7 +60,7 @@ const sampleConfig = `
     ## correctly parse the field.
     ##
     ## If using one of the built in elasticsearch formats this is not required.
-    date_field_custom_format = ""
+    # date_field_custom_format = ""
 
     ## Time window to query (eg. "1m" to query documents from last minute).
     ## Normally should be set to same as collection interval
