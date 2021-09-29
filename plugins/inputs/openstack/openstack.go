@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
@@ -67,6 +68,10 @@ type OpenStack struct {
 	EnabledServices  []string        `toml:"enabled_services"`
 	ServerDiagnotics bool            `toml:"server_diagnotics"`
 	OutputSecrets    bool            `toml:"output_secrets"`
+	TagPrefix        string          `toml:"tag_prefix"`
+	TagValue         string          `toml:"tag_value"`
+	HumanReadableTS  bool            `toml:"human_readable_timestamps"`
+	MeasureRequest   bool            `toml:"measure_openstack_requests"`
 	Log              telegraf.Logger `toml:"-"`
 	httpconfig.HTTPClientConfig
 
@@ -86,8 +91,8 @@ type OpenStack struct {
 }
 
 // ContainsService indicates whether a particular service is enabled
-func (o *OpenStack) ContainsService(t string) bool {
-	for _, service := range o.services {
+func ContainsService(t string, services map[string]services.Service) bool {
+	for _, service := range services {
 		if service.Type == t {
 			return true
 		}
@@ -97,8 +102,8 @@ func (o *OpenStack) ContainsService(t string) bool {
 }
 
 // InEnabledServices indicates whether a particular service is included in EnabledServices
-func (o *OpenStack) InEnabledServices(t string) bool {
-	for _, service := range o.EnabledServices {
+func InEnabledServices(t string, EnabledServices []string) bool {
+	for _, service := range EnabledServices {
 		if service == t {
 			return true
 		}
@@ -153,6 +158,17 @@ var sampleConfig = `
   # tls_key = /path/to/keyfile
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Options for tags received from Openstack 
+  # tag_prefix = "openstack_tag_"
+  # tag_value = "true"
+
+  ## Timestamp format for timestamp data recieved from Openstack.
+  ## If false format is unix nanoseconds.
+  # human_readable_timestamps = false
+
+  ## Measure Openstack call duration
+  # measure_openstack_requests = false 
 `
 
 // SampleConfig return a sample configuration file for auto-generation and
@@ -204,7 +220,7 @@ func (o *OpenStack) Init() error {
 	}
 
 	if err := o.gatherServices(); err != nil {
-		o.Log.Warnf("failed to get resource openstack services %v", err)
+		return fmt.Errorf("failed to get resource openstack services %v", err)
 	}
 
 	if o.compute, err = openstack.NewComputeV2(provider, gophercloud.EndpointOpts{}); err != nil {
@@ -217,14 +233,14 @@ func (o *OpenStack) Init() error {
 	}
 
 	// The Orchestration service is optional
-	if o.ContainsService("orchestration") {
+	if ContainsService("orchestration", o.services) {
 		if o.stack, err = openstack.NewOrchestrationV1(provider, gophercloud.EndpointOpts{}); err != nil {
 			return fmt.Errorf("unable to create V1 stack client %v", err)
 		}
 	}
 
 	// The Cinder volume storage service is optional
-	if o.ContainsService("volumev2") {
+	if ContainsService("volumev2", o.services) {
 		if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
 			return fmt.Errorf("unable to create V2 volume client %v", err)
 		}
@@ -254,52 +270,35 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 		"stacks":        o.gatherStacks,
 	}
 
+	call_duration := map[string]interface{}{}
 	for _, service := range o.EnabledServices {
+		// As Services are already gathered in Init(), using this to accumulate them.
 		if service == "services" {
 			o.accumulateServices(acc)
 			continue
 		}
+		start := time.Now()
 		gatherer := gatherers[service]
 		if err := gatherer(acc); err != nil {
 			acc.AddError(fmt.Errorf("failed to get resource %q %v", service, err))
 		}
+		call_duration[service] = time.Since(start).Nanoseconds()
 	}
 
-	if o.ServerDiagnotics && !o.InEnabledServices("servers") {
-		if err := o.gatherServers(acc); err != nil {
-			acc.AddError(fmt.Errorf("failed to get resource server diagnostics %v", err))
-		} else {
-			o.accumulateServerDiagnostics(acc)
+	if o.MeasureRequest {
+		for service, duration := range call_duration {
+			acc.AddFields("openstack_request_duration", map[string]interface{}{service: duration}, map[string]string{})
 		}
 	}
 
-	return nil
-}
-
-// gatherStacks collects stacks from the OpenStack API.
-func (o *OpenStack) gatherStacks(acc telegraf.Accumulator) error {
-	page, err := stacks.List(o.stack, &stacks.ListOpts{}).AllPages()
-	if err != nil {
-		return fmt.Errorf("unable to list stacks %v", err)
-	}
-	stacks, err := stacks.ExtractStacks(page)
-	if err != nil {
-		return fmt.Errorf("unable to extract stacks %v", err)
-	}
-	for _, stack := range stacks {
-		tags := map[string]string{
-			"description": stack.Description,
-			"name":        stack.Name,
-			"stack_tags":  strings.Join(stack.Tags[:], ","),
+	if o.ServerDiagnotics {
+		if !InEnabledServices("servers", o.EnabledServices) {
+			if err := o.gatherServers(acc); err != nil {
+				acc.AddError(fmt.Errorf("failed to get resource server diagnostics %v", err))
+				return nil
+			}
 		}
-		fields := map[string]interface{}{
-			"status":        stack.Status,
-			"id":            stack.ID,
-			"status_reason": stack.StatusReason,
-			"creation_time": stack.CreationTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"updated_time":  stack.UpdatedTime.Format("2006-01-02T15:04:05.999999999Z07:00"),
-		}
-		acc.AddFields("openstack_stack", fields, tags)
+		o.accumulateServerDiagnostics(acc)
 	}
 
 	return nil
@@ -322,7 +321,43 @@ func (o *OpenStack) gatherServices() error {
 	return nil
 }
 
-// gatherNovaServices collects nova_services from the OpenStack API.
+// gatherStacks collects and accumulates stacks data from the OpenStack API.
+func (o *OpenStack) gatherStacks(acc telegraf.Accumulator) error {
+	page, err := stacks.List(o.stack, &stacks.ListOpts{}).AllPages()
+	if err != nil {
+		return fmt.Errorf("unable to list stacks %v", err)
+	}
+	stacks, err := stacks.ExtractStacks(page)
+	if err != nil {
+		return fmt.Errorf("unable to extract stacks %v", err)
+	}
+	for _, stack := range stacks {
+		tags := map[string]string{
+			"description": stack.Description,
+			"name":        stack.Name,
+		}
+		for _, stack_tag := range stack.Tags {
+			tags[o.TagPrefix+stack_tag] = o.TagValue
+		}
+		fields := map[string]interface{}{
+			"status":        stack.Status,
+			"id":            stack.ID,
+			"status_reason": stack.StatusReason,
+		}
+		if !o.HumanReadableTS {
+			fields["creation_time"] = stack.CreationTime.UnixNano()
+			fields["updated_time"] = stack.UpdatedTime.UnixNano()
+		} else {
+			fields["creation_time"] = stack.CreationTime.Format("2006-01-02T15:04:05.999999999Z07:00")
+			fields["updated_time"] = stack.UpdatedTime.Format("2006-01-02T15:04:05.999999999Z07:00")
+		}
+		acc.AddFields("openstack_stack", fields, tags)
+	}
+
+	return nil
+}
+
+// gatherNovaServices collects and accumulates nova_services data from the OpenStack API.
 func (o *OpenStack) gatherNovaServices(acc telegraf.Accumulator) error {
 	page, err := nova_services.List(o.compute, &nova_services.ListOpts{}).AllPages()
 	if err != nil {
@@ -344,7 +379,11 @@ func (o *OpenStack) gatherNovaServices(acc telegraf.Accumulator) error {
 			"id":              nova_service.ID,
 			"disabled_reason": nova_service.DisabledReason,
 			"forced_down":     nova_service.ForcedDown,
-			"updated_at":      nova_service.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
+		}
+		if !o.HumanReadableTS {
+			fields["updated_at"] = nova_service.UpdatedAt.UnixNano()
+		} else {
+			fields["updated_at"] = nova_service.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
 		}
 		acc.AddFields("openstack_nova_service", fields, tags)
 	}
@@ -352,7 +391,7 @@ func (o *OpenStack) gatherNovaServices(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherSubnets collects subnets from the OpenStack API.
+// gatherSubnets collects and accumulates subnets data from the OpenStack API.
 func (o *OpenStack) gatherSubnets(acc telegraf.Accumulator) error {
 	page, err := subnets.List(o.network, &subnets.ListOpts{}).AllPages()
 	if err != nil {
@@ -374,25 +413,27 @@ func (o *OpenStack) gatherSubnets(acc telegraf.Accumulator) error {
 			"ip_version":        strconv.Itoa(subnet.IPVersion),
 			"cidr":              subnet.CIDR,
 			"gateway_ip":        subnet.GatewayIP,
-			"dns_nameservers":   strings.Join(subnet.DNSNameservers[:], ","),
-			"allocation_pools":  strings.Join(allocation_pools[:], ","),
 			"tenant_id":         subnet.TenantID,
 			"project_id":        subnet.ProjectID,
 			"ipv6_address_mode": subnet.IPv6AddressMode,
 			"ipv6_ra_mode":      subnet.IPv6RAMode,
 			"subnet_pool_id":    subnet.SubnetPoolID,
-			"subnet_tags":       strings.Join(subnet.Tags[:], ","),
+		}
+		for _, subnet_tag := range subnet.Tags {
+			tags[o.TagPrefix+subnet_tag] = o.TagValue
 		}
 		fields := map[string]interface{}{
-			"id":           subnet.ID,
-			"dhcp_enabled": subnet.EnableDHCP,
+			"id":               subnet.ID,
+			"dhcp_enabled":     subnet.EnableDHCP,
+			"dns_nameservers":  strings.Join(subnet.DNSNameservers[:], ","),
+			"allocation_pools": strings.Join(allocation_pools[:], ","),
 		}
 		acc.AddFields("openstack_subnet", fields, tags)
 	}
 	return nil
 }
 
-// gatherPorts collects ports from the OpenStack API.
+// gatherPorts collects and accumulates ports data from the OpenStack API.
 func (o *OpenStack) gatherPorts(acc telegraf.Accumulator) error {
 	page, err := ports.List(o.network, &ports.ListOpts{}).AllPages()
 	if err != nil {
@@ -404,16 +445,17 @@ func (o *OpenStack) gatherPorts(acc telegraf.Accumulator) error {
 	}
 	for _, port := range ports {
 		tags := map[string]string{
-			"network_id":      port.NetworkID,
-			"name":            port.Name,
-			"description":     port.Description,
-			"status":          port.Status,
-			"tenant_id":       port.TenantID,
-			"project_id":      port.ProjectID,
-			"device_owner":    port.DeviceOwner,
-			"security_groups": strings.Join(port.SecurityGroups[:], ","),
-			"device_id":       port.DeviceID,
-			"port_tags":       strings.Join(port.Tags[:], ","),
+			"network_id":   port.NetworkID,
+			"name":         port.Name,
+			"description":  port.Description,
+			"status":       port.Status,
+			"tenant_id":    port.TenantID,
+			"project_id":   port.ProjectID,
+			"device_owner": port.DeviceOwner,
+			"device_id":    port.DeviceID,
+		}
+		for _, port_tag := range port.Tags {
+			tags[o.TagPrefix+port_tag] = o.TagValue
 		}
 		fields := map[string]interface{}{
 			"id":                    port.ID,
@@ -421,6 +463,7 @@ func (o *OpenStack) gatherPorts(acc telegraf.Accumulator) error {
 			"admin_state_up":        port.AdminStateUp,
 			"fixed_ips":             len(port.FixedIPs),
 			"allowed_address_pairs": len(port.AllowedAddressPairs),
+			"security_groups":       strings.Join(port.SecurityGroups[:], ","),
 		}
 		if len(port.FixedIPs) > 0 {
 			for _, ip := range port.FixedIPs {
@@ -435,7 +478,7 @@ func (o *OpenStack) gatherPorts(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherNetworks collects networks from the OpenStack API.
+// gatherNetworks collects and accumulates networks data from the OpenStack API.
 func (o *OpenStack) gatherNetworks(acc telegraf.Accumulator) error {
 	page, err := networks.List(o.network, &networks.ListOpts{}).AllPages()
 	if err != nil {
@@ -447,21 +490,28 @@ func (o *OpenStack) gatherNetworks(acc telegraf.Accumulator) error {
 	}
 	for _, network := range networks {
 		tags := map[string]string{
-			"name":                    network.Name,
-			"description":             network.Description,
-			"status":                  strings.ToLower(network.Status),
-			"tenant_id":               network.TenantID,
-			"project_id":              network.ProjectID,
-			"availability_zone_hints": strings.Join(network.AvailabilityZoneHints[:], ","),
-			"network_tags":            strings.Join(network.Tags[:], ","),
+			"name":        network.Name,
+			"description": network.Description,
+			"status":      strings.ToLower(network.Status),
+			"tenant_id":   network.TenantID,
+			"project_id":  network.ProjectID,
+		}
+		for _, network_tag := range network.Tags {
+			tags[o.TagPrefix+network_tag] = o.TagValue
 		}
 		fields := map[string]interface{}{
-			"id":             network.ID,
-			"updated_at":     network.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"created_at":     network.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"admin_state_up": network.AdminStateUp,
-			"subnets":        len(network.Subnets),
-			"shared":         network.Shared,
+			"id":                      network.ID,
+			"admin_state_up":          network.AdminStateUp,
+			"subnets":                 len(network.Subnets),
+			"shared":                  network.Shared,
+			"availability_zone_hints": strings.Join(network.AvailabilityZoneHints[:], ","),
+		}
+		if !o.HumanReadableTS {
+			fields["updated_at"] = network.UpdatedAt.UnixNano()
+			fields["created_at"] = network.CreatedAt.UnixNano()
+		} else {
+			fields["updated_at"] = network.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			fields["created_at"] = network.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
 		}
 		if len(network.Subnets) > 0 {
 			for _, subnet := range network.Subnets {
@@ -475,7 +525,7 @@ func (o *OpenStack) gatherNetworks(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherAgents collects agents from the OpenStack API.
+// gatherAgents collects and accumulates agents data from the OpenStack API.
 func (o *OpenStack) gatherAgents(acc telegraf.Accumulator) error {
 	page, err := agents.List(o.network, &agents.ListOpts{}).AllPages()
 	if err != nil {
@@ -495,20 +545,26 @@ func (o *OpenStack) gatherAgents(acc telegraf.Accumulator) error {
 			"topic":             agent.Topic,
 		}
 		fields := map[string]interface{}{
-			"id":                  agent.ID,
-			"admin_state_up":      agent.AdminStateUp,
-			"alive":               agent.Alive,
-			"resources_synced":    agent.ResourcesSynced,
-			"created_at":          agent.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"started_at":          agent.StartedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"heartbeat_timestamp": agent.HeartbeatTimestamp.Format("2006-01-02T15:04:05.999999999Z07:00"),
+			"id":               agent.ID,
+			"admin_state_up":   agent.AdminStateUp,
+			"alive":            agent.Alive,
+			"resources_synced": agent.ResourcesSynced,
+		}
+		if !o.HumanReadableTS {
+			fields["created_at"] = agent.CreatedAt.UnixNano()
+			fields["started_at"] = agent.StartedAt.UnixNano()
+			fields["heartbeat_timestamp"] = agent.HeartbeatTimestamp.UnixNano()
+		} else {
+			fields["created_at"] = agent.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			fields["started_at"] = agent.StartedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			fields["heartbeat_timestamp"] = agent.HeartbeatTimestamp.Format("2006-01-02T15:04:05.999999999Z07:00")
 		}
 		acc.AddFields("openstack_newtron_agent", fields, tags)
 	}
 	return nil
 }
 
-// gatherAggregates collects aggregates from the OpenStack API.
+// gatherAggregates collects and accumulates aggregates data from the OpenStack API.
 func (o *OpenStack) gatherAggregates(acc telegraf.Accumulator) error {
 	page, err := aggregates.List(o.compute).AllPages()
 	if err != nil {
@@ -527,9 +583,15 @@ func (o *OpenStack) gatherAggregates(acc telegraf.Accumulator) error {
 			"id":              aggregate.ID,
 			"aggregate_hosts": len(aggregate.Hosts),
 			"deleted":         aggregate.Deleted,
-			"created_at":      aggregate.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"updated_at":      aggregate.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"deleted_at":      aggregate.DeletedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
+		}
+		if !o.HumanReadableTS {
+			fields["created_at"] = aggregate.CreatedAt.UnixNano()
+			fields["updated_at"] = aggregate.UpdatedAt.UnixNano()
+			fields["deleted_at"] = aggregate.DeletedAt.UnixNano()
+		} else {
+			fields["created_at"] = aggregate.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			fields["updated_at"] = aggregate.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			fields["deleted_at"] = aggregate.DeletedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
 		}
 		if len(aggregate.Hosts) > 0 {
 			for _, host := range aggregate.Hosts {
@@ -543,7 +605,7 @@ func (o *OpenStack) gatherAggregates(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherProjects collects projects from the OpenStack API.
+// gatherProjects collects and accumulates projects data from the OpenStack API.
 func (o *OpenStack) gatherProjects(acc telegraf.Accumulator) error {
 	page, err := projects.List(o.identity, &projects.ListOpts{}).AllPages()
 	if err != nil {
@@ -556,11 +618,13 @@ func (o *OpenStack) gatherProjects(acc telegraf.Accumulator) error {
 	for _, project := range projects {
 		o.projects[project.ID] = project
 		tags := map[string]string{
-			"description":  project.Description,
-			"domain_id":    project.DomainID,
-			"name":         project.Name,
-			"parent_id":    project.ParentID,
-			"project_tags": strings.Join(project.Tags[:], ","),
+			"description": project.Description,
+			"domain_id":   project.DomainID,
+			"name":        project.Name,
+			"parent_id":   project.ParentID,
+		}
+		for _, project_tag := range project.Tags {
+			tags[o.TagPrefix+project_tag] = o.TagValue
 		}
 		fields := map[string]interface{}{
 			"id":        project.ID,
@@ -573,7 +637,7 @@ func (o *OpenStack) gatherProjects(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherHypervisors collects hypervisors from the OpenStack API.
+// gatherHypervisors collects and accumulates hypervisors data from the OpenStack API.
 func (o *OpenStack) gatherHypervisors(acc telegraf.Accumulator) error {
 	page, err := hypervisors.List(o.compute).AllPages()
 	if err != nil {
@@ -584,13 +648,12 @@ func (o *OpenStack) gatherHypervisors(acc telegraf.Accumulator) error {
 		return fmt.Errorf("unable to extract hypervisors %v", err)
 	}
 	o.hypervisors = hypervisors
-	if o.InEnabledServices("hypervisors") {
+	if InEnabledServices("hypervisors", o.EnabledServices) {
 		for _, hypervisor := range hypervisors {
 			tags := map[string]string{
 				"cpu_vendor":              hypervisor.CPUInfo.Vendor,
 				"cpu_arch":                hypervisor.CPUInfo.Arch,
 				"cpu_model":               hypervisor.CPUInfo.Model,
-				"cpu_features":            strings.Join(hypervisor.CPUInfo.Features[:], ","),
 				"status":                  hypervisor.Status,
 				"state":                   hypervisor.State,
 				"hypervisor_hostname":     hypervisor.HypervisorHostname,
@@ -599,6 +662,9 @@ func (o *OpenStack) gatherHypervisors(acc telegraf.Accumulator) error {
 				"service_host":            hypervisor.Service.Host,
 				"service_id":              hypervisor.Service.ID,
 				"service_disabled_reason": hypervisor.Service.DisabledReason,
+			}
+			for _, cpu_feature := range hypervisor.CPUInfo.Features {
+				tags["cpu_feature_"+cpu_feature] = "true"
 			}
 			fields := map[string]interface{}{
 				"id":                   hypervisor.ID,
@@ -624,7 +690,7 @@ func (o *OpenStack) gatherHypervisors(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherFlavors collects flavors from the OpenStack API.
+// gatherFlavors collects and accumulates flavors data from the OpenStack API.
 func (o *OpenStack) gatherFlavors(acc telegraf.Accumulator) error {
 	page, err := flavors.ListDetail(o.compute, &flavors.ListOpts{}).AllPages()
 	if err != nil {
@@ -654,13 +720,101 @@ func (o *OpenStack) gatherFlavors(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// gatherVolumes collects and accumulates volumes data from the OpenStack API.
+func (o *OpenStack) gatherVolumes(acc telegraf.Accumulator) error {
+	page, err := volumes.List(o.volume, &volumes.ListOpts{AllTenants: true}).AllPages()
+	if err != nil {
+		return fmt.Errorf("unable to list volumes %v", err)
+	}
+	v := []volume{}
+	if err := volumes.ExtractVolumesInto(page, &v); err != nil {
+		return fmt.Errorf("unable to extract volumes %v", err)
+	}
+	for _, volume := range v {
+		tags := map[string]string{
+			"status":               volume.Status,
+			"availability_zone":    volume.AvailabilityZone,
+			"name":                 volume.Name,
+			"description":          volume.Description,
+			"volume_type":          volume.VolumeType,
+			"snapshot_id":          volume.SnapshotID,
+			"source_volid":         volume.SourceVolID,
+			"bootable":             volume.Bootable,
+			"replication_status":   volume.ReplicationStatus,
+			"consistency_group_id": volume.ConsistencyGroupID,
+		}
+		fields := map[string]interface{}{
+			"id":                volume.ID,
+			"size":              volume.Size,
+			"total_attachments": len(volume.Attachments),
+			"encrypted":         volume.Encrypted,
+			"multiattach":       volume.Multiattach,
+		}
+		if !o.HumanReadableTS {
+			fields["created_at"] = volume.CreatedAt.UnixNano()
+			fields["updated_at"] = volume.UpdatedAt.UnixNano()
+		} else {
+			fields["created_at"] = volume.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			fields["updated_at"] = volume.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+		}
+		if o.OutputSecrets {
+			tags["user_id"] = volume.UserID
+		}
+		if len(volume.Attachments) > 0 {
+			for _, attachment := range volume.Attachments {
+				if !o.HumanReadableTS {
+					fields["attachment_attached_at"] = attachment.AttachedAt.UnixNano()
+				} else {
+					fields["attachment_attached_at"] = attachment.AttachedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+				}
+				tags["attachment_attachment_id"] = attachment.AttachmentID
+				tags["attachment_device"] = attachment.Device
+				tags["attachment_host_name"] = attachment.HostName
+				fields["attachment_server_id"] = attachment.ServerID
+				acc.AddFields("openstack_volume", fields, tags)
+			}
+		} else {
+			acc.AddFields("openstack_volume", fields, tags)
+		}
+	}
+	return nil
+}
+
+// gatherStoragePools collects and accumulates storage pools data from the OpenStack API.
+func (o *OpenStack) gatherStoragePools(acc telegraf.Accumulator) error {
+	results, err := schedulerstats.List(o.volume, &schedulerstats.ListOpts{Detail: true}).AllPages()
+	if err != nil {
+		return fmt.Errorf("unable to list storage pools %v", err)
+	}
+	storagePools, err := schedulerstats.ExtractStoragePools(results)
+	if err != nil {
+		return fmt.Errorf("unable to extract storage pools %v", err)
+	}
+	for _, storagePool := range storagePools {
+		tags := map[string]string{
+			"name":                storagePool.Capabilities.VolumeBackendName,
+			"driver_version":      storagePool.Capabilities.DriverVersion,
+			"storage_protocol":    storagePool.Capabilities.StorageProtocol,
+			"vendor_name":         storagePool.Capabilities.VendorName,
+			"volume_backend_name": storagePool.Capabilities.VolumeBackendName,
+		}
+		fields := map[string]interface{}{
+			"total_capacity_gb": storagePool.Capabilities.TotalCapacityGB,
+			"free_capacity_gb":  storagePool.Capabilities.FreeCapacityGB,
+		}
+		acc.AddFields("openstack_storage_pool", fields, tags)
+	}
+	return nil
+}
+
+// gatherServers collects servers from the OpenStack API.
 func (o *OpenStack) gatherServers(acc telegraf.Accumulator) error {
-	if !o.InEnabledServices("hypervisors") {
+	if !InEnabledServices("hypervisors", o.EnabledServices) {
 		if err := o.gatherHypervisors(acc); err != nil {
 			acc.AddError(fmt.Errorf("failed to get resource hypervisors %v", err))
 		}
 	}
-	server_gather := o.InEnabledServices("servers")
+	server_gather := InEnabledServices("servers", o.EnabledServices)
 	for _, hypervisor := range o.hypervisors {
 		page, err := servers.List(o.compute, &servers.ListOpts{AllTenants: true, Host: hypervisor.HypervisorHostname}).AllPages()
 		if err != nil {
@@ -672,66 +826,7 @@ func (o *OpenStack) gatherServers(acc telegraf.Accumulator) error {
 		}
 		for _, server := range servers {
 			if server_gather {
-				tags := map[string]string{}
-				// Extract the flavor details to avoid joins (ignore errors and leave as zero values)
-				var vcpus, ram, disk int
-				if flavorIDInterface, ok := server.Flavor["id"]; ok {
-					if flavorID, ok := flavorIDInterface.(string); ok {
-						tags["flavor"] = flavorID
-						if flavor, ok := o.flavors[flavorID]; ok {
-							vcpus = flavor.VCPUs
-							ram = flavor.RAM
-							disk = flavor.Disk
-						}
-					}
-				}
-				if imageIDInterface, ok := server.Image["id"]; ok {
-					if imageID, ok := imageIDInterface.(string); ok {
-						tags["image"] = imageID
-					}
-				}
-				// Try derive the associated project
-				project := "unknown"
-				if p, ok := o.projects[server.TenantID]; ok {
-					project = p.Name
-				}
-				tags["tenant_id"] = server.TenantID
-				tags["name"] = server.Name
-				tags["host_id"] = server.HostID
-				tags["status"] = strings.ToLower(server.Status)
-				tags["key_name"] = server.KeyName
-				tags["host_name"] = hypervisor.HypervisorHostname
-				tags["project"] = project
-				fields := map[string]interface{}{
-					"id":               server.ID,
-					"progress":         server.Progress,
-					"accessIPv4":       server.AccessIPv4,
-					"accessIPv6":       server.AccessIPv6,
-					"addresses":        len(server.Addresses),
-					"security_groups":  len(server.SecurityGroups),
-					"volumes_attached": len(server.AttachedVolumes),
-					"fault_code":       server.Fault.Code,
-					"fault_details":    server.Fault.Details,
-					"fault_message":    server.Fault.Message,
-					"fault_created":    server.Fault.Created.Format("2006-01-02T15:04:05.999999999Z07:00"),
-					"updated":          server.Updated.Format("2006-01-02T15:04:05.999999999Z07:00"),
-					"created":          server.Created.Format("2006-01-02T15:04:05.999999999Z07:00"),
-					"vcpus":            vcpus,
-					"ram_mb":           ram,
-					"disk_gb":          disk,
-				}
-				if o.OutputSecrets {
-					tags["user_id"] = server.UserID
-					fields["adminPass"] = server.AdminPass
-				}
-				if len(server.AttachedVolumes) == 0 {
-					acc.AddFields("openstack_server", fields, tags)
-				} else {
-					for _, AttachedVolume := range server.AttachedVolumes {
-						fields["volume_id"] = AttachedVolume.ID
-						acc.AddFields("openstack_server", fields, tags)
-					}
-				}
+				o.accumulateServer(acc, server, hypervisor.HypervisorHostname)
 			}
 			if !o.ServerDiagnotics || server.Status != "ACTIVE" {
 				continue
@@ -745,6 +840,90 @@ func (o *OpenStack) gatherServers(acc telegraf.Accumulator) error {
 		}
 	}
 	return nil
+}
+
+// accumulateServices accumulates statistics of services.
+func (o *OpenStack) accumulateServices(acc telegraf.Accumulator) {
+	for _, service := range o.services {
+		tags := map[string]string{
+			"name": service.Type,
+		}
+		fields := map[string]interface{}{
+			"service_id":      service.ID,
+			"service_enabled": service.Enabled,
+		}
+		acc.AddFields("openstack_service", fields, tags)
+	}
+}
+
+// accumulateServer accumulates statistics of a server.
+func (o *OpenStack) accumulateServer(acc telegraf.Accumulator, server servers.Server, host_name string) {
+	tags := map[string]string{}
+	// Extract the flavor details to avoid joins (ignore errors and leave as zero values)
+	var vcpus, ram, disk int
+	if flavorIDInterface, ok := server.Flavor["id"]; ok {
+		if flavorID, ok := flavorIDInterface.(string); ok {
+			tags["flavor"] = flavorID
+			if flavor, ok := o.flavors[flavorID]; ok {
+				vcpus = flavor.VCPUs
+				ram = flavor.RAM
+				disk = flavor.Disk
+			}
+		}
+	}
+	if imageIDInterface, ok := server.Image["id"]; ok {
+		if imageID, ok := imageIDInterface.(string); ok {
+			tags["image"] = imageID
+		}
+	}
+	// Try derive the associated project
+	project := "unknown"
+	if p, ok := o.projects[server.TenantID]; ok {
+		project = p.Name
+	}
+	tags["tenant_id"] = server.TenantID
+	tags["name"] = server.Name
+	tags["host_id"] = server.HostID
+	tags["status"] = strings.ToLower(server.Status)
+	tags["key_name"] = server.KeyName
+	tags["host_name"] = host_name
+	tags["project"] = project
+	fields := map[string]interface{}{
+		"id":               server.ID,
+		"progress":         server.Progress,
+		"accessIPv4":       server.AccessIPv4,
+		"accessIPv6":       server.AccessIPv6,
+		"addresses":        len(server.Addresses),
+		"security_groups":  len(server.SecurityGroups),
+		"volumes_attached": len(server.AttachedVolumes),
+		"fault_code":       server.Fault.Code,
+		"fault_details":    server.Fault.Details,
+		"fault_message":    server.Fault.Message,
+		"vcpus":            vcpus,
+		"ram_mb":           ram,
+		"disk_gb":          disk,
+	}
+	if !o.HumanReadableTS {
+		fields["fault_created"] = server.Fault.Created.UnixNano()
+		fields["updated"] = server.Updated.UnixNano()
+		fields["created"] = server.Created.UnixNano()
+	} else {
+		fields["fault_created"] = server.Fault.Created.Format("2006-01-02T15:04:05.999999999Z07:00")
+		fields["updated"] = server.Updated.Format("2006-01-02T15:04:05.999999999Z07:00")
+		fields["created"] = server.Created.Format("2006-01-02T15:04:05.999999999Z07:00")
+	}
+	if o.OutputSecrets {
+		tags["user_id"] = server.UserID
+		fields["adminPass"] = server.AdminPass
+	}
+	if len(server.AttachedVolumes) == 0 {
+		acc.AddFields("openstack_server", fields, tags)
+	} else {
+		for _, AttachedVolume := range server.AttachedVolumes {
+			fields["volume_id"] = AttachedVolume.ID
+			acc.AddFields("openstack_server", fields, tags)
+		}
+	}
 }
 
 // accumulateServerDiagnostics accumulates statistics from the compute(nova) service.
@@ -804,105 +983,15 @@ func (o *OpenStack) accumulateServerDiagnostics(acc telegraf.Accumulator) {
 	}
 }
 
-// gatherVolumes collects volumes from the OpenStack API.
-func (o *OpenStack) gatherVolumes(acc telegraf.Accumulator) error {
-	page, err := volumes.List(o.volume, &volumes.ListOpts{AllTenants: true}).AllPages()
-	if err != nil {
-		return fmt.Errorf("unable to list volumes %v", err)
-	}
-	v := []volume{}
-	if err := volumes.ExtractVolumesInto(page, &v); err != nil {
-		return fmt.Errorf("unable to extract volumes %v", err)
-	}
-	for _, volume := range v {
-		tags := map[string]string{
-			"status":               volume.Status,
-			"availability_zone":    volume.AvailabilityZone,
-			"name":                 volume.Name,
-			"description":          volume.Description,
-			"volume_type":          volume.VolumeType,
-			"snapshot_id":          volume.SnapshotID,
-			"source_volid":         volume.SourceVolID,
-			"bootable":             volume.Bootable,
-			"replication_status":   volume.ReplicationStatus,
-			"consistency_group_id": volume.ConsistencyGroupID,
-		}
-		fields := map[string]interface{}{
-			"id":                volume.ID,
-			"size":              volume.Size,
-			"total_attachments": len(volume.Attachments),
-			"encrypted":         volume.Encrypted,
-			"multiattach":       volume.Multiattach,
-			"created_at":        volume.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-			"updated_at":        volume.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00"),
-		}
-		if o.OutputSecrets {
-			tags["user_id"] = volume.UserID
-		}
-		if len(volume.Attachments) > 0 {
-			for _, attachment := range volume.Attachments {
-				fields["attachment_attached_at"] = attachment.AttachedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
-				tags["attachment_attachment_id"] = attachment.AttachmentID
-				tags["attachment_device"] = attachment.Device
-				tags["attachment_host_name"] = attachment.HostName
-				fields["attachment_server_id"] = attachment.ServerID
-				acc.AddFields("openstack_volume", fields, tags)
-			}
-		} else {
-			acc.AddFields("openstack_volume", fields, tags)
-		}
-	}
-	return nil
-}
-
-// gatherStoragePools collects storage pools from the OpenStack API.
-func (o *OpenStack) gatherStoragePools(acc telegraf.Accumulator) error {
-	results, err := schedulerstats.List(o.volume, &schedulerstats.ListOpts{Detail: true}).AllPages()
-	if err != nil {
-		return fmt.Errorf("unable to list storage pools %v", err)
-	}
-	storagePools, err := schedulerstats.ExtractStoragePools(results)
-	if err != nil {
-		return fmt.Errorf("unable to extract storage pools %v", err)
-	}
-	for _, storagePool := range storagePools {
-		tags := map[string]string{
-			"name":                storagePool.Capabilities.VolumeBackendName,
-			"driver_version":      storagePool.Capabilities.DriverVersion,
-			"storage_protocol":    storagePool.Capabilities.StorageProtocol,
-			"vendor_name":         storagePool.Capabilities.VendorName,
-			"volume_backend_name": storagePool.Capabilities.VolumeBackendName,
-		}
-		fields := map[string]interface{}{
-			"total_capacity_gb": storagePool.Capabilities.TotalCapacityGB,
-			"free_capacity_gb":  storagePool.Capabilities.FreeCapacityGB,
-		}
-		acc.AddFields("openstack_storage_pool", fields, tags)
-	}
-	return nil
-}
-
-// accumulateServices accumulates statistics from services.
-func (o *OpenStack) accumulateServices(acc telegraf.Accumulator) {
-	for _, service := range o.services {
-		tags := map[string]string{
-			"name": service.Type,
-		}
-		fields := map[string]interface{}{
-			"service_id":      service.ID,
-			"service_enabled": service.Enabled,
-		}
-		acc.AddFields("openstack_service", fields, tags)
-	}
-}
-
 // init registers a callback which creates a new OpenStack input instance.
 func init() {
 	inputs.Add("openstack", func() telegraf.Input {
 		return &OpenStack{
-			Domain:   "default",
-			Project:  "admin",
-			Username: "admin",
+			Domain:    "default",
+			Project:   "admin",
+			Username:  "admin",
+			TagPrefix: "openstack_tag_",
+			TagValue:  "true",
 		}
 	})
 }
