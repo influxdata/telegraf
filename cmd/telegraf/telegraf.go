@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/influxdata/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
@@ -27,7 +28,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	"gopkg.in/tomb.v1"
 )
+
+type sliceFlags []string
+
+func (i *sliceFlags) String() string {
+	s := strings.Join(*i, " ")
+	return "[" + s + "]"
+}
+
+func (i *sliceFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
 
 // If you update these, update usage.go and usage_windows.go
 var fDebug = flag.Bool("debug", false,
@@ -38,9 +52,10 @@ var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs")
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
-var fConfig = flag.String("config", "", "configuration file to load")
-var fConfigDirectory = flag.String("config-directory", "",
-	"directory containing additional *.conf files")
+
+var fConfigs sliceFlags
+var fConfigDirs sliceFlags
+var fWatchConfig = flag.String("watch-config", "", "Monitoring config changes [notify, poll]")
 var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
@@ -102,6 +117,15 @@ func reloadLoop(
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
+		if *fWatchConfig != "" {
+			for _, fConfig := range fConfigs {
+				if _, err := os.Stat(fConfig); err == nil {
+					go watchLocalConfig(signals, fConfig)
+				} else {
+					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
+				}
+			}
+		}
 		go func() {
 			select {
 			case sig := <-signals:
@@ -123,6 +147,46 @@ func reloadLoop(
 	}
 }
 
+func watchLocalConfig(signals chan os.Signal, fConfig string) {
+	var mytomb tomb.Tomb
+	var watcher watch.FileWatcher
+	if *fWatchConfig == "poll" {
+		watcher = watch.NewPollingFileWatcher(fConfig)
+	} else {
+		watcher = watch.NewInotifyFileWatcher(fConfig)
+	}
+	changes, err := watcher.ChangeEvents(&mytomb, 0)
+	if err != nil {
+		log.Printf("E! Error watching config: %s\n", err)
+		return
+	}
+	log.Println("I! Config watcher started")
+	select {
+	case <-changes.Modified:
+		log.Println("I! Config file modified")
+	case <-changes.Deleted:
+		// deleted can mean moved. wait a bit a check existence
+		<-time.After(time.Second)
+		if _, err := os.Stat(fConfig); err == nil {
+			log.Println("I! Config file overwritten")
+		} else {
+			log.Println("W! Config file deleted")
+			if err := watcher.BlockUntilExists(&mytomb); err != nil {
+				log.Printf("E! Cannot watch for config: %s\n", err.Error())
+				return
+			}
+			log.Println("I! Config file appeared")
+		}
+	case <-changes.Truncated:
+		log.Println("I! Config file truncated")
+	case <-mytomb.Dying():
+		log.Println("I! Config watcher ended")
+		return
+	}
+	mytomb.Done()
+	signals <- syscall.SIGHUP
+}
+
 func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
@@ -133,17 +197,28 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err := c.LoadConfig(*fConfig)
-	if err != nil {
-		return err
-	}
-
-	if *fConfigDirectory != "" {
-		err = c.LoadDirectory(*fConfigDirectory)
+	var err error
+	// providing no "config" flag should load default config
+	if len(fConfigs) == 0 {
+		err = c.LoadConfig("")
 		if err != nil {
 			return err
 		}
 	}
+	for _, fConfig := range fConfigs {
+		err = c.LoadConfig(fConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, fConfigDirectory := range fConfigDirs {
+		err = c.LoadDirectory(fConfigDirectory)
+		if err != nil {
+			return err
+		}
+	}
+
 	if !*fTest && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
@@ -245,6 +320,9 @@ func formatFullVersion() string {
 }
 
 func main() {
+	flag.Var(&fConfigs, "config", "configuration file to load")
+	flag.Var(&fConfigDirs, "config-directory", "directory containing additional *.conf files")
+
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 	args := flag.Args()

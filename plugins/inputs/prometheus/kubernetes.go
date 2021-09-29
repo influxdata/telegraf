@@ -5,14 +5,13 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"os/user"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/ghodss/yaml"
@@ -42,7 +41,7 @@ const cAdvisorPodListDefaultInterval = 60
 // loadClient parses a kubeconfig from a file and returns a Kubernetes
 // client. It does not support extensions or client auth providers.
 func loadClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
-	data, err := ioutil.ReadFile(kubeconfigPath)
+	data, err := os.ReadFile(kubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading '%s': %v", kubeconfigPath, err)
 	}
@@ -55,7 +54,7 @@ func loadClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(&config)
 }
 
-func (p *Prometheus) start(ctx context.Context) error {
+func (p *Prometheus) startK8s(ctx context.Context) error {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get InClusterConfig - %v", err)
@@ -77,8 +76,6 @@ func (p *Prometheus) start(ctx context.Context) error {
 		}
 	}
 
-	p.wg = sync.WaitGroup{}
-
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
@@ -88,7 +85,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 				return
 			case <-time.After(time.Second):
 				if p.isNodeScrapeScope {
-					err = p.cAdvisor(ctx)
+					err = p.cAdvisor(ctx, config.BearerToken)
 					if err != nil {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
@@ -114,41 +111,52 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 		LabelSelector: p.KubernetesLabelSelector,
 		FieldSelector: p.KubernetesFieldSelector,
 	})
+	defer watcher.Stop()
 	if err != nil {
 		return err
 	}
-	pod := &corev1.Pod{}
-	go func() {
-		for event := range watcher.ResultChan() {
-			pod = &corev1.Pod{}
-			// If the pod is not "ready", there will be no ip associated with it.
-			if pod.Annotations["prometheus.io/scrape"] != "true" ||
-				!podReady(pod.Status.ContainerStatuses) {
-				continue
-			}
 
-			switch event.Type {
-			case watch.Added:
-				registerPod(pod, p)
-			case watch.Modified:
-				// To avoid multiple actions for each event, unregister on the first event
-				// in the delete sequence, when the containers are still "ready".
-				if pod.GetDeletionTimestamp() != nil {
-					unregisterPod(pod, p)
-				} else {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			for event := range watcher.ResultChan() {
+				pod, ok := event.Object.(*corev1.Pod)
+				if !ok {
+					return fmt.Errorf("Unexpected object when getting pods")
+				}
+
+				// If the pod is not "ready", there will be no ip associated with it.
+				if pod.Annotations["prometheus.io/scrape"] != "true" ||
+					!podReady(pod.Status.ContainerStatuses) {
+					continue
+				}
+
+				switch event.Type {
+				case watch.Added:
 					registerPod(pod, p)
+				case watch.Modified:
+					// To avoid multiple actions for each event, unregister on the first event
+					// in the delete sequence, when the containers are still "ready".
+					if pod.GetDeletionTimestamp() != nil {
+						unregisterPod(pod, p)
+					} else {
+						registerPod(pod, p)
+					}
 				}
 			}
 		}
-	}()
-
-	return nil
+	}
 }
 
-func (p *Prometheus) cAdvisor(ctx context.Context) error {
+func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
 	// The request will be the same each time
 	podsURL := fmt.Sprintf("https://%s:10250/pods", p.NodeIP)
 	req, err := http.NewRequest("GET", podsURL, nil)
+	req.Header.Set("Authorization", "Bearer "+bearerToken)
+	req.Header.Add("Accept", "application/json")
+
 	if err != nil {
 		return fmt.Errorf("error when creating request to %s to get pod list: %w", podsURL, err)
 	}

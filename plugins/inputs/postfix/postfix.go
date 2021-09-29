@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // postfix doesn't aim for Windows

@@ -3,8 +3,8 @@ package zipkin
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -637,7 +637,7 @@ func TestZipkinPlugin(t *testing.T) {
 }
 
 func postThriftData(datafile, address, contentType string) error {
-	dat, err := ioutil.ReadFile(datafile)
+	dat, err := os.ReadFile(datafile)
 	if err != nil {
 		return fmt.Errorf("could not read from data file %s", datafile)
 	}

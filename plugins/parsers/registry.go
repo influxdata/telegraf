@@ -12,13 +12,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
-	"github.com/influxdata/telegraf/plugins/parsers/xml"
+	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
 type ParserFunc func() (Parser, error)
@@ -51,6 +52,8 @@ type Parser interface {
 	// and parses it into a telegraf metric.
 	//
 	// Must be thread-safe.
+	// This function is only called by plugins that expect line based protocols
+	// Doesn't need to be implemented by non-linebased parsers (e.g. json, xml)
 	ParseLine(line string) (telegraf.Metric, error)
 
 	// SetDefaultTags tells the parser to add all of the given tags
@@ -156,12 +159,20 @@ type Config struct {
 	// Value configuration
 	ValueFieldName string `toml:"value_field_name"`
 
-	// XML configuration
-	XMLConfig []XMLConfig `toml:"xml"`
+	// XPath configuration
+	XPathPrintDocument bool   `toml:"xpath_print_document"`
+	XPathProtobufFile  string `toml:"xpath_protobuf_file"`
+	XPathProtobufType  string `toml:"xpath_protobuf_type"`
+	XPathConfig        []XPathConfig
+
+	// JSONPath configuration
+	JSONV2Config []JSONV2Config `toml:"json_v2"`
 }
 
-type XMLConfig struct {
-	xml.Config
+type XPathConfig xpath.Config
+
+type JSONV2Config struct {
+	json_v2.Config
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -251,8 +262,17 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewPrometheusParser(config.DefaultTags)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
-	case "xml":
-		parser, err = NewXMLParser(config.MetricName, config.DefaultTags, config.XMLConfig)
+	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
+		parser = &xpath.Parser{
+			Format:              config.DataFormat,
+			ProtobufMessageDef:  config.XPathProtobufFile,
+			ProtobufMessageType: config.XPathProtobufType,
+			PrintDocument:       config.XPathPrintDocument,
+			DefaultTags:         config.DefaultTags,
+			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
+		}
+	case "json_v2":
+		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -370,28 +390,33 @@ func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, erro
 	}, nil
 }
 
-func NewXMLParser(metricName string, defaultTags map[string]string, xmlConfigs []XMLConfig) (Parser, error) {
+func NewXPathParserConfigs(metricName string, cfgs []XPathConfig) []xpath.Config {
 	// Convert the config formats which is a one-to-one copy
-	configs := make([]xml.Config, len(xmlConfigs))
-	for i, cfg := range xmlConfigs {
-		configs[i].MetricName = metricName
-		configs[i].MetricQuery = cfg.MetricQuery
-		configs[i].Selection = cfg.Selection
-		configs[i].Timestamp = cfg.Timestamp
-		configs[i].TimestampFmt = cfg.TimestampFmt
-		configs[i].Tags = cfg.Tags
-		configs[i].Fields = cfg.Fields
-		configs[i].FieldsInt = cfg.FieldsInt
-
-		configs[i].FieldSelection = cfg.FieldSelection
-		configs[i].FieldNameQuery = cfg.FieldNameQuery
-		configs[i].FieldValueQuery = cfg.FieldValueQuery
-
-		configs[i].FieldNameExpand = cfg.FieldNameExpand
+	configs := make([]xpath.Config, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		config := xpath.Config(cfg)
+		config.MetricDefaultName = metricName
+		configs = append(configs, config)
 	}
+	return configs
+}
 
-	return &xml.Parser{
-		Configs:     configs,
-		DefaultTags: defaultTags,
+func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
+	configs := make([]json_v2.Config, len(jsonv2config))
+	for i, cfg := range jsonv2config {
+		configs[i].MeasurementName = cfg.MeasurementName
+		configs[i].MeasurementNamePath = cfg.MeasurementNamePath
+
+		configs[i].TimestampPath = cfg.TimestampPath
+		configs[i].TimestampFormat = cfg.TimestampFormat
+		configs[i].TimestampTimezone = cfg.TimestampTimezone
+
+		configs[i].Fields = cfg.Fields
+		configs[i].Tags = cfg.Tags
+
+		configs[i].JSONObjects = cfg.JSONObjects
+	}
+	return &json_v2.Parser{
+		Configs: configs,
 	}, nil
 }

@@ -114,11 +114,11 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if f.Md5 {
-				md5, err := getMd5(fileName)
+				md5Hash, err := getMd5(fileName)
 				if err != nil {
 					acc.AddError(err)
 				} else {
-					fields["md5_sum"] = md5
+					fields["md5_sum"] = md5Hash
 				}
 			}
 

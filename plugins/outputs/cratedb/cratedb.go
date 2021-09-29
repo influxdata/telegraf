@@ -14,22 +14,23 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	_ "github.com/jackc/pgx/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
+	_ "github.com/jackc/pgx/v4/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
 )
 
 const MaxInt64 = int64(^uint64(0) >> 1)
 
 type CrateDB struct {
-	URL         string
-	Timeout     config.Duration
-	Table       string
-	TableCreate bool `toml:"table_create"`
-	DB          *sql.DB
+	URL          string
+	Timeout      config.Duration
+	Table        string
+	TableCreate  bool   `toml:"table_create"`
+	KeySeparator string `toml:"key_separator"`
+	DB           *sql.DB
 }
 
 var sampleConfig = `
-  # A github.com/jackc/pgx connection string.
-  # See https://godoc.org/github.com/jackc/pgx#ParseDSN
+  # A github.com/jackc/pgx/v4 connection string.
+  # See https://pkg.go.dev/github.com/jackc/pgx/v4#ParseConfig
   url = "postgres://user:password@localhost/schema?sslmode=disable"
   # Timeout for all CrateDB queries.
   timeout = "5s"
@@ -37,6 +38,8 @@ var sampleConfig = `
   table = "metrics"
   # If true, and the metrics table does not exist, create it automatically.
   table_create = true
+  # The character(s) to replace any '.' in an object key with
+  key_separator = "_"
 `
 
 func (c *CrateDB) Connect() error {
@@ -68,15 +71,21 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
 	defer cancel()
-	if sql, err := insertSQL(c.Table, metrics); err != nil {
-		return err
-	} else if _, err := c.DB.ExecContext(ctx, sql); err != nil {
+
+	generatedSQL, err := insertSQL(c.Table, c.KeySeparator, metrics)
+	if err != nil {
 		return err
 	}
+
+	_, err = c.DB.ExecContext(ctx, generatedSQL)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
+func insertSQL(table string, keyReplacement string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
 		cols := []interface{}{
@@ -89,7 +98,7 @@ func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 
 		escapedCols := make([]string, len(cols))
 		for i, col := range cols {
-			escaped, err := escapeValue(col)
+			escaped, err := escapeValue(col, keyReplacement)
 			if err != nil {
 				return "", err
 			}
@@ -113,7 +122,7 @@ VALUES
 // inputs.
 //
 // [1] https://github.com/influxdata/telegraf/pull/3210#issuecomment-339273371
-func escapeValue(val interface{}) (string, error) {
+func escapeValue(val interface{}, keyReplacement string) (string, error) {
 	switch t := val.(type) {
 	case string:
 		return escapeString(t, `'`), nil
@@ -131,11 +140,11 @@ func escapeValue(val interface{}) (string, error) {
 		return strconv.FormatBool(t), nil
 	case time.Time:
 		// see https://crate.io/docs/crate/reference/sql/data_types.html#timestamp
-		return escapeValue(t.Format("2006-01-02T15:04:05.999-0700"))
+		return escapeValue(t.Format("2006-01-02T15:04:05.999-0700"), keyReplacement)
 	case map[string]string:
-		return escapeObject(convertMap(t))
+		return escapeObject(convertMap(t), keyReplacement)
 	case map[string]interface{}:
-		return escapeObject(t)
+		return escapeObject(t, keyReplacement)
 	default:
 		// This might be panic worthy under normal circumstances, but it's probably
 		// better to not shut down the entire telegraf process because of one
@@ -154,7 +163,7 @@ func convertMap(m map[string]string) map[string]interface{} {
 	return c
 }
 
-func escapeObject(m map[string]interface{}) (string, error) {
+func escapeObject(m map[string]interface{}, keyReplacement string) (string, error) {
 	// There is a decent chance that the implementation below doesn't catch all
 	// edge cases, but it's hard to tell since the format seems to be a bit
 	// underspecified.
@@ -171,12 +180,15 @@ func escapeObject(m map[string]interface{}) (string, error) {
 	// Now we build our key = val pairs
 	pairs := make([]string, 0, len(m))
 	for _, k := range keys {
-		// escape the value of our key k (potentially recursive)
-		val, err := escapeValue(m[k])
+		key := escapeString(strings.ReplaceAll(k, ".", keyReplacement), `"`)
+
+		// escape the value of the value at k (potentially recursive)
+		val, err := escapeValue(m[k], keyReplacement)
 		if err != nil {
 			return "", err
 		}
-		pairs = append(pairs, escapeString(k, `"`)+" = "+val)
+
+		pairs = append(pairs, key+" = "+val)
 	}
 	return `{` + strings.Join(pairs, ", ") + `}`, nil
 }

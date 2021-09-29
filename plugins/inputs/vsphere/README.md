@@ -8,7 +8,10 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 * Datastores
 
 ## Supported versions of vSphere
-This plugin supports vSphere version 5.5 through 6.7.
+
+This plugin supports vSphere version 6.5, 6.7 and 7.0. It may work with versions 5.1, 5.5 and 6.0, but neither are officially supported.
+
+Compatibility information was found [here](https://github.com/vmware/govmomi/tree/v0.26.0#compatibility)
 
 ## Configuration
 
@@ -282,7 +285,7 @@ We can extend this to looking at a cluster level: ```/DC0/host/Cluster1/*/hadoop
 vCenter keeps two different kinds of metrics, known as realtime and historical metrics.
 
 * Realtime metrics: Available at a 20 second granularity. These metrics are stored in memory and are very fast and cheap to query. Our tests have shown that a complete set of realtime metrics for 7000 virtual machines can be obtained in less than 20 seconds. Realtime metrics are only available on **ESXi hosts** and **virtual machine** resources. Realtime metrics are only stored for 1 hour in vCenter.
-* Historical metrics: Available at a 5 minute, 30 minutes, 2 hours and 24 hours rollup levels. The vSphere Telegraf plugin only uses the 5 minute rollup. These metrics are stored in the vCenter database and can be expensive and slow to query. Historical metrics are the only type of metrics available for **clusters**, **datastores** and **datacenters**.
+* Historical metrics: Available at a (default) 5 minute, 30 minutes, 2 hours and 24 hours rollup levels. The vSphere Telegraf plugin only uses the most granular rollup which defaults to 5 minutes but can be changed in vCenter to other interval durations. These metrics are stored in the vCenter database and can be expensive and slow to query. Historical metrics are the only type of metrics available for **clusters**, **datastores** and **datacenters**.
 
 For more information, refer to the vSphere documentation here: https://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.wssdk.pg.doc_50%2FPG_Ch16_Performance.18.2.html
 
@@ -315,7 +318,7 @@ This will disrupt the metric collection and can result in missed samples. The be
 [[inputs.vsphere]]
 
   interval = "300s"
-
+  
   vcenters = [ "https://someaddress/sdk" ]
   username = "someuser@vsphere.local"
   password = "secret"
@@ -354,6 +357,11 @@ The vSphere plugin allows you to specify two concurrency settings:
 * ```discover_concurrency```: The  maximum number of simultaneous queries for resource discovery allowed.
 
 While a higher level of concurrency typically has a positive impact on performance, increasing these numbers too much can cause performance issues at the vCenter server. A rule of thumb is to set these parameters to the number of virtual machines divided by 1500 and rounded up to the nearest integer.
+
+### Configuring historical_interval setting
+
+When the vSphere plugin queries vCenter for historical statistics it queries for statistics that exist at a specific interval.  The default historical interval duration is 5 minutes but if this interval has been changed then you must override the default query interval in the vSphere plugin.
+* ```historical_interval```: The interval of the most granular statistics configured in vSphere represented in seconds.
 
 ## Measurements &amp; Fields
 

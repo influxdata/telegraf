@@ -3,12 +3,12 @@ package postgresql_extensible
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"time"
 
-	_ "github.com/jackc/pgx/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
+	_ "github.com/jackc/pgx/v4/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -147,7 +147,7 @@ func ReadQueryFromFile(filePath string) (string, error) {
 	}
 	defer file.Close()
 
-	query, err := ioutil.ReadAll(file)
+	query, err := io.ReadAll(file)
 	if err != nil {
 		return "", err
 	}

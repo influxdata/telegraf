@@ -2,8 +2,8 @@
 
 ## Before Review
 
-Ensure that the CLA is signed.  The only exemption would be non-copyrightable
-changes such as fixing a typo.
+Ensure that the CLA is signed (the `telegraf-tiger` bot performs this check).  The 
+only exemption would be non-copyrightable changes such as fixing a typo.
 
 Check that all tests are passing.  Due to intermittent errors in the CI tests
 it may be required to check the cause of test failures and restart failed
@@ -19,7 +19,7 @@ contributor to merge or rebase.
 
 ## Review
 
-[Review the pull request](Review).
+[Review the pull request](https://github.com/influxdata/telegraf/blob/master/docs/developers/REVIEWS.md).
 
 ## Merge
 
@@ -35,13 +35,15 @@ This method is used because many pull requests do not have a clean change
 history and this method allows us to normalize commit messages as well as
 simplifies backporting.
 
+### Rewriting the commit message
 After selecting "Squash and Merge" you may need to rewrite the commit message.
 Usually the body of the commit messages should be cleared as well, unless it
-is well written and applies to the entire changeset.  Use imperative present
-tense for the first line of the message: instead of "I added tests for" or
-"Adding tests for," use "Add tests for.".  The default merge commit messages
-include the PR number at the end of the commit message, keep this in the final
-message.  If applicable mention the plugin in the message.
+is well written and applies to the entire changeset.  
+- Use imperative present tense for the first line of the message: 
+  - Use "Add tests for" (instead of "I added tests for" or "Adding tests for") 
+- The default merge commit messages include the PR number at the end of the 
+commit message, keep this in the final message.  
+- If applicable mention the plugin in the message.
 
 **Example Enhancement:**
 
@@ -53,7 +55,7 @@ message.  If applicable mention the plugin in the message.
 
 ## After Merge
 
-[Update the Changelog](Changelog).
+[Update the Changelog](https://github.com/influxdata/telegraf/blob/master/docs/maintainers/CHANGELOG.md).
 
 If required, backport the patch and the changelog update to the current
 release branch.  Usually this can be done by cherry picking the commits:

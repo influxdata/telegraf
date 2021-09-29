@@ -2,7 +2,7 @@ package httpjson
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -143,7 +143,7 @@ func (c *mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) 
 		resp.StatusCode = 405 // Method not allowed
 	}
 
-	resp.Body = ioutil.NopCloser(strings.NewReader(c.responseBody))
+	resp.Body = io.NopCloser(strings.NewReader(c.responseBody))
 	return &resp, nil
 }
 
@@ -377,7 +377,7 @@ func TestHttpJsonPOST(t *testing.T) {
 		"api_key": "mykey",
 	}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 		assert.Equal(t, "api_key=mykey", string(body))
 		w.WriteHeader(http.StatusOK)

@@ -3,14 +3,14 @@ package directory_monitor
 import (
 	"bytes"
 	"compress/gzip"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCSVGZImport(t *testing.T) {
@@ -19,9 +19,9 @@ func TestCSVGZImport(t *testing.T) {
 	testCsvGzFile := "test.csv.gz"
 
 	// Establish process directory and finished directory.
-	finishedDirectory, err := ioutil.TempDir("", "finished")
+	finishedDirectory, err := os.MkdirTemp("", "finished")
 	require.NoError(t, err)
-	processDirectory, err := ioutil.TempDir("", "test")
+	processDirectory, err := os.MkdirTemp("", "test")
 	require.NoError(t, err)
 	defer os.RemoveAll(processDirectory)
 	defer os.RemoveAll(finishedDirectory)
@@ -61,7 +61,7 @@ func TestCSVGZImport(t *testing.T) {
 	require.NoError(t, err)
 	err = w.Close()
 	require.NoError(t, err)
-	err = ioutil.WriteFile(filepath.Join(processDirectory, testCsvGzFile), b.Bytes(), 0666)
+	err = os.WriteFile(filepath.Join(processDirectory, testCsvGzFile), b.Bytes(), 0666)
 	require.NoError(t, err)
 
 	// Start plugin before adding file.
@@ -77,8 +77,9 @@ func TestCSVGZImport(t *testing.T) {
 
 	// File should have gone back to the test directory, as we configured.
 	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvFile))
-	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvGzFile))
+	require.NoError(t, err)
 
+	_, err = os.Stat(filepath.Join(finishedDirectory, testCsvGzFile))
 	require.NoError(t, err)
 }
 
@@ -87,9 +88,9 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	testJSONFile := "test.json"
 
 	// Establish process directory and finished directory.
-	finishedDirectory, err := ioutil.TempDir("", "finished")
+	finishedDirectory, err := os.MkdirTemp("", "finished")
 	require.NoError(t, err)
-	processDirectory, err := ioutil.TempDir("", "test")
+	processDirectory, err := os.MkdirTemp("", "test")
 	require.NoError(t, err)
 	defer os.RemoveAll(processDirectory)
 	defer os.RemoveAll(finishedDirectory)

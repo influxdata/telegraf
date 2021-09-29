@@ -9,8 +9,8 @@ Converts prometheus remote write samples directly into Telegraf metrics. It can 
   ## Address and port to host HTTP listener on
   service_address = ":1234"
 
-  ## Path to listen to.
-  path = "/recieve"
+  ## Paths to listen to.
+  paths = ["/receive"]
 
   ## Data format to consume.
   data_format = "prometheusremotewrite"

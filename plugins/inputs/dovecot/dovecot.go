@@ -78,14 +78,22 @@ func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype string, filter string) error {
-	_, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		return fmt.Errorf("%q on url %s", err.Error(), addr)
+	var proto string
+
+	if strings.HasPrefix(addr, "/") {
+		proto = "unix"
+	} else {
+		proto = "tcp"
+
+		_, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			return fmt.Errorf("%q on url %s", err.Error(), addr)
+		}
 	}
 
-	c, err := net.DialTimeout("tcp", addr, defaultTimeout)
+	c, err := net.DialTimeout(proto, addr, defaultTimeout)
 	if err != nil {
-		return fmt.Errorf("enable to connect to dovecot server '%s': %s", addr, err)
+		return fmt.Errorf("unable to connect to dovecot server '%s': %s", addr, err)
 	}
 	defer c.Close()
 
@@ -105,10 +113,20 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	}
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, c); err != nil {
-		return fmt.Errorf("copying message failed for dovecot server '%s': %s", addr, err)
+		// We need to accept the timeout here as reading from the connection will only terminate on EOF
+		// or on a timeout to happen. As EOF for TCP connections will only be sent on connection closing,
+		// the only way to get the whole message is to wait for the timeout to happen.
+		if nerr, ok := err.(net.Error); !ok || !nerr.Timeout() {
+			return fmt.Errorf("copying message failed for dovecot server '%s': %s", addr, err)
+		}
 	}
 
-	host, _, _ := net.SplitHostPort(addr)
+	var host string
+	if strings.HasPrefix(addr, "/") {
+		host = addr
+	} else {
+		host, _, _ = net.SplitHostPort(addr)
+	}
 
 	return gatherStats(&buf, acc, host, qtype)
 }

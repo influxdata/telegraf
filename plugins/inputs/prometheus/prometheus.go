@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -40,6 +41,9 @@ type Prometheus struct {
 	// Field Selector/s for Kubernetes
 	KubernetesFieldSelector string `toml:"kubernetes_field_selector"`
 
+	// Consul SD configuration
+	ConsulConfig ConsulConfig `toml:"consul"`
+
 	// Bearer Token authorization file path
 	BearerToken       string `toml:"bearer_token"`
 	BearerTokenString string `toml:"bearer_token_string"`
@@ -58,7 +62,8 @@ type Prometheus struct {
 
 	Log telegraf.Logger
 
-	client *http.Client
+	client  *http.Client
+	headers map[string]string
 
 	// Should we scrape Kubernetes services for prometheus annotations
 	MonitorPods       bool   `toml:"monitor_kubernetes_pods"`
@@ -75,6 +80,9 @@ type Prometheus struct {
 	podLabelSelector  labels.Selector
 	podFieldSelector  fields.Selector
 	isNodeScrapeScope bool
+
+	// List of consul services to scrape
+	consulServices map[string]URLAndAddress
 }
 
 var sampleConfig = `
@@ -91,7 +99,7 @@ var sampleConfig = `
   # metric_version = 1
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
-  # url_tag = "scrapeUrl"
+  # url_tag = "url"
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -124,6 +132,19 @@ var sampleConfig = `
   # field selector to target pods
   # eg. To scrape pods on a specific node
   # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
+
+  ## Scrape Services available in Consul Catalog
+  # [inputs.prometheus.consul]
+  #   enabled = true
+  #   agent = "http://localhost:8500"
+  #   query_interval = "5m"
+
+  #   [[inputs.prometheus.consul.query]]
+  #     name = "a service name"
+  #     tag = "a service tag"
+  #     url = 'http://{{if ne .ServiceAddress ""}}{{.ServiceAddress}}{{else}}{{.Address}}{{end}}:{{.ServicePort}}/{{with .ServiceMeta.metrics_path}}{{.}}{{else}}metrics{{end}}'
+  #     [inputs.prometheus.consul.query.tags]
+  #       host = "{{.Node}}"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
@@ -236,6 +257,10 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
+	// add all services collected from consul
+	for k, v := range p.consulServices {
+		allURLs[k] = v
+	}
 	// loop through all pods scraped via the prometheus annotation on the pods
 	for k, v := range p.kubernetesPods {
 		allURLs[k] = v
@@ -273,6 +298,10 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		p.client = client
+		p.headers = map[string]string{
+			"User-Agent": internal.ProductToken(),
+			"Accept":     acceptHeader,
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -350,10 +379,10 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 	}
 
-	req.Header.Add("Accept", acceptHeader)
+	p.addHeaders(req)
 
 	if p.BearerToken != "" {
-		token, err := ioutil.ReadFile(p.BearerToken)
+		token, err := os.ReadFile(p.BearerToken)
 		if err != nil {
 			return err
 		}
@@ -379,7 +408,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("%s returned HTTP status %s", u.URL, resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading body: %s", err)
 	}
@@ -427,6 +456,12 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	return nil
 }
 
+func (p *Prometheus) addHeaders(req *http.Request) {
+	for header, value := range p.headers {
+		req.Header.Add(header, value)
+	}
+}
+
 /* Check if the field selector specified is valid.
  * See ToSelectableFields() for list of fields that are selectable:
  * https://github.com/kubernetes/kubernetes/release-1.20/pkg/registry/core/pod/strategy.go
@@ -451,20 +486,27 @@ func fieldSelectorIsSupported(fieldSelector fields.Selector) (bool, string) {
 	return true, ""
 }
 
-// Start will start the Kubernetes scraping if enabled in the configuration
+// Start will start the Kubernetes and/or Consul scraping if enabled in the configuration
 func (p *Prometheus) Start(_ telegraf.Accumulator) error {
+	var ctx context.Context
+	p.wg = sync.WaitGroup{}
+	ctx, p.cancel = context.WithCancel(context.Background())
+
+	if p.ConsulConfig.Enabled && len(p.ConsulConfig.Queries) > 0 {
+		if err := p.startConsul(ctx); err != nil {
+			return err
+		}
+	}
 	if p.MonitorPods {
-		var ctx context.Context
-		ctx, p.cancel = context.WithCancel(context.Background())
-		return p.start(ctx)
+		if err := p.startK8s(ctx); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (p *Prometheus) Stop() {
-	if p.MonitorPods {
-		p.cancel()
-	}
+	p.cancel()
 	p.wg.Wait()
 }
 
@@ -473,6 +515,7 @@ func init() {
 		return &Prometheus{
 			ResponseTimeout: config.Duration(time.Second * 3),
 			kubernetesPods:  map[string]URLAndAddress{},
+			consulServices:  map[string]URLAndAddress{},
 			URLTag:          "url",
 		}
 	})

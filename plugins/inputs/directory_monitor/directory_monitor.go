@@ -2,11 +2,19 @@ package directory_monitor
 
 import (
 	"bufio"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"regexp"
+	"sync"
 	"time"
+
+	"golang.org/x/sync/semaphore"
+	"gopkg.in/djherbis/times.v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -14,15 +22,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/selfstat"
-	"golang.org/x/sync/semaphore"
-	"gopkg.in/djherbis/times.v1"
-
-	"compress/gzip"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"sync"
 )
 
 const sampleConfig = `
@@ -108,7 +107,7 @@ func (monitor *DirectoryMonitor) Description() string {
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 	// Get all files sitting in the directory.
-	files, err := ioutil.ReadDir(monitor.Directory)
+	files, err := os.ReadDir(monitor.Directory)
 	if err != nil {
 		return fmt.Errorf("unable to monitor the targeted directory: %w", err)
 	}
@@ -183,7 +182,7 @@ func (monitor *DirectoryMonitor) Monitor() {
 	}
 }
 
-func (monitor *DirectoryMonitor) processFile(file os.FileInfo) {
+func (monitor *DirectoryMonitor) processFile(file os.DirEntry) {
 	if file.IsDir() {
 		return
 	}
@@ -263,9 +262,7 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 		if err != nil {
 			return err
 		}
-		if firstLine {
-			firstLine = false
-		}
+		firstLine = false
 
 		if err := monitor.sendMetrics(metrics); err != nil {
 			return err

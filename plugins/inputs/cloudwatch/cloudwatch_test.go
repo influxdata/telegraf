@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/testutil"
@@ -105,7 +106,9 @@ func TestGather(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
-		Region:    "us-east-1",
+		CredentialConfig: internalaws.CredentialConfig{
+			Region: "us-east-1",
+		},
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
@@ -113,8 +116,9 @@ func TestGather(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	c.client = &mockGatherCloudWatchClient{}
 
+	require.NoError(t, c.Init())
+	c.client = &mockGatherCloudWatchClient{}
 	require.NoError(t, acc.GatherError(c.Gather))
 
 	fields := map[string]interface{}{}
@@ -130,6 +134,26 @@ func TestGather(t *testing.T) {
 
 	require.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)
+}
+
+func TestGather_MultipleNamespaces(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := config.Duration(duration)
+	c := &CloudWatch{
+		Namespaces: []string{"AWS/ELB", "AWS/EC2"},
+		Delay:      internalDuration,
+		Period:     internalDuration,
+		RateLimit:  200,
+	}
+
+	var acc testutil.Accumulator
+
+	require.NoError(t, c.Init())
+	c.client = &mockGatherCloudWatchClient{}
+	require.NoError(t, acc.GatherError(c.Gather))
+
+	require.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
+	require.True(t, acc.HasMeasurement("cloudwatch_aws_ec2"))
 }
 
 type mockSelectMetricsCloudWatchClient struct{}
@@ -189,7 +213,9 @@ func TestSelectMetrics(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
-		Region:    "us-east-1",
+		CredentialConfig: internalaws.CredentialConfig{
+			Region: "us-east-1",
+		},
 		Namespace: "AWS/ELB",
 		Delay:     internalDuration,
 		Period:    internalDuration,
@@ -210,8 +236,7 @@ func TestSelectMetrics(t *testing.T) {
 			},
 		},
 	}
-	err := c.initializeCloudWatch()
-	require.NoError(t, err)
+	require.NoError(t, c.Init())
 	c.client = &mockSelectMetricsCloudWatchClient{}
 	filtered, err := getFilteredMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
@@ -226,18 +251,20 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 		Value: aws.String("p-example"),
 	}
 
+	namespace := "AWS/ELB"
 	m := &cwClient.Metric{
 		MetricName: aws.String("Latency"),
 		Dimensions: []*cwClient.Dimension{d},
+		Namespace:  &namespace,
 	}
 
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{
-		Namespace: "AWS/ELB",
-		Delay:     internalDuration,
-		Period:    internalDuration,
+		Namespaces: []string{namespace},
+		Delay:      internalDuration,
+		Period:     internalDuration,
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -248,7 +275,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 
 	statFilter, _ := filter.NewIncludeExcludeFilter(nil, nil)
 	queries := c.getDataQueries([]filteredMetric{{metrics: []*cwClient.Metric{m}, statFilter: statFilter}})
-	params := c.getDataInputs(queries)
+	params := c.getDataInputs(queries[namespace])
 
 	require.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
 	require.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
@@ -263,18 +290,20 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 		Value: aws.String("p-example"),
 	}
 
+	namespace := "AWS/ELB"
 	m := &cwClient.Metric{
 		MetricName: aws.String("Latency"),
 		Dimensions: []*cwClient.Dimension{d},
+		Namespace:  &namespace,
 	}
 
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{
-		Namespace: "AWS/ELB",
-		Delay:     internalDuration,
-		Period:    internalDuration,
+		Namespaces: []string{namespace},
+		Delay:      internalDuration,
+		Period:     internalDuration,
 	}
 
 	require.NoError(t, c.initializeCloudWatch())
@@ -285,7 +314,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 
 	statFilter, _ := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
 	queries := c.getDataQueries([]filteredMetric{{metrics: []*cwClient.Metric{m}, statFilter: statFilter}})
-	params := c.getDataInputs(queries)
+	params := c.getDataInputs(queries[namespace])
 
 	require.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
 	require.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
@@ -348,4 +377,11 @@ func TestProxyFunction(t *testing.T) {
 	proxyResult, err := proxyFunction(&http.Request{})
 	require.NoError(t, err)
 	require.Equal(t, "www.penguins.com", proxyResult.Host)
+}
+
+func TestCombineNamespaces(t *testing.T) {
+	c := &CloudWatch{Namespace: "AWS/ELB", Namespaces: []string{"AWS/EC2", "AWS/Billing"}}
+
+	require.NoError(t, c.Init())
+	require.Equal(t, []string{"AWS/EC2", "AWS/Billing", "AWS/ELB"}, c.Namespaces)
 }

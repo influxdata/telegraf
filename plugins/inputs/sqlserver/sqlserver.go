@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +19,7 @@ import (
 // SQLServer struct
 type SQLServer struct {
 	Servers      []string `toml:"servers"`
+	AuthMethod   string   `toml:"auth_method"`
 	QueryVersion int      `toml:"query_version"`
 	AzureDB      bool     `toml:"azuredb"`
 	DatabaseType string   `toml:"database_type"`
@@ -79,6 +80,10 @@ const sampleConfig = `
 servers = [
   "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
 ]
+
+## Authentication method
+## valid methods: "connection_string", "AAD"
+# auth_method = "connection_string"
 
 ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
 ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
@@ -251,11 +256,12 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			wg.Add(1)
 			go func(pool *sql.DB, query Query, serverIndex int) {
 				defer wg.Done()
-				queryError := s.gatherServer(pool, query, acc)
+				connectionString := s.Servers[serverIndex]
+				queryError := s.gatherServer(pool, query, acc, connectionString)
 
 				if s.HealthMetric {
 					mutex.Lock()
-					s.gatherHealth(healthMetrics, s.Servers[serverIndex], queryError)
+					s.gatherHealth(healthMetrics, connectionString, queryError)
 					mutex.Unlock()
 				}
 
@@ -286,11 +292,11 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 	for _, serv := range s.Servers {
 		var pool *sql.DB
 
-		// setup connection based on authentication
-		rx := regexp.MustCompile(`\b(?:(Password=((?:&(?:[a-z]+|#[0-9]+);|[^;]){0,})))\b`)
-
-		// when password is provided in connection string, use SQL auth
-		if rx.MatchString(serv) {
+		switch strings.ToLower(s.AuthMethod) {
+		case "connection_string":
+			// Use the DSN (connection string) directly. In this case,
+			// empty username/password causes use of Windows
+			// integrated authentication.
 			var err error
 			pool, err = sql.Open("mssql", serv)
 
@@ -298,8 +304,8 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				continue
 			}
-		} else {
-			// otherwise assume AAD Auth with system-assigned managed identity (MSI)
+		case "aad":
+			// AAD Auth with system-assigned managed identity (MSI)
 
 			// AAD Auth is only supported for Azure SQL Database or Azure SQL Managed Instance
 			if s.DatabaseType == "SQLServer" {
@@ -322,6 +328,8 @@ func (s *SQLServer) Start(acc telegraf.Accumulator) error {
 			}
 
 			pool = sql.OpenDB(connector)
+		default:
+			return fmt.Errorf("unknown auth method: %v", s.AuthMethod)
 		}
 
 		s.pools = append(s.pools, pool)
@@ -337,12 +345,21 @@ func (s *SQLServer) Stop() {
 	}
 }
 
-func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator) error {
+func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumulator, connectionString string) error {
 	// execute query
 	rows, err := pool.Query(query.Script)
 	if err != nil {
-		return fmt.Errorf("script %s failed: %w", query.ScriptName, err)
+		serverName, databaseName := getConnectionIdentifiers(connectionString)
+
+		// Error msg based on the format in SSMS. SQLErrorClass() is another term for severity/level: http://msdn.microsoft.com/en-us/library/dd304156.aspx
+		if sqlerr, ok := err.(mssql.Error); ok {
+			return fmt.Errorf("Query %s failed for server: %s and database: %s with Msg %d, Level %d, State %d:, Line %d, Error: %w", query.ScriptName,
+				serverName, databaseName, sqlerr.SQLErrorNumber(), sqlerr.SQLErrorClass(), sqlerr.SQLErrorState(), sqlerr.SQLErrorLineNo(), err)
+		}
+
+		return fmt.Errorf("Query %s failed for server: %s and database: %s with Error: %w", query.ScriptName, serverName, databaseName, err)
 	}
+
 	defer rows.Close()
 
 	// grab the column information from the result
@@ -553,6 +570,9 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
-		return &SQLServer{Servers: []string{defaultServer}}
+		return &SQLServer{
+			Servers:    []string{defaultServer},
+			AuthMethod: "connection_string",
+		}
 	})
 }

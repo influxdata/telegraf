@@ -124,6 +124,20 @@ func (r *AwsEc2Processor) Init() error {
 		return errors.New("no tags specified in configuration")
 	}
 
+	for _, tag := range r.ImdsTags {
+		if len(tag) == 0 || !isImdsTagAllowed(tag) {
+			return fmt.Errorf("not allowed metadata tag specified in configuration: %s", tag)
+		}
+		r.imdsTags[tag] = struct{}{}
+	}
+	if len(r.imdsTags) == 0 && len(r.EC2Tags) == 0 {
+		return errors.New("no allowed metadata tags specified in configuration")
+	}
+
+	return nil
+}
+
+func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -161,21 +175,6 @@ func (r *AwsEc2Processor) Init() error {
 		}
 	}
 
-	for _, tag := range r.ImdsTags {
-		if len(tag) > 0 && isImdsTagAllowed(tag) {
-			r.imdsTags[tag] = struct{}{}
-		} else {
-			return fmt.Errorf("not allowed metadata tag specified in configuration: %s", tag)
-		}
-	}
-	if len(r.imdsTags) == 0 && len(r.EC2Tags) == 0 {
-		return errors.New("no allowed metadata tags specified in configuration")
-	}
-
-	return nil
-}
-
-func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 	if r.Ordered {
 		r.parallel = parallel.NewOrdered(acc, r.asyncAdd, DefaultMaxOrderedQueueSize, r.MaxParallelCalls)
 	} else {

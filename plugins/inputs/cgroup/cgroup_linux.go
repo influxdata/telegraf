@@ -1,15 +1,16 @@
+//go:build linux
 // +build linux
 
 package cgroup
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 )
@@ -44,7 +45,7 @@ func (g *CGroup) gatherDir(acc telegraf.Accumulator, dir string) error {
 			return file.err
 		}
 
-		raw, err := ioutil.ReadFile(file.path)
+		raw, err := os.ReadFile(file.path)
 		if err != nil {
 			return err
 		}
@@ -168,7 +169,7 @@ type fileFormat struct {
 	parser  func(measurement string, fields map[string]interface{}, b []byte)
 }
 
-const keyPattern = "[[:alpha:]_]+"
+const keyPattern = "[[:alnum:]:_]+"
 const valuePattern = "[\\d-]+"
 
 var fileFormats = [...]fileFormat{
@@ -208,17 +209,18 @@ var fileFormats = [...]fileFormat{
 			}
 		},
 	},
-	// 	KEY0 VAL0\n
-	// 	KEY1 VAL1\n
+	// 	KEY0 ... VAL0\n
+	// 	KEY1 ... VAL1\n
 	// 	...
 	{
-		name:    "New line separated key-space-value's",
-		pattern: "^(" + keyPattern + " " + valuePattern + "\n)+$",
+		name:    "Space separated keys and value, separated by new line",
+		pattern: "^((" + keyPattern + " )+" + valuePattern + "\n)+$",
 		parser: func(measurement string, fields map[string]interface{}, b []byte) {
-			re := regexp.MustCompile("(" + keyPattern + ") (" + valuePattern + ")\n")
+			re := regexp.MustCompile("((?:" + keyPattern + " ?)+) (" + valuePattern + ")\n")
 			matches := re.FindAllStringSubmatch(string(b), -1)
 			for _, v := range matches {
-				fields[measurement+"."+v[1]] = numberOrString(v[2])
+				k := strings.ReplaceAll(v[1], " ", ".")
+				fields[measurement+"."+k] = numberOrString(v[2])
 			}
 		},
 	},

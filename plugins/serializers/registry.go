@@ -59,6 +59,9 @@ type Config struct {
 	// Support tags in graphite protocol
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
 
+	// Support tags which follow the spec
+	GraphiteTagSanitizeMode string `toml:"graphite_tag_sanitize_mode"`
+
 	// Character for separating metric name and field for Graphite tags
 	GraphiteSeparator string `toml:"graphite_separator"`
 
@@ -84,6 +87,9 @@ type Config struct {
 
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration `toml:"timestamp_units"`
+
+	// Timestamp format to use for JSON formatted output
+	TimestampFormat string `toml:"timestamp_format"`
 
 	// Include HEC routing fields for splunkmetric output
 	HecRouting bool `toml:"hec_routing"`
@@ -118,9 +124,9 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
-		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteSeparator, config.Templates)
+		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
-		serializer, err = NewJSONSerializer(config.TimestampUnits)
+		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
 	case "nowmetric":
@@ -185,8 +191,8 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride)
 }
 
-func NewJSONSerializer(timestampUnits time.Duration) (Serializer, error) {
-	return json.NewSerializer(timestampUnits)
+func NewJSONSerializer(timestampUnits time.Duration, timestampFormat string) (Serializer, error) {
+	return json.NewSerializer(timestampUnits, timestampFormat)
 }
 
 func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {
@@ -223,7 +229,7 @@ func NewInfluxSerializer() (Serializer, error) {
 	return influx.NewSerializer(), nil
 }
 
-func NewGraphiteSerializer(prefix, template string, tagSupport bool, separator string, templates []string) (Serializer, error) {
+func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagSanitizeMode string, separator string, templates []string) (Serializer, error) {
 	graphiteTemplates, defaultTemplate, err := graphite.InitGraphiteTemplates(templates)
 
 	if err != nil {
@@ -234,16 +240,21 @@ func NewGraphiteSerializer(prefix, template string, tagSupport bool, separator s
 		template = defaultTemplate
 	}
 
+	if tagSanitizeMode == "" {
+		tagSanitizeMode = "strict"
+	}
+
 	if separator == "" {
 		separator = "."
 	}
 
 	return &graphite.GraphiteSerializer{
-		Prefix:     prefix,
-		Template:   template,
-		TagSupport: tagSupport,
-		Separator:  separator,
-		Templates:  graphiteTemplates,
+		Prefix:          prefix,
+		Template:        template,
+		TagSupport:      tagSupport,
+		TagSanitizeMode: tagSanitizeMode,
+		Separator:       separator,
+		Templates:       graphiteTemplates,
 	}, nil
 }
 

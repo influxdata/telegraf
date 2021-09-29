@@ -6,7 +6,7 @@ import (
 	"compress/zlib"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"strings"
 	"sync"
@@ -30,14 +30,6 @@ type (
 	}
 
 	KinesisConsumer struct {
-		Region                 string    `toml:"region"`
-		AccessKey              string    `toml:"access_key"`
-		SecretKey              string    `toml:"secret_key"`
-		RoleARN                string    `toml:"role_arn"`
-		Profile                string    `toml:"profile"`
-		Filename               string    `toml:"shared_credential_file"`
-		Token                  string    `toml:"token"`
-		EndpointURL            string    `toml:"endpoint_url"`
 		StreamName             string    `toml:"streamname"`
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
@@ -62,6 +54,8 @@ type (
 		processContentEncodingFunc processContent
 
 		lastSeqNum *big.Int
+
+		internalaws.CredentialConfig
 	}
 
 	checkpoint struct {
@@ -85,16 +79,19 @@ var sampleConfig = `
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) explicit credentials from 'access_key' and 'secret_key'
-  ## 3) shared profile from 'profile'
-  ## 4) environment variables
-  ## 5) shared credentials file
-  ## 6) EC2 Instance Profile
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
   # access_key = ""
   # secret_key = ""
   # token = ""
   # role_arn = ""
+  # web_identity_token_file = ""
+  # role_session_name = ""
   # profile = ""
   # shared_credential_file = ""
 
@@ -156,18 +153,7 @@ func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      k.Region,
-		AccessKey:   k.AccessKey,
-		SecretKey:   k.SecretKey,
-		RoleARN:     k.RoleARN,
-		Profile:     k.Profile,
-		Filename:    k.Filename,
-		Token:       k.Token,
-		EndpointURL: k.EndpointURL,
-	}
-	configProvider := credentialConfig.Credentials()
-	client := kinesis.New(configProvider)
+	client := kinesis.New(k.CredentialConfig.Credentials())
 
 	k.checkpoint = &noopCheckpoint{}
 	if k.DynamoDB != nil {
@@ -230,8 +216,8 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 			}
 			err := k.onMessage(k.acc, r)
 			if err != nil {
-				k.sem <- struct{}{}
-				return consumer.ScanStatus{Error: err}
+				<-k.sem
+				k.Log.Errorf("Scan parser error: %s", err.Error())
 			}
 
 			return consumer.ScanStatus{}
@@ -363,7 +349,7 @@ func processGzip(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer zipData.Close()
-	return ioutil.ReadAll(zipData)
+	return io.ReadAll(zipData)
 }
 
 func processZlib(data []byte) ([]byte, error) {
@@ -372,7 +358,7 @@ func processZlib(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer zlibData.Close()
-	return ioutil.ReadAll(zlibData)
+	return io.ReadAll(zlibData)
 }
 
 func processNoOp(data []byte) ([]byte, error) {

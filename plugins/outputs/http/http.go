@@ -1,11 +1,11 @@
 package http
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -13,13 +13,13 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 const (
-	defaultURL = "http://127.0.0.1:8080/telegraf"
+	maxErrMsgLen = 1024
+	defaultURL   = "http://127.0.0.1:8080/telegraf"
 )
 
 var sampleConfig = `
@@ -48,6 +48,15 @@ var sampleConfig = `
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Optional Cookie authentication
+  # cookie_auth_url = "https://localhost/authMe"
+  # cookie_auth_method = "POST"
+  # cookie_auth_username = "username"
+  # cookie_auth_password = "pa$$word"
+  # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
+  ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
+  # cookie_auth_renewal = "5m"
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
@@ -83,8 +92,8 @@ type HTTP struct {
 	Password        string            `toml:"password"`
 	Headers         map[string]string `toml:"headers"`
 	ContentEncoding string            `toml:"content_encoding"`
-	tls.ClientConfig
 	httpconfig.HTTPClientConfig
+	Log telegraf.Logger `toml:"-"`
 
 	client     *http.Client
 	serializer serializers.Serializer
@@ -104,7 +113,7 @@ func (h *HTTP) Connect() error {
 	}
 
 	ctx := context.Background()
-	client, err := h.HTTPClientConfig.CreateClient(ctx)
+	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
 	}
@@ -174,11 +183,18 @@ func (h *HTTP) write(reqBody []byte) error {
 		return err
 	}
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
+		errorLine := ""
+		scanner := bufio.NewScanner(io.LimitReader(resp.Body, maxErrMsgLen))
+		if scanner.Scan() {
+			errorLine = scanner.Text()
+		}
+
+		return fmt.Errorf("when writing to [%s] received status code: %d. body: %s", h.URL, resp.StatusCode, errorLine)
 	}
+
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
 	}

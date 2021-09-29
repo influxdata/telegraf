@@ -1,9 +1,9 @@
+//go:build linux
 // +build linux
 
 package diskio
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -19,7 +19,7 @@ S:foo/bar/devlink1
 
 // setupNullDisk sets up fake udev info as if /dev/null were a disk.
 func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() {
-	td, err := ioutil.TempFile("", ".telegraf.DiskInfoTest")
+	td, err := os.CreateTemp("", ".telegraf.DiskInfoTest")
 	require.NoError(t, err)
 
 	if s.infoCache == nil {
@@ -92,12 +92,14 @@ func TestDiskIOStats_diskName(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		s := DiskIO{
-			NameTemplates: tc.templates,
-		}
-		defer setupNullDisk(t, &s, "null")()
-		name, _ := s.diskName("null")
-		require.Equal(t, tc.expected, name, "Templates: %#v", tc.templates)
+		func() {
+			s := DiskIO{
+				NameTemplates: tc.templates,
+			}
+			defer setupNullDisk(t, &s, "null")() //nolint:revive // done on purpose, cleaning will be executed properly
+			name, _ := s.diskName("null")
+			require.Equal(t, tc.expected, name, "Templates: %#v", tc.templates)
+		}()
 	}
 }
 
@@ -107,7 +109,7 @@ func TestDiskIOStats_diskTags(t *testing.T) {
 	s := &DiskIO{
 		DeviceTags: []string{"MY_PARAM_2"},
 	}
-	defer setupNullDisk(t, s, "null")()
+	defer setupNullDisk(t, s, "null")() //nolint:revive // done on purpose, cleaning will be executed properly
 	dt := s.diskTags("null")
 	require.Equal(t, map[string]string{"MY_PARAM_2": "myval2"}, dt)
 }

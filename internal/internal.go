@@ -297,8 +297,25 @@ func parseComponents(timestamp interface{}) (int64, int64, error) {
 			return 0, 0, err
 		}
 		return integer, 0, nil
+	case int8:
+		return int64(ts), 0, nil
+	case int16:
+		return int64(ts), 0, nil
+	case int32:
+		return int64(ts), 0, nil
 	case int64:
 		return ts, 0, nil
+	case uint8:
+		return int64(ts), 0, nil
+	case uint16:
+		return int64(ts), 0, nil
+	case uint32:
+		return int64(ts), 0, nil
+	case uint64:
+		return int64(ts), 0, nil
+	case float32:
+		integer, fractional := math.Modf(float64(ts))
+		return int64(integer), int64(fractional * 1e9), nil
 	case float64:
 		integer, fractional := math.Modf(ts)
 		return int64(integer), int64(fractional * 1e9), nil
@@ -331,6 +348,36 @@ func parseTime(format string, timestamp interface{}, location string) (time.Time
 		loc, err := time.LoadLocation(location)
 		if err != nil {
 			return time.Unix(0, 0), err
+		}
+		switch strings.ToLower(format) {
+		case "ansic":
+			format = time.ANSIC
+		case "unixdate":
+			format = time.UnixDate
+		case "rubydate":
+			format = time.RubyDate
+		case "rfc822":
+			format = time.RFC822
+		case "rfc822z":
+			format = time.RFC822Z
+		case "rfc850":
+			format = time.RFC850
+		case "rfc1123":
+			format = time.RFC1123
+		case "rfc1123z":
+			format = time.RFC1123Z
+		case "rfc3339":
+			format = time.RFC3339
+		case "rfc3339nano":
+			format = time.RFC3339Nano
+		case "stamp":
+			format = time.Stamp
+		case "stampmilli":
+			format = time.StampMilli
+		case "stampmicro":
+			format = time.StampMicro
+		case "stampnano":
+			format = time.StampNano
 		}
 		return time.ParseInLocation(format, ts, loc)
 	default:
