@@ -13,7 +13,7 @@ lightweight and use Dynamic Management Views supplied by SQL Server.
 
 ### Additional Setup
 
-You have to create a login on every SQL Server instance  or Azure SQL Managed instance you want to monitor, with following script:
+You have to create a login on every SQL Server instance or Azure SQL Managed instance you want to monitor, with following script:
 
 ```sql
 USE master;
@@ -33,6 +33,27 @@ CREATE USER [telegraf] WITH PASSWORD = N'mystrongpassword';
 GO
 GRANT VIEW DATABASE STATE TO [telegraf];
 GO
+```
+
+For Azure SQL Elastic Pool, please follow the following instructions to collect metrics.
+
+On master logical database, create an SQL login 'telegraf' and assign it to the server-level role ##MS_ServerStateReader##. In addition, create also a user for this login.
+
+```sql
+CREATE LOGIN [telegraf] WITH PASSWORD = N'mystrongpassword';
+GO
+CREATE USER [telegraf] FOR LOGIN telegraf;
+GO
+ALTER SERVER ROLE ##MS_ServerStateReader##
+  ADD MEMBER telegraf
+GO
+```
+
+You can then collect metrics with this login by targetting any database attached to the pool. However, you must create the same user on this user database. Note: if you plan to add/remove databases from the pool, we recommend to create an empty database attached to the pool dedicated for this purpose.
+
+```sql
+GO
+CREATE USER [telegraf] FOR LOGIN telegraf;
 ```
 
 ### Configuration
@@ -81,8 +102,22 @@ GO
 
   # database_type = "AzureSQLManagedInstance"
 
+  ## A list of queries to include. If not specified, all the above listed queries are used.
   # include_query = []
 
+  ## A list of queries to explicitly ignore.
+  # exclude_query = []
+
+  ## Queries enabled by default for database_type = "AzureSQLPool" are - 
+  ## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolOsWaitStats, 
+  ## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
+
+  # database_type = "AzureSQLPool"
+
+  ## A list of queries to include. If not specified, all the above listed queries are used.
+  # include_query = []
+
+  ## A list of queries to explicitly ignore.
   # exclude_query = []
 
   ## Queries enabled by default for database_type = "SQLServer" are - 
@@ -129,30 +164,39 @@ GO
   ## - AzureSQLDBRequests
   ## - AzureSQLDBSchedulers
 
-   ## database_type =  AzureSQLManagedInstance by default collects the following queries
-   ## - AzureSQLMIResourceStats 
-   ## - AzureSQLMIResourceGovernance 
-   ## - AzureSQLMIDatabaseIO 
-   ## - AzureSQLMIServerProperties 
-   ## - AzureSQLMIOsWaitstats 
-   ## - AzureSQLMIMemoryClerks
-   ## - AzureSQLMIPerformanceCounters
-   ## - AzureSQLMIRequests
-   ## - AzureSQLMISchedulers
+  ## database_type =  AzureSQLManagedInstance by default collects the following queries
+  ## - AzureSQLMIResourceStats 
+  ## - AzureSQLMIResourceGovernance 
+  ## - AzureSQLMIDatabaseIO 
+  ## - AzureSQLMIServerProperties 
+  ## - AzureSQLMIOsWaitstats 
+  ## - AzureSQLMIMemoryClerks
+  ## - AzureSQLMIPerformanceCounters
+  ## - AzureSQLMIRequests
+  ## - AzureSQLMISchedulers
 
-   ## database_type =  SQLServer by default collects the following queries
-   ## - SQLServerPerformanceCounters 
-   ## - SQLServerWaitStatsCategorized 
-   ## - SQLServerDatabaseIO 
-   ## - SQLServerProperties 
-   ## - SQLServerMemoryClerks 
-   ## - SQLServerSchedulers
-   ## - SQLServerRequests
-   ## - SQLServerVolumeSpace
-   ## - SQLServerCpu
-   ## and following as optional (if mentioned in the include_query list)
-   ## - SQLServerAvailabilityReplicaStates
-   ## - SQLServerDatabaseReplicaStates
+  ## database_type =  AzureSQLPool by default collects the following queries
+  ## - AzureSQLPoolResourceStats
+  ## - AzureSQLPoolResourceGovernance
+  ## - AzureSQLPoolDatabaseIO
+  ## - AzureSQLPoolOsWaitStats, 
+  ## - AzureSQLPoolMemoryClerks
+  ## - AzureSQLPoolPerformanceCounters
+  ## - AzureSQLPoolSchedulers
+
+  ## database_type =  SQLServer by default collects the following queries
+  ## - SQLServerPerformanceCounters 
+  ## - SQLServerWaitStatsCategorized 
+  ## - SQLServerDatabaseIO 
+  ## - SQLServerProperties 
+  ## - SQLServerMemoryClerks 
+  ## - SQLServerSchedulers
+  ## - SQLServerRequests
+  ## - SQLServerVolumeSpace
+  ## - SQLServerCpu
+  ## and following as optional (if mentioned in the include_query list)
+  ## - SQLServerAvailabilityReplicaStates
+  ## - SQLServerDatabaseReplicaStates
 
   ## Version 2 by default collects the following queries
   ## Version 2 is being deprecated, please consider using database_type.
@@ -178,7 +222,6 @@ GO
   ## - MemoryClerk
   ## - VolumeSpace
   ## - PerformanceMetrics
-
 ```
 
 ### Support for Azure Active Directory (AAD) authentication using [Managed Identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
@@ -303,6 +346,18 @@ These are metrics for Azure SQL Managed instance, are very similar to version 2 
 - *AzureSQLMIOsWaitstats*: Wait time in ms from `sys.dm_os_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected as they occur and instance wide
 - *AzureSQLMIRequests*: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
 - *AzureSQLMISchedulers*: This captures `sys.dm_os_schedulers` snapshots.
+
+#### database_type = "AzureSQLPool"
+
+These are metrics for Azure SQL to monitor resources usage at Elastic Pool leve. These metrics requires additional permissions to be collected, please ensure to check additional setup section in this documentation.
+
+- *AzureSQLPoolResourceStats*: Returns resource usage statistics for the current elastic pool in a SQL Database server. Queried from `sys.dm_resource_governor_resource_pools_history_ex`.
+- *AzureSQLPoolResourceGovernance*: Returns actual configuration and capacity settings used by resource governance mechanisms in the current elastic pool. Queried from `sys.dm_user_db_resource_governance`. A row is returned for each database in the pool.
+- *AzureSQLPoolDatabaseIO*: Returns I/O statistics for data and log files for each database in the pool. Queried from `sys.dm_io_virtual_file_stats`.
+- *AzureSQLPoolOsWaitStats*: Returns information about all the waits encountered by threads that executed. Queried from `sys.dm_os_wait_stats`.
+- *AzureSQLPoolMemoryClerks*: Memory clerk breakdown from `sys.dm_os_memory_clerks`.
+- *AzureSQLPoolPerformanceCounters*: A selected list of performance counters from `sys.dm_os_performance_counters`. Note: Performance counters where the cntr_type column value is 537003264 are already returned with a percentage format between 0 and 100. For other counters, please check [sys.dm_os_performance_counters](https://docs.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-os-performance-counters-transact-sql?view=azuresqldb-current) documentation.
+- *AzureSQLPoolSchedulers*: This captures `sys.dm_os_schedulers` snapshots.
 
 #### database_type = "SQLServer"
 
