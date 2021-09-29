@@ -27,13 +27,13 @@ func TestGatherServer(t *testing.T) {
 		}
 	}))
 
-        cb := Couchbase{
+	cb := Couchbase{
 		BucketStatsIncluded: []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"},
 		ClientConfig: tls.ClientConfig{
 			InsecureSkipVerify: true,
 		},
 	}
-        err := cb.Init()
+	err := cb.Init()
 	require.NoError(t, err)
 
 	var acc testutil.Accumulator
@@ -110,9 +110,9 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 			var err error
 			var cb Couchbase
 			cb.BucketStatsIncluded = []string{"couch_total_disk_size"}
-                        cb.ClientConfig = tls.ClientConfig{
-                          InsecureSkipVerify: true,
-                        }
+			cb.ClientConfig = tls.ClientConfig{
+				InsecureSkipVerify: true,
+			}
 			err = cb.Init()
 			require.NoError(t, err)
 			var acc testutil.Accumulator
