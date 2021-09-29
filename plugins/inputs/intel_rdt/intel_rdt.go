@@ -46,6 +46,7 @@ type IntelRDT struct {
 	Processes        []string `toml:"processes"`
 	SamplingInterval int32    `toml:"sampling_interval"`
 	ShortenedMetrics bool     `toml:"shortened_metrics"`
+	UseSudo          bool     `toml:"use_sudo"`
 
 	Log              telegraf.Logger  `toml:"-"`
 	Publisher        Publisher        `toml:"-"`
@@ -97,6 +98,10 @@ func (r *IntelRDT) SampleConfig() string {
 	## Mandatory if cores aren't set and forbidden if cores are specified.
 	## e.g. ["qemu", "pmd"]
 	# processes = ["process"]
+
+	## Specify if the pqos process should be called with sudo.
+	## Mandatory if the telegraf process does not run as root.
+	# use_sudo = false
 `
 }
 
@@ -253,6 +258,12 @@ func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAss
 	defer r.wg.Done()
 
 	cmd := exec.Command(r.PqosPath, append(args)...)
+
+	if r.UseSudo {
+		// run pqos with `/bin/sh -c "sudo /path/to/pqos ..."`
+		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.Replace(strings.Join(args, " "), ";", "\\;", -1))}
+		cmd = exec.Command("/bin/sh", args...)
+	}
 
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
