@@ -177,7 +177,7 @@ func (o *OpenStack) SampleConfig() string {
 	return sampleConfig
 }
 
-// initialize performs any necessary initialization functions
+// initialize performs any necessary initialization functions.
 func (o *OpenStack) Init() error {
 	if len(o.EnabledServices) == 0 {
 		o.EnabledServices = []string{"services", "projects", "hypervisors", "flavors", "networks", "volumes"}
