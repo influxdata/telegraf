@@ -203,7 +203,7 @@ func (o *OpenStack) Init() error {
 	}
 
 	ctx := context.Background()
-	client, err := o.HTTPClientConfig.CreateClient(ctx, Log)
+	client, err := o.HTTPClientConfig.CreateClient(ctx, o.Log)
 	if err != nil {
 		return err
 	}
