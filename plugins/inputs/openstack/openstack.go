@@ -177,7 +177,7 @@ func (o *OpenStack) SampleConfig() string {
 	return sampleConfig
 }
 
-// initialize performs any necessary initialization functions.
+// initialize performs any necessary initialization functions
 func (o *OpenStack) Init() error {
 	if len(o.EnabledServices) == 0 {
 		o.EnabledServices = []string{"services", "projects", "hypervisors", "flavors", "networks", "volumes"}
@@ -203,7 +203,7 @@ func (o *OpenStack) Init() error {
 	}
 
 	ctx := context.Background()
-	client, err := o.HTTPClientConfig.CreateClient(ctx)
+	client, err := o.HTTPClientConfig.CreateClient(ctx, Log)
 	if err != nil {
 		return err
 	}
