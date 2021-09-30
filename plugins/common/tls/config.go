@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -147,7 +147,7 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 func makeCertPool(certFiles []string) (*x509.CertPool, error) {
 	pool := x509.NewCertPool()
 	for _, certFile := range certFiles {
-		pem, err := ioutil.ReadFile(certFile)
+		pem, err := os.ReadFile(certFile)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"could not read certificate %q: %v", certFile, err)

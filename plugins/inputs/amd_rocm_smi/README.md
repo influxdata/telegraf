@@ -1,11 +1,11 @@
-# ROCm System Management Interface (SMI) Input Plugin
+# AMD ROCm System Management Interface (SMI) Input Plugin
 
 This plugin uses a query on the [`rocm-smi`](https://github.com/RadeonOpenCompute/rocm_smi_lib/tree/master/python_smi_tools) binary to pull GPU stats including memory and GPU usage, temperatures and other.
 
 ### Configuration
 
 ```toml
-# Pulls statistics from nvidia GPUs attached to the host
+# Pulls statistics from AMD GPUs attached to the host
 [[inputs.amd_rocm_smi]]
   ## Optional: path to rocm-smi binary, defaults to $PATH via exec.LookPath
   # bin_path = "/opt/rocm/bin/rocm-smi"

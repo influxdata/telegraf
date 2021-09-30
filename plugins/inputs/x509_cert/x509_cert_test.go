@@ -4,8 +4,6 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/pion/dtls/v2"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/url"
@@ -14,6 +12,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/pion/dtls/v2"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +32,7 @@ var _ telegraf.Input = &X509Cert{}
 func TestGatherRemoteIntegration(t *testing.T) {
 	t.Skip("Skipping network-dependent test due to race condition when test-all")
 
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	require.NoError(t, err)
 
 	defer os.Remove(tmpfile.Name())
@@ -149,7 +149,7 @@ func TestGatherLocal(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			f, err := ioutil.TempFile("", "x509_cert")
+			f, err := os.CreateTemp("", "x509_cert")
 			require.NoError(t, err)
 
 			_, err = f.Write([]byte(test.content))
@@ -181,7 +181,7 @@ func TestGatherLocal(t *testing.T) {
 func TestTags(t *testing.T) {
 	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
 
-	f, err := ioutil.TempFile("", "x509_cert")
+	f, err := os.CreateTemp("", "x509_cert")
 	require.NoError(t, err)
 
 	_, err = f.Write([]byte(cert))
@@ -238,7 +238,7 @@ func TestGatherChain(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			f, err := ioutil.TempFile("", "x509_cert")
+			f, err := os.CreateTemp("", "x509_cert")
 			require.NoError(t, err)
 
 			_, err = f.Write([]byte(test.content))

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -382,7 +382,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	p.addHeaders(req)
 
 	if p.BearerToken != "" {
-		token, err := ioutil.ReadFile(p.BearerToken)
+		token, err := os.ReadFile(p.BearerToken)
 		if err != nil {
 			return err
 		}
@@ -408,7 +408,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("%s returned HTTP status %s", u.URL, resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading body: %s", err)
 	}
