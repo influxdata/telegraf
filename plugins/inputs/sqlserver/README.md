@@ -47,7 +47,7 @@ ALTER SERVER ROLE ##MS_ServerStateReader##
 GO
 ```
 
-Elastic pool metrics can be collected from any database in the pool if a user for the telegraf login is created in that database. For collection to work, this database must remain in the pool, and must not be renamed. If you plan to add/remove databases from this pool, create a separate database for monitoring purposes that will remain in the pool.
+Elastic pool metrics can be collected from any database in the pool if a user for the `telegraf` login is created in that database. For collection to work, this database must remain in the pool, and must not be renamed. If you plan to add/remove databases from this pool, create a separate database for monitoring purposes that will remain in the pool.
 
 ```sql
 GO
@@ -350,7 +350,7 @@ These are metrics for Azure SQL Managed instance, are very similar to version 2 
 These are metrics for Azure SQL to monitor resources usage at Elastic Pool level. These metrics require additional permissions to be collected, please ensure to check additional setup section in this documentation.
 
 - *AzureSQLPoolResourceStats*: Returns resource usage statistics for the current elastic pool in a SQL Database server. Queried from `sys.dm_resource_governor_resource_pools_history_ex`.
-- *AzureSQLPoolResourceGovernance*: Returns actual configuration and capacity settings used by resource governance mechanisms in the current elastic pool. Queried from `sys.dm_user_db_resource_governance`. A row is returned for each database in the pool.
+- *AzureSQLPoolResourceGovernance*: Returns actual configuration and capacity settings used by resource governance mechanisms in the current elastic pool. Queried from `sys.dm_user_db_resource_governance`.
 - *AzureSQLPoolDatabaseIO*: Returns I/O statistics for data and log files for each database in the pool. Queried from `sys.dm_io_virtual_file_stats`.
 - *AzureSQLPoolOsWaitStats*: Returns information about all the waits encountered by threads that executed. Queried from `sys.dm_os_wait_stats`.
 - *AzureSQLPoolMemoryClerks*: Memory clerk breakdown from `sys.dm_os_memory_clerks`.
