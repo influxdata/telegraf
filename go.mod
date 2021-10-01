@@ -278,7 +278,7 @@ require (
 	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
+	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20210610132358-84b48f89b13b
 	golang.org/x/oauth2 v0.0.0-20210805134026-6f1e6394065a
