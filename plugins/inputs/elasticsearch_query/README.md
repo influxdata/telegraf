@@ -157,7 +157,7 @@ Please note that the `[[inputs.elasticsearch_query]]` is still required for all 
 
 ### Optional parameters
 
-- `date_field_custom_format`: Not needed if using one of the built in date/time formats of Elasticsearch, but may be required if using a custom date/time format.
+- `date_field_custom_format`: Not needed if using one of the built in date/time formats of Elasticsearch, but may be required if using a custom date/time format. The format syntax uses the [Joda date format](https://www.elastic.co/guide/en/elasticsearch/reference/6.8/search-aggregations-bucket-daterange-aggregation.html#date-format-pattern).
 - `filter_query`: Lucene query to filter the results (default: "\*")
 - `metric_fields`: The list of fields to perform metric aggregation (these must be indexed as numeric fields)
 - `metric_funcion`: The single-value metric aggregation function to be performed on the `metric_fields` defined. Currently supported aggregations are "avg", "min", "max", "sum". (see [https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html)
