@@ -1135,7 +1135,6 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.InternalPagesEvicted = newStat.WiredTiger.Cache.InternalPagesEvicted
 		returnVal.ModifiedPagesEvicted = newStat.WiredTiger.Cache.ModifiedPagesEvicted
 		returnVal.UnmodifiedPagesEvicted = newStat.WiredTiger.Cache.UnmodifiedPagesEvicted
-		
 		returnVal.FlushesTotalTime = newStat.WiredTiger.Transaction.TransCheckpointsTotalTimeMsecs * int64(time.Millisecond)
 	}
 	if newStat.WiredTiger != nil && oldStat.WiredTiger != nil {
