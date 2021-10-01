@@ -278,12 +278,12 @@ func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAss
 	}()
 	err = cmd.Start()
 	if err != nil {
-		r.errorChan <- fmt.Errorf("pqos: %v", err)
+		r.Log.Errorf("pqos: %v", err)
 		return
 	}
 	err = cmd.Wait()
 	if err != nil {
-		r.errorChan <- fmt.Errorf("pqos: %v", err)
+		r.Log.Errorf("pqos: %v", err)
 	}
 }
 
