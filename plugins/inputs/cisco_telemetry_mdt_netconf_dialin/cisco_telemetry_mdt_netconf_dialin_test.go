@@ -19,7 +19,7 @@ import (
 	"github.com/cisco-ie/netgonf/netconf"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -109,7 +109,7 @@ var mockDTSRequest = dialinSubscriptionRequest{
 	XPathFilter:   "/if:interfaces-state/interface",
 	Keys:          []string{"/if:interfaces-state/interface/name"},
 	UpdateTrigger: "periodic",
-	Period:        &internal.Duration{Duration: 1 * time.Second},
+	Period:        config.Duration(1 * time.Second),
 }
 
 // A mock of a request to create an event notification subscription
@@ -122,7 +122,7 @@ var mockDENSRequest = notificationSubscriptionRequest{
 var mockGRequest = getRequest{
 	SelectFilter: "/memory-statistics/memory-statistic",
 	Keys:         []string{"/memory-statistics/memory-statistic/name"},
-	Period:       internal.Duration{Duration: 1 * time.Second},
+	Period:       config.Duration(1 * time.Second),
 }
 
 // sessionMockGoodTelemetryReceive embeds the netconf.Session in order to
@@ -259,7 +259,7 @@ func mockCiscoTelemetryNETCONF(dsrs *dialinSubscriptionRequestsService,
 		Username: "user", Password: "password",
 		IgnoreServerAuthenticity: false,
 		ServerPublicKey:          publicKey,
-		Redial:                   internal.Duration{Duration: 10 * time.Second},
+		Redial:                   config.Duration(10 * time.Second),
 		Dsrs: &dialinSubscriptionRequestsService{
 			Subscriptions: []dialinSubscriptionRequest{mockDTSRequest},
 			Notifications: []notificationSubscriptionRequest{mockDENSRequest},
@@ -779,13 +779,13 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 				Subscriptions: []dialinSubscriptionRequest{{
 					UpdateTrigger: "periodic",
 					Keys:          []string{"/if:interfaces-state/interface/name"},
-					Period:        &internal.Duration{Duration: 10 * time.Second},
+					Period:        config.Duration(10 * time.Second),
 				}},
 				setting: &setting{},
 			}, &getRequestsService{
 				Gets: []getRequest{{
 					Keys:   []string{"/memory-statistics/memory-statistic/name"},
-					Period: internal.Duration{Duration: 10 * time.Second},
+					Period: config.Duration(10 * time.Second),
 				}},
 				setting: &setting{},
 			}, false),
@@ -798,13 +798,13 @@ func TestCiscoTelemetryNETCONF_preparePaths(t *testing.T) {
 				Subscriptions: []dialinSubscriptionRequest{{
 					XPathFilter:   mockDTSRequest.XPathFilter,
 					UpdateTrigger: mockDTSRequest.UpdateTrigger,
-					Period:        &internal.Duration{Duration: 10 * time.Second},
+					Period:        config.Duration(10 * time.Second),
 				}},
 				setting: &setting{},
 			}, &getRequestsService{
 				Gets: []getRequest{{
 					SelectFilter: mockGRequest.SelectFilter,
-					Period:       internal.Duration{Duration: 10 * time.Second},
+					Period:       config.Duration(10 * time.Second),
 				}},
 				setting: &setting{},
 			}, false),
@@ -1066,7 +1066,7 @@ func Test_dialinSubscriptionRequestsService_createRequests(t *testing.T) {
 				c: mockCiscoTelemetryNETCONF(&dialinSubscriptionRequestsService{
 					Subscriptions: []dialinSubscriptionRequest{{
 						XPathFilter: mockDTSRequest.XPathFilter,
-						Period:      &internal.Duration{Duration: 1 * time.Second},
+						Period:      config.Duration(1 * time.Second),
 					}},
 				}, &getRequestsService{}, false),
 			},
@@ -1083,7 +1083,7 @@ func Test_dialinSubscriptionRequestsService_createRequests(t *testing.T) {
 					Subscriptions: []dialinSubscriptionRequest{{
 						XPathFilter:   "/cdp-ios-xe-oper:cdp-neighbor-details/cdp-neighbor-detail",
 						UpdateTrigger: "on-change",
-						Period:        &internal.Duration{Duration: 0 * time.Second},
+						Period:        config.Duration(0 * time.Second),
 					}},
 				}, &getRequestsService{}, false),
 			},
@@ -1097,7 +1097,7 @@ func Test_dialinSubscriptionRequestsService_createRequests(t *testing.T) {
 					Subscriptions: []dialinSubscriptionRequest{{
 						XPathFilter:   "/cdp-ios-xe-oper:cdp-neighbor-details/cdp-neighbor-detail",
 						UpdateTrigger: "on-change",
-						Period:        &internal.Duration{Duration: 1 * time.Second},
+						Period:        config.Duration(1 * time.Second),
 					}},
 				}, &getRequestsService{}, false),
 			},
@@ -1518,7 +1518,7 @@ func Test_getRequestsService_createRequests(t *testing.T) {
 					&getRequestsService{
 						Gets: []getRequest{{
 							SelectFilter: "/asdf/asdf",
-							Period:       internal.Duration{Duration: 10 * time.Second},
+							Period:       config.Duration(10 * time.Second),
 						}},
 					}, false),
 			},

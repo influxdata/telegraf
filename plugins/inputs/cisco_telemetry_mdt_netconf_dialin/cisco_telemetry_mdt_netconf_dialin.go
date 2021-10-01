@@ -15,7 +15,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -147,7 +147,7 @@ type getRequestsService struct {
 type dialinSubscriptionRequest struct {
 	XPathFilter   string `toml:"xpath_filter"`
 	UpdateTrigger string `toml:"update_trigger"`
-	Period        *internal.Duration
+	Period        config.Duration
 	Keys          []string
 }
 
@@ -160,7 +160,7 @@ type notificationSubscriptionRequest struct {
 // getRequest given as input to the plugin
 type getRequest struct {
 	SelectFilter string `toml:"xpath_filter"`
-	Period       internal.Duration
+	Period       config.Duration
 	Keys         []string
 }
 
@@ -209,7 +209,7 @@ type CiscoTelemetryNETCONF struct {
 	userXpaths map[string]interface{}
 	userKeys   map[string]interface{}
 
-	Redial internal.Duration
+	Redial config.Duration
 
 	acc    telegraf.Accumulator
 	cancel context.CancelFunc
@@ -258,7 +258,7 @@ func (dsrs *dialinSubscriptionRequestsService) createService(
 
 		select {
 		case <-ctx.Done():
-		case <-time.After(c.Redial.Duration):
+		case <-time.After(time.Duration(c.Redial)):
 		}
 	}
 }
@@ -272,17 +272,17 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 		// Initialization of subscriptions
 		subscriptions := make([]*netconfSubscriptionRequest, len(dsrs.Subscriptions))
 		for i, subscription := range dsrs.Subscriptions {
-			if subscription.Period != nil {
-				if subscription.Period.Duration >= 0 {
+			if subscription.Period != 0 {
+				if time.Duration(subscription.Period) >= 0 {
 					// Check type of subscription
 					switch subscription.UpdateTrigger {
 					case "periodic":
-						if subscription.Period.Duration > 0 {
+						if time.Duration(subscription.Period) > 0 {
 							subscriptions[i] = &netconfSubscriptionRequest{
 								YangPush:    "urn:ietf:params:xml:ns:yang:ietf-yang-push",
 								Stream:      "yp:yang-push",
 								XPathFilter: subscription.XPathFilter,
-								Period: uint64(subscription.Period.Duration.Nanoseconds() /
+								Period: uint64(time.Duration(subscription.Period).Nanoseconds() /
 									(int64(time.Millisecond) * 10)),
 							}
 						} else {
@@ -291,14 +291,14 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 									"time period for subscription %d has to be "+
 									"strictly positive but is %d",
 								i+1,
-								subscription.Period.Duration,
+								time.Duration(subscription.Period),
 							)
 							c.acc.AddError(err)
 							continue
 						}
 					case "on-change":
 						p := new(uint64)
-						*p = uint64(subscription.Period.Duration.Nanoseconds() /
+						*p = uint64(time.Duration(subscription.Period).Nanoseconds() /
 							(int64(time.Millisecond) * 10))
 						// on-change
 						subscriptions[i] = &netconfSubscriptionRequest{
@@ -321,7 +321,7 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 					log.Printf(
 						"%s: establishing subscription %s %s %s key(s)=%v...",
 						pluginName, subscription.XPathFilter,
-						subscription.UpdateTrigger, subscription.Period.Duration,
+						subscription.UpdateTrigger, time.Duration(subscription.Period),
 						subscription.Keys,
 					)
 
@@ -343,7 +343,7 @@ func (dsrs *dialinSubscriptionRequestsService) createRequests(
 						"failed to create telemetry subscription: "+
 							"time period for subscription %d has to be positive but is %d",
 						i+1,
-						subscription.Period.Duration,
+						time.Duration(subscription.Period),
 					)
 					c.acc.AddError(err)
 				}
@@ -510,7 +510,7 @@ func (grs *getRequestsService) createService(
 
 		select {
 		case <-ctx.Done():
-		case <-time.After(c.Redial.Duration):
+		case <-time.After(time.Duration(c.Redial)):
 		}
 	}
 }
@@ -542,10 +542,10 @@ func (grs *getRequestsService) createRequests(
 			// Add the next goroutine to the waitlist
 			waitgroup.Add(1)
 
-			go func(get *netconf.Get, period internal.Duration) {
+			go func(get *netconf.Get, period config.Duration) {
 				// Create a ticker that ticks periodically until it is stopped
 				ticker := time.NewTicker(time.Duration(
-					period.Duration.Nanoseconds()) * time.Nanosecond)
+					time.Duration(period).Nanoseconds()) * time.Nanosecond)
 
 				for ctx.Err() == nil {
 					grs.Mutex.Lock()
@@ -681,7 +681,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 
 		select {
 		case <-ctx.Done():
-		case <-time.After(c.Redial.Duration):
+		case <-time.After(time.Duration(c.Redial)):
 		}
 	}
 
@@ -705,7 +705,7 @@ func (c *CiscoTelemetryNETCONF) connectClient(ctx context.Context, s *setting) {
 
 		select {
 		case <-ctx.Done():
-		case <-time.After(c.Redial.Duration):
+		case <-time.After(time.Duration(c.Redial)):
 		}
 	}
 
@@ -982,7 +982,7 @@ func (c *CiscoTelemetryNETCONF) Gather(_ telegraf.Accumulator) error {
 func init() {
 	inputs.Add("cisco_telemetry_mdt_netconf_dialin", func() telegraf.Input {
 		return &CiscoTelemetryNETCONF{
-			Redial: internal.Duration{Duration: 10 * time.Second},
+			Redial: config.Duration(10 * time.Second),
 		}
 	})
 }
