@@ -29,9 +29,8 @@ SELECT TOP(1)
   ,cast([avg_data_io_percent] as float) AS [avg_data_io_percent]
   ,cast([avg_log_write_percent] as float) AS [avg_log_write_percent]
   ,cast([avg_storage_percent] as float) AS [avg_storage_percent]
-  ,cast([max_worker_percent] as float) AS [max_worker_percent]
   ,cast([max_session_percent] as float) AS [max_session_percent]
-  ,[max_data_space_kb]/1024. AS [storage_limit_mb]
+  ,cast([max_data_space_kb]/1024. as int) AS [storage_limit_mb]
   ,cast([avg_instance_cpu_percent] as float) AS [avg_instance_cpu_percent]
   ,cast([avg_allocated_storage_percent] as float) AS [avg_allocated_storage_percent]
 FROM 

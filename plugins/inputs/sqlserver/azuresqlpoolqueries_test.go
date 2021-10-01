@@ -38,7 +38,6 @@ func TestAzureSQL_ElasticPool_ResourceStats_Query(t *testing.T) {
 	require.True(t, acc.HasFloatField("sqlserver_pool_resource_stats", "avg_data_io_percent"))
 	require.True(t, acc.HasFloatField("sqlserver_pool_resource_stats", "avg_log_write_percent"))
 	require.True(t, acc.HasFloatField("sqlserver_pool_resource_stats", "avg_storage_percent"))
-	require.True(t, acc.HasFloatField("sqlserver_pool_resource_stats", "max_worker_percent"))
 	require.True(t, acc.HasFloatField("sqlserver_pool_resource_stats", "max_session_percent"))
 	require.True(t, acc.HasInt64Field("sqlserver_pool_resource_stats", "storage_limit_mb"))
 	require.True(t, acc.HasFloatField("sqlserver_pool_resource_stats", "avg_instance_cpu_percent"))
@@ -75,7 +74,6 @@ func TestAzureSQL_ElasticPool_ResourceGovernance_Query(t *testing.T) {
 	require.True(t, acc.HasMeasurement("sqlserver_pool_resource_governance"))
 	require.True(t, acc.HasTag("sqlserver_pool_resource_governance", "sql_instance"))
 	require.True(t, acc.HasTag("sqlserver_pool_resource_governance", "elastic_pool_name"))
-	require.True(t, acc.HasTag("sqlserver_pool_resource_governance", "database_name"))
 	require.True(t, acc.HasTag("sqlserver_pool_resource_governance", "slo_name"))
 	require.True(t, acc.HasInt64Field("sqlserver_pool_resource_governance", "dtu_limit"))
 	require.True(t, acc.HasInt64Field("sqlserver_pool_resource_governance", "cpu_limit"))
@@ -108,8 +106,8 @@ func TestAzureSQL_ElasticPool_ResourceGovernance_Query(t *testing.T) {
 	require.True(t, acc.HasInt64Field("sqlserver_pool_resource_governance", "volume_pfs_iops"))
 	require.True(t, acc.HasInt64Field("sqlserver_pool_resource_governance", "volume_type_pfs_iops"))
 
-	// This query should return one row per database attached to the pool
-	require.Equal(t, 3, len(acc.Metrics))
+	// This query should only return one row
+	require.Equal(t, 1, len(acc.Metrics))
 	server.Stop()
 }
 
