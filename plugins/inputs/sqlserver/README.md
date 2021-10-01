@@ -37,19 +37,17 @@ GO
 
 For Azure SQL Elastic Pool, please follow the following instructions to collect metrics.
 
-On master logical database, create an SQL login 'telegraf' and assign it to the server-level role ##MS_ServerStateReader##. In addition, create also a user for this login.
+On master logical database, create an SQL login 'telegraf' and assign it to the server-level role ##MS_ServerStateReader##.
 
 ```sql
 CREATE LOGIN [telegraf] WITH PASSWORD = N'mystrongpassword';
 GO
-CREATE USER [telegraf] FOR LOGIN telegraf;
-GO
 ALTER SERVER ROLE ##MS_ServerStateReader##
-  ADD MEMBER telegraf
+  ADD MEMBER [telegraf];
 GO
 ```
 
-You can then collect metrics with this login by targetting any database attached to the pool. However, you must create the same user on this user database. Note: if you plan to add/remove databases from the pool, we recommend to create an empty database attached to the pool dedicated for this purpose.
+Elastic pool metrics can be collected from any database in the pool if a user for the telegraf login is created in that database. For collection to work, this database must remain in the pool, and must not be renamed. If you plan to add/remove databases from this pool, create a separate database for monitoring purposes that will remain in the pool.
 
 ```sql
 GO
@@ -349,7 +347,7 @@ These are metrics for Azure SQL Managed instance, are very similar to version 2 
 
 #### database_type = "AzureSQLPool"
 
-These are metrics for Azure SQL to monitor resources usage at Elastic Pool leve. These metrics requires additional permissions to be collected, please ensure to check additional setup section in this documentation.
+These are metrics for Azure SQL to monitor resources usage at Elastic Pool level. These metrics require additional permissions to be collected, please ensure to check additional setup section in this documentation.
 
 - *AzureSQLPoolResourceStats*: Returns resource usage statistics for the current elastic pool in a SQL Database server. Queried from `sys.dm_resource_governor_resource_pools_history_ex`.
 - *AzureSQLPoolResourceGovernance*: Returns actual configuration and capacity settings used by resource governance mechanisms in the current elastic pool. Queried from `sys.dm_user_db_resource_governance`. A row is returned for each database in the pool.
