@@ -842,13 +842,20 @@ func (c *CiscoTelemetryNETCONF) reportError(
 		log.Printf(
 			logMessage, processName,
 		)
+		log.Println("Context cancelled. Adding error to accumulator: ", err, "!")
+		c.acc.AddError(fmt.Errorf(
+			errorMessage, processName, err,
+		))
 	} else if ctx.Err() != nil {
-		// Acknowledge other context error
+		// Acknowledge other context erro
+		log.Println("Context error: Adding error to accumulator: ", err, "!")
 		c.acc.AddError(fmt.Errorf(
 			errorMessage, processName, ctx.Err().Error(),
 		))
+
 	} else {
 		// Report base error
+		log.Println("Adding error to accumulator: ", err, "!")
 		c.acc.AddError(fmt.Errorf(
 			errorMessage, processName, err,
 		))

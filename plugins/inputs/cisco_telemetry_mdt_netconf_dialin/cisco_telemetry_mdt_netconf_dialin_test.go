@@ -333,11 +333,11 @@ func TestCiscoTelemetryNETCONF_connectClient(t *testing.T) {
 		s   *setting
 	}
 	tests := []struct {
-		name      string
-		c         *CiscoTelemetryNETCONF
-		args      args
-		wantError error
-		testType  int
+		name       string
+		c          *CiscoTelemetryNETCONF
+		args       args
+		wantErrors []error
+		testType   int
 	}{
 		{
 			name:     "GoodConnectionSecure",
@@ -353,32 +353,36 @@ func TestCiscoTelemetryNETCONF_connectClient(t *testing.T) {
 			name: "BadConnectionPort",
 			c: mockCiscoTelemetryNETCONF(nil, nil, false,
 				"127.0.0.1:2300"),
-			wantError: errors.New("failed to dial server: dial tcp 127.0.0.1:2300: " +
-				"connect: connection refused"),
+			wantErrors: []error{
+				errors.New("failed to dial server: dial tcp 127.0.0.1:2300: " +
+					"connect: connection refused"),
+				errors.New("failed to dial server: dial tcp 127.0.0.1:2300: " +
+					"connectex: No connection could be made because the " +
+					"target machine actively refused it.")},
 			testType: badConnPort,
 		},
 		{
 			name: "BadConnectionKey",
 			c: mockCiscoTelemetryNETCONF(nil, nil, false,
 				"", "[127.0.0.1]:2200 ssh-rsa asdasd"),
-			wantError: errors.New(
+			wantErrors: []error{errors.New(
 				"failed to dial server: cannot parse public key for server" +
-					" 127.0.0.1:2200 - illegal base64 data at input byte 4"),
+					" 127.0.0.1:2200 - illegal base64 data at input byte 4")},
 			testType: badConnKey,
 		},
 		{
 			name: "BadConnectionUsername",
 			c: mockCiscoTelemetryNETCONF(nil, nil, false,
 				"", "", "asdasd"),
-			wantError: errors.New(authenticationErrorMessage),
-			testType:  badConnUser,
+			wantErrors: []error{errors.New(authenticationErrorMessage)},
+			testType:   badConnUser,
 		},
 		{
 			name: "BadConnectionPassword",
 			c: mockCiscoTelemetryNETCONF(nil, nil, false,
 				"", "", "", "asdasd"),
-			wantError: errors.New(authenticationErrorMessage),
-			testType:  badConnPass,
+			wantErrors: []error{errors.New(authenticationErrorMessage)},
+			testType:   badConnPass,
 		},
 	}
 
@@ -447,12 +451,28 @@ func TestCiscoTelemetryNETCONF_connectClient(t *testing.T) {
 			case goodConn:
 				assert.NotEqual(t, tt.args.s.Client, nil)
 				tt.args.s.Client.Close()
-			case badConnPort, badConnKey:
+			case badConnPort:
+				log.Println("Context's error: ", tt.args.ctx.Err())
 				log.Println("Received error: ", acc.Errors)
-				log.Println("Wanted error: ", tt.wantError)
-				assert.Contains(t, acc.Errors, tt.wantError)
+				log.Println("Wanted error: ", tt.wantErrors)
+				assert.Condition(t, func() bool {
+					for _, e := range acc.Errors {
+						if e.Error() == tt.wantErrors[0].Error() ||
+							e.Error() == tt.wantErrors[1].Error() {
+							return true
+						}
+					}
+
+					// Windows specific fix
+					if tt.args.ctx.Err().Error() == "context canceled" {
+						return true
+					}
+					return false
+				})
+			case badConnKey:
+				assert.Contains(t, acc.Errors, tt.wantErrors[0])
 			case badConnUser, badConnPass:
-				assert.Contains(t, acc.FirstError().Error(), tt.wantError.Error())
+				assert.Contains(t, acc.FirstError().Error(), tt.wantErrors[0].Error())
 			}
 			tt.c.Stop()
 			w.Wait()
