@@ -448,6 +448,8 @@ func TestCiscoTelemetryNETCONF_connectClient(t *testing.T) {
 				assert.NotEqual(t, tt.args.s.Client, nil)
 				tt.args.s.Client.Close()
 			case badConnPort, badConnKey:
+				log.Println("Received error: ", acc.Errors)
+				log.Println("Wanted error: ", tt.wantError)
 				assert.Contains(t, acc.Errors, tt.wantError)
 			case badConnUser, badConnPass:
 				assert.Contains(t, acc.FirstError().Error(), tt.wantError.Error())
