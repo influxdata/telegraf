@@ -95,12 +95,12 @@ var goodEventNotificationSampleXML = []byte(`<eventTime>1970-01-01T00:00:00.0000
 	`<alarm-class>changed-alarm</alarm-class><device>xrv</device>` +
 	`<type xmlns:al="http://tail-f.com/ns/ncs-alarms">al:out-of-sync</type>` +
 	`<managed-object xmlns:ncs="http://tail-f.com/ns/ncs">/ncs:devices/ncs:` +
-	`device[ncs:name='xrv']</managed-object><specific-problem></specific-problem>` +
+	`device[ncs:name='xrv']</managed-object>` +
 	`<event-type>operationalViolation</event-type><has-clear>true</has-clear>` +
 	`<kind-of-alarm>root-cause</kind-of-alarm><probable-cause>0</probable-cause>` +
 	`<event-time>1970-01-01T00:00:00.00001+00:00</event-time><perceived-severity>` +
 	`major</perceived-severity><alarm-text>got: 1000000444 expected: 1000000443` +
-	`</alarm-text><specific-problem></specific-problem></alarm-notification>`)
+	`</alarm-text></alarm-notification>`)
 
 var badSampleXML = []byte(`<asdf><asdf-node><asdf-name>asdf</asdf-name></asdf>`)
 
@@ -245,8 +245,7 @@ func mockEventNotification() testutil.Metric {
 			"managed-object": "/ncs:devices/ncs:device[ncs:name='xrv']",
 			"alarm-text":     "got: 1000000444 expected: 1000000443", "device": "xrv",
 			"kind-of-alarm": "root-cause", "probable-cause": uint64(0),
-			"event-time":       "1970-01-01T00:00:00.00001+00:00",
-			"specific-problem": interface{}(nil),
+			"event-time": "1970-01-01T00:00:00.00001+00:00",
 		},
 	}
 }
