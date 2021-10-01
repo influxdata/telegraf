@@ -81,6 +81,15 @@ var tsc = &testSNMPConnection{
 		".1.0.0.2.1.5.0.9.9": 11,
 		".1.0.0.2.1.5.1.9.9": 22,
 		".1.0.0.0.1.6.0":     ".1.0.0.0.1.7",
+		".1.0.0.3.1.1.10":    "instance",
+		".1.0.0.3.1.1.11":    "instance2",
+		".1.0.0.3.1.1.12":    "instance3",
+		".1.0.0.3.1.2.10":    10,
+		".1.0.0.3.1.2.11":    20,
+		".1.0.0.3.1.2.12":    20,
+		".1.0.0.3.1.3.10":    1,
+		".1.0.0.3.1.3.11":    2,
+		".1.0.0.3.1.3.12":    3,
 	},
 }
 
@@ -959,4 +968,243 @@ func TestSnmpTableCache_hit(t *testing.T) {
 	assert.Equal(t, "c", oidText)
 	assert.Equal(t, []Field{{Name: "d"}}, fields)
 	assert.Equal(t, fmt.Errorf("e"), err)
+}
+
+func TestTableJoin_walk(t *testing.T) {
+	tbl := Table{
+		Name:       "mytable",
+		IndexAsTag: true,
+		Fields: []Field{
+			{
+				Name:  "myfield1",
+				Oid:   ".1.0.0.3.1.1",
+				IsTag: true,
+			},
+			{
+				Name: "myfield2",
+				Oid:  ".1.0.0.3.1.2",
+			},
+			{
+				Name:                "myfield3",
+				Oid:                 ".1.0.0.3.1.3",
+				SecondaryIndexTable: true,
+			},
+			{
+				Name:              "myfield4",
+				Oid:               ".1.0.0.0.1.1",
+				SecondaryIndexUse: true,
+				IsTag:             true,
+			},
+			{
+				Name:              "myfield5",
+				Oid:               ".1.0.0.0.1.2",
+				SecondaryIndexUse: true,
+			},
+		},
+	}
+
+	tb, err := tbl.Build(tsc, true)
+	require.NoError(t, err)
+
+	assert.Equal(t, tb.Name, "mytable")
+	rtr1 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance",
+			"myfield4": "bar",
+			"index":    "10",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 10,
+			"myfield3": 1,
+			"myfield5": 2,
+		},
+	}
+	rtr2 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance2",
+			"index":    "11",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 2,
+			"myfield5": 0,
+		},
+	}
+	rtr3 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance3",
+			"index":    "12",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 3,
+		},
+	}
+	assert.Len(t, tb.Rows, 3)
+	assert.Contains(t, tb.Rows, rtr1)
+	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
+}
+
+func TestTableOuterJoin_walk(t *testing.T) {
+	tbl := Table{
+		Name:       "mytable",
+		IndexAsTag: true,
+		Fields: []Field{
+			{
+				Name:  "myfield1",
+				Oid:   ".1.0.0.3.1.1",
+				IsTag: true,
+			},
+			{
+				Name: "myfield2",
+				Oid:  ".1.0.0.3.1.2",
+			},
+			{
+				Name:                "myfield3",
+				Oid:                 ".1.0.0.3.1.3",
+				SecondaryIndexTable: true,
+				SecondaryOuterJoin:  true,
+			},
+			{
+				Name:              "myfield4",
+				Oid:               ".1.0.0.0.1.1",
+				SecondaryIndexUse: true,
+				IsTag:             true,
+			},
+			{
+				Name:              "myfield5",
+				Oid:               ".1.0.0.0.1.2",
+				SecondaryIndexUse: true,
+			},
+		},
+	}
+
+	tb, err := tbl.Build(tsc, true)
+	require.NoError(t, err)
+
+	assert.Equal(t, tb.Name, "mytable")
+	rtr1 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance",
+			"myfield4": "bar",
+			"index":    "10",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 10,
+			"myfield3": 1,
+			"myfield5": 2,
+		},
+	}
+	rtr2 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance2",
+			"index":    "11",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 2,
+			"myfield5": 0,
+		},
+	}
+	rtr3 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance3",
+			"index":    "12",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 3,
+		},
+	}
+	rtr4 := RTableRow{
+		Tags: map[string]string{
+			"index":    "Secondary.0",
+			"myfield4": "foo",
+		},
+		Fields: map[string]interface{}{
+			"myfield5": 1,
+		},
+	}
+	assert.Len(t, tb.Rows, 4)
+	assert.Contains(t, tb.Rows, rtr1)
+	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
+	assert.Contains(t, tb.Rows, rtr4)
+}
+
+func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
+	tbl := Table{
+		Name:       "mytable",
+		IndexAsTag: false,
+		Fields: []Field{
+			{
+				Name:  "myfield1",
+				Oid:   ".1.0.0.3.1.1",
+				IsTag: true,
+			},
+			{
+				Name: "myfield2",
+				Oid:  ".1.0.0.3.1.2",
+			},
+			{
+				Name:                "myfield3",
+				Oid:                 ".1.0.0.3.1.3",
+				SecondaryIndexTable: true,
+			},
+			{
+				Name:              "myfield4",
+				Oid:               ".1.0.0.0.1.1",
+				SecondaryIndexUse: true,
+				IsTag:             true,
+			},
+			{
+				Name:              "myfield5",
+				Oid:               ".1.0.0.0.1.2",
+				SecondaryIndexUse: true,
+			},
+		},
+	}
+
+	tb, err := tbl.Build(tsc, true)
+	require.NoError(t, err)
+
+	assert.Equal(t, tb.Name, "mytable")
+	rtr1 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance",
+			"myfield4": "bar",
+			//"index":    "10",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 10,
+			"myfield3": 1,
+			"myfield5": 2,
+		},
+	}
+	rtr2 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance2",
+			//"index":    "11",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 2,
+			"myfield5": 0,
+		},
+	}
+	rtr3 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance3",
+			//"index":    "12",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 3,
+		},
+	}
+	assert.Len(t, tb.Rows, 3)
+	assert.Contains(t, tb.Rows, rtr1)
+	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
 }

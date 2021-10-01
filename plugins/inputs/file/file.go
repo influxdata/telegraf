@@ -2,7 +2,7 @@ package file
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -115,7 +115,7 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	defer file.Close()
 
 	r, _ := utfbom.Skip(f.decoder.Reader(file))
-	fileContents, err := ioutil.ReadAll(r)
+	fileContents, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("E! Error file: %v could not be read, %s", filename, err)
 	}

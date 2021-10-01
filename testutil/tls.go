@@ -2,7 +2,7 @@ package testutil
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 
@@ -93,7 +93,7 @@ func readCertificate(filename string) string {
 	if err != nil {
 		panic(fmt.Sprintf("opening %q: %v", filename, err))
 	}
-	octets, err := ioutil.ReadAll(file)
+	octets, err := io.ReadAll(file)
 	if err != nil {
 		panic(fmt.Sprintf("reading %q: %v", filename, err))
 	}

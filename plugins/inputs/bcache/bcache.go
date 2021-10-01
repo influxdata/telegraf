@@ -8,7 +8,6 @@ package bcache
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -85,7 +84,7 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	if len(metrics) == 0 {
 		return errors.New("can't read any stats file")
 	}
-	file, err := ioutil.ReadFile(bdev + "/dirty_data")
+	file, err := os.ReadFile(bdev + "/dirty_data")
 	if err != nil {
 		return err
 	}
@@ -97,7 +96,7 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 
 	for _, path := range metrics {
 		key := filepath.Base(path)
-		file, err := ioutil.ReadFile(path)
+		file, err := os.ReadFile(path)
 		rawValue := strings.TrimSpace(string(file))
 		if err != nil {
 			return err
