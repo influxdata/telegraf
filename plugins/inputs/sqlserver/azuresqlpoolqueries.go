@@ -59,7 +59,6 @@ SELECT
 	 'sqlserver_pool_resource_governance' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
-	,[database_name]
 	,[slo_name]
 	,[dtu_limit]
 	,[cpu_limit]
@@ -92,7 +91,8 @@ SELECT
 	,[volume_pfs_iops]
 	,[volume_type_pfs_iops]
 FROM 
-	sys.dm_user_db_resource_governance;
+	sys.dm_user_db_resource_governance
+WHERE database_id = DB_ID();
 `
 
 const sqlAzurePoolDatabaseIO = `
