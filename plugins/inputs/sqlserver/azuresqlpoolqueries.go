@@ -23,7 +23,7 @@ END
 SELECT TOP(1)
    'sqlserver_pool_resource_stats' AS [measurement]
   ,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-  ,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
+  ,(SELECT [elastic_pool_name] FROM sys.database_service_objectives WHERE database_id = DB_ID()) AS [elastic_pool_name]
   ,[snapshot_time]
   ,cast([cap_vcores_used_percent] as float) AS [avg_cpu_percent]
   ,cast([avg_data_io_percent] as float) AS [avg_data_io_percent]
@@ -31,7 +31,7 @@ SELECT TOP(1)
   ,cast([avg_storage_percent] as float) AS [avg_storage_percent]
   ,cast([max_worker_percent] as float) AS [max_worker_percent]
   ,cast([max_session_percent] as float) AS [max_session_percent]
-  ,[max_data_space_kb]/1024 AS [storage_limit_mb]
+  ,[max_data_space_kb]/1024. AS [storage_limit_mb]
   ,cast([avg_instance_cpu_percent] as float) AS [avg_instance_cpu_percent]
   ,cast([avg_allocated_storage_percent] as float) AS [avg_allocated_storage_percent]
 FROM 
@@ -58,7 +58,7 @@ END
 SELECT
 	 'sqlserver_pool_resource_governance' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
+	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives WHERE database_id = DB_ID()) AS [elastic_pool_name]
 	,[slo_name]
 	,[dtu_limit]
 	,[cpu_limit]
@@ -111,7 +111,7 @@ END
 SELECT
 	 'sqlserver_database_io' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
+	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives WHERE database_id = DB_ID()) AS [elastic_pool_name]
 	,CASE
 		WHEN vfs.[database_id] = 1 THEN 'master'
 		WHEN vfs.[database_id] = 2 THEN 'tempdb'
@@ -158,7 +158,7 @@ END
 SELECT
 	 'sqlserver_waitstats' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
+	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives WHERE database_id = DB_ID()) AS [elastic_pool_name]
 	,[wait_type]
 	,[waiting_tasks_count]
 	,[wait_time_ms]
@@ -277,7 +277,7 @@ END
 SELECT
 	 'sqlserver_memory_clerks' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
-	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
+	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives WHERE database_id = DB_ID()) AS [elastic_pool_name]
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
 FROM 
@@ -485,7 +485,7 @@ END
 SELECT
 	 'sqlserver_schedulers' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
-	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives) AS [elastic_pool_name]
+	,(SELECT [elastic_pool_name] FROM sys.database_service_objectives WHERE database_id = DB_ID()) AS [elastic_pool_name]
 	,[scheduler_id]
 	,[cpu_id]
 	,[status]
