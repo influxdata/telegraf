@@ -485,36 +485,21 @@ var testEsAggregationData = []esAggregationQueryTest{
 		false,
 	},
 	{
-		"query 14 - custom date/time format",
+		"query 14 - non-existing custom date/time format",
 		esAggregation{
 			Index:           testindex,
 			MeasurementName: "measurement14",
-			MetricFields:    []string{"size"},
-			FilterQuery:     "downloads",
-			MetricFunction:  "max",
 			DateField:       "@timestamp",
 			DateFieldFormat: "yyyy",
 			QueryPeriod:     queryPeriod,
 			Tags:            []string{},
-			mapMetricFields: map[string]string{"size": "long"},
+			mapMetricFields: map[string]string{},
 		},
-		[]aggregationQueryData{
-			{
-				aggKey:   aggKey{measurement: "measurement14", name: "size_max", function: "max", field: "size"},
-				isParent: true,
-			},
-		},
-		[]telegraf.Metric{
-			testutil.MustMetric(
-				"measurement14",
-				map[string]string{},
-				map[string]interface{}{"size_max": float64(3318)},
-				time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
-			),
-		},
+		nil,
+		nil,
 		false,
 		false,
-		false,
+		true,
 	},
 }
 
