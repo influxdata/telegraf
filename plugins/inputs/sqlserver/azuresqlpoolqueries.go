@@ -35,7 +35,7 @@ SELECT TOP(1)
   ,cast([avg_instance_cpu_percent] as float) AS [avg_instance_cpu_percent]
   ,cast([avg_allocated_storage_percent] as float) AS [avg_allocated_storage_percent]
 FROM 
-  sys.dm_resource_governor_resource_pools_history_ex WITH (NOLOCK)
+  sys.dm_resource_governor_resource_pools_history_ex
 WHERE 
   [name] = 'SloSharedPool1'
 ORDER BY
@@ -92,7 +92,7 @@ SELECT
 	,[volume_pfs_iops]
 	,[volume_type_pfs_iops]
 FROM 
-	sys.dm_user_db_resource_governance WITH (NOLOCK);
+	sys.dm_user_db_resource_governance;
 `
 
 const sqlAzurePoolDatabaseIO = `
@@ -222,7 +222,7 @@ SELECT
   			'PWAIT_RESOURCE_SEMAPHORE_FT_PARALLEL_QUERY_SYNC') THEN 'Full Text Search'
  		ELSE 'Other'
 	 END AS [wait_category]
-FROM sys.dm_os_wait_stats AS ws WITH (NOLOCK)
+FROM sys.dm_os_wait_stats AS ws
 WHERE
 	ws.[wait_type] NOT IN (
         N'BROKER_EVENTHANDLER', N'BROKER_RECEIVE_WAITFOR', N'BROKER_TASK_STOP',
@@ -281,7 +281,7 @@ SELECT
 	,mc.[type] AS [clerk_type]
 	,SUM(mc.[pages_kb]) AS [size_kb]
 FROM 
-	sys.dm_os_memory_clerks AS mc WITH (NOLOCK)
+	sys.dm_os_memory_clerks AS mc
 GROUP BY
 	mc.[type]
 HAVING 
