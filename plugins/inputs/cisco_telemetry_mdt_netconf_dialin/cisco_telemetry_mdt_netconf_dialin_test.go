@@ -1545,6 +1545,14 @@ func Test_getRequestsService_createRequests(t *testing.T) {
 
 		w := new(sync.WaitGroup)
 		w.Add(1)
+
+		switch tt.testType {
+		case badGetRequestInvalidPath:
+			if testing.Short() {
+				t.Skip("Skipping integration test. Run this test separately with IOS-XE connection details given as t* arguments.")
+			}
+		}
+
 		go func() {
 			t.Run(tt.name, func(t *testing.T) {
 				// Prerequisites: establish connection
@@ -1558,10 +1566,6 @@ func Test_getRequestsService_createRequests(t *testing.T) {
 					assert.Error(t, err)
 					assert.Equal(t, err, tt.wantError)
 				case badGetRequestInvalidPath:
-					if testing.Short() {
-						t.Skip("Skipping integration test. Run this test separately with IOS-XE connection details given as t* arguments.")
-					}
-
 					assert.Contains(t, acc.Errors, tt.wantError)
 					fallthrough
 				default:
