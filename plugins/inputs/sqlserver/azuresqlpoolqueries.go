@@ -14,8 +14,8 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
-IF (SELECT [elastic_pool_name] FROM sys.database_service_objectives) IS NULL BEGIN
-	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not attached to an elastic pool. Check the database_type parameter in the telegraf configuration.';
+IF NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
+	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
@@ -49,8 +49,8 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
-IF (SELECT [elastic_pool_name] FROM sys.database_service_objectives) IS NULL BEGIN
-	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not attached to an elastic pool. Check the database_type parameter in the telegraf configuration.';
+IF NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
+	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
@@ -102,8 +102,8 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
-IF (SELECT [elastic_pool_name] FROM sys.database_service_objectives) IS NULL BEGIN
-	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not attached to an elastic pool. Check the database_type parameter in the telegraf configuration.';
+IF NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
+	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
@@ -149,8 +149,8 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
-IF (SELECT [elastic_pool_name] FROM sys.database_service_objectives) IS NULL BEGIN
-	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not attached to an elastic pool. Check the database_type parameter in the telegraf configuration.';
+IF NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
+	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
@@ -268,8 +268,8 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
-IF (SELECT [elastic_pool_name] FROM sys.database_service_objectives) IS NULL BEGIN
-	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not attached to an elastic pool. Check the database_type parameter in the telegraf configuration.';
+IF NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
+	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
@@ -305,8 +305,8 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
-IF (SELECT [elastic_pool_name] FROM sys.database_service_objectives) IS NULL BEGIN
-	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not attached to an elastic pool. Check the database_type parameter in the telegraf configuration.';
+IF NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
+	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
@@ -476,8 +476,8 @@ IF SERVERPROPERTY('EngineEdition') <> 5 BEGIN /*not Azure SQL DB*/
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
-IF (SELECT [elastic_pool_name] FROM sys.database_service_objectives) IS NULL BEGIN
-	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not attached to an elastic pool. Check the database_type parameter in the telegraf configuration.';
+IF NOT EXISTS (SELECT 1 FROM sys.database_service_objectives WHERE database_id = DB_ID() AND elastic_pool_name IS NOT NULL) BEGIN
+	SET @ErrorMessage = 'Telegraf - Database:' + DB_NAME() +' is not in an elastic pool. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
 END
