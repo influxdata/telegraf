@@ -18,6 +18,46 @@ func TestGatherValidXML(t *testing.T) {
 		expected []telegraf.Metric
 	}{
 		{
+			name:     "GeForce GT 1030",
+			filename: "gt-1030.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"nvidia_smi",
+					map[string]string{
+						"name":         "NVIDIA GeForce GT 1030",
+						"compute_mode": "Default",
+						"index":        "0",
+						"pstate":       "P0",
+						"uuid":         "GPU-857c6374-f681-cf3a-f99f-9063a87b8ac0",
+					},
+					map[string]interface{}{
+						"clocks_current_graphics":       1265,
+						"clocks_current_memory":         3003,
+						"clocks_current_sm":             1265,
+						"clocks_current_video":          1126,
+						"encoder_stats_average_fps":     0,
+						"encoder_stats_average_latency": 0,
+						"encoder_stats_session_count":   0,
+						"fan_speed":                     35,
+						"memory_free":                   1123,
+						"memory_total":                  1998,
+						"memory_used":                   875,
+						"pcie_link_gen_current":         3,
+						"pcie_link_width_current":       4,
+						"temperature_gpu":               36,
+						"utilization_gpu":               0,
+						"utilization_memory":            3,
+						"utilization_decoder":           0,
+						"cuda_version":                  "11.4",
+						"driver_version":                "470.74",
+						"fbc_stats_average_fps":         0,
+						"fbc_stats_average_latency":     0,
+						"fbc_stats_session_count":       0,
+					},
+					time.Unix(0, 0)),
+			},
+		},
+		{
 			name:     "GeForce GTX 1070 Ti",
 			filename: "gtx-1070-ti.xml",
 			expected: []telegraf.Metric{
