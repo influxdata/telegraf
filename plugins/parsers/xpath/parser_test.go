@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -135,7 +136,7 @@ func TestParseInvalidXML(t *testing.T) {
 	}
 }
 
-func TestInvalidTypeQueriesFail(t *testing.T) {
+func TestInvalidNumbericTypeQueriesIgnore(t *testing.T) {
 	var tests = []struct {
 		name          string
 		input         string
@@ -162,7 +163,52 @@ func TestInvalidTypeQueriesFail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				IgnoreNaN:   true,
+				Configs:     tt.configs,
+				DefaultTags: tt.defaultTags,
+				Log:         testutil.Logger{Name: "parsers.xml"},
+			}
+			require.NoError(t, parser.Init())
+
+			_, err := parser.ParseLine(tt.input)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestInvalidNumericTypeQueriesFail(t *testing.T) {
+	var tests = []struct {
+		name          string
+		input         string
+		configs       []Config
+		defaultTags   map[string]string
+		expectedError string
+	}{
+		{
+			name:  "invalid field (int) type",
+			input: singleMetricValuesXML,
+			configs: []Config{
+				{
+					MetricDefaultName: "test",
+					Timestamp:         "/Device_1/Timestamp_unix",
+					FieldsInt: map[string]string{
+						"a": "/Device_1/value_string",
+					},
+				},
+			},
+			defaultTags:   map[string]string{},
+			expectedError: "failed to parse field (int) 'a': strconv.ParseInt: parsing \"this is a test\": invalid syntax",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := &Parser{
+				Configs:     tt.configs,
+				DefaultTags: tt.defaultTags,
+				Log:         testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			_, err := parser.ParseLine(tt.input)
@@ -176,10 +222,32 @@ func TestInvalidTypeQueries(t *testing.T) {
 	var tests = []struct {
 		name        string
 		input       string
+		ignoreNaN   bool
 		configs     []Config
 		defaultTags map[string]string
 		expected    telegraf.Metric
 	}{
+		{
+			name:      "invalid field type (number, ignore-NaN)",
+			input:     singleMetricValuesXML,
+			ignoreNaN: true,
+			configs: []Config{
+				{
+					MetricDefaultName: "test",
+					Timestamp:         "/Device_1/Timestamp_unix",
+					Fields: map[string]string{
+						"a": "number(/Device_1/value_string)",
+					},
+				},
+			},
+			defaultTags: map[string]string{},
+			expected: testutil.MustMetric(
+				"test",
+				map[string]string{},
+				map[string]interface{}{},
+				time.Unix(1577923199, 0),
+			),
+		},
 		{
 			name:  "invalid field type (number)",
 			input: singleMetricValuesXML,
@@ -197,7 +265,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 				"test",
 				map[string]string{},
 				map[string]interface{}{
-					"a": float64(0),
+					"a": math.NaN(),
 				},
 				time.Unix(1577923199, 0),
 			),
@@ -228,7 +296,12 @@ func TestInvalidTypeQueries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				IgnoreNaN:   tt.ignoreNaN,
+				Configs:     tt.configs,
+				DefaultTags: tt.defaultTags,
+				Log:         testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)

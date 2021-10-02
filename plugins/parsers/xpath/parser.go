@@ -2,6 +2,7 @@ package xpath
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -30,8 +31,8 @@ type Parser struct {
 	Configs             []Config
 	DefaultTags         map[string]string
 	Log                 telegraf.Logger
-
-	document dataDocument
+	IgnoreNaN           bool
+	document            dataDocument
 }
 
 type Config struct {
@@ -257,10 +258,14 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		}
 		switch v := v.(type) {
 		case string:
-			fields[name], err = strconv.ParseInt(v, 10, 54)
+			fv, err := strconv.ParseInt(v, 10, 54)
 			if err != nil {
+				if p.IgnoreNaN {
+					continue
+				}
 				return nil, fmt.Errorf("failed to parse field (int) '%s': %v", name, err)
 			}
+			fields[name] = fv
 		case bool:
 			fields[name] = int64(0)
 			if v {
@@ -280,6 +285,9 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query field '%s': %v", name, err)
+		}
+		if fpv, ok := v.(float64); ok && p.IgnoreNaN && math.IsNaN(fpv) {
+			continue
 		}
 		fields[name] = v
 	}
