@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/transport"
 	"github.com/influxdata/telegraf/testutil"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -78,11 +80,17 @@ func TestGatherValidJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
+
+			plugin := NewAMDSMI()
+			plugin.Receiver.(*transport.Exec).BinPath = "."
+			plugin.Log = testutil.Logger{}
+			require.NoError(t, plugin.Init())
+
 			octets, err := os.ReadFile(filepath.Join("testdata", tt.filename))
 			require.NoError(t, err)
 
-			err = gatherROCmSMI(octets, &acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Parse(&acc, octets))
+			require.NoError(t, acc.FirstError())
 
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
