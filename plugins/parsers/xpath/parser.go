@@ -31,12 +31,12 @@ type Parser struct {
 	Configs             []Config
 	DefaultTags         map[string]string
 	Log                 telegraf.Logger
-	IgnoreNaN           bool
 	document            dataDocument
 }
 
 type Config struct {
 	MetricDefaultName string            `toml:"-"`
+	IgnoreNaN         bool              `toml:"ignore_nan"`
 	MetricQuery       string            `toml:"metric_name"`
 	Selection         string            `toml:"metric_selection"`
 	Timestamp         string            `toml:"timestamp"`
@@ -260,7 +260,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		case string:
 			fv, err := strconv.ParseInt(v, 10, 54)
 			if err != nil {
-				if p.IgnoreNaN {
+				if config.IgnoreNaN {
 					continue
 				}
 				return nil, fmt.Errorf("failed to parse field (int) '%s': %v", name, err)
@@ -286,7 +286,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		if err != nil {
 			return nil, fmt.Errorf("failed to query field '%s': %v", name, err)
 		}
-		if fpv, ok := v.(float64); ok && p.IgnoreNaN && math.IsNaN(fpv) {
+		if fpv, ok := v.(float64); ok && config.IgnoreNaN && math.IsNaN(fpv) {
 			continue
 		}
 		fields[name] = v

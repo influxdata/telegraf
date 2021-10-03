@@ -150,6 +150,7 @@ func TestInvalidNumbericTypeQueriesIgnore(t *testing.T) {
 			configs: []Config{
 				{
 					MetricDefaultName: "test",
+					IgnoreNaN:         true,
 					Timestamp:         "/Device_1/Timestamp_unix",
 					FieldsInt: map[string]string{
 						"a": "/Device_1/value_string",
@@ -164,7 +165,6 @@ func TestInvalidNumbericTypeQueriesIgnore(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{
-				IgnoreNaN:   true,
 				Configs:     tt.configs,
 				DefaultTags: tt.defaultTags,
 				Log:         testutil.Logger{Name: "parsers.xml"},
@@ -222,18 +222,17 @@ func TestInvalidTypeQueries(t *testing.T) {
 	var tests = []struct {
 		name        string
 		input       string
-		ignoreNaN   bool
 		configs     []Config
 		defaultTags map[string]string
 		expected    telegraf.Metric
 	}{
 		{
-			name:      "invalid field type (number, ignore-NaN)",
-			input:     singleMetricValuesXML,
-			ignoreNaN: true,
+			name:  "invalid field type (number, ignore-NaN)",
+			input: singleMetricValuesXML,
 			configs: []Config{
 				{
 					MetricDefaultName: "test",
+					IgnoreNaN:         true,
 					Timestamp:         "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"a": "number(/Device_1/value_string)",
@@ -297,7 +296,6 @@ func TestInvalidTypeQueries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{
-				IgnoreNaN:   tt.ignoreNaN,
 				Configs:     tt.configs,
 				DefaultTags: tt.defaultTags,
 				Log:         testutil.Logger{Name: "parsers.xml"},

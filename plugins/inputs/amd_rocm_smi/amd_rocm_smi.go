@@ -62,12 +62,12 @@ func NewAMDSMI() *generic.ReceiveAndParse {
 				"--json"},
 		},
 		Parser: &xpath.Parser{
-			Format:    "xpath_json",
-			IgnoreNaN: true,
+			Format: "xpath_json",
 			// PrintDocument: true,
 			Configs: []xpath.Config{
 				{
 					MetricDefaultName: "amd_rocm_smi",
+					IgnoreNaN:         true,
 					Selection:         "//*[starts-with(name(.), 'card')]",
 					Tags: map[string]string{
 						"name":          "name()",

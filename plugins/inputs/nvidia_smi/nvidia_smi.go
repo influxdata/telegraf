@@ -21,11 +21,11 @@ func NewNvidiaSMI() *generic.ReceiveAndParse {
 			BinArgs: []string{"-q", "-x"},
 		},
 		Parser: &xpath.Parser{
-			Format:    "xml",
-			IgnoreNaN: true,
+			Format: "xml",
 			Configs: []xpath.Config{
 				{
 					MetricDefaultName: "nvidia_smi",
+					IgnoreNaN:         true,
 					Selection:         "//gpu",
 					Tags: map[string]string{
 						"index":        "count(./preceding-sibling::gpu)",
