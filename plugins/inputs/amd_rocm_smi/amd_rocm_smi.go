@@ -1,21 +1,36 @@
 package amd_rocm_smi
 
 import (
+	_ "embed" // Required for embedding the parser config file
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/influxdata/toml"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/transport"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers/xpath"
+	"github.com/influxdata/telegraf/plugins/parsers"
 
 	generic "github.com/influxdata/telegraf/plugins/common/receive_parse"
 )
 
+//go:embed amd_rocm_smi_parser.conf
+var cfgfile []byte
+
 func NewAMDSMI() *generic.ReceiveAndParse {
+	var cfg parsers.Config
+	if err := toml.Unmarshal(cfgfile, &cfg); err != nil {
+		panic(fmt.Errorf("cannot unmarshal 'amd_rocm_smi_parser.conf': %v", err))
+	}
+	parser, err := parsers.NewParser(&cfg)
+	if err != nil {
+		panic(fmt.Errorf("cannot instantiate parser for 'amd_rocm_smi': %v", err))
+	}
+
 	return &generic.ReceiveAndParse{
 		DescriptionText: "Query statistics from AMD Graphics cards using rocm-smi binary",
 		Receiver: &transport.Exec{
@@ -61,38 +76,7 @@ func NewAMDSMI() *generic.ReceiveAndParse {
 				"--showtoponuma",
 				"--json"},
 		},
-		Parser: &xpath.Parser{
-			Format: "xpath_json",
-			// PrintDocument: true,
-			Configs: []xpath.Config{
-				{
-					MetricDefaultName: "amd_rocm_smi",
-					IgnoreNaN:         true,
-					Selection:         "//*[starts-with(name(.), 'card')]",
-					Tags: map[string]string{
-						"name":          "name()",
-						"gpu_id":        "child::*[name() = 'GPU ID']",
-						"gpu_unique_id": "child::*[name() = 'Unique ID']",
-					},
-					Fields: map[string]string{
-						"temperature_sensor_edge":     "number(child::*[name() = 'Temperature (Sensor edge) (C)'])",
-						"temperature_sensor_junction": "number(child::*[name() = 'Temperature (Sensor junction) (C)'])",
-						"temperature_sensor_memory":   "number(child::*[name() = 'Temperature (Sensor memory) (C)'])",
-						"power_draw":                  "number(child::*[name() = 'Average Graphics Package Power (W)'])",
-						"driver_version":              "/system/child::*[name() = 'Driver version']",
-					},
-					FieldsInt: map[string]string{
-						"fan_speed":             "child::*[name() = 'Fan speed (%)']",
-						"memory_total":          "child::*[name() = 'VRAM Total Memory (B)']",
-						"memory_used":           "child::*[name() = 'VRAM Total Used Memory (B)']",
-						"utilization_gpu":       "child::*[name() = 'GPU use (%)']",
-						"utilization_memory":    "child::*[name() = 'GPU memory use (%)']",
-						"clocks_current_sm":     "substring(child::*[name() = 'sclk clock speed:'], 2, string-length(.)-5)",
-						"clocks_current_memory": "substring(child::*[name() = 'mclk clock speed:'], 2, string-length(.)-5)",
-					},
-				},
-			},
-		},
+		Parser: parser,
 		PostProcessors: []generic.PostProcessor{
 			{
 				Name:    "memory_free computation",
