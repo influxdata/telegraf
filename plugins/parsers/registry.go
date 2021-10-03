@@ -268,7 +268,7 @@ func NewParser(config *Config) (Parser, error) {
 		)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
-	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
+	case "xml", "xpath_xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
 		parser = &xpath.Parser{
 			Format:              config.DataFormat,
 			ProtobufMessageDef:  config.XPathProtobufFile,

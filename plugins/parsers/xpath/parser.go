@@ -53,7 +53,7 @@ type Config struct {
 
 func (p *Parser) Init() error {
 	switch p.Format {
-	case "", "xml":
+	case "", "xml", "xpath_xml":
 		p.document = &xmlDocument{}
 	case "xpath_json":
 		p.document = &jsonDocument{}
