@@ -64,8 +64,6 @@ func (r *ReceiveAndParse) Init() error {
 		}
 	}
 
-	fmt.Printf("got: %v\n", r)
-
 	return nil
 }
 
