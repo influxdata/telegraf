@@ -330,10 +330,9 @@ $(include_packages):
 			--maintainer support@influxdb.com \
 			--config-files /etc/telegraf/telegraf.conf.sample \
 			--config-files /etc/logrotate.d/telegraf \
-			--after-install scripts/deb/post-install.sh \
-			--before-install scripts/deb/pre-install.sh \
-			--after-remove scripts/deb/post-remove.sh \
-			--before-remove scripts/deb/pre-remove.sh \
+			--after-install scripts/deb/postinst \
+			--after-remove scripts/deb/postrm \
+			--before-remove scripts/deb/prerm \
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
 			--name telegraf \
 			--version $(version) \

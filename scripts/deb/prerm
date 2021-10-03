@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+# Automatically added by dh_installsystemd/13.3.3ubuntu2
+if [ -d /run/systemd/system ] && [ "$1" = remove ]; then
+	deb-systemd-invoke stop 'telegraf.service' >/dev/null || true
+fi
+# End automatically added section
