@@ -60,6 +60,9 @@ var (
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
+
+	// secretStores contains all configured secret-stores
+	secretStores = make(map[string]secretstore.SecretStore)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -1031,6 +1034,11 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 	}
 
+	// Try to resolve all secrets in the plugins
+	if err := c.resolveSecrets(); err != nil {
+		return fmt.Errorf("resolving secrets failed: %v", err)
+	}
+
 	if len(c.Processors) > 1 {
 		sort.Sort(c.Processors)
 	}
@@ -1297,9 +1305,6 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		}
 	}
 
-	// Replace the secrets in the plugin with the values of the secret-store
-	c.replaceSecrets("outputs."+name, output)
-
 	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
@@ -1450,9 +1455,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return err
 		}
 	}
-
-	// Replace the secrets in the plugin with the values of the secret-store
-	c.replaceSecrets("inputs."+name, input)
 
 	rp := models.NewRunningInput(input, pluginConfig)
 	rp.SetDefaultTags(c.Tags)

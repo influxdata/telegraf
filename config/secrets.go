@@ -1,12 +1,14 @@
 package config
 
 import (
-	"log" //nolint:revive  // This is a subpart of config which is allowed to have log imported.
-	"reflect"
+	"bytes"
+	"fmt"
 	"regexp"
 	"strings"
 
-	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/awnumar/memguard"
+
+	"github.com/influxdata/telegraf/secretstore"
 )
 
 const secretStoreConfig = `
@@ -35,75 +37,131 @@ const secretStoreConfig = `
 // secretPattern is a regex to extract references to secrets stored in a secret-store.
 var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
 
-func (c *Config) replaceSecrets(pluginType string, plugin interface{}) {
-	walkPluginStruct(reflect.ValueOf(plugin), func(f reflect.StructField, fv reflect.Value) {
-		c.replaceFieldSecret(pluginType, f, fv)
-	})
+// secretRegister contains a list of secrets for later resolving by the config.
+var secretRegister = make([]*Secret, 0)
+
+// Secret safely stores sensitive data such as a password or token
+type Secret struct {
+	enclave  *memguard.Enclave
+	resolver func() (string, error)
+
+	stores map[string]secretstore.SecretStore
 }
 
-func (c *Config) replaceFieldSecret(pluginType string, field reflect.StructField, value reflect.Value) {
-	tags := strings.Split(field.Tag.Get("telegraf"), ",")
-	if !choice.Contains("secret", tags) {
-		return
-	}
-
-	// We only support string replacement
-	if value.Kind() != reflect.String {
-		log.Printf("W! [secretstore] unsupported type %q for field %q of %q", field.Type.Kind().String(), field.Name, pluginType)
-		return
-	}
-
-	// Secret references are in the form @{<store name>:<keyname>}
-	matches := secretPattern.FindStringSubmatch(value.String())
-	if len(matches) < 2 {
-		return
-	}
-
-	// There should _ALWAYS_ be two parts due to the regular expression match
-	parts := strings.SplitN(matches[1], ":", 2)
-	storename := parts[0] // Ignore the storename for now. This is in preparation for using multiple stores
-	keyname := parts[1]
-
-	log.Printf("I! [secretstore] Replacing secret %q in %q of %q...", keyname, field.Name, pluginType)
-	store, found := c.SecretStore[storename]
-	if !found {
-		log.Printf("E! [secretstore] Unknown store %q for secret %q of %q", storename, matches[1], pluginType)
-		return
-	}
-	secret, err := store.Get(keyname)
+// staticResolver returns static secrets that do not change over time
+func (s *Secret) staticResolver() (string, error) {
+	lockbuf, err := s.enclave.Open()
 	if err != nil {
-		log.Printf("E! [secretstore] Retrieving secret %q in %q of %q failed: %v", matches[1], field.Name, pluginType, err)
-		return
+		return "", fmt.Errorf("opening enclave failed: %v", err)
 	}
-	value.SetString(secret)
+
+	return lockbuf.String(), nil
 }
 
-func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv reflect.Value)) {
-	v := reflect.Indirect(value)
-	t := v.Type()
+// dynamicResolver returns dynamic secrets that change over time e.g. TOTP
+func (s *Secret) dynamicResolver() (string, error) {
+	lockbuf, err := s.enclave.Open()
+	if err != nil {
+		return "", fmt.Errorf("opening enclave failed: %v", err)
+	}
 
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		fieldValue := v.Field(i)
+	return s.replace(lockbuf.String(), s.stores, false)
+}
 
-		if field.PkgPath != "" {
-			continue
+// UnmarshalTOML creates a secret from a toml value
+func (s *Secret) UnmarshalTOML(b []byte) error {
+	s.enclave = memguard.NewEnclave(unquote(b))
+	s.resolver = s.staticResolver
+	s.stores = make(map[string]secretstore.SecretStore)
+
+	secretRegister = append(secretRegister, s)
+
+	return nil
+}
+
+// Get return the string representation of the secret
+func (s *Secret) Get() (string, error) {
+	return s.resolver()
+}
+
+// Resolve all static references to secret-stores and keep the dynamic ones.
+func (s *Secret) Resolve(stores map[string]secretstore.SecretStore) error {
+	lockbuf, err := s.enclave.Open()
+	if err != nil {
+		return fmt.Errorf("opening enclave failed: %v", err)
+	}
+
+	secret, err := s.replace(lockbuf.String(), stores, true)
+	if err != nil {
+		return err
+	}
+
+	if lockbuf.String() != secret {
+		s.enclave = memguard.NewEnclave([]byte(secret))
+		lockbuf.Destroy()
+	}
+
+	return nil
+}
+
+func (s *Secret) replace(secret string, stores map[string]secretstore.SecretStore, replaceDynamic bool) (string, error) {
+	replaceErrs := make([]string, 0)
+	newsecret := secretPattern.ReplaceAllStringFunc(secret, func(match string) string {
+		// There should _ALWAYS_ be two parts due to the regular expression match
+		parts := strings.SplitN(match[2:len(match)-1], ":", 2)
+		storename := parts[0]
+		keyname := parts[1]
+
+		store, found := stores[storename]
+		if !found {
+			replaceErrs = append(replaceErrs, fmt.Sprintf("unknown store %q for %q", storename, match))
+			return match
 		}
-		switch field.Type.Kind() {
-		case reflect.Struct:
-			walkPluginStruct(fieldValue, fn)
 
-		case reflect.Array, reflect.Slice:
-			for j := 0; j < fieldValue.Len(); j++ {
-				fn(field, fieldValue.Index(j))
-			}
-		case reflect.Map:
-			iter := fieldValue.MapRange()
-			for iter.Next() {
-				fn(field, iter.Value())
-			}
-		default:
-			fn(field, fieldValue)
+		// Do not replace secrets from a dynamic store and remember their stores
+		if replaceDynamic && store.IsDynamic() {
+			s.stores[storename] = store
+			s.resolver = s.dynamicResolver
+			return match
+		}
+
+		// Replace all secrets from static stores
+		replacement, err := store.Get(keyname)
+		if err != nil {
+			replaceErrs = append(replaceErrs, fmt.Sprintf("getting secret %q for %q: %v", keyname, match, err))
+			return match
+		}
+		return replacement
+	})
+	if len(replaceErrs) > 0 {
+		return "", fmt.Errorf("replacing secrets failed: %s", strings.Join(replaceErrs, ";"))
+	}
+
+	return newsecret, nil
+}
+
+// resolveSecrets iterates over all registered secrets and resolves all resolvable references.
+func (c *Config) resolveSecrets() error {
+	for _, secret := range secretRegister {
+		if err := secret.Resolve(c.SecretStore); err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+func unquote(b []byte) []byte {
+	if bytes.HasPrefix(b, []byte("'''")) && bytes.HasSuffix(b, []byte("'''")) {
+		return b[3 : len(b)-3]
+	}
+	if bytes.HasPrefix(b, []byte("'")) && bytes.HasSuffix(b, []byte("'")) {
+		return b[1 : len(b)-1]
+	}
+	if bytes.HasPrefix(b, []byte("\"\"\"")) && bytes.HasSuffix(b, []byte("\"\"\"")) {
+		return b[3 : len(b)-3]
+	}
+	if bytes.HasPrefix(b, []byte("\"")) && bytes.HasSuffix(b, []byte("\"")) {
+		return b[1 : len(b)-1]
+	}
+	return b
 }

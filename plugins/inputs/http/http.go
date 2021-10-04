@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -24,11 +25,11 @@ type HTTP struct {
 	Headers map[string]string `toml:"headers"`
 
 	// HTTP Basic Auth Credentials
-	Username string `toml:"username" telegraf:"secret"`
-	Password string `toml:"password" telegraf:"secret"`
+	Username config.Secret `toml:"username"`
+	Password config.Secret `toml:"password"`
 
 	// Absolute path to file with Bearer token
-	BearerToken string `toml:"bearer_token" telegraf:"secret"`
+	BearerToken string `toml:"bearer_token"`
 
 	SuccessStatusCodes []int `toml:"success_status_codes"`
 
@@ -125,8 +126,16 @@ func (h *HTTP) gatherURL(
 		}
 	}
 
-	if h.Username != "" || h.Password != "" {
-		request.SetBasicAuth(h.Username, h.Password)
+	username, err := h.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %v", err)
+	}
+	password, err := h.Password.Get()
+	if err != nil {
+		return fmt.Errorf("getting password failed: %v", err)
+	}
+	if username != "" || password != "" {
+		request.SetBasicAuth(username, password)
 	}
 
 	resp, err := h.client.Do(request)

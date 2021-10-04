@@ -197,7 +197,7 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *dbsql
 
 type SQL struct {
 	Driver             string          `toml:"driver"`
-	Dsn                string          `toml:"dsn" telegraf:"secret"`
+	Dsn                config.Secret   `toml:"dsn"`
 	Timeout            config.Duration `toml:"timeout"`
 	MaxIdleTime        config.Duration `toml:"connection_max_idle_time"`
 	MaxLifetime        config.Duration `toml:"connection_max_life_time"`
@@ -216,7 +216,11 @@ func (s *SQL) Init() error {
 		return errors.New("missing SQL driver option")
 	}
 
-	if s.Dsn == "" {
+	dsn, err := s.Dsn.Get()
+	if err != nil {
+		return fmt.Errorf("getting DSN failed: %v", err)
+	}
+	if dsn == "" {
 		return errors.New("missing data source name (DSN) option")
 	}
 
@@ -345,8 +349,12 @@ func (s *SQL) Start(_ telegraf.Accumulator) error {
 	var err error
 
 	// Connect to the database server
-	s.Log.Debugf("Connecting to %q...", s.Dsn)
-	s.db, err = dbsql.Open(s.driverName, s.Dsn)
+	dsn, err := s.Dsn.Get()
+	if err != nil {
+		return fmt.Errorf("getting DSN failed: %v", err)
+	}
+	s.Log.Debugf("Connecting to %q...", dsn)
+	s.db, err = dbsql.Open(s.driverName, dsn)
 	if err != nil {
 		return err
 	}

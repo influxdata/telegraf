@@ -33,6 +33,8 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+
+	"github.com/awnumar/memguard"
 	"gopkg.in/tomb.v1"
 )
 
@@ -372,6 +374,10 @@ func main() {
 	if err := internal.SetVersion(version); err != nil {
 		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
+
+	// Make sure we safely erase secrets
+	memguard.CatchInterrupt()
+	defer memguard.Purge()
 
 	// Load external plugins, if requested.
 	if *fPlugins != "" {
