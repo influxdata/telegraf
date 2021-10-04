@@ -194,7 +194,7 @@ func runAgent(ctx context.Context,
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
-	c := config.NewConfig()
+	c := config.NewConfig(version)
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
 	var err error

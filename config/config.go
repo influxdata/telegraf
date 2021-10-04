@@ -77,12 +77,17 @@ type Config struct {
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
+
+	versionMajor int
+	versionMinor int
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
 // For historical reasons, It holds the actual instances of the running plugins
 // once the configuration is parsed.
-func NewConfig() *Config {
+func NewConfig(version string) *Config {
+	maj, min := parseVersion(version)
+
 	c := &Config{
 		UnusedFields: map[string]bool{},
 
@@ -102,6 +107,9 @@ func NewConfig() *Config {
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
+
+		versionMajor: maj,
+		versionMinor: min,
 	}
 
 	tomlCfg := &toml.Config{
@@ -199,6 +207,9 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
+
+	versionMajor int
+	versionMinor int
 }
 
 // InputNames returns a list of strings of the configured inputs.
