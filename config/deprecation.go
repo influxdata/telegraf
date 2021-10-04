@@ -208,11 +208,11 @@ func (c *Config) PrintDeprecationList(infos []PluginDeprecationInfo) {
 }
 
 func (c *Config) getDeprecationEscalation(since string) Escalation {
-	sinceMajor, sinceMinor := parseVersion(since)
-	if c.versionMajor > sinceMajor {
+	sinceMajor, sinceMinor := ParseVersion(since)
+	if c.VersionMajor > sinceMajor {
 		return Error
 	}
-	if c.versionMajor == sinceMajor && c.versionMinor >= sinceMinor {
+	if c.VersionMajor == sinceMajor && c.VersionMinor >= sinceMinor {
 		return Warn
 	}
 
@@ -266,7 +266,7 @@ func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv ref
 	}
 }
 
-func parseVersion(version string) (major, minor int) {
+func ParseVersion(version string) (major, minor int) {
 	parts := strings.SplitN(version, ".", 3)
 	if len(parts) < 2 {
 		panic(fmt.Errorf("insufficient version fields in %q", version))
