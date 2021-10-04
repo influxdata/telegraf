@@ -4,7 +4,7 @@ The `monit` plugin gathers metrics and status information about local processes,
 remote hosts, file, file systems, directories and network interfaces managed
 and watched over by [Monit][monit].
 
-The use this plugin you should first enable the [HTTPD TCP port][httpd] in
+To use this plugin you should first enable the [HTTPD TCP port][httpd] in
 Monit.
 
 Minimum Version of Monit tested with is 5.16.
