@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
+
 	"github.com/influxdata/telegraf"
 )
 
@@ -29,11 +31,13 @@ func (c *Config) handleDeprecation(name string, plugin interface{}) error {
 		since, notice := deprecatedPlugin.DeprecationNotice()
 		switch c.getDeprecationEscalation(since) {
 		case Warn:
-			printPluginDeprecationNotice("W! [agent] DeprecationWarning", name, since, notice)
+			prefix := "W! " + color.YellowString("DeprecationWarning")
+			printPluginDeprecationNotice(prefix, name, since, notice)
 			// We will not check for any deprecated options as the whole plugin is deprecated anyway.
 			return nil
 		case Error:
-			printPluginDeprecationNotice("E! [agent] DeprecationError", name, since, notice)
+			prefix := "E! " + color.RedString("DeprecationError")
+			printPluginDeprecationNotice(prefix, name, since, notice)
 			// We are past the grace period
 			return fmt.Errorf("plugin deprecated")
 		}
@@ -60,9 +64,11 @@ func (c *Config) handleDeprecation(name string, plugin interface{}) error {
 
 		switch c.getDeprecationEscalation(since) {
 		case Warn:
-			printOptionDeprecationNotice("W! [agent] DeprecationWarning", name, option, since, notice)
+			prefix := "W! " + color.YellowString("DeprecationWarning")
+			printOptionDeprecationNotice(prefix, name, option, since, notice)
 		case Error:
-			printOptionDeprecationNotice("E! [agent] DeprecationError", name, option, since, notice)
+			prefix := "E! " + color.RedString("DeprecationError")
+			printOptionDeprecationNotice(prefix, name, option, since, notice)
 			deprecatedOptions = append(deprecatedOptions, option)
 		}
 	})
