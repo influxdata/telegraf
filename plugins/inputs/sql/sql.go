@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/secretstore"
 )
 
 const magicIdleCount int = (-int(^uint(0) >> 1))
@@ -196,15 +197,15 @@ func (q *Query) parse(ctx context.Context, acc telegraf.Accumulator, rows *dbsql
 }
 
 type SQL struct {
-	Driver             string          `toml:"driver"`
-	Dsn                config.Secret   `toml:"dsn"`
-	Timeout            config.Duration `toml:"timeout"`
-	MaxIdleTime        config.Duration `toml:"connection_max_idle_time"`
-	MaxLifetime        config.Duration `toml:"connection_max_life_time"`
-	MaxOpenConnections int             `toml:"connection_max_open"`
-	MaxIdleConnections int             `toml:"connection_max_idle"`
-	Queries            []Query         `toml:"query"`
-	Log                telegraf.Logger `toml:"-"`
+	Driver             string             `toml:"driver"`
+	Dsn                secretstore.Secret `toml:"dsn"`
+	Timeout            config.Duration    `toml:"timeout"`
+	MaxIdleTime        config.Duration    `toml:"connection_max_idle_time"`
+	MaxLifetime        config.Duration    `toml:"connection_max_life_time"`
+	MaxOpenConnections int                `toml:"connection_max_open"`
+	MaxIdleConnections int                `toml:"connection_max_idle"`
+	Queries            []Query            `toml:"query"`
+	Log                telegraf.Logger    `toml:"-"`
 
 	driverName string
 	db         *dbsql.DB

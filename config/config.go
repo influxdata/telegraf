@@ -435,6 +435,29 @@ var agentConfig = `
   # snmp_translator = "netsnmp"
 `
 
+const secretStoreConfig = `
+# Store secrets like credentials using a service external to telegraf
+# [[secretstore]]
+  ## Name of the secret-store used to reference the secrets later via @{name:secret_key} (mandatory)
+  name = secretstore
+
+  ## Define the service for storing the credentials, can be one of
+  ##     file://<path>
+  ##       Encrypted file at the given "path" (mandatory) for storing the secrets.
+  ##     kwallet://[[application]/folder]   (default: "kwallet://telegraf")
+  ##       kWallet with the given "application" ID and an optional subfolder.
+  ##     os://[collection]                  (default: "os://telegraf")
+  ##       OS's native secret store with "collection" being the keychain/keyring name or Windows' credential prefix
+  ##     secret-service://[collection]      (default: "secret-service://telegraf")
+  ##       Freedesktop secret-service implementation.
+  # service = "os://telegraf"
+
+	## Password to be used for unlocking secret-stores (e.g. encrypted files).
+	## If omitted, you will be prompted for the password when starting telegraf.
+	## You may use environment-variables here to allow non-interactive starts.
+	# password = "$SECRETSTORE_PASSWD"
+`
+
 var outputHeader = `
 ###############################################################################
 #                            OUTPUT PLUGINS                                   #
@@ -1035,7 +1058,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 	}
 
 	// Try to resolve all secrets in the plugins
-	if err := c.resolveSecrets(); err != nil {
+	if err := secretstore.ResolveSecrets(); err != nil {
 		return fmt.Errorf("resolving secrets failed: %v", err)
 	}
 

@@ -10,10 +10,10 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/secretstore"
 )
 
 type HTTP struct {
@@ -25,8 +25,8 @@ type HTTP struct {
 	Headers map[string]string `toml:"headers"`
 
 	// HTTP Basic Auth Credentials
-	Username config.Secret `toml:"username"`
-	Password config.Secret `toml:"password"`
+	Username secretstore.Secret `toml:"username"`
+	Password secretstore.Secret `toml:"password"`
 
 	// Absolute path to file with Bearer token
 	BearerToken string `toml:"bearer_token"`

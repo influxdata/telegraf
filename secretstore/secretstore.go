@@ -21,6 +21,8 @@ type SecretStore struct {
 	dynamic bool
 }
 
+var stores = make(map[string]*SecretStore)
+
 // Init initializes all internals of the secret-store
 func (s *SecretStore) Init() error {
 	if s.Name == "" {
@@ -46,15 +48,10 @@ func (s *SecretStore) Init() error {
 
 	switch u.Scheme {
 	case "file", "kwallet", "os", "secret-service":
-		var passwd string
-		if s.Password.Enclave != nil {
-			lockbuf, err := s.Password.Open()
-			if err != nil {
-				return fmt.Errorf("opening enclave failed: %v", err)
-			}
-			// Remove the password from memory when leaving
-			defer lockbuf.Destroy()
-			passwd = lockbuf.String()
+		defer s.Password.Destroy()
+		passwd, err := s.Password.Get()
+		if err != nil {
+			return fmt.Errorf("getting password faild: %v", err)
 		}
 
 		s.store, err = NewKeyringStore(s.Name, u.Scheme, path, passwd)
@@ -64,6 +61,9 @@ func (s *SecretStore) Init() error {
 	default:
 		return fmt.Errorf("unknown service %q", u.Scheme)
 	}
+
+	// Register the store
+	stores[s.Name] = s
 
 	return nil
 }
