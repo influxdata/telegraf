@@ -1033,7 +1033,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := c.handleDeprecation("aggregators."+name, aggregator); err != nil {
+	if err := c.printUserDeprecation("aggregators."+name, aggregator); err != nil {
 		return err
 	}
 
@@ -1085,7 +1085,7 @@ func (c *Config) newRunningProcessor(
 		}
 	}
 
-	if err := c.handleDeprecation("processors."+processorConfig.Name, processor); err != nil {
+	if err := c.printUserDeprecation("processors."+processorConfig.Name, processor); err != nil {
 		return nil, err
 	}
 
@@ -1123,7 +1123,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := c.handleDeprecation("outputs."+name, output); err != nil {
+	if err := c.printUserDeprecation("outputs."+name, output); err != nil {
 		return err
 	}
 
@@ -1176,7 +1176,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := c.handleDeprecation("inputs."+name, input); err != nil {
+	if err := c.printUserDeprecation("inputs."+name, input); err != nil {
 		return err
 	}
 
