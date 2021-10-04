@@ -46,6 +46,11 @@ func (c *Config) handleDeprecation(name string, plugin interface{}) error {
 	// Check for deprecated options
 	deprecatedOptions := make([]string, 0)
 	walkPluginStruct(reflect.ValueOf(plugin), func(field reflect.StructField, value reflect.Value) {
+		// Try to report only those fields that are set
+		if value.IsZero() {
+			return
+		}
+
 		tags := strings.SplitN(field.Tag.Get("deprecated"), ";", 2)
 		if len(tags) < 1 || tags[0] == "" {
 			return
@@ -134,9 +139,8 @@ func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv ref
 			for iter.Next() {
 				fn(field, iter.Value())
 			}
-		default:
-			fn(field, fieldValue)
 		}
+		fn(field, fieldValue)
 	}
 }
 
