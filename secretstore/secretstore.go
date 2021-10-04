@@ -17,7 +17,8 @@ type SecretStore struct {
 	Service  string `toml:"service"`
 	Password Secret `toml:"password"`
 
-	store storeImpl
+	store   storeImpl
+	dynamic bool
 }
 
 // Init initializes all internals of the secret-store
@@ -80,4 +81,9 @@ func (s *SecretStore) Set(key, value string) error {
 // List lists all known secret keys
 func (s *SecretStore) List() ([]string, error) {
 	return s.store.List()
+}
+
+// IsDynamic returns true if the store contains secrets that change over time (e.g. TOTP)
+func (s *SecretStore) IsDynamic() bool {
+	return s.dynamic
 }
