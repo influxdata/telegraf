@@ -184,7 +184,7 @@ func (k *Kafka) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (_ *Kafka) DeprecationNotice() (since, notice string) {
+func (*Kafka) DeprecationNotice() (since, notice string) {
 	return "1.20", "use 'inputs.kafka_consumer' instead, NOTE: 'kafka_consumer' only supports Kafka v0.8+"
 }
 

@@ -146,7 +146,7 @@ func serviceName(s string, n string, t map[string]string, f string) string {
 	return strings.Join(serviceStrings, s)
 }
 
-func (_ *Riemann) DeprecationNotice() (since, notice string) {
+func (*Riemann) DeprecationNotice() (since, notice string) {
 	return "1.20", "use 'outputs.riemann' instead (see https://github.com/influxdata/telegraf/issues/1878)"
 }
 

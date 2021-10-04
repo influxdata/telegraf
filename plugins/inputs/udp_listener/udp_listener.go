@@ -223,7 +223,7 @@ func (u *UDPListener) udpParser() {
 	}
 }
 
-func (_ *UDPListener) DeprecationNotice() (since, notice string) {
+func (*UDPListener) DeprecationNotice() (since, notice string) {
 	return "1.3", "use 'inputs.socket_listener' instead"
 }
 
