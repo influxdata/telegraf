@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"log" //nolint:revive // log is ok here as the logging facility is not set-up yet
 	"reflect"
 	"sort"
 	"strconv"
@@ -194,7 +194,7 @@ func (c *Config) PrintDeprecationList(infos []PluginDeprecationInfo) {
 	for _, info := range infos {
 		switch info.Level {
 		case Warn, Error:
-			fmt.Printf("  %-40s %-5s since %5s %s\n", info.Name, info.Level, info.Since, info.Notice)
+			_, _ = fmt.Printf("  %-40s %-5s since %5s %s\n", info.Name, info.Level, info.Since, info.Notice)
 		}
 
 		if len(info.Options) < 1 {
@@ -202,7 +202,7 @@ func (c *Config) PrintDeprecationList(infos []PluginDeprecationInfo) {
 		}
 		sort.Slice(info.Options, func(i, j int) bool { return info.Options[i].Name < info.Options[j].Name })
 		for _, option := range info.Options {
-			fmt.Printf("  %-40s %-5s since %5s %s\n", info.Name+"/"+option.Name, option.Level, option.Since, option.Notice)
+			_, _ = fmt.Printf("  %-40s %-5s since %5s %s\n", info.Name+"/"+option.Name, option.Level, option.Since, option.Notice)
 		}
 	}
 }

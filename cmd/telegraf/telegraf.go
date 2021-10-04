@@ -399,12 +399,16 @@ func main() {
 		c := config.NewConfig()
 		c.VersionMajor, c.VersionMinor = config.ParseVersion(version)
 		infos := c.CollectDeprecationInfos()
+		//nolint:revive // We will notice if Println fails
 		fmt.Println("Deprecated Input Plugins: ")
 		c.PrintDeprecationList(infos["inputs"])
+		//nolint:revive // We will notice if Println fails
 		fmt.Println("Deprecated Output Plugins: ")
 		c.PrintDeprecationList(infos["outputs"])
+		//nolint:revive // We will notice if Println fails
 		fmt.Println("Deprecated Processor Plugins: ")
 		c.PrintDeprecationList(infos["processors"])
+		//nolint:revive // We will notice if Println fails
 		fmt.Println("Deprecated Aggregator Plugins: ")
 		c.PrintDeprecationList(infos["aggregators"])
 		return

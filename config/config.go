@@ -203,9 +203,6 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
-
-	versionMajor int
-	versionMinor int
 }
 
 // InputNames returns a list of strings of the configured inputs.

@@ -318,7 +318,7 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (_ *Jolokia) DeprecationNotice() (since, notice string) {
+func (*Jolokia) DeprecationNotice() (since, notice string) {
 	return "1.5", "use 'inputs.jolokia2' instead"
 }
 
