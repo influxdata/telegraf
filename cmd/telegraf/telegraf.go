@@ -60,6 +60,8 @@ var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fDeprecationList = flag.Bool("deprecation-list", false,
+	"print all deprecated plugins or plugin options.")
 var fSectionFilters = flag.String("section-filter", "",
 	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
 var fInputFilters = flag.String("input-filter", "",
@@ -392,6 +394,18 @@ func main() {
 
 	// switch for flags which just do something and exit immediately
 	switch {
+	case *fDeprecationList:
+		c := config.NewConfig(version)
+		infos := c.CollectDeprecationInfos()
+		fmt.Println("Deprecated Input Plugins: ")
+		c.PrintDeprecationList(infos["inputs"])
+		fmt.Println("Deprecated Output Plugins: ")
+		c.PrintDeprecationList(infos["outputs"])
+		fmt.Println("Deprecated Processor Plugins: ")
+		c.PrintDeprecationList(infos["processors"])
+		fmt.Println("Deprecated Aggregator Plugins: ")
+		c.PrintDeprecationList(infos["aggregators"])
+		return
 	case *fOutputList:
 		fmt.Println("Available Output Plugins: ")
 		names := make([]string, 0, len(outputs.Outputs))
