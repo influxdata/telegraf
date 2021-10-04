@@ -23,6 +23,13 @@ type PluginDescriber interface {
 	Description() string
 }
 
+// PluginDeprecator marks a plugin as deprecated and provides hints to the user.
+type PluginDeprecator interface {
+	// DeprecationNotice returns the version since when the plugin is deprecated and
+	// (optionally) provides a deprecation notice allowing to suggest replacements etc.
+	DeprecationNotice() (since string, notice string)
+}
+
 // Logger defines an plugin-related interface for logging.
 type Logger interface {
 	// Errorf logs an error message, patterned after log.Printf.
