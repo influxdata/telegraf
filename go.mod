@@ -198,8 +198,13 @@ require (
 	github.com/apache/arrow/go/arrow v0.0.0-20211006091945-a69884db78f4 // indirect
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/armon/go-metrics v0.3.3 // indirect
+	github.com/awnumar/memguard v0.22.2
+	github.com/aws/aws-sdk-go-v2 v1.9.2
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.2.0 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.8.3
+	github.com/aws/aws-sdk-go-v2/credentials v1.4.3
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.6.0
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.5.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.3 // indirect
@@ -383,6 +388,7 @@ require (
 require github.com/libp2p/go-reuseport v0.1.0
 
 require (
+	github.com/awnumar/memcall v0.0.0-20191004114545-73db50fd9f80 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
 	github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f // indirect
