@@ -283,7 +283,7 @@ func (h *HTTPJSON) sendRequest(serverURL string) (string, float64, error) {
 	return string(body), responseTime, err
 }
 
-func (h *HTTPJSON) DeprecationNotice() (since, notice string) {
+func (_ *HTTPJSON) DeprecationNotice() (since, notice string) {
 	return "1.6", "use 'inputs.http' instead"
 }
 

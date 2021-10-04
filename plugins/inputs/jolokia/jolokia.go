@@ -318,6 +318,10 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (_ *Jolokia) DeprecationNotice() (since, notice string) {
+	return "1.5", "use 'inputs.jolokia2' instead"
+}
+
 func init() {
 	inputs.Add("jolokia", func() telegraf.Input {
 		return &Jolokia{

@@ -313,6 +313,10 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (_ *Cassandra) DeprecationNotice() (since, notice string) {
+	return "1.7", "use 'inputs.jolokia2' with the 'cassandra.conf' example configuration instead"
+}
+
 func init() {
 	inputs.Add("cassandra", func() telegraf.Input {
 		return &Cassandra{jClient: &JolokiaClientImpl{client: &http.Client{}}}

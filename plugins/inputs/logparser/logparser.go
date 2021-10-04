@@ -360,6 +360,10 @@ func (l *LogParserPlugin) Stop() {
 	offsetsMutex.Unlock()
 }
 
+func (_ *LogParserPlugin) DeprecationNotice() (since, notice string) {
+	return "1.15", "use 'inputs.tail' with 'grok' data format instead"
+}
+
 func init() {
 	inputs.Add("logparser", func() telegraf.Input {
 		return NewLogParser()
