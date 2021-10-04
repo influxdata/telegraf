@@ -196,7 +196,8 @@ func runAgent(ctx context.Context,
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
-	c := config.NewConfig(version)
+	c := config.NewConfig()
+	c.VersionMajor, c.VersionMinor = config.ParseVersion(version)
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
 	var err error
@@ -395,7 +396,8 @@ func main() {
 	// switch for flags which just do something and exit immediately
 	switch {
 	case *fDeprecationList:
-		c := config.NewConfig(version)
+		c := config.NewConfig()
+		c.VersionMajor, c.VersionMinor = config.ParseVersion(version)
 		infos := c.CollectDeprecationInfos()
 		fmt.Println("Deprecated Input Plugins: ")
 		c.PrintDeprecationList(infos["inputs"])
