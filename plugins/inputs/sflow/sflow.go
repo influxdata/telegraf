@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,8 +31,8 @@ const (
 )
 
 type SFlow struct {
-	ServiceAddress string        `toml:"service_address"`
-	ReadBufferSize internal.Size `toml:"read_buffer_size"`
+	ServiceAddress string      `toml:"service_address"`
+	ReadBufferSize config.Size `toml:"read_buffer_size"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -83,8 +83,8 @@ func (s *SFlow) Start(acc telegraf.Accumulator) error {
 	s.closer = conn
 	s.addr = conn.LocalAddr()
 
-	if s.ReadBufferSize.Size > 0 {
-		if err := conn.SetReadBuffer(int(s.ReadBufferSize.Size)); err != nil {
+	if s.ReadBufferSize > 0 {
+		if err := conn.SetReadBuffer(int(s.ReadBufferSize)); err != nil {
 			return err
 		}
 	}

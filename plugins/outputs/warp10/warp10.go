@@ -3,7 +3,7 @@ package warp10
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -25,12 +25,12 @@ const (
 
 // Warp10 output plugin
 type Warp10 struct {
-	Prefix             string            `toml:"prefix"`
-	WarpURL            string            `toml:"warp_url"`
-	Token              string            `toml:"token"`
-	Timeout            internal.Duration `toml:"timeout"`
-	PrintErrorBody     bool              `toml:"print_error_body"`
-	MaxStringErrorSize int               `toml:"max_string_error_size"`
+	Prefix             string          `toml:"prefix"`
+	WarpURL            string          `toml:"warp_url"`
+	Token              string          `toml:"token"`
+	Timeout            config.Duration `toml:"timeout"`
+	PrintErrorBody     bool            `toml:"print_error_body"`
+	MaxStringErrorSize int             `toml:"max_string_error_size"`
 	client             *http.Client
 	tls.ClientConfig
 }
@@ -76,8 +76,8 @@ func (w *Warp10) createClient() (*http.Client, error) {
 		return nil, err
 	}
 
-	if w.Timeout.Duration == 0 {
-		w.Timeout.Duration = defaultClientTimeout
+	if w.Timeout == 0 {
+		w.Timeout = config.Duration(defaultClientTimeout)
 	}
 
 	client := &http.Client{
@@ -85,7 +85,7 @@ func (w *Warp10) createClient() (*http.Client, error) {
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
 		},
-		Timeout: w.Timeout.Duration,
+		Timeout: time.Duration(w.Timeout),
 	}
 
 	return client, nil
@@ -154,7 +154,7 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 
 	if resp.StatusCode != http.StatusOK {
 		if w.PrintErrorBody {
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
 		}
 

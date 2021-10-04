@@ -8,8 +8,9 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 // sampleJSON from fluentd version '0.14.9'
@@ -122,10 +123,13 @@ func Test_Gather(t *testing.T) {
 
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "%s", string(sampleJSON))
+		_, err := fmt.Fprintf(w, "%s", string(sampleJSON))
+		require.NoError(t, err)
 	}))
 
 	requestURL, err := url.Parse(fluentdTest.Endpoint)
+	require.NoError(t, err)
+	require.NotNil(t, requestURL)
 
 	ts.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
 
@@ -144,15 +148,15 @@ func Test_Gather(t *testing.T) {
 		t.Errorf("acc.HasMeasurement: expected fluentd")
 	}
 
-	assert.Equal(t, expectedOutput[0].PluginID, acc.Metrics[0].Tags["plugin_id"])
-	assert.Equal(t, expectedOutput[0].PluginType, acc.Metrics[0].Tags["plugin_type"])
-	assert.Equal(t, expectedOutput[0].PluginCategory, acc.Metrics[0].Tags["plugin_category"])
-	assert.Equal(t, *expectedOutput[0].RetryCount, acc.Metrics[0].Fields["retry_count"])
+	require.Equal(t, expectedOutput[0].PluginID, acc.Metrics[0].Tags["plugin_id"])
+	require.Equal(t, expectedOutput[0].PluginType, acc.Metrics[0].Tags["plugin_type"])
+	require.Equal(t, expectedOutput[0].PluginCategory, acc.Metrics[0].Tags["plugin_category"])
+	require.Equal(t, *expectedOutput[0].RetryCount, acc.Metrics[0].Fields["retry_count"])
 
-	assert.Equal(t, expectedOutput[1].PluginID, acc.Metrics[1].Tags["plugin_id"])
-	assert.Equal(t, expectedOutput[1].PluginType, acc.Metrics[1].Tags["plugin_type"])
-	assert.Equal(t, expectedOutput[1].PluginCategory, acc.Metrics[1].Tags["plugin_category"])
-	assert.Equal(t, *expectedOutput[1].RetryCount, acc.Metrics[1].Fields["retry_count"])
-	assert.Equal(t, *expectedOutput[1].BufferQueueLength, acc.Metrics[1].Fields["buffer_queue_length"])
-	assert.Equal(t, *expectedOutput[1].BufferTotalQueuedSize, acc.Metrics[1].Fields["buffer_total_queued_size"])
+	require.Equal(t, expectedOutput[1].PluginID, acc.Metrics[1].Tags["plugin_id"])
+	require.Equal(t, expectedOutput[1].PluginType, acc.Metrics[1].Tags["plugin_type"])
+	require.Equal(t, expectedOutput[1].PluginCategory, acc.Metrics[1].Tags["plugin_category"])
+	require.Equal(t, *expectedOutput[1].RetryCount, acc.Metrics[1].Fields["retry_count"])
+	require.Equal(t, *expectedOutput[1].BufferQueueLength, acc.Metrics[1].Fields["buffer_queue_length"])
+	require.Equal(t, *expectedOutput[1].BufferTotalQueuedSize, acc.Metrics[1].Fields["buffer_total_queued_size"])
 }

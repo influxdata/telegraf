@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,7 +37,7 @@ type Fibaro struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
-	Timeout internal.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 
 	client *http.Client
 }
@@ -126,7 +126,7 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 			},
-			Timeout: f.Timeout.Duration,
+			Timeout: time.Duration(f.Timeout),
 		}
 	}
 
@@ -221,7 +221,7 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("fibaro", func() telegraf.Input {
 		return &Fibaro{
-			Timeout: internal.Duration{Duration: defaultTimeout},
+			Timeout: config.Duration(defaultTimeout),
 		}
 	})
 }

@@ -467,6 +467,9 @@ func (n *NFSClient) Init() error {
 		}
 	}
 
+	n.nfs3Ops = nfs3Ops
+	n.nfs4Ops = nfs4Ops
+
 	if len(n.IncludeMounts) > 0 {
 		n.Log.Debugf("Including these mount patterns: %v", n.IncludeMounts)
 	} else {

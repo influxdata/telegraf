@@ -10,6 +10,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -18,7 +19,7 @@ import (
 
 var (
 	// 30 Seconds is the default used by paho.mqtt.golang
-	defaultConnectionTimeout = internal.Duration{Duration: 30 * time.Second}
+	defaultConnectionTimeout = config.Duration(30 * time.Second)
 
 	defaultMaxUndeliveredMessages = 1000
 )
@@ -43,14 +44,14 @@ type Client interface {
 type ClientFactory func(o *mqtt.ClientOptions) Client
 
 type MQTTConsumer struct {
-	Servers                []string          `toml:"servers"`
-	Topics                 []string          `toml:"topics"`
-	TopicTag               *string           `toml:"topic_tag"`
-	Username               string            `toml:"username"`
-	Password               string            `toml:"password"`
-	QoS                    int               `toml:"qos"`
-	ConnectionTimeout      internal.Duration `toml:"connection_timeout"`
-	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
+	Servers                []string        `toml:"servers"`
+	Topics                 []string        `toml:"topics"`
+	TopicTag               *string         `toml:"topic_tag"`
+	Username               string          `toml:"username"`
+	Password               string          `toml:"password"`
+	QoS                    int             `toml:"qos"`
+	ConnectionTimeout      config.Duration `toml:"connection_timeout"`
+	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
 
 	parser parsers.Parser
 
@@ -169,8 +170,8 @@ func (m *MQTTConsumer) Init() error {
 		return fmt.Errorf("qos value must be 0, 1, or 2: %d", m.QoS)
 	}
 
-	if m.ConnectionTimeout.Duration < 1*time.Second {
-		return fmt.Errorf("connection_timeout must be greater than 1s: %s", m.ConnectionTimeout.Duration)
+	if time.Duration(m.ConnectionTimeout) < 1*time.Second {
+		return fmt.Errorf("connection_timeout must be greater than 1s: %s", time.Duration(m.ConnectionTimeout))
 	}
 
 	m.topicTag = "topic"
@@ -320,7 +321,7 @@ func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
 func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts := mqtt.NewClientOptions()
 
-	opts.ConnectTimeout = m.ConnectionTimeout.Duration
+	opts.ConnectTimeout = time.Duration(m.ConnectionTimeout)
 
 	if m.ClientID == "" {
 		opts.SetClientID("Telegraf-Consumer-" + internal.RandomString(5))

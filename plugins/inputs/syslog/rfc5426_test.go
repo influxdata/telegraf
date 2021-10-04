@@ -2,7 +2,6 @@ package syslog
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -232,7 +231,7 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 	for _, tc := range getTestCasesForRFC5426() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create receiver
-			receiver := newUDPSyslogReceiver(protocol+"://"+address, bestEffort)
+			receiver := newUDPSyslogReceiver(protocol+"://"+address, bestEffort, syslogRFC5424)
 			acc := &testutil.Accumulator{}
 			require.NoError(t, receiver.Start(acc))
 			defer receiver.Stop()
@@ -290,7 +289,7 @@ func TestBestEffort_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir, err := ioutil.TempDir("", "telegraf")
+	tmpdir, err := os.MkdirTemp("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unixgram.sock")
@@ -304,7 +303,7 @@ func TestStrict_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir, err := ioutil.TempDir("", "telegraf")
+	tmpdir, err := os.MkdirTemp("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unixgram.sock")
@@ -325,10 +324,11 @@ func TestTimeIncrement_udp(t *testing.T) {
 
 	// Create receiver
 	receiver := &Syslog{
-		Address:    "udp://" + address,
-		now:        getNow,
-		BestEffort: false,
-		Separator:  "_",
+		Address:        "udp://" + address,
+		now:            getNow,
+		BestEffort:     false,
+		SyslogStandard: syslogRFC5424,
+		Separator:      "_",
 	}
 	acc := &testutil.Accumulator{}
 	require.NoError(t, receiver.Start(acc))

@@ -75,11 +75,11 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 		// Execute a dummy call against the server to make sure the client is
 		// still functional. If not, try to log back in. If that doesn't work,
 		// we give up.
-		ctx1, cancel1 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
+		ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(cf.parent.Timeout))
 		defer cancel1()
 		if _, err := methods.GetCurrentTime(ctx1, cf.client.Client); err != nil {
 			cf.parent.Log.Info("Client session seems to have time out. Reauthenticating!")
-			ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
+			ctx2, cancel2 := context.WithTimeout(ctx, time.Duration(cf.parent.Timeout))
 			defer cancel2()
 			if err := cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)); err != nil {
 				if !retrying {
@@ -131,7 +131,7 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 		}
 	}
 
-	ctx1, cancel1 := context.WithTimeout(ctx, vs.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(vs.Timeout))
 	defer cancel1()
 	vimClient, err := vim25.NewClient(ctx1, soapClient)
 	if err != nil {
@@ -141,7 +141,7 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 
 	// If TSLKey is specified, try to log in as an extension using a cert.
 	if vs.TLSKey != "" {
-		ctx2, cancel2 := context.WithTimeout(ctx, vs.Timeout.Duration)
+		ctx2, cancel2 := context.WithTimeout(ctx, time.Duration(vs.Timeout))
 		defer cancel2()
 		if err := sm.LoginExtensionByCertificate(ctx2, vs.TLSKey); err != nil {
 			return nil, err
@@ -161,7 +161,7 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 		}
 	}
 
-	c.Timeout = vs.Timeout.Duration
+	c.Timeout = time.Duration(vs.Timeout)
 	m := view.NewManager(c.Client)
 
 	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{}, true)
@@ -178,10 +178,10 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 		Root:    v,
 		Perf:    p,
 		Valid:   true,
-		Timeout: vs.Timeout.Duration,
+		Timeout: time.Duration(vs.Timeout),
 	}
 	// Adjust max query size if needed
-	ctx3, cancel3 := context.WithTimeout(ctx, vs.Timeout.Duration)
+	ctx3, cancel3 := context.WithTimeout(ctx, time.Duration(vs.Timeout))
 	defer cancel3()
 	n, err := client.GetMaxQueryMetrics(ctx3)
 	if err != nil {

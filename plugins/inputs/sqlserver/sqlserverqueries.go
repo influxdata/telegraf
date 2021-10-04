@@ -409,6 +409,8 @@ SELECT DISTINCT
 			,'Mirrored Write Transactions/sec'
 			,'Group Commit Time'
 			,'Group Commits/Sec'
+			,'Workfiles Created/sec'
+			,'Worktables Created/sec'
 			,'Distributed Query'
 			,'DTC calls'
 			,'Query Store CPU usage'
@@ -1063,6 +1065,7 @@ SELECT
 	,s.[program_name]
 	,s.[host_name]
 	,s.[nt_user_name]
+	,s.[login_name]
 	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
 		WHEN 0 THEN ''0-Read Committed''
 		WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)''
@@ -1141,7 +1144,7 @@ END;
 WITH utilization_cte AS
 (
 	SELECT
-		[SQLProcessUtilization] AS [sqlserver_process_cpu]
+		 [SQLProcessUtilization] AS [sqlserver_process_cpu]
 		,[SystemIdle] AS [system_idle_cpu]
 		,100 - [SystemIdle] - [SQLProcessUtilization] AS [other_process_cpu]
 	FROM (
@@ -1170,8 +1173,8 @@ WITH utilization_cte AS
 ),
 processor_Info_cte AS
 (
-	SELECT (cpu_count / hyperthread_ratio) as number_of_physical_cpus
-	  FROM sys.dm_os_sys_info
+	SELECT ([cpu_count] / [hyperthread_ratio]) as [number_of_physical_cpus]
+	FROM sys.dm_os_sys_info
 )
 SELECT
 	'sqlserver_cpu' AS [measurement]
@@ -1179,16 +1182,15 @@ SELECT
 	,[sqlserver_process_cpu]
 	,[system_idle_cpu]
 	,100 - [system_idle_cpu] - [sqlserver_process_cpu] AS [other_process_cpu]
-FROM
-	(
-		SELECT
-			(case
-				when [other_process_cpu] < 0 then [sqlserver_process_cpu] / a.number_of_physical_cpus
-				else [sqlserver_process_cpu]
-			  end) as [sqlserver_process_cpu]
-		,[system_idle_cpu]
-	FROM utilization_cte
-		CROSS APPLY processor_Info_cte a
+FROM (
+	SELECT
+		(CASE
+			WHEN u.[other_process_cpu] < 0 THEN u.[sqlserver_process_cpu] / p.[number_of_physical_cpus]
+			ELSE u.[sqlserver_process_cpu]
+		END) AS [sqlserver_process_cpu]
+		,u.[system_idle_cpu]
+	FROM utilization_cte AS u
+		CROSS APPLY processor_Info_cte AS p
 	) AS b
 `
 

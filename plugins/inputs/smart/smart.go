@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -24,19 +25,23 @@ var (
 	// Device Model:     APPLE SSD SM256E
 	// Product:              HUH721212AL5204
 	// Model Number: TS128GMTE850
-	modelInfo = regexp.MustCompile("^(Device Model|Product|Model Number):\\s+(.*)$")
+	modelInfo = regexp.MustCompile(`^(Device Model|Product|Model Number):\s+(.*)$`)
 	// Serial Number:    S0X5NZBC422720
-	serialInfo = regexp.MustCompile("(?i)^Serial Number:\\s+(.*)$")
+	serialInfo = regexp.MustCompile(`(?i)^Serial Number:\s+(.*)$`)
 	// LU WWN Device Id: 5 002538 655584d30
-	wwnInfo = regexp.MustCompile("^LU WWN Device Id:\\s+(.*)$")
+	wwnInfo = regexp.MustCompile(`^LU WWN Device Id:\s+(.*)$`)
 	// User Capacity:    251,000,193,024 bytes [251 GB]
-	userCapacityInfo = regexp.MustCompile("^User Capacity:\\s+([0-9,]+)\\s+bytes.*$")
+	userCapacityInfo = regexp.MustCompile(`^User Capacity:\s+([0-9,]+)\s+bytes.*$`)
 	// SMART support is: Enabled
-	smartEnabledInfo = regexp.MustCompile("^SMART support is:\\s+(\\w+)$")
+	smartEnabledInfo = regexp.MustCompile(`^SMART support is:\s+(\w+)$`)
+	// Power mode is:    ACTIVE or IDLE or Power mode was:   STANDBY
+	powermodeInfo = regexp.MustCompile(`^Power mode \w+:\s+(\w+)`)
+	// Device is in STANDBY mode
+	standbyInfo = regexp.MustCompile(`^Device is in\s+(\w+)`)
 	// SMART overall-health self-assessment test result: PASSED
 	// SMART Health Status: OK
 	// PASSED, FAILED, UNKNOWN
-	smartOverallHealth = regexp.MustCompile("^(SMART overall-health self-assessment test result|SMART Health Status):\\s+(\\w+).*$")
+	smartOverallHealth = regexp.MustCompile(`^(SMART overall-health self-assessment test result|SMART Health Status):\s+(\w+).*$`)
 
 	// sasNvmeAttr is a SAS or NVME SMART attribute
 	sasNvmeAttr = regexp.MustCompile(`^([^:]+):\s+(.+)$`)
@@ -45,7 +50,7 @@ var (
 	//   1 Raw_Read_Error_Rate     -O-RC-   200   200   000    -    0
 	//   5 Reallocated_Sector_Ct   PO--CK   100   100   000    -    0
 	// 192 Power-Off_Retract_Count -O--C-   097   097   000    -    14716
-	attribute = regexp.MustCompile("^\\s*([0-9]+)\\s(\\S+)\\s+([-P][-O][-S][-R][-C][-K])\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9-]+)\\s+([-\\w]+)\\s+([\\w\\+\\.]+).*$")
+	attribute = regexp.MustCompile(`^\s*([0-9]+)\s(\S+)\s+([-P][-O][-S][-R][-C][-K])\s+([0-9]+)\s+([0-9]+)\s+([0-9-]+)\s+([-\w]+)\s+([\w\+\.]+).*$`)
 
 	//  Additional Smart Log for NVME device:nvme0 namespace-id:ffffffff
 	//	key                               normalized raw
@@ -268,17 +273,17 @@ var (
 
 // Smart plugin reads metrics from storage devices supporting S.M.A.R.T.
 type Smart struct {
-	Path             string            `toml:"path"` //deprecated - to keep backward compatibility
-	PathSmartctl     string            `toml:"path_smartctl"`
-	PathNVMe         string            `toml:"path_nvme"`
-	Nocheck          string            `toml:"nocheck"`
-	EnableExtensions []string          `toml:"enable_extensions"`
-	Attributes       bool              `toml:"attributes"`
-	Excludes         []string          `toml:"excludes"`
-	Devices          []string          `toml:"devices"`
-	UseSudo          bool              `toml:"use_sudo"`
-	Timeout          internal.Duration `toml:"timeout"`
-	Log              telegraf.Logger   `toml:"-"`
+	Path             string          `toml:"path"` //deprecated - to keep backward compatibility
+	PathSmartctl     string          `toml:"path_smartctl"`
+	PathNVMe         string          `toml:"path_nvme"`
+	Nocheck          string          `toml:"nocheck"`
+	EnableExtensions []string        `toml:"enable_extensions"`
+	Attributes       bool            `toml:"attributes"`
+	Excludes         []string        `toml:"excludes"`
+	Devices          []string        `toml:"devices"`
+	UseSudo          bool            `toml:"use_sudo"`
+	Timeout          config.Duration `toml:"timeout"`
+	Log              telegraf.Logger `toml:"-"`
 }
 
 type nvmeDevice struct {
@@ -332,7 +337,7 @@ var sampleConfig = `
 
 func newSmart() *Smart {
 	return &Smart{
-		Timeout: internal.Duration{Duration: time.Second * 30},
+		Timeout: config.Duration(time.Second * 30),
 	}
 }
 
@@ -477,12 +482,12 @@ func (m *Smart) scanDevices(ignoreExcludes bool, scanArgs ...string) ([]string, 
 }
 
 // Wrap with sudo
-var runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+var runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 	cmd := exec.Command(command, args...)
 	if sudo {
 		cmd = exec.Command("sudo", append([]string{"-n", command}, args...)...)
 	}
-	return internal.CombinedOutputTimeout(cmd, timeout.Duration)
+	return internal.CombinedOutputTimeout(cmd, time.Duration(timeout))
 }
 
 func excludedDev(excludes []string, deviceLine string) bool {
@@ -529,7 +534,7 @@ func (m *Smart) getVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 	wg.Wait()
 }
 
-func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme string, timeout internal.Duration, useSudo bool) []nvmeDevice {
+func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme string, timeout config.Duration, useSudo bool) []nvmeDevice {
 	var NVMeDevices []nvmeDevice
 
 	for _, device := range devices {
@@ -549,7 +554,7 @@ func getDeviceInfoForNVMeDisks(acc telegraf.Accumulator, devices []string, nvme 
 	return NVMeDevices
 }
 
-func gatherNVMeDeviceInfo(nvme, device string, timeout internal.Duration, useSudo bool) (string, string, string, error) {
+func gatherNVMeDeviceInfo(nvme, device string, timeout config.Duration, useSudo bool) (string, string, string, error) {
 	args := []string{"id-ctrl"}
 	args = append(args, strings.Split(device, " ")...)
 	out, err := runCmd(timeout, useSudo, nvme, args...)
@@ -589,7 +594,7 @@ func findNVMeDeviceInfo(output string) (string, string, string, error) {
 	return vid, sn, mn, nil
 }
 
-func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo bool, nvme string, device nvmeDevice, wg *sync.WaitGroup) {
+func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout config.Duration, usesudo bool, nvme string, device nvmeDevice, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	args := []string{"intel", "smart-log-add"}
@@ -636,7 +641,7 @@ func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout internal.Duration, us
 	}
 }
 
-func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
+func gatherDisk(acc telegraf.Accumulator, timeout config.Duration, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nocheck, "--format=brief"}
@@ -692,11 +697,24 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 			deviceFields["health_ok"] = health[2] == "PASSED" || health[2] == "OK"
 		}
 
+		// checks to see if there is a power mode to print to user
+		// if not look for Device is in STANDBY which happens when
+		// nocheck is set to standby (will exit to not spin up the disk)
+		// otherwise nothing is found so nothing is printed (NVMe does not show power)
+		if power := powermodeInfo.FindStringSubmatch(line); len(power) > 1 {
+			deviceTags["power"] = power[1]
+		} else {
+			if power := standbyInfo.FindStringSubmatch(line); len(power) > 1 {
+				deviceTags["power"] = power[1]
+			}
+		}
+
 		tags := map[string]string{}
 		fields := make(map[string]interface{})
 
 		if collectAttributes {
-			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
+			//add power mode
+			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled", "power"}
 			for _, key := range keys {
 				if value, ok := deviceTags[key]; ok {
 					tags[key] = value

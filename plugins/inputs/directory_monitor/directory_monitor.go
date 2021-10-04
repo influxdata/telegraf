@@ -2,11 +2,19 @@ package directory_monitor
 
 import (
 	"bufio"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"regexp"
+	"sync"
 	"time"
+
+	"golang.org/x/sync/semaphore"
+	"gopkg.in/djherbis/times.v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -14,15 +22,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/selfstat"
-	"golang.org/x/sync/semaphore"
-	"gopkg.in/djherbis/times.v1"
-
-	"compress/gzip"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"sync"
 )
 
 const sampleConfig = `
@@ -39,7 +38,7 @@ const sampleConfig = `
   ## The amount of time a file is allowed to sit in the directory before it is picked up.
   ## This time can generally be low but if you choose to have a very large file written to the directory and it's potentially slow,
   ## set this higher so that the plugin will wait until the file is fully copied to the directory.
-  # directory_duration_threshold = "50ms" 
+  # directory_duration_threshold = "50ms"
   #
   ## A list of the only file names to monitor, if necessary. Supports regex. If left blank, all files are ingested.
   # files_to_monitor = ["^.*\.csv"]
@@ -108,7 +107,7 @@ func (monitor *DirectoryMonitor) Description() string {
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 	// Get all files sitting in the directory.
-	files, err := ioutil.ReadDir(monitor.Directory)
+	files, err := os.ReadDir(monitor.Directory)
 	if err != nil {
 		return fmt.Errorf("unable to monitor the targeted directory: %w", err)
 	}
@@ -118,6 +117,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 
 		// We've been cancelled via Stop().
 		if monitor.context.Err() != nil {
+			//nolint:nilerr // context cancelation is not an error
 			return nil
 		}
 
@@ -182,7 +182,7 @@ func (monitor *DirectoryMonitor) Monitor() {
 	}
 }
 
-func (monitor *DirectoryMonitor) processFile(file os.FileInfo) {
+func (monitor *DirectoryMonitor) processFile(file os.DirEntry) {
 	if file.IsDir() {
 		return
 	}
@@ -262,11 +262,11 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 		if err != nil {
 			return err
 		}
-		if firstLine {
-			firstLine = false
-		}
+		firstLine = false
 
-		monitor.sendMetrics(metrics)
+		if err := monitor.sendMetrics(metrics); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -295,13 +295,16 @@ func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte, f
 	}
 }
 
-func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) {
+func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 	// Report the metrics for the file.
 	for _, m := range metrics {
 		// Block until metric can be written.
-		monitor.sem.Acquire(monitor.context, 1)
+		if err := monitor.sem.Acquire(monitor.context, 1); err != nil {
+			return err
+		}
 		monitor.acc.AddTrackingMetricGroup([]telegraf.Metric{m})
 	}
+	return nil
 }
 
 func (monitor *DirectoryMonitor) moveFile(filePath string, directory string) {
@@ -344,7 +347,7 @@ func (monitor *DirectoryMonitor) SetParserFunc(fn parsers.ParserFunc) {
 
 func (monitor *DirectoryMonitor) Init() error {
 	if monitor.Directory == "" || monitor.FinishedDirectory == "" {
-		return errors.New("Missing one of the following required config options: directory, finished_directory.")
+		return errors.New("missing one of the following required config options: directory, finished_directory")
 	}
 
 	if monitor.FileQueueSize <= 0 {

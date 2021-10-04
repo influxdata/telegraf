@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -26,8 +26,8 @@ const (
 // NetResponse struct
 type NetResponse struct {
 	Address     string
-	Timeout     internal.Duration
-	ReadTimeout internal.Duration
+	Timeout     config.Duration
+	ReadTimeout config.Duration
 	Send        string
 	Expect      string
 	Protocol    string
@@ -80,7 +80,7 @@ func (n *NetResponse) TCPGather() (map[string]string, map[string]interface{}, er
 	// Start Timer
 	start := time.Now()
 	// Connecting
-	conn, err := net.DialTimeout("tcp", n.Address, n.Timeout.Duration)
+	conn, err := net.DialTimeout("tcp", n.Address, time.Duration(n.Timeout))
 	// Stop timer
 	responseTime := time.Since(start).Seconds()
 	// Handle error
@@ -105,7 +105,7 @@ func (n *NetResponse) TCPGather() (map[string]string, map[string]interface{}, er
 	// Read string if needed
 	if n.Expect != "" {
 		// Set read timeout
-		if gerr := conn.SetReadDeadline(time.Now().Add(n.ReadTimeout.Duration)); gerr != nil {
+		if gerr := conn.SetReadDeadline(time.Now().Add(time.Duration(n.ReadTimeout))); gerr != nil {
 			return nil, nil, gerr
 		}
 		// Prepare reader
@@ -169,7 +169,7 @@ func (n *NetResponse) UDPGather() (map[string]string, map[string]interface{}, er
 	}
 	// Read string
 	// Set read timeout
-	if gerr := conn.SetReadDeadline(time.Now().Add(n.ReadTimeout.Duration)); gerr != nil {
+	if gerr := conn.SetReadDeadline(time.Now().Add(time.Duration(n.ReadTimeout))); gerr != nil {
 		return nil, nil, gerr
 	}
 	// Read
@@ -204,11 +204,11 @@ func (n *NetResponse) UDPGather() (map[string]string, map[string]interface{}, er
 // also fill an Accumulator that is supplied.
 func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	// Set default values
-	if n.Timeout.Duration == 0 {
-		n.Timeout.Duration = time.Second
+	if n.Timeout == 0 {
+		n.Timeout = config.Duration(time.Second)
 	}
-	if n.ReadTimeout.Duration == 0 {
-		n.ReadTimeout.Duration = time.Second
+	if n.ReadTimeout == 0 {
+		n.ReadTimeout = config.Duration(time.Second)
 	}
 	// Check send and expected string
 	if n.Protocol == "udp" && n.Send == "" {

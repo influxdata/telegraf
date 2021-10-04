@@ -6,17 +6,18 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type Amon struct {
-	ServerKey    string            `toml:"server_key"`
-	AmonInstance string            `toml:"amon_instance"`
-	Timeout      internal.Duration `toml:"timeout"`
-	Log          telegraf.Logger   `toml:"-"`
+	ServerKey    string          `toml:"server_key"`
+	AmonInstance string          `toml:"amon_instance"`
+	Timeout      config.Duration `toml:"timeout"`
+	Log          telegraf.Logger `toml:"-"`
 
 	client *http.Client
 }
@@ -51,7 +52,7 @@ func (a *Amon) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: a.Timeout.Duration,
+		Timeout: time.Duration(a.Timeout),
 	}
 	return nil
 }

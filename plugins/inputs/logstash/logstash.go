@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -59,7 +58,7 @@ type Logstash struct {
 	Username string            `toml:"username"`
 	Password string            `toml:"password"`
 	Headers  map[string]string `toml:"headers"`
-	Timeout  internal.Duration `toml:"timeout"`
+	Timeout  config.Duration   `toml:"timeout"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -72,7 +71,7 @@ func NewLogstash() *Logstash {
 		SinglePipeline: false,
 		Collect:        []string{"pipelines", "process", "jvm"},
 		Headers:        make(map[string]string),
-		Timeout:        internal.Duration{Duration: time.Second * 5},
+		Timeout:        config.Duration(time.Second * 5),
 	}
 }
 
@@ -130,6 +129,8 @@ type Plugin struct {
 	Events   interface{} `json:"events"`
 	Name     string      `json:"name"`
 	Failures *int64      `json:"failures,omitempty"`
+	BulkRequests map[string]interface{} `json:"bulk_requests"`
+	Documents    map[string]interface{} `json:"documents"`
 }
 
 type PipelinePlugins struct {
@@ -172,7 +173,7 @@ func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: logstash.Timeout.Duration,
+		Timeout: time.Duration(logstash.Timeout),
 	}
 
 	return client, nil
@@ -205,7 +206,7 @@ func (logstash *Logstash) gatherJSONData(url string, value interface{}) error {
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
-		body, _ := ioutil.ReadAll(io.LimitReader(response.Body, 200))
+		body, _ := io.ReadAll(io.LimitReader(response.Body, 200))
 		return fmt.Errorf("%s returned HTTP status %s: %q", url, response.Status, body)
 	}
 
@@ -296,6 +297,62 @@ func (logstash *Logstash) gatherPluginsStats(
 				"failures": *plugin.Failures,
 			}
 			accumulator.AddFields("logstash_plugins", failuresFields, pluginTags)
+		/*
+			The elasticsearch output produces additional stats around
+			bulk requests and document writes (that are elasticsearch specific).
+			Collect those here
+		*/
+		if pluginType == "output" && plugin.Name == "elasticsearch" {
+			/*
+				The "bulk_requests" section has details about batch writes
+				into Elasticsearch
+
+				  "bulk_requests" : {
+					"successes" : 2870,
+					"responses" : {
+					  "200" : 2870
+					},
+					"failures": 262,
+					"with_errors": 9089
+				  },
+			*/
+			flattener := jsonParser.JSONFlattener{}
+			err := flattener.FlattenJSON("", plugin.BulkRequests)
+			if err != nil {
+				return err
+			}
+			for k, v := range flattener.Fields {
+				if strings.HasPrefix(k, "bulk_requests") {
+					continue
+				}
+				newKey := fmt.Sprintf("bulk_requests_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
+			}
+			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+
+			/*
+				The "documents" section has counts of individual documents
+				written/retried/etc.
+				  "documents" : {
+					"successes" : 2665549,
+					"retryable_failures": 13733
+				  }
+			*/
+			flattener = jsonParser.JSONFlattener{}
+			err = flattener.FlattenJSON("", plugin.Documents)
+			if err != nil {
+				return err
+			}
+			for k, v := range flattener.Fields {
+				if strings.HasPrefix(k, "documents") {
+					continue
+				}
+				newKey := fmt.Sprintf("documents_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
+			}
+			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
 		}
 	}
 

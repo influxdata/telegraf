@@ -11,10 +11,8 @@ import (
 
 func MustMetric(t *testing.T, m *testutil.Metric) telegraf.Metric {
 	t.Helper()
-	v, err := metric.New(m.Measurement, m.Tags, m.Fields, m.Time)
-	if err != nil {
-		t.Fatal(err)
-	}
+	v := metric.New(m.Measurement, m.Tags, m.Fields, m.Time)
+
 	return v
 }
 

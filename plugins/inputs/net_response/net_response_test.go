@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
@@ -86,7 +86,7 @@ func TestTCPError(t *testing.T) {
 	c := NetResponse{
 		Protocol: "tcp",
 		Address:  ":9999",
-		Timeout:  internal.Duration{Duration: time.Second * 30},
+		Timeout:  config.Duration(time.Second * 30),
 	}
 	// Gather
 	require.NoError(t, c.Gather(&acc))
@@ -113,8 +113,8 @@ func TestTCPOK1(t *testing.T) {
 		Address:     "127.0.0.1:2004",
 		Send:        "test",
 		Expect:      "test",
-		ReadTimeout: internal.Duration{Duration: time.Second * 3},
-		Timeout:     internal.Duration{Duration: time.Second},
+		ReadTimeout: config.Duration(time.Second * 3),
+		Timeout:     config.Duration(time.Second),
 		Protocol:    "tcp",
 	}
 	// Start TCP server
@@ -157,8 +157,8 @@ func TestTCPOK2(t *testing.T) {
 		Address:     "127.0.0.1:2004",
 		Send:        "test",
 		Expect:      "test2",
-		ReadTimeout: internal.Duration{Duration: time.Second * 3},
-		Timeout:     internal.Duration{Duration: time.Second},
+		ReadTimeout: config.Duration(time.Second * 3),
+		Timeout:     config.Duration(time.Second),
 		Protocol:    "tcp",
 	}
 	// Start TCP server
@@ -237,8 +237,8 @@ func TestUDPOK1(t *testing.T) {
 		Address:     "127.0.0.1:2004",
 		Send:        "test",
 		Expect:      "test",
-		ReadTimeout: internal.Duration{Duration: time.Second * 3},
-		Timeout:     internal.Duration{Duration: time.Second},
+		ReadTimeout: config.Duration(time.Second * 3),
+		Timeout:     config.Duration(time.Second),
 		Protocol:    "udp",
 	}
 	// Start UDP server

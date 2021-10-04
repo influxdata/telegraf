@@ -3,7 +3,7 @@ package elasticsearch
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"sort"
@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
@@ -147,19 +147,19 @@ const sampleConfig = `
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch
 // servers.
 type Elasticsearch struct {
-	Local                      bool              `toml:"local"`
-	Servers                    []string          `toml:"servers"`
-	HTTPTimeout                internal.Duration `toml:"http_timeout"`
-	ClusterHealth              bool              `toml:"cluster_health"`
-	ClusterHealthLevel         string            `toml:"cluster_health_level"`
-	ClusterStats               bool              `toml:"cluster_stats"`
-	ClusterStatsOnlyFromMaster bool              `toml:"cluster_stats_only_from_master"`
-	IndicesInclude             []string          `toml:"indices_include"`
-	IndicesLevel               string            `toml:"indices_level"`
-	NodeStats                  []string          `toml:"node_stats"`
-	Username                   string            `toml:"username"`
-	Password                   string            `toml:"password"`
-	NumMostRecentIndices       int               `toml:"num_most_recent_indices"`
+	Local                      bool            `toml:"local"`
+	Servers                    []string        `toml:"servers"`
+	HTTPTimeout                config.Duration `toml:"http_timeout"`
+	ClusterHealth              bool            `toml:"cluster_health"`
+	ClusterHealthLevel         string          `toml:"cluster_health_level"`
+	ClusterStats               bool            `toml:"cluster_stats"`
+	ClusterStatsOnlyFromMaster bool            `toml:"cluster_stats_only_from_master"`
+	IndicesInclude             []string        `toml:"indices_include"`
+	IndicesLevel               string          `toml:"indices_level"`
+	NodeStats                  []string        `toml:"node_stats"`
+	Username                   string          `toml:"username"`
+	Password                   string          `toml:"password"`
+	NumMostRecentIndices       int             `toml:"num_most_recent_indices"`
 
 	tls.ClientConfig
 
@@ -180,7 +180,7 @@ func (i serverInfo) isMaster() bool {
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
-		HTTPTimeout:                internal.Duration{Duration: time.Second * 5},
+		HTTPTimeout:                config.Duration(time.Second * 5),
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
 	}
@@ -340,12 +340,12 @@ func (e *Elasticsearch) createHTTPClient() (*http.Client, error) {
 		return nil, err
 	}
 	tr := &http.Transport{
-		ResponseHeaderTimeout: e.HTTPTimeout.Duration,
+		ResponseHeaderTimeout: time.Duration(e.HTTPTimeout),
 		TLSClientConfig:       tlsCfg,
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   e.HTTPTimeout.Duration,
+		Timeout:   time.Duration(e.HTTPTimeout),
 	}
 
 	return client, nil
@@ -644,7 +644,8 @@ func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now
 
 				// determine shard tag and primary/replica designation
 				shardType := "replica"
-				if flattened.Fields["routing_primary"] == true {
+				routingPrimary, _ := flattened.Fields["routing_primary"].(bool)
+				if routingPrimary {
 					shardType = "primary"
 				}
 				delete(flattened.Fields, "routing_primary")
@@ -701,7 +702,7 @@ func (e *Elasticsearch) getCatMaster(url string) (string, error) {
 		// future calls.
 		return "", fmt.Errorf("elasticsearch: Unable to retrieve master node information. API responded with status-code %d, expected %d", r.StatusCode, http.StatusOK)
 	}
-	response, err := ioutil.ReadAll(r.Body)
+	response, err := io.ReadAll(r.Body)
 
 	if err != nil {
 		return "", err

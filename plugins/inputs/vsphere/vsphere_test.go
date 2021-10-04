@@ -11,7 +11,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	itls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
@@ -147,12 +147,13 @@ func defaultVSphere() *VSphere {
 
 		MaxQueryObjects:         256,
 		MaxQueryMetrics:         256,
-		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-		Timeout:                 internal.Duration{Duration: time.Second * 20},
+		ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+		Timeout:                 config.Duration(time.Second * 20),
 		ForceDiscoverOnInit:     true,
 		DiscoverConcurrency:     1,
 		CollectConcurrency:      1,
 		Separator:               ".",
+		HistoricalInterval:      config.Duration(time.Second * 300),
 	}
 }
 
@@ -228,6 +229,12 @@ func TestParseConfig(t *testing.T) {
 	tab, err := toml.Parse([]byte(c))
 	require.NoError(t, err)
 	require.NotNil(t, tab)
+
+}
+
+func TestConfigDurationParsing(t *testing.T) {
+	v := defaultVSphere()
+	require.Equal(t, int32(300), int32(time.Duration(v.HistoricalInterval).Seconds()), "HistoricalInterval.Seconds() with default duration should resolve 300")
 }
 
 func TestMaxQuery(t *testing.T) {

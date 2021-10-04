@@ -11,13 +11,13 @@ This section is for developers who want to create a new aggregator plugin.
   `github.com/influxdata/telegraf/plugins/aggregators/all/all.go` file.
 - The `SampleConfig` function should return valid toml that describes how the
   plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [SampleConfig][] page for the latest style guidelines.
+  consult the [Sample Config][] page for the latest style guidelines.
 * The `Description` function should say in one line what this aggregator does.
 * The Aggregator plugin will need to keep caches of metrics that have passed
   through it. This should be done using the builtin `HashID()` function of
   each metric.
 * When the `Reset()` function is called, all caches should be cleared.
-- Follow the recommended [CodeStyle][].
+- Follow the recommended [Code Style][].
 
 ### Aggregator Plugin Example
 
@@ -128,5 +128,5 @@ func init() {
 ```
 
 [telegraf.Aggregator]: https://godoc.org/github.com/influxdata/telegraf#Aggregator
-[SampleConfig]: https://github.com/influxdata/telegraf/wiki/SampleConfig
-[CodeStyle]: https://github.com/influxdata/telegraf/wiki/CodeStyle
+[Sample Config]: https://github.com/influxdata/telegraf/blob/master/docs/developers/SAMPLE_CONFIG.md
+[Code Style]: https://github.com/influxdata/telegraf/blob/master/docs/developers/CODE_STYLE.md

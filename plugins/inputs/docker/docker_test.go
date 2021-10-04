@@ -3,7 +3,7 @@ package docker
 import (
 	"context"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"reflect"
 	"sort"
 	"strings"
@@ -12,10 +12,11 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 type MockClient struct {
@@ -26,6 +27,7 @@ type MockClient struct {
 	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
+	CloseF            func() error
 }
 
 func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
@@ -75,6 +77,10 @@ func (c *MockClient) NodeList(
 	return c.NodeListF(ctx, options)
 }
 
+func (c *MockClient) Close() error {
+	return c.CloseF()
+}
+
 var baseClient = MockClient{
 	InfoF: func(context.Context) (types.Info, error) {
 		return info, nil
@@ -97,6 +103,9 @@ var baseClient = MockClient{
 	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 		return NodeList, nil
 	},
+	CloseF: func() error {
+		return nil
+	},
 }
 
 func newClient(_ string, _ *tls.Config) (Client, error) {
@@ -112,7 +121,12 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_image": "redis/image",
 	}
 
-	parseContainerStats(stats, &acc, tags, "123456789", containerMetricClasses, containerMetricClasses, "linux")
+	d := &Docker{
+		Log:              testutil.Logger{},
+		PerDeviceInclude: containerMetricClasses,
+		TotalInclude:     containerMetricClasses,
+	}
+	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
 
 	// test docker_container_net measurement
 	netfields := map[string]interface{}{
@@ -278,6 +292,9 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 					return NodeList, nil
+				},
+				CloseF: func() error {
+					return nil
 				},
 			}, nil
 		},
@@ -911,7 +928,7 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 	err := acc.GatherError(d.Gather)
 	require.NoError(t, err)
 
-	d.gatherSwarmInfo(&acc)
+	require.NoError(t, d.gatherSwarmInfo(&acc))
 
 	// test docker_container_net measurement
 	acc.AssertContainsTaggedFields(t,
@@ -1043,7 +1060,7 @@ func TestContainerName(t *testing.T) {
 				}
 				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
 					return types.ContainerStats{
-						Body: ioutil.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
+						Body: io.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
 					}, nil
 				}
 				return &client, nil
@@ -1063,7 +1080,7 @@ func TestContainerName(t *testing.T) {
 				}
 				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
 					return types.ContainerStats{
-						Body: ioutil.NopCloser(strings.NewReader(`{}`)),
+						Body: io.NopCloser(strings.NewReader(`{}`)),
 					}, nil
 				}
 				return &client, nil
@@ -1259,8 +1276,12 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			parseContainerStats(tt.args.stat, &acc, tt.args.tags, tt.args.id, tt.args.perDeviceInclude,
-				tt.args.totalInclude, tt.args.daemonOSType)
+			d := &Docker{
+				Log:              testutil.Logger{},
+				PerDeviceInclude: tt.args.perDeviceInclude,
+				TotalInclude:     tt.args.totalInclude,
+			}
+			d.parseContainerStats(tt.args.stat, &acc, tt.args.tags, tt.args.id, tt.args.daemonOSType)
 
 			actual := FilterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
 				return choice.Contains(m.Name(),

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -67,11 +68,11 @@ type Checker interface {
 }
 
 type Health struct {
-	ServiceAddress string            `toml:"service_address"`
-	ReadTimeout    internal.Duration `toml:"read_timeout"`
-	WriteTimeout   internal.Duration `toml:"write_timeout"`
-	BasicUsername  string            `toml:"basic_username"`
-	BasicPassword  string            `toml:"basic_password"`
+	ServiceAddress string          `toml:"service_address"`
+	ReadTimeout    config.Duration `toml:"read_timeout"`
+	WriteTimeout   config.Duration `toml:"write_timeout"`
+	BasicUsername  string          `toml:"basic_username"`
+	BasicPassword  string          `toml:"basic_password"`
 	tlsint.ServerConfig
 
 	Compares []*Compares     `toml:"compares"`
@@ -141,8 +142,8 @@ func (h *Health) Connect() error {
 	h.server = &http.Server{
 		Addr:         h.ServiceAddress,
 		Handler:      authHandler(h),
-		ReadTimeout:  h.ReadTimeout.Duration,
-		WriteTimeout: h.WriteTimeout.Duration,
+		ReadTimeout:  time.Duration(h.ReadTimeout),
+		WriteTimeout: time.Duration(h.WriteTimeout),
 		TLSConfig:    h.tlsConf,
 	}
 
@@ -257,8 +258,8 @@ func (h *Health) isHealthy() bool {
 func NewHealth() *Health {
 	return &Health{
 		ServiceAddress: defaultServiceAddress,
-		ReadTimeout:    internal.Duration{Duration: defaultReadTimeout},
-		WriteTimeout:   internal.Duration{Duration: defaultWriteTimeout},
+		ReadTimeout:    config.Duration(defaultReadTimeout),
+		WriteTimeout:   config.Duration(defaultWriteTimeout),
 		healthy:        true,
 	}
 }

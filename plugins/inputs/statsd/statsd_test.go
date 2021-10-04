@@ -9,7 +9,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -398,7 +397,7 @@ func TestParse_Counters(t *testing.T) {
 // Tests low-level functionality of timings
 func TestParse_Timings(t *testing.T) {
 	s := NewTestStatsd()
-	s.Percentiles = []internal.Number{{Value: 90.0}}
+	s.Percentiles = []Number{90.0}
 	acc := &testutil.Accumulator{}
 
 	// Test that timings work
@@ -1187,7 +1186,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 	s := NewTestStatsd()
 	s.Templates = []string{"measurement.field"}
-	s.Percentiles = []internal.Number{{Value: 90.0}}
+	s.Percentiles = []Number{90.0}
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
@@ -1235,7 +1234,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 	s := NewTestStatsd()
 	s.Templates = []string{}
-	s.Percentiles = []internal.Number{{Value: 90.0}}
+	s.Percentiles = []Number{90.0}
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
@@ -1664,4 +1663,13 @@ func TestUdp(t *testing.T) {
 		acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime(),
 	)
+}
+
+func TestParse_Ints(t *testing.T) {
+	s := NewTestStatsd()
+	s.Percentiles = []Number{90}
+	acc := &testutil.Accumulator{}
+
+	require.NoError(t, s.Gather(acc))
+	require.Equal(t, s.Percentiles, []Number{90.0})
 }

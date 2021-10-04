@@ -7,15 +7,17 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/pion/dtls/v2"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -24,7 +26,8 @@ import (
 const sampleConfig = `
   ## List certificate sources
   ## Prefix your entry with 'file://' if you intend to use relative paths
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443",
+  sources = ["tcp://example.org:443", "https://influxdata.com:443",
+            "udp://127.0.0.1:4433", "/etc/ssl/certs/ssl-cert-snakeoil.pem",
             "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
 
   ## Timeout for SSL connection
@@ -43,9 +46,9 @@ const description = "Reads metrics from a SSL certificate"
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Sources    []string          `toml:"sources"`
-	Timeout    internal.Duration `toml:"timeout"`
-	ServerName string            `toml:"server_name"`
+	Sources    []string        `toml:"sources"`
+	Timeout    config.Duration `toml:"timeout"`
+	ServerName string          `toml:"server_name"`
 	tlsCfg     *tls.Config
 	_tls.ClientConfig
 	locations []*url.URL
@@ -66,8 +69,7 @@ func (c *X509Cert) SampleConfig() string {
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
 		if strings.HasPrefix(source, "file://") ||
-			strings.HasPrefix(source, "/") ||
-			strings.Index(source, ":\\") != 1 {
+			strings.HasPrefix(source, "/") {
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			g, err := globpath.Compile(source)
 			if err != nil {
@@ -82,7 +84,6 @@ func (c *X509Cert) sourcesToURLs() error {
 			if err != nil {
 				return fmt.Errorf("failed to parse cert location - %s", err.Error())
 			}
-
 			c.locations = append(c.locations, u)
 		}
 	}
@@ -104,14 +105,51 @@ func (c *X509Cert) serverName(u *url.URL) (string, error) {
 }
 
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
+	protocol := u.Scheme
 	switch u.Scheme {
-	case "https":
-		u.Scheme = "tcp"
-		fallthrough
 	case "udp", "udp4", "udp6":
+		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
+		if err != nil {
+			return nil, err
+		}
+		defer ipConn.Close()
+
+		serverName, err := c.serverName(u)
+		if err != nil {
+			return nil, err
+		}
+
+		dtlsCfg := &dtls.Config{
+			InsecureSkipVerify: true,
+			Certificates:       c.tlsCfg.Certificates,
+			RootCAs:            c.tlsCfg.RootCAs,
+			ServerName:         serverName,
+		}
+		conn, err := dtls.Client(ipConn, dtlsCfg)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+
+		rawCerts := conn.ConnectionState().PeerCertificates
+		var certs []*x509.Certificate
+		for _, rawCert := range rawCerts {
+			parsed, err := x509.ParseCertificate(rawCert)
+			if err != nil {
+				return nil, err
+			}
+
+			if parsed != nil {
+				certs = append(certs, parsed)
+			}
+		}
+
+		return certs, nil
+	case "https":
+		protocol = "tcp"
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
+		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -127,6 +165,9 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		conn := tls.Client(ipConn, c.tlsCfg)
 		defer conn.Close()
 
+		// reset SNI between requests
+		defer func() { c.tlsCfg.ServerName = "" }()
+
 		hsErr := conn.Handshake()
 		if hsErr != nil {
 			return nil, hsErr
@@ -136,7 +177,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, nil
 	case "file":
-		content, err := ioutil.ReadFile(u.Path)
+		content, err := os.ReadFile(u.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -252,7 +293,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, location := range append(c.locations, collectedUrls...) {
-		certs, err := c.getCert(location, c.Timeout.Duration*time.Second)
+		certs, err := c.getCert(location, time.Duration(c.Timeout))
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
@@ -313,6 +354,14 @@ func (c *X509Cert) Init() error {
 		tlsCfg = &tls.Config{}
 	}
 
+	if tlsCfg.ServerName != "" && c.ServerName == "" {
+		// Save SNI from tlsCfg.ServerName to c.ServerName and reset tlsCfg.ServerName.
+		// We need to reset c.tlsCfg.ServerName for each certificate when there's
+		// no explicit SNI (c.tlsCfg.ServerName or c.ServerName) otherwise we'll always (re)use
+		// first uri HostName for all certs (see issue 8914)
+		c.ServerName = tlsCfg.ServerName
+		tlsCfg.ServerName = ""
+	}
 	c.tlsCfg = tlsCfg
 
 	return nil
@@ -322,7 +371,7 @@ func init() {
 	inputs.Add("x509_cert", func() telegraf.Input {
 		return &X509Cert{
 			Sources: []string{},
-			Timeout: internal.Duration{Duration: 5 * time.Second}, // set default timeout to 5s
+			Timeout: config.Duration(5 * time.Second), // set default timeout to 5s
 		}
 	})
 }

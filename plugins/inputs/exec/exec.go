@@ -4,19 +4,21 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os/exec"
+	osExec "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/kballard/go-shellquote"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
-	"github.com/kballard/go-shellquote"
 )
 
 const sampleConfig = `
@@ -43,9 +45,9 @@ const sampleConfig = `
 const MaxStderrBytes int = 512
 
 type Exec struct {
-	Commands []string          `toml:"commands"`
-	Command  string            `toml:"command"`
-	Timeout  internal.Duration `toml:"timeout"`
+	Commands []string        `toml:"commands"`
+	Command  string          `toml:"command"`
+	Timeout  config.Duration `toml:"timeout"`
 
 	parser parsers.Parser
 
@@ -56,7 +58,7 @@ type Exec struct {
 func NewExec() *Exec {
 	return &Exec{
 		runner:  CommandRunner{},
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: config.Duration(time.Second * 5),
 	}
 }
 
@@ -75,7 +77,7 @@ func (c CommandRunner) Run(
 		return nil, nil, fmt.Errorf("exec: unable to parse command, %s", err)
 	}
 
-	cmd := exec.Command(splitCmd[0], splitCmd[1:]...)
+	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
 
 	var (
 		out    bytes.Buffer
@@ -110,6 +112,7 @@ func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
 		buf.Truncate(i)
 	}
 	if didTruncate {
+		//nolint:errcheck,revive // Will always return nil or panic
 		buf.WriteString("...")
 	}
 	return buf
@@ -138,7 +141,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	out, errbuf, runErr := e.runner.Run(command, e.Timeout.Duration)
+	out, errbuf, runErr := e.runner.Run(command, time.Duration(e.Timeout))
 	if !isNagios && runErr != nil {
 		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
 		acc.AddError(err)

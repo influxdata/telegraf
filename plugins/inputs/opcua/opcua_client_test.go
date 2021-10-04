@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,28 +18,33 @@ type OPCTags struct {
 	Namespace      string
 	IdentifierType string
 	Identifier     string
-	Want           string
+	Want           interface{}
 }
 
 func TestClient1Integration(t *testing.T) {
-	t.Skip("Skipping due to dial tcp 195.254.227.245:4840: connect: connection refused")
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var testopctags = []OPCTags{
 		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
 		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
 		{"ManufacturerName", "0", "i", "2263", "open62541"},
+		{"badnode", "1", "i", "1337", nil},
+		{"goodnode", "1", "s", "the.answer", "42"},
 	}
 
 	var o OpcUA
 	var err error
 
 	o.MetricName = "testing"
-	o.Endpoint = "opc.tcp://opcua.rocks:4840"
+	o.Endpoint = "opc.tcp://localhost:4840"
 	o.AuthMethod = "Anonymous"
 	o.ConnectTimeout = config.Duration(10 * time.Second)
 	o.RequestTimeout = config.Duration(1 * time.Second)
 	o.SecurityPolicy = "None"
 	o.SecurityMode = "None"
+	o.Log = testutil.Logger{}
 	for _, tags := range testopctags {
 		o.RootNodes = append(o.RootNodes, MapOPCTag(tags))
 	}
@@ -58,7 +65,7 @@ func TestClient1Integration(t *testing.T) {
 			if compare != testopctags[i].Want {
 				t.Errorf("Tag %s: Values %v for type %s  does not match record", o.nodes[i].tag.FieldName, value.Interface(), types)
 			}
-		} else {
+		} else if testopctags[i].Want != nil {
 			t.Errorf("Tag: %s has value: %v", o.nodes[i].tag.FieldName, v.Value)
 		}
 	}
@@ -248,6 +255,7 @@ func TestValidateOPCTags(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			o := OpcUA{
 				nodes: tt.nodes,
+				Log:   testutil.Logger{},
 			}
 			require.Equal(t, tt.err, o.validateOPCTags())
 		})

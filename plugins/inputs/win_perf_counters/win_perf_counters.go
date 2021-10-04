@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package win_perf_counters
@@ -9,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -143,7 +144,7 @@ type Win_PerfCounters struct {
 	PreVistaSupport         bool
 	UsePerfCounterTime      bool
 	Object                  []perfobject
-	CountersRefreshInterval internal.Duration
+	CountersRefreshInterval config.Duration
 	UseWildcardsExpansion   bool
 
 	Log telegraf.Logger
@@ -345,7 +346,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
 
-	if m.lastRefreshed.IsZero() || (m.CountersRefreshInterval.Duration.Nanoseconds() > 0 && m.lastRefreshed.Add(m.CountersRefreshInterval.Duration).Before(time.Now())) {
+	if m.lastRefreshed.IsZero() || (m.CountersRefreshInterval > 0 && m.lastRefreshed.Add(time.Duration(m.CountersRefreshInterval)).Before(time.Now())) {
 		if m.counters != nil {
 			m.counters = m.counters[:0]
 		}
@@ -477,6 +478,6 @@ func isKnownCounterDataError(err error) bool {
 
 func init() {
 	inputs.Add("win_perf_counters", func() telegraf.Input {
-		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: internal.Duration{Duration: time.Second * 60}}
+		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: config.Duration(time.Second * 60)}
 	})
 }

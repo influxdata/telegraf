@@ -3,15 +3,18 @@ package nsd
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func NSDControl(output string) func(string, internal.Duration, bool, string, string) (*bytes.Buffer, error) {
-	return func(string, internal.Duration, bool, string, string) (*bytes.Buffer, error) {
+var TestTimeout = config.Duration(time.Second)
+
+func NSDControl(output string) func(string, config.Duration, bool, string, string) (*bytes.Buffer, error) {
+	return func(string, config.Duration, bool, string, string) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }

@@ -5,16 +5,17 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -265,7 +266,7 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 	listener := &InfluxDBV2Listener{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
-		MaxBodySize:    internal.Size{Size: 4096},
+		MaxBodySize:    config.Size(4096),
 		timeFunc:       time.Now,
 	}
 
@@ -363,7 +364,7 @@ func TestWriteGzippedData(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	data, err := ioutil.ReadFile("./testdata/testmsgs.gz")
+	data, err := os.ReadFile("./testdata/testmsgs.gz")
 	require.NoError(t, err)
 
 	req, err := http.NewRequest("POST", createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), bytes.NewBuffer(data))
@@ -485,7 +486,7 @@ func TestReady(t *testing.T) {
 	resp, err := http.Get(createURL(listener, "http", "/api/v2/ready", ""))
 	require.NoError(t, err)
 	require.Equal(t, "application/json", resp.Header["Content-Type"][0])
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Contains(t, string(bodyBytes), "\"status\":\"ready\"")
 	require.NoError(t, resp.Body.Close())

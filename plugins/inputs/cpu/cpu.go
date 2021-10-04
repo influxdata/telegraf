@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"time"
 
+	cpuUtil "github.com/shirou/gopsutil/cpu"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
-	"github.com/shirou/gopsutil/cpu"
 )
 
 type CPUStats struct {
 	ps        system.PS
-	lastStats map[string]cpu.TimesStat
+	lastStats map[string]cpuUtil.TimesStat
 
 	PerCPU         bool `toml:"percpu"`
 	TotalCPU       bool `toml:"totalcpu"`
@@ -123,7 +124,7 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 		acc.AddGauge("cpu", fieldsG, tags, now)
 	}
 
-	c.lastStats = make(map[string]cpu.TimesStat)
+	c.lastStats = make(map[string]cpuUtil.TimesStat)
 	for _, cts := range times {
 		c.lastStats[cts.CPU] = cts
 	}
@@ -131,12 +132,12 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 	return err
 }
 
-func totalCPUTime(t cpu.TimesStat) float64 {
+func totalCPUTime(t cpuUtil.TimesStat) float64 {
 	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal + t.Idle
 	return total
 }
 
-func activeCPUTime(t cpu.TimesStat) float64 {
+func activeCPUTime(t cpuUtil.TimesStat) float64 {
 	active := totalCPUTime(t) - t.Idle
 	return active
 }

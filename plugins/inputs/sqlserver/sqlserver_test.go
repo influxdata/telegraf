@@ -184,18 +184,20 @@ func TestSqlServer_MultipleInstanceWithHealthMetricIntegration(t *testing.T) {
 }
 
 func TestSqlServer_HealthMetric(t *testing.T) {
-	fakeServer1 := "localhost\\fakeinstance1;Database=fakedb1"
-	fakeServer2 := "localhost\\fakeinstance2;Database=fakedb2"
+	fakeServer1 := "localhost\\fakeinstance1;Database=fakedb1;Password=ABCabc01;"
+	fakeServer2 := "localhost\\fakeinstance2;Database=fakedb2;Password=ABCabc01;"
 
 	s1 := &SQLServer{
 		Servers:      []string{fakeServer1, fakeServer2},
 		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
 		HealthMetric: true,
+		AuthMethod:   "connection_string",
 	}
 
 	s2 := &SQLServer{
 		Servers:      []string{fakeServer1},
 		IncludeQuery: []string{"DatabaseSize"},
+		AuthMethod:   "connection_string",
 	}
 
 	// acc1 should have the health metric because it is specified in the config

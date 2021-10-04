@@ -3,7 +3,7 @@ package mesos
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -558,7 +558,7 @@ func (m *Mesos) gatherMainMetrics(u *url.URL, role Role, acc telegraf.Accumulato
 		return err
 	}
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	// Ignore the returned error to not shadow the initial one
 	//nolint:errcheck,revive
 	resp.Body.Close()

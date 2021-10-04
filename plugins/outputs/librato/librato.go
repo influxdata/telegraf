@@ -4,25 +4,26 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
 // Librato structure for configuration and client
 type Librato struct {
-	APIUser   string            `toml:"api_user"`
-	APIToken  string            `toml:"api_token"`
-	Debug     bool              `toml:"debug"`
-	SourceTag string            `toml:"source_tag"` // Deprecated, keeping for backward-compatibility
-	Timeout   internal.Duration `toml:"timeout"`
-	Template  string            `toml:"template"`
-	Log       telegraf.Logger   `toml:"-"`
+	APIUser   string          `toml:"api_user"`
+	APIToken  string          `toml:"api_token"`
+	Debug     bool            `toml:"debug"`
+	SourceTag string          `toml:"source_tag"` // Deprecated, keeping for backward-compatibility
+	Timeout   config.Duration `toml:"timeout"`
+	Template  string          `toml:"template"`
+	Log       telegraf.Logger `toml:"-"`
 
 	APIUrl string
 	client *http.Client
@@ -83,7 +84,7 @@ func (l *Librato) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: l.Timeout.Duration,
+		Timeout: time.Duration(l.Timeout),
 	}
 	return nil
 }
@@ -150,7 +151,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 || l.Debug {
-			htmlData, err := ioutil.ReadAll(resp.Body)
+			htmlData, err := io.ReadAll(resp.Body)
 			if err != nil {
 				l.Log.Debugf("Couldn't get response! (%v)", err)
 			}

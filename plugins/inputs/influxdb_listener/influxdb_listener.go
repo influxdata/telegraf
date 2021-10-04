@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -29,14 +30,14 @@ type InfluxDBListener struct {
 	port           int
 	tlsint.ServerConfig
 
-	ReadTimeout        internal.Duration `toml:"read_timeout"`
-	WriteTimeout       internal.Duration `toml:"write_timeout"`
-	MaxBodySize        internal.Size     `toml:"max_body_size"`
-	MaxLineSize        internal.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
-	BasicUsername      string            `toml:"basic_username"`
-	BasicPassword      string            `toml:"basic_password"`
-	DatabaseTag        string            `toml:"database_tag"`
-	RetentionPolicyTag string            `toml:"retention_policy_tag"`
+	ReadTimeout        config.Duration `toml:"read_timeout"`
+	WriteTimeout       config.Duration `toml:"write_timeout"`
+	MaxBodySize        config.Size     `toml:"max_body_size"`
+	MaxLineSize        config.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
+	BasicUsername      string          `toml:"basic_username"`
+	BasicPassword      string          `toml:"basic_password"`
+	DatabaseTag        string          `toml:"database_tag"`
+	RetentionPolicyTag string          `toml:"retention_policy_tag"`
 
 	timeFunc influx.TimeFunc
 
@@ -137,19 +138,19 @@ func (h *InfluxDBListener) Init() error {
 	h.authFailures = selfstat.Register("influxdb_listener", "auth_failures", tags)
 	h.routes()
 
-	if h.MaxBodySize.Size == 0 {
-		h.MaxBodySize.Size = defaultMaxBodySize
+	if h.MaxBodySize == 0 {
+		h.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
-	if h.MaxLineSize.Size != 0 {
+	if h.MaxLineSize != 0 {
 		h.Log.Warnf("Use of deprecated configuration: 'max_line_size'; parser now handles lines of unlimited length and option is ignored")
 	}
 
-	if h.ReadTimeout.Duration < time.Second {
-		h.ReadTimeout.Duration = time.Second * 10
+	if h.ReadTimeout < config.Duration(time.Second) {
+		h.ReadTimeout = config.Duration(time.Second * 10)
 	}
-	if h.WriteTimeout.Duration < time.Second {
-		h.WriteTimeout.Duration = time.Second * 10
+	if h.WriteTimeout < config.Duration(time.Second) {
+		h.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
 	return nil
@@ -167,8 +168,8 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	h.server = http.Server{
 		Addr:         h.ServiceAddress,
 		Handler:      h,
-		ReadTimeout:  h.ReadTimeout.Duration,
-		WriteTimeout: h.WriteTimeout.Duration,
+		ReadTimeout:  time.Duration(h.ReadTimeout),
+		WriteTimeout: time.Duration(h.WriteTimeout),
 		TLSConfig:    tlsConf,
 	}
 
@@ -259,7 +260,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		defer h.writesServed.Incr(1)
 		// Check that the content length is not too large for us to handle.
-		if req.ContentLength > h.MaxBodySize.Size {
+		if req.ContentLength > int64(h.MaxBodySize) {
 			if err := tooLarge(res); err != nil {
 				h.Log.Debugf("error in too-large: %v", err)
 			}
@@ -270,7 +271,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		rp := req.URL.Query().Get("rp")
 
 		body := req.Body
-		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
+		body = http.MaxBytesReader(res, body, int64(h.MaxBodySize))
 		// Handle gzip request bodies
 		if req.Header.Get("Content-Encoding") == "gzip" {
 			var err error

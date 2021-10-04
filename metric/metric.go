@@ -24,7 +24,7 @@ func New(
 	fields map[string]interface{},
 	tm time.Time,
 	tp ...telegraf.ValueType,
-) (telegraf.Metric, error) {
+) telegraf.Metric {
 	var vtype telegraf.ValueType
 	if len(tp) > 0 {
 		vtype = tp[0]
@@ -60,7 +60,7 @@ func New(
 		}
 	}
 
-	return m, nil
+	return m
 }
 
 // FromMetric returns a deep copy of the metric with any tracking information

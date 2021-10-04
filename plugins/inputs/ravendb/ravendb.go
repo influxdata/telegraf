@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -28,7 +28,7 @@ type RavenDB struct {
 	URL  string `toml:"url"`
 	Name string `toml:"name"`
 
-	Timeout internal.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 
 	StatsInclude       []string `toml:"stats_include"`
 	DbStatsDbs         []string `toml:"db_stats_dbs"`
@@ -133,12 +133,12 @@ func (r *RavenDB) ensureClient() error {
 		return err
 	}
 	tr := &http.Transport{
-		ResponseHeaderTimeout: r.Timeout.Duration,
+		ResponseHeaderTimeout: time.Duration(r.Timeout),
 		TLSClientConfig:       tlsCfg,
 	}
 	r.client = &http.Client{
 		Transport: tr,
-		Timeout:   r.Timeout.Duration,
+		Timeout:   time.Duration(r.Timeout),
 	}
 
 	return nil
@@ -418,7 +418,7 @@ func (r *RavenDB) Init() error {
 func init() {
 	inputs.Add("ravendb", func() telegraf.Input {
 		return &RavenDB{
-			Timeout:      internal.Duration{Duration: defaultTimeout * time.Second},
+			Timeout:      config.Duration(defaultTimeout * time.Second),
 			StatsInclude: []string{"server", "databases", "indexes", "collections"},
 		}
 	})

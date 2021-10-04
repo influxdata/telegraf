@@ -42,6 +42,8 @@ Logstash 5 and later is supported.
 
 ### Metrics
 
+Additional plugin stats may be collected (because logstash doesn't consistently expose all stats)
+
 - logstash_jvm
   - tags:
     - node_id
@@ -126,6 +128,10 @@ Logstash 5 and later is supported.
     - in
     - out
     - failures(if exists)
+    - bulk_requests_failures (for Logstash 7+)
+    - bulk_requests_with_errors (for Logstash 7+)
+    - documents_successes (for logstash 7+)
+    - documents_retryable_failures (for logstash 7+)
 
 - logstash_queue
   - tags:

@@ -3,7 +3,7 @@ package fluentd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -63,11 +63,11 @@ func parse(data []byte) (datapointArray []pluginData, err error) {
 
 	if err = json.Unmarshal(data, &endpointData); err != nil {
 		err = fmt.Errorf("processing JSON structure")
-		return
+		return nil, err
 	}
 
 	datapointArray = append(datapointArray, endpointData.Payload...)
-	return
+	return datapointArray, err
 }
 
 // Description - display description
@@ -104,7 +104,7 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 
 	if err != nil {
 		return fmt.Errorf("unable to read the HTTP body \"%s\": %v", string(body), err)

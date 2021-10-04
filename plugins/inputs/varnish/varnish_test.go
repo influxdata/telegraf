@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package varnish
@@ -10,12 +11,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func fakeVarnishStat(output string) func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
-	return func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
+func fakeVarnishStat(output string) func(string, bool, string, config.Duration) (*bytes.Buffer, error) {
+	return func(string, bool, string, config.Duration) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }

@@ -3,7 +3,6 @@ package statsd
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"net"
 	"sort"
@@ -18,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/selfstat"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -35,6 +35,21 @@ const (
 	parserGoRoutines = 5
 )
 
+var errParsing = errors.New("error parsing statsd line")
+
+// Number will get parsed as an int or float depending on what is passed
+type Number float64
+
+func (n *Number) UnmarshalTOML(b []byte) error {
+	value, err := strconv.ParseFloat(string(b), 64)
+	if err != nil {
+		return err
+	}
+
+	*n = Number(value)
+	return nil
+}
+
 // Statsd allows the importing of statsd and dogstatsd data.
 type Statsd struct {
 	// Protocol used on listener - udp or tcp
@@ -49,7 +64,7 @@ type Statsd struct {
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []internal.Number
+	Percentiles     []Number
 	PercentileLimit int
 
 	DeleteGauges   bool
@@ -119,8 +134,8 @@ type Statsd struct {
 
 	MaxTCPConnections int `toml:"max_tcp_connections"`
 
-	TCPKeepAlive       bool               `toml:"tcp_keep_alive"`
-	TCPKeepAlivePeriod *internal.Duration `toml:"tcp_keep_alive_period"`
+	TCPKeepAlive       bool             `toml:"tcp_keep_alive"`
+	TCPKeepAlivePeriod *config.Duration `toml:"tcp_keep_alive_period"`
 
 	// Max duration for each metric to stay cached without being updated.
 	MaxTTL config.Duration `toml:"max_ttl"`
@@ -304,8 +319,8 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			fields[prefix+"lower"] = stats.Lower()
 			fields[prefix+"count"] = stats.Count()
 			for _, percentile := range s.Percentiles {
-				name := fmt.Sprintf("%s%v_percentile", prefix, percentile.Value)
-				fields[name] = stats.Percentile(percentile.Value)
+				name := fmt.Sprintf("%s%v_percentile", prefix, percentile)
+				fields[name] = stats.Percentile(float64(percentile))
 			}
 		}
 
@@ -474,7 +489,7 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 				}
 
 				if s.TCPKeepAlivePeriod != nil {
-					if err = conn.SetKeepAlivePeriod(s.TCPKeepAlivePeriod.Duration); err != nil {
+					if err = conn.SetKeepAlivePeriod(time.Duration(*s.TCPKeepAlivePeriod)); err != nil {
 						return err
 					}
 				}
@@ -568,6 +583,10 @@ func (s *Statsd) parser() error {
 					}
 				default:
 					if err := s.parseStatsdLine(line); err != nil {
+						if errors.Cause(err) == errParsing {
+							// parsing errors log when the error occurs
+							continue
+						}
 						return err
 					}
 				}
@@ -605,7 +624,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	bits := strings.Split(line, ":")
 	if len(bits) < 2 {
 		s.Log.Errorf("Splitting ':', unable to parse metric: %s", line)
-		return errors.New("error Parsing statsd line")
+		return errParsing
 	}
 
 	// Extract bucket name from individual metric bits
@@ -621,7 +640,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		pipesplit := strings.Split(bit, "|")
 		if len(pipesplit) < 2 {
 			s.Log.Errorf("Splitting '|', unable to parse metric: %s", line)
-			return errors.New("error parsing statsd line")
+			return errParsing
 		} else if len(pipesplit) > 2 {
 			sr := pipesplit[2]
 
@@ -645,14 +664,14 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			m.mtype = pipesplit[1]
 		default:
 			s.Log.Errorf("Metric type %q unsupported", pipesplit[1])
-			return errors.New("error parsing statsd line")
+			return errParsing
 		}
 
 		// Parse the value
 		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
 			if m.mtype != "g" && m.mtype != "c" {
 				s.Log.Errorf("+- values are only supported for gauges & counters, unable to parse metric: %s", line)
-				return errors.New("error parsing statsd line")
+				return errParsing
 			}
 			m.additive = true
 		}
@@ -662,7 +681,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
 				s.Log.Errorf("Parsing value to float64, unable to parse metric: %s", line)
-				return errors.New("error parsing statsd line")
+				return errParsing
 			}
 			m.floatvalue = v
 		case "c":
@@ -672,7 +691,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 				v2, err2 := strconv.ParseFloat(pipesplit[0], 64)
 				if err2 != nil {
 					s.Log.Errorf("Parsing value to int64, unable to parse metric: %s", line)
-					return errors.New("error parsing statsd line")
+					return errParsing
 				}
 				v = int64(v2)
 			}

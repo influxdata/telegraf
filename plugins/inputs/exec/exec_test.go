@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
@@ -200,12 +201,14 @@ func TestTruncate(t *testing.T) {
 			name: "should not truncate",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world")
+				_, err := b.WriteString("hello world")
+				require.NoError(t, err)
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world")
+				_, err := b.WriteString("hello world")
+				require.NoError(t, err)
 				return &b
 			},
 		},
@@ -213,12 +216,14 @@ func TestTruncate(t *testing.T) {
 			name: "should truncate up to the new line",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world\nand all the people")
+				_, err := b.WriteString("hello world\nand all the people")
+				require.NoError(t, err)
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				b.WriteString("hello world...")
+				_, err := b.WriteString("hello world...")
+				require.NoError(t, err)
 				return &b
 			},
 		},
@@ -227,16 +232,17 @@ func TestTruncate(t *testing.T) {
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < 2*MaxStderrBytes; i++ {
-					b.WriteByte('b')
+					require.NoError(t, b.WriteByte('b'))
 				}
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < MaxStderrBytes; i++ {
-					b.WriteByte('b')
+					require.NoError(t, b.WriteByte('b'))
 				}
-				b.WriteString("...")
+				_, err := b.WriteString("...")
+				require.NoError(t, err)
 				return &b
 			},
 		},

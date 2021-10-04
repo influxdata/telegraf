@@ -8,7 +8,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
@@ -338,7 +337,7 @@ func init() {
 			ClientConfig: snmp.ClientConfig{
 				Retries:        3,
 				MaxRepetitions: 10,
-				Timeout:        internal.Duration{Duration: 5 * time.Second},
+				Timeout:        config.Duration(5 * time.Second),
 				Version:        2,
 				Community:      "public",
 			},
@@ -350,6 +349,7 @@ func init() {
 func makeTableNoMock(fieldName string) (*si.Table, error) {
 	var err error
 	tab := si.Table{
+		Name:       "ifTable",
 		IndexAsTag: true,
 		Fields: []si.Field{
 			{Oid: fieldName},

@@ -81,7 +81,9 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 
 			tags := map[string]string{"url": hostPort, "source": host, "port": port, "type": cg.Type}
 
-			grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
+			if err := grouper.Add("bind_counter", tags, ts, c.Name, c.Value); err != nil {
+				acc.AddError(fmt.Errorf("adding tags %q to group failed: %v", tags, err))
+			}
 		}
 	}
 
@@ -118,15 +120,17 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 						"type":   cg.Type,
 					}
 
-					grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
+					if err := grouper.Add("bind_counter", tags, ts, c.Name, c.Value); err != nil {
+						acc.AddError(fmt.Errorf("adding tags %q to group failed: %v", tags, err))
+					}
 				}
 			}
 		}
 	}
 
 	//Add grouped metrics
-	for _, metric := range grouper.Metrics() {
-		acc.AddMetric(metric)
+	for _, groupedMetric := range grouper.Metrics() {
+		acc.AddMetric(groupedMetric)
 	}
 }
 
@@ -138,21 +142,29 @@ func (b *Bind) readStatsXMLv3(addr *url.URL, acc telegraf.Accumulator) error {
 
 	// Progressively build up full v3Stats struct by parsing the individual HTTP responses
 	for _, suffix := range [...]string{"/server", "/net", "/mem"} {
-		scrapeURL := addr.String() + suffix
+		err := func() error {
+			scrapeURL := addr.String() + suffix
 
-		resp, err := b.client.Get(scrapeURL)
+			resp, err := b.client.Get(scrapeURL)
+			if err != nil {
+				return err
+			}
+
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("%s returned HTTP status: %s", scrapeURL, resp.Status)
+			}
+
+			if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
+				return fmt.Errorf("unable to decode XML document: %s", err)
+			}
+
+			return nil
+		}()
+
 		if err != nil {
 			return err
-		}
-
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("%s returned HTTP status: %s", scrapeURL, resp.Status)
-		}
-
-		if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
-			return fmt.Errorf("Unable to decode XML document: %s", err)
 		}
 	}
 

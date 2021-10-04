@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -27,7 +26,7 @@ import (
 )
 
 func getMetric(t *testing.T) telegraf.Metric {
-	m, err := metric.New(
+	m := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
@@ -35,7 +34,6 @@ func getMetric(t *testing.T) telegraf.Metric {
 		},
 		time.Unix(0, 0),
 	)
-	require.NoError(t, err)
 	return m
 }
 
@@ -44,7 +42,7 @@ func getMetrics(t *testing.T) []telegraf.Metric {
 	var metrics = make([]telegraf.Metric, count)
 
 	for i := 0; i < count; i++ {
-		m, err := metric.New(
+		m := metric.New(
 			fmt.Sprintf("cpu-%d", i),
 			map[string]string{
 				"ec2_instance": "aws-129038123",
@@ -59,7 +57,6 @@ func getMetrics(t *testing.T) []telegraf.Metric {
 			},
 			time.Unix(0, 0),
 		)
-		require.NoError(t, err)
 		metrics[i] = m
 	}
 	return metrics
@@ -302,7 +299,7 @@ func TestContentEncodingGzip(t *testing.T) {
 				body, err := gzip.NewReader(r.Body)
 				require.NoError(t, err)
 
-				payload, err := ioutil.ReadAll(body)
+				payload, err := io.ReadAll(body)
 				require.NoError(t, err)
 
 				assert.Equal(t, string(payload), "metric=cpu field=value  42 0\n")

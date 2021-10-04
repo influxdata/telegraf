@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"math/big"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -13,11 +13,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pion/dtls/v2"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -30,7 +32,7 @@ var _ telegraf.Input = &X509Cert{}
 func TestGatherRemoteIntegration(t *testing.T) {
 	t.Skip("Skipping network-dependent test due to race condition when test-all")
 
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	require.NoError(t, err)
 
 	defer os.Remove(tmpfile.Name())
@@ -60,7 +62,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 	pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
 	require.NoError(t, err)
 
-	config := &tls.Config{
+	cfg := &tls.Config{
 		InsecureSkipVerify: true,
 		Certificates:       []tls.Certificate{pair},
 	}
@@ -68,13 +70,13 @@ func TestGatherRemoteIntegration(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.unset {
-				config.Certificates = nil
-				config.GetCertificate = func(i *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				cfg.Certificates = nil
+				cfg.GetCertificate = func(i *tls.ClientHelloInfo) (*tls.Certificate, error) {
 					return nil, nil
 				}
 			}
 
-			ln, err := tls.Listen("tcp", ":0", config)
+			ln, err := tls.Listen("tcp", ":0", cfg)
 			require.NoError(t, err)
 			defer ln.Close()
 
@@ -85,7 +87,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 					sconn.Close()
 				}
 
-				serverConfig := config.Clone()
+				serverConfig := cfg.Clone()
 
 				srv := tls.Server(sconn, serverConfig)
 				if test.noshake {
@@ -100,7 +102,7 @@ func TestGatherRemoteIntegration(t *testing.T) {
 
 			sc := X509Cert{
 				Sources: []string{test.server},
-				Timeout: internal.Duration{Duration: test.timeout},
+				Timeout: config.Duration(test.timeout),
 			}
 			require.NoError(t, sc.Init())
 
@@ -147,7 +149,7 @@ func TestGatherLocal(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			f, err := ioutil.TempFile("", "x509_cert")
+			f, err := os.CreateTemp("", "x509_cert")
 			require.NoError(t, err)
 
 			_, err = f.Write([]byte(test.content))
@@ -179,7 +181,7 @@ func TestGatherLocal(t *testing.T) {
 func TestTags(t *testing.T) {
 	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
 
-	f, err := ioutil.TempFile("", "x509_cert")
+	f, err := os.CreateTemp("", "x509_cert")
 	require.NoError(t, err)
 
 	_, err = f.Write([]byte(cert))
@@ -236,7 +238,7 @@ func TestGatherChain(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			f, err := ioutil.TempFile("", "x509_cert")
+			f, err := os.CreateTemp("", "x509_cert")
 			require.NoError(t, err)
 
 			_, err = f.Write([]byte(test.content))
@@ -258,6 +260,36 @@ func TestGatherChain(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGatherUDPCert(t *testing.T) {
+	pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
+	require.NoError(t, err)
+
+	cfg := &dtls.Config{
+		Certificates: []tls.Certificate{pair},
+	}
+
+	addr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0}
+	listener, err := dtls.Listen("udp", addr, cfg)
+	require.NoError(t, err)
+	defer listener.Close()
+
+	go func() {
+		_, _ = listener.Accept()
+	}()
+
+	m := &X509Cert{
+		Sources: []string{"udp://" + listener.Addr().String()},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, m.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+
+	assert.Len(t, acc.Errors, 0)
+	assert.True(t, acc.HasMeasurement("x509_cert"))
 }
 
 func TestStrings(t *testing.T) {
@@ -306,7 +338,7 @@ func TestGatherCertMustNotTimeout(t *testing.T) {
 	duration := time.Duration(15) * time.Second
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
-		Timeout: internal.Duration{Duration: duration},
+		Timeout: config.Duration(duration),
 	}
 	require.NoError(t, m.Init())
 
@@ -314,6 +346,16 @@ func TestGatherCertMustNotTimeout(t *testing.T) {
 	require.NoError(t, m.Gather(&acc))
 	require.Empty(t, acc.Errors)
 	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestSourcesToURLs(t *testing.T) {
+	m := &X509Cert{
+		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
+	}
+	require.NoError(t, m.Init())
+
+	assert.Equal(t, len(m.globpaths), 2)
+	assert.Equal(t, len(m.locations), 2)
 }
 
 func TestServerName(t *testing.T) {

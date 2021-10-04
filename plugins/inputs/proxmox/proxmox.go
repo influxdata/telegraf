@@ -3,11 +3,12 @@ package proxmox
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -66,7 +67,7 @@ func (px *Proxmox) Init() error {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: px.ResponseTimeout.Duration,
+		Timeout: time.Duration(px.ResponseTimeout),
 	}
 
 	return nil
@@ -114,7 +115,7 @@ func performRequest(px *Proxmox, apiURL string, method string, data url.Values) 
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

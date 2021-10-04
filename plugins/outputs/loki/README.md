@@ -3,6 +3,8 @@
 This plugin sends logs to Loki, using tags as labels, 
 log line will content all fields in `key="value"` format which is easily parsable with `logfmt` parser in Loki.
 
+Logs within each stream are sorted by timestamp before being sent to Loki.
+
 ### Configuration:
 
 ```toml
