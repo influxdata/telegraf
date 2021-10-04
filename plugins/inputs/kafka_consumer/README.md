@@ -83,12 +83,12 @@ and use the old zookeeper connection method.
   ## larger messages are dropped
   max_message_len = 1000000
 
-  ## Maximum messages to read from the broker that have not been written by an
-  ## output.  For best throughput set based on the number of metrics within
-  ## each message and the size of the output's metric_batch_size.
+  ## Maximum messages to read from the broker that have not been written by
+  ## an output. For best throughput, set max_undelivered_messages to at or
+  ## above the metric_batch_size.
   ##
   ## For example, if each message from the queue contains 10 metrics and the
-  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## output metric_batch_size is 1000, setting this to 1000 will ensure that a
   ## full batch is collected and the write is triggered immediately without
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
