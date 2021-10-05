@@ -48,11 +48,10 @@ func (*Upsd) SampleConfig() string {
 
 func (h *Upsd) Gather(accumulator telegraf.Accumulator) error {
 	for _, server := range h.Servers {
-		err := func(Server string) error {
-			upsList, err := fetchVariables(server, h.Username, h.Password)
-			if err != nil {
-				return err
-			}
+		upsList, err := h.fetchVariables(server)
+		if err != nil {
+			return err
+		}
 
 		for name, variables := range upsList {
 			h.GatherUps(accumulator, name, variables)
@@ -78,7 +77,7 @@ func (h *Upsd) GatherUps(accumulator telegraf.Accumulator, name string, variable
 
 	status := h.mapStatus(metrics)
 
-	timeLeftS := metrics["battery.runtime"].(int64)
+	timeLeftS, _ := metrics["battery.runtime"].(int64)
 
 	fields := map[string]interface{}{
 		"status_flags":           status,
