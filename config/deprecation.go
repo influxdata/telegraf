@@ -237,6 +237,9 @@ func printOptionDeprecationNotice(prefix, name, option, since, notice string) {
 	log.Printf("Please note: %s", optionWarnNotice)
 }
 
+
+// walkPluginStruct iterates over the fields of a structure in depth-first search (to cover nested structures)
+// and calls the given function for every visited field.
 func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv reflect.Value)) {
 	v := reflect.Indirect(value)
 	t := v.Type()
