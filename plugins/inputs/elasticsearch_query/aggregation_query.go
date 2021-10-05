@@ -32,7 +32,7 @@ func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregatio
 
 	query := elastic5.NewBoolQuery()
 	query = query.Filter(elastic5.NewQueryStringQuery(filterQuery))
-	query = query.Filter(elastic5.NewRangeQuery(aggregation.DateField).From(from).To(now))
+	query = query.Filter(elastic5.NewRangeQuery(aggregation.DateField).From(from).To(now).Format(aggregation.DateFieldFormat))
 
 	search := e.esClient.Search().Index(aggregation.Index).Query(query).Size(0)
 
