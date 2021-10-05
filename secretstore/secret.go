@@ -27,8 +27,9 @@ func ResolveSecrets() error {
 
 // Secret safely stores sensitive data such as a password or token
 type Secret struct {
-	enclave  *memguard.Enclave
-	resolver func() (string, error)
+	enclave    *memguard.Enclave
+	initialzed bool
+	resolver   func() (string, error)
 }
 
 // staticResolver returns static secrets that do not change over time
@@ -51,23 +52,33 @@ func (s *Secret) dynamicResolver() (string, error) {
 	return s.replace(lockbuf.String(), false)
 }
 
+// NewSecret creates a new secret from the given bytes
+func NewSecret(b []byte) *Secret {
+	s := Secret{}
+	s.initialize(b)
+	return &s
+}
+
 // UnmarshalTOML creates a secret from a toml value
 func (s *Secret) UnmarshalTOML(b []byte) error {
-	s.enclave = memguard.NewEnclave(unquote(b))
-	s.resolver = s.staticResolver
-
-	secretRegister = append(secretRegister, s)
+	s.initialize(b)
 
 	return nil
 }
 
 // Get return the string representation of the secret
 func (s *Secret) Get() (string, error) {
-	return s.resolver()
+	if s.initialzed {
+		return s.resolver()
+	}
+	return "", nil
 }
 
 // Resolve all static references to secret-stores and keep the dynamic ones.
 func (s *Secret) Resolve() error {
+	if !s.initialzed {
+		panic("secret not initialzed before Resolve()")
+	}
 	lockbuf, err := s.enclave.Open()
 	if err != nil {
 		return fmt.Errorf("opening enclave failed: %v", err)
@@ -86,15 +97,51 @@ func (s *Secret) Resolve() error {
 	return nil
 }
 
-// Destroy the secret
+// Destroy the secret content
 func (s *Secret) Destroy() error {
+	if s.enclave == nil {
+		return nil
+	}
+
+	// Remove the secret from the
 	lockbuf, err := s.enclave.Open()
 	if err != nil {
 		return fmt.Errorf("opening enclave failed: %v", err)
 	}
 	defer lockbuf.Destroy()
+	defer s.unregister()
+
+	s.initialzed = false
 
 	return nil
+}
+
+func (s *Secret) initialize(b []byte) {
+	s.enclave = memguard.NewEnclave(unquote(b))
+	s.resolver = s.staticResolver
+	s.initialzed = true
+
+	secretRegister = append(secretRegister, s)
+}
+
+func (s *Secret) unregister() {
+	// Find secret in the register
+	idx := -1
+	for i, rs := range secretRegister {
+		if rs == s {
+			idx = i
+			break
+		}
+	}
+
+	// Secret is not in register
+	if idx < 0 {
+		return
+	}
+
+	// Remove the secret
+	secretRegister[idx] = secretRegister[len(secretRegister)-1]
+	secretRegister = secretRegister[:len(secretRegister)-1]
 }
 
 func (s *Secret) replace(secret string, replaceDynamic bool) (string, error) {
