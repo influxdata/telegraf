@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/binary"
 	ejson "encoding/json"
 	"fmt"
@@ -16,11 +17,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const (
-	defaultGraylogEndpoint = "127.0.0.1:12201"
+	defaultEndpoint        = "127.0.0.1:12201"
 	defaultConnection      = "wan"
 	defaultMaxChunkSizeWan = 1420
 	defaultMaxChunkSizeLan = 8154
@@ -29,7 +31,7 @@ const (
 )
 
 type gelfConfig struct {
-	GraylogEndpoint string
+	Endpoint        string
 	Connection      string
 	MaxChunkSizeWan int
 	MaxChunkSizeLan int
@@ -51,11 +53,12 @@ type gelfUDP struct {
 
 type gelfTCP struct {
 	gelfCommon
+	tlsConfig *tls.Config
 }
 
-func newGelfWriter(cfg gelfConfig, dialer *net.Dialer) gelf {
-	if cfg.GraylogEndpoint == "" {
-		cfg.GraylogEndpoint = defaultGraylogEndpoint
+func newGelfWriter(cfg gelfConfig, dialer *net.Dialer, tlsConfig *tls.Config) gelf {
+	if cfg.Endpoint == "" {
+		cfg.Endpoint = defaultEndpoint
 	}
 
 	if cfg.Connection == "" {
@@ -71,10 +74,10 @@ func newGelfWriter(cfg gelfConfig, dialer *net.Dialer) gelf {
 	}
 
 	scheme := defaultScheme
-	parts := strings.SplitN(cfg.GraylogEndpoint, "://", 2)
+	parts := strings.SplitN(cfg.Endpoint, "://", 2)
 	if len(parts) == 2 {
 		scheme = strings.ToLower(parts[0])
-		cfg.GraylogEndpoint = parts[1]
+		cfg.Endpoint = parts[1]
 	}
 	common := gelfCommon{
 		gelfConfig: cfg,
@@ -84,7 +87,7 @@ func newGelfWriter(cfg gelfConfig, dialer *net.Dialer) gelf {
 	var g gelf
 	switch scheme {
 	case "tcp":
-		g = &gelfTCP{gelfCommon: common}
+		g = &gelfTCP{gelfCommon: common, tlsConfig: tlsConfig}
 	default:
 		g = &gelfUDP{gelfCommon: common}
 	}
@@ -180,7 +183,7 @@ func (g *gelfUDP) compress(b []byte) bytes.Buffer {
 
 func (g *gelfUDP) send(b []byte) error {
 	if g.conn == nil {
-		conn, err := g.dialer.Dial("udp", g.gelfConfig.GraylogEndpoint)
+		conn, err := g.dialer.Dial("udp", g.gelfConfig.Endpoint)
 		if err != nil {
 			return err
 		}
@@ -218,7 +221,13 @@ func (g *gelfTCP) Close() (err error) {
 
 func (g *gelfTCP) send(b []byte) error {
 	if g.conn == nil {
-		conn, err := g.dialer.Dial("tcp", g.gelfConfig.GraylogEndpoint)
+		var conn net.Conn
+		var err error
+		if g.tlsConfig == nil {
+			conn, err = g.dialer.Dial("tcp", g.gelfConfig.Endpoint)
+		} else {
+			conn, err = tls.DialWithDialer(g.dialer, "tcp", g.gelfConfig.Endpoint, g.tlsConfig)
+		}
 		if err != nil {
 			return err
 		}
@@ -244,9 +253,11 @@ type Graylog struct {
 	Servers           []string        `toml:"servers"`
 	ShortMessageField string          `toml:"short_message_field"`
 	Timeout           config.Duration `toml:"timeout"`
+	tlsint.ClientConfig
 
 	writer  io.Writer
 	closers []io.WriteCloser
+	Log     telegraf.Logger
 }
 
 var sampleConfig = `
@@ -260,18 +271,30 @@ var sampleConfig = `
   ## "telegraf" will be used.
   ##   example: short_message_field = "message"
   # short_message_field = ""
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (g *Graylog) Connect() error {
-	writers := []io.Writer{}
-	dialer := net.Dialer{Timeout: time.Duration(g.Timeout)}
+	var writers []io.Writer
+	dialer := &net.Dialer{Timeout: time.Duration(g.Timeout)}
 
 	if len(g.Servers) == 0 {
 		g.Servers = append(g.Servers, "localhost:12201")
 	}
 
+	tlsCfg, err := g.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
 	for _, server := range g.Servers {
-		w := newGelfWriter(gelfConfig{GraylogEndpoint: server}, &dialer)
+		w := newGelfWriter(gelfConfig{Endpoint: server}, dialer, tlsCfg)
 		writers = append(writers, w)
 		g.closers = append(g.closers, w)
 	}
