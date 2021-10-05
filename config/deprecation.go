@@ -237,13 +237,20 @@ func printOptionDeprecationNotice(prefix, name, option, since, notice string) {
 	log.Printf("Please note: %s", optionWarnNotice)
 }
 
-
 // walkPluginStruct iterates over the fields of a structure in depth-first search (to cover nested structures)
 // and calls the given function for every visited field.
 func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv reflect.Value)) {
 	v := reflect.Indirect(value)
 	t := v.Type()
 
+	// Only works on structs
+	if t.Kind() != reflect.Struct {
+		return
+	}
+
+	// Walk over the struct fields and call the given function. If we encounter more complex embedded
+	// elements (stucts, slices/arrays, maps) we need to descend into those elements as they might
+	// contain structures nested in the current structure.
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		fieldValue := v.Field(i)
@@ -254,15 +261,20 @@ func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv ref
 		switch field.Type.Kind() {
 		case reflect.Struct:
 			walkPluginStruct(fieldValue, fn)
-
 		case reflect.Array, reflect.Slice:
 			for j := 0; j < fieldValue.Len(); j++ {
-				fn(field, fieldValue.Index(j))
+				element := fieldValue.Index(j)
+				// The array might contain structs
+				walkPluginStruct(element, fn)
+				fn(field, element)
 			}
 		case reflect.Map:
 			iter := fieldValue.MapRange()
 			for iter.Next() {
-				fn(field, iter.Value())
+				element := iter.Value()
+				// The map might contain structs
+				walkPluginStruct(element, fn)
+				fn(field, element)
 			}
 		}
 		fn(field, fieldValue)
