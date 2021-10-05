@@ -55,6 +55,10 @@ const sampleConfig = `
   ## Lowering this value will result in *slightly* less memory use, with a potential sacrifice in speed efficiency, if absolutely necessary.
   #	file_queue_size = 100000
   #
+  ## Name a tag containing the name of the file the data was parsed from.  Leave empty
+  ## to disable.
+  # file_tag = ""
+  #
   ## The dataformat to be read from the files.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -75,6 +79,7 @@ type DirectoryMonitor struct {
 	Directory         string `toml:"directory"`
 	FinishedDirectory string `toml:"finished_directory"`
 	ErrorDirectory    string `toml:"error_directory"`
+	FileTag           string `toml:"file_tag"`
 
 	FilesToMonitor             []string        `toml:"files_to_monitor"`
 	FilesToIgnore              []string        `toml:"files_to_ignore"`
@@ -250,10 +255,10 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 		reader = file
 	}
 
-	return monitor.parseFile(parser, reader)
+	return monitor.parseFile(parser, reader, file.Name())
 }
 
-func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader) error {
+func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
 	// Read the file line-by-line and parse with the configured parse method.
 	firstLine := true
 	scanner := bufio.NewScanner(reader)
@@ -263,6 +268,12 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 			return err
 		}
 		firstLine = false
+
+		if monitor.FileTag != "" {
+			for _, m := range metrics {
+				m.AddTag(monitor.FileTag, filepath.Base(fileName))
+			}
+		}
 
 		if err := monitor.sendMetrics(metrics); err != nil {
 			return err

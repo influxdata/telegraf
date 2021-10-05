@@ -39,6 +39,10 @@ This plugin is intended to read files that are moved or copied to the monitored 
   ## Lowering this value will result in *slightly* less memory use, with a potential sacrifice in speed efficiency, if absolutely necessary.
   #	file_queue_size = 100000
   #
+  ## Name a tag containing the name of the file the data was parsed from.  Leave empty
+  ## to disable.
+  # file_tag = ""
+  #
   ## The dataformat to be read from the files.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
