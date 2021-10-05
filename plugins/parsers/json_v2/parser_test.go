@@ -29,6 +29,18 @@ func TestData(t *testing.T) {
 			test: "array_of_objects",
 		},
 		{
+			name: "Test having multiple JSON inputs",
+			test: "multiple_json_input",
+		},
+		{
+			name: "A second test when selecting with sub field and tags",
+			test: "subfieldtag_in_object_2",
+		},
+		{
+			name: "Test selecting with sub field and tags",
+			test: "subfieldtag_in_object",
+		},
+		{
 			name: "Test using just fields and tags",
 			test: "fields_and_tags",
 		},
