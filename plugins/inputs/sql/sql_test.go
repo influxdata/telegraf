@@ -15,6 +15,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/secretstore"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -123,9 +124,10 @@ func TestMariaDB(t *testing.T) {
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
+			dsn := fmt.Sprintf("root:%s@tcp(%s:%s)/%s", passwd, addr, port, database)
 			plugin := &SQL{
 				Driver:  "maria",
-				Dsn:     fmt.Sprintf("root:%s@tcp(%s:%s)/%s", passwd, addr, port, database),
+				Dsn:     secretstore.NewSecret([]byte(dsn)),
 				Queries: tt.queries,
 				Log:     logger,
 			}
@@ -242,9 +244,10 @@ func TestPostgreSQL(t *testing.T) {
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
+			dsn := fmt.Sprintf("postgres://postgres:%v@%v:%v/%v", passwd, addr, port, database)
 			plugin := &SQL{
 				Driver:  "pgx",
-				Dsn:     fmt.Sprintf("postgres://postgres:%v@%v:%v/%v", passwd, addr, port, database),
+				Dsn:     secretstore.NewSecret([]byte(dsn)),
 				Queries: tt.queries,
 				Log:     logger,
 			}
