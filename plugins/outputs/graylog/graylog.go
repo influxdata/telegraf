@@ -342,7 +342,7 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	m["version"] = "1.1"
 	m["timestamp"] = float64(metric.Time().UnixNano()) / 1_000_000_000
 	m["short_message"] = "telegraf"
-	m["name"] = metric.Name()
+	m["_name"] = metric.Name()
 
 	if host, ok := metric.GetTag("host"); ok {
 		m["host"] = host

@@ -164,6 +164,9 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
 		var obj GelfObject
 		_ = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
+		assert.Equal(t, obj["short_message"], "telegraf")
+		assert.Equal(t, obj["_name"], "test1")
+		assert.Equal(t, obj["_tag1"], "value1")
 		assert.Equal(t, obj["_value"], float64(1))
 	}
 
