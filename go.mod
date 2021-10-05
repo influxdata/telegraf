@@ -98,7 +98,7 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/echlebek/timeproxy v1.0.0 // indirect
 	github.com/eclipse/paho.mqtt.golang v1.3.0
-	github.com/fatih/color v1.10.0 // indirect
+	github.com/fatih/color v1.10.0
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logfmt/logfmt v0.5.0
