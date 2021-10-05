@@ -98,22 +98,22 @@ func (s *Secret) Resolve() error {
 }
 
 // Destroy the secret content
-func (s *Secret) Destroy() error {
+func (s *Secret) Destroy() {
 	if s.enclave == nil {
-		return nil
+		return
 	}
 
-	// Remove the secret from the
+	// Wipe the secret from memory
 	lockbuf, err := s.enclave.Open()
 	if err != nil {
-		return fmt.Errorf("opening enclave failed: %v", err)
+		return
 	}
-	defer lockbuf.Destroy()
-	defer s.unregister()
+	lockbuf.Destroy()
+
+	// Unregister secret to avoid trying to resolve it
+	s.unregister()
 
 	s.initialzed = false
-
-	return nil
 }
 
 func (s *Secret) initialize(b []byte) {
