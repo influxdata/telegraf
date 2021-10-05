@@ -60,9 +60,6 @@ var (
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
 	fetchURLRe = regexp.MustCompile(`^\w+://`)
-
-	// secretStores contains all configured secret-stores
-	secretStores = make(map[string]secretstore.SecretStore)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
