@@ -15,6 +15,13 @@ var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
 // secretRegister contains a list of secrets for later resolving by the config.
 var secretRegister = make([]*Secret, 0)
 
+// NewSecret creates a new secret from the given bytes
+func NewSecret(b []byte) Secret {
+	s := Secret{}
+	s.initialize(b)
+	return s
+}
+
 // ResolveSecrets iterates over all registered secrets and resolves all possible references.
 func ResolveSecrets() error {
 	for _, secret := range secretRegister {
@@ -50,13 +57,6 @@ func (s *Secret) dynamicResolver() (string, error) {
 	}
 
 	return s.replace(lockbuf.String(), false)
-}
-
-// NewSecret creates a new secret from the given bytes
-func NewSecret(b []byte) *Secret {
-	s := Secret{}
-	s.initialize(b)
-	return &s
 }
 
 // UnmarshalTOML creates a secret from a toml value
