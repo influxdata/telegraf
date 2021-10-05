@@ -2,20 +2,27 @@ package upsd
 
 import (
 	"fmt"
+	nut "github.com/Malinskiy/go.nut"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	nut "github.com/robbiet480/go.nut"
 	"strings"
+	"time"
 )
 
 //See: https://networkupstools.org/docs/developer-guide.chunked/index.html
 
 const defaultAddress = "127.0.0.1"
 
+var defaultConnectTimeout = config.Duration(10 * time.Second)
+var defaultOpTimeout = config.Duration(10 * time.Second)
+
 type Upsd struct {
-	Servers  []string
-	Username string
-	Password string
+	Servers           []string
+	Username          string
+	Password          string
+	OpTimeout         config.Duration
+	ConnectionTimeout config.Duration
 }
 
 func (*Upsd) Description() string {
@@ -28,6 +35,11 @@ var sampleConfig = `
   servers = ["127.0.0.1"]
   # username = "user"
   # password = "password"
+
+  # Timeout for dialing server.
+  connectionTimeout = "10s"
+  # Read/write operation timeout.
+  opTimeout = "10s"
 `
 
 func (*Upsd) SampleConfig() string {
@@ -42,15 +54,8 @@ func (h *Upsd) Gather(accumulator telegraf.Accumulator) error {
 				return err
 			}
 
-			for name, variables := range upsList {
-				h.GatherUps(accumulator, name, variables)
-			}
-
-			return nil
-		}(server)
-
-		if err != nil {
-			return err
+		for name, variables := range upsList {
+			h.GatherUps(accumulator, name, variables)
 		}
 	}
 	return nil
@@ -147,23 +152,22 @@ func contains(s []string, str string) bool {
 	return false
 }
 
-func fetchVariables(server string, username string, password string) (map[string][]nut.Variable, error) {
-	client, connectErr := nut.Connect(server)
-
-	if connectErr != nil {
-		fmt.Print(connectErr)
+func (h *Upsd) fetchVariables(server string) (map[string][]nut.Variable, error) {
+	client, err := nut.Connect(server, time.Duration(h.ConnectionTimeout), time.Duration(h.OpTimeout))
+	if err != nil {
+		return nil, fmt.Errorf("connect: %w", err)
 	}
 
-	if username != "" && password != "" {
-		_, authErr := client.Authenticate(username, password)
-		if authErr != nil {
-			fmt.Print(authErr)
+	if h.Username != "" && h.Password != "" {
+		_, err = client.Authenticate(h.Username, h.Password)
+		if err != nil {
+			return nil, fmt.Errorf("auth: %w", err)
 		}
 	}
 
-	upsList, listErr := client.GetUPSList()
-	if listErr != nil {
-		fmt.Print(listErr)
+	upsList, err := client.GetUPSList()
+	if err != nil {
+		return nil, fmt.Errorf("getupslist: %w", err)
 	}
 
 	defer client.Disconnect()
@@ -179,9 +183,11 @@ func fetchVariables(server string, username string, password string) (map[string
 func init() {
 	inputs.Add("upsd", func() telegraf.Input {
 		return &Upsd{
-			Servers:  []string{defaultAddress},
-			Username: "",
-			Password: "",
+			Servers:           []string{defaultAddress},
+			Username:          "",
+			Password:          "",
+			OpTimeout:         defaultOpTimeout,
+			ConnectionTimeout: defaultConnectTimeout,
 		}
 	})
 }
