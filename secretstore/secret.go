@@ -105,10 +105,9 @@ func (s *Secret) Destroy() {
 
 	// Wipe the secret from memory
 	lockbuf, err := s.enclave.Open()
-	if err != nil {
-		return
+	if err == nil {
+		lockbuf.Destroy()
 	}
-	lockbuf.Destroy()
 
 	// Unregister secret to avoid trying to resolve it
 	s.unregister()
