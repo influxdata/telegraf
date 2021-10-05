@@ -25,6 +25,8 @@ var stores = make(map[string]*SecretStore)
 
 // Init initializes all internals of the secret-store
 func (s *SecretStore) Init() error {
+	defer s.Password.Destroy()
+
 	if s.Name == "" {
 		return fmt.Errorf("name missing")
 	}
@@ -48,7 +50,6 @@ func (s *SecretStore) Init() error {
 
 	switch u.Scheme {
 	case "file", "kwallet", "os", "secret-service":
-		defer s.Password.Destroy()
 		passwd, err := s.Password.Get()
 		if err != nil {
 			return fmt.Errorf("getting password faild: %v", err)
