@@ -38,12 +38,7 @@ func (s *Secret) staticResolver() (string, error) {
 
 // dynamicResolver returns dynamic secrets that change over time e.g. TOTP
 func (s *Secret) dynamicResolver() (string, error) {
-	lockbuf, err := s.enclave.Open()
-	if err != nil {
-		return "", fmt.Errorf("opening enclave failed: %v", err)
-	}
-
-	return s.replace(lockbuf.String(), false)
+	return s.replace(true, false)
 }
 
 // UnmarshalTOML creates a secret from a toml value
@@ -57,29 +52,6 @@ func (s *Secret) Get() (string, error) {
 		return s.resolver()
 	}
 	return "", nil
-}
-
-// Resolve all static references to secret-stores and keep the dynamic ones.
-func (s *Secret) Resolve() error {
-	if !s.initialzed {
-		panic("secret not initialzed before Resolve()")
-	}
-	lockbuf, err := s.enclave.Open()
-	if err != nil {
-		return fmt.Errorf("opening enclave failed: %v", err)
-	}
-
-	secret, err := s.replace(lockbuf.String(), true)
-	if err != nil {
-		return err
-	}
-
-	if lockbuf.String() != secret {
-		s.enclave = memguard.NewEnclave([]byte(secret))
-		lockbuf.Destroy()
-	}
-
-	return nil
 }
 
 // Destroy the secret content
@@ -102,12 +74,19 @@ func (s *Secret) initialize(b []byte) error {
 	s.resolver = s.staticResolver
 	s.initialzed = true
 
-	return s.Resolve()
+	// We don't need to know the secret
+	_, err := s.replace(false, true)
+	return err
 }
 
-func (s *Secret) replace(secret string, replaceDynamic bool) (string, error) {
+func (s *Secret) replace(replaceDynamic, save bool) (string, error) {
+	lockbuf, err := s.enclave.Open()
+	if err != nil {
+		return "", fmt.Errorf("opening enclave failed: %v", err)
+	}
+
 	replaceErrs := make([]string, 0)
-	newsecret := secretPattern.ReplaceAllStringFunc(secret, func(match string) string {
+	newsecret := secretPattern.ReplaceAllStringFunc(lockbuf.String(), func(match string) string {
 		// There should _ALWAYS_ be two parts due to the regular expression match
 		parts := strings.SplitN(match[2:len(match)-1], ":", 2)
 		storename := parts[0]
@@ -135,6 +114,11 @@ func (s *Secret) replace(secret string, replaceDynamic bool) (string, error) {
 	})
 	if len(replaceErrs) > 0 {
 		return "", fmt.Errorf("replacing secrets failed: %s", strings.Join(replaceErrs, ";"))
+	}
+
+	if save && lockbuf.String() != newsecret {
+		s.enclave = memguard.NewEnclave([]byte(newsecret))
+		lockbuf.Destroy()
 	}
 
 	return newsecret, nil
