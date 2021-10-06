@@ -3,7 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -933,7 +933,7 @@ func loadConfig(config string) ([]byte, error) {
 	}
 
 	// If it isn't a https scheme, try it as a file
-	return ioutil.ReadFile(config)
+	return os.ReadFile(config)
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
@@ -964,7 +964,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 			return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
 		}
 		defer resp.Body.Close()
-		return ioutil.ReadAll(resp.Body)
+		return io.ReadAll(resp.Body)
 	}
 
 	return nil, nil
@@ -1421,28 +1421,8 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				c.getFieldString(metricConfig, "timestamp_format", &mc.TimestampFormat)
 				c.getFieldString(metricConfig, "timestamp_timezone", &mc.TimestampTimezone)
 
-				if fieldConfigs, ok := metricConfig.Fields["field"]; ok {
-					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
-						for _, fieldconfig := range fieldConfigs {
-							var f json_v2.DataSet
-							c.getFieldString(fieldconfig, "path", &f.Path)
-							c.getFieldString(fieldconfig, "rename", &f.Rename)
-							c.getFieldString(fieldconfig, "type", &f.Type)
-							mc.Fields = append(mc.Fields, f)
-						}
-					}
-				}
-				if fieldConfigs, ok := metricConfig.Fields["tag"]; ok {
-					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
-						for _, fieldconfig := range fieldConfigs {
-							var t json_v2.DataSet
-							c.getFieldString(fieldconfig, "path", &t.Path)
-							c.getFieldString(fieldconfig, "rename", &t.Rename)
-							t.Type = "string"
-							mc.Tags = append(mc.Tags, t)
-						}
-					}
-				}
+				mc.Fields = getFieldSubtable(c, metricConfig)
+				mc.Tags = getTagSubtable(c, metricConfig)
 
 				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
 					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
@@ -1458,6 +1438,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 							c.getFieldStringSlice(objectConfig, "tags", &o.Tags)
 							c.getFieldStringMap(objectConfig, "renames", &o.Renames)
 							c.getFieldStringMap(objectConfig, "fields", &o.Fields)
+
+							o.FieldPaths = getFieldSubtable(c, objectConfig)
+							o.TagPaths = getTagSubtable(c, objectConfig)
+
 							mc.JSONObjects = append(mc.JSONObjects, o)
 						}
 					}
@@ -1475,6 +1459,42 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	}
 
 	return pc, nil
+}
+
+func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
+	var fields []json_v2.DataSet
+
+	if fieldConfigs, ok := metricConfig.Fields["field"]; ok {
+		if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+			for _, fieldconfig := range fieldConfigs {
+				var f json_v2.DataSet
+				c.getFieldString(fieldconfig, "path", &f.Path)
+				c.getFieldString(fieldconfig, "rename", &f.Rename)
+				c.getFieldString(fieldconfig, "type", &f.Type)
+				fields = append(fields, f)
+			}
+		}
+	}
+
+	return fields
+}
+
+func getTagSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
+	var tags []json_v2.DataSet
+
+	if fieldConfigs, ok := metricConfig.Fields["tag"]; ok {
+		if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+			for _, fieldconfig := range fieldConfigs {
+				var t json_v2.DataSet
+				c.getFieldString(fieldconfig, "path", &t.Path)
+				c.getFieldString(fieldconfig, "rename", &t.Rename)
+				t.Type = "string"
+				tags = append(tags, t)
+			}
+		}
+	}
+
+	return tags
 }
 
 // buildSerializer grabs the necessary entries from the ast.Table for creating
@@ -1573,7 +1593,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_format", "json_timestamp_units", "json_timezone", "json_v2",
 		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
 		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
-		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
+		"prefix", "prometheus_export_timestamp", "prometheus_ignore_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
 		"value_field_name", "wavefront_source_override", "wavefront_use_strict",

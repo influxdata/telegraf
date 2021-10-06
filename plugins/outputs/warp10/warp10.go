@@ -3,7 +3,7 @@ package warp10
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -154,7 +154,7 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 
 	if resp.StatusCode != http.StatusOK {
 		if w.PrintErrorBody {
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
 		}
 
