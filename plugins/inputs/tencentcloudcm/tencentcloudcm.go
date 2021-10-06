@@ -182,7 +182,7 @@ func (t *TencentCloudCM) Init() error {
 		return fmt.Errorf("account is empty")
 	}
 
-	t.discoverTool = NewDiscoverTool(t.Log)
+	t.discoverTool = newDiscoverTool(t.Log)
 
 	// create account credential
 	for i := range t.Accounts {
@@ -236,11 +236,8 @@ func (t *TencentCloudCM) Init() error {
 			}
 		}
 	}
-
 	t.client = &cloudmonitorClient{Accounts: t.Accounts, Log: t.Log}
-
 	return nil
-
 }
 
 func (t *TencentCloudCM) updateWindow(relativeTo time.Time) {
@@ -269,9 +266,7 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 		<-lmtr.C
 		go func(m metricObject) {
 			defer wg.Done()
-
 			for {
-
 				client, err := t.client.NewClient(m.Region, m.Account.crs, *t)
 				if err != nil {
 					acc.AddError(err)
@@ -296,11 +291,8 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 				results = append(results, *result)
 				rLock.Unlock()
 				m.MonitorInstances = m.MonitorInstances[len(batch):]
-
 			}
-
 		}(obj)
-
 	}
 	wg.Wait()
 	for _, result := range results {

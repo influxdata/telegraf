@@ -374,7 +374,7 @@ func (l LBPublic) Discover(crs *common.Credential, region, endpoint string, offs
 	if err != nil {
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", l.Namespace(), err)
 	}
-	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
+	return *response.Response.TotalCount, mapInterfaceToString(instances), nil
 }
 
 // LBPrivate defines Cloud Load Balancer, see: https://intl.cloud.tencent.com/document/product/214
@@ -431,7 +431,7 @@ func (l *LBPrivate) Discover(crs *common.Credential, region, endpoint string, of
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", l.Namespace(), err)
 	}
 
-	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
+	return *response.Response.TotalCount, mapInterfaceToString(instances), nil
 }
 
 // CES defines Elasticsearch Service, see: https://intl.cloud.tencent.com/document/product/845
@@ -488,5 +488,5 @@ func (c *CES) Discover(crs *common.Credential, region, endpoint string, offset, 
 		return 0, nil, fmt.Errorf("json.Unmarshal response for namespace %s failed: %s", c.Namespace(), err)
 	}
 
-	return uint64(*response.Response.TotalCount), mapInterfaceToString(instances), nil
+	return *response.Response.TotalCount, mapInterfaceToString(instances), nil
 }

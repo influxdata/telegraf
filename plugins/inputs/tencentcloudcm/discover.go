@@ -31,8 +31,8 @@ type discoverObject struct {
 	MonitorInstances []*monitor.Instance          // Monitor Instances with information enough for metrics pulling
 }
 
-// NewDiscoverTool Factory
-func NewDiscoverTool(log telegraf.Logger) *discoverTool {
+// newDiscoverTool Factory
+func newDiscoverTool(log telegraf.Logger) *discoverTool {
 	discoverTool := &discoverTool{
 		DiscoveredObjects: map[string]discoverObject{},
 		DiscoveredMetrics: map[string][]string{},
