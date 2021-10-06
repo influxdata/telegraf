@@ -9,6 +9,7 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
@@ -89,8 +90,21 @@ func TestWriteTCP(t *testing.T) {
 			instance: Graylog{
 				Servers: []string{"tcp://127.0.0.1:12201"},
 				ClientConfig: tlsint.ClientConfig{
+					ServerName: "localhost",
+					TLSCA:      tlsClientConfig.TLSCA,
+					TLSKey:     tlsClientConfig.TLSKey,
+					TLSCert:    tlsClientConfig.TLSCert,
+				},
+			},
+			tlsServerConfig: tlsServerConfig,
+		},
+		{
+			name: "TLS no validation",
+			instance: Graylog{
+				Servers: []string{"tcp://127.0.0.1:12201"},
+				ClientConfig: tlsint.ClientConfig{
+					InsecureSkipVerify: true,
 					ServerName:         "localhost",
-					TLSCA:              tlsClientConfig.TLSCA,
 					TLSKey:             tlsClientConfig.TLSKey,
 					TLSCert:            tlsClientConfig.TLSCert,
 				},
@@ -146,11 +160,10 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
 	require.NoError(t, err)
 	defer udpServer.Close()
 	defer wg.Done()
-
-	bufR := make([]byte, 1024)
 	wg2.Done()
 
 	recv := func() {
+		bufR := make([]byte, 1024)
 		n, _, err := udpServer.ReadFromUDP(bufR)
 		require.NoError(t, err)
 
@@ -179,31 +192,28 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.WaitGroup, tlsConfig *tls.Config) {
-	var err error
-	var tcpServer net.Listener
-	if tlsConfig == nil {
-		tcpServer, err = net.Listen("tcp", "127.0.0.1:12201")
-	} else {
-		tcpServer, err = tls.Listen("tcp", "127.0.0.1:12201", tlsConfig)
-	}
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12201")
 	require.NoError(t, err)
 	defer tcpServer.Close()
 	defer wg.Done()
-
-	bufR := make([]byte, 1)
-	bufW := bytes.NewBuffer(nil)
 	wg2.Done()
 
 	accept := func() net.Conn {
 		conn, err := tcpServer.Accept()
 		require.NoError(t, err)
+		if tcpConn, ok := conn.(*net.TCPConn); ok {
+			_ = tcpConn.SetLinger(0)
+		}
+		_ = conn.SetDeadline(time.Now().Add(15 * time.Second))
+		if tlsConfig != nil {
+			conn = tls.Server(conn, tlsConfig)
+		}
 		return conn
 	}
-	conn := accept()
-	defer conn.Close()
 
-	recv := func() {
-		bufW.Reset()
+	recv := func(conn net.Conn) {
+		bufR := make([]byte, 1)
+		bufW := bytes.NewBuffer(nil)
 		for {
 			n, err := conn.Read(bufR)
 			require.NoError(t, err)
@@ -218,16 +228,22 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 		var obj GelfObject
 		err = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
+		assert.Equal(t, obj["short_message"], "telegraf")
+		assert.Equal(t, obj["_name"], "test1")
+		assert.Equal(t, obj["_tag1"], "value1")
 		assert.Equal(t, obj["_value"], float64(1))
 	}
 
+	conn := accept()
+	defer conn.Close()
+
 	// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
 
-	recv()
-	recv()
+	recv(conn)
+	recv(conn)
 	_ = conn.Close()
 	wg3.Done()
 	conn = accept()
 	defer conn.Close()
-	recv()
+	recv(conn)
 }
