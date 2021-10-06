@@ -46,6 +46,15 @@ apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="+Inf"} 20
 apiserver_request_latencies_sum{resource="bindings",verb="POST"} 1.02726334e+08
 apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025
 `
+
+	validNaNSummary = `# HELP http_request_durations_seconds HTTP latency distributions.
+# TYPE http_request_durations_seconds summary
+http_request_durations_seconds{method="DELETE",status="200",quantile="0.5"} NaN
+http_request_durations_seconds{method="DELETE",status="200",quantile="0.9"} NaN
+http_request_durations_seconds{method="DELETE",status="200",quantile="0.99"} NaN
+http_request_durations_seconds_sum{method="DELETE",status="200"} 0.0
+http_request_durations_seconds_count{method="DELETE",status="200"} 2
+`
 )
 
 func TestParsingValidGauge(t *testing.T) {
@@ -470,5 +479,29 @@ func TestParserProtobufHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error reading metrics for %s: %s", ts.URL, err)
 	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func TestParsingValidNaNSummary(t *testing.T) {
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"method": "DELETE",
+				"status": "200",
+			},
+			map[string]interface{}{
+				"http_request_durations_seconds_count": 2.0,
+				"http_request_durations_seconds_sum":   0.0,
+			},
+			time.Unix(0, 0),
+			telegraf.Summary,
+		),
+	}
+
+	metrics, err := parse([]byte(validNaNSummary))
+
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }

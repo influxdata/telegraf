@@ -124,6 +124,9 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 	metrics = append(metrics, met)
 
 	for _, q := range m.GetSummary().Quantile {
+		if math.IsNaN(q.GetValue()) {
+			continue
+		}
 		newTags := tags
 		fields = make(map[string]interface{})
 
