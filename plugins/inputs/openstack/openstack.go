@@ -36,13 +36,9 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/openstack/orchestration/v1/stacks"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
-)
-
-const (
-	// plugin is used to identify ourselves in log output
-	plugin = "openstack"
 )
 
 var (
@@ -90,9 +86,9 @@ type OpenStack struct {
 	services    map[string]services.Service
 }
 
-// ContainsService indicates whether a particular service is enabled
-func ContainsService(t string, services map[string]services.Service) bool {
-	for _, service := range services {
+// containsService indicates whether a particular service is enabled
+func (o *OpenStack) containsService(t string) bool {
+	for _, service := range o.services {
 		if service.Type == t {
 			return true
 		}
@@ -101,15 +97,12 @@ func ContainsService(t string, services map[string]services.Service) bool {
 	return false
 }
 
-// InEnabledServices indicates whether a particular service is included in EnabledServices
-func InEnabledServices(t string, EnabledServices []string) bool {
-	for _, service := range EnabledServices {
-		if service == t {
-			return true
-		}
+// convertTimeFormat, to convert time format based on HumanReadableTS
+func (o *OpenStack) convertTimeFormat(t time.Time) interface{} {
+	if o.HumanReadableTS {
+		return t.Format("2006-01-02T15:04:05.999999999Z07:00")
 	}
-
-	return false
+	return t.UnixNano()
 }
 
 // Description returns a description string of the input plugin and implements
@@ -182,6 +175,9 @@ func (o *OpenStack) Init() error {
 	if len(o.EnabledServices) == 0 {
 		o.EnabledServices = []string{"services", "projects", "hypervisors", "flavors", "networks", "volumes"}
 	}
+	if o.TagValue == "" {
+		return fmt.Errorf("tag_value option can not be empty string")
+	}
 	sort.Strings(o.EnabledServices)
 	o.flavors = map[string]flavors.Flavor{}
 	o.hypervisors = []hypervisors.Hypervisor{}
@@ -233,14 +229,14 @@ func (o *OpenStack) Init() error {
 	}
 
 	// The Orchestration service is optional
-	if ContainsService("orchestration", o.services) {
+	if o.containsService("orchestration") {
 		if o.stack, err = openstack.NewOrchestrationV1(provider, gophercloud.EndpointOpts{}); err != nil {
 			return fmt.Errorf("unable to create V1 stack client %v", err)
 		}
 	}
 
 	// The Cinder volume storage service is optional
-	if ContainsService("volumev2", o.services) {
+	if o.containsService("volumev2") {
 		if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
 			return fmt.Errorf("unable to create V2 volume client %v", err)
 		}
@@ -292,7 +288,7 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if o.ServerDiagnotics {
-		if !InEnabledServices("servers", o.EnabledServices) {
+		if !choice.Contains("servers", o.EnabledServices) {
 			if err := o.gatherServers(acc); err != nil {
 				acc.AddError(fmt.Errorf("failed to get resource server diagnostics %v", err))
 				return nil
@@ -343,13 +339,8 @@ func (o *OpenStack) gatherStacks(acc telegraf.Accumulator) error {
 			"status":        stack.Status,
 			"id":            stack.ID,
 			"status_reason": stack.StatusReason,
-		}
-		if !o.HumanReadableTS {
-			fields["creation_time"] = stack.CreationTime.UnixNano()
-			fields["updated_time"] = stack.UpdatedTime.UnixNano()
-		} else {
-			fields["creation_time"] = stack.CreationTime.Format("2006-01-02T15:04:05.999999999Z07:00")
-			fields["updated_time"] = stack.UpdatedTime.Format("2006-01-02T15:04:05.999999999Z07:00")
+			"creation_time": o.convertTimeFormat(stack.CreationTime),
+			"updated_time":  o.convertTimeFormat(stack.UpdatedTime),
 		}
 		acc.AddFields("openstack_stack", fields, tags)
 	}
@@ -379,11 +370,7 @@ func (o *OpenStack) gatherNovaServices(acc telegraf.Accumulator) error {
 			"id":              nova_service.ID,
 			"disabled_reason": nova_service.DisabledReason,
 			"forced_down":     nova_service.ForcedDown,
-		}
-		if !o.HumanReadableTS {
-			fields["updated_at"] = nova_service.UpdatedAt.UnixNano()
-		} else {
-			fields["updated_at"] = nova_service.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			"updated_at":      o.convertTimeFormat(nova_service.UpdatedAt),
 		}
 		acc.AddFields("openstack_nova_service", fields, tags)
 	}
@@ -505,13 +492,8 @@ func (o *OpenStack) gatherNetworks(acc telegraf.Accumulator) error {
 			"subnets":                 len(network.Subnets),
 			"shared":                  network.Shared,
 			"availability_zone_hints": strings.Join(network.AvailabilityZoneHints[:], ","),
-		}
-		if !o.HumanReadableTS {
-			fields["updated_at"] = network.UpdatedAt.UnixNano()
-			fields["created_at"] = network.CreatedAt.UnixNano()
-		} else {
-			fields["updated_at"] = network.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
-			fields["created_at"] = network.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			"updated_at":              o.convertTimeFormat(network.UpdatedAt),
+			"created_at":              o.convertTimeFormat(network.CreatedAt),
 		}
 		if len(network.Subnets) > 0 {
 			for _, subnet := range network.Subnets {
@@ -545,19 +527,13 @@ func (o *OpenStack) gatherAgents(acc telegraf.Accumulator) error {
 			"topic":             agent.Topic,
 		}
 		fields := map[string]interface{}{
-			"id":               agent.ID,
-			"admin_state_up":   agent.AdminStateUp,
-			"alive":            agent.Alive,
-			"resources_synced": agent.ResourcesSynced,
-		}
-		if !o.HumanReadableTS {
-			fields["created_at"] = agent.CreatedAt.UnixNano()
-			fields["started_at"] = agent.StartedAt.UnixNano()
-			fields["heartbeat_timestamp"] = agent.HeartbeatTimestamp.UnixNano()
-		} else {
-			fields["created_at"] = agent.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
-			fields["started_at"] = agent.StartedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
-			fields["heartbeat_timestamp"] = agent.HeartbeatTimestamp.Format("2006-01-02T15:04:05.999999999Z07:00")
+			"id":                  agent.ID,
+			"admin_state_up":      agent.AdminStateUp,
+			"alive":               agent.Alive,
+			"resources_synced":    agent.ResourcesSynced,
+			"created_at":          o.convertTimeFormat(agent.CreatedAt),
+			"started_at":          o.convertTimeFormat(agent.StartedAt),
+			"heartbeat_timestamp": o.convertTimeFormat(agent.HeartbeatTimestamp),
 		}
 		acc.AddFields("openstack_newtron_agent", fields, tags)
 	}
@@ -583,15 +559,9 @@ func (o *OpenStack) gatherAggregates(acc telegraf.Accumulator) error {
 			"id":              aggregate.ID,
 			"aggregate_hosts": len(aggregate.Hosts),
 			"deleted":         aggregate.Deleted,
-		}
-		if !o.HumanReadableTS {
-			fields["created_at"] = aggregate.CreatedAt.UnixNano()
-			fields["updated_at"] = aggregate.UpdatedAt.UnixNano()
-			fields["deleted_at"] = aggregate.DeletedAt.UnixNano()
-		} else {
-			fields["created_at"] = aggregate.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
-			fields["updated_at"] = aggregate.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
-			fields["deleted_at"] = aggregate.DeletedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			"created_at":      o.convertTimeFormat(aggregate.CreatedAt),
+			"updated_at":      o.convertTimeFormat(aggregate.UpdatedAt),
+			"deleted_at":      o.convertTimeFormat(aggregate.DeletedAt),
 		}
 		if len(aggregate.Hosts) > 0 {
 			for _, host := range aggregate.Hosts {
@@ -648,7 +618,7 @@ func (o *OpenStack) gatherHypervisors(acc telegraf.Accumulator) error {
 		return fmt.Errorf("unable to extract hypervisors %v", err)
 	}
 	o.hypervisors = hypervisors
-	if InEnabledServices("hypervisors", o.EnabledServices) {
+	if choice.Contains("hypervisors", o.EnabledServices) {
 		for _, hypervisor := range hypervisors {
 			tags := map[string]string{
 				"cpu_vendor":              hypervisor.CPUInfo.Vendor,
@@ -749,13 +719,8 @@ func (o *OpenStack) gatherVolumes(acc telegraf.Accumulator) error {
 			"total_attachments": len(volume.Attachments),
 			"encrypted":         volume.Encrypted,
 			"multiattach":       volume.Multiattach,
-		}
-		if !o.HumanReadableTS {
-			fields["created_at"] = volume.CreatedAt.UnixNano()
-			fields["updated_at"] = volume.UpdatedAt.UnixNano()
-		} else {
-			fields["created_at"] = volume.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
-			fields["updated_at"] = volume.UpdatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")
+			"created_at":        o.convertTimeFormat(volume.CreatedAt),
+			"updated_at":        o.convertTimeFormat(volume.UpdatedAt),
 		}
 		if o.OutputSecrets {
 			tags["user_id"] = volume.UserID
@@ -809,12 +774,12 @@ func (o *OpenStack) gatherStoragePools(acc telegraf.Accumulator) error {
 
 // gatherServers collects servers from the OpenStack API.
 func (o *OpenStack) gatherServers(acc telegraf.Accumulator) error {
-	if !InEnabledServices("hypervisors", o.EnabledServices) {
+	if !choice.Contains("hypervisors", o.EnabledServices) {
 		if err := o.gatherHypervisors(acc); err != nil {
 			acc.AddError(fmt.Errorf("failed to get resource hypervisors %v", err))
 		}
 	}
-	server_gather := InEnabledServices("servers", o.EnabledServices)
+	server_gather := choice.Contains("servers", o.EnabledServices)
 	for _, hypervisor := range o.hypervisors {
 		page, err := servers.List(o.compute, &servers.ListOpts{AllTenants: true, Host: hypervisor.HypervisorHostname}).AllPages()
 		if err != nil {
@@ -902,15 +867,9 @@ func (o *OpenStack) accumulateServer(acc telegraf.Accumulator, server servers.Se
 		"vcpus":            vcpus,
 		"ram_mb":           ram,
 		"disk_gb":          disk,
-	}
-	if !o.HumanReadableTS {
-		fields["fault_created"] = server.Fault.Created.UnixNano()
-		fields["updated"] = server.Updated.UnixNano()
-		fields["created"] = server.Created.UnixNano()
-	} else {
-		fields["fault_created"] = server.Fault.Created.Format("2006-01-02T15:04:05.999999999Z07:00")
-		fields["updated"] = server.Updated.Format("2006-01-02T15:04:05.999999999Z07:00")
-		fields["created"] = server.Created.Format("2006-01-02T15:04:05.999999999Z07:00")
+		"fault_created":    o.convertTimeFormat(server.Fault.Created),
+		"updated":          o.convertTimeFormat(server.Updated),
+		"created":          o.convertTimeFormat(server.Created),
 	}
 	if o.OutputSecrets {
 		tags["user_id"] = server.UserID
