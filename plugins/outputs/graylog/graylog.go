@@ -39,6 +39,7 @@ type gelfConfig struct {
 
 type gelf interface {
 	io.WriteCloser
+	Connect() error
 }
 
 type gelfCommon struct {
@@ -181,13 +182,21 @@ func (g *gelfUDP) compress(b []byte) bytes.Buffer {
 	return buf
 }
 
+func (g *gelfUDP) Connect() error {
+	conn, err := g.dialer.Dial("udp", g.gelfConfig.Endpoint)
+	if err != nil {
+		return err
+	}
+	g.conn = conn
+	return nil
+}
+
 func (g *gelfUDP) send(b []byte) error {
 	if g.conn == nil {
-		conn, err := g.dialer.Dial("udp", g.gelfConfig.Endpoint)
+		err := g.Connect()
 		if err != nil {
 			return err
 		}
-		g.conn = conn
 	}
 
 	_, err := g.conn.Write(b)
@@ -219,19 +228,27 @@ func (g *gelfTCP) Close() (err error) {
 	return err
 }
 
+func (g *gelfTCP) Connect() error {
+	var err error
+	var conn net.Conn
+	if g.tlsConfig == nil {
+		conn, err = g.dialer.Dial("tcp", g.gelfConfig.Endpoint)
+	} else {
+		conn, err = tls.DialWithDialer(g.dialer, "tcp", g.gelfConfig.Endpoint, g.tlsConfig)
+	}
+	if err != nil {
+		return err
+	}
+	g.conn = conn
+	return nil
+}
+
 func (g *gelfTCP) send(b []byte) error {
 	if g.conn == nil {
-		var conn net.Conn
-		var err error
-		if g.tlsConfig == nil {
-			conn, err = g.dialer.Dial("tcp", g.gelfConfig.Endpoint)
-		} else {
-			conn, err = tls.DialWithDialer(g.dialer, "tcp", g.gelfConfig.Endpoint, g.tlsConfig)
-		}
+		err := g.Connect()
 		if err != nil {
 			return err
 		}
-		g.conn = conn
 	}
 
 	_, err := g.conn.Write(b)
@@ -295,6 +312,10 @@ func (g *Graylog) Connect() error {
 
 	for _, server := range g.Servers {
 		w := newGelfWriter(gelfConfig{Endpoint: server}, dialer, tlsCfg)
+		err := w.Connect()
+		if err != nil {
+			return fmt.Errorf("failed to connect to server [%s]: %v", server, err)
+		}
 		writers = append(writers, w)
 		g.closers = append(g.closers, w)
 	}
