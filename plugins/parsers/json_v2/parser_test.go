@@ -21,6 +21,10 @@ func TestData(t *testing.T) {
 		test string
 	}{
 		{
+			name: "Test when using field and object together",
+			test: "mix_field_and_object",
+		},
+		{
 			name: "Test complex nesting",
 			test: "complex_nesting",
 		},
