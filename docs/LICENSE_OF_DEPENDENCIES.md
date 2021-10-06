@@ -174,7 +174,6 @@ following works:
 - github.com/josharian/intern [MIT License](https://github.com/josharian/intern/blob/master/license.md)
 - github.com/josharian/native [MIT License](https://github.com/josharian/native/blob/main/license)
 - github.com/jpillora/backoff [MIT License](https://github.com/jpillora/backoff/blob/master/LICENSE)
-- github.com/jsipprell/keyctl [BSD 3-Clause "New" or "Revised" License](https://github.com/jsipprell/keyctl/blob/master/LICENSE)
 - github.com/json-iterator/go [MIT License](https://github.com/json-iterator/go/blob/master/LICENSE)
 - github.com/kardianos/service [zlib License](https://github.com/kardianos/service/blob/master/LICENSE)
 - github.com/karrick/godirwalk [BSD 2-Clause "Simplified" License](https://github.com/karrick/godirwalk/blob/master/LICENSE)
