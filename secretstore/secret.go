@@ -19,11 +19,6 @@ func NewSecret(b []byte) (Secret, error) {
 	return s, err
 }
 
-// ResolveSecrets iterates over all registered secrets and resolves all possible references.
-func ResolveSecrets() error {
-	return nil
-}
-
 // Secret safely stores sensitive data such as a password or token
 type Secret struct {
 	enclave    *memguard.Enclave

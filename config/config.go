@@ -1054,11 +1054,6 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 	}
 
-	// Try to resolve all secrets in the plugins
-	if err := secretstore.ResolveSecrets(); err != nil {
-		return fmt.Errorf("resolving secrets failed: %v", err)
-	}
-
 	if len(c.Processors) > 1 {
 		sort.Sort(c.Processors)
 	}
