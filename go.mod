@@ -328,7 +328,15 @@ require (
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
 	github.com/signalfx/sapm-proto v0.7.2 // indirect
-	github.com/stretchr/objx v0.2.0 // indirect
+	github.com/sirupsen/logrus v1.8.1
+	github.com/sleepinggenius2/gosmi v0.4.3
+	github.com/snowflakedb/gosnowflake v1.6.2
+	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
+	github.com/stretchr/objx v0.3.0 // indirect
+	github.com/stretchr/testify v1.7.0
+	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
+	github.com/testcontainers/testcontainers-go v0.11.1
+	github.com/tidwall/gjson v1.10.2
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
@@ -404,7 +412,6 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.2 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/jsipprell/keyctl v1.0.0 // indirect
 	github.com/keybase/go-keychain v0.0.0-20190712205309-48d3d31d256d // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
@@ -430,6 +437,4 @@ replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemet
 // replaced due to open PR updating protobuf https://github.com/riemann/riemann-go-client/pull/27
 replace github.com/riemann/riemann-go-client => github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754
 
-replace github.com/99designs/keyring v1.1.6 => github.com/DocLambda/keyring v1.1.7-0.20210921123854-3c26ce9620d4
-
-replace github.com/jsipprell/keyctl v1.0.0 => github.com/DocLambda/keyctl v1.0.1-0.20210921123644-c0d0c2bd0612
+replace github.com/99designs/keyring v1.1.6 => github.com/DocLambda/keyring v1.1.7-0.20211005172301-c1964a25bfa4
