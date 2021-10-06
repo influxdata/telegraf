@@ -274,7 +274,6 @@ type Graylog struct {
 
 	writer  io.Writer
 	closers []io.WriteCloser
-	Log     telegraf.Logger
 }
 
 var sampleConfig = `
