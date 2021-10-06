@@ -30,8 +30,8 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
-	github.com/Microsoft/go-winio v0.4.17-0.20210211115548-6eac466e5fa3 // indirect
-	github.com/Microsoft/hcsshim v0.8.16 // indirect
+	github.com/Microsoft/go-winio v0.4.17 // indirect
+	github.com/Microsoft/hcsshim v0.8.21 // indirect
 	github.com/Shopify/sarama v1.27.2
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/aerospike/aerospike-client-go v1.27.0
@@ -70,8 +70,8 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
-	github.com/containerd/cgroups v0.0.0-20210114181951-8a68de567b68 // indirect
-	github.com/containerd/containerd v1.5.0-beta.4 // indirect
+	github.com/containerd/cgroups v1.0.1 // indirect
+	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/couchbase/go-couchbase v0.1.0
 	github.com/couchbase/gomemcached v0.1.3 // indirect
@@ -203,7 +203,7 @@ require (
 	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/opencontainers/runc v1.0.0-rc95 // indirect
+	github.com/opencontainers/runc v1.0.2 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
@@ -238,7 +238,7 @@ require (
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
 	github.com/signalfx/golib/v3 v3.3.34
 	github.com/signalfx/sapm-proto v0.4.0 // indirect
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/sleepinggenius2/gosmi v0.4.3
 	github.com/snowflakedb/gosnowflake v1.5.0
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
@@ -253,8 +253,8 @@ require (
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/vapourismo/knx-go v0.0.0-20201122213738-75fe09ace330
-	github.com/vishvananda/netlink v1.1.0 // indirect
-	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df // indirect
+	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852 // indirect
+	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.26.0
 	github.com/wavefronthq/wavefront-sdk-go v0.9.7
@@ -314,9 +314,9 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.20.4
+	k8s.io/api v0.20.6
 	k8s.io/apimachinery v0.21.1
-	k8s.io/client-go v0.20.4
+	k8s.io/client-go v0.20.6
 	k8s.io/klog/v2 v2.8.0 // indirect
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
 	modernc.org/cc/v3 v3.33.5 // indirect
