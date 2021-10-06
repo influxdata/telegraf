@@ -2,12 +2,14 @@ package upsd
 
 import (
 	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	nut "github.com/Malinskiy/go.nut"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"strings"
-	"time"
 )
 
 //See: https://networkupstools.org/docs/developer-guide.chunked/index.html
@@ -47,17 +49,34 @@ func (*Upsd) SampleConfig() string {
 }
 
 func (h *Upsd) Gather(accumulator telegraf.Accumulator) error {
-	for _, server := range h.Servers {
-		upsList, err := h.fetchVariables(server)
-		if err != nil {
-			return err
+	l := len(h.Servers)
+	switch l {
+	case 0:
+	case 1:
+		h.gatherServer(h.Servers[0], accumulator)
+	default:
+		var wg sync.WaitGroup
+		wg.Add(l)
+		for _, server := range h.Servers {
+			go func(server string) {
+				defer wg.Done()
+				h.gatherServer(server, accumulator)
+			}(server)
 		}
-
-		for name, variables := range upsList {
-			h.GatherUps(accumulator, name, variables)
-		}
+		wg.Wait()
 	}
 	return nil
+}
+
+func (h *Upsd) gatherServer(server string, accumulator telegraf.Accumulator) {
+	upsList, err := h.fetchVariables(server)
+	if err != nil {
+		accumulator.AddError(err)
+		return
+	}
+	for name, variables := range upsList {
+		h.GatherUps(accumulator, name, variables)
+	}
 }
 
 func (h *Upsd) GatherUps(accumulator telegraf.Accumulator, name string, variables []nut.Variable) {
