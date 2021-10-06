@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -345,13 +346,29 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 }
 
 func shutDownPqos(pqos *exec.Cmd) error {
+	timeout := time.Second * 2
+
 	if pqos.Process != nil {
-		err := pqos.Process.Signal(os.Interrupt)
-		if err != nil {
-			err = pqos.Process.Kill()
-			if err != nil {
-				return fmt.Errorf("failed to shut down pqos: %v", err)
+		// try to send interrupt signal, ignore err for now
+		_ = pqos.Process.Signal(os.Interrupt)
+
+		// wait and constantly check if pqos is still running
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		for {
+			if err := pqos.Process.Signal(syscall.Signal(0)); err == os.ErrProcessDone {
+				return nil
+			} else if ctx.Err() != nil {
+				break
 			}
+		}
+
+		// if pqos is still running after some period, try to kill it
+		// this will send SIGTERM to pqos, and leave garbage in `/sys/fs/resctrl/mon_groups`
+		// fixed in https://github.com/intel/intel-cmt-cat/issues/197
+		err := pqos.Process.Kill()
+		if err != nil {
+			return fmt.Errorf("failed to shut down pqos: %v", err)
 		}
 	}
 	return nil
