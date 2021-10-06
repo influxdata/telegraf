@@ -12,23 +12,15 @@ import (
 // secretPattern is a regex to extract references to secrets stored in a secret-store.
 var secretPattern = regexp.MustCompile(`@\{(\w+:\w+)\}`)
 
-// secretRegister contains a list of secrets for later resolving by the config.
-var secretRegister = make([]*Secret, 0)
-
 // NewSecret creates a new secret from the given bytes
-func NewSecret(b []byte) Secret {
+func NewSecret(b []byte) (Secret, error) {
 	s := Secret{}
-	s.initialize(b)
-	return s
+	err := s.initialize(b)
+	return s, err
 }
 
 // ResolveSecrets iterates over all registered secrets and resolves all possible references.
 func ResolveSecrets() error {
-	for _, secret := range secretRegister {
-		if err := secret.Resolve(); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -61,9 +53,7 @@ func (s *Secret) dynamicResolver() (string, error) {
 
 // UnmarshalTOML creates a secret from a toml value
 func (s *Secret) UnmarshalTOML(b []byte) error {
-	s.initialize(b)
-
-	return nil
+	return s.initialize(b)
 }
 
 // Get return the string representation of the secret
@@ -109,38 +99,15 @@ func (s *Secret) Destroy() {
 		lockbuf.Destroy()
 	}
 
-	// Unregister secret to avoid trying to resolve it
-	s.unregister()
-
 	s.initialzed = false
 }
 
-func (s *Secret) initialize(b []byte) {
+func (s *Secret) initialize(b []byte) error {
 	s.enclave = memguard.NewEnclave(unquote(b))
 	s.resolver = s.staticResolver
 	s.initialzed = true
 
-	secretRegister = append(secretRegister, s)
-}
-
-func (s *Secret) unregister() {
-	// Find secret in the register
-	idx := -1
-	for i, rs := range secretRegister {
-		if rs == s {
-			idx = i
-			break
-		}
-	}
-
-	// Secret is not in register
-	if idx < 0 {
-		return
-	}
-
-	// Remove the secret
-	secretRegister[idx] = secretRegister[len(secretRegister)-1]
-	secretRegister = secretRegister[:len(secretRegister)-1]
+	return s.Resolve()
 }
 
 func (s *Secret) replace(secret string, replaceDynamic bool) (string, error) {
