@@ -31,6 +31,11 @@ All MongoDB server versions from 2.6 and higher are supported.
   ## List of db where collections stats are collected
   ## If empty, all db are concerned
   # col_stats_dbs = ["local"]
+  
+  ## Direct connect to mongod node that included in replcaset and collect stats exactly from this node.
+  ## If you disable this option, telegraf will collect stats only from primary node, even if you specify secondary node in "servers" section.
+  ## Default value true, if you want to disable direct_connect option, you have to set this option to false
+  # direct_connect = true
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

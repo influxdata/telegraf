@@ -26,6 +26,7 @@ type MongoDB struct {
 	GatherColStats      bool
 	GatherTopStat       bool
 	ColStatsDbs         []string
+	DirectConnect       bool
 	tlsint.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -44,7 +45,7 @@ var sampleConfig = `
   ## For example:
   ##   mongodb://user:auth_key@10.10.3.30:27017,
   ##   mongodb://10.10.3.33:18832,
-  servers = ["mongodb://127.0.0.1:27017?connect=direct"]
+  servers = ["mongodb://127.0.0.1:27017"]
 
   ## When true, collect cluster status
   ## Note that the query that counts jumbo chunks triggers a COLLSCAN, which
@@ -64,6 +65,11 @@ var sampleConfig = `
   ## List of db where collections stats are collected
   ## If empty, all db are concerned
   # col_stats_dbs = ["local"]
+
+  ## Direct connect to mongod node that included in replcaset and collect stats exactly from this node.
+  ## If you disable this option, telegraf will collect stats only from primary node, even if you specify secondary node in "servers" section.
+  ## Default value is true, if you want to disable direct_connect option, you need set this option to false
+  # direct_connect = true
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -122,6 +128,24 @@ func (m *MongoDB) Init() error {
 		u, err := url.Parse(connURL)
 		if err != nil {
 			return fmt.Errorf("unable to parse connection URL: %q", err)
+		}
+
+		if m.DirectConnect {
+			if strings.Contains(connURL, "replicaSet") {
+				m.Log.Warn("DirectConnection is set true but connection string contains replicaSet parameter")
+			} else if strings.Contains(connURL, "directConnection") || strings.Contains(connURL, "connect=direct") {
+				m.Log.Warn("DirectConnection is set to true but it seems you already use direct connection option in your connection string")
+			} else if len(strings.Split(u.Host, ",")) > 1 {
+				m.Log.Warn("DirectConnection is set to true but a direct connection cannot be made if multiple hosts are specified")
+			} else {
+				if u.Path == "" {
+					u.Path = "/"
+				}
+				query, _ := url.ParseQuery(u.RawQuery)
+				query.Add("directConnection", "true")
+				u.RawQuery = query.Encode()
+				connURL = u.String()
+			}
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -183,6 +207,7 @@ func init() {
 			GatherColStats:      false,
 			GatherTopStat:       false,
 			ColStatsDbs:         []string{"local"},
+			DirectConnect:       true,
 		}
 	})
 }
