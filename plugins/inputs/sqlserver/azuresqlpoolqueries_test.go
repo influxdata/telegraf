@@ -1,10 +1,10 @@
 package sqlserver
 
 import (
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
-	"github.com/stretchr/testify/require"
-	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestAzureSQL_ElasticPool_ResourceStats_Query(t *testing.T) {
@@ -17,8 +17,8 @@ func TestAzureSQL_ElasticPool_ResourceStats_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_POOL_CONNECTION_STRING")
-	
-	server := &SQLServer {
+
+	server := &SQLServer{
 		Servers:      []string{connectionString},
 		IncludeQuery: []string{"AzureSQLPoolResourceStats"},
 		AuthMethod:   "connection_string",
@@ -59,8 +59,8 @@ func TestAzureSQL_ElasticPool_ResourceGovernance_Query(t *testing.T) {
 	}
 
 	connectionString := os.Getenv("AZURESQL_POOL_CONNECTION_STRING")
-	
-	server := &SQLServer {
+
+	server := &SQLServer{
 		Servers:      []string{connectionString},
 		IncludeQuery: []string{"AzureSQLPoolResourceGovernance"},
 		AuthMethod:   "connection_string",
@@ -123,7 +123,7 @@ func TestAzureSQL_ElasticPool_DatabaseIO_Query(t *testing.T) {
 
 	connectionString := os.Getenv("AZURESQL_POOL_CONNECTION_STRING")
 
-	server := &SQLServer {
+	server := &SQLServer{
 		Servers:      []string{connectionString},
 		IncludeQuery: []string{"AzureSQLPoolDatabaseIO"},
 		AuthMethod:   "connection_string",
@@ -167,7 +167,7 @@ func TestAzureSQL_ElasticPool_OsWaitStats_Query(t *testing.T) {
 
 	connectionString := os.Getenv("AZURESQL_POOL_CONNECTION_STRING")
 
-	server := &SQLServer {
+	server := &SQLServer{
 		Servers:      []string{connectionString},
 		IncludeQuery: []string{"AzureSQLPoolOsWaitStats"},
 		AuthMethod:   "connection_string",
@@ -204,7 +204,7 @@ func TestAzureSQL_ElasticPool_MemoryClerks_Query(t *testing.T) {
 
 	connectionString := os.Getenv("AZURESQL_POOL_CONNECTION_STRING")
 
-	server := &SQLServer {
+	server := &SQLServer{
 		Servers:      []string{connectionString},
 		IncludeQuery: []string{"AzureSQLPoolMemoryClerks"},
 		AuthMethod:   "connection_string",
@@ -236,7 +236,7 @@ func TestAzureSQL_ElasticPool_PerformanceCounters_Query(t *testing.T) {
 
 	connectionString := os.Getenv("AZURESQL_POOL_CONNECTION_STRING")
 
-	server := &SQLServer {
+	server := &SQLServer{
 		Servers:      []string{connectionString},
 		IncludeQuery: []string{"AzureSQLPoolPerformanceCounters"},
 		AuthMethod:   "connection_string",
@@ -270,7 +270,7 @@ func TestAzureSQL_ElasticPool_Schedulers_Query(t *testing.T) {
 
 	connectionString := os.Getenv("AZURESQL_POOL_CONNECTION_STRING")
 
-	server := &SQLServer {
+	server := &SQLServer{
 		Servers:      []string{connectionString},
 		IncludeQuery: []string{"AzureSQLPoolSchedulers"},
 		AuthMethod:   "connection_string",
@@ -288,8 +288,8 @@ func TestAzureSQL_ElasticPool_Schedulers_Query(t *testing.T) {
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "scheduler_id"))
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "cpu_id"))
 	require.True(t, acc.HasTag("sqlserver_schedulers", "status"))
-	require.True(t, acc.HasField("sqlserver_schedulers", "is_online"))	
-	require.True(t, acc.HasField("sqlserver_schedulers", "is_idle"))	
+	require.True(t, acc.HasField("sqlserver_schedulers", "is_online"))
+	require.True(t, acc.HasField("sqlserver_schedulers", "is_idle"))
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "preemptive_switches_count"))
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "context_switches_count"))
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "idle_switches_count"))
@@ -307,6 +307,6 @@ func TestAzureSQL_ElasticPool_Schedulers_Query(t *testing.T) {
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "total_cpu_idle_capped_ms"))
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "total_scheduler_delay_ms"))
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "ideal_workers_limit"))
-	
+
 	server.Stop()
 }

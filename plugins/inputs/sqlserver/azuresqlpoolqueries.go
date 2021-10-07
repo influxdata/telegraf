@@ -264,13 +264,12 @@ HAVING
 OPTION(RECOMPILE);
 `
 
-
 // Specific case on this query when cntr_type = 537003264 to return a percentage value between 0 and 100
 // cf. https://docs.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-os-performance-counters-transact-sql?view=azuresqldb-current
-// Performance counters where the cntr_type column value is 537003264 display the ratio of a subset to its set as a percentage. 
-// For example, the Buffer Manager:Buffer cache hit ratio counter compares the total number of cache hits and the total number of cache lookups. 
-// As such, to get a snapshot-like reading of the last second only, you must compare the delta between the current value and the base value (denominator) 
-// between two collection points that are one second apart. 
+// Performance counters where the cntr_type column value is 537003264 display the ratio of a subset to its set as a percentage.
+// For example, the Buffer Manager:Buffer cache hit ratio counter compares the total number of cache hits and the total number of cache lookups.
+// As such, to get a snapshot-like reading of the last second only, you must compare the delta between the current value and the base value (denominator)
+// between two collection points that are one second apart.
 // The corresponding base value is the performance counter Buffer Manager:Buffer cache hit ratio base where the cntr_type column value is 1073939712.
 const sqlAzurePoolPerformanceCounters = `
 SET DEADLOCK_PRIORITY -10;
