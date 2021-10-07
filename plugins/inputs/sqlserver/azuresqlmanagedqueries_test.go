@@ -154,7 +154,7 @@ func TestAzureSQL_Managed_ServerProperties_Query(t *testing.T) {
 	require.True(t, acc.HasTag("sqlserver_server_properties", "hardware_type"))
 	require.True(t, acc.HasInt64Field("sqlserver_server_properties", "total_storage_mb"))
 	require.True(t, acc.HasInt64Field("sqlserver_server_properties", "available_storage_mb"))
-	require.True(t, acc.HasField("sqlserver_server_properties", "uptime")) // time
+	require.True(t, acc.HasField("sqlserver_server_properties", "uptime"))	// Time field.
 	require.True(t, acc.HasTag("sqlserver_server_properties", "sql_version"))
 	require.True(t, acc.HasTag("sqlserver_server_properties", "sql_version_desc"))
 	require.True(t, acc.HasInt64Field("sqlserver_server_properties", "db_online"))
@@ -320,9 +320,9 @@ func TestAzureSQL_Managed_Requests_Query(t *testing.T) {
 	require.True(t, acc.HasInt64Field("sqlserver_requests", "granted_query_memory_pages"))
 	require.True(t, acc.HasFloatField("sqlserver_requests", "percent_complete"))
 	require.True(t, acc.HasTag("sqlserver_requests", "statement_text"))
-	require.True(t, acc.HasField("sqlserver_requests", "objectid"))         // null
-	require.True(t, acc.HasField("sqlserver_requests", "stmt_object_name")) // null
-	require.True(t, acc.HasField("sqlserver_requests", "stmt_db_name"))     // null
+	require.True(t, acc.HasField("sqlserver_requests", "objectid"))         // Can be null.
+	require.True(t, acc.HasField("sqlserver_requests", "stmt_object_name")) // Can be null.
+	require.True(t, acc.HasField("sqlserver_requests", "stmt_db_name"))     // Can be null.
 	require.True(t, acc.HasTag("sqlserver_requests", "query_hash"))
 	require.True(t, acc.HasTag("sqlserver_requests", "query_plan_hash"))
 	require.True(t, acc.HasTag("sqlserver_requests", "session_db_name"))
@@ -358,8 +358,8 @@ func TestAzureSQL_Managed_Schedulers_Query(t *testing.T) {
 	require.True(t, acc.HasTag("sqlserver_schedulers", "sql_instance"))
 	require.True(t, acc.HasTag("sqlserver_schedulers", "scheduler_id"))
 	require.True(t, acc.HasTag("sqlserver_schedulers", "cpu_id"))
-	require.True(t, acc.HasField("sqlserver_schedulers", "is_online")) // bool
-	require.True(t, acc.HasField("sqlserver_schedulers", "is_idle"))   // bool
+	require.True(t, acc.HasField("sqlserver_schedulers", "is_online")) // Bool field.
+	require.True(t, acc.HasField("sqlserver_schedulers", "is_idle"))   // Bool field.
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "preemptive_switches_count"))
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "context_switches_count"))
 	require.True(t, acc.HasInt64Field("sqlserver_schedulers", "current_tasks_count"))
