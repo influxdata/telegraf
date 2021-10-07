@@ -19,6 +19,11 @@ This plugin writes to a Graylog instance using the "[GELF][]" format.
   ##   example: short_message_field = "message"
   # short_message_field = ""
 
+  ## According to GELF payload specification, additional fields names must be prefixed
+  ## with an underscore. Previous versions did not prefix custom field 'name' with underscore.
+  ## Set to true for backward compatibility.
+  # name_field_no_prefix = false
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

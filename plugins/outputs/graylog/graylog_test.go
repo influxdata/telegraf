@@ -34,6 +34,13 @@ func TestWriteUDP(t *testing.T) {
 				Servers: []string{"udp://127.0.0.1:12201"},
 			},
 		},
+		{
+			name: "UDP non-standard name field",
+			instance: Graylog{
+				Servers:           []string{"udp://127.0.0.1:12201"},
+				NameFieldNoPrefix: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -42,7 +49,7 @@ func TestWriteUDP(t *testing.T) {
 			var wg2 sync.WaitGroup
 			wg.Add(1)
 			wg2.Add(1)
-			go UDPServer(t, &wg, &wg2)
+			go UDPServer(t, &wg, &wg2, &tt.instance)
 			wg2.Wait()
 
 			i := tt.instance
@@ -153,7 +160,7 @@ func TestWriteTCP(t *testing.T) {
 
 type GelfObject map[string]interface{}
 
-func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
+func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Graylog) {
 	serverAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:12201")
 	require.NoError(t, err)
 	udpServer, err := net.ListenUDP("udp", serverAddr)
@@ -178,7 +185,11 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
 		_ = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
 		assert.Equal(t, obj["short_message"], "telegraf")
-		assert.Equal(t, obj["_name"], "test1")
+		if config.NameFieldNoPrefix {
+			assert.Equal(t, obj["name"], "test1")
+		} else {
+			assert.Equal(t, obj["_name"], "test1")
+		}
 		assert.Equal(t, obj["_tag1"], "value1")
 		assert.Equal(t, obj["_value"], float64(1))
 	}

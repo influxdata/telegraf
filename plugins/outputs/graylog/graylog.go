@@ -269,6 +269,7 @@ func (g *gelfTCP) send(b []byte) error {
 type Graylog struct {
 	Servers           []string        `toml:"servers"`
 	ShortMessageField string          `toml:"short_message_field"`
+	NameFieldNoPrefix bool            `toml:"name_field_noprefix"`
 	Timeout           config.Duration `toml:"timeout"`
 	tlsint.ClientConfig
 
@@ -287,6 +288,11 @@ var sampleConfig = `
   ## "telegraf" will be used.
   ##   example: short_message_field = "message"
   # short_message_field = ""
+
+  ## According to GELF payload specification, additional fields names must be prefixed
+  ## with an underscore. Previous versions did not prefix custom field 'name' with underscore.
+  ## Set to true for backward compatibility.
+  # name_field_no_prefix = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -362,7 +368,11 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	m["version"] = "1.1"
 	m["timestamp"] = float64(metric.Time().UnixNano()) / 1_000_000_000
 	m["short_message"] = "telegraf"
-	m["_name"] = metric.Name()
+	if g.NameFieldNoPrefix {
+		m["name"] = metric.Name()
+	} else {
+		m["_name"] = metric.Name()
+	}
 
 	if host, ok := metric.GetTag("host"); ok {
 		m["host"] = host
