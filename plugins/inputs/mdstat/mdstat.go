@@ -59,7 +59,8 @@ type recoveryLine struct {
 }
 
 type MdstatConf struct {
-	FileName string `toml:"file_name"`
+	FileName  string `toml:"file_name"`
+	FinalPath string
 }
 
 func (k *MdstatConf) Description() string {
@@ -278,6 +279,15 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 }
 
 func (k *MdstatConf) getProcMdstat() ([]byte, error) {
+	data, err := os.ReadFile(mdStatFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (k *MdstatConf) Init() error {
 	var mdStatFile string
 	if k.FileName == "" {
 		mdStatFile = proc(envProc, defaultHostProc) + "/mdstat"
@@ -286,17 +296,12 @@ func (k *MdstatConf) getProcMdstat() ([]byte, error) {
 	}
 	if _, err := os.Stat(mdStatFile); os.IsNotExist(err) {
 		// if the file doesn't exist, we shouldn't spam the log with messages on every run
-		return nil, nil
+		return fmt.Errorf("mdstat: %s does not exist", mdStatFile)
 	} else if err != nil {
 		return nil, err
 	}
-
-	data, err := os.ReadFile(mdStatFile)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
+	k.FinalPath = mdstatFile
+	return nil
 }
 
 func init() {
