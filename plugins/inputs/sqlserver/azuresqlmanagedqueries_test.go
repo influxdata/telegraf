@@ -154,7 +154,7 @@ func TestAzureSQL_Managed_ServerProperties_Query(t *testing.T) {
 	require.True(t, acc.HasTag("sqlserver_server_properties", "hardware_type"))
 	require.True(t, acc.HasInt64Field("sqlserver_server_properties", "total_storage_mb"))
 	require.True(t, acc.HasInt64Field("sqlserver_server_properties", "available_storage_mb"))
-	require.True(t, acc.HasField("sqlserver_server_properties", "uptime"))	// Time field.
+	require.True(t, acc.HasField("sqlserver_server_properties", "uptime")) // Time field.
 	require.True(t, acc.HasTag("sqlserver_server_properties", "sql_version"))
 	require.True(t, acc.HasTag("sqlserver_server_properties", "sql_version_desc"))
 	require.True(t, acc.HasInt64Field("sqlserver_server_properties", "db_online"))
