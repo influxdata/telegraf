@@ -189,6 +189,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/temp"
 	_ "github.com/influxdata/telegraf/plugins/inputs/tengine"
 	_ "github.com/influxdata/telegraf/plugins/inputs/tomcat"
+	_ "github.com/influxdata/telegraf/plugins/inputs/transmission"
 	_ "github.com/influxdata/telegraf/plugins/inputs/trig"
 	_ "github.com/influxdata/telegraf/plugins/inputs/twemproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/udp_listener"
