@@ -59,8 +59,7 @@ type recoveryLine struct {
 }
 
 type MdstatConf struct {
-	FileName  string `toml:"file_name"`
-	FinalPath string
+	FileName string `toml:"file_name"`
 }
 
 func (k *MdstatConf) Description() string {
@@ -72,6 +71,8 @@ var mdSampleConfig = `
 	## If not specified, then default is /proc/mdstat
 	# file_name = "/proc/mdstat"
 `
+
+var MDFilePath = ""
 
 func (k *MdstatConf) SampleConfig() string {
 	return mdSampleConfig
@@ -278,8 +279,24 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// correctly format/discover mdstat file
+func (k *MdstatConf) getMdFilePath() string {
+	var mdStatFile string
+	if k.FileName == "" {
+		var proc string
+		// try to read full file path
+		if proc = os.Getenv(envProc); proc == "" {
+			proc = defaultHostProc
+		}
+		mdStatFile = proc + "/mdstat"
+	} else {
+		mdStatFile = k.FileName
+	}
+	return mdStatFile
+}
+
 func (k *MdstatConf) getProcMdstat() ([]byte, error) {
-	data, err := os.ReadFile(mdStatFile)
+	data, err := os.ReadFile(k.getMdFilePath())
 	if err != nil {
 		return nil, err
 	}
@@ -288,32 +305,16 @@ func (k *MdstatConf) getProcMdstat() ([]byte, error) {
 }
 
 func (k *MdstatConf) Init() error {
-	var mdStatFile string
-	if k.FileName == "" {
-		mdStatFile = proc(envProc, defaultHostProc) + "/mdstat"
-	} else {
-		mdStatFile = k.FileName
-	}
-	if _, err := os.Stat(mdStatFile); os.IsNotExist(err) {
+	filepath := k.getMdFilePath()
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
 		// if the file doesn't exist, we shouldn't spam the log with messages on every run
-		return fmt.Errorf("mdstat: %s does not exist", mdStatFile)
+		return fmt.Errorf("mdstat: %s does not exist", filepath)
 	} else if err != nil {
-		return nil, err
+		return err
 	}
-	k.FinalPath = mdstatFile
 	return nil
 }
 
 func init() {
 	inputs.Add("mdstat", func() telegraf.Input { return &MdstatConf{} })
-}
-
-// proc can be used to read file paths from env
-func proc(env, path string) string {
-	// try to read full file path
-	if p := os.Getenv(env); p != "" {
-		return p
-	}
-	// return default path
-	return path
 }

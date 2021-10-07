@@ -11,6 +11,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMissingMdstatProcFile(t *testing.T) {
+	filename := makeFakeMDStatFile([]byte(mdStatFileEmpty))
+	defer os.Remove(filename)
+	k := MdstatConf{
+		FileName: filename + "a",
+	}
+	err := k.Init()
+	assert.NotNil(t, err)
+}
+
 func TestFullMdstatProcFile(t *testing.T) {
 	filename := makeFakeMDStatFile([]byte(mdStatFileFull))
 	defer os.Remove(filename)
