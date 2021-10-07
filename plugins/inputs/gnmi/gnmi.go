@@ -215,19 +215,19 @@ func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 // SubscribeGNMI and extract telemetry data
 func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
 	// Create a slice of grpc options for multiple different options.
-	var Options []grpc.DialOption
+	var options []grpc.DialOption
 	if len(c.WebAuthToken) > 0 {
-		Options = append(Options, grpc.WithPerRPCCredentials((oauth.NewOauthAccess(&oauth2.Token{
+		options = append(options, grpc.WithPerRPCCredentials((oauth.NewOauthAccess(&oauth2.Token{
 			AccessToken: c.WebAuthToken,
 		}))))
 	}
 	if tlscfg != nil {
-		Options = append(Options, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
+		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
 	}
 	if tlscfg == nil {
-		Options = append(Options, grpc.WithInsecure())
+		options = append(options, grpc.WithInsecure())
 	}
-	client, err := grpc.DialContext(ctx, address, Options...)
+	client, err := grpc.DialContext(ctx, address, options...)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %v", err)
 	}
