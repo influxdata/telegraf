@@ -285,7 +285,8 @@ func (k *MdstatConf) getProcMdstat() ([]byte, error) {
 		mdStatFile = k.FileName
 	}
 	if _, err := os.Stat(mdStatFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("mdstat: %s does not exist", mdStatFile)
+		// if the file doesn't exist, we shouldn't spam the log with messages on every run
+		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
