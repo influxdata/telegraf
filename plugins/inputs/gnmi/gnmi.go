@@ -25,6 +25,8 @@ import (
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	"golang.org/x/oauth2"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
 // gNMI plugin instance
@@ -57,7 +59,8 @@ type GNMI struct {
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 
-	Log telegraf.Logger
+	Log          telegraf.Logger
+	WebAuthToken string `toml:"webauthtoken"`
 }
 
 // Subscription for a gNMI client
@@ -95,6 +98,12 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	if c.EnableTLS {
 		if tlscfg, err = c.ClientConfig.TLSConfig(); err != nil {
 			return err
+		}
+	}
+	if c.WebAuthToken != "" {
+		tlscfg = &tls.Config{
+			Renegotiation:      tls.RenegotiateNever,
+			InsecureSkipVerify: true,
 		}
 	}
 
@@ -205,14 +214,20 @@ func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 
 // SubscribeGNMI and extract telemetry data
 func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
-	var opt grpc.DialOption
-	if tlscfg != nil {
-		opt = grpc.WithTransportCredentials(credentials.NewTLS(tlscfg))
-	} else {
-		opt = grpc.WithInsecure()
+	// Create a slice of grpc options for multiple different options.
+	var Options []grpc.DialOption
+	if len(c.WebAuthToken) > 0 {
+		Options = append(Options, grpc.WithPerRPCCredentials((oauth.NewOauthAccess(&oauth2.Token{
+			AccessToken: c.WebAuthToken,
+		}))))
 	}
-
-	client, err := grpc.DialContext(ctx, address, opt)
+	if tlscfg != nil {
+		Options = append(Options, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
+	}
+	if tlscfg == nil {
+		Options = append(Options, grpc.WithInsecure())
+	}
+	client, err := grpc.DialContext(ctx, address, Options...)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %v", err)
 	}
