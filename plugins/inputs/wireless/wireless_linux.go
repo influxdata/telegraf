@@ -5,7 +5,6 @@ package wireless
 
 import (
 	"bytes"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -47,7 +46,7 @@ func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 	w.loadPath()
 
 	wirelessPath := path.Join(w.HostProc, "net", "wireless")
-	table, err := ioutil.ReadFile(wirelessPath)
+	table, err := os.ReadFile(wirelessPath)
 	if err != nil {
 		return err
 	}

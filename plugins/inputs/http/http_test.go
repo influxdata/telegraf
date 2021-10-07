@@ -3,7 +3,7 @@ package http_test
 import (
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -183,7 +183,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 				URLs:   []string{url},
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Equal(t, []byte(""), body)
 				w.WriteHeader(http.StatusOK)
@@ -197,7 +197,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 				Body:   "test",
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Equal(t, []byte("test"), body)
 				w.WriteHeader(http.StatusOK)
@@ -211,7 +211,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 				Body:   "test",
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Equal(t, []byte("test"), body)
 				w.WriteHeader(http.StatusOK)
@@ -230,7 +230,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 
 				gr, err := gzip.NewReader(r.Body)
 				require.NoError(t, err)
-				body, err := ioutil.ReadAll(gr)
+				body, err := io.ReadAll(gr)
 				require.NoError(t, err)
 				require.Equal(t, []byte("test"), body)
 				w.WriteHeader(http.StatusOK)

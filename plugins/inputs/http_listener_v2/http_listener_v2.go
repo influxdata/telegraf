@@ -4,7 +4,7 @@ import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -292,7 +292,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		}
 		defer r.Close()
 		maxReader := http.MaxBytesReader(res, r, int64(h.MaxBodySize))
-		bytes, err := ioutil.ReadAll(maxReader)
+		bytes, err := io.ReadAll(maxReader)
 		if err != nil {
 			if err := tooLarge(res); err != nil {
 				h.Log.Debugf("error in too-large: %v", err)
@@ -302,7 +302,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		return bytes, true
 	case "snappy":
 		defer req.Body.Close()
-		bytes, err := ioutil.ReadAll(req.Body)
+		bytes, err := io.ReadAll(req.Body)
 		if err != nil {
 			h.Log.Debug(err.Error())
 			if err := badRequest(res); err != nil {
@@ -322,7 +322,7 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 		return bytes, true
 	default:
 		defer req.Body.Close()
-		bytes, err := ioutil.ReadAll(req.Body)
+		bytes, err := io.ReadAll(req.Body)
 		if err != nil {
 			h.Log.Debug(err.Error())
 			if err := badRequest(res); err != nil {

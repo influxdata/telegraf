@@ -2,7 +2,7 @@ package prometheus
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -261,7 +261,7 @@ rpc_duration_seconds_count 2693
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
 			require.Equal(t,
@@ -392,7 +392,7 @@ rpc_duration_seconds_count 2693
 			resp, err := http.Get(output.URL())
 			require.NoError(t, err)
 
-			actual, err := ioutil.ReadAll(resp.Body)
+			actual, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
 			require.Equal(t,
@@ -422,7 +422,7 @@ func TestLandingPage(t *testing.T) {
 	resp, err := http.Get(u.String())
 	require.NoError(t, err)
 
-	actual, err := ioutil.ReadAll(resp.Body)
+	actual, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
 	require.Equal(t, expected, strings.TrimSpace(string(actual)))

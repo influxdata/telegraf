@@ -3,7 +3,7 @@ package zipkin
 import (
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"mime"
 	"net/http"
 	"strings"
@@ -88,7 +88,7 @@ func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 	}
 
-	octets, err := ioutil.ReadAll(body)
+	octets, err := io.ReadAll(body)
 	if err != nil {
 		s.recorder.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)

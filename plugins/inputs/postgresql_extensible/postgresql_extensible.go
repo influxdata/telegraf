@@ -3,7 +3,7 @@ package postgresql_extensible
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -147,7 +147,7 @@ func ReadQueryFromFile(filePath string) (string, error) {
 	}
 	defer file.Close()
 
-	query, err := ioutil.ReadAll(file)
+	query, err := io.ReadAll(file)
 	if err != nil {
 		return "", err
 	}

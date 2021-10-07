@@ -1,4 +1,29 @@
-## v1.20.0-rc0 [2021-09-02]
+## v1.20.1 [2021-10-06]
+
+#### Bugfixes
+
+  - [#9776](https://github.com/influxdata/telegraf/pull/9776) Update k8s.io/apimachinery module from 0.21.1 to 0.22.2
+  - [#9864](https://github.com/influxdata/telegraf/pull/9864) Update containerd module to v1.5.7
+  - [#9863](https://github.com/influxdata/telegraf/pull/9863) Update consul module to v1.11.0
+  - [#9846](https://github.com/influxdata/telegraf/pull/9846) `inputs.mongodb` Fix panic due to nil dereference
+  - [#9850](https://github.com/influxdata/telegraf/pull/9850) `inputs.intel_rdt` Prevent timeout when logging
+  - [#9848](https://github.com/influxdata/telegraf/pull/9848) `outputs.loki` Update http_headers setting to match sample config
+  - [#9808](https://github.com/influxdata/telegraf/pull/9808) `inputs.procstat` Add missing tags
+  - [#9803](https://github.com/influxdata/telegraf/pull/9803) `outputs.mqtt` Add keep alive config option and documentation around issue with eclipse/mosquitto version
+  - [#9800](https://github.com/influxdata/telegraf/pull/9800) Fix output buffer never completely flushing
+  - [#9458](https://github.com/influxdata/telegraf/pull/9458) `inputs.couchbase` Fix insecure certificate validation
+  - [#9797](https://github.com/influxdata/telegraf/pull/9797) `inputs.opentelemetry` Fix error returned to OpenTelemetry client
+  - [#9789](https://github.com/influxdata/telegraf/pull/9789) Update github.com/testcontainers/testcontainers-go module from 0.11.0 to 0.11.1
+  - [#9791](https://github.com/influxdata/telegraf/pull/9791) Update github.com/Azure/go-autorest/autorest/adal module
+  - [#9678](https://github.com/influxdata/telegraf/pull/9678) Update github.com/Azure/go-autorest/autorest/azure/auth module from 0.5.6 to 0.5.8
+  - [#9769](https://github.com/influxdata/telegraf/pull/9769) Update cloud.google.com/go/pubsub module from 1.15.0 to 1.17.0
+  - [#9770](https://github.com/influxdata/telegraf/pull/9770) Update github.com/aws/smithy-go module from 1.3.1 to 1.8.0
+
+#### Features
+
+  - [#9838](https://github.com/influxdata/telegraf/pull/9838) `inputs.elasticsearch_query` Add custom time/date format field
+
+## v1.20.0 [2021-09-17]
 
 #### Release Notes
 
@@ -6,7 +31,7 @@
 
 #### Bugfixes
 
-  - [#9700](https://github.com/influxdata/telegraf/pull/9700) Update thrift module to 0.14.2 and zipkin-go-opentracing 0.4.5
+  - [#9700](https://github.com/influxdata/telegraf/pull/9700) Update thrift module to 0.14.2 and zipkin-go-opentracing to 0.4.5
   - [#9587](https://github.com/influxdata/telegraf/pull/9587) `outputs.opentelemetry` Use headers config in grpc requests
   - [#9713](https://github.com/influxdata/telegraf/pull/9713) Update runc module to v1.0.0-rc95 to address CVE-2021-30465
   - [#9699](https://github.com/influxdata/telegraf/pull/9699) Migrate dgrijalva/jwt-go to golang-jwt/jwt/v4
@@ -16,8 +41,21 @@
   - [#9674](https://github.com/influxdata/telegraf/pull/9674) `inputs.mongodb` Change command based on server version
   - [#9676](https://github.com/influxdata/telegraf/pull/9676) `outputs.dynatrace` Remove hardcoded int value
   - [#9619](https://github.com/influxdata/telegraf/pull/9619) `outputs.influxdb_v2` Increase accepted retry-after header values.
-  - [#9652](https://github.com/influxdata/telegraf/pull/9652) Update github.com/tinylib/msgp module from 1.1.5 to 1.1.6
+  - [#9652](https://github.com/influxdata/telegraf/pull/9652) Update tinylib/msgp module from 1.1.5 to 1.1.6
   - [#9471](https://github.com/influxdata/telegraf/pull/9471) `inputs.sql` Make timeout apply to single query
+  - [#9760](https://github.com/influxdata/telegraf/pull/9760) Update shirou/gopsutil module to 3.21.8
+  - [#9707](https://github.com/influxdata/telegraf/pull/9707) `inputs.logstash` Add additional logstash output plugin stats
+  - [#9656](https://github.com/influxdata/telegraf/pull/9656) Update miekg/dns module from 1.1.31 to 1.1.43
+  - [#9750](https://github.com/influxdata/telegraf/pull/9750) Update antchfx/xmlquery module from 1.3.5 to 1.3.6
+  - [#9757](https://github.com/influxdata/telegraf/pull/9757) `parsers.registry.go` Fix panic for non-existing metric names
+  - [#9677](https://github.com/influxdata/telegraf/pull/9677) Update Azure/azure-event-hubs-go/v3 module from 3.2.0 to 3.3.13
+  - [#9653](https://github.com/influxdata/telegraf/pull/9653) Update prometheus/client_golang module from 1.7.1 to 1.11.0
+  - [#9693](https://github.com/influxdata/telegraf/pull/9693) `inputs.cloudwatch` Fix pagination error
+  - [#9727](https://github.com/influxdata/telegraf/pull/9727) `outputs.http` Add error message logging
+  - [#9718](https://github.com/influxdata/telegraf/pull/9718) Update influxdata/influxdb-observability module from 0.2.4 to 0.2.7
+  - [#9560](https://github.com/influxdata/telegraf/pull/9560) Update gopcua/opcua module
+  - [#9544](https://github.com/influxdata/telegraf/pull/9544) `inputs.couchbase` Fix memory leak
+  - [#9588](https://github.com/influxdata/telegraf/pull/9588) `outputs.opentelemetry` Use attributes setting
 
 #### Features
 
@@ -38,12 +76,15 @@
   - [#9343](https://github.com/influxdata/telegraf/pull/9343) `inputs.snmp_trap` Improve MIB lookup performance
   - [#9342](https://github.com/influxdata/telegraf/pull/9342) `outputs.newrelic` Add option to override metric_url
   - [#9306](https://github.com/influxdata/telegraf/pull/9306) `inputs.smart` Add power mode status
+  - [#9762](https://github.com/influxdata/telegraf/pull/9762) `inputs.bond` Add count of bonded slaves (for easier alerting)
+  - [#9675](https://github.com/influxdata/telegraf/pull/9675) `outputs.dynatrace` Remove special handling from counters and update dynatrace-oss/dynatrace-metric-utils-go module to 0.3.0
 
 #### New Input Plugins
 
   - [#9602](https://github.com/influxdata/telegraf/pull/9602) Add rocm_smi input to monitor AMD GPUs
   - [#9101](https://github.com/influxdata/telegraf/pull/9101) Add mdstat input to gather from /proc/mdstat collection
   - [#3536](https://github.com/influxdata/telegraf/pull/3536) Add Elasticsearch query input
+  - [#9623](https://github.com/influxdata/telegraf/pull/9623) Add internet Speed Monitor Input Plugin
 
 #### New Output Plugins
 
