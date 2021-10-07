@@ -274,3 +274,25 @@ func TestRemoveCarriageReturns(t *testing.T) {
 		}
 	}
 }
+
+func TestCommandExtended(t *testing.T) {
+	parser, _ := parsers.NewValueParser("metric", "string", "field", nil)
+	e := NewExec()
+	e.CommandsExtended = []CommandExtended{{
+		Command: "echo extended_command",
+		Tags:    [][]string{{"tag_1", "value_1"}},
+	}}
+	e.SetParser(parser)
+
+	var acc testutil.Accumulator
+	err := acc.GatherError(e.Gather)
+	require.NoError(t, err)
+
+	fieldsExtended := map[string]interface{}{
+		"field": "extended_command",
+	}
+	tags := map[string]string{
+		"tag_1": "value_1",
+	}
+	acc.AssertContainsTaggedFields(t, "metric", fieldsExtended, tags)
+}

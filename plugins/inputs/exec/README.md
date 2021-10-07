@@ -15,7 +15,24 @@ This plugin can be used to poll for custom metrics from any source.
     "/usr/bin/mycollector --foo=bar",
     "/tmp/collect_*.sh"
   ]
+  
+  ## Extended commands can contain tags which will be added to the metrics gathered by the command execution
+  ## Tags need to be written as an array of two strings: first one is the tag name, second the tag value
+  commands_extended = [
+    { command = "/tmp/test.sh", tags = [ ["tag_1", "value_1"], ["tag_2", "value_2"] ] },
+    { command = "/usr/bin/mycollector --foo=bar", tags = [ ["tag_1", "value_2"], [ "tag_3", "value_3" ] ] }
+  ]
 
+  ## additional parameters that will be added to the metrics as tags
+  ## Lines correspond to the command lines, so first line of parameters are 
+  ## added to metrics of first command and so on. 
+  ## If one command should not have additional tags, add an empty array.
+  tags = [
+    [ ],
+    [ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
+    [ [ "tag_3", "value_tag_3" ] ]
+  ]
+ 
   ## Timeout for each command to complete.
   timeout = "5s"
 
