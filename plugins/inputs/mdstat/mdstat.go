@@ -72,8 +72,6 @@ var mdSampleConfig = `
 	# file_name = "/proc/mdstat"
 `
 
-var MDFilePath = ""
-
 func (k *MdstatConf) SampleConfig() string {
 	return mdSampleConfig
 }
