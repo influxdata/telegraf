@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/windows"
 )
 
 var InvalidServices = []string{"XYZ1@", "ZYZ@", "SDF_@#"}
@@ -19,7 +20,27 @@ func TestListIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	provider := &MgProvider{}
-	scmgr, err := provider.Connect()
+	scmgr, err := provider.Connect(windows.SC_MANAGER_ALL_ACCESS)
+	require.NoError(t, err)
+	defer scmgr.Disconnect()
+
+	winServices := &WinServices{
+		ServiceNames: KnownServices,
+	}
+	winServices.Init()
+	services, err := winServices.listServices(scmgr)
+	require.NoError(t, err)
+	require.Len(t, services, 2, "Different number of services")
+	require.Equal(t, services[0], KnownServices[0])
+	require.Equal(t, services[1], KnownServices[1])
+}
+
+func TestReadOnlyListIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	provider := &MgProvider{}
+	scmgr, err := provider.Connect(windows.GENERIC_READ)
 	require.NoError(t, err)
 	defer scmgr.Disconnect()
 
@@ -39,7 +60,7 @@ func TestEmptyListIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	provider := &MgProvider{}
-	scmgr, err := provider.Connect()
+	scmgr, err := provider.Connect(windows.SC_MANAGER_ALL_ACCESS)
 	require.NoError(t, err)
 	defer scmgr.Disconnect()
 

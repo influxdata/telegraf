@@ -10,8 +10,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
+	"github.com/influxdata/telegraf/plugins/inputs/win_services/svc"
+	"github.com/influxdata/telegraf/plugins/inputs/win_services/svc/mgr"
+
+	"golang.org/x/sys/windows"
 )
 
 type ServiceErr struct {
@@ -40,13 +42,13 @@ type WinService interface {
 
 // ManagerProvider sets interface for acquiring manager instance, like mgr.Mgr
 type ManagerProvider interface {
-	Connect() (WinServiceManager, error)
+	Connect(accessMask uint32) (WinServiceManager, error)
 }
 
 // WinServiceManager provides interface for mgr.Mgr
 type WinServiceManager interface {
 	Disconnect() error
-	OpenService(name string) (WinService, error)
+	OpenService(name string, accessMask uint32) (WinService, error)
 	ListServices() ([]string, error)
 }
 
@@ -59,8 +61,8 @@ func (m *WinSvcMgr) Disconnect() error {
 	return m.realMgr.Disconnect()
 }
 
-func (m *WinSvcMgr) OpenService(name string) (WinService, error) {
-	return m.realMgr.OpenService(name)
+func (m *WinSvcMgr) OpenService(name string, accessMask uint32) (WinService, error) {
+	return m.realMgr.OpenService(name, accessMask)
 }
 func (m *WinSvcMgr) ListServices() ([]string, error) {
 	return m.realMgr.ListServices()
@@ -70,8 +72,8 @@ func (m *WinSvcMgr) ListServices() ([]string, error) {
 type MgProvider struct {
 }
 
-func (rmr *MgProvider) Connect() (WinServiceManager, error) {
-	scmgr, err := mgr.Connect()
+func (rmr *MgProvider) Connect(accessMask uint32) (WinServiceManager, error) {
+	scmgr, err := mgr.Connect(accessMask)
 	if err != nil {
 		return nil, err
 	} else {
@@ -95,7 +97,9 @@ type WinServices struct {
 	Log telegraf.Logger
 
 	ServiceNames []string `toml:"service_names"`
-	mgrProvider  ManagerProvider
+	AccessLevel  string   `toml:"access_level"`
+
+	mgrProvider ManagerProvider
 
 	servicesFilter filter.Filter
 }
@@ -114,6 +118,10 @@ func (m *WinServices) Init() error {
 		return err
 	}
 
+	if m.AccessLevel != "" && m.AccessLevel != "read-only" {
+		return fmt.Errorf("unknown access level set: %s", m.AccessLevel)
+	}
+
 	return nil
 }
 
@@ -126,7 +134,13 @@ func (m *WinServices) SampleConfig() string {
 }
 
 func (m *WinServices) Gather(acc telegraf.Accumulator) error {
-	scmgr, err := m.mgrProvider.Connect()
+	var access_mask uint32 = windows.SC_MANAGER_ALL_ACCESS
+	if m.AccessLevel == "read-only" {
+		m.Log.Debug("Using read-only access")
+		access_mask = windows.GENERIC_READ
+	}
+
+	scmgr, err := m.mgrProvider.Connect(access_mask)
 	if err != nil {
 		return fmt.Errorf("Could not open service manager: %s", err)
 	}
@@ -138,7 +152,7 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, srvName := range serviceNames {
-		service, err := collectServiceInfo(scmgr, srvName)
+		service, err := collectServiceInfo(scmgr, srvName, access_mask)
 		if err != nil {
 			if IsPermission(err) {
 				m.Log.Debug(err.Error())
@@ -184,8 +198,8 @@ func (m *WinServices) listServices(scmgr WinServiceManager) ([]string, error) {
 }
 
 // collectServiceInfo gathers info about a service.
-func collectServiceInfo(scmgr WinServiceManager, serviceName string) (*ServiceInfo, error) {
-	srv, err := scmgr.OpenService(serviceName)
+func collectServiceInfo(scmgr WinServiceManager, serviceName string, accessMask uint32) (*ServiceInfo, error) {
+	srv, err := scmgr.OpenService(serviceName, accessMask)
 	if err != nil {
 		return nil, &ServiceErr{
 			Message: "could not open service",

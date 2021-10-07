@@ -10,11 +10,11 @@ import (
 	"log"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/inputs/win_services/svc"
+	"github.com/influxdata/telegraf/plugins/inputs/win_services/svc/mgr"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
 )
 
 //testData is DD wrapper for unit testing of WinServices
@@ -44,7 +44,7 @@ func (m *FakeSvcMgr) Disconnect() error {
 	return nil
 }
 
-func (m *FakeSvcMgr) OpenService(name string) (WinService, error) {
+func (m *FakeSvcMgr) OpenService(name string, accessMask uint32) (WinService, error) {
 	for _, s := range m.testData.services {
 		if s.serviceName == name {
 			if s.serviceOpenError != nil {
@@ -69,7 +69,7 @@ type FakeMgProvider struct {
 	testData testData
 }
 
-func (m *FakeMgProvider) Connect() (WinServiceManager, error) {
+func (m *FakeMgProvider) Connect(accessMask uint32) (WinServiceManager, error) {
 	if m.testData.mgrConnectError != nil {
 		return nil, m.testData.mgrConnectError
 	} else {
