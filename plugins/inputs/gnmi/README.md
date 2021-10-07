@@ -42,6 +42,9 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
   # [inputs.gnmi.aliases]
   #   ifcounters = "openconfig:/interfaces/interface/state/counters"
 
+  ## Set a gRPC based token for outgoing connections.
+  # webauthtoken = ""
+
   [[inputs.gnmi.subscription]]
     ## Name of the measurement that will be emitted
     name = "ifcounters"
