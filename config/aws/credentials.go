@@ -21,7 +21,7 @@ type CredentialConfig struct {
 	WebIdentityTokenFile string `toml:"web_identity_token_file"`
 }
 
-func (c *CredentialConfig) Credentials() client.ConfigProvider {
+func (c *CredentialConfig) Credentials() (client.ConfigProvider, error) {
 	if c.RoleARN != "" {
 		return c.assumeCredentials()
 	}
@@ -29,7 +29,7 @@ func (c *CredentialConfig) Credentials() client.ConfigProvider {
 	return c.rootCredentials()
 }
 
-func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
+func (c *CredentialConfig) rootCredentials() (client.ConfigProvider, error) {
 	config := &aws.Config{
 		Region: aws.String(c.Region),
 	}
@@ -42,11 +42,14 @@ func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 		config.Credentials = credentials.NewSharedCredentials(c.Filename, c.Profile)
 	}
 
-	return session.New(config)
+	return session.NewSession(config)
 }
 
-func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
-	rootCredentials := c.rootCredentials()
+func (c *CredentialConfig) assumeCredentials() (client.ConfigProvider, error) {
+	rootCredentials, err := c.rootCredentials()
+	if err != nil {
+		return nil, err
+	}
 	config := &aws.Config{
 		Region:   aws.String(c.Region),
 		Endpoint: &c.EndpointURL,
@@ -58,5 +61,5 @@ func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
 		config.Credentials = stscreds.NewCredentials(rootCredentials, c.RoleARN)
 	}
 
-	return session.New(config)
+	return session.NewSession(config)
 }

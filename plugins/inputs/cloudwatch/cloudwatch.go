@@ -288,7 +288,11 @@ func (c *CloudWatch) initializeCloudWatch() error {
 	}
 
 	loglevel := aws.LogOff
-	c.client = cwClient.New(c.CredentialConfig.Credentials(), cfg.WithLogLevel(loglevel))
+	p, err := c.CredentialConfig.Credentials()
+	if err != nil {
+		return err
+	}
+	c.client = cwClient.New(p, cfg.WithLogLevel(loglevel))
 
 	// Initialize regex matchers for each Dimension value.
 	for _, m := range c.Metrics {
