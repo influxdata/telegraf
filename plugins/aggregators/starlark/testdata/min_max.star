@@ -31,10 +31,13 @@ def add(cache, metric):
                 elif v > min_max["max"]:
                     aggregate["fields"][k]["max"] = v
         
-def push(cache, accumulator):
+def apply(cache):
+    metrics = []
     for a in cache:
         fields = {}
         for k in cache[a]["fields"]:
             fields[k + "_min"] = cache[a]["fields"][k]["min"]
             fields[k + "_max"] = cache[a]["fields"][k]["max"]
-        accumulator.add_fields(cache[a]["name"], fields, cache[a]["tags"])
+        m = Metric(cache[a]["name"], cache[a]["tags"], fields)
+        metrics.append(m)
+    return metrics

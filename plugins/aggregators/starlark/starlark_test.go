@@ -356,10 +356,8 @@ func TestLastFromSource(t *testing.T) {
 def add(cache, metric):
     cache["last"] = metric
 
-def push(cache, accumulator):
-    last = cache.get("last")
-    if last != None:
-        accumulator.add_fields(last.name, last.fields, last.tags)
+def apply(cache):
+    return cache.get("last")
 `)
 	require.NoError(t, err)
 	plugin.Add(

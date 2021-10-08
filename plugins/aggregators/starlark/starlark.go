@@ -21,10 +21,8 @@ const (
 def add(cache, metric):
   cache["last"] = metric
 
-def push(cache, accumulator):
-  last = cache.get("last")
-  if last != None:
-	  accumulator.add_fields(last.name, last.fields, last.tags)
+def apply(cache):
+  return cache.get("last")
 '''
 
   ## File containing a Starlark script.
@@ -42,11 +40,11 @@ def push(cache, accumulator):
 type Starlark struct {
 	common.StarlarkCommon
 
-	addArgs  starlark.Tuple
-	addFunc  *starlark.Function
-	cache    *starlark.Dict
-	pushArgs starlark.Tuple
-	pushFunc *starlark.Function
+	addArgs   starlark.Tuple
+	addFunc   *starlark.Function
+	cache     *starlark.Dict
+	applyArgs starlark.Tuple
+	applyFunc *starlark.Function
 }
 
 func (s *Starlark) Init() error {
@@ -76,16 +74,15 @@ func (s *Starlark) Init() error {
 	s.addArgs[0] = &starlark.Dict{}
 	s.addArgs[1] = &common.Metric{}
 
-	// The source should define a push function.
-	s.pushFunc, err = common.InitFunction(globals, "push", 2)
+	// The source should define a apply function.
+	s.applyFunc, err = common.InitFunction(globals, "apply", 1)
 	if err != nil {
 		return err
 	}
 
-	// Prepare the argument of the push method.
-	s.pushArgs = make(starlark.Tuple, 2)
-	s.pushArgs[0] = &starlark.Dict{}
-	s.pushArgs[1] = &common.Accumulator{}
+	// Prepare the argument of the apply method.
+	s.applyArgs = make(starlark.Tuple, 1)
+	s.applyArgs[0] = &starlark.Dict{}
 
 	return nil
 }
@@ -106,10 +103,39 @@ func (s *Starlark) Add(metric telegraf.Metric) {
 }
 
 func (s *Starlark) Push(acc telegraf.Accumulator) {
-	s.pushArgs[0] = s.cache
-	s.pushArgs[1].(*common.Accumulator).Wrap(acc)
+	s.applyArgs[0] = s.cache
 
-	s.call(s.pushFunc, s.pushArgs)
+	rv, err := s.Call(s.applyFunc, s.applyArgs)
+	if err != nil {
+		if err, ok := err.(*starlark.EvalError); ok {
+			for _, line := range strings.Split(err.Backtrace(), "\n") {
+				s.Log.Error(line)
+			}
+		}
+		return
+	}
+
+	switch rv := rv.(type) {
+	case *starlark.List:
+		iter := rv.Iterate()
+		defer iter.Done()
+		var v starlark.Value
+		for iter.Next(&v) {
+			switch v := v.(type) {
+			case *common.Metric:
+				m := v.Unwrap()
+				acc.AddMetric(m)
+			default:
+				s.Log.Errorf("Invalid type returned in list: %s", v.Type())
+			}
+		}
+	case *common.Metric:
+		m := rv.Unwrap()
+		acc.AddMetric(m)
+	case starlark.NoneType:
+	default:
+		s.Log.Errorf("Invalid type returned: %T", rv)
+	}
 }
 
 func (s *Starlark) Reset() {

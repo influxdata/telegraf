@@ -1,7 +1,7 @@
 # Starlark Aggregator
 
 The `starlark` aggregator calls a Starlark function to add the metrics to the aggregator,
-then calls another Starlark function to push the aggregates to the accumulator. Both Starlark functions
+then calls another Starlark function to push the metrics returned to the accumulator. Both Starlark functions
 have an argument called `cache` which is a [dict-like][dict] object allowing to keep temporary the metrics to
 aggregate. The `cache` is automatically cleared by the the aggregator.
 
@@ -14,7 +14,7 @@ files or sockets.
 The **[Starlark specification][]** has details about the syntax and available
 functions.
 
-### Configuration
+## Configuration
 
 ```toml
 [[aggregators.starlark]]
@@ -27,10 +27,8 @@ functions.
 def add(cache, metric):
   cache["last"] = metric
 
-def push(cache, accumulator):
-  last = cache.get("last")
-  if last != None:
-	  accumulator.add_fields(last.name, last.fields, last.tags)
+def apply(cache):
+  return cache.get("last")
 '''
 
   ## File containing a Starlark script.
@@ -44,41 +42,39 @@ def push(cache, accumulator):
   #   debug_mode = true
 ```
 
-### Usage
+## Usage
 
 The Starlark code should contain a function called `add` that takes a cache as first argument and a metric as
 second argument. The function will be called with each metric to add them to the cache, and doesn't return anything.
 
 ```python
-def add(cache, accumulator):
-	cache["last"] = metric
+def add(cache, metric):
+  cache["last"] = metric
 ```
 
-The Starlark code should also contain a function called `push` that takes a cache as first argument and an accumulator as second argument. The function will be called to compute the aggregation from the metrics available in the cache, and doesn't return anything.
+The Starlark code should also contain a function called `apply` that takes a cache as argument. The function will be called to compute the aggregation from the metrics available in the cache, and returns the metrics to push to the accumulator.
 
 ```python
-def push(cache, metric):
-  last = cache.get("last")
-  if last != None:
-	  accumulator.add_fields(last.name, last.fields, last.tags)
+def apply(cache):
+  return cache.get("last")
 ```
 
 For a list of available types and functions that can be used in the code, see
 the [Starlark specification][].
 
-### Python Differences
+## Python Differences
 
 Refer to the section [Python Differences](plugins/processors/starlark/README.md#python-differences) of the documentation about the Starlark processor.
 
-### Libraries available
+## Libraries available
 
 Refer to the section [Libraries available](plugins/processors/starlark/README.md#libraries-available) of the documentation about the Starlark processor.
 
-### Common Questions
+## Common Questions
 
 Refer to the section [Common Questions](plugins/processors/starlark/README.md#common-questions) of the documentation about the Starlark processor.
 
-### Examples
+## Examples
 
 - [minmax](/plugins/aggregators/starlark/testdata/min_max.star) - A minmax aggregator implemented with a Starlark script.
 - [merge](/plugins/aggregators/starlark/testdata/merge.star) - A merge aggregator implemented with a Starlark script.

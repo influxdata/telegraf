@@ -17,9 +17,5 @@ def add(cache, metric):
         for k, v in metric.fields.items():
             m.fields[k] = v
 
-def push(cache, accumulator):
-    accumulator.set_precision(time.nanosecond)
-    metrics = cache.get("ordered")
-    if metrics != None:
-        for m in metrics:
-             accumulator.add_metric(m)
+def apply(cache):
+    return cache.get("ordered")
