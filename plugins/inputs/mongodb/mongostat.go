@@ -248,14 +248,15 @@ type TransactionStats struct {
 
 // ReplStatus stores data related to replica sets.
 type ReplStatus struct {
-	SetName      string      `bson:"setName"`
-	IsMaster     interface{} `bson:"ismaster"`
-	Secondary    interface{} `bson:"secondary"`
-	IsReplicaSet interface{} `bson:"isreplicaset"`
-	ArbiterOnly  interface{} `bson:"arbiterOnly"`
-	Hosts        []string    `bson:"hosts"`
-	Passives     []string    `bson:"passives"`
-	Me           string      `bson:"me"`
+	SetName           string      `bson:"setName"`
+	IsWritablePrimary interface{} `bson:"isWritablePrimary"` // mongodb 5.x
+	IsMaster          interface{} `bson:"ismaster"`
+	Secondary         interface{} `bson:"secondary"`
+	IsReplicaSet      interface{} `bson:"isreplicaset"`
+	ArbiterOnly       interface{} `bson:"arbiterOnly"`
+	Hosts             []string    `bson:"hosts"`
+	Passives          []string    `bson:"passives"`
+	Me                string      `bson:"me"`
 }
 
 // DBRecordStats stores data related to memory operations across databases.
@@ -1165,7 +1166,9 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	if newStat.Repl != nil {
 		returnVal.ReplSetName = newStat.Repl.SetName
 		// BEGIN code modification
-		if newStat.Repl.IsMaster.(bool) {
+		if newStat.Repl.IsMaster != nil && newStat.Repl.IsMaster.(bool) {
+			returnVal.NodeType = "PRI"
+		} else if newStat.Repl.IsWritablePrimary != nil && newStat.Repl.IsWritablePrimary.(bool) {
 			returnVal.NodeType = "PRI"
 		} else if newStat.Repl.Secondary != nil && newStat.Repl.Secondary.(bool) {
 			returnVal.NodeType = "SEC"
