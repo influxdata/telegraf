@@ -88,10 +88,12 @@ var GlobalStatusConversions = map[string]ConversionFunc{
 	"ssl_verify_depth":              ParseUint,
 }
 
+// see https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html
+// see https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
 var GlobalVariableConversions = map[string]ConversionFunc{
-	"delay_key_write":                  ParseString,        // ON, OFF, ALL
-	"enforce_gtid_consistency":         ParseString,        // ON, OFF, WARN
-	"event_scheduler":                  ParseBoolAsInteger, // YES, NO, DISABLED
+	"delay_key_write":                  ParseString, // ON, OFF, ALL
+	"enforce_gtid_consistency":         ParseString, // ON, OFF, WARN
+	"event_scheduler":                  ParseString, // YES, NO, DISABLED
 	"gtid_mode":                        ParseGTIDMode,
 	"have_openssl":                     ParseBoolAsInteger, // alias for have_ssl
 	"have_ssl":                         ParseBoolAsInteger, // YES, DISABLED
