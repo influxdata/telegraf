@@ -19,7 +19,7 @@ Stat collection based on Prometheus' mdstat collection library at https://github
   # file_name = "/proc/mdstat"
 ```
 
-If `file_name` is not discovered, the plugin will not run
+If the default file path or the `file_name` variable is not discovered, the plugin will not run.
 
 ### Measurements & Fields:
 
