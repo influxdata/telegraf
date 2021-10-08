@@ -1166,13 +1166,13 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	if newStat.Repl != nil {
 		returnVal.ReplSetName = newStat.Repl.SetName
 		// BEGIN code modification
-		if newStat.Repl.IsMaster != nil && newStat.Repl.IsMaster.(bool) {
+		if val, ok := newStat.Repl.IsMaster.(bool); ok && val {
 			returnVal.NodeType = "PRI"
-		} else if newStat.Repl.IsWritablePrimary != nil && newStat.Repl.IsWritablePrimary.(bool) {
+		} else if val, ok := newStat.Repl.IsWritablePrimary.(bool); ok && val {
 			returnVal.NodeType = "PRI"
-		} else if newStat.Repl.Secondary != nil && newStat.Repl.Secondary.(bool) {
+		} else if val, ok := newStat.Repl.Secondary.(bool); ok && val {
 			returnVal.NodeType = "SEC"
-		} else if newStat.Repl.ArbiterOnly != nil && newStat.Repl.ArbiterOnly.(bool) {
+		} else if val, ok := newStat.Repl.ArbiterOnly.(bool); ok && val {
 			returnVal.NodeType = "ARB"
 		} else {
 			returnVal.NodeType = "UNK"
