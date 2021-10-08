@@ -110,7 +110,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.0.0
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
-	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.3
 	github.com/google/flatbuffers v1.12.0 // indirect
@@ -234,7 +234,7 @@ require (
 	github.com/showwin/speedtest-go v1.1.4
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
-	github.com/signalfx/golib/v3 v3.3.40
+	github.com/signalfx/golib/v3 v3.3.38
 	github.com/signalfx/sapm-proto v0.7.2 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/sleepinggenius2/gosmi v0.4.3
@@ -308,11 +308,11 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.21.0
+	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.2
-	k8s.io/client-go v0.21.0
+	k8s.io/client-go v0.22.2
 	k8s.io/klog/v2 v2.9.0 // indirect
-	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
+	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
 	modernc.org/cc/v3 v3.33.5 // indirect
 	modernc.org/ccgo/v3 v3.9.4 // indirect
 	modernc.org/libc v1.9.5 // indirect
