@@ -1,6 +1,7 @@
 package http_response
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/robertkrimen/otto"
 )
 
 const (
@@ -48,6 +50,14 @@ type HTTPResponse struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
+
+	initalBody    string            // Initial body saves the original body.
+	initialHeader map[string]string // Initial header saves the original header.
+	initialScript string            // Initial script saves the original script
+
+	ResponseSetENV map[string]string `toml:"response_set_env"`
+	ScriptSetENV   map[string]string `toml:"script_set_env"`
+	Script         string            `toml:"script"`
 
 	Log telegraf.Logger
 
@@ -261,6 +271,43 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 	return nil
 }
 
+func (h *HTTPResponse) findField(field, value string, m map[string]interface{}) string {
+	if value != "" || m == nil {
+		return value
+	}
+	for k, v := range m {
+		if k == field {
+			return fmt.Sprintf("%s", v)
+		}
+		vv, ok := v.(map[string]interface{})
+		if ok {
+			value := h.findField(field, value, vv)
+			if value != "" {
+				return value
+			}
+		}
+	}
+	return ""
+}
+
+// replaceENV replaces environment variable reference with actual value in body, header and pre-request script.
+func (h *HTTPResponse) setENV(target string) error {
+	rx := regexp.MustCompile(`(?s)` + regexp.QuoteMeta("${") + `(.*?)` + regexp.QuoteMeta("}"))
+	for _, match := range rx.FindAllStringSubmatch(target, -1) {
+		envVar := os.Getenv(match[1])
+		if envVar == "" {
+			return fmt.Errorf("env: %s not found for %v", match[1], h.URLs)
+		}
+		h.Script = strings.ReplaceAll(h.Script, match[0], os.Getenv(match[1]))
+		h.Body = strings.ReplaceAll(h.Body, match[0], os.Getenv(match[1]))
+		for k, v := range h.Headers {
+			v = strings.ReplaceAll(v, match[0], os.Getenv(match[1]))
+			h.Headers[k] = v
+		}
+	}
+	return nil
+}
+
 // HTTPGather gathers all fields and returns any errors it encounters
 func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]string, error) {
 	// Prepare fields and tags
@@ -373,6 +420,28 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		}
 	}
 
+	if h.ResponseSetENV != nil {
+		bodyMap := map[string]interface{}{}
+		err := json.Unmarshal(bodyBytes, &bodyMap)
+		if err != nil {
+			return nil, nil, err
+		} else {
+			for env, responseVar := range h.ResponseSetENV {
+				value := h.findField(responseVar, "", bodyMap)
+				if value == "" {
+					return nil, nil, fmt.Errorf("response field %s not found with body %s", responseVar, string(bodyBytes))
+				}
+				if value != "" {
+					err = os.Setenv(env, value)
+					if err != nil {
+						return nil, nil, err
+					}
+					// fmt.Printf("set env %s %s\n", env, value)
+				}
+			}
+		}
+	}
+
 	// Check the response status code
 	if h.ResponseStatusCode > 0 {
 		if resp.StatusCode == h.ResponseStatusCode {
@@ -412,6 +481,30 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	// Save original copy of body
+	if h.initalBody == "" {
+		h.initalBody = h.Body
+	}
+
+	if h.initialHeader == nil {
+		h.initialHeader = map[string]string{}
+		for k, v := range h.Headers {
+			h.initialHeader[k] = v
+		}
+	}
+
+	if h.initialScript == "" {
+		h.initialScript = h.Script
+	}
+	// Initialize body to original state
+	h.Body = h.initalBody
+
+	for k, v := range h.initialHeader {
+		h.Headers[k] = v
+	}
+
+	h.Script = h.initialScript
+
 	// Set default values
 	if h.ResponseTimeout < config.Duration(time.Second) {
 		h.ResponseTimeout = config.Duration(time.Second * 5)
@@ -427,6 +520,48 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		} else {
 			h.Log.Warn("'address' deprecated in telegraf 1.12, please use 'urls'")
 			h.URLs = []string{h.Address}
+		}
+	}
+
+	err := h.setENV(h.Script)
+	if err != nil {
+		return err
+	}
+
+	if h.Script != "" {
+		vm := otto.New()
+		_, err := vm.Run(h.Script)
+		if err != nil {
+			return fmt.Errorf("failed to run pre-request script : %s", err)
+		}
+		if h.ScriptSetENV != nil {
+			for envVar, scriptVar := range h.ScriptSetENV {
+				scriptValue, err := vm.Get(scriptVar)
+				if err != nil {
+					return fmt.Errorf("failed to get pre-request result value for variable %s : %s", scriptVar, err)
+				}
+				scriptValueString, err := scriptValue.ToString()
+				if err != nil {
+					return fmt.Errorf("failed to convert pre-request result value %v to string : %s", scriptValueString, err)
+				}
+				err = os.Setenv(envVar, scriptValueString)
+				if err != nil {
+					return fmt.Errorf("failed to set environment variable %s with value %v : %s", envVar, scriptValueString, err)
+				}
+			}
+		}
+
+	}
+
+	err = h.setENV(h.Body)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range h.Headers {
+		err = h.setENV(v)
+		if err != nil {
+			return err
 		}
 	}
 
