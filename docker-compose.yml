@@ -111,7 +111,8 @@ services:
     environment:
       - CRATE_HEAP_SIZE=128m
   supervisor:
-    image: bravado/supervisord
+    build:
+      context: plugins/inputs/supervisor/testdata/
     volumes:
       - ./plugins/inputs/supervisor/testdata/supervisord.conf:/etc/supervisor/supervisord.conf
     ports:

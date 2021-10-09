@@ -2,11 +2,11 @@
 
 This plugin gather information about processes that running under supervisor using XML-RPC API
 
-Plugin minimum tested version: 1.17.0
+Plugin minimum tested version: 3.3.2
 
 ### Supervisor configuration
 
-This plugin needs TCP HTTP server to be enabled without basic auth for collecting information. Here is example of
+This plugin needs TCP HTTP server to be enabled for collecting information. Here is example of
 `inet_http_server` section in supervisor config that will work with default plugin configuration.
 
 ```
@@ -20,7 +20,8 @@ port=127.0.0.1:9001
 
 ```toml
 [inputs.supervisor]
-  ## Url of supervisor's XML-RPC endpoint
+  ## Url of supervisor's XML-RPC endpoint if basic auth enabled in supervisor http server,
+  ## than you have to add credentials to url (ex. http://login:pass@localhost:9001/RPC2)
   # url="http://localhost:9001/RPC2"
   ## Use supervisor identification string as server tag
   use_identification_tag = false
@@ -76,7 +77,7 @@ endpoint by default or you can use supervisor's identification string, which is 
 |Statecode| Statename  |                  Description                 |
 |---------|------------|----------------------------------------------|
 |    2    |    FATAL   |  Supervisor has experienced a serious error. |
-|    1    |   RUNNING  |        Supervisor is working normally.       |
+|    1    |   RUNNING  |         Supervisor is working normally.      |
 |    0    | RESTARTING |  Supervisor is in the process of restarting. |
 |   -1    |  SHUTDOWN  |Supervisor is in the process of shutting down.|
 ### Example Output
