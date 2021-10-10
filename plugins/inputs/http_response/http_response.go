@@ -134,6 +134,21 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional pre-request script using JavaScript.
+  # script = 'var timestamp = (Date.now()/1000).toFixed()'
+
+  ## Optional environment variable exporting from pre-request script
+  ## Assign variable name from script to environment variable name, then reference
+  ## the env using ${TIMESTAMP} notation in body, header or script.
+  [inputs.http_response.script_set_env]
+  # TIMESTAMP = "timestamp"
+
+  ## Optional environment variable exporting from response body
+  ## Assign field name from response body to environment variable name, then reference
+  ## the env using ${SESSIONID} notation in body, header or script.
+  [inputs.http_response.response_set_env]
+  SESSIONID = "sessionId"
+
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
   #   Host = "github.com"
@@ -436,7 +451,6 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 					if err != nil {
 						return nil, nil, err
 					}
-					// fmt.Printf("set env %s %s\n", env, value)
 				}
 			}
 		}

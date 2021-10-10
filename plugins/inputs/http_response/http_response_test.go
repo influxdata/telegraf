@@ -1311,3 +1311,15 @@ func TestSNI(t *testing.T) {
 	absentFields := []string{"response_string_match"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }
+
+func TestFindField(t *testing.T) {
+	body := map[string]interface{}{
+		"code": "0",
+		"data": map[string]interfac{}{
+			"sessionid": "1"
+		}
+	}
+	h := &HTTPResponse{}
+	assert.EqualValues(t, "1", h.findField("sessionid", "", body))
+	assert.EqualValues(t, "", h.findField("token", "", body))
+}
