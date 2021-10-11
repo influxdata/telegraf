@@ -157,7 +157,7 @@ func TestFieldInit(t *testing.T) {
 }
 
 func TestTableInit(t *testing.T) {
-	testDataPath, err := filepath.Abs("./testdata")
+	testDataPath, err := filepath.Abs("./testdata/tabletest")
 	require.NoError(t, err)
 
 	tbl := Table{
