@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/monitoring v1.2.0
 	cloud.google.com/go/pubsub v1.18.0
 	collectd.org v0.5.0
-	github.com/99designs/keyring v1.1.6
+	github.com/99designs/keyring v1.1.7-0.20211011120927-33891b18a1fa
 	github.com/Azure/azure-amqp-common-go/v3 v3.1.0 // indirect
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.17
 	github.com/Azure/azure-kusto-go v0.6.0
@@ -436,5 +436,3 @@ replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemet
 
 // replaced due to open PR updating protobuf https://github.com/riemann/riemann-go-client/pull/27
 replace github.com/riemann/riemann-go-client => github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754
-
-replace github.com/99designs/keyring v1.1.6 => github.com/DocLambda/keyring v1.1.7-0.20211005172301-c1964a25bfa4
