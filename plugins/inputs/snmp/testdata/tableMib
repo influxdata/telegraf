@@ -3,9 +3,9 @@ RFC1213-MIB DEFINITIONS ::= BEGIN
 IMPORTS
         mgmt, NetworkAddress, IpAddress, Counter, Gauge,
                 TimeTicks
-            FROM RFC1155
+            FROM RFC1155-SMI
         OBJECT-TYPE
-                FROM RFC-1212;
+                FROM fooImports;
 
 --  This MIB module uses the extended OBJECT-TYPE macro as
 --  defined in [14];

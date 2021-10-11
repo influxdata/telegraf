@@ -157,13 +157,13 @@ func TestFieldInit(t *testing.T) {
 }
 
 func TestTableInit(t *testing.T) {
-	testDataPath, err := filepath.Abs("./testdata/tabletest")
+	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
 	tbl := Table{
 		Oid: ".1.3.6.1.2.1.3.1",
 		Fields: []Field{
-			{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex"},
+			{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "ifIndex"},
 			{Oid: "RFC1213-MIB::atPhysAddress", Name: "atPhysAddress", IsTag: true},
 		},
 	}
@@ -178,7 +178,7 @@ func TestTableInit(t *testing.T) {
 	assert.Equal(t, "atTable", tbl.Name)
 
 	assert.Len(t, tbl.Fields, 4)
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, snmp: s})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true, snmp: s})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", IsTag: true, initialized: true, snmp: s, Conversion: "hwaddr"})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true, snmp: s})
 }

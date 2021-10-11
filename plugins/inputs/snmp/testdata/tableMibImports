@@ -1,4 +1,4 @@
-RFC1155 DEFINITIONS ::= BEGIN
+RFC1155-SMI DEFINITIONS ::= BEGIN
 
 EXPORTS -- EVERYTHING
         internet, directory, mgmt,
