@@ -49,7 +49,7 @@ var containerList = []entities.ListContainer{
 		Pid:        5429,
 		Pod:        "",
 		PodName:    "",
-		Ports:      []ocicni.PortMapping{ocicni.PortMapping{HostPort: 8080, ContainerPort: 80, Protocol: "tcp", HostIP: ""}},
+		Ports:      []ocicni.PortMapping{{HostPort: 8080, ContainerPort: 80, Protocol: "tcp", HostIP: ""}},
 		State:      "running",
 		Status:     "",
 	},
