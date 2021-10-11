@@ -861,7 +861,6 @@ type snmpTableCache struct {
 func snmpTable(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
 	var stc snmpTableCache
 	stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err = snmpTableCall(oid)
-	println(stc.fields)
 	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
 }
 
@@ -893,6 +892,7 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	// grabs all columns from the table
 	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
 	col := node.GetRow().AsTable().ColumnOrder
+
 	for i := range col {
 		_, isTag := tagOids[mibPrefix+col[i]]
 		fields = append(fields, Field{Name: col[i], Oid: mibPrefix + col[i], IsTag: isTag})

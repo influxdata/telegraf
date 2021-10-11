@@ -161,9 +161,10 @@ func TestTableInit(t *testing.T) {
 	require.NoError(t, err)
 
 	tbl := Table{
-		Oid: ".1.0.0.0",
+		Oid: ".1.3.6.1.2.1.3.1",
 		Fields: []Field{
-			{Oid: "TEST::description", Name: "description", IsTag: true},
+			{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex"},
+			{Oid: "RFC1213-MIB::atPhysAddress", Name: "atPhysAddress", IsTag: true},
 		},
 	}
 	s := &Snmp{
@@ -174,10 +175,12 @@ func TestTableInit(t *testing.T) {
 	err = tbl.Init(s)
 	require.NoError(t, err)
 
-	assert.Equal(t, "testTable", tbl.Name)
+	assert.Equal(t, "atTable", tbl.Name)
 
-	assert.Len(t, tbl.Fields, 1)
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.4", Name: "description", IsTag: true, initialized: true, snmp: s})
+	assert.Len(t, tbl.Fields, 4)
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, snmp: s})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", IsTag: true, initialized: true, snmp: s, Conversion: "hwaddr"})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true, snmp: s})
 }
 
 func TestSnmpInit(t *testing.T) {
