@@ -6,7 +6,9 @@ import (
 	"time"
 )
 
-// MillisecondTimestamp refers to the JSON representation of timestamps, for
+// Timestamp wraps time.Time and adapts json.Marshaler.
+//
+// Timestamp refers to the JSON representation of timestamps, for
 // time-data interchange, as a single integer representing a modified version of
 // whole milliseconds since the UNIX epoch (00:00:00 UTC on January 1, 1970).
 // Individual languages (Go, C, Java) will typically implement this structure
@@ -70,27 +72,61 @@ import (
 // JSON string.  That fact must be taken into account when marshalling and
 // unmarshalling data structures that contain such fields.
 //
-type MillisecondTimestamp struct {
+type Timestamp struct {
 	time.Time
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (t *MillisecondTimestamp) UnmarshalJSON(input []byte) error {
-	strInput := string(bytes.Trim(input, "\""))
+// NewTimestamp returns reference to new timestamp setted to UTC now.
+func NewTimestamp() *Timestamp {
+	return &Timestamp{time.Now().UTC()}
+}
 
-	i, err := strconv.ParseInt(strInput, 10, 64)
-	if err != nil {
-		return err
-	}
+// Add returns the timestamp t+d.
+// Overrides nested time.Time Add.
+func (t Timestamp) Add(d time.Duration) Timestamp {
+	return Timestamp{t.Time.Add(d)}
+}
 
-	i *= int64(time.Millisecond)
-	*t = MillisecondTimestamp{time.Unix(0, i).UTC()}
-	return nil
+// AddDate returns the timestamp corresponding to adding the given number of years, months, and days.
+// Overrides nested time.Time AddDate.
+func (t Timestamp) AddDate(years int, months int, days int) Timestamp {
+	return Timestamp{t.Time.AddDate(years, months, days)}
+}
+
+// In returns a copy of t with location set to loc.
+// Overrides nested time.Time In.
+func (t Timestamp) In(loc *time.Location) Timestamp {
+	return Timestamp{t.Time.In(loc)}
+}
+
+// Local returns a copy of t with the location set to local time.
+// Overrides nested time.Time Local.
+func (t Timestamp) Local() Timestamp {
+	return Timestamp{t.Time.Local()}
+}
+
+// Round returns a copy of t rounded to the nearest multiple of d.
+// Overrides nested time.Time Round.
+func (t Timestamp) Round(d time.Duration) Timestamp {
+	return Timestamp{t.Time.Round(d)}
+}
+
+// Truncate returns a copy t rounded down to a multiple of d.
+// Overrides nested time.Time Truncate.
+func (t Timestamp) Truncate(d time.Duration) Timestamp {
+	return Timestamp{t.Time.Truncate(d)}
+}
+
+// UTC returns a copy of t with the location set to UTC.
+// Overrides nested time.Time UTC.
+func (t Timestamp) UTC() Timestamp {
+	return Timestamp{t.Time.UTC()}
 }
 
 // MarshalJSON implements json.Marshaler.
-func (t MillisecondTimestamp) MarshalJSON() ([]byte, error) {
-	i := t.UnixNano()/int64(time.Millisecond)
+// Overrides nested time.Time MarshalJSON.
+func (t Timestamp) MarshalJSON() ([]byte, error) {
+	i := t.UnixMilli()
 	buf := make([]byte, 0, 16)
 	buf = append(buf, '"')
 	buf = strconv.AppendInt(buf, i, 10)
@@ -98,9 +134,26 @@ func (t MillisecondTimestamp) MarshalJSON() ([]byte, error) {
 	return buf, nil
 }
 
-func (t MillisecondTimestamp) String() string {
-	i := t.UnixNano()/int64(time.Millisecond)
+// String implements fmt.Stringer.
+// Overrides nested time.Time String.
+func (t Timestamp) String() string {
+	i := t.UnixMilli()
 	buf := make([]byte, 0, 16)
 	buf = strconv.AppendInt(buf, i, 10)
 	return string(buf)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Overrides nested time.Time UnmarshalJSON.
+func (t *Timestamp) UnmarshalJSON(input []byte) error {
+	strInput := string(bytes.Trim(input, `"`))
+
+	i, err := strconv.ParseInt(strInput, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	i *= int64(time.Millisecond)
+	*t = Timestamp{time.Unix(0, i).UTC()}
+	return nil
 }

@@ -2,7 +2,7 @@
 
 This plugin writes to a Groundwork instance using "[GROUNDWORK][]" own format.
 
-[GROUNDWORK]: https://github.com/gwos
+[GROUNDWORK]: https://www.gwos.com
 
 ### Configuration:
 

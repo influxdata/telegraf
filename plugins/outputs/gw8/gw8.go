@@ -1,15 +1,19 @@
 package gw8
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-uuid"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/outputs/gw8/addons"
-	"io"
+	"github.com/patrickmn/go-cache"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -17,12 +21,25 @@ const (
 	defaultMonitoringRoute = "/api/monitoring?dynamic=true"
 )
 
+// Login and logout routes from Groundwork API
 const (
 	loginUrl  = "/api/auth/login"
 	logoutUrl = "/api/auth/logout"
 )
 
-var sampleConfig = `
+var (
+	tracerOnce sync.Once
+)
+
+// Variables for building and updating tracer token
+var (
+	tracerToken         []byte
+	cacheKeyTracerToken = "cacheKeyTraceToken"
+	tracerCache         = cache.New(-1, -1)
+)
+
+var (
+	sampleConfig = `
   ## HTTP endpoint for your groundwork instance.
   groundwork_endpoint = ""
 
@@ -39,17 +56,25 @@ var sampleConfig = `
 
   ## Default display name for the host with services(metrics)
   default_host = "default_telegraf"
+
+  ## Default service state [default - "host"]
+  default_service_state = "SERVICE_OK"
+
+  ## The name of the tag that contains the hostname
+  resource_tag = "host"
 `
+)
 
 type GW8 struct {
-	Server      string `toml:"groundwork_endpoint"`
-	AgentId     string `toml:"agent_id"`
-	AppType     string `toml:"app_type"`
-	Username    string `toml:"username"`
-	Password    string `toml:"password"`
-	DefaultHost string `toml:"default_host"`
-	authToken   string
-	writer      io.Writer
+	Server              string `toml:"groundwork_endpoint"`
+	AgentId             string `toml:"agent_id"`
+	AppType             string `toml:"app_type"`
+	Username            string `toml:"username"`
+	Password            string `toml:"password"`
+	DefaultHost         string `toml:"default_host"`
+	DefaultServiceState string `toml:"default_service_state"`
+	ResourceTag         string `toml:"resource_tag"`
+	authToken           string
 }
 
 func (g *GW8) SampleConfig() string {
@@ -57,8 +82,6 @@ func (g *GW8) SampleConfig() string {
 }
 
 func (g *GW8) Connect() error {
-	var writers []io.Writer
-
 	if g.Server == "" {
 		return errors.New("Groundwork endpoint\\username\\password are not provided ")
 	}
@@ -68,8 +91,6 @@ func (g *GW8) Connect() error {
 	} else {
 		return err
 	}
-
-	g.writer = io.MultiWriter(writers...)
 
 	return nil
 }
@@ -95,7 +116,7 @@ func (g *GW8) Close() error {
 func (g *GW8) Write(metrics []telegraf.Metric) error {
 	resourceToServicesMap := make(map[string][]addons.DynamicMonitoredService)
 	for _, metric := range metrics {
-		resource, service := parseMetric(g.DefaultHost, metric)
+		resource, service := parseMetric(g.DefaultHost, g.DefaultServiceState, g.ResourceTag, metric)
 		resourceToServicesMap[resource] = append(resourceToServicesMap[resource], service)
 	}
 
@@ -105,8 +126,7 @@ func (g *GW8) Write(metrics []telegraf.Metric) error {
 			Name:          resourceName,
 			Type:          addons.Host,
 			Status:        addons.HostUp,
-			LastCheckTime: addons.MillisecondTimestamp{Time: time.Now()},
-			NextCheckTime: addons.MillisecondTimestamp{Time: time.Now()},
+			LastCheckTime: &addons.Timestamp{Time: time.Now()},
 			Services:      services,
 		})
 	}
@@ -115,8 +135,8 @@ func (g *GW8) Write(metrics []telegraf.Metric) error {
 		Context: &addons.TracerContext{
 			AppType:    g.AppType,
 			AgentID:    g.AgentId,
-			TraceToken: "cd05607a-4d23-4338-95db-c96367034d23",
-			TimeStamp:  addons.MillisecondTimestamp{Time: time.Now()},
+			TraceToken: makeTracerToken(),
+			TimeStamp:  &addons.Timestamp{Time: time.Now()},
 			Version:    addons.ModelVersion,
 		},
 		Resources: resources,
@@ -134,19 +154,38 @@ func (g *GW8) Write(metrics []telegraf.Metric) error {
 		"Accept":         "application/json",
 	}
 
-	if _, _, err = addons.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJson); err != nil {
-		return err
+	statusCode, _, httpErr := addons.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJson)
+	if err != nil {
+		return httpErr
+	}
+
+	/* Re-login mechanism */
+	if statusCode == 401 {
+		if err = g.Connect(); err != nil {
+			return err
+		}
+		headers["GWOS-API-TOKEN"] = g.authToken
+		statusCode, body, httpErr := addons.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJson)
+		if httpErr != nil {
+			return httpErr
+		}
+		if statusCode != 200 {
+			return errors.New(fmt.Sprintf("something went wrong during processing an http request[http_status = %d, body = %s]", statusCode, string(body)))
+		}
 	}
 
 	return nil
 }
 
-func parseMetric(hostname string, metric telegraf.Metric) (string, addons.DynamicMonitoredService) {
+func parseMetric(defaultHostname, defaultServiceState, resourceTag string, metric telegraf.Metric) (string, addons.DynamicMonitoredService) {
 	resource := "default_telegraf"
-	if hostname != "" {
-		resource = hostname
+	if defaultHostname != "" {
+		resource = defaultHostname
 	}
-	if value, present := metric.GetTag("resource"); present {
+	if resourceTag == "" {
+		resourceTag = "host"
+	}
+	if value, present := metric.GetTag(resourceTag); present {
 		resource = value
 	}
 
@@ -156,6 +195,9 @@ func parseMetric(hostname string, metric telegraf.Metric) (string, addons.Dynami
 	}
 
 	status := string(addons.ServiceOk)
+	if defaultServiceState != "" && validStatus(defaultServiceState) {
+		status = defaultServiceState
+	}
 	if value, present := metric.GetTag("status"); present {
 		if validStatus(value) {
 			status = value
@@ -177,7 +219,6 @@ func parseMetric(hostname string, metric telegraf.Metric) (string, addons.Dynami
 		if s, err := strconv.ParseFloat(value, 64); err == nil {
 			critical = s
 		}
-		unitType = value
 	}
 
 	warning := -1.0
@@ -185,16 +226,14 @@ func parseMetric(hostname string, metric telegraf.Metric) (string, addons.Dynami
 		if s, err := strconv.ParseFloat(value, 64); err == nil {
 			warning = s
 		}
-		unitType = value
 	}
 
 	serviceObject := addons.DynamicMonitoredService{
 		Name:             service,
-		Type:             "Service",
+		Type:             addons.Service,
 		Owner:            resource,
 		Status:           addons.MonitorStatus(status),
-		LastCheckTime:    addons.MillisecondTimestamp{Time: time.Now()},
-		NextCheckTime:    addons.MillisecondTimestamp{Time: time.Now()},
+		LastCheckTime:    &addons.Timestamp{Time: metric.Time()},
 		LastPlugInOutput: message,
 		Metrics:          nil,
 	}
@@ -218,24 +257,13 @@ func parseMetric(hostname string, metric telegraf.Metric) (string, addons.Dynami
 			},
 		})
 
-		var val float64
-		switch i := value.Value.(type) {
-		case float64:
-			val = i
-		case float32:
-			val = float64(i)
-		case int64:
-			val = float64(i)
-		case int:
-			val = float64(i)
-		default:
-		}
+		val, _ := internal.ToFloat64(value.Value)
 		serviceObject.Metrics = append(serviceObject.Metrics, addons.TimeSeries{
 			MetricName: value.Key,
 			SampleType: addons.Value,
 			Interval: &addons.TimeInterval{
-				EndTime:   addons.MillisecondTimestamp{Time: time.Now()},
-				StartTime: addons.MillisecondTimestamp{Time: time.Now()},
+				EndTime:   &addons.Timestamp{Time: time.Now()},
+				StartTime: &addons.Timestamp{Time: time.Now()},
 			},
 			Value: &addons.TypedValue{
 				ValueType:   addons.DoubleType,
@@ -316,8 +344,6 @@ func calculateStatus(value *addons.TypedValue, warning *addons.TypedValue, criti
 
 	if warning != nil {
 		switch warning.ValueType {
-		case addons.IntegerType:
-			warningValue = float64(warning.IntegerValue)
 		case addons.DoubleType:
 			warningValue = warning.DoubleValue
 		}
@@ -325,48 +351,12 @@ func calculateStatus(value *addons.TypedValue, warning *addons.TypedValue, criti
 
 	if critical != nil {
 		switch critical.ValueType {
-		case addons.IntegerType:
-			criticalValue = float64(critical.IntegerValue)
 		case addons.DoubleType:
 			criticalValue = critical.DoubleValue
 		}
 	}
 
 	switch value.ValueType {
-	case addons.IntegerType:
-		if warning == nil && criticalValue == -1 {
-			if float64(value.IntegerValue) >= criticalValue {
-				return addons.ServiceUnscheduledCritical
-			}
-			return addons.ServiceOk
-		}
-		if critical == nil && (warning != nil && warningValue == -1) {
-			if float64(value.IntegerValue) >= warningValue {
-				return addons.ServiceWarning
-			}
-			return addons.ServiceOk
-		}
-		if (warning != nil && warningValue == -1) && (critical != nil && criticalValue == -1) {
-			return addons.ServiceOk
-		}
-		// is it a reverse comparison (low to high)
-		if (warning != nil && critical != nil) && warningValue > criticalValue {
-			if float64(value.IntegerValue) <= criticalValue {
-				return addons.ServiceUnscheduledCritical
-			}
-			if float64(value.IntegerValue) <= warningValue {
-				return addons.ServiceWarning
-			}
-			return addons.ServiceOk
-		} else {
-			if (warning != nil && critical != nil) && float64(value.IntegerValue) >= criticalValue {
-				return addons.ServiceUnscheduledCritical
-			}
-			if (warning != nil && critical != nil) && float64(value.IntegerValue) >= warningValue {
-				return addons.ServiceWarning
-			}
-			return addons.ServiceOk
-		}
 	case addons.DoubleType:
 		if warning == nil && criticalValue == -1 {
 			if value.DoubleValue >= criticalValue {
@@ -412,6 +402,38 @@ func validStatus(status string) bool {
 		status == string(addons.ServiceScheduledCritical) ||
 		status == string(addons.ServiceUnscheduledCritical) ||
 		status == string(addons.ServiceUnknown)
+}
+
+// makeTracerContext
+func makeTracerToken() string {
+	tracerOnce.Do(initTracerToken)
+
+	/* combine TraceToken from fixed and incremental parts */
+	tokenBuf := make([]byte, 16)
+	copy(tokenBuf, tracerToken)
+	if tokenInc, err := tracerCache.IncrementUint64(cacheKeyTracerToken, 1); err == nil {
+		binary.PutUvarint(tokenBuf, tokenInc)
+	} else {
+		/* fallback with timestamp */
+		binary.PutVarint(tokenBuf, time.Now().UnixNano())
+	}
+	traceToken, _ := uuid.FormatUUID(tokenBuf)
+
+	return traceToken
+}
+
+func initTracerToken() {
+	/* prepare random tracerToken */
+	token := []byte("aaaabbbbccccdddd")
+	if randBuf, err := uuid.GenerateRandomBytes(16); err == nil {
+		copy(tracerToken, randBuf)
+	} else {
+		/* fallback with multiplied timestamp */
+		binary.PutVarint(tracerToken, time.Now().UnixNano())
+		binary.PutVarint(tracerToken[6:], time.Now().UnixNano())
+	}
+	tracerCache.Set(cacheKeyTracerToken, uint64(1), -1)
+	tracerToken = token
 }
 
 func init() {

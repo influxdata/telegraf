@@ -341,6 +341,7 @@ require (
 	go.opentelemetry.io/otel/sdk/export/metric v0.23.0 // indirect
 	go.opentelemetry.io/otel/trace v1.0.0-RC3 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 )
 
 // replaced due to https://github.com/satori/go.uuid/issues/73

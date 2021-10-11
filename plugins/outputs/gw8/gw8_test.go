@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -21,6 +22,13 @@ const (
 func TestWrite(t *testing.T) {
 	// Generate test metric with default name to test Write logic
 	metric := testutil.TestMetric(1, defaultTestServiceName)
+
+	// Get value from metric to compare with value from json result
+	expectedValue := 0.0
+	for _, value := range metric.FieldList() {
+		expectedValue, _ = internal.ToFloat64(value.Value)
+		break
+	}
 
 	// Simulate Groundwork server that should receive custom metrics
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -40,6 +48,11 @@ func TestWrite(t *testing.T) {
 			t,
 			obj["resources"].([]interface{})[0].(map[string]interface{})["services"].([]interface{})[0].(map[string]interface{})["name"],
 			defaultTestServiceName,
+		)
+		assert.Equal(
+			t,
+			obj["resources"].([]interface{})[0].(map[string]interface{})["services"].([]interface{})[0].(map[string]interface{})["metrics"].([]interface{})[0].(map[string]interface{})["value"].(map[string]interface{})["doubleValue"].(float64),
+			expectedValue,
 		)
 
 		_, err = fmt.Fprintln(w, `OK`)

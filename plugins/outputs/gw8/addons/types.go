@@ -18,8 +18,6 @@ const (
 	Value    MetricSampleType = "Value"
 	Warning                   = "Warning"
 	Critical                  = "Critical"
-	Min                       = "Min"
-	Max                       = "Max"
 )
 
 // UnitType - Supported units are a subset of The Unified Code for Units of Measure
@@ -36,30 +34,12 @@ const (
 	GB                   = "GB"
 )
 
-// ComputeType defines CloudHub Compute Types
-type ComputeType string
-
-// CloudHub Compute Types
-const (
-	Query         ComputeType = "Query"
-	Regex                     = "Regex"
-	Synthetic                 = "Synthetic"
-	Informational             = "Informational"
-	Performance               = "Performance"
-	Health                    = "Health"
-)
-
 // ValueType defines the data type of the value of a metric
 type ValueType string
 
-// Data type of the value of a metric
+// DoubleType type of the value of a metric
 const (
-	IntegerType     ValueType = "IntegerType"
-	DoubleType                = "DoubleType"
-	StringType                = "StringType"
-	BooleanType               = "BooleanType"
-	TimeType                  = "TimeType"
-	UnspecifiedType           = "UnspecifiedType"
+	DoubleType ValueType = "DoubleType"
 )
 
 type MonitorStatus string
@@ -82,21 +62,11 @@ const (
 // ResourceType defines the resource type
 type ResourceType string
 
-// The resource type uniquely defining the resource type
+// Host The resource type uniquely defining the resource type
 // General Nagios Types are host and service, whereas CloudHub can have richer complexity
 const (
-	Host           ResourceType = "host"
-	Hypervisor                  = "hypervisor"
-	Instance                    = "instance"
-	VirtualMachine              = "virtual-machine"
-	CloudApp                    = "cloud-app"
-	CloudFunction               = "cloud-function"
-	LoadBalancer                = "load-balancer"
-	Container                   = "container"
-	Storage                     = "storage"
-	Network                     = "network"
-	NetworkSwitch               = "network-switch"
-	NetworkDevice               = "network-device"
+	Host    ResourceType = "host"
+	Service              = "service"
 )
 
 // TypedValue defines a single strongly-typed value.
@@ -109,17 +79,17 @@ type TypedValue struct {
 	// DoubleValue: A 64-bit double-precision floating-point number. Its
 	// magnitude is approximately &plusmn;10<sup>&plusmn;300</sup> and it
 	// has 16 significant digits of precision.
-	DoubleValue float64 `json:"doubleValue"`
+	DoubleValue float64 `json:"doubleValue,omitempty"`
 
 	// Int64Value: A 64-bit integer. Its range is approximately
 	// &plusmn;9.2x10<sup>18</sup>.
-	IntegerValue int64 `json:"integerValue"`
+	IntegerValue int64 `json:"integerValue,omitempty"`
 
 	// StringValue: A variable-length string value.
 	StringValue string `json:"stringValue,omitempty"`
 
 	// a time stored as full timestamp
-	TimeValue *MillisecondTimestamp `json:"timeValue,omitempty"`
+	TimeValue *Timestamp `json:"timeValue,omitempty"`
 }
 
 // TimeInterval defines a closed time interval. It extends from the start time
@@ -140,12 +110,12 @@ type TypedValue struct {
 // start time could overwrite data written at the previous end time.
 type TimeInterval struct {
 	// EndTime: Required. The end of the time interval.
-	EndTime MillisecondTimestamp `json:"endTime,omitempty"`
+	EndTime *Timestamp `json:"endTime"`
 
 	// StartTime: Optional. The beginning of the time interval. The default
 	// value for the start time is the end time. The start time must not be
 	// later than the end time.
-	StartTime MillisecondTimestamp `json:"startTime,omitempty"`
+	StartTime *Timestamp `json:"startTime,omitempty"`
 }
 
 type DynamicMonitoredResource struct {
@@ -167,9 +137,9 @@ type DynamicMonitoredResource struct {
 	// Restrict to a Groundwork Monitor Status
 	Status MonitorStatus `json:"status,required"`
 	// The last status check time on this resource
-	LastCheckTime MillisecondTimestamp `json:"lastCheckTime,omitempty"`
+	LastCheckTime *Timestamp `json:"lastCheckTime,omitempty"`
 	// The next status check time on this resource
-	NextCheckTime MillisecondTimestamp `json:"nextCheckTime,omitempty"`
+	NextCheckTime *Timestamp `json:"nextCheckTime,omitempty"`
 	// Nagios plugin output string
 	LastPlugInOutput string `json:"lastPluginOutput,omitempty"`
 	// Services state collection
@@ -199,9 +169,7 @@ type DynamicMonitoredService struct {
 	// Restrict to a Groundwork Monitor Status
 	Status MonitorStatus `json:"status,required"`
 	// The last status check time on this resource
-	LastCheckTime MillisecondTimestamp `json:"lastCheckTime,omitempty"`
-	// The next status check time on this resource
-	NextCheckTime MillisecondTimestamp `json:"nextCheckTime,omitempty"`
+	LastCheckTime *Timestamp `json:"lastCheckTime,omitempty"`
 	// Nagios plugin output string
 	LastPlugInOutput string `json:"lastPluginOutput,omitempty"`
 	// metrics
@@ -228,13 +196,11 @@ type TimeSeries struct {
 	// same start time and increasing end times, until an event resets the
 	// cumulative value to zero and sets a new start time for the following
 	// samples.
-	Interval          *TimeInterval     `json:"interval"`
-	Value             *TypedValue       `json:"value"`
-	Tags              map[string]string `json:"tags,omitempty"`
-	Unit              UnitType          `json:"unit,omitempty"`
-	Thresholds        *[]ThresholdValue `json:"thresholds,omitempty"`
-	MetricComputeType ComputeType       `json:"-"`
-	MetricExpression  string            `json:"-"`
+	Interval   *TimeInterval     `json:"interval"`
+	Value      *TypedValue       `json:"value"`
+	Tags       map[string]string `json:"tags,omitempty"`
+	Unit       UnitType          `json:"unit,omitempty"`
+	Thresholds *[]ThresholdValue `json:"thresholds,omitempty"`
 }
 
 // DynamicResourcesWithServicesRequest defines SendResourcesWithMetrics payload
@@ -275,11 +241,11 @@ type MonitoredResourceRef struct {
 
 // TracerContext describes a Transit call
 type TracerContext struct {
-	AppType    string               `json:"appType"`
-	AgentID    string               `json:"agentId"`
-	TraceToken string               `json:"traceToken"`
-	TimeStamp  MillisecondTimestamp `json:"timeStamp"`
-	Version    VersionString        `json:"version"`
+	AppType    string        `json:"appType"`
+	AgentID    string        `json:"agentId"`
+	TraceToken string        `json:"traceToken"`
+	TimeStamp  *Timestamp    `json:"timeStamp"`
+	Version    VersionString `json:"version"`
 }
 
 // VersionString defines type of constant
