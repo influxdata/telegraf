@@ -5,6 +5,7 @@ package ethtool
 
 import (
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -81,7 +82,7 @@ func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulat
 
 	fields[fieldInterfaceUp] = e.interfaceUp(iface)
 	for k, v := range stats {
-		fields[k] = v
+		fields[strings.TrimSpace(k)] = v
 	}
 
 	acc.AddFields(pluginName, fields, tags)
