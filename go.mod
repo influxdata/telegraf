@@ -104,7 +104,7 @@ require (
 	github.com/golang/snappy v0.0.3
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-github/v32 v32.1.0
-	github.com/gopcua/opcua v0.1.13
+	github.com/gopcua/opcua v0.2.0-rc2.0.20210409063412-baabb9b14fd2
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/gosnmp/gosnmp v1.32.0
