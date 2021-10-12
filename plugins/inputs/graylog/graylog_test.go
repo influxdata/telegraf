@@ -1,7 +1,7 @@
 package graylog
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -115,7 +115,7 @@ func (c *mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) 
 		resp.StatusCode = 405 // Method not allowed
 	}
 
-	resp.Body = ioutil.NopCloser(strings.NewReader(c.responseBody))
+	resp.Body = io.NopCloser(strings.NewReader(c.responseBody))
 	return &resp, nil
 }
 

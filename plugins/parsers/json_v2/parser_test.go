@@ -3,7 +3,6 @@ package json_v2_test
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -22,12 +21,28 @@ func TestData(t *testing.T) {
 		test string
 	}{
 		{
+			name: "Test when using field and object together",
+			test: "mix_field_and_object",
+		},
+		{
 			name: "Test complex nesting",
 			test: "complex_nesting",
 		},
 		{
 			name: "Test having an array of objects",
 			test: "array_of_objects",
+		},
+		{
+			name: "Test having multiple JSON inputs",
+			test: "multiple_json_input",
+		},
+		{
+			name: "A second test when selecting with sub field and tags",
+			test: "subfieldtag_in_object_2",
+		},
+		{
+			name: "Test selecting with sub field and tags",
+			test: "subfieldtag_in_object",
 		},
 		{
 			name: "Test using just fields and tags",
@@ -90,7 +105,7 @@ func TestData(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			// Process the telegraf config file for the test
-			buf, err := ioutil.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", tc.test))
+			buf, err := os.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", tc.test))
 			require.NoError(t, err)
 			inputs.Add("file", func() telegraf.Input {
 				return &file.File{}

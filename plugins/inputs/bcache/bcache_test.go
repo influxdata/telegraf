@@ -4,7 +4,6 @@
 package bcache
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -50,39 +49,39 @@ func TestBcacheGeneratesMetrics(t *testing.T) {
 	err = os.MkdirAll(testBcacheUUIDPath+"/bdev0/stats_total", 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testBcacheUUIDPath+"/bdev0/dirty_data",
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/dirty_data",
 		[]byte(dirtyData), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/bypassed",
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/bypassed",
 		[]byte(bypassed), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_bypass_hits",
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_bypass_hits",
 		[]byte(cacheBypassHits), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_bypass_misses",
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_bypass_misses",
 		[]byte(cacheBypassMisses), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_hit_ratio",
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_hit_ratio",
 		[]byte(cacheHitRatio), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_hits",
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_hits",
 		[]byte(cacheHits), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_miss_collisions",
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_miss_collisions",
 		[]byte(cacheMissCollisions), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_misses",
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_misses",
 		[]byte(cacheMisses), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_readaheads",
+	err = os.WriteFile(testBcacheUUIDPath+"/bdev0/stats_total/cache_readaheads",
 		[]byte(cacheReadaheads), 0644)
 	require.NoError(t, err)
 

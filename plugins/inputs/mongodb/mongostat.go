@@ -1086,8 +1086,10 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			}
 			if newStat.Metrics.Repl.Network != nil {
 				returnVal.ReplNetworkBytes = newStat.Metrics.Repl.Network.Bytes
-				returnVal.ReplNetworkGetmoresNum = newStat.Metrics.Repl.Network.GetMores.Num
-				returnVal.ReplNetworkGetmoresTotalMillis = newStat.Metrics.Repl.Network.GetMores.TotalMillis
+				if newStat.Metrics.Repl.Network.GetMores != nil {
+					returnVal.ReplNetworkGetmoresNum = newStat.Metrics.Repl.Network.GetMores.Num
+					returnVal.ReplNetworkGetmoresTotalMillis = newStat.Metrics.Repl.Network.GetMores.TotalMillis
+				}
 				returnVal.ReplNetworkOps = newStat.Metrics.Repl.Network.Ops
 			}
 		}

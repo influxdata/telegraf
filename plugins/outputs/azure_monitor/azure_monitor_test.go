@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -209,7 +211,11 @@ func TestAggregate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.plugin.Connect()
+			msiEndpoint, err := adal.GetMSIVMEndpoint()
+			require.NoError(t, err)
+
+			os.Setenv("MSI_ENDPOINT", msiEndpoint)
+			err = tt.plugin.Connect()
 			require.NoError(t, err)
 
 			// Reset globals

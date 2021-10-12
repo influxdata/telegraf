@@ -1,16 +1,16 @@
 package thrift
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net"
 	"strconv"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
-
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore"
+	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
+	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift/gen-go/zipkincore"
 )
 
 // UnmarshalThrift converts raw bytes in thrift format to a slice of spans
@@ -20,8 +20,8 @@ func UnmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
 		return nil, err
 	}
 
-	transport := thrift.NewTBinaryProtocolTransport(buffer)
-	_, size, err := transport.ReadListBegin()
+	transport := thrift.NewTBinaryProtocolConf(buffer, nil)
+	_, size, err := transport.ReadListBegin(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -29,13 +29,13 @@ func UnmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
 	spans := make([]*zipkincore.Span, size)
 	for i := 0; i < size; i++ {
 		zs := &zipkincore.Span{}
-		if err = zs.Read(transport); err != nil {
+		if err = zs.Read(context.Background(), transport); err != nil {
 			return nil, err
 		}
 		spans[i] = zs
 	}
 
-	if err = transport.ReadListEnd(); err != nil {
+	if err = transport.ReadListEnd(context.Background()); err != nil {
 		return nil, err
 	}
 	return spans, nil

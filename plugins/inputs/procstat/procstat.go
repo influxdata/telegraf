@@ -3,7 +3,6 @@ package procstat
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -155,9 +154,10 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	tags := make(map[string]string)
 	p.procs = newProcs
-
 	for _, proc := range p.procs {
+		tags = proc.Tags()
 		p.addMetric(proc, acc, now)
 	}
 
@@ -166,7 +166,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		"running":     len(p.procs),
 		"result_code": 0,
 	}
-	tags := make(map[string]string)
+
 	tags["pid_finder"] = p.PidFinder
 	tags["result"] = "success"
 	acc.AddFields("procstat_lookup", fields, tags, now)
@@ -516,7 +516,7 @@ func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
 		return nil, fmt.Errorf("not a directory %s", path)
 	}
 	procsPath := filepath.Join(path, "cgroup.procs")
-	out, err := ioutil.ReadFile(procsPath)
+	out, err := os.ReadFile(procsPath)
 	if err != nil {
 		return nil, err
 	}
