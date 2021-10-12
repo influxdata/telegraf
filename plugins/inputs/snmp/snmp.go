@@ -528,7 +528,6 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
 				if len(ent.Name) <= len(oid) || ent.Name[:len(oid)+1] != oid+"." {
-					fmt.Printf("%v\n", &walkError{})
 					return &walkError{} // break the walk
 				}
 
