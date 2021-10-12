@@ -20,10 +20,11 @@ var pythonScript []byte
 
 const sampleConfig = `
   ## Database user with SELECT_CATALOG_ROLE role granted, required.
-	username = system
-	password = oracle
-  ## Data source name, required. See https://cx-oracle.readthedocs.io/en/latest/user_guide/connection_handling.html#connection-strings
-	dsn = XE
+  username = system
+  password = oracle
+  ## Data source name, required. 
+	## See https://cx-oracle.readthedocs.io/en/latest/user_guide/connection_handling.html#connection-strings
+  dsn = XE
 
   ## python executable, python3 by default 
   python=python3
