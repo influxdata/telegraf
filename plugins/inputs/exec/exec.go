@@ -1,24 +1,18 @@
 package exec
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	osExec "os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/kballard/go-shellquote"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/kballard/go-shellquote"
 )
 
 const sampleConfig = `
@@ -42,8 +36,6 @@ const sampleConfig = `
   data_format = "influx"
 `
 
-const MaxStderrBytes int = 512
-
 type Exec struct {
 	Commands []string        `toml:"commands"`
 	Command  string          `toml:"command"`
@@ -57,91 +49,23 @@ type Exec struct {
 
 func NewExec() *Exec {
 	return &Exec{
-		runner:  CommandRunner{},
+		runner:  NewRunner(),
 		Timeout: config.Duration(time.Second * 5),
 	}
-}
-
-type Runner interface {
-	Run(string, time.Duration) ([]byte, []byte, error)
-}
-
-type CommandRunner struct{}
-
-func (c CommandRunner) Run(
-	command string,
-	timeout time.Duration,
-) ([]byte, []byte, error) {
-	splitCmd, err := shellquote.Split(command)
-	if err != nil || len(splitCmd) == 0 {
-		return nil, nil, fmt.Errorf("exec: unable to parse command, %s", err)
-	}
-
-	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
-
-	var (
-		out    bytes.Buffer
-		stderr bytes.Buffer
-	)
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-
-	runErr := internal.RunTimeout(cmd, timeout)
-
-	out = removeWindowsCarriageReturns(out)
-	if stderr.Len() > 0 && !telegraf.Debug {
-		stderr = removeWindowsCarriageReturns(stderr)
-		stderr = c.truncate(stderr)
-	}
-
-	return out.Bytes(), stderr.Bytes(), runErr
-}
-
-func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
-	// Limit the number of bytes.
-	didTruncate := false
-	if buf.Len() > MaxStderrBytes {
-		buf.Truncate(MaxStderrBytes)
-		didTruncate = true
-	}
-	if i := bytes.IndexByte(buf.Bytes(), '\n'); i > 0 {
-		// Only show truncation if the newline wasn't the last character.
-		if i < buf.Len()-1 {
-			didTruncate = true
-		}
-		buf.Truncate(i)
-	}
-	if didTruncate {
-		//nolint:errcheck,revive // Will always return nil or panic
-		buf.WriteString("...")
-	}
-	return buf
-}
-
-// removeWindowsCarriageReturns removes all carriage returns from the input if the
-// OS is Windows. It does not return any errors.
-func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
-	if runtime.GOOS == "windows" {
-		var buf bytes.Buffer
-		for {
-			byt, err := b.ReadBytes(0x0D)
-			byt = bytes.TrimRight(byt, "\x0d")
-			if len(byt) > 0 {
-				_, _ = buf.Write(byt)
-			}
-			if err == io.EOF {
-				return buf
-			}
-		}
-	}
-	return b
 }
 
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	out, errbuf, runErr := e.runner.Run(command, time.Duration(e.Timeout))
+	var out, errbuf []byte
+	var runErr error
+	splitCmd, err := shellquote.Split(command)
+	if err != nil || len(splitCmd) == 0 {
+		runErr = fmt.Errorf("exec: unable to parse command, %s", err)
+	} else {
+		out, errbuf, runErr = e.runner.Run(splitCmd[0], splitCmd[1:], nil, nil, time.Duration(e.Timeout))
+	}
 	if !isNagios && runErr != nil {
 		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
 		acc.AddError(err)
