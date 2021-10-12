@@ -4,6 +4,15 @@ Building the packages for Telegraf is automated using [Make](https://en.wikipedi
 
 The packaging steps require certain tools to be setup before hand to work. These dependencies are listed in the ci-1.17.docker file which you can find in the scripts directory. Therefore it is recommended to use Docker to build the artifacts, see more details below.
 
+## Go Version
+
+Telegraf will be built using the latest version of Go whenever possible. Incrementing the version is maintained by the core Telegraf team because it requires access to an internal docker repository that hosts the docker CI images. When a new version is released, the following process is followed:
+
+1. Within the `Makefile` and `.circleci\config.yml` update the Go versions to the new version number
+2. Run `make ci-<latest version>` where `<latest version>` refers to the new Go version number (this requires internal permissions)
+3. The files `scripts\installgo_mac.sh` and `scripts\installgo_windows.sh` need to be updated as well with the new Go version and SHA
+4. Create a pull request with these new changes, and verify the CI passes and uses the new docker image
+
 ## Package using Docker
 
 This packaging method uses the CI images, and is very similar to how the
