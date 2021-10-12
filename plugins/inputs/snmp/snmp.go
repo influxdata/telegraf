@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"os"
@@ -313,8 +314,9 @@ func (f *Field) init(parent *Snmp) error {
 	// check if oid needs translation or name is not set
 	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
 		_, oidNum, oidText, conversion, err := snmpTranslateCall(f.Oid)
+		//maybe turn this into a warning
 		if err != nil {
-			return fmt.Errorf("translating: %w", err)
+			log.Printf("W! [inputs.snmp] %v", err)
 		}
 		f.Oid = oidNum
 		if f.Name == "" {
@@ -919,7 +921,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 
 		out, err = gosmi.GetNode(node)
 		if err != nil {
-			return "", "", "", "", err
+			return oid, oid, oid, "", err
 		}
 
 		oidNum = "." + out.RenderNumeric() + end
@@ -930,7 +932,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
 				out, err = gosmi.GetNode(s[i])
 				if err != nil {
-					return "", "", "", "", err
+					return oid, oid, oid, "", err
 				}
 				s[i] = out.RenderNumeric()
 			}
@@ -942,7 +944,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		oidNum = oid
 		// ensure modules are loaded or node will be empty (might not error)
 		if err != nil {
-			return "", "", "", "", err
+			return oid, oid, oid, "", err
 		}
 	}
 

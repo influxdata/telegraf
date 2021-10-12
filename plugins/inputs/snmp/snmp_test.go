@@ -143,6 +143,7 @@ func TestFieldInit(t *testing.T) {
 		{"IF-MIB::ifPhysAddress.1", "", "none", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "none"},
 		{"BRIDGE-MIB::dot1dTpFdbAddress.1", "", "", ".1.3.6.1.2.1.17.4.3.1.1.1", "dot1dTpFdbAddress.1", "hwaddr"},
 		{"TCP-MIB::tcpConnectionLocalAddress.1", "", "", ".1.3.6.1.2.1.6.19.1.2.1", "tcpConnectionLocalAddress.1", "ipaddr"},
+		{".999", "", "", ".999", ".999", ""},
 	}
 
 	for _, txl := range translations {
@@ -163,6 +164,7 @@ func TestTableInit(t *testing.T) {
 	tbl := Table{
 		Oid: ".1.3.6.1.2.1.3.1",
 		Fields: []Field{
+			{Oid: ".999", Name: "foo"},
 			{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "ifIndex"},
 			{Oid: "RFC1213-MIB::atPhysAddress", Name: "atPhysAddress", IsTag: true},
 		},
@@ -177,7 +179,7 @@ func TestTableInit(t *testing.T) {
 
 	assert.Equal(t, "atTable", tbl.Name)
 
-	assert.Len(t, tbl.Fields, 4)
+	assert.Len(t, tbl.Fields, 5)
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true, snmp: s})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", IsTag: true, initialized: true, snmp: s, Conversion: "hwaddr"})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true, snmp: s})
