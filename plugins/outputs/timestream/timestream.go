@@ -314,13 +314,12 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 		}
 
 		var operation *smithy.OperationError
-		if errors.As(err, &operation) {
-			t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
-		} else {
+		if !errors.As(err, &operation) {
 			// Retry other, non-aws errors.
 			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
 				t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
+		t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
 	}
 	return nil
 }
@@ -523,8 +522,8 @@ func partitionRecords(size int, records []types.Record) [][]types.Record {
 
 // getTimestreamTime produces Timestream TimeUnit and TimeValue with minimum possible granularity
 // while maintaining the same information.
-func getTimestreamTime(time time.Time) (timeUnit types.TimeUnit, timeValue string) {
-	nanosTime := time.UnixNano()
+func getTimestreamTime(t time.Time) (timeUnit types.TimeUnit, timeValue string) {
+	nanosTime := t.UnixNano()
 	if nanosTime%1e9 == 0 {
 		timeUnit = types.TimeUnitSeconds
 		timeValue = strconv.FormatInt(nanosTime/1e9, 10)

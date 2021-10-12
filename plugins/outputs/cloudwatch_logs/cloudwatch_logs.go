@@ -212,7 +212,7 @@ func (c *CloudWatchLogs) Connect() error {
 			for _, logGroup := range logGroupsOutput.LogGroups {
 				if *(logGroup.LogGroupName) == c.LogGroup {
 					c.Log.Debugf("Found log group %q", c.LogGroup)
-					c.lg = &logGroup
+					c.lg = &logGroup //nolint:revive
 				}
 			}
 		}
