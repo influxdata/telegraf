@@ -82,10 +82,36 @@ func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulat
 
 	fields[fieldInterfaceUp] = e.interfaceUp(iface)
 	for k, v := range stats {
-		fields[strings.TrimSpace(k)] = v
+		fields[e.normalizeKey(k)] = v
 	}
 
 	acc.AddFields(pluginName, fields, tags)
+}
+
+// normalize key string; order matters to avoid replacing whitespace with
+// underscores, then trying to trim those same underscores.
+func (e *Ethtool) normalizeKey(key string) string {
+	if inStringSlice(e.NormalizeKeys, "trim") {
+		key = strings.TrimSpace(key)
+	}
+	if inStringSlice(e.NormalizeKeys, "lower") {
+		key = strings.ToLower(key)
+	}
+	if inStringSlice(e.NormalizeKeys, "spaces") {
+		key = strings.ReplaceAll(key, " ", "_")
+	}
+
+	return key
+}
+
+func inStringSlice(slice []string, value string) bool {
+	for _, item := range slice {
+		if item == value {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (e *Ethtool) interfaceUp(iface net.Interface) bool {

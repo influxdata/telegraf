@@ -12,6 +12,14 @@ The ethtool input plugin pulls ethernet device stats. Fields pulled will depend 
 
   ## List of interfaces to ignore when pulling metrics.
   # interface_exclude = ["eth1"]
+
+  ## Some drivers declare statistics with extra whitespace, different spacing,
+  ## and mix cases. This list, when enabled, can be used to clean the keys.
+  ## Here are the current possible normalizations:
+  ##  * trim: removes leading and trailing whitespace
+  ##  * lower: changes all capitalized letters to lowercase
+  ##  * spaces: replaces spaces with underscores
+  # normalize_keys = ["trim", "lower", "spaces"]
 ```
 
 Interfaces can be included or ignored using:
