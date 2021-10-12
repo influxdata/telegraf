@@ -915,7 +915,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 
 		out, err = gosmi.GetNode(node)
 		if err != nil {
-			return oid, oid, oid, "", err
+			return oid, oid, oid, oid, err
 		}
 
 		oidNum = "." + out.RenderNumeric() + end
@@ -926,7 +926,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
 				out, err = gosmi.GetNode(s[i])
 				if err != nil {
-					return oid, oid, oid, "", err
+					return oid, oid, oid, oid, err
 				}
 				s[i] = out.RenderNumeric()
 			}
@@ -938,7 +938,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		oidNum = oid
 		// ensure modules are loaded or node will be empty (might not error)
 		if err != nil {
-			return oid, oid, oid, "", err
+			return oid, oid, oid, oid, err
 		}
 	}
 
@@ -961,7 +961,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	oidText = out.RenderQualified()
 	i := strings.Index(oidText, "::")
 	if i == -1 {
-		return "", oid, oid, "", fmt.Errorf("not found")
+		return "", oid, oid, oid, fmt.Errorf("not found")
 	}
 	mibName = oidText[:i]
 	oidText = oidText[i+2:] + end

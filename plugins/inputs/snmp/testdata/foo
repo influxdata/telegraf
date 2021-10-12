@@ -15,6 +15,9 @@ fooTestMIB MODULE-IDENTITY
     ::= { iso 1 }
 
 fooMIBObjects OBJECT IDENTIFIER ::= { iso 2 }
+fooOne OBJECT IDENTIFIER ::= { iso 1 }
+six OBJECT IDENTIFIER ::= { fooOne 1 }
+three OBJECT IDENTIFIER ::= { six 3 }
 
 foo OBJECT-TYPE 
             SYNTAX Integer32
