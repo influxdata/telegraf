@@ -231,7 +231,7 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 		Fields: []Field{
 			{Oid: ".1.1.1.1", Name: "one", IsTag: true},
 			{Oid: ".1.1.1.2", Name: "two"},
-			{Oid: ".1.1.1.3", Name: ".1.1.1.3"},
+			{Oid: ".1.1.1.3"},
 		},
 		Tables: []Table{
 			{Name: "testing",
@@ -255,7 +255,7 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 	assert.Equal(t, false, s.Fields[1].IsTag)
 
 	assert.Equal(t, ".1.1.1.3", s.Fields[2].Oid)
-	assert.Equal(t, ".1.1.1.3", s.Fields[2].Name)
+	assert.Equal(t, "iso", s.Fields[2].Name)
 	assert.Equal(t, false, s.Fields[2].IsTag)
 
 	assert.Equal(t, ".1.1.1.4", s.Tables[0].Fields[0].Oid)
