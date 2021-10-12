@@ -442,7 +442,6 @@ func TestNormalizedKeys(t *testing.T) {
 			},
 		},
 	}
-
 	for _, c := range cases {
 		eth0 := &InterfaceMock{"eth0", "e1000e", c.stats, false, true}
 		expectedTags := map[string]string{
@@ -469,5 +468,4 @@ func TestNormalizedKeys(t *testing.T) {
 
 		acc.AssertContainsTaggedFields(t, pluginName, toStringMapInterface(c.expectedFields), expectedTags)
 	}
-
 }
