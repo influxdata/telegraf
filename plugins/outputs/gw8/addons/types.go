@@ -40,6 +40,7 @@ type ValueType string
 // DoubleType type of the value of a metric
 const (
 	DoubleType ValueType = "DoubleType"
+	StringType ValueType = "StringType"
 )
 
 type MonitorStatus string
@@ -73,23 +74,13 @@ const (
 type TypedValue struct {
 	ValueType ValueType `json:"valueType"`
 
-	// BoolValue: A Boolean value: true or false.
-	BoolValue bool `json:"boolValue,omitempty"`
-
 	// DoubleValue: A 64-bit double-precision floating-point number. Its
 	// magnitude is approximately &plusmn;10<sup>&plusmn;300</sup> and it
 	// has 16 significant digits of precision.
 	DoubleValue float64 `json:"doubleValue,omitempty"`
 
-	// Int64Value: A 64-bit integer. Its range is approximately
-	// &plusmn;9.2x10<sup>18</sup>.
-	IntegerValue int64 `json:"integerValue,omitempty"`
-
 	// StringValue: A variable-length string value.
-	StringValue string `json:"stringValue,omitempty"`
-
-	// a time stored as full timestamp
-	TimeValue *Timestamp `json:"timeValue,omitempty"`
+	StringValue *string `json:"stringValue,omitempty"`
 }
 
 // TimeInterval defines a closed time interval. It extends from the start time

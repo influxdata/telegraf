@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -14,21 +13,14 @@ import (
 )
 
 const (
-	defaultTestAgentId     = "ec1676cc-583d-48ee-b035-7fb5ed0fcf88"
+	defaultTestAgentID     = "ec1676cc-583d-48ee-b035-7fb5ed0fcf88"
 	defaultTestAppType     = "TELEGRAF"
-	defaultTestServiceName = "GROUNDWORK_TEST"
 )
 
 func TestWrite(t *testing.T) {
 	// Generate test metric with default name to test Write logic
-	metric := testutil.TestMetric(1, defaultTestServiceName)
-
-	// Get value from metric to compare with value from json result
-	expectedValue := 0.0
-	for _, value := range metric.FieldList() {
-		expectedValue, _ = internal.ToFloat64(value.Value)
-		break
-	}
+	floatMetric := testutil.TestMetric(1, "Float")
+	stringMetric := testutil.TestMetric("Test", "String")
 
 	// Simulate Groundwork server that should receive custom metrics
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,17 +34,22 @@ func TestWrite(t *testing.T) {
 
 		// Check if server gets valid metrics object
 		assert.Equal(t, obj["context"].(map[string]interface{})["appType"], defaultTestAppType)
-		assert.Equal(t, obj["context"].(map[string]interface{})["agentId"], defaultTestAgentId)
+		assert.Equal(t, obj["context"].(map[string]interface{})["agentId"], defaultTestAgentID)
 		assert.Equal(t, obj["resources"].([]interface{})[0].(map[string]interface{})["name"], "default_telegraf")
 		assert.Equal(
 			t,
 			obj["resources"].([]interface{})[0].(map[string]interface{})["services"].([]interface{})[0].(map[string]interface{})["name"],
-			defaultTestServiceName,
+			"Float",
 		)
 		assert.Equal(
 			t,
 			obj["resources"].([]interface{})[0].(map[string]interface{})["services"].([]interface{})[0].(map[string]interface{})["metrics"].([]interface{})[0].(map[string]interface{})["value"].(map[string]interface{})["doubleValue"].(float64),
-			expectedValue,
+			1.0,
+		)
+		assert.Equal(
+			t,
+			obj["resources"].([]interface{})[0].(map[string]interface{})["services"].([]interface{})[1].(map[string]interface{})["metrics"].([]interface{})[0].(map[string]interface{})["value"].(map[string]interface{})["stringValue"].(string),
+			"Test",
 		)
 
 		_, err = fmt.Fprintln(w, `OK`)
@@ -62,10 +59,10 @@ func TestWrite(t *testing.T) {
 	i := GW8{
 		Server:  server.URL,
 		AppType: defaultTestAppType,
-		AgentId: defaultTestAgentId,
+		AgentID: defaultTestAgentID,
 	}
 
-	err := i.Write([]telegraf.Metric{metric})
+	err := i.Write([]telegraf.Metric{floatMetric, stringMetric})
 	assert.NoError(t, err)
 
 	defer server.Close()

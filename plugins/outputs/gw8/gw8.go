@@ -23,8 +23,8 @@ const (
 
 // Login and logout routes from Groundwork API
 const (
-	loginUrl  = "/api/auth/login"
-	logoutUrl = "/api/auth/logout"
+	loginURL  = "/api/auth/login"
+	logoutURL = "/api/auth/logout"
 )
 
 var (
@@ -41,7 +41,7 @@ var (
 var (
 	sampleConfig = `
   ## HTTP endpoint for your groundwork instance.
-  groundwork_endpoint = ""
+  endpoint = ""
 
   ## Agent uuid for Groundwork API Server
   agent_id = ""
@@ -51,23 +51,24 @@ var (
 
   ## Username to access Groundwork API
   username = ""
+
   ## Password to use in pair with username
   password = ""
 
   ## Default display name for the host with services(metrics)
   default_host = "default_telegraf"
 
-  ## Default service state [default - "host"]
+  ## Default service state [default - "SERVICE_OK"]
   default_service_state = "SERVICE_OK"
 
-  ## The name of the tag that contains the hostname
+  ## The name of the tag that contains the hostname [default - "host"]
   resource_tag = "host"
 `
 )
 
 type GW8 struct {
 	Server              string `toml:"groundwork_endpoint"`
-	AgentId             string `toml:"agent_id"`
+	AgentID             string `toml:"agent_id"`
 	AppType             string `toml:"app_type"`
 	Username            string `toml:"username"`
 	Password            string `toml:"password"`
@@ -83,16 +84,15 @@ func (g *GW8) SampleConfig() string {
 
 func (g *GW8) Connect() error {
 	if g.Server == "" {
-		return errors.New("Groundwork endpoint\\username\\password are not provided ")
+		return errors.New("no 'server' provided")
 	}
 
-	if byteToken, err := login(g.Server+loginUrl, g.Username, g.Password); err == nil {
+	byteToken, err := login(g.Server+loginURL, g.Username, g.Password)
+	if err == nil {
 		g.authToken = string(byteToken)
-	} else {
-		return err
 	}
 
-	return nil
+	return err
 }
 
 func (g *GW8) Close() error {
@@ -105,12 +105,9 @@ func (g *GW8) Close() error {
 		"Content-Type": "application/x-www-form-urlencoded",
 	}
 
-	_, _, err := addons.SendRequest(http.MethodPost, g.Server+logoutUrl, headers, formValues, nil)
-	if err != nil {
-		return err
-	}
+	_, _, err := addons.SendRequest(http.MethodPost, g.Server+logoutURL, headers, formValues, nil)
 
-	return nil
+	return err
 }
 
 func (g *GW8) Write(metrics []telegraf.Metric) error {
@@ -126,17 +123,17 @@ func (g *GW8) Write(metrics []telegraf.Metric) error {
 			Name:          resourceName,
 			Type:          addons.Host,
 			Status:        addons.HostUp,
-			LastCheckTime: &addons.Timestamp{Time: time.Now()},
+			LastCheckTime: addons.Now(),
 			Services:      services,
 		})
 	}
 
-	requestJson, err := json.Marshal(addons.DynamicResourcesWithServicesRequest{
+	requestJSON, err := json.Marshal(addons.DynamicResourcesWithServicesRequest{
 		Context: &addons.TracerContext{
 			AppType:    g.AppType,
-			AgentID:    g.AgentId,
+			AgentID:    g.AgentID,
 			TraceToken: makeTracerToken(),
-			TimeStamp:  &addons.Timestamp{Time: time.Now()},
+			TimeStamp:  addons.Now(),
 			Version:    addons.ModelVersion,
 		},
 		Resources: resources,
@@ -154,9 +151,9 @@ func (g *GW8) Write(metrics []telegraf.Metric) error {
 		"Accept":         "application/json",
 	}
 
-	statusCode, _, httpErr := addons.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJson)
+	statusCode, _, err := addons.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
 	if err != nil {
-		return httpErr
+		return err
 	}
 
 	/* Re-login mechanism */
@@ -165,12 +162,12 @@ func (g *GW8) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 		headers["GWOS-API-TOKEN"] = g.authToken
-		statusCode, body, httpErr := addons.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJson)
+		statusCode, body, httpErr := addons.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
 		if httpErr != nil {
 			return httpErr
 		}
 		if statusCode != 200 {
-			return errors.New(fmt.Sprintf("something went wrong during processing an http request[http_status = %d, body = %s]", statusCode, string(body)))
+			return fmt.Errorf("something went wrong during processing an http request[http_status = %d, body = %s]", statusCode, string(body))
 		}
 	}
 
@@ -233,7 +230,7 @@ func parseMetric(defaultHostname, defaultServiceState, resourceTag string, metri
 		Type:             addons.Service,
 		Owner:            resource,
 		Status:           addons.MonitorStatus(status),
-		LastCheckTime:    &addons.Timestamp{Time: metric.Time()},
+		LastCheckTime:    addons.Now(),
 		LastPlugInOutput: message,
 		Metrics:          nil,
 	}
@@ -257,17 +254,28 @@ func parseMetric(defaultHostname, defaultServiceState, resourceTag string, metri
 			},
 		})
 
-		val, _ := internal.ToFloat64(value.Value)
+		valueType := addons.DoubleType
+		var floatVal float64
+		var stringVal *string
+
+		switch value.Value.(type) {
+		case string:
+			valueType = addons.StringType
+			tmpStr := value.Value.(string)
+			stringVal = &tmpStr
+		default:
+			floatVal, _ = internal.ToFloat64(value.Value)
+		}
 		serviceObject.Metrics = append(serviceObject.Metrics, addons.TimeSeries{
 			MetricName: value.Key,
 			SampleType: addons.Value,
 			Interval: &addons.TimeInterval{
-				EndTime:   &addons.Timestamp{Time: time.Now()},
-				StartTime: &addons.Timestamp{Time: time.Now()},
+				EndTime: addons.TimestampRef(metric.Time()),
 			},
 			Value: &addons.TypedValue{
-				ValueType:   addons.DoubleType,
-				DoubleValue: val,
+				ValueType:   valueType,
+				DoubleValue: floatVal,
+				StringValue: stringVal,
 			},
 			Unit:       addons.UnitType(unitType),
 			Thresholds: &thresholds,
@@ -299,8 +307,7 @@ func login(url, username, password string) ([]byte, error) {
 		return nil, err
 	}
 	if statusCode != 200 {
-		return nil, errors.New(fmt.Sprintf("[ERROR]: Http request failed. [Status code]: %d, [Response]: %s",
-			statusCode, string(body)))
+		return nil, fmt.Errorf("[ERROR]: Http request failed. [Status code]: %d, [Response]: %s", statusCode, string(body))
 	}
 
 	return body, nil
@@ -343,21 +350,18 @@ func calculateStatus(value *addons.TypedValue, warning *addons.TypedValue, criti
 	var criticalValue float64
 
 	if warning != nil {
-		switch warning.ValueType {
-		case addons.DoubleType:
+		if warning.ValueType == addons.DoubleType {
 			warningValue = warning.DoubleValue
 		}
 	}
 
 	if critical != nil {
-		switch critical.ValueType {
-		case addons.DoubleType:
+		if critical.ValueType == addons.DoubleType {
 			criticalValue = critical.DoubleValue
 		}
 	}
 
-	switch value.ValueType {
-	case addons.DoubleType:
+	if value.ValueType == addons.DoubleType {
 		if warning == nil && criticalValue == -1 {
 			if value.DoubleValue >= criticalValue {
 				return addons.ServiceUnscheduledCritical
@@ -382,26 +386,26 @@ func calculateStatus(value *addons.TypedValue, warning *addons.TypedValue, criti
 				return addons.ServiceWarning
 			}
 			return addons.ServiceOk
-		} else {
-			if value.DoubleValue >= criticalValue {
-				return addons.ServiceUnscheduledCritical
-			}
-			if value.DoubleValue >= warningValue {
-				return addons.ServiceWarning
-			}
-			return addons.ServiceOk
 		}
+		if value.DoubleValue >= criticalValue {
+			return addons.ServiceUnscheduledCritical
+		}
+		if value.DoubleValue >= warningValue {
+			return addons.ServiceWarning
+		}
+
+		return addons.ServiceOk
 	}
 	return addons.ServiceOk
 }
 
 func validStatus(status string) bool {
-	return status == string(addons.ServiceOk) ||
-		status == string(addons.ServiceWarning) ||
-		status == string(addons.ServicePending) ||
-		status == string(addons.ServiceScheduledCritical) ||
-		status == string(addons.ServiceUnscheduledCritical) ||
-		status == string(addons.ServiceUnknown)
+	switch addons.MonitorStatus(status) {
+	case addons.ServiceOk, addons.ServiceWarning, addons.ServicePending, addons.ServiceScheduledCritical,
+		addons.ServiceUnscheduledCritical, addons.ServiceUnknown:
+		return true
+	}
+	return false
 }
 
 // makeTracerContext
