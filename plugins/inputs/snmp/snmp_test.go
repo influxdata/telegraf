@@ -65,33 +65,42 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 var tsc = &testSNMPConnection{
 	host: "tsc",
 	values: map[string]interface{}{
-		".1.0.0.0.1.1.0":     "foo",
-		".1.0.0.0.1.1.1":     []byte("bar"),
-		".1.0.0.0.1.1.2":     []byte(""),
-		".1.0.0.0.1.102":     "bad",
-		".1.0.0.0.1.2.0":     1,
-		".1.0.0.0.1.2.1":     2,
-		".1.0.0.0.1.2.2":     0,
-		".1.0.0.0.1.3.0":     "0.123",
-		".1.0.0.0.1.3.1":     "0.456",
-		".1.0.0.0.1.3.2":     "0.000",
-		".1.0.0.0.1.3.3":     "9.999",
-		".1.0.0.0.1.5.0":     123456,
-		".1.0.0.1.1":         "baz",
-		".1.0.0.1.2":         234,
-		".1.0.0.1.3":         []byte("byte slice"),
-		".1.0.0.2.1.5.0.9.9": 11,
-		".1.0.0.2.1.5.1.9.9": 22,
-		".1.0.0.0.1.6.0":     ".1.0.0.0.1.7",
-		".1.0.0.3.1.1.10":    "instance",
-		".1.0.0.3.1.1.11":    "instance2",
-		".1.0.0.3.1.1.12":    "instance3",
-		".1.0.0.3.1.2.10":    10,
-		".1.0.0.3.1.2.11":    20,
-		".1.0.0.3.1.2.12":    20,
-		".1.0.0.3.1.3.10":    1,
-		".1.0.0.3.1.3.11":    2,
-		".1.0.0.3.1.3.12":    3,
+		".1.3.6.1.2.1.3.1.1.1.0": "foo",
+		".1.3.6.1.2.1.3.1.1.1.1": []byte("bar"),
+		".1.3.6.1.2.1.3.1.1.1.2": []byte(""),
+		".1.3.6.1.2.1.3.1.1.102": "bad",
+		".1.3.6.1.2.1.3.1.1.2.0": 1,
+		".1.3.6.1.2.1.3.1.1.2.1": 2,
+		".1.3.6.1.2.1.3.1.1.2.2": 0,
+		".1.3.6.1.2.1.3.1.1.3.0": "1.3.6.1.2.1.3.1.1.3",
+		".1.3.6.1.2.1.3.1.1.5.0": 123456,
+		".1.0.0.0.1.1.0":         "foo",
+		".1.0.0.0.1.1.1":         []byte("bar"),
+		".1.0.0.0.1.1.2":         []byte(""),
+		".1.0.0.0.1.102":         "bad",
+		".1.0.0.0.1.2.0":         1,
+		".1.0.0.0.1.2.1":         2,
+		".1.0.0.0.1.2.2":         0,
+		".1.0.0.0.1.3.0":         "0.123",
+		".1.0.0.0.1.3.1":         "0.456",
+		".1.0.0.0.1.3.2":         "0.000",
+		".1.0.0.0.1.3.3":         "9.999",
+		".1.0.0.0.1.5.0":         123456,
+		".1.0.0.1.1":             "baz",
+		".1.0.0.1.2":             234,
+		".1.0.0.1.3":             []byte("byte slice"),
+		".1.0.0.2.1.5.0.9.9":     11,
+		".1.0.0.2.1.5.1.9.9":     22,
+		".1.0.0.0.1.6.0":         ".1.0.0.0.1.7",
+		".1.0.0.3.1.1.10":        "instance",
+		".1.0.0.3.1.1.11":        "instance2",
+		".1.0.0.3.1.1.12":        "instance3",
+		".1.0.0.3.1.2.10":        10,
+		".1.0.0.3.1.2.11":        20,
+		".1.0.0.3.1.2.12":        20,
+		".1.0.0.3.1.3.10":        1,
+		".1.0.0.3.1.3.11":        2,
+		".1.0.0.3.1.3.12":        3,
 	},
 }
 
@@ -214,7 +223,6 @@ func TestSnmpInit(t *testing.T) {
 		Oid:         ".1.0.0.1.1",
 		Name:        "hostname",
 		initialized: true,
-		snmp:        s,
 	}, s.Fields[0])
 }
 
@@ -655,12 +663,12 @@ func TestTableBuild_walk(t *testing.T) {
 			{
 				Name:      "atPhysAddress",
 				Oid:       "1.3.6.1.2.1.3.1.1.2",
-				Translate: true,
+				Translate: false,
 			},
 			{
-				Name:       "atNetAddress",
-				Oid:        "1.3.6.1.2.1.3.1.1.3",
-				Conversion: "float",
+				Name:      "atNetAddress",
+				Oid:       "1.3.6.1.2.1.3.1.1.3",
+				Translate: true,
 			},
 		},
 	}
@@ -679,9 +687,7 @@ func TestTableBuild_walk(t *testing.T) {
 		},
 		Fields: map[string]interface{}{
 			"atPhysAddress": 1,
-			"atNetAddress":  "testTableEntry.7",
-			// this fails as Build calls snmpTranslate and this is not a real mib so traslate fails
-			// "myfield6": "testTableEntry.7",
+			"atNetAddress":  "atNetAddress",
 		},
 	}
 	rtr2 := RTableRow{
@@ -702,7 +708,7 @@ func TestTableBuild_walk(t *testing.T) {
 		},
 	}
 
-	assert.Len(t, tb.Rows, 4)
+	assert.Len(t, tb.Rows, 3)
 	assert.Contains(t, tb.Rows, rtr1)
 	assert.Contains(t, tb.Rows, rtr2)
 	assert.Contains(t, tb.Rows, rtr3)

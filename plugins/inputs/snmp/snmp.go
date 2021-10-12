@@ -297,7 +297,6 @@ type Field struct {
 	SecondaryOuterJoin bool
 
 	initialized bool
-	snmp        *Snmp
 }
 
 // init() converts OID names to numbers, and sets the .Name attribute if unset.
@@ -529,6 +528,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
 				if len(ent.Name) <= len(oid) || ent.Name[:len(oid)+1] != oid+"." {
+					fmt.Printf("%v\n", &walkError{})
 					return &walkError{} // break the walk
 				}
 
@@ -556,10 +556,14 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				// snmptranslate table field value here
 				if f.Translate {
 					if entOid, ok := ent.Value.(string); ok {
+						fmt.Printf("%v \n", entOid)
 						_, _, oidText, _, err := snmpTranslateCall(entOid)
+						fmt.Printf("%v \n", err)
+						fmt.Printf("%v\n", ent.Value)
 						if err == nil {
 							// If no error translating, the original value for ent.Value should be replaced
 							ent.Value = oidText
+							fmt.Printf("%v\n", ent.Value)
 						}
 					}
 				}

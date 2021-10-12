@@ -52,6 +52,6 @@ description OBJECT-TYPE
             STATUS current 
             DESCRIPTION
                 "server mib for testing"
-            ::= { testMIBObjects 4 }
+            ::= { testMIBObjects 4 }   
 
 END
