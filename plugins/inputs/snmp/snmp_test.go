@@ -124,6 +124,9 @@ func TestFieldInit(t *testing.T) {
 		},
 	}
 
+	err = s.init()
+	require.NoError(t, err)
+
 	translations := []struct {
 		inputOid           string
 		inputName          string
@@ -147,8 +150,8 @@ func TestFieldInit(t *testing.T) {
 	}
 
 	for _, txl := range translations {
-		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion, snmp: s}
-		err := f.init(f.snmp)
+		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
+		err := f.init()
 		if !assert.NoError(t, err, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName) {
 			continue
 		}
@@ -174,15 +177,18 @@ func TestTableInit(t *testing.T) {
 			Path: []string{testDataPath},
 		},
 	}
-	err = tbl.Init(s)
+	err = s.init()
+	require.NoError(t, err)
+
+	err = tbl.Init()
 	require.NoError(t, err)
 
 	assert.Equal(t, "atTable", tbl.Name)
 
 	assert.Len(t, tbl.Fields, 5)
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true, snmp: s})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", IsTag: true, initialized: true, snmp: s, Conversion: "hwaddr"})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true, snmp: s})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", IsTag: true, initialized: true, Conversion: "hwaddr"})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true})
 }
 
 func TestSnmpInit(t *testing.T) {
@@ -627,77 +633,64 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 }
 
 func TestTableBuild_walk(t *testing.T) {
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
+	s := &Snmp{
+		ClientConfig: snmp.ClientConfig{
+			Path: []string{testDataPath},
+		},
+	}
+	err = s.init()
+	require.NoError(t, err)
+
 	tbl := Table{
-		Name:       "mytable",
+		Name:       "atTable",
 		IndexAsTag: true,
 		Fields: []Field{
 			{
-				Name:  "myfield1",
-				Oid:   ".1.0.0.0.1.1",
+				Name:  "ifIndex",
+				Oid:   "1.3.6.1.2.1.3.1.1.1",
 				IsTag: true,
 			},
 			{
-				Name: "myfield2",
-				Oid:  ".1.0.0.0.1.2",
+				Name:      "atPhysAddress",
+				Oid:       "1.3.6.1.2.1.3.1.1.2",
+				Translate: true,
 			},
 			{
-				Name:       "myfield3",
-				Oid:        ".1.0.0.0.1.3",
+				Name:       "atNetAddress",
+				Oid:        "1.3.6.1.2.1.3.1.1.3",
 				Conversion: "float",
-			},
-			{
-				Name:           "myfield4",
-				Oid:            ".1.0.0.2.1.5",
-				OidIndexSuffix: ".9.9",
-			},
-			{
-				Name:           "myfield5",
-				Oid:            ".1.0.0.2.1.5",
-				OidIndexLength: 1,
-			},
-			// {
-			// 	Name:      "myfield6",
-			// 	Oid:       ".1.0.0.0.1.6",
-			// 	Translate: true,
-			// },
-			{
-				Name:      "myfield7",
-				Oid:       ".1.0.0.0.1.6",
-				Translate: false,
 			},
 		},
 	}
 
+	err = tbl.Init()
+	require.NoError(t, err)
 	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 
-	assert.Equal(t, tb.Name, "mytable")
+	assert.Equal(t, tb.Name, "atTable")
 
 	rtr1 := RTableRow{
 		Tags: map[string]string{
-			"myfield1": "foo",
-			"index":    "0",
+			"ifIndex": "foo",
+			"index":   "0",
 		},
 		Fields: map[string]interface{}{
-			"myfield2": 1,
-			"myfield3": float64(0.123),
-			"myfield4": 11,
-			"myfield5": 11,
+			"atPhysAddress": 1,
+			"atNetAddress":  "testTableEntry.7",
 			// this fails as Build calls snmpTranslate and this is not a real mib so traslate fails
 			// "myfield6": "testTableEntry.7",
-			"myfield7": ".1.0.0.0.1.7",
 		},
 	}
 	rtr2 := RTableRow{
 		Tags: map[string]string{
-			"myfield1": "bar",
-			"index":    "1",
+			"ifIndex": "bar",
+			"index":   "1",
 		},
 		Fields: map[string]interface{}{
-			"myfield2": 2,
-			"myfield3": float64(0.456),
-			"myfield4": 22,
-			"myfield5": 22,
+			"atPhysAddress": 2,
 		},
 	}
 	rtr3 := RTableRow{
@@ -705,23 +698,14 @@ func TestTableBuild_walk(t *testing.T) {
 			"index": "2",
 		},
 		Fields: map[string]interface{}{
-			"myfield2": 0,
-			"myfield3": float64(0.0),
+			"atPhysAddress": 0,
 		},
 	}
-	rtr4 := RTableRow{
-		Tags: map[string]string{
-			"index": "3",
-		},
-		Fields: map[string]interface{}{
-			"myfield3": float64(9.999),
-		},
-	}
+
 	assert.Len(t, tb.Rows, 4)
 	assert.Contains(t, tb.Rows, rtr1)
 	assert.Contains(t, tb.Rows, rtr2)
 	assert.Contains(t, tb.Rows, rtr3)
-	assert.Contains(t, tb.Rows, rtr4)
 }
 
 func TestTableBuild_noWalk(t *testing.T) {

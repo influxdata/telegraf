@@ -108,16 +108,21 @@ func (s *Snmp) init() error {
 		return nil
 	}
 
+	err := s.getMibsPath()
+	if err != nil {
+		return fmt.Errorf("could not get path %v", err)
+	}
+
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
-		if err := s.Tables[i].Init(s); err != nil {
+		if err := s.Tables[i].Init(); err != nil {
 			return fmt.Errorf("initializing table %s: %w", s.Tables[i].Name, err)
 		}
 	}
 
 	for i := range s.Fields {
-		if err := s.Fields[i].init(s); err != nil {
+		if err := s.Fields[i].init(); err != nil {
 			return fmt.Errorf("initializing field %s: %w", s.Fields[i].Name, err)
 		}
 	}
@@ -187,16 +192,10 @@ type Table struct {
 	Oid string
 
 	initialized bool
-	snmp        *Snmp
 }
 
 // Init() builds & initializes the nested fields.
-func (t *Table) Init(parent *Snmp) error {
-	t.snmp = parent
-	err := t.snmp.getMibsPath()
-	if err != nil {
-		return fmt.Errorf("could not get path %v", err)
-	}
+func (t *Table) Init() error {
 	//makes sure oid or name is set in config file
 	//otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
@@ -214,7 +213,7 @@ func (t *Table) Init(parent *Snmp) error {
 	secondaryIndexTablePresent := false
 	// initialize all the nested fields
 	for i := range t.Fields {
-		if err := t.Fields[i].init(t.snmp); err != nil {
+		if err := t.Fields[i].init(); err != nil {
 			return fmt.Errorf("initializing field %s: %w", t.Fields[i].Name, err)
 		}
 		if t.Fields[i].SecondaryIndexTable {
@@ -302,15 +301,11 @@ type Field struct {
 }
 
 // init() converts OID names to numbers, and sets the .Name attribute if unset.
-func (f *Field) init(parent *Snmp) error {
-	f.snmp = parent
+func (f *Field) init() error {
 	if f.initialized {
 		return nil
 	}
-	err := f.snmp.getMibsPath()
-	if err != nil {
-		return fmt.Errorf("could not get path %v", err)
-	}
+
 	// check if oid needs translation or name is not set
 	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
 		_, oidNum, oidText, conversion, err := snmpTranslateCall(f.Oid)
