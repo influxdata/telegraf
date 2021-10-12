@@ -6,7 +6,7 @@ import (
 	osExec "os/exec"
 	"time"
 
-	_ "embed"
+	_ "embed" //nolint // golangci-lint@1.38.0 incorrect false positive
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -41,9 +41,9 @@ type Oracle struct {
 	Password string `toml:"password"`
 	SID      string `toml:"SID"`
 
-	parser parsers.Parser
-	args   []string
-	env    []string
+	parser    parsers.Parser
+	args      []string
+	scriptEnv []string
 
 	runner exec.Runner
 }
@@ -58,16 +58,16 @@ func NewOracle() *Oracle {
 	}
 }
 
-func (e *Oracle) SampleConfig() string {
+func (*Oracle) SampleConfig() string {
 	return sampleConfig
 }
 
-func (o *Oracle) Description() string {
+func (*Oracle) Description() string {
 	return "Read metrics from Oracle RDBMS"
 }
 
 func (o *Oracle) Gather(acc telegraf.Accumulator) error {
-	out, errbuf, runErr := o.runner.Run(o.Python, o.args, o.env, pythonScript, time.Duration(o.Timeout))
+	out, errbuf, runErr := o.runner.Run(o.Python, o.args, o.scriptEnv, pythonScript, time.Duration(o.Timeout))
 	if runErr != nil {
 		err := fmt.Errorf("oracle: %s : %s", runErr, string(errbuf))
 		acc.AddError(err)
@@ -99,7 +99,7 @@ func (o *Oracle) Init() error {
 		return fmt.Errorf(`oracle: "SID" is required`)
 	}
 	if o.Env != nil {
-		o.env = append(os.Environ(), o.Env...)
+		o.scriptEnv = append(os.Environ(), o.Env...)
 	}
 	o.args = []string{
 		"-",

@@ -80,9 +80,9 @@ func TestOracleConfiguration(t *testing.T) {
 	assert.Error(t, oracle.Init())
 	oracle.SID = "XE"
 	oracle.Env = []string{"whatever=yes"}
-	oracle.Init()
-	assert.Contains(t, oracle.env, "whatever=yes")
-	assert.Contains(t, oracle.env, os.Environ()[0])
+	oracle.Init() //nolint:errcheck
+	assert.Contains(t, oracle.scriptEnv, "whatever=yes")
+	assert.Contains(t, oracle.scriptEnv, os.Environ()[0])
 }
 
 func TestOracleExecutionError(t *testing.T) {

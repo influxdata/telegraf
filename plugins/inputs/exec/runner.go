@@ -32,7 +32,6 @@ func (c CommandRunner) Run(
 	input []byte,
 	timeout time.Duration,
 ) ([]byte, []byte, error) {
-
 	cmd := osExec.Command(command, args...)
 
 	var (
