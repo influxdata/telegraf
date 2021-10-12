@@ -22,8 +22,8 @@ const sampleConfig = `
   ## Database user with SELECT_CATALOG_ROLE role granted, required.
 	username = system
 	password = oracle
-  ## Database SID
-	SID = XE
+  ## Data source name, required. See https://cx-oracle.readthedocs.io/en/latest/user_guide/connection_handling.html#connection-strings
+	dsn = XE
 
   ## python executable, python3 by default 
   python=python3
@@ -39,7 +39,7 @@ type Oracle struct {
 
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-	SID      string `toml:"SID"`
+	DSN      string `toml:"dsn"`
 
 	parser    parsers.Parser
 	args      []string
@@ -88,15 +88,15 @@ func (o *Oracle) Gather(acc telegraf.Accumulator) error {
 }
 
 func (o *Oracle) Init() error {
-	// validate username, password and sid
+	// validate username, password and dsn
 	if o.Username == "" {
 		return fmt.Errorf(`oracle: "username" is required`)
 	}
 	if o.Password == "" {
 		return fmt.Errorf(`oracle: "password" is required`)
 	}
-	if o.SID == "" {
-		return fmt.Errorf(`oracle: "SID" is required`)
+	if o.DSN == "" {
+		return fmt.Errorf(`oracle: "dsn" is required`)
 	}
 	if o.Env != nil {
 		o.scriptEnv = append(os.Environ(), o.Env...)
@@ -105,7 +105,7 @@ func (o *Oracle) Init() error {
 		"-",
 		"-u", o.Username,
 		"-p", o.Password,
-		"-s", o.SID,
+		"-d", o.DSN,
 	}
 
 	// validate that python executable exists

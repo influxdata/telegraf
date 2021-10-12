@@ -72,13 +72,13 @@ func TestOracleConfiguration(t *testing.T) {
 	oracle, _ := input.(*Oracle)
 	// python3 is used OOTB
 	assert.Equal(t, oracle.Python, "python3")
-	// username, password and SID is required
+	// username, password and dsn is required
 	assert.Error(t, oracle.Init())
 	oracle.Username = "system"
 	assert.Error(t, oracle.Init())
 	oracle.Password = "oracle"
 	assert.Error(t, oracle.Init())
-	oracle.SID = "XE"
+	oracle.DSN = "XE"
 	oracle.Env = []string{"whatever=yes"}
 	oracle.Init() //nolint:errcheck
 	assert.Contains(t, oracle.scriptEnv, "whatever=yes")
