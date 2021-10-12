@@ -16,7 +16,10 @@
 
 **Note:** If you have a pull request with only one commit, then that commit needs to follow the conventional commit format or the `Semantic Pull Request` check will fail. This is because github will use the pull request title if there are multiple commits, but if there is only one commit it will use it instead.
 
-#### Contributing an External Plugin *(new)*
+#### When will your contribution get released?
+We have two kinds of releases: patch releases, which happen every few weeks, and feature releases, which happen once a quarter. If your fix is a bug fix, it will be released in the patch release after it is merged. If your release is a new plugin or other feature, it will be released in the next quarterly feature release (targeted towards the end of each quarter).
+
+#### Contributing an External Plugin
 
 Input, output, and processor plugins written for internal Telegraf can be run as externally-compiled plugins through the [Execd Input](/plugins/inputs/execd), [Execd Output](/plugins/outputs/execd), and [Execd Processor](/plugins/processors/execd) Plugins without having to change the plugin code.
 
