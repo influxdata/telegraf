@@ -3747,13 +3747,6 @@ func (m *streamMachine) Next() error {
 	m.machine.finishMetric = false
 
 	for {
-		// Expand the buffer if it is full
-		if m.machine.pe == len(m.machine.data) {
-			expanded := make([]byte, 2*len(m.machine.data))
-			copy(expanded, m.machine.data)
-			m.machine.data = expanded
-		}
-
 		err := m.machine.exec()
 		if err != nil {
 			return err
@@ -3762,6 +3755,13 @@ func (m *streamMachine) Next() error {
 		// If we have successfully parsed a full metric line break out
 		if m.machine.finishMetric {
 			break
+		}
+
+		// Expand the buffer if it is full
+		if m.machine.pe == len(m.machine.data) {
+			expanded := make([]byte, 2*len(m.machine.data))
+			copy(expanded, m.machine.data)
+			m.machine.data = expanded
 		}
 
 		n, err := m.reader.Read(m.machine.data[m.machine.pe:])

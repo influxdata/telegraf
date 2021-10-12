@@ -1,3 +1,13 @@
+## v1.20.2 [2021-10-07]
+
+#### Bugfixes
+
+  - [#9878](https://github.com/influxdata/telegraf/pull/9878) `inputs.cloudwatch` Use new session API
+  - [#9872](https://github.com/influxdata/telegraf/pull/9872) `parsers.json_v2` Duplicate line_protocol when using object and fields
+  - [#9787](https://github.com/influxdata/telegraf/pull/9787) `parsers.influx` Fix memory leak in influx parser
+  - [#9880](https://github.com/influxdata/telegraf/pull/9880) `inputs.stackdriver` Migrate to cloud.google.com/go/monitoring/apiv3/v2
+  - [#9887](https://github.com/influxdata/telegraf/pull/9887) Fix makefile typo that prevented i386 tar and rpm packages from being built
+
 ## v1.20.1 [2021-10-06]
 
 #### Bugfixes

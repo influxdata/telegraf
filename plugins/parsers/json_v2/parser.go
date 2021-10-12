@@ -137,7 +137,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		metrics = append(metrics, cartesianProduct(tags, fields)...)
 
 		if len(objects) != 0 && len(metrics) != 0 {
-			metrics = append(metrics, cartesianProduct(objects, metrics)...)
+			metrics = cartesianProduct(objects, metrics)
 		} else {
 			metrics = append(metrics, objects...)
 		}

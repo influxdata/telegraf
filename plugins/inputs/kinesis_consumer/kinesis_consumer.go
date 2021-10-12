@@ -153,24 +153,31 @@ func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
-	client := kinesis.New(k.CredentialConfig.Credentials())
+	p, err := k.CredentialConfig.Credentials()
+	if err != nil {
+		return err
+	}
+	client := kinesis.New(p)
 
 	k.checkpoint = &noopCheckpoint{}
 	if k.DynamoDB != nil {
-		var err error
+		p, err := (&internalaws.CredentialConfig{
+			Region:      k.Region,
+			AccessKey:   k.AccessKey,
+			SecretKey:   k.SecretKey,
+			RoleARN:     k.RoleARN,
+			Profile:     k.Profile,
+			Filename:    k.Filename,
+			Token:       k.Token,
+			EndpointURL: k.EndpointURL,
+		}).Credentials()
+		if err != nil {
+			return err
+		}
 		k.checkpoint, err = ddb.New(
 			k.DynamoDB.AppName,
 			k.DynamoDB.TableName,
-			ddb.WithDynamoClient(dynamodb.New((&internalaws.CredentialConfig{
-				Region:      k.Region,
-				AccessKey:   k.AccessKey,
-				SecretKey:   k.SecretKey,
-				RoleARN:     k.RoleARN,
-				Profile:     k.Profile,
-				Filename:    k.Filename,
-				Token:       k.Token,
-				EndpointURL: k.EndpointURL,
-			}).Credentials())),
+			ddb.WithDynamoClient(dynamodb.New(p)),
 			ddb.WithMaxInterval(time.Second*10),
 		)
 		if err != nil {

@@ -271,7 +271,7 @@ ppc64le += linux_ppc64le.tar.gz ppc64le.rpm ppc64el.deb
 .PHONY: ppc64le
 ppc64le:
 	@ echo $(ppc64le)
-i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gzi386.rpm
+i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gz i386.rpm
 .PHONY: i386
 i386:
 	@ echo $(i386)

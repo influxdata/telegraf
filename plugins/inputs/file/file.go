@@ -29,9 +29,13 @@ const sampleConfig = `
   ## as well as ** to match recursive files and directories.
   files = ["/tmp/metrics.out"]
 
+  
   ## Name a tag containing the name of the file the data was parsed from.  Leave empty
-  ## to disable.
+  ## to disable. Cautious when file name variation is high, this can increase the cardinality 
+  ## significantly. Read more about cardinality here: 
+  ## https://docs.influxdata.com/influxdb/cloud/reference/glossary/#series-cardinality
   # file_tag = ""
+  #
 
   ## Character encoding to use when interpreting the file contents.  Invalid
   ## characters are replaced using the unicode replacement character.  When set
