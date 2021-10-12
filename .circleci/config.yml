@@ -4,12 +4,6 @@ orbs:
   aws-cli: circleci/aws-cli@1.4.0
 
 executors:
-  go-1_16:
-    working_directory: '/go/src/github.com/influxdata/telegraf'
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.16.7'
-    environment:
-      GOFLAGS: -p=8
   go-1_17:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
@@ -172,16 +166,6 @@ jobs:
           root: '/go'
           paths:
             - '*'
-  test-go-1_16:
-    executor: go-1_16
-    steps:
-      - test-go
-    parallelism: 4
-  test-go-1_16-386:
-    executor: go-1_16
-    steps:
-      - test-go
-    parallelism: 4
   test-go-1_17:
     executor: go-1_17
     steps:
@@ -223,11 +207,6 @@ jobs:
     steps:
       - package-build:
           type: i386
-  ppc64le-package:
-    executor: go-1_16
-    steps:
-      - package-build:
-          type: ppc64le
   s390x-package:
     executor: go-1_17
     steps:
@@ -375,8 +354,6 @@ commonjobs:
   - &test-awaiter
     'test-awaiter':
       requires:
-        - 'test-go-1_16'
-        - 'test-go-1_16-386'
         - 'test-go-1_17'
         - 'test-go-1_17-386'
   - &windows-package
@@ -433,18 +410,6 @@ workflows:
   check:
     jobs:
       - 'deps':
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16-386':
-          requires:
-            - 'deps'
           filters:
             tags:
               only: /.*/
@@ -525,8 +490,6 @@ workflows:
           requires:
             - 'test-go-windows'
             - 'test-go-mac'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
             - 'test-go-1_17'
             - 'test-go-1_17-386'
           filters:
@@ -550,12 +513,6 @@ workflows:
   nightly:
     jobs:
       - 'deps'
-      - 'test-go-1_16':
-          requires:
-            - 'deps'
-      - 'test-go-1_16-386':
-          requires:
-            - 'deps'
       - 'test-go-1_17':
           requires:
             - 'deps'
