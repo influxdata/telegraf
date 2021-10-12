@@ -258,9 +258,6 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 			p.Log.Debugf("Found object in query ignoring it please use 'object' to gather metrics from objects")
 			return results, nil
 		}
-		if result.IncludeCollection == nil && (len(p.objectConfig.FieldPaths) > 0 || len(p.objectConfig.TagPaths) > 0) {
-			result.IncludeCollection = p.existsInpathResults(result.Index, result.Raw)
-		}
 		r, err := p.combineObject(result)
 		if err != nil {
 			return nil, err
@@ -271,8 +268,8 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 
 	if result.IsArray() {
 		var err error
-		if result.IncludeCollection == nil && (len(p.objectConfig.FieldPaths) > 0 || len(p.objectConfig.TagPaths) > 0) {
-			result.IncludeCollection = p.existsInpathResults(result.Index, result.Raw)
+		if result.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
+			result.IncludeCollection = p.existsInpathResults(result.Index)
 		}
 		result.ForEach(func(_, val gjson.Result) bool {
 			m := metric.New(
@@ -282,23 +279,16 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 				p.timestamp,
 			)
 			if val.IsObject() {
-				if p.iterateObjects {
-					n := result
-					n.ParentIndex += val.Index
-					n.Metric = m
-					n.Result = val
-					if n.IncludeCollection == nil && (len(p.objectConfig.FieldPaths) > 0 || len(p.objectConfig.TagPaths) > 0) {
-						n.IncludeCollection = p.existsInpathResults(n.Index, n.Raw)
-					}
-					r, err := p.combineObject(n)
-					if err != nil {
-						return false
-					}
-
-					results = append(results, r...)
-				} else {
-					p.Log.Debugf("Found object in query ignoring it please use 'object' to gather metrics from objects")
+				n := result
+				n.ParentIndex += val.Index
+				n.Metric = m
+				n.Result = val
+				r, err := p.combineObject(n)
+				if err != nil {
+					return false
 				}
+
+				results = append(results, r...)
 				if len(results) != 0 {
 					for _, newResult := range results {
 						mergeMetric(result.Metric, newResult)
@@ -307,19 +297,11 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 				return true
 			}
 
-			for _, f := range result.Metric.FieldList() {
-				m.AddField(f.Key, f.Value)
-			}
-			for _, f := range result.Metric.TagList() {
-				m.AddTag(f.Key, f.Value)
-			}
+			mergeMetric(result.Metric, m)
 			n := result
 			n.ParentIndex += val.Index
 			n.Metric = m
 			n.Result = val
-			if n.IncludeCollection == nil && (len(p.objectConfig.FieldPaths) > 0 || len(p.objectConfig.TagPaths) > 0) {
-				n.IncludeCollection = p.existsInpathResults(n.Index, n.Raw)
-			}
 			r, err := p.expandArray(n)
 			if err != nil {
 				return false
@@ -355,7 +337,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 						pathResult = result.IncludeCollection
 					} else {
 						// Verify that the result should be included based on the results of fieldpaths and tag paths
-						pathResult = p.existsInpathResults(result.ParentIndex, result.Raw)
+						pathResult = p.existsInpathResults(result.ParentIndex)
 					}
 					if pathResult == nil {
 						return results, nil
@@ -392,16 +374,17 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 	return results, nil
 }
 
-func (p *Parser) existsInpathResults(index int, raw string) *PathResult {
-	for _, f := range p.subPathResults {
-		if f.result.Index == 0 {
-			for _, i := range f.result.Indexes {
-				if i == index {
-					return &f
-				}
-			}
-		} else if f.result.Index == index {
+func (p *Parser) existsInpathResults(index int) *PathResult {
+	for _, f := range p.pathResults {
+		if f.result.Index == index {
 			return &f
+		}
+
+		// Indexes will be populated with all the elements that match on a `#(...)#` query
+		for _, i := range f.result.Indexes {
+			if i == index {
+				return &f
+			}
 		}
 	}
 	return nil
@@ -433,10 +416,6 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject) ([]telegraf.
 			r.DataSet = f
 			r.tag = true
 			p.subPathResults = append(p.subPathResults, r)
-		}
-
-		if result.Type == gjson.Null {
-			return nil, fmt.Errorf("GJSON Path returned null")
 		}
 
 		rootObject := MetricNode{
@@ -578,33 +557,31 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 func (p *Parser) convertType(input gjson.Result, desiredType string, name string) (interface{}, error) {
 	switch inputType := input.Value().(type) {
 	case string:
-		if desiredType != "string" {
-			switch desiredType {
-			case "uint":
-				r, err := strconv.ParseUint(inputType, 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf("unable to convert field '%s' to type uint: %v", name, err)
-				}
-				return r, nil
-			case "int":
-				r, err := strconv.ParseInt(inputType, 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf("unable to convert field '%s' to type int: %v", name, err)
-				}
-				return r, nil
-			case "float":
-				r, err := strconv.ParseFloat(inputType, 64)
-				if err != nil {
-					return nil, fmt.Errorf("unable to convert field '%s' to type float: %v", name, err)
-				}
-				return r, nil
-			case "bool":
-				r, err := strconv.ParseBool(inputType)
-				if err != nil {
-					return nil, fmt.Errorf("unable to convert field '%s' to type bool: %v", name, err)
-				}
-				return r, nil
+		switch desiredType {
+		case "uint":
+			r, err := strconv.ParseUint(inputType, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to convert field '%s' to type uint: %v", name, err)
 			}
+			return r, nil
+		case "int":
+			r, err := strconv.ParseInt(inputType, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to convert field '%s' to type int: %v", name, err)
+			}
+			return r, nil
+		case "float":
+			r, err := strconv.ParseFloat(inputType, 64)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to convert field '%s' to type float: %v", name, err)
+			}
+			return r, nil
+		case "bool":
+			r, err := strconv.ParseBool(inputType)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to convert field '%s' to type bool: %v", name, err)
+			}
+			return r, nil
 		}
 	case bool:
 		switch desiredType {
@@ -624,22 +601,20 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 			return uint64(0), nil
 		}
 	case float64:
-		if desiredType != "float" {
-			switch desiredType {
-			case "string":
-				return fmt.Sprint(inputType), nil
-			case "int":
-				return input.Int(), nil
-			case "uint":
-				return input.Uint(), nil
-			case "bool":
-				if inputType == 0 {
-					return false, nil
-				} else if inputType == 1 {
-					return true, nil
-				} else {
-					return nil, fmt.Errorf("unable to convert field '%s' to type bool", name)
-				}
+		switch desiredType {
+		case "string":
+			return fmt.Sprint(inputType), nil
+		case "int":
+			return input.Int(), nil
+		case "uint":
+			return input.Uint(), nil
+		case "bool":
+			if inputType == 0 {
+				return false, nil
+			} else if inputType == 1 {
+				return true, nil
+			} else {
+				return nil, fmt.Errorf("Unable to convert field '%s' to type bool", name)
 			}
 		}
 	default:
