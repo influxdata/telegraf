@@ -3,12 +3,12 @@ package upsd
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	nut "github.com/Malinskiy/go.nut"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -20,11 +20,12 @@ var defaultConnectTimeout = config.Duration(10 * time.Second)
 var defaultOpTimeout = config.Duration(10 * time.Second)
 
 type Upsd struct {
-	Servers           []string
+	Server            string
 	Username          string
 	Password          string
 	OpTimeout         config.Duration
 	ConnectionTimeout config.Duration
+	Log               telegraf.Logger `toml:"-"`
 }
 
 func (*Upsd) Description() string {
@@ -32,54 +33,37 @@ func (*Upsd) Description() string {
 }
 
 var sampleConfig = `
-  # A list of running NUT servers to connect to.
-  # If not provided will default to 127.0.0.1
-  servers = ["127.0.0.1"]
+  ## A running NUT server to connect to.
+  # server = "127.0.0.1"
   # username = "user"
   # password = "password"
-
-  # Timeout for dialing server.
-  connectionTimeout = "10s"
-  # Read/write operation timeout.
-  opTimeout = "10s"
+  ## Timeout for dialing server.
+  # connectionTimeout = "10s"
+  ## Read/write operation timeout.
+  # opTimeout = "10s"
 `
 
 func (*Upsd) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *Upsd) Gather(accumulator telegraf.Accumulator) error {
-	l := len(h.Servers)
-	switch l {
-	case 0:
-	case 1:
-		h.gatherServer(h.Servers[0], accumulator)
-	default:
-		var wg sync.WaitGroup
-		wg.Add(l)
-		for _, server := range h.Servers {
-			go func(server string) {
-				defer wg.Done()
-				h.gatherServer(server, accumulator)
-			}(server)
-		}
-		wg.Wait()
+func (u *Upsd) Gather(acc telegraf.Accumulator) error {
+	return u.gatherServer(u.Server, acc)
+}
+
+func (u *Upsd) gatherServer(server string, acc telegraf.Accumulator) error {
+	upsList, err := u.fetchVariables(server)
+	if err != nil {
+		acc.AddError(err)
+		return err
+	}
+	for name, variables := range upsList {
+		u.gatherUps(acc, name, variables)
 	}
 	return nil
 }
 
-func (h *Upsd) gatherServer(server string, accumulator telegraf.Accumulator) {
-	upsList, err := h.fetchVariables(server)
-	if err != nil {
-		accumulator.AddError(err)
-		return
-	}
-	for name, variables := range upsList {
-		h.GatherUps(accumulator, name, variables)
-	}
-}
-
-func (h *Upsd) GatherUps(accumulator telegraf.Accumulator, name string, variables []nut.Variable) {
+func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.Variable) {
 	metrics := make(map[string]interface{})
 	for _, variable := range variables {
 		name := variable.Name
@@ -94,9 +78,12 @@ func (h *Upsd) GatherUps(accumulator telegraf.Accumulator, name string, variable
 		"model": fmt.Sprintf("%v", metrics["device.model"]),
 	}
 
-	status := h.mapStatus(metrics)
+	status := u.mapStatus(metrics)
 
-	timeLeftS, _ := metrics["battery.runtime"].(int64)
+	timeLeftS, ok := metrics["battery.runtime"].(int64)
+	if !ok {
+		u.Log.Debugf("Error parsing battery.runtime: type is not int64")
+	}
 
 	fields := map[string]interface{}{
 		"status_flags":           status,
@@ -116,10 +103,10 @@ func (h *Upsd) GatherUps(accumulator telegraf.Accumulator, name string, variable
 		"battery_date":            metrics["battery.mfr.date"],
 	}
 
-	accumulator.AddFields("upsd", fields, tags)
+	acc.AddFields("upsd", fields, tags)
 }
 
-func (h *Upsd) mapStatus(metrics map[string]interface{}) uint64 {
+func (u *Upsd) mapStatus(metrics map[string]interface{}) uint64 {
 	status := uint64(0)
 	statusString := fmt.Sprintf("%v", metrics["ups.status"])
 	statuses := strings.Fields(statusString)
@@ -133,51 +120,41 @@ func (h *Upsd) mapStatus(metrics map[string]interface{}) uint64 {
 	//5	Overloaded output
 	//6	Battery low
 	//7	Replace battery
-	if contains(statuses, "CAL") {
+	if choice.Contains("CAL", statuses) {
 		status |= 1 << 0
 	}
-	if contains(statuses, "TRIM") {
+	if choice.Contains("TRIM", statuses) {
 		status |= 1 << 1
 	}
-	if contains(statuses, "BOOST") {
+	if choice.Contains("BOOST", statuses) {
 		status |= 1 << 2
 	}
-	if contains(statuses, "OL") {
+	if choice.Contains("OL", statuses) {
 		status |= 1 << 3
 	}
-	if contains(statuses, "OB") {
+	if choice.Contains("OB", statuses) {
 		status |= 1 << 4
 	}
-	if contains(statuses, "OVER") {
+	if choice.Contains("OVER", statuses) {
 		status |= 1 << 5
 	}
-	if contains(statuses, "LB") {
+	if choice.Contains("LB", statuses) {
 		status |= 1 << 6
 	}
-	if contains(statuses, "RB") {
+	if choice.Contains("RB", statuses) {
 		status |= 1 << 7
 	}
 	return status
 }
 
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (h *Upsd) fetchVariables(server string) (map[string][]nut.Variable, error) {
-	client, err := nut.Connect(server, time.Duration(h.ConnectionTimeout), time.Duration(h.OpTimeout))
+func (u *Upsd) fetchVariables(server string) (map[string][]nut.Variable, error) {
+	client, err := nut.Connect(server, time.Duration(u.ConnectionTimeout), time.Duration(u.OpTimeout))
 	if err != nil {
 		return nil, fmt.Errorf("connect: %w", err)
 	}
 
-	if h.Username != "" && h.Password != "" {
-		_, err = client.Authenticate(h.Username, h.Password)
+	if u.Username != "" && u.Password != "" {
+		_, err = client.Authenticate(u.Username, u.Password)
 		if err != nil {
 			return nil, fmt.Errorf("auth: %w", err)
 		}
@@ -201,9 +178,7 @@ func (h *Upsd) fetchVariables(server string) (map[string][]nut.Variable, error) 
 func init() {
 	inputs.Add("upsd", func() telegraf.Input {
 		return &Upsd{
-			Servers:           []string{defaultAddress},
-			Username:          "",
-			Password:          "",
+			Server:            defaultAddress,
 			OpTimeout:         defaultOpTimeout,
 			ConnectionTimeout: defaultConnectTimeout,
 		}

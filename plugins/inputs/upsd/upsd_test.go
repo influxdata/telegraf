@@ -2,28 +2,13 @@ package upsd
 
 import (
 	"context"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
-
-func TestUpsdDocs(_ *testing.T) {
-	apc := &Upsd{}
-	apc.Description()
-	apc.SampleConfig()
-}
-
-func TestUpsdInit(t *testing.T) {
-	input, ok := inputs.Inputs["upsd"]
-	if !ok {
-		t.Fatal("Input not defined")
-	}
-
-	_ = input().(*Upsd)
-}
 
 func TestUpsdGather(t *testing.T) {
 	nut := &Upsd{ConnectionTimeout: defaultConnectTimeout, OpTimeout: defaultOpTimeout}
@@ -77,11 +62,9 @@ func TestUpsdGather(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 
 			lAddr, err := listen(ctx, t, tt.out())
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
-			nut.Servers = []string{lAddr}
+			nut.Server = lAddr
 
 			err = nut.Gather(&acc)
 			if tt.err {
