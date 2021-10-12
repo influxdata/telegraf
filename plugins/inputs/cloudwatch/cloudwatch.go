@@ -347,7 +347,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 				for _, name := range m.MetricNames {
 					for _, namespace := range c.Namespaces {
 						metrics = append(metrics, types.Metric{
-							Namespace: aws.String(namespace),
+							Namespace:  aws.String(namespace),
 							MetricName: aws.String(name),
 							Dimensions: dimensions,
 						})
