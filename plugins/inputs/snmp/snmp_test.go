@@ -211,13 +211,6 @@ func TestSnmpInit(t *testing.T) {
 }
 
 func TestSnmpInit_noTranslate(t *testing.T) {
-	// write another mib
-	// override execCommand so it returns exec.ErrNotFound
-	// defer func(ec func(string, ...string) *exec.Cmd) { execCommand = ec }(execCommand)
-	// execCommand = func(_ string, _ ...string) *exec.Cmd {
-	// 	return exec.Command("snmptranslateExecErrNotFound")
-	// }
-
 	s := &Snmp{
 		Fields: []Field{
 			{Oid: ".1.1.1.1", Name: "one", IsTag: true},
