@@ -1,0 +1,123 @@
+package oracle
+
+import (
+	"fmt"
+	"os"
+	osExec "os/exec"
+	"time"
+
+	_ "embed"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/exec"
+	"github.com/influxdata/telegraf/plugins/parsers"
+)
+
+//go:embed oracle_metrics.py
+var pythonScript []byte
+
+const sampleConfig = `
+  ## Database user with SELECT_CATALOG_ROLE role granted, required.
+	username = system
+	password = oracle
+  ## Database SID
+	SID = XE
+
+  ## python executable, python3 by default 
+  python=python3
+
+  ## Timeout for metrics collector to complete.
+  timeout = "5s"
+`
+
+type Oracle struct {
+	Python  string          `toml:"python"`
+	Env     []string        `toml:"env"`
+	Timeout config.Duration `toml:"timeout"`
+
+	Username string `toml:"username"`
+	Password string `toml:"password"`
+	SID      string `toml:"SID"`
+
+	parser parsers.Parser
+	args   []string
+	env    []string
+
+	runner exec.Runner
+}
+
+func NewOracle() *Oracle {
+	parser, _ := parsers.NewInfluxParser()
+	return &Oracle{
+		Python:  "python3",
+		Timeout: config.Duration(time.Second * 5),
+		runner:  exec.NewRunner(),
+		parser:  parser,
+	}
+}
+
+func (e *Oracle) SampleConfig() string {
+	return sampleConfig
+}
+
+func (o *Oracle) Description() string {
+	return "Read metrics from Oracle RDBMS"
+}
+
+func (o *Oracle) Gather(acc telegraf.Accumulator) error {
+	out, errbuf, runErr := o.runner.Run(o.Python, o.args, o.env, pythonScript, time.Duration(o.Timeout))
+	if runErr != nil {
+		err := fmt.Errorf("oracle: %s : %s", runErr, string(errbuf))
+		acc.AddError(err)
+		return nil
+	}
+
+	metrics, err := o.parser.Parse(out)
+	if err != nil {
+		acc.AddError(err)
+		return nil
+	}
+
+	for _, m := range metrics {
+		acc.AddMetric(m)
+	}
+
+	return nil
+}
+
+func (o *Oracle) Init() error {
+	// validate username, password and sid
+	if o.Username == "" {
+		return fmt.Errorf(`oracle: "username" is required`)
+	}
+	if o.Password == "" {
+		return fmt.Errorf(`oracle: "password" is required`)
+	}
+	if o.SID == "" {
+		return fmt.Errorf(`oracle: "SID" is required`)
+	}
+	if o.Env != nil {
+		o.env = append(os.Environ(), o.Env...)
+	}
+	o.args = []string{
+		"-",
+		"-u", o.Username,
+		"-p", o.Password,
+		"-s", o.SID,
+	}
+
+	// validate that python executable exists
+	if _, err := osExec.LookPath(o.Python); err != nil {
+		return fmt.Errorf("oracle: python executable not found: %v", err)
+	}
+
+	return nil
+}
+
+func init() {
+	inputs.Add("oracle", func() telegraf.Input {
+		return NewOracle()
+	})
+}

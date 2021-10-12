@@ -139,6 +139,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/opensmtpd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/opentelemetry"
 	_ "github.com/influxdata/telegraf/plugins/inputs/openweathermap"
+	_ "github.com/influxdata/telegraf/plugins/inputs/oracle"
 	_ "github.com/influxdata/telegraf/plugins/inputs/passenger"
 	_ "github.com/influxdata/telegraf/plugins/inputs/pf"
 	_ "github.com/influxdata/telegraf/plugins/inputs/pgbouncer"
