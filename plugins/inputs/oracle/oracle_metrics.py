@@ -1,6 +1,6 @@
 import argparse
-import re
 import cx_Oracle
+import re
 import sys
 
 
@@ -11,21 +11,20 @@ def handle_error(error_message):
 
 class OracleMetrics():
 
-    def __init__(self, user, passwd, sid):
+    def __init__(self, user, passwd, dsn):
         self.user = user
         self.passwd = passwd
-        self.sid = sid
+        self.dsn = dsn
         self.delengine = "none"
         self.connection = None
         try:
-            self.connection = cx_Oracle.connect(self.user, self.passwd, self.sid)
+            self.connection = cx_Oracle.connect(self.user, self.passwd, self.dsn)
         except cx_Oracle.DatabaseError as e :
             raise
         except Exception as e :
             raise
 
-
-    def getWaitClassStats(self, user, passwd, sid):
+    def getWaitClassStats(self):
         cursor = None
         try:
             cursor = self.connection.cursor()
@@ -49,7 +48,7 @@ class OracleMetrics():
             for wait in cursor:
                 wait_name = wait[0]
                 wait_value = wait[1]
-                print ("oracle_wait_class,instance={0},wait_class={1} wait_value={2}".format(sid, re.sub(' ', '_', wait_name), wait_value))
+                print ("oracle_wait_class,instance={0},wait_class={1} wait_value={2}".format(self.dsn, re.sub(' ', '_', wait_name), wait_value))
         except Exception as e :
             raise
         finally:
@@ -57,7 +56,7 @@ class OracleMetrics():
                 cursor.close()
 
 
-    def getSysmetrics(self, user, passwd, sid):
+    def getSysmetrics(self):
         cursor = None
         try:
             cursor = self.connection.cursor()
@@ -67,7 +66,7 @@ class OracleMetrics():
             for metric in cursor:
                 metric_name = metric[0]
                 metric_value = metric[1]
-                print ("oracle_sysmetric,instance={0},metric_name={1} metric_value={2}".format(sid,re.sub(' ', '_', metric_name),metric_value))
+                print ("oracle_sysmetric,instance={0},metric_name={1} metric_value={2}".format(self.dsn,re.sub(' ', '_', metric_name),metric_value))
         except Exception as e :
             raise
         finally:
@@ -75,7 +74,7 @@ class OracleMetrics():
                 cursor.close()
    
 
-    def getWaitStats(self, user, passwd, sid):
+    def getWaitStats(self):
         cursor = None
         try:
             cursor = self.connection.cursor()
@@ -94,7 +93,7 @@ class OracleMetrics():
                 wait_name = wait[1]
                 wait_cnt = wait[2]
                 wait_avgms = wait[3]
-                print ("oracle_wait_event,instance={0},wait_class={1},wait_event={2} count={3},latency={4}".format(sid,re.sub(' ', '_', wait_class), re.sub(' ','_',wait_name),wait_cnt,wait_avgms))
+                print ("oracle_wait_event,instance={0},wait_class={1},wait_event={2} count={3},latency={4}".format(self.dsn,re.sub(' ', '_', wait_class), re.sub(' ','_',wait_name),wait_cnt,wait_avgms))
         except Exception as e :
             raise
         finally:
@@ -102,7 +101,7 @@ class OracleMetrics():
                 cursor.close()
 
 
-    def getTableSpaceStats(self, user, passwd, sid):
+    def getTableSpaceStats(self):
         cursor = None
         try:
             cursor = self.connection.cursor()
@@ -127,7 +126,7 @@ class OracleMetrics():
                 free_space_mb = tbs[2]
                 max_size_mb = tbs[3]
                 percent_used = tbs[4]
-                print ("oracle_tablespaces,instance={0},tbs_name={1} used_space_mb={2},free_space_mb={3},percent_used={4},max_size_mb={5}".format(sid, re.sub(' ', '_', tbs_name), used_space_mb,free_space_mb,percent_used,max_size_mb))
+                print ("oracle_tablespaces,instance={0},tbs_name={1} used_space_mb={2},free_space_mb={3},percent_used={4},max_size_mb={5}".format(self.dsn, re.sub(' ', '_', tbs_name), used_space_mb,free_space_mb,percent_used,max_size_mb))
         except Exception as e :
             raise
         finally:
@@ -135,7 +134,7 @@ class OracleMetrics():
                 cursor.close()
 
 
-    def getMiscMetrics(self, user, passwd, sid):
+    def getMiscMetrics(self):
         query="""select status , count(1) as connectionCount from V$SESSION group by status"""
         cursor = None
         try:
@@ -144,7 +143,7 @@ class OracleMetrics():
             for metric in cursor:
                 metric_name = metric[0]
                 metric_value = metric[1]
-                print("oracle_connectioncount,instance={0},metric_name={1} metric_value={2}".format(sid,metric_name,metric_value))
+                print("oracle_connectioncount,instance={0},metric_name={1} metric_value={2}".format(self.dsn,metric_name,metric_value))
             
             query="""SELECT 'instance_status'  metric_name,
                         CASE STATUS when 'OPEN' THEN 1
@@ -161,7 +160,7 @@ class OracleMetrics():
             for metric in cursor:
                 metric_name = metric[0]
                 metric_value = metric[1]
-                print("oracle_status,instance={0},metric_name={1} metric_value={2}".format(sid,metric_name,metric_value))
+                print("oracle_status,instance={0},metric_name={1} metric_value={2}".format(self.dsn,metric_name,metric_value))
         except Exception as e :
             raise
         finally:
@@ -174,16 +173,16 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser()
         parser.add_argument('-u', '--user', help="Pass the username with SELECT_CATALOG_ROLE role granted", required=True)
         parser.add_argument('-p', '--passwd', required=True)
-        parser.add_argument('-s', '--sid', help="SID to connect to", required=True)
+        parser.add_argument('-d', '--dsn', help="dsn to connect to", required=True)
         args = parser.parse_args()
         stats = None
         try:
-            stats = OracleMetrics(args.user, args.passwd, args.sid)
-            stats.getWaitClassStats(args.user, args.passwd, args.sid)
-            stats.getWaitStats(args.user, args.passwd, args.sid)
-            stats.getSysmetrics(args.user, args.passwd, args.sid)
-            stats.getTableSpaceStats(args.user, args.passwd, args.sid)
-            stats.getMiscMetrics(args.user, args.passwd, args.sid)
+            stats = OracleMetrics(args.user, args.passwd, args.dsn)
+            stats.getWaitClassStats()
+            stats.getWaitStats()
+            stats.getSysmetrics()
+            stats.getTableSpaceStats()
+            stats.getMiscMetrics()
         except Exception as e:
             handle_error(e)
         finally:
