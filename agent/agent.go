@@ -775,7 +775,7 @@ func (a *Agent) runOutputs(
 func (a *Agent) flushLoop(
 	ctx context.Context,
 	output *models.RunningOutput,
-	ticker *RollingTicker,
+	ticker Ticker,
 ) {
 	logError := func(err error) {
 		if err != nil {
@@ -804,11 +804,15 @@ func (a *Agent) flushLoop(
 		case <-ticker.Elapsed():
 			logError(a.flushOnce(output, ticker, output.Write))
 		case <-flushRequested:
-			ticker.Reset()
 			logError(a.flushOnce(output, ticker, output.Write))
 		case <-output.BatchReady:
-			ticker.Reset()
-			logError(a.flushOnce(output, ticker, output.WriteBatch))
+			// Favor the ticker over batch ready
+			select {
+			case <-ticker.Elapsed():
+				logError(a.flushOnce(output, ticker, output.Write))
+			default:
+				logError(a.flushOnce(output, ticker, output.WriteBatch))
+			}
 		}
 	}
 }

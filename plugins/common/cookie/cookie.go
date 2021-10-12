@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
@@ -78,7 +77,7 @@ func (c *CookieAuthConfig) authRenewal(ctx context.Context, ticker *clockutil.Ti
 func (c *CookieAuthConfig) auth() error {
 	var body io.ReadCloser
 	if c.Body != "" {
-		body = ioutil.NopCloser(strings.NewReader(c.Body))
+		body = io.NopCloser(strings.NewReader(c.Body))
 		defer body.Close()
 	}
 
@@ -97,7 +96,7 @@ func (c *CookieAuthConfig) auth() error {
 	}
 	defer resp.Body.Close()
 
-	if _, err = io.Copy(ioutil.Discard, resp.Body); err != nil {
+	if _, err = io.Copy(io.Discard, resp.Body); err != nil {
 		return err
 	}
 

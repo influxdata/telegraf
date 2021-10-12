@@ -14,6 +14,14 @@
 5. Open a new [pull request][].
 6. The pull request title needs to follow [conventional commit format](https://www.conventionalcommits.org/en/v1.0.0/#summary)
 
+**Note:** If you have a pull request with only one commit, then that commit needs to follow the conventional commit format or the `Semantic Pull Request` check will fail. This is because github will use the pull request title if there are multiple commits, but if there is only one commit it will use it instead.
+
+#### Contributing an External Plugin *(new)*
+
+Input, output, and processor plugins written for internal Telegraf can be run as externally-compiled plugins through the [Execd Input](/plugins/inputs/execd), [Execd Output](/plugins/outputs/execd), and [Execd Processor](/plugins/processors/execd) Plugins without having to change the plugin code.
+
+Follow the guidelines of how to integrate your plugin with the [Execd Go Shim](/plugins/common/shim) to easily compile it as a separate app and run it with the respective `execd` plugin.
+Check out our [guidelines](/docs/EXTERNAL_PLUGINS.md#external-plugin-guidelines) on how to build and set up your external plugins to run with `execd`.
 
 #### Security Vulnerability Reporting
 InfluxData takes security and our users' trust very seriously. If you believe you have found a security issue in any of our

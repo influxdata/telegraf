@@ -57,7 +57,7 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
 
 ### Metrics:
 
-- jenkins_node
+- jenkins
   - tags:
     - source
     - port

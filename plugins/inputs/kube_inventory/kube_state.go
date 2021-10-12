@@ -3,8 +3,8 @@ package kube_inventory
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -101,7 +101,7 @@ func (ki *KubernetesInventory) Init() error {
 	}
 
 	if ki.BearerToken != "" {
-		token, err := ioutil.ReadFile(ki.BearerToken)
+		token, err := os.ReadFile(ki.BearerToken)
 		if err != nil {
 			return err
 		}

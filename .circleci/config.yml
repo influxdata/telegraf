@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  win: circleci/windows@2.4.0  
+  win: circleci/windows@2.4.0
   aws-cli: circleci/aws-cli@1.4.0
 
 executors:
@@ -25,34 +25,105 @@ executors:
       GOFLAGS: -p=8
 
 commands:
+  generate-config:
+    parameters:
+      os:
+        type: string
+        default: "linux"
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '/build'
+      - run: ./scripts/generate_config.sh << parameters.os >>
+      - store_artifacts:
+          path: './new-config'
+          destination: 'new-config'
+      - persist_to_workspace:
+          root: './new-config'
+          paths:
+            - '*'
   check-changed-files-or-halt:
-      steps:
-        - run: ./scripts/check-file-changes.sh
-  check-changed-files-or-halt-windows:
-      steps:
-        - run: 
-            command: ./scripts/check-file-changes.sh
-            shell: bash.exe
+    steps:
+      - run: ./scripts/check-file-changes.sh
   test-go:
     parameters:
-      goarch:
+      os:
         type: string
-        default: "amd64"
+        default: "linux"
+      gotestsum:
+        type: string
+        default: "gotestsum"
+      cache_version:
+        type: string
+        default: "v3"
     steps:
       - checkout
       - check-changed-files-or-halt
-      - attach_workspace:
-          at: '/go'
-      - run: 'GOARCH=<< parameters.goarch >> make'
-      - run: 'GOARCH=<< parameters.goarch >> make check'
-      - run: 'GOARCH=<< parameters.goarch >> make check-deps'
-      - run: 'GOARCH=<< parameters.goarch >> make test'
+      - when:
+          condition:
+            equal: [ linux, << parameters.os >> ]
+          steps:
+            - restore_cache:
+                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+            - attach_workspace:
+                at: '/go'
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - restore_cache:
+                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+            - run: 'sh ./scripts/installgo_mac.sh'
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: rm -rf /c/Go
+            - restore_cache:
+                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+            - run: 'sh ./scripts/installgo_windows.sh'
+      - run: mkdir -p test-results
+      - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
+      - run: |
+          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+          ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
+      - store_test_results:
+          path: test-results
+      - when:
+          condition:
+            equal: [ linux, << parameters.os >> ]
+          steps:
+            - save_cache:
+                name: 'Saving cache'
+                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                paths:
+                  - '~/go/src/github.com/influxdata/telegraf/gotestsum'
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - save_cache:
+                name: 'Saving cache'
+                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                paths:
+                  - '/go/src/github.com/influxdata/telegraf/gotestsum'
+                  - '/usr/local/Cellar/go'
+                  - '/usr/local/bin/go'
+                  - '/usr/local/bin/gofmt'
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - save_cache:
+                name: 'Saving cache'
+                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                paths:
+                  - 'C:\Go'
+                  - 'C:\Users\circleci\project\gotestsum.exe'
+
   package-build:
     parameters:
       release:
-        type: boolean
-        default: false
-      nightly:
         type: boolean
         default: false
       type:
@@ -65,20 +136,14 @@ commands:
           at: '/go'
       - when:
           condition: << parameters.release >>
-          steps: 
-            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 make package'
-      - when:
-          condition: << parameters.nightly >>
-          steps: 
-            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 NIGHTLY=1 make package'
-            - run: 'make upload-nightly'
+          steps:
+            - run: 'make package'
       - unless:
           condition:
             or:
-              - << parameters.nightly >>
               - << parameters.release >>
           steps:
-            - run: '<< parameters.type >>=1 make package'
+            - run: 'make package include_packages="$(make << parameters.type >>)"'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -96,6 +161,8 @@ jobs:
       - check-changed-files-or-halt
       - run: 'make deps'
       - run: 'make tidy'
+      - run: 'make check'
+      - run: 'make check-deps'
       - save_cache:
           name: 'go module cache'
           key: go-mod-v1-{{ checksum "go.sum" }}
@@ -109,51 +176,37 @@ jobs:
     executor: go-1_16
     steps:
       - test-go
+    parallelism: 4
   test-go-1_16-386:
     executor: go-1_16
     steps:
-      - test-go:
-          goarch: "386"
+      - test-go
+    parallelism: 4
   test-go-1_17:
     executor: go-1_17
     steps:
       - test-go
+    parallelism: 4
   test-go-1_17-386:
     executor: go-1_17
     steps:
-      - test-go:
-          goarch: "386"
+      - test-go
+    parallelism: 4
   test-go-mac:
     executor: mac
     steps:
-      - checkout
-      - restore_cache:
-          key: mac-go-mod-v0-{{ checksum "go.sum" }}
-      - check-changed-files-or-halt
-      - run: 'sh ./scripts/mac_installgo.sh'
-      - save_cache:
-          name: 'Saving cache'
-          key: mac-go-mod-v0-{{ checksum "go.sum" }}
-          paths:
-            - '/usr/local/Cellar/go'
-            - '/usr/local/bin/go'
-            - '/usr/local/bin/gofmt'
-      - run: 'make deps'
-      - run: 'make tidy'
-      - run: 'make'
-      - run: 'make check'
-      - run: 'make test'
+      - test-go:
+          os: darwin
+    parallelism: 4
   test-go-windows:
     executor:
         name: win/default
-        shell: powershell.exe
+        shell: bash.exe
     steps:
-      - checkout
-      - check-changed-files-or-halt-windows
-      - run: choco upgrade golang --version=1.17.0
-      - run: choco install make
-      - run: git config --system core.longpaths true
-      - run: make test-windows
+      - test-go:
+          os: windows
+          gotestsum: "gotestsum.exe"
+    parallelism: 4
 
   windows-package:
     executor: go-1_17
@@ -170,11 +223,11 @@ jobs:
     steps:
       - package-build:
           type: i386
-  ppc641e-package:
-    executor: go-1_17
+  ppc64le-package:
+    executor: go-1_16
     steps:
       - package-build:
-          type: ppc641e
+          type: ppc64le
   s390x-package:
     executor: go-1_17
     steps:
@@ -224,8 +277,17 @@ jobs:
   nightly:
     executor: go-1_17
     steps:
-      - package-build:
-          nightly: true
+      - attach_workspace:
+          at: '/build'
+      - run:
+          command: |
+            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/nightlies/ \
+              --exclude "*" \
+              --include "*.tar.gz" \
+              --include "*.deb" \
+              --include "*.rpm" \
+              --include "*.zip" \
+              --acl public-read
   package-consolidate:
     executor:
         name: win/default
@@ -283,14 +345,89 @@ jobs:
           command: |
             echo "Go tests complete."
   share-artifacts:
-    executor: aws-cli/default  
+    executor: aws-cli/default
     steps:
       - run:
           command: |
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
-            curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"   
-                      
+            curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
+  generate-config:
+    executor: go-1_17
+    steps:
+      - generate-config
+  generate-config-win:
+    executor:
+        name: win/default
+        shell: bash.exe
+    steps:
+      - generate-config:
+          os: windows
+  update-config:
+    executor: go-1_17
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '/new-config'
+      - run: ./scripts/update_config.sh ${UPDATE_CONFIG_TOKEN}
+
+commonjobs:
+  - &test-awaiter
+    'test-awaiter':
+      requires:
+        - 'test-go-1_16'
+        - 'test-go-1_16-386'
+        - 'test-go-1_17'
+        - 'test-go-1_17-386'
+  - &windows-package
+    'windows-package':
+      requires:
+        - 'test-go-windows'
+  - &darwin-package
+    'darwin-package':
+      requires:
+        - 'test-go-mac'
+  - &i386-package
+    'i386-package':
+      requires:
+        - 'test-awaiter'
+  - &ppc64le-package
+    'ppc64le-package':
+      requires:
+        - 'test-awaiter'
+  - &s390x-package
+    's390x-package':
+      requires:
+        - 'test-awaiter'
+  - &armel-package
+    'armel-package':
+      requires:
+        - 'test-awaiter'
+  - &amd64-package
+    'amd64-package':
+      requires:
+        - 'test-awaiter'
+  - &arm64-package
+    'arm64-package':
+      requires:
+        - 'test-awaiter'
+  - &armhf-package
+    'armhf-package':
+      requires:
+        - 'test-awaiter'
+  - &static-package
+    'static-package':
+      requires:
+        - 'test-awaiter'
+  - &mipsel-package
+    'mipsel-package':
+      requires:
+        - 'test-awaiter'
+  - &mips-package
+    'mips-package':
+      requires:
+        - 'test-awaiter'
+
 workflows:
   version: 2
   check:
@@ -331,52 +468,45 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-awaiter': 
+      - *test-awaiter
+      - *windows-package
+      - *darwin-package
+      - *i386-package
+      - *ppc64le-package
+      - *s390x-package
+      - *armel-package
+      - *amd64-package
+      - *arm64-package
+      - *armhf-package
+      - *static-package
+      - *mipsel-package
+      - *mips-package
+      - 'generate-config':
           requires:
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
-            - 'test-go-1_17'
-            - 'test-go-1_17-386'
-      - 'windows-package':
-          requires: 
-            - 'test-go-windows'
-      - 'darwin-package':
-          requires: 
-            - 'test-go-mac'
-      - 'i386-package':
-          requires: 
-            - 'test-awaiter'
-      - 'ppc641e-package':
-          requires: 
-            - 'test-awaiter'
-      - 's390x-package':
-          requires: 
-            - 'test-awaiter'
-      - 'armel-package':
-          requires: 
-            - 'test-awaiter'
-      - 'amd64-package':
-          requires: 
-            - 'test-awaiter'
-      - 'arm64-package':
-          requires: 
-            - 'test-awaiter'
-      - 'armhf-package':
-          requires: 
-            - 'test-awaiter'
-      - 'static-package':
+            - 'amd64-package'
+          filters:
+            branches:
+              only:
+                - master
+      - 'generate-config-win':
           requires:
-            - 'test-awaiter'
-      - 'mipsel-package':
-          requires: 
-            - 'test-awaiter'
-      - 'mips-package':
-          requires: 
-            - 'test-awaiter'
+            - 'windows-package'
+          filters:
+            branches:
+              only:
+                - master
+      - 'update-config':
+          requires:
+            - 'generate-config-win'
+            - 'generate-config'
+          filters:
+            branches:
+              only:
+                - master
       - 'share-artifacts':
           requires:
             - 'i386-package'
-            - 'ppc641e-package'
+            - 'ppc64le-package'
             - 's390x-package'
             - 'armel-package'
             - 'amd64-package'
@@ -412,7 +542,7 @@ workflows:
                 only: /.*/
       - 'package-sign-mac':
            requires:
-             - 'package-sign-windows' 
+             - 'package-sign-windows'
            filters:
               tags:
                 only: /.*/
@@ -434,14 +564,33 @@ workflows:
             - 'deps'
       - 'test-go-mac'
       - 'test-go-windows'
-      - 'nightly':
+      - *test-awaiter
+      - *windows-package
+      - *darwin-package
+      - *i386-package
+      - *ppc64le-package
+      - *s390x-package
+      - *armel-package
+      - *amd64-package
+      - *arm64-package
+      - *armhf-package
+      - *static-package
+      - *mipsel-package
+      - *mips-package
+      - nightly:
           requires:
-            - 'test-go-windows'
-            - 'test-go-mac'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
-            - 'test-go-1_17'
-            - 'test-go-1_17-386'
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'darwin-package'
+            - 'windows-package'
+            - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
     triggers:
       - schedule:
           cron: "0 7 * * *"

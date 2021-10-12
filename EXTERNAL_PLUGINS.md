@@ -8,6 +8,7 @@ Pull requests welcome.
 ## Inputs
 - [awsalarms](https://github.com/vipinvkmenon/awsalarms) - Simple plugin to gather/monitor alarms generated  in AWS.
 - [octoprint](https://github.com/BattleBas/octoprint-telegraf-plugin) - Gather 3d print information from the octoprint API.
+- [opcda](https://github.com/lpc921/telegraf-execd-opcda) - Gather data from [OPC Fundation's Data Access (DA)](https://opcfoundation.org/about/opc-technologies/opc-classic/) protocol for industrial automation.
 - [open-hardware-monitor](https://github.com/marianob85/open_hardware_monitor-telegraf-plugin) - Gather sensors data provided by [Open Hardware Monitor](http://openhardwaremonitor.org)
 - [plex](https://github.com/russorat/telegraf-webhooks-plex) - Listens for events from Plex Media Server [Webhooks](https://support.plex.tv/articles/115002267687-webhooks/).
 - [rand](https://github.com/ssoroka/rand) - Generate random numbers

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -180,7 +180,7 @@ func (h *HTTP) gatherURL(
 	}
 
 	if h.BearerToken != "" {
-		token, err := ioutil.ReadFile(h.BearerToken)
+		token, err := os.ReadFile(h.BearerToken)
 		if err != nil {
 			return err
 		}
@@ -225,7 +225,7 @@ func (h *HTTP) gatherURL(
 			h.SuccessStatusCodes)
 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -254,7 +254,7 @@ func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) 
 		}
 		return rc, nil
 	}
-	return ioutil.NopCloser(reader), nil
+	return io.NopCloser(reader), nil
 }
 
 func init() {

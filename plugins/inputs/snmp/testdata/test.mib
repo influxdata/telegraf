@@ -55,4 +55,43 @@ hostname OBJECT-TYPE
 	STATUS current
 	::= { testOID 1 1 }
 
+testSecondaryTable OBJECT-TYPE
+	SYNTAX SEQUENCE OF testSecondaryTableEntry
+	MAX-ACCESS not-accessible
+	STATUS current
+	::= { testOID 3 }
+
+testSecondaryTableEntry OBJECT-TYPE
+	SYNTAX TestSecondaryTableEntry
+	MAX-ACCESS not-accessible
+	STATUS current
+	INDEX {
+		instance
+	}
+	::= { testSecondaryTable 1 }
+
+TestSecondaryTableEntry ::=
+	SEQUENCE {
+		instance OCTET STRING,
+		connections  INTEGER,
+		testTableIndex INTEGER,
+	}
+
+instance OBJECT-TYPE
+	SYNTAX OCTET STRING
+	MAX-ACCESS read-only
+	STATUS current
+	::= { testSecondaryTableEntry 1 }
+
+connections OBJECT-TYPE
+	SYNTAX OCTET STRING
+	MAX-ACCESS read-only
+	STATUS current
+	::= { testSecondaryTableEntry 2 }
+
+testTableIndex OBJECT-TYPE
+	SYNTAX OCTET STRING
+	MAX-ACCESS read-only
+	STATUS current
+	::= { testSecondaryTableEntry 3 }
 END
