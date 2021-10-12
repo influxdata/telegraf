@@ -10,11 +10,13 @@ import (
 )
 
 type Regex struct {
-	Tags       []converter     `toml:"tags"`
-	Fields     []converter     `toml:"fields"`
-	Metrics    []converter     `toml:"metrics"`
-	Log        telegraf.Logger `toml:"-"`
-	regexCache map[string]*regexp.Regexp
+	Tags         []converter     `toml:"tags"`
+	Fields       []converter     `toml:"fields"`
+	TagRename    []converter     `toml:"tag_rename"`
+	FieldRename  []converter     `toml:"field_rename"`
+	MetricRename []converter     `toml:"metric_rename"`
+	Log          telegraf.Logger `toml:"-"`
+	regexCache   map[string]*regexp.Regexp
 }
 
 type converter struct {
@@ -55,12 +57,32 @@ const sampleConfig = `
   #   replacement = "${1}"
   #   result_key = "search_category"
 
-  ## Replace metric element names such as "measurement", "tag" or "field" name
-  # [[processors.regex.metrics]]
-  #   ## Element name to change, can be "measurement", "tags" or "fields"
-  #   key = "fields"
-  #   ## Regular expression to match on a element name
-  #   pattern = "^value_(\\d)_\\d_\\d$"
+	## Rename metric fields
+  # [[processors.regex.field_rename]]
+  #   ## Regular expression to match on a field name
+  #   pattern = "^search_(\\w+)d$"
+  #   ## Matches of the pattern will be replaced with this string.  Use ${1}
+  #   ## notation to use the text of the first submatch.
+  #   replacement = "${1}"
+  #   ## If the new tag or field name is already present, you can either
+  #   ## "overwrite" or "keep" the existing tag or field.
+  #   # result_key = "keep"
+
+  ## Rename metric tags
+  # [[processors.regex.tag_rename]]
+  #   ## Regular expression to match on a tag name
+  #   pattern = "^search_(\\w+)d$"
+  #   ## Matches of the pattern will be replaced with this string.  Use ${1}
+  #   ## notation to use the text of the first submatch.
+  #   replacement = "${1}"
+  #   ## If the new tag or field name is already present, you can either
+  #   ## "overwrite" or "keep" the existing tag or field.
+  #   # result_key = "keep"
+
+  ## Rename metrics
+  # [[processors.regex.metric_rename]]
+  #   ## Regular expression to match on an metric name
+  #   pattern = "^search_(\\w+)d$"
   #   ## Matches of the pattern will be replaced with this string.  Use ${1}
   #   ## notation to use the text of the first submatch.
   #   replacement = "${1}"
@@ -83,9 +105,43 @@ func (r *Regex) Init() error {
 			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
 		}
 	}
-	for _, c := range r.Metrics {
-		if err := choice.Check(c.Key, []string{"measurement", "fields", "tags"}); err != nil {
-			return fmt.Errorf("invalid metrics key: %v", err)
+	for _, c := range r.TagRename {
+		if c.Key != "" {
+			r.Log.Info("'tag_rename' section contains a key which is ignored during processing")
+		}
+
+		if c.ResultKey == "" {
+			c.ResultKey = "keep"
+		}
+		if err := choice.Check(c.ResultKey, []string{"overwrite", "keep"}); err != nil {
+			return fmt.Errorf("invalid metrics result_key: %v", err)
+		}
+
+		if _, compiled := r.regexCache[c.Pattern]; !compiled {
+			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
+		}
+	}
+
+	for _, c := range r.FieldRename {
+		if c.Key != "" {
+			r.Log.Info("'field_rename' section contains a key which is ignored during processing")
+		}
+
+		if c.ResultKey == "" {
+			c.ResultKey = "keep"
+		}
+		if err := choice.Check(c.ResultKey, []string{"overwrite", "keep"}); err != nil {
+			return fmt.Errorf("invalid metrics result_key: %v", err)
+		}
+
+		if _, compiled := r.regexCache[c.Pattern]; !compiled {
+			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
+		}
+	}
+
+	for _, c := range r.MetricRename {
+		if c.Key != "" {
+			r.Log.Info("'metric_rename' section contains a key which is ignored during processing")
 		}
 
 		if c.ResultKey == "" {
@@ -136,76 +192,78 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			}
 		}
 
-		for _, converter := range r.Metrics {
+		for _, converter := range r.TagRename {
 			regex := r.regexCache[converter.Pattern]
+			replacements := make(map[string]string)
+			for _, tag := range metric.TagList() {
+				name := tag.Key
+				if regex.MatchString(name) {
+					newName := regex.ReplaceAllString(name, converter.Replacement)
 
-			switch converter.Key {
-			case "measurement":
-				value := metric.Name()
-				if regex.MatchString(value) {
-					newValue := regex.ReplaceAllString(value, converter.Replacement)
-					metric.SetName(newValue)
-				}
-			case "fields":
-				replacements := make(map[string]string)
-				for _, field := range metric.FieldList() {
-					name := field.Key
-					if regex.MatchString(name) {
-						newName := regex.ReplaceAllString(name, converter.Replacement)
+					if !metric.HasTag(newName) {
+						// There is no colliding tag, we can just change the name.
+						tag.Key = newName
+					}
 
-						if !metric.HasField(newName) {
-							// There is no colliding field, we can just change the name.
-							field.Key = newName
-						}
-
-						if converter.ResultKey == "overwrite" {
-							// We got a colliding field, remember the replacement and do it later
-							replacements[name] = newName
-						}
+					if converter.ResultKey == "overwrite" {
+						// We got a colliding tag, remember the replacement and do it later
+						replacements[name] = newName
 					}
 				}
-				// We needed to postpone the replacement as we cannot modify the field-list
-				// while iterating it as this will result in invalid memory dereference panic.
-				for oldName, newName := range replacements {
-					value, ok := metric.GetField(oldName)
-					if !ok {
-						// Just in case the field got removed in the meantime
-						continue
-					}
-					metric.RemoveField(newName)
-					metric.AddField(newName, value)
-					metric.RemoveField(oldName)
+			}
+			// We needed to postpone the replacement as we cannot modify the field-list
+			// while iterating it as this will result in invalid memory dereference panic.
+			for oldName, newName := range replacements {
+				value, ok := metric.GetTag(oldName)
+				if !ok {
+					// Just in case the field got removed in the meantime
+					continue
 				}
-			case "tags":
-				replacements := make(map[string]string)
-				for _, tag := range metric.TagList() {
-					name := tag.Key
-					if regex.MatchString(name) {
-						newName := regex.ReplaceAllString(name, converter.Replacement)
+				metric.RemoveTag(newName)
+				metric.AddTag(newName, value)
+				metric.RemoveTag(oldName)
+			}
+		}
 
-						if !metric.HasTag(newName) {
-							// There is no colliding tag, we can just change the name.
-							tag.Key = newName
-						}
+		for _, converter := range r.FieldRename {
+			regex := r.regexCache[converter.Pattern]
+			replacements := make(map[string]string)
+			for _, field := range metric.FieldList() {
+				name := field.Key
+				if regex.MatchString(name) {
+					newName := regex.ReplaceAllString(name, converter.Replacement)
 
-						if converter.ResultKey == "overwrite" {
-							// We got a colliding tag, remember the replacement and do it later
-							replacements[name] = newName
-						}
+					if !metric.HasField(newName) {
+						// There is no colliding field, we can just change the name.
+						field.Key = newName
+					}
+
+					if converter.ResultKey == "overwrite" {
+						// We got a colliding field, remember the replacement and do it later
+						replacements[name] = newName
 					}
 				}
-				// We needed to postpone the replacement as we cannot modify the field-list
-				// while iterating it as this will result in invalid memory dereference panic.
-				for oldName, newName := range replacements {
-					value, ok := metric.GetTag(oldName)
-					if !ok {
-						// Just in case the field got removed in the meantime
-						continue
-					}
-					metric.RemoveTag(newName)
-					metric.AddTag(newName, value)
-					metric.RemoveTag(oldName)
+			}
+			// We needed to postpone the replacement as we cannot modify the field-list
+			// while iterating it as this will result in invalid memory dereference panic.
+			for oldName, newName := range replacements {
+				value, ok := metric.GetField(oldName)
+				if !ok {
+					// Just in case the field got removed in the meantime
+					continue
 				}
+				metric.RemoveField(newName)
+				metric.AddField(newName, value)
+				metric.RemoveField(oldName)
+			}
+		}
+
+		for _, converter := range r.MetricRename {
+			regex := r.regexCache[converter.Pattern]
+			value := metric.Name()
+			if regex.MatchString(value) {
+				newValue := regex.ReplaceAllString(value, converter.Replacement)
+				metric.SetName(newValue)
 			}
 		}
 	}

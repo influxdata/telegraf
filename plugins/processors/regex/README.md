@@ -41,11 +41,9 @@ For metrics transforms, `key` denotes the element that should be transformed. Fu
     replacement = "${1}"
     result_key = "search_category"
 
-  # Replace metric element names such as "measurement", "tag" or "field" name
-  [[processors.regex.metrics]]
-    ## Element name to change, can be "measurement", "tags" or "fields"
-    key = "fields"
-    ## Regular expression to match on a element name
+  # Rename metric fields
+  [[processors.regex.field_rename]]
+    ## Regular expression to match on a field name
     pattern = "^search_(\\w+)d$"
     ## Matches of the pattern will be replaced with this string.  Use ${1}
     ## notation to use the text of the first submatch.
@@ -53,6 +51,28 @@ For metrics transforms, `key` denotes the element that should be transformed. Fu
     ## If the new tag or field name is already present, you can either
     ## "overwrite" or "keep" the existing tag or field.
     # result_key = "keep"
+
+  # Rename metric tags
+  # [[processors.regex.tag_rename]]
+  #   ## Regular expression to match on a tag name
+  #   pattern = "^search_(\\w+)d$"
+  #   ## Matches of the pattern will be replaced with this string.  Use ${1}
+  #   ## notation to use the text of the first submatch.
+  #   replacement = "${1}"
+  #   ## If the new tag or field name is already present, you can either
+  #   ## "overwrite" or "keep" the existing tag or field.
+  #   # result_key = "keep"
+
+  # Rename metrics
+  # [[processors.regex.metric_rename]]
+  #   ## Regular expression to match on an metric name
+  #   pattern = "^search_(\\w+)d$"
+  #   ## Matches of the pattern will be replaced with this string.  Use ${1}
+  #   ## notation to use the text of the first submatch.
+  #   replacement = "${1}"
+  #   ## If the new tag or field name is already present, you can either
+  #   ## "overwrite" or "keep" the existing tag or field.
+  #   # result_key = "keep"
 ```
 
 ### Tags:

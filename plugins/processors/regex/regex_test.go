@@ -74,9 +74,8 @@ func TestFieldConversions(t *testing.T) {
 
 	for _, test := range tests {
 		regex := Regex{
-			Fields: []converter{
-				test.converter,
-			},
+			Fields: []converter{test.converter},
+			Log:    testutil.Logger{},
 		}
 		require.NoError(t, regex.Init())
 
@@ -143,9 +142,8 @@ func TestTagConversions(t *testing.T) {
 
 	for _, test := range tests {
 		regex := Regex{
-			Tags: []converter{
-				test.converter,
-			},
+			Tags: []converter{test.converter},
+			Log:  testutil.Logger{},
 		}
 		require.NoError(t, regex.Init())
 
@@ -161,7 +159,7 @@ func TestTagConversions(t *testing.T) {
 	}
 }
 
-func TestMetricConversions(t *testing.T) {
+func TestMetricNameConversions(t *testing.T) {
 	inputTemplate := []telegraf.Metric{
 		testutil.MustMetric(
 			"access_log",
@@ -211,7 +209,6 @@ func TestMetricConversions(t *testing.T) {
 		{
 			name: "Should change metric name",
 			converter: converter{
-				Key:         "measurement",
 				Pattern:     "^(\\w+)_log$",
 				Replacement: "${1}",
 			},
@@ -256,10 +253,78 @@ func TestMetricConversions(t *testing.T) {
 				),
 			},
 		},
+	}
+
+	for _, test := range tests {
+		// Copy the inputs as they will be modified by the processor
+		input := make([]telegraf.Metric, len(inputTemplate))
+		for i, m := range inputTemplate {
+			input[i] = m.Copy()
+		}
+
+		t.Run(test.name, func(t *testing.T) {
+			regex := Regex{
+				MetricRename: []converter{test.converter},
+				Log:          testutil.Logger{},
+			}
+			require.NoError(t, regex.Init())
+
+			actual := regex.Apply(input...)
+			testutil.RequireMetricsEqual(t, test.expected, actual)
+		})
+	}
+}
+
+func TestFieldRenameConversions(t *testing.T) {
+	inputTemplate := []telegraf.Metric{
+		testutil.MustMetric(
+			"access_log",
+			map[string]string{
+				"verb":      "GET",
+				"resp_code": "200",
+			},
+			map[string]interface{}{
+				"request": "/users/42/",
+			},
+			time.Unix(1627646243, 0),
+		),
+		testutil.MustMetric(
+			"access_log",
+			map[string]string{
+				"verb":      "GET",
+				"resp_code": "200",
+			},
+			map[string]interface{}{
+				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+				"ignore_number": int64(200),
+				"ignore_bool":   true,
+			},
+			time.Unix(1627646253, 0),
+		),
+		testutil.MustMetric(
+			"error_log",
+			map[string]string{
+				"verb":      "GET",
+				"resp_code": "404",
+			},
+			map[string]interface{}{
+				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+				"ignore_number": int64(404),
+				"ignore_flag":   true,
+				"error_message": "request too silly",
+			},
+			time.Unix(1627646263, 0),
+		),
+	}
+
+	tests := []struct {
+		name      string
+		converter converter
+		expected  []telegraf.Metric
+	}{
 		{
 			name: "Should change field name",
 			converter: converter{
-				Key:         "fields",
 				Pattern:     "^(?:ignore|error)_(\\w+)$",
 				Replacement: "result_${1}",
 			},
@@ -305,57 +370,8 @@ func TestMetricConversions(t *testing.T) {
 			},
 		},
 		{
-			name: "Should change tag name",
-			converter: converter{
-				Key:         "tags",
-				Pattern:     "^resp_(\\w+)$",
-				Replacement: "${1}",
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric(
-					"access_log",
-					map[string]string{
-						"verb": "GET",
-						"code": "200",
-					},
-					map[string]interface{}{
-						"request": "/users/42/",
-					},
-					time.Unix(1627646243, 0),
-				),
-				testutil.MustMetric(
-					"access_log",
-					map[string]string{
-						"verb": "GET",
-						"code": "200",
-					},
-					map[string]interface{}{
-						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
-						"ignore_number": int64(200),
-						"ignore_bool":   true,
-					},
-					time.Unix(1627646253, 0),
-				),
-				testutil.MustMetric(
-					"error_log",
-					map[string]string{
-						"verb": "GET",
-						"code": "404",
-					},
-					map[string]interface{}{
-						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
-						"ignore_number": int64(404),
-						"ignore_flag":   true,
-						"error_message": "request too silly",
-					},
-					time.Unix(1627646263, 0),
-				),
-			},
-		},
-		{
 			name: "Should keep existing field name",
 			converter: converter{
-				Key:         "fields",
 				Pattern:     "^(?:ignore|error)_(\\w+)$",
 				Replacement: "request",
 			},
@@ -401,9 +417,171 @@ func TestMetricConversions(t *testing.T) {
 			},
 		},
 		{
+			name: "Should overwrite existing field name",
+			converter: converter{
+				Pattern:     "^ignore_bool$",
+				Replacement: "request",
+				ResultKey:   "overwrite",
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"access_log",
+					map[string]string{
+						"verb":      "GET",
+						"resp_code": "200",
+					},
+					map[string]interface{}{
+						"request": "/users/42/",
+					},
+					time.Unix(1627646243, 0),
+				),
+				testutil.MustMetric(
+					"access_log",
+					map[string]string{
+						"verb":      "GET",
+						"resp_code": "200",
+					},
+					map[string]interface{}{
+						"ignore_number": int64(200),
+						"request":       true,
+					},
+					time.Unix(1627646253, 0),
+				),
+				testutil.MustMetric(
+					"error_log",
+					map[string]string{
+						"verb":      "GET",
+						"resp_code": "404",
+					},
+					map[string]interface{}{
+						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+						"ignore_number": int64(404),
+						"ignore_flag":   true,
+						"error_message": "request too silly",
+					},
+					time.Unix(1627646263, 0),
+				),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		// Copy the inputs as they will be modified by the processor
+		input := make([]telegraf.Metric, len(inputTemplate))
+		for i, m := range inputTemplate {
+			input[i] = m.Copy()
+		}
+
+		t.Run(test.name, func(t *testing.T) {
+			regex := Regex{
+				FieldRename: []converter{test.converter},
+				Log:         testutil.Logger{},
+			}
+			require.NoError(t, regex.Init())
+
+			actual := regex.Apply(input...)
+			testutil.RequireMetricsEqual(t, test.expected, actual)
+		})
+	}
+}
+
+func TestTagRenameConversions(t *testing.T) {
+	inputTemplate := []telegraf.Metric{
+		testutil.MustMetric(
+			"access_log",
+			map[string]string{
+				"verb":      "GET",
+				"resp_code": "200",
+			},
+			map[string]interface{}{
+				"request": "/users/42/",
+			},
+			time.Unix(1627646243, 0),
+		),
+		testutil.MustMetric(
+			"access_log",
+			map[string]string{
+				"verb":      "GET",
+				"resp_code": "200",
+			},
+			map[string]interface{}{
+				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+				"ignore_number": int64(200),
+				"ignore_bool":   true,
+			},
+			time.Unix(1627646253, 0),
+		),
+		testutil.MustMetric(
+			"error_log",
+			map[string]string{
+				"verb":      "GET",
+				"resp_code": "404",
+			},
+			map[string]interface{}{
+				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+				"ignore_number": int64(404),
+				"ignore_flag":   true,
+				"error_message": "request too silly",
+			},
+			time.Unix(1627646263, 0),
+		),
+	}
+
+	tests := []struct {
+		name      string
+		converter converter
+		expected  []telegraf.Metric
+	}{
+		{
+			name: "Should change tag name",
+			converter: converter{
+				Pattern:     "^resp_(\\w+)$",
+				Replacement: "${1}",
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"access_log",
+					map[string]string{
+						"verb": "GET",
+						"code": "200",
+					},
+					map[string]interface{}{
+						"request": "/users/42/",
+					},
+					time.Unix(1627646243, 0),
+				),
+				testutil.MustMetric(
+					"access_log",
+					map[string]string{
+						"verb": "GET",
+						"code": "200",
+					},
+					map[string]interface{}{
+						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+						"ignore_number": int64(200),
+						"ignore_bool":   true,
+					},
+					time.Unix(1627646253, 0),
+				),
+				testutil.MustMetric(
+					"error_log",
+					map[string]string{
+						"verb": "GET",
+						"code": "404",
+					},
+					map[string]interface{}{
+						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
+						"ignore_number": int64(404),
+						"ignore_flag":   true,
+						"error_message": "request too silly",
+					},
+					time.Unix(1627646263, 0),
+				),
+			},
+		},
+		{
 			name: "Should keep existing tag name",
 			converter: converter{
-				Key:         "tags",
 				Pattern:     "^resp_(\\w+)$",
 				Replacement: "verb",
 			},
@@ -449,57 +627,8 @@ func TestMetricConversions(t *testing.T) {
 			},
 		},
 		{
-			name: "Should overwrite existing field name",
-			converter: converter{
-				Key:         "fields",
-				Pattern:     "^ignore_bool$",
-				Replacement: "request",
-				ResultKey:   "overwrite",
-			},
-			expected: []telegraf.Metric{
-				testutil.MustMetric(
-					"access_log",
-					map[string]string{
-						"verb":      "GET",
-						"resp_code": "200",
-					},
-					map[string]interface{}{
-						"request": "/users/42/",
-					},
-					time.Unix(1627646243, 0),
-				),
-				testutil.MustMetric(
-					"access_log",
-					map[string]string{
-						"verb":      "GET",
-						"resp_code": "200",
-					},
-					map[string]interface{}{
-						"ignore_number": int64(200),
-						"request":       true,
-					},
-					time.Unix(1627646253, 0),
-				),
-				testutil.MustMetric(
-					"error_log",
-					map[string]string{
-						"verb":      "GET",
-						"resp_code": "404",
-					},
-					map[string]interface{}{
-						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
-						"ignore_number": int64(404),
-						"ignore_flag":   true,
-						"error_message": "request too silly",
-					},
-					time.Unix(1627646263, 0),
-				),
-			},
-		},
-		{
 			name: "Should overwrite existing tag name",
 			converter: converter{
-				Key:         "tags",
 				Pattern:     "^resp_(\\w+)$",
 				Replacement: "verb",
 				ResultKey:   "overwrite",
@@ -552,7 +681,10 @@ func TestMetricConversions(t *testing.T) {
 		}
 
 		t.Run(test.name, func(t *testing.T) {
-			regex := Regex{Metrics: []converter{test.converter}}
+			regex := Regex{
+				TagRename: []converter{test.converter},
+				Log:       testutil.Logger{},
+			}
 			require.NoError(t, regex.Init())
 
 			actual := regex.Apply(input...)
@@ -591,6 +723,7 @@ func TestMultipleConversions(t *testing.T) {
 				ResultKey:   "search_category",
 			},
 		},
+		Log: testutil.Logger{},
 	}
 	require.NoError(t, regex.Init())
 
@@ -658,9 +791,8 @@ func TestNoMatches(t *testing.T) {
 
 	for _, test := range tests {
 		regex := Regex{
-			Fields: []converter{
-				test.converter,
-			},
+			Fields: []converter{test.converter},
+			Log:    testutil.Logger{},
 		}
 		require.NoError(t, regex.Init())
 
@@ -687,6 +819,7 @@ func BenchmarkConversions(b *testing.B) {
 				Replacement: "/users/{id}/",
 			},
 		},
+		Log: testutil.Logger{},
 	}
 	require.NoError(b, regex.Init())
 
