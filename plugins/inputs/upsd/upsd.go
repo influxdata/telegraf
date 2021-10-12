@@ -26,6 +26,8 @@ type Upsd struct {
 	OpTimeout         config.Duration
 	ConnectionTimeout config.Duration
 	Log               telegraf.Logger `toml:"-"`
+
+	batteryRuntimeTypeWarningIssued bool
 }
 
 func (*Upsd) Description() string {
@@ -48,13 +50,8 @@ func (*Upsd) SampleConfig() string {
 }
 
 func (u *Upsd) Gather(acc telegraf.Accumulator) error {
-	return u.gatherServer(u.Server, acc)
-}
-
-func (u *Upsd) gatherServer(server string, acc telegraf.Accumulator) error {
-	upsList, err := u.fetchVariables(server)
+	upsList, err := u.fetchVariables(u.Server)
 	if err != nil {
-		acc.AddError(err)
 		return err
 	}
 	for name, variables := range upsList {
@@ -78,24 +75,26 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"model": fmt.Sprintf("%v", metrics["device.model"]),
 	}
 
+	//for compatibility reasons, maps string status into apcupsd format
 	status := u.mapStatus(metrics)
 
 	timeLeftS, ok := metrics["battery.runtime"].(int64)
-	if !ok {
-		u.Log.Debugf("Error parsing battery.runtime: type is not int64")
+	if !ok && !u.batteryRuntimeTypeWarningIssued {
+		u.Log.Warnf("'battery.runtime' type is not int64")
+		u.batteryRuntimeTypeWarningIssued = true
 	}
 
 	fields := map[string]interface{}{
-		"status_flags":           status,
-		"input_voltage":          metrics["input.voltage"],
-		"load_percent":           metrics["ups.load"],
-		"battery_charge_percent": metrics["battery.charge"],
-		"time_left_ns":           timeLeftS * 1_000_000_000,
-		"output_voltage":         metrics["output.voltage"],
-		"internal_temp":          metrics["ups.temperature"],
-		"battery_voltage":        metrics["battery.voltage"],
-		"input_frequency":        metrics["input.frequency"],
-		//"time_on_battery_ns": no clue how to get this one,
+		"status_flags":            status,
+		"ups.status":              metrics["ups.status"],
+		"input_voltage":           metrics["input.voltage"],
+		"load_percent":            metrics["ups.load"],
+		"battery_charge_percent":  metrics["battery.charge"],
+		"time_left_ns":            timeLeftS * 1_000_000_000, //Compatibility with apcupsd metrics format
+		"output_voltage":          metrics["output.voltage"],
+		"internal_temp":           metrics["ups.temperature"],
+		"battery_voltage":         metrics["battery.voltage"],
+		"input_frequency":         metrics["input.frequency"],
 		"nominal_input_voltage":   metrics["input.voltage.nominal"],
 		"nominal_battery_voltage": metrics["battery.voltage.nominal"],
 		"nominal_power":           metrics["ups.realpower.nominal"],

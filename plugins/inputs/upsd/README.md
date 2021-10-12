@@ -1,6 +1,6 @@
 # UPSD Input Plugin
 
-This plugin reads data from an upsd daemon over its NUT network protocol.
+This plugin reads data of one or more Uninterruptible Power Supplies from an upsd daemon using its NUT network protocol.
 
 ### Requirements
 
@@ -10,9 +10,15 @@ upsd should be installed and it's daemon should be running.
 
 ```toml
 [[inputs.upsd]]
-  # A list of running upsd server to connect to.
+  ## A running NUT server to connect to.
   # If not provided will default to 127.0.0.1
-  servers = ["127.0.0.1"]
+  # server = "127.0.0.1"
+  # username = "user"
+  # password = "password"
+  ## Timeout for dialing server.
+  # connectionTimeout = "10s"
+  ## Read/write operation timeout.
+  # opTimeout = "10s"
 ```
 
 ### Metrics
