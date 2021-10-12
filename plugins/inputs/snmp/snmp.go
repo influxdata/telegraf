@@ -556,14 +556,10 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				// snmptranslate table field value here
 				if f.Translate {
 					if entOid, ok := ent.Value.(string); ok {
-						fmt.Printf("%v \n", entOid)
 						_, _, oidText, _, err := snmpTranslateCall(entOid)
-						fmt.Printf("%v \n", err)
-						fmt.Printf("%v\n", ent.Value)
 						if err == nil {
 							// If no error translating, the original value for ent.Value should be replaced
 							ent.Value = oidText
-							fmt.Printf("%v\n", ent.Value)
 						}
 					}
 				}
