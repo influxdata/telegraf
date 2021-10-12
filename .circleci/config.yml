@@ -207,6 +207,11 @@ jobs:
     steps:
       - package-build:
           type: i386
+  ppc64le-package:
+    executor: go-1_17
+    steps:
+      - package-build:
+          type: ppc64le
   s390x-package:
     executor: go-1_17
     steps:
