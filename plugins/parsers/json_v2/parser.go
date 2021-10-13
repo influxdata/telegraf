@@ -268,7 +268,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 
 	if result.IsArray() {
 		var err error
-		if result.IncludeCollection == nil && (len(p.currentSettings.FieldPaths) > 0 || len(p.currentSettings.TagPaths) > 0) {
+		if result.IncludeCollection == nil && (len(p.objectConfig.FieldPaths) > 0 || len(p.objectConfig.TagPaths) > 0) {
 			result.IncludeCollection = p.existsInpathResults(result.Index)
 		}
 		result.ForEach(func(_, val gjson.Result) bool {
@@ -375,7 +375,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) existsInpathResults(index int) *PathResult {
-	for _, f := range p.pathResults {
+	for _, f := range p.subPathResults {
 		if f.result.Index == index {
 			return &f
 		}
