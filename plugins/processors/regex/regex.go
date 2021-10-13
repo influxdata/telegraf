@@ -211,7 +211,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 					}
 				}
 			}
-			// We needed to postpone the replacement as we cannot modify the field-list
+			// We needed to postpone the replacement as we cannot modify the tag-list
 			// while iterating it as this will result in invalid memory dereference panic.
 			for oldName, newName := range replacements {
 				value, ok := metric.GetTag(oldName)
