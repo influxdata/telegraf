@@ -1,11 +1,8 @@
 package snmp
 
 import (
-	"fmt"
 	"net"
-	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -16,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
-	"github.com/sleepinggenius2/gosmi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -915,38 +911,6 @@ func TestFieldConvert(t *testing.T) {
 	}
 }
 
-func TestSnmpTableCache_miss(t *testing.T) {
-	snmpTableCaches = nil
-	oid := ".1.0.0.0"
-	mibName, oidNum, oidText, fields, err := snmpTable(oid)
-	assert.Len(t, snmpTableCaches, 1)
-	stc := snmpTableCaches[oid]
-	require.NotNil(t, stc)
-	assert.Equal(t, mibName, stc.mibName)
-	assert.Equal(t, oidNum, stc.oidNum)
-	assert.Equal(t, oidText, stc.oidText)
-	assert.Equal(t, fields, stc.fields)
-	assert.Equal(t, err, stc.err)
-}
-
-func TestSnmpTableCache_hit(t *testing.T) {
-	snmpTableCaches = map[string]snmpTableCache{
-		"foo": {
-			mibName: "a",
-			oidNum:  "b",
-			oidText: "c",
-			fields:  []Field{{Name: "d"}},
-			err:     fmt.Errorf("e"),
-		},
-	}
-	mibName, oidNum, oidText, fields, err := snmpTable("foo")
-	assert.Equal(t, "a", mibName)
-	assert.Equal(t, "b", oidNum)
-	assert.Equal(t, "c", oidText)
-	assert.Equal(t, []Field{{Name: "d"}}, fields)
-	assert.Equal(t, fmt.Errorf("e"), err)
-}
-
 func TestTableJoin_walk(t *testing.T) {
 	tbl := Table{
 		Name:       "mytable",
@@ -1184,60 +1148,4 @@ func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
 	assert.Contains(t, tb.Rows, rtr1)
 	assert.Contains(t, tb.Rows, rtr2)
 	assert.Contains(t, tb.Rows, rtr3)
-}
-
-func TestGoSmi(t *testing.T) {
-	gosmi.Init()
-	Path := []string{testDataPath}
-	var folders []string
-	for _, mibPath := range Path {
-		gosmi.AppendPath(mibPath)
-		folders = append(folders, mibPath)
-		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
-			if info.Mode()&os.ModeSymlink != 0 {
-				s, _ := os.Readlink(path)
-				folders = append(folders, s)
-			}
-			return nil
-		})
-		require.NoError(t, err)
-		for _, folder := range folders {
-			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
-				if info.IsDir() {
-					gosmi.AppendPath(path)
-				} else if info.Mode()&os.ModeSymlink == 0 {
-					gosmi.LoadModule(info.Name())
-					//println(load)
-				}
-				return nil
-			})
-			require.NoError(t, err)
-		}
-		folders = []string{}
-	}
-	oid := "TEST::description"
-	var end string
-	if strings.ContainsAny(oid, "::") {
-		// slpit given oid
-		// for example RFC1213-MIB::sysUpTime.0
-		s := strings.Split(oid, "::")
-		// node becomes sysUpTime.0
-		node := s[1]
-		if strings.ContainsAny(node, ".") {
-			s = strings.Split(node, ".")
-			// node becomes sysUpTime
-			node = s[0]
-			end = "." + s[1]
-		}
-
-		out, err := gosmi.GetNode(node)
-
-		oidNum := "." + out.RenderNumeric() + end
-		fmt.Printf("%v\n", oidNum)
-
-		oidText := out.RenderQualified()
-		fmt.Printf("%v\n", oidText)
-
-		require.Error(t, err)
-	}
 }
