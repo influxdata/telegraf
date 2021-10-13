@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	mb "github.com/grid-x/modbus"
@@ -36,9 +37,26 @@ type Modbus struct {
 	isConnected bool
 	// Request handling
 	requests map[byte]requestSet
+
+}
+type fieldConverterFunc func(bytes []byte) interface{}
+
+var RTUClientHandlerCache []RTUClientHandlerMap
+var ASCIIClientHandlerCache []ASCIIClientHandlerMap
+var GatherLock sync.Mutex
+
+
+type RTUClientHandlerMap struct {
+	Controller string
+	handler *mb.RTUClientHandler
 }
 
-type fieldConverterFunc func(bytes []byte) interface{}
+type ASCIIClientHandlerMap struct {
+	Controller string
+	handler *mb.ASCIIClientHandler
+}
+
+
 
 type requestSet struct {
 	coil     []request
@@ -191,11 +209,19 @@ func (m *Modbus) Init() error {
 
 // Gather implements the telegraf plugin interface method for data accumulation
 func (m *Modbus) Gather(acc telegraf.Accumulator) error {
+	GatherLock.Lock()
+	defer GatherLock.Unlock()
+
+	m.handler.SetSlave(m.SlaveID)
+	m.client = mb.NewClient(m.handler)
+	m.isConnected = false
+
 	if !m.isConnected {
 		if err := m.connect(); err != nil {
 			return err
 		}
 	}
+	//fmt.Printf("正在獲取 %s %d \n",m.Controller, m.SlaveID)
 
 	timestamp := time.Now()
 	for retry := 0; retry <= m.Retries; retry++ {
@@ -264,23 +290,59 @@ func (m *Modbus) initClient() error {
 			m.handler = handler
 		}
 	case "file":
+		var handler_tmp mb.ClientHandler
 		switch m.TransmissionMode {
 		case "RTU":
-			handler := mb.NewRTUClientHandler(u.Path)
-			handler.Timeout = time.Duration(m.Timeout)
-			handler.BaudRate = m.BaudRate
-			handler.DataBits = m.DataBits
-			handler.Parity = m.Parity
-			handler.StopBits = m.StopBits
-			m.handler = handler
+			for _,RTUClientHandler :=range RTUClientHandlerCache{
+				if ( RTUClientHandler.Controller == u.Path) {
+					handler_tmp = RTUClientHandler.handler
+					break;
+				}
+			}
+			if(handler_tmp==nil){
+				handler := mb.NewRTUClientHandler(u.Path)
+				handler.Timeout = time.Duration(m.Timeout)
+				handler.BaudRate = m.BaudRate
+				handler.DataBits = m.DataBits
+				handler.Parity = m.Parity
+				handler.StopBits = m.StopBits
+				m.handler = handler
+				// 存入緩存
+				var RTUClientHandlerTmp RTUClientHandlerMap
+				RTUClientHandlerTmp.handler = handler
+				RTUClientHandlerTmp.Controller = u.Path
+				RTUClientHandlerCache = append(RTUClientHandlerCache, RTUClientHandlerTmp )
+				//fmt.Printf("RTU 創建新實例 %s \n",u.Path)
+			}else{
+				m.handler = handler_tmp
+				//fmt.Printf("RTU 使用緩存 %s \n",u.Path)
+			}
 		case "ASCII":
-			handler := mb.NewASCIIClientHandler(u.Path)
-			handler.Timeout = time.Duration(m.Timeout)
-			handler.BaudRate = m.BaudRate
-			handler.DataBits = m.DataBits
-			handler.Parity = m.Parity
-			handler.StopBits = m.StopBits
-			m.handler = handler
+			for _,ASCIIClientHandler :=range ASCIIClientHandlerCache{
+				if ( ASCIIClientHandler.Controller == u.Path) {
+					handler_tmp = ASCIIClientHandler.handler
+					break;
+				}
+			}
+			if(handler_tmp==nil){
+				handler := mb.NewASCIIClientHandler(u.Path)
+				handler.Timeout = time.Duration(m.Timeout)
+				handler.BaudRate = m.BaudRate
+				handler.DataBits = m.DataBits
+				handler.Parity = m.Parity
+				handler.StopBits = m.StopBits
+				m.handler = handler
+				// 存入緩存
+				var ASCIIClientHandlerTmp ASCIIClientHandlerMap
+				ASCIIClientHandlerTmp.handler = handler
+				ASCIIClientHandlerTmp.Controller = u.Path
+				ASCIIClientHandlerCache = append(ASCIIClientHandlerCache, ASCIIClientHandlerTmp )
+				//fmt.Printf("ASCII 創建新實例 %s \n",u.Path)
+			}else{
+				m.handler = handler_tmp
+				//fmt.Printf("ASCII 使用緩存 %s \n",u.Path)
+			}
+
 		default:
 			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
 		}
@@ -288,9 +350,7 @@ func (m *Modbus) initClient() error {
 		return fmt.Errorf("invalid controller %q", m.Controller)
 	}
 
-	m.handler.SetSlave(m.SlaveID)
-	m.client = mb.NewClient(m.handler)
-	m.isConnected = false
+
 
 	return nil
 }
