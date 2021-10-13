@@ -411,7 +411,12 @@ func main() {
 	case *fDeprecationList:
 		c := config.NewConfig()
 		c.VersionMajor, c.VersionMinor = config.ParseVersion(version)
-		infos := c.CollectDeprecationInfos()
+		infos := c.CollectDeprecationInfos(
+			inputFilters,
+			outputFilters,
+			aggregatorFilters,
+			processorFilters,
+		)
 		//nolint:revive // We will notice if Println fails
 		fmt.Println("Deprecated Input Plugins: ")
 		c.PrintDeprecationList(infos["inputs"])

@@ -165,11 +165,15 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 	return nil
 }
 
-func (c *Config) CollectDeprecationInfos() map[string][]PluginDeprecationInfo {
+func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFilter []string) map[string][]PluginDeprecationInfo {
 	infos := make(map[string][]PluginDeprecationInfo)
 
 	infos["inputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range inputs.Inputs {
+		if len(inFilter) > 0 && !sliceContains(name, inFilter) {
+			continue
+		}
+
 		plugin := creator()
 		info := c.collectDeprecationInfo("inputs", name, plugin, true)
 
@@ -180,6 +184,10 @@ func (c *Config) CollectDeprecationInfos() map[string][]PluginDeprecationInfo {
 
 	infos["outputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range outputs.Outputs {
+		if len(outFilter) > 0 && !sliceContains(name, outFilter) {
+			continue
+		}
+
 		plugin := creator()
 		info := c.collectDeprecationInfo("outputs", name, plugin, true)
 
@@ -190,6 +198,10 @@ func (c *Config) CollectDeprecationInfos() map[string][]PluginDeprecationInfo {
 
 	infos["processors"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range processors.Processors {
+		if len(procFilter) > 0 && !sliceContains(name, procFilter) {
+			continue
+		}
+
 		plugin := creator()
 		info := c.collectDeprecationInfo("processors", name, plugin, true)
 
@@ -200,6 +212,10 @@ func (c *Config) CollectDeprecationInfos() map[string][]PluginDeprecationInfo {
 
 	infos["aggregators"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range aggregators.Aggregators {
+		if len(aggFilter) > 0 && !sliceContains(name, aggFilter) {
+			continue
+		}
+
 		plugin := creator()
 		info := c.collectDeprecationInfo("aggregators", name, plugin, true)
 
