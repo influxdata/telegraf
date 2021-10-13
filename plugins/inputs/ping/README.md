@@ -100,7 +100,7 @@ LimitNOFILE=8192
 
 Restart Telegraf:
 ```sh
-$ systemctl edit telegraf
+$ systemctl restart telegraf
 ```
 
 #### Linux Permissions

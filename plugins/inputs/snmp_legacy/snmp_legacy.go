@@ -1,9 +1,9 @@
 package snmp_legacy
 
 import (
-	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -296,7 +296,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			subnodes: make(map[string]Node),
 		}
 
-		data, err := ioutil.ReadFile(s.SnmptranslateFile)
+		data, err := os.ReadFile(s.SnmptranslateFile)
 		if err != nil {
 			s.Log.Errorf("Reading SNMPtranslate file error: %s", err.Error())
 			return err

@@ -24,6 +24,29 @@ Note: pqos tool needs root privileges to work properly.
 
 Metrics will be constantly reported from the following `pqos` commands within the given interval:
 
+#### If telegraf does not run as the root user
+
+The `pqos` binary needs to run as root.  If telegraf is running as a non-root user, you may enable sudo
+to allow `pqos` to run correctly.
+The `pqos` command requires root level access to run.  There are two options to
+overcome this if you run telegraf as a non-root user.
+
+It is possible to update the pqos binary with setuid using `chmod u+s
+/path/to/pqos`.  This approach is simple and requires no modification to the
+Telegraf configuration, however pqos is not a read-only tool and there are
+security implications for making such a command setuid root.
+
+Alternately, you may enable sudo to allow `pqos` to run correctly, as follows:
+
+Add the following to your sudoers file (assumes telegraf runs as a user named `telegraf`):
+
+```
+telegraf ALL=(ALL) NOPASSWD:/usr/sbin/pqos -r --iface-os --mon-file-type=csv --mon-interval=*
+```
+
+If you wish to use sudo, you must also add `use_sudo = true` to the Telegraf
+configuration (see below).
+
 #### In case of cores monitoring:
 ```
 pqos -r --iface-os --mon-file-type=csv --mon-interval=INTERVAL --mon-core=all:[CORES]\;mbt:[CORES]
@@ -76,6 +99,10 @@ More about Intel RDT: https://www.intel.com/content/www/us/en/architecture-and-t
   ## Mandatory if cores aren't set and forbidden if cores are specified.
   ## e.g. ["qemu", "pmd"]
   # processes = ["process"]
+
+  ## Specify if the pqos process should be called with sudo.
+  ## Mandatory if the telegraf process does not run as root.
+  # use_sudo = false
 ```
 
 ### Exposed metrics

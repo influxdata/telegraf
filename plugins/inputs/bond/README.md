@@ -27,6 +27,7 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
 - bond_slave
   - failures
   - status
+  - count
 
 ### Description:
 
@@ -39,6 +40,9 @@ status
 
 failures
   Amount of failures for bond's slave interface.
+
+count
+  Number of slaves attached to bond
 ```
 
 ### Tags:
@@ -79,7 +83,9 @@ Output:
 > bond,bond=bond1,host=local active_slave="eth0",status=1i 1509704525000000000
 > bond_slave,bond=bond1,interface=eth0,host=local status=1i,failures=0i 1509704525000000000
 > bond_slave,host=local,bond=bond1,interface=eth1 status=1i,failures=0i 1509704525000000000
+> bond_slave,host=local,bond=bond1 count=2i 1509704525000000000
 > bond,bond=bond0,host=isvetlov-mac.local status=1i 1509704525000000000
 > bond_slave,bond=bond0,interface=eth1,host=local status=1i,failures=0i 1509704525000000000
 > bond_slave,bond=bond0,interface=eth2,host=local status=1i,failures=0i 1509704525000000000
+> bond_slave,bond=bond0,host=local count=2i 1509704525000000000
 ```
