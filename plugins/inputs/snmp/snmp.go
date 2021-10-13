@@ -307,7 +307,7 @@ func (f *Field) init() error {
 
 	// check if oid needs translation or name is not set
 	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
-		_, oidNum, oidText, conversion, err := snmpTranslateCall(f.Oid)
+		_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
 		//maybe turn this into a warning
 		if err != nil {
 			log.Printf("W! [inputs.snmp] %v", err)
@@ -555,7 +555,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				// snmptranslate table field value here
 				if f.Translate {
 					if entOid, ok := ent.Value.(string); ok {
-						_, _, oidText, _, err := snmpTranslateCall(entOid)
+						_, _, oidText, _, err := SnmpTranslate(entOid)
 						if err == nil {
 							// If no error translating, the original value for ent.Value should be replaced
 							ent.Value = oidText
@@ -852,16 +852,30 @@ type snmpTableCache struct {
 	err     error
 }
 
+var snmpTableCachesLock sync.Mutex
+var snmpTableCaches map[string]snmpTableCache
+
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
 func snmpTable(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
+	snmpTableCachesLock.Lock()
+	if snmpTableCaches == nil {
+		snmpTableCaches = map[string]snmpTableCache{}
+	}
+
 	var stc snmpTableCache
-	stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err = snmpTableCall(oid)
+	var ok bool
+	if stc, ok = snmpTableCaches[oid]; !ok {
+		stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err = snmpTableCall(oid)
+		snmpTableCaches[oid] = stc
+	}
+
+	snmpTableCachesLock.Unlock()
 	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
 }
 
 func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	mibName, oidNum, oidText, _, err = snmpTranslateCall(oid)
+	mibName, oidNum, oidText, _, err = SnmpTranslate(oid)
 	if err != nil {
 		return "", "", "", nil, fmt.Errorf("translating: %w", err)
 	}
@@ -895,6 +909,44 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	}
 
 	return mibName, oidNum, oidText, fields, err
+}
+
+type snmpTranslateCache struct {
+	mibName    string
+	oidNum     string
+	oidText    string
+	conversion string
+	err        error
+}
+
+var snmpTranslateCachesLock sync.Mutex
+var snmpTranslateCaches map[string]snmpTranslateCache
+
+// snmpTranslate resolves the given OID.
+func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+	snmpTranslateCachesLock.Lock()
+	if snmpTranslateCaches == nil {
+		snmpTranslateCaches = map[string]snmpTranslateCache{}
+	}
+
+	var stc snmpTranslateCache
+	var ok bool
+	if stc, ok = snmpTranslateCaches[oid]; !ok {
+		// This will result in only one call to snmptranslate running at a time.
+		// We could speed it up by putting a lock in snmpTranslateCache and then
+		// returning it immediately, and multiple callers would then release the
+		// snmpTranslateCachesLock and instead wait on the individual
+		// snmpTranslation.Lock to release. But I don't know that the extra complexity
+		// is worth it. Especially when it would slam the system pretty hard if lots
+		// of lookups are being performed.
+
+		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = snmpTranslateCall(oid)
+		snmpTranslateCaches[oid] = stc
+	}
+
+	snmpTranslateCachesLock.Unlock()
+
+	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
 }
 
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
