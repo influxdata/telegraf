@@ -49,7 +49,8 @@ func (m *mockGatherCloudMonitorClient) GatherMetrics(client monitor.Client, requ
 			DataPoints []*monitor.DataPoint `json:"DataPoints,omitempty" name:"DataPoints"`
 			StartTime  *string              `json:"StartTime,omitempty" name:"StartTime"`
 			EndTime    *string              `json:"EndTime,omitempty" name:"EndTime"`
-			RequestId  *string              `json:"RequestId,omitempty" name:"RequestId"`
+			//nolint:revive // Ignore this linter error as the field has to be named 'RequestId' due to requirements by the SDK.
+			RequestId *string `json:"RequestId,omitempty" name:"RequestId"`
 		}{
 			RequestId:  common.StringPtr("request_id"),
 			Period:     common.Uint64Ptr(300),
