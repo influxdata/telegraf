@@ -45,9 +45,12 @@ func (p *program) run() {
 		p.inputFilters,
 		p.outputFilters,
 	)
+	close(stop)
 }
 func (p *program) Stop(s service.Service) error {
-	close(stop)
+	var empty struct{}
+	stop <- empty // signal reloadLoop to finish (context cancel)
+	<-stop        // wait for reloadLoop to finish and channel to close
 	return nil
 }
 
