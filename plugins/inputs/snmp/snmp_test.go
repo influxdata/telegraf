@@ -642,7 +642,90 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	assert.Equal(t, (gs.Retries+1)*2, reqCount)
 }
 
-func TestTableBuild_walk(t *testing.T) {
+func TestTableBuild_walk_noTranslate(t *testing.T) {
+	tbl := Table{
+		Name:       "mytable",
+		IndexAsTag: true,
+		Fields: []Field{
+			{
+				Name:  "myfield1",
+				Oid:   ".1.0.0.0.1.1",
+				IsTag: true,
+			},
+			{
+				Name: "myfield2",
+				Oid:  ".1.0.0.0.1.2",
+			},
+			{
+				Name:       "myfield3",
+				Oid:        ".1.0.0.0.1.3",
+				Conversion: "float",
+			},
+			{
+				Name:           "myfield4",
+				Oid:            ".1.0.0.2.1.5",
+				OidIndexSuffix: ".9.9",
+			},
+			{
+				Name:           "myfield5",
+				Oid:            ".1.0.0.2.1.5",
+				OidIndexLength: 1,
+			},
+		},
+	}
+
+	tb, err := tbl.Build(tsc, true)
+	require.NoError(t, err)
+	assert.Equal(t, tb.Name, "mytable")
+	rtr1 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "foo",
+			"index":    "0",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 1,
+			"myfield3": float64(0.123),
+			"myfield4": 11,
+			"myfield5": 11,
+		},
+	}
+	rtr2 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "bar",
+			"index":    "1",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 2,
+			"myfield3": float64(0.456),
+			"myfield4": 22,
+			"myfield5": 22,
+		},
+	}
+	rtr3 := RTableRow{
+		Tags: map[string]string{
+			"index": "2",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 0,
+			"myfield3": float64(0.0),
+		},
+	}
+	rtr4 := RTableRow{
+		Tags: map[string]string{
+			"index": "3",
+		},
+		Fields: map[string]interface{}{
+			"myfield3": float64(9.999),
+		},
+	}
+	assert.Len(t, tb.Rows, 4)
+	assert.Contains(t, tb.Rows, rtr1)
+	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
+	assert.Contains(t, tb.Rows, rtr4)
+}
+
+func TestTableBuild_walk_Translate(t *testing.T) {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 	s := &Snmp{
