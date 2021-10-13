@@ -57,7 +57,7 @@ const sampleConfig = `
   #   replacement = "${1}"
   #   result_key = "search_category"
 
-	## Rename metric fields
+  ## Rename metric fields
   # [[processors.regex.field_rename]]
   #   ## Regular expression to match on a field name
   #   pattern = "^search_(\\w+)d$"
