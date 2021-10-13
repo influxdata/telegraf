@@ -146,8 +146,7 @@ func (r *Regex) Init() error {
 		}
 
 		if c.ResultKey != "" {
-			r.Log.Info("'metric_rename' section contains a result_key setting which is ignored during processing")
-			r.Log.Info("'metric_rename' sections will ALWAYS overwrite the name of the metric")
+			r.Log.Info("'metric_rename' section contains a 'result_key' ignored during processing as metrics will ALWAYS the name")
 		}
 
 		if _, compiled := r.regexCache[c.Pattern]; !compiled {
@@ -219,7 +218,6 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 					// Just in case the tag got removed in the meantime
 					continue
 				}
-				metric.RemoveTag(newName)
 				metric.AddTag(newName, value)
 				metric.RemoveTag(oldName)
 			}
@@ -253,7 +251,6 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 					// Just in case the field got removed in the meantime
 					continue
 				}
-				metric.RemoveField(newName)
 				metric.AddField(newName, value)
 				metric.RemoveField(oldName)
 			}
