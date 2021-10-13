@@ -203,6 +203,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 					if !metric.HasTag(newName) {
 						// There is no colliding tag, we can just change the name.
 						tag.Key = newName
+						continue
 					}
 
 					if converter.ResultKey == "overwrite" {
@@ -236,6 +237,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 					if !metric.HasField(newName) {
 						// There is no colliding field, we can just change the name.
 						field.Key = newName
+						continue
 					}
 
 					if converter.ResultKey == "overwrite" {
