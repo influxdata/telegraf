@@ -64,14 +64,33 @@ type PluginDeprecationInfo struct {
 	Options []DeprecationInfo
 }
 
-func (c *Config) collectDeprecationInfo(name string, plugin interface{}, all bool) PluginDeprecationInfo {
+func (c *Config) incrementPluginDeprecations(category string) {
+	newcounts := []int64{1, 0}
+	if counts, found := c.Deprecations[category]; found {
+		newcounts = []int64{counts[0] + 1, counts[1]}
+	}
+	c.Deprecations[category] = newcounts
+}
+
+func (c *Config) incrementPluginOptionDeprecations(category string) {
+	newcounts := []int64{0, 1}
+	if counts, found := c.Deprecations[category]; found {
+		newcounts = []int64{counts[0], counts[1] + 1}
+	}
+	c.Deprecations[category] = newcounts
+}
+
+func (c *Config) collectDeprecationInfo(category, name string, plugin interface{}, all bool) PluginDeprecationInfo {
 	info := PluginDeprecationInfo{}
-	info.Name = name
+	info.Name = category + "." + name
 
 	// First check if the whole plugin is deprecated
 	if deprecatedPlugin, ok := plugin.(telegraf.PluginDeprecator); ok {
 		info.Since, info.Notice = deprecatedPlugin.DeprecationNotice()
 		info.Level = c.getDeprecationEscalation(info.Since)
+		if info.Level != None {
+			c.incrementPluginDeprecations(category)
+		}
 	}
 
 	// Check for deprecated options
@@ -91,6 +110,10 @@ func (c *Config) collectDeprecationInfo(name string, plugin interface{}, all boo
 			Level: c.getDeprecationEscalation(tags[0]),
 		}
 
+		if optionInfo.Level != None {
+			c.incrementPluginOptionDeprecations(category)
+		}
+
 		if len(tags) > 1 {
 			optionInfo.Notice = tags[1]
 		}
@@ -105,8 +128,8 @@ func (c *Config) collectDeprecationInfo(name string, plugin interface{}, all boo
 	return info
 }
 
-func (c *Config) printUserDeprecation(name string, plugin interface{}) error {
-	info := c.collectDeprecationInfo(name, plugin, false)
+func (c *Config) printUserDeprecation(category, name string, plugin interface{}) error {
+	info := c.collectDeprecationInfo(category, name, plugin, false)
 
 	switch info.Level {
 	case Warn:
@@ -148,7 +171,7 @@ func (c *Config) CollectDeprecationInfos() map[string][]PluginDeprecationInfo {
 	infos["inputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range inputs.Inputs {
 		plugin := creator()
-		info := c.collectDeprecationInfo(name, plugin, true)
+		info := c.collectDeprecationInfo("inputs", name, plugin, true)
 
 		if info.Level != None || len(info.Options) > 0 {
 			infos["inputs"] = append(infos["inputs"], info)
@@ -158,7 +181,7 @@ func (c *Config) CollectDeprecationInfos() map[string][]PluginDeprecationInfo {
 	infos["outputs"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range outputs.Outputs {
 		plugin := creator()
-		info := c.collectDeprecationInfo(name, plugin, true)
+		info := c.collectDeprecationInfo("outputs", name, plugin, true)
 
 		if info.Level != None || len(info.Options) > 0 {
 			infos["outputs"] = append(infos["outputs"], info)
@@ -168,7 +191,7 @@ func (c *Config) CollectDeprecationInfos() map[string][]PluginDeprecationInfo {
 	infos["processors"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range processors.Processors {
 		plugin := creator()
-		info := c.collectDeprecationInfo(name, plugin, true)
+		info := c.collectDeprecationInfo("processors", name, plugin, true)
 
 		if info.Level != None || len(info.Options) > 0 {
 			infos["processors"] = append(infos["processors"], info)
@@ -178,7 +201,7 @@ func (c *Config) CollectDeprecationInfos() map[string][]PluginDeprecationInfo {
 	infos["aggregators"] = make([]PluginDeprecationInfo, 0)
 	for name, creator := range aggregators.Aggregators {
 		plugin := creator()
-		info := c.collectDeprecationInfo(name, plugin, true)
+		info := c.collectDeprecationInfo("aggregators", name, plugin, true)
 
 		if info.Level != None || len(info.Options) > 0 {
 			infos["aggregators"] = append(infos["aggregators"], info)

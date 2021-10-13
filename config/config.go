@@ -80,6 +80,7 @@ type Config struct {
 
 	VersionMajor int
 	VersionMinor int
+	Deprecations map[string][]int64
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -105,6 +106,7 @@ func NewConfig() *Config {
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
+		Deprecations:  make(map[string][]int64, 0),
 	}
 
 	tomlCfg := &toml.Config{
@@ -1020,7 +1022,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := c.printUserDeprecation("aggregators."+name, aggregator); err != nil {
+	if err := c.printUserDeprecation("aggregators", name, aggregator); err != nil {
 		return err
 	}
 
@@ -1072,7 +1074,7 @@ func (c *Config) newRunningProcessor(
 		}
 	}
 
-	if err := c.printUserDeprecation("processors."+processorConfig.Name, processor); err != nil {
+	if err := c.printUserDeprecation("processors", processorConfig.Name, processor); err != nil {
 		return nil, err
 	}
 
@@ -1110,7 +1112,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := c.printUserDeprecation("outputs."+name, output); err != nil {
+	if err := c.printUserDeprecation("outputs", name, output); err != nil {
 		return err
 	}
 
@@ -1163,7 +1165,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := c.printUserDeprecation("inputs."+name, input); err != nil {
+	if err := c.printUserDeprecation("inputs", name, input); err != nil {
 		return err
 	}
 
