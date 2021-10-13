@@ -17,7 +17,7 @@
 **Note:** If you have a pull request with only one commit, then that commit needs to follow the conventional commit format or the `Semantic Pull Request` check will fail. This is because github will use the pull request title if there are multiple commits, but if there is only one commit it will use it instead.
 
 #### When will your contribution get released?
-We have two kinds of releases: patch releases, which happen every few weeks, and feature releases, which happen once a quarter. If your fix is a bug fix, it will be released in the patch release after it is merged. If your release is a new plugin or other feature, it will be released in the next quarterly feature release (targeted towards the end of each quarter).
+We have two kinds of releases: patch releases, which happen every few weeks, and feature releases, which happen once a quarter. If your fix is a bug fix, it will be released in the patch release after it is merged to master. If your release is a new plugin or other feature, it will be released in the quarterly release after it is merged to master. Quarterly releases are on the third Wednesday of March, June, September, and December.
 
 #### Contributing an External Plugin
 
