@@ -216,7 +216,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			for oldName, newName := range replacements {
 				value, ok := metric.GetTag(oldName)
 				if !ok {
-					// Just in case the field got removed in the meantime
+					// Just in case the tag got removed in the meantime
 					continue
 				}
 				metric.RemoveTag(newName)
