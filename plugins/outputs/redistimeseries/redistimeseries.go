@@ -10,12 +10,13 @@ import (
 var sampleConfig = `
   ## The address of the RedisTimeSeries server.
   address = "127.0.0.1:6379"
+  database = 0
 
-  # Redis ACL username
+  ## Redis ACL username
   # username = ""
   ## password to login Redis
   # password = ""
-  database = 0
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -55,9 +56,6 @@ func (r *RedisTimeSeries) SampleConfig() string {
 	return sampleConfig
 }
 func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
 	for _, m := range metrics {
 		now := m.Time().UnixNano() / 1000000 // in milliseconds
 		tags := m.Tags()
