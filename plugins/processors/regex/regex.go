@@ -64,8 +64,9 @@ const sampleConfig = `
   #   ## Matches of the pattern will be replaced with this string.  Use ${1}
   #   ## notation to use the text of the first submatch.
   #   replacement = "${1}"
-  #   ## If the new tag or field name is already present, you can either
-  #   ## "overwrite" or "keep" the existing tag or field.
+  #   ## If the new field name already exists, you can either "overwrite" the
+  #   ## existing one with the value of the renamed field OR you can "keep"
+  #   ## both the existing and source field.
   #   # result_key = "keep"
 
   ## Rename metric tags
@@ -75,8 +76,9 @@ const sampleConfig = `
   #   ## Matches of the pattern will be replaced with this string.  Use ${1}
   #   ## notation to use the text of the first submatch.
   #   replacement = "${1}"
-  #   ## If the new tag or field name is already present, you can either
-  #   ## "overwrite" or "keep" the existing tag or field.
+  #   ## If the new tag name already exists, you can either "overwrite" the
+  #   ## existing one with the value of the renamed tag OR you can "keep"
+  #   ## both the existing and source tag.
   #   # result_key = "keep"
 
   ## Rename metrics
@@ -86,9 +88,6 @@ const sampleConfig = `
   #   ## Matches of the pattern will be replaced with this string.  Use ${1}
   #   ## notation to use the text of the first submatch.
   #   replacement = "${1}"
-  #   ## If the new tag or field name is already present, you can either
-  #   ## "overwrite" or "keep" the existing tag or field.
-  #   # result_key = "keep"
 `
 
 func (r *Regex) Init() error {
@@ -105,6 +104,8 @@ func (r *Regex) Init() error {
 			r.regexCache[c.Pattern] = regexp.MustCompile(c.Pattern)
 		}
 	}
+
+	resultOptions := []string{"overwrite", "keep"}
 	for _, c := range r.TagRename {
 		if c.Key != "" {
 			r.Log.Info("'tag_rename' section contains a key which is ignored during processing")
@@ -113,7 +114,7 @@ func (r *Regex) Init() error {
 		if c.ResultKey == "" {
 			c.ResultKey = "keep"
 		}
-		if err := choice.Check(c.ResultKey, []string{"overwrite", "keep"}); err != nil {
+		if err := choice.Check(c.ResultKey, resultOptions); err != nil {
 			return fmt.Errorf("invalid metrics result_key: %v", err)
 		}
 
@@ -130,7 +131,7 @@ func (r *Regex) Init() error {
 		if c.ResultKey == "" {
 			c.ResultKey = "keep"
 		}
-		if err := choice.Check(c.ResultKey, []string{"overwrite", "keep"}); err != nil {
+		if err := choice.Check(c.ResultKey, resultOptions); err != nil {
 			return fmt.Errorf("invalid metrics result_key: %v", err)
 		}
 
@@ -144,11 +145,9 @@ func (r *Regex) Init() error {
 			r.Log.Info("'metric_rename' section contains a key which is ignored during processing")
 		}
 
-		if c.ResultKey == "" {
-			c.ResultKey = "keep"
-		}
-		if err := choice.Check(c.ResultKey, []string{"overwrite", "keep"}); err != nil {
-			return fmt.Errorf("invalid metrics result_key: %v", err)
+		if c.ResultKey != "" {
+			r.Log.Info("'metric_rename' section contains a result_key setting which is ignored during processing")
+			r.Log.Info("'metric_rename' sections will ALWAYS overwrite the name of the metric")
 		}
 
 		if _, compiled := r.regexCache[c.Pattern]; !compiled {

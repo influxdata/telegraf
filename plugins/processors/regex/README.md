@@ -48,8 +48,9 @@ For metrics transforms, `key` denotes the element that should be transformed. Fu
     ## Matches of the pattern will be replaced with this string.  Use ${1}
     ## notation to use the text of the first submatch.
     replacement = "${1}"
-    ## If the new field name is already present, you can either
-    ## "overwrite" or "keep" the existing field.
+    ## If the new field name already exists, you can either "overwrite" the
+    ## existing one with the value of the renamed field OR you can "keep"
+    ## both the existing and source field.
     # result_key = "keep"
 
   # Rename metric tags
@@ -59,8 +60,9 @@ For metrics transforms, `key` denotes the element that should be transformed. Fu
   #   ## Matches of the pattern will be replaced with this string.  Use ${1}
   #   ## notation to use the text of the first submatch.
   #   replacement = "${1}"
-  #   ## If the new tag name is already present, you can either
-  #   ## "overwrite" or "keep" the existing tag.
+  #   ## If the new tag name already exists, you can either "overwrite" the
+  #   ## existing one with the value of the renamed tag OR you can "keep"
+  #   ## both the existing and source tag.
   #   # result_key = "keep"
 
   # Rename metrics
