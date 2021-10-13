@@ -50,7 +50,7 @@ func (p *program) run() {
 func (p *program) Stop(s service.Service) error {
 	var empty struct{}
 	stop <- empty // signal reloadLoop to finish (context cancel)
-	<-stop        // wait for reloadLoop to finish and channel to close
+	<-stop        // wait for reloadLoop to finish and close channel
 	return nil
 }
 
