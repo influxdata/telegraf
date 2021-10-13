@@ -31,15 +31,20 @@ func MongoDBGetCollections(database_name string, client *mongo.Client, ctx conte
 	return ret
 }
 
-func MongoDBInsert(database_name string, database_collection string, client *mongo.Client, ctx context.Context, json []byte) {
+func MongoDBInsert(database_name string, database_collection string, client *mongo.Client, ctx context.Context, json []byte) error {
 	var bdoc interface{}
 	err := bson.UnmarshalJSON(json, &bdoc)
-	collection := client.Database(database_name).Collection(database_collection)
-	insertResult, err := collection.InsertOne(ctx, &bdoc)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	log.Println("Inserted a single document: ", insertResult.InsertedID)
+	collection := client.Database(database_name).Collection(database_collection)
+	// insertResult, err := collection.InsertOne(ctx, &bdoc)
+	_, err = collection.InsertOne(ctx, &bdoc)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// log.Println("Inserted a single document: ", insertResult.InsertedID)
+	return err
 }
 
 type MongoDB struct {
@@ -91,19 +96,20 @@ func (s *MongoDB) Init() error {
 	return nil
 }
 
-func MongoDBCreateTimeSeriesCollection(s *MongoDB, database_collection string) {
+func MongoDBCreateTimeSeriesCollection(client *mongo.Client, ctx context.Context, metric_database string, database_collection string, metric_granularity string, retention_policy string) error {
 	tso := options.TimeSeries()
 	tso.SetTimeField("timestamp")
 	tso.SetMetaField("tags")
-	tso.SetGranularity(s.Metric_granularity)
+	tso.SetGranularity(metric_granularity)
 
 	cco := options.CreateCollection()
 	//check s,m,d
-	if s.Retention_policy != "" {
-		expiregranularity := s.Retention_policy[len(s.Retention_policy)-1:]
-		expire_after_seconds, err := strconv.ParseInt(s.Retention_policy[0:len(s.Retention_policy)-1], 10, 64)
+	if retention_policy != "" {
+		expiregranularity := retention_policy[len(retention_policy)-1:]
+		expire_after_seconds, err := strconv.ParseInt(retention_policy[0:len(retention_policy)-1], 10, 64)
 		if err != nil {
 			log.Fatal(err)
+			return err
 		}
 		if expiregranularity == "m" {
 			expire_after_seconds = expire_after_seconds * 60
@@ -116,9 +122,18 @@ func MongoDBCreateTimeSeriesCollection(s *MongoDB, database_collection string) {
 	}
 	cco.SetTimeSeriesOptions(tso)
 
-	err := s.client.Database(s.Metric_database).CreateCollection(s.ctx, database_collection, cco)
+	err := client.Database(metric_database).CreateCollection(ctx, database_collection, cco)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
+		return err
+	}
+	return nil
+}
+
+func MongoDBCreateTimeSeriesCollectionFromPluginObject(s *MongoDB, database_collection string) {
+	err := MongoDBCreateTimeSeriesCollection(s.client, s.ctx, s.Metric_database, database_collection, s.Metric_granularity, s.Retention_policy)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -247,17 +262,17 @@ func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 		// ensure collection gets created as time series collection.
 		if !DoesCollectionExist(s, metric.Name()) {
 			fmt.Println("creating time series collection for metric " + metric.Name() + "...")
-			MongoDBCreateTimeSeriesCollection(s, metric.Name())
+			MongoDBCreateTimeSeriesCollectionFromPluginObject(s, metric.Name())
 			UpdateCollectionMap(s, metric.Name())
 		}
 
 		mdb_bson := NormalizeJSON(metric)
 		if mdb_bson != "" {
-			fmt.Printf("%v\n", mdb_bson)
+			// fmt.Printf("%v\n", mdb_bson)
 			MongoDBInsert(s.Metric_database, metric.Name(), s.client, s.ctx, []byte(mdb_bson))
-		} else {
+		} /* else {
 			fmt.Printf("null %v\n", mdb_bson)
-		}
+		}*/
 	}
 	return nil
 }

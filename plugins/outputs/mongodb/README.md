@@ -1,8 +1,7 @@
 # MongoDB Output Plugin
 
 Requires MongoDB 5.0+ for Time Series Collections
-This plugin sends metrics to MongoDB and automatically creates the collections as time series collections
-
+This plugin sends metrics to MongoDB and automatically creates the collections as time series collections when they don't already exist.
 
 ### Configuration:
 
@@ -10,9 +9,10 @@ This plugin sends metrics to MongoDB and automatically creates the collections a
 # A plugin that can transmit logs to mongodb
 [[outputs.mongodb]]
   connection_string = "mongodb://localhost:27017/admin"
-  authentication_type = "SCRAM"
-  username = "root"
-  password = "***"
+  authentication_type = "NONE"
+  # authentication_type = "SCRAM"
+  # username = "root"
+  # password = "***"
   # authentication_type = "X509"
   # x509clientpem = "client.pem"
   # x509clientpempwd = "changeme"
