@@ -273,6 +273,19 @@ func runAgent(ctx context.Context,
 	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 	log.Printf("I! Tags enabled: %s", c.ListTags())
 
+	if count, found := c.Deprecations["inputs"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated inputs: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["aggregators"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated aggregators: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["processors"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated processors: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["outputs"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
+	}
+
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
