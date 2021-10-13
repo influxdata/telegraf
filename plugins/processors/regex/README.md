@@ -59,8 +59,8 @@ For metrics transforms, `key` denotes the element that should be transformed. Fu
   #   ## Matches of the pattern will be replaced with this string.  Use ${1}
   #   ## notation to use the text of the first submatch.
   #   replacement = "${1}"
-  #   ## If the new tag or field name is already present, you can either
-  #   ## "overwrite" or "keep" the existing tag or field.
+  #   ## If the new tag name is already present, you can either
+  #   ## "overwrite" or "keep" the existing tag.
   #   # result_key = "keep"
 
   # Rename metrics
