@@ -43,7 +43,7 @@ require (
 	github.com/antchfx/xmlquery v1.3.6
 	github.com/antchfx/xpath v1.1.11
 	github.com/apache/arrow/go/arrow v0.0.0-20211006091945-a69884db78f4 // indirect
-	github.com/apache/thrift v0.14.2
+	github.com/apache/thrift v0.15.0
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-metrics v0.3.3 // indirect
