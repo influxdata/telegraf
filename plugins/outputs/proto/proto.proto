@@ -656,6 +656,22 @@ message Netstat {
   double timestamp = 4;
 }
 
+message GPS {
+
+  message Fields {
+    double lat = 1;
+    double lon = 2;
+  }
+
+  message Tags {
+    string host = 1;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+  Tags tags = 3;
+  double timestamp = 4;
+}
 
 message Influx {
   repeated Kernel kernel = 1;
@@ -679,6 +695,7 @@ message Influx {
   repeated Glog glog = 19;
   repeated Diskio diskio = 20;
   repeated Netstat netstat = 21;
+  repeated GPS gps = 22;
 }
 
 
