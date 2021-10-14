@@ -30,6 +30,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
 	_ "github.com/influxdata/telegraf/plugins/outputs/logzio"
 	_ "github.com/influxdata/telegraf/plugins/outputs/loki"
+	_ "github.com/influxdata/telegraf/plugins/outputs/mongodb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/mqtt"
 	_ "github.com/influxdata/telegraf/plugins/outputs/nats"
 	_ "github.com/influxdata/telegraf/plugins/outputs/newrelic"
@@ -51,5 +52,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
 	_ "github.com/influxdata/telegraf/plugins/outputs/websocket"
 	_ "github.com/influxdata/telegraf/plugins/outputs/yandex_cloud_monitoring"
-	_ "github.com/influxdata/telegraf/plugins/outputs/mongodb"
 )
