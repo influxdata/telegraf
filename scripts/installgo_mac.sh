@@ -4,7 +4,7 @@ set -eux
 
 GO_ARCH="darwin-amd64"
 GO_VERSION="1.17.2"
-GO_VERSION_SHA="3c452046b1dfa27b70d3217c9fe6de266f9fd74d83aad81382fead70efcdffca" # from https://golang.org/dl
+GO_VERSION_SHA="7914497a302a132a465d33f5ee044ce05568bacdb390ab805cb75a3435a23f94" # from https://golang.org/dl
 
 # This path is cachable. (Saving in /usr/local/ would cause issues restoring the cache.)
 path="/usr/local/Cellar"
