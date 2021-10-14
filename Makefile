@@ -199,11 +199,6 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
-.PHONY: ci-1.16
-ci-1.16:
-	docker build -t quay.io/influxdb/telegraf-ci:1.16.7 - < scripts/ci-1.16.docker
-	docker push quay.io/influxdb/telegraf-ci:1.16.7
-
 .PHONY: ci-1.17
 ci-1.17:
 	docker build -t quay.io/influxdb/telegraf-ci:1.17.0 - < scripts/ci-1.17.docker
@@ -271,7 +266,7 @@ ppc64le += linux_ppc64le.tar.gz ppc64le.rpm ppc64el.deb
 .PHONY: ppc64le
 ppc64le:
 	@ echo $(ppc64le)
-i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gzi386.rpm
+i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gz i386.rpm
 .PHONY: i386
 i386:
 	@ echo $(i386)

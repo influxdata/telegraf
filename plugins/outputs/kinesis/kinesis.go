@@ -126,9 +126,13 @@ func (k *KinesisOutput) Connect() error {
 		k.Log.Infof("Establishing a connection to Kinesis in %s", k.Region)
 	}
 
-	svc := kinesis.New(k.CredentialConfig.Credentials())
+	p, err := k.CredentialConfig.Credentials()
+	if err != nil {
+		return err
+	}
+	svc := kinesis.New(p)
 
-	_, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
+	_, err = svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
 		StreamName: aws.String(k.StreamName),
 	})
 	k.svc = svc

@@ -15,14 +15,26 @@ import (
 )
 
 func TestWriteDefault(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	scenarioUDP(t, "127.0.0.1:12201")
 }
 
 func TestWriteUDP(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	scenarioUDP(t, "udp://127.0.0.1:12201")
 }
 
 func TestWriteTCP(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	scenarioTCP(t, "tcp://127.0.0.1:12201")
 }
 
