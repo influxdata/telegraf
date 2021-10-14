@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 func MongoDBGetCollections(database_name string, client *mongo.Client, ctx context.Context) map[string]bson.M {
@@ -48,22 +47,21 @@ func MongoDBInsert(database_name string, database_collection string, client *mon
 }
 
 type MongoDB struct {
-	Dsn                 string          `toml:"dsn"`
-	AuthenticationType  string          `toml:"authentication"`
-	MetricDatabase      string          `toml:"database"`
-	MetricGranularity   string          `toml:"granularity"`
-	Username            string          `toml:"username"`
-	Password            string          `toml:"password"`
-	CAFile              string          `toml:"cafile"`
-	X509clientpem       string          `toml:"x509clientpem"`
-	X509clientpempwd    string          `toml:"x509clientpempwd"`
-	Allow_tls_insecure  bool            `toml:"allow_tls_insecure"`
-	Retention_policy    string          `toml:"retention_policy"`
-	Log                 telegraf.Logger `toml:"-"`
-	client              *mongo.Client
-	ctx                 context.Context
-	collections         (map[string]bson.M)
-	serializer          serializers.Serializer
+	Dsn                string          `toml:"dsn"`
+	AuthenticationType string          `toml:"authentication"`
+	MetricDatabase     string          `toml:"database"`
+	MetricGranularity  string          `toml:"granularity"`
+	Username           string          `toml:"username"`
+	Password           string          `toml:"password"`
+	CAFile             string          `toml:"cafile"`
+	X509clientpem      string          `toml:"x509clientpem"`
+	X509clientpempwd   string          `toml:"x509clientpempwd"`
+	Allow_tls_insecure bool            `toml:"allow_tls_insecure"`
+	Retention_policy   string          `toml:"retention_policy"`
+	Log                telegraf.Logger `toml:"-"`
+	client             *mongo.Client
+	ctx                context.Context
+	collections        (map[string]bson.M)
 }
 
 func (s *MongoDB) Description() string {
@@ -71,17 +69,17 @@ func (s *MongoDB) Description() string {
 }
 
 var sampleConfig = `
-  connection_string = "mongodb://localhost:27017/admin"
-  # connection_string = "mongodb://mongod1:27017,mongod2:27017,mongod3:27017/admin&replicaSet=myReplSet&w=1"
-  authentication_type = "SCRAM" # SCRAM or X509
+  dsn = "mongodb://localhost:27017/admin"
+  # dsn = "mongodb://mongod1:27017,mongod2:27017,mongod3:27017/admin&replicaSet=myReplSet&w=1"
+  authentication = "SCRAM" # NONE, SCRAM, or X509
   username = "root" #username for SCRAM 
   password = "****" #password for SCRAM user or private key password if encrypted X509
   # x509clientpem = "client.pem"
   # x509clientpempwd = "****"
   # allow_tls_insecure = false
   # cafile = "ca.pem" #if using X509 authentication
-  metric_database = "telegraf" #tells telegraf which database to write metrics to. collections are automatically created as time series collections
-  metric_granularity = "seconds" #can be seconds, minutes, or hours
+  database = "telegraf" #tells telegraf which database to write metrics to. collections are automatically created as time series collections
+  granularity = "seconds" #can be seconds, minutes, or hours
   retention_policy = "15d" #set a TTL on the collect. examples: 120m, 24h, or 15d
   data_format = "json" #always set to json for proper serialization
 `
@@ -92,7 +90,7 @@ func (s *MongoDB) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (s *MongoDB) Init() error {
-	log.Println("connecting to " + s.Connection_string + " with username " + s.Username)
+	log.Println("connecting to " + s.Dsn + " with username " + s.Username)
 	return nil
 }
 
@@ -131,7 +129,7 @@ func MongoDBCreateTimeSeriesCollection(client *mongo.Client, ctx context.Context
 }
 
 func MongoDBCreateTimeSeriesCollectionFromPluginObject(s *MongoDB, database_collection string) {
-	err := MongoDBCreateTimeSeriesCollection(s.client, s.ctx, s.Metric_database, database_collection, s.Metric_granularity, s.Retention_policy)
+	err := MongoDBCreateTimeSeriesCollection(s.client, s.ctx, s.MetricDatabase, database_collection, s.MetricGranularity, s.Retention_policy)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -149,18 +147,18 @@ func UpdateCollectionMap(s *MongoDB, database_collection string) {
 func (s *MongoDB) Connect() error {
 	ctx := context.TODO()
 
-	connection_string := s.Connection_string
+	connection_string := s.Dsn
 	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1)
 	clientOptions := options.Client().SetServerAPIOptions(serverAPIOptions)
 
-	if s.Authentication_type == "SCRAM" {
+	if s.AuthenticationType == "SCRAM" {
 		credential := options.Credential{
 			AuthMechanism: "SCRAM-SHA-256",
 			Username:      s.Username,
 			Password:      s.Password,
 		}
 		clientOptions = clientOptions.SetAuth(credential)
-	} else if s.Authentication_type == "X509" {
+	} else if s.AuthenticationType == "X509" {
 		//format connection string to include tls/x509 options
 		new_connection_string, err := url.Parse(connection_string)
 		if err != nil {
@@ -220,7 +218,7 @@ func (s *MongoDB) Connect() error {
 		log.Fatal(err)
 	} else {
 		log.Println("connected!")
-		s.collections = MongoDBGetCollections(s.Metric_database, s.client, s.ctx)
+		s.collections = MongoDBGetCollections(s.MetricDatabase, s.client, s.ctx)
 	}
 
 	return err
@@ -231,7 +229,7 @@ func (s *MongoDB) Close() error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Connection to MongoDB closed.")
+	log.Println("Connection to MongoDB closed.")
 	return err
 }
 
@@ -261,24 +259,20 @@ func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		// ensure collection gets created as time series collection.
 		if !DoesCollectionExist(s, metric.Name()) {
-			fmt.Println("creating time series collection for metric " + metric.Name() + "...")
+			log.Println("creating time series collection for metric " + metric.Name() + "...")
 			MongoDBCreateTimeSeriesCollectionFromPluginObject(s, metric.Name())
 			UpdateCollectionMap(s, metric.Name())
 		}
 
 		mdb_bson := NormalizeJSON(metric)
 		if mdb_bson != "" {
-			// fmt.Printf("%v\n", mdb_bson)
-			MongoDBInsert(s.Metric_database, metric.Name(), s.client, s.ctx, []byte(mdb_bson))
+			// log.Printf("%v\n", mdb_bson)
+			MongoDBInsert(s.MetricDatabase, metric.Name(), s.client, s.ctx, []byte(mdb_bson))
 		} /* else {
-			fmt.Printf("null %v\n", mdb_bson)
+			log.Printf("null %v\n", mdb_bson)
 		}*/
 	}
 	return nil
-}
-
-func (s *MongoDB) SetSerializer(serializer serializers.Serializer) {
-	s.serializer = serializer
 }
 
 func init() {
