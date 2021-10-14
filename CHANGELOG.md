@@ -1,3 +1,38 @@
+## v1.20.2 [2021-10-07]
+
+#### Bugfixes
+
+  - [#9878](https://github.com/influxdata/telegraf/pull/9878) `inputs.cloudwatch` Use new session API
+  - [#9872](https://github.com/influxdata/telegraf/pull/9872) `parsers.json_v2` Duplicate line_protocol when using object and fields
+  - [#9787](https://github.com/influxdata/telegraf/pull/9787) `parsers.influx` Fix memory leak in influx parser
+  - [#9880](https://github.com/influxdata/telegraf/pull/9880) `inputs.stackdriver` Migrate to cloud.google.com/go/monitoring/apiv3/v2
+  - [#9887](https://github.com/influxdata/telegraf/pull/9887) Fix makefile typo that prevented i386 tar and rpm packages from being built
+
+## v1.20.1 [2021-10-06]
+
+#### Bugfixes
+
+  - [#9776](https://github.com/influxdata/telegraf/pull/9776) Update k8s.io/apimachinery module from 0.21.1 to 0.22.2
+  - [#9864](https://github.com/influxdata/telegraf/pull/9864) Update containerd module to v1.5.7
+  - [#9863](https://github.com/influxdata/telegraf/pull/9863) Update consul module to v1.11.0
+  - [#9846](https://github.com/influxdata/telegraf/pull/9846) `inputs.mongodb` Fix panic due to nil dereference
+  - [#9850](https://github.com/influxdata/telegraf/pull/9850) `inputs.intel_rdt` Prevent timeout when logging
+  - [#9848](https://github.com/influxdata/telegraf/pull/9848) `outputs.loki` Update http_headers setting to match sample config
+  - [#9808](https://github.com/influxdata/telegraf/pull/9808) `inputs.procstat` Add missing tags
+  - [#9803](https://github.com/influxdata/telegraf/pull/9803) `outputs.mqtt` Add keep alive config option and documentation around issue with eclipse/mosquitto version
+  - [#9800](https://github.com/influxdata/telegraf/pull/9800) Fix output buffer never completely flushing
+  - [#9458](https://github.com/influxdata/telegraf/pull/9458) `inputs.couchbase` Fix insecure certificate validation
+  - [#9797](https://github.com/influxdata/telegraf/pull/9797) `inputs.opentelemetry` Fix error returned to OpenTelemetry client
+  - [#9789](https://github.com/influxdata/telegraf/pull/9789) Update github.com/testcontainers/testcontainers-go module from 0.11.0 to 0.11.1
+  - [#9791](https://github.com/influxdata/telegraf/pull/9791) Update github.com/Azure/go-autorest/autorest/adal module
+  - [#9678](https://github.com/influxdata/telegraf/pull/9678) Update github.com/Azure/go-autorest/autorest/azure/auth module from 0.5.6 to 0.5.8
+  - [#9769](https://github.com/influxdata/telegraf/pull/9769) Update cloud.google.com/go/pubsub module from 1.15.0 to 1.17.0
+  - [#9770](https://github.com/influxdata/telegraf/pull/9770) Update github.com/aws/smithy-go module from 1.3.1 to 1.8.0
+
+#### Features
+
+  - [#9838](https://github.com/influxdata/telegraf/pull/9838) `inputs.elasticsearch_query` Add custom time/date format field
+
 ## v1.20.0 [2021-09-17]
 
 #### Release Notes

@@ -58,6 +58,8 @@ type Prometheus struct {
 
 	URLTag string `toml:"url_tag"`
 
+	IgnoreTimestamp bool `toml:"ignore_timestamp"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger
@@ -100,6 +102,10 @@ var sampleConfig = `
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "url"
+
+  ## Whether the timestamp of the scraped metrics will be ignored.
+  ## If set to true, the gather time will be used.
+  # ignore_timestamp = false
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -414,10 +420,13 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if p.MetricVersion == 2 {
-		parser := parser_v2.Parser{Header: resp.Header}
+		parser := parser_v2.Parser{
+			Header:          resp.Header,
+			IgnoreTimestamp: p.IgnoreTimestamp,
+		}
 		metrics, err = parser.Parse(body)
 	} else {
-		metrics, err = Parse(body, resp.Header)
+		metrics, err = Parse(body, resp.Header, p.IgnoreTimestamp)
 	}
 
 	if err != nil {

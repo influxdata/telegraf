@@ -2,13 +2,14 @@ package timestream_test
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/timestreamwrite"
@@ -53,10 +54,9 @@ func (m *mockTimestreamClient) DescribeDatabase(*timestreamwrite.DescribeDatabas
 
 func TestConnectValidatesConfigParameters(t *testing.T) {
 	assertions := assert.New(t)
-	ts.WriteFactory = func(credentialConfig *internalaws.CredentialConfig) ts.WriteClient {
-		return &mockTimestreamClient{}
+	ts.WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (ts.WriteClient, error) {
+		return &mockTimestreamClient{}, nil
 	}
-
 	// checking base arguments
 	noDatabaseName := ts.Timestream{Log: testutil.Logger{}}
 	assertions.Contains(noDatabaseName.Connect().Error(), "DatabaseName")
@@ -182,11 +182,11 @@ func (m *mockTimestreamErrorClient) DescribeDatabase(*timestreamwrite.DescribeDa
 func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 	assertions := assert.New(t)
 
-	ts.WriteFactory = func(credentialConfig *internalaws.CredentialConfig) ts.WriteClient {
+	ts.WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (ts.WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			awserr.New(timestreamwrite.ErrCodeThrottlingException,
 				"Throttling Test", nil),
-		}
+		}, nil
 	}
 	plugin := ts.Timestream{
 		MappingMode:  ts.MappingModeMultiTable,
@@ -210,11 +210,11 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
 	assertions := assert.New(t)
 
-	ts.WriteFactory = func(credentialConfig *internalaws.CredentialConfig) ts.WriteClient {
+	ts.WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (ts.WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			awserr.New(timestreamwrite.ErrCodeRejectedRecordsException,
 				"RejectedRecords Test", nil),
-		}
+		}, nil
 	}
 	plugin := ts.Timestream{
 		MappingMode:  ts.MappingModeMultiTable,
