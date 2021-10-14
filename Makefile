@@ -206,8 +206,8 @@ ci-1.16:
 
 .PHONY: ci-1.17
 ci-1.17:
-	docker build -t quay.io/influxdb/telegraf-ci:1.17.1 - < scripts/ci-1.17.docker
-	docker push quay.io/influxdb/telegraf-ci:1.17.1
+	docker build -t quay.io/influxdb/telegraf-ci:1.17.2 - < scripts/ci-1.17.docker
+	docker push quay.io/influxdb/telegraf-ci:1.17.2
 
 .PHONY: install
 install: $(buildbin)

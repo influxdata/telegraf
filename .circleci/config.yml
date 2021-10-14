@@ -13,7 +13,7 @@ executors:
   go-1_17:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.17.1'
+      - image: 'quay.io/influxdb/telegraf-ci:1.17.2'
     environment:
       GOFLAGS: -p=8
   mac:
