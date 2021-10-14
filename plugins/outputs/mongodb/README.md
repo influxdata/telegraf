@@ -1,7 +1,7 @@
 # MongoDB Output Plugin
 
-Requires MongoDB 5.0+ for Time Series Collections
 This plugin sends metrics to MongoDB and automatically creates the collections as time series collections when they don't already exist.
+**Please note:** Requires MongoDB 5.0+ for Time Series Collections
 
 ### Configuration:
 
