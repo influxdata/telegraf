@@ -48,10 +48,10 @@ func MongoDBInsert(database_name string, database_collection string, client *mon
 }
 
 type MongoDB struct {
-	Connection_string   string          `toml:"connection_string"`
-	Authentication_type string          `toml:"authentication_type"`
-	Metric_database     string          `toml:"metric_database"`
-	Metric_granularity  string          `toml:"metric_granularity"`
+	Dsn                 string          `toml:"dsn"`
+	AuthenticationType  string          `toml:"authentication"`
+	MetricDatabase      string          `toml:"database"`
+	MetricGranularity   string          `toml:"granularity"`
 	Username            string          `toml:"username"`
 	Password            string          `toml:"password"`
 	CAFile              string          `toml:"cafile"`
