@@ -106,7 +106,7 @@ func NewConfig() *Config {
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
-		Deprecations:  make(map[string][]int64, 0),
+		Deprecations:  make(map[string][]int64),
 	}
 
 	tomlCfg := &toml.Config{
