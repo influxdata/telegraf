@@ -23,6 +23,7 @@ Pull requests welcome.
 - [s7comm](https://github.com/nicolasme/s7comm) - Gather information from Siemens PLC
 - [net_irtt](https://github.com/iAnatoly/telegraf-input-net_irtt) - Gather information from IRTT network test
 - [dht_sensor](https://github.com/iAnatoly/telegraf-input-dht_sensor) - Gather temperature and humidity from DHTXX sensors
+- [oracle](https://github.com/bonitoo-io/telegraf-input-oracle) - Gather the statistic data from Oracle RDBMS
 
 ## Outputs
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.
