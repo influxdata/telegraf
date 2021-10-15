@@ -2,14 +2,11 @@ package mongodb
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/url"
 	"strconv"
-	"time"
 
-	"gopkg.in/mgo.v2/bson"
-
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -30,15 +27,10 @@ func MongoDBGetCollections(database_name string, client *mongo.Client, ctx conte
 	return ret
 }
 
-func MongoDBInsert(database_name string, database_collection string, client *mongo.Client, ctx context.Context, json []byte) error {
-	var bdoc interface{}
-	err := bson.UnmarshalJSON(json, &bdoc)
-	if err != nil {
-		log.Fatal(err)
-	}
+func MongoDBInsert(database_name string, database_collection string, client *mongo.Client, ctx context.Context, bson bson.D) error {
 	collection := client.Database(database_name).Collection(database_collection)
 	// insertResult, err := collection.InsertOne(ctx, &bdoc)
-	_, err = collection.InsertOne(ctx, &bdoc)
+	_, err := collection.InsertOne(ctx, &bson)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,8 +48,8 @@ type MongoDB struct {
 	CAFile             string          `toml:"cafile"`
 	X509clientpem      string          `toml:"x509clientpem"`
 	X509clientpempwd   string          `toml:"x509clientpempwd"`
-	Allow_tls_insecure bool            `toml:"allow_tls_insecure"`
-	Retention_policy   string          `toml:"retention_policy"`
+	AllowTLSInsecure   bool            `toml:"allow_tls_insecure"`
+	TTL                string          `toml:"ttl"`
 	Log                telegraf.Logger `toml:"-"`
 	client             *mongo.Client
 	ctx                context.Context
@@ -80,7 +72,7 @@ var sampleConfig = `
   # cafile = "ca.pem" #if using X509 authentication
   database = "telegraf" #tells telegraf which database to write metrics to. collections are automatically created as time series collections
   granularity = "seconds" #can be seconds, minutes, or hours
-  retention_policy = "15d" #set a TTL on the collect. examples: 120m, 24h, or 15d
+  ttl = "15d" #set a TTL on the collect. examples: 120m, 24h, or 15d
   data_format = "json" #always set to json for proper serialization
 `
 
@@ -94,17 +86,17 @@ func (s *MongoDB) Init() error {
 	return nil
 }
 
-func MongoDBCreateTimeSeriesCollection(client *mongo.Client, ctx context.Context, metric_database string, database_collection string, metric_granularity string, retention_policy string) error {
+func (s *MongoDB) MongoDBCreateTimeSeriesCollection(database_collection string) error {
 	tso := options.TimeSeries()
 	tso.SetTimeField("timestamp")
 	tso.SetMetaField("tags")
-	tso.SetGranularity(metric_granularity)
+	tso.SetGranularity(s.MetricGranularity)
 
 	cco := options.CreateCollection()
 	//check s,m,d
-	if retention_policy != "" {
-		expiregranularity := retention_policy[len(retention_policy)-1:]
-		expire_after_seconds, err := strconv.ParseInt(retention_policy[0:len(retention_policy)-1], 10, 64)
+	if s.TTL != "" {
+		expiregranularity := s.TTL[len(s.TTL)-1:]
+		expire_after_seconds, err := strconv.ParseInt(s.TTL[0:len(s.TTL)-1], 10, 64)
 		if err != nil {
 			log.Fatal(err)
 			return err
@@ -120,7 +112,7 @@ func MongoDBCreateTimeSeriesCollection(client *mongo.Client, ctx context.Context
 	}
 	cco.SetTimeSeriesOptions(tso)
 
-	err := client.Database(metric_database).CreateCollection(ctx, database_collection, cco)
+	err := s.client.Database(s.MetricDatabase).CreateCollection(s.ctx, database_collection, cco)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -128,19 +120,12 @@ func MongoDBCreateTimeSeriesCollection(client *mongo.Client, ctx context.Context
 	return nil
 }
 
-func MongoDBCreateTimeSeriesCollectionFromPluginObject(s *MongoDB, database_collection string) {
-	err := MongoDBCreateTimeSeriesCollection(s.client, s.ctx, s.MetricDatabase, database_collection, s.MetricGranularity, s.Retention_policy)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func DoesCollectionExist(s *MongoDB, database_collection string) bool {
+func (s *MongoDB) DoesCollectionExist(database_collection string) bool {
 	_, collectionExists := s.collections[database_collection]
 	return collectionExists
 }
 
-func UpdateCollectionMap(s *MongoDB, database_collection string) {
+func (s *MongoDB) UpdateCollectionMap(database_collection string) {
 	s.collections[database_collection] = bson.M{"bustedware": "llc"}
 }
 
@@ -166,8 +151,8 @@ func (s *MongoDB) Connect() error {
 		}
 		q := new_connection_string.Query()
 		q.Set("tls", "true")
-		if s.Allow_tls_insecure {
-			q.Set("tlsAllowInvalidCertificates", strconv.FormatBool(s.Allow_tls_insecure))
+		if s.AllowTLSInsecure {
+			q.Set("tlsAllowInvalidCertificates", strconv.FormatBool(s.AllowTLSInsecure))
 		}
 		q.Set("tlsCAFile", s.CAFile)
 		q.Set("sslClientCertificateKeyFile", s.X509clientpem)
@@ -233,44 +218,34 @@ func (s *MongoDB) Close() error {
 	return err
 }
 
-// all metric fields are parent level of document
+// all metric/measurement fields are parent level of document
 // metadata field is named "tags"
-// converts native metric json timestamp to mongodb native timestamp
-func NormalizeJSON(metric telegraf.Metric) string {
-	bsonstr := "{"
+// mongodb stores timestamp as UTC. conversion should be performed during reads in app or in aggregation pipeline
+func MarshalMetric(metric telegraf.Metric) bson.D {
+	var bdoc bson.D
 	for k, v := range metric.Fields() {
-		if _, ok := v.(string); ok {
-			bsonstr = bsonstr + `"` + k + `":"` + v.(string) + `",`
-		} else {
-			tmpstr := fmt.Sprintf("%v", v)
-			bsonstr = bsonstr + `"` + k + `":` + tmpstr + `,`
-		}
+		bdoc = append(bdoc, bson.E{k, v})
 	}
-	bsonstr = bsonstr + "\"tags\":{"
+	var tags bson.D
 	for k, v := range metric.Tags() {
-		nonescapedstr := fmt.Sprintf("%#v", v)
-		bsonstr = bsonstr + `"` + k + `":` + nonescapedstr + `,`
+		tags = append(tags, bson.E{k, v})
 	}
-	bsonstr = bsonstr[:len(bsonstr)-1] + "},\"timestamp\":ISODate(\"" + metric.Time().UTC().Format(time.RFC3339) + "\")}"
-	return bsonstr
+	bdoc = append(bdoc, bson.E{"tags", tags})
+	bdoc = append(bdoc, bson.E{"timestamp", metric.Time()})
+	return bdoc
 }
 
 func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		// ensure collection gets created as time series collection.
-		if !DoesCollectionExist(s, metric.Name()) {
+		if !s.DoesCollectionExist(metric.Name()) {
 			log.Println("creating time series collection for metric " + metric.Name() + "...")
-			MongoDBCreateTimeSeriesCollectionFromPluginObject(s, metric.Name())
-			UpdateCollectionMap(s, metric.Name())
+			s.MongoDBCreateTimeSeriesCollection(metric.Name())
+			s.UpdateCollectionMap(metric.Name())
 		}
 
-		mdb_bson := NormalizeJSON(metric)
-		if mdb_bson != "" {
-			// log.Printf("%v\n", mdb_bson)
-			MongoDBInsert(s.MetricDatabase, metric.Name(), s.client, s.ctx, []byte(mdb_bson))
-		} /* else {
-			log.Printf("null %v\n", mdb_bson)
-		}*/
+		bson := MarshalMetric(metric)
+		MongoDBInsert(s.MetricDatabase, metric.Name(), s.client, s.ctx, bson)
 	}
 	return nil
 }

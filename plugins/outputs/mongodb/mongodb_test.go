@@ -1,45 +1,56 @@
 package mongodb
 
 import (
-	"context"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/require"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"testing"
 	"time"
 )
+
+func getMetrics() []telegraf.Metric {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	metrics := []telegraf.Metric{m}
+	return metrics
+}
 
 func TestConnectNoAuthAndInsertDocument(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	ctx := context.Background()
+	s := MongoDB{
+		Dsn:                "mongodb://localhost:27017",
+		AuthenticationType: "NONE",
+		MetricDatabase:     "myMetricDatabase",
+		MetricGranularity:  "minutes",
+		AllowTLSInsecure:   false,
+		TTL:                "15d",
+	}
 
-	metric_database := "myMetricDatabase"
-	metric_collection := "myMetricCollection"
-	metric_granularity := "minutes"
-	retention_policy := "15d"
-	connection_string := "mongodb://localhost:27017"
-	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1)
-	clientOptions := options.Client().SetServerAPIOptions(serverAPIOptions)
-	clientOptions = clientOptions.ApplyURI(connection_string)
-
-	// test connect
-	client, err := mongo.Connect(ctx, clientOptions)
+	// connect to mongodb
+	err := s.Connect()
 	require.NoError(t, err)
 
-	// test try to create time series collection. if it already exists as non time series
-	// the collection would have to be dropped first
-	collections := MongoDBGetCollections(metric_database, client, ctx)
-	_, collectionExists := collections[metric_collection]
-	if !collectionExists {
-		MongoDBCreateTimeSeriesCollection(client, ctx, metric_database, metric_collection, metric_granularity, retention_policy)
+	// create time series collection when it doesn't exist
+	myTestMetricName := "testMetricName"
+	if !s.DoesCollectionExist(myTestMetricName) {
+		err = s.MongoDBCreateTimeSeriesCollection(myTestMetricName)
+		require.NoError(t, err)
 	}
 
 	// test insert
-	mdb_json := "{\"measurement1\":50,\"measurement2\":\"value2\",\"timestamp\":ISODate(\"" + time.Now().UTC().Format(time.RFC3339) + "\"),\"tags\":{\"host\":\"myHostName\"}}"
+	err = s.Write(getMetrics())
+	require.NoError(t, err)
 
-	err = MongoDBInsert(metric_database, metric_collection, client, ctx, []byte(mdb_json))
+	// cleanup
+	err = s.Close()
 	require.NoError(t, err)
 }

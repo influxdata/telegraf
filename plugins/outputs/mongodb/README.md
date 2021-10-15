@@ -8,18 +8,19 @@ This plugin sends metrics to MongoDB and automatically creates the collections a
 ```toml
 # A plugin that can transmit logs to mongodb
 [[outputs.mongodb]]
-  connection_string = "mongodb://localhost:27017/admin"
-  authentication_type = "NONE"
-  # authentication_type = "SCRAM"
+  dsn = "mongodb://localhost:27017"
+  # dsn = "mongodb://mongod1:27017,mongod2:27017,mongod3:27017/admin&replicaSet=myReplSet&w=1"
+  authentication = "NONE"
+  # authentication = "SCRAM"
   # username = "root"
   # password = "***"
-  # authentication_type = "X509"
-  # x509clientpem = "client.pem"
+  # authentication = "X509"
+  # x509clientpem = "clientpwd.pem"
   # x509clientpempwd = "changeme"
-  # cafile = "ca.pem" #if using X509 authentication
+  # cafile = "ca.pem"
   # allow_tls_insecure = false
-  metric_database = "telegraf" #tells telegraf which database to write metrics to. collections are automatically created as time series collections
-  metric_granularity = "seconds" # can be seconds, minutes, or hours
-  retention_policy = "120s" #set a TTL on the collect. examples: 120m, 24h, or 15d
-  data_format = "json" #always set to json for proper serialization
+  database = "telegraf"
+  granularity = "seconds"
+  ttl = "120s"
+  data_format = "json"
 ```
