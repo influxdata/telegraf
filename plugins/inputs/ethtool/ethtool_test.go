@@ -390,7 +390,7 @@ type TestCase struct {
 func TestNormalizedKeys(t *testing.T) {
 	cases := []TestCase{
 		{
-			normalization: []string{"spaces"},
+			normalization: []string{"underscore"},
 			stats: map[string]uint64{
 				"port rx":      1,
 				" Port_tx":     0,
@@ -403,7 +403,7 @@ func TestNormalizedKeys(t *testing.T) {
 			},
 		},
 		{
-			normalization: []string{"spaces", "lower"},
+			normalization: []string{"underscore", "lower"},
 			stats: map[string]uint64{
 				"Port rx":      1,
 				" Port_tx":     0,
@@ -416,10 +416,36 @@ func TestNormalizedKeys(t *testing.T) {
 			},
 		},
 		{
-			normalization: []string{"spaces", "lower", "trim"},
+			normalization: []string{"underscore", "lower", "trim"},
 			stats: map[string]uint64{
 				"  Port RX ":   1,
 				" Port_tx":     0,
+				"interface_up": 0,
+			},
+			expectedFields: map[string]uint64{
+				"port_rx":      1,
+				"port_tx":      0,
+				"interface_up": 0,
+			},
+		},
+		{
+			normalization: []string{"underscore", "lower", "snakecase", "trim"},
+			stats: map[string]uint64{
+				"  Port RX ":   1,
+				" Port_tx":     0,
+				"interface_up": 0,
+			},
+			expectedFields: map[string]uint64{
+				"port_rx":      1,
+				"port_tx":      0,
+				"interface_up": 0,
+			},
+		},
+		{
+			normalization: []string{"snakecase"},
+			stats: map[string]uint64{
+				"  PortRX ":    1,
+				" PortTX":      0,
 				"interface_up": 0,
 			},
 			expectedFields: map[string]uint64{
@@ -466,6 +492,7 @@ func TestNormalizedKeys(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, acc.Metrics, 1)
 
+		acc.AssertContainsFields(t, pluginName, toStringMapInterface(c.expectedFields))
 		acc.AssertContainsTaggedFields(t, pluginName, toStringMapInterface(c.expectedFields), expectedTags)
 	}
 }

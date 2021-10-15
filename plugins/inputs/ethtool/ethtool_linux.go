@@ -5,6 +5,7 @@ package ethtool
 
 import (
 	"net"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -89,19 +90,34 @@ func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulat
 }
 
 // normalize key string; order matters to avoid replacing whitespace with
-// underscores, then trying to trim those same underscores.
+// underscores, then trying to trim those same underscores. Likewise with
+// camelcase before trying to lower case things.
 func (e *Ethtool) normalizeKey(key string) string {
+	// must trim whitespace or this will have a leading _
+	if inStringSlice(e.NormalizeKeys, "snakecase") {
+		key = camelCase2SnakeCase(strings.TrimSpace(key))
+	}
+	// must occur before underscore, otherwise nothing to trim
 	if inStringSlice(e.NormalizeKeys, "trim") {
 		key = strings.TrimSpace(key)
 	}
 	if inStringSlice(e.NormalizeKeys, "lower") {
 		key = strings.ToLower(key)
 	}
-	if inStringSlice(e.NormalizeKeys, "spaces") {
+	if inStringSlice(e.NormalizeKeys, "underscore") {
 		key = strings.ReplaceAll(key, " ", "_")
 	}
 
 	return key
+}
+
+func camelCase2SnakeCase(value string) string {
+	matchFirstCap := regexp.MustCompile("(.)([A-Z][a-z]+)")
+	matchAllCap := regexp.MustCompile("([a-z0-9])([A-Z])")
+
+	snake := matchFirstCap.ReplaceAllString(value, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
 }
 
 func inStringSlice(slice []string, value string) bool {
