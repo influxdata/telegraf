@@ -27,10 +27,10 @@ func MongoDBGetCollections(database_name string, client *mongo.Client, ctx conte
 	return ret
 }
 
-func MongoDBInsert(database_name string, database_collection string, client *mongo.Client, ctx context.Context, bson bson.D) error {
-	collection := client.Database(database_name).Collection(database_collection)
+func (s *MongoDB) MongoDBInsert(database_collection string, bson bson.D) error {
+	collection := s.client.Database(s.MetricDatabase).Collection(database_collection)
 	// insertResult, err := collection.InsertOne(ctx, &bdoc)
-	_, err := collection.InsertOne(ctx, &bson)
+	_, err := collection.InsertOne(s.ctx, &bson)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,7 +73,6 @@ var sampleConfig = `
   database = "telegraf" #tells telegraf which database to write metrics to. collections are automatically created as time series collections
   granularity = "seconds" #can be seconds, minutes, or hours
   ttl = "15d" #set a TTL on the collect. examples: 120m, 24h, or 15d
-  data_format = "json" #always set to json for proper serialization
 `
 
 func (s *MongoDB) SampleConfig() string {
@@ -245,7 +244,10 @@ func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 		}
 
 		bson := MarshalMetric(metric)
-		MongoDBInsert(s.MetricDatabase, metric.Name(), s.client, s.ctx, bson)
+		err := s.MongoDBInsert(metric.Name(), bson)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	return nil
 }

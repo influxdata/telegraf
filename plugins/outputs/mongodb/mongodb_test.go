@@ -2,21 +2,13 @@ package mongodb
 
 import (
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 func getMetrics() []telegraf.Metric {
-	m := metric.New(
-		"cpu",
-		map[string]string{},
-		map[string]interface{}{
-			"value": 42.0,
-		},
-		time.Unix(0, 0),
-	)
+	m := testutil.TestMetric("mymetric")
 	metrics := []telegraf.Metric{m}
 	return metrics
 }

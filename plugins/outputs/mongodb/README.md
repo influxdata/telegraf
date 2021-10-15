@@ -22,5 +22,4 @@ This plugin sends metrics to MongoDB and automatically creates the collections a
   database = "telegraf"
   granularity = "seconds"
   ttl = "120s"
-  data_format = "json"
 ```
