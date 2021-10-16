@@ -16,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+const (
+	defaultKeepAlive = 0
+)
+
 var sampleConfig = `
   servers = ["localhost:1883"] # required.
 
@@ -55,6 +59,12 @@ var sampleConfig = `
   ## actually reads it
   # retain = false
 
+  ## Defines the maximum length of time that the broker and client may not communicate. 
+  ## Defaults to 0 which turns the feature off. For version v2.0.12 of eclipse/mosquitto there is a 
+  ## [bug](https://github.com/eclipse/mosquitto/issues/2117) which requires keep_alive to be set.
+  ## As a reference eclipse/paho.mqtt.golang v1.3.0 defaults to 30.
+  # keep_alive = 0
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -72,8 +82,9 @@ type MQTT struct {
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
-	BatchMessage bool `toml:"batch"`
-	Retain       bool `toml:"retain"`
+	BatchMessage bool  `toml:"batch"`
+	Retain       bool  `toml:"retain"`
+	KeepAlive    int64 `toml:"keep_alive"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -190,7 +201,7 @@ func (m *MQTT) publish(topic string, body []byte) error {
 
 func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
-	opts.KeepAlive = 0
+	opts.KeepAlive = m.KeepAlive
 
 	if m.Timeout < config.Duration(time.Second) {
 		m.Timeout = config.Duration(5 * time.Second)
@@ -237,6 +248,8 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 
 func init() {
 	outputs.Add("mqtt", func() telegraf.Output {
-		return &MQTT{}
+		return &MQTT{
+			KeepAlive: defaultKeepAlive,
+		}
 	})
 }

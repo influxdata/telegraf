@@ -56,7 +56,7 @@ func (kl *KNXListener) SampleConfig() string {
   service_address = "localhost:3671"
 
   ## Measurement definition(s)
-  # [[inputs.KNXListener.measurement]]
+  # [[inputs.knx_listener.measurement]]
   #   ## Name of the measurement
   #   name = "temperature"
   #   ## Datapoint-Type (DPT) of the KNX messages
@@ -64,7 +64,7 @@ func (kl *KNXListener) SampleConfig() string {
   #   ## List of Group-Addresses (GAs) assigned to the measurement
   #   addresses = ["5/5/1"]
 
-  # [[inputs.KNXListener.measurement]]
+  # [[inputs.knx_listener.measurement]]
   #   name = "illumination"
   #   dpt = "9.004"
   #   addresses = ["5/5/3"]
@@ -195,5 +195,7 @@ func (kl *KNXListener) listen() {
 }
 
 func init() {
+	inputs.Add("knx_listener", func() telegraf.Input { return &KNXListener{ServiceType: "tunnel"} })
+	// Register for backward compatibility
 	inputs.Add("KNXListener", func() telegraf.Input { return &KNXListener{ServiceType: "tunnel"} })
 }

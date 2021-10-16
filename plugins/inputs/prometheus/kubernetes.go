@@ -5,11 +5,11 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"os/user"
 	"path/filepath"
 	"time"
@@ -41,7 +41,7 @@ const cAdvisorPodListDefaultInterval = 60
 // loadClient parses a kubeconfig from a file and returns a Kubernetes
 // client. It does not support extensions or client auth providers.
 func loadClient(kubeconfigPath string) (*kubernetes.Clientset, error) {
-	data, err := ioutil.ReadFile(kubeconfigPath)
+	data, err := os.ReadFile(kubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading '%s': %v", kubeconfigPath, err)
 	}
@@ -154,12 +154,11 @@ func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
 	// The request will be the same each time
 	podsURL := fmt.Sprintf("https://%s:10250/pods", p.NodeIP)
 	req, err := http.NewRequest("GET", podsURL, nil)
-	req.Header.Set("Authorization", "Bearer "+bearerToken)
-	req.Header.Add("Accept", "application/json")
-
 	if err != nil {
 		return fmt.Errorf("error when creating request to %s to get pod list: %w", podsURL, err)
 	}
+	req.Header.Set("Authorization", "Bearer "+bearerToken)
+	req.Header.Add("Accept", "application/json")
 
 	// Update right away so code is not waiting the length of the specified scrape interval initially
 	err = updateCadvisorPodList(p, req)

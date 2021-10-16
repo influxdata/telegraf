@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"sync"
@@ -361,7 +361,7 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	data, err := ioutil.ReadFile("./testdata/testmsgs.gz")
+	data, err := os.ReadFile("./testdata/testmsgs.gz")
 	require.NoError(t, err)
 
 	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(data))

@@ -57,7 +57,7 @@ const MaxRecordsPerCall = 100
 var sampleConfig = `
   ## Amazon Region
   region = "us-east-1"
-  
+
   ## Amazon Credentials
   ## Credentials are loaded in the following order:
   ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
@@ -75,7 +75,7 @@ var sampleConfig = `
   #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
-  
+
   ## Endpoint to make request against, the correct endpoint is automatically
   ## determined and this option should only be set if you wish to override the
   ## default.
@@ -88,7 +88,7 @@ var sampleConfig = `
 
   ## Specifies if the plugin should describe the Timestream database upon starting
   ## to validate if it has access necessary permissions, connection, etc., as a safety check.
-  ## If the describe operation fails, the plugin will not start 
+  ## If the describe operation fails, the plugin will not start
   ## and therefore the Telegraf agent will not start.
   describe_database_on_start = false
 
@@ -97,17 +97,17 @@ var sampleConfig = `
   ## For example, consider the following data in line protocol format:
   ## weather,location=us-midwest,season=summer temperature=82,humidity=71 1465839830100400200
   ## airquality,location=us-west no2=5,pm25=16 1465839830100400200
-  ## where weather and airquality are the measurement names, location and season are tags, 
+  ## where weather and airquality are the measurement names, location and season are tags,
   ## and temperature, humidity, no2, pm25 are fields.
   ## In multi-table mode:
   ##  - first line will be ingested to table named weather
   ##  - second line will be ingested to table named airquality
   ##  - the tags will be represented as dimensions
   ##  - first table (weather) will have two records:
-  ##      one with measurement name equals to temperature, 
+  ##      one with measurement name equals to temperature,
   ##      another with measurement name equals to humidity
   ##  - second table (airquality) will have two records:
-  ##      one with measurement name equals to no2, 
+  ##      one with measurement name equals to no2,
   ##      another with measurement name equals to pm25
   ##  - the Timestream tables from the example will look like this:
   ##      TABLE "weather":
@@ -141,7 +141,7 @@ var sampleConfig = `
   ## Specifies the Timestream table where the metrics will be uploaded.
   # single_table_name = "yourTableNameHere"
 
-  ## Only valid and required for mapping_mode = "single-table" 
+  ## Only valid and required for mapping_mode = "single-table"
   ## Describes what will be the Timestream dimension name for the Telegraf
   ## measurement name.
   # single_table_dimension_name_for_telegraf_measurement_name = "namespace"
@@ -169,9 +169,12 @@ var sampleConfig = `
 `
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
-var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) WriteClient {
-	configProvider := credentialConfig.Credentials()
-	return timestreamwrite.New(configProvider)
+var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	configProvider, err := credentialConfig.Credentials()
+	if err != nil {
+		return nil, err
+	}
+	return timestreamwrite.New(configProvider), nil
 }
 
 func (t *Timestream) Connect() error {
@@ -221,7 +224,10 @@ func (t *Timestream) Connect() error {
 
 	t.Log.Infof("Constructing Timestream client for '%s' mode", t.MappingMode)
 
-	svc := WriteFactory(&t.CredentialConfig)
+	svc, err := WriteFactory(&t.CredentialConfig)
+	if err != nil {
+		return err
+	}
 
 	if t.DescribeDatabaseOnStart {
 		t.Log.Infof("Describing database '%s' in region '%s'", t.DatabaseName, t.Region)

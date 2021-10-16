@@ -177,12 +177,12 @@ var sampleConfig = `
   ## Namespace for the CloudWatch MetricDatums
   namespace = "InfluxData/Telegraf"
 
-  ## If you have a large amount of metrics, you should consider to send statistic 
-  ## values instead of raw metrics which could not only improve performance but 
-  ## also save AWS API cost. If enable this flag, this plugin would parse the required 
-  ## CloudWatch statistic fields (count, min, max, and sum) and send them to CloudWatch. 
-  ## You could use basicstats aggregator to calculate those fields. If not all statistic 
-  ## fields are available, all fields would still be sent as raw metrics. 
+  ## If you have a large amount of metrics, you should consider to send statistic
+  ## values instead of raw metrics which could not only improve performance but
+  ## also save AWS API cost. If enable this flag, this plugin would parse the required
+  ## CloudWatch statistic fields (count, min, max, and sum) and send them to CloudWatch.
+  ## You could use basicstats aggregator to calculate those fields. If not all statistic
+  ## fields are available, all fields would still be sent as raw metrics.
   # write_statistics = false
 
   ## Enable high resolution metrics of 1 second (if not enabled, standard resolution are of 60 seconds precision)
@@ -198,7 +198,11 @@ func (c *CloudWatch) Description() string {
 }
 
 func (c *CloudWatch) Connect() error {
-	c.svc = cloudwatch.New(c.CredentialConfig.Credentials())
+	p, err := c.CredentialConfig.Credentials()
+	if err != nil {
+		return err
+	}
+	c.svc = cloudwatch.New(p)
 	return nil
 }
 
