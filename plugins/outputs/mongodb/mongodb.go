@@ -29,9 +29,9 @@ func (s *MongoDB) MongoDBGetCollections(ctx context.Context) error {
 	return nil
 }
 
-func (s *MongoDB) MongoDBInsert(ctx context.Context, database_collection string, bson bson.D) error {
-	collection := s.client.Database(s.MetricDatabase).Collection(database_collection)
-	_, err := collection.InsertOne(ctx, &bson)
+func (s *MongoDB) MongoDBInsert(ctx context.Context, databaseCollection string, bdoc bson.D) error {
+	collection := s.client.Database(s.MetricDatabase).Collection(databaseCollection)
+	_, err := collection.InsertOne(ctx, &bdoc)
 	if err != nil {
 		s.Log.Error(err)
 	}
@@ -63,9 +63,11 @@ func (s *MongoDB) Description() string {
 var sampleConfig = `
   dsn = "mongodb://localhost:27017/admin"
   # dsn = "mongodb://mongod1:27017,mongod2:27017,mongod3:27017/admin&replicaSet=myReplSet&w=1"
-  authentication = "SCRAM" # NONE, SCRAM, or X509
-  username = "root" #username for SCRAM 
-  password = "****" #password for SCRAM user or private key password if encrypted X509
+  authentication = "NONE" 
+  # authentication = "SCRAM"
+  # username = "root" #username for SCRAM 
+  # password = "****" #password for SCRAM user or private key password if encrypted X509
+  # authentication = "X509"
   # x509clientpem = "client.pem"
   # x509clientpempwd = "****"
   # allow_tls_insecure = false
@@ -92,11 +94,11 @@ func (s *MongoDB) Init() error {
 		s.clientOptions = s.clientOptions.SetAuth(credential)
 	} else if s.AuthenticationType == "X509" {
 		//format connection string to include tls/x509 options
-		new_connection_string, err := url.Parse(s.Dsn)
+		newConnectionString, err := url.Parse(s.Dsn)
 		if err != nil {
 			s.Log.Error(err)
 		}
-		q := new_connection_string.Query()
+		q := newConnectionString.Query()
 		q.Set("tls", "true")
 		if s.AllowTLSInsecure {
 			q.Set("tlsAllowInvalidCertificates", strconv.FormatBool(s.AllowTLSInsecure))
@@ -106,8 +108,8 @@ func (s *MongoDB) Init() error {
 		if s.X509clientpempwd != "" {
 			q.Set("sslClientCertificateKeyPassword", s.X509clientpempwd)
 		}
-		new_connection_string.RawQuery = q.Encode()
-		s.Dsn = new_connection_string.String()
+		newConnectionString.RawQuery = q.Encode()
+		s.Dsn = newConnectionString.String()
 		// always auth source $external
 		credential := options.Credential{
 			AuthSource:    "$external",
@@ -120,7 +122,7 @@ func (s *MongoDB) Init() error {
 	return nil
 }
 
-func (s *MongoDB) MongoDBCreateTimeSeriesCollection(database_collection string) error {
+func (s *MongoDB) MongoDBCreateTimeSeriesCollection(databaseCollection string) error {
 	ctx := context.Background()
 	tso := options.TimeSeries()
 	tso.SetTimeField("timestamp")
@@ -130,36 +132,32 @@ func (s *MongoDB) MongoDBCreateTimeSeriesCollection(database_collection string) 
 	cco := options.CreateCollection()
 	if s.TTL != "" {
 		expiregranularity := s.TTL[len(s.TTL)-1:]
-		expire_after_seconds, err := strconv.ParseInt(s.TTL[0:len(s.TTL)-1], 10, 64)
+		expireAfterSeconds, err := strconv.ParseInt(s.TTL[0:len(s.TTL)-1], 10, 64)
 		if err != nil {
 			s.Log.Error(err)
 			return fmt.Errorf("unable to parse ttl: %v", err)
 		}
 		if expiregranularity == "m" {
-			expire_after_seconds = expire_after_seconds * 60
+			expireAfterSeconds = expireAfterSeconds * 60
 		} else if expiregranularity == "h" {
-			expire_after_seconds = expire_after_seconds * 60 * 60
+			expireAfterSeconds = expireAfterSeconds * 60 * 60
 		} else if expiregranularity == "d" {
-			expire_after_seconds = expire_after_seconds * 24 * 60 * 60
+			expireAfterSeconds = expireAfterSeconds * 24 * 60 * 60
 		}
-		cco.SetExpireAfterSeconds(expire_after_seconds)
+		cco.SetExpireAfterSeconds(expireAfterSeconds)
 	}
 	cco.SetTimeSeriesOptions(tso)
 
-	err := s.client.Database(s.MetricDatabase).CreateCollection(ctx, database_collection, cco)
-	if err != nil {
-		s.Log.Error(err)
-	}
-	return err
+	return s.client.Database(s.MetricDatabase).CreateCollection(ctx, databaseCollection, cco)
 }
 
-func (s *MongoDB) DoesCollectionExist(database_collection string) bool {
-	_, collectionExists := s.collections[database_collection]
+func (s *MongoDB) DoesCollectionExist(databaseCollection string) bool {
+	_, collectionExists := s.collections[databaseCollection]
 	return collectionExists
 }
 
-func (s *MongoDB) UpdateCollectionMap(database_collection string) {
-	s.collections[database_collection] = bson.M{"bustedware": "llc"}
+func (s *MongoDB) UpdateCollectionMap(databaseCollection string) {
+	s.collections[databaseCollection] = bson.M{"bustedware": "llc"}
 }
 
 func (s *MongoDB) Connect() error {
@@ -209,12 +207,15 @@ func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 		// ensure collection gets created as time series collection.
 		if !s.DoesCollectionExist(metric.Name()) {
 			s.Log.Debugf("creating time series collection for metric " + metric.Name() + "...")
-			s.MongoDBCreateTimeSeriesCollection(metric.Name())
+			err := s.MongoDBCreateTimeSeriesCollection(metric.Name())
+			if err != nil {
+				s.Log.Error(err)
+			}
 			s.UpdateCollectionMap(metric.Name())
 		}
 
-		bson := MarshalMetric(metric)
-		err := s.MongoDBInsert(ctx, metric.Name(), bson)
+		bdoc := MarshalMetric(metric)
+		err := s.MongoDBInsert(ctx, metric.Name(), bdoc)
 		if err != nil {
 			s.Log.Error(err)
 		}
