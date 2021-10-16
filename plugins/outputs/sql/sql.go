@@ -117,7 +117,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 var sampleConfig = `
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com)
+  ##  sqlite (SQLite3), snowflake (snowflake.com) clickhouse (ClickHouse)
   # driver = ""
 
   ## Data source name
