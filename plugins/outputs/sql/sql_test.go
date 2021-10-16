@@ -334,3 +334,101 @@ func TestPostgresIntegration(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, string(expected), string(actual))
 }
+
+func TestClickHouseIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	initdb, err := filepath.Abs("testdata/clickhouse/initdb")
+	// confd, err := filepath.Abs("testdata/clickhouse/config.d")
+	require.NoError(t, err)
+
+	// initdb/init.sql creates this database
+	const dbname = "foo"
+
+	// default username for clickhouse is default
+	const username = "default"
+
+	outDir, err := os.MkdirTemp("", "tg-clickhouse-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(outDir)
+
+	ctx := context.Background()
+	req := testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image: "yandex/clickhouse-server",
+			BindMounts: map[string]string{
+				initdb: "/docker-entrypoint-initdb.d",
+				outDir: "/out",
+			},
+			ExposedPorts: []string{"9000/tcp", "8123/tcp"},
+			WaitingFor:   wait.NewHTTPStrategy("/").WithPort("8123/tcp"),
+		},
+		Started: true,
+	}
+	cont, err := testcontainers.GenericContainer(ctx, req)
+	require.NoError(t, err, "starting container failed")
+	defer func() {
+		require.NoError(t, cont.Terminate(ctx), "terminating container failed")
+	}()
+
+	// Get the connection details from the container
+	host, err := cont.Host(ctx)
+	require.NoError(t, err, "getting container host address failed")
+	require.NotEmpty(t, host)
+	natPort, err := cont.MappedPort(ctx, "9000/tcp")
+	require.NoError(t, err, "getting container host port failed")
+	port := natPort.Port()
+	require.NotEmpty(t, port)
+
+	//use the plugin to write to the database
+	// host, port, username, password, dbname
+	address := fmt.Sprintf("tcp://%v:%v?username=%v&database=%v", host, port, username, dbname)
+	p := newSQL()
+	p.Log = testutil.Logger{}
+	p.Driver = "clickhouse"
+	p.DataSourceName = address
+	p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ENGINE MergeTree() ORDER by timestamp"
+	p.Convert.Integer = "Int64"
+	p.Convert.Text = "String"
+	p.Convert.Timestamp = "DateTime"
+	p.Convert.Defaultvalue = "String"
+	p.Convert.Unsigned = "UInt64"
+	p.Convert.Bool = "UInt8"
+
+	require.NoError(t, p.Connect())
+
+	require.NoError(t, p.Write(
+		testMetrics,
+	))
+
+	// dump the database
+	var rc int
+  for _, metric := range testMetrics {
+    rc, err = cont.Exec(ctx, []string{
+      "bash",
+      "-c",
+      "clickhouse-client" +
+        " --user=" + username +
+        " --database=" + dbname +
+        " --format=TabSeparatedRaw" +
+        " --multiquery --query=" +
+        "\"SELECT * FROM \\\"" + metric.Name() + "\\\";" +
+        "SHOW CREATE TABLE \\\"" + metric.Name() + "\\\"\"" +
+      " >> /out/dump 2>&1",
+    })
+    require.NoError(t, err)
+    require.Equal(t, 0, rc)
+  }
+
+	dumpfile := filepath.Join(outDir, "dump")
+	require.FileExists(t, dumpfile)
+
+	//compare the dump to what we expected
+	expected, err := os.ReadFile("testdata/clickhouse/expected.txt")
+	require.NoError(t, err)
+	actual, err := os.ReadFile(dumpfile)
+	require.NoError(t, err)
+	require.Equal(t, string(expected), string(actual))
+}

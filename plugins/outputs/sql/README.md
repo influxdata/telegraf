@@ -70,7 +70,7 @@ through the convert settings.
 [[outputs.sql]]
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com)
+  ##  sqlite (SQLite3), snowflake (snowflake.com) clickhouse (ClickHouse)
   # driver = ""
 
   ## Data source name
@@ -139,6 +139,22 @@ FreeBSD, and other Linux and Darwin platforms.
 
 The DSN is a filename or url with scheme "file:". See the [driver
 docs](https://modernc.org/sqlite) for details.
+
+### clickhouse
+
+Use this metric type to SQL type conversion:
+
+```toml
+  [outputs.sql.convert]
+    integer              = "Int64"
+    text                 = "String"
+    timestamp            = "DateTime"
+    defaultvalue         = "String"
+    unsigned             = "UInt64"
+    bool                 = "Uint8"
+```
+
+See [ClickHouse data types](https://clickhouse.com/docs/en/sql-reference/data-types/) for more info.
 
 ### denisenkom/go-mssqldb
 
