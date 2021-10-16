@@ -344,7 +344,7 @@ func TestClickHouse(t *testing.T) {
 						"int64_one": int64(1234),
 						"int64_two": int64(2345),
 					},
-					time.Unix(1634372383, 0),
+					time.Unix(1621289085, 0),
 				),
 			},
 		},

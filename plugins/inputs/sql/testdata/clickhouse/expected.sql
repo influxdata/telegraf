@@ -12,4 +12,4 @@ INSERT INTO default.metric_one (
     int64_one,
     int64_two,
     timestamp
-) VALUES ('tag1', 'tag2', 1234, 2345, 1634372383);
+) VALUES ('tag1', 'tag2', 1234, 2345, 1621289085);
