@@ -405,22 +405,22 @@ func TestClickHouseIntegration(t *testing.T) {
 
 	// dump the database
 	var rc int
-  for _, metric := range testMetrics {
-    rc, err = cont.Exec(ctx, []string{
-      "bash",
-      "-c",
-      "clickhouse-client" +
-        " --user=" + username +
-        " --database=" + dbname +
-        " --format=TabSeparatedRaw" +
-        " --multiquery --query=" +
-        "\"SELECT * FROM \\\"" + metric.Name() + "\\\";" +
-        "SHOW CREATE TABLE \\\"" + metric.Name() + "\\\"\"" +
-      " >> /out/dump 2>&1",
-    })
-    require.NoError(t, err)
-    require.Equal(t, 0, rc)
-  }
+	for _, metric := range testMetrics {
+		rc, err = cont.Exec(ctx, []string{
+			"bash",
+			"-c",
+			"clickhouse-client" +
+				" --user=" + username +
+				" --database=" + dbname +
+				" --format=TabSeparatedRaw" +
+				" --multiquery --query=" +
+				"\"SELECT * FROM \\\"" + metric.Name() + "\\\";" +
+				"SHOW CREATE TABLE \\\"" + metric.Name() + "\\\"\"" +
+				" >> /out/dump 2>&1",
+		})
+		require.NoError(t, err)
+		require.Equal(t, 0, rc)
+	}
 
 	dumpfile := filepath.Join(outDir, "dump")
 	require.FileExists(t, dumpfile)

@@ -195,7 +195,7 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 		// Postgres uses $1 $2 $3 as placeholders
 		for i := 0; i < len(columns); i++ {
 			placeholders = append(placeholders, fmt.Sprintf("$%d", i+1))
-    }
+		}
 	} else {
 		// Everything else uses ? ? ? as placeholders
 		for i := 0; i < len(columns); i++ {
@@ -249,19 +249,19 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		}
 
 		sql := p.generateInsert(tablename, columns)
-    var (
-      tx, _ = p.db.Begin()
-      stmt, _ = tx.Prepare(sql)
-    )
-    defer stmt.Close()
+		var (
+			tx, _   = p.db.Begin()
+			stmt, _ = tx.Prepare(sql)
+		)
+		defer stmt.Close()
 
-    _, err := stmt.Exec(values...)
+		_, err := stmt.Exec(values...)
 		if err != nil {
 			p.Log.Errorf("Error during prepare: %v, %v", err, sql)
 			return err
 		}
 
-    if err := tx.Commit(); err != nil {
+		if err := tx.Commit(); err != nil {
 			p.Log.Errorf("Error during commit: %v, %v", err, sql)
 			return err
 		}
