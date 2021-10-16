@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -223,14 +224,15 @@ func (s *MongoDB) Close() error {
 func MarshalMetric(metric telegraf.Metric) bson.D {
 	var bdoc bson.D
 	for k, v := range metric.Fields() {
-		bdoc = append(bdoc, bson.E{k, v})
+		//bson.D{primitive.E{Key: "autorefid", Value: "100"}}
+		bdoc = append(bdoc, primitive.E{Key: k, Value: v})
 	}
 	var tags bson.D
 	for k, v := range metric.Tags() {
-		tags = append(tags, bson.E{k, v})
+		tags = append(tags, primitive.E{Key: k, Value: v})
 	}
-	bdoc = append(bdoc, bson.E{"tags", tags})
-	bdoc = append(bdoc, bson.E{"timestamp", metric.Time()})
+	bdoc = append(bdoc, primitive.E{Key: "tags", Value: tags})
+	bdoc = append(bdoc, primitive.E{Key: "timestamp", Value: metric.Time()})
 	return bdoc
 }
 
