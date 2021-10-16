@@ -2,7 +2,7 @@ package mongodb
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/url"
 	"strconv"
 
@@ -15,25 +15,25 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-func (s *MongoDB) MongoDBGetCollections() error {
+func (s *MongoDB) MongoDBGetCollections(ctx context.Context) error {
 	s.collections = map[string]bson.M{}
-	collections, _ := s.client.Database(s.MetricDatabase).ListCollections(s.ctx, bson.M{})
-	for collections.Next(s.ctx) {
+	collections, _ := s.client.Database(s.MetricDatabase).ListCollections(ctx, bson.M{})
+	for collections.Next(ctx) {
 		var collection bson.M
 		if err := collections.Decode(&collection); err != nil {
-			log.Fatal(err)
-			return err
+			s.Log.Error(err)
+			return fmt.Errorf("unable to decode ListCollections: %v", err)
 		}
 		s.collections[collection["name"].(string)] = collection
 	}
 	return nil
 }
 
-func (s *MongoDB) MongoDBInsert(database_collection string, bson bson.D) error {
+func (s *MongoDB) MongoDBInsert(ctx context.Context, database_collection string, bson bson.D) error {
 	collection := s.client.Database(s.MetricDatabase).Collection(database_collection)
-	_, err := collection.InsertOne(s.ctx, &bson)
+	_, err := collection.InsertOne(ctx, &bson)
 	if err != nil {
-		log.Fatal(err)
+		s.Log.Error(err)
 	}
 	return err
 }
@@ -52,7 +52,6 @@ type MongoDB struct {
 	TTL                string          `toml:"ttl"`
 	Log                telegraf.Logger `toml:"-"`
 	client             *mongo.Client
-	ctx                context.Context
 	clientOptions      *options.ClientOptions
 	collections        map[string]bson.M
 }
@@ -95,7 +94,7 @@ func (s *MongoDB) Init() error {
 		//format connection string to include tls/x509 options
 		new_connection_string, err := url.Parse(s.Dsn)
 		if err != nil {
-			log.Fatal(err)
+			s.Log.Error(err)
 		}
 		q := new_connection_string.Query()
 		q.Set("tls", "true")
@@ -122,6 +121,7 @@ func (s *MongoDB) Init() error {
 }
 
 func (s *MongoDB) MongoDBCreateTimeSeriesCollection(database_collection string) error {
+	ctx := context.Background()
 	tso := options.TimeSeries()
 	tso.SetTimeField("timestamp")
 	tso.SetMetaField("tags")
@@ -132,8 +132,8 @@ func (s *MongoDB) MongoDBCreateTimeSeriesCollection(database_collection string) 
 		expiregranularity := s.TTL[len(s.TTL)-1:]
 		expire_after_seconds, err := strconv.ParseInt(s.TTL[0:len(s.TTL)-1], 10, 64)
 		if err != nil {
-			log.Fatal(err)
-			return err
+			s.Log.Error(err)
+			return fmt.Errorf("unable to parse ttl: %v", err)
 		}
 		if expiregranularity == "m" {
 			expire_after_seconds = expire_after_seconds * 60
@@ -146,12 +146,11 @@ func (s *MongoDB) MongoDBCreateTimeSeriesCollection(database_collection string) 
 	}
 	cco.SetTimeSeriesOptions(tso)
 
-	err := s.client.Database(s.MetricDatabase).CreateCollection(s.ctx, database_collection, cco)
+	err := s.client.Database(s.MetricDatabase).CreateCollection(ctx, database_collection, cco)
 	if err != nil {
-		log.Fatal(err)
-		return err
+		s.Log.Error(err)
 	}
-	return nil
+	return err
 }
 
 func (s *MongoDB) DoesCollectionExist(database_collection string) bool {
@@ -166,27 +165,24 @@ func (s *MongoDB) UpdateCollectionMap(database_collection string) {
 func (s *MongoDB) Connect() error {
 	ctx := context.Background()
 
-	log.Println("connecting to " + s.Dsn)
+	s.Log.Debugf("connecting to " + s.Dsn)
 	client, err := mongo.Connect(ctx, s.clientOptions)
 	s.client = client
-	s.ctx = ctx
 	if err != nil {
-		log.Print("unable to connect")
-		log.Fatal(err)
-	} else {
-		log.Println("connected!")
-		err = s.MongoDBGetCollections()
+		return fmt.Errorf("unable to connect: %v", err)
 	}
-
+	s.Log.Debugf("connected!")
+	err = s.MongoDBGetCollections(ctx)
 	return err
 }
 
 func (s *MongoDB) Close() error {
-	err := s.client.Disconnect(s.ctx)
+	ctx := context.Background()
+	err := s.client.Disconnect(ctx)
 	if err != nil {
-		log.Fatal(err)
+		s.Log.Error(err)
 	}
-	log.Println("Connection to MongoDB closed.")
+	s.Log.Debugf("Connection to MongoDB closed.")
 	return err
 }
 
@@ -208,18 +204,19 @@ func MarshalMetric(metric telegraf.Metric) bson.D {
 }
 
 func (s *MongoDB) Write(metrics []telegraf.Metric) error {
+	ctx := context.Background()
 	for _, metric := range metrics {
 		// ensure collection gets created as time series collection.
 		if !s.DoesCollectionExist(metric.Name()) {
-			log.Println("creating time series collection for metric " + metric.Name() + "...")
+			s.Log.Debugf("creating time series collection for metric " + metric.Name() + "...")
 			s.MongoDBCreateTimeSeriesCollection(metric.Name())
 			s.UpdateCollectionMap(metric.Name())
 		}
 
 		bson := MarshalMetric(metric)
-		err := s.MongoDBInsert(metric.Name(), bson)
+		err := s.MongoDBInsert(ctx, metric.Name(), bson)
 		if err != nil {
-			log.Fatal(err)
+			s.Log.Error(err)
 		}
 	}
 	return nil
