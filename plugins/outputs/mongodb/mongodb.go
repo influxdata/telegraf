@@ -15,27 +15,26 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-func MongoDBGetCollections(database_name string, client *mongo.Client, ctx context.Context) map[string]bson.M {
-	ret := map[string]bson.M{}
-	collections, _ := client.Database(database_name).ListCollections(ctx, bson.M{})
-	for collections.Next(ctx) {
+func (s *MongoDB) MongoDBGetCollections() error {
+	s.collections = map[string]bson.M{}
+	collections, _ := s.client.Database(s.MetricDatabase).ListCollections(s.ctx, bson.M{})
+	for collections.Next(s.ctx) {
 		var collection bson.M
 		if err := collections.Decode(&collection); err != nil {
 			log.Fatal(err)
+			return err
 		}
-		ret[collection["name"].(string)] = collection
+		s.collections[collection["name"].(string)] = collection
 	}
-	return ret
+	return nil
 }
 
 func (s *MongoDB) MongoDBInsert(database_collection string, bson bson.D) error {
 	collection := s.client.Database(s.MetricDatabase).Collection(database_collection)
-	// insertResult, err := collection.InsertOne(ctx, &bdoc)
 	_, err := collection.InsertOne(s.ctx, &bson)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// log.Println("Inserted a single document: ", insertResult.InsertedID)
 	return err
 }
 
@@ -54,11 +53,12 @@ type MongoDB struct {
 	Log                telegraf.Logger `toml:"-"`
 	client             *mongo.Client
 	ctx                context.Context
-	collections        (map[string]bson.M)
+	clientOptions      *options.ClientOptions
+	collections        map[string]bson.M
 }
 
 func (s *MongoDB) Description() string {
-	return "Configuration for sending metrics to MongoDB"
+	return "Sends metrics to MongoDB"
 }
 
 var sampleConfig = `
@@ -80,9 +80,44 @@ func (s *MongoDB) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init is for setup, and validating config.
 func (s *MongoDB) Init() error {
-	log.Println("connecting to " + s.Dsn + " with username " + s.Username)
+	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1) //use new mongodb versioned api
+	s.clientOptions = options.Client().SetServerAPIOptions(serverAPIOptions)
+
+	if s.AuthenticationType == "SCRAM" {
+		credential := options.Credential{
+			AuthMechanism: "SCRAM-SHA-256",
+			Username:      s.Username,
+			Password:      s.Password,
+		}
+		s.clientOptions = s.clientOptions.SetAuth(credential)
+	} else if s.AuthenticationType == "X509" {
+		//format connection string to include tls/x509 options
+		new_connection_string, err := url.Parse(s.Dsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		q := new_connection_string.Query()
+		q.Set("tls", "true")
+		if s.AllowTLSInsecure {
+			q.Set("tlsAllowInvalidCertificates", strconv.FormatBool(s.AllowTLSInsecure))
+		}
+		q.Set("tlsCAFile", s.CAFile)
+		q.Set("sslClientCertificateKeyFile", s.X509clientpem)
+		if s.X509clientpempwd != "" {
+			q.Set("sslClientCertificateKeyPassword", s.X509clientpempwd)
+		}
+		new_connection_string.RawQuery = q.Encode()
+		s.Dsn = new_connection_string.String()
+		// always auth source $external
+		credential := options.Credential{
+			AuthSource:    "$external",
+			AuthMechanism: "MONGODB-X509",
+		}
+		s.clientOptions = s.clientOptions.SetAuth(credential)
+	}
+
+	s.clientOptions = s.clientOptions.ApplyURI(s.Dsn)
 	return nil
 }
 
@@ -93,7 +128,6 @@ func (s *MongoDB) MongoDBCreateTimeSeriesCollection(database_collection string) 
 	tso.SetGranularity(s.MetricGranularity)
 
 	cco := options.CreateCollection()
-	//check s,m,d
 	if s.TTL != "" {
 		expiregranularity := s.TTL[len(s.TTL)-1:]
 		expire_after_seconds, err := strconv.ParseInt(s.TTL[0:len(s.TTL)-1], 10, 64)
@@ -130,72 +164,10 @@ func (s *MongoDB) UpdateCollectionMap(database_collection string) {
 }
 
 func (s *MongoDB) Connect() error {
-	ctx := context.TODO()
+	ctx := context.Background()
 
-	connection_string := s.Dsn
-	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1)
-	clientOptions := options.Client().SetServerAPIOptions(serverAPIOptions)
-
-	if s.AuthenticationType == "SCRAM" {
-		credential := options.Credential{
-			AuthMechanism: "SCRAM-SHA-256",
-			Username:      s.Username,
-			Password:      s.Password,
-		}
-		clientOptions = clientOptions.SetAuth(credential)
-	} else if s.AuthenticationType == "X509" {
-		//format connection string to include tls/x509 options
-		new_connection_string, err := url.Parse(connection_string)
-		if err != nil {
-			log.Fatal(err)
-		}
-		q := new_connection_string.Query()
-		q.Set("tls", "true")
-		if s.AllowTLSInsecure {
-			q.Set("tlsAllowInvalidCertificates", strconv.FormatBool(s.AllowTLSInsecure))
-		}
-		q.Set("tlsCAFile", s.CAFile)
-		q.Set("sslClientCertificateKeyFile", s.X509clientpem)
-		if s.X509clientpempwd != "" {
-			q.Set("sslClientCertificateKeyPassword", s.X509clientpempwd)
-		}
-		new_connection_string.RawQuery = q.Encode()
-		connection_string = new_connection_string.String()
-		// always auth source $external
-		credential := options.Credential{
-			AuthSource:    "$external",
-			AuthMechanism: "MONGODB-X509",
-		}
-		clientOptions = clientOptions.SetAuth(credential)
-	}
-	//TODO
-	//https://github.com/mongodb/mongo-go-driver/blob/master/mongo/client_examples_test.go
-	//these would only be for enterprise mongodb since community does not support LDAP/KERBEROS
-
-	// LDAP
-	// "mongodb://ldap-user:ldap-pwd@localhost:27017/?authMechanism=PLAIN".
-	// else if s.Authentication_type == "LDAP" {
-	// credential := options.Credential{
-	//     AuthMechanism: "PLAIN",
-	//     Username:      "ldap-user",
-	//     Password:      "ldap-pwd",
-	// }
-	// }
-
-	// KERBEROS
-	// "mongodb://drivers%40KERBEROS.EXAMPLE.COM@mongo-server.example.com:27017/?authMechanism=GSSAPI".
-	// else if s.Authentication_type == "KERBEROS" {
-	// credential := options.Credential{
-	//     AuthMechanism: "GSSAPI",
-	//     Username:      "drivers@KERBEROS.EXAMPLE.COM",
-	// }
-	// }
-
-	// AWS / ATLAS
-	//https://github.com/mongodb/mongo-go-driver/blob/master/mongo/client_examples_test.go#L249
-
-	clientOptions = clientOptions.ApplyURI(connection_string)
-	client, err := mongo.Connect(ctx, clientOptions)
+	log.Println("connecting to " + s.Dsn)
+	client, err := mongo.Connect(ctx, s.clientOptions)
 	s.client = client
 	s.ctx = ctx
 	if err != nil {
@@ -203,7 +175,7 @@ func (s *MongoDB) Connect() error {
 		log.Fatal(err)
 	} else {
 		log.Println("connected!")
-		s.collections = MongoDBGetCollections(s.MetricDatabase, s.client, s.ctx)
+		err = s.MongoDBGetCollections()
 	}
 
 	return err
@@ -224,7 +196,6 @@ func (s *MongoDB) Close() error {
 func MarshalMetric(metric telegraf.Metric) bson.D {
 	var bdoc bson.D
 	for k, v := range metric.Fields() {
-		//bson.D{primitive.E{Key: "autorefid", Value: "100"}}
 		bdoc = append(bdoc, primitive.E{Key: k, Value: v})
 	}
 	var tags bson.D
