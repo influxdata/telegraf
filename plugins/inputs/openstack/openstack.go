@@ -125,7 +125,7 @@ var sampleConfig = `
   # project = "admin"
 
   ## User authentication credentials. Must have admin rights.
-  # username = "admin"
+  username = "admin"
   password = "password"
 
   ## Available services are: 
@@ -174,6 +174,9 @@ func (o *OpenStack) SampleConfig() string {
 func (o *OpenStack) Init() error {
 	if len(o.EnabledServices) == 0 {
 		o.EnabledServices = []string{"services", "projects", "hypervisors", "flavors", "networks", "volumes"}
+	}
+	if o.Username == "" || o.Password == "" {
+		return fmt.Errorf("username or password can not be empty string")
 	}
 	if o.TagValue == "" {
 		return fmt.Errorf("tag_value option can not be empty string")
@@ -948,7 +951,6 @@ func init() {
 		return &OpenStack{
 			Domain:    "default",
 			Project:   "admin",
-			Username:  "admin",
 			TagPrefix: "openstack_tag_",
 			TagValue:  "true",
 		}
