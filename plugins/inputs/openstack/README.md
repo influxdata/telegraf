@@ -34,7 +34,7 @@ At present this plugin requires the following APIs:
   # project = "admin"
 
   ## User authentication credentials. Must have admin rights.
-  # username = "admin"
+  username = "admin"
   password = "password"
 
   ## Available services are: 
