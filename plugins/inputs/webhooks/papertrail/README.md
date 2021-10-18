@@ -26,7 +26,7 @@ Events from Papertrail come in two forms:
     * `facility`
     * `message`
 
-When an event is received, a count-based point will look similar to:
+When a callback is received, an event-based point will look similar to:
 
 ```
 papertrail,host=myserver.example.com,event=saved_search_name count=1i,source_name="abc",program="CROND",severity="Info",source_id=2i,message="message body",source_ip="208.75.57.121",id=7711561783320576i,facility="Cron",url="https://papertrailapp.com/searches/42?centered_on_id=7711561783320576",search_id=42i 1453248892000000000
@@ -39,7 +39,7 @@ papertrail,host=myserver.example.com,event=saved_search_name count=1i,source_nam
   * Each count "source_name" object is converted to a `host` tag
   * The "saved_search" name in the payload is added as an `event` tag
 
-When an event is received, a count-based point will look similar to:
+When a callback is received, a count-based point will look similar to:
 
 ```
 papertrail,host=myserver.example.com,event=saved_search_name count=3i 1453248892000000000
