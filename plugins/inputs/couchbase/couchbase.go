@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -20,6 +21,9 @@ type Couchbase struct {
 	BucketStatsIncluded []string `toml:"bucket_stats_included"`
 
 	bucketInclude filter.Filter
+	client        *http.Client
+
+	tls.ClientConfig
 }
 
 var sampleConfig = `
@@ -36,10 +40,17 @@ var sampleConfig = `
 
   ## Filter bucket fields to include only here.
   # bucket_stats_included = ["quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification (defaults to false)
+  ## If set to false, tls_cert and tls_key are required
+  # insecure_skip_verify = false
 `
 
 var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
-var client = &http.Client{Timeout: 10 * time.Second}
 
 func (cb *Couchbase) SampleConfig() string {
 	return sampleConfig
@@ -53,7 +64,7 @@ func (cb *Couchbase) Description() string {
 // Returns one of the errors encountered while gathering stats (if any).
 func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 	if len(cb.Servers) == 0 {
-		return cb.gatherServer(acc, "http://localhost:8091/", nil)
+		return cb.gatherServer(acc, "http://localhost:8091/")
 	}
 
 	var wg sync.WaitGroup
@@ -61,7 +72,7 @@ func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			acc.AddError(cb.gatherServer(acc, serv, nil))
+			acc.AddError(cb.gatherServer(acc, serv))
 		}(serv)
 	}
 
@@ -70,26 +81,26 @@ func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string, pool *couchbaseClient.Pool) error {
-	if pool == nil {
-		client, err := couchbaseClient.Connect(addr)
-		if err != nil {
-			return err
-		}
+func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
+	escapedAddr := regexpURI.ReplaceAllString(addr, "${1}")
 
-		// `default` is the only possible pool name. It's a
-		// placeholder for a possible future Couchbase feature. See
-		// http://stackoverflow.com/a/16990911/17498.
-		p, err := client.GetPool("default")
-		if err != nil {
-			return err
-		}
-		pool = &p
+	client, err := couchbaseClient.Connect(addr)
+	if err != nil {
+		return err
 	}
+
+	// `default` is the only possible pool name. It's a
+	// placeholder for a possible future Couchbase feature. See
+	// http://stackoverflow.com/a/16990911/17498.
+	pool, err := client.GetPool("default")
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
 
 	for i := 0; i < len(pool.Nodes); i++ {
 		node := pool.Nodes[i]
-		tags := map[string]string{"cluster": regexpURI.ReplaceAllString(addr, "${1}"), "hostname": node.Hostname}
+		tags := map[string]string{"cluster": escapedAddr, "hostname": node.Hostname}
 		fields := make(map[string]interface{})
 		fields["memory_free"] = node.MemoryFree
 		fields["memory_total"] = node.MemoryTotal
@@ -97,7 +108,7 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string, pool *c
 	}
 
 	for bucketName := range pool.BucketMap {
-		tags := map[string]string{"cluster": regexpURI.ReplaceAllString(addr, "${1}"), "bucket": bucketName}
+		tags := map[string]string{"cluster": escapedAddr, "bucket": bucketName}
 		bs := pool.BucketMap[bucketName].BasicStats
 		fields := make(map[string]interface{})
 		cb.addBucketField(fields, "quota_percent_used", bs["quotaPercentUsed"])
@@ -369,7 +380,7 @@ func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, bucketStats
 		return err
 	}
 
-	r, err := client.Do(req)
+	r, err := cb.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -386,6 +397,24 @@ func (cb *Couchbase) Init() error {
 	}
 
 	cb.bucketInclude = f
+
+	tlsConfig, err := cb.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	cb.client = &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: couchbaseClient.MaxIdleConnsPerHost,
+			TLSClientConfig:     tlsConfig,
+		},
+	}
+
+	couchbaseClient.SetSkipVerify(cb.ClientConfig.InsecureSkipVerify)
+	couchbaseClient.SetCertFile(cb.ClientConfig.TLSCert)
+	couchbaseClient.SetKeyFile(cb.ClientConfig.TLSKey)
+	couchbaseClient.SetRootFile(cb.ClientConfig.TLSCA)
 
 	return nil
 }

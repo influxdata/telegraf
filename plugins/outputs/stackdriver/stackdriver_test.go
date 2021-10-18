@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3"
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"github.com/golang/protobuf/proto"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	googlepb "github.com/golang/protobuf/ptypes/timestamp"

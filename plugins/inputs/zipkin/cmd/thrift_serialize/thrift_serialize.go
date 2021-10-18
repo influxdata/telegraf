@@ -24,15 +24,16 @@ Otherwise, the input file will be interpreted as json, and the output will be en
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore"
+	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift/gen-go/zipkincore"
 )
 
 var (
@@ -51,7 +52,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	contents, err := ioutil.ReadFile(filename)
+	contents, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("Error reading file: %v\n", err)
 	}
@@ -62,7 +63,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
-		if err := ioutil.WriteFile(outFileName, raw, 0644); err != nil {
+		if err := os.WriteFile(outFileName, raw, 0644); err != nil {
 			log.Fatalf("%v", err)
 		}
 	case "thrift":
@@ -70,7 +71,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
-		if err := ioutil.WriteFile(outFileName, raw, 0644); err != nil {
+		if err := os.WriteFile(outFileName, raw, 0644); err != nil {
 			log.Fatalf("%v", err)
 		}
 	default:
@@ -100,20 +101,20 @@ func jsonToZipkinThrift(jsonRaw []byte) ([]byte, error) {
 	zspans = append(zspans, spans...)
 
 	buf := thrift.NewTMemoryBuffer()
-	transport := thrift.NewTBinaryProtocolTransport(buf)
+	transport := thrift.NewTBinaryProtocolConf(buf, nil)
 
-	if err = transport.WriteListBegin(thrift.STRUCT, len(spans)); err != nil {
+	if err = transport.WriteListBegin(context.Background(), thrift.STRUCT, len(spans)); err != nil {
 		return nil, fmt.Errorf("error in beginning thrift write: %v", err)
 	}
 
 	for _, span := range zspans {
-		err = span.Write(transport)
+		err = span.Write(context.Background(), transport)
 		if err != nil {
 			return nil, fmt.Errorf("error converting zipkin struct to thrift: %v", err)
 		}
 	}
 
-	if err = transport.WriteListEnd(); err != nil {
+	if err = transport.WriteListEnd(context.Background()); err != nil {
 		return nil, fmt.Errorf("error finishing thrift write: %v", err)
 	}
 
@@ -127,8 +128,8 @@ func thriftToJSONSpans(thriftData []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	transport := thrift.NewTBinaryProtocolTransport(buffer)
-	_, size, err := transport.ReadListBegin()
+	transport := thrift.NewTBinaryProtocolConf(buffer, nil)
+	_, size, err := transport.ReadListBegin(context.Background())
 	if err != nil {
 		err = fmt.Errorf("error in ReadListBegin: %v", err)
 		return nil, err
@@ -137,14 +138,14 @@ func thriftToJSONSpans(thriftData []byte) ([]byte, error) {
 	var spans []*zipkincore.Span
 	for i := 0; i < size; i++ {
 		zs := &zipkincore.Span{}
-		if err = zs.Read(transport); err != nil {
+		if err = zs.Read(context.Background(), transport); err != nil {
 			err = fmt.Errorf("Error reading into zipkin struct: %v", err)
 			return nil, err
 		}
 		spans = append(spans, zs)
 	}
 
-	err = transport.ReadListEnd()
+	err = transport.ReadListEnd(context.Background())
 	if err != nil {
 		err = fmt.Errorf("error ending thrift read: %v", err)
 		return nil, err

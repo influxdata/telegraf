@@ -19,6 +19,8 @@ To generate a file with specific inputs and outputs, you can use the
 telegraf --input-filter cpu:mem:net:swap --output-filter influxdb:kafka config
 ```
 
+[View the full list][flags] of Telegraf commands and flags or by running `telegraf --help`.
+
 ### Configuration Loading
 
 The location of the configuration file can be set via the `--config` command
@@ -671,3 +673,4 @@ Reference the detailed [TLS][] documentation.
 [telegraf.conf]: /etc/telegraf.conf
 [TLS]: /docs/TLS.md
 [glob pattern]: https://github.com/gobwas/glob#syntax
+[flags]: /docs/COMMANDS_AND_FLAGS.md

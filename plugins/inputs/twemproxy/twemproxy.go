@@ -3,7 +3,7 @@ package twemproxy
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net"
 	"time"
 
@@ -37,7 +37,7 @@ func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	body, err := ioutil.ReadAll(conn)
+	body, err := io.ReadAll(conn)
 	if err != nil {
 		return err
 	}
