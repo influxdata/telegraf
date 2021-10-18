@@ -8,6 +8,7 @@ Pull requests welcome.
 ## Inputs
 - [awsalarms](https://github.com/vipinvkmenon/awsalarms) - Simple plugin to gather/monitor alarms generated  in AWS.
 - [octoprint](https://github.com/BattleBas/octoprint-telegraf-plugin) - Gather 3d print information from the octoprint API.
+- [opcda](https://github.com/lpc921/telegraf-execd-opcda) - Gather data from [OPC Fundation's Data Access (DA)](https://opcfoundation.org/about/opc-technologies/opc-classic/) protocol for industrial automation.
 - [open-hardware-monitor](https://github.com/marianob85/open_hardware_monitor-telegraf-plugin) - Gather sensors data provided by [Open Hardware Monitor](http://openhardwaremonitor.org)
 - [plex](https://github.com/russorat/telegraf-webhooks-plex) - Listens for events from Plex Media Server [Webhooks](https://support.plex.tv/articles/115002267687-webhooks/).
 - [rand](https://github.com/ssoroka/rand) - Generate random numbers
@@ -22,6 +23,7 @@ Pull requests welcome.
 - [s7comm](https://github.com/nicolasme/s7comm) - Gather information from Siemens PLC
 - [net_irtt](https://github.com/iAnatoly/telegraf-input-net_irtt) - Gather information from IRTT network test
 - [dht_sensor](https://github.com/iAnatoly/telegraf-input-dht_sensor) - Gather temperature and humidity from DHTXX sensors
+- [oracle](https://github.com/bonitoo-io/telegraf-input-oracle) - Gather the statistic data from Oracle RDBMS
 
 ## Outputs
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.

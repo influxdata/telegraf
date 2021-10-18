@@ -134,3 +134,62 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	// Verify that we read each JSON line once to a single metric.
 	require.Equal(t, len(acc.Metrics), 5)
 }
+
+func TestFileTag(t *testing.T) {
+	acc := testutil.Accumulator{}
+	testJSONFile := "test.json"
+
+	// Establish process directory and finished directory.
+	finishedDirectory, err := os.MkdirTemp("", "finished")
+	require.NoError(t, err)
+	processDirectory, err := os.MkdirTemp("", "test")
+	require.NoError(t, err)
+	defer os.RemoveAll(processDirectory)
+	defer os.RemoveAll(finishedDirectory)
+
+	// Init plugin.
+	r := DirectoryMonitor{
+		Directory:          processDirectory,
+		FinishedDirectory:  finishedDirectory,
+		FileTag:            "filename",
+		MaxBufferedMetrics: 1000,
+		FileQueueSize:      1000,
+	}
+	err = r.Init()
+	require.NoError(t, err)
+
+	parserConfig := parsers.Config{
+		DataFormat:  "json",
+		JSONNameKey: "Name",
+	}
+
+	r.SetParserFunc(func() (parsers.Parser, error) {
+		return parsers.NewParser(&parserConfig)
+	})
+
+	// Let's drop a 1-line LINE-DELIMITED json.
+	// Write csv file to process into the 'process' directory.
+	f, err := os.Create(filepath.Join(processDirectory, testJSONFile))
+	require.NoError(t, err)
+	_, err = f.WriteString("{\"Name\": \"event1\",\"Speed\": 100.1,\"Length\": 20.1}")
+	require.NoError(t, err)
+	err = f.Close()
+	require.NoError(t, err)
+
+	err = r.Start(&acc)
+	r.Log = testutil.Logger{}
+	require.NoError(t, err)
+	err = r.Gather(&acc)
+	require.NoError(t, err)
+	acc.Wait(1)
+	r.Stop()
+
+	// Verify that we read each JSON line once to a single metric.
+	require.Equal(t, len(acc.Metrics), 1)
+	for _, m := range acc.Metrics {
+		for key, value := range m.Tags {
+			require.Equal(t, r.FileTag, key)
+			require.Equal(t, filepath.Base(testJSONFile), value)
+		}
+	}
+}

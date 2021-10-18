@@ -154,12 +154,11 @@ func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
 	// The request will be the same each time
 	podsURL := fmt.Sprintf("https://%s:10250/pods", p.NodeIP)
 	req, err := http.NewRequest("GET", podsURL, nil)
-	req.Header.Set("Authorization", "Bearer "+bearerToken)
-	req.Header.Add("Accept", "application/json")
-
 	if err != nil {
 		return fmt.Errorf("error when creating request to %s to get pod list: %w", podsURL, err)
 	}
+	req.Header.Set("Authorization", "Bearer "+bearerToken)
+	req.Header.Add("Accept", "application/json")
 
 	// Update right away so code is not waiting the length of the specified scrape interval initially
 	err = updateCadvisorPodList(p, req)
