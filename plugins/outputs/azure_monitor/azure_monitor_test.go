@@ -373,3 +373,15 @@ func TestWrite(t *testing.T) {
 		})
 	}
 }
+
+func TestMain(m *testing.M) {
+	// Set up a fake environment for adal.getMSIType()
+	// Root cause: https://github.com/Azure/go-autorest/commit/def88ef859fb980eff240c755a70597bc9b490d0
+	err := os.Setenv("MSI_ENDPOINT", "fake.endpoint")
+
+	if err != nil {
+		panic(err)
+	}
+
+	os.Exit(m.Run())
+}
