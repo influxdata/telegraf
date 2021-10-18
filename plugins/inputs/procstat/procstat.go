@@ -474,7 +474,7 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
 			return nil, nil
 		}
-		pid, err := strconv.Atoi(string(kv[1]))
+		pid, err := strconv.ParseInt(string(kv[1]), 10, 32)
 		if err != nil {
 			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
 		}
