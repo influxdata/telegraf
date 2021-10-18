@@ -45,7 +45,7 @@ const (
   ## Some drivers declare statistics with extra whitespace, different spacing,
   ## and mix cases. This list, when enabled, can be used to clean the keys.
   ## Here are the current possible normalizations:
-  ##  * snakecase: converts camelCaseWords to camel_case_words
+  ##  * snakecase: converts fooBarBaz to foo_bar_baz
   ##  * trim: removes leading and trailing whitespace
   ##  * lower: changes all capitalized letters to lowercase
   ##  * underscore: replaces spaces with underscores
