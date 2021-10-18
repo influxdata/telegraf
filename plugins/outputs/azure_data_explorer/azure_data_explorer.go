@@ -27,6 +27,7 @@ type AzureDataExplorer struct {
 	Timeout         config.Duration `toml:"timeout"`
 	MetricsGrouping string          `toml:"metrics_grouping_type"`
 	TableName       string          `toml:"table_name"`
+	CreateTables    bool            `toml:"create_tables"`
 	client          localClient
 	ingesters       map[string]localIngestor
 	serializer      serializers.Serializer
@@ -77,6 +78,9 @@ func (adx *AzureDataExplorer) SampleConfig() string {
   ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
   # table_name = ""
 
+  ## If false, the plugin will not try to create tables. 
+  ## Useful for clients with low permissions.
+  # create_tables = true
 `
 }
 
@@ -198,6 +202,9 @@ func (adx *AzureDataExplorer) getIngestor(ctx context.Context, tableName string)
 }
 
 func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, tableName string) error {
+	if !adx.CreateTables {
+		return nil
+	}
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
 	if _, err := adx.client.Mgmt(ctx, adx.Database, createStmt); err != nil {
 		return err
@@ -241,7 +248,8 @@ func (adx *AzureDataExplorer) Init() error {
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
-			Timeout: config.Duration(20 * time.Second),
+			Timeout:      config.Duration(20 * time.Second),
+			CreateTables: true,
 		}
 	})
 }
