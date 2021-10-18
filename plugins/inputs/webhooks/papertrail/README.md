@@ -14,8 +14,8 @@ Events from Papertrail come in two forms:
   * Each point has a field counter (`count`), which is set to `1` (signifying the event occurred)
   * Each event "hostname" object is converted to a `host` tag
   * The "saved_search" name in the payload is added as an `event` tag
-  * The "saved_search" id in the payload is addes a a `search_id` field
-  * The papertrail url to view the event is built and added as the `url` field
+  * The "saved_search" id in the payload is added as a `search_id` field
+  * The papertrail url to view the event is built and added as a `url` field
   * The rest of the data in the event is converted directly to fields on the point:
     * `id`
     * `source_ip`
