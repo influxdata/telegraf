@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -58,6 +58,8 @@ type Prometheus struct {
 
 	URLTag string `toml:"url_tag"`
 
+	IgnoreTimestamp bool `toml:"ignore_timestamp"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger
@@ -100,6 +102,10 @@ var sampleConfig = `
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "url"
+
+  ## Whether the timestamp of the scraped metrics will be ignored.
+  ## If set to true, the gather time will be used.
+  # ignore_timestamp = false
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -382,7 +388,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	p.addHeaders(req)
 
 	if p.BearerToken != "" {
-		token, err := ioutil.ReadFile(p.BearerToken)
+		token, err := os.ReadFile(p.BearerToken)
 		if err != nil {
 			return err
 		}
@@ -408,16 +414,19 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("%s returned HTTP status %s", u.URL, resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading body: %s", err)
 	}
 
 	if p.MetricVersion == 2 {
-		parser := parser_v2.Parser{Header: resp.Header}
+		parser := parser_v2.Parser{
+			Header:          resp.Header,
+			IgnoreTimestamp: p.IgnoreTimestamp,
+		}
 		metrics, err = parser.Parse(body)
 	} else {
-		metrics, err = Parse(body, resp.Header)
+		metrics, err = Parse(body, resp.Header, p.IgnoreTimestamp)
 	}
 
 	if err != nil {

@@ -3,7 +3,6 @@ package procstat
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -155,9 +154,10 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	tags := make(map[string]string)
 	p.procs = newProcs
-
 	for _, proc := range p.procs {
+		tags = proc.Tags()
 		p.addMetric(proc, acc, now)
 	}
 
@@ -166,7 +166,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		"running":     len(p.procs),
 		"result_code": 0,
 	}
-	tags := make(map[string]string)
+
 	tags["pid_finder"] = p.PidFinder
 	tags["result"] = "success"
 	acc.AddFields("procstat_lookup", fields, tags, now)
@@ -474,7 +474,7 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
 			return nil, nil
 		}
-		pid, err := strconv.Atoi(string(kv[1]))
+		pid, err := strconv.ParseInt(string(kv[1]), 10, 32)
 		if err != nil {
 			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
 		}
@@ -516,7 +516,7 @@ func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
 		return nil, fmt.Errorf("not a directory %s", path)
 	}
 	procsPath := filepath.Join(path, "cgroup.procs")
-	out, err := ioutil.ReadFile(procsPath)
+	out, err := os.ReadFile(procsPath)
 	if err != nil {
 		return nil, err
 	}

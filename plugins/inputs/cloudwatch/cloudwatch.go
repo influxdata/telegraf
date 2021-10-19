@@ -288,7 +288,11 @@ func (c *CloudWatch) initializeCloudWatch() error {
 	}
 
 	loglevel := aws.LogOff
-	c.client = cwClient.New(c.CredentialConfig.Credentials(), cfg.WithLogLevel(loglevel))
+	p, err := c.CredentialConfig.Credentials()
+	if err != nil {
+		return err
+	}
+	c.client = cwClient.New(p, cfg.WithLogLevel(loglevel))
 
 	// Initialize regex matchers for each Dimension value.
 	for _, m := range c.Metrics {
@@ -410,18 +414,21 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cwClient.Metric, error) {
 	default:
 		recentlyActive = nil
 	}
-	params = &cwClient.ListMetricsInput{
-		Dimensions:     []*cwClient.DimensionFilter{},
-		NextToken:      token,
-		MetricName:     nil,
-		RecentlyActive: recentlyActive,
-	}
+
 	for _, namespace := range c.Namespaces {
-		params.Namespace = aws.String(namespace)
+
+		params = &cwClient.ListMetricsInput{
+			Dimensions:     []*cwClient.DimensionFilter{},
+			NextToken:      token,
+			MetricName:     nil,
+			RecentlyActive: recentlyActive,
+			Namespace:      aws.String(namespace),
+		}
+
 		for {
 			resp, err := c.client.ListMetrics(params)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to list metrics with params per namespace: %v", err)
 			}
 
 			metrics = append(metrics, resp.Metrics...)
@@ -432,7 +439,6 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cwClient.Metric, error) {
 			params.NextToken = resp.NextToken
 		}
 	}
-
 	return metrics, nil
 }
 

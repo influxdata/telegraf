@@ -8,35 +8,18 @@
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics.
 
-Design goals are to have a minimal memory footprint with a plugin system so
-that developers in the community can easily add support for collecting
-metrics.
+Design goal:
+- Have a minimal memory footprint with a plugin system so that developers in the community can easily add support for collecting metrics.
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugin types:
 
-1. [Input Plugins](#input-plugins) collect metrics from the system, services, or 3rd party APIs
-2. [Processor Plugins](#processor-plugins) transform, decorate, and/or filter metrics
-3. [Aggregator Plugins](#aggregator-plugins) create aggregate metrics (e.g. mean, min, max, quantiles, etc.)
-4. [Output Plugins](#output-plugins) write metrics to various destinations
+1. [Input Plugins](/docs/INPUTS.md) collect metrics from the system, services, or 3rd party APIs
+2. [Processor Plugins](/docs/PROCESSORS.md) transform, decorate, and/or filter metrics
+3. [Aggregator Plugins](/docs/AGGREGATORS.md) create aggregate metrics (e.g. mean, min, max, quantiles, etc.)
+4. [Output Plugins](/docs/OUTPUTS.md) write metrics to various destinations
 
-New plugins are designed to be easy to contribute, pull requests are welcomed
-and we work to incorporate as many pull requests as possible.
-If none of the internal plugins fit your needs, you could have a look at the
+New plugins are designed to be easy to contribute, pull requests are welcomed and we work to incorporate as many pull requests as possible. If none of the internal plugins fit your needs, you could have a look at the
 [list of external plugins](EXTERNAL_PLUGINS.md).
-
-## Try in Browser :rocket:
-
-You can try Telegraf right in your browser in the [Telegraf playground](https://rootnroll.com/d/telegraf/).
-
-## Contributing
-
-There are many ways to contribute:
-- Fix and [report bugs](https://github.com/influxdata/telegraf/issues/new)
-- [Improve documentation](https://github.com/influxdata/telegraf/issues?q=is%3Aopen+label%3Adocumentation)
-- [Review code and feature proposals](https://github.com/influxdata/telegraf/pulls)
-- Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
-- [Contribute plugins](CONTRIBUTING.md)
-- [Contribute external plugins](docs/EXTERNAL_PLUGINS.md)
 
 ## Minimum Requirements
 
@@ -59,9 +42,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires Go version 1.14 or newer, the Makefile requires GNU make.
+Telegraf requires Go version 1.17 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.14 (1.15 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.17 (1.17.2 recommended)
 2. Clone the Telegraf repository:
    ```
    cd ~/src
@@ -80,46 +63,17 @@ version.
 
 ### Nightly Builds
 
-These builds are generated from the master branch:
+[Nightly](/docs/NIGHTLIES.md) builds are available, generated from the master branch.
 
-FreeBSD - .tar.gz
-- [telegraf-nightly_freebsd_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_amd64.tar.gz)
-- [telegraf-nightly_freebsd_armv7.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_armv7.tar.gz)
-- [telegraf-nightly_freebsd_i386.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_freebsd_i386.tar.gz)
+### 3rd Party Builds
 
-Linux - .rpm
-- [telegraf-nightly.arm64.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.arm64.rpm)
-- [telegraf-nightly.armel.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.armel.rpm)
-- [telegraf-nightly.armv6hl.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.armv6hl.rpm)
-- [telegraf-nightly.i386.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.i386.rpm)
-- [telegraf-nightly.ppc64le.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.ppc64le.rpm)
-- [telegraf-nightly.s390x.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.s390x.rpm)
-- [telegraf-nightly.x86_64.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.x86_64.rpm)
+Builds for other platforms or package formats are provided by members of the Telegraf community. These packages are not built, tested or supported by the Telegraf project or InfluxData, we make no guarantees that they will work. Please get in touch with the package author if you need support.
 
-Linux - .deb
-- [telegraf_nightly_amd64.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_amd64.deb)
-- [telegraf_nightly_arm64.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_arm64.deb)
-- [telegraf_nightly_armel.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_armel.deb)
-- [telegraf_nightly_armhf.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_armhf.deb)
-- [telegraf_nightly_i386.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_i386.deb)
-- [telegraf_nightly_ppc64el.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_ppc64el.deb)
-- [telegraf_nightly_s390x.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_s390x.deb)
-
-Linux - .tar.gz
-- [telegraf-nightly_linux_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_amd64.tar.gz)
-- [telegraf-nightly_linux_arm64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_arm64.tar.gz)
-- [telegraf-nightly_linux_armel.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_armel.tar.gz)
-- [telegraf-nightly_linux_armhf.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_armhf.tar.gz)
-- [telegraf-nightly_linux_i386.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_i386.tar.gz)
-- [telegraf-nightly_linux_s390x.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_s390x.tar.gz)
-- [telegraf-static-nightly_linux_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-static-nightly_linux_amd64.tar.gz)
-
-OSX - .tar.gz
-- [telegraf-nightly_darwin_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_darwin_amd64.tar.gz)
-
-Windows - .zip
-- [telegraf-nightly_windows_i386.zip](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_i386.zip)
-- [telegraf-nightly_windows_amd64.zip](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_windows_amd64.zip)
+* Windows
+  * [Chocolatey](https://chocolatey.org/packages/telegraf) by [ripclawffb](https://chocolatey.org/profiles/ripclawffb)
+  * [Scoop](https://github.com/ScoopInstaller/Main/blob/master/bucket/telegraf.json)
+* Linux
+  * [Snap](https://snapcraft.io/telegraf) by Laurent Sesquès (sajoupa)
 
 ## How to use it:
 
@@ -163,7 +117,7 @@ telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 
 [Latest Release Documentation][release docs].
 
-For documentation on the latest development code see the [documentation index][devel docs].
+For documentation on the latest development code see the [documentation index](/docs).
 
 [release docs]: https://docs.influxdata.com/telegraf
 [devel docs]: docs
@@ -493,3 +447,19 @@ For documentation on the latest development code see the [documentation index][d
 * [websocket](./plugins/outputs/websocket) 
 * [sumologic](./plugins/outputs/sumologic)
 * [yandex_cloud_monitoring](./plugins/outputs/yandex_cloud_monitoring)
+[developer docs]: docs
+- [Input Plugins](/docs/INPUTS.md)
+- [Output Plugins](/docs/OUTPUTS.md)
+- [Processor Plugins](/docs/PROCESSORS.md)
+- [Aggregator Plugins](/docs/AGGREGATORS.md)
+
+
+## Contributing
+
+There are many ways to contribute:
+- Fix and [report bugs](https://github.com/influxdata/telegraf/issues/new)
+- [Improve documentation](https://github.com/influxdata/telegraf/issues?q=is%3Aopen+label%3Adocumentation)
+- [Review code and feature proposals](https://github.com/influxdata/telegraf/pulls)
+- Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
+- [Contribute plugins](CONTRIBUTING.md)
+- [Contribute external plugins](docs/EXTERNAL_PLUGINS.md)

@@ -157,6 +157,9 @@ type Config struct {
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 
+	// Prometheus configuration
+	PrometheusIgnoreTimestamp bool `toml:"prometheus_ignore_timestamp"`
+
 	// Value configuration
 	ValueFieldName string `toml:"value_field_name"`
 
@@ -262,7 +265,10 @@ func NewParser(config *Config) (Parser, error) {
 	case "opentsdb":
 		parser, err = NewOpenTSDBParser()
 	case "prometheus":
-		parser, err = NewPrometheusParser(config.DefaultTags)
+		parser, err = NewPrometheusParser(
+			config.DefaultTags,
+			config.PrometheusIgnoreTimestamp,
+		)
 	case "prometheusremotewrite":
 		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
 	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
@@ -385,9 +391,10 @@ func NewFormUrlencodedParser(
 	}, nil
 }
 
-func NewPrometheusParser(defaultTags map[string]string) (Parser, error) {
+func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (Parser, error) {
 	return &prometheus.Parser{
-		DefaultTags: defaultTags,
+		DefaultTags:     defaultTags,
+		IgnoreTimestamp: ignoreTimestamp,
 	}, nil
 }
 
@@ -402,7 +409,7 @@ func NewXPathParserConfigs(metricName string, cfgs []XPathConfig) []xpath.Config
 	configs := make([]xpath.Config, 0, len(cfgs))
 	for _, cfg := range cfgs {
 		config := xpath.Config(cfg)
-		config.MetricName = metricName
+		config.MetricDefaultName = metricName
 		configs = append(configs, config)
 	}
 	return configs

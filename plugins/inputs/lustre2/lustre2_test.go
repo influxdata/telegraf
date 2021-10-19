@@ -4,7 +4,6 @@
 package lustre2
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -149,13 +148,13 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	err = os.MkdirAll(obddir+"/"+ostName, 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(mdtdir+"/"+ostName+"/md_stats", []byte(mdtProcContents), 0644)
+	err = os.WriteFile(mdtdir+"/"+ostName+"/md_stats", []byte(mdtProcContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(osddir+"/"+ostName+"/stats", []byte(osdldiskfsProcContents), 0644)
+	err = os.WriteFile(osddir+"/"+ostName+"/stats", []byte(osdldiskfsProcContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(obddir+"/"+ostName+"/stats", []byte(obdfilterProcContents), 0644)
+	err = os.WriteFile(obddir+"/"+ostName+"/stats", []byte(obdfilterProcContents), 0644)
 	require.NoError(t, err)
 
 	// Begin by testing standard Lustre stats
@@ -218,10 +217,10 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	err = os.MkdirAll(obddir+"/"+ostName, 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(mdtdir+"/"+ostName+"/job_stats", []byte(mdtJobStatsContents), 0644)
+	err = os.WriteFile(mdtdir+"/"+ostName+"/job_stats", []byte(mdtJobStatsContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(obddir+"/"+ostName+"/job_stats", []byte(obdfilterJobStatsContents), 0644)
+	err = os.WriteFile(obddir+"/"+ostName+"/job_stats", []byte(obdfilterJobStatsContents), 0644)
 	require.NoError(t, err)
 
 	// Test Lustre Jobstats

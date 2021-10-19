@@ -108,12 +108,12 @@ region = "us-east-1"
 
 ## Cloud watch log group. Must be created in AWS cloudwatch logs upfront!
 ## For example, you can specify the name of the k8s cluster here to group logs from all cluster in oine place
-log_group = "my-group-name" 
+log_group = "my-group-name"
 
 ## Log stream in log group
 ## Either log group name or reference to metric attribute, from which it can be parsed:
 ## tag:<TAG_NAME> or field:<FIELD_NAME>. If log stream is not exist, it will be created.
-## Since AWS is not automatically delete logs streams with expired logs entries (i.e. empty log stream) 
+## Since AWS is not automatically delete logs streams with expired logs entries (i.e. empty log stream)
 ## you need to put in place appropriate house-keeping (https://forums.aws.amazon.com/thread.jspa?threadID=178855)
 log_stream = "tag:location"
 
@@ -126,7 +126,7 @@ log_data_metric_name  = "docker_log"
 ## Specify from which metric attribute the log data should be retrieved:
 ## tag:<TAG_NAME> or field:<FIELD_NAME>.
 ## I.e., if you  are using docker_log plugin to stream logs from container, then
-## specify log_data_source  = "field:message" 
+## specify log_data_source  = "field:message"
 log_data_source  = "field:message"
 `
 
@@ -187,7 +187,11 @@ func (c *CloudWatchLogs) Connect() error {
 	var logGroupsOutput = &cloudwatchlogs.DescribeLogGroupsOutput{NextToken: &dummyToken}
 	var err error
 
-	c.svc = cloudwatchlogs.New(c.CredentialConfig.Credentials())
+	p, err := c.CredentialConfig.Credentials()
+	if err != nil {
+		return err
+	}
+	c.svc = cloudwatchlogs.New(p)
 	if c.svc == nil {
 		return fmt.Errorf("can't create cloudwatch logs service endpoint")
 	}

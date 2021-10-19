@@ -201,6 +201,113 @@ One [metric][] is created for each row of the SNMP table.
       ## Specifies if the value of given field should be snmptranslated
       ## by default no field values are translated
       # translate = true
+		
+      ## Secondary index table allows to merge data from two tables with
+      ## different index that this filed will be used to join them. There can
+      ## be only one secondary index table.
+      # secondary_index_table = false
+      
+      ## This field is using secondary index, and will be later merged with
+      ## primary index using SecondaryIndexTable. SecondaryIndexTable and
+      ## SecondaryIndexUse are exclusive.
+      # secondary_index_use = false
+      
+      ## Controls if entries from secondary table should be added or not
+      ## if joining index is present or not. I set to true, means that join
+      ## is outer, and index is prepended with "Secondary." for missing values
+      ## to avoid overlaping indexes from both tables. Can be set per field or
+      ## globally with SecondaryIndexTable, global true overrides per field false.
+      # secondary_outer_join = false
+```
+
+##### Two Table Join
+Snmp plugin can join two snmp tables that have different indexes. For this to work one table
+should have translation field that return index of second table as value. Examples
+of such fields are:
+ * Cisco portTable with translation field: `CISCO-STACK-MIB::portIfIndex`,
+which value is IfIndex from ifTable
+ * Adva entityFacilityTable with translation field: `ADVA-FSPR7-MIB::entityFacilityOneIndex`,
+which value is IfIndex from ifTable
+ * Cisco cpeExtPsePortTable with translation field: `CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex`,
+which value is index from entPhysicalTable
+   
+Such field can be used to translate index to secondary table with `secondary_index_table = true`
+and all fields from secondary table (with index pointed from translation field), should have added option
+`secondary_index_use = true`. Telegraf cannot duplicate entries during join so translation
+must be 1-to-1 (not 1-to-many). To add fields from secondary table with index that is not present
+in translation table (outer join), there is a second option for translation index `secondary_outer_join = true`.
+
+###### Example configuration for table joins
+
+CISCO-POWER-ETHERNET-EXT-MIB table before join:
+```
+[[inputs.snmp.table]]
+name = "ciscoPower"
+index_as_tag = true
+
+[[inputs.snmp.table.field]]
+name = "PortPwrConsumption"
+oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortPwrConsumption"
+
+[[inputs.snmp.table.field]]
+name = "EntPhyIndex"
+oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex"
+```
+
+Partial result (removed agent_host and host columns from all following outputs in this section):
+```
+> ciscoPower,index=1.2 EntPhyIndex=1002i,PortPwrConsumption=6643i 1621460628000000000
+> ciscoPower,index=1.6 EntPhyIndex=1006i,PortPwrConsumption=10287i 1621460628000000000
+> ciscoPower,index=1.5 EntPhyIndex=1005i,PortPwrConsumption=8358i 1621460628000000000
+```
+
+Note here that EntPhyIndex column carries index from ENTITY-MIB table, config for it:
+```
+[[inputs.snmp.table]]
+name = "entityTable"
+index_as_tag = true
+
+[[inputs.snmp.table.field]]
+name = "EntPhysicalName"
+oid = "ENTITY-MIB::entPhysicalName"
+```
+Partial result:
+```
+> entityTable,index=1006 EntPhysicalName="GigabitEthernet1/6" 1621460809000000000
+> entityTable,index=1002 EntPhysicalName="GigabitEthernet1/2" 1621460809000000000
+> entityTable,index=1005 EntPhysicalName="GigabitEthernet1/5" 1621460809000000000
+```
+
+Now, lets attempt to join these results into one table. EntPhyIndex matches index
+from second table, and lets convert EntPhysicalName into tag, so second table will
+only provide tags into result. Configuration:
+
+```
+[[inputs.snmp.table]]
+name = "ciscoPowerEntity"
+index_as_tag = true
+
+[[inputs.snmp.table.field]]
+name = "PortPwrConsumption"
+oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortPwrConsumption"
+
+[[inputs.snmp.table.field]]
+name = "EntPhyIndex"
+oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex"
+secondary_index_table = true    # enables joining
+
+[[inputs.snmp.table.field]]
+name = "EntPhysicalName"
+oid = "ENTITY-MIB::entPhysicalName"
+secondary_index_use = true      # this tag is indexed from secondary table
+is_tag = true
+```
+
+Result:
+```
+> ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/2,index=1.2 EntPhyIndex=1002i,PortPwrConsumption=6643i 1621461148000000000
+> ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/6,index=1.6 EntPhyIndex=1006i,PortPwrConsumption=10287i 1621461148000000000
+> ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/5,index=1.5 EntPhyIndex=1005i,PortPwrConsumption=8358i 1621461148000000000
 ```
 
 ### Troubleshooting

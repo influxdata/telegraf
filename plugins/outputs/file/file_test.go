@@ -3,7 +3,6 @@ package file
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -181,7 +180,7 @@ func TestFileStdout(t *testing.T) {
 }
 
 func createFile() *os.File {
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	if err != nil {
 		panic(err)
 	}
@@ -190,7 +189,7 @@ func createFile() *os.File {
 }
 
 func tmpFile() string {
-	d, err := ioutil.TempDir("", "")
+	d, err := os.MkdirTemp("", "")
 	if err != nil {
 		panic(err)
 	}
@@ -198,7 +197,7 @@ func tmpFile() string {
 }
 
 func validateFile(fname, expS string, t *testing.T) {
-	buf, err := ioutil.ReadFile(fname)
+	buf, err := os.ReadFile(fname)
 	if err != nil {
 		panic(err)
 	}

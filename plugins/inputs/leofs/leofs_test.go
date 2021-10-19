@@ -1,7 +1,6 @@
 package leofs
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"runtime"
@@ -132,7 +131,7 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 
 	// Build the fake snmpwalk for test
 	src := os.TempDir() + "/test.go"
-	require.NoError(t, ioutil.WriteFile(src, []byte(code), 0600))
+	require.NoError(t, os.WriteFile(src, []byte(code), 0600))
 	defer os.Remove(src)
 
 	require.NoError(t, exec.Command("go", "build", "-o", executable, src).Run())

@@ -85,18 +85,19 @@ Meta:
 - tags: ``
 
 Measurement names:
+ - puppetagent_changes_total
  - puppetagent_events_failure
  - puppetagent_events_total
  - puppetagent_events_success
- - puppetagent_resources_failed
- - puppetagent_resources_scheduled
  - puppetagent_resources_changed
+ - puppetagent_resources_corrective_change
+ - puppetagent_resources_failed
+ - puppetagent_resources_failedtorestart
+ - puppetagent_resources_outofsync
+ - puppetagent_resources_restarted
+ - puppetagent_resources_scheduled
  - puppetagent_resources_skipped
  - puppetagent_resources_total
- - puppetagent_resources_failedtorestart
- - puppetagent_resources_restarted
- - puppetagent_resources_outofsync
- - puppetagent_changes_total
  - puppetagent_time_service
  - puppetagent_time_lastrun
  - puppetagent_version_config
@@ -108,18 +109,26 @@ Meta:
 - tags: ``
 
 Measurement names:
- - puppetagent_time_user
- - puppetagent_time_schedule
- - puppetagent_time_filebucket
- - puppetagent_time_file
- - puppetagent_time_exec
  - puppetagent_time_anchor
- - puppetagent_time_sshauthorizedkey
- - puppetagent_time_package
- - puppetagent_time_total
+ - puppetagent_time_catalogapplication
  - puppetagent_time_configretrieval
- - puppetagent_time_lastrun
+ - puppetagent_time_convertcatalog
  - puppetagent_time_cron
+ - puppetagent_time_exec
+ - puppetagent_time_factgeneration
+ - puppetagent_time_file
+ - puppetagent_time_filebucket
+ - puppetagent_time_group
+ - puppetagent_time_lastrun
+ - puppetagent_time_noderetrieval
+ - puppetagent_time_notify
+ - puppetagent_time_package
+ - puppetagent_time_pluginsync
+ - puppetagent_time_schedule
+ - puppetagent_time_sshauthorizedkey
+ - puppetagent_time_total
+ - puppetagent_time_transactionevaluation
+ - puppetagent_time_user
  - puppetagent_version_config
 
 #### PuppetAgent string measurements:

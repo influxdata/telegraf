@@ -2,14 +2,14 @@ package dcos
 
 import (
 	"context"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go/v4"
+	jwt "github.com/golang-jwt/jwt/v4"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -370,7 +370,7 @@ func (d *DCOS) createClient() (Client, error) {
 
 func (d *DCOS) createCredentials() (Credentials, error) {
 	if d.ServiceAccountID != "" && d.ServiceAccountPrivateKey != "" {
-		bs, err := ioutil.ReadFile(d.ServiceAccountPrivateKey)
+		bs, err := os.ReadFile(d.ServiceAccountPrivateKey)
 		if err != nil {
 			return nil, err
 		}
