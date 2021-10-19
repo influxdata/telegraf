@@ -102,7 +102,12 @@ func (p *OpenTSDBParser) ParseLine(line string) (telegraf.Metric, error) {
 	tags := make(map[string]string)
 	for _, tag := range tagStrs {
 		tagValue := strings.Split(tag, "=")
-		if len(tagValue) != 2 || len(tagValue[0]) == 0 || len(tagValue[1]) == 0 {
+		if len(tagValue) != 2 {
+			continue
+		}
+		name = tagValue[0]
+		value = tagValue[1]
+		if name == "" || value == "" {
 			continue
 		}
 		tags[tagValue[0]] = tagValue[1]
