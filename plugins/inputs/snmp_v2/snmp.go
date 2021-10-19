@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"os"
@@ -310,7 +309,7 @@ func (f *Field) init() error {
 		_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
 		//maybe turn this into a warning
 		if err != nil {
-			log.Printf("W! [inputs.snmp] %v", err)
+			return fmt.Errorf("translating: %w", err)
 		}
 		f.Oid = oidNum
 		if f.Name == "" {
@@ -989,8 +988,9 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
 		oidNum = oid
 		// ensure modules are loaded or node will be empty (might not error)
+		// do not return the err as the oid is numeric and telegraf can continue
 		if err != nil {
-			return oid, oid, oid, oid, err
+			return oid, oid, oid, oid, nil
 		}
 	}
 
