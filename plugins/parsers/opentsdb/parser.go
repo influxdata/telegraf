@@ -93,7 +93,7 @@ func (p *OpenTSDBParser) ParseLine(line string) (telegraf.Metric, error) {
 		timestamp = time.Unix(ts, 0)
 	case 13:
 		// millisecond resolution
-		timestamp = time.Unix(ts/1000, (ts%1000)*1000000)
+		timestamp = time.Unix(0, ts*1000)
 	default:
 		return nil, fmt.Errorf(`field "%s" time: "%s" time must be 10 or 13 chars`, measurement, tsStr)
 	}
