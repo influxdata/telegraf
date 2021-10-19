@@ -1284,6 +1284,7 @@ N' , COALESCE(r.status,s.status) AS status
 , r.blocking_session_id
 , s.program_name
 , s.host_name
+, s.login_name
 , s.nt_user_name '
 + @Columns + 
 N', LEFT (CASE COALESCE(r.transaction_isolation_level, s.transaction_isolation_level)
