@@ -399,9 +399,7 @@ func TestClickHouseIntegration(t *testing.T) {
 
 	require.NoError(t, p.Connect())
 
-	require.NoError(t, p.Write(
-		testMetrics,
-	))
+	require.NoError(t, p.Write(testMetrics))
 
 	// dump the database
 	var rc int
