@@ -162,6 +162,7 @@ func (d TagDict) Delete(k starlark.Value) (v starlark.Value, found bool, err err
 			v := starlark.String(value)
 			return v, ok, err
 		}
+		return starlark.None, false, nil
 	}
 
 	return starlark.None, false, errors.New("key must be of type 'str'")

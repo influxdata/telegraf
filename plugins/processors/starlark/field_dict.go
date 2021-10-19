@@ -175,6 +175,7 @@ func (d FieldDict) Delete(k starlark.Value) (v starlark.Value, found bool, err e
 			sv, err := asStarlarkValue(value)
 			return sv, ok, err
 		}
+		return starlark.None, false, nil
 	}
 
 	return starlark.None, false, errors.New("key must be of type 'str'")
