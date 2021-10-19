@@ -37,6 +37,9 @@ information.
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
 
+  ## Path to mib files
+  # path = ["/usr/share/snmp/mibs"]
+
   ## SNMP community string.
   # community = "public"
 
