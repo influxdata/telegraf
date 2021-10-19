@@ -58,7 +58,7 @@ func (adx *AzureDataExplorer) Description() string {
 
 func (adx *AzureDataExplorer) SampleConfig() string {
 	return `
-  ## Azure Data Exlorer cluster endpoint
+  ## Azure Data Explorer cluster endpoint
   ## ex: endpoint_url = "https://clustername.australiasoutheast.kusto.windows.net"
   endpoint_url = ""
   
@@ -78,8 +78,8 @@ func (adx *AzureDataExplorer) SampleConfig() string {
   ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
   # table_name = ""
 
-  ## If false, the plugin will not try to create tables. 
-  ## Useful for clients with low permissions.
+  ## Creates tables and relevant mapping if set to true(default). 
+  ## Skips table and mapping creation if set to false, this is useful for running Telegraf with the lowest possible permissions i.e. table ingestor role.
   # create_tables = true
 `
 }
