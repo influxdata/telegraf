@@ -188,7 +188,6 @@ func TestWrite(t *testing.T) {
 				} else {
 					require.Empty(t, tC.client.queries)
 				}
-
 			}
 		})
 	}

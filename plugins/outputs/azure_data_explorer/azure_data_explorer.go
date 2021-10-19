@@ -203,6 +203,7 @@ func (adx *AzureDataExplorer) getIngestor(ctx context.Context, tableName string)
 
 func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, tableName string) error {
 	if !adx.CreateTables {
+		adx.Log.Info("skipped table creation")
 		return nil
 	}
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
