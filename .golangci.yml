@@ -48,6 +48,7 @@ linters-settings:
       - name: empty-lines
       - name: error-naming
       - name: error-return
+          arguments: ["fmt.Printf"]
       - name: error-strings
       - name: errorf
 #      - name: flag-parameter #disable for now
