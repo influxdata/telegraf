@@ -21,9 +21,9 @@ type Datadog struct {
 	Apikey   string          `toml:"apikey"`
 	Timeout  config.Duration `toml:"timeout"`
 	URL      string          `toml:"url"`
-	Log      telegraf.Logger `toml:"-"`
 	Compress bool            `toml:"compress"`
 	Interval int             `toml:"interval"`
+	Log      telegraf.Logger `toml:"-"`
 
 	client *http.Client
 	proxy.HTTPProxy
