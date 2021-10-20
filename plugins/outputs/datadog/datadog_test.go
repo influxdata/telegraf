@@ -120,12 +120,14 @@ func TestBuildTags(t *testing.T) {
 
 func TestBuildPoint(t *testing.T) {
 	var tagtests = []struct {
-		ptIn  telegraf.Metric
-		outPt Point
-		err   error
+		ptIn     telegraf.Metric
+		interval int
+		outPt    Point
+		err      error
 	}{
 		{
-			testutil.TestMetric(0.0, "test1"),
+			testutil.TestMetricWithType(0.0, telegraf.Counter, "test1"),
+			1,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -133,7 +135,8 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(1.0, "test2"),
+			testutil.TestMetricWithType(1.0, telegraf.Counter, "test2"),
+			1,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				1.0,
@@ -141,23 +144,17 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(10, "test3"),
+			testutil.TestMetricWithType(10, telegraf.Counter, "test3"),
+			2,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
-				10.0,
+				5.0,
 			},
 			nil,
 		},
 		{
-			testutil.TestMetric(int32(112345), "test4"),
-			Point{
-				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
-				112345.0,
-			},
-			nil,
-		},
-		{
-			testutil.TestMetric(int64(112345), "test5"),
+			testutil.TestMetricWithType(int32(112345), telegraf.Counter, "test4"),
+			1,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				112345.0,
@@ -165,7 +162,8 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(float32(11234.5), "test6"),
+			testutil.TestMetricWithType(int64(112345), telegraf.Counter, "test5"),
+			10,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				11234.5,
@@ -173,7 +171,17 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(bool(true), "test7"),
+			testutil.TestMetricWithType(float32(11234.5), telegraf.Counter, "test6"),
+			1,
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				11234.5,
+			},
+			nil,
+		},
+		{
+			testutil.TestMetricWithType(bool(true), telegraf.Counter, "test7"),
+			1,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				1.0,
@@ -181,7 +189,8 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(bool(false), "test8"),
+			testutil.TestMetricWithType(bool(false), telegraf.Counter, "test8"),
+			1,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -189,7 +198,8 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(int64(0), "test int64"),
+			testutil.TestMetricWithType(int64(0), telegraf.Counter, "test int64"),
+			1,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -197,7 +207,8 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(uint64(0), "test uint64"),
+			testutil.TestMetricWithType(uint64(0), telegraf.Counter, "test uint64"),
+			1,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -205,7 +216,8 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(true, "test bool"),
+			testutil.TestMetricWithType(true, telegraf.Counter, "test bool"),
+			1,
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				1.0,
@@ -214,7 +226,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 	}
 	for _, tt := range tagtests {
-		pt, err := buildMetrics(tt.ptIn)
+		pt, err := buildMetrics(tt.ptIn, tt.interval)
 		if err != nil && tt.err == nil {
 			t.Errorf("%s: unexpected error, %+v\n", tt.ptIn.Name(), err)
 		}

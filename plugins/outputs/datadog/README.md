@@ -19,6 +19,12 @@ This plugin writes to the [Datadog Metrics API][metrics] and requires an
 
   ## Set http_proxy (telegraf uses the system wide proxy settings if it isn't set)
   # http_proxy_url = "http://localhost:8888"
+
+  ## Whether to compress the HTTP request body
+  # compress = true
+
+  ## Interval in seconds to divide counters by for Datadog rates/counters
+  # interval = 10
 ```
 
 ### Metrics

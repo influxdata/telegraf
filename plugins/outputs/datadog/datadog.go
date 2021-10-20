@@ -2,6 +2,7 @@ package datadog
 
 import (
 	"bytes"
+	"compress/zlib"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -17,10 +18,12 @@ import (
 )
 
 type Datadog struct {
-	Apikey  string          `toml:"apikey"`
-	Timeout config.Duration `toml:"timeout"`
-	URL     string          `toml:"url"`
-	Log     telegraf.Logger `toml:"-"`
+	Apikey   string          `toml:"apikey"`
+	Timeout  config.Duration `toml:"timeout"`
+	URL      string          `toml:"url"`
+	Log      telegraf.Logger `toml:"-"`
+	Compress bool            `toml:"compress"`
+	Interval int             `toml:"interval"`
 
 	client *http.Client
 	proxy.HTTPProxy
@@ -38,6 +41,12 @@ var sampleConfig = `
 
   ## Set http_proxy (telegraf uses the system wide proxy settings if it isn't set)
   # http_proxy_url = "http://localhost:8888"
+
+  ## Whether to compress the HTTP request body
+  # compress = true
+
+  ## Interval in seconds to divide counters by for Datadog rates/counters
+  # interval = 10
 `
 
 type TimeSeries struct {
@@ -80,7 +89,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	metricCounter := 0
 
 	for _, m := range metrics {
-		if dogMs, err := buildMetrics(m); err == nil {
+		if dogMs, err := buildMetrics(m, d.Interval); err == nil {
 			metricTags := buildTags(m.TagList())
 			host, _ := m.GetTag("host")
 
@@ -122,7 +131,23 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
 	}
-	req, err := http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(tsBytes))
+
+	var req *http.Request
+	if d.Compress {
+		var buf bytes.Buffer
+		compressor := zlib.NewWriter(&buf)
+		if _, err = compressor.Write(tsBytes); err != nil {
+			return err
+		}
+		if err = compressor.Close(); err != nil {
+			return err
+		}
+		req, err = http.NewRequest("POST", d.authenticatedURL(), &buf)
+		req.Header.Set("Content-Encoding", "deflate")
+	} else {
+		req, err = http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(tsBytes))
+	}
+
 	if err != nil {
 		return fmt.Errorf("unable to create http.Request, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
 	}
@@ -156,7 +181,7 @@ func (d *Datadog) authenticatedURL() string {
 	return fmt.Sprintf("%s?%s", d.URL, q.Encode())
 }
 
-func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
+func buildMetrics(m telegraf.Metric, interval int) (map[string]Point, error) {
 	ms := make(map[string]Point)
 	for _, field := range m.FieldList() {
 		if !verifyValue(field.Value) {
@@ -167,6 +192,9 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 			return ms, fmt.Errorf("unable to extract value from Fields %v error %v", field.Key, err.Error())
 		}
 		p[0] = float64(m.Time().Unix())
+		if m.Type() == telegraf.Counter {
+			p[1] /= float64(interval)
+		}
 		ms[field.Key] = p
 	}
 	return ms, nil
@@ -219,7 +247,8 @@ func (d *Datadog) Close() error {
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
 		return &Datadog{
-			URL: datadogAPI,
+			URL:      datadogAPI,
+			Interval: 1,
 		}
 	})
 }
