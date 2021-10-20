@@ -84,3 +84,41 @@ func TestCovertGlobalVariables(t *testing.T) {
 		})
 	}
 }
+
+func TestParseValue(t *testing.T) {
+	testCases := []struct {
+		rawByte sql.RawBytes
+		output  interface{}
+		err     string
+	}{
+		{sql.RawBytes("123"), int64(123), ""},
+		{sql.RawBytes("abc"), "abc", ""},
+		{sql.RawBytes("10.1"), 10.1, ""},
+		{sql.RawBytes("ON"), 1, ""},
+		{sql.RawBytes("OFF"), 0, ""},
+		{sql.RawBytes("NO"), 0, ""},
+		{sql.RawBytes("YES"), 1, ""},
+		{sql.RawBytes("No"), 0, ""},
+		{sql.RawBytes("Yes"), 1, ""},
+		{sql.RawBytes("-794"), int64(-794), ""},
+		{sql.RawBytes("2147483647"), int64(2147483647), ""},                       // max int32
+		{sql.RawBytes("2147483648"), int64(2147483648), ""},                       // too big for int32
+		{sql.RawBytes("9223372036854775807"), int64(9223372036854775807), ""},     // max int64
+		{sql.RawBytes("9223372036854775808"), uint64(9223372036854775808), ""},    // too big for int64
+		{sql.RawBytes("18446744073709551615"), uint64(18446744073709551615), ""},  // max uint64
+		{sql.RawBytes("18446744073709551616"), float64(18446744073709552000), ""}, // too big for uint64
+		{sql.RawBytes("18446744073709552333"), float64(18446744073709552000), ""}, // too big for uint64
+		{sql.RawBytes(""), nil, "foo"},
+	}
+	for _, cases := range testCases {
+		got, err := ParseValue(cases.rawByte)
+
+		if err != nil && cases.err == "" {
+			t.Errorf("for %s got unexpected error: %s", string(cases.rawByte), err)
+		} else if err == nil && cases.err != "" {
+			t.Errorf("for %s did not get expected error: %s", string(cases.rawByte), cases.err)
+		} else if got != cases.output {
+			t.Errorf("for %s wanted %#v (%T), got %#v (%T)", string(cases.rawByte), cases.output, cases.output, got, got)
+		}
+	}
+}

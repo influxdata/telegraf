@@ -1,7 +1,6 @@
 package mysql
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"strconv"
@@ -657,11 +656,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 
 func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{}, error) {
 	if m.MetricVersion < 2 {
-		v, ok := v1.ParseValue(value)
-		if ok {
-			return v, nil
-		}
-		return v, fmt.Errorf("could not parse value: %q", string(value))
+		return v1.ParseValue(value)
 	}
 	return v2.ConvertGlobalVariables(key, value)
 }
@@ -1902,33 +1897,20 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 }
 
 func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
+	var data interface{}
+	var err error
+
 	if m.MetricVersion < 2 {
-		return v1.ParseValue(value)
-	}
-	return parseValue(value)
-}
-
-// parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1
-func parseValue(value sql.RawBytes) (interface{}, bool) {
-	if bytes.EqualFold(value, []byte("YES")) || bytes.Equal(value, []byte("ON")) {
-		return 1, true
+		data, err = v1.ParseValue(value)
+	} else {
+		data, err = v2.ParseValue(value)
 	}
 
-	if bytes.EqualFold(value, []byte("NO")) || bytes.Equal(value, []byte("OFF")) {
-		return 0, true
+	if err != nil {
+		return nil, false
 	}
 
-	if val, err := strconv.ParseInt(string(value), 10, 64); err == nil {
-		return val, true
-	}
-	if val, err := strconv.ParseFloat(string(value), 64); err == nil {
-		return val, true
-	}
-
-	if len(string(value)) > 0 {
-		return string(value), true
-	}
-	return nil, false
+	return data, true
 }
 
 // findThreadState can be used to find thread state by command and plain state
