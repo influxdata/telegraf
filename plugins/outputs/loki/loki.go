@@ -57,7 +57,7 @@ type Loki struct {
 	Timeout      config.Duration   `toml:"timeout"`
 	Username     string            `toml:"username"`
 	Password     string            `toml:"password"`
-	Headers      map[string]string `toml:"headers"`
+	Headers      map[string]string `toml:"http_headers"`
 	ClientID     string            `toml:"client_id"`
 	ClientSecret string            `toml:"client_secret"`
 	TokenURL     string            `toml:"token_url"`

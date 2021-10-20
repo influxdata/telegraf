@@ -109,6 +109,114 @@ func TestIngress(t *testing.T) {
 			},
 			hasError: false,
 		},
+		{
+			name: "no HTTPIngressRuleValue",
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/ingress/": netv1.IngressList{
+						Items: []netv1.Ingress{
+							{
+								Status: netv1.IngressStatus{
+									LoadBalancer: v1.LoadBalancerStatus{
+										Ingress: []v1.LoadBalancerIngress{
+											{
+												Hostname: "chron-1",
+												IP:       "1.0.0.127",
+											},
+										},
+									},
+								},
+								Spec: netv1.IngressSpec{
+									Rules: []netv1.IngressRule{
+										{
+											Host: "ui.internal",
+											IngressRuleValue: netv1.IngressRuleValue{
+												HTTP: nil,
+											},
+										},
+									},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        12,
+									Namespace:         "ns1",
+									Name:              "ui-lb",
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
+						},
+					},
+				},
+			},
+			hasError: false,
+		},
+		{
+			name: "no IngressServiceBackend",
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/ingress/": netv1.IngressList{
+						Items: []netv1.Ingress{
+							{
+								Status: netv1.IngressStatus{
+									LoadBalancer: v1.LoadBalancerStatus{
+										Ingress: []v1.LoadBalancerIngress{
+											{
+												Hostname: "chron-1",
+												IP:       "1.0.0.127",
+											},
+										},
+									},
+								},
+								Spec: netv1.IngressSpec{
+									Rules: []netv1.IngressRule{
+										{
+											Host: "ui.internal",
+											IngressRuleValue: netv1.IngressRuleValue{
+												HTTP: &netv1.HTTPIngressRuleValue{
+													Paths: []netv1.HTTPIngressPath{
+														{
+															Path: "/",
+															Backend: netv1.IngressBackend{
+																Service: nil,
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        12,
+									Namespace:         "ns1",
+									Name:              "ui-lb",
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
+						},
+					},
+				},
+			},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_ingress",
+					map[string]string{
+						"ingress_name": "ui-lb",
+						"namespace":    "ns1",
+						"ip":           "1.0.0.127",
+						"hostname":     "chron-1",
+						"host":         "ui.internal",
+						"path":         "/",
+					},
+					map[string]interface{}{
+						"tls":        false,
+						"generation": int64(12),
+						"created":    now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
+			},
+			hasError: false,
+		},
 	}
 
 	for _, v := range tests {

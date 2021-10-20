@@ -1,9 +1,9 @@
+//go:build linux
 // +build linux
 
 package synproxy
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -155,7 +155,7 @@ func testSynproxyFileData(t *testing.T, fileData string, telegrafData map[string
 }
 
 func makeFakeSynproxyFile(content []byte) string {
-	tmpfile, err := ioutil.TempFile("", "synproxy_test")
+	tmpfile, err := os.CreateTemp("", "synproxy_test")
 	if err != nil {
 		panic(err)
 	}

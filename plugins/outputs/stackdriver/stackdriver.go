@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3" // Imports the Stackdriver Monitoring client package.
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2" // Imports the Stackdriver Monitoring client package.
 	googlepb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -218,7 +218,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 		// Prepare time series request.
 		timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
-			Name:       monitoring.MetricProjectPath(s.Project),
+			Name:       fmt.Sprintf("projects/%s", s.Project),
 			TimeSeries: timeSeries,
 		}
 

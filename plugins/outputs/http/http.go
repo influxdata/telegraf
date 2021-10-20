@@ -1,11 +1,11 @@
 package http
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	defaultURL = "http://127.0.0.1:8080/telegraf"
+	maxErrMsgLen = 1024
+	defaultURL   = "http://127.0.0.1:8080/telegraf"
 )
 
 var sampleConfig = `
@@ -182,11 +183,18 @@ func (h *HTTP) write(reqBody []byte) error {
 		return err
 	}
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
+		errorLine := ""
+		scanner := bufio.NewScanner(io.LimitReader(resp.Body, maxErrMsgLen))
+		if scanner.Scan() {
+			errorLine = scanner.Text()
+		}
+
+		return fmt.Errorf("when writing to [%s] received status code: %d. body: %s", h.URL, resp.StatusCode, errorLine)
 	}
+
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
 	}

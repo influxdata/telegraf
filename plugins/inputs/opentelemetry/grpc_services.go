@@ -56,7 +56,7 @@ func newMetricsService(logger common.Logger, writer *writeToAccumulator, schema 
 
 func (s *metricsService) Export(ctx context.Context, req pdata.Metrics) (otlpgrpc.MetricsResponse, error) {
 	err := s.converter.WriteMetrics(ctx, req, s.writer)
-	return otlpgrpc.MetricsResponse{}, err
+	return otlpgrpc.NewMetricsResponse(), err
 }
 
 type logsService struct {

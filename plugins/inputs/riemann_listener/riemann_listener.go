@@ -368,7 +368,7 @@ func (rsl *RiemannSocketListener) Start(acc telegraf.Accumulator) error {
 
 // Handle cancellations from the process
 func processOsSignals(cancelFunc context.CancelFunc) {
-	signalChan := make(chan os.Signal)
+	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 	for {
 		sig := <-signalChan

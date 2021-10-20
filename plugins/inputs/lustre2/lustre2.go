@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // Package lustre2 (doesn't aim for Windows)
@@ -7,7 +8,7 @@
 package lustre2
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -373,7 +374,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 		name := path[len(path)-2]
 
 		//lines, err := internal.ReadLines(file)
-		wholeFile, err := ioutil.ReadFile(file)
+		wholeFile, err := os.ReadFile(file)
 		if err != nil {
 			return err
 		}
