@@ -687,7 +687,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		// scanning keys and values separately
 
 		// get columns names, and create an array with its length
-		cols, err := rows.Columns()
+		cols, err := rows.ColumnTypes()
 		if err != nil {
 			return err
 		}
@@ -701,20 +701,31 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		}
 		// range over columns, and try to parse values
 		for i, col := range cols {
+			colName := col.Name()
+
 			if m.MetricVersion >= 2 {
-				col = strings.ToLower(col)
+				colName = strings.ToLower(colName)
 			}
 
+			colValue := *vals[i].(*sql.RawBytes)
+
 			if m.GatherAllSlaveChannels &&
-				(strings.ToLower(col) == "channel_name" || strings.ToLower(col) == "connection_name") {
+				(strings.ToLower(colName) == "channel_name" || strings.ToLower(colName) == "connection_name") {
 				// Since the default channel name is empty, we need this block
 				channelName := "default"
-				if len(*vals[i].(*sql.RawBytes)) > 0 {
-					channelName = string(*vals[i].(*sql.RawBytes))
+				if len(colValue) > 0 {
+					channelName = string(colValue)
 				}
 				tags["channel"] = channelName
-			} else if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
-				fields["slave_"+col] = value
+				continue
+			}
+
+			if colValue == nil || len(colValue) == 0 {
+				continue
+			}
+
+			if value, err := m.parseValueByDatabaseTypeName(colValue, col.DatabaseTypeName()); err != nil {
+				fields["slave_"+colName] = value
 			}
 		}
 		acc.AddFields("mysql", fields, tags)
@@ -1894,6 +1905,23 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 		}
 	}
 	return nil
+}
+
+func (m *Mysql) parseValueByDatabaseTypeName(value sql.RawBytes, databaseTypeName string) (interface{}, error) {
+	if m.MetricVersion < 2 {
+		return v1.ParseValue(value)
+	}
+
+	switch databaseTypeName {
+	case "INT":
+		return v2.ParseInt(value)
+	case "BIGINT":
+		return v2.ParseUint(value)
+	case "VARCHAR":
+		return v2.ParseString(value)
+	default:
+		return v2.ParseValue(value)
+	}
 }
 
 func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
