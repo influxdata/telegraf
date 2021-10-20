@@ -88,56 +88,34 @@ servers = [
 
 ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
 ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
-## Possible values for database_type are - "AzureSQLDB" or "AzureSQLManagedInstance" or "SQLServer"
+## Possible values for database_type are - "SQLServer" or "AzureSQLDB" or "AzureSQLManagedInstance" or "AzureSQLPool"
+
+database_type = "SQLServer"
+
+## A list of queries to include. If not specified, all the below listed queries are used.
+include_query = []
+
+## A list of queries to explicitly ignore.
+exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
+
+## Queries enabled by default for database_type = "SQLServer" are - 
+## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
+## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates
 
 ## Queries enabled by default for database_type = "AzureSQLDB" are - 
 ## AzureSQLDBResourceStats, AzureSQLDBResourceGovernance, AzureSQLDBWaitStats, AzureSQLDBDatabaseIO, AzureSQLDBServerProperties, 
 ## AzureSQLDBOsWaitstats, AzureSQLDBMemoryClerks, AzureSQLDBPerformanceCounters, AzureSQLDBRequests, AzureSQLDBSchedulers
 
-# database_type = "AzureSQLDB"
-
-## A list of queries to include. If not specified, all the above listed queries are used.
-# include_query = []
-
-## A list of queries to explicitly ignore.
-# exclude_query = []
-
 ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
 ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
 ## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
-
-# database_type = "AzureSQLManagedInstance"
-
-## A list of queries to include. If not specified, all the above listed queries are used.
-# include_query = []
-
-## A list of queries to explicitly ignore.
-# exclude_query = []
 
 ## Queries enabled by default for database_type = "AzureSQLPool" are - 
 ## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats, 
 ## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
 
-# database_type = "AzureSQLPool"
-
-## A list of queries to include. If not specified, all the above listed queries are used.
-# include_query = []
-
-## A list of queries to explicitly ignore.
-# exclude_query = []
-
-## Queries enabled by default for database_type = "SQLServer" are - 
-## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
-## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu
-
-database_type = "SQLServer"
-
-include_query = []
-
-## SQLServerAvailabilityReplicaStates and SQLServerDatabaseReplicaStates are optional queries and hence excluded here as default
-exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
-
-## Following are old config settings, you may use them only if you are using the earlier flavor of queries, however it is recommended to use 
+## Following are old config settings
+## You may use them only if you are using the earlier flavor of queries, however it is recommended to use 
 ## the new mechanism of identifying the database_type there by use it's corresponding queries
 
 ## Optional parameter, setting this to 2 will use a new version
