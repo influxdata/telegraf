@@ -50,7 +50,7 @@ func (r *ReceiveAndParse) Init() error {
 	models.SetLoggerOnPlugin(r.Receiver, r.Log)
 	models.SetLoggerOnPlugin(r.Parser, r.Log)
 
-	// Try to initialize the transport
+	// Try to initialize the receiver
 	if t, ok := r.Receiver.(telegraf.Initializer); ok {
 		if err := t.Init(); err != nil {
 			return fmt.Errorf("initializing receiver failed: %v", err)
