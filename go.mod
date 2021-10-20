@@ -101,7 +101,6 @@ require (
 	github.com/eclipse/paho.mqtt.golang v1.3.0
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
-	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logfmt/logfmt v0.5.0
 	github.com/go-logr/logr v0.4.0 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
@@ -339,6 +338,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.2 // indirect
@@ -346,6 +346,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.8 // indirect
 	github.com/rogpeppe/go-internal v1.6.2 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
 	go.opentelemetry.io/otel v1.0.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.24.0 // indirect
 	go.opentelemetry.io/otel/internal/metric v0.24.0 // indirect

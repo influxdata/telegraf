@@ -55,9 +55,9 @@ done
 # github.com/foo/bar github.com/foo/bar/v3) there will be a duplicate
 # in the list.  Remove duplicates again.
 mv "${tmpdir}/HEAD" "${tmpdir}/HEAD-dup"
-uniq "${tmpdir}/HEAD-dup" > "${tmpdir}/HEAD"
+uniq "${tmpdir}/HEAD-dup" | sort > "${tmpdir}/HEAD"
 
-grep '^-' docs/LICENSE_OF_DEPENDENCIES.md | grep -v github.com/DataDog/datadog-agent | cut -f 2 -d' ' > "${tmpdir}/LICENSE_OF_DEPENDENCIES.md"
+grep '^-' docs/LICENSE_OF_DEPENDENCIES.md | grep -v github.com/DataDog/datadog-agent | cut -f 2 -d' ' | sort > "${tmpdir}/LICENSE_OF_DEPENDENCIES.md"
 
 diff -U0 "${tmpdir}/LICENSE_OF_DEPENDENCIES.md" "${tmpdir}/HEAD" || {
 cat - <<EOF
