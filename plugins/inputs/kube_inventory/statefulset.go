@@ -28,16 +28,20 @@ func (ki *KubernetesInventory) gatherStatefulSet(s v1.StatefulSet, acc telegraf.
 		"replicas_current":    status.CurrentReplicas,
 		"replicas_ready":      status.ReadyReplicas,
 		"replicas_updated":    status.UpdatedReplicas,
-		"spec_replicas":       *s.Spec.Replicas,
 		"observed_generation": s.Status.ObservedGeneration,
+	}
+	if s.Spec.Replicas != nil {
+		fields["spec_replicas"] = *s.Spec.Replicas
 	}
 	tags := map[string]string{
 		"statefulset_name": s.Name,
 		"namespace":        s.Namespace,
 	}
-	for key, val := range s.Spec.Selector.MatchLabels {
-		if ki.selectorFilter.Match(key) {
-			tags["selector_"+key] = val
+	if s.Spec.Selector != nil {
+		for key, val := range s.Spec.Selector.MatchLabels {
+			if ki.selectorFilter.Match(key) {
+				tags["selector_"+key] = val
+			}
 		}
 	}
 

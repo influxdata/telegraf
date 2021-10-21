@@ -15,7 +15,8 @@ import (
 func TestScrapeURLNoAnnotations(t *testing.T) {
 	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}}
 	p.Annotations = map[string]string{}
-	url := getScrapeURL(p)
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
 	assert.Nil(t, url)
 }
 
@@ -23,36 +24,57 @@ func TestScrapeURLAnnotationsNoScrape(t *testing.T) {
 	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}}
 	p.Name = "myPod"
 	p.Annotations = map[string]string{"prometheus.io/scrape": "false"}
-	url := getScrapeURL(p)
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
 	assert.Nil(t, url)
 }
 
 func TestScrapeURLAnnotations(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
-	url := getScrapeURL(p)
-	assert.Equal(t, "http://127.0.0.1:9102/metrics", *url)
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:9102/metrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPort(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/port": "9000"}
-	url := getScrapeURL(p)
-	assert.Equal(t, "http://127.0.0.1:9000/metrics", *url)
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:9000/metrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPath(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "mymetrics"}
-	url := getScrapeURL(p)
-	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", *url)
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/mymetrics"}
-	url := getScrapeURL(p)
-	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", *url)
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", url.String())
+}
+
+func TestScrapeURLAnnotationsCustomPathWithQueryParameters(t *testing.T) {
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/v1/agent/metrics?format=prometheus"}
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics?format=prometheus", url.String())
+}
+
+func TestScrapeURLAnnotationsCustomPathWithFragment(t *testing.T) {
+	p := pod()
+	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/v1/agent/metrics#prometheus"}
+	url, err := getScrapeURL(p)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics#prometheus", url.String())
 }
 
 func TestAddPod(t *testing.T) {
