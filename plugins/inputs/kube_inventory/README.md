@@ -74,6 +74,8 @@ avoid cardinality issues:
   # tls_cert = "/path/to/certfile"
   ## Used for TLS client certificate authentication
   # tls_key = "/path/to/keyfile"
+  ## Send the specified TLS server name via SNI
+  # tls_server_name = "kubernetes.example.com"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
