@@ -2,6 +2,7 @@ package internet_speed
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -68,7 +69,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	fields["download"] = s.DLSpeed
 	fields["upload"] = s.ULSpeed
-	fields["latency"] = s.Latency
+	fields["latency"] = timeDurationMillisecondToFloat64(s.Latency)
 
 	tags := make(map[string]string)
 
@@ -79,4 +80,8 @@ func init() {
 	inputs.Add("internet_speed", func() telegraf.Input {
 		return &InternetSpeed{}
 	})
+}
+
+func timeDurationMillisecondToFloat64(d time.Duration) float64 {
+	return float64(d) / float64(time.Millisecond)
 }
