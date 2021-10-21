@@ -706,6 +706,49 @@ def apply(metric):
 			},
 		},
 		{
+			name: "pop tag (default)",
+			source: `
+def apply(metric):
+	metric.tags['host2'] = metric.tags.pop('url', 'foo.org')
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host": "example.org",
+						"url":  "bar.org",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host":  "example.org",
+						"host2": "foo.org",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host":  "example.org",
+						"host2": "bar.org",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "popitem tags",
 			source: `
 def apply(metric):
@@ -1769,6 +1812,53 @@ def apply(metric):
 				testutil.MustMetric("cpu",
 					map[string]string{},
 					map[string]interface{}{"time_guest": 0},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "pop field (default)",
+			source: `
+def apply(metric):
+	metric.fields['idle_count'] = metric.fields.pop('count', 10)
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":  0,
+						"time_guest": 0,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":  0,
+						"time_guest": 0,
+						"count":      0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":  0,
+						"time_guest": 0,
+						"idle_count": 10,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":  0,
+						"time_guest": 0,
+						"idle_count": 0,
+					},
 					time.Unix(0, 0),
 				),
 			},
