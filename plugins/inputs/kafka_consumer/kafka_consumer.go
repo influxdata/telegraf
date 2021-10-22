@@ -128,15 +128,15 @@ type empty struct{}
 type semaphore chan empty
 
 type KafkaConsumer struct {
-	Brokers                []string `toml:"brokers"`
-	ConsumerGroup          string   `toml:"consumer_group"`
-	MaxMessageLen          int      `toml:"max_message_len"`
-	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
-	Offset                 string   `toml:"offset"`
-	BalanceStrategy        string   `toml:"balance_strategy"`
-	Topics                 []string `toml:"topics"`
-	TopicTag               string   `toml:"topic_tag"`
+	Brokers                []string        `toml:"brokers"`
+	ConsumerGroup          string          `toml:"consumer_group"`
+	MaxMessageLen          int             `toml:"max_message_len"`
+	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
 	MaxProcessingTime      config.Duration `toml:"max_processing_time"`
+	Offset                 string          `toml:"offset"`
+	BalanceStrategy        string          `toml:"balance_strategy"`
+	Topics                 []string        `toml:"topics"`
+	TopicTag               string          `toml:"topic_tag"`
 
 	kafka.ReadConfig
 

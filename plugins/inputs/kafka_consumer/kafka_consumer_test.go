@@ -64,7 +64,7 @@ func TestInit(t *testing.T) {
 				require.Equal(t, plugin.MaxUndeliveredMessages, defaultMaxUndeliveredMessages)
 				require.Equal(t, plugin.config.ClientID, "Telegraf")
 				require.Equal(t, plugin.config.Consumer.Offsets.Initial, sarama.OffsetOldest)
-				require.Equal(t, plugin.config.Consumer.MaxProcessingTime, time.Duration(100 * time.Millisecond))
+				require.Equal(t, plugin.config.Consumer.MaxProcessingTime, time.Duration(100*time.Millisecond))
 			},
 		},
 		{
@@ -169,11 +169,11 @@ func TestInit(t *testing.T) {
 		{
 			name: "custom max_processing_time",
 			plugin: &KafkaConsumer{
-				MaxProcessingTime: config.Duration(1000 * time.Millisecond),
+				MaxProcessingTime: config.Duration(1000*time.Millisecond),
 				Log:    testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
-				require.Equal(t, plugin.config.Consumer.MaxProcessingTime, time.Duration(1000 * time.Millisecond))
+				require.Equal(t, plugin.config.Consumer.MaxProcessingTime, time.Duration(1000*time.Millisecond))
 			},
 		},
 	}
