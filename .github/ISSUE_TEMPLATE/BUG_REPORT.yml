@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking time to fill out this bug report! We reserve Telegraf issues for bugs for reproducible problems.  
-        Please redirect any questions about Telegraf usage to Please reach out to us in our [Community Slack](influxdata.com/slack) or [Community Page](https://community.influxdata.com/) and we can get this question answered
+        Please redirect any questions about Telegraf usage to our [Community Slack](https://influxdata.com/slack) or [Community Page](https://community.influxdata.com/) we have a lot of talented community members there who could help answer your question more quickly.
   - type: textarea
     id: config
     attributes:
@@ -36,9 +36,10 @@ body:
     attributes:
       label: Steps to reproduce
       description: Describe the steps to reproduce the bug.
-      value: 
-      1. ...
-      2. ...
+      value: |
+      1. 
+      2.
+      ...
     validations:
       required: true
   - type: textarea
