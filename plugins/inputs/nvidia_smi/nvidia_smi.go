@@ -2,7 +2,7 @@ package nvidia_smi
 
 import (
 	"encoding/xml"
-	"fmt"
+	"errors"
 	"os"
 	"os/exec"
 	"strconv"
@@ -39,12 +39,23 @@ func (smi *NvidiaSMI) SampleConfig() string {
 `
 }
 
-// Gather implements the telegraf interface
-func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
+func (smi *NvidiaSMI) Init() error {
+	if len(smi.BinPath) == 0 {
+		var err error
+		smi.BinPath, err = exec.LookPath("nvidia-smi")
+		if err != nil {
+			return errors.New("nvidia-smi not found: verify that nvidia-smi is installed and that nvidia-smi is in your PATH")
+		}
+	}
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
-		return fmt.Errorf("nvidia-smi binary not at path %s, cannot gather GPU data", smi.BinPath)
+		return errors.New("nvidia-smi binary not at path " + smi.BinPath)
 	}
 
+	return nil
+}
+
+// Gather implements the telegraf interface
+func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
 	data, err := smi.pollSMI()
 	if err != nil {
 		return err
@@ -61,7 +72,6 @@ func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
-			BinPath: "/usr/bin/nvidia-smi",
 			Timeout: config.Duration(5 * time.Second),
 		}
 	})
