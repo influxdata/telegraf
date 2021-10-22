@@ -593,6 +593,7 @@ workflows:
             - 'test-awaiter'
       - 's390x-package':
           name: 's390x-package-nightly'
+          nightly: true
           requires:
             - 'test-awaiter'
       - 'armel-package':
