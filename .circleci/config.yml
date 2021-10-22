@@ -632,18 +632,18 @@ workflows:
             - 'test-awaiter'
       - nightly:
           requires:
-            - 'i386-package'
-            - 'ppc64le-package'
-            - 's390x-package'
-            - 'armel-package'
-            - 'amd64-package'
-            - 'mipsel-package'
-            - 'mips-package'
-            - 'darwin-package'
-            - 'windows-package'
-            - 'static-package'
-            - 'arm64-package'
-            - 'armhf-package'
+            - 'i386-package-nightly'
+            - 'ppc64le-package-nightly'
+            - 's390x-package-nightly'
+            - 'armel-package-nightly'
+            - 'amd64-package-nightly'
+            - 'mipsel-package-nightly'
+            - 'mips-package-nightly'
+            - 'darwin-package-nightly'
+            - 'windows-package-nightly'
+            - 'static-package-nightly'
+            - 'arm64-package-nightly'
+            - 'armhf-package-nightly'
     triggers:
       - schedule:
           cron: "0 7 * * *"
