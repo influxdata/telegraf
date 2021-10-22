@@ -9,12 +9,13 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
-	oauth "github.com/influxdata/telegraf/plugins/common/oauth"
-	plugin "github.com/influxdata/telegraf/plugins/inputs/http"
+	"github.com/influxdata/telegraf/plugins/common/oauth"
+	httpplugin "github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestHTTPwithJSONFormat(t *testing.T) {
@@ -27,9 +28,9 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 	}))
 	defer fakeServer.Close()
 
-	url := fakeServer.URL + "/endpoint"
-	plugin := &plugin.HTTP{
-		URLs: []string{url},
+	address := fakeServer.URL + "/endpoint"
+	plugin := &httpplugin.HTTP{
+		URLs: []string{address},
 	}
 	metricName := "metricName"
 
@@ -50,7 +51,7 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 	require.Equal(t, metric.Measurement, metricName)
 	require.Len(t, acc.Metrics[0].Fields, 1)
 	require.Equal(t, acc.Metrics[0].Fields["a"], 1.2)
-	require.Equal(t, acc.Metrics[0].Tags["url"], url)
+	require.Equal(t, acc.Metrics[0].Tags["url"], address)
 }
 
 func TestHTTPHeaders(t *testing.T) {
@@ -69,9 +70,9 @@ func TestHTTPHeaders(t *testing.T) {
 	}))
 	defer fakeServer.Close()
 
-	url := fakeServer.URL + "/endpoint"
-	plugin := &plugin.HTTP{
-		URLs:    []string{url},
+	address := fakeServer.URL + "/endpoint"
+	plugin := &httpplugin.HTTP{
+		URLs:    []string{address},
 		Headers: map[string]string{header: headerValue},
 	}
 
@@ -92,9 +93,9 @@ func TestInvalidStatusCode(t *testing.T) {
 	}))
 	defer fakeServer.Close()
 
-	url := fakeServer.URL + "/endpoint"
-	plugin := &plugin.HTTP{
-		URLs: []string{url},
+	address := fakeServer.URL + "/endpoint"
+	plugin := &httpplugin.HTTP{
+		URLs: []string{address},
 	}
 
 	metricName := "metricName"
@@ -115,9 +116,9 @@ func TestSuccessStatusCodes(t *testing.T) {
 	}))
 	defer fakeServer.Close()
 
-	url := fakeServer.URL + "/endpoint"
-	plugin := &plugin.HTTP{
-		URLs:               []string{url},
+	address := fakeServer.URL + "/endpoint"
+	plugin := &httpplugin.HTTP{
+		URLs:               []string{address},
 		SuccessStatusCodes: []int{200, 202},
 	}
 
@@ -143,7 +144,7 @@ func TestMethod(t *testing.T) {
 	}))
 	defer fakeServer.Close()
 
-	plugin := &plugin.HTTP{
+	plugin := &httpplugin.HTTP{
 		URLs:   []string{fakeServer.URL},
 		Method: "POST",
 	}
@@ -169,18 +170,18 @@ func TestBodyAndContentEncoding(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	url := fmt.Sprintf("http://%s", ts.Listener.Addr().String())
+	address := fmt.Sprintf("http://%s", ts.Listener.Addr().String())
 
 	tests := []struct {
 		name             string
-		plugin           *plugin.HTTP
+		plugin           *httpplugin.HTTP
 		queryHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
 	}{
 		{
 			name: "no body",
-			plugin: &plugin.HTTP{
+			plugin: &httpplugin.HTTP{
 				Method: "POST",
-				URLs:   []string{url},
+				URLs:   []string{address},
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				body, err := io.ReadAll(r.Body)
@@ -191,8 +192,8 @@ func TestBodyAndContentEncoding(t *testing.T) {
 		},
 		{
 			name: "post body",
-			plugin: &plugin.HTTP{
-				URLs:   []string{url},
+			plugin: &httpplugin.HTTP{
+				URLs:   []string{address},
 				Method: "POST",
 				Body:   "test",
 			},
@@ -205,8 +206,8 @@ func TestBodyAndContentEncoding(t *testing.T) {
 		},
 		{
 			name: "get method body is sent",
-			plugin: &plugin.HTTP{
-				URLs:   []string{url},
+			plugin: &httpplugin.HTTP{
+				URLs:   []string{address},
 				Method: "GET",
 				Body:   "test",
 			},
@@ -219,8 +220,8 @@ func TestBodyAndContentEncoding(t *testing.T) {
 		},
 		{
 			name: "gzip encoding",
-			plugin: &plugin.HTTP{
-				URLs:            []string{url},
+			plugin: &httpplugin.HTTP{
+				URLs:            []string{address},
 				Method:          "GET",
 				Body:            "test",
 				ContentEncoding: "gzip",
@@ -269,13 +270,13 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		plugin       *plugin.HTTP
+		plugin       *httpplugin.HTTP
 		tokenHandler TestHandlerFunc
 		handler      TestHandlerFunc
 	}{
 		{
 			name: "no credentials",
-			plugin: &plugin.HTTP{
+			plugin: &httpplugin.HTTP{
 				URLs: []string{u.String()},
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
@@ -285,7 +286,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		},
 		{
 			name: "success",
-			plugin: &plugin.HTTP{
+			plugin: &httpplugin.HTTP{
 				URLs: []string{u.String() + "/write"},
 				HTTPClientConfig: httpconfig.HTTPClientConfig{
 					OAuth2Config: oauth.OAuth2Config{
