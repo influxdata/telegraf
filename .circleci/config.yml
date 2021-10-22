@@ -572,49 +572,61 @@ workflows:
       - 'test-go-windows'
       - *test-awaiter
       - 'windows-package':
+          name: 'windows-package-nightly'
           nightly: true
           requires:
             - 'test-go-windows'
       - 'darwin-package':
+          name: 'darwin-package-nightly'
           nightly: true
           requires:
             - 'test-go-mac'
       - 'i386-package':
+          name: 'i386-package-nightly'
           nightly: true
           requires:
             - 'test-awaiter'
       - 'ppc64le-package':
+          name: 'ppc64le-package-nightly'
           nightly: true
           requires:
             - 'test-awaiter'
       - 's390x-package':
+          name: 's390x-package-nightly'
           requires:
             - 'test-awaiter'
       - 'armel-package':
+          name: 'armel-package-nightly'
           nightly: true
           requires:
             - 'test-awaiter'
       - 'amd64-package':
+          name: 'amd64-package-nightly'
           nightly: true
           requires:
             - 'test-awaiter'
       - 'arm64-package':
+          name: 'arm64-package-nightly'
           nightly: true
           requires:
             - 'test-awaiter'
       - 'armhf-package':
+          name: 'armhf-package-nightly'
           nightly: true
           requires:
             - 'test-awaiter'
       - 'static-package':
+          name: 'static-package-nightly'
           nightly: true
           requires:
             - 'test-awaiter'
       - 'mipsel-package':
+          name: 'mipsel-package-nightly'
           nightly: true
           requires:
             - 'test-awaiter'
       - 'mips-package':
+          name: 'mips-package-nightly'
           nightly: true
           requires:
             - 'test-awaiter'
