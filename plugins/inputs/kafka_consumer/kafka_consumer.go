@@ -10,6 +10,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -101,6 +102,14 @@ const sampleConfig = `
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
 
+  ## Maximum amount of time the consumer expects a message takes to process for
+  ## the user. If writing to the Messages channel takes longer than this, that
+  ## partition will stop fetching more messages until it can proceed again.
+  ## 
+  ## Note that the effective timeout could be between 'max_processing_time' and
+  ## '2 * max_processing_time'.
+  # max_processing_time = "100ms"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -110,6 +119,7 @@ const sampleConfig = `
 
 const (
 	defaultMaxUndeliveredMessages = 1000
+	defaultMaxProcessingTime      = config.Duration(100 * time.Millisecond)
 	defaultConsumerGroup          = "telegraf_metrics_consumers"
 	reconnectDelay                = 5 * time.Second
 )
@@ -126,6 +136,7 @@ type KafkaConsumer struct {
 	BalanceStrategy        string   `toml:"balance_strategy"`
 	Topics                 []string `toml:"topics"`
 	TopicTag               string   `toml:"topic_tag"`
+	MaxProcessingTime      config.Duration `toml:"max_processing_time"`
 
 	kafka.ReadConfig
 
@@ -172,6 +183,9 @@ func (k *KafkaConsumer) Init() error {
 	if k.MaxUndeliveredMessages == 0 {
 		k.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
 	}
+	if time.Duration(k.MaxProcessingTime) == 0 {
+		k.MaxProcessingTime = defaultMaxProcessingTime
+	}
 	if k.ConsumerGroup == "" {
 		k.ConsumerGroup = defaultConsumerGroup
 	}
@@ -208,6 +222,8 @@ func (k *KafkaConsumer) Init() error {
 	if k.ConsumerCreator == nil {
 		k.ConsumerCreator = &SaramaCreator{}
 	}
+
+	config.Consumer.MaxProcessingTime = time.Duration(k.MaxProcessingTime)
 
 	k.config = config
 	return nil

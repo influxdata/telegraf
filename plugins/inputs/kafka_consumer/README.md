@@ -93,6 +93,14 @@ and use the old zookeeper connection method.
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
 
+  ## Maximum amount of time the consumer expects a message takes to process for
+  ## the user. If writing to the Messages channel takes longer than this, that
+  ## partition will stop fetching more messages until it can proceed again.
+  ## 
+  ## Note that the effective timeout could be between 'max_processing_time' and
+  ## '2 * max_processing_time'.
+  # max_processing_time = "100ms"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
