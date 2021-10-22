@@ -2,9 +2,15 @@
 
 set -eux
 
-GO_ARCH="darwin-amd64"
+ARCH=$(uname -m)
 GO_VERSION="1.17.2"
-GO_VERSION_SHA="7914497a302a132a465d33f5ee044ce05568bacdb390ab805cb75a3435a23f94" # from https://golang.org/dl
+if [ "$ARCH" = 'arm64' ]; then
+    GO_ARCH="darwin-arm64"
+    GO_VERSION_SHA="ce8771bd3edfb5b28104084b56bbb532eeb47fbb7769c3e664c6223712c30904" # from https://golang.org/dl
+elif [ "$ARCH" = 'x86_64' ]; then
+    GO_ARCH="darwin-amd64"
+    GO_VERSION_SHA="7914497a302a132a465d33f5ee044ce05568bacdb390ab805cb75a3435a23f94" # from https://golang.org/dl
+fi
 
 # This path is cachable. (Saving in /usr/local/ would cause issues restoring the cache.)
 path="/usr/local/Cellar"
