@@ -37,9 +37,10 @@ body:
       label: Steps to reproduce
       description: Describe the steps to reproduce the bug.
       value: |
-      1. 
-      2.
-      ...
+        1.
+        2.
+        3.
+        ...
     validations:
       required: true
   - type: textarea
