@@ -169,8 +169,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "custom max_processing_time",
 			plugin: &KafkaConsumer{
-				MaxProcessingTime: config.Duration(1000*time.Millisecond),
-				Log:    testutil.Logger{},
+				MaxProcessingTime: config.Duration(1000 * time.Millisecond),
+				Log:               testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, plugin.config.Consumer.MaxProcessingTime, time.Duration(1000*time.Millisecond))
