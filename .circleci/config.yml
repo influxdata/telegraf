@@ -138,7 +138,7 @@ commands:
       - when:
           condition: << parameters.nightly >>
           steps:
-            - run: 'NIGHTLY=1 make package'
+            - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
       - unless:
           condition:
             or:
