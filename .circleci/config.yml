@@ -432,132 +432,132 @@ commonjobs:
 
 workflows:
   version: 2
-  # check:
-    # jobs:
-    #   - 'deps':
-    #       filters:
-    #         tags:
-    #           only: /.*/
-    #   - 'test-go-1_17':
-    #       requires:
-    #         - 'deps'
-    #       filters:
-    #         tags:
-    #           only: /.*/
-    #   - 'test-go-1_17-386':
-    #       requires:
-    #         - 'deps'
-    #       filters:
-    #         tags:
-    #           only: /.*/
-    #   - 'test-go-mac':
-    #       filters:
-    #         tags: # only runs on tags if you specify this filter
-    #           only: /.*/
-    #   - 'test-go-windows':
-    #       filters:
-    #         tags:
-    #           only: /.*/
-    #   - *test-awaiter
-    #   - 'windows-package':
-    #       requires:
-    #         - 'test-go-windows'
-    #   - 'darwin-package':
-    #       requires:
-    #         - 'test-go-mac'
-    #   - 'i386-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 'ppc64le-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 's390x-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 'armel-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 'amd64-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 'arm64-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 'armhf-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 'static-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 'mipsel-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 'mips-package':
-    #       requires:
-    #         - 'test-awaiter'
-    #   - 'generate-config':
-    #       requires:
-    #         - 'amd64-package'
-    #       filters:
-    #         branches:
-    #           only:
-    #             - master
-    #   - 'generate-config-win':
-    #       requires:
-    #         - 'windows-package'
-    #       filters:
-    #         branches:
-    #           only:
-    #             - master
-    #   - 'update-config':
-    #       requires:
-    #         - 'generate-config-win'
-    #         - 'generate-config'
-    #       filters:
-    #         branches:
-    #           only:
-    #             - master
-    #   - 'share-artifacts':
-    #       requires:
-    #         - 'i386-package'
-    #         - 'ppc64le-package'
-    #         - 's390x-package'
-    #         - 'armel-package'
-    #         - 'amd64-package'
-    #         - 'mipsel-package'
-    #         - 'mips-package'
-    #         - 'darwin-package'
-    #         - 'windows-package'
-    #         - 'static-package'
-    #         - 'arm64-package'
-    #         - 'armhf-package'
-    #       filters:
-    #         branches:
-    #           ignore:
-    #             - master
-    #   - 'release':
-    #       requires:
-    #         - 'test-go-windows'
-    #         - 'test-go-mac'
-    #         - 'test-go-1_17'
-    #         - 'test-go-1_17-386'
-    #       filters:
-    #         tags:
-    #           only: /.*/
-    #         branches:
-    #           ignore: /.*/
-    #   - 'package-sign-windows':
-    #       requires:
-    #         - 'release'
-    #       filters:
-    #           tags:
-    #             only: /.*/
-    #   - 'package-sign-mac':
-    #        requires:
-    #          - 'package-sign-windows'
-    #        filters:
-    #           tags:
-    #             only: /.*/
+  check:
+    jobs:
+      - 'deps':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_17':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_17-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-mac':
+          filters:
+            tags: # only runs on tags if you specify this filter
+              only: /.*/
+      - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
+      - *test-awaiter
+      - 'windows-package':
+          requires:
+            - 'test-go-windows'
+      - 'darwin-package':
+          requires:
+            - 'test-go-mac'
+      - 'i386-package':
+          requires:
+            - 'test-awaiter'
+      - 'ppc64le-package':
+          requires:
+            - 'test-awaiter'
+      - 's390x-package':
+          requires:
+            - 'test-awaiter'
+      - 'armel-package':
+          requires:
+            - 'test-awaiter'
+      - 'amd64-package':
+          requires:
+            - 'test-awaiter'
+      - 'arm64-package':
+          requires:
+            - 'test-awaiter'
+      - 'armhf-package':
+          requires:
+            - 'test-awaiter'
+      - 'static-package':
+          requires:
+            - 'test-awaiter'
+      - 'mipsel-package':
+          requires:
+            - 'test-awaiter'
+      - 'mips-package':
+          requires:
+            - 'test-awaiter'
+      - 'generate-config':
+          requires:
+            - 'amd64-package'
+          filters:
+            branches:
+              only:
+                - master
+      - 'generate-config-win':
+          requires:
+            - 'windows-package'
+          filters:
+            branches:
+              only:
+                - master
+      - 'update-config':
+          requires:
+            - 'generate-config-win'
+            - 'generate-config'
+          filters:
+            branches:
+              only:
+                - master
+      - 'share-artifacts':
+          requires:
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'darwin-package'
+            - 'windows-package'
+            - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
+          filters:
+            branches:
+              ignore:
+                - master
+      - 'release':
+          requires:
+            - 'test-go-windows'
+            - 'test-go-mac'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+      - 'package-sign-windows':
+          requires:
+            - 'release'
+          filters:
+              tags:
+                only: /.*/
+      - 'package-sign-mac':
+           requires:
+             - 'package-sign-windows'
+           filters:
+              tags:
+                only: /.*/
 
   nightly:
     jobs:
@@ -632,10 +632,10 @@ workflows:
             - 'static-package'
             - 'arm64-package'
             - 'armhf-package'
-    # triggers:
-    #   - schedule:
-    #       cron: "0 7 * * *"
-    #       filters:
-    #         branches:
-    #           only:
-    #             - master
+    triggers:
+      - schedule:
+          cron: "0 7 * * *"
+          filters:
+            branches:
+              only:
+                - master
