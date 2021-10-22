@@ -18,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestHTTPwithJSONFormat(t *testing.T) {
+func TestHTTPWithJSONFormat(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
 			_, _ = w.Write([]byte(simpleJSON))
