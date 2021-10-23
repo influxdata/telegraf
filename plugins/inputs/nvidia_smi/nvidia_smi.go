@@ -31,22 +31,25 @@ func (smi *NvidiaSMI) Description() string {
 // SampleConfig returns the sample configuration for the NvidiaSMI plugin
 func (smi *NvidiaSMI) SampleConfig() string {
 	return `
-  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-  # bin_path = "/usr/bin/nvidia-smi"
+  ## Optional: path to nvidia-smi binary, if not specified or an empty string is specified, we will search for it on exec.LookPath
+  ## We will use "os.Stat" to check whether the nvidia-smi binary actually exists at the location pointed to by the bin_path, 
+  ## if not, an error will be returned as soon as possible (in Init())
+  # bin_path = ""
 
-  ## Optional: timeout for GPU polling
+  ## Optional: timeout for GPU polling, defaults "5s"
   # timeout = "5s"
 `
 }
 
 func (smi *NvidiaSMI) Init() error {
-	if len(smi.BinPath) == 0 {
+	if smi.BinPath == "" {
 		var err error
 		smi.BinPath, err = exec.LookPath("nvidia-smi")
 		if err != nil {
 			return errors.New("nvidia-smi not found: verify that nvidia-smi is installed and that nvidia-smi is in your PATH")
 		}
 	}
+	// fail-fast
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
 		return errors.New("nvidia-smi binary not at path " + smi.BinPath)
 	}
@@ -72,6 +75,7 @@ func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
+			BinPath: "",
 			Timeout: config.Duration(5 * time.Second),
 		}
 	})

@@ -7,10 +7,12 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
 ```toml
 # Pulls statistics from nvidia GPUs attached to the host
 [[inputs.nvidia_smi]]
-  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-  # bin_path = "/usr/bin/nvidia-smi"
+  ## Optional: path to nvidia-smi binary, if not specified or an empty string is specified, we will search for it on exec.LookPath
+  ## We will use "os.Stat" to check whether the nvidia-smi binary actually exists at the location pointed to by the bin_path, 
+  ## if not, an error will be returned as soon as possible (in Init())
+  # bin_path = ""
 
-  ## Optional: timeout for GPU polling
+  ## Optional: timeout for GPU polling, defaults "5s"
   # timeout = "5s"
 ```
 
