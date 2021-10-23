@@ -277,7 +277,7 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			var err error
 			counterHandle, err := m.query.AddCounterToQuery(counterPath)
 
-			objectName, instance, counterName, err = extractCounterInfoFromCounterPath(counterPath)
+			objectName, instance, _, err = extractCounterInfoFromCounterPath(counterPath)
 			if err != nil {
 				return err
 			}
