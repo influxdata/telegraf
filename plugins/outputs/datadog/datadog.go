@@ -194,8 +194,7 @@ func buildMetrics(m telegraf.Metric, interval config.Duration) (map[string]Point
 		}
 		p[0] = float64(m.Time().Unix())
 		if m.Type() == telegraf.Counter {
-			// Divide time.duration by 1e9 to get seconds
-			p[1] /= (float64(interval) / 1e9)
+			p[1] /= time.Duration(interval).Seconds()
 		}
 		ms[field.Key] = p
 	}
