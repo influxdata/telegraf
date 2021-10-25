@@ -24,8 +24,10 @@ This plugin writes to the [Datadog Metrics API][metrics] and requires an
   # compress = true
 
   ## Interval in seconds to divide counters by for Datadog rates/counters
-  # interval = 10
+  # dd_interval = 1s
 ```
+Note: The dd_interval config should match your current Datadog Agent flush interval if you currently use it.
+This ensures that aggregated metrics coming out of Telegraf match what Datadog Agent used to do.
 
 ### Metrics
 

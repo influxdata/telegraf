@@ -18,12 +18,12 @@ import (
 )
 
 type Datadog struct {
-	Apikey   string          `toml:"apikey"`
-	Timeout  config.Duration `toml:"timeout"`
-	URL      string          `toml:"url"`
-	Compress bool            `toml:"compress"`
-	Interval int             `toml:"interval"`
-	Log      telegraf.Logger `toml:"-"`
+	Apikey     string          `toml:"apikey"`
+	Timeout    config.Duration `toml:"timeout"`
+	URL        string          `toml:"url"`
+	Compress   bool            `toml:"compress"`
+	DDInterval config.Duration `toml:"dd_interval"`
+	Log        telegraf.Logger `toml:"-"`
 
 	client *http.Client
 	proxy.HTTPProxy
@@ -46,7 +46,7 @@ var sampleConfig = `
   # compress = true
 
   ## Interval in seconds to divide counters by for Datadog rates/counters
-  # interval = 10
+  # dd_interval = 1s
 `
 
 type TimeSeries struct {
@@ -54,11 +54,10 @@ type TimeSeries struct {
 }
 
 type Metric struct {
-	Metric   string   `json:"metric"`
-	Points   [1]Point `json:"points"`
-	Host     string   `json:"host"`
-	Tags     []string `json:"tags,omitempty"`
-	Interval int64    `json:"omitempty"`
+	Metric string   `json:"metric"`
+	Points [1]Point `json:"points"`
+	Host   string   `json:"host"`
+	Tags   []string `json:"tags,omitempty"`
 }
 
 type Point [2]float64
@@ -90,7 +89,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	metricCounter := 0
 
 	for _, m := range metrics {
-		if dogMs, err := buildMetrics(m, d.Interval); err == nil {
+		if dogMs, err := buildMetrics(m, d.DDInterval); err == nil {
 			metricTags := buildTags(m.TagList())
 			host, _ := m.GetTag("host")
 
@@ -183,7 +182,7 @@ func (d *Datadog) authenticatedURL() string {
 	return fmt.Sprintf("%s?%s", d.URL, q.Encode())
 }
 
-func buildMetrics(m telegraf.Metric, interval int) (map[string]Point, error) {
+func buildMetrics(m telegraf.Metric, interval config.Duration) (map[string]Point, error) {
 	ms := make(map[string]Point)
 	for _, field := range m.FieldList() {
 		if !verifyValue(field.Value) {
@@ -195,7 +194,8 @@ func buildMetrics(m telegraf.Metric, interval int) (map[string]Point, error) {
 		}
 		p[0] = float64(m.Time().Unix())
 		if m.Type() == telegraf.Counter {
-			p[1] /= float64(interval)
+			// Divide time.duration by 1e9 to get seconds
+			p[1] /= (float64(interval) / 1e9)
 		}
 		ms[field.Key] = p
 	}
@@ -249,8 +249,8 @@ func (d *Datadog) Close() error {
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
 		return &Datadog{
-			URL:      datadogAPI,
-			Interval: 1,
+			URL:        datadogAPI,
+			DDInterval: config.Duration(1 * time.Second),
 		}
 	})
 }

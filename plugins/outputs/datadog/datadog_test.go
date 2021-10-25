@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -121,13 +122,13 @@ func TestBuildTags(t *testing.T) {
 func TestBuildPoint(t *testing.T) {
 	var tagtests = []struct {
 		ptIn     telegraf.Metric
-		interval int
+		interval config.Duration
 		outPt    Point
 		err      error
 	}{
 		{
 			testutil.TestMetricWithType(0.0, telegraf.Counter, "test1"),
-			1,
+			config.Duration(1 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -136,7 +137,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(1.0, telegraf.Counter, "test2"),
-			1,
+			config.Duration(1 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				1.0,
@@ -145,7 +146,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(10, telegraf.Counter, "test3"),
-			2,
+			config.Duration(2 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				5.0,
@@ -154,7 +155,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(int32(112345), telegraf.Counter, "test4"),
-			1,
+			config.Duration(1 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				112345.0,
@@ -163,7 +164,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(int64(112345), telegraf.Counter, "test5"),
-			10,
+			config.Duration(10 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				11234.5,
@@ -172,7 +173,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(float32(11234.5), telegraf.Counter, "test6"),
-			1,
+			config.Duration(1 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				11234.5,
@@ -181,7 +182,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(bool(true), telegraf.Counter, "test7"),
-			1,
+			config.Duration(1 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				1.0,
@@ -190,7 +191,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(bool(false), telegraf.Counter, "test8"),
-			1,
+			config.Duration(1 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -199,7 +200,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(int64(0), telegraf.Counter, "test int64"),
-			1,
+			config.Duration(1 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -208,7 +209,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(uint64(0), telegraf.Counter, "test uint64"),
-			1,
+			config.Duration(1 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,
@@ -217,7 +218,7 @@ func TestBuildPoint(t *testing.T) {
 		},
 		{
 			testutil.TestMetricWithType(true, telegraf.Counter, "test bool"),
-			1,
+			config.Duration(1 * time.Second),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				1.0,
