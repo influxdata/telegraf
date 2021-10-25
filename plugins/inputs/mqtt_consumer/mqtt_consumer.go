@@ -44,9 +44,10 @@ type Client interface {
 type ClientFactory func(o *mqtt.ClientOptions) Client
 
 type MQTTConsumer struct {
-	Servers                []string        `toml:"servers"`
-	Topics                 []string        `toml:"topics"`
-	TopicTag               *string         `toml:"topic_tag"`
+	Servers  []string `toml:"servers"`
+	Topics   []string `toml:"topics"`
+	TopicTag *string  `toml:"topic_tag"`
+
 	Username               string          `toml:"username"`
 	Password               string          `toml:"password"`
 	QoS                    int             `toml:"qos"`
@@ -92,6 +93,12 @@ var sampleConfig = `
     "telegraf/+/mem",
     "sensors/#",
   ]
+
+  ## Enable extracting tag values from MQTT topics
+  ## _ denotes an ignored entry in the topic path
+  # topic_tags = "_/format/client/_"
+  # topic_measurement = "measurement/_/_/_"
+  # topic_fields = "_/_/_/temperature" 
 
   ## The message topic will be stored in a tag specified by this value.  If set
   ## to the empty string no topic tag will be created.
