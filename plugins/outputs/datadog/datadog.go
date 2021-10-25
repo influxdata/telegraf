@@ -2,7 +2,6 @@ package datadog
 
 import (
 	"bytes"
-	"compress/zlib"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -54,10 +54,11 @@ type TimeSeries struct {
 }
 
 type Metric struct {
-	Metric string   `json:"metric"`
-	Points [1]Point `json:"points"`
-	Host   string   `json:"host"`
-	Tags   []string `json:"tags,omitempty"`
+	Metric   string   `json:"metric"`
+	Points   [1]Point `json:"points"`
+	Host     string   `json:"host"`
+	Tags     []string `json:"tags,omitempty"`
+	Interval int64    `json:"omitempty"`
 }
 
 type Point [2]float64
@@ -133,16 +134,17 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	var req *http.Request
+	var z *internal.ZlibEncoder
 	if d.Compress {
-		var buf bytes.Buffer
-		compressor := zlib.NewWriter(&buf)
-		if _, err = compressor.Write(tsBytes); err != nil {
+		z, err = internal.NewZlibEncoder()
+		if err != nil {
 			return err
 		}
-		if err = compressor.Close(); err != nil {
+		var buf []byte
+		if buf, err = z.Encode(tsBytes); err != nil {
 			return err
 		}
-		req, err = http.NewRequest("POST", d.authenticatedURL(), &buf)
+		req, err = http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(buf))
 		req.Header.Set("Content-Encoding", "deflate")
 	} else {
 		req, err = http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(tsBytes))
