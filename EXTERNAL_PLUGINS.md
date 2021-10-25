@@ -24,6 +24,7 @@ Pull requests welcome.
 - [net_irtt](https://github.com/iAnatoly/telegraf-input-net_irtt) - Gather information from IRTT network test
 - [dht_sensor](https://github.com/iAnatoly/telegraf-input-dht_sensor) - Gather temperature and humidity from DHTXX sensors
 - [oracle](https://github.com/bonitoo-io/telegraf-input-oracle) - Gather the statistic data from Oracle RDBMS
+- [db2](https://github.com/bonitoo-io/telegraf-input-db2) - Gather the statistic data from DB2 RDBMS
 
 ## Outputs
 - [kinesis](https://github.com/morfien101/telegraf-output-kinesis) - Aggregation and compression of metrics to send Amazon Kinesis.

@@ -31,6 +31,12 @@ The server TLS configuration provides support for TLS mutual authentication:
 ## enable mutually authenticated TLS connections.
 # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
+## Set one or more allowed DNS name to enable a whitelist
+## to verify incoming client certificates.
+## It will go through all available SAN in the certificate,
+## if of them matches the request is accepted.
+# tls_allowed_dns_names = ["client.example.org"]
+
 ## Add service certificate and key.
 # tls_cert = "/etc/telegraf/cert.pem"
 # tls_key = "/etc/telegraf/key.pem"

@@ -59,6 +59,9 @@ and use the old zookeeper connection method.
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
+
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
 

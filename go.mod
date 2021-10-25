@@ -9,11 +9,11 @@ require (
 	cloud.google.com/go/pubsub v1.17.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.5.0
-	github.com/Azure/azure-amqp-common-go/v3 v3.0.1 // indirect
+	github.com/Azure/azure-amqp-common-go/v3 v3.1.0 // indirect
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.13
 	github.com/Azure/azure-kusto-go v0.4.0
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
-	github.com/Azure/azure-sdk-for-go v52.5.0+incompatible // indirect
+	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible // indirect
 	github.com/Azure/azure-storage-blob-go v0.14.0 // indirect
 	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
 	github.com/Azure/go-amqp v0.13.12 // indirect
@@ -47,19 +47,26 @@ require (
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-metrics v0.3.3 // indirect
-	github.com/aws/aws-sdk-go v1.38.69
 	github.com/aws/aws-sdk-go-v2 v1.9.1
 	github.com/aws/aws-sdk-go-v2/config v1.8.2
-	github.com/aws/aws-sdk-go-v2/credentials v1.4.2 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.4.2
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.5.1
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.5.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.0.4 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.2.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.7.0
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.5.2
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.5.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.3.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.1.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.3.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.7.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.6.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.16.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.4.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.7.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.7.1
+	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.3.2
 	github.com/aws/smithy-go v1.8.0
 	github.com/benbjohnson/clock v1.1.0
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -129,8 +136,8 @@ require (
 	github.com/grid-x/serial v0.0.0-20191104121038-e24bc9bf6f08 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
-	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
-	github.com/hashicorp/consul/api v1.11.0
+	github.com/harlow/kinesis-consumer v0.3.6-0.20210911031324-5a873d6e9fec
+	github.com/hashicorp/consul/api v1.9.1
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-hclog v0.16.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
@@ -244,9 +251,9 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.11.1
-	github.com/tidwall/gjson v1.9.0
-	github.com/tidwall/match v1.0.3 // indirect
-	github.com/tidwall/pretty v1.1.0 // indirect
+	github.com/tidwall/gjson v1.10.2
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tinylib/msgp v1.1.6
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
@@ -264,7 +271,7 @@ require (
 	github.com/xdg/scram v1.0.3
 	github.com/xdg/stringprep v1.0.3 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
-	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
+	github.com/yuin/gopher-lua v0.0.0-20200603152657-dc2b0ca8b37e // indirect
 	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
 	go.mongodb.org/mongo-driver v1.7.3
 	go.opencensus.io v0.23.0 // indirect
@@ -327,7 +334,10 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.2.3 // indirect
+	github.com/aws/aws-sdk-go v1.38.3 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
+	github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f // indirect
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
