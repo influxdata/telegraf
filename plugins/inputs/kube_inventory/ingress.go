@@ -20,7 +20,8 @@ func collectIngress(ctx context.Context, acc telegraf.Accumulator, ki *Kubernete
 }
 
 func (ki *KubernetesInventory) gatherIngress(i netv1.Ingress, acc telegraf.Accumulator) {
-	if i.GetCreationTimestamp().Second() == 0 && i.GetCreationTimestamp().Nanosecond() == 0 {
+	creationTs := i.GetCreationTimestamp()
+	if creationTs.IsZero() {
 		return
 	}
 
