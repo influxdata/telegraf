@@ -197,10 +197,10 @@ func (s *MongoDB) createTimeSeriesCollection(databaseCollection string) error {
 func (s *MongoDB) Connect() error {
 	ctx := context.Background()
 	client, err := mongo.Connect(ctx, s.clientOptions)
-	s.client = client
 	if err != nil {
 		return fmt.Errorf("unable to connect: %v", err)
 	}
+	s.client = client
 	err = s.getCollections(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to get collections from specified metric database: %v", err)
