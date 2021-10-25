@@ -93,10 +93,11 @@ and use the old zookeeper connection method.
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
 
-  ## Maximum amount of time the consumer expects a message takes to process for
-  ## the user. If writing to the Messages channel takes longer than this, that
-  ## partition will stop fetching more messages until it can proceed again.
-  ## 
+  ## Maximum amount of time the consumer should take to process messages. If
+  ## the debug log prints messages from sarama about 'abandoning subscription
+  ## to [topic] because consuming was taking too long', increase this value to
+  ## longer than the time taken by the output plugin(s).
+  ##
   ## Note that the effective timeout could be between 'max_processing_time' and
   ## '2 * max_processing_time'.
   # max_processing_time = "100ms"
