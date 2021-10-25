@@ -13,6 +13,7 @@ type ClientConfig struct {
 	TLSCA              string `toml:"tls_ca"`
 	TLSCert            string `toml:"tls_cert"`
 	TLSKey             string `toml:"tls_key"`
+	TLSKeyPwd          string `toml:"tls_key_pwd"`
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
 	ServerName         string `toml:"tls_server_name"`
 
@@ -26,6 +27,7 @@ type ClientConfig struct {
 type ServerConfig struct {
 	TLSCert           string   `toml:"tls_cert"`
 	TLSKey            string   `toml:"tls_key"`
+	TLSKeyPwd         string   `toml:"tls_key_pwd"`
 	TLSAllowedCACerts []string `toml:"tls_allowed_cacerts"`
 	TLSCipherSuites   []string `toml:"tls_cipher_suites"`
 	TLSMinVersion     string   `toml:"tls_min_version"`

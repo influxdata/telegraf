@@ -1,48 +1,348 @@
 package mongodb
 
 import (
-	"github.com/influxdata/telegraf"
+	"testing"
+	"time"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
-func getMetrics() []telegraf.Metric {
-	m := testutil.TestMetric("mymetric")
-	metrics := []telegraf.Metric{m}
-	return metrics
-}
-
-func TestConnectNoAuthAndInsertDocument(t *testing.T) {
+func TestConnectAndWriteIntegrationNoAuth(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	s := MongoDB{
+	plugin := &MongoDB{
 		Dsn:                "mongodb://localhost:27017",
 		AuthenticationType: "NONE",
-		MetricDatabase:     "myMetricDatabase",
-		MetricGranularity:  "minutes",
-		AllowTLSInsecure:   false,
-		TTL:                "15d",
+		MetricDatabase:     "telegraf_test",
+		MetricGranularity:  "seconds",
 	}
 
-	// connect to mongodb
-	err := s.Connect()
+	// validate config
+	err := plugin.Init()
 	require.NoError(t, err)
 
-	// create time series collection when it doesn't exist
-	myTestMetricName := "testMetricName"
-	if !s.DoesCollectionExist(myTestMetricName) {
-		err = s.MongoDBCreateTimeSeriesCollection(myTestMetricName)
-		require.NoError(t, err)
-	}
+	// connect
+	err = plugin.Connect()
+	require.NoError(t, err)
 
-	// test insert
-	err = s.Write(getMetrics())
+	// insert mock metrics
+	err = plugin.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 
 	// cleanup
-	err = s.Close()
+	err = plugin.Close()
 	require.NoError(t, err)
+}
+
+func TestConnectAndWriteIntegrationSCRAMAuth(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		name        string
+		plugin      *MongoDB
+		connErrFunc func(t *testing.T, err error)
+	}{
+		{
+			name: "success with scram authentication",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27018/admin",
+				AuthenticationType: "SCRAM",
+				Username:           "root",
+				Password:           "changeme",
+				MetricDatabase:     "telegraf_test",
+				MetricGranularity:  "seconds",
+			},
+			connErrFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "fail with scram authentication bad password",
+			plugin: &MongoDB{
+				Dsn:                 "mongodb://localhost:27018/admin",
+				AuthenticationType:  "SCRAM",
+				Username:            "root",
+				Password:            "root",
+				MetricDatabase:      "telegraf_test",
+				MetricGranularity:   "seconds",
+				ServerSelectTimeout: config.Duration(time.Duration(5) * time.Second),
+			},
+			connErrFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// validate config
+			err := tt.plugin.Init()
+			require.NoError(t, err)
+
+			if err == nil {
+				// connect
+				err = tt.plugin.Connect()
+				tt.connErrFunc(t, err)
+
+				if err == nil {
+					// insert mock metrics
+					err = tt.plugin.Write(testutil.MockMetrics())
+					require.NoError(t, err)
+
+					// cleanup
+					err = tt.plugin.Close()
+					require.NoError(t, err)
+				}
+			}
+		})
+	}
+}
+
+func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		name        string
+		plugin      *MongoDB
+		connErrFunc func(t *testing.T, err error)
+	}{
+		{
+			name: "success with x509 authentication",
+			plugin: &MongoDB{
+				Dsn:                 "mongodb://localhost:27019",
+				AuthenticationType:  "X509",
+				MetricDatabase:      "telegraf_test",
+				MetricGranularity:   "seconds",
+				ServerSelectTimeout: config.Duration(time.Duration(5) * time.Second),
+				TTL:                 config.Duration(time.Duration(5) * time.Minute),
+				ClientConfig: tls.ClientConfig{
+					TLSCA:              "dev/cacert.pem",
+					TLSKey:             "dev/client.pem",
+					InsecureSkipVerify: false,
+				},
+			},
+			connErrFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "success with x509 authentication using encrypted key file",
+			plugin: &MongoDB{
+				Dsn:                 "mongodb://localhost:27019",
+				AuthenticationType:  "X509",
+				MetricDatabase:      "telegraf_test",
+				MetricGranularity:   "seconds",
+				ServerSelectTimeout: config.Duration(time.Duration(5) * time.Second),
+				TTL:                 config.Duration(time.Duration(5) * time.Minute),
+				ClientConfig: tls.ClientConfig{
+					TLSCA:              "dev/cacert.pem",
+					TLSKey:             "dev/clientenc.pem",
+					TLSKeyPwd:          "changeme",
+					InsecureSkipVerify: false,
+				},
+			},
+			connErrFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "success with x509 authentication missing ca and using insceure tls",
+			plugin: &MongoDB{
+				Dsn:                 "mongodb://localhost:27019",
+				AuthenticationType:  "X509",
+				MetricDatabase:      "telegraf_test",
+				MetricGranularity:   "seconds",
+				ServerSelectTimeout: config.Duration(time.Duration(5) * time.Second),
+				TTL:                 config.Duration(time.Duration(5) * time.Minute),
+				ClientConfig: tls.ClientConfig{
+					TLSKey:             "dev/client.pem",
+					InsecureSkipVerify: true,
+				},
+			},
+			connErrFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "fail with x509 authentication missing ca",
+			plugin: &MongoDB{
+				Dsn:                 "mongodb://localhost:27019",
+				AuthenticationType:  "X509",
+				MetricDatabase:      "telegraf_test",
+				MetricGranularity:   "seconds",
+				ServerSelectTimeout: config.Duration(time.Duration(5) * time.Second),
+				TTL:                 config.Duration(time.Duration(5) * time.Minute),
+				ClientConfig: tls.ClientConfig{
+					TLSKey:             "dev/client.pem",
+					InsecureSkipVerify: false,
+				},
+			},
+			connErrFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+		{
+			name: "fail with x509 authentication using encrypted key file",
+			plugin: &MongoDB{
+				Dsn:                 "mongodb://localhost:27019",
+				AuthenticationType:  "X509",
+				MetricDatabase:      "telegraf_test",
+				MetricGranularity:   "seconds",
+				ServerSelectTimeout: config.Duration(time.Duration(5) * time.Second),
+				TTL:                 config.Duration(time.Duration(5) * time.Minute),
+				ClientConfig: tls.ClientConfig{
+					TLSCA:              "dev/cacert.pem",
+					TLSKey:             "dev/clientenc.pem",
+					TLSKeyPwd:          "badpassword",
+					InsecureSkipVerify: false,
+				},
+			},
+			connErrFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+		{
+			name: "fail with x509 authentication using invalid ca",
+			plugin: &MongoDB{
+				Dsn:                 "mongodb://localhost:27019",
+				AuthenticationType:  "X509",
+				MetricDatabase:      "telegraf_test",
+				MetricGranularity:   "seconds",
+				ServerSelectTimeout: config.Duration(time.Duration(5) * time.Second),
+				TTL:                 config.Duration(time.Duration(5) * time.Minute),
+				ClientConfig: tls.ClientConfig{
+					TLSCA:              "dev/client.pem",
+					TLSKey:             "dev/client.pem",
+					InsecureSkipVerify: false,
+				},
+			},
+			connErrFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+		{
+			name: "fail with x509 authentication using invalid key",
+			plugin: &MongoDB{
+				Dsn:                 "mongodb://localhost:27019",
+				AuthenticationType:  "X509",
+				MetricDatabase:      "telegraf_test",
+				MetricGranularity:   "seconds",
+				ServerSelectTimeout: config.Duration(time.Duration(5) * time.Second),
+				TTL:                 config.Duration(time.Duration(5) * time.Minute),
+				ClientConfig: tls.ClientConfig{
+					TLSCA:              "dev/cacert.pem",
+					TLSKey:             "dev/cacert.pem",
+					InsecureSkipVerify: false,
+				},
+			},
+			connErrFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// validate config
+			err := tt.plugin.Init()
+			require.NoError(t, err)
+
+			if err == nil {
+				// connect
+				err = tt.plugin.Connect()
+				tt.connErrFunc(t, err)
+
+				if err == nil {
+					// insert mock metrics
+					err = tt.plugin.Write(testutil.MockMetrics())
+					require.NoError(t, err)
+
+					// cleanup
+					err = tt.plugin.Close()
+					require.NoError(t, err)
+				}
+			}
+		})
+	}
+}
+
+func TestConfiguration(t *testing.T) {
+	tests := []struct {
+		name    string
+		plugin  *MongoDB
+		errFunc func(t *testing.T, err error)
+	}{
+		{
+			name: "fail with invalid connection string",
+			plugin: &MongoDB{
+				Dsn:                "asdf1234",
+				AuthenticationType: "NONE",
+				MetricDatabase:     "telegraf_test",
+				MetricGranularity:  "seconds",
+				TTL:                config.Duration(time.Duration(5) * time.Minute),
+			},
+		},
+		{
+			name: "fail with missing metric database",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "NONE",
+				MetricGranularity:  "seconds",
+			},
+		},
+		{
+			name: "fail with missing metric granularity",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "NONE",
+				MetricDatabase:     "telegraf_test",
+			},
+		},
+		{
+			name: "fail with invalid metric granularity",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "NONE",
+				MetricDatabase:     "telegraf_test",
+				MetricGranularity:  "somerandomgranularitythatdoesntwork",
+			},
+		},
+		{
+			name: "fail with scram authentication missing username field",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "SCRAM",
+				Password:           "somerandompasswordthatwontwork",
+				MetricDatabase:     "telegraf_test",
+				MetricGranularity:  "seconds",
+			},
+		},
+		{
+			name: "fail with scram authentication missing password field",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "SCRAM",
+				Username:           "somerandomusernamethatwontwork",
+				MetricDatabase:     "telegraf_test",
+				MetricGranularity:  "seconds",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// validate config
+			err := tt.plugin.Init()
+			require.Error(t, err)
+		})
+	}
 }

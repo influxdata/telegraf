@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,16 +14,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-func (s *MongoDB) MongoDBGetCollections(ctx context.Context) error {
+func (s *MongoDB) getCollections(ctx context.Context) error {
 	s.collections = map[string]bson.M{}
-	collections, _ := s.client.Database(s.MetricDatabase).ListCollections(ctx, bson.M{})
+	collections, err := s.client.Database(s.MetricDatabase).ListCollections(ctx, bson.M{})
+	if err != nil {
+		return fmt.Errorf("unable to execute ListCollections: %v", err)
+	}
 	for collections.Next(ctx) {
 		var collection bson.M
 		if err := collections.Decode(&collection); err != nil {
-			s.Log.Error(err)
 			return fmt.Errorf("unable to decode ListCollections: %v", err)
 		}
 		s.collections[collection["name"].(string)] = collection
@@ -29,31 +35,26 @@ func (s *MongoDB) MongoDBGetCollections(ctx context.Context) error {
 	return nil
 }
 
-func (s *MongoDB) MongoDBInsert(ctx context.Context, databaseCollection string, bdoc bson.D) error {
+func (s *MongoDB) insertDocument(ctx context.Context, databaseCollection string, bdoc bson.D) error {
 	collection := s.client.Database(s.MetricDatabase).Collection(databaseCollection)
 	_, err := collection.InsertOne(ctx, &bdoc)
-	if err != nil {
-		s.Log.Error(err)
-	}
 	return err
 }
 
 type MongoDB struct {
-	Dsn                string          `toml:"dsn"`
-	AuthenticationType string          `toml:"authentication"`
-	MetricDatabase     string          `toml:"database"`
-	MetricGranularity  string          `toml:"granularity"`
-	Username           string          `toml:"username"`
-	Password           string          `toml:"password"`
-	CAFile             string          `toml:"cafile"`
-	X509clientpem      string          `toml:"x509clientpem"`
-	X509clientpempwd   string          `toml:"x509clientpempwd"`
-	AllowTLSInsecure   bool            `toml:"allow_tls_insecure"`
-	TTL                string          `toml:"ttl"`
-	Log                telegraf.Logger `toml:"-"`
-	client             *mongo.Client
-	clientOptions      *options.ClientOptions
-	collections        map[string]bson.M
+	Dsn                 string          `toml:"dsn"`
+	AuthenticationType  string          `toml:"authentication"`
+	MetricDatabase      string          `toml:"database"`
+	MetricGranularity   string          `toml:"granularity"`
+	Username            string          `toml:"username"`
+	Password            string          `toml:"password"`
+	ServerSelectTimeout config.Duration `toml:"timeout"`
+	TTL                 config.Duration `toml:"ttl"`
+	Log                 telegraf.Logger `toml:"-"`
+	client              *mongo.Client
+	clientOptions       *options.ClientOptions
+	collections         map[string]bson.M
+	tls.ClientConfig
 }
 
 func (s *MongoDB) Description() string {
@@ -61,20 +62,38 @@ func (s *MongoDB) Description() string {
 }
 
 var sampleConfig = `
-  dsn = "mongodb://localhost:27017/admin"
+  # connection string examples for mongodb
+  dsn = "mongodb://localhost:27017"
   # dsn = "mongodb://mongod1:27017,mongod2:27017,mongod3:27017/admin&replicaSet=myReplSet&w=1"
-  authentication = "NONE" 
+
+  # overrides serverSelectionTimeoutMS in dsn if set
+  # timeout = "30s"
+
+  # default authentication, optional
+  # authentication = "NONE"
+
+  # for SCRAM-SHA-256 authentication
   # authentication = "SCRAM"
-  # username = "root" #username for SCRAM 
-  # password = "****" #password for SCRAM user or private key password if encrypted X509
+  # username = "root"
+  # password = "***"
+
+  # for x509 certificate authentication
   # authentication = "X509"
-  # x509clientpem = "client.pem"
-  # x509clientpempwd = "****"
-  # allow_tls_insecure = false
-  # cafile = "ca.pem" #if using X509 authentication
-  database = "telegraf" #tells telegraf which database to write metrics to. collections are automatically created as time series collections
-  granularity = "seconds" #can be seconds, minutes, or hours
-  ttl = "15d" #set a TTL on the collect. examples: 120m, 24h, or 15d
+  # tls_ca = "ca.pem"
+  # tls_key = "client.pem"
+  # # tls_key_pwd = "changeme" # required for encrypted tls_key
+  # insecure_skip_verify = false
+
+  # database to store measurements and time series collections
+  database = "telegraf"
+
+  # granularity can be seconds, minutes, or hours. 
+  # configuring this value will be based on your input collection frequency. 
+  # see https://docs.mongodb.com/manual/core/timeseries-collections/#create-a-time-series-collection
+  granularity = "seconds" 
+
+  # optionally set a TTL to automatically expire documents from the measurement collections.
+  # ttl = "360h" 
 `
 
 func (s *MongoDB) SampleConfig() string {
@@ -82,31 +101,55 @@ func (s *MongoDB) SampleConfig() string {
 }
 
 func (s *MongoDB) Init() error {
+	if s.MetricDatabase == "" {
+		return fmt.Errorf("metric database must be configured in the client before connecting")
+	}
+	if s.MetricGranularity == "" || (s.MetricGranularity != "seconds" && s.MetricGranularity != "minutes" && s.MetricGranularity != "hours") {
+		return fmt.Errorf("invalid time series collection granularity. please specify \"seconds\", \"minutes\", or \"hours\"")
+	}
+
+	// do some basic Dsn checks
+	if !strings.Contains(s.Dsn, "mongodb://") && !strings.Contains(s.Dsn, "mongodb+srv://") {
+		return fmt.Errorf("invalid connection string. expected mongodb://host:port/?{options} or mongodb+srv://host:port/?{options}")
+	}
+	if !strings.Contains(s.Dsn[strings.Index(s.Dsn, "://")+3:], "/") { //append '/' to Dsn if its missing
+		s.Dsn = s.Dsn + "/"
+	}
+
 	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1) //use new mongodb versioned api
 	s.clientOptions = options.Client().SetServerAPIOptions(serverAPIOptions)
 
-	if s.AuthenticationType == "SCRAM" {
+	switch s.AuthenticationType {
+	case "SCRAM":
+		if s.Username == "" {
+			return fmt.Errorf("SCRAM authentication must specify a password")
+		}
+		if s.Password == "" {
+			return fmt.Errorf("SCRAM authentication must specify a password")
+		}
 		credential := options.Credential{
 			AuthMechanism: "SCRAM-SHA-256",
 			Username:      s.Username,
 			Password:      s.Password,
 		}
 		s.clientOptions = s.clientOptions.SetAuth(credential)
-	} else if s.AuthenticationType == "X509" {
+	case "X509":
 		//format connection string to include tls/x509 options
 		newConnectionString, err := url.Parse(s.Dsn)
 		if err != nil {
-			s.Log.Error(err)
+			return err
 		}
 		q := newConnectionString.Query()
 		q.Set("tls", "true")
-		if s.AllowTLSInsecure {
-			q.Set("tlsAllowInvalidCertificates", strconv.FormatBool(s.AllowTLSInsecure))
+		if s.InsecureSkipVerify {
+			q.Set("tlsInsecure", strconv.FormatBool(s.InsecureSkipVerify))
 		}
-		q.Set("tlsCAFile", s.CAFile)
-		q.Set("sslClientCertificateKeyFile", s.X509clientpem)
-		if s.X509clientpempwd != "" {
-			q.Set("sslClientCertificateKeyPassword", s.X509clientpempwd)
+		if s.TLSCA != "" {
+			q.Set("tlsCAFile", s.TLSCA)
+		}
+		q.Set("sslClientCertificateKeyFile", s.TLSKey)
+		if s.TLSKeyPwd != "" {
+			q.Set("sslClientCertificateKeyPassword", s.TLSKeyPwd)
 		}
 		newConnectionString.RawQuery = q.Encode()
 		s.Dsn = newConnectionString.String()
@@ -118,76 +161,62 @@ func (s *MongoDB) Init() error {
 		s.clientOptions = s.clientOptions.SetAuth(credential)
 	}
 
+	if s.ServerSelectTimeout != 0 {
+		serverSelectionTimeoutSeconds := int64(s.ServerSelectTimeout / 1000000000)
+		s.clientOptions = s.clientOptions.SetServerSelectionTimeout(time.Duration(serverSelectionTimeoutSeconds) * time.Second)
+	}
+
 	s.clientOptions = s.clientOptions.ApplyURI(s.Dsn)
 	return nil
 }
 
-func (s *MongoDB) MongoDBCreateTimeSeriesCollection(databaseCollection string) error {
-	ctx := context.Background()
-	tso := options.TimeSeries()
-	tso.SetTimeField("timestamp")
-	tso.SetMetaField("tags")
-	tso.SetGranularity(s.MetricGranularity)
-
-	cco := options.CreateCollection()
-	if s.TTL != "" {
-		expiregranularity := s.TTL[len(s.TTL)-1:]
-		expireAfterSeconds, err := strconv.ParseInt(s.TTL[0:len(s.TTL)-1], 10, 64)
-		if err != nil {
-			s.Log.Error(err)
-			return fmt.Errorf("unable to parse ttl: %v", err)
-		}
-		if expiregranularity == "m" {
-			expireAfterSeconds = expireAfterSeconds * 60
-		} else if expiregranularity == "h" {
-			expireAfterSeconds = expireAfterSeconds * 60 * 60
-		} else if expiregranularity == "d" {
-			expireAfterSeconds = expireAfterSeconds * 24 * 60 * 60
-		}
-		cco.SetExpireAfterSeconds(expireAfterSeconds)
-	}
-	cco.SetTimeSeriesOptions(tso)
-
-	return s.client.Database(s.MetricDatabase).CreateCollection(ctx, databaseCollection, cco)
-}
-
-func (s *MongoDB) DoesCollectionExist(databaseCollection string) bool {
+func (s *MongoDB) createTimeSeriesCollection(databaseCollection string) error {
 	_, collectionExists := s.collections[databaseCollection]
-	return collectionExists
-}
-
-func (s *MongoDB) UpdateCollectionMap(databaseCollection string) {
-	s.collections[databaseCollection] = bson.M{"bustedware": "llc"}
+	if !collectionExists {
+		ctx := context.Background()
+		tso := options.TimeSeries()
+		tso.SetTimeField("timestamp")
+		tso.SetMetaField("tags")
+		tso.SetGranularity(s.MetricGranularity)
+		cco := options.CreateCollection()
+		expireAfterSeconds := int64(s.TTL / 1000000000)
+		if expireAfterSeconds != 0 {
+			cco.SetExpireAfterSeconds(expireAfterSeconds)
+		}
+		cco.SetTimeSeriesOptions(tso)
+		err := s.client.Database(s.MetricDatabase).CreateCollection(ctx, databaseCollection, cco)
+		if err != nil {
+			return fmt.Errorf("unable to create time series collection: %v", err)
+		}
+		s.collections[databaseCollection] = bson.M{}
+		return err
+	}
+	return nil
 }
 
 func (s *MongoDB) Connect() error {
 	ctx := context.Background()
-
-	s.Log.Debugf("connecting to " + s.Dsn)
 	client, err := mongo.Connect(ctx, s.clientOptions)
 	s.client = client
 	if err != nil {
 		return fmt.Errorf("unable to connect: %v", err)
 	}
-	s.Log.Debugf("connected!")
-	err = s.MongoDBGetCollections(ctx)
-	return err
+	err = s.getCollections(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to get collections from specified metric database: %v", err)
+	}
+	return nil
 }
 
 func (s *MongoDB) Close() error {
 	ctx := context.Background()
-	err := s.client.Disconnect(ctx)
-	if err != nil {
-		s.Log.Error(err)
-	}
-	s.Log.Debugf("Connection to MongoDB closed.")
-	return err
+	return s.client.Disconnect(ctx)
 }
 
 // all metric/measurement fields are parent level of document
 // metadata field is named "tags"
 // mongodb stores timestamp as UTC. conversion should be performed during reads in app or in aggregation pipeline
-func MarshalMetric(metric telegraf.Metric) bson.D {
+func marshalMetric(metric telegraf.Metric) bson.D {
 	var bdoc bson.D
 	for k, v := range metric.Fields() {
 		bdoc = append(bdoc, primitive.E{Key: k, Value: v})
@@ -204,20 +233,14 @@ func MarshalMetric(metric telegraf.Metric) bson.D {
 func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 	for _, metric := range metrics {
-		// ensure collection gets created as time series collection.
-		if !s.DoesCollectionExist(metric.Name()) {
-			s.Log.Debugf("creating time series collection for metric " + metric.Name() + "...")
-			err := s.MongoDBCreateTimeSeriesCollection(metric.Name())
-			if err != nil {
-				s.Log.Error(err)
-			}
-			s.UpdateCollectionMap(metric.Name())
-		}
-
-		bdoc := MarshalMetric(metric)
-		err := s.MongoDBInsert(ctx, metric.Name(), bdoc)
+		err := s.createTimeSeriesCollection(metric.Name())
 		if err != nil {
-			s.Log.Error(err)
+			return err
+		}
+		bdoc := marshalMetric(metric)
+		err = s.insertDocument(ctx, metric.Name(), bdoc)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
