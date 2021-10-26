@@ -49,6 +49,11 @@ func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	users, err := host.Users()
+	s.Log.Debugf("Found %i number of users", len(users))
+	if err != nil {
+		s.Log.Debugf("Oops error, ", err.Error())
+	}
+
 	if err == nil {
 		fields["n_users"] = len(users)
 	} else if os.IsNotExist(err) {
