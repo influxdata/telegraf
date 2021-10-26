@@ -31,6 +31,10 @@ information.
   ## 1024.  See README.md for details
   ##
   # service_address = "udp://:162"
+  ##
+  ## Path to mib files
+  # path = ["/usr/share/snmp/mibs"]
+  ##
   ## Timeout running snmptranslate command
   # timeout = "5s"
   ## Snmp version

@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package intel_powerstat
@@ -92,7 +93,6 @@ func (r *raplServiceImpl) getConstraintMaxPowerWatts(socketID string) (float64, 
 
 	socketMaxPower, _, err := r.fs.readFileToFloat64(socketMaxPowerFile)
 	return convertMicroWattToWatt(socketMaxPower), err
-
 }
 
 func (r *raplServiceImpl) prepareData() {
@@ -176,8 +176,8 @@ func (r *raplServiceImpl) findDramFolder(raplFolders []string, socketID string) 
 }
 
 func (r *raplServiceImpl) calculateData(socketID string, socketEnergyUjFile io.Reader, dramEnergyUjFile io.Reader,
-	socketMaxEnergyUjFile io.Reader, dramMaxEnergyUjFile io.Reader) error {
-
+	socketMaxEnergyUjFile io.Reader, dramMaxEnergyUjFile io.Reader,
+) error {
 	newSocketEnergy, _, err := r.readEnergyInJoules(socketEnergyUjFile)
 	if err != nil {
 		return err

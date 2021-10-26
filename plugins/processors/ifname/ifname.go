@@ -8,7 +8,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
@@ -158,7 +157,7 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 	for {
 		m, age, err := d.getMap(agent)
 		if err != nil {
-			return fmt.Errorf("couldn't retrieve the table of interface names: %w", err)
+			return fmt.Errorf("couldn't retrieve the table of interface names for %s: %w", agent, err)
 		}
 
 		name, found := m[num]
@@ -172,7 +171,7 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 		// the interface we're interested in.  If the entry is old
 		// enough, retrieve it from the agent once more.
 		if age < minRetry {
-			return fmt.Errorf("interface number %d isn't in the table of interface names", num)
+			return fmt.Errorf("interface number %d isn't in the table of interface names on %s", num, agent)
 		}
 
 		if firstTime {
@@ -182,7 +181,7 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 		}
 
 		// not found, cache hit, retrying
-		return fmt.Errorf("missing interface but couldn't retrieve table")
+		return fmt.Errorf("missing interface but couldn't retrieve table for %v", agent)
 	}
 }
 
@@ -201,19 +200,19 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
-	d.ifTable, err = d.makeTable("IF-MIB::ifTable")
+	d.ifTable, err = d.makeTable("IF-MIB::ifDescr")
 	if err != nil {
-		return fmt.Errorf("looking up ifTable in local MIB: %w", err)
+		return fmt.Errorf("looking up ifDescr in local MIB: %w", err)
 	}
-	d.ifXTable, err = d.makeTable("IF-MIB::ifXTable")
+	d.ifXTable, err = d.makeTable("IF-MIB::ifName")
 	if err != nil {
-		return fmt.Errorf("looking up ifXTable in local MIB: %w", err)
+		return fmt.Errorf("looking up ifName in local MIB: %w", err)
 	}
 
 	fn := func(m telegraf.Metric) []telegraf.Metric {
 		err := d.addTag(m)
 		if err != nil {
-			d.Log.Debugf("Error adding tag %v", err)
+			d.Log.Debugf("Error adding tag: %v", err)
 		}
 		return []telegraf.Metric{m}
 	}
@@ -226,7 +225,7 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *IfName) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+func (d *IfName) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	d.parallel.Enqueue(metric)
 	return nil
 }
@@ -338,7 +337,7 @@ func init() {
 			ClientConfig: snmp.ClientConfig{
 				Retries:        3,
 				MaxRepetitions: 10,
-				Timeout:        internal.Duration{Duration: 5 * time.Second},
+				Timeout:        config.Duration(5 * time.Second),
 				Version:        2,
 				Community:      "public",
 			},
@@ -347,11 +346,14 @@ func init() {
 	})
 }
 
-func makeTableNoMock(tableName string) (*si.Table, error) {
+func makeTableNoMock(fieldName string) (*si.Table, error) {
 	var err error
 	tab := si.Table{
-		Oid:        tableName,
+		Name:       "ifTable",
 		IndexAsTag: true,
+		Fields: []si.Field{
+			{Oid: fieldName},
+		},
 	}
 
 	err = tab.Init()

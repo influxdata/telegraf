@@ -1,0 +1,87 @@
+{
+    "?xml": {
+        "@version": "1.0",
+        "@encoding": "utf-8"
+    },
+    "root": {
+        "@id": "1",
+        "uri": {
+            "#cdata-section": "http://api.bart.gov/api/etd.aspx?cmd=etd&orig=POWL&json=y"
+        },
+        "date": "06/03/2021",
+        "time": "09:46:01 AM PDT",
+        "station": [
+            {
+                "name": "Powell St.",
+                "abbr": "POWL",
+                "etd": [
+                    {
+                        "destination": "Antioch",
+                        "abbreviation": "ANTC",
+                        "limited": "0",
+                        "estimate": [
+                            {
+                                "minutes": "9",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "YELLOW",
+                                "hexcolor": "#ffff33",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "40",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "YELLOW",
+                                "hexcolor": "#ffff33",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "70",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "YELLOW",
+                                "hexcolor": "#ffff33",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            }
+                        ]
+                    },
+                    {
+                        "destination": "Berryessa",
+                        "abbreviation": "BERY",
+                        "limited": "0",
+                        "estimate": [
+                            {
+                                "minutes": "12",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "GREEN",
+                                "hexcolor": "#339933",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "42",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "GREEN",
+                                "hexcolor": "#339933",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "message": ""
+    }
+}

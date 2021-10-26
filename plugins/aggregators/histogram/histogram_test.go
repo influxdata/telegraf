@@ -25,7 +25,7 @@ func NewTestHistogram(cfg []config, reset bool, cumulative bool) telegraf.Aggreg
 }
 
 // firstMetric1 is the first test metric
-var firstMetric1, _ = metric.New(
+var firstMetric1 = metric.New(
 	"first_metric_name",
 	tags{},
 	fields{
@@ -36,7 +36,7 @@ var firstMetric1, _ = metric.New(
 )
 
 // firstMetric1 is the first test metric with other value
-var firstMetric2, _ = metric.New(
+var firstMetric2 = metric.New(
 	"first_metric_name",
 	tags{},
 	fields{
@@ -47,7 +47,7 @@ var firstMetric2, _ = metric.New(
 )
 
 // secondMetric is the second metric
-var secondMetric, _ = metric.New(
+var secondMetric = metric.New(
 	"second_metric_name",
 	tags{},
 	fields{
@@ -210,7 +210,6 @@ func TestHistogramWithAllFieldsNonCumulative(t *testing.T) {
 // TestHistogramWithTwoPeriodsAndAllFields tests two metrics getting added with a push/reset in between (simulates
 // getting added in different periods) for all fields
 func TestHistogramWithTwoPeriodsAndAllFields(t *testing.T) {
-
 	var cfg []config
 	cfg = append(cfg, config{Metric: "first_metric_name", Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
 	histogram := NewTestHistogram(cfg, false, true)

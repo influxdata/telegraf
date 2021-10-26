@@ -18,14 +18,13 @@ func TestOrderedJobsStayOrdered(t *testing.T) {
 	p := parallel.NewOrdered(acc, jobFunc, 10000, 10)
 	now := time.Now()
 	for i := 0; i < 20000; i++ {
-		m, err := metric.New("test",
+		m := metric.New("test",
 			map[string]string{},
 			map[string]interface{}{
 				"val": i,
 			},
 			now,
 		)
-		require.NoError(t, err)
 		now = now.Add(1)
 		p.Enqueue(m)
 	}
@@ -51,14 +50,13 @@ func TestUnorderedJobsDontDropAnyJobs(t *testing.T) {
 	expectedTotal := 0
 	for i := 0; i < 20000; i++ {
 		expectedTotal += i
-		m, err := metric.New("test",
+		m := metric.New("test",
 			map[string]string{},
 			map[string]interface{}{
 				"val": i,
 			},
 			now,
 		)
-		require.NoError(t, err)
 		now = now.Add(1)
 		p.Enqueue(m)
 	}
@@ -79,7 +77,7 @@ func BenchmarkOrdered(b *testing.B) {
 
 	p := parallel.NewOrdered(acc, jobFunc, 10000, 10)
 
-	m, _ := metric.New("test",
+	m := metric.New("test",
 		map[string]string{},
 		map[string]interface{}{
 			"val": 1,
@@ -99,7 +97,7 @@ func BenchmarkUnordered(b *testing.B) {
 
 	p := parallel.NewUnordered(acc, jobFunc, 10)
 
-	m, _ := metric.New("test",
+	m := metric.New("test",
 		map[string]string{},
 		map[string]interface{}{
 			"val": 1,

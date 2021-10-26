@@ -103,6 +103,16 @@ do
 done < manifest
 echo ""
 
+package="$(grep *_darwin_amd64.dmg manifest | cut -f2 -d' ')"
+cat -<<EOF
+      {
+        "platform": "macOS (via signed .dmg)",
+        "link": "https://dl.influxdata.com/telegraf/releases/$package",
+        "code": [
+
+        ]
+      },
+EOF
 package="$(grep *_amd64.deb manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
@@ -131,8 +141,8 @@ cat -<<EOF
         "platform": "Windows Binaries (64-bit)",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
-          "wget https://dl.influxdata.com/telegraf/releases/$package",
-          "unzip $package"
+          "wget https://dl.influxdata.com/telegraf/releases/$package -UseBasicParsing -OutFile $package",
+          "Expand-Archive .\\$package -DestinationPath 'C:\\Program Files\\InfluxData\\telegraf\\'"
         ]
       },
 EOF
@@ -140,6 +150,17 @@ package="$(grep *_linux_amd64.tar.gz manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "Linux Binaries (64-bit)",
+        "sha256":"$(sha256sum $package | cut -f1 -d' ')",
+        "code":[
+          "wget https://dl.influxdata.com/telegraf/releases/$package",
+          "tar xf $package"
+        ]
+      },
+EOF
+package="$(grep *_static_linux_amd64.tar.gz manifest | cut -f2 -d' ')"
+cat -<<EOF
+      {
+        "platform": "Linux Binaries (64-bit, static)",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package",
@@ -161,7 +182,18 @@ EOF
 package="$(grep *linux_armhf.tar.gz manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
-        "platform": "Linux Binaries (ARM)",
+        "platform": "Linux Binaries (ARMv7)",
+        "sha256":"$(sha256sum $package | cut -f1 -d' ')",
+        "code":[
+          "wget https://dl.influxdata.com/telegraf/releases/$package",
+          "tar xf $package"
+        ]
+      },
+EOF
+package="$(grep *linux_arm64.tar.gz manifest | cut -f2 -d' ')"
+cat -<<EOF
+      {
+        "platform": "Linux Binaries (ARMv8)",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package",
@@ -178,4 +210,5 @@ aws s3 sync ./ "s3://$BUCKET/" \
 	--include "*.zip" \
 	--include "*.DIGESTS" \
 	--include "*.asc" \
+	--include "*.dmg" \
 	--acl public-read

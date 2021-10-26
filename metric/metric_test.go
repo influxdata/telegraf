@@ -20,8 +20,7 @@ func TestNewMetric(t *testing.T) {
 		"usage_idle": float64(99),
 		"usage_busy": float64(1),
 	}
-	m, err := New("cpu", tags, fields, now)
-	require.NoError(t, err)
+	m := New("cpu", tags, fields, now)
 
 	require.Equal(t, "cpu", m.Name())
 	require.Equal(t, tags, m.Tags())
@@ -38,10 +37,7 @@ func baseMetric() telegraf.Metric {
 	}
 	now := time.Now()
 
-	m, err := New("cpu", tags, fields, now)
-	if err != nil {
-		panic(err)
-	}
+	m := New("cpu", tags, fields, now)
 	return m
 }
 
@@ -176,7 +172,7 @@ func TestTagList_Sorted(t *testing.T) {
 
 func TestEquals(t *testing.T) {
 	now := time.Now()
-	m1, err := New("cpu",
+	m1 := New("cpu",
 		map[string]string{
 			"host": "localhost",
 		},
@@ -185,9 +181,8 @@ func TestEquals(t *testing.T) {
 		},
 		now,
 	)
-	require.NoError(t, err)
 
-	m2, err := New("cpu",
+	m2 := New("cpu",
 		map[string]string{
 			"host": "localhost",
 		},
@@ -196,7 +191,6 @@ func TestEquals(t *testing.T) {
 		},
 		now,
 	)
-	require.NoError(t, err)
 
 	lhs := m1.(*metric)
 	require.Equal(t, lhs, m2)
@@ -208,7 +202,7 @@ func TestEquals(t *testing.T) {
 }
 
 func TestHashID(t *testing.T) {
-	m, _ := New(
+	m := New(
 		"cpu",
 		map[string]string{
 			"datacenter": "us-east-1",
@@ -241,7 +235,7 @@ func TestHashID(t *testing.T) {
 }
 
 func TestHashID_Consistency(t *testing.T) {
-	m, _ := New(
+	m := New(
 		"cpu",
 		map[string]string{
 			"datacenter": "us-east-1",
@@ -255,7 +249,7 @@ func TestHashID_Consistency(t *testing.T) {
 	)
 	hash := m.HashID()
 
-	m2, _ := New(
+	m2 := New(
 		"cpu",
 		map[string]string{
 			"datacenter": "us-east-1",
@@ -274,7 +268,7 @@ func TestHashID_Consistency(t *testing.T) {
 }
 
 func TestHashID_Delimiting(t *testing.T) {
-	m1, _ := New(
+	m1 := New(
 		"cpu",
 		map[string]string{
 			"a": "x",
@@ -286,7 +280,7 @@ func TestHashID_Delimiting(t *testing.T) {
 		},
 		time.Now(),
 	)
-	m2, _ := New(
+	m2 := New(
 		"cpu",
 		map[string]string{
 			"a": "xbycz",
@@ -328,15 +322,7 @@ func TestValueType(t *testing.T) {
 	fields := map[string]interface{}{
 		"value": float64(42),
 	}
-	m, err := New("cpu", tags, fields, now, telegraf.Gauge)
-	assert.NoError(t, err)
+	m := New("cpu", tags, fields, now, telegraf.Gauge)
 
 	assert.Equal(t, telegraf.Gauge, m.Type())
-}
-
-func TestCopyAggregate(t *testing.T) {
-	m1 := baseMetric()
-	m1.SetAggregate(true)
-	m2 := m1.Copy()
-	assert.True(t, m2.IsAggregate())
 }

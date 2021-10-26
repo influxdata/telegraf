@@ -9,7 +9,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 [[inputs.modbus]]
   ## Connection Configuration
   ##
-  ## The plugin supports connections to PLCs via MODBUS/TCP or
+  ## The plugin supports connections to PLCs via MODBUS/TCP, RTU over TCP, ASCII over TCP or
   ## via serial line communication in binary (RTU) or readable (ASCII) encoding
   ##
   ## Device name
@@ -36,8 +36,15 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   # data_bits = 8
   # parity = "N"
   # stop_bits = 1
+
+  ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and "ASCIIoverTCP"
+  ## default behaviour is "TCP" if the controller is TCP
+  ## For Serial you can choose between "RTU" and "ASCII"
   # transmission_mode = "RTU"
 
+  ## Trace the connection to the modbus device as debug messages
+  ## Note: You have to enable telegraf's debug mode to see those messages!
+  # debug_connection = false
 
   ## Measurements
   ##
@@ -85,7 +92,21 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
     { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
     { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
   ]
+
+  ## Enable workarounds required by some devices to work correctly
+  # [inputs.modbus.workarounds]
+    ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
+    # pause_between_requests = "0ms"
+    ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
+    ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
+    ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
+    # close_connection_after_gather = false
 ```
+
+### Notes
+You can debug Modbus connection issues by enabling `debug_connection`. To see those debug messages Telegraf has to be started with debugging enabled (i.e. with `--debug` option). Please be aware that connection tracing will produce a lot of messages and should **NOT** be used in production environments.
+
+Please use `pause_between_requests` with care. Especially make sure that the total gather time, including the pause(s), does not exceed the configured collection interval. Note, that pauses add up if multiple requests are sent!
 
 ### Metrics
 
@@ -96,7 +117,7 @@ Metric are custom and configured using the `discrete_inputs`, `coils`,
 
 The field `data_type` defines the representation of the data value on input from the modbus registers.
 The input values are then converted from the given `data_type` to a type that is apropriate when
-sending the value to the output plugin. These output types are usually one of string, 
+sending the value to the output plugin. These output types are usually one of string,
 integer or floating-point-number. The size of the output type is assumed to be large enough
 for all supported input types. The mapping from the input type to the output type is fixed
 and cannot be configured.
@@ -114,7 +135,7 @@ always include the sign and therefore there exists no variant.
 
 These types are handled as an integer type on input, but are converted to floating point representation
 for further processing (e.g. scaling). Use one of these types when the input value is a decimal fixed point
-representation of a non-integer value. 
+representation of a non-integer value.
 
 Select the type `UFIXED` when the input type is declared to hold unsigned integer values, which cannot
 be negative. The documentation of your modbus device should indicate this by a term like
@@ -126,6 +147,30 @@ with N decimal places'.
 
 (FLOAT32 is deprecated and should not be used any more. UFIXED provides the same conversion
 from unsigned values).
+
+### Trouble shooting
+
+#### Strange data
+Modbus documentations are often a mess. People confuse memory-address (starts at one) and register address (starts at zero) or stay unclear about the used word-order. Furthermore, there are some non-standard implementations that also
+swap the bytes within the register word (16-bit).
+
+If you get an error or don't get the expected values from your device, you can try the following steps (assuming a 32-bit value).
+
+In case are using a serial device and get an `permission denied` error, please check the permissions of your serial device and change accordingly.
+
+In case you get an `exception '2' (illegal data address)` error you might try to offset your `address` entries by minus one as it is very likely that there is a confusion between memory and register addresses.
+
+In case you see strange values, the `byte_order` might be off. You can either probe all combinations (`ABCD`, `CDBA`, `BADC` or `DCBA`) or you set `byte_order="ABCD" data_type="UINT32"` and use the resulting value(s) in an online converter like [this](https://www.scadacore.com/tools/programming-calculators/online-hex-converter/). This makes especially sense if you don't want to mess with the device, deal with 64-bit values and/or don't know the `data_type` of your register (e.g. fix-point floating values vs. IEEE floating point).
+
+If your data still looks corrupted, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
+
+#### Workarounds
+Some Modbus devices need special read characteristics when reading data and will fail otherwise. For example, there are certain serial devices that need a certain pause between register read requests. Others might only offer a limited number of simultaneously connected devices, like serial devices or some ModbusTCP devices. In case you need to access those devices in parallel you might want to disconnect immediately after the plugin finished reading.
+
+To allow this plugin to also handle those "special" devices there is the `workarounds` configuration options. In case your documentation states certain read requirements or you get read timeouts or other read errors you might want to try one or more workaround options.
+If you find that other/more workarounds are required for your device, please let us know.
+
+In case your device needs a workaround that is not yet implemented, please open an issue or submit a pull-request.
 
 ### Example Output
 

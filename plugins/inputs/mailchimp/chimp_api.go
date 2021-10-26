@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -76,7 +75,9 @@ func (e APIError) Error() string {
 
 func chimpErrorCheck(body []byte) error {
 	var e APIError
-	json.Unmarshal(body, &e)
+	if err := json.Unmarshal(body, &e); err != nil {
+		return err
+	}
 	if e.Title != "" || e.Status != 0 {
 		return e
 	}
@@ -124,7 +125,7 @@ func (a *ChimpAPI) GetReport(campaignID string) (Report, error) {
 func runChimp(api *ChimpAPI, params ReportsParams) ([]byte, error) {
 	client := &http.Client{
 		Transport: api.Transport,
-		Timeout:   time.Duration(4 * time.Second),
+		Timeout:   4 * time.Second,
 	}
 
 	var b bytes.Buffer
@@ -146,11 +147,11 @@ func runChimp(api *ChimpAPI, params ReportsParams) ([]byte, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
-		body, _ := ioutil.ReadAll(io.LimitReader(resp.Body, 200))
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return nil, fmt.Errorf("%s returned HTTP status %s: %q", api.url.String(), resp.Status, body)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

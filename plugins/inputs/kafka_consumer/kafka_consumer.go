@@ -66,6 +66,9 @@ const sampleConfig = `
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
+
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
 
@@ -77,7 +80,7 @@ const sampleConfig = `
   ##  3 : LZ4
   ##  4 : ZSTD
    # compression_codec = 0
-   
+
   ## Initial offset position; one of "oldest" or "newest".
   # offset = "oldest"
 
@@ -107,7 +110,6 @@ const sampleConfig = `
 
 const (
 	defaultMaxUndeliveredMessages = 1000
-	defaultMaxMessageLen          = 1000000
 	defaultConsumerGroup          = "telegraf_metrics_consumers"
 	reconnectDelay                = 5 * time.Second
 )
@@ -236,6 +238,8 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			err := k.consumer.Consume(ctx, k.Topics, handler)
 			if err != nil {
 				acc.AddError(err)
+				// Ignore returned error as we cannot do anything about it anyway
+				//nolint:errcheck,revive
 				internal.SleepContext(ctx, reconnectDelay)
 			}
 		}
@@ -256,7 +260,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *KafkaConsumer) Gather(acc telegraf.Accumulator) error {
+func (k *KafkaConsumer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -314,11 +318,11 @@ func (h *ConsumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
 }
 
 // Run processes any delivered metrics during the lifetime of the session.
-func (h *ConsumerGroupHandler) run(ctx context.Context) error {
+func (h *ConsumerGroupHandler) run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		case track := <-h.acc.Delivered():
 			h.onDelivery(track)
 		}
@@ -394,7 +398,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	for {
 		err := h.Reserve(ctx)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		select {

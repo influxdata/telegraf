@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/influxdata/telegraf"
 )
@@ -16,16 +16,13 @@ func collectPersistentVolumeClaims(ctx context.Context, acc telegraf.Accumulator
 		return
 	}
 	for _, pvc := range list.Items {
-		if err = ki.gatherPersistentVolumeClaim(*pvc, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherPersistentVolumeClaim(pvc, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherPersistentVolumeClaim(pvc v1.PersistentVolumeClaim, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherPersistentVolumeClaim(pvc corev1.PersistentVolumeClaim, acc telegraf.Accumulator) {
 	phaseType := 3
-	switch strings.ToLower(pvc.Status.GetPhase()) {
+	switch strings.ToLower(string(pvc.Status.Phase)) {
 	case "bound":
 		phaseType = 0
 	case "lost":
@@ -37,18 +34,20 @@ func (ki *KubernetesInventory) gatherPersistentVolumeClaim(pvc v1.PersistentVolu
 		"phase_type": phaseType,
 	}
 	tags := map[string]string{
-		"pvc_name":     pvc.Metadata.GetName(),
-		"namespace":    pvc.Metadata.GetNamespace(),
-		"phase":        pvc.Status.GetPhase(),
-		"storageclass": pvc.Spec.GetStorageClassName(),
+		"pvc_name":  pvc.Name,
+		"namespace": pvc.Namespace,
+		"phase":     string(pvc.Status.Phase),
 	}
-	for key, val := range pvc.GetSpec().GetSelector().GetMatchLabels() {
-		if ki.selectorFilter.Match(key) {
-			tags["selector_"+key] = val
+	if pvc.Spec.StorageClassName != nil {
+		tags["storageclass"] = *pvc.Spec.StorageClassName
+	}
+	if pvc.Spec.Selector != nil {
+		for key, val := range pvc.Spec.Selector.MatchLabels {
+			if ki.selectorFilter.Match(key) {
+				tags["selector_"+key] = val
+			}
 		}
 	}
 
 	acc.AddFields(persistentVolumeClaimMeasurement, fields, tags)
-
-	return nil
 }

@@ -7,6 +7,7 @@ The pf plugin retrieves this information by invoking the `pfstat` command. The `
 * Run telegraf as root. This is strongly discouraged.
 * Change the ownership and permissions for /dev/pf such that the user telegraf runs at can read the /dev/pf device file. This is probably not that good of an idea either.
 * Configure sudo to grant telegraf to run `pfctl` as root. This is the most restrictive option, but require sudo setup.
+* Add "telegraf" to the "proxy" group as /dev/pf is owned by root:proxy. 
 
 ### Using sudo
 

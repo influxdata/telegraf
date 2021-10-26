@@ -2,14 +2,13 @@ package cloudwatch
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"math"
 	"sort"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
-
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
@@ -83,7 +82,7 @@ func TestBuildMetricDatums(t *testing.T) {
 		assert.Equal(0, len(datums), fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
 	}
 
-	statisticMetric, _ := metric.New(
+	statisticMetric := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"value_max": float64(10), "value_min": float64(0), "value_sum": float64(100), "value_count": float64(20)},
@@ -92,7 +91,7 @@ func TestBuildMetricDatums(t *testing.T) {
 	datums := BuildMetricDatum(true, false, statisticMetric)
 	assert.Equal(1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", statisticMetric))
 
-	multiFieldsMetric, _ := metric.New(
+	multiFieldsMetric := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"valueA": float64(10), "valueB": float64(0), "valueC": float64(100), "valueD": float64(20)},
@@ -101,7 +100,7 @@ func TestBuildMetricDatums(t *testing.T) {
 	datums = BuildMetricDatum(true, false, multiFieldsMetric)
 	assert.Equal(4, len(datums), fmt.Sprintf("Each field should create a Datum {value: %v}", multiFieldsMetric))
 
-	multiStatisticMetric, _ := metric.New(
+	multiStatisticMetric := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{
@@ -117,8 +116,8 @@ func TestBuildMetricDatums(t *testing.T) {
 }
 
 func TestMetricDatumResolution(t *testing.T) {
-	const expectedStandardResolutionValue = int64(60)
-	const expectedHighResolutionValue = int64(1)
+	const expectedStandardResolutionValue = int32(60)
+	const expectedHighResolutionValue = int32(1)
 
 	assert := assert.New(t)
 
@@ -153,19 +152,19 @@ func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
 func TestPartitionDatums(t *testing.T) {
 	assert := assert.New(t)
 
-	testDatum := cloudwatch.MetricDatum{
+	testDatum := types.MetricDatum{
 		MetricName: aws.String("Foo"),
 		Value:      aws.Float64(1),
 	}
 
-	zeroDatum := []*cloudwatch.MetricDatum{}
-	oneDatum := []*cloudwatch.MetricDatum{&testDatum}
-	twoDatum := []*cloudwatch.MetricDatum{&testDatum, &testDatum}
-	threeDatum := []*cloudwatch.MetricDatum{&testDatum, &testDatum, &testDatum}
+	zeroDatum := []types.MetricDatum{}
+	oneDatum := []types.MetricDatum{testDatum}
+	twoDatum := []types.MetricDatum{testDatum, testDatum}
+	threeDatum := []types.MetricDatum{testDatum, testDatum, testDatum}
 
-	assert.Equal([][]*cloudwatch.MetricDatum{}, PartitionDatums(2, zeroDatum))
-	assert.Equal([][]*cloudwatch.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
-	assert.Equal([][]*cloudwatch.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
-	assert.Equal([][]*cloudwatch.MetricDatum{twoDatum}, PartitionDatums(2, twoDatum))
-	assert.Equal([][]*cloudwatch.MetricDatum{twoDatum, oneDatum}, PartitionDatums(2, threeDatum))
+	assert.Equal([][]types.MetricDatum{}, PartitionDatums(2, zeroDatum))
+	assert.Equal([][]types.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
+	assert.Equal([][]types.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
+	assert.Equal([][]types.MetricDatum{twoDatum}, PartitionDatums(2, twoDatum))
+	assert.Equal([][]types.MetricDatum{twoDatum, oneDatum}, PartitionDatums(2, threeDatum))
 }

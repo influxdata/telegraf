@@ -88,7 +88,6 @@ func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf
 			results = append(results, metrics...)
 		default:
 			return nil, ErrWrongType
-
 		}
 	}
 
@@ -143,11 +142,9 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 	}
 
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)
-	metric, err := metric.New(name, tags, nFields, timestamp)
-	if err != nil {
-		return nil, err
-	}
-	return []telegraf.Metric{metric}, nil
+	m := metric.New(name, tags, nFields, timestamp)
+
+	return []telegraf.Metric{m}, nil
 }
 
 // will take in field map with strings and bools,
@@ -155,7 +152,6 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 // will delete any strings/bools that shouldn't be fields
 // assumes that any non-numeric values in TagKeys should be displayed as tags
 func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
-
 	for name, value := range fields {
 		if p.tagKeys == nil {
 			continue
@@ -197,9 +193,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if p.query != "" {
 		result := gjson.GetBytes(buf, p.query)
 		buf = []byte(result.Raw)
-		if !result.IsArray() && !result.IsObject() {
-			err := fmt.Errorf("E! Query path must lead to a JSON object or array of objects, but lead to: %v", result.Type)
+		if !result.IsArray() && !result.IsObject() && result.Type != gjson.Null {
+			err := fmt.Errorf("E! Query path must lead to a JSON object, array of objects or null, but lead to: %v", result.Type)
 			return nil, err
+		}
+		if result.Type == gjson.Null {
+			return nil, nil
 		}
 	}
 
@@ -221,6 +220,8 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return p.parseObject(v, timestamp)
 	case []interface{}:
 		return p.parseArray(v, timestamp)
+	case nil:
+		return nil, nil
 	default:
 		return nil, ErrWrongType
 	}

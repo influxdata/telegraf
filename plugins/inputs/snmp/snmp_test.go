@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	config "github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
@@ -82,6 +81,15 @@ var tsc = &testSNMPConnection{
 		".1.0.0.2.1.5.0.9.9": 11,
 		".1.0.0.2.1.5.1.9.9": 22,
 		".1.0.0.0.1.6.0":     ".1.0.0.0.1.7",
+		".1.0.0.3.1.1.10":    "instance",
+		".1.0.0.3.1.1.11":    "instance2",
+		".1.0.0.3.1.1.12":    "instance3",
+		".1.0.0.3.1.2.10":    10,
+		".1.0.0.3.1.2.11":    20,
+		".1.0.0.3.1.2.12":    20,
+		".1.0.0.3.1.3.10":    1,
+		".1.0.0.3.1.3.11":    2,
+		".1.0.0.3.1.3.12":    3,
 	},
 }
 
@@ -93,8 +101,8 @@ func TestSampleConfig(t *testing.T) {
 	expected := &Snmp{
 		Agents:       []string{"udp://127.0.0.1:161"},
 		AgentHostTag: "",
-		ClientConfig: config.ClientConfig{
-			Timeout:        internal.Duration{Duration: 5 * time.Second},
+		ClientConfig: snmp.ClientConfig{
+			Timeout:        config.Duration(5 * time.Second),
 			Version:        2,
 			Community:      "public",
 			MaxRepetitions: 10,
@@ -200,11 +208,12 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 			{Oid: ".1.1.1.3"},
 		},
 		Tables: []Table{
-			{Fields: []Field{
-				{Oid: ".1.1.1.4", Name: "four", IsTag: true},
-				{Oid: ".1.1.1.5", Name: "five"},
-				{Oid: ".1.1.1.6"},
-			}},
+			{Name: "testing",
+				Fields: []Field{
+					{Oid: ".1.1.1.4", Name: "four", IsTag: true},
+					{Oid: ".1.1.1.5", Name: "five"},
+					{Oid: ".1.1.1.6"},
+				}},
 		},
 	}
 
@@ -236,11 +245,26 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
 }
 
+func TestSnmpInit_noName_noOid(t *testing.T) {
+	s := &Snmp{
+		Tables: []Table{
+			{Fields: []Field{
+				{Oid: ".1.1.1.4", Name: "four", IsTag: true},
+				{Oid: ".1.1.1.5", Name: "five"},
+				{Oid: ".1.1.1.6"},
+			}},
+		},
+	}
+
+	err := s.init()
+	require.Error(t, err)
+}
+
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
-		ClientConfig: config.ClientConfig{
-			Timeout:   internal.Duration{Duration: 3 * time.Second},
+		ClientConfig: snmp.ClientConfig{
+			Timeout:   config.Duration(3 * time.Second),
 			Retries:   4,
 			Version:   2,
 			Community: "foo",
@@ -308,7 +332,7 @@ func stubTCPServer(wg *sync.WaitGroup) {
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4"},
-		ClientConfig: config.ClientConfig{
+		ClientConfig: snmp.ClientConfig{
 			Version:        3,
 			MaxRepetitions: 20,
 			ContextName:    "mycontext",
@@ -356,7 +380,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES192,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -377,7 +401,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES192C,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -398,7 +422,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES256,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -419,7 +443,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Algorithm: gosnmp.AES256C,
 			Config: &Snmp{
 				Agents: []string{"1.2.3.4"},
-				ClientConfig: config.ClientConfig{
+				ClientConfig: snmp.ClientConfig{
 					Version:        3,
 					MaxRepetitions: 20,
 					ContextName:    "mycontext",
@@ -488,8 +512,8 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 		t.Skip("Skipping test due to random failures.")
 	}
 	srvr, err := net.ListenUDP("udp4", &net.UDPAddr{})
-	defer srvr.Close()
 	require.NoError(t, err)
+	defer srvr.Close()
 	reqCount := 0
 	// Set up a WaitGroup to wait for the server goroutine to exit and protect
 	// reqCount.
@@ -507,7 +531,10 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 			}
 			reqCount++
 
-			srvr.WriteTo([]byte{'X'}, addr) // will cause decoding error
+			// will cause decoding error
+			if _, err := srvr.WriteTo([]byte{'X'}, addr); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -527,7 +554,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 		GoSNMP: gs,
 	}
 	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
-	srvr.Close()
+	assert.NoError(t, srvr.Close())
 	wg.Wait()
 	assert.Error(t, err)
 	assert.False(t, gs.Conn == conn)
@@ -538,8 +565,8 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	// TODO: Fix this test
 	t.Skip("Test failing too often, skip for now and revisit later.")
 	srvr, err := net.ListenUDP("udp4", &net.UDPAddr{})
-	defer srvr.Close()
 	require.NoError(t, err)
+	defer srvr.Close()
 	reqCount := 0
 	// Set up a WaitGroup to wait for the server goroutine to exit and protect
 	// reqCount.
@@ -557,7 +584,10 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 			}
 			reqCount++
 
-			srvr.WriteTo([]byte{'X'}, addr) // will cause decoding error
+			// will cause decoding error
+			if _, err := srvr.WriteTo([]byte{'X'}, addr); err != nil {
+				return
+			}
 		}
 	}()
 
@@ -577,7 +607,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 		GoSNMP: gs,
 	}
 	_, err = gsw.Get([]string{".1.0.0"})
-	srvr.Close()
+	require.NoError(t, srvr.Close())
 	wg.Wait()
 	assert.Error(t, err)
 	assert.False(t, gs.Conn == conn)
@@ -760,7 +790,7 @@ func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	tstart := time.Now()
-	s.Gather(acc)
+	require.NoError(t, s.Gather(acc))
 	tstop := time.Now()
 
 	require.Len(t, acc.Metrics, 2)
@@ -807,7 +837,7 @@ func TestGather_host(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	s.Gather(acc)
+	require.NoError(t, s.Gather(acc))
 
 	require.Len(t, acc.Metrics, 1)
 	m := acc.Metrics[0]
@@ -938,4 +968,243 @@ func TestSnmpTableCache_hit(t *testing.T) {
 	assert.Equal(t, "c", oidText)
 	assert.Equal(t, []Field{{Name: "d"}}, fields)
 	assert.Equal(t, fmt.Errorf("e"), err)
+}
+
+func TestTableJoin_walk(t *testing.T) {
+	tbl := Table{
+		Name:       "mytable",
+		IndexAsTag: true,
+		Fields: []Field{
+			{
+				Name:  "myfield1",
+				Oid:   ".1.0.0.3.1.1",
+				IsTag: true,
+			},
+			{
+				Name: "myfield2",
+				Oid:  ".1.0.0.3.1.2",
+			},
+			{
+				Name:                "myfield3",
+				Oid:                 ".1.0.0.3.1.3",
+				SecondaryIndexTable: true,
+			},
+			{
+				Name:              "myfield4",
+				Oid:               ".1.0.0.0.1.1",
+				SecondaryIndexUse: true,
+				IsTag:             true,
+			},
+			{
+				Name:              "myfield5",
+				Oid:               ".1.0.0.0.1.2",
+				SecondaryIndexUse: true,
+			},
+		},
+	}
+
+	tb, err := tbl.Build(tsc, true)
+	require.NoError(t, err)
+
+	assert.Equal(t, tb.Name, "mytable")
+	rtr1 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance",
+			"myfield4": "bar",
+			"index":    "10",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 10,
+			"myfield3": 1,
+			"myfield5": 2,
+		},
+	}
+	rtr2 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance2",
+			"index":    "11",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 2,
+			"myfield5": 0,
+		},
+	}
+	rtr3 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance3",
+			"index":    "12",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 3,
+		},
+	}
+	assert.Len(t, tb.Rows, 3)
+	assert.Contains(t, tb.Rows, rtr1)
+	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
+}
+
+func TestTableOuterJoin_walk(t *testing.T) {
+	tbl := Table{
+		Name:       "mytable",
+		IndexAsTag: true,
+		Fields: []Field{
+			{
+				Name:  "myfield1",
+				Oid:   ".1.0.0.3.1.1",
+				IsTag: true,
+			},
+			{
+				Name: "myfield2",
+				Oid:  ".1.0.0.3.1.2",
+			},
+			{
+				Name:                "myfield3",
+				Oid:                 ".1.0.0.3.1.3",
+				SecondaryIndexTable: true,
+				SecondaryOuterJoin:  true,
+			},
+			{
+				Name:              "myfield4",
+				Oid:               ".1.0.0.0.1.1",
+				SecondaryIndexUse: true,
+				IsTag:             true,
+			},
+			{
+				Name:              "myfield5",
+				Oid:               ".1.0.0.0.1.2",
+				SecondaryIndexUse: true,
+			},
+		},
+	}
+
+	tb, err := tbl.Build(tsc, true)
+	require.NoError(t, err)
+
+	assert.Equal(t, tb.Name, "mytable")
+	rtr1 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance",
+			"myfield4": "bar",
+			"index":    "10",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 10,
+			"myfield3": 1,
+			"myfield5": 2,
+		},
+	}
+	rtr2 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance2",
+			"index":    "11",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 2,
+			"myfield5": 0,
+		},
+	}
+	rtr3 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance3",
+			"index":    "12",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 3,
+		},
+	}
+	rtr4 := RTableRow{
+		Tags: map[string]string{
+			"index":    "Secondary.0",
+			"myfield4": "foo",
+		},
+		Fields: map[string]interface{}{
+			"myfield5": 1,
+		},
+	}
+	assert.Len(t, tb.Rows, 4)
+	assert.Contains(t, tb.Rows, rtr1)
+	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
+	assert.Contains(t, tb.Rows, rtr4)
+}
+
+func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
+	tbl := Table{
+		Name:       "mytable",
+		IndexAsTag: false,
+		Fields: []Field{
+			{
+				Name:  "myfield1",
+				Oid:   ".1.0.0.3.1.1",
+				IsTag: true,
+			},
+			{
+				Name: "myfield2",
+				Oid:  ".1.0.0.3.1.2",
+			},
+			{
+				Name:                "myfield3",
+				Oid:                 ".1.0.0.3.1.3",
+				SecondaryIndexTable: true,
+			},
+			{
+				Name:              "myfield4",
+				Oid:               ".1.0.0.0.1.1",
+				SecondaryIndexUse: true,
+				IsTag:             true,
+			},
+			{
+				Name:              "myfield5",
+				Oid:               ".1.0.0.0.1.2",
+				SecondaryIndexUse: true,
+			},
+		},
+	}
+
+	tb, err := tbl.Build(tsc, true)
+	require.NoError(t, err)
+
+	assert.Equal(t, tb.Name, "mytable")
+	rtr1 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance",
+			"myfield4": "bar",
+			//"index":    "10",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 10,
+			"myfield3": 1,
+			"myfield5": 2,
+		},
+	}
+	rtr2 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance2",
+			//"index":    "11",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 2,
+			"myfield5": 0,
+		},
+	}
+	rtr3 := RTableRow{
+		Tags: map[string]string{
+			"myfield1": "instance3",
+			//"index":    "12",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 20,
+			"myfield3": 3,
+		},
+	}
+	assert.Len(t, tb.Rows, 3)
+	assert.Contains(t, tb.Rows, rtr1)
+	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
 }

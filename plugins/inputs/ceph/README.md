@@ -2,7 +2,7 @@
 
 Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.
 
-Ceph has introduced a Telegraf and Influx plugin in the 13.x Mimic release. The Telegraf module sends to a Telegraf configured with a socket_listener. [Learn more in their docs](http://docs.ceph.com/docs/mimic/mgr/telegraf/)
+Ceph has introduced a Telegraf and Influx plugin in the 13.x Mimic release. The Telegraf module sends to a Telegraf configured with a socket_listener. [Learn more in their docs](https://docs.ceph.com/en/latest/mgr/telegraf/)
 
 *Admin Socket Stats*
 
@@ -45,7 +45,7 @@ the cluster.  The currently supported commands are:
 ### Configuration:
 
 ```toml
-# Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.
+# Collects performance metrics from the MON, OSD, MDS and RGW nodes in a Ceph storage cluster.
 [[inputs.ceph]]
   ## This is the recommended interval to poll.  Too frequent and you will lose
   ## data points due to timeouts during rebalancing and recovery

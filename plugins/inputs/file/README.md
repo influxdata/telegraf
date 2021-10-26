@@ -20,8 +20,11 @@ plugin instead.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
+  
   ## Name a tag containing the name of the file the data was parsed from.  Leave empty
-  ## to disable.
+  ## to disable. Cautious when file name variation is high, this can increase the cardinality 
+  ## significantly. Read more about cardinality here: 
+  ## https://docs.influxdata.com/influxdb/cloud/reference/glossary/#series-cardinality
   # file_tag = ""
 ```
 

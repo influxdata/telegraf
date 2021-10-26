@@ -117,7 +117,7 @@ func TestRoutingKey(t *testing.T) {
 				RoutingKey: "static",
 			},
 			metric: func() telegraf.Metric {
-				m, _ := metric.New(
+				m := metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -137,7 +137,7 @@ func TestRoutingKey(t *testing.T) {
 				RoutingKey: "random",
 			},
 			metric: func() telegraf.Metric {
-				m, _ := metric.New(
+				m := metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -179,7 +179,7 @@ func (p *MockProducer) Close() error {
 	return nil
 }
 
-func NewMockProducer(addrs []string, config *sarama.Config) (sarama.SyncProducer, error) {
+func NewMockProducer(_ []string, _ *sarama.Config) (sarama.SyncProducer, error) {
 	return &MockProducer{}, nil
 }
 

@@ -1,7 +1,7 @@
 # systemd Units Input Plugin
 
 The systemd_units plugin gathers systemd unit status on Linux. It relies on
-`systemctl list-units --all --plain --type=service` to collect data on service status.
+`systemctl list-units [PATTERN] --all --plain --type=service` to collect data on service status.
 
 The results are tagged with the unit name and provide enumerated fields for
 loaded, active and running fields, indicating the unit health.
@@ -22,6 +22,13 @@ see `systemctl list-units --all --type help` for possible options.
   ## values are "socket", "target", "device", "mount", "automount", "swap",
   ## "timer", "path", "slice" and "scope ":
   # unittype = "service"
+  #
+  ## Filter for a specific pattern, default is "" (i.e. all), other possible
+  ## values are valid pattern for systemctl, e.g. "a*" for all units with
+  ## names starting with "a"
+  # pattern = ""
+  ## pattern = "telegraf* influxdb*"
+  ## pattern = "a*"
 ```
 
 ### Metrics

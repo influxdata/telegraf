@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -162,7 +161,8 @@ func TestJSONSuccess(t *testing.T) {
 			payload = devicesJSON
 		}
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, payload)
+		_, err := fmt.Fprintln(w, payload)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -178,7 +178,7 @@ func TestJSONSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	// Gather should add 5 metrics
-	assert.Equal(t, uint64(5), acc.NMetrics())
+	require.Equal(t, uint64(5), acc.NMetrics())
 
 	// Ensure fields / values are correct - Device 1
 	tags := map[string]string{"deviceId": "1", "section": "Section 1", "room": "Room 1", "name": "Device 1", "type": "com.fibaro.binarySwitch"}

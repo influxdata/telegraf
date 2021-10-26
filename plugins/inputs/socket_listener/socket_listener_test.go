@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/wlog"
@@ -68,7 +68,7 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 }
 
 func TestSocketListener_unix_tls(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
+	tmpdir, err := os.MkdirTemp("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix_tls.sock")
@@ -99,7 +99,7 @@ func TestSocketListener_tcp(t *testing.T) {
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
-	sl.ReadBufferSize = internal.Size{Size: 1024}
+	sl.ReadBufferSize = config.Size(1024)
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
@@ -118,7 +118,7 @@ func TestSocketListener_udp(t *testing.T) {
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "udp://127.0.0.1:0"
-	sl.ReadBufferSize = internal.Size{Size: 1024}
+	sl.ReadBufferSize = config.Size(1024)
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
@@ -132,7 +132,7 @@ func TestSocketListener_udp(t *testing.T) {
 }
 
 func TestSocketListener_unix(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
+	tmpdir, err := os.MkdirTemp("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix.sock")
@@ -140,11 +140,11 @@ func TestSocketListener_unix(t *testing.T) {
 	defer testEmptyLog(t)()
 
 	f, _ := os.Create(sock)
-	f.Close()
+	require.NoError(t, f.Close())
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unix://" + sock
-	sl.ReadBufferSize = internal.Size{Size: 1024}
+	sl.ReadBufferSize = config.Size(1024)
 
 	acc := &testutil.Accumulator{}
 	err = sl.Start(acc)
@@ -162,18 +162,19 @@ func TestSocketListener_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir, err := ioutil.TempDir("", "telegraf")
+	tmpdir, err := os.MkdirTemp("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unixgram.sock")
 
 	defer testEmptyLog(t)()
 
-	os.Create(sock)
+	_, err = os.Create(sock)
+	require.NoError(t, err)
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unixgram://" + sock
-	sl.ReadBufferSize = internal.Size{Size: 1024}
+	sl.ReadBufferSize = config.Size(1024)
 
 	acc := &testutil.Accumulator{}
 	err = sl.Start(acc)
@@ -192,7 +193,7 @@ func TestSocketListenerDecode_tcp(t *testing.T) {
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
-	sl.ReadBufferSize = internal.Size{Size: 1024}
+	sl.ReadBufferSize = config.Size(1024)
 	sl.ContentEncoding = "gzip"
 
 	acc := &testutil.Accumulator{}
@@ -212,7 +213,7 @@ func TestSocketListenerDecode_udp(t *testing.T) {
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "udp://127.0.0.1:0"
-	sl.ReadBufferSize = internal.Size{Size: 1024}
+	sl.ReadBufferSize = config.Size(1024)
 	sl.ContentEncoding = "gzip"
 
 	acc := &testutil.Accumulator{}
@@ -242,9 +243,10 @@ func testSocketListener(t *testing.T, sl *SocketListener, client net.Conn) {
 		require.NoError(t, err)
 	}
 
-	client.Write(mstr12)
-	client.Write(mstr3)
-
+	_, err := client.Write(mstr12)
+	require.NoError(t, err)
+	_, err = client.Write(mstr3)
+	require.NoError(t, err)
 	acc := sl.Accumulator.(*testutil.Accumulator)
 
 	acc.Wait(3)

@@ -73,8 +73,12 @@ func (n *NATS) Connect() error {
 	}
 
 	// override authentication, if any was specified
-	if n.Username != "" {
+	if n.Username != "" && n.Password != "" {
 		opts = append(opts, nats.UserInfo(n.Username, n.Password))
+	}
+
+	if n.Credentials != "" {
+		opts = append(opts, nats.UserCredentials(n.Credentials))
 	}
 
 	if n.Name != "" {

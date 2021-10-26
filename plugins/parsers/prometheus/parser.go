@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	"io"
 	"math"
 	"mime"
 	"net/http"
 	"time"
+
+	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -20,8 +21,9 @@ import (
 )
 
 type Parser struct {
-	DefaultTags map[string]string
-	Header      http.Header
+	DefaultTags     map[string]string
+	Header          http.Header
+	IgnoreTimestamp bool
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -64,14 +66,15 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		for _, m := range mf.Metric {
 			// reading tags
 			tags := common.MakeLabels(m, p.DefaultTags)
+			t := p.GetTimestamp(m, now)
 
 			if mf.GetType() == dto.MetricType_SUMMARY {
 				// summary metric
-				telegrafMetrics := makeQuantiles(m, tags, metricName, mf.GetType(), now)
+				telegrafMetrics := makeQuantiles(m, tags, metricName, mf.GetType(), t)
 				metrics = append(metrics, telegrafMetrics...)
 			} else if mf.GetType() == dto.MetricType_HISTOGRAM {
 				// histogram metric
-				telegrafMetrics := makeBuckets(m, tags, metricName, mf.GetType(), now)
+				telegrafMetrics := makeBuckets(m, tags, metricName, mf.GetType(), t)
 				metrics = append(metrics, telegrafMetrics...)
 			} else {
 				// standard metric
@@ -79,11 +82,8 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				fields := getNameAndValue(m, metricName)
 				// converting to telegraf metric
 				if len(fields) > 0 {
-					t := getTimestamp(m, now)
-					metric, err := metric.New("prometheus", tags, fields, t, common.ValueType(mf.GetType()))
-					if err == nil {
-						metrics = append(metrics, metric)
-					}
+					m := metric.New("prometheus", tags, fields, t, common.ValueType(mf.GetType()))
+					metrics = append(metrics, m)
 				}
 			}
 		}
@@ -114,17 +114,14 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 // Get Quantiles for summary metric & Buckets for histogram
-func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, now time.Time) []telegraf.Metric {
+func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, t time.Time) []telegraf.Metric {
 	var metrics []telegraf.Metric
 	fields := make(map[string]interface{})
-	t := getTimestamp(m, now)
 
 	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetSummary().GetSampleSum())
-	met, err := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
-	if err == nil {
-		metrics = append(metrics, met)
-	}
+	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
+	metrics = append(metrics, met)
 
 	for _, q := range m.GetSummary().Quantile {
 		newTags := tags
@@ -133,27 +130,22 @@ func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, met
 		newTags["quantile"] = fmt.Sprint(q.GetQuantile())
 		fields[metricName] = float64(q.GetValue())
 
-		quantileMetric, err := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
-		if err == nil {
-			metrics = append(metrics, quantileMetric)
-		}
+		quantileMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
+		metrics = append(metrics, quantileMetric)
 	}
 	return metrics
 }
 
 // Get Buckets  from histogram metric
-func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, now time.Time) []telegraf.Metric {
+func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, t time.Time) []telegraf.Metric {
 	var metrics []telegraf.Metric
 	fields := make(map[string]interface{})
-	t := getTimestamp(m, now)
 
 	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetHistogram().GetSampleSum())
 
-	met, err := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
-	if err == nil {
-		metrics = append(metrics, met)
-	}
+	met := metric.New("prometheus", tags, fields, t, common.ValueType(metricType))
+	metrics = append(metrics, met)
 
 	for _, b := range m.GetHistogram().Bucket {
 		newTags := tags
@@ -161,10 +153,8 @@ func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metri
 		newTags["le"] = fmt.Sprint(b.GetUpperBound())
 		fields[metricName+"_bucket"] = float64(b.GetCumulativeCount())
 
-		histogramMetric, err := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
-		if err == nil {
-			metrics = append(metrics, histogramMetric)
-		}
+		histogramMetric := metric.New("prometheus", newTags, fields, t, common.ValueType(metricType))
+		metrics = append(metrics, histogramMetric)
 	}
 	return metrics
 }
@@ -188,9 +178,9 @@ func getNameAndValue(m *dto.Metric, metricName string) map[string]interface{} {
 	return fields
 }
 
-func getTimestamp(m *dto.Metric, now time.Time) time.Time {
+func (p *Parser) GetTimestamp(m *dto.Metric, now time.Time) time.Time {
 	var t time.Time
-	if m.TimestampMs != nil && *m.TimestampMs > 0 {
+	if !p.IgnoreTimestamp && m.TimestampMs != nil && *m.TimestampMs > 0 {
 		t = time.Unix(0, m.GetTimestampMs()*1000000)
 	} else {
 		t = now

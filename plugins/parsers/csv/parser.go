@@ -80,7 +80,7 @@ func (p *Parser) SetTimeFunc(fn TimeFunc) {
 	p.TimeFunc = fn
 }
 
-func (p *Parser) compile(r io.Reader) (*csv.Reader, error) {
+func (p *Parser) compile(r io.Reader) *csv.Reader {
 	csvReader := csv.NewReader(r)
 	// ensures that the reader reads records of different lengths without an error
 	csvReader.FieldsPerRecord = -1
@@ -91,15 +91,12 @@ func (p *Parser) compile(r io.Reader) (*csv.Reader, error) {
 		csvReader.Comment = []rune(p.Comment)[0]
 	}
 	csvReader.TrimLeadingSpace = p.TrimSpace
-	return csvReader, nil
+	return csvReader
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	r := bytes.NewReader(buf)
-	csvReader, err := p.compile(r)
-	if err != nil {
-		return nil, err
-	}
+	csvReader := p.compile(r)
 	// skip first rows
 	for i := 0; i < p.SkipRows; i++ {
 		_, err := csvReader.Read()
@@ -163,11 +160,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 // it will also not skip any rows
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	r := bytes.NewReader([]byte(line))
-	csvReader, err := p.compile(r)
-	if err != nil {
-		return nil, err
-	}
-
+	csvReader := p.compile(r)
 	// if there is nothing in DataColumns, ParseLine will fail
 	if len(p.ColumnNames) == 0 {
 		return nil, fmt.Errorf("[parsers.csv] data columns must be specified")
@@ -287,10 +280,8 @@ outer:
 	delete(recordFields, p.TimestampColumn)
 	delete(recordFields, p.MeasurementColumn)
 
-	m, err := metric.New(measurementName, tags, recordFields, metricTime)
-	if err != nil {
-		return nil, err
-	}
+	m := metric.New(measurementName, tags, recordFields, metricTime)
+
 	return m, nil
 }
 

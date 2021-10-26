@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
@@ -11,16 +12,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestRefreshFilePaths(t *testing.T) {
 	wd, err := os.Getwd()
+	require.NoError(t, err)
+
 	r := File{
 		Files: []string{filepath.Join(wd, "dev/testfiles/**.log")},
 	}
@@ -29,7 +32,7 @@ func TestRefreshFilePaths(t *testing.T) {
 
 	err = r.refreshFilePaths()
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(r.filenames))
+	require.Equal(t, 2, len(r.filenames))
 }
 
 func TestFileTag(t *testing.T) {
@@ -47,7 +50,7 @@ func TestFileTag(t *testing.T) {
 		DataFormat: "json",
 	}
 	nParser, err := parsers.NewParser(&parserConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	r.parser = nParser
 
 	err = r.Gather(&acc)
@@ -55,8 +58,8 @@ func TestFileTag(t *testing.T) {
 
 	for _, m := range acc.Metrics {
 		for key, value := range m.Tags {
-			assert.Equal(t, r.FileTag, key)
-			assert.Equal(t, filepath.Base(r.Files[0]), value)
+			require.Equal(t, r.FileTag, key)
+			require.Equal(t, filepath.Base(r.Files[0]), value)
 		}
 	}
 }
@@ -74,12 +77,12 @@ func TestJSONParserCompile(t *testing.T) {
 		TagKeys:    []string{"parent_ignored_child"},
 	}
 	nParser, err := parsers.NewParser(&parserConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	r.parser = nParser
 
-	r.Gather(&acc)
-	assert.Equal(t, map[string]string{"parent_ignored_child": "hi"}, acc.Metrics[0].Tags)
-	assert.Equal(t, 5, len(acc.Metrics[0].Fields))
+	require.NoError(t, r.Gather(&acc))
+	require.Equal(t, map[string]string{"parent_ignored_child": "hi"}, acc.Metrics[0].Tags)
+	require.Equal(t, 5, len(acc.Metrics[0].Fields))
 }
 
 func TestGrokParser(t *testing.T) {
@@ -98,10 +101,11 @@ func TestGrokParser(t *testing.T) {
 
 	nParser, err := parsers.NewParser(&parserConfig)
 	r.parser = nParser
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = r.Gather(&acc)
-	assert.Equal(t, len(acc.Metrics), 2)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 2)
 }
 
 func TestCharacterEncoding(t *testing.T) {

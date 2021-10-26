@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3" // Imports the Stackdriver Monitoring client package.
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2" // Imports the Stackdriver Monitoring client package.
 	googlepb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -71,11 +71,11 @@ var sampleConfig = `
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {
 	if s.Project == "" {
-		return fmt.Errorf("Project is a required field for stackdriver output")
+		return fmt.Errorf("project is a required field for stackdriver output")
 	}
 
 	if s.Namespace == "" {
-		return fmt.Errorf("Namespace is a required field for stackdriver output")
+		return fmt.Errorf("namespace is a required field for stackdriver output")
 	}
 
 	if s.ResourceType == "" {
@@ -218,7 +218,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 		// Prepare time series request.
 		timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
-			Name:       monitoring.MetricProjectPath(s.Project),
+			Name:       fmt.Sprintf("projects/%s", s.Project),
 			TimeSeries: timeSeries,
 		}
 
@@ -300,7 +300,7 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	case int64:
 		return &monitoringpb.TypedValue{
 			Value: &monitoringpb.TypedValue_Int64Value{
-				Int64Value: int64(v),
+				Int64Value: v,
 			},
 		}, nil
 	case float64:
@@ -312,7 +312,7 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	case bool:
 		return &monitoringpb.TypedValue{
 			Value: &monitoringpb.TypedValue_BoolValue{
-				BoolValue: bool(v),
+				BoolValue: v,
 			},
 		}, nil
 	case string:

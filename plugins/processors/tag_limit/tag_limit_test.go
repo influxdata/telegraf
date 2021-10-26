@@ -16,7 +16,7 @@ func MustMetric(name string, tags map[string]string, fields map[string]interface
 	if fields == nil {
 		fields = map[string]interface{}{}
 	}
-	m, _ := metric.New(name, tags, fields, metricTime)
+	m := metric.New(name, tags, fields, metricTime)
 	return m
 }
 

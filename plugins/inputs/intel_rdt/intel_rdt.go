@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package intel_rdt
@@ -13,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -45,6 +47,7 @@ type IntelRDT struct {
 	Processes        []string `toml:"processes"`
 	SamplingInterval int32    `toml:"sampling_interval"`
 	ShortenedMetrics bool     `toml:"shortened_metrics"`
+	UseSudo          bool     `toml:"use_sudo"`
 
 	Log              telegraf.Logger  `toml:"-"`
 	Publisher        Publisher        `toml:"-"`
@@ -96,6 +99,10 @@ func (r *IntelRDT) SampleConfig() string {
 	## Mandatory if cores aren't set and forbidden if cores are specified.
 	## e.g. ["qemu", "pmd"]
 	# processes = ["process"]
+
+	## Specify if the pqos process should be called with sudo.
+	## Mandatory if the telegraf process does not run as root.
+	# use_sudo = false
 `
 }
 
@@ -245,7 +252,6 @@ func (r *IntelRDT) createArgsAndStartPQOS(ctx context.Context) {
 		args = append(args, processArg)
 		go r.readData(ctx, args, r.processesPIDsMap)
 	}
-	return
 }
 
 func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAssociation map[string]string) {
@@ -253,6 +259,12 @@ func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAss
 	defer r.wg.Done()
 
 	cmd := exec.Command(r.PqosPath, append(args)...)
+
+	if r.UseSudo {
+		// run pqos with `/bin/sh -c "sudo /path/to/pqos ..."`
+		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.Replace(strings.Join(args, " "), ";", "\\;", -1))}
+		cmd = exec.Command("/bin/sh", args...)
+	}
 
 	cmdReader, err := cmd.StdoutPipe()
 	if err != nil {
@@ -278,12 +290,12 @@ func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAss
 	}()
 	err = cmd.Start()
 	if err != nil {
-		r.errorChan <- fmt.Errorf("pqos: %v", err)
+		r.Log.Errorf("pqos: %v", err)
 		return
 	}
 	err = cmd.Wait()
 	if err != nil {
-		r.errorChan <- fmt.Errorf("pqos: %v", err)
+		r.Log.Errorf("pqos: %v", err)
 	}
 }
 
@@ -298,11 +310,9 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 	*/
 	toOmit := pqosInitOutputLinesNumber
 
-	// omit first measurements which are zeroes
-	if len(r.parsedCores) != 0 {
+	if len(r.parsedCores) != 0 { // omit first measurements which are zeroes
 		toOmit = toOmit + len(r.parsedCores)
-		// specify how many lines should pass before stopping
-	} else if len(processesPIDsAssociation) != 0 {
+	} else if len(processesPIDsAssociation) != 0 { // specify how many lines should pass before stopping
 		toOmit = toOmit + len(processesPIDsAssociation)
 	}
 	for omitCounter := 0; omitCounter < toOmit; omitCounter++ {
@@ -336,13 +346,29 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 }
 
 func shutDownPqos(pqos *exec.Cmd) error {
+	timeout := time.Second * 2
+
 	if pqos.Process != nil {
-		err := pqos.Process.Signal(os.Interrupt)
-		if err != nil {
-			err = pqos.Process.Kill()
-			if err != nil {
-				return fmt.Errorf("failed to shut down pqos: %v", err)
+		// try to send interrupt signal, ignore err for now
+		_ = pqos.Process.Signal(os.Interrupt)
+
+		// wait and constantly check if pqos is still running
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		for {
+			if err := pqos.Process.Signal(syscall.Signal(0)); err == os.ErrProcessDone {
+				return nil
+			} else if ctx.Err() != nil {
+				break
 			}
+		}
+
+		// if pqos is still running after some period, try to kill it
+		// this will send SIGTERM to pqos, and leave garbage in `/sys/fs/resctrl/mon_groups`
+		// fixed in https://github.com/intel/intel-cmt-cat/issues/197
+		err := pqos.Process.Kill()
+		if err != nil {
+			return fmt.Errorf("failed to shut down pqos: %v", err)
 		}
 	}
 	return nil
