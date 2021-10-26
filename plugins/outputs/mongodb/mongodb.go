@@ -122,7 +122,7 @@ func (s *MongoDB) Init() error {
 	switch s.AuthenticationType {
 	case "SCRAM":
 		if s.Username == "" {
-			return fmt.Errorf("SCRAM authentication must specify a password")
+			return fmt.Errorf("SCRAM authentication must specify a username")
 		}
 		if s.Password == "" {
 			return fmt.Errorf("SCRAM authentication must specify a password")
