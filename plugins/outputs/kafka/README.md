@@ -136,6 +136,9 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/timestreamwrite"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite/types"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,57 +19,57 @@ func TestGetTimestreamTime(t *testing.T) {
 	tOnlySeconds := time.Date(2020, time.November, 10, 23, 44, 20, 0, time.UTC)
 
 	tUnitNanos, tValueNanos := getTimestreamTime(tWithNanos)
-	assertions.Equal("NANOSECONDS", tUnitNanos)
+	assertions.Equal(types.TimeUnitNanoseconds, tUnitNanos)
 	assertions.Equal("1605051860000000123", tValueNanos)
 
 	tUnitMicros, tValueMicros := getTimestreamTime(tWithMicros)
-	assertions.Equal("MICROSECONDS", tUnitMicros)
+	assertions.Equal(types.TimeUnitMicroseconds, tUnitMicros)
 	assertions.Equal("1605051860000123", tValueMicros)
 
 	tUnitMillis, tValueMillis := getTimestreamTime(tWithMillis)
-	assertions.Equal("MILLISECONDS", tUnitMillis)
+	assertions.Equal(types.TimeUnitMilliseconds, tUnitMillis)
 	assertions.Equal("1605051860123", tValueMillis)
 
 	tUnitSeconds, tValueSeconds := getTimestreamTime(tOnlySeconds)
-	assertions.Equal("SECONDS", tUnitSeconds)
+	assertions.Equal(types.TimeUnitSeconds, tUnitSeconds)
 	assertions.Equal("1605051860", tValueSeconds)
 }
 
 func TestPartitionRecords(t *testing.T) {
 	assertions := assert.New(t)
 
-	testDatum := timestreamwrite.Record{
+	testDatum := types.Record{
 		MeasureName:      aws.String("Foo"),
-		MeasureValueType: aws.String("DOUBLE"),
+		MeasureValueType: types.MeasureValueTypeDouble,
 		MeasureValue:     aws.String("123"),
 	}
 
-	var zeroDatum []*timestreamwrite.Record
-	oneDatum := []*timestreamwrite.Record{&testDatum}
-	twoDatum := []*timestreamwrite.Record{&testDatum, &testDatum}
-	threeDatum := []*timestreamwrite.Record{&testDatum, &testDatum, &testDatum}
+	var zeroDatum []types.Record
+	oneDatum := []types.Record{testDatum}
+	twoDatum := []types.Record{testDatum, testDatum}
+	threeDatum := []types.Record{testDatum, testDatum, testDatum}
 
-	assertions.Equal([][]*timestreamwrite.Record{}, partitionRecords(2, zeroDatum))
-	assertions.Equal([][]*timestreamwrite.Record{oneDatum}, partitionRecords(2, oneDatum))
-	assertions.Equal([][]*timestreamwrite.Record{oneDatum}, partitionRecords(2, oneDatum))
-	assertions.Equal([][]*timestreamwrite.Record{twoDatum}, partitionRecords(2, twoDatum))
-	assertions.Equal([][]*timestreamwrite.Record{twoDatum, oneDatum}, partitionRecords(2, threeDatum))
+	assertions.Equal([][]types.Record{}, partitionRecords(2, zeroDatum))
+	assertions.Equal([][]types.Record{oneDatum}, partitionRecords(2, oneDatum))
+	assertions.Equal([][]types.Record{oneDatum}, partitionRecords(2, oneDatum))
+	assertions.Equal([][]types.Record{twoDatum}, partitionRecords(2, twoDatum))
+	assertions.Equal([][]types.Record{twoDatum, oneDatum}, partitionRecords(2, threeDatum))
 }
 
 func TestConvertValueSupported(t *testing.T) {
 	intInputValues := []interface{}{-1, int8(-2), int16(-3), int32(-4), int64(-5)}
 	intOutputValues := []string{"-1", "-2", "-3", "-4", "-5"}
-	intOutputValueTypes := []string{"BIGINT", "BIGINT", "BIGINT", "BIGINT", "BIGINT"}
+	intOutputValueTypes := []types.MeasureValueType{types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint}
 	testConvertValueSupportedCases(t, intInputValues, intOutputValues, intOutputValueTypes)
 
 	uintInputValues := []interface{}{uint(1), uint8(2), uint16(3), uint32(4), uint64(5)}
 	uintOutputValues := []string{"1", "2", "3", "4", "5"}
-	uintOutputValueTypes := []string{"BIGINT", "BIGINT", "BIGINT", "BIGINT", "BIGINT"}
+	uintOutputValueTypes := []types.MeasureValueType{types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint, types.MeasureValueTypeBigint}
 	testConvertValueSupportedCases(t, uintInputValues, uintOutputValues, uintOutputValueTypes)
 
 	otherInputValues := []interface{}{"foo", float32(22.123), 22.1234, true}
 	otherOutputValues := []string{"foo", "22.123", "22.1234", "true"}
-	otherOutputValueTypes := []string{"VARCHAR", "DOUBLE", "DOUBLE", "BOOLEAN"}
+	otherOutputValueTypes := []types.MeasureValueType{types.MeasureValueTypeVarchar, types.MeasureValueTypeDouble, types.MeasureValueTypeDouble, types.MeasureValueTypeBoolean}
 	testConvertValueSupportedCases(t, otherInputValues, otherOutputValues, otherOutputValueTypes)
 }
 
@@ -80,7 +80,7 @@ func TestConvertValueUnsupported(t *testing.T) {
 }
 
 func testConvertValueSupportedCases(t *testing.T,
-	inputValues []interface{}, outputValues []string, outputValueTypes []string) {
+	inputValues []interface{}, outputValues []string, outputValueTypes []types.MeasureValueType) {
 	assertions := assert.New(t)
 	for i, inputValue := range inputValues {
 		v, vt, ok := convertValue(inputValue)

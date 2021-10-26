@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/binary"
 	ejson "encoding/json"
 	"fmt"
@@ -16,11 +17,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const (
-	defaultGraylogEndpoint = "127.0.0.1:12201"
+	defaultEndpoint        = "127.0.0.1:12201"
 	defaultConnection      = "wan"
 	defaultMaxChunkSizeWan = 1420
 	defaultMaxChunkSizeLan = 8154
@@ -29,7 +31,7 @@ const (
 )
 
 type gelfConfig struct {
-	GraylogEndpoint string
+	Endpoint        string
 	Connection      string
 	MaxChunkSizeWan int
 	MaxChunkSizeLan int
@@ -37,6 +39,7 @@ type gelfConfig struct {
 
 type gelf interface {
 	io.WriteCloser
+	Connect() error
 }
 
 type gelfCommon struct {
@@ -51,11 +54,12 @@ type gelfUDP struct {
 
 type gelfTCP struct {
 	gelfCommon
+	tlsConfig *tls.Config
 }
 
-func newGelfWriter(cfg gelfConfig, dialer *net.Dialer) gelf {
-	if cfg.GraylogEndpoint == "" {
-		cfg.GraylogEndpoint = defaultGraylogEndpoint
+func newGelfWriter(cfg gelfConfig, dialer *net.Dialer, tlsConfig *tls.Config) gelf {
+	if cfg.Endpoint == "" {
+		cfg.Endpoint = defaultEndpoint
 	}
 
 	if cfg.Connection == "" {
@@ -71,10 +75,10 @@ func newGelfWriter(cfg gelfConfig, dialer *net.Dialer) gelf {
 	}
 
 	scheme := defaultScheme
-	parts := strings.SplitN(cfg.GraylogEndpoint, "://", 2)
+	parts := strings.SplitN(cfg.Endpoint, "://", 2)
 	if len(parts) == 2 {
 		scheme = strings.ToLower(parts[0])
-		cfg.GraylogEndpoint = parts[1]
+		cfg.Endpoint = parts[1]
 	}
 	common := gelfCommon{
 		gelfConfig: cfg,
@@ -84,7 +88,7 @@ func newGelfWriter(cfg gelfConfig, dialer *net.Dialer) gelf {
 	var g gelf
 	switch scheme {
 	case "tcp":
-		g = &gelfTCP{gelfCommon: common}
+		g = &gelfTCP{gelfCommon: common, tlsConfig: tlsConfig}
 	default:
 		g = &gelfUDP{gelfCommon: common}
 	}
@@ -178,13 +182,21 @@ func (g *gelfUDP) compress(b []byte) bytes.Buffer {
 	return buf
 }
 
+func (g *gelfUDP) Connect() error {
+	conn, err := g.dialer.Dial("udp", g.gelfConfig.Endpoint)
+	if err != nil {
+		return err
+	}
+	g.conn = conn
+	return nil
+}
+
 func (g *gelfUDP) send(b []byte) error {
 	if g.conn == nil {
-		conn, err := g.dialer.Dial("udp", g.gelfConfig.GraylogEndpoint)
+		err := g.Connect()
 		if err != nil {
 			return err
 		}
-		g.conn = conn
 	}
 
 	_, err := g.conn.Write(b)
@@ -216,13 +228,27 @@ func (g *gelfTCP) Close() (err error) {
 	return err
 }
 
+func (g *gelfTCP) Connect() error {
+	var err error
+	var conn net.Conn
+	if g.tlsConfig == nil {
+		conn, err = g.dialer.Dial("tcp", g.gelfConfig.Endpoint)
+	} else {
+		conn, err = tls.DialWithDialer(g.dialer, "tcp", g.gelfConfig.Endpoint, g.tlsConfig)
+	}
+	if err != nil {
+		return err
+	}
+	g.conn = conn
+	return nil
+}
+
 func (g *gelfTCP) send(b []byte) error {
 	if g.conn == nil {
-		conn, err := g.dialer.Dial("tcp", g.gelfConfig.GraylogEndpoint)
+		err := g.Connect()
 		if err != nil {
 			return err
 		}
-		g.conn = conn
 	}
 
 	_, err := g.conn.Write(b)
@@ -243,7 +269,9 @@ func (g *gelfTCP) send(b []byte) error {
 type Graylog struct {
 	Servers           []string        `toml:"servers"`
 	ShortMessageField string          `toml:"short_message_field"`
+	NameFieldNoPrefix bool            `toml:"name_field_noprefix"`
 	Timeout           config.Duration `toml:"timeout"`
+	tlsint.ClientConfig
 
 	writer  io.Writer
 	closers []io.WriteCloser
@@ -260,18 +288,39 @@ var sampleConfig = `
   ## "telegraf" will be used.
   ##   example: short_message_field = "message"
   # short_message_field = ""
+
+  ## According to GELF payload specification, additional fields names must be prefixed
+  ## with an underscore. Previous versions did not prefix custom field 'name' with underscore.
+  ## Set to true for backward compatibility.
+  # name_field_no_prefix = false
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (g *Graylog) Connect() error {
-	writers := []io.Writer{}
-	dialer := net.Dialer{Timeout: time.Duration(g.Timeout)}
+	var writers []io.Writer
+	dialer := &net.Dialer{Timeout: time.Duration(g.Timeout)}
 
 	if len(g.Servers) == 0 {
 		g.Servers = append(g.Servers, "localhost:12201")
 	}
 
+	tlsCfg, err := g.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
 	for _, server := range g.Servers {
-		w := newGelfWriter(gelfConfig{GraylogEndpoint: server}, &dialer)
+		w := newGelfWriter(gelfConfig{Endpoint: server}, dialer, tlsCfg)
+		err := w.Connect()
+		if err != nil {
+			return fmt.Errorf("failed to connect to server [%s]: %v", server, err)
+		}
 		writers = append(writers, w)
 		g.closers = append(g.closers, w)
 	}
@@ -319,7 +368,11 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	m["version"] = "1.1"
 	m["timestamp"] = float64(metric.Time().UnixNano()) / 1_000_000_000
 	m["short_message"] = "telegraf"
-	m["name"] = metric.Name()
+	if g.NameFieldNoPrefix {
+		m["name"] = metric.Name()
+	} else {
+		m["_name"] = metric.Name()
+	}
 
 	if host, ok := metric.GetTag("host"); ok {
 		m["host"] = host

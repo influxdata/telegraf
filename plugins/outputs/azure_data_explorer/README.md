@@ -31,6 +31,10 @@ Azure Data Explorer is a distributed, columnar store, purpose built for any type
   
   ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
   # table_name = ""
+
+  ## Creates tables and relevant mapping if set to true(default). 
+  ## Skips table and mapping creation if set to false, this is useful for running Telegraf with the lowest possible permissions i.e. table ingestor role.
+  # create_tables = true
 ```
 
 ## Metrics Grouping
@@ -85,7 +89,10 @@ These methods are:
 
 [principal]: https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-application-objects
 
-Whichever method, the designated Principal needs to be assigned the `Database User` role on the Database level in the Azure Data Explorer. This role will allow the plugin to create the required tables and ingest data into it.
+Whichever method, the designated Principal needs to be assigned the `Database User` role on the Database level in the Azure Data Explorer. This role will 
+allow the plugin to create the required tables and ingest data into it.  
+If `create_tables=false` then the designated principal only needs the `Database Ingestor` role at least.
+
 
 ### Configurations of the chosen Authentication Method 
 
