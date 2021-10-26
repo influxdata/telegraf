@@ -110,22 +110,28 @@ func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
 
 func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 	for measurement, file := range map[string]string{"interrupts": "/proc/interrupts", "soft_interrupts": "/proc/softirqs"} {
-		func() {
-			f, err := os.Open(file)
-			if err != nil {
-				acc.AddError(fmt.Errorf("could not open file: %s", file))
-				return
-			}
-			defer f.Close()
-			irqs, err := parseInterrupts(f)
-			if err != nil {
-				acc.AddError(fmt.Errorf("parsing %s: %s", file, err))
-				return
-			}
-			reportMetrics(measurement, irqs, acc, s.CPUAsTag)
-		}()
+		irqs, err := parseFile(file)
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+		reportMetrics(measurement, irqs, acc, s.CPUAsTag)
 	}
 	return nil
+}
+
+func parseFile(file string) ([]IRQ, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file: %s", file)
+	}
+	defer f.Close()
+
+	irqs, err := parseInterrupts(f)
+	if err != nil {
+		return nil, fmt.Errorf("parsing %s: %s", file, err)
+	}
+	return irqs, nil
 }
 
 func reportMetrics(measurement string, irqs []IRQ, acc telegraf.Accumulator, cpusAsTags bool) {

@@ -429,11 +429,7 @@ func TestInitialize(t *testing.T) {
 			}
 			if test.output != nil {
 				if test.input.client == nil {
-					errStr := ""
-					if te != nil {
-						errStr = te.Error()
-					}
-					t.Fatalf("%s: failed %s, jenkins instance shouldn't be nil", test.name, errStr)
+					t.Fatalf("%s: failed %v, jenkins instance shouldn't be nil", test.name, te)
 				}
 				if test.input.MaxConnections != test.output.MaxConnections {
 					t.Fatalf("%s: different MaxConnections Expected %d, got %d\n", test.name, test.output.MaxConnections, test.input.MaxConnections)
