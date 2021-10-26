@@ -300,30 +300,30 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmi.Subs
 			} else {
 				c.Log.Debugf("No measurement alias for gNMI path: %s", name)
 			}
-		    lastAliasPath = aliasPath
+			lastAliasPath = aliasPath
 		}
 
-        luTags := make(map[string]string, len(tags))
-        for key, val := range tags {
-            if key != "path" {
-              luTags[key] = val
-            }
-        }
-        luBKey, _ := json.Marshal(luTags)
-        luKey := string(luBKey)
+		luTags := make(map[string]string, len(tags))
+		for key, val := range tags {
+			if key != "path" {
+				luTags[key] = val
+			}
+		}
+		luBKey, _ := json.Marshal(luTags)
+		luKey := string(luBKey)
 
 		// Update tag lookups and discard rest of update
 		if lu, ok := c.lookup[name]; ok {
-	        for _, v := range fields {
-		        lu[luKey] = fmt.Sprintf("%v", v)
-	        }
+			for _, v := range fields {
+				lu[luKey] = fmt.Sprintf("%v", v)
+			}
 			continue
 		}
 
 		// Apply lookups if present
 		for k, v := range c.lookup {
 			if t, ok := v[luKey]; ok {
-                tags[k] = t
+				tags[k] = t
 			}
 		}
 
@@ -436,7 +436,7 @@ func (c *GNMI) handlePath(gPath *gnmi.Path, tags map[string]string, prefix strin
 				key = strings.Replace(key, "-", "_", -1)
 
 				// Use short-form of key if possible
-                shortKey := path.Base(name)+"/"+key
+				shortKey := path.Base(name) + "/" + key
 				if _, exists := tags[shortKey]; exists {
 					tags[name+"/"+key] = val
 				} else {
