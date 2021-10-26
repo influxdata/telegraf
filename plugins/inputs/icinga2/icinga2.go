@@ -82,7 +82,7 @@ func (i *Icinga2) SampleConfig() string {
 
 func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 	for _, check := range checks {
-		url, err := url.Parse(i.Server)
+		serverURL, err := url.Parse(i.Server)
 		if err != nil {
 			i.Log.Error(err.Error())
 			continue
@@ -106,9 +106,9 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 			"check_command": check.Attrs.CheckCommand,
 			"source":        source,
 			"state":         levels[state],
-			"server":        url.Hostname(),
-			"scheme":        url.Scheme,
-			"port":          url.Port(),
+			"server":        serverURL.Hostname(),
+			"scheme":        serverURL.Scheme,
+			"port":          serverURL.Port(),
 		}
 
 		acc.AddFields(fmt.Sprintf("icinga2_%s", i.ObjectType), fields, tags)
@@ -152,9 +152,9 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 		requestURL += "&attrs=host_name"
 	}
 
-	url := fmt.Sprintf(requestURL, i.Server, i.ObjectType)
+	address := fmt.Sprintf(requestURL, i.Server, i.ObjectType)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
 	}

@@ -157,7 +157,7 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 	for {
 		m, age, err := d.getMap(agent)
 		if err != nil {
-			return fmt.Errorf("couldn't retrieve the table of interface names: %w", err)
+			return fmt.Errorf("couldn't retrieve the table of interface names for %s: %w", agent, err)
 		}
 
 		name, found := m[num]
@@ -171,7 +171,7 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 		// the interface we're interested in.  If the entry is old
 		// enough, retrieve it from the agent once more.
 		if age < minRetry {
-			return fmt.Errorf("interface number %d isn't in the table of interface names", num)
+			return fmt.Errorf("interface number %d isn't in the table of interface names on %s", num, agent)
 		}
 
 		if firstTime {
@@ -181,7 +181,7 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 		}
 
 		// not found, cache hit, retrying
-		return fmt.Errorf("missing interface but couldn't retrieve table")
+		return fmt.Errorf("missing interface but couldn't retrieve table for %v", agent)
 	}
 }
 
@@ -212,7 +212,7 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 	fn := func(m telegraf.Metric) []telegraf.Metric {
 		err := d.addTag(m)
 		if err != nil {
-			d.Log.Debugf("Error adding tag %v", err)
+			d.Log.Debugf("Error adding tag: %v", err)
 		}
 		return []telegraf.Metric{m}
 	}
