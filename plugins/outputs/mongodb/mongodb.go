@@ -94,7 +94,7 @@ var sampleConfig = `
   # granularity can be seconds, minutes, or hours. 
   # configuring this value will be based on your input collection frequency. 
   # see https://docs.mongodb.com/manual/core/timeseries-collections/#create-a-time-series-collection
-  granularity = "seconds" 
+  # granularity = "seconds" 
 
   # optionally set a TTL to automatically expire documents from the measurement collections.
   # ttl = "360h" 
@@ -109,7 +109,7 @@ func (s *MongoDB) Init() error {
 		return fmt.Errorf("metric database must be configured in the client before connecting")
 	}
 	switch s.MetricGranularity {
-	case "",  "seconds", "minutes", "hours":
+	case "", "seconds", "minutes", "hours":
 	default:
 		return fmt.Errorf("invalid time series collection granularity. please specify \"seconds\", \"minutes\", or \"hours\"")
 	}
@@ -168,7 +168,8 @@ func (s *MongoDB) Init() error {
 	}
 
 	if s.ServerSelectTimeout != 0 {
-		s.clientOptions = s.clientOptions.SetServerSelectionTimeout(time.Duration(serverSelectionTimeoutSeconds).Seconds())
+		serverSelectionTimeoutSeconds := int64(s.ServerSelectTimeout / 1000000000)
+		s.clientOptions = s.clientOptions.SetServerSelectionTimeout(time.Duration(serverSelectionTimeoutSeconds) * time.Second)
 	}
 
 	s.clientOptions = s.clientOptions.ApplyURI(s.Dsn)
@@ -194,7 +195,6 @@ func (s *MongoDB) createTimeSeriesCollection(databaseCollection string) error {
 			return fmt.Errorf("unable to create time series collection: %v", err)
 		}
 		s.collections[databaseCollection] = bson.M{}
-		return err
 	}
 	return nil
 }
@@ -241,7 +241,7 @@ func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 		bdoc := marshalMetric(metric)
-		if err := s.insertDocument(ctx, metric.Name(), bdoc);  err != nil {
+		if err := s.insertDocument(ctx, metric.Name(), bdoc); err != nil {
 			return err
 		}
 	}
