@@ -293,7 +293,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			tags["condition_main"] = e.Weather[0].Main
 		}
 		tags["forecast"] = fmt.Sprintf("%dh", (i+1)*3)
-		acc.AddFields("weather", fields, tags, tm)
+		acc.AddFields("weather", fields, tags, tm.Add(time.Duration((i+1)*3)*time.Hour))
 	}
 }
 

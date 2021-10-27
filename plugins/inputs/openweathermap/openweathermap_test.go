@@ -451,7 +451,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 				"condition_description": "light rain",
 				"condition_icon":        "10n",
 			},
-			time.Unix(1543622400, 0),
+			time.Unix(1543633200, 0),
 		),
 		testutil.MustMetric(
 			"weather",
@@ -474,7 +474,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 				"condition_description": "light rain",
 				"condition_icon":        "10n",
 			},
-			time.Unix(1544043600, 0),
+			time.Unix(1544065200, 0),
 		),
 	}
 
