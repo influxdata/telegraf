@@ -52,7 +52,7 @@ func (smi *NvidiaSMI) Init() error {
 	}
 	// fail-fast
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
-		return fmt.Errorf("nvidia-smi binary not at path %w", err)
+		return fmt.Errorf("nvidia-smi binary not at path %s", smi.BinPath)
 	}
 
 	return nil
