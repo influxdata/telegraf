@@ -45,17 +45,17 @@ func (c *connector) Connect() (Connection, error) {
 		return nil, err
 	}
 
-	rcon, err := rcon.NewClient(c.hostname, p)
+	client, err := rcon.NewClient(c.hostname, p)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = rcon.Authorize(c.password)
+	_, err = client.Authorize(c.password)
 	if err != nil {
 		return nil, err
 	}
 
-	return &connection{rcon: rcon}, nil
+	return &connection{client: client}, nil
 }
 
 func newClient(connector Connector) *client {
@@ -111,11 +111,11 @@ func (c *client) Scores(player string) ([]Score, error) {
 }
 
 type connection struct {
-	rcon *rcon.Client
+	client *rcon.Client
 }
 
 func (c *connection) Execute(command string) (string, error) {
-	packet, err := c.rcon.Execute(command)
+	packet, err := c.client.Execute(command)
 	if err != nil {
 		return "", err
 	}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -905,6 +906,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 		return err
 	}
 	defer rows.Close()
+
 	var (
 		command string
 		state   string
@@ -948,6 +950,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	if err != nil {
 		return err
 	}
+	defer connRows.Close()
 
 	for connRows.Next() {
 		var user string
@@ -1812,90 +1815,100 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 	}
 
 	for _, database := range dbList {
-		rows, err := db.Query(fmt.Sprintf(tableSchemaQuery, database))
+		err := m.gatherSchemaForDB(db, database, servtag, acc)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		var (
-			tableSchema   string
-			tableName     string
-			tableType     string
-			engine        string
-			version       float64
-			rowFormat     string
-			tableRows     float64
-			dataLength    float64
-			indexLength   float64
-			dataFree      float64
-			createOptions string
+	}
+	return nil
+}
+
+func (m *Mysql) gatherSchemaForDB(db *sql.DB, database string, servtag string, acc telegraf.Accumulator) error {
+	rows, err := db.Query(fmt.Sprintf(tableSchemaQuery, database))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var (
+		tableSchema   string
+		tableName     string
+		tableType     string
+		engine        string
+		version       float64
+		rowFormat     string
+		tableRows     float64
+		dataLength    float64
+		indexLength   float64
+		dataFree      float64
+		createOptions string
+	)
+
+	for rows.Next() {
+		err = rows.Scan(
+			&tableSchema,
+			&tableName,
+			&tableType,
+			&engine,
+			&version,
+			&rowFormat,
+			&tableRows,
+			&dataLength,
+			&indexLength,
+			&dataFree,
+			&createOptions,
 		)
-		for rows.Next() {
-			err = rows.Scan(
-				&tableSchema,
-				&tableName,
-				&tableType,
-				&engine,
-				&version,
-				&rowFormat,
-				&tableRows,
-				&dataLength,
-				&indexLength,
-				&dataFree,
-				&createOptions,
-			)
-			if err != nil {
-				return err
-			}
-			tags := map[string]string{"server": servtag}
-			tags["schema"] = tableSchema
-			tags["table"] = tableName
+		if err != nil {
+			return err
+		}
+		tags := map[string]string{"server": servtag}
+		tags["schema"] = tableSchema
+		tags["table"] = tableName
 
-			if m.MetricVersion < 2 {
-				acc.AddFields(newNamespace("info_schema", "table_rows"),
-					map[string]interface{}{"value": tableRows}, tags)
+		if m.MetricVersion < 2 {
+			acc.AddFields(newNamespace("info_schema", "table_rows"),
+				map[string]interface{}{"value": tableRows}, tags)
 
-				dlTags := copyTags(tags)
-				dlTags["component"] = "data_length"
-				acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
-					map[string]interface{}{"value": dataLength}, dlTags)
+			dlTags := copyTags(tags)
+			dlTags["component"] = "data_length"
+			acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
+				map[string]interface{}{"value": dataLength}, dlTags)
 
-				ilTags := copyTags(tags)
-				ilTags["component"] = "index_length"
-				acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
-					map[string]interface{}{"value": indexLength}, ilTags)
+			ilTags := copyTags(tags)
+			ilTags["component"] = "index_length"
+			acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
+				map[string]interface{}{"value": indexLength}, ilTags)
 
-				dfTags := copyTags(tags)
-				dfTags["component"] = "data_free"
-				acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
-					map[string]interface{}{"value": dataFree}, dfTags)
-			} else {
-				acc.AddFields("mysql_table_schema",
-					map[string]interface{}{"rows": tableRows}, tags)
+			dfTags := copyTags(tags)
+			dfTags["component"] = "data_free"
+			acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
+				map[string]interface{}{"value": dataFree}, dfTags)
+		} else {
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"rows": tableRows}, tags)
 
-				acc.AddFields("mysql_table_schema",
-					map[string]interface{}{"data_length": dataLength}, tags)
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"data_length": dataLength}, tags)
 
-				acc.AddFields("mysql_table_schema",
-					map[string]interface{}{"index_length": indexLength}, tags)
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"index_length": indexLength}, tags)
 
-				acc.AddFields("mysql_table_schema",
-					map[string]interface{}{"data_free": dataFree}, tags)
-			}
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"data_free": dataFree}, tags)
+		}
 
-			versionTags := copyTags(tags)
-			versionTags["type"] = tableType
-			versionTags["engine"] = engine
-			versionTags["row_format"] = rowFormat
-			versionTags["create_options"] = createOptions
+		versionTags := copyTags(tags)
+		versionTags["type"] = tableType
+		versionTags["engine"] = engine
+		versionTags["row_format"] = rowFormat
+		versionTags["create_options"] = createOptions
 
-			if m.MetricVersion < 2 {
-				acc.AddFields(newNamespace("info_schema", "table_version"),
-					map[string]interface{}{"value": version}, versionTags)
-			} else {
-				acc.AddFields("mysql_table_schema_version",
-					map[string]interface{}{"table_version": version}, versionTags)
-			}
+		if m.MetricVersion < 2 {
+			acc.AddFields(newNamespace("info_schema", "table_version"),
+				map[string]interface{}{"value": version}, versionTags)
+		} else {
+			acc.AddFields("mysql_table_schema_version",
+				map[string]interface{}{"table_version": version}, versionTags)
 		}
 	}
 	return nil
