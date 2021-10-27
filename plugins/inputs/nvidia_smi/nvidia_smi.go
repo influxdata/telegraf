@@ -3,6 +3,7 @@ package nvidia_smi
 import (
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -51,7 +52,7 @@ func (smi *NvidiaSMI) Init() error {
 	}
 	// fail-fast
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
-		return errors.New("nvidia-smi binary not at path " + smi.BinPath)
+		return fmt.Errorf("nvidia-smi binary not at path %w", err)
 	}
 
 	return nil

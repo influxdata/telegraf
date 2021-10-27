@@ -16,6 +16,10 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
   # timeout = "5s"
 ```
 
+#### Linux
+
+On Linux, `nvidia-smi` is generally located at `/usr/bin/nvidia-smi`
+
 #### Windows
 
 On Windows, `nvidia-smi` is generally located at `C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe`
