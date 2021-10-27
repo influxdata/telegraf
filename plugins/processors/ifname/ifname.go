@@ -299,7 +299,7 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 }
 
 func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
-	gs := d.gsBase
+	gs, _ := snmp.NewWrapper(d.ClientConfig)
 	err := gs.SetAgent(agent)
 	if err != nil {
 		return nil, fmt.Errorf("parsing agent tag: %w", err)
