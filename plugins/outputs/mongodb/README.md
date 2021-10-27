@@ -31,12 +31,12 @@ This plugin sends metrics to MongoDB and automatically creates the collections a
   # insecure_skip_verify = false
 
   # database to store measurements and time series collections
-  database = "telegraf"
+  # database = "telegraf"
 
   # granularity can be seconds, minutes, or hours. 
   # configuring this value will be based on your input collection frequency. 
   # see https://docs.mongodb.com/manual/core/timeseries-collections/#create-a-time-series-collection
-  granularity = "seconds" 
+  # granularity = "seconds" 
 
   # optionally set a TTL to automatically expire documents from the measurement collections.
   # ttl = "360h" 

@@ -282,22 +282,6 @@ func TestConfiguration(t *testing.T) {
 			},
 		},
 		{
-			name: "fail with missing metric database",
-			plugin: &MongoDB{
-				Dsn:                "mongodb://localhost:27017",
-				AuthenticationType: "NONE",
-				MetricGranularity:  "seconds",
-			},
-		},
-		{
-			name: "fail with missing metric granularity",
-			plugin: &MongoDB{
-				Dsn:                "mongodb://localhost:27017",
-				AuthenticationType: "NONE",
-				MetricDatabase:     "telegraf_test",
-			},
-		},
-		{
 			name: "fail with invalid metric granularity",
 			plugin: &MongoDB{
 				Dsn:                "mongodb://localhost:27017",
@@ -333,6 +317,36 @@ func TestConfiguration(t *testing.T) {
 			// validate config
 			err := tt.plugin.Init()
 			require.Error(t, err)
+		})
+	}
+
+	tests = []struct {
+		name    string
+		plugin  *MongoDB
+		errFunc func(t *testing.T, err error)
+	}{
+		{
+			name: "success init with missing metric database",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "NONE",
+				MetricGranularity:  "seconds",
+			},
+		},
+		{
+			name: "success init missing metric granularity",
+			plugin: &MongoDB{
+				Dsn:                "mongodb://localhost:27017",
+				AuthenticationType: "NONE",
+				MetricDatabase:     "telegraf_test",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// validate config
+			err := tt.plugin.Init()
+			require.NoError(t, err)
 		})
 	}
 }

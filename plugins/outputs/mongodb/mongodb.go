@@ -106,10 +106,12 @@ func (s *MongoDB) SampleConfig() string {
 
 func (s *MongoDB) Init() error {
 	if s.MetricDatabase == "" {
-		return fmt.Errorf("metric database must be configured in the client before connecting")
+		s.MetricDatabase = "telegraf"
 	}
 	switch s.MetricGranularity {
-	case "", "seconds", "minutes", "hours":
+	case "":
+		s.MetricGranularity = "seconds"
+	case "seconds", "minutes", "hours":
 	default:
 		return fmt.Errorf("invalid time series collection granularity. please specify \"seconds\", \"minutes\", or \"hours\"")
 	}
