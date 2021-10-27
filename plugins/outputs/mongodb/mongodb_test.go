@@ -23,20 +23,10 @@ func TestConnectAndWriteIntegrationNoAuth(t *testing.T) {
 	}
 
 	// validate config
-	err := plugin.Init()
-	require.NoError(t, err)
-
-	// connect
-	err = plugin.Connect()
-	require.NoError(t, err)
-
-	// insert mock metrics
-	err = plugin.Write(testutil.MockMetrics())
-	require.NoError(t, err)
-
-	// cleanup
-	err = plugin.Close()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
+	require.NoError(t, plugin.Close())
 }
 
 func TestConnectAndWriteIntegrationSCRAMAuth(t *testing.T) {

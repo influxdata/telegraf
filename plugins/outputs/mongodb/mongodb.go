@@ -30,7 +30,11 @@ func (s *MongoDB) getCollections(ctx context.Context) error {
 		if err := collections.Decode(&collection); err != nil {
 			return fmt.Errorf("unable to decode ListCollections: %v", err)
 		}
-		s.collections[collection["name"].(string)] = collection
+		name, ok := collection["name"].(string)
+		if !ok {
+			return fmt.Errorf("non-string name in %v", collection)
+		}
+		s.collections[name] = collection
 	}
 	return nil
 }
@@ -85,7 +89,7 @@ var sampleConfig = `
   # insecure_skip_verify = false
 
   # database to store measurements and time series collections
-  database = "telegraf"
+  # database = "telegraf"
 
   # granularity can be seconds, minutes, or hours. 
   # configuring this value will be based on your input collection frequency. 
@@ -104,12 +108,14 @@ func (s *MongoDB) Init() error {
 	if s.MetricDatabase == "" {
 		return fmt.Errorf("metric database must be configured in the client before connecting")
 	}
-	if s.MetricGranularity == "" || (s.MetricGranularity != "seconds" && s.MetricGranularity != "minutes" && s.MetricGranularity != "hours") {
+	switch s.MetricGranularity {
+	case "",  "seconds", "minutes", "hours":
+	default:
 		return fmt.Errorf("invalid time series collection granularity. please specify \"seconds\", \"minutes\", or \"hours\"")
 	}
 
 	// do some basic Dsn checks
-	if !strings.Contains(s.Dsn, "mongodb://") && !strings.Contains(s.Dsn, "mongodb+srv://") {
+	if !strings.HasPrefix(s.Dsn, "mongodb://") && !strings.HasPrefix(s.Dsn, "mongodb+srv://") {
 		return fmt.Errorf("invalid connection string. expected mongodb://host:port/?{options} or mongodb+srv://host:port/?{options}")
 	}
 	if !strings.Contains(s.Dsn[strings.Index(s.Dsn, "://")+3:], "/") { //append '/' to Dsn if its missing
@@ -162,8 +168,7 @@ func (s *MongoDB) Init() error {
 	}
 
 	if s.ServerSelectTimeout != 0 {
-		serverSelectionTimeoutSeconds := int64(s.ServerSelectTimeout / 1000000000)
-		s.clientOptions = s.clientOptions.SetServerSelectionTimeout(time.Duration(serverSelectionTimeoutSeconds) * time.Second)
+		s.clientOptions = s.clientOptions.SetServerSelectionTimeout(time.Duration(serverSelectionTimeoutSeconds).Seconds())
 	}
 
 	s.clientOptions = s.clientOptions.ApplyURI(s.Dsn)
@@ -201,8 +206,7 @@ func (s *MongoDB) Connect() error {
 		return fmt.Errorf("unable to connect: %v", err)
 	}
 	s.client = client
-	err = s.getCollections(ctx)
-	if err != nil {
+	if err := s.getCollections(ctx); err != nil {
 		return fmt.Errorf("unable to get collections from specified metric database: %v", err)
 	}
 	return nil
@@ -233,13 +237,11 @@ func marshalMetric(metric telegraf.Metric) bson.D {
 func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 	for _, metric := range metrics {
-		err := s.createTimeSeriesCollection(metric.Name())
-		if err != nil {
+		if err := s.createTimeSeriesCollection(metric.Name()); err != nil {
 			return err
 		}
 		bdoc := marshalMetric(metric)
-		err = s.insertDocument(ctx, metric.Name(), bdoc)
-		if err != nil {
+		if err := s.insertDocument(ctx, metric.Name(), bdoc);  err != nil {
 			return err
 		}
 	}
