@@ -101,16 +101,13 @@ type IfName struct {
 
 	lock  sync.Mutex `toml:"-"`
 	cache *TTLCache  `toml:"-"`
+	sigs  sigMap     `toml:"-"`
 
 	parallel parallel.Parallel    `toml:"-"`
 	acc      telegraf.Accumulator `toml:"-"`
 
 	getMapRemote mapFunc       `toml:"-"`
 	makeTable    makeTableFunc `toml:"-"`
-
-	gsBase snmp.GosnmpWrapper `toml:"-"`
-
-	sigs sigMap `toml:"-"`
 }
 
 const minRetry time.Duration = 5 * time.Minute
@@ -195,7 +192,7 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 	d.acc = acc
 
 	var err error
-	d.gsBase, err = snmp.NewWrapper(d.ClientConfig)
+	_, err = snmp.NewWrapper(d.ClientConfig)
 	if err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
