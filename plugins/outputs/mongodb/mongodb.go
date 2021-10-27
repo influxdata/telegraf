@@ -170,8 +170,7 @@ func (s *MongoDB) Init() error {
 	}
 
 	if s.ServerSelectTimeout != 0 {
-		serverSelectionTimeoutSeconds := int64(s.ServerSelectTimeout / 1000000000)
-		s.clientOptions = s.clientOptions.SetServerSelectionTimeout(time.Duration(serverSelectionTimeoutSeconds) * time.Second)
+		s.clientOptions = s.clientOptions.SetServerSelectionTimeout(time.Duration(serverSelectionTimeoutSeconds))
 	}
 
 	s.clientOptions = s.clientOptions.ApplyURI(s.Dsn)
