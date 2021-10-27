@@ -3,12 +3,12 @@ package kafka_consumer
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Shopify/sarama"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
@@ -232,7 +232,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer k.wg.Done()
 		for ctx.Err() == nil {
-			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser)
+			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
 			err := k.consumer.Consume(ctx, k.Topics, handler)
@@ -276,12 +276,13 @@ type Message struct {
 	session sarama.ConsumerGroupSession
 }
 
-func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser parsers.Parser) *ConsumerGroupHandler {
+func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser parsers.Parser, log telegraf.Logger) *ConsumerGroupHandler {
 	handler := &ConsumerGroupHandler{
 		acc:         acc.WithTracking(maxUndelivered),
 		sem:         make(chan empty, maxUndelivered),
 		undelivered: make(map[telegraf.TrackingID]Message, maxUndelivered),
 		parser:      parser,
+		log:         log,
 	}
 	return handler
 }
@@ -299,6 +300,8 @@ type ConsumerGroupHandler struct {
 
 	mu          sync.Mutex
 	undelivered map[telegraf.TrackingID]Message
+
+	log telegraf.Logger
 }
 
 // Setup is called once when a new session is opened.  It setups up the handler
@@ -335,7 +338,7 @@ func (h *ConsumerGroupHandler) onDelivery(track telegraf.DeliveryInfo) {
 
 	msg, ok := h.undelivered[track.ID()]
 	if !ok {
-		log.Printf("E! [inputs.kafka_consumer] Could not mark message delivered: %d", track.ID())
+		h.log.Errorf("Could not mark message delivered: %d", track.ID())
 		return
 	}
 
