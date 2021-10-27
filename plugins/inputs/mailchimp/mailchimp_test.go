@@ -28,7 +28,7 @@ func TestMailChimpGatherReports(t *testing.T) {
 
 	api := &ChimpAPI{
 		url:   u,
-		Debug: true,
+		debug: true,
 		log:   testutil.Logger{},
 	}
 	m := MailChimp{
@@ -93,7 +93,7 @@ func TestMailChimpGatherReport(t *testing.T) {
 
 	api := &ChimpAPI{
 		url:   u,
-		Debug: true,
+		debug: true,
 		log:   testutil.Logger{},
 	}
 	m := MailChimp{
@@ -159,7 +159,7 @@ func TestMailChimpGatherError(t *testing.T) {
 
 	api := &ChimpAPI{
 		url:   u,
-		Debug: true,
+		debug: true,
 		log:   testutil.Logger{},
 	}
 	m := MailChimp{

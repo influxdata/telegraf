@@ -31,8 +31,8 @@ func TestAddressParsing(t *testing.T) {
 		address, protocol, err := m.ParseAddress(args[0])
 
 		require.Nil(t, err, args[0])
-		require.True(t, address == args[1], args[0])
-		require.True(t, protocol == args[2], args[0])
+		require.Equal(t, args[1], address, args[0])
+		require.Equal(t, args[2], protocol, args[0])
 	}
 
 	for _, addr := range rejectTests {

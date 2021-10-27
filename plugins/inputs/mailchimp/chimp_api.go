@@ -23,7 +23,7 @@ var mailchimpDatacenter = regexp.MustCompile("[a-z]+[0-9]+$")
 
 type ChimpAPI struct {
 	Transport http.RoundTripper
-	Debug     bool
+	debug     bool
 
 	sync.Mutex
 
@@ -137,7 +137,7 @@ func (a *ChimpAPI) runChimp(params ReportsParams) ([]byte, error) {
 	}
 	req.URL.RawQuery = params.String()
 	req.Header.Set("User-Agent", "Telegraf-MailChimp-Plugin")
-	if a.Debug {
+	if a.debug {
 		a.log.Debugf("request URL: %s", req.URL.String())
 	}
 
@@ -157,7 +157,7 @@ func (a *ChimpAPI) runChimp(params ReportsParams) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if a.Debug {
+	if a.debug {
 		a.log.Debugf("response Body: %q", string(body))
 	}
 
