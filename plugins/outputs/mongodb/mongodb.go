@@ -140,7 +140,7 @@ func (s *MongoDB) Init() error {
 			Username:      s.Username,
 			Password:      s.Password,
 		}
-		s.clientOptions = s.clientOptions.SetAuth(credential)
+		s.clientOptions.SetAuth(credential)
 	case "X509":
 		//format connection string to include tls/x509 options
 		newConnectionString, err := url.Parse(s.Dsn)
@@ -166,14 +166,14 @@ func (s *MongoDB) Init() error {
 			AuthSource:    "$external",
 			AuthMechanism: "MONGODB-X509",
 		}
-		s.clientOptions = s.clientOptions.SetAuth(credential)
+		s.clientOptions.SetAuth(credential)
 	}
 
 	if s.ServerSelectTimeout != 0 {
-		s.clientOptions = s.clientOptions.SetServerSelectionTimeout(time.Duration(s.ServerSelectTimeout))
+		s.clientOptions.SetServerSelectionTimeout(time.Duration(s.ServerSelectTimeout))
 	}
 
-	s.clientOptions = s.clientOptions.ApplyURI(s.Dsn)
+	s.clientOptions.ApplyURI(s.Dsn)
 	return nil
 }
 
@@ -186,9 +186,8 @@ func (s *MongoDB) createTimeSeriesCollection(databaseCollection string) error {
 		tso.SetMetaField("tags")
 		tso.SetGranularity(s.MetricGranularity)
 		cco := options.CreateCollection()
-		expireAfterSeconds := int64(s.TTL / 1000000000)
-		if expireAfterSeconds != 0 {
-			cco.SetExpireAfterSeconds(expireAfterSeconds)
+		if s.TTL != 0 {
+			cco.SetExpireAfterSeconds(int64(time.Duration(s.TTL).Seconds()))
 		}
 		cco.SetTimeSeriesOptions(tso)
 		err := s.client.Database(s.MetricDatabase).CreateCollection(ctx, databaseCollection, cco)
