@@ -99,10 +99,10 @@ type IfName struct {
 	ifTable  *si.Table
 	ifXTable *si.Table
 
-	lock     sync.Mutex
 	cache    *TTLCache
-	sigs     sigMap
+	lock     sync.Mutex
 	parallel parallel.Parallel
+	sigs     sigMap
 
 	getMapRemote mapFunc
 	makeTable    makeTableFunc
