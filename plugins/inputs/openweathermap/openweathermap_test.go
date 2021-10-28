@@ -451,6 +451,66 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 				"condition_description": "light rain",
 				"condition_icon":        "10n",
 			},
+			time.Unix(1543622400, 0),
+		),
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "2988507",
+				"forecast":       "6h",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "500",
+				"condition_main": "Rain",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(92),
+				"humidity":              int64(98),
+				"pressure":              1032.18,
+				"temperature":           6.38,
+				"rain":                  0.049999999999997,
+				"wind_degrees":          335.005,
+				"wind_speed":            2.66,
+				"condition_description": "light rain",
+				"condition_icon":        "10n",
+			},
+			time.Unix(1544043600, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t,
+		expected, acc.GetTelegrafMetrics(),
+		testutil.SortMetrics())
+
+	// test timestamp as `prediction`
+	n.Timestamp = "prediction"
+	require.NoError(t, n.Init())
+
+	var acc2 testutil.Accumulator
+	require.NoError(t, n.Gather(&acc2))
+
+	expected = []telegraf.Metric{
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "2988507",
+				"forecast":       "3h",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "500",
+				"condition_main": "Rain",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(88),
+				"humidity":              int64(91),
+				"pressure":              1018.65,
+				"temperature":           6.71,
+				"rain":                  0.035,
+				"wind_degrees":          228.501,
+				"wind_speed":            3.76,
+				"condition_description": "light rain",
+				"condition_icon":        "10n",
+			},
 			time.Unix(1543633200, 0),
 		),
 		testutil.MustMetric(
@@ -479,8 +539,9 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 	}
 
 	testutil.RequireMetricsEqual(t,
-		expected, acc.GetTelegrafMetrics(),
+		expected, acc2.GetTelegrafMetrics(),
 		testutil.SortMetrics())
+
 }
 
 func TestWeatherGeneratesMetrics(t *testing.T) {

@@ -104,7 +104,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 						return
 					}
 
-					gatherForecast(acc, status)
+					gatherForecast(acc, status, n.Timestamp)
 				}()
 			}
 		} else if fetch == "weather" {
@@ -274,7 +274,7 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 	}
 }
 
-func gatherForecast(acc telegraf.Accumulator, status *Status) {
+func gatherForecast(acc telegraf.Accumulator, status *Status, timestamp string) {
 	tags := map[string]string{
 		"city_id":  strconv.FormatInt(status.City.ID, 10),
 		"forecast": "*",
@@ -299,7 +299,10 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			tags["condition_main"] = e.Weather[0].Main
 		}
 		tags["forecast"] = fmt.Sprintf("%dh", (i+1)*3)
-		acc.AddFields("weather", fields, tags, tm.Add(time.Duration((i+1)*3)*time.Hour))
+		if timestamp == "prediction" {
+			tm = tm.Add(time.Duration((i+1)*3) * time.Hour)
+		}
+		acc.AddFields("weather", fields, tags, tm)
 	}
 }
 
@@ -344,11 +347,11 @@ func (n *OpenWeatherMap) Init() error {
 	}
 
 	switch n.Timestamp {
-	case "imperial", "standard", "metric":
+	case "issue", "prediction":
 	case "":
-		n.Units = defaultUnits
+		n.Timestamp = defaultTimestamp
 	default:
-		return fmt.Errorf("unknown units: %s", n.Units)
+		return fmt.Errorf("unknown timeStamp: %s", n.Timestamp)
 	}
 
 	return nil
