@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
@@ -64,6 +65,7 @@ func TestInit(t *testing.T) {
 				require.Equal(t, plugin.MaxUndeliveredMessages, defaultMaxUndeliveredMessages)
 				require.Equal(t, plugin.config.ClientID, "Telegraf")
 				require.Equal(t, plugin.config.Consumer.Offsets.Initial, sarama.OffsetOldest)
+				require.Equal(t, plugin.config.Consumer.MaxProcessingTime, 100*time.Millisecond)
 			},
 		},
 		{
@@ -163,6 +165,16 @@ func TestInit(t *testing.T) {
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.True(t, plugin.config.Net.TLS.Enable)
+			},
+		},
+		{
+			name: "custom max_processing_time",
+			plugin: &KafkaConsumer{
+				MaxProcessingTime: config.Duration(1000 * time.Millisecond),
+				Log:               testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.Equal(t, plugin.config.Consumer.MaxProcessingTime, 1000*time.Millisecond)
 			},
 		},
 	}
