@@ -96,17 +96,16 @@ type IfName struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	ifTable  *si.Table `toml:"-"`
-	ifXTable *si.Table `toml:"-"`
+	ifTable  *si.Table
+	ifXTable *si.Table
 
-	lock  sync.Mutex `toml:"-"`
-	cache *TTLCache  `toml:"-"`
-	sigs  sigMap     `toml:"-"`
+	lock     sync.Mutex
+	cache    *TTLCache
+	sigs     sigMap
+	parallel parallel.Parallel
 
-	parallel parallel.Parallel    `toml:"-"`
-
-	getMapRemote mapFunc       `toml:"-"`
-	makeTable    makeTableFunc `toml:"-"`
+	getMapRemote mapFunc
+	makeTable    makeTableFunc
 }
 
 const minRetry time.Duration = 5 * time.Minute
