@@ -69,7 +69,7 @@ So in case you expect a longer period of inactivity or you want to abandon a pul
 
 ## Linting
 
-Each pull request will have the appriopriate linters checking the files for any common mistakes. The github action Super Linter is used: https://github.com/github/super-linter. If it is failing you can click on the action and read the logs to figure out the issue. You can also run the github action locally by following these instructions: https://github.com/github/super-linter/blob/main/docs/run-linter-locally.md. You can find more information on each of the linters in the super linter readme.
+Each pull request will have the appriopriate linters checking the files for any common mistakes. The github action Super Linter is used: [super-pinter](https://github.com/github/super-linter). If it is failing you can click on the action and read the logs to figure out the issue. You can also run the github action locally by following these instructions: [run-linter-locally.md](https://github.com/github/super-linter/blob/main/docs/run-linter-locally.md). You can find more information on each of the linters in the super linter readme.
 
 ## Testing
 
@@ -124,7 +124,8 @@ Metrics use `snake_case` naming style.
 
 Generally enumeration data should be encoded as a tag.  In some cases it may
 be desirable to also include the data as an integer field:
-```
+
+```shell
 net_response,result=success result_code=0i
 ```
 
@@ -132,7 +133,8 @@ net_response,result=success result_code=0i
 
 Use tags for each range with the `le` tag, and `+Inf` for the values out of
 range.  This format is inspired by the Prometheus project:
-```
+
+```shell
 cpu,le=0.0 usage_idle_bucket=0i 1486998330000000000
 cpu,le=50.0 usage_idle_bucket=2i 1486998330000000000
 cpu,le=100.0 usage_idle_bucket=2i 1486998330000000000
