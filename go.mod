@@ -76,7 +76,6 @@ require (
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
-	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
 	github.com/containerd/cgroups v1.0.1 // indirect
 	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
@@ -113,12 +112,10 @@ require (
 	github.com/goburrow/serial v0.1.0 // indirect
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid v3.3.0+incompatible
-	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v4 v4.1.0
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
 	github.com/google/flatbuffers v2.0.0+incompatible // indirect
 	github.com/google/go-cmp v0.5.6
@@ -339,6 +336,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
 	github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f // indirect
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.2 // indirect
