@@ -691,14 +691,17 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		if err != nil {
 			return err
 		}
-		vals := make([]interface{}, len(cols))
+		vals := make([]sql.RawBytes, len(cols))
+		valPtrs := make([]interface{}, len(cols))
 		// fill the array with sql.Rawbytes
 		for i := range vals {
-			vals[i] = &sql.RawBytes{}
+			vals[i] = sql.RawBytes{}
+			valPtrs[i] = &vals[i]
 		}
-		if err = rows.Scan(vals...); err != nil {
+		if err = rows.Scan(valPtrs...); err != nil {
 			return err
 		}
+
 		// range over columns, and try to parse values
 		for i, col := range cols {
 			colName := col.Name()
@@ -707,7 +710,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 				colName = strings.ToLower(colName)
 			}
 
-			colValue := *vals[i].(*sql.RawBytes)
+			colValue := vals[i]
 
 			if m.GatherAllSlaveChannels &&
 				(strings.ToLower(colName) == "channel_name" || strings.ToLower(colName) == "connection_name") {
@@ -724,9 +727,13 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 				continue
 			}
 
-			if value, err := m.parseValueByDatabaseTypeName(colValue, col.DatabaseTypeName()); err != nil {
-				fields["slave_"+colName] = value
+			value, err := m.parseValueByDatabaseTypeName(colValue, col.DatabaseTypeName())
+			if err != nil {
+				m.Log.Debugf("Error parsing %s=%q: %v", colName, string(colValue), err)
+				continue
 			}
+
+			fields["slave_"+colName] = value
 		}
 		acc.AddFields("mysql", fields, tags)
 
@@ -1349,10 +1356,16 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 		if err := rows.Scan(&key, &val); err != nil {
 			return err
 		}
+
 		key = strings.ToLower(key)
-		if value, ok := m.parseValue(val); ok {
-			fields[key] = value
+		value, err := m.parseValue(val)
+		if err != nil {
+			m.Log.Debugf("Error parsing %s=%q: %v", key, string(val), err)
+			continue
 		}
+
+		fields[key] = value
+
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_innodb", fields, tags)
@@ -1924,21 +1937,12 @@ func (m *Mysql) parseValueByDatabaseTypeName(value sql.RawBytes, databaseTypeNam
 	}
 }
 
-func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
-	var data interface{}
-	var err error
-
+func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, error) {
 	if m.MetricVersion < 2 {
-		data, err = v1.ParseValue(value)
-	} else {
-		data, err = v2.ParseValue(value)
+		return v1.ParseValue(value)
 	}
 
-	if err != nil {
-		return nil, false
-	}
-
-	return data, true
+	return v2.ParseValue(value)
 }
 
 // findThreadState can be used to find thread state by command and plain state
