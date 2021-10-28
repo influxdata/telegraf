@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 type FakeConsumerGroup struct {
@@ -259,7 +260,7 @@ func (c *FakeConsumerGroupClaim) Messages() <-chan *sarama.ConsumerMessage {
 func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	parser := value.NewValueParser("cpu", "int", "", nil)
-	cg := NewConsumerGroupHandler(acc, 1, parser)
+	cg := NewConsumerGroupHandler(acc, 1, parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -274,11 +275,12 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	require.NoError(t, err)
 
 	cancel()
-	// This produces a flappy testcase probably due to a race between context cancelation and consumption.
+	// This produces a flappy testcase probably due to a race between context cancellation and consumption.
 	// Furthermore, it is not clear what the outcome of this test should be...
 	// err = cg.ConsumeClaim(session, &claim)
 	//require.NoError(t, err)
 	// So stick with the line below for now.
+	//nolint:errcheck
 	cg.ConsumeClaim(session, &claim)
 
 	err = cg.Cleanup(session)
@@ -288,7 +290,7 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	parser := value.NewValueParser("cpu", "int", "", nil)
-	cg := NewConsumerGroupHandler(acc, 1, parser)
+	cg := NewConsumerGroupHandler(acc, 1, parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -402,7 +404,7 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			acc := &testutil.Accumulator{}
 			parser := value.NewValueParser("cpu", "int", "", nil)
-			cg := NewConsumerGroupHandler(acc, 1, parser)
+			cg := NewConsumerGroupHandler(acc, 1, parser, testutil.Logger{})
 			cg.MaxMessageLen = tt.maxMessageLen
 			cg.TopicTag = tt.topicTag
 
