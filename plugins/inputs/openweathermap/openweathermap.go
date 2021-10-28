@@ -23,10 +23,10 @@ const (
 	// The limit of locations is 20.
 	owmRequestSeveralCityID int = 20
 
-	defaultBaseURL                = "https://api.openweathermap.org/"
-	defaultResponseTimeout        = time.Second * 5
-	defaultUnits           string = "metric"
-	defaultLang            string = "en"
+	defaultBaseURL         = "https://api.openweathermap.org/"
+	defaultResponseTimeout = time.Second * 5
+	defaultUnits           = "metric"
+	defaultLang            = "en"
 )
 
 type OpenWeatherMap struct {
