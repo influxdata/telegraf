@@ -2,6 +2,7 @@ package v2
 
 import (
 	"database/sql"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -108,17 +109,19 @@ func TestParseValue(t *testing.T) {
 		{sql.RawBytes("18446744073709551615"), uint64(18446744073709551615), ""},  // max uint64
 		{sql.RawBytes("18446744073709551616"), float64(18446744073709552000), ""}, // too big for uint64
 		{sql.RawBytes("18446744073709552333"), float64(18446744073709552000), ""}, // too big for uint64
-		{sql.RawBytes(""), nil, "foo"},
+		{sql.RawBytes(""), nil, "unconvertible value"},
 	}
 	for _, cases := range testCases {
 		got, err := ParseValue(cases.rawByte)
 
 		if err != nil && cases.err == "" {
-			t.Errorf("for %s got unexpected error: %s", string(cases.rawByte), err)
+			t.Errorf("for %q got unexpected error: %q", string(cases.rawByte), err.Error())
+		} else if err != nil && !strings.HasPrefix(err.Error(), cases.err) {
+			t.Errorf("for %q wanted error %q, got %q", string(cases.rawByte), cases.err, err.Error())
 		} else if err == nil && cases.err != "" {
-			t.Errorf("for %s did not get expected error: %s", string(cases.rawByte), cases.err)
+			t.Errorf("for %q did not get expected error: %s", string(cases.rawByte), cases.err)
 		} else if got != cases.output {
-			t.Errorf("for %s wanted %#v (%T), got %#v (%T)", string(cases.rawByte), cases.output, cases.output, got, got)
+			t.Errorf("for %q wanted %#v (%T), got %#v (%T)", string(cases.rawByte), cases.output, cases.output, got, got)
 		}
 	}
 }
