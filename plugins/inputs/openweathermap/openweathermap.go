@@ -27,6 +27,7 @@ const (
 	defaultResponseTimeout time.Duration = time.Second * 5
 	defaultUnits           string        = "metric"
 	defaultLang            string        = "en"
+	defaultTimestamp       string        = "issue"
 )
 
 type OpenWeatherMap struct {
@@ -37,6 +38,7 @@ type OpenWeatherMap struct {
 	BaseURL         string          `toml:"base_url"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Units           string          `toml:"units"`
+	Timestamp       string          `toml:"timestamp"`
 
 	client  *http.Client
 	baseURL *url.URL
@@ -71,6 +73,10 @@ var sampleConfig = `
   ## Query interval; OpenWeatherMap updates their weather data every 10
   ## minutes.
   interval = "10m"
+
+  ## Type of the timestamp. Default to "issue" which is the collected time.
+  ## Another option is "prediction" which is the predicted time.
+  timestamp = "issue"
 `
 
 func (n *OpenWeatherMap) SampleConfig() string {
@@ -335,6 +341,14 @@ func (n *OpenWeatherMap) Init() error {
 		n.Lang = defaultLang
 	default:
 		return fmt.Errorf("unknown language: %s", n.Lang)
+	}
+
+	switch n.Timestamp {
+	case "imperial", "standard", "metric":
+	case "":
+		n.Units = defaultUnits
+	default:
+		return fmt.Errorf("unknown units: %s", n.Units)
 	}
 
 	return nil

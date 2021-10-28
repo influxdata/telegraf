@@ -42,6 +42,10 @@ condition ID, icon, and main is at [weather conditions][].
   ## Query interval; OpenWeatherMap weather data is updated every 10
   ## minutes.
   interval = "10m"
+
+  ## Type of the timestamp. Default to "issue" which is the collected time.
+  ## Another option is "prediction" which is the predicted time.
+  timestamp = "issue"
 ```
 
 ### Metrics
