@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 
@@ -236,7 +235,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			return false
 		})
 	}
-	data, err := proto.Marshal(&prompb.WriteRequest{Timeseries: promTS})
+	data, err := (&prompb.WriteRequest{Timeseries: promTS}).Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal protobuf: %v", err)
 	}
