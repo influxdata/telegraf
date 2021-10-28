@@ -31,6 +31,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
 	_ "github.com/influxdata/telegraf/plugins/outputs/logzio"
 	_ "github.com/influxdata/telegraf/plugins/outputs/loki"
+	_ "github.com/influxdata/telegraf/plugins/outputs/mongodb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/mqtt"
 	_ "github.com/influxdata/telegraf/plugins/outputs/nats"
 	_ "github.com/influxdata/telegraf/plugins/outputs/newrelic"
