@@ -13,18 +13,18 @@ import (
 	"sync"
 	"time"
 
-	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
-	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck // Cannot switch to "google.golang.org/protobuf/proto", "github.com/golang/protobuf/proto" is used by "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Register GRPC gzip decoder to support compressed telemetry
 	"google.golang.org/grpc/peer"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/dialout"
+	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/telemetry"
 )
 
 const (
@@ -61,6 +61,9 @@ type CiscoTelemetryMDT struct {
 	mutex           sync.Mutex
 	acc             telegraf.Accumulator
 	wg              sync.WaitGroup
+
+	// Required embed to maintain compatibility
+	dialout.UnimplementedGRPCMdtDialoutServer
 }
 
 type NxPayloadXfromStructure struct {

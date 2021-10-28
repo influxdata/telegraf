@@ -1,0 +1,92 @@
+/* ----------------------------------------------------------------------------
+ * telemetry.proto - Telemetry protobuf definitions
+ *
+ * August 2016
+ *
+ * Copyright (c) 2016 by Cisco Systems, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ----------------------------------------------------------------------------
+ */
+
+syntax = "proto3";
+
+package telemetry;
+option go_package = ".;telemetry";
+
+/*
+ * Common message used as a header to both compact and self-describing
+ * telemetry messages.
+ */
+
+message Telemetry {
+  oneof node_id {
+    string node_id_str = 1;
+    //  bytes node_id_uuid = 2;              // not produced
+  }
+  oneof subscription {
+    string   subscription_id_str = 3;
+    //  uint32   subscription_id = 4;        // not produced
+  }
+  // string   sensor_path = 5;               // not produced
+  string   encoding_path = 6;
+  // string   model_version = 7;             // not produced
+  uint64   collection_id = 8;
+  uint64   collection_start_time = 9;
+  uint64   msg_timestamp = 10;
+  repeated TelemetryField data_gpbkv = 11;
+  TelemetryGPBTable data_gpb = 12;
+  uint64   collection_end_time = 13;
+  // uint64   heartbeat_sequence_number = 14; // not produced
+}
+
+/*
+ * Messages used to export content in GPB K/V form.
+ *
+ * The set of messages in this .proto are sufficient to decode all
+ * telemetry messages.
+ */
+
+message TelemetryField {
+  uint64         timestamp = 1;
+  string         name = 2;
+  oneof value_by_type {
+    bytes          bytes_value = 4;
+    string         string_value = 5;
+    bool           bool_value = 6;
+    uint32         uint32_value = 7;
+    uint64         uint64_value = 8;
+    sint32         sint32_value = 9;
+    sint64         sint64_value = 10;
+    double         double_value = 11;
+    float          float_value = 12;
+  }
+  repeated TelemetryField fields = 15;
+}
+
+/*
+ * Messages used to export content in compact GPB form
+ *
+ * Per encoding-path .proto files are required to decode keys/content
+ * pairs below.
+ */
+
+message TelemetryGPBTable {
+  repeated TelemetryRowGPB row = 1;
+}
+
+message TelemetryRowGPB {
+  uint64 timestamp = 1;
+  bytes keys = 10;
+  bytes content = 11;
+}

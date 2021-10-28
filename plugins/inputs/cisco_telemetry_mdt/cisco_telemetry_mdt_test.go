@@ -8,12 +8,12 @@ import (
 	"net"
 	"testing"
 
-	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
-	telemetryBis "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck // Cannot switch to "google.golang.org/protobuf/proto", "github.com/golang/protobuf/proto" is used by "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 
+	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/dialout"
+	telemetryBis "github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/telemetry"
 	"github.com/influxdata/telegraf/testutil"
 )
 
