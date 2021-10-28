@@ -104,7 +104,6 @@ type IfName struct {
 	sigs  sigMap     `toml:"-"`
 
 	parallel parallel.Parallel    `toml:"-"`
-	acc      telegraf.Accumulator `toml:"-"`
 
 	getMapRemote mapFunc       `toml:"-"`
 	makeTable    makeTableFunc `toml:"-"`
@@ -193,8 +192,6 @@ func (d *IfName) invalidate(agent string) {
 }
 
 func (d *IfName) Start(acc telegraf.Accumulator) error {
-	d.acc = acc
-
 	var err error
 	d.ifTable, err = d.makeTable("IF-MIB::ifDescr")
 	if err != nil {
