@@ -47,6 +47,7 @@ var dataWithStringValues = &telemetry.OpenConfigData{
 }
 
 type openConfigTelemetryServer struct {
+	telemetry.OpenConfigTelemetryServer
 }
 
 func (s *openConfigTelemetryServer) TelemetrySubscribe(req *telemetry.SubscriptionRequest, stream telemetry.OpenConfigTelemetry_TelemetrySubscribeServer) error {
@@ -81,8 +82,8 @@ func (s *openConfigTelemetryServer) GetDataEncodings(_ context.Context, _ *telem
 }
 
 func newServer() *openConfigTelemetryServer {
-	s := new(openConfigTelemetryServer)
-	return s
+	s := new(telemetry.OpenConfigTelemetryServer)
+	return &openConfigTelemetryServer{*s}
 }
 
 func TestOpenConfigTelemetryData(t *testing.T) {
