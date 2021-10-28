@@ -17,13 +17,13 @@ import (
 
 	"github.com/influxdata/telegraf/metric"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	riemanngoproto "github.com/influxdata/telegraf/plugins/inputs/riemann_listener/proto"
 	riemanngo "github.com/riemann/riemann-go-client"
-	riemangoProto "github.com/riemann/riemann-go-client/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 type RiemannSocketListener struct {
@@ -181,7 +181,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			}
 		}
 
-		messagePb := &riemangoProto.Msg{}
+		messagePb := &riemanngoproto.Msg{}
 		var header uint32
 		// First obtain the size of the riemann event from client and acknowledge
 		if err = binary.Read(conn, binary.BigEndian, &header); err != nil {
@@ -204,7 +204,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			riemannReturnErrorResponse(conn, "Failed to unmarshal")
 			return
 		}
-		riemannEvents := riemanngo.ProtocolBuffersToEvents(messagePb.Events)
+		riemannEvents := ProtocolBuffersToEvents(messagePb.Events)
 
 		for _, m := range riemannEvents {
 			if m.Service == "" {
@@ -230,7 +230,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 
 func riemannReturnResponse(conn net.Conn) {
 	t := true
-	message := new(riemangoProto.Msg)
+	message := new(riemanngoproto.Msg)
 	message.Ok = &t
 	returnData, err := proto.Marshal(message)
 	if err != nil {
@@ -252,7 +252,7 @@ func riemannReturnResponse(conn net.Conn) {
 
 func riemannReturnErrorResponse(conn net.Conn, errorMessage string) {
 	t := false
-	message := new(riemangoProto.Msg)
+	message := new(riemanngoproto.Msg)
 	message.Ok = &t
 	message.Error = &errorMessage
 	returnData, err := proto.Marshal(message)
@@ -392,4 +392,39 @@ func newRiemannSocketListener() *RiemannSocketListener {
 
 func init() {
 	inputs.Add("riemann_listener", func() telegraf.Input { return newRiemannSocketListener() })
+}
+
+// ProtocolBuffersToEvents converts an array of proto.Event to an array of Event
+func ProtocolBuffersToEvents(pbEvents []*riemanngoproto.Event) []riemanngo.Event {
+	var events []riemanngo.Event
+	for _, event := range pbEvents {
+		e := riemanngo.Event{
+			State:       event.GetState(),
+			Service:     event.GetService(),
+			Host:        event.GetHost(),
+			Description: event.GetDescription(),
+			TTL:         time.Duration(event.GetTtl()) * time.Second,
+			Tags:        event.GetTags(),
+		}
+		if event.TimeMicros != nil {
+			e.Time = time.Unix(0, event.GetTimeMicros()*int64(time.Microsecond))
+		} else if event.Time != nil {
+			e.Time = time.Unix(event.GetTime(), 0)
+		}
+		if event.MetricF != nil {
+			e.Metric = event.GetMetricF()
+		} else if event.MetricD != nil {
+			e.Metric = event.GetMetricD()
+		} else {
+			e.Metric = event.GetMetricSint64()
+		}
+		if event.Attributes != nil {
+			e.Attributes = make(map[string]string, len(event.GetAttributes()))
+			for _, attr := range event.GetAttributes() {
+				e.Attributes[attr.GetKey()] = attr.GetValue()
+			}
+		}
+		events = append(events, e)
+	}
+	return events
 }
