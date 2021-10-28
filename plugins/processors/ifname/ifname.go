@@ -129,6 +129,10 @@ func (d *IfName) Init() error {
 
 	d.sigs = make(sigMap)
 
+	if _, err := snmp.NewWrapper(d.ClientConfig); err != nil {
+		return fmt.Errorf("parsing SNMP client config: %w", err)
+	}
+
 	return nil
 }
 
@@ -192,11 +196,6 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 	d.acc = acc
 
 	var err error
-	_, err = snmp.NewWrapper(d.ClientConfig)
-	if err != nil {
-		return fmt.Errorf("parsing SNMP client config: %w", err)
-	}
-
 	d.ifTable, err = d.makeTable("IF-MIB::ifDescr")
 	if err != nil {
 		return fmt.Errorf("looking up ifDescr in local MIB: %w", err)
