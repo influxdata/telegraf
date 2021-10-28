@@ -5,6 +5,8 @@
 
 [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack)
+[![GitHub Super-Linter](https://github.com/influxdata/telegraf/workflows/Lint%20Code%20Base/badge.svg)](https://github.com/marketplace/actions/super-linter)
+
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics. Based on a
 plugin system to enable developers in the community to easily add support for additional
