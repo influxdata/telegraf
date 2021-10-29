@@ -13,21 +13,21 @@ import (
 const maxTagLength = 254
 
 type Wavefront struct {
-	URL             string                          `toml:"url"`
-	Token           string                          `toml:"token"`
-	Host            string                          `toml:"host"`
-	Port            int                             `toml:"port"`
-	Prefix          string                          `toml:"prefix"`
-	SimpleFields    bool                            `toml:"simple_fields"`
-	MetricSeparator string                          `toml:"metric_separator"`
-	ConvertPaths    bool                            `toml:"convert_paths"`
-	ConvertBool     bool                            `toml:"convert_bool"`
-	UseRegex        bool                            `toml:"use_regex"`
-	UseStrict       bool                            `toml:"use_strict"`
-	TruncateTags    bool                            `toml:"truncate_tags"`
-	ImmediateFlush  bool                            `toml:"immediate_flush"`
-	SourceOverride  []string                        `toml:"source_override"`
-	StringToNumber  map[string][]map[string]float64 `toml:"string_to_number"`
+	URL                string                          `toml:"url"`
+	Token              string                          `toml:"token"`
+	Host               string                          `toml:"host"`
+	Port               int                             `toml:"port"`
+	Prefix             string                          `toml:"prefix"`
+	SimpleFields       bool                            `toml:"simple_fields"`
+	MetricSeparator    string                          `toml:"metric_separator"`
+	ConvertPaths       bool                            `toml:"convert_paths"`
+	ConvertBool        bool                            `toml:"convert_bool"`
+	UseRegex           bool                            `toml:"use_regex"`
+	UseStrict          bool                            `toml:"use_strict"`
+	TruncateTags       bool                            `toml:"truncate_tags"`
+	ImmediateFlush     bool                            `toml:"immediate_flush"`
+	SourceOverride     []string                        `toml:"source_override"`
+	StringToNumber     map[string][]map[string]float64 `toml:"string_to_number"`
 
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
@@ -134,7 +134,7 @@ func (w *Wavefront) Connect() error {
 		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
 	}
 	if w.URL != "" {
-		w.Log.Debug("connecting over http/https using Url: %s", w.URL)
+		w.Log.Debugf("connecting over http/https using Url: %s", w.URL)
 		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
 			Server:               w.URL,
 			Token:                w.Token,
@@ -150,6 +150,7 @@ func (w *Wavefront) Connect() error {
 			Host:                 w.Host,
 			MetricsPort:          w.Port,
 			FlushIntervalSeconds: flushSeconds,
+
 		})
 		if err != nil {
 			return fmt.Errorf("could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
@@ -167,15 +168,29 @@ func (w *Wavefront) Connect() error {
 }
 
 func (w *Wavefront) Write(metrics []telegraf.Metric) error {
+	w.Log.Debugf("Received batch of %d metrics", len(metrics))
 	for _, m := range metrics {
 		for _, point := range w.buildMetrics(m) {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
-				if isRetryable(err) {
-					return fmt.Errorf("wavefront sending error: %v", err)
+				if strings.Contains(err.Error(), "buffer full, dropping line") {
+					// The internal buffer in the Wavefront SDK is full. To prevent data loss,
+					// we flush the buffer (which is a blocking operation) and try again.
+					w.Log.Debug("SDK buffer overrun. Forcibly flushing the buffer")
+					err = w.sender.Flush()
+					if err != nil {
+						return err
+					}
+					// Try again.
+					err = w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 				}
-				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
-				w.Log.Debugf("Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ", point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
+				if err != nil {
+					if isRetryable(err) {
+						return fmt.Errorf("wavefront sending error: %v", err)
+					}
+					w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
+					w.Log.Debugf("Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ", point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
+				}
 			}
 		}
 	}
@@ -346,12 +361,12 @@ func (w *Wavefront) Close() error {
 func init() {
 	outputs.Add("wavefront", func() telegraf.Output {
 		return &Wavefront{
-			Token:           "DUMMY_TOKEN",
-			MetricSeparator: ".",
-			ConvertPaths:    true,
-			ConvertBool:     true,
-			TruncateTags:    false,
-			ImmediateFlush:  true,
+			Token:              "DUMMY_TOKEN",
+			MetricSeparator:    ".",
+			ConvertPaths:       true,
+			ConvertBool:        true,
+			TruncateTags:       false,
+			ImmediateFlush:     true,
 		}
 	})
 }
