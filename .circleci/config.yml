@@ -535,6 +535,9 @@ workflows:
             branches:
               ignore:
                 - master
+                - release.*
+            tags:
+              ignore: /.*/
       - 'release':
           requires:
             - 'test-go-windows'
