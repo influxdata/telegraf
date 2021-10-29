@@ -113,7 +113,7 @@ func TestPowerdnsGeneratesMetrics(t *testing.T) {
 }
 
 func TestPowerdnsParseMetrics(t *testing.T) {
-	values := parseResponse(metrics)
+	values := parseResponse(metrics, false)
 
 	tests := []struct {
 		key   string
@@ -172,8 +172,68 @@ func TestPowerdnsParseMetrics(t *testing.T) {
 	}
 }
 
+func TestPowerdnsParseMetricsUnderscore(t *testing.T) {
+	values := parseResponse(metrics, true)
+
+	tests := []struct {
+		key   string
+		value int64
+	}{
+		{"corrupt_packets", 0},
+		{"deferred_cache_inserts", 0},
+		{"deferred_cache_lookup", 0},
+		{"dnsupdate_answers", 0},
+		{"dnsupdate_changes", 0},
+		{"dnsupdate_queries", 0},
+		{"dnsupdate_refused", 0},
+		{"packetcache_hit", 0},
+		{"packetcache_miss", 1},
+		{"packetcache_size", 0},
+		{"query_cache_hit", 0},
+		{"query_cache_miss", 6},
+		{"rd_queries", 1},
+		{"recursing_answers", 0},
+		{"recursing_questions", 0},
+		{"recursion_unanswered", 0},
+		{"security_status", 3},
+		{"servfail_packets", 0},
+		{"signatures", 0},
+		{"tcp_answers", 0},
+		{"tcp_queries", 0},
+		{"timedout_packets", 0},
+		{"udp_answers", 1},
+		{"udp_answers_bytes", 50},
+		{"udp_do_queries", 0},
+		{"udp_queries", 0},
+		{"udp4_answers", 1},
+		{"udp4_queries", 1},
+		{"udp6_answers", 0},
+		{"udp6_queries", 0},
+		{"key_cache_size", 0},
+		{"latency", 26},
+		{"meta_cache_size", 0},
+		{"qsize_q", 0},
+		{"signature_cache_size", 0},
+		{"sys_msec", 2889},
+		{"uptime", 86317},
+		{"user_msec", 2167},
+	}
+
+	for _, test := range tests {
+		value, ok := values[test.key]
+		if !ok {
+			t.Errorf("Did not find key for metric %s in values", test.key)
+			continue
+		}
+		if value != test.value {
+			t.Errorf("Metric: %s, Expected: %d, actual: %d",
+				test.key, test.value, value)
+		}
+	}
+}
+
 func TestPowerdnsParseCorruptMetrics(t *testing.T) {
-	values := parseResponse(corruptMetrics)
+	values := parseResponse(corruptMetrics, false)
 
 	tests := []struct {
 		key   string
@@ -232,7 +292,7 @@ func TestPowerdnsParseCorruptMetrics(t *testing.T) {
 }
 
 func TestPowerdnsParseIntOverflowMetrics(t *testing.T) {
-	values := parseResponse(intOverflowMetrics)
+	values := parseResponse(intOverflowMetrics, false)
 
 	tests := []struct {
 		key   string

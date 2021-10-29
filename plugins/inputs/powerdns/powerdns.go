@@ -16,12 +16,16 @@ import (
 
 type Powerdns struct {
 	UnixSockets []string
+	Underscore  bool
 }
 
 var sampleConfig = `
   ## An array of sockets to gather stats about.
   ## Specify a path to unix socket.
   unix_sockets = ["/var/run/pdns.controlsocket"]
+
+  # Convert dash in field names to underscore
+  underscore = false
 `
 
 var defaultTimeout = 5 * time.Second
@@ -89,7 +93,7 @@ func (p *Powerdns) gatherServer(address string, acc telegraf.Accumulator) error 
 	metrics := string(buf)
 
 	// Process data
-	fields := parseResponse(metrics)
+	fields := parseResponse(metrics, p.Underscore)
 
 	// Add server socket as a tag
 	tags := map[string]string{"server": address}
@@ -99,7 +103,7 @@ func (p *Powerdns) gatherServer(address string, acc telegraf.Accumulator) error 
 	return nil
 }
 
-func parseResponse(metrics string) map[string]interface{} {
+func parseResponse(metrics string, underscore bool) map[string]interface{} {
 	values := make(map[string]interface{})
 
 	s := strings.Split(metrics, ",")
@@ -116,7 +120,12 @@ func parseResponse(metrics string) map[string]interface{} {
 				metric, err.Error())
 			continue
 		}
-		values[m[0]] = i
+
+		field := m[0]
+		if underscore {
+			field = strings.ReplaceAll(field, "-", "_")
+		}
+		values[field] = i
 	}
 
 	return values

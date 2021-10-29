@@ -12,6 +12,9 @@ The powerdns plugin gathers metrics about PowerDNS using unix socket.
   #
   # If no servers are specified, then '/var/run/pdns.controlsocket' is used as the path.
   unix_sockets = ["/var/run/pdns.controlsocket"]
+
+  # Convert dash in field names to underscore
+  underline = false
 ```
 
 #### Permissions
@@ -65,6 +68,8 @@ usermod telegraf -a -G pdns
   - sys-msec
   - uptime
   - user-msec
+
+If underscore bool is set to true, field names will have `-` converted to `_`, e.g. changing `user-msec` to `user_msec`.
 
 ### Tags:
 
