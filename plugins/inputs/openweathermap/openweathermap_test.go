@@ -541,7 +541,6 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 	testutil.RequireMetricsEqual(t,
 		expected, acc2.GetTelegrafMetrics(),
 		testutil.SortMetrics())
-
 }
 
 func TestWeatherGeneratesMetrics(t *testing.T) {
