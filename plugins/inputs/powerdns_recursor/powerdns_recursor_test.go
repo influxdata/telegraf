@@ -188,7 +188,7 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 }
 
 func TestPowerdnsRecursorParseMetrics(t *testing.T) {
-	values := parseResponse(metrics)
+	values := parseResponse(metrics, false)
 
 	tests := []struct {
 		key   string
@@ -309,8 +309,130 @@ func TestPowerdnsRecursorParseMetrics(t *testing.T) {
 	}
 }
 
+func TestPowerdnsRecursorParseMetricsUnderscore(t *testing.T) {
+	values := parseResponse(metrics, true)
+
+	tests := []struct {
+		key   string
+		value int64
+	}{
+		{"all_outqueries", 3591637},
+		{"answers_slow", 36451},
+		{"answers0_1", 177297},
+		{"answers1_10", 1209328},
+		{"answers10_100", 1238786},
+		{"answers100_1000", 402917},
+		{"auth_zone_queries", 4},
+		{"auth4_answers_slow", 44248},
+		{"auth4_answers0_1", 59169},
+		{"auth4_answers1_10", 1747403},
+		{"auth4_answers10_100", 1315621},
+		{"auth4_answers100_1000", 424683},
+		{"auth6_answers_slow", 0},
+		{"auth6_answers0_1", 0},
+		{"auth6_answers1_10", 0},
+		{"auth6_answers10_100", 0},
+		{"auth6_answers100_1000", 0},
+		{"cache_entries", 295917},
+		{"cache_hits", 148630},
+		{"cache_misses", 2916149},
+		{"case_mismatches", 0},
+		{"chain_resends", 418602},
+		{"client_parse_errors", 0},
+		{"concurrent_queries", 0},
+		{"dlg_only_drops", 0},
+		{"dnssec_queries", 151536},
+		{"dnssec_result_bogus", 0},
+		{"dnssec_result_indeterminate", 0},
+		{"dnssec_result_insecure", 0},
+		{"dnssec_result_nta", 0},
+		{"dnssec_result_secure", 46},
+		{"dnssec_validations", 46},
+		{"dont_outqueries", 62},
+		{"ecs_queries", 0},
+		{"ecs_responses", 0},
+		{"edns_ping_matches", 0},
+		{"edns_ping_mismatches", 0},
+		{"failed_host_entries", 33},
+		{"fd_usage", 32},
+		{"ignored_packets", 0},
+		{"ipv6_outqueries", 0},
+		{"ipv6_questions", 0},
+		{"malloc_bytes", 0},
+		{"max_cache_entries", 1000000},
+		{"max_mthread_stack", 33747},
+		{"max_packetcache_entries", 500000},
+		{"negcache_entries", 100070},
+		{"no_packet_error", 0},
+		{"noedns_outqueries", 72409},
+		{"noerror_answers", 25155259},
+		{"noping_outqueries", 0},
+		{"nsset_invalidations", 2385},
+		{"nsspeeds_entries", 3571},
+		{"nxdomain_answers", 3307768},
+		{"outgoing_timeouts", 43876},
+		{"outgoing4_timeouts", 43876},
+		{"outgoing6_timeouts", 0},
+		{"over_capacity_drops", 0},
+		{"packetcache_entries", 80756},
+		{"packetcache_hits", 25698497},
+		{"packetcache_misses", 3064625},
+		{"policy_drops", 0},
+		{"policy_result_custom", 0},
+		{"policy_result_drop", 0},
+		{"policy_result_noaction", 3064779},
+		{"policy_result_nodata", 0},
+		{"policy_result_nxdomain", 0},
+		{"policy_result_truncate", 0},
+		{"qa_latency", 6587},
+		{"query_pipe_full_drops", 0},
+		{"questions", 28763276},
+		{"real_memory_usage", 280465408},
+		{"resource_limits", 0},
+		{"security_status", 1},
+		{"server_parse_errors", 0},
+		{"servfail_answers", 300249},
+		{"spoof_prevents", 0},
+		{"sys_msec", 1296588},
+		{"tcp_client_overflow", 0},
+		{"tcp_clients", 0},
+		{"tcp_outqueries", 116},
+		{"tcp_questions", 130},
+		{"throttle_entries", 33},
+		{"throttled_out", 13187},
+		{"throttled_outqueries", 13187},
+		{"too_old_drops", 2},
+		{"udp_in_errors", 4},
+		{"udp_noport_errors", 2908},
+		{"udp_recvbuf_errors", 0},
+		{"udp_sndbuf_errors", 0},
+		{"unauthorized_tcp", 0},
+		{"unauthorized_udp", 0},
+		{"unexpected_packets", 0},
+		{"unreachables", 1695},
+		{"uptime", 165725},
+		{"user_msec", 1266384},
+		{"x_our_latency", 19},
+		{"x_ourtime_slow", 632},
+		{"x_ourtime0_1", 3060079},
+		{"x_ourtime1_2", 3351},
+		{"x_ourtime16_32", 197},
+		{"x_ourtime2_4", 302},
+		{"x_ourtime4_8", 194},
+		{"x_ourtime8_16", 24},
+	}
+
+	for _, test := range tests {
+		value, ok := values[test.key]
+		if !assert.Truef(t, ok, "Did not find key for metric %s in values", test.key) {
+			continue
+		}
+		require.EqualValuesf(t, value, test.value, "Metric: %s, Expected: %d, actual: %d", test.key, test.value, value)
+	}
+}
+
 func TestPowerdnsRecursorParseCorruptMetrics(t *testing.T) {
-	values := parseResponse(corruptMetrics)
+	values := parseResponse(corruptMetrics, false)
 
 	tests := []struct {
 		key   string
@@ -431,7 +553,7 @@ func TestPowerdnsRecursorParseCorruptMetrics(t *testing.T) {
 }
 
 func TestPowerdnsRecursorParseIntOverflowMetrics(t *testing.T) {
-	values := parseResponse(intOverflowMetrics)
+	values := parseResponse(intOverflowMetrics, false)
 
 	tests := []struct {
 		key   string

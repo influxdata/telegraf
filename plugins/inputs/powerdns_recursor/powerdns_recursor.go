@@ -21,6 +21,7 @@ type PowerdnsRecursor struct {
 	UnixSockets []string `toml:"unix_sockets"`
 	SocketDir   string   `toml:"socket_dir"`
 	SocketMode  string   `toml:"socket_mode"`
+	Underscore  bool     `toml:"underscore"`
 
 	mode uint32
 }
@@ -36,6 +37,8 @@ var sampleConfig = `
   # socket_dir = "/var/run/"
   ## Socket permissions for the receive socket.
   # socket_mode = "0666"
+  ## Convert dash in field names to underscore
+  # underscore = false
 `
 
 func (p *PowerdnsRecursor) SampleConfig() string {
@@ -125,7 +128,7 @@ func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator
 	metrics := string(buf)
 
 	// Process data
-	fields := parseResponse(metrics)
+	fields := parseResponse(metrics, p.Underscore)
 
 	// Add server socket as a tag
 	tags := map[string]string{"server": address}
@@ -135,7 +138,7 @@ func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator
 	return conn.Close()
 }
 
-func parseResponse(metrics string) map[string]interface{} {
+func parseResponse(metrics string, underscore bool) map[string]interface{} {
 	values := make(map[string]interface{})
 
 	s := strings.Split(metrics, "\n")
@@ -152,7 +155,12 @@ func parseResponse(metrics string) map[string]interface{} {
 				metric, err.Error())
 			continue
 		}
-		values[m[0]] = i
+
+		field := m[0]
+		if underscore {
+			field = strings.ReplaceAll(field, "-", "_")
+		}
+		values[field] = i
 	}
 
 	return values
