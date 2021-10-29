@@ -63,9 +63,8 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 
-  ## Use batch serialization format instead of line based delimiting.  The
-  ## batch format allows for the production of non line based output formats and
-  ## may more efficiently encode metric groups.
+  ## Use batch serialization format instead of line based format.  Batch format
+  ## is more efficient and should be used unless line based format is needed.
   # use_batch_format = true
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
