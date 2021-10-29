@@ -57,6 +57,8 @@ arch() {
 			echo armel;;
 		*armv6hl.*)
 			echo armv6hl;;
+		*armv7.*)
+			echo armv7;;
 		*armhf.*)
 			echo armhf;;
 		*arm64.* | *aarch64.*)
@@ -67,6 +69,8 @@ arch() {
 			echo s390x;;
 		*ppc64le.*)
 			echo ppc64le;;
+		*ppc64el.*)
+			echo ppc64el;;
 		*mipsel.*)
 			echo mipsel;;
 		*mips.*)
@@ -107,16 +111,16 @@ package="$(grep *_darwin_amd64.dmg manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "macOS (via signed .dmg)",
+        "ref": "mac",
         "link": "https://dl.influxdata.com/telegraf/releases/$package",
-        "code": [
-
-        ]
+        "code": []
       },
 EOF
 package="$(grep *_amd64.deb manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "Ubuntu &amp; Debian",
+        "ref": "ubuntu",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package",
@@ -128,6 +132,7 @@ package="$(grep *.x86_64.rpm manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "RedHat &amp; CentOS",
+        "ref": "redhat",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package",
@@ -139,10 +144,11 @@ package="$(grep *windows_amd64.zip manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "Windows Binaries (64-bit)",
+        "ref": "win",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package -UseBasicParsing -OutFile $package",
-          "Expand-Archive .\\$package -DestinationPath 'C:\\Program Files\\InfluxData\\telegraf\\'"
+          "Expand-Archive .\\\\$package -DestinationPath 'C:\\\Program Files\\\InfluxData\\\telegraf\\\'"
         ]
       },
 EOF
@@ -150,6 +156,7 @@ package="$(grep *_linux_amd64.tar.gz manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "Linux Binaries (64-bit)",
+        "ref": "linux64",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package",
@@ -161,6 +168,7 @@ package="$(grep *_static_linux_amd64.tar.gz manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "Linux Binaries (64-bit, static)",
+        "ref": "linux64_static",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package",
@@ -172,6 +180,7 @@ package="$(grep *linux_i386.tar.gz manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "Linux Binaries (32-bit)",
+        "ref": "linux32",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package",
@@ -183,6 +192,7 @@ package="$(grep *linux_armhf.tar.gz manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "Linux Binaries (ARMv7)",
+        "ref": "linux_arm7",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package",
@@ -194,6 +204,7 @@ package="$(grep *linux_arm64.tar.gz manifest | cut -f2 -d' ')"
 cat -<<EOF
       {
         "platform": "Linux Binaries (ARMv8)",
+        "ref": "linux_arm8",
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package",
