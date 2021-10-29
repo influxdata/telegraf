@@ -14,8 +14,13 @@ For client TLS support we have the following options:
 
 ## The public and private keypairs for the client encoded in PEM format.  May
 ## contain intermediate certificates.
+## Configuration for separate cert and key files
 # tls_cert = "/etc/telegraf/cert.pem"
 # tls_key = "/etc/telegraf/key.pem"
+## Configuration for single file containing both cert and key
+# tls_cert_key = "/etc/telegraf/client.pem"
+## For encrypted key files, supply a password for decryption
+# tls_key_pwd = "***" 
 ## Skip TLS verification.
 # insecure_skip_verify = false
 ## Send the specified TLS server name via SNI.
@@ -38,8 +43,13 @@ The server TLS configuration provides support for TLS mutual authentication:
 # tls_allowed_dns_names = ["client.example.org"]
 
 ## Add service certificate and key.
+## Configuration for separate cert and key files
 # tls_cert = "/etc/telegraf/cert.pem"
 # tls_key = "/etc/telegraf/key.pem"
+## Configuration for single file containing both cert and key
+# tls_cert_key = "/etc/telegraf/client.pem"
+## For encrypted key files, supply a password for decryption
+# tls_key_pwd = "***" 
 ```
 
 #### Advanced Configuration
