@@ -43,6 +43,30 @@ func TestClientConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "success with enc tls key",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientEncKeyPath(),
+				TLSKeyPwd: "changeme",
+			},
+		},
+		{
+			name: "success with cert and key",
+			client: tls.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCertAndKey: pki.ClientCertAndKeyPath(),
+			},
+		},
+		{
+			name: "success with cert and enc key",
+			client: tls.ClientConfig{
+				TLSCA:         pki.CACertPath(),
+				TLSCertAndKey: pki.ClientCertAndEncKeyPath(),
+				TLSKeyPwd:     "changeme",
+			},
+		},
+		{
 			name: "invalid ca",
 			client: tls.ClientConfig{
 				TLSCA:   pki.ClientKeyPath(),
@@ -152,6 +176,39 @@ func TestServerConfig(t *testing.T) {
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
 				TLSKeyPwd:         "",
+				TLSAllowedCACerts: []string{pki.CACertPath()},
+				TLSCipherSuites:   []string{pki.CipherSuite()},
+				TLSMinVersion:     pki.TLSMinVersion(),
+				TLSMaxVersion:     pki.TLSMaxVersion(),
+			},
+		},
+		{
+			name: "success with enc tls key",
+			server: tls.ServerConfig{
+				TLSCert:           pki.ServerCertPath(),
+				TLSKey:            pki.ServerEncKeyPath(),
+				TLSKeyPwd:         "changeme",
+				TLSAllowedCACerts: []string{pki.CACertPath()},
+				TLSCipherSuites:   []string{pki.CipherSuite()},
+				TLSMinVersion:     pki.TLSMinVersion(),
+				TLSMaxVersion:     pki.TLSMaxVersion(),
+			},
+		},
+		{
+			name: "success with cert and key",
+			server: tls.ServerConfig{
+				TLSCertAndKey:     pki.ServerCertAndKeyPath(),
+				TLSAllowedCACerts: []string{pki.CACertPath()},
+				TLSCipherSuites:   []string{pki.CipherSuite()},
+				TLSMinVersion:     pki.TLSMinVersion(),
+				TLSMaxVersion:     pki.TLSMaxVersion(),
+			},
+		},
+		{
+			name: "success with cert and enc key",
+			server: tls.ServerConfig{
+				TLSCertAndKey:     pki.ServerCertAndEncKeyPath(),
+				TLSKeyPwd:         "changeme",
 				TLSAllowedCACerts: []string{pki.CACertPath()},
 				TLSCipherSuites:   []string{pki.CipherSuite()},
 				TLSMinVersion:     pki.TLSMinVersion(),

@@ -1,9 +1,6 @@
 package testutil
 
 import (
-	"fmt"
-	"io"
-	"os"
 	"path"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -37,7 +34,7 @@ func (p *pki) TLSServerConfig() *tls.ServerConfig {
 }
 
 func (p *pki) ReadCACert() string {
-	return readCertificate(p.CACertPath())
+	return tls.ReadCertificate(p.CACertPath())
 }
 
 func (p *pki) CACertPath() string {
@@ -57,7 +54,7 @@ func (p *pki) TLSMaxVersion() string {
 }
 
 func (p *pki) ReadClientCert() string {
-	return readCertificate(p.ClientCertPath())
+	return tls.ReadCertificate(p.ClientCertPath())
 }
 
 func (p *pki) ClientCertPath() string {
@@ -65,19 +62,31 @@ func (p *pki) ClientCertPath() string {
 }
 
 func (p *pki) ReadClientKey() string {
-	return readCertificate(p.ClientKeyPath())
+	return tls.ReadKey(p.ClientKeyPath(), "")
 }
 
 func (p *pki) ClientKeyPath() string {
 	return path.Join(p.path, "clientkey.pem")
 }
 
+func (p *pki) ReadClientCertAndKey() string {
+	return tls.ReadKey(p.ClientCertAndKeyPath(), "")
+}
+
 func (p *pki) ClientCertAndKeyPath() string {
 	return path.Join(p.path, "client.pem")
 }
 
+func (p *pki) ReadClientEncKey() string {
+	return tls.ReadKey(p.ClientEncKeyPath(), "changeme")
+}
+
 func (p *pki) ClientEncKeyPath() string {
-	return path.Join(p.path, "clientkeyenc.pem")
+	return path.Join(p.path, "clientenckey.pem")
+}
+
+func (p *pki) ReadClientCertAndEncKey() string {
+	return tls.ReadKey(p.ClientCertAndEncKeyPath(), "changeme")
 }
 
 func (p *pki) ClientCertAndEncKeyPath() string {
@@ -85,7 +94,7 @@ func (p *pki) ClientCertAndEncKeyPath() string {
 }
 
 func (p *pki) ReadServerCert() string {
-	return readCertificate(p.ServerCertPath())
+	return tls.ReadCertificate(p.ServerCertPath())
 }
 
 func (p *pki) ServerCertPath() string {
@@ -93,25 +102,33 @@ func (p *pki) ServerCertPath() string {
 }
 
 func (p *pki) ReadServerKey() string {
-	return readCertificate(p.ServerKeyPath())
+	return tls.ReadKey(p.ServerKeyPath(), "")
 }
 
 func (p *pki) ServerKeyPath() string {
 	return path.Join(p.path, "serverkey.pem")
 }
 
+func (p *pki) ReadServerCertAndKey() string {
+	return tls.ReadKey(p.ServerCertAndKeyPath(), "")
+}
+
 func (p *pki) ServerCertAndKeyPath() string {
 	return path.Join(p.path, "server.pem")
 }
 
-func readCertificate(filename string) string {
-	file, err := os.Open(filename)
-	if err != nil {
-		panic(fmt.Sprintf("opening %q: %v", filename, err))
-	}
-	octets, err := io.ReadAll(file)
-	if err != nil {
-		panic(fmt.Sprintf("reading %q: %v", filename, err))
-	}
-	return string(octets)
+func (p *pki) ReadServerEncKey() string {
+	return tls.ReadKey(p.ServerEncKeyPath(), "changeme")
+}
+
+func (p *pki) ServerEncKeyPath() string {
+	return path.Join(p.path, "serverenckey.pem")
+}
+
+func (p *pki) ReadServerCertAndEncKey() string {
+	return tls.ReadKey(p.ServerCertAndEncKeyPath(), "changeme")
+}
+
+func (p *pki) ServerCertAndEncKeyPath() string {
+	return path.Join(p.path, "serverenc.pem")
 }

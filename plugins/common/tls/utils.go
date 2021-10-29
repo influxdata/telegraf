@@ -1,7 +1,11 @@
 package tls
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"os"
 )
 
 // ParseCiphers returns a `[]uint16` by received `[]string` key that represents ciphers from crypto/tls.
@@ -27,4 +31,59 @@ func ParseTLSVersion(version string) (uint16, error) {
 		return v, nil
 	}
 	return 0, fmt.Errorf("unsupported version %q", version)
+}
+
+func readFile(filename string) []byte {
+	file, err := os.Open(filename)
+	if err != nil {
+		panic(fmt.Sprintf("opening %q: %v", filename, err))
+	}
+	octets, err := ioutil.ReadAll(file)
+	if err != nil {
+		panic(fmt.Sprintf("reading %q: %v", filename, err))
+	}
+	return octets
+}
+
+func ReadCertificate(filename string) string {
+	octets := readFile(filename)
+	return string(octets)
+}
+
+func ReadKey(filename string, password string) string {
+	octets := readFile(filename)
+	var allBlocks string
+	currentBlock, remainingBytes := pem.Decode(octets)
+	for {
+		if x509.IsEncryptedPEMBlock(currentBlock) {
+			decryptedBytesDER, err := x509.DecryptPEMBlock(currentBlock, []byte(password))
+			if err != nil {
+				panic(fmt.Sprintf("incorrect password for key file %q: %v", filename, err))
+			}
+			decryptedBytesPEM, err := x509.ParsePKCS1PrivateKey(decryptedBytesDER)
+			if err != nil {
+				panic(fmt.Sprintf("unable to convert from DER to PEM format: %v", err))
+			}
+			rsaKey := string(pem.EncodeToMemory(
+				&pem.Block{
+					Type:  "RSA PRIVATE KEY",
+					Bytes: x509.MarshalPKCS1PrivateKey(decryptedBytesPEM),
+				},
+			))
+			allBlocks += rsaKey
+		} else {
+			cert := string(pem.EncodeToMemory(
+				&pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: currentBlock.Bytes,
+				},
+			))
+			allBlocks += cert
+		}
+		currentBlock, remainingBytes = pem.Decode(remainingBytes)
+		if currentBlock == nil {
+			break
+		}
+	}
+	return allBlocks
 }

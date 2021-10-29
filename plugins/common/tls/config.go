@@ -15,6 +15,7 @@ type ClientConfig struct {
 	TLSCA              string `toml:"tls_ca"`
 	TLSCert            string `toml:"tls_cert"`
 	TLSKey             string `toml:"tls_key"`
+	TLSCertAndKey      string `toml:"tls_cert_key"`
 	TLSKeyPwd          string `toml:"tls_key_pwd"`
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
 	ServerName         string `toml:"tls_server_name"`
@@ -29,6 +30,7 @@ type ClientConfig struct {
 type ServerConfig struct {
 	TLSCert            string   `toml:"tls_cert"`
 	TLSKey             string   `toml:"tls_key"`
+	TLSCertAndKey      string   `toml:"tls_cert_key"`
 	TLSKeyPwd          string   `toml:"tls_key_pwd"`
 	TLSAllowedCACerts  []string `toml:"tls_allowed_cacerts"`
 	TLSCipherSuites    []string `toml:"tls_cipher_suites"`
@@ -58,7 +60,7 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 	//     * peer certificate authorities,
 	//     * disabled security, or
 	//     * an SNI server name.
-	if c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" && !c.InsecureSkipVerify && c.ServerName == "" {
+	if c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" && c.TLSCertAndKey == "" && !c.InsecureSkipVerify && c.ServerName == "" {
 		return nil, nil
 	}
 
@@ -75,8 +77,13 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 		tlsConfig.RootCAs = pool
 	}
 
+	if c.TLSCertAndKey != "" {
+		c.TLSCert = c.TLSCertAndKey
+		c.TLSKey = c.TLSCertAndKey
+	}
+
 	if c.TLSCert != "" && c.TLSKey != "" {
-		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey)
+		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey, c.TLSKeyPwd)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +99,7 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 // TLSConfig returns a tls.Config, may be nil without error if TLS is not
 // configured.
 func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
-	if c.TLSCert == "" && c.TLSKey == "" && len(c.TLSAllowedCACerts) == 0 {
+	if c.TLSCert == "" && c.TLSKey == "" && c.TLSCertAndKey == "" && len(c.TLSAllowedCACerts) == 0 {
 		return nil, nil
 	}
 
@@ -107,8 +114,13 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	}
 
+	if c.TLSCertAndKey != "" {
+		c.TLSCert = c.TLSCertAndKey
+		c.TLSKey = c.TLSCertAndKey
+	}
+
 	if c.TLSCert != "" && c.TLSKey != "" {
-		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey)
+		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey, c.TLSKeyPwd)
 		if err != nil {
 			return nil, err
 		}
@@ -171,8 +183,14 @@ func makeCertPool(certFiles []string) (*x509.CertPool, error) {
 	return pool, nil
 }
 
-func loadCertificate(config *tls.Config, certFile, keyFile string) error {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+func loadCertificate(config *tls.Config, certFile string, keyFile string, keyFilePassword string) error {
+	var cert tls.Certificate
+	var err error
+	if keyFilePassword != "" {
+		cert, err = tls.X509KeyPair([]byte(ReadCertificate(certFile)), []byte(ReadKey(keyFile, keyFilePassword)))
+	} else {
+		cert, err = tls.LoadX509KeyPair(certFile, keyFile)
+	}
 	if err != nil {
 		return fmt.Errorf(
 			"could not load keypair %s:%s: %v", certFile, keyFile, err)
