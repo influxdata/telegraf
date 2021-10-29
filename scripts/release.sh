@@ -148,7 +148,7 @@ cat -<<EOF
         "sha256":"$(sha256sum $package | cut -f1 -d' ')",
         "code":[
           "wget https://dl.influxdata.com/telegraf/releases/$package -UseBasicParsing -OutFile $package",
-          "Expand-Archive .\\\\$package -DestinationPath 'C:\\\Program Files\\\InfluxData\\\telegraf\\\'"
+          "Expand-Archive .\\\\$package -DestinationPath 'C:\\\\Program Files\\\\InfluxData\\\\telegraf\\\\'"
         ]
       },
 EOF
