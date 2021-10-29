@@ -63,8 +63,9 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 
-  ## Use batch serialization format instead of line based format.  Batch format
-  ## is more efficient and should be used unless line based format is needed.
+  ## Use batch serialization format (default) instead of line based format.
+  ## Batch format is more efficient and should be used unless line based
+  ## format is really needed.
   # use_batch_format = true
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
