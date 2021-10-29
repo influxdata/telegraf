@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"net"
@@ -36,8 +35,9 @@ func (e APIError) Error() string {
 }
 
 const (
-	defaultRequestTimeout = time.Second * 5
-	defaultMaxWait        = 60 // seconds
+	defaultRequestTimeout           = time.Second * 5
+	defaultMaxWaitSeconds           = 60
+	defaultMaxWaitRetryAfterSeconds = 10 * 60
 )
 
 type HTTPConfig struct {
@@ -306,8 +306,9 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 // retryDuration takes the longer of the Retry-After header and our own back-off calculation
 func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 	// basic exponential backoff (x^2)/40 (denominator to widen the slope)
-	// at 40 denominator, it'll take 35 retries to hit the max defaultMaxWait of 30s
+	// at 40 denominator, it'll take 49 retries to hit the max defaultMaxWait of 60s
 	backoff := math.Pow(float64(c.retryCount), 2) / 40
+	backoff = math.Min(backoff, defaultMaxWaitSeconds)
 
 	// get any value from the header, if available
 	retryAfterHeader := float64(0)
@@ -319,11 +320,12 @@ func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 			// there was a value but we couldn't parse it? guess minimum 10 sec
 			retryAfterHeader = 10
 		}
+		// protect against excessively large retry-after
+		retryAfterHeader = math.Min(retryAfterHeader, defaultMaxWaitRetryAfterSeconds)
 	}
-	// take the highest value from both, but not over the max wait.
+	// take the highest value of backoff and retry-after.
 	retry := math.Max(backoff, retryAfterHeader)
-	retry = math.Min(retry, defaultMaxWait)
-	return time.Duration(retry) * time.Second
+	return time.Duration(retry*1000) * time.Millisecond
 }
 
 func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
@@ -358,7 +360,7 @@ func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser
 		return rc, nil
 	}
 
-	return ioutil.NopCloser(reader), nil
+	return io.NopCloser(reader), nil
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {

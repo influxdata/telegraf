@@ -1,19 +1,25 @@
 ### Contributing
 
 1. [Sign the CLA][cla].
-1. Open a [new issue][] to discuss the changes you would like to make.  This is
+2. Open a [new issue][] to discuss the changes you would like to make.  This is
    not strictly required but it may help reduce the amount of rework you need
    to do later.
-1. Make changes or write plugin using the guidelines in the following
+3. Make changes or write plugin using the guidelines in the following
    documents:
    - [Input Plugins][inputs]
    - [Processor Plugins][processors]
    - [Aggregator Plugins][aggregators]
    - [Output Plugins][outputs]
-1. Ensure you have added proper unit tests and documentation.
-1. Open a new [pull request][].
+4. Ensure you have added proper unit tests and documentation.
+5. Open a new [pull request][].
+6. The pull request title needs to follow [conventional commit format](https://www.conventionalcommits.org/en/v1.0.0/#summary)
 
-#### Contributing an External Plugin *(new)*
+**Note:** If you have a pull request with only one commit, then that commit needs to follow the conventional commit format or the `Semantic Pull Request` check will fail. This is because github will use the pull request title if there are multiple commits, but if there is only one commit it will use it instead.
+
+#### When will your contribution get released?
+We have two kinds of releases: patch releases, which happen every few weeks, and feature releases, which happen once a quarter. If your fix is a bug fix, it will be released in the next patch release after it is merged to master. If your release is a new plugin or other feature, it will be released in the next quarterly release after it is merged to master. Quarterly releases are on the third Wednesday of March, June, September, and December.
+
+#### Contributing an External Plugin
 
 Input, output, and processor plugins written for internal Telegraf can be run as externally-compiled plugins through the [Execd Input](/plugins/inputs/execd), [Execd Output](/plugins/outputs/execd), and [Execd Processor](/plugins/processors/execd) Plugins without having to change the plugin code.
 

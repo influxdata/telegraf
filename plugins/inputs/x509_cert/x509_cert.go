@@ -7,12 +7,14 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pion/dtls/v2"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -24,7 +26,8 @@ import (
 const sampleConfig = `
   ## List certificate sources
   ## Prefix your entry with 'file://' if you intend to use relative paths
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443",
+  sources = ["tcp://example.org:443", "https://influxdata.com:443",
+            "udp://127.0.0.1:4433", "/etc/ssl/certs/ssl-cert-snakeoil.pem",
             "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
 
   ## Timeout for SSL connection
@@ -104,10 +107,46 @@ func (c *X509Cert) serverName(u *url.URL) (string, error) {
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
 	protocol := u.Scheme
 	switch u.Scheme {
+	case "udp", "udp4", "udp6":
+		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
+		if err != nil {
+			return nil, err
+		}
+		defer ipConn.Close()
+
+		serverName, err := c.serverName(u)
+		if err != nil {
+			return nil, err
+		}
+
+		dtlsCfg := &dtls.Config{
+			InsecureSkipVerify: true,
+			Certificates:       c.tlsCfg.Certificates,
+			RootCAs:            c.tlsCfg.RootCAs,
+			ServerName:         serverName,
+		}
+		conn, err := dtls.Client(ipConn, dtlsCfg)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+
+		rawCerts := conn.ConnectionState().PeerCertificates
+		var certs []*x509.Certificate
+		for _, rawCert := range rawCerts {
+			parsed, err := x509.ParseCertificate(rawCert)
+			if err != nil {
+				return nil, err
+			}
+
+			if parsed != nil {
+				certs = append(certs, parsed)
+			}
+		}
+
+		return certs, nil
 	case "https":
 		protocol = "tcp"
-		fallthrough
-	case "udp", "udp4", "udp6":
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
 		ipConn, err := net.DialTimeout(protocol, u.Host, timeout)
@@ -138,7 +177,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, nil
 	case "file":
-		content, err := ioutil.ReadFile(u.Path)
+		content, err := os.ReadFile(u.Path)
 		if err != nil {
 			return nil, err
 		}

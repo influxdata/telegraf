@@ -1,3 +1,4 @@
+//nolint
 package influxdb
 
 import (
@@ -224,17 +225,20 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 		switch apiError := err.(type) {
 		case *DatabaseNotFoundError:
-			if !i.SkipDatabaseCreation {
-				allErrorsAreDatabaseNotFoundErrors = false
-				err := client.CreateDatabase(ctx, apiError.Database)
-				if err != nil {
-					i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
-						client.URL(), apiError.Database)
-				} else {
-					// try another client, if all clients fail with this error, do not return error
-					continue
-				}
+			if i.SkipDatabaseCreation {
+				continue
 			}
+			// retry control
+			// error so the write is retried
+			err := client.CreateDatabase(ctx, apiError.Database)
+			if err != nil {
+				i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
+					client.URL(), apiError.Database)
+			} else {
+				return errors.New("database created; retry write")
+			}
+		default:
+			allErrorsAreDatabaseNotFoundErrors = false
 		}
 	}
 

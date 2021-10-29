@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -56,7 +57,7 @@ type Loki struct {
 	Timeout      config.Duration   `toml:"timeout"`
 	Username     string            `toml:"username"`
 	Password     string            `toml:"password"`
-	Headers      map[string]string `toml:"headers"`
+	Headers      map[string]string `toml:"http_headers"`
 	ClientID     string            `toml:"client_id"`
 	ClientSecret string            `toml:"client_secret"`
 	TokenURL     string            `toml:"token_url"`
@@ -136,6 +137,10 @@ func (l *Loki) Close() error {
 
 func (l *Loki) Write(metrics []telegraf.Metric) error {
 	s := Streams{}
+
+	sort.SliceStable(metrics, func(i, j int) bool {
+		return metrics[i].Time().Before(metrics[j].Time())
+	})
 
 	for _, m := range metrics {
 		tags := m.TagList()

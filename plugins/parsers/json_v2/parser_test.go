@@ -16,73 +16,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestData(t *testing.T) {
-	var tests = []struct {
-		name string
-		test string
-	}{
-		{
-			name: "Test having an array of objects",
-			test: "array_of_objects",
-		},
-		{
-			name: "Test using just fields and tags",
-			test: "fields_and_tags",
-		},
-		{
-			name: "Test gathering from array of nested objects",
-			test: "nested_array_of_objects",
-		},
-		{
-			name: "Test setting timestamp",
-			test: "timestamp",
-		},
-		{
-			name: "Test setting measurement name from int",
-			test: "measurement_name_int",
-		},
-		{
-			name: "Test multiple types",
-			test: "types",
-		},
-		{
-			name: "Test settings tags in nested object",
-			test: "nested_tags",
-		},
-		{
-			name: "Test settings tags in nested and non-nested objects",
-			test: "nested_and_nonnested_tags",
-		},
-		{
-			name: "Test a more complex nested tag retrieval",
-			test: "nested_tags_complex",
-		},
-		{
-			name: "Test multiple arrays in object",
-			test: "multiple_arrays_in_object",
-		},
-		{
-			name: "Test fields and tags complex",
-			test: "fields_and_tags_complex",
-		},
-		{
-			name: "Test object",
-			test: "object",
-		},
-		{
-			name: "Test multiple timestamps",
-			test: "multiple_timestamps",
-		},
-		{
-			name: "Test field with null",
-			test: "null",
-		},
-	}
+func TestMultipleConfigs(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := ioutil.ReadDir("testdata")
+	require.NoError(t, err)
+	// Make sure testdata contains data
+	require.Greater(t, len(folders), 0)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, f := range folders {
+		t.Run(f.Name(), func(t *testing.T) {
 			// Process the telegraf config file for the test
-			buf, err := ioutil.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", tc.test))
+			buf, err := os.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", f.Name()))
 			require.NoError(t, err)
 			inputs.Add("file", func() telegraf.Input {
 				return &file.File{}
@@ -99,10 +43,9 @@ func TestData(t *testing.T) {
 				err = i.Gather(&acc)
 				require.NoError(t, err)
 			}
-			require.NoError(t, err)
 
 			// Process expected metrics and compare with resulting metrics
-			expectedOutputs, err := readMetricFile(fmt.Sprintf("testdata/%s/expected.out", tc.test))
+			expectedOutputs, err := readMetricFile(fmt.Sprintf("testdata/%s/expected.out", f.Name()))
 			require.NoError(t, err)
 			testutil.RequireMetricsEqual(t, expectedOutputs, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})

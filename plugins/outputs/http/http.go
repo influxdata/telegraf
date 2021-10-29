@@ -1,14 +1,13 @@
 package http
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -18,7 +17,8 @@ import (
 )
 
 const (
-	defaultURL = "http://127.0.0.1:8080/telegraf"
+	maxErrMsgLen = 1024
+	defaultURL   = "http://127.0.0.1:8080/telegraf"
 )
 
 var sampleConfig = `
@@ -48,11 +48,25 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional Cookie authentication
+  # cookie_auth_url = "https://localhost/authMe"
+  # cookie_auth_method = "POST"
+  # cookie_auth_username = "username"
+  # cookie_auth_password = "pa$$word"
+  # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
+  ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
+  # cookie_auth_renewal = "5m"
+
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
+
+  ## Use batch serialization format (default) instead of line based format.
+  ## Batch format is more efficient and should be used unless line based
+  ## format is really needed.
+  # use_batch_format = true
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
@@ -70,9 +84,9 @@ var sampleConfig = `
 `
 
 const (
-	defaultClientTimeout = 5 * time.Second
-	defaultContentType   = "text/plain; charset=utf-8"
-	defaultMethod        = http.MethodPost
+	defaultContentType    = "text/plain; charset=utf-8"
+	defaultMethod         = http.MethodPost
+	defaultUseBatchFormat = true
 )
 
 type HTTP struct {
@@ -82,7 +96,9 @@ type HTTP struct {
 	Password        string            `toml:"password"`
 	Headers         map[string]string `toml:"headers"`
 	ContentEncoding string            `toml:"content_encoding"`
+	UseBatchFormat  bool              `toml:"use_batch_format"`
 	httpconfig.HTTPClientConfig
+	Log telegraf.Logger `toml:"-"`
 
 	client     *http.Client
 	serializer serializers.Serializer
@@ -102,7 +118,7 @@ func (h *HTTP) Connect() error {
 	}
 
 	ctx := context.Background()
-	client, err := h.HTTPClientConfig.CreateClient(ctx)
+	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
 	}
@@ -125,12 +141,30 @@ func (h *HTTP) SampleConfig() string {
 }
 
 func (h *HTTP) Write(metrics []telegraf.Metric) error {
-	reqBody, err := h.serializer.SerializeBatch(metrics)
-	if err != nil {
-		return err
+	var reqBody []byte
+
+	if h.UseBatchFormat {
+		var err error
+		reqBody, err = h.serializer.SerializeBatch(metrics)
+		if err != nil {
+			return err
+		}
+
+		return h.write(reqBody)
 	}
 
-	return h.write(reqBody)
+	for _, metric := range metrics {
+		var err error
+		reqBody, err = h.serializer.Serialize(metric)
+		if err != nil {
+			return err
+		}
+
+		if err := h.write(reqBody); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (h *HTTP) write(reqBody []byte) error {
@@ -172,11 +206,18 @@ func (h *HTTP) write(reqBody []byte) error {
 		return err
 	}
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
+		errorLine := ""
+		scanner := bufio.NewScanner(io.LimitReader(resp.Body, maxErrMsgLen))
+		if scanner.Scan() {
+			errorLine = scanner.Text()
+		}
+
+		return fmt.Errorf("when writing to [%s] received status code: %d. body: %s", h.URL, resp.StatusCode, errorLine)
 	}
+
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
 	}
@@ -187,8 +228,9 @@ func (h *HTTP) write(reqBody []byte) error {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &HTTP{
-			Method: defaultMethod,
-			URL:    defaultURL,
+			Method:         defaultMethod,
+			URL:            defaultURL,
+			UseBatchFormat: defaultUseBatchFormat,
 		}
 	})
 }

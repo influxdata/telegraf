@@ -34,6 +34,15 @@ func TestClientConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "success with tls key password set",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientKeyPath(),
+				TLSKeyPwd: "",
+			},
+		},
+		{
 			name: "invalid ca",
 			client: tls.ClientConfig{
 				TLSCA:   pki.ClientKeyPath(),
@@ -128,8 +137,21 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "success",
 			server: tls.ServerConfig{
+				TLSCert:            pki.ServerCertPath(),
+				TLSKey:             pki.ServerKeyPath(),
+				TLSAllowedCACerts:  []string{pki.CACertPath()},
+				TLSCipherSuites:    []string{pki.CipherSuite()},
+				TLSAllowedDNSNames: []string{"localhost", "127.0.0.1"},
+				TLSMinVersion:      pki.TLSMinVersion(),
+				TLSMaxVersion:      pki.TLSMaxVersion(),
+			},
+		},
+		{
+			name: "success with tls key password set",
+			server: tls.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
+				TLSKeyPwd:         "",
 				TLSAllowedCACerts: []string{pki.CACertPath()},
 				TLSCipherSuites:   []string{pki.CipherSuite()},
 				TLSMinVersion:     pki.TLSMinVersion(),
@@ -293,9 +315,10 @@ func TestConnect(t *testing.T) {
 	}
 
 	serverConfig := tls.ServerConfig{
-		TLSCert:           pki.ServerCertPath(),
-		TLSKey:            pki.ServerKeyPath(),
-		TLSAllowedCACerts: []string{pki.CACertPath()},
+		TLSCert:            pki.ServerCertPath(),
+		TLSKey:             pki.ServerKeyPath(),
+		TLSAllowedCACerts:  []string{pki.CACertPath()},
+		TLSAllowedDNSNames: []string{"localhost", "127.0.0.1"},
 	}
 
 	serverTLSConfig, err := serverConfig.TLSConfig()
@@ -322,4 +345,47 @@ func TestConnect(t *testing.T) {
 	resp, err := client.Get(ts.URL)
 	require.NoError(t, err)
 	require.Equal(t, 200, resp.StatusCode)
+}
+
+func TestConnectWrongDNS(t *testing.T) {
+	clientConfig := tls.ClientConfig{
+		TLSCA:   pki.CACertPath(),
+		TLSCert: pki.ClientCertPath(),
+		TLSKey:  pki.ClientKeyPath(),
+	}
+
+	serverConfig := tls.ServerConfig{
+		TLSCert:            pki.ServerCertPath(),
+		TLSKey:             pki.ServerKeyPath(),
+		TLSAllowedCACerts:  []string{pki.CACertPath()},
+		TLSAllowedDNSNames: []string{"localhos", "127.0.0.2"},
+	}
+
+	serverTLSConfig, err := serverConfig.TLSConfig()
+	require.NoError(t, err)
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	ts.TLS = serverTLSConfig
+
+	ts.StartTLS()
+	defer ts.Close()
+
+	clientTLSConfig, err := clientConfig.TLSConfig()
+	require.NoError(t, err)
+
+	client := http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: clientTLSConfig,
+		},
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Get(ts.URL)
+	require.Error(t, err)
+	if resp != nil {
+		err = resp.Body.Close()
+		require.NoError(t, err)
+	}
 }

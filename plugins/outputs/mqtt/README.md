@@ -40,6 +40,12 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
   ## When true, messages will have RETAIN flag set.
   # retain = false
 
+  ## Defines the maximum length of time that the broker and client may not communicate. 
+  ## Defaults to 0 which turns the feature off. For version v2.0.12 mosquitto there is a 
+  ## [bug](https://github.com/eclipse/mosquitto/issues/2117) which requires keep_alive to be set.
+  ## As a reference eclipse/paho.mqtt.golang v1.3.0 defaults to 30.
+  # keep_alive = 0
+
   ## Data format to output.
   # data_format = "influx"
 ```
@@ -62,3 +68,4 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 * `batch`: When true, metrics will be sent in one MQTT message per flush. Otherwise, metrics are written one metric per MQTT message.
 * `retain`: Set `retain` flag when publishing
 * `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
+* `keep_alive`: Defines the maximum length of time that the broker and client may not communicate with each other. Defaults to 0 which deactivates this feature. 

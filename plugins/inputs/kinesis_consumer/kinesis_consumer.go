@@ -6,16 +6,16 @@ import (
 	"compress/zlib"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	consumer "github.com/harlow/kinesis-consumer"
-	"github.com/harlow/kinesis-consumer/checkpoint/ddb"
+	"github.com/harlow/kinesis-consumer/store/ddb"
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
@@ -30,14 +30,6 @@ type (
 	}
 
 	KinesisConsumer struct {
-		Region                 string    `toml:"region"`
-		AccessKey              string    `toml:"access_key"`
-		SecretKey              string    `toml:"secret_key"`
-		RoleARN                string    `toml:"role_arn"`
-		Profile                string    `toml:"profile"`
-		Filename               string    `toml:"shared_credential_file"`
-		Token                  string    `toml:"token"`
-		EndpointURL            string    `toml:"endpoint_url"`
 		StreamName             string    `toml:"streamname"`
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
@@ -52,7 +44,7 @@ type (
 		acc    telegraf.TrackingAccumulator
 		sem    chan struct{}
 
-		checkpoint    consumer.Checkpoint
+		checkpoint    consumer.Store
 		checkpoints   map[string]checkpoint
 		records       map[telegraf.TrackingID]string
 		checkpointTex sync.Mutex
@@ -62,6 +54,8 @@ type (
 		processContentEncodingFunc processContent
 
 		lastSeqNum *big.Int
+
+		internalaws.CredentialConfig
 	}
 
 	checkpoint struct {
@@ -85,16 +79,19 @@ var sampleConfig = `
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) explicit credentials from 'access_key' and 'secret_key'
-  ## 3) shared profile from 'profile'
-  ## 4) environment variables
-  ## 5) shared credentials file
-  ## 6) EC2 Instance Profile
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
   # access_key = ""
   # secret_key = ""
   # token = ""
   # role_arn = ""
+  # web_identity_token_file = ""
+  # role_session_name = ""
   # profile = ""
   # shared_credential_file = ""
 
@@ -156,35 +153,19 @@ func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      k.Region,
-		AccessKey:   k.AccessKey,
-		SecretKey:   k.SecretKey,
-		RoleARN:     k.RoleARN,
-		Profile:     k.Profile,
-		Filename:    k.Filename,
-		Token:       k.Token,
-		EndpointURL: k.EndpointURL,
+	cfg, err := k.CredentialConfig.Credentials()
+	if err != nil {
+		return err
 	}
-	configProvider := credentialConfig.Credentials()
-	client := kinesis.New(configProvider)
+	client := kinesis.NewFromConfig(cfg)
 
-	k.checkpoint = &noopCheckpoint{}
+	k.checkpoint = &noopStore{}
 	if k.DynamoDB != nil {
 		var err error
 		k.checkpoint, err = ddb.New(
 			k.DynamoDB.AppName,
 			k.DynamoDB.TableName,
-			ddb.WithDynamoClient(dynamodb.New((&internalaws.CredentialConfig{
-				Region:      k.Region,
-				AccessKey:   k.AccessKey,
-				SecretKey:   k.SecretKey,
-				RoleARN:     k.RoleARN,
-				Profile:     k.Profile,
-				Filename:    k.Filename,
-				Token:       k.Token,
-				EndpointURL: k.EndpointURL,
-			}).Credentials())),
+			ddb.WithDynamoClient(dynamodb.NewFromConfig(cfg)),
 			ddb.WithMaxInterval(time.Second*10),
 		)
 		if err != nil {
@@ -196,7 +177,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		k.StreamName,
 		consumer.WithClient(client),
 		consumer.WithShardIteratorType(k.ShardIteratorType),
-		consumer.WithCheckpoint(k),
+		consumer.WithStore(k),
 	)
 	if err != nil {
 		return err
@@ -221,10 +202,10 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	k.wg.Add(1)
 	go func() {
 		defer k.wg.Done()
-		err := k.cons.Scan(ctx, func(r *consumer.Record) consumer.ScanStatus {
+		err := k.cons.Scan(ctx, func(r *consumer.Record) error {
 			select {
 			case <-ctx.Done():
-				return consumer.ScanStatus{Error: ctx.Err()}
+				return ctx.Err()
 			case k.sem <- struct{}{}:
 				break
 			}
@@ -234,7 +215,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 				k.Log.Errorf("Scan parser error: %s", err.Error())
 			}
 
-			return consumer.ScanStatus{}
+			return nil
 		})
 		if err != nil {
 			k.cancel()
@@ -305,7 +286,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 				}
 
 				k.lastSeqNum = strToBint(sequenceNum)
-				if err := k.checkpoint.Set(chk.streamName, chk.shardID, sequenceNum); err != nil {
+				if err := k.checkpoint.SetCheckpoint(chk.streamName, chk.shardID, sequenceNum); err != nil {
 					k.Log.Debug("Setting checkpoint failed: %v", err)
 				}
 			} else {
@@ -339,13 +320,13 @@ func (k *KinesisConsumer) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Get wraps the checkpoint's Get function (called by consumer library)
-func (k *KinesisConsumer) Get(streamName, shardID string) (string, error) {
-	return k.checkpoint.Get(streamName, shardID)
+// Get wraps the checkpoint's GetCheckpoint function (called by consumer library)
+func (k *KinesisConsumer) GetCheckpoint(streamName, shardID string) (string, error) {
+	return k.checkpoint.GetCheckpoint(streamName, shardID)
 }
 
-// Set wraps the checkpoint's Set function (called by consumer library)
-func (k *KinesisConsumer) Set(streamName, shardID, sequenceNumber string) error {
+// Set wraps the checkpoint's SetCheckpoint function (called by consumer library)
+func (k *KinesisConsumer) SetCheckpoint(streamName, shardID, sequenceNumber string) error {
 	if sequenceNumber == "" {
 		return fmt.Errorf("sequence number should not be empty")
 	}
@@ -363,7 +344,7 @@ func processGzip(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer zipData.Close()
-	return ioutil.ReadAll(zipData)
+	return io.ReadAll(zipData)
 }
 
 func processZlib(data []byte) ([]byte, error) {
@@ -372,7 +353,7 @@ func processZlib(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer zlibData.Close()
-	return ioutil.ReadAll(zlibData)
+	return io.ReadAll(zlibData)
 }
 
 func processNoOp(data []byte) ([]byte, error) {
@@ -397,10 +378,10 @@ func (k *KinesisConsumer) Init() error {
 	return k.configureProcessContentEncodingFunc()
 }
 
-type noopCheckpoint struct{}
+type noopStore struct{}
 
-func (n noopCheckpoint) Set(string, string, string) error   { return nil }
-func (n noopCheckpoint) Get(string, string) (string, error) { return "", nil }
+func (n noopStore) SetCheckpoint(string, string, string) error   { return nil }
+func (n noopStore) GetCheckpoint(string, string) (string, error) { return "", nil }
 
 func init() {
 	negOne, _ = new(big.Int).SetString("-1", 10)

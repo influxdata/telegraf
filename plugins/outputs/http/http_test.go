@@ -3,7 +3,7 @@ package http
 import (
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,7 +15,9 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	oauth "github.com/influxdata/telegraf/plugins/common/oauth"
+	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,6 +31,15 @@ func getMetric() telegraf.Metric {
 		time.Unix(0, 0),
 	)
 
+	return m
+}
+
+func getMetrics(n int) []telegraf.Metric {
+	m := make([]telegraf.Metric, n)
+	for n > 0 {
+		n--
+		m[n] = getMetric()
+	}
 	return m
 }
 
@@ -272,7 +283,7 @@ func TestContentEncodingGzip(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				payload, err := ioutil.ReadAll(body)
+				payload, err := io.ReadAll(body)
 				require.NoError(t, err)
 				require.Contains(t, string(payload), "cpu value=42")
 
@@ -454,4 +465,52 @@ func TestDefaultUserAgent(t *testing.T) {
 		err = client.Write([]telegraf.Metric{getMetric()})
 		require.NoError(t, err)
 	})
+}
+
+func TestBatchedUnbatched(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	client := &HTTP{
+		URL:    u.String(),
+		Method: defaultMethod,
+	}
+
+	var s = map[string]serializers.Serializer{
+		"influx": influx.NewSerializer(),
+		"json": func(s serializers.Serializer, err error) serializers.Serializer {
+			require.NoError(t, err)
+			return s
+		}(json.NewSerializer(time.Second, "")),
+	}
+
+	for name, serializer := range s {
+		var requests int
+		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests++
+			w.WriteHeader(http.StatusOK)
+		})
+
+		t.Run(name, func(t *testing.T) {
+			for _, mode := range [...]bool{false, true} {
+				requests = 0
+				client.UseBatchFormat = mode
+				client.SetSerializer(serializer)
+
+				err = client.Connect()
+				require.NoError(t, err)
+				err = client.Write(getMetrics(3))
+				require.NoError(t, err)
+
+				if client.UseBatchFormat {
+					require.Equal(t, requests, 1, "batched")
+				} else {
+					require.Equal(t, requests, 3, "unbatched")
+				}
+			}
+		})
+	}
 }

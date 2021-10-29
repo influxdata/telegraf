@@ -2,7 +2,7 @@ package prometheus
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -74,7 +74,7 @@ func TestParsingValidGauge(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func TestParsingValieCounter(t *testing.T) {
+func TestParsingValidCounter(t *testing.T) {
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
 			"prometheus",
@@ -340,6 +340,32 @@ test_counter{label="test"} 1 %d
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
 }
 
+func TestMetricsWithoutIgnoreTimestamp(t *testing.T) {
+	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
+	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
+	metricsWithTimestamps := fmt.Sprintf(`
+# TYPE test_counter counter
+test_counter{label="test"} 1 %d
+`, testTimeUnix)
+	expected := testutil.MustMetric(
+		"prometheus",
+		map[string]string{
+			"label": "test",
+		},
+		map[string]interface{}{
+			"test_counter": float64(1.0),
+		},
+		testTime,
+		telegraf.Counter,
+	)
+
+	parser := Parser{IgnoreTimestamp: true}
+	metric, _ := parser.ParseLine(metricsWithTimestamps)
+
+	testutil.RequireMetricEqual(t, expected, metric, testutil.IgnoreTime(), testutil.SortMetrics())
+	assert.WithinDuration(t, time.Now(), metric.Time(), 5*time.Second)
+}
+
 func parse(buf []byte) ([]telegraf.Metric, error) {
 	parser := Parser{}
 	return parser.Parse(buf)
@@ -435,7 +461,7 @@ func TestParserProtobufHeader(t *testing.T) {
 		t.Fatalf("error making HTTP request to %s: %s", ts.URL, err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("error reading body: %s", err)
 	}

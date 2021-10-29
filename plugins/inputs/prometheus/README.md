@@ -23,6 +23,10 @@ in Prometheus format.
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "url"
   
+  ## Whether the timestamp of the scraped metrics will be ignored.
+  ## If set to true, the gather time will be used.
+  # ignore_timestamp = false
+  
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
   
@@ -58,6 +62,19 @@ in Prometheus format.
   # field selector to target pods
   # eg. To scrape pods on a specific node
   # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
+
+  ## Scrape Services available in Consul Catalog
+  # [inputs.prometheus.consul]
+  #   enabled = true
+  #   agent = "http://localhost:8500"
+  #   query_interval = "5m"
+
+  #   [[inputs.prometheus.consul.query]]
+  #     name = "a service name"
+  #     tag = "a service tag"
+  #     url = 'http://{{if ne .ServiceAddress ""}}{{.ServiceAddress}}{{else}}{{.Address}}{{end}}:{{.ServicePort}}/{{with .ServiceMeta.metrics_path}}{{.}}{{else}}metrics{{end}}'
+  #     [inputs.prometheus.consul.query.tags]
+  #       host = "{{.Node}}"
   
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
@@ -117,6 +134,26 @@ env:
 
 If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated. If not specified, the default is 60 seconds.
 
+#### Consul Service Discovery
+
+Enabling this option and configuring consul `agent` url will allow the plugin to query
+consul catalog for available services. Using `query_interval` the plugin will periodically
+query the consul catalog for services with `name` and `tag` and refresh the list of scraped urls.
+It can use the information from the catalog to build the scraped url and additional tags from a template.
+
+Multiple consul queries can be configured, each for different service.
+The following example fields can be used in url or tag templates:
+* Node
+* Address
+* NodeMeta
+* ServicePort
+* ServiceAddress
+* ServiceTags
+* ServiceMeta
+
+For full list of available fields and their type see struct CatalogService in
+https://github.com/hashicorp/consul/blob/master/api/catalog.go
+
 #### Bearer Token
 
 If set, the file specified by the `bearer_token` parameter will be read on
@@ -125,20 +162,20 @@ Authorization header.
 
 ### Usage for Caddy HTTP server
 
-If you want to monitor Caddy, you need to use Caddy with its Prometheus plugin:
+Steps to monitor Caddy with Telegraf's Prometheus input plugin:
 
-* Download Caddy+Prometheus plugin [here](https://caddyserver.com/download/linux/amd64?plugins=http.prometheus)
-* Add the `prometheus` directive in your `CaddyFile`
+* Download [Caddy](https://caddyserver.com/download)
+* Download Prometheus and set up [monitoring Caddy with Prometheus metrics](https://caddyserver.com/docs/metrics#monitoring-caddy-with-prometheus-metrics)
 * Restart Caddy
 * Configure Telegraf to fetch metrics on it:
 
 ```toml
 [[inputs.prometheus]]
 #   ## An array of urls to scrape metrics from.
-  urls = ["http://localhost:9180/metrics"]
+  urls = ["http://localhost:2019/metrics"]
 ```
 
-> This is the default URL where Caddy Prometheus plugin will send data.
+> This is the default URL where Caddy will send data.
 > For more details, please read the [Caddy Prometheus documentation](https://github.com/miekg/caddy-prometheus/blob/master/README.md).
 
 ### Metrics:

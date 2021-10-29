@@ -1,11 +1,12 @@
 package kinesis
 
 import (
+	"context"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kinesis"
-	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
@@ -18,15 +19,6 @@ const maxRecordsPerRequest uint32 = 500
 
 type (
 	KinesisOutput struct {
-		Region      string `toml:"region"`
-		AccessKey   string `toml:"access_key"`
-		SecretKey   string `toml:"secret_key"`
-		RoleARN     string `toml:"role_arn"`
-		Profile     string `toml:"profile"`
-		Filename    string `toml:"shared_credential_file"`
-		Token       string `toml:"token"`
-		EndpointURL string `toml:"endpoint_url"`
-
 		StreamName         string     `toml:"streamname"`
 		PartitionKey       string     `toml:"partitionkey"`
 		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
@@ -35,7 +27,9 @@ type (
 
 		Log        telegraf.Logger `toml:"-"`
 		serializer serializers.Serializer
-		svc        kinesisiface.KinesisAPI
+		svc        kinesisClient
+
+		internalaws.CredentialConfig
 	}
 
 	Partition struct {
@@ -45,22 +39,29 @@ type (
 	}
 )
 
+type kinesisClient interface {
+	PutRecords(context.Context, *kinesis.PutRecordsInput, ...func(*kinesis.Options)) (*kinesis.PutRecordsOutput, error)
+}
+
 var sampleConfig = `
   ## Amazon REGION of kinesis endpoint.
   region = "ap-southeast-2"
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) explicit credentials from 'access_key' and 'secret_key'
-  ## 3) shared profile from 'profile'
-  ## 4) environment variables
-  ## 5) shared credentials file
-  ## 6) EC2 Instance Profile
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
   #token = ""
   #role_arn = ""
+  #web_identity_token_file = ""
+  #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
 
@@ -130,20 +131,14 @@ func (k *KinesisOutput) Connect() error {
 		k.Log.Infof("Establishing a connection to Kinesis in %s", k.Region)
 	}
 
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      k.Region,
-		AccessKey:   k.AccessKey,
-		SecretKey:   k.SecretKey,
-		RoleARN:     k.RoleARN,
-		Profile:     k.Profile,
-		Filename:    k.Filename,
-		Token:       k.Token,
-		EndpointURL: k.EndpointURL,
+	cfg, err := k.CredentialConfig.Credentials()
+	if err != nil {
+		return err
 	}
-	configProvider := credentialConfig.Credentials()
-	svc := kinesis.New(configProvider)
 
-	_, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
+	svc := kinesis.NewFromConfig(cfg)
+
+	_, err = svc.DescribeStreamSummary(context.Background(), &kinesis.DescribeStreamSummaryInput{
 		StreamName: aws.String(k.StreamName),
 	})
 	k.svc = svc
@@ -158,14 +153,14 @@ func (k *KinesisOutput) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
-func (k *KinesisOutput) writeKinesis(r []*kinesis.PutRecordsRequestEntry) time.Duration {
+func (k *KinesisOutput) writeKinesis(r []types.PutRecordsRequestEntry) time.Duration {
 	start := time.Now()
 	payload := &kinesis.PutRecordsInput{
 		Records:    r,
 		StreamName: aws.String(k.StreamName),
 	}
 
-	resp, err := k.svc.PutRecords(payload)
+	resp, err := k.svc.PutRecords(context.Background(), payload)
 	if err != nil {
 		k.Log.Errorf("Unable to write to Kinesis : %s", err.Error())
 		return time.Since(start)
@@ -225,7 +220,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	r := []*kinesis.PutRecordsRequestEntry{}
+	r := []types.PutRecordsRequestEntry{}
 
 	for _, metric := range metrics {
 		sz++
@@ -238,12 +233,12 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		partitionKey := k.getPartitionKey(metric)
 
-		d := kinesis.PutRecordsRequestEntry{
+		d := types.PutRecordsRequestEntry{
 			Data:         values,
 			PartitionKey: aws.String(partitionKey),
 		}
 
-		r = append(r, &d)
+		r = append(r, d)
 
 		if sz == maxRecordsPerRequest {
 			elapsed := k.writeKinesis(r)

@@ -1,19 +1,21 @@
 package cloudwatch_logs
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type messageBatch struct {
-	logEvents    []*cloudwatchlogs.InputLogEvent
+	logEvents    []types.InputLogEvent
 	messageCount int
 }
 type logStreamContainer struct {
@@ -25,25 +27,16 @@ type logStreamContainer struct {
 
 //Cloudwatch Logs service interface
 type cloudWatchLogs interface {
-	DescribeLogGroups(*cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
-	DescribeLogStreams(*cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error)
-	CreateLogStream(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error)
-	PutLogEvents(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)
+	DescribeLogGroups(context.Context, *cloudwatchlogs.DescribeLogGroupsInput, ...func(options *cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
+	DescribeLogStreams(context.Context, *cloudwatchlogs.DescribeLogStreamsInput, ...func(options *cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogStreamsOutput, error)
+	CreateLogStream(context.Context, *cloudwatchlogs.CreateLogStreamInput, ...func(options *cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogStreamOutput, error)
+	PutLogEvents(context.Context, *cloudwatchlogs.PutLogEventsInput, ...func(options *cloudwatchlogs.Options)) (*cloudwatchlogs.PutLogEventsOutput, error)
 }
 
 // CloudWatchLogs plugin object definition
 type CloudWatchLogs struct {
-	Region      string `toml:"region"`
-	AccessKey   string `toml:"access_key"`
-	SecretKey   string `toml:"secret_key"`
-	RoleARN     string `toml:"role_arn"`
-	Profile     string `toml:"profile"`
-	Filename    string `toml:"shared_credential_file"`
-	Token       string `toml:"token"`
-	EndpointURL string `toml:"endpoint_url"`
-
-	LogGroup string                   `toml:"log_group"`
-	lg       *cloudwatchlogs.LogGroup //log group data
+	LogGroup string          `toml:"log_group"`
+	lg       *types.LogGroup //log group data
 
 	LogStream string                         `toml:"log_stream"`
 	lsKey     string                         //log stream source: tag or field
@@ -59,6 +52,8 @@ type CloudWatchLogs struct {
 	svc cloudWatchLogs //cloudwatch logs service
 
 	Log telegraf.Logger `toml:"-"`
+
+	internalaws.CredentialConfig
 }
 
 const (
@@ -91,16 +86,19 @@ region = "us-east-1"
 
 ## Amazon Credentials
 ## Credentials are loaded in the following order
-## 1) Assumed credentials via STS if role_arn is specified
-## 2) explicit credentials from 'access_key' and 'secret_key'
-## 3) shared profile from 'profile'
-## 4) environment variables
-## 5) shared credentials file
-## 6) EC2 Instance Profile
+## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+## 2) Assumed credentials via STS if role_arn is specified
+## 3) explicit credentials from 'access_key' and 'secret_key'
+## 4) shared profile from 'profile'
+## 5) environment variables
+## 6) shared credentials file
+## 7) EC2 Instance Profile
 #access_key = ""
 #secret_key = ""
 #token = ""
 #role_arn = ""
+#web_identity_token_file = ""
+#role_session_name = ""
 #profile = ""
 #shared_credential_file = ""
 
@@ -112,12 +110,12 @@ region = "us-east-1"
 
 ## Cloud watch log group. Must be created in AWS cloudwatch logs upfront!
 ## For example, you can specify the name of the k8s cluster here to group logs from all cluster in oine place
-log_group = "my-group-name" 
+log_group = "my-group-name"
 
 ## Log stream in log group
 ## Either log group name or reference to metric attribute, from which it can be parsed:
 ## tag:<TAG_NAME> or field:<FIELD_NAME>. If log stream is not exist, it will be created.
-## Since AWS is not automatically delete logs streams with expired logs entries (i.e. empty log stream) 
+## Since AWS is not automatically delete logs streams with expired logs entries (i.e. empty log stream)
 ## you need to put in place appropriate house-keeping (https://forums.aws.amazon.com/thread.jspa?threadID=178855)
 log_stream = "tag:location"
 
@@ -130,7 +128,7 @@ log_data_metric_name  = "docker_log"
 ## Specify from which metric attribute the log data should be retrieved:
 ## tag:<TAG_NAME> or field:<FIELD_NAME>.
 ## I.e., if you  are using docker_log plugin to stream logs from container, then
-## specify log_data_source  = "field:message" 
+## specify log_data_source  = "field:message"
 log_data_source  = "field:message"
 `
 
@@ -191,27 +189,17 @@ func (c *CloudWatchLogs) Connect() error {
 	var logGroupsOutput = &cloudwatchlogs.DescribeLogGroupsOutput{NextToken: &dummyToken}
 	var err error
 
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      c.Region,
-		AccessKey:   c.AccessKey,
-		SecretKey:   c.SecretKey,
-		RoleARN:     c.RoleARN,
-		Profile:     c.Profile,
-		Filename:    c.Filename,
-		Token:       c.Token,
-		EndpointURL: c.EndpointURL,
+	cfg, err := c.CredentialConfig.Credentials()
+	if err != nil {
+		return err
 	}
-	configProvider := credentialConfig.Credentials()
-
-	c.svc = cloudwatchlogs.New(configProvider)
-	if c.svc == nil {
-		return fmt.Errorf("can't create cloudwatch logs service endpoint")
-	}
+	c.svc = cloudwatchlogs.NewFromConfig(cfg)
 
 	//Find log group with name 'c.LogGroup'
 	if c.lg == nil { //In case connection is not retried, first time
 		for logGroupsOutput.NextToken != nil {
 			logGroupsOutput, err = c.svc.DescribeLogGroups(
+				context.Background(),
 				&cloudwatchlogs.DescribeLogGroupsInput{
 					LogGroupNamePrefix: &c.LogGroup,
 					NextToken:          queryToken})
@@ -224,7 +212,7 @@ func (c *CloudWatchLogs) Connect() error {
 			for _, logGroup := range logGroupsOutput.LogGroups {
 				if *(logGroup.LogGroupName) == c.LogGroup {
 					c.Log.Debugf("Found log group %q", c.LogGroup)
-					c.lg = logGroup
+					c.lg = &logGroup //nolint:revive
 				}
 			}
 		}
@@ -337,7 +325,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 			lsContainer = val
 		} else {
 			lsContainer.messageBatches[0].messageCount = 0
-			lsContainer.messageBatches[0].logEvents = []*cloudwatchlogs.InputLogEvent{}
+			lsContainer.messageBatches[0].logEvents = []types.InputLogEvent{}
 			c.ls[logStream] = lsContainer
 		}
 
@@ -347,7 +335,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 			lsContainer.currentBatchIndex++
 			lsContainer.messageBatches = append(lsContainer.messageBatches,
 				messageBatch{
-					logEvents:    []*cloudwatchlogs.InputLogEvent{},
+					logEvents:    []types.InputLogEvent{},
 					messageCount: 0})
 			lsContainer.currentBatchSizeBytes = messageSizeInBytesForAWS
 		} else {
@@ -361,7 +349,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 		//Adding metring to batch
 		lsContainer.messageBatches[lsContainer.currentBatchIndex].logEvents =
 			append(lsContainer.messageBatches[lsContainer.currentBatchIndex].logEvents,
-				&cloudwatchlogs.InputLogEvent{
+				types.InputLogEvent{
 					Message:   &logData,
 					Timestamp: &metricTime})
 	}
@@ -382,11 +370,11 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 			if elem.sequenceToken == "" {
 				//This is the first attempt to write to log stream,
 				//need to check log stream existence and create it if necessary
-				describeLogStreamOutput, err := c.svc.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+				describeLogStreamOutput, err := c.svc.DescribeLogStreams(context.Background(), &cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName:        &c.LogGroup,
 					LogStreamNamePrefix: &logStream})
 				if err == nil && len(describeLogStreamOutput.LogStreams) == 0 {
-					_, err := c.svc.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
+					_, err := c.svc.CreateLogStream(context.Background(), &cloudwatchlogs.CreateLogStreamInput{
 						LogGroupName:  &c.LogGroup,
 						LogStreamName: &logStream})
 					if err != nil {
@@ -416,14 +404,14 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 
 			//There is a quota of 5 requests per second per log stream. Additional
 			//requests are throttled. This quota can't be changed.
-			putLogEventsOutput, err := c.svc.PutLogEvents(&putLogEvents)
+			putLogEventsOutput, err := c.svc.PutLogEvents(context.Background(), &putLogEvents)
 			if err != nil {
 				c.Log.Errorf("Can't push logs batch to AWS. Reason: %v", err)
 				continue
 			}
 			//Cleanup batch
 			elem.messageBatches[index] = messageBatch{
-				logEvents:    []*cloudwatchlogs.InputLogEvent{},
+				logEvents:    []types.InputLogEvent{},
 				messageCount: 0}
 
 			elem.sequenceToken = *putLogEventsOutput.NextSequenceToken
