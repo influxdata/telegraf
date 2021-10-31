@@ -28,8 +28,6 @@ type metricObject struct {
 	Namespace string
 	Account   *Account
 
-	isDiscovered bool
-
 	MonitorInstances []*monitor.Instance
 }
 
@@ -43,24 +41,12 @@ func (c *cloudmonitorClient) GetMetricObjects(t TencentCloudCM) []metricObject {
 			for _, region := range namespace.Regions {
 				region.instancesToMonitor()
 				monitorInstances := region.monitorInstances
-				isDiscovered := false
-				if len(monitorInstances) == 0 {
-					// if instances are not specified. look them up in the discoverTool
-					monitorInstances = t.discoverTool.GetMonitorInstances(account.Name, namespace.Name, region.RegionName)
-					isDiscovered = true
-				}
-				if len(monitorInstances) == 0 {
-					c.Log.Debugf("discover 0 instance for account:%s namespace:%s region:%s", account.Name, namespace.Name, region.RegionName)
-					continue
-				}
-				c.Log.Debugf("discover %v instance for account:%s namespace:%s region:%s", len(monitorInstances), account.Name, namespace.Name, region.RegionName)
 				for _, metric := range namespace.Metrics {
 					metricObjects = append(metricObjects, metricObject{
 						Metric:           metric,
 						Region:           region.RegionName,
 						Namespace:        namespace.Name,
 						Account:          account,
-						isDiscovered:     isDiscovered,
 						MonitorInstances: monitorInstances,
 					})
 				}

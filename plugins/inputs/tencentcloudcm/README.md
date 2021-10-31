@@ -41,11 +41,6 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
 
   ## Batch instance size for intiating a GetMonitorData API call.
   # batch_size = 100
-  ## By default, Tencent Cloud CM Input plugin will automatically discover instances in specified regions
-  ## This sets the interval for discover and update the instances discovered.
-  ##
-  ## how often the discovery API call executed (default 1m)
-  # discovery_interval = "5m"
 
   ## Tencent Cloud Account (required - you can provide multiple entries and distinguish them using
   ## optional name field, if name is empty, index number will be used as default)
@@ -68,15 +63,7 @@ This plugin uses [Access Key](https://intl.cloud.tencent.com/document/product/59
       region = "ap-guangzhou"
   
       ## Dimension filters for Metric. Different namespaces may have different
-      ## dimension requirements, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843It must be specified if the namespace does not support instance auto discovery
-      ## Currently, discovery supported for the following namespaces:
-      ## - QCE/CVM
-      ## - QCE/CDB
-      ## - QCE/CES
-      ## - QCE/REDIS
-      ## - QCE/LB_PUBLIC
-      ## - QCE/LB_PRIVATE
-      ## - QCE/DC
+      ## dimension requirements, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843It must be specified.
       # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances]]
       # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances.dimensions]]
       #   name = "value"

@@ -2,7 +2,6 @@ package tencentcloudcm
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -26,17 +25,14 @@ type TencentCloudCM struct {
 	Timeout   config.Duration `toml:"timeout"`
 	BatchSize int             `toml:"batch_size"`
 
-	DiscoveryInterval config.Duration `toml:"discovery_interval"`
-
 	Accounts []*Account `toml:"accounts"`
 
 	client cmClient
 
 	Log telegraf.Logger `toml:"-"`
 
-	windowStart  time.Time
-	windowEnd    time.Time
-	discoverTool *discoverTool
+	windowStart time.Time
+	windowEnd   time.Time
 }
 
 // Account defines a Tencent Cloud account
@@ -119,11 +115,6 @@ func (t *TencentCloudCM) SampleConfig() string {
   
 	## Batch instance size for intiating a GetMonitorData API call.
 	# batch_size = 100
-	## By default, Tencent Cloud CM Input plugin will automatically discover instances in specified regions
-	## This sets the interval for discover and update the instances discovered.
-	##
-	## how often the discovery API call executed (default 1m)
-	# discovery_interval = "5m"
   
 	## Tencent Cloud Account (required - you can provide multiple entries and distinguish them using
 	## optional name field, if name is empty, index number will be used as default)
@@ -146,15 +137,7 @@ func (t *TencentCloudCM) SampleConfig() string {
 		  region = "ap-guangzhou"
   
 		  ## Dimension filters for Metric. Different namespaces may have different
-		  ## dimension requirements, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843It must be specified if the namespace does not support instance auto discovery
-		  ## Currently, discovery supported for the following namespaces:
-		  ## - QCE/CVM
-		  ## - QCE/CDB
-		  ## - QCE/CES
-		  ## - QCE/REDIS
-		  ## - QCE/LB_PUBLIC
-		  ## - QCE/LB_PRIVATE
-		  ## - QCE/DC
+		  ## dimension requirements, e.g. CVM Monitoring Metrics: https://intl.cloud.tencent.com/document/product/248/6843It must be specified.
 		  # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances]]
 		  # [[inputs.tencentcloudcm.accounts.namespaces.regions.instances.dimensions]]
 		  #   name = "value"
@@ -182,8 +165,6 @@ func (t *TencentCloudCM) Init() error {
 		return fmt.Errorf("account is empty")
 	}
 
-	t.discoverTool = newDiscoverTool(t.Log)
-
 	// create account credential
 	for i := range t.Accounts {
 		if t.Accounts[i].SecretID == "" {
@@ -200,7 +181,7 @@ func (t *TencentCloudCM) Init() error {
 		if t.Accounts[i].Name == "" {
 			t.Accounts[i].Name = fmt.Sprintf("account_%v", i)
 		}
-		// check if namespace supports auto discovery
+
 		for _, namespace := range t.Accounts[i].Namespaces {
 			if namespace.Name == "" {
 				return fmt.Errorf("namespace is empty")
@@ -209,33 +190,10 @@ func (t *TencentCloudCM) Init() error {
 				if region.RegionName == "" {
 					return fmt.Errorf("region is empty")
 				}
-				_, ok := t.discoverTool.registry[namespace.Name]
-				if len(region.Instances) == 0 && !ok {
-					return fmt.Errorf(
-						"unsupported namespace %s for discovering instances, please specify instances and dimensions",
-						namespace.Name,
-					)
-				}
 			}
 		}
 	}
 
-	// start discovery
-	go t.discoverTool.Discover(t.Accounts, t.DiscoveryInterval, t.Endpoint)
-	t.discoverTool.DiscoverMetrics()
-	for i, account := range t.Accounts {
-		for j, namespace := range account.Namespaces {
-			// use discovered metrics if not specified
-			if len(namespace.Metrics) == 0 {
-				metrics, ok := t.discoverTool.DiscoveredMetrics[namespace.Name]
-				if !ok {
-					return fmt.Errorf("unsupported namespace %s for discovering metrics, please specify metrics",
-						namespace.Name)
-				}
-				t.Accounts[i].Namespaces[j].Metrics = metrics
-			}
-		}
-	}
 	t.client = &cloudmonitorClient{Accounts: t.Accounts, Log: t.Log}
 	return nil
 }
@@ -307,13 +265,6 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 
 			metricObject := requestIDMap[*result.Response.RequestId]
 
-			if metricObject.isDiscovered {
-				instance := t.discoverTool.GetInstance(metricObject.Account.Name, metricObject.Namespace, metricObject.Region, newKey(strings.Join(keys, "-")))
-				for k, v := range instance {
-					tags[fmt.Sprintf("_%s_%s", metricObject.Namespace, k)] = fmt.Sprintf("%v", v)
-				}
-			}
-
 			tags["account"] = metricObject.Account.Name
 			tags["namespace"] = metricObject.Namespace
 			tags["region"] = metricObject.Region
@@ -340,11 +291,10 @@ func (t *TencentCloudCM) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("tencentcloudcm", func() telegraf.Input {
 		return &TencentCloudCM{
-			Endpoint:          "tencentcloudapi.com",
-			RateLimit:         20,
-			BatchSize:         100,
-			Timeout:           config.Duration(5 * time.Second),
-			DiscoveryInterval: config.Duration(5 * time.Minute),
+			Endpoint:  "tencentcloudapi.com",
+			RateLimit: 20,
+			BatchSize: 100,
+			Timeout:   config.Duration(5 * time.Second),
 		}
 	})
 }
