@@ -2,7 +2,6 @@ package nvidia_smi
 
 import (
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -32,10 +31,10 @@ func (smi *NvidiaSMI) Description() string {
 // SampleConfig returns the sample configuration for the NvidiaSMI plugin
 func (smi *NvidiaSMI) SampleConfig() string {
 	return `
-  ## Optional: path to nvidia-smi binary, if not specified or an empty string is specified, we will search for it on exec.LookPath
-  ## We will use "os.Stat" to check whether the nvidia-smi binary actually exists at the location pointed to by the bin_path, 
-  ## if not, an error will be returned as soon as possible (in Init())
-  # bin_path = ""
+  ## Optional: path to nvidia-smi binary, defaults "/usr/bin/nvidia-smi"
+  ## We will first try to locate the nvidia-smi binary with the explicitly specified value (or default value), 
+  ## if it is not found, we will try to locate it on PATH(exec.LookPath), if it is still not found, an error will be returned
+  # bin_path = "/usr/bin/nvidia-smi"
 
   ## Optional: timeout for GPU polling, defaults "5s"
   # timeout = "5s"
@@ -43,16 +42,13 @@ func (smi *NvidiaSMI) SampleConfig() string {
 }
 
 func (smi *NvidiaSMI) Init() error {
-	if smi.BinPath == "" {
-		var err error
-		smi.BinPath, err = exec.LookPath("nvidia-smi")
-		if err != nil {
-			return errors.New("nvidia-smi not found: verify that nvidia-smi is installed and that nvidia-smi is in your PATH")
-		}
-	}
-	// fail-fast
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
-		return fmt.Errorf("nvidia-smi binary not at path %s", smi.BinPath)
+		binPath, err := exec.LookPath("nvidia-smi")
+		// fail-fast
+		if err != nil {
+			return fmt.Errorf("nvidia-smi not found in %q and not in PATH; please make sure nvidia-smi is installed and/or is in PATH", smi.BinPath)
+		}
+		smi.BinPath = binPath
 	}
 
 	return nil
@@ -76,7 +72,7 @@ func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
-			BinPath: "",
+			BinPath: "/usr/bin/nvidia-smi",
 			Timeout: config.Duration(5 * time.Second),
 		}
 	})
