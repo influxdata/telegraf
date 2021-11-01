@@ -362,7 +362,7 @@ func (g *Graylog) Write(metrics []telegraf.Metric) error {
 }
 
 func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
-	out := []string{}
+	var out []string
 
 	m := make(map[string]interface{})
 	m["version"] = "1.1"
@@ -384,9 +384,18 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 		m["host"] = host
 	}
 
+	add := func(key string, value interface{}) {
+		switch key {
+		case "short_message", "full_message":
+			m[key] = value
+		default:
+			m["_"+key] = value
+		}
+	}
+
 	for _, tag := range metric.TagList() {
 		if tag.Key != "host" {
-			m["_"+tag.Key] = tag.Value
+			add(tag.Key, tag.Value)
 		}
 	}
 
@@ -394,7 +403,7 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 		if field.Key == g.ShortMessageField {
 			m["short_message"] = field.Value
 		} else {
-			m["_"+field.Key] = field.Value
+			add(field.Key, field.Value)
 		}
 	}
 

@@ -59,6 +59,9 @@ func TestWriteUDP(t *testing.T) {
 			defer wg.Wait()
 
 			metrics := testutil.MockMetrics()
+			assert.Equal(t, len(metrics), 1)
+			metrics[0].AddField("short_message", "short message1")
+			metrics[0].AddField("full_message", "full message1")
 
 			// UDP scenario:
 			// 4 messages are send
@@ -128,7 +131,7 @@ func TestWriteTCP(t *testing.T) {
 			wg.Add(1)
 			wg2.Add(1)
 			wg3.Add(1)
-			go TCPServer(t, &wg, &wg2, &wg3, tt.tlsServerConfig)
+			go TCPServer(t, &wg, &wg2, &wg3, &tt.instance, tt.tlsServerConfig)
 			wg2.Wait()
 
 			i := tt.instance
@@ -138,6 +141,9 @@ func TestWriteTCP(t *testing.T) {
 			defer wg.Wait()
 
 			metrics := testutil.MockMetrics()
+			assert.Equal(t, len(metrics), 1)
+			metrics[0].AddField("short_message", "short message1")
+			metrics[0].AddField("full_message", "full message1")
 
 			// TCP scenario:
 			// 4 messages are send
@@ -184,7 +190,8 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Gr
 		var obj GelfObject
 		_ = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
-		assert.Equal(t, obj["short_message"], "telegraf")
+		assert.Equal(t, obj["short_message"], "short message1")
+		assert.Equal(t, obj["full_message"], "full message1")
 		if config.NameFieldNoPrefix {
 			assert.Equal(t, obj["name"], "test1")
 		} else {
@@ -202,7 +209,7 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Gr
 	recv()
 }
 
-func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.WaitGroup, tlsConfig *tls.Config) {
+func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.WaitGroup, config *Graylog, tlsConfig *tls.Config) {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:12201")
 	require.NoError(t, err)
 	defer tcpServer.Close()
@@ -239,8 +246,13 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 		var obj GelfObject
 		err = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
-		assert.Equal(t, obj["short_message"], "telegraf")
-		assert.Equal(t, obj["_name"], "test1")
+		assert.Equal(t, obj["short_message"], "short message1")
+		assert.Equal(t, obj["full_message"], "full message1")
+		if config.NameFieldNoPrefix {
+			assert.Equal(t, obj["name"], "test1")
+		} else {
+			assert.Equal(t, obj["_name"], "test1")
+		}
 		assert.Equal(t, obj["_tag1"], "value1")
 		assert.Equal(t, obj["_value"], float64(1))
 	}
