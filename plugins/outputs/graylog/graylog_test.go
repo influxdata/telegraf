@@ -3,125 +3,174 @@ package graylog
 import (
 	"bytes"
 	"compress/zlib"
+	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net"
 	"sync"
 	"testing"
+	"time"
 
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestWriteDefault(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
-
-	scenarioUDP(t, "127.0.0.1:12201")
-}
-
 func TestWriteUDP(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
+	tests := []struct {
+		name     string
+		instance Graylog
+	}{
+		{
+			name: "default without scheme",
+			instance: Graylog{
+				Servers: []string{"127.0.0.1:12201"},
+			},
+		},
+		{
+			name: "UDP",
+			instance: Graylog{
+				Servers: []string{"udp://127.0.0.1:12201"},
+			},
+		},
+		{
+			name: "UDP non-standard name field",
+			instance: Graylog{
+				Servers:           []string{"udp://127.0.0.1:12201"},
+				NameFieldNoPrefix: true,
+			},
+		},
 	}
 
-	scenarioUDP(t, "udp://127.0.0.1:12201")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			var wg2 sync.WaitGroup
+			wg.Add(1)
+			wg2.Add(1)
+			go UDPServer(t, &wg, &wg2, &tt.instance)
+			wg2.Wait()
+
+			i := tt.instance
+			err := i.Connect()
+			require.NoError(t, err)
+			defer i.Close()
+			defer wg.Wait()
+
+			metrics := testutil.MockMetrics()
+
+			// UDP scenario:
+			// 4 messages are send
+
+			err = i.Write(metrics)
+			require.NoError(t, err)
+			err = i.Write(metrics)
+			require.NoError(t, err)
+			err = i.Write(metrics)
+			require.NoError(t, err)
+			err = i.Write(metrics)
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestWriteTCP(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
+	pki := testutil.NewPKI("../../../testutil/pki")
+	tlsClientConfig := pki.TLSClientConfig()
+	tlsServerConfig, err := pki.TLSServerConfig().TLSConfig()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name            string
+		instance        Graylog
+		tlsServerConfig *tls.Config
+	}{
+		{
+			name: "TCP",
+			instance: Graylog{
+				Servers: []string{"tcp://127.0.0.1:12201"},
+			},
+		},
+		{
+			name: "TLS",
+			instance: Graylog{
+				Servers: []string{"tcp://127.0.0.1:12201"},
+				ClientConfig: tlsint.ClientConfig{
+					ServerName: "localhost",
+					TLSCA:      tlsClientConfig.TLSCA,
+					TLSKey:     tlsClientConfig.TLSKey,
+					TLSCert:    tlsClientConfig.TLSCert,
+				},
+			},
+			tlsServerConfig: tlsServerConfig,
+		},
+		{
+			name: "TLS no validation",
+			instance: Graylog{
+				Servers: []string{"tcp://127.0.0.1:12201"},
+				ClientConfig: tlsint.ClientConfig{
+					InsecureSkipVerify: true,
+					ServerName:         "localhost",
+					TLSKey:             tlsClientConfig.TLSKey,
+					TLSCert:            tlsClientConfig.TLSCert,
+				},
+			},
+			tlsServerConfig: tlsServerConfig,
+		},
 	}
 
-	scenarioTCP(t, "tcp://127.0.0.1:12201")
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			var wg2 sync.WaitGroup
+			var wg3 sync.WaitGroup
+			wg.Add(1)
+			wg2.Add(1)
+			wg3.Add(1)
+			go TCPServer(t, &wg, &wg2, &wg3, tt.tlsServerConfig)
+			wg2.Wait()
 
-func scenarioUDP(t *testing.T, server string) {
-	var wg sync.WaitGroup
-	var wg2 sync.WaitGroup
-	wg.Add(1)
-	wg2.Add(1)
-	go UDPServer(t, &wg, &wg2)
-	wg2.Wait()
+			i := tt.instance
+			err = i.Connect()
+			require.NoError(t, err)
+			defer i.Close()
+			defer wg.Wait()
 
-	i := Graylog{
-		Servers: []string{server},
+			metrics := testutil.MockMetrics()
+
+			// TCP scenario:
+			// 4 messages are send
+			// -> connection gets forcefully broken after the 2nd message (server closes connection)
+			// -> the 3rd write fails with error
+			// -> during the 4th write connection is restored and write is successful
+
+			err = i.Write(metrics)
+			require.NoError(t, err)
+			err = i.Write(metrics)
+			require.NoError(t, err)
+			wg3.Wait()
+			err = i.Write(metrics)
+			require.Error(t, err)
+			err = i.Write(metrics)
+			require.NoError(t, err)
+		})
 	}
-	err := i.Connect()
-	require.NoError(t, err)
-
-	metrics := testutil.MockMetrics()
-
-	// UDP scenario:
-	// 4 messages are send
-
-	err = i.Write(metrics)
-	require.NoError(t, err)
-	err = i.Write(metrics)
-	require.NoError(t, err)
-	err = i.Write(metrics)
-	require.NoError(t, err)
-	err = i.Write(metrics)
-	require.NoError(t, err)
-
-	wg.Wait()
-	i.Close()
-}
-
-func scenarioTCP(t *testing.T, server string) {
-	var wg sync.WaitGroup
-	var wg2 sync.WaitGroup
-	var wg3 sync.WaitGroup
-	wg.Add(1)
-	wg2.Add(1)
-	wg3.Add(1)
-	go TCPServer(t, &wg, &wg2, &wg3)
-	wg2.Wait()
-
-	i := Graylog{
-		Servers: []string{server},
-	}
-	err := i.Connect()
-	require.NoError(t, err)
-
-	metrics := testutil.MockMetrics()
-
-	// TCP scenario:
-	// 4 messages are send
-	// -> connection gets broken after the 2nd message (server closes connection)
-	// -> the 3rd write ends with error
-	// -> in the 4th write connection is restored and write is successful
-
-	err = i.Write(metrics)
-	require.NoError(t, err)
-	err = i.Write(metrics)
-	require.NoError(t, err)
-	wg3.Wait()
-	err = i.Write(metrics)
-	require.Error(t, err)
-	err = i.Write(metrics)
-	require.NoError(t, err)
-
-	wg.Wait()
-	i.Close()
 }
 
 type GelfObject map[string]interface{}
 
-func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
+func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Graylog) {
 	serverAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:12201")
 	require.NoError(t, err)
 	udpServer, err := net.ListenUDP("udp", serverAddr)
 	require.NoError(t, err)
 	defer udpServer.Close()
 	defer wg.Done()
-
-	bufR := make([]byte, 1024)
 	wg2.Done()
 
 	recv := func() {
+		bufR := make([]byte, 1024)
 		n, _, err := udpServer.ReadFromUDP(bufR)
 		require.NoError(t, err)
 
@@ -135,6 +184,13 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
 		var obj GelfObject
 		_ = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
+		assert.Equal(t, obj["short_message"], "telegraf")
+		if config.NameFieldNoPrefix {
+			assert.Equal(t, obj["name"], "test1")
+		} else {
+			assert.Equal(t, obj["_name"], "test1")
+		}
+		assert.Equal(t, obj["_tag1"], "value1")
 		assert.Equal(t, obj["_value"], float64(1))
 	}
 
@@ -146,29 +202,29 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup) {
 	recv()
 }
 
-func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.WaitGroup) {
-	serverAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:12201")
-	require.NoError(t, err)
-	tcpServer, err := net.ListenTCP("tcp", serverAddr)
+func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.WaitGroup, tlsConfig *tls.Config) {
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12201")
 	require.NoError(t, err)
 	defer tcpServer.Close()
 	defer wg.Done()
-
-	bufR := make([]byte, 1)
-	bufW := bytes.NewBuffer(nil)
 	wg2.Done()
 
-	accept := func() *net.TCPConn {
-		conn, err := tcpServer.AcceptTCP()
+	accept := func() net.Conn {
+		conn, err := tcpServer.Accept()
 		require.NoError(t, err)
-		_ = conn.SetLinger(0)
+		if tcpConn, ok := conn.(*net.TCPConn); ok {
+			_ = tcpConn.SetLinger(0)
+		}
+		_ = conn.SetDeadline(time.Now().Add(15 * time.Second))
+		if tlsConfig != nil {
+			conn = tls.Server(conn, tlsConfig)
+		}
 		return conn
 	}
-	conn := accept()
-	defer conn.Close()
 
-	recv := func() {
-		bufW.Reset()
+	recv := func(conn net.Conn) {
+		bufR := make([]byte, 1)
+		bufW := bytes.NewBuffer(nil)
 		for {
 			n, err := conn.Read(bufR)
 			require.NoError(t, err)
@@ -183,16 +239,22 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 		var obj GelfObject
 		err = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
+		assert.Equal(t, obj["short_message"], "telegraf")
+		assert.Equal(t, obj["_name"], "test1")
+		assert.Equal(t, obj["_tag1"], "value1")
 		assert.Equal(t, obj["_value"], float64(1))
 	}
 
-	// in TCP scenario only 3 messages are received (1st, 2dn and 4th) due to connection break after the 2nd
+	conn := accept()
+	defer conn.Close()
 
-	recv()
-	recv()
+	// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
+
+	recv(conn)
+	recv(conn)
 	_ = conn.Close()
 	wg3.Done()
 	conn = accept()
 	defer conn.Close()
-	recv()
+	recv(conn)
 }

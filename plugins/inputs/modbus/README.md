@@ -29,7 +29,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 
   # TCP - connect via Modbus/TCP
   controller = "tcp://localhost:502"
-  
+
   ## Serial (RS485; RS232)
   # controller = "file:///dev/ttyUSB0"
   # baud_rate = 9600
@@ -41,6 +41,10 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   ## default behaviour is "TCP" if the controller is TCP
   ## For Serial you can choose between "RTU" and "ASCII"
   # transmission_mode = "RTU"
+
+  ## Trace the connection to the modbus device as debug messages
+  ## Note: You have to enable telegraf's debug mode to see those messages!
+  # debug_connection = false
 
   ## Measurements
   ##
@@ -88,7 +92,21 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
     { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
     { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
   ]
+
+  ## Enable workarounds required by some devices to work correctly
+  # [inputs.modbus.workarounds]
+    ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
+    # pause_between_requests = "0ms"
+    ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
+    ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
+    ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
+    # close_connection_after_gather = false
 ```
+
+### Notes
+You can debug Modbus connection issues by enabling `debug_connection`. To see those debug messages Telegraf has to be started with debugging enabled (i.e. with `--debug` option). Please be aware that connection tracing will produce a lot of messages and should **NOT** be used in production environments.
+
+Please use `pause_between_requests` with care. Especially make sure that the total gather time, including the pause(s), does not exceed the configured collection interval. Note, that pauses add up if multiple requests are sent!
 
 ### Metrics
 
@@ -131,6 +149,8 @@ with N decimal places'.
 from unsigned values).
 
 ### Trouble shooting
+
+#### Strange data
 Modbus documentations are often a mess. People confuse memory-address (starts at one) and register address (starts at zero) or stay unclear about the used word-order. Furthermore, there are some non-standard implementations that also
 swap the bytes within the register word (16-bit).
 
@@ -142,7 +162,15 @@ In case you get an `exception '2' (illegal data address)` error you might try to
 
 In case you see strange values, the `byte_order` might be off. You can either probe all combinations (`ABCD`, `CDBA`, `BADC` or `DCBA`) or you set `byte_order="ABCD" data_type="UINT32"` and use the resulting value(s) in an online converter like [this](https://www.scadacore.com/tools/programming-calculators/online-hex-converter/). This makes especially sense if you don't want to mess with the device, deal with 64-bit values and/or don't know the `data_type` of your register (e.g. fix-point floating values vs. IEEE floating point).
 
-If nothing helps, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
+If your data still looks corrupted, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
+
+#### Workarounds
+Some Modbus devices need special read characteristics when reading data and will fail otherwise. For example, there are certain serial devices that need a certain pause between register read requests. Others might only offer a limited number of simultaneously connected devices, like serial devices or some ModbusTCP devices. In case you need to access those devices in parallel you might want to disconnect immediately after the plugin finished reading.
+
+To allow this plugin to also handle those "special" devices there is the `workarounds` configuration options. In case your documentation states certain read requirements or you get read timeouts or other read errors you might want to try one or more workaround options.
+If you find that other/more workarounds are required for your device, please let us know.
+
+In case your device needs a workaround that is not yet implemented, please open an issue or submit a pull-request.
 
 ### Example Output
 

@@ -65,10 +65,10 @@ parameters is closely related have a single description.
   # password = ""
 ```
 
-An parameters should usually be describable in a few sentences.  If it takes
+Parameters should usually be describable in a few sentences.  If it takes
 much more than this, try to provide a shorter explanation and provide a more
 complex description in the Configuration section of the plugins
-[README](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/EXAMPLE_README.md)
+[README](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/example)
 
 Boolean parameters should be used judiciously.  You should try to think of
 something better since they don't scale well, things are often not truly

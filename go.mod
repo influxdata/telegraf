@@ -9,11 +9,11 @@ require (
 	cloud.google.com/go/pubsub v1.17.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.5.0
-	github.com/Azure/azure-amqp-common-go/v3 v3.0.1 // indirect
+	github.com/Azure/azure-amqp-common-go/v3 v3.1.0 // indirect
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.13
-	github.com/Azure/azure-kusto-go v0.3.2
+	github.com/Azure/azure-kusto-go v0.4.0
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
-	github.com/Azure/azure-sdk-for-go v52.5.0+incompatible // indirect
+	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible // indirect
 	github.com/Azure/azure-storage-blob-go v0.14.0 // indirect
 	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
 	github.com/Azure/go-amqp v0.13.12 // indirect
@@ -43,22 +43,30 @@ require (
 	github.com/antchfx/xmlquery v1.3.6
 	github.com/antchfx/xpath v1.1.11
 	github.com/apache/arrow/go/arrow v0.0.0-20211006091945-a69884db78f4 // indirect
-	github.com/apache/thrift v0.14.2
+	github.com/apache/thrift v0.15.0
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
-	github.com/aws/aws-sdk-go v1.38.69
-	github.com/aws/aws-sdk-go-v2 v1.9.1
-	github.com/aws/aws-sdk-go-v2/config v1.8.2
-	github.com/aws/aws-sdk-go-v2/credentials v1.4.2 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.5.1
+	github.com/armon/go-metrics v0.3.3 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.9.2
+	github.com/aws/aws-sdk-go-v2/config v1.8.3
+	github.com/aws/aws-sdk-go-v2/credentials v1.4.3
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.6.0
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.5.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.0.4 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.2.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.7.0
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.5.2
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.5.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.3.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.3.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.1.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.7.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.6.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.16.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.4.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.7.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.4.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.7.2
+	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.3.2
 	github.com/aws/smithy-go v1.8.0
 	github.com/benbjohnson/clock v1.1.0
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -76,7 +84,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.10.0
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v20.10.7+incompatible
+	github.com/docker/docker v20.10.9+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60
@@ -101,7 +109,8 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang-jwt/jwt/v4 v4.0.0
+	github.com/golang-jwt/jwt/v4 v4.1.0
+	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2
@@ -120,8 +129,8 @@ require (
 	github.com/gosnmp/gosnmp v1.32.0
 	github.com/grid-x/modbus v0.0.0-20210224155242-c4a3d042e99b
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
-	github.com/harlow/kinesis-consumer v0.3.1-0.20181230152818-2f58b136fee0
-	github.com/hashicorp/consul/api v1.11.0
+	github.com/harlow/kinesis-consumer v0.3.6-0.20210911031324-5a873d6e9fec
+	github.com/hashicorp/consul/api v1.9.1
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-hclog v0.16.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
@@ -185,7 +194,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/client_model v0.2.0
-	github.com/prometheus/common v0.30.0
+	github.com/prometheus/common v0.31.1
 	github.com/prometheus/procfs v0.6.0
 	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
@@ -209,9 +218,9 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.218
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/monitor v1.0.218
 	github.com/testcontainers/testcontainers-go v0.11.1
-	github.com/tidwall/gjson v1.9.0
-	github.com/tidwall/match v1.0.3 // indirect
-	github.com/tidwall/pretty v1.1.0 // indirect
+	github.com/tidwall/gjson v1.10.2
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tinylib/msgp v1.1.6
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
@@ -229,8 +238,9 @@ require (
 	github.com/xdg/scram v1.0.3
 	github.com/xdg/stringprep v1.0.3 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
-	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
-	go.mongodb.org/mongo-driver v1.5.3
+	github.com/yuin/gopher-lua v0.0.0-20200603152657-dc2b0ca8b37e // indirect
+	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
+	go.mongodb.org/mongo-driver v1.7.3
 	go.opencensus.io v0.23.0 // indirect
 	go.opentelemetry.io/collector/model v0.35.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.23.0
@@ -270,13 +280,11 @@ require (
 )
 
 require (
-	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/devigned/tab v0.1.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/grid-x/serial v0.0.0-20191104121038-e24bc9bf6f08 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
@@ -307,7 +315,6 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
-	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	golang.zx2c4.com/wireguard v0.0.20200121 // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
@@ -332,7 +339,9 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.2.3 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
+	github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f // indirect
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
