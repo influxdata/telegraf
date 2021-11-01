@@ -323,7 +323,7 @@ abcdefgh        0       2    false
 }
 
 func TestSkipRows(t *testing.T) {
-	p, err := NewParser(
+	p1, _ := NewParser(
 		&Config{
 			HeaderRowCount:    1,
 			SkipRows:          1,
@@ -332,17 +332,40 @@ func TestSkipRows(t *testing.T) {
 			TimeFunc:          DefaultTime,
 		},
 	)
-	testCSV := `garbage nonsense
+	testCSV1 := `garbage nonsense
 line1,line2,line3
 hello,80,test_name2`
 
 	expectedFields := map[string]interface{}{
 		"line2": int64(80),
 	}
-	metrics, err := p.Parse([]byte(testCSV))
-	require.NoError(t, err)
-	require.Equal(t, "test_name2", metrics[0].Name())
-	require.Equal(t, expectedFields, metrics[0].Fields())
+	metrics0, err1 := p1.Parse([]byte(testCSV1))
+	require.NoError(t, err1)
+	require.Equal(t, "test_name2", metrics0[0].Name())
+	require.Equal(t, expectedFields, metrics0[0].Fields())
+
+	p2, _ := NewParser(
+		&Config{
+			HeaderRowCount:    1,
+			SkipRows:          1,
+			TagColumns:        []string{"line1"},
+			MeasurementColumn: "line3",
+			TimeFunc:          DefaultTime,
+		},
+	)
+	testCSV2 := []string{"garbage nonsense\r\n", "line1,line2,line3\r\n", "hello,80,test_name2\r\n"}
+
+	metrics2, err2 := p2.Parse([]byte(testCSV2[0]))
+	require.EqualError(t, err2, "EOF, [parsers.csv] data columns must be specified")
+	require.Error(t, err2)
+	require.Nil(t, metrics2)
+	metric1, err3 := p2.ParseLine(testCSV2[1])
+	require.NoError(t, err3)
+	require.Nil(t, metric1)
+	metric2, err4 := p2.ParseLine(testCSV2[2])
+	require.NoError(t, err4)
+	require.Equal(t, "test_name2", metric2.Name())
+	require.Equal(t, expectedFields, metric2.Fields())
 }
 
 func TestSkipColumns(t *testing.T) {
@@ -375,13 +398,50 @@ func TestSkipColumnsWithHeader(t *testing.T) {
 	)
 	require.NoError(t, err)
 	testCSV := `col,col,col
-	1,2,3
-	trash,80,test_name`
+1,2,3
+trash,80,test_name`
 
 	// we should expect an error if we try to get col1
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 	require.Equal(t, map[string]interface{}{"col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
+}
+
+func TestMultiHeader(t *testing.T) {
+	p1, err := NewParser(
+		&Config{
+			HeaderRowCount: 2,
+			TimeFunc:       DefaultTime,
+		},
+	)
+	require.NoError(t, err)
+	testCSV1 := `col,col
+1,2
+80,test_name`
+
+	metrics1, err1 := p1.Parse([]byte(testCSV1))
+	require.NoError(t, err1)
+	require.Equal(t, map[string]interface{}{"col1": int64(80), "col2": "test_name"}, metrics1[0].Fields())
+
+	testCSV2 := []string{"col,col\r\n", "1,2\r\n", "80,test_name\r\n"}
+
+	p2, _ := NewParser(
+		&Config{
+			HeaderRowCount: 2,
+			TimeFunc:       DefaultTime,
+		},
+	)
+
+	metrics2, err2 := p2.Parse([]byte(testCSV2[0]))
+	require.EqualError(t, err2, "EOF, [parsers.csv] data columns must be specified")
+	require.Error(t, err2)
+	require.Nil(t, metrics2)
+	metric1, err3 := p2.ParseLine(testCSV2[1])
+	require.NoError(t, err3)
+	require.Nil(t, metric1)
+	metric1, err3 = p2.ParseLine(testCSV2[2])
+	require.NoError(t, err3)
+	require.Equal(t, map[string]interface{}{"col1": int64(80), "col2": "test_name"}, metric1.Fields())
 }
 
 func TestParseStream(t *testing.T) {

@@ -342,6 +342,67 @@ cpu,42
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
+func TestCSVMultiHeaderWithSkipRowANDColumn(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	_, err = tmpfile.WriteString(`garbage nonsense
+skip,measurement,value
+row,1,2
+skip1,cpu,42
+skip2,mem,100
+`)
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Close())
+
+	plugin := NewTestTail()
+	plugin.Log = testutil.Logger{}
+	plugin.FromBeginning = true
+	plugin.Files = []string{tmpfile.Name()}
+	plugin.SetParserFunc(func() (parsers.Parser, error) {
+		return csv.NewParser(&csv.Config{
+			MeasurementColumn: "measurement1",
+			HeaderRowCount:    2,
+			SkipRows:          1,
+			SkipColumns:       1,
+			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
+		})
+	})
+
+	err = plugin.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	err = plugin.Start(&acc)
+	require.NoError(t, err)
+	defer plugin.Stop()
+	err = plugin.Gather(&acc)
+	require.NoError(t, err)
+	acc.Wait(2)
+	plugin.Stop()
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"path": tmpfile.Name(),
+			},
+			map[string]interface{}{
+				"value2": 42,
+			},
+			time.Unix(0, 0)),
+		testutil.MustMetric("mem",
+			map[string]string{
+				"path": tmpfile.Name(),
+			},
+			map[string]interface{}{
+				"value2": 100,
+			},
+			time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
 // Ensure that the first line can produce multiple metrics (#6138)
 func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")

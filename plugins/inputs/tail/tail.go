@@ -291,22 +291,20 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.Metric, error) {
 	switch parser.(type) {
 	case *csv.Parser:
-		// The csv parser parses headers in Parse and skips them in ParseLine.
-		// As a temporary solution call Parse only when getting the first
-		// line from the file.
-		if firstLine {
-			return parser.Parse([]byte(line))
-		}
-
-		m, err := parser.ParseLine(line)
+		m, err := parser.Parse([]byte(line))
 		if err != nil {
-			return nil, err
+			switch err.Error() {
+			case "EOF, [parsers.csv] expecting more skip rows":
+				// Ignore error and continue reading next line
+				return []telegraf.Metric{}, nil
+			case "EOF, [parsers.csv] data columns must be specified":
+				// Ignore error and continue reading next line
+				return []telegraf.Metric{}, nil
+			default:
+				return nil, err
+			}
 		}
-
-		if m != nil {
-			return []telegraf.Metric{m}, nil
-		}
-		return []telegraf.Metric{}, nil
+		return m, err
 	default:
 		return parser.Parse([]byte(line))
 	}

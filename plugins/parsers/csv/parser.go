@@ -96,24 +96,43 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	r := bytes.NewReader(buf)
+	return parseCSV(p, r, false)
+}
+
+// ParseLine does not use any information in header and assumes DataColumns is set
+// it will also not skip any rows
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+	r := bytes.NewReader([]byte(line))
+	metrics, err := parseCSV(p, r, true)
+	if len(metrics) > 0 {
+		//only  return the first metrics
+		return metrics[0], err
+	}
+	return nil, err
+}
+
+func parseCSV(p *Parser, r io.Reader, parseOnlyOneMetric bool) ([]telegraf.Metric, error) {
 	csvReader := p.compile(r)
 	// skip first rows
-	for i := 0; i < p.SkipRows; i++ {
+	for p.SkipRows > 0 {
 		_, err := csvReader.Read()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("EOF, [parsers.csv] expecting more skip rows")
 		}
+		p.SkipRows--
 	}
-	// if there is a header and we did not get DataColumns
+	// if there is a header, and we did not get DataColumns
 	// set DataColumns to names extracted from the header
 	// we always reread the header to avoid side effects
 	// in cases where multiple files with different
 	// headers are read
 	if !p.gotColumnNames {
-		headerNames := make([]string, 0)
-		for i := 0; i < p.HeaderRowCount; i++ {
+		for p.HeaderRowCount > 0 {
 			header, err := csvReader.Read()
 			if err != nil {
+				if err == io.EOF {
+					return nil, fmt.Errorf("EOF, [parsers.csv] data columns must be specified")
+				}
 				return nil, err
 			}
 			//concatenate header names
@@ -122,14 +141,17 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				if p.TrimSpace {
 					name = strings.Trim(name, " ")
 				}
-				if len(headerNames) <= i {
-					headerNames = append(headerNames, name)
+				if len(p.ColumnNames) <= i {
+					p.ColumnNames = append(p.ColumnNames, name)
 				} else {
-					headerNames[i] = headerNames[i] + name
+					p.ColumnNames[i] = p.ColumnNames[i] + name
 				}
 			}
+			p.HeaderRowCount--
 		}
-		p.ColumnNames = headerNames[p.SkipColumns:]
+		// skip first rows
+		p.ColumnNames = p.ColumnNames[p.SkipColumns:]
+		p.gotColumnNames = true
 	} else {
 		// if columns are named, just skip header rows
 		for i := 0; i < p.HeaderRowCount; i++ {
@@ -154,27 +176,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		metrics = append(metrics, m)
 	}
 	return metrics, nil
-}
-
-// ParseLine does not use any information in header and assumes DataColumns is set
-// it will also not skip any rows
-func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	r := bytes.NewReader([]byte(line))
-	csvReader := p.compile(r)
-	// if there is nothing in DataColumns, ParseLine will fail
-	if len(p.ColumnNames) == 0 {
-		return nil, fmt.Errorf("[parsers.csv] data columns must be specified")
-	}
-
-	record, err := csvReader.Read()
-	if err != nil {
-		return nil, err
-	}
-	m, err := p.parseRecord(record)
-	if err != nil {
-		return nil, err
-	}
-	return m, nil
 }
 
 func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
