@@ -21,10 +21,14 @@ At present this plugin requires the following APIs:
 ## Configuration and Recommendations
 ### Recommendations
 
-#### The recommended polling interval is 30 minutes.  This can be reduced on smaller deployments with a handful of VMs, but will need to be increased on hubs with hundreds or thousands of VMs as it can have a performance impact. This can be done using `interval` option.
-`interval`: Overrides the interval setting of the agent for the plugin. How often to gather this metric. Normal plugins use a single global interval, but if one particular input should be run less or more often, you can configure that here. 
-#### Highly recommend to use [modifiers](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#modifiers) like tagexclude to discard unwanted tags to keep tag cardinality in check.
-#### Also recommend to poll different Openstack services at different interval as per your need. For example: If you want to poll "nova_services" more frequently than the rest then use seperate configuration like shown below
+Due to the large number of unique tags that this plugin generates, in order to keep the cardinality down it is **highly recommended** to use [modifiers](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#modifiers) like `tagexclude` to discard unwanted tags. 
+
+For deployments with only a small number of VMs and hosts, a small polling interval (e.g. seconds-minutes) is acceptable. For larger deployments, polling a large number of systems will impact performance. Use the `interval` option to change how often the plugin is run:
+
+`interval`: How often a metric is gathered. Setting this value at the plugin level overrides the global agent interval setting.
+
+Also, consider polling OpenStack services at different intervals depending on your requirements. This will help with load and cardinality as well.
+
 ```
 [[inputs.openstack]]
   interval = 5m
