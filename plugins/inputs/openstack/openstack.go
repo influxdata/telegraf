@@ -339,7 +339,7 @@ func (o *OpenStack) gatherStacks(acc telegraf.Accumulator) error {
 			tags[o.TagPrefix+stackTag] = o.TagValue
 		}
 		fields := map[string]interface{}{
-			"status":        stack.Status,
+			"status":        strings.ToLower(stack.Status),
 			"id":            stack.ID,
 			"status_reason": stack.StatusReason,
 			"creation_time": o.convertTimeFormat(stack.CreationTime),
@@ -366,7 +366,7 @@ func (o *OpenStack) gatherNovaServices(acc telegraf.Accumulator) error {
 			"name":         novaService.Binary,
 			"host_machine": novaService.Host,
 			"state":        novaService.State,
-			"status":       novaService.Status,
+			"status":       strings.ToLower(novaService.Status),
 			"zone":         novaService.Zone,
 		}
 		fields := map[string]interface{}{
@@ -438,7 +438,7 @@ func (o *OpenStack) gatherPorts(acc telegraf.Accumulator) error {
 			"network_id":   port.NetworkID,
 			"name":         port.Name,
 			"description":  port.Description,
-			"status":       port.Status,
+			"status":       strings.ToLower(port.Status),
 			"tenant_id":    port.TenantID,
 			"project_id":   port.ProjectID,
 			"device_owner": port.DeviceOwner,
@@ -627,7 +627,7 @@ func (o *OpenStack) gatherHypervisors(acc telegraf.Accumulator) error {
 				"cpu_vendor":              hypervisor.CPUInfo.Vendor,
 				"cpu_arch":                hypervisor.CPUInfo.Arch,
 				"cpu_model":               hypervisor.CPUInfo.Model,
-				"status":                  hypervisor.Status,
+				"status":                  strings.ToLower(hypervisor.Status),
 				"state":                   hypervisor.State,
 				"hypervisor_hostname":     hypervisor.HypervisorHostname,
 				"hypervisor_type":         hypervisor.HypervisorType,
@@ -705,7 +705,7 @@ func (o *OpenStack) gatherVolumes(acc telegraf.Accumulator) error {
 	}
 	for _, volume := range v {
 		tags := map[string]string{
-			"status":               volume.Status,
+			"status":               strings.ToLower(volume.Status),
 			"availability_zone":    volume.AvailabilityZone,
 			"name":                 volume.Name,
 			"description":          volume.Description,
@@ -713,7 +713,7 @@ func (o *OpenStack) gatherVolumes(acc telegraf.Accumulator) error {
 			"snapshot_id":          volume.SnapshotID,
 			"source_volid":         volume.SourceVolID,
 			"bootable":             volume.Bootable,
-			"replication_status":   volume.ReplicationStatus,
+			"replication_status":   strings.ToLower(volume.ReplicationStatus),
 			"consistency_group_id": volume.ConsistencyGroupID,
 		}
 		fields := map[string]interface{}{
