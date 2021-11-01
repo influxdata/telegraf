@@ -8,6 +8,7 @@ import (
 
 	"github.com/aristanetworks/goarista/lanz"
 	pb "github.com/aristanetworks/goarista/lanz/proto"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -85,6 +86,7 @@ func (l *Lanz) Stop() {
 }
 
 func receive(acc telegraf.Accumulator, in <-chan *pb.LanzRecord, deviceURL *url.URL) {
+	//nolint:gosimple // for-select used on purpose
 	for {
 		select {
 		case msg, ok := <-in:

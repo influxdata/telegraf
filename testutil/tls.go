@@ -72,6 +72,18 @@ func (p *pki) ClientKeyPath() string {
 	return path.Join(p.path, "clientkey.pem")
 }
 
+func (p *pki) ClientCertAndKeyPath() string {
+	return path.Join(p.path, "client.pem")
+}
+
+func (p *pki) ClientEncKeyPath() string {
+	return path.Join(p.path, "clientkeyenc.pem")
+}
+
+func (p *pki) ClientCertAndEncKeyPath() string {
+	return path.Join(p.path, "clientenc.pem")
+}
+
 func (p *pki) ReadServerCert() string {
 	return readCertificate(p.ServerCertPath())
 }
@@ -86,6 +98,10 @@ func (p *pki) ReadServerKey() string {
 
 func (p *pki) ServerKeyPath() string {
 	return path.Join(p.path, "serverkey.pem")
+}
+
+func (p *pki) ServerCertAndKeyPath() string {
+	return path.Join(p.path, "server.pem")
 }
 
 func readCertificate(filename string) string {
