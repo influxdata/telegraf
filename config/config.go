@@ -1368,6 +1368,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldBool(tbl, "csv_trim_space", &pc.CSVTrimSpace)
 	c.getFieldStringSlice(tbl, "csv_skip_values", &pc.CSVSkipValues)
 
+	//for hep parser
+	c.getFieldStringSlice(tbl, "hep_header", &pc.HEPHeader)
+	c.getFieldString(tbl, "hep_measurement_name", &pc.HepMeasurementName)
+
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
 
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
@@ -1598,7 +1602,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
 		"value_field_name", "wavefront_source_override", "wavefront_use_strict",
 		"xml", "xpath", "xpath_json", "xpath_msgpack", "xpath_protobuf", "xpath_print_document",
-		"xpath_protobuf_file", "xpath_protobuf_type":
+		"xpath_protobuf_file", "xpath_protobuf_type", "hep_header", "hep_measurement_name":
 
 		// ignore fields that are common to all plugins.
 	default:
