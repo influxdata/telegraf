@@ -21,7 +21,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	riemanngoproto "github.com/influxdata/telegraf/plugins/inputs/riemann_listener/proto"
+	"github.com/influxdata/telegraf/plugins/inputs/riemann_listener/riemangoProto"
 	riemanngo "github.com/riemann/riemann-go-client"
 	"google.golang.org/protobuf/proto"
 )
@@ -181,7 +181,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			}
 		}
 
-		messagePb := &riemanngoproto.Msg{}
+		messagePb := &riemangoProto.Msg{}
 		var header uint32
 		// First obtain the size of the riemann event from client and acknowledge
 		if err = binary.Read(conn, binary.BigEndian, &header); err != nil {
@@ -204,7 +204,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			riemannReturnErrorResponse(conn, "Failed to unmarshal")
 			return
 		}
-		riemannEvents := ProtocolBuffersToEvents(messagePb.Events)
+		riemannEvents := protocolBuffersToEvents(messagePb.Events)
 
 		for _, m := range riemannEvents {
 			if m.Service == "" {
@@ -230,7 +230,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 
 func riemannReturnResponse(conn net.Conn) {
 	t := true
-	message := new(riemanngoproto.Msg)
+	message := new(riemangoProto.Msg)
 	message.Ok = &t
 	returnData, err := proto.Marshal(message)
 	if err != nil {
@@ -252,7 +252,7 @@ func riemannReturnResponse(conn net.Conn) {
 
 func riemannReturnErrorResponse(conn net.Conn, errorMessage string) {
 	t := false
-	message := new(riemanngoproto.Msg)
+	message := new(riemangoProto.Msg)
 	message.Ok = &t
 	message.Error = &errorMessage
 	returnData, err := proto.Marshal(message)
@@ -394,8 +394,8 @@ func init() {
 	inputs.Add("riemann_listener", func() telegraf.Input { return newRiemannSocketListener() })
 }
 
-// ProtocolBuffersToEvents converts an array of proto.Event to an array of Event
-func ProtocolBuffersToEvents(pbEvents []*riemanngoproto.Event) []riemanngo.Event {
+// protocolBuffersToEvents converts an array of proto.Event to an array of Event
+func protocolBuffersToEvents(pbEvents []*riemangoProto.Event) []riemanngo.Event {
 	var events []riemanngo.Event
 	for _, event := range pbEvents {
 		e := riemanngo.Event{

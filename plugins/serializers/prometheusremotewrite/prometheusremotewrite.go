@@ -235,7 +235,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			return false
 		})
 	}
-	data, err := (&prompb.WriteRequest{Timeseries: promTS}).Marshal()
+	pb := &prompb.WriteRequest{Timeseries: promTS}
+	data, err := pb.Marshal()
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal protobuf: %v", err)
 	}
