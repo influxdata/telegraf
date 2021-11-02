@@ -53,13 +53,13 @@ func ReadKey(filename string) string {
 	var allBlocks string
 	currentBlock, remainingBlocks := pem.Decode(octets)
 	for {
-		pemBlockAscii := string(pem.EncodeToMemory(
+		pemBlockASCII := string(pem.EncodeToMemory(
 			&pem.Block{
 				Type:  currentBlock.Type,
 				Bytes: currentBlock.Bytes,
 			},
 		))
-		allBlocks += pemBlockAscii
+		allBlocks += pemBlockASCII
 
 		currentBlock, remainingBlocks = pem.Decode(remainingBlocks)
 		if currentBlock == nil {
