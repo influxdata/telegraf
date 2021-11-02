@@ -9,6 +9,7 @@ lightweight and use Dynamic Management Views supplied by SQL Server.
   need to be addressed by the community. 
 - Azure SQL Database (Single)
 - Azure SQL Managed Instance
+- Azure SQL Elastic Pool
 
 ### Additional Setup:
 
