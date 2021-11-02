@@ -83,7 +83,7 @@ func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
 	}
 
 	if c.TLSCert != "" && c.TLSKey != "" {
-		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey, c.TLSKeyPwd)
+		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +120,7 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 	}
 
 	if c.TLSCert != "" && c.TLSKey != "" {
-		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey, c.TLSKeyPwd)
+		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey)
 		if err != nil {
 			return nil, err
 		}
@@ -183,14 +183,8 @@ func makeCertPool(certFiles []string) (*x509.CertPool, error) {
 	return pool, nil
 }
 
-func loadCertificate(config *tls.Config, certFile string, keyFile string, keyFilePassword string) error {
-	var cert tls.Certificate
-	var err error
-	if keyFilePassword != "" {
-		cert, err = tls.X509KeyPair([]byte(ReadCertificate(certFile)), []byte(ReadKey(keyFile, keyFilePassword)))
-	} else {
-		cert, err = tls.LoadX509KeyPair(certFile, keyFile)
-	}
+func loadCertificate(config *tls.Config, certFile string, keyFile string) error {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return fmt.Errorf(
 			"could not load keypair %s:%s: %v", certFile, keyFile, err)

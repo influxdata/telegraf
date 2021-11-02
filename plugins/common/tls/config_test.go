@@ -43,13 +43,15 @@ func TestClientConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "success with enc tls key",
+			name: "fail with enc tls key",
 			client: tls.ClientConfig{
 				TLSCA:     pki.CACertPath(),
 				TLSCert:   pki.ClientCertPath(),
 				TLSKey:    pki.ClientEncKeyPath(),
 				TLSKeyPwd: "changeme",
 			},
+			expNil: true,
+			expErr: true,
 		},
 		{
 			name: "success with cert and key",
@@ -59,12 +61,14 @@ func TestClientConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "success with cert and enc key",
+			name: "fail with cert and enc key",
 			client: tls.ClientConfig{
 				TLSCA:         pki.CACertPath(),
 				TLSCertAndKey: pki.ClientCertAndEncKeyPath(),
 				TLSKeyPwd:     "changeme",
 			},
+			expNil: true,
+			expErr: true,
 		},
 		{
 			name: "invalid ca",
@@ -183,7 +187,7 @@ func TestServerConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "success with enc tls key",
+			name: "fail with enc tls key",
 			server: tls.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerEncKeyPath(),
@@ -193,6 +197,8 @@ func TestServerConfig(t *testing.T) {
 				TLSMinVersion:     pki.TLSMinVersion(),
 				TLSMaxVersion:     pki.TLSMaxVersion(),
 			},
+			expNil: true,
+			expErr: true,
 		},
 		{
 			name: "success with cert and key",
@@ -205,7 +211,7 @@ func TestServerConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "success with cert and enc key",
+			name: "fail with cert and enc key",
 			server: tls.ServerConfig{
 				TLSCertAndKey:     pki.ServerCertAndEncKeyPath(),
 				TLSKeyPwd:         "changeme",
@@ -214,6 +220,8 @@ func TestServerConfig(t *testing.T) {
 				TLSMinVersion:     pki.TLSMinVersion(),
 				TLSMaxVersion:     pki.TLSMaxVersion(),
 			},
+			expNil: true,
+			expErr: true,
 		},
 		{
 			name: "missing tls cipher suites is okay",

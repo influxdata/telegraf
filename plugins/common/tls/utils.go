@@ -1,7 +1,6 @@
 package tls
 
 import (
-	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -46,41 +45,23 @@ func readFile(filename string) []byte {
 }
 
 func ReadCertificate(filename string) string {
-	octets := readFile(filename)
-	return string(octets)
+	return ReadKey(filename)
 }
 
-func ReadKey(filename string, password string) string {
+func ReadKey(filename string) string {
 	octets := readFile(filename)
 	var allBlocks string
-	currentBlock, remainingBytes := pem.Decode(octets)
+	currentBlock, remainingBlocks := pem.Decode(octets)
 	for {
-		if x509.IsEncryptedPEMBlock(currentBlock) {
-			decryptedBytesDER, err := x509.DecryptPEMBlock(currentBlock, []byte(password))
-			if err != nil {
-				panic(fmt.Sprintf("incorrect password for key file %q: %v", filename, err))
-			}
-			decryptedBytesPEM, err := x509.ParsePKCS1PrivateKey(decryptedBytesDER)
-			if err != nil {
-				panic(fmt.Sprintf("unable to convert from DER to PEM format: %v", err))
-			}
-			rsaKey := string(pem.EncodeToMemory(
-				&pem.Block{
-					Type:  "RSA PRIVATE KEY",
-					Bytes: x509.MarshalPKCS1PrivateKey(decryptedBytesPEM),
-				},
-			))
-			allBlocks += rsaKey
-		} else {
-			cert := string(pem.EncodeToMemory(
-				&pem.Block{
-					Type:  "CERTIFICATE",
-					Bytes: currentBlock.Bytes,
-				},
-			))
-			allBlocks += cert
-		}
-		currentBlock, remainingBytes = pem.Decode(remainingBytes)
+		pemBlockAscii := string(pem.EncodeToMemory(
+			&pem.Block{
+				Type:  currentBlock.Type,
+				Bytes: currentBlock.Bytes,
+			},
+		))
+		allBlocks += pemBlockAscii
+
+		currentBlock, remainingBlocks = pem.Decode(remainingBlocks)
 		if currentBlock == nil {
 			break
 		}

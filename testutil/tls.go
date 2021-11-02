@@ -62,7 +62,7 @@ func (p *pki) ClientCertPath() string {
 }
 
 func (p *pki) ReadClientKey() string {
-	return tls.ReadKey(p.ClientKeyPath(), "")
+	return tls.ReadKey(p.ClientKeyPath())
 }
 
 func (p *pki) ClientKeyPath() string {
@@ -70,7 +70,7 @@ func (p *pki) ClientKeyPath() string {
 }
 
 func (p *pki) ReadClientCertAndKey() string {
-	return tls.ReadKey(p.ClientCertAndKeyPath(), "")
+	return tls.ReadKey(p.ClientCertAndKeyPath())
 }
 
 func (p *pki) ClientCertAndKeyPath() string {
@@ -78,7 +78,7 @@ func (p *pki) ClientCertAndKeyPath() string {
 }
 
 func (p *pki) ReadClientEncKey() string {
-	return tls.ReadKey(p.ClientEncKeyPath(), "changeme")
+	return tls.ReadKey(p.ClientEncKeyPath())
 }
 
 func (p *pki) ClientEncKeyPath() string {
@@ -86,7 +86,7 @@ func (p *pki) ClientEncKeyPath() string {
 }
 
 func (p *pki) ReadClientCertAndEncKey() string {
-	return tls.ReadKey(p.ClientCertAndEncKeyPath(), "changeme")
+	return tls.ReadKey(p.ClientCertAndEncKeyPath())
 }
 
 func (p *pki) ClientCertAndEncKeyPath() string {
@@ -102,7 +102,7 @@ func (p *pki) ServerCertPath() string {
 }
 
 func (p *pki) ReadServerKey() string {
-	return tls.ReadKey(p.ServerKeyPath(), "")
+	return tls.ReadKey(p.ServerKeyPath())
 }
 
 func (p *pki) ServerKeyPath() string {
@@ -110,7 +110,7 @@ func (p *pki) ServerKeyPath() string {
 }
 
 func (p *pki) ReadServerCertAndKey() string {
-	return tls.ReadKey(p.ServerCertAndKeyPath(), "")
+	return tls.ReadKey(p.ServerCertAndKeyPath())
 }
 
 func (p *pki) ServerCertAndKeyPath() string {
@@ -118,7 +118,7 @@ func (p *pki) ServerCertAndKeyPath() string {
 }
 
 func (p *pki) ReadServerEncKey() string {
-	return tls.ReadKey(p.ServerEncKeyPath(), "changeme")
+	return tls.ReadKey(p.ServerEncKeyPath())
 }
 
 func (p *pki) ServerEncKeyPath() string {
@@ -126,7 +126,7 @@ func (p *pki) ServerEncKeyPath() string {
 }
 
 func (p *pki) ReadServerCertAndEncKey() string {
-	return tls.ReadKey(p.ServerCertAndEncKeyPath(), "changeme")
+	return tls.ReadKey(p.ServerCertAndEncKeyPath())
 }
 
 func (p *pki) ServerCertAndEncKeyPath() string {
