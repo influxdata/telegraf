@@ -33,8 +33,6 @@ func TestRedisSentinelConnect(t *testing.T) {
 }
 
 func TestRedisSentinelMasters(t *testing.T) {
-	t.Logf("Redis Sentinel: 'sentinel masters <name>'")
-
 	now := time.Now()
 
 	globalTags := map[string]string{
@@ -43,9 +41,9 @@ func TestRedisSentinelMasters(t *testing.T) {
 	}
 
 	expectedTags := map[string]string{
-		"port":        "6379",
-		"source":      "redis.io",
-		"master_name": masterName,
+		"port":   "6379",
+		"source": "redis.io",
+		"master": masterName,
 	}
 
 	// has_quorum is a custom field
@@ -69,7 +67,6 @@ func TestRedisSentinelMasters(t *testing.T) {
 		"quorum":                  2,
 		"role_reported":           "master",
 		"role_reported_time":      83138826,
-		"runid":                   "ff3dadd1cfea3043de4d25711d93f01a564562f7",
 		"has_quorum":              1,
 	}
 
@@ -100,7 +97,9 @@ func TestRedisSentinelMasters(t *testing.T) {
 		"runid":                   "ff3dadd1cfea3043de4d25711d93f01a564562f7",
 	}
 
-	smTags, smFields := convertSentinelMastersOutput(globalTags, sentinelMastersOutput, nil)
+	var acc testutil.Accumulator
+
+	smTags, smFields := convertSentinelMastersOutput(&acc, globalTags, sentinelMastersOutput, nil)
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementMasters, smTags, smFields, now),
 	}
@@ -109,8 +108,6 @@ func TestRedisSentinelMasters(t *testing.T) {
 }
 
 func TestRedisSentinels(t *testing.T) {
-	t.Logf("Redis Sentinel: 'sentinel sentinels <name>'")
-
 	now := time.Now()
 
 	globalTags := make(map[string]string)
@@ -118,13 +115,10 @@ func TestRedisSentinels(t *testing.T) {
 	expectedTags := map[string]string{
 		"sentinel_ip":   "127.0.0.1",
 		"sentinel_port": "26380",
-		"master_name":   masterName,
+		"master":        masterName,
 	}
 	expectedFields := map[string]interface{}{
 		"name":                    "adfd343f6b6ecc77e2b9636de6d9f28d4b827521",
-		"ip":                      "127.0.0.1",
-		"port":                    26380,
-		"runid":                   "adfd343f6b6ecc77e2b9636de6d9f28d4b827521",
 		"flags":                   "sentinel",
 		"link_pending_commands":   0,
 		"link_refcount":           1,
@@ -158,7 +152,9 @@ func TestRedisSentinels(t *testing.T) {
 		"voted_leader_epoch":      "0",
 	}
 
-	sentinelTags, sentinelFields := convertSentinelSentinelsOutput(globalTags, masterName, sentinelsOutput)
+	var acc testutil.Accumulator
+
+	sentinelTags, sentinelFields := convertSentinelSentinelsOutput(&acc, globalTags, masterName, sentinelsOutput)
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementSentinels, sentinelTags, sentinelFields, now),
 	}
@@ -167,8 +163,6 @@ func TestRedisSentinels(t *testing.T) {
 }
 
 func TestRedisSentinelReplicas(t *testing.T) {
-	t.Logf("Redis Sentinel: 'sentinel replicas <name>'")
-
 	now := time.Now()
 
 	globalTags := make(map[string]string)
@@ -176,13 +170,12 @@ func TestRedisSentinelReplicas(t *testing.T) {
 	expectedTags := map[string]string{
 		"replica_ip":   "127.0.0.1",
 		"replica_port": "6380",
-		"master_name":  masterName,
+		"master":       masterName,
 	}
 	expectedFields := map[string]interface{}{
 		"down_after_milliseconds": 30000,
 		"flags":                   "slave",
 		"info_refresh":            8476,
-		"ip":                      "127.0.0.1",
 		"last_ok_ping_reply":      987,
 		"last_ping_reply":         987,
 		"last_ping_sent":          0,
@@ -193,10 +186,8 @@ func TestRedisSentinelReplicas(t *testing.T) {
 		"master_link_status":      "ok",
 		"master_port":             6379,
 		"name":                    "127.0.0.1:6380",
-		"port":                    6380,
 		"role_reported":           "slave",
 		"role_reported_time":      10267432,
-		"runid":                   "70e07dad9e450e2d35f1b75338e0a5341b59d710",
 		"slave_priority":          100,
 		"slave_repl_offset":       1392400,
 	}
@@ -228,7 +219,9 @@ func TestRedisSentinelReplicas(t *testing.T) {
 		"slave_repl_offset":       "1392400",
 	}
 
-	sentinelTags, sentinelFields := convertSentinelReplicaOutput(globalTags, masterName, replicasOutput)
+	var acc testutil.Accumulator
+
+	sentinelTags, sentinelFields := convertSentinelReplicaOutput(&acc, globalTags, masterName, replicasOutput)
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementReplicas, sentinelTags, sentinelFields, now),
 	}
@@ -237,8 +230,6 @@ func TestRedisSentinelReplicas(t *testing.T) {
 }
 
 func TestRedisSentinelInfoAll(t *testing.T) {
-	t.Logf("Redis Sentinel: 'info all'")
-
 	now := time.Now()
 
 	globalTags := map[string]string{
