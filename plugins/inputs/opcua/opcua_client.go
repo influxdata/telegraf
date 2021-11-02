@@ -10,6 +10,7 @@ import (
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -229,14 +230,14 @@ func (o *OpcUA) validateEndpoint() error {
 	//search security policy type
 	switch o.SecurityPolicy {
 	case "None", "Basic128Rsa15", "Basic256", "Basic256Sha256", "auto":
-		break
+		// Valid security policy type - do nothing.
 	default:
 		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityPolicy, o.MetricName)
 	}
 	//search security mode type
 	switch o.SecurityMode {
 	case "None", "Sign", "SignAndEncrypt", "auto":
-		break
+		// Valid security mode type - do nothing.
 	default:
 		return fmt.Errorf("invalid security type '%s' in '%s'", o.SecurityMode, o.MetricName)
 	}
@@ -371,7 +372,7 @@ func (o *OpcUA) validateOPCTags() error {
 		//search identifier type
 		switch node.tag.IdentifierType {
 		case "s", "i", "g", "b":
-			break
+			// Valid identifier type - do nothing.
 		default:
 			return fmt.Errorf("invalid identifier type '%s' in '%s'", node.tag.IdentifierType, node.tag.FieldName)
 		}
@@ -455,7 +456,7 @@ func (o *OpcUA) setupOptions() error {
 
 	if o.Certificate == "" && o.PrivateKey == "" {
 		if o.SecurityPolicy != "None" || o.SecurityMode != "None" {
-			o.Certificate, o.PrivateKey, err = generateCert("urn:telegraf:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
+			o.Certificate, o.PrivateKey, err = generateCert("urn:telegraf:gopcua:client", 2048, o.Certificate, o.PrivateKey, 365*24*time.Hour)
 			if err != nil {
 				return err
 			}

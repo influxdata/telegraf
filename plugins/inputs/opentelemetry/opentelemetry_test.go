@@ -5,10 +5,6 @@ import (
 	"net"
 	"testing"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric"
@@ -18,6 +14,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestOpenTelemetry(t *testing.T) {
@@ -72,12 +72,11 @@ func TestOpenTelemetry(t *testing.T) {
 
 	// Check
 
-	assert.Empty(t, accumulator.Errors)
+	require.Empty(t, accumulator.Errors)
 
-	if assert.Len(t, accumulator.Metrics, 1) {
-		got := accumulator.Metrics[0]
-		assert.Equal(t, "measurement-counter", got.Measurement)
-		assert.Equal(t, telegraf.Counter, got.Type)
-		assert.Equal(t, "library-name", got.Tags["otel.library.name"])
-	}
+	require.Len(t, accumulator.Metrics, 1)
+	got := accumulator.Metrics[0]
+	require.Equal(t, "measurement-counter", got.Measurement)
+	require.Equal(t, telegraf.Counter, got.Type)
+	require.Equal(t, "library-name", got.Tags["otel.library.name"])
 }
