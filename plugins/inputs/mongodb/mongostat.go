@@ -903,7 +903,7 @@ func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
 	return lockUsages
 }
 
-func diff(newVal, oldVal, sampleTime int64) (int64, int64) {
+func diff(newVal, oldVal, sampleTime int64) (avg int64, newValue int64) {
 	d := newVal - oldVal
 	if d < 0 {
 		d = newVal
@@ -1311,10 +1311,10 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 						// I'm the master
 						returnVal.ReplLag = 0
 						break
-					} else {
-						// I'm secondary
-						me = member
 					}
+
+					// I'm secondary
+					me = member
 				} else if member.State == 1 {
 					// Master found
 					master = member
