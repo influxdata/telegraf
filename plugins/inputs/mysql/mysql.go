@@ -636,7 +636,12 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 
 		value, err := m.parseGlobalVariables(key, val)
 		if err != nil {
-			m.Log.Debugf("Error parsing global variable %q: %v", key, err)
+			errString := fmt.Errorf("error parsing mysql global variable %q=%q: %v", key, string(val), err)
+			if m.MetricVersion < 2 {
+				m.Log.Debug(errString)
+			} else {
+				acc.AddError(errString)
+			}
 		} else {
 			fields[key] = value
 		}
@@ -729,7 +734,12 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 
 			value, err := m.parseValueByDatabaseTypeName(colValue, col.DatabaseTypeName())
 			if err != nil {
-				m.Log.Debugf("Error parsing %s=%q: %v", colName, string(colValue), err)
+				errString := fmt.Errorf("error parsing mysql slave status %q=%q: %v", colName, string(colValue), err)
+				if m.MetricVersion < 2 {
+					m.Log.Debug(errString)
+				} else {
+					acc.AddError(errString)
+				}
 				continue
 			}
 
@@ -889,7 +899,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			key = strings.ToLower(key)
 			value, err := v2.ConvertGlobalStatus(key, val)
 			if err != nil {
-				m.Log.Debugf("Error parsing global status: %v", err)
+				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %v", key, string(val), err))
 			} else {
 				fields[key] = value
 			}
@@ -1358,9 +1368,9 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 		}
 
 		key = strings.ToLower(key)
-		value, err := m.parseValue(val)
+		value, err := m.parseValueByDatabaseTypeName(val, "BIGINT")
 		if err != nil {
-			m.Log.Debugf("Error parsing %s=%q: %v", key, string(val), err)
+			acc.AddError(fmt.Errorf("error parsing mysql InnoDB metric %q=%q: %v", key, string(val), err))
 			continue
 		}
 
@@ -1933,16 +1943,9 @@ func (m *Mysql) parseValueByDatabaseTypeName(value sql.RawBytes, databaseTypeNam
 	case "VARCHAR":
 		return v2.ParseString(value)
 	default:
+		m.Log.Debugf("unknown database type name %q in parseValueByDatabaseTypeName", databaseTypeName)
 		return v2.ParseValue(value)
 	}
-}
-
-func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, error) {
-	if m.MetricVersion < 2 {
-		return v1.ParseValue(value)
-	}
-
-	return v2.ParseValue(value)
 }
 
 // findThreadState can be used to find thread state by command and plain state
