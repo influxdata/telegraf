@@ -36,7 +36,7 @@ func (smi *NvidiaSMI) SampleConfig() string {
   ## if it is not found, we will try to locate it on PATH(exec.LookPath), if it is still not found, an error will be returned
   # bin_path = "/usr/bin/nvidia-smi"
 
-  ## Optional: timeout for GPU polling, defaults "5s"
+  ## Optional: timeout for GPU polling
   # timeout = "5s"
 `
 }
