@@ -56,4 +56,3 @@ jobs:
           LINTER_RULES_PATH: '.'
           MARKDOWN_CONFIG_FILE: .markdownlint.yml
           VALIDATE_MARKDOWN: true
-          VALIDATE_GO: true
