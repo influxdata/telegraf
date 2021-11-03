@@ -142,7 +142,7 @@ telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 
 ## Documentation
 
-[Latest Release Documentation](https://docs.influxdata.com/telegraf)
+[Latest Release Documentation](https://docs.influxdata.com/telegraf/latest/)
 
 For documentation on the latest development code see the [documentation index](/docs).
 
