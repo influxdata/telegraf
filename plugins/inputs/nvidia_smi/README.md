@@ -11,7 +11,7 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
   ## We will first try to locate the nvidia-smi binary with the explicitly specified value (or default value), 
   ## if it is not found, we will try to locate it on PATH(exec.LookPath), if it is still not found, an error will be returned
   # bin_path = "/usr/bin/nvidia-smi"
-  
+
   ## Optional: timeout for GPU polling
   # timeout = "5s"
 ```
