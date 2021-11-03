@@ -210,7 +210,6 @@ func (c *CloudWatch) Init() error {
 		return err
 	}
 
-	c.Log.Debugf("init complete, no issues")
 	return nil
 }
 
