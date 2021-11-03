@@ -1,4 +1,4 @@
-# Tencent Cloud Cloud Monitor Input Plugin
+# Cloud Monitor Input Plugin for Tencent Cloud
 
 This plugin will pull Metrics from Tencent Cloud Cloud Monitor (CM).
 
