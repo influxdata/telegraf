@@ -96,28 +96,28 @@ func (p *Parser) compile(r io.Reader) *csv.Reader {
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	r := bytes.NewReader(buf)
-	return parseCSV(p, r, false)
+	return parseCSV(p, r)
 }
 
 // ParseLine does not use any information in header and assumes DataColumns is set
 // it will also not skip any rows
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	r := bytes.NewReader([]byte(line))
-	metrics, err := parseCSV(p, r, true)
+	metrics, err := parseCSV(p, r)
 	if len(metrics) > 0 {
-		//only  return the first metrics
+		// only return the first metric as there should be only one
 		return metrics[0], err
 	}
 	return nil, err
 }
 
-func parseCSV(p *Parser, r io.Reader, parseOnlyOneMetric bool) ([]telegraf.Metric, error) {
+func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 	csvReader := p.compile(r)
 	// skip first rows
 	for p.SkipRows > 0 {
 		_, err := csvReader.Read()
 		if err != nil {
-			return nil, fmt.Errorf("EOF, [parsers.csv] expecting more skip rows")
+			return nil, err
 		}
 		p.SkipRows--
 	}
@@ -130,9 +130,6 @@ func parseCSV(p *Parser, r io.Reader, parseOnlyOneMetric bool) ([]telegraf.Metri
 		for p.HeaderRowCount > 0 {
 			header, err := csvReader.Read()
 			if err != nil {
-				if err == io.EOF {
-					return nil, fmt.Errorf("EOF, [parsers.csv] data columns must be specified")
-				}
 				return nil, err
 			}
 			//concatenate header names
@@ -154,11 +151,12 @@ func parseCSV(p *Parser, r io.Reader, parseOnlyOneMetric bool) ([]telegraf.Metri
 		p.gotColumnNames = true
 	} else {
 		// if columns are named, just skip header rows
-		for i := 0; i < p.HeaderRowCount; i++ {
+		for p.HeaderRowCount > 0 {
 			_, err := csvReader.Read()
 			if err != nil {
 				return nil, err
 			}
+			p.HeaderRowCount--
 		}
 	}
 
@@ -290,7 +288,7 @@ outer:
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
-	timestampColumn, timestampFormat string, Timezone string,
+	timestampColumn, timestampFormat string, timezone string,
 ) (time.Time, error) {
 	if timestampColumn != "" {
 		if recordFields[timestampColumn] == nil {
@@ -301,7 +299,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 		case "":
 			return time.Time{}, fmt.Errorf("timestamp format must be specified")
 		default:
-			metricTime, err := internal.ParseTimestamp(timestampFormat, recordFields[timestampColumn], Timezone)
+			metricTime, err := internal.ParseTimestamp(timestampFormat, recordFields[timestampColumn], timezone)
 			if err != nil {
 				return time.Time{}, err
 			}

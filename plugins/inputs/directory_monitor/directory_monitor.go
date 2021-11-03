@@ -261,7 +261,6 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 }
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
-
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		metrics, err := monitor.parseLine(parser, scanner.Bytes())
@@ -287,17 +286,11 @@ func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte) (
 	switch parser.(type) {
 	case *csv.Parser:
 		m, err := parser.Parse(line)
+		if err == io.EOF {
+			return []telegraf.Metric{}, nil
+		}
 		if err != nil {
-			switch err.Error() {
-			case "EOF, [parsers.csv] expecting more skip rows":
-				// Ignore error and continue reading next line
-				return []telegraf.Metric{}, nil
-			case "EOF, [parsers.csv] data columns must be specified":
-				// Ignore error and continue reading next line
-				return []telegraf.Metric{}, nil
-			default:
-				return nil, err
-			}
+			return nil, err
 		}
 		return m, err
 	default:
