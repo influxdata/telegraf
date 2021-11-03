@@ -216,7 +216,6 @@ func (c *CloudWatch) Init() error {
 // Gather takes in an accumulator and adds the metrics that the Input
 // gathers. This is called every "interval".
 func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
-	c.Log.Debugf("gathering cloudwatch")
 	filteredMetrics, err := getFilteredMetrics(c)
 	if err != nil {
 		return err

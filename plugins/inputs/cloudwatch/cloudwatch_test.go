@@ -105,6 +105,7 @@ func TestGather(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		RateLimit: 200,
+		Log:       testutil.Logger{},
 	}
 
 	var acc testutil.Accumulator
@@ -136,6 +137,7 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 		Delay:      internalDuration,
 		Period:     internalDuration,
 		RateLimit:  200,
+		Log:        testutil.Logger{},
 	}
 
 	var acc testutil.Accumulator
@@ -212,6 +214,7 @@ func TestSelectMetrics(t *testing.T) {
 		Delay:     internalDuration,
 		Period:    internalDuration,
 		RateLimit: 200,
+		Log:       testutil.Logger{},
 		Metrics: []*Metric{
 			{
 				MetricNames: []string{"Latency", "RequestCount"},
