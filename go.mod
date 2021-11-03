@@ -76,6 +76,7 @@ require (
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
 	github.com/containerd/cgroups v1.0.1 // indirect
 	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
@@ -365,3 +366,6 @@ replace github.com/mdlayher/apcupsd => github.com/influxdata/apcupsd v0.0.0-2021
 //https://github.com/WireGuard/wgctrl-go/blob/e35592f146e40ce8057113d14aafcc3da231fbac/go.mod#L12 ) was not working when using GOPROXY=direct.
 //Replacing with the pseudo-version works around this.
 replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v0.0.0-20200121152719-05b03c675090
+
+// replaced due to open PR updating protobuf https://github.com/cisco-ie/nx-telemetry-proto/pull/1
+replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemetry-proto v0.0.0-20210629125746-3c19a51b1abc

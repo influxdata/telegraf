@@ -19,12 +19,12 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
+	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/dialout"
-	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/telemetry"
 )
 
 const (

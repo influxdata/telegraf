@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/telemetry"
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 )
 
 //xform Field to string

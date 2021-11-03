@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/dialout"
-	telemetryBis "github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/telemetry"
+	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	telemetryBis "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/influxdata/telegraf/testutil"
 )
 
