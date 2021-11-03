@@ -210,12 +210,14 @@ func (c *CloudWatch) Init() error {
 		return err
 	}
 
+	c.Log.Debugf("init complete, no issues")
 	return nil
 }
 
 // Gather takes in an accumulator and adds the metrics that the Input
 // gathers. This is called every "interval".
 func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
+	c.Log.Debugf("gathering cloudwatch")
 	filteredMetrics, err := getFilteredMetrics(c)
 	if err != nil {
 		return err
@@ -225,6 +227,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 	// Get all of the possible queries so we can send groups of 100.
 	queries := c.getDataQueries(filteredMetrics)
+	c.Log.Debugf("running %d queries", len(queries))
 	if len(queries) == 0 {
 		return nil
 	}
@@ -426,13 +429,14 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
 	}
 
 	for _, namespace := range c.Namespaces {
+		c.Log.Debugf("fetching metrics from namespace: %s", namespace)
 		params.Namespace = aws.String(namespace)
 		for {
 			resp, err := c.client.ListMetrics(context.Background(), params)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list metrics with params per namespace: %v", err)
 			}
-
+			c.Log.Debugf("found %d metrics", len(resp.Metrics))
 			metrics = append(metrics, resp.Metrics...)
 			if resp.NextToken == nil {
 				break
@@ -563,7 +567,9 @@ func (c *CloudWatch) gatherMetrics(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get metric data: %v", err)
 		}
-
+		for _, result := range resp.MetricDataResults {
+			c.Log.Debugf("%s %f", *result.Label, result.Values)
+		}
 		results = append(results, resp.MetricDataResults...)
 		if resp.NextToken == nil {
 			break
@@ -583,6 +589,7 @@ func (c *CloudWatch) aggregateMetrics(
 	)
 
 	for namespace, results := range metricDataResults {
+		c.Log.Debugf("aggregating metrics for namespace: %s (%d results)", namespace, len(results))
 		namespace = sanitizeMeasurement(namespace)
 
 		for _, result := range results {
@@ -593,7 +600,9 @@ func (c *CloudWatch) aggregateMetrics(
 			}
 			tags["region"] = c.Region
 
+			c.Log.Debugf("%s: found %d values", *result.Label, len(result.Values))
 			for i := range result.Values {
+				c.Log.Debugf("recording metric: \"%s\" tags: \"%s\" fields: \"%s=%s\"", namespace, tags, *result.Label, result.Values[i])
 				if err := grouper.Add(namespace, tags, result.Timestamps[i], *result.Label, result.Values[i]); err != nil {
 					acc.AddError(err)
 				}
