@@ -18,8 +18,8 @@ They form a basis for profiling applications to trace dynamic control flow and i
   
   ## List of core events measurement entities. There can be more than one core_events sections.
   [[inputs.intel_pmu.core_events]]
-    ## List of events to be counted. Single entry can contain name of the event (case insensitive)
-    ## augmented with config options and perf modifiers.
+    ## List of events to be counted. Event names shall match names from event_definitions files.
+    ## Single entry can contain name of the event (case insensitive) augmented with config options and perf modifiers.
     ## If absent, all core events from provided event_definitions are counted skipping unresolvable ones.
     events = ["INST_RETIRED.ANY", "CPU_CLK_UNHALTED.THREAD_ANY:config1=0x4043200000000k"]
 
@@ -41,8 +41,8 @@ They form a basis for profiling applications to trace dynamic control flow and i
 
   ## List of uncore event measurement entities. There can be more than one uncore_events sections.
   [[inputs.intel_pmu.uncore_events]]
-    ## List of events to be counted. Single entry can contain name of the event (case insensitive)
-    ## augmented with config options and perf modifiers.
+    ## List of events to be counted. Event names shall match names from event_definitions files.
+    ## Single entry can contain name of the event (case insensitive) augmented with config options and perf modifiers.
     ## If absent, all uncore events from provided event_definitions are counted skipping unresolvable ones.
     events = ["UNC_CHA_CLOCKTICKS", "UNC_CHA_TOR_OCCUPANCY.IA_MISS"]
 
