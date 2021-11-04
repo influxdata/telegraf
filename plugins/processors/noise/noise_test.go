@@ -40,10 +40,10 @@ func createTestMetrics() map[string]telegraf.Metric {
 // Verifies that field values are modified by the Laplace noise
 func TestAddNoiseToMetric(t *testing.T) {
 	processor := Noise{
-		Sensitivity: 1.0,
-		Epsilon:     1.0,
-		Log:         testutil.Logger{},
+		Scale: 1.0,
+		Log:   testutil.Logger{},
 	}
+	_ = processor.Init()
 	metrics := createTestMetrics()
 	for _, metric := range metrics {
 		after := processor.Apply(metric.Copy())[0]
@@ -55,10 +55,10 @@ func TestAddNoiseToMetric(t *testing.T) {
 // noise
 func TestLaplaceNoiseWithIgnoreField(t *testing.T) {
 	processor := Noise{
-		Sensitivity:  1.0,
-		Epsilon:      1.0,
-		IgnoreFields: []string{"usage_guest", "usage_system"},
-		Log:          testutil.Logger{},
+		Scale:         1.0,
+		IncludeFields: []string{},
+		ExcludeFields: []string{"usage_guest", "usage_system"},
+		Log:           testutil.Logger{},
 	}
 
 	// call Init as we want to initialize the excludeLists
@@ -70,53 +70,22 @@ func TestLaplaceNoiseWithIgnoreField(t *testing.T) {
 	require.NotEqual(t, metric, after)
 
 	// check that ignore values were not changed
-	for _, ignore := range processor.IgnoreFields {
+	for _, ignore := range processor.ExcludeFields {
 		have, _ := metric["cpu"].GetField(ignore)
 		should, _ := after.GetField(ignore)
 		require.Equal(t, have, should)
 	}
 }
 
-// Tests that Measurements in the IgnoreMeasurement set are not affected by the
-// Laplace noise
-func TestLaplaceNoiseWithIgnoreMeasurement(t *testing.T) {
-	processor := Noise{
-		Sensitivity:        1.0,
-		Epsilon:            1.0,
-		IgnoreMeasurements: []string{"disk"},
-		Log:                testutil.Logger{},
-	}
-
-	// call Init as we want to initialize the excludeLists
-	_ = processor.Init()
-	metrics := createTestMetrics()
-	after := metrics
-
-	// Run Apply for all metrics
-	for _, metric := range metrics {
-		after[metric.Name()] = processor.Apply(metric.Copy())[0]
-	}
-
-	// iterate metrics which should have been ignored if they still have the
-	// value
-	for _, ignoreMeasurement := range processor.IgnoreMeasurements {
-		processor.Log.Infof("ignoreMeasurement", ignoreMeasurement)
-		for key, value := range metrics[ignoreMeasurement].Fields() {
-			require.Equal(t, value, after[ignoreMeasurement].Fields()[key])
-		}
-	}
-}
-
 func TestAddNoiseToValue(t *testing.T) {
 	processor := Noise{
-		Sensitivity: 1.0,
-		Epsilon:     1.0,
-		Log:         testutil.Logger{},
+		Scale: 5.0,
+		Log:   testutil.Logger{},
 	}
-
+	_ = processor.Init()
 	haveValues := []interface{}{
-		int64(-5),
-		uint64(4),
+		int64(-51232),
+		uint64(45123),
 		float64(1.337),
 	}
 

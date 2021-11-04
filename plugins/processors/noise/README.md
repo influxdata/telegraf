@@ -1,19 +1,20 @@
 # Noise Processor
 
 The *Noise* processor is used to add noise to numerical field values. For each field a noise is generated using Laplace distribution and added to the value.
-Using the _sensitivity_ and _epsilon_ parameter the effect of the noise can be modified. A bigger _epsilon_ (compared to a smaller _sensitivity_) value means that noise variation will be smaller and the the resulting value will be more close to the real value.
+Using the _scale_ parameter the effect of the noise can be modified. A smaller _scale_ value means that noise variation will be smaller and the resulting value will be more close to the real value.
 
 ### Configuration
 ```toml
 [[processors.noise]]
-  sensitivity = 1.0
-  epsilon = 1.0
-  ignore_fields = []
-  ignore_measurements = []
+  scale = 1.0
+  include_fields = []
+  exclude_fields = []
+  namedrop = []
 ```
 
 ### Example
-Add noise to each value the *Inputs.CPU*  plugin generates, except for the _uptime\_format_ field and all fields of the metrics _swap_, _disk_ and _net_:
+Add noise to each value the *Inputs.CPU*  plugin generates, except for the _usage\_steal_, _usage\_user_, _uptime\_format_, _usage\_idle_ field and all fields of the metrics _swap_, _disk_ and _net_:
+
 
 ```toml
 [[inputs.cpu]]
@@ -23,10 +24,10 @@ Add noise to each value the *Inputs.CPU*  plugin generates, except for the _upti
   report_active = false
 
 [[processors.noise]]
-  sensitivity = 1.0
-  epsilon = 1.0
-  ignore_fields = ["uptime_format"]
-  ignore_measurements = ["swap", "disk", "net"]
+  scale = 1.0
+  include_fields = []
+  exclude_fields = ["usage_steal", "usage_user", "uptime_format", "usage_idle",
+  namedrop = ["swap", "disk", "net"]
 ```
 
 Result of noise added to the _cpu_ metric:
