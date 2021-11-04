@@ -12,6 +12,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/execd"
 	_ "github.com/influxdata/telegraf/plugins/processors/filepath"
 	_ "github.com/influxdata/telegraf/plugins/processors/ifname"
+	_ "github.com/influxdata/telegraf/plugins/processors/noise"
 	_ "github.com/influxdata/telegraf/plugins/processors/override"
 	_ "github.com/influxdata/telegraf/plugins/processors/parser"
 	_ "github.com/influxdata/telegraf/plugins/processors/pivot"
