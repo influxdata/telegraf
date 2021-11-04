@@ -242,6 +242,29 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	assert.True(t, acc.HasTimestamp("prometheus", time.Unix(1490802350, 0)))
 }
 
+func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fmt.Fprintln(w, sampleTextFormat)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Log:             testutil.Logger{},
+		URLs:            []string{ts.URL},
+		URLTag:          "url",
+		IgnoreTimestamp: true,
+	}
+
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	m, _ := acc.Get("test_metric")
+	assert.WithinDuration(t, time.Now(), m.Time, 5*time.Second)
+}
+
 func TestUnsupportedFieldSelector(t *testing.T) {
 	fieldSelectorString := "spec.containerName=container"
 	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}

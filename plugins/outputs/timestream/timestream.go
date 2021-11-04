@@ -1,7 +1,9 @@
 package timestream
 
 import (
+	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash/fnv"
 	"reflect"
@@ -11,9 +13,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/timestreamwrite"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite"
+	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite/types"
+	"github.com/aws/smithy-go"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 )
 
@@ -38,9 +41,9 @@ type (
 	}
 
 	WriteClient interface {
-		CreateTable(*timestreamwrite.CreateTableInput) (*timestreamwrite.CreateTableOutput, error)
-		WriteRecords(*timestreamwrite.WriteRecordsInput) (*timestreamwrite.WriteRecordsOutput, error)
-		DescribeDatabase(*timestreamwrite.DescribeDatabaseInput) (*timestreamwrite.DescribeDatabaseOutput, error)
+		CreateTable(context.Context, *timestreamwrite.CreateTableInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.CreateTableOutput, error)
+		WriteRecords(context.Context, *timestreamwrite.WriteRecordsInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.WriteRecordsOutput, error)
+		DescribeDatabase(context.Context, *timestreamwrite.DescribeDatabaseInput, ...func(*timestreamwrite.Options)) (*timestreamwrite.DescribeDatabaseOutput, error)
 	}
 )
 
@@ -57,7 +60,7 @@ const MaxRecordsPerCall = 100
 var sampleConfig = `
   ## Amazon Region
   region = "us-east-1"
-  
+
   ## Amazon Credentials
   ## Credentials are loaded in the following order:
   ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
@@ -75,7 +78,7 @@ var sampleConfig = `
   #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
-  
+
   ## Endpoint to make request against, the correct endpoint is automatically
   ## determined and this option should only be set if you wish to override the
   ## default.
@@ -88,7 +91,7 @@ var sampleConfig = `
 
   ## Specifies if the plugin should describe the Timestream database upon starting
   ## to validate if it has access necessary permissions, connection, etc., as a safety check.
-  ## If the describe operation fails, the plugin will not start 
+  ## If the describe operation fails, the plugin will not start
   ## and therefore the Telegraf agent will not start.
   describe_database_on_start = false
 
@@ -97,17 +100,17 @@ var sampleConfig = `
   ## For example, consider the following data in line protocol format:
   ## weather,location=us-midwest,season=summer temperature=82,humidity=71 1465839830100400200
   ## airquality,location=us-west no2=5,pm25=16 1465839830100400200
-  ## where weather and airquality are the measurement names, location and season are tags, 
+  ## where weather and airquality are the measurement names, location and season are tags,
   ## and temperature, humidity, no2, pm25 are fields.
   ## In multi-table mode:
   ##  - first line will be ingested to table named weather
   ##  - second line will be ingested to table named airquality
   ##  - the tags will be represented as dimensions
   ##  - first table (weather) will have two records:
-  ##      one with measurement name equals to temperature, 
+  ##      one with measurement name equals to temperature,
   ##      another with measurement name equals to humidity
   ##  - second table (airquality) will have two records:
-  ##      one with measurement name equals to no2, 
+  ##      one with measurement name equals to no2,
   ##      another with measurement name equals to pm25
   ##  - the Timestream tables from the example will look like this:
   ##      TABLE "weather":
@@ -141,7 +144,7 @@ var sampleConfig = `
   ## Specifies the Timestream table where the metrics will be uploaded.
   # single_table_name = "yourTableNameHere"
 
-  ## Only valid and required for mapping_mode = "single-table" 
+  ## Only valid and required for mapping_mode = "single-table"
   ## Describes what will be the Timestream dimension name for the Telegraf
   ## measurement name.
   # single_table_dimension_name_for_telegraf_measurement_name = "namespace"
@@ -169,9 +172,12 @@ var sampleConfig = `
 `
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
-var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) WriteClient {
-	configProvider := credentialConfig.Credentials()
-	return timestreamwrite.New(configProvider)
+var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+	cfg, err := credentialConfig.Credentials()
+	if err != nil {
+		return &timestreamwrite.Client{}, err
+	}
+	return timestreamwrite.NewFromConfig(cfg), nil
 }
 
 func (t *Timestream) Connect() error {
@@ -221,7 +227,10 @@ func (t *Timestream) Connect() error {
 
 	t.Log.Infof("Constructing Timestream client for '%s' mode", t.MappingMode)
 
-	svc := WriteFactory(&t.CredentialConfig)
+	svc, err := WriteFactory(&t.CredentialConfig)
+	if err != nil {
+		return err
+	}
 
 	if t.DescribeDatabaseOnStart {
 		t.Log.Infof("Describing database '%s' in region '%s'", t.DatabaseName, t.Region)
@@ -229,7 +238,7 @@ func (t *Timestream) Connect() error {
 		describeDatabaseInput := &timestreamwrite.DescribeDatabaseInput{
 			DatabaseName: aws.String(t.DatabaseName),
 		}
-		describeDatabaseOutput, err := svc.DescribeDatabase(describeDatabaseInput)
+		describeDatabaseOutput, err := svc.DescribeDatabase(context.Background(), describeDatabaseInput)
 		if err != nil {
 			t.Log.Errorf("Couldn't describe database '%s'. Check error, fix permissions, connectivity, create database.", t.DatabaseName)
 			return err
@@ -272,33 +281,45 @@ func (t *Timestream) Write(metrics []telegraf.Metric) error {
 func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteRecordsInput, resourceNotFoundRetry bool) error {
 	t.Log.Debugf("Writing to Timestream: '%v' with ResourceNotFoundRetry: '%t'", writeRecordsInput, resourceNotFoundRetry)
 
-	_, err := t.svc.WriteRecords(writeRecordsInput)
+	_, err := t.svc.WriteRecords(context.Background(), writeRecordsInput)
 	if err != nil {
 		// Telegraf will retry ingesting the metrics if an error is returned from the plugin.
 		// Therefore, return error only for retryable exceptions: ThrottlingException and 5xx exceptions.
-		if e, ok := err.(awserr.Error); ok {
-			switch e.Code() {
-			case timestreamwrite.ErrCodeResourceNotFoundException:
-				if resourceNotFoundRetry {
-					t.Log.Warnf("Failed to write to Timestream database '%s' table '%s'. Error: '%s'",
-						t.DatabaseName, *writeRecordsInput.TableName, e)
-					return t.createTableAndRetry(writeRecordsInput)
-				}
-				t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
-			case timestreamwrite.ErrCodeThrottlingException:
-				return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
-					t.DatabaseName, *writeRecordsInput.TableName, err)
-			case timestreamwrite.ErrCodeInternalServerException:
-				return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
-					t.DatabaseName, *writeRecordsInput.TableName, err)
-			default:
-				t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
+		var notFound *types.ResourceNotFoundException
+		if errors.As(err, &notFound) {
+			if resourceNotFoundRetry {
+				t.Log.Warnf("Failed to write to Timestream database '%s' table '%s'. Error: '%s'",
+					t.DatabaseName, *writeRecordsInput.TableName, notFound)
+				return t.createTableAndRetry(writeRecordsInput)
 			}
-		} else {
+			t.logWriteToTimestreamError(notFound, writeRecordsInput.TableName)
+		}
+
+		var rejected *types.RejectedRecordsException
+		if errors.As(err, &rejected) {
+			t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
+			return nil
+		}
+
+		var throttling *types.ThrottlingException
+		if errors.As(err, &throttling) {
+			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+				t.DatabaseName, *writeRecordsInput.TableName, throttling)
+		}
+
+		var internal *types.InternalServerException
+		if errors.As(err, &internal) {
+			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
+				t.DatabaseName, *writeRecordsInput.TableName, internal)
+		}
+
+		var operation *smithy.OperationError
+		if !errors.As(err, &operation) {
 			// Retry other, non-aws errors.
 			return fmt.Errorf("unable to write to Timestream database '%s' table '%s'. Error: %s",
 				t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
+		t.logWriteToTimestreamError(err, writeRecordsInput.TableName)
 	}
 	return nil
 }
@@ -328,27 +349,25 @@ func (t *Timestream) createTable(tableName *string) error {
 	createTableInput := &timestreamwrite.CreateTableInput{
 		DatabaseName: aws.String(t.DatabaseName),
 		TableName:    aws.String(*tableName),
-		RetentionProperties: &timestreamwrite.RetentionProperties{
-			MagneticStoreRetentionPeriodInDays: aws.Int64(t.CreateTableMagneticStoreRetentionPeriodInDays),
-			MemoryStoreRetentionPeriodInHours:  aws.Int64(t.CreateTableMemoryStoreRetentionPeriodInHours),
+		RetentionProperties: &types.RetentionProperties{
+			MagneticStoreRetentionPeriodInDays: t.CreateTableMagneticStoreRetentionPeriodInDays,
+			MemoryStoreRetentionPeriodInHours:  t.CreateTableMemoryStoreRetentionPeriodInHours,
 		},
 	}
-	var tags []*timestreamwrite.Tag
+	var tags []types.Tag
 	for key, val := range t.CreateTableTags {
-		tags = append(tags, &timestreamwrite.Tag{
+		tags = append(tags, types.Tag{
 			Key:   aws.String(key),
 			Value: aws.String(val),
 		})
 	}
-	createTableInput.SetTags(tags)
+	createTableInput.Tags = tags
 
-	_, err := t.svc.CreateTable(createTableInput)
+	_, err := t.svc.CreateTable(context.Background(), createTableInput)
 	if err != nil {
-		if e, ok := err.(awserr.Error); ok {
+		if _, ok := err.(*types.ConflictException); ok {
 			// if the table was created in the meantime, it's ok.
-			if e.Code() == timestreamwrite.ErrCodeConflictException {
-				return nil
-			}
+			return nil
 		}
 		return err
 	}
@@ -374,17 +393,17 @@ func (t *Timestream) TransformMetrics(metrics []telegraf.Metric) []*timestreamwr
 			newWriteRecord := &timestreamwrite.WriteRecordsInput{
 				DatabaseName: aws.String(t.DatabaseName),
 				Records:      records,
-				CommonAttributes: &timestreamwrite.Record{
+				CommonAttributes: &types.Record{
 					Dimensions: dimensions,
 					Time:       aws.String(timeValue),
-					TimeUnit:   aws.String(timeUnit),
+					TimeUnit:   timeUnit,
 				},
 			}
 			if t.MappingMode == MappingModeSingleTable {
-				newWriteRecord.SetTableName(t.SingleTableName)
+				newWriteRecord.TableName = &t.SingleTableName
 			}
 			if t.MappingMode == MappingModeMultiTable {
-				newWriteRecord.SetTableName(m.Name())
+				newWriteRecord.TableName = aws.String(m.Name())
 			}
 
 			writeRequests[id] = newWriteRecord
@@ -434,17 +453,17 @@ func hashFromMetricTimeNameTagKeys(m telegraf.Metric) uint64 {
 	return h.Sum64()
 }
 
-func (t *Timestream) buildDimensions(point telegraf.Metric) []*timestreamwrite.Dimension {
-	var dimensions []*timestreamwrite.Dimension
+func (t *Timestream) buildDimensions(point telegraf.Metric) []types.Dimension {
+	var dimensions []types.Dimension
 	for tagName, tagValue := range point.Tags() {
-		dimension := &timestreamwrite.Dimension{
+		dimension := types.Dimension{
 			Name:  aws.String(tagName),
 			Value: aws.String(tagValue),
 		}
 		dimensions = append(dimensions, dimension)
 	}
 	if t.MappingMode == MappingModeSingleTable {
-		dimension := &timestreamwrite.Dimension{
+		dimension := types.Dimension{
 			Name:  aws.String(t.SingleTableDimensionNameForTelegrafMeasurementName),
 			Value: aws.String(point.Name()),
 		}
@@ -457,8 +476,8 @@ func (t *Timestream) buildDimensions(point telegraf.Metric) []*timestreamwrite.D
 // Tags and time are not included - common attributes are built separately.
 // Records with unsupported Metric Field type are skipped.
 // It returns an array of Timestream write records.
-func (t *Timestream) buildWriteRecords(point telegraf.Metric) []*timestreamwrite.Record {
-	var records []*timestreamwrite.Record
+func (t *Timestream) buildWriteRecords(point telegraf.Metric) []types.Record {
+	var records []types.Record
 	for fieldName, fieldValue := range point.Fields() {
 		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
 		if !ok {
@@ -467,9 +486,9 @@ func (t *Timestream) buildWriteRecords(point telegraf.Metric) []*timestreamwrite
 				fieldName, reflect.TypeOf(fieldValue))
 			continue
 		}
-		record := &timestreamwrite.Record{
+		record := types.Record{
 			MeasureName:      aws.String(fieldName),
-			MeasureValueType: aws.String(stringFieldValueType),
+			MeasureValueType: stringFieldValueType,
 			MeasureValue:     aws.String(stringFieldValue),
 		}
 		records = append(records, record)
@@ -480,13 +499,13 @@ func (t *Timestream) buildWriteRecords(point telegraf.Metric) []*timestreamwrite
 // partitionRecords splits the Timestream records into smaller slices of a max size
 // so that are under the limit for the Timestream API call.
 // It returns the array of array of records.
-func partitionRecords(size int, records []*timestreamwrite.Record) [][]*timestreamwrite.Record {
+func partitionRecords(size int, records []types.Record) [][]types.Record {
 	numberOfPartitions := len(records) / size
 	if len(records)%size != 0 {
 		numberOfPartitions++
 	}
 
-	partitions := make([][]*timestreamwrite.Record, numberOfPartitions)
+	partitions := make([][]types.Record, numberOfPartitions)
 
 	for i := 0; i < numberOfPartitions; i++ {
 		start := size * i
@@ -503,25 +522,19 @@ func partitionRecords(size int, records []*timestreamwrite.Record) [][]*timestre
 
 // getTimestreamTime produces Timestream TimeUnit and TimeValue with minimum possible granularity
 // while maintaining the same information.
-func getTimestreamTime(time time.Time) (timeUnit string, timeValue string) {
-	const (
-		TimeUnitS  = "SECONDS"
-		TimeUnitMS = "MILLISECONDS"
-		TimeUnitUS = "MICROSECONDS"
-		TimeUnitNS = "NANOSECONDS"
-	)
-	nanosTime := time.UnixNano()
+func getTimestreamTime(t time.Time) (timeUnit types.TimeUnit, timeValue string) {
+	nanosTime := t.UnixNano()
 	if nanosTime%1e9 == 0 {
-		timeUnit = TimeUnitS
+		timeUnit = types.TimeUnitSeconds
 		timeValue = strconv.FormatInt(nanosTime/1e9, 10)
 	} else if nanosTime%1e6 == 0 {
-		timeUnit = TimeUnitMS
+		timeUnit = types.TimeUnitMilliseconds
 		timeValue = strconv.FormatInt(nanosTime/1e6, 10)
 	} else if nanosTime%1e3 == 0 {
-		timeUnit = TimeUnitUS
+		timeUnit = types.TimeUnitMicroseconds
 		timeValue = strconv.FormatInt(nanosTime/1e3, 10)
 	} else {
-		timeUnit = TimeUnitNS
+		timeUnit = types.TimeUnitNanoseconds
 		timeValue = strconv.FormatInt(nanosTime, 10)
 	}
 	return
@@ -529,61 +542,55 @@ func getTimestreamTime(time time.Time) (timeUnit string, timeValue string) {
 
 // convertValue converts single Field value from Telegraf Metric and produces
 // value, valueType Timestream representation.
-func convertValue(v interface{}) (value string, valueType string, ok bool) {
-	const (
-		TypeBigInt  = "BIGINT"
-		TypeDouble  = "DOUBLE"
-		TypeBoolean = "BOOLEAN"
-		TypeVarchar = "VARCHAR"
-	)
+func convertValue(v interface{}) (value string, valueType types.MeasureValueType, ok bool) {
 	ok = true
 
 	switch t := v.(type) {
 	case int:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatInt(int64(t), 10)
 	case int8:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatInt(int64(t), 10)
 	case int16:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatInt(int64(t), 10)
 	case int32:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatInt(int64(t), 10)
 	case int64:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatInt(t, 10)
 	case uint:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatUint(uint64(t), 10)
 	case uint8:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatUint(uint64(t), 10)
 	case uint16:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatUint(uint64(t), 10)
 	case uint32:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatUint(uint64(t), 10)
 	case uint64:
-		valueType = TypeBigInt
+		valueType = types.MeasureValueTypeBigint
 		value = strconv.FormatUint(t, 10)
 	case float32:
-		valueType = TypeDouble
+		valueType = types.MeasureValueTypeDouble
 		value = strconv.FormatFloat(float64(t), 'f', -1, 32)
 	case float64:
-		valueType = TypeDouble
+		valueType = types.MeasureValueTypeDouble
 		value = strconv.FormatFloat(t, 'f', -1, 64)
 	case bool:
-		valueType = TypeBoolean
+		valueType = types.MeasureValueTypeBoolean
 		if t {
 			value = "true"
 		} else {
 			value = "false"
 		}
 	case string:
-		valueType = TypeVarchar
+		valueType = types.MeasureValueTypeVarchar
 		value = t
 	default:
 		// Skip unsupported type.

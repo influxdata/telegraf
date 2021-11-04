@@ -4,13 +4,14 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf/testutil"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -215,7 +216,7 @@ func TestContentEncodingGzip(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				payload, err := ioutil.ReadAll(body)
+				payload, err := io.ReadAll(body)
 				require.NoError(t, err)
 
 				var s Request
@@ -394,7 +395,7 @@ func TestMetricSorting(t *testing.T) {
 			body := r.Body
 			var err error
 
-			payload, err := ioutil.ReadAll(body)
+			payload, err := io.ReadAll(body)
 			require.NoError(t, err)
 
 			var s Request

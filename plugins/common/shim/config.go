@@ -3,7 +3,6 @@ package shim
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -53,7 +52,7 @@ func LoadConfig(filePath *string) (loaded loadedConfig, err error) {
 	var data string
 	conf := config{}
 	if filePath != nil && *filePath != "" {
-		b, err := ioutil.ReadFile(*filePath)
+		b, err := os.ReadFile(*filePath)
 		if err != nil {
 			return loadedConfig{}, err
 		}

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3"
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	googlepbduration "github.com/golang/protobuf/ptypes/duration"
 	googlepbts "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
@@ -397,7 +397,7 @@ func (s *Stackdriver) newTimeSeriesConf(
 		StartTime: &googlepbts.Timestamp{Seconds: startTime.Unix()},
 	}
 	tsReq := &monitoringpb.ListTimeSeriesRequest{
-		Name:     monitoring.MetricProjectPath(s.Project),
+		Name:     fmt.Sprintf("projects/%s", s.Project),
 		Filter:   filter,
 		Interval: interval,
 	}
@@ -533,7 +533,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 
 	ret := []*timeSeriesConf{}
 	req := &monitoringpb.ListMetricDescriptorsRequest{
-		Name: monitoring.MetricProjectPath(s.Project),
+		Name: fmt.Sprintf("projects/%s", s.Project),
 	}
 
 	filters := s.newListMetricDescriptorsFilters()

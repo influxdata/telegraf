@@ -6,16 +6,16 @@ import (
 	"compress/zlib"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	consumer "github.com/harlow/kinesis-consumer"
-	"github.com/harlow/kinesis-consumer/checkpoint/ddb"
+	"github.com/harlow/kinesis-consumer/store/ddb"
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
@@ -44,7 +44,7 @@ type (
 		acc    telegraf.TrackingAccumulator
 		sem    chan struct{}
 
-		checkpoint    consumer.Checkpoint
+		checkpoint    consumer.Store
 		checkpoints   map[string]checkpoint
 		records       map[telegraf.TrackingID]string
 		checkpointTex sync.Mutex
@@ -153,24 +153,19 @@ func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
-	client := kinesis.New(k.CredentialConfig.Credentials())
+	cfg, err := k.CredentialConfig.Credentials()
+	if err != nil {
+		return err
+	}
+	client := kinesis.NewFromConfig(cfg)
 
-	k.checkpoint = &noopCheckpoint{}
+	k.checkpoint = &noopStore{}
 	if k.DynamoDB != nil {
 		var err error
 		k.checkpoint, err = ddb.New(
 			k.DynamoDB.AppName,
 			k.DynamoDB.TableName,
-			ddb.WithDynamoClient(dynamodb.New((&internalaws.CredentialConfig{
-				Region:      k.Region,
-				AccessKey:   k.AccessKey,
-				SecretKey:   k.SecretKey,
-				RoleARN:     k.RoleARN,
-				Profile:     k.Profile,
-				Filename:    k.Filename,
-				Token:       k.Token,
-				EndpointURL: k.EndpointURL,
-			}).Credentials())),
+			ddb.WithDynamoClient(dynamodb.NewFromConfig(cfg)),
 			ddb.WithMaxInterval(time.Second*10),
 		)
 		if err != nil {
@@ -182,7 +177,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		k.StreamName,
 		consumer.WithClient(client),
 		consumer.WithShardIteratorType(k.ShardIteratorType),
-		consumer.WithCheckpoint(k),
+		consumer.WithStore(k),
 	)
 	if err != nil {
 		return err
@@ -207,10 +202,10 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	k.wg.Add(1)
 	go func() {
 		defer k.wg.Done()
-		err := k.cons.Scan(ctx, func(r *consumer.Record) consumer.ScanStatus {
+		err := k.cons.Scan(ctx, func(r *consumer.Record) error {
 			select {
 			case <-ctx.Done():
-				return consumer.ScanStatus{Error: ctx.Err()}
+				return ctx.Err()
 			case k.sem <- struct{}{}:
 				break
 			}
@@ -220,7 +215,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 				k.Log.Errorf("Scan parser error: %s", err.Error())
 			}
 
-			return consumer.ScanStatus{}
+			return nil
 		})
 		if err != nil {
 			k.cancel()
@@ -291,7 +286,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 				}
 
 				k.lastSeqNum = strToBint(sequenceNum)
-				if err := k.checkpoint.Set(chk.streamName, chk.shardID, sequenceNum); err != nil {
+				if err := k.checkpoint.SetCheckpoint(chk.streamName, chk.shardID, sequenceNum); err != nil {
 					k.Log.Debug("Setting checkpoint failed: %v", err)
 				}
 			} else {
@@ -325,13 +320,13 @@ func (k *KinesisConsumer) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Get wraps the checkpoint's Get function (called by consumer library)
-func (k *KinesisConsumer) Get(streamName, shardID string) (string, error) {
-	return k.checkpoint.Get(streamName, shardID)
+// Get wraps the checkpoint's GetCheckpoint function (called by consumer library)
+func (k *KinesisConsumer) GetCheckpoint(streamName, shardID string) (string, error) {
+	return k.checkpoint.GetCheckpoint(streamName, shardID)
 }
 
-// Set wraps the checkpoint's Set function (called by consumer library)
-func (k *KinesisConsumer) Set(streamName, shardID, sequenceNumber string) error {
+// Set wraps the checkpoint's SetCheckpoint function (called by consumer library)
+func (k *KinesisConsumer) SetCheckpoint(streamName, shardID, sequenceNumber string) error {
 	if sequenceNumber == "" {
 		return fmt.Errorf("sequence number should not be empty")
 	}
@@ -349,7 +344,7 @@ func processGzip(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer zipData.Close()
-	return ioutil.ReadAll(zipData)
+	return io.ReadAll(zipData)
 }
 
 func processZlib(data []byte) ([]byte, error) {
@@ -358,7 +353,7 @@ func processZlib(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer zlibData.Close()
-	return ioutil.ReadAll(zlibData)
+	return io.ReadAll(zlibData)
 }
 
 func processNoOp(data []byte) ([]byte, error) {
@@ -383,10 +378,10 @@ func (k *KinesisConsumer) Init() error {
 	return k.configureProcessContentEncodingFunc()
 }
 
-type noopCheckpoint struct{}
+type noopStore struct{}
 
-func (n noopCheckpoint) Set(string, string, string) error   { return nil }
-func (n noopCheckpoint) Get(string, string) (string, error) { return "", nil }
+func (n noopStore) SetCheckpoint(string, string, string) error   { return nil }
+func (n noopStore) GetCheckpoint(string, string) (string, error) { return "", nil }
 
 func init() {
 	negOne, _ = new(big.Int).SetString("-1", 10)

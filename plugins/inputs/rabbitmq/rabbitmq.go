@@ -3,7 +3,7 @@ package rabbitmq
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -431,7 +431,7 @@ func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 		return nil, fmt.Errorf("getting %q failed: %v %v", u, resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
 }
 
 func (r *RabbitMQ) requestJSON(u string, target interface{}) error {

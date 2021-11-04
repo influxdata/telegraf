@@ -140,8 +140,11 @@ vet:
 
 .PHONY: lint-install
 lint-install:
+	@echo "Installing golangci-lint"
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
 
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.38.0
+	@echo "Installing markdownlint"
+	npm install -g markdownlint-cli
 
 .PHONY: lint
 lint:
@@ -151,6 +154,13 @@ ifeq (, $(shell which golangci-lint))
 endif
 
 	golangci-lint run
+
+ifeq (, $(shell which markdownlint-cli))
+	$(info markdownlint-cli can't be found, please run: make lint-install)
+	exit 1
+endif
+
+	markdownlint-cli
 
 .PHONY: lint-branch
 lint-branch:
@@ -199,15 +209,10 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
-.PHONY: ci-1.16
-ci-1.16:
-	docker build -t quay.io/influxdb/telegraf-ci:1.16.7 - < scripts/ci-1.16.docker
-	docker push quay.io/influxdb/telegraf-ci:1.16.7
-
 .PHONY: ci-1.17
 ci-1.17:
-	docker build -t quay.io/influxdb/telegraf-ci:1.17.0 - < scripts/ci-1.17.docker
-	docker push quay.io/influxdb/telegraf-ci:1.17.0
+	docker build -t quay.io/influxdb/telegraf-ci:1.17.2 - < scripts/ci-1.17.docker
+	docker push quay.io/influxdb/telegraf-ci:1.17.2
 
 .PHONY: install
 install: $(buildbin)
@@ -271,7 +276,7 @@ ppc64le += linux_ppc64le.tar.gz ppc64le.rpm ppc64el.deb
 .PHONY: ppc64le
 ppc64le:
 	@ echo $(ppc64le)
-i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gzi386.rpm
+i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gz i386.rpm
 .PHONY: i386
 i386:
 	@ echo $(i386)
