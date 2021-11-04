@@ -548,6 +548,10 @@ const sampleConfig = `
  # prefix = ""
  # target = ""
 
+ ## define webauthtoken
+ # webauthtoken = ""
+
+
  ## Define additional aliases to map telemetry encoding paths to simple measurement names
  #[inputs.gnmi.aliases]
  #  ifcounters = "openconfig:/interfaces/interface/state/counters"

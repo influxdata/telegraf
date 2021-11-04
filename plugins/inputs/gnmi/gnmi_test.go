@@ -159,6 +159,58 @@ func TestUsernamePassword(t *testing.T) {
 		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = success"))
 }
 
+func TestWebAuthToken(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	grpcServer := grpc.NewServer()
+	gnmiServer := &MockServer{
+		SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+			metadata, ok := metadata.FromIncomingContext(server.Context())
+			if !ok {
+				return errors.New("failed to get metadata")
+			}
+
+			WebAuthToken := metadata.Get("WebAuthToken")
+			if len(WebAuthToken) != 1 || WebAuthToken[0] != "token123" {
+				return errors.New("wrong token")
+			}
+
+			return errors.New("success")
+		},
+		GRPCServer: grpcServer,
+	}
+	gnmiLib.RegisterGNMIServer(grpcServer, gnmiServer)
+
+	plugin := &GNMI{
+		Log:          testutil.Logger{},
+		Addresses:    []string{listener.Addr().String()},
+		WebAuthToken: "token123",
+		Encoding:     "proto",
+		Redial:       config.Duration(1 * time.Second),
+	}
+
+	var acc testutil.Accumulator
+	err = plugin.Start(&acc)
+	require.NoError(t, err)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := grpcServer.Serve(listener)
+		require.NoError(t, err)
+	}()
+
+	acc.WaitError(1)
+	plugin.Stop()
+	grpcServer.Stop()
+	wg.Wait()
+
+	require.Contains(t, acc.Errors,
+		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = success"))
+}
+
 func mockGNMINotification() *gnmiLib.Notification {
 	return &gnmiLib.Notification{
 		Timestamp: 1543236572000000000,
