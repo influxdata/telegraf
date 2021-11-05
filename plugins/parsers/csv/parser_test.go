@@ -318,6 +318,22 @@ func TestTrimSpace(t *testing.T) {
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 	require.Equal(t, expectedFields, metrics[0].Fields())
+
+	p, err = NewParser(
+		&Config{
+			HeaderRowCount: 2,
+			TrimSpace:      true,
+			TimeFunc:       DefaultTime,
+		},
+	)
+	require.NoError(t, err)
+	testCSV = "   col  ,  col  ,col\n" +
+		"  1  ,  2  ,3\n" +
+		"  test  space  ,  80  ,test_name"
+
+	metrics, err = p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, map[string]interface{}{"col1": "test  space", "col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
 }
 
 func TestTrimSpaceDelimitedBySpace(t *testing.T) {
@@ -501,6 +517,44 @@ func TestParseStream(t *testing.T) {
 			},
 			DefaultTime(),
 		), m)
+}
+
+func TestParseLineMultiMetricErrorMessage(t *testing.T) {
+	p, err := NewParser(
+		&Config{
+			MetricName:     "csv",
+			HeaderRowCount: 1,
+			TimeFunc:       DefaultTime,
+		},
+	)
+	require.NoError(t, err)
+
+	csvHeader := "a,b,c"
+	csvOneRow := "1,2,3"
+	csvTwoRows := "4,5,6\n7,8,9"
+
+	metrics, err := p.Parse([]byte(csvHeader))
+	require.NoError(t, err)
+	require.Len(t, metrics, 0)
+	m, err := p.ParseLine(csvOneRow)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		testutil.MustMetric(
+			"csv",
+			map[string]string{},
+			map[string]interface{}{
+				"a": int64(1),
+				"b": int64(2),
+				"c": int64(3),
+			},
+			DefaultTime(),
+		), m)
+	m, err = p.ParseLine(csvTwoRows)
+	require.Errorf(t, err, "expected 1 metric found 2")
+	require.Nil(t, m)
+	metrics, err = p.Parse([]byte(csvTwoRows))
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
 }
 
 func TestTimestampUnixFloatPrecision(t *testing.T) {

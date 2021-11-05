@@ -288,7 +288,7 @@ func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte) (
 		m, err := parser.Parse(line)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return []telegraf.Metric{}, nil
+				return nil, nil
 			}
 			return nil, err
 		}

@@ -109,7 +109,8 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 	if len(metrics) == 1 {
 		return metrics[0], nil
-	} else if len(metrics) > 1 {
+	}
+	if len(metrics) > 1 {
 		return nil, fmt.Errorf("expected 1 metric found %d", len(metrics))
 	}
 	return nil, nil

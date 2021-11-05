@@ -294,7 +294,7 @@ func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
 		m, err := parser.Parse([]byte(line))
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return []telegraf.Metric{}, nil
+				return nil, nil
 			}
 			return nil, err
 		}
