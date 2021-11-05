@@ -18,8 +18,8 @@ import (
 )
 
 type RedisSentinel struct {
-	Servers  []string
-	Password string
+	Servers  []string `toml:"servers"`
+	Password string   `toml:"password"`
 	tls.ClientConfig
 
 	clients []*RedisSentinelClient
