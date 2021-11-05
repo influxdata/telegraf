@@ -46,6 +46,9 @@ type GNMI struct {
 	Username string
 	Password string
 
+	// Web auth token for devices that support it.
+	WebAuthToken string `toml:"webauthtoken"`
+
 	// Redial
 	Redial config.Duration
 
@@ -59,8 +62,7 @@ type GNMI struct {
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 
-	Log          telegraf.Logger
-	WebAuthToken string `toml:"webauthtoken"`
+	Log telegraf.Logger
 }
 
 // Subscription for a gNMI client
