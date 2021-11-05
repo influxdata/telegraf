@@ -193,7 +193,7 @@ func (r *RedisSentinel) Init() error {
 	for i, serv := range r.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
+			return fmt.Errorf("unable to parse to address %q: %v", serv, err.Error())
 		}
 
 		if u.Scheme != "tcp" && u.Scheme != "unix" {
