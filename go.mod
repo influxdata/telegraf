@@ -369,3 +369,6 @@ replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v
 
 // replaced due to open PR updating protobuf https://github.com/cisco-ie/nx-telemetry-proto/pull/1
 replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemetry-proto v0.0.0-20210629125746-3c19a51b1abc
+
+// replaced due to open PR updating protobuf https://github.com/riemann/riemann-go-client/pull/27
+replace github.com/riemann/riemann-go-client => github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754

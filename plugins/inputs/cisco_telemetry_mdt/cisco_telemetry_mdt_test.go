@@ -8,12 +8,12 @@ import (
 	"net"
 	"testing"
 
+	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	telemetryBis "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 
-	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
-	telemetryBis "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/influxdata/telegraf/testutil"
 )
 

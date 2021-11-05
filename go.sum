@@ -689,6 +689,8 @@ github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60/go.mod h1:
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
 github.com/dropbox/godropbox v0.0.0-20180512210157-31879d3884b9 h1:NAvZb7gqQfLSNBPzVsvI7eZMosXtg2g2kxXrei90CtU=
 github.com/dropbox/godropbox v0.0.0-20180512210157-31879d3884b9/go.mod h1:glr97hP/JuXb+WMYCizc4PIFuzw1lCR97mwbe1VVXhQ=
+github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754 h1:aDtw0/++yjOoiXB9sldaFYW61mK3m6ia/wYWxPLrwYY=
+github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754/go.mod h1:4rS0vfmzOMwfFPhi6Zve4k/59TsBepqd6WESNULE0ho=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
@@ -990,7 +992,6 @@ github.com/golang/mock v1.4.3/go.mod h1:UOMv5ysSaYNkG+OFQykRIcU/QvvxJf3p21QfJ2Bt
 github.com/golang/mock v1.4.4/go.mod h1:l3mdAwkq5BuhzHwde/uurv3sEJeZMXNpwsxVWU71h+4=
 github.com/golang/mock v1.5.0/go.mod h1:CWnOUgYIOo4TcNZ0wHX3YZCqsaM1I1Jvs6v3mP3KVu8=
 github.com/golang/mock v1.6.0/go.mod h1:p6yTPP+5HYm5mzsMV8JkE6ZKdX+/wYM6Hr+LicevLPs=
-github.com/golang/protobuf v0.0.0-20170307001533-c9c7427a2a70/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.2/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
@@ -1833,8 +1834,6 @@ github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475/go.mod h1:bCqn
 github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 h1:OdAsTTz6OkFY5QxjkYwrChwuRruF69c169dPK26NUlk=
 github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/retailnext/hllpp v1.0.1-0.20180308014038-101a6d2f8b52/go.mod h1:RDpi1RftBQPUCDRw6SmxeaREsAaRKnOclghuzp/WRzc=
-github.com/riemann/riemann-go-client v0.5.0 h1:yPP7tz1vSYJkSZvZFCsMiDsHHXX57x8/fEX3qyEXuAA=
-github.com/riemann/riemann-go-client v0.5.0/go.mod h1:FMiaOL8dgBnRfgwENzV0xlYJ2eCbV1o7yqVwOBLbShQ=
 github.com/rivo/tview v0.0.0-20200219210816-cd38d7432498/go.mod h1:6lkG1x+13OShEf0EaOCaTQYyB7d5nSbb181KtjlS+84=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff h1:+6NUiITWwE5q1KO6SAfUX918c+Tab0+tGAM/mtdlUyA=
