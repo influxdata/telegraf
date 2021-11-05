@@ -286,9 +286,12 @@ func gatherInfoStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 	}
 
 	rdr := strings.NewReader(info)
-	infoTags, infoFields := convertSentinelInfoOutput(acc, client.baseTags(), rdr)
-
-	acc.AddFields(measurementSentinel, infoFields, infoTags)
+	infoTags, infoFields, err := convertSentinelInfoOutput(client.baseTags(), rdr)
+	if err == nil {
+		acc.AddFields(measurementSentinel, infoFields, infoTags)
+	} else {
+		acc.AddError(err)
+	}
 }
 
 func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
@@ -324,8 +327,12 @@ func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 
 		_, quorumErr := quorumCmd.Result()
 
-		sentinelMastersTags, sentinelMastersFields := convertSentinelMastersOutput(acc, client.baseTags(), m, quorumErr)
-		acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
+		sentinelMastersTags, sentinelMastersFields, err := convertSentinelMastersOutput(client.baseTags(), m, quorumErr)
+		if err == nil {
+			acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
+		} else {
+			acc.AddError(err)
+		}
 
 		gatherReplicaStats(acc, client, masterName)
 		gatherSentinelStats(acc, client, masterName)
@@ -352,8 +359,12 @@ func gatherReplicaStats(
 		if replica, replicaOk := replica.([]interface{}); replicaOk {
 			rm := toMap(replica)
 
-			replicaTags, replicaFields := convertSentinelReplicaOutput(acc, client.baseTags(), masterName, rm)
-			acc.AddFields(measurementReplicas, replicaFields, replicaTags)
+			replicaTags, replicaFields, err := convertSentinelReplicaOutput(client.baseTags(), masterName, rm)
+			if err == nil {
+				acc.AddFields(measurementReplicas, replicaFields, replicaTags)
+			} else {
+				acc.AddError(err)
+			}
 		}
 	}
 }
@@ -378,19 +389,22 @@ func gatherSentinelStats(
 		if sentinel, sentinelOk := sentinel.([]interface{}); sentinelOk {
 			sm := toMap(sentinel)
 
-			sentinelTags, sentinelFields := convertSentinelSentinelsOutput(acc, client.baseTags(), masterName, sm)
-			acc.AddFields(measurementSentinels, sentinelFields, sentinelTags)
+			sentinelTags, sentinelFields, err := convertSentinelSentinelsOutput(client.baseTags(), masterName, sm)
+			if err == nil {
+				acc.AddFields(measurementSentinels, sentinelFields, sentinelTags)
+			} else {
+				acc.AddError(err)
+			}
 		}
 	}
 }
 
 // converts `sentinel masters <name>` output to tags and fields
 func convertSentinelMastersOutput(
-	acc telegraf.Accumulator,
 	globalTags map[string]string,
 	master map[string]string,
 	quorumErr error,
-) (map[string]string, map[string]interface{}) {
+) (map[string]string, map[string]interface{}, error) {
 	tags := make(map[string]string)
 	for k, v := range globalTags {
 		tags[k] = v
@@ -410,34 +424,31 @@ func convertSentinelMastersOutput(
 
 		switch valType := measurementMastersFields[key]; valType {
 		case "float":
-			if val, err := strconv.ParseFloat(val, 64); err == nil {
-				fields[key] = val
-			} else {
-				acc.AddError(err)
+			val, err := strconv.ParseFloat(val, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
 			}
+			fields[key] = val
 		case "integer":
-			if val, err := strconv.ParseInt(val, 10, 64); err == nil {
-				fields[key] = val
-			} else {
-				acc.AddError(err)
+			val, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
 			}
+			fields[key] = val
 		case "string":
 			fields[key] = val
-		default:
-			continue
 		}
 	}
 
-	return tags, fields
+	return tags, fields, nil
 }
 
 // converts `sentinel sentinels <name>` output to tags and fields
 func convertSentinelSentinelsOutput(
-	acc telegraf.Accumulator,
 	globalTags map[string]string,
 	masterName string,
 	sentinelMaster map[string]string,
-) (map[string]string, map[string]interface{}) {
+) (map[string]string, map[string]interface{}, error) {
 	tags := make(map[string]string)
 	for k, v := range globalTags {
 		tags[k] = v
@@ -454,34 +465,31 @@ func convertSentinelSentinelsOutput(
 
 		switch valType := measurementSentinelsFields[key]; valType {
 		case "float":
-			if val, err := strconv.ParseFloat(val, 64); err == nil {
-				fields[key] = val
-			} else {
-				acc.AddError(err)
+			val, err := strconv.ParseFloat(val, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
 			}
+			fields[key] = val
 		case "integer":
-			if val, err := strconv.ParseInt(val, 10, 64); err == nil {
-				fields[key] = val
-			} else {
-				acc.AddError(err)
+			val, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
 			}
+			fields[key] = val
 		case "string":
 			fields[key] = val
-		default:
-			continue
 		}
 	}
 
-	return tags, fields
+	return tags, fields, nil
 }
 
 // converts `sentinel replicas <name>` output to tags and fields
 func convertSentinelReplicaOutput(
-	acc telegraf.Accumulator,
 	globalTags map[string]string,
 	masterName string,
 	replica map[string]string,
-) (map[string]string, map[string]interface{}) {
+) (map[string]string, map[string]interface{}, error) {
 	tags := make(map[string]string)
 	for k, v := range globalTags {
 		tags[k] = v
@@ -498,34 +506,31 @@ func convertSentinelReplicaOutput(
 
 		switch valType := measurementReplicasFields[key]; valType {
 		case "float":
-			if val, err := strconv.ParseFloat(val, 64); err == nil {
-				fields[key] = val
-			} else {
-				acc.AddError(err)
+			val, err := strconv.ParseFloat(val, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
 			}
+			fields[key] = val
 		case "integer":
-			if val, err := strconv.ParseInt(val, 10, 64); err == nil {
-				fields[key] = val
-			} else {
-				acc.AddError(err)
+			val, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
 			}
+			fields[key] = val
 		case "string":
 			fields[key] = val
-		default:
-			continue
 		}
 	}
 
-	return tags, fields
+	return tags, fields, nil
 }
 
 // convertSentinelInfoOutput parses `INFO` command output
 // Largely copied from the Redis input plugin's gatherInfoOutput()
 func convertSentinelInfoOutput(
-	acc telegraf.Accumulator,
 	globalTags map[string]string,
 	rdr io.Reader,
-) (map[string]string, map[string]interface{}) {
+) (map[string]string, map[string]interface{}, error) {
 	scanner := bufio.NewScanner(rdr)
 	fields := make(map[string]interface{})
 
@@ -558,11 +563,11 @@ func convertSentinelInfoOutput(
 		if section == "Server" {
 			// Rename and convert to nanoseconds
 			if name == "uptime_in_seconds" {
-				if uptimeInSeconds, uptimeParseErr := strconv.ParseInt(parts[1], 10, 64); uptimeParseErr == nil {
-					fields["uptime_ns"] = int64(time.Duration(uptimeInSeconds) * time.Second)
-				} else {
-					acc.AddError(uptimeParseErr)
+				uptimeInSeconds, uptimeParseErr := strconv.ParseInt(parts[1], 10, 64)
+				if uptimeParseErr != nil {
+					return nil, nil, fmt.Errorf("failed parsing field uptime_in_seconds: %v", uptimeParseErr)
 				}
+				fields["uptime_ns"] = int64(time.Duration(uptimeInSeconds) * time.Second)
 
 				continue
 			}
@@ -579,23 +584,21 @@ func convertSentinelInfoOutput(
 
 		switch valType := measurementSentinelFields[metric]; valType {
 		case "float":
-			if val, err := strconv.ParseFloat(val, 64); err == nil {
-				fields[metric] = val
-			} else {
-				acc.AddError(err)
+			val, err := strconv.ParseFloat(val, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed parsing field %v: %v", metric, err)
 			}
+			fields[metric] = val
 		case "integer":
-			if val, err := strconv.ParseInt(val, 10, 64); err == nil {
-				fields[metric] = val
-			} else {
-				acc.AddError(err)
+			val, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed parsing field %v: %v", metric, err)
 			}
+			fields[metric] = val
 		case "string":
 			fields[metric] = val
-		default:
-			continue
 		}
 	}
 
-	return tags, fields
+	return tags, fields, nil
 }

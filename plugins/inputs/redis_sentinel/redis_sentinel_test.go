@@ -97,9 +97,7 @@ func TestRedisSentinelMasters(t *testing.T) {
 		"runid":                   "ff3dadd1cfea3043de4d25711d93f01a564562f7",
 	}
 
-	var acc testutil.Accumulator
-
-	smTags, smFields := convertSentinelMastersOutput(&acc, globalTags, sentinelMastersOutput, nil)
+	smTags, smFields, _ := convertSentinelMastersOutput(globalTags, sentinelMastersOutput, nil)
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementMasters, smTags, smFields, now),
 	}
@@ -152,9 +150,7 @@ func TestRedisSentinels(t *testing.T) {
 		"voted_leader_epoch":      "0",
 	}
 
-	var acc testutil.Accumulator
-
-	sentinelTags, sentinelFields := convertSentinelSentinelsOutput(&acc, globalTags, masterName, sentinelsOutput)
+	sentinelTags, sentinelFields, _ := convertSentinelSentinelsOutput(globalTags, masterName, sentinelsOutput)
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementSentinels, sentinelTags, sentinelFields, now),
 	}
@@ -219,9 +215,7 @@ func TestRedisSentinelReplicas(t *testing.T) {
 		"slave_repl_offset":       "1392400",
 	}
 
-	var acc testutil.Accumulator
-
-	sentinelTags, sentinelFields := convertSentinelReplicaOutput(&acc, globalTags, masterName, replicasOutput)
+	sentinelTags, sentinelFields, _ := convertSentinelReplicaOutput(globalTags, masterName, replicasOutput)
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementReplicas, sentinelTags, sentinelFields, now),
 	}
@@ -369,10 +363,9 @@ master0:name=myothermaster,status=ok,address=127.0.0.1:6381,slaves=1,sentinels=2
 master1:name=mymaster,status=ok,address=127.0.0.1:6379,slaves=1,sentinels=1
 `
 
-	var acc testutil.Accumulator
 	rdr := bufio.NewReader(strings.NewReader(testINFOOutput))
 
-	infoTags, infoFields := convertSentinelInfoOutput(&acc, globalTags, rdr)
+	infoTags, infoFields, _ := convertSentinelInfoOutput(globalTags, rdr)
 
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementSentinel, infoTags, infoFields, now),
