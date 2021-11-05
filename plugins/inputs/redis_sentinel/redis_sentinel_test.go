@@ -67,7 +67,7 @@ func TestRedisSentinelMasters(t *testing.T) {
 		"quorum":                  2,
 		"role_reported":           "master",
 		"role_reported_time":      83138826,
-		"has_quorum":              1,
+		"has_quorum":              true,
 	}
 
 	expectedMetrics := []telegraf.Metric{

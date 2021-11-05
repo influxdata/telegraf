@@ -38,10 +38,9 @@ The plugin gathers the results of these commands and measurements:
 * `sentinel replicas` - `redis_replicas`
 * `info all` - `redis_sentinel`
 
-The `has-quorum` (int) field in `redis_sentinel_masters` is from calling the command `sentinels ckquorum`. `1` is for true, `0` is for false.
+The `has_quorum` field in `redis_sentinel_masters` is from calling the command `sentinels ckquorum`.
 
 There are 5 remote network requests made for each server listed in the config.
-
 
 ### Metrics
 
@@ -57,7 +56,7 @@ There are 5 remote network requests made for each server listed in the config.
     - down_after_milliseconds (int)
     - failover_timeout (int)
     - flags (string)
-    - has_quorum (int)
+    - has_quorum (bool)
     - info_refresh (int)
     - ip (string)
     - last_ok_ping_reply (int)
@@ -173,7 +172,6 @@ There are 5 remote network requests made for each server listed in the config.
     - used_cpu_sys_children (float)
     - used_cpu_user (float)
     - used_cpu_user_children (float)
-
 
 ### Example Output:
 

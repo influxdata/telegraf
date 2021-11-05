@@ -408,9 +408,9 @@ func convertSentinelMastersOutput(
 
 	fields := make(map[string]interface{})
 
-	fields["has_quorum"] = 0
+	fields["has_quorum"] = false
 	if quorumErr == nil {
-		fields["has_quorum"] = 1
+		fields["has_quorum"] = true
 	}
 
 	for key, val := range master {
