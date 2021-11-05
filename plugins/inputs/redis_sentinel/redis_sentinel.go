@@ -546,6 +546,9 @@ func convertSentinelInfoOutput(
 			continue
 		}
 
+		// Redis denotes configuration sections with a hashtag
+		// This comes in handy when we want to ensure we're processing the correct configuration option
+		// For example, when we are renaming fields before sending them to the accumulator
 		if line[0] == '#' {
 			if len(line) > 2 {
 				section = line[2:]
