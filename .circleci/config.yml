@@ -399,6 +399,8 @@ jobs:
   share-artifacts:
     executor: aws-cli/default
     steps:
+      - checkout
+      - check-changed-files-or-halt
       - run:
           command: |
             PR=${CIRCLE_PULL_REQUEST##*/}
