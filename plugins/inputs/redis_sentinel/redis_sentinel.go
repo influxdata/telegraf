@@ -146,11 +146,7 @@ func init() {
 }
 
 func (r *RedisSentinelClient) baseTags() map[string]string {
-	tags := make(map[string]string)
-	for k, v := range r.tags {
-		tags[k] = v
-	}
-	return tags
+	return r.tags
 }
 
 func (r *RedisSentinel) SampleConfig() string {
