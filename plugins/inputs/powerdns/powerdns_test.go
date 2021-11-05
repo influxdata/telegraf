@@ -113,7 +113,11 @@ func TestPowerdnsGeneratesMetrics(t *testing.T) {
 }
 
 func TestPowerdnsParseMetrics(t *testing.T) {
-	values := parseResponse(metrics)
+	p := &Powerdns{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(metrics)
 
 	tests := []struct {
 		key   string
@@ -173,7 +177,11 @@ func TestPowerdnsParseMetrics(t *testing.T) {
 }
 
 func TestPowerdnsParseCorruptMetrics(t *testing.T) {
-	values := parseResponse(corruptMetrics)
+	p := &Powerdns{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(corruptMetrics)
 
 	tests := []struct {
 		key   string
@@ -232,7 +240,11 @@ func TestPowerdnsParseCorruptMetrics(t *testing.T) {
 }
 
 func TestPowerdnsParseIntOverflowMetrics(t *testing.T) {
-	values := parseResponse(intOverflowMetrics)
+	p := &Powerdns{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(intOverflowMetrics)
 
 	tests := []struct {
 		key   string

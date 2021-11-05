@@ -166,23 +166,22 @@ func (p *Ping) args(url string, system string) []string {
 //
 // It returns (<transmitted packets>, <received packets>, <average response>)
 func processPingOutput(out string) (int, int, int, float64, float64, float64, float64, error) {
-	var trans, recv, ttl int = 0, 0, -1
-	var min, avg, max, stddev float64 = -1.0, -1.0, -1.0, -1.0
+	var trans, recv, ttl = 0, 0, -1
+	var min, avg, max, stddev = -1.0, -1.0, -1.0, -1.0
 	// Set this error to nil if we find a 'transmitted' line
-	err := errors.New("Fatal error processing ping output")
+	err := errors.New("fatal error processing ping output")
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
 		// Reading only first TTL, ignoring other TTL messages
 		if ttl == -1 && (strings.Contains(line, "ttl=") || strings.Contains(line, "hlim=")) {
 			ttl, err = getTTL(line)
-		} else if strings.Contains(line, "transmitted") &&
-			strings.Contains(line, "received") {
-			trans, recv, err = getPacketStats(line, trans, recv)
+		} else if strings.Contains(line, "transmitted") && strings.Contains(line, "received") {
+			trans, recv, err = getPacketStats(line)
 			if err != nil {
 				return trans, recv, ttl, min, avg, max, stddev, err
 			}
 		} else if strings.Contains(line, "min/avg/max") {
-			min, avg, max, stddev, err = checkRoundTripTimeStats(line, min, avg, max, stddev)
+			min, avg, max, stddev, err = checkRoundTripTimeStats(line)
 			if err != nil {
 				return trans, recv, ttl, min, avg, max, stddev, err
 			}
@@ -191,10 +190,12 @@ func processPingOutput(out string) (int, int, int, float64, float64, float64, fl
 	return trans, recv, ttl, min, avg, max, stddev, err
 }
 
-func getPacketStats(line string, trans, recv int) (int, int, error) {
+func getPacketStats(line string) (trans int, recv int, err error) {
+	trans, recv = 0, 0
+
 	stats := strings.Split(line, ", ")
 	// Transmitted packets
-	trans, err := strconv.Atoi(strings.Split(stats[0], " ")[0])
+	trans, err = strconv.Atoi(strings.Split(stats[0], " ")[0])
 	if err != nil {
 		return trans, recv, err
 	}
@@ -209,12 +210,13 @@ func getTTL(line string) (int, error) {
 	return strconv.Atoi(ttlMatch[2])
 }
 
-func checkRoundTripTimeStats(line string, min, avg, max,
-	stddev float64) (float64, float64, float64, float64, error) {
+func checkRoundTripTimeStats(line string) (min float64, avg float64, max float64, stddev float64, err error) {
+	min, avg, max, stddev = -1.0, -1.0, -1.0, -1.0
+
 	stats := strings.Split(line, " ")[3]
 	data := strings.Split(stats, "/")
 
-	min, err := strconv.ParseFloat(data[0], 64)
+	min, err = strconv.ParseFloat(data[0], 64)
 	if err != nil {
 		return min, avg, max, stddev, err
 	}

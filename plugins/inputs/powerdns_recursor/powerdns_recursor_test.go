@@ -188,7 +188,11 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 }
 
 func TestPowerdnsRecursorParseMetrics(t *testing.T) {
-	values := parseResponse(metrics)
+	p := &PowerdnsRecursor{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(metrics)
 
 	tests := []struct {
 		key   string
@@ -310,7 +314,11 @@ func TestPowerdnsRecursorParseMetrics(t *testing.T) {
 }
 
 func TestPowerdnsRecursorParseCorruptMetrics(t *testing.T) {
-	values := parseResponse(corruptMetrics)
+	p := &PowerdnsRecursor{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(corruptMetrics)
 
 	tests := []struct {
 		key   string
@@ -431,7 +439,11 @@ func TestPowerdnsRecursorParseCorruptMetrics(t *testing.T) {
 }
 
 func TestPowerdnsRecursorParseIntOverflowMetrics(t *testing.T) {
-	values := parseResponse(intOverflowMetrics)
+	p := &PowerdnsRecursor{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(intOverflowMetrics)
 
 	tests := []struct {
 		key   string

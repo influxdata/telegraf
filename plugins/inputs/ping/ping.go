@@ -273,6 +273,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		fields["ttl"] = stats.ttl
 	}
 
+	//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
 	fields["percent_packet_loss"] = float64(stats.PacketLoss)
 	fields["minimum_response_ms"] = float64(stats.MinRtt) / float64(time.Millisecond)
 	fields["average_response_ms"] = float64(stats.AvgRtt) / float64(time.Millisecond)

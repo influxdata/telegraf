@@ -415,7 +415,7 @@ func TestPingBinary(t *testing.T) {
 	}
 	err := acc.GatherError(p.Gather)
 	require.Error(t, err)
-	require.EqualValues(t, err.Error(), "Fatal error processing ping output: www.google.com")
+	require.EqualValues(t, err.Error(), "fatal error processing ping output: www.google.com")
 }
 
 // Test that Gather function works using native ping
