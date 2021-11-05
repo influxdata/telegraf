@@ -260,12 +260,12 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 	for _, client := range r.clients {
 		wg.Add(1)
 
-		go func(client *RedisSentinelClient, acc telegraf.Accumulator) {
+		go func(acc telegraf.Accumulator, client *RedisSentinelClient) {
 			defer wg.Done()
 
-			gatherMasterStats(client, acc)
-			gatherInfoStats(client, acc)
-		}(client, acc)
+			gatherMasterStats(acc, client)
+			gatherInfoStats(acc, client)
+		}(acc, client)
 	}
 
 	wg.Wait()
@@ -273,7 +273,7 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func gatherInfoStats(client *RedisSentinelClient, acc telegraf.Accumulator) {
+func gatherInfoStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 	infoCmd := redis.NewStringCmd("info", "all")
 	// We check the command result below
 	//nolint:errcheck
@@ -291,7 +291,7 @@ func gatherInfoStats(client *RedisSentinelClient, acc telegraf.Accumulator) {
 	acc.AddFields(measurementSentinel, infoFields, infoTags)
 }
 
-func gatherMasterStats(client *RedisSentinelClient, acc telegraf.Accumulator) {
+func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 	mastersCmd := redis.NewSliceCmd("sentinel", "masters")
 	// We check the command result below
 	//nolint:errcheck
@@ -327,14 +327,14 @@ func gatherMasterStats(client *RedisSentinelClient, acc telegraf.Accumulator) {
 		sentinelMastersTags, sentinelMastersFields := convertSentinelMastersOutput(acc, client.baseTags(), m, quorumErr)
 		acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
 
-		gatherReplicaStats(client, acc, masterName)
-		gatherSentinelStats(client, acc, masterName)
+		gatherReplicaStats(acc, client, masterName)
+		gatherSentinelStats(acc, client, masterName)
 	}
 }
 
 func gatherReplicaStats(
-	client *RedisSentinelClient,
 	acc telegraf.Accumulator,
+	client *RedisSentinelClient,
 	masterName string,
 ) {
 	replicasCmd := redis.NewSliceCmd("sentinel", "replicas", masterName)
@@ -359,8 +359,8 @@ func gatherReplicaStats(
 }
 
 func gatherSentinelStats(
-	client *RedisSentinelClient,
 	acc telegraf.Accumulator,
+	client *RedisSentinelClient,
 	masterName string,
 ) {
 	sentinelsCmd := redis.NewSliceCmd("sentinel", "sentinels", masterName)
