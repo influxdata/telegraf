@@ -79,13 +79,16 @@ func TestLaplaceNoiseWithIgnoreField(t *testing.T) {
 
 func TestAddNoiseToValue(t *testing.T) {
 	processor := Noise{
-		Scale: 5.0,
+		Scale: 2.0,
 		Log:   testutil.Logger{},
 	}
 	_ = processor.Init()
 	haveValues := []interface{}{
 		int64(-51232),
 		uint64(45123),
+		uint64(100),
+		uint64(2),
+		uint64(999862),
 		float64(1.337),
 	}
 
@@ -94,16 +97,19 @@ func TestAddNoiseToValue(t *testing.T) {
 	}
 
 	for _, value := range haveValues {
-		after := processor.addNoiseToValue(value)
+		processor.Log.Infof("Testing: %v", value)
+		after := processor.addNoise(value)
 		// check value is not the same
 		require.NotEqual(t, value, after)
+		processor.Log.Infof("Before: ", reflect.TypeOf(value), value)
+		processor.Log.Infof("After: ", reflect.TypeOf(after), after)
 		// check type is still the same
 		require.Equal(t, reflect.TypeOf(value), reflect.TypeOf(after))
 	}
 
 	// check that nothing happens to non numerical types:
 	for _, value := range haveValuesInvalid {
-		after := processor.addNoiseToValue(value)
+		after := processor.addNoise(value)
 		require.Equal(t, value, after)
 		require.Equal(t, reflect.TypeOf(value), reflect.TypeOf(after))
 	}
