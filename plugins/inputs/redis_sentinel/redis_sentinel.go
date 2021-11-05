@@ -145,7 +145,7 @@ func init() {
 	})
 }
 
-func (r *RedisSentinelClient) BaseTags() map[string]string {
+func (r *RedisSentinelClient) baseTags() map[string]string {
 	tags := make(map[string]string)
 	for k, v := range r.tags {
 		tags[k] = v
@@ -294,7 +294,7 @@ func gatherInfoStats(client *RedisSentinelClient, acc telegraf.Accumulator) {
 	}
 
 	rdr := strings.NewReader(info)
-	infoTags, infoFields := convertSentinelInfoOutput(acc, client.BaseTags(), rdr)
+	infoTags, infoFields := convertSentinelInfoOutput(acc, client.baseTags(), rdr)
 
 	acc.AddFields(measurementSentinel, infoFields, infoTags)
 }
@@ -332,7 +332,7 @@ func gatherMasterStats(client *RedisSentinelClient, acc telegraf.Accumulator) {
 
 		_, quorumErr := quorumCmd.Result()
 
-		sentinelMastersTags, sentinelMastersFields := convertSentinelMastersOutput(acc, client.BaseTags(), m, quorumErr)
+		sentinelMastersTags, sentinelMastersFields := convertSentinelMastersOutput(acc, client.baseTags(), m, quorumErr)
 		acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
 
 		gatherReplicaStats(client, acc, masterName)
@@ -360,7 +360,7 @@ func gatherReplicaStats(
 		if replica, replicaOk := replica.([]interface{}); replicaOk {
 			rm := toMap(replica)
 
-			replicaTags, replicaFields := convertSentinelReplicaOutput(acc, client.BaseTags(), masterName, rm)
+			replicaTags, replicaFields := convertSentinelReplicaOutput(acc, client.baseTags(), masterName, rm)
 			acc.AddFields(measurementReplicas, replicaFields, replicaTags)
 		}
 	}
@@ -386,7 +386,7 @@ func gatherSentinelStats(
 		if sentinel, sentinelOk := sentinel.([]interface{}); sentinelOk {
 			sm := toMap(sentinel)
 
-			sentinelTags, sentinelFields := convertSentinelSentinelsOutput(acc, client.BaseTags(), masterName, sm)
+			sentinelTags, sentinelFields := convertSentinelSentinelsOutput(acc, client.baseTags(), masterName, sm)
 			acc.AddFields(measurementSentinels, sentinelFields, sentinelTags)
 		}
 	}
