@@ -292,10 +292,10 @@ func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
 	switch parser.(type) {
 	case *csv.Parser:
 		m, err := parser.Parse([]byte(line))
-		if err == io.EOF {
-			return []telegraf.Metric{}, nil
-		}
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return []telegraf.Metric{}, nil
+			}
 			return nil, err
 		}
 		return m, err

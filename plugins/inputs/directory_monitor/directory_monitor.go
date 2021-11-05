@@ -286,10 +286,10 @@ func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte) (
 	switch parser.(type) {
 	case *csv.Parser:
 		m, err := parser.Parse(line)
-		if err == io.EOF {
-			return []telegraf.Metric{}, nil
-		}
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return []telegraf.Metric{}, nil
+			}
 			return nil, err
 		}
 		return m, err

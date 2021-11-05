@@ -104,11 +104,15 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	r := bytes.NewReader([]byte(line))
 	metrics, err := parseCSV(p, r)
-	if len(metrics) > 0 {
-		// only return the first metric as there should be only one
-		return metrics[0], err
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	if len(metrics) == 1 {
+		return metrics[0], nil
+	} else if len(metrics) > 1 {
+		return nil, fmt.Errorf("expected 1 metric found %d", len(metrics))
+	}
+	return nil, nil
 }
 
 func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
@@ -126,38 +130,33 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 	// we always reread the header to avoid side effects
 	// in cases where multiple files with different
 	// headers are read
-	if !p.gotColumnNames {
-		for p.HeaderRowCount > 0 {
-			header, err := csvReader.Read()
-			if err != nil {
-				return nil, err
-			}
-			//concatenate header names
-			for i := range header {
-				name := header[i]
-				if p.TrimSpace {
-					name = strings.Trim(name, " ")
-				}
-				if len(p.ColumnNames) <= i {
-					p.ColumnNames = append(p.ColumnNames, name)
-				} else {
-					p.ColumnNames[i] = p.ColumnNames[i] + name
-				}
-			}
-			p.HeaderRowCount--
+	for p.HeaderRowCount > 0 {
+		header, err := csvReader.Read()
+		if err != nil {
+			return nil, err
 		}
+		p.HeaderRowCount--
+		if p.gotColumnNames {
+			// Ignore header lines if columns are named
+			continue
+		}
+		//concatenate header names
+		for i, h := range header {
+			name := h
+			if p.TrimSpace {
+				name = strings.Trim(name, " ")
+			}
+			if len(p.ColumnNames) <= i {
+				p.ColumnNames = append(p.ColumnNames, name)
+			} else {
+				p.ColumnNames[i] = p.ColumnNames[i] + name
+			}
+		}
+	}
+	if !p.gotColumnNames {
 		// skip first rows
 		p.ColumnNames = p.ColumnNames[p.SkipColumns:]
 		p.gotColumnNames = true
-	} else {
-		// if columns are named, just skip header rows
-		for p.HeaderRowCount > 0 {
-			_, err := csvReader.Read()
-			if err != nil {
-				return nil, err
-			}
-			p.HeaderRowCount--
-		}
 	}
 
 	table, err := csvReader.ReadAll()
