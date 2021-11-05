@@ -13,14 +13,15 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
+	parserV2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
@@ -221,8 +222,6 @@ func (p *Prometheus) Init() error {
 	return nil
 }
 
-var ErrProtocolError = errors.New("prometheus protocol error")
-
 func (p *Prometheus) AddressToURL(u *url.URL, address string) *url.URL {
 	host := address
 	if u.Port() != "" {
@@ -421,7 +420,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	if p.MetricVersion == 2 {
-		parser := parser_v2.Parser{
+		parser := parserV2.Parser{
 			Header:          resp.Header,
 			IgnoreTimestamp: p.IgnoreTimestamp,
 		}

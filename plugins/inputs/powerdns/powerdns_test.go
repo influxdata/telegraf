@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -108,7 +107,7 @@ func TestPowerdnsGeneratesMetrics(t *testing.T) {
 		"meta-cache-size", "qsize-q", "signature-cache-size", "sys-msec", "uptime", "user-msec"}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasInt64Field("powerdns", metric), metric)
+		require.True(t, acc.HasInt64Field("powerdns", metric), metric)
 	}
 }
 

@@ -67,3 +67,10 @@ type NodeDNS struct {
 		Searchdomain string `json:"search"`
 	} `json:"data"`
 }
+
+type metrics struct {
+	total          int64
+	used           int64
+	free           int64
+	usedPercentage float64
+}
