@@ -143,9 +143,6 @@ lint-install:
 	@echo "Installing golangci-lint"
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
 
-	@echo "Installing markdownlint"
-	npm install -g markdownlint-cli
-
 .PHONY: lint
 lint:
 ifeq (, $(shell which golangci-lint))
@@ -154,13 +151,6 @@ ifeq (, $(shell which golangci-lint))
 endif
 
 	golangci-lint run
-
-ifeq (, $(shell which markdownlint-cli))
-	$(info markdownlint-cli can't be found, please run: make lint-install)
-	exit 1
-endif
-
-	markdownlint-cli
 
 .PHONY: lint-branch
 lint-branch:
