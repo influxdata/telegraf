@@ -200,11 +200,7 @@ func (r *RedisSentinel) Init() error {
 			return fmt.Errorf("invalid scheme %q. expected tcp or unix", u.Scheme)
 		}
 
-		password := ""
-
-		if len(r.Password) > 0 {
-			password = r.Password
-		}
+		password := r.Password
 
 		var address string
 		if u.Scheme == "unix" {
