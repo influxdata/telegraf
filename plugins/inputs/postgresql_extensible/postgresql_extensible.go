@@ -204,7 +204,7 @@ func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, sqlQuery s
 
 	rows, err := p.DB.Query(sqlQuery)
 	if err != nil {
-		p.Log.Error(err.Error())
+		acc.AddError(err)
 		return
 	}
 
@@ -212,7 +212,7 @@ func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, sqlQuery s
 
 	// grab the column information from the result
 	if columns, err = rows.Columns(); err != nil {
-		p.Log.Error(err.Error())
+		acc.AddError(err)
 		return
 	}
 
@@ -229,7 +229,7 @@ func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, sqlQuery s
 	for rows.Next() {
 		err = p.accRow(measName, rows, acc, columns)
 		if err != nil {
-			p.Log.Error(err.Error())
+			acc.AddError(err)
 			break
 		}
 	}
