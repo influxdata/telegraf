@@ -1,9 +1,11 @@
 # Starlark Aggregator
 
-The `starlark` aggregator calls a Starlark function to add the metrics to the aggregator,
-then calls another Starlark function to push the metrics returned to the accumulator. Both Starlark functions
-have an argument called `cache` which is a [dict-like][dict] object allowing to keep temporary the metrics to
-aggregate. The `cache` is automatically cleared by the the aggregator.
+The `starlark` aggregator allows to implement a custom aggregator plugin with a Starlark script. The Starlark
+script needs to be composed of the three methods defined in the Aggregator plugin interface which are `add`, `push` and `reset`.
+
+The Starlark Aggregator plugin calls the Starlark function `add` to add the metrics to the aggregator, then calls the Starlark function `push` to push the resulting metrics into the accumulator and finally calls the Starlark function `reset` to reset the entire state of the plugin.
+
+The Starlark functions can use the global function `state` to keep temporary the metrics to aggregate.
 
 The Starlark language is a dialect of Python, and will be familiar to those who
 have experience with the Python language. However, there are major [differences](#python-differences).
@@ -24,11 +26,16 @@ functions.
   ##
   ## Source of the Starlark script.
   source = '''
-def add(cache, metric):
-  cache["last"] = metric
+state = {}
 
-def apply(cache):
-  return cache.get("last")
+def add(metric):
+  state["last"] = metric
+
+def push():
+  return state.get("last")
+
+def reset():
+  state.clear()
 '''
 
   ## File containing a Starlark script.
@@ -44,19 +51,28 @@ def apply(cache):
 
 ## Usage
 
-The Starlark code should contain a function called `add` that takes a cache as first argument and a metric as
-second argument. The function will be called with each metric to add them to the cache, and doesn't return anything.
+The Starlark code should contain a function called `add` that takes a metric as argument.
+The function will be called with each metric to add, and doesn't return anything.
 
 ```python
-def add(cache, metric):
-  cache["last"] = metric
+def add(metric):
+  state["last"] = metric
 ```
 
-The Starlark code should also contain a function called `apply` that takes a cache as argument. The function will be called to compute the aggregation from the metrics available in the cache, and returns the metrics to push to the accumulator.
+The Starlark code should also contain a function called `push` that doesn't take any argument.
+The function will be called to compute the aggregation, and returns the metrics to push to the accumulator.
 
 ```python
-def apply(cache):
-  return cache.get("last")
+def push():
+  return state.get("last")
+```
+
+The Starlark code should also contain a function called `reset` that doesn't take any argument.
+The function will be called to reset the plugin, and doesn't return anything.
+
+```python
+def push():
+  state.clear()
 ```
 
 For a list of available types and functions that can be used in the code, see

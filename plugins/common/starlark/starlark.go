@@ -1,8 +1,9 @@
-package starlark //nolint
+package starlark //nolint - Needed to avoid getting import-shadowing: The name 'starlark' shadows an import name (revive)
 
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"go.starlark.net/lib/math"
@@ -17,13 +18,13 @@ type StarlarkCommon struct {
 	Script    string                 `toml:"script"`
 	Constants map[string]interface{} `toml:"constants"`
 
-	Log telegraf.Logger `toml:"-"`
+	Log              telegraf.Logger `toml:"-"`
+	StarlarkLoadFunc func(module string, logger telegraf.Logger) (starlark.StringDict, error)
 
-	thread           *starlark.Thread
-	starlarkLoadFunc func(module string, logger telegraf.Logger) (starlark.StringDict, error)
+	thread *starlark.Thread
 }
 
-func (s *StarlarkCommon) InitGlobals(filename string) (starlark.StringDict, error) {
+func (s *StarlarkCommon) Init() (starlark.StringDict, error) {
 	if s.Source == "" && s.Script == "" {
 		return nil, errors.New("one of source or script must be set")
 	}
@@ -34,7 +35,7 @@ func (s *StarlarkCommon) InitGlobals(filename string) (starlark.StringDict, erro
 	s.thread = &starlark.Thread{
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
 		Load: func(thread *starlark.Thread, module string) (starlark.StringDict, error) {
-			return s.starlarkLoadFunc(module, s.Log)
+			return s.StarlarkLoadFunc(module, s.Log)
 		},
 	}
 
@@ -44,14 +45,27 @@ func (s *StarlarkCommon) InitGlobals(filename string) (starlark.StringDict, erro
 	builtins["catch"] = starlark.NewBuiltin("catch", catch)
 	s.addConstants(&builtins)
 
-	program, err := s.sourceProgram(builtins, filename)
+	program, err := s.sourceProgram(builtins, "")
 
 	if err != nil {
 		return nil, err
 	}
 
 	// Execute source
-	return program.Init(s.thread, builtins)
+	globals, err := program.Init(s.thread, builtins)
+	if err != nil {
+		return nil, err
+	}
+	// Make available a shared state to the apply function
+	globals["state"] = starlark.NewDict(0)
+
+	// Freeze the global state.  This prevents modifications to the processor
+	// state and prevents scripts from containing errors storing tracking
+	// metrics.  Tasks that require global state will not be possible due to
+	// this, so maybe we should relax this in the future.
+	globals.Freeze()
+
+	return globals, nil
 }
 
 func InitFunction(globals starlark.StringDict, fnName string, expectedParams int) (*starlark.Function, error) {
@@ -95,13 +109,15 @@ func (s *StarlarkCommon) sourceProgram(builtins starlark.StringDict, filename st
 
 // Call calls the function fn with the specified positional and keyword arguments.
 func (s *StarlarkCommon) Call(fn starlark.Value, args starlark.Tuple) (starlark.Value, error) {
-	return starlark.Call(s.thread, fn, args, nil)
-}
-
-func NewStarlarkCommon(fn func(module string, logger telegraf.Logger) (starlark.StringDict, error)) StarlarkCommon {
-	return StarlarkCommon{
-		starlarkLoadFunc: fn,
+	rv, err := starlark.Call(s.thread, fn, args, nil)
+	if err != nil {
+		if err, ok := err.(*starlark.EvalError); ok {
+			for _, line := range strings.Split(err.Backtrace(), "\n") {
+				s.Log.Error(line)
+			}
+		}
 	}
+	return rv, err
 }
 
 func LoadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error) {

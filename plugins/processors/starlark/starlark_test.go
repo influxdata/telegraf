@@ -3310,27 +3310,30 @@ func testNow(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, 
 }
 
 func newStarlarkFromSrouce(source string) *Starlark {
-	inner := common.NewStarlarkCommon(testLoadFunc)
-	inner.Log = testutil.Logger{}
-	inner.Source = source
 	return &Starlark{
-		StarlarkCommon: inner,
+		StarlarkCommon: common.StarlarkCommon{
+			StarlarkLoadFunc: testLoadFunc,
+			Log:              testutil.Logger{},
+			Source:           source,
+		},
 	}
 }
 
 func newStarlarkFromScript(script string) *Starlark {
-	inner := common.NewStarlarkCommon(testLoadFunc)
-	inner.Log = testutil.Logger{}
-	inner.Script = script
 	return &Starlark{
-		StarlarkCommon: inner,
+		StarlarkCommon: common.StarlarkCommon{
+			StarlarkLoadFunc: testLoadFunc,
+			Log:              testutil.Logger{},
+			Script:           script,
+		},
 	}
 }
 
 func newStarlarkNoScript() *Starlark {
-	inner := common.NewStarlarkCommon(testLoadFunc)
-	inner.Log = testutil.Logger{}
 	return &Starlark{
-		StarlarkCommon: inner,
+		StarlarkCommon: common.StarlarkCommon{
+			StarlarkLoadFunc: testLoadFunc,
+			Log:              testutil.Logger{},
+		},
 	}
 }

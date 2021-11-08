@@ -1,8 +1,6 @@
-package starlark //nolint
+package starlark //nolint - Needed to avoid getting import-shadowing: The name 'starlark' shadows an import name (revive)
 
 import (
-	"strings"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
@@ -18,11 +16,16 @@ const (
   ##
   ## Source of the Starlark script.
   source = '''
-def add(cache, metric):
-  cache["last"] = metric
+state = {}
 
-def apply(cache):
-  return cache.get("last")
+def add(metric):
+  state["last"] = metric
+
+def push():
+  return state.get("last")
+
+def reset():
+  state.clear()
 '''
 
   ## File containing a Starlark script.
@@ -42,47 +45,46 @@ type Starlark struct {
 
 	addArgs   starlark.Tuple
 	addFunc   *starlark.Function
-	cache     *starlark.Dict
-	applyArgs starlark.Tuple
-	applyFunc *starlark.Function
+	pushArgs  starlark.Tuple
+	pushFunc  *starlark.Function
+	resetArgs starlark.Tuple
+	resetFunc *starlark.Function
 }
 
 func (s *Starlark) Init() error {
 	// Execute source
-	globals, err := s.InitGlobals("aggregators.starlark")
+	globals, err := s.StarlarkCommon.Init()
 	if err != nil {
 		return err
 	}
 
-	// Initialize the cache
-	s.Reset()
-
-	// Freeze the global state.  This prevents modifications to the aggregator
-	// state and prevents scripts from containing errors storing tracking
-	// metrics.  Tasks that require global state will not be possible due to
-	// this, so maybe we should relax this in the future.
-	globals.Freeze()
-
 	// The source should define an add function.
-	s.addFunc, err = common.InitFunction(globals, "add", 2)
+	s.addFunc, err = common.InitFunction(globals, "add", 1)
 	if err != nil {
 		return err
 	}
 
 	// Prepare the arguments of the add method.
-	s.addArgs = make(starlark.Tuple, 2)
-	s.addArgs[0] = &starlark.Dict{}
-	s.addArgs[1] = &common.Metric{}
+	s.addArgs = make(starlark.Tuple, 1)
+	s.addArgs[0] = &common.Metric{}
 
-	// The source should define a apply function.
-	s.applyFunc, err = common.InitFunction(globals, "apply", 1)
+	// The source should define a push function.
+	s.pushFunc, err = common.InitFunction(globals, "push", 0)
 	if err != nil {
 		return err
 	}
 
-	// Prepare the argument of the apply method.
-	s.applyArgs = make(starlark.Tuple, 1)
-	s.applyArgs[0] = &starlark.Dict{}
+	// Prepare the argument of the push method.
+	s.pushArgs = make(starlark.Tuple, 0)
+
+	// The source should define a reset function.
+	s.resetFunc, err = common.InitFunction(globals, "reset", 0)
+	if err != nil {
+		return err
+	}
+
+	// Prepare the argument of the reset method.
+	s.resetArgs = make(starlark.Tuple, 0)
 
 	return nil
 }
@@ -96,22 +98,14 @@ func (s *Starlark) Description() string {
 }
 
 func (s *Starlark) Add(metric telegraf.Metric) {
-	s.addArgs[0] = s.cache
-	s.addArgs[1].(*common.Metric).Wrap(metric)
+	s.addArgs[0].(*common.Metric).Wrap(metric)
 
-	s.call(s.addFunc, s.addArgs)
+	s.Call(s.addFunc, s.addArgs) //nolint - error already checked within the Call function
 }
 
 func (s *Starlark) Push(acc telegraf.Accumulator) {
-	s.applyArgs[0] = s.cache
-
-	rv, err := s.Call(s.applyFunc, s.applyArgs)
+	rv, err := s.Call(s.pushFunc, s.pushArgs)
 	if err != nil {
-		if err, ok := err.(*starlark.EvalError); ok {
-			for _, line := range strings.Split(err.Backtrace(), "\n") {
-				s.Log.Error(line)
-			}
-		}
 		return
 	}
 
@@ -139,25 +133,16 @@ func (s *Starlark) Push(acc telegraf.Accumulator) {
 }
 
 func (s *Starlark) Reset() {
-	s.cache = starlark.NewDict(0)
-}
-
-func (s *Starlark) call(fn starlark.Value, args starlark.Tuple) {
-	_, err := s.Call(fn, args)
-	if err != nil {
-		if err, ok := err.(*starlark.EvalError); ok {
-			for _, line := range strings.Split(err.Backtrace(), "\n") {
-				s.Log.Error(line)
-			}
-		}
-	}
+	s.Call(s.resetFunc, s.resetArgs) //nolint - error already checked within the Call function
 }
 
 // init initializes starlark aggregator plugin
 func init() {
 	aggregators.Add("starlark", func() telegraf.Aggregator {
 		return &Starlark{
-			StarlarkCommon: common.NewStarlarkCommon(common.LoadFunc),
+			StarlarkCommon: common.StarlarkCommon{
+				StarlarkLoadFunc: common.LoadFunc,
+			},
 		}
 	})
 }

@@ -2,7 +2,6 @@ package starlark
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/influxdata/telegraf"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
@@ -44,19 +43,10 @@ type Starlark struct {
 }
 
 func (s *Starlark) Init() error {
-	globals, err := s.InitGlobals("processors.starlark")
+	globals, err := s.StarlarkCommon.Init()
 	if err != nil {
 		return err
 	}
-
-	// Make available a shared state to the apply function
-	globals["state"] = starlark.NewDict(0)
-
-	// Freeze the global state.  This prevents modifications to the processor
-	// state and prevents scripts from containing errors storing tracking
-	// metrics.  Tasks that require global state will not be possible due to
-	// this, so maybe we should relax this in the future.
-	globals.Freeze()
 
 	// The source should define an apply function.
 	s.applyFunc, err = common.InitFunction(globals, "apply", 1)
@@ -93,11 +83,6 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 
 	rv, err := s.Call(s.applyFunc, s.args)
 	if err != nil {
-		if err, ok := err.(*starlark.EvalError); ok {
-			for _, line := range strings.Split(err.Backtrace(), "\n") {
-				s.Log.Error(line)
-			}
-		}
 		metric.Reject()
 		return err
 	}
@@ -166,7 +151,9 @@ func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {
 func init() {
 	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
 		return &Starlark{
-			StarlarkCommon: common.NewStarlarkCommon(common.LoadFunc),
+			StarlarkCommon: common.StarlarkCommon{
+				StarlarkLoadFunc: common.LoadFunc,
+			},
 		}
 	})
 }

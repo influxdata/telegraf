@@ -353,11 +353,15 @@ func newMerge() (*Starlark, error) {
 func TestLastFromSource(t *testing.T) {
 	acc := testutil.Accumulator{}
 	plugin, err := newStarlarkFromSource(`
-def add(cache, metric):
-    cache["last"] = metric
+state = {}
+def add(metric):
+  state["last"] = metric
 
-def apply(cache):
-    return cache.get("last")
+def push():
+  return state.get("last")
+
+def reset():
+  state.clear()
 `)
 	require.NoError(t, err)
 	plugin.Add(
@@ -394,14 +398,16 @@ def apply(cache):
 		"cpu": "cpu2",
 	}
 	acc.AssertContainsTaggedFields(t, "cpu", expectedFields, expectedTags)
+	plugin.Reset()
 }
 
 func newStarlarkFromSource(source string) (*Starlark, error) {
-	inner := common.NewStarlarkCommon(common.LoadFunc)
-	inner.Log = testutil.Logger{}
-	inner.Source = source
 	plugin := &Starlark{
-		StarlarkCommon: inner,
+		StarlarkCommon: common.StarlarkCommon{
+			StarlarkLoadFunc: common.LoadFunc,
+			Log:              testutil.Logger{},
+			Source:           source,
+		},
 	}
 	err := plugin.Init()
 	if err != nil {
@@ -411,11 +417,12 @@ func newStarlarkFromSource(source string) (*Starlark, error) {
 }
 
 func newStarlarkFromScript(script string) (*Starlark, error) {
-	inner := common.NewStarlarkCommon(common.LoadFunc)
-	inner.Log = testutil.Logger{}
-	inner.Script = script
 	plugin := &Starlark{
-		StarlarkCommon: inner,
+		StarlarkCommon: common.StarlarkCommon{
+			StarlarkLoadFunc: common.LoadFunc,
+			Log:              testutil.Logger{},
+			Script:           script,
+		},
 	}
 	err := plugin.Init()
 	if err != nil {

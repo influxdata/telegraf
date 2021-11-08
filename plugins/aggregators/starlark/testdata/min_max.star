@@ -1,9 +1,9 @@
 # Example of a min_max aggregator implemented with a starlark script.
 
 supported_types = (["int", "float"])
-
-def add(cache, metric):
-    aggregate = cache.get(metric)
+state = {}
+def add(metric):
+    aggregate = state.get(metric)
     if aggregate == None:
         aggregate = {
             "name": metric.name, 
@@ -16,7 +16,7 @@ def add(cache, metric):
 				    "min": v,
 				    "max": v,
 			    }
-        cache[metric] = aggregate
+        state[metric] = aggregate
     else:
         for k, v in metric.fields.items():
             if type(v) in supported_types:
@@ -31,13 +31,16 @@ def add(cache, metric):
                 elif v > min_max["max"]:
                     aggregate["fields"][k]["max"] = v
         
-def apply(cache):
+def push():
     metrics = []
-    for a in cache:
+    for a in state:
         fields = {}
-        for k in cache[a]["fields"]:
-            fields[k + "_min"] = cache[a]["fields"][k]["min"]
-            fields[k + "_max"] = cache[a]["fields"][k]["max"]
-        m = Metric(cache[a]["name"], cache[a]["tags"], fields)
+        for k in state[a]["fields"]:
+            fields[k + "_min"] = state[a]["fields"][k]["min"]
+            fields[k + "_max"] = state[a]["fields"][k]["max"]
+        m = Metric(state[a]["name"], state[a]["tags"], fields)
         metrics.append(m)
     return metrics
+
+def reset():
+  state.clear()
