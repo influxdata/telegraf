@@ -25,9 +25,10 @@ func TestUpsdGather(t *testing.T) {
 				name: "test listening server with output",
 				err:  false,
 				tags: map[string]string{
-					"serial":   "ABC123",
-					"ups_name": "fake",
-					"model":    "Model 12345",
+					"serial":    "ABC123",
+					"ups_name":  "fake",
+					"model":     "Model 12345",
+					"status_OL": "true",
 				},
 				fields: map[string]interface{}{
 					"status_flags":            uint64(8),

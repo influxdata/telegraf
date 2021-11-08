@@ -75,8 +75,8 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 		"model": fmt.Sprintf("%v", metrics["device.model"]),
 	}
 
-	//for compatibility reasons, maps string status into apcupsd format
-	status := u.mapStatus(metrics)
+	// For compatibility with the apcupsd plugin's output we map the status string status into a bit-format
+	status := u.mapStatus(metrics, tags)
 
 	timeLeftS, ok := metrics["battery.runtime"].(int64)
 	if !ok && !u.batteryRuntimeTypeWarningIssued {
@@ -105,7 +105,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, name string, variables []nut.
 	acc.AddFields("upsd", fields, tags)
 }
 
-func (u *Upsd) mapStatus(metrics map[string]interface{}) uint64 {
+func (u *Upsd) mapStatus(metrics map[string]interface{}, tags map[string]string) uint64 {
 	status := uint64(0)
 	statusString := fmt.Sprintf("%v", metrics["ups.status"])
 	statuses := strings.Fields(statusString)
@@ -121,27 +121,35 @@ func (u *Upsd) mapStatus(metrics map[string]interface{}) uint64 {
 	//7	Replace battery
 	if choice.Contains("CAL", statuses) {
 		status |= 1 << 0
+		tags["status_CAL"] = "true"
 	}
 	if choice.Contains("TRIM", statuses) {
 		status |= 1 << 1
+		tags["status_TRIM"] = "true"
 	}
 	if choice.Contains("BOOST", statuses) {
 		status |= 1 << 2
+		tags["status_BOOST"] = "true"
 	}
 	if choice.Contains("OL", statuses) {
 		status |= 1 << 3
+		tags["status_OL"] = "true"
 	}
 	if choice.Contains("OB", statuses) {
 		status |= 1 << 4
+		tags["status_OB"] = "true"
 	}
 	if choice.Contains("OVER", statuses) {
 		status |= 1 << 5
+		tags["status_OVER"] = "true"
 	}
 	if choice.Contains("LB", statuses) {
 		status |= 1 << 6
+		tags["status_LB"] = "true"
 	}
 	if choice.Contains("RB", statuses) {
 		status |= 1 << 7
+		tags["status_RB"] = "true"
 	}
 	return status
 }
