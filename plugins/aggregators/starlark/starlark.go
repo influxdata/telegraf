@@ -59,32 +59,22 @@ func (s *Starlark) Init() error {
 	}
 
 	// The source should define an add function.
-	s.addFunc, err = common.InitFunction(globals, "add", 1)
+	s.addFunc, s.addArgs, err = common.InitFunction(globals, "add", &common.Metric{})
 	if err != nil {
 		return err
 	}
-
-	// Prepare the arguments of the add method.
-	s.addArgs = make(starlark.Tuple, 1)
-	s.addArgs[0] = &common.Metric{}
 
 	// The source should define a push function.
-	s.pushFunc, err = common.InitFunction(globals, "push", 0)
+	s.pushFunc, s.pushArgs, err = common.InitFunction(globals, "push")
 	if err != nil {
 		return err
 	}
-
-	// Prepare the argument of the push method.
-	s.pushArgs = make(starlark.Tuple, 0)
 
 	// The source should define a reset function.
-	s.resetFunc, err = common.InitFunction(globals, "reset", 0)
+	s.resetFunc, s.resetArgs, err = common.InitFunction(globals, "reset")
 	if err != nil {
 		return err
 	}
-
-	// Prepare the argument of the reset method.
-	s.resetArgs = make(starlark.Tuple, 0)
 
 	return nil
 }

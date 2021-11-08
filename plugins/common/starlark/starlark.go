@@ -68,23 +68,33 @@ func (s *StarlarkCommon) Init() (starlark.StringDict, error) {
 	return globals, nil
 }
 
-func InitFunction(globals starlark.StringDict, fnName string, expectedParams int) (*starlark.Function, error) {
-	globalFn := globals[fnName]
+/*
+	// Reusing the same metric wrapper to skip an allocation.  This will cause
+	// any saved references to point to the new metric, but due to freezing the
+	// globals none should exist.
+	s.args = make(starlark.Tuple, 1)
+	s.args[0] = &common.Metric{}
+*/
+func InitFunction(globals starlark.StringDict, name string, params ...starlark.Value) (*starlark.Function, starlark.Tuple, error) {
+	globalFn, found := globals[name]
 
-	if globalFn == nil {
-		return nil, fmt.Errorf("%s is not defined", fnName)
+	if !found {
+		return nil, nil, fmt.Errorf("%s is not defined", name)
 	}
 
-	var ok bool
-	var fn *starlark.Function
-	if fn, ok = globalFn.(*starlark.Function); !ok {
-		return nil, fmt.Errorf("%s is not a function", fnName)
+	fn, ok := globalFn.(*starlark.Function)
+	if !ok {
+		return nil, nil, fmt.Errorf("%s is not a function", name)
 	}
 
-	if fn.NumParams() != expectedParams {
-		return nil, fmt.Errorf("%s function must take %d parameter(s)", fnName, expectedParams)
+	if fn.NumParams() != len(params) {
+		return nil, nil, fmt.Errorf("%s function must take %d parameter(s)", name, len(params))
 	}
-	return fn, nil
+	p := make(starlark.Tuple, len(params))
+	for i, param := range params {
+		p[i] = param
+	}
+	return fn, p, nil
 }
 
 // Add all the constants defined in the plugin as constants of the script

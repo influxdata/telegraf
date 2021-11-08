@@ -49,16 +49,10 @@ func (s *Starlark) Init() error {
 	}
 
 	// The source should define an apply function.
-	s.applyFunc, err = common.InitFunction(globals, "apply", 1)
+	s.applyFunc, s.args, err = common.InitFunction(globals, "apply", &common.Metric{})
 	if err != nil {
 		return err
 	}
-
-	// Reusing the same metric wrapper to skip an allocation.  This will cause
-	// any saved references to point to the new metric, but due to freezing the
-	// globals none should exist.
-	s.args = make(starlark.Tuple, 1)
-	s.args[0] = &common.Metric{}
 
 	// Preallocate a slice for return values.
 	s.results = make([]telegraf.Metric, 0, 10)
