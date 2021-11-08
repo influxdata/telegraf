@@ -49,6 +49,43 @@ func TestUpsdGather(t *testing.T) {
 				},
 				out: genOutput,
 			},
+		}
+
+		acc testutil.Accumulator
+	)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+
+			lAddr, err := listen(ctx, t, tt.out())
+			require.NoError(t, err)
+
+			nut.Server = lAddr
+
+			err = nut.Gather(&acc)
+			if tt.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				acc.AssertContainsTaggedFields(t, "upsd", tt.fields, tt.tags)
+			}
+			cancel()
+		})
+	}
+}
+
+func TestUpsdGatherFail(t *testing.T) {
+	nut := &Upsd{ConnectionTimeout: defaultConnectTimeout, OpTimeout: defaultOpTimeout}
+
+	var (
+		tests = []struct {
+			name   string
+			err    bool
+			tags   map[string]string
+			fields map[string]interface{}
+			out    func() []interaction
+		}{
 			{
 				name: "test with bad output",
 				err:  true,
