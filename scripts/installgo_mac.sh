@@ -3,10 +3,10 @@
 set -eux
 
 ARCH=$(uname -m)
-GO_VERSION="1.17.2"
+GO_VERSION="1.17.3"
 if [ "$ARCH" = 'arm64' ]; then
     GO_ARCH="darwin-arm64"
-    GO_VERSION_SHA="ce8771bd3edfb5b28104084b56bbb532eeb47fbb7769c3e664c6223712c30904" # from https://golang.org/dl
+    GO_VERSION_SHA="9058d167ffe44fffce5d00fe8c0a09dec761a9654debc166b2a9ffe070595b07" # from https://golang.org/dl
 elif [ "$ARCH" = 'x86_64' ]; then
     GO_ARCH="darwin-amd64"
     GO_VERSION_SHA="7914497a302a132a465d33f5ee044ce05568bacdb390ab805cb75a3435a23f94" # from https://golang.org/dl
