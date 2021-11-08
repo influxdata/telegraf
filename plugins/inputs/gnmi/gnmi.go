@@ -550,7 +550,7 @@ const sampleConfig = `
  # prefix = ""
  # target = ""
 
- ## define webauthtoken
+ ## Set a gRPC based token for outgoing connections.
  # webauthtoken = ""
 
 
