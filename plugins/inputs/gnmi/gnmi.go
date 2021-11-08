@@ -225,8 +225,7 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	}
 	if tlscfg != nil {
 		options = append(options, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
-	}
-	if tlscfg == nil {
+	} else {
 		options = append(options, grpc.WithInsecure())
 	}
 	client, err := grpc.DialContext(ctx, address, options...)
