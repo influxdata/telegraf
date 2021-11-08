@@ -13,6 +13,7 @@ import (
 
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
+	reuse "github.com/libp2p/go-reuseport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -161,9 +162,7 @@ func TestWriteTCP(t *testing.T) {
 type GelfObject map[string]interface{}
 
 func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Graylog) {
-	serverAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:12201")
-	require.NoError(t, err)
-	udpServer, err := net.ListenUDP("udp", serverAddr)
+	udpServer, err := reuse.ListenPacket("udp", "127.0.0.1:12201")
 	require.NoError(t, err)
 	defer udpServer.Close()
 	defer wg.Done()
@@ -171,7 +170,7 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Gr
 
 	recv := func() {
 		bufR := make([]byte, 1024)
-		n, _, err := udpServer.ReadFromUDP(bufR)
+		n, _, err := udpServer.ReadFrom(bufR)
 		require.NoError(t, err)
 
 		b := bytes.NewReader(bufR[0:n])
@@ -203,7 +202,7 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Gr
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.WaitGroup, tlsConfig *tls.Config) {
-	tcpServer, err := net.Listen("tcp", "127.0.0.1:12201")
+	tcpServer, err := reuse.Listen("tcp", "127.0.0.1:12201")
 	require.NoError(t, err)
 	defer tcpServer.Close()
 	defer wg.Done()
