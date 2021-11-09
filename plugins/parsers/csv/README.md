@@ -33,8 +33,21 @@ values.
   ## If this is not specified, type conversion will be done on the types above.
   csv_column_types = []
 
-  ## Indicates the number of rows to skip before looking for header information.
+  ## Indicates the number of rows to skip before looking for metadata and header information.
   csv_skip_rows = 0
+  
+  
+  ## Indicates the number of rows that parse for metadata before looking for header information.
+  ## Indicates how many rows to parse for metadata. By default, the parser assumes there are no 
+  ## metadata rows to parse. If set, the parser would use the regex provided in the csv_metadata_regex 
+  ## to look for metadata.
+  # csv_metadata_rows = 0
+  ## A list of regex patters with two subgroups named key and value. If csv_metadata_rows is set,
+  ## csv_metadata_regex must contain atleaset one regex patters. Metadata key and value must be
+  ## on the same row.
+  ## For example:
+  ## Useing "(?P<key>\w+)[=](?P<value>\w+)" to parse "key1=value1" would return key1 and value1
+  # csv_metadata_regex = ["[#]?\s*(?P<key>[^=]+)[=](?P<value>\w+)"]
 
   ## Indicates the number of columns to skip before looking for data to parse.
   ## These columns will be skipped in the header as well.
