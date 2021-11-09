@@ -163,8 +163,8 @@ func gatherVMData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 	}
 }
 
-func getCurrentVMStatus(px *Proxmox, rt ResourceType, id string) (VMStat, error) {
-	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + id + "/status/current"
+func getCurrentVMStatus(px *Proxmox, rt ResourceType, id json.Number) (VMStat, error) {
+	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + string(id) + "/status/current"
 
 	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
 	if err != nil {
@@ -196,8 +196,8 @@ func getVMStats(px *Proxmox, rt ResourceType) (VMStats, error) {
 	return vmStats, nil
 }
 
-func getVMConfig(px *Proxmox, vmID string, rt ResourceType) (VMConfig, error) {
-	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + vmID + "/config"
+func getVMConfig(px *Proxmox, vmID json.Number, rt ResourceType) (VMConfig, error) {
+	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + string(vmID) + "/config"
 	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
 	if err != nil {
 		return VMConfig{}, err
