@@ -138,10 +138,10 @@ func (ns *Nstat) loadGoodTable(table []byte) map[string]interface{} {
 		if bytes.Equal(fields[i+1], zeroByte) {
 			if !ns.DumpZeros {
 				continue
-			} else {
-				entries[string(fields[i])] = int64(0)
-				continue
 			}
+
+			entries[string(fields[i])] = int64(0)
+			continue
 		}
 		// the counter is not zero, so parse it.
 		value, err = strconv.ParseInt(string(fields[i+1]), 10, 64)
@@ -176,10 +176,10 @@ func (ns *Nstat) loadUglyTable(table []byte) map[string]interface{} {
 			if bytes.Equal(metrics[j], zeroByte) {
 				if !ns.DumpZeros {
 					continue
-				} else {
-					entries[string(append(prefix, headers[j]...))] = int64(0)
-					continue
 				}
+
+				entries[string(append(prefix, headers[j]...))] = int64(0)
+				continue
 			}
 			// the counter is not zero, so parse it.
 			value, err = strconv.ParseInt(string(metrics[j]), 10, 64)

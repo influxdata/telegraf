@@ -3,15 +3,12 @@ package openntpd
 import (
 	"bytes"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
-
-var TestTimeout = config.Duration(time.Second)
 
 func OpenntpdCTL(output string) func(string, config.Duration, bool) (*bytes.Buffer, error) {
 	return func(string, config.Duration, bool) (*bytes.Buffer, error) {
@@ -26,11 +23,11 @@ func TestParseSimpleOutput(t *testing.T) {
 	}
 	err := v.Gather(acc)
 
-	assert.NoError(t, err)
-	assert.True(t, acc.HasMeasurement("openntpd"))
-	assert.Equal(t, acc.NMetrics(), uint64(1))
+	require.NoError(t, err)
+	require.True(t, acc.HasMeasurement("openntpd"))
+	require.Equal(t, acc.NMetrics(), uint64(1))
 
-	assert.Equal(t, acc.NFields(), 7)
+	require.Equal(t, acc.NFields(), 7)
 
 	firstpeerfields := map[string]interface{}{
 		"wt":     int64(1),
@@ -57,11 +54,11 @@ func TestParseSimpleOutputwithStatePrefix(t *testing.T) {
 	}
 	err := v.Gather(acc)
 
-	assert.NoError(t, err)
-	assert.True(t, acc.HasMeasurement("openntpd"))
-	assert.Equal(t, acc.NMetrics(), uint64(1))
+	require.NoError(t, err)
+	require.True(t, acc.HasMeasurement("openntpd"))
+	require.Equal(t, acc.NMetrics(), uint64(1))
 
-	assert.Equal(t, acc.NFields(), 7)
+	require.Equal(t, acc.NFields(), 7)
 
 	firstpeerfields := map[string]interface{}{
 		"wt":     int64(1),
@@ -89,11 +86,11 @@ func TestParseSimpleOutputInvalidPeer(t *testing.T) {
 	}
 	err := v.Gather(acc)
 
-	assert.NoError(t, err)
-	assert.True(t, acc.HasMeasurement("openntpd"))
-	assert.Equal(t, acc.NMetrics(), uint64(1))
+	require.NoError(t, err)
+	require.True(t, acc.HasMeasurement("openntpd"))
+	require.Equal(t, acc.NMetrics(), uint64(1))
 
-	assert.Equal(t, acc.NFields(), 4)
+	require.Equal(t, acc.NFields(), 4)
 
 	firstpeerfields := map[string]interface{}{
 		"wt":   int64(1),
@@ -117,11 +114,11 @@ func TestParseSimpleOutputServersDNSError(t *testing.T) {
 	}
 	err := v.Gather(acc)
 
-	assert.NoError(t, err)
-	assert.True(t, acc.HasMeasurement("openntpd"))
-	assert.Equal(t, acc.NMetrics(), uint64(1))
+	require.NoError(t, err)
+	require.True(t, acc.HasMeasurement("openntpd"))
+	require.Equal(t, acc.NMetrics(), uint64(1))
 
-	assert.Equal(t, acc.NFields(), 4)
+	require.Equal(t, acc.NFields(), 4)
 
 	firstpeerfields := map[string]interface{}{
 		"next": int64(2),
@@ -159,11 +156,11 @@ func TestParseSimpleOutputServerDNSError(t *testing.T) {
 	}
 	err := v.Gather(acc)
 
-	assert.NoError(t, err)
-	assert.True(t, acc.HasMeasurement("openntpd"))
-	assert.Equal(t, acc.NMetrics(), uint64(1))
+	require.NoError(t, err)
+	require.True(t, acc.HasMeasurement("openntpd"))
+	require.Equal(t, acc.NMetrics(), uint64(1))
 
-	assert.Equal(t, acc.NFields(), 4)
+	require.Equal(t, acc.NFields(), 4)
 
 	firstpeerfields := map[string]interface{}{
 		"next": int64(12),
@@ -187,11 +184,11 @@ func TestParseFullOutput(t *testing.T) {
 	}
 	err := v.Gather(acc)
 
-	assert.NoError(t, err)
-	assert.True(t, acc.HasMeasurement("openntpd"))
-	assert.Equal(t, acc.NMetrics(), uint64(20))
+	require.NoError(t, err)
+	require.True(t, acc.HasMeasurement("openntpd"))
+	require.Equal(t, acc.NMetrics(), uint64(20))
 
-	assert.Equal(t, acc.NFields(), 113)
+	require.Equal(t, acc.NFields(), 113)
 
 	firstpeerfields := map[string]interface{}{
 		"wt":     int64(1),

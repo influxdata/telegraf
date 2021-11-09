@@ -779,3 +779,51 @@ func Test_parseV2(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizeIPMICmd(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		expected []string
+	}{
+		{
+			name: "default args",
+			args: []string{
+				"-H", "localhost",
+				"-U", "username",
+				"-P", "password",
+				"-I", "lan",
+			},
+			expected: []string{
+				"-H", "localhost",
+				"-U", "username",
+				"-P", "REDACTED",
+				"-I", "lan",
+			},
+		},
+		{
+			name: "no password",
+			args: []string{
+				"-H", "localhost",
+				"-U", "username",
+				"-I", "lan",
+			},
+			expected: []string{
+				"-H", "localhost",
+				"-U", "username",
+				"-I", "lan",
+			},
+		},
+		{
+			name:     "empty args",
+			args:     []string{},
+			expected: []string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var sanitizedArgs []string = sanitizeIPMICmd(tt.args)
+			require.Equal(t, tt.expected, sanitizedArgs)
+		})
+	}
+}
