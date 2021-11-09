@@ -72,34 +72,6 @@ func (di *deprecationInfo) determineEscalation(major, minor int) {
 	}
 }
 
-func (di *deprecationInfo) printPluginDeprecationNotice(prefix string) {
-	if di.info.Notice != "" {
-		log.Printf(
-			"%s: Plugin %q deprecated since version %s and will be removed in %s: %s",
-			prefix, di.Name, di.info.Since, di.info.RemovalIn, di.info.Notice,
-		)
-	} else {
-		log.Printf(
-			"%s: Plugin %q deprecated since version %s and will be removed in %s",
-			prefix, di.Name, di.info.Since, di.info.RemovalIn,
-		)
-	}
-}
-
-func (di *deprecationInfo) printOptionDeprecationNotice(prefix, plugin string) {
-	if di.info.Notice != "" {
-		log.Printf(
-			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
-			prefix, di.Name, plugin, di.info.Since, di.info.RemovalIn, di.info.Notice,
-		)
-	} else {
-		log.Printf(
-			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s",
-			prefix, di.Name, plugin, di.info.Since, di.info.RemovalIn,
-		)
-	}
-}
-
 // pluginDeprecationInfo holds all information about a deprecated plugin or it's options
 type pluginDeprecationInfo struct {
 	deprecationInfo
@@ -191,12 +163,12 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 	switch info.Level {
 	case Warn:
 		prefix := "W! " + color.YellowString("DeprecationWarning")
-		info.printPluginDeprecationNotice(prefix)
+		printPluginDeprecationNotice(prefix, info.Name, info.info)
 		// We will not check for any deprecated options as the whole plugin is deprecated anyway.
 		return nil
 	case Error:
 		prefix := "E! " + color.RedString("DeprecationError")
-		info.printPluginDeprecationNotice(prefix)
+		printPluginDeprecationNotice(prefix, info.Name, info.info)
 		// We are past the grace period
 		return fmt.Errorf("plugin deprecated")
 	}
@@ -207,10 +179,10 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 		switch option.Level {
 		case Warn:
 			prefix := "W! " + color.YellowString("DeprecationWarning")
-			option.printOptionDeprecationNotice(prefix, info.Name)
+			printOptionDeprecationNotice(prefix, info.Name, option.Name, option.info)
 		case Error:
 			prefix := "E! " + color.RedString("DeprecationError")
-			option.printOptionDeprecationNotice(prefix, info.Name)
+			printOptionDeprecationNotice(prefix, info.Name, option.Name, option.info)
 			deprecatedOptions = append(deprecatedOptions, option.Name)
 		}
 	}
@@ -307,6 +279,28 @@ func (c *Config) PrintDeprecationList(plugins []pluginDeprecationInfo) {
 			)
 		}
 	}
+}
+
+func printHistoricPluginDeprecationNotice(category, name string, info telegraf.DeprecationInfo) {
+	prefix := "E! " + color.RedString("DeprecationError")
+	log.Printf(
+		"%s: Plugin %q deprecated since version %s and removed: %s",
+		prefix, category+"."+name, info.Since, info.Notice,
+	)
+}
+
+func printPluginDeprecationNotice(prefix, name string, info telegraf.DeprecationInfo) {
+	log.Printf(
+		"%s: Plugin %q deprecated since version %s and will be removed in %s: %s",
+		prefix, name, info.Since, info.RemovalIn, info.Notice,
+	)
+}
+
+func printOptionDeprecationNotice(prefix, plugin, option string, info telegraf.DeprecationInfo) {
+	log.Printf(
+		"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
+		prefix, option, plugin, info.Since, info.RemovalIn, info.Notice,
+	)
 }
 
 // walkPluginStruct iterates over the fields of a structure in depth-first search (to cover nested structures)

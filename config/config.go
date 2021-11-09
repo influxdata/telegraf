@@ -1009,6 +1009,11 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 func (c *Config) addAggregator(name string, table *ast.Table) error {
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := aggregators.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("aggregators", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
 		return fmt.Errorf("Undefined but requested aggregator: %s", name)
 	}
 	aggregator := creator()
@@ -1033,6 +1038,11 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 func (c *Config) addProcessor(name string, table *ast.Table) error {
 	creator, ok := processors.Processors[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := processors.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("processors", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
 
@@ -1088,6 +1098,11 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	}
 	creator, ok := outputs.Outputs[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := outputs.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("outputs", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
 		return fmt.Errorf("Undefined but requested output: %s", name)
 	}
 	output := creator()
@@ -1125,6 +1140,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
 		return nil
 	}
+
 	// Legacy support renaming io input to diskio
 	if name == "io" {
 		name = "diskio"
@@ -1132,6 +1148,12 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	creator, ok := inputs.Inputs[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := inputs.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("inputs", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
+
 		return fmt.Errorf("Undefined but requested input: %s", name)
 	}
 	input := creator()
