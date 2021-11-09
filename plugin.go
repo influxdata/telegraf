@@ -27,7 +27,7 @@ type PluginDescriber interface {
 type PluginDeprecator interface {
 	// DeprecationNotice returns the version since when the plugin is deprecated and
 	// (optionally) provides a deprecation notice allowing to suggest replacements etc.
-	DeprecationNotice() (since string, notice string)
+	DeprecationNotice() (since string, removalIn, notice string)
 }
 
 // Logger defines an plugin-related interface for logging.
