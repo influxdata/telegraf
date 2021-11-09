@@ -164,6 +164,22 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(srv *Server) {
 			defer wg.Done()
+			if !srv.reachable {
+				// is not reachable try a reconnect
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+				defer cancel()
+				err := srv.client.Disconnect(ctx)
+				if err != nil {
+					m.Log.Errorf("unable to reconnect to MongoDB: %q", err)
+					return
+				}
+				err = srv.client.Connect(ctx)
+				if err != nil {
+					m.Log.Errorf("unable to reconnect to MongoDB: %q", err)
+					return
+				}
+				srv.reachable = true
+			}
 			err := srv.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.GatherTopStat, m.ColStatsDbs)
 			if err != nil {
 				m.Log.Errorf("failed to gather data: %q", err)

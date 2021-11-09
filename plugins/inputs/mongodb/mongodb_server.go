@@ -19,6 +19,7 @@ type Server struct {
 	client     *mongo.Client
 	hostname   string
 	lastResult *MongoStatus
+	reachable  bool
 
 	Log telegraf.Logger
 }
