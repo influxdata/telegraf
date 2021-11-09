@@ -37,19 +37,17 @@ def apply(metric):
 type Starlark struct {
 	common.StarlarkCommon
 
-	applyFunc *starlark.Function
-	args      starlark.Tuple
-	results   []telegraf.Metric
+	results []telegraf.Metric
 }
 
 func (s *Starlark) Init() error {
-	globals, err := s.StarlarkCommon.Init()
+	err := s.StarlarkCommon.Init()
 	if err != nil {
 		return err
 	}
 
 	// The source should define an apply function.
-	s.applyFunc, s.args, err = common.InitFunction(globals, "apply", &common.Metric{})
+	err = s.AddFunction("apply", &common.Metric{})
 	if err != nil {
 		return err
 	}
@@ -73,9 +71,13 @@ func (s *Starlark) Start(_ telegraf.Accumulator) error {
 }
 
 func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
-	s.args[0].(*common.Metric).Wrap(metric)
+	parameters, found := s.GetParameters("apply")
+	if !found {
+		return fmt.Errorf("The parameters of the apply function could not be found")
+	}
+	parameters[0].(*common.Metric).Wrap(metric)
 
-	rv, err := s.Call(s.applyFunc, s.args)
+	rv, err := s.Call("apply")
 	if err != nil {
 		metric.Reject()
 		return err

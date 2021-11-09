@@ -21,15 +21,18 @@ type StarlarkCommon struct {
 	Log              telegraf.Logger `toml:"-"`
 	StarlarkLoadFunc func(module string, logger telegraf.Logger) (starlark.StringDict, error)
 
-	thread *starlark.Thread
+	thread     *starlark.Thread
+	globals    starlark.StringDict
+	functions  map[string]*starlark.Function
+	parameters map[string]starlark.Tuple
 }
 
-func (s *StarlarkCommon) Init() (starlark.StringDict, error) {
+func (s *StarlarkCommon) Init() error {
 	if s.Source == "" && s.Script == "" {
-		return nil, errors.New("one of source or script must be set")
+		return errors.New("one of source or script must be set")
 	}
 	if s.Source != "" && s.Script != "" {
-		return nil, errors.New("both source or script cannot be set")
+		return errors.New("both source or script cannot be set")
 	}
 
 	s.thread = &starlark.Thread{
@@ -48,13 +51,13 @@ func (s *StarlarkCommon) Init() (starlark.StringDict, error) {
 	program, err := s.sourceProgram(builtins, "")
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Execute source
 	globals, err := program.Init(s.thread, builtins)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// Make available a shared state to the apply function
 	globals["state"] = starlark.NewDict(0)
@@ -65,36 +68,39 @@ func (s *StarlarkCommon) Init() (starlark.StringDict, error) {
 	// this, so maybe we should relax this in the future.
 	globals.Freeze()
 
-	return globals, nil
+	s.globals = globals
+	s.functions = make(map[string]*starlark.Function)
+	s.parameters = make(map[string]starlark.Tuple)
+	return nil
 }
 
-/*
-	// Reusing the same metric wrapper to skip an allocation.  This will cause
-	// any saved references to point to the new metric, but due to freezing the
-	// globals none should exist.
-	s.args = make(starlark.Tuple, 1)
-	s.args[0] = &common.Metric{}
-*/
-func InitFunction(globals starlark.StringDict, name string, params ...starlark.Value) (*starlark.Function, starlark.Tuple, error) {
-	globalFn, found := globals[name]
+func (s *StarlarkCommon) GetParameters(name string) (starlark.Tuple, bool) {
+	parameters, found := s.parameters[name]
+	return parameters, found
+}
+
+func (s *StarlarkCommon) AddFunction(name string, params ...starlark.Value) error {
+	globalFn, found := s.globals[name]
 
 	if !found {
-		return nil, nil, fmt.Errorf("%s is not defined", name)
+		return fmt.Errorf("%s is not defined", name)
 	}
 
-	fn, ok := globalFn.(*starlark.Function)
-	if !ok {
-		return nil, nil, fmt.Errorf("%s is not a function", name)
+	fn, found := globalFn.(*starlark.Function)
+	if !found {
+		return fmt.Errorf("%s is not a function", name)
 	}
 
 	if fn.NumParams() != len(params) {
-		return nil, nil, fmt.Errorf("%s function must take %d parameter(s)", name, len(params))
+		return fmt.Errorf("%s function must take %d parameter(s)", name, len(params))
 	}
 	p := make(starlark.Tuple, len(params))
 	for i, param := range params {
 		p[i] = param
 	}
-	return fn, p, nil
+	s.functions[name] = fn
+	s.parameters[name] = params
+	return nil
 }
 
 // Add all the constants defined in the plugin as constants of the script
@@ -117,14 +123,24 @@ func (s *StarlarkCommon) sourceProgram(builtins starlark.StringDict, filename st
 	return program, err
 }
 
-// Call calls the function fn with the specified positional and keyword arguments.
-func (s *StarlarkCommon) Call(fn starlark.Value, args starlark.Tuple) (starlark.Value, error) {
+// Call calls the function corresponding to the given name.
+func (s *StarlarkCommon) Call(name string) (starlark.Value, error) {
+	fn, ok := s.functions[name]
+	if !ok {
+		return nil, fmt.Errorf("function %q does not exist", name)
+	}
+	args, ok := s.parameters[name]
+	if !ok {
+		return nil, fmt.Errorf("params for function %q do not exist", name)
+	}
 	rv, err := starlark.Call(s.thread, fn, args, nil)
 	if err != nil {
 		if err, ok := err.(*starlark.EvalError); ok {
 			for _, line := range strings.Split(err.Backtrace(), "\n") {
 				s.Log.Error(line)
 			}
+		} else {
+			s.Log.Error(err.Msg)
 		}
 	}
 	return rv, err

@@ -42,36 +42,29 @@ def reset():
 
 type Starlark struct {
 	common.StarlarkCommon
-
-	addArgs   starlark.Tuple
-	addFunc   *starlark.Function
-	pushArgs  starlark.Tuple
-	pushFunc  *starlark.Function
-	resetArgs starlark.Tuple
-	resetFunc *starlark.Function
 }
 
 func (s *Starlark) Init() error {
 	// Execute source
-	globals, err := s.StarlarkCommon.Init()
+	err := s.StarlarkCommon.Init()
 	if err != nil {
 		return err
 	}
 
 	// The source should define an add function.
-	s.addFunc, s.addArgs, err = common.InitFunction(globals, "add", &common.Metric{})
+	err = s.AddFunction("add", &common.Metric{})
 	if err != nil {
 		return err
 	}
 
 	// The source should define a push function.
-	s.pushFunc, s.pushArgs, err = common.InitFunction(globals, "push")
+	err = s.AddFunction("push")
 	if err != nil {
 		return err
 	}
 
 	// The source should define a reset function.
-	s.resetFunc, s.resetArgs, err = common.InitFunction(globals, "reset")
+	err = s.AddFunction("reset")
 	if err != nil {
 		return err
 	}
@@ -88,13 +81,18 @@ func (s *Starlark) Description() string {
 }
 
 func (s *Starlark) Add(metric telegraf.Metric) {
-	s.addArgs[0].(*common.Metric).Wrap(metric)
+	parameters, found := s.GetParameters("add")
+	if !found {
+		s.Log.Errorf("The parameters of the add function could not be found")
+		return
+	}
+	parameters[0].(*common.Metric).Wrap(metric)
 
-	s.Call(s.addFunc, s.addArgs) //nolint - error already checked within the Call function
+	s.Call("add") //nolint - error already checked within the Call function
 }
 
 func (s *Starlark) Push(acc telegraf.Accumulator) {
-	rv, err := s.Call(s.pushFunc, s.pushArgs)
+	rv, err := s.Call("push")
 	if err != nil {
 		return
 	}
@@ -123,7 +121,7 @@ func (s *Starlark) Push(acc telegraf.Accumulator) {
 }
 
 func (s *Starlark) Reset() {
-	s.Call(s.resetFunc, s.resetArgs) //nolint - error already checked within the Call function
+	s.Call("reset") //nolint - error already checked within the Call function
 }
 
 // init initializes starlark aggregator plugin
