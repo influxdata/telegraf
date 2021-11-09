@@ -32,6 +32,8 @@ type Config struct {
 	Timezone          string   `toml:"csv_timezone"`
 	TrimSpace         bool     `toml:"csv_trim_space"`
 	SkipValues        []string `toml:"csv_skip_values"`
+	MetadataRows      int      `toml:"csv_metadata_rows"`
+	MetadataRegex     []string `toml:"csv_metadata_regex"`
 
 	gotColumnNames bool
 
@@ -65,6 +67,11 @@ func NewParser(c *Config) (*Parser, error) {
 
 	if len(c.ColumnNames) > 0 && len(c.ColumnTypes) > 0 && len(c.ColumnNames) != len(c.ColumnTypes) {
 		return nil, fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
+	}
+
+	if c.MetadataRows > 0 && len(c.MetadataRegex) == 0 {
+		return nil, fmt.Errorf("when csv_metadata_rows is defined, " +
+			"csv_metadata_regex must have atleast one valid regex string")
 	}
 
 	c.gotColumnNames = len(c.ColumnNames) > 0
