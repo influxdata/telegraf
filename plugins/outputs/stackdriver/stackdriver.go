@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2" // Imports the Stackdriver Monitoring client package.
-	googlepb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -18,6 +17,7 @@ import (
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Stackdriver is the Google Stackdriver config info.
@@ -247,16 +247,16 @@ func getStackdriverTimeInterval(
 	switch m {
 	case metricpb.MetricDescriptor_GAUGE:
 		return &monitoringpb.TimeInterval{
-			EndTime: &googlepb.Timestamp{
+			EndTime: &timestamppb.Timestamp{
 				Seconds: end,
 			},
 		}, nil
 	case metricpb.MetricDescriptor_CUMULATIVE:
 		return &monitoringpb.TimeInterval{
-			StartTime: &googlepb.Timestamp{
+			StartTime: &timestamppb.Timestamp{
 				Seconds: start,
 			},
-			EndTime: &googlepb.Timestamp{
+			EndTime: &timestamppb.Timestamp{
 				Seconds: end,
 			},
 		}, nil
