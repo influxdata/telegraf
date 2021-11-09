@@ -352,9 +352,7 @@ func getActiveVCLJson(out io.Reader) (string, error) {
 		output = string(b)
 	}
 	// workaround for non valid json in varnish 6.6.1 https://github.com/varnishcache/varnish-cache/issues/3687
-	if strings.HasPrefix(output, "200") {
-		output = strings.TrimPrefix(output, "200")
-	}
+	output = strings.TrimPrefix(output, "200")
 
 	var jsonOut []interface{}
 	err := json.Unmarshal([]byte(output), &jsonOut)
