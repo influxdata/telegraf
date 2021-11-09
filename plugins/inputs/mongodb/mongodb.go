@@ -135,20 +135,24 @@ func (m *MongoDB) Init() error {
 			opts.ReadPreference = readpref.Nearest()
 		}
 
+		isReachable := true
 		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
-			return fmt.Errorf("unable to connect to MongoDB: %q", err)
+			m.Log.Errorf("unable to create MongoDB client: %q", err)
+			isReachable = false
 		}
 
 		err = client.Ping(ctx, opts.ReadPreference)
 		if err != nil {
-			return fmt.Errorf("unable to connect to MongoDB: %s", err)
+			m.Log.Errorf("unable to connect to MongoDB: %s", err)
+			isReachable = false
 		}
 
 		server := &Server{
-			client:   client,
-			hostname: u.Host,
-			Log:      m.Log,
+			client:    client,
+			hostname:  u.Host,
+			reachable: isReachable,
+			Log:       m.Log,
 		}
 		m.clients = append(m.clients, server)
 	}
@@ -166,14 +170,16 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			if !srv.reachable {
 				// is not reachable try a reconnect
-				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-				defer cancel()
-				err := srv.client.Disconnect(ctx)
+				disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), 1*time.Second)
+				defer disconnectCancel()
+				err := srv.client.Disconnect(disconnectCtx)
 				if err != nil {
 					m.Log.Errorf("unable to reconnect to MongoDB: %q", err)
 					return
 				}
-				err = srv.client.Connect(ctx)
+				connectCtx, connectCancel := context.WithTimeout(context.Background(), 1*time.Second)
+				defer connectCancel()
+				err = srv.client.Connect(connectCtx)
 				if err != nil {
 					m.Log.Errorf("unable to reconnect to MongoDB: %q", err)
 					return
