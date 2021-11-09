@@ -45,23 +45,23 @@ type deprecationInfo struct {
 	Name string
 	// Level of deprecation
 	Level Escalation
-	// Since which version the plugin or plugin option is deprecated
-	Since string
-	// RemovalIn is an optional field denoting in which version the plugin or plugin option is actually removed
-	RemovalIn string
-	// Notice to the user about alternatives or further information
-	Notice string
+	info  telegraf.DeprecationInfo
 }
 
 func (di *deprecationInfo) determineEscalation(major, minor int) {
 	var removalMajor, removalMinor int
 
-	sinceMajor, sinceMinor := ParseVersion(di.Since)
-	if di.RemovalIn != "" {
-		removalMajor, removalMinor = ParseVersion(di.RemovalIn)
+	di.Level = None
+	if di.info.Since == "" {
+		return
+	}
+
+	sinceMajor, sinceMinor := ParseVersion(di.info.Since)
+	if di.info.RemovalIn != "" {
+		removalMajor, removalMinor = ParseVersion(di.info.RemovalIn)
 	} else {
 		removalMajor, removalMinor = sinceMajor+1, 0
-		di.RemovalIn = fmt.Sprintf("%d.%d", removalMajor, removalMinor)
+		di.info.RemovalIn = fmt.Sprintf("%d.%d", removalMajor, removalMinor)
 	}
 
 	di.Level = None
@@ -73,29 +73,29 @@ func (di *deprecationInfo) determineEscalation(major, minor int) {
 }
 
 func (di *deprecationInfo) printPluginDeprecationNotice(prefix string) {
-	if di.Notice != "" {
+	if di.info.Notice != "" {
 		log.Printf(
 			"%s: Plugin %q deprecated since version %s and will be removed in %s: %s",
-			prefix, di.Name, di.Since, di.RemovalIn, di.Notice,
+			prefix, di.Name, di.info.Since, di.info.RemovalIn, di.info.Notice,
 		)
 	} else {
 		log.Printf(
 			"%s: Plugin %q deprecated since version %s and will be removed in %s",
-			prefix, di.Name, di.Since, di.RemovalIn,
+			prefix, di.Name, di.info.Since, di.info.RemovalIn,
 		)
 	}
 }
 
 func (di *deprecationInfo) printOptionDeprecationNotice(prefix, plugin string) {
-	if di.Notice != "" {
+	if di.info.Notice != "" {
 		log.Printf(
 			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
-			prefix, di.Name, plugin, di.Since, di.RemovalIn, di.Notice,
+			prefix, di.Name, plugin, di.info.Since, di.info.RemovalIn, di.info.Notice,
 		)
 	} else {
 		log.Printf(
 			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s",
-			prefix, di.Name, plugin, di.Since, di.RemovalIn,
+			prefix, di.Name, plugin, di.info.Since, di.info.RemovalIn,
 		)
 	}
 }
@@ -125,16 +125,27 @@ func (c *Config) incrementPluginOptionDeprecations(category string) {
 }
 
 func (c *Config) collectDeprecationInfo(category, name string, plugin interface{}, all bool) pluginDeprecationInfo {
-	info := pluginDeprecationInfo{}
-	info.Name = category + "." + name
+	info := pluginDeprecationInfo{
+		deprecationInfo: deprecationInfo{
+			Name:  category + "." + name,
+			Level: None,
+		},
+	}
 
 	// First check if the whole plugin is deprecated
-	if deprecatedPlugin, ok := plugin.(telegraf.PluginDeprecator); ok {
-		info.Since, info.RemovalIn, info.Notice = deprecatedPlugin.DeprecationNotice()
-		info.determineEscalation(c.VersionMajor, c.VersionMinor)
-		if info.Level != None {
-			c.incrementPluginDeprecations(category)
+	switch category {
+	case "inputs":
+		if pi, deprecated := inputs.Deprecations[name]; deprecated {
+			info.deprecationInfo.info = pi
 		}
+	case "outputs":
+		if pi, deprecated := outputs.Deprecations[name]; deprecated {
+			info.deprecationInfo.info = pi
+		}
+	}
+	info.determineEscalation(c.VersionMajor, c.VersionMinor)
+	if info.Level != None {
+		c.incrementPluginDeprecations(category)
 	}
 
 	// Check for deprecated options
@@ -148,22 +159,20 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		if len(tags) < 1 || tags[0] == "" {
 			return
 		}
-		optionInfo := deprecationInfo{
-			Name:  field.Name,
-			Since: tags[0],
+		optionInfo := deprecationInfo{Name: field.Name}
+		optionInfo.info.Since = tags[0]
+
+		if len(tags) > 1 {
+			optionInfo.info.Notice = tags[len(tags)-1]
 		}
+		if len(tags) > 2 {
+			optionInfo.info.RemovalIn = tags[1]
+		}
+		optionInfo.determineEscalation(c.VersionMajor, c.VersionMinor)
 
 		if optionInfo.Level != None {
 			c.incrementPluginOptionDeprecations(category)
 		}
-
-		if len(tags) > 1 {
-			optionInfo.Notice = tags[len(tags)-1]
-		}
-		if len(tags) > 2 {
-			optionInfo.RemovalIn = tags[1]
-		}
-		optionInfo.determineEscalation(c.VersionMajor, c.VersionMinor)
 
 		// Get the toml field name
 		option := field.Tag.Get("toml")
@@ -275,21 +284,27 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 	return infos
 }
 
-func (c *Config) PrintDeprecationList(infos []pluginDeprecationInfo) {
-	sort.Slice(infos, func(i, j int) bool { return infos[i].Name < infos[j].Name })
+func (c *Config) PrintDeprecationList(plugins []pluginDeprecationInfo) {
+	sort.Slice(plugins, func(i, j int) bool { return plugins[i].Name < plugins[j].Name })
 
-	for _, info := range infos {
-		switch info.Level {
+	for _, plugin := range plugins {
+		switch plugin.Level {
 		case Warn, Error:
-			_, _ = fmt.Printf("  %-40s %-5s since %5s %s\n", info.Name, info.Level, info.Since, info.Notice)
+			_, _ = fmt.Printf(
+				"  %-40s %-5s since %-5s removal in %-5s %s\n",
+				plugin.Name, plugin.Level, plugin.info.Since, plugin.info.RemovalIn, plugin.info.Notice,
+			)
 		}
 
-		if len(info.Options) < 1 {
+		if len(plugin.Options) < 1 {
 			continue
 		}
-		sort.Slice(info.Options, func(i, j int) bool { return info.Options[i].Name < info.Options[j].Name })
-		for _, option := range info.Options {
-			_, _ = fmt.Printf("  %-40s %-5s since %5s %s\n", info.Name+"/"+option.Name, option.Level, option.Since, option.Notice)
+		sort.Slice(plugin.Options, func(i, j int) bool { return plugin.Options[i].Name < plugin.Options[j].Name })
+		for _, option := range plugin.Options {
+			_, _ = fmt.Printf(
+				"  %-40s %-5s since %-5s removal in %-5s %s\n",
+				plugin.Name+"/"+option.Name, option.Level, option.info.Since, option.info.RemovalIn, option.info.Notice,
+			)
 		}
 	}
 }
