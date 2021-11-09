@@ -154,20 +154,24 @@ type Config struct {
 	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
 
 	//csv configuration
-	CSVColumnNames       []string `toml:"csv_column_names"`
-	CSVColumnTypes       []string `toml:"csv_column_types"`
-	CSVComment           string   `toml:"csv_comment"`
-	CSVDelimiter         string   `toml:"csv_delimiter"`
-	CSVHeaderRowCount    int      `toml:"csv_header_row_count"`
-	CSVMeasurementColumn string   `toml:"csv_measurement_column"`
-	CSVSkipColumns       int      `toml:"csv_skip_columns"`
-	CSVSkipRows          int      `toml:"csv_skip_rows"`
-	CSVTagColumns        []string `toml:"csv_tag_columns"`
-	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
-	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
-	CSVTimezone          string   `toml:"csv_timezone"`
-	CSVTrimSpace         bool     `toml:"csv_trim_space"`
-	CSVSkipValues        []string `toml:"csv_skip_values"`
+	CSVColumnNames        []string `toml:"csv_column_names"`
+	CSVColumnTypes        []string `toml:"csv_column_types"`
+	CSVComment            string   `toml:"csv_comment"`
+	CSVDelimiter          string   `toml:"csv_delimiter"`
+	CSVHeaderRowCount     int      `toml:"csv_header_row_count"`
+	CSVMeasurementColumn  string   `toml:"csv_measurement_column"`
+	CSVSkipColumns        int      `toml:"csv_skip_columns"`
+	CSVSkipRows           int      `toml:"csv_skip_rows"`
+	CSVTagColumns         []string `toml:"csv_tag_columns"`
+	CSVTimestampColumn    string   `toml:"csv_timestamp_column"`
+	CSVTimestampFormat    string   `toml:"csv_timestamp_format"`
+	CSVTimezone           string   `toml:"csv_timezone"`
+	CSVTrimSpace          bool     `toml:"csv_trim_space"`
+	CSVSkipValues         []string `toml:"csv_skip_values"`
+	CSVSkipErrors         bool     `toml:"csv_skip_errors"`
+	CSVMetadataRows       int      `toml:"csv_metadata_rows"`
+	CSVMetadataSeparators []string `toml:"csv_metadata_separators"`
+	CSVMetadataTrimSet    string   `toml:"csv_metadata_trim_set"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
