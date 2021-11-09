@@ -297,10 +297,6 @@ func (t *TCPListener) remember(id string, conn *net.TCPConn) {
 	t.conns[id] = conn
 }
 
-func (*TCPListener) DeprecationNotice() (since, notice string) {
-	return "1.3", "use 'inputs.socket_listener' instead"
-}
-
 func init() {
 	inputs.Add("tcp_listener", func() telegraf.Input {
 		return &TCPListener{

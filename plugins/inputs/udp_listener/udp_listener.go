@@ -221,10 +221,6 @@ func (u *UDPListener) udpParser() {
 	}
 }
 
-func (*UDPListener) DeprecationNotice() (since, notice string) {
-	return "1.3", "use 'inputs.socket_listener' instead"
-}
-
 func init() {
 	inputs.Add("udp_listener", func() telegraf.Input {
 		return &UDPListener{

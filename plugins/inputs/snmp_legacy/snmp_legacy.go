@@ -815,10 +815,6 @@ func (h *Host) HandleResponse(
 	return lastOid, nil
 }
 
-func (*Snmp) DeprecationNotice() (since, notice string) {
-	return "1.20", "use 'inputs.snmp' instead"
-}
-
 func init() {
 	inputs.Add("snmp_legacy", func() telegraf.Input {
 		return &Snmp{}

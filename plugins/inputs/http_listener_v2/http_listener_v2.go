@@ -385,10 +385,6 @@ func (h *HTTPListenerV2) authenticateIfSet(handler http.HandlerFunc, res http.Re
 	}
 }
 
-func (*HTTPListenerV2) DeprecationNotice() (since, notice string) {
-	return "1.9", "has been renamed to 'influxdb_listener', use 'inputs.influxdb_listener' or 'inputs.influxdb_listener_v2' instead"
-}
-
 func init() {
 	inputs.Add("http_listener_v2", func() telegraf.Input {
 		return &HTTPListenerV2{
