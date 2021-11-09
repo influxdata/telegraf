@@ -113,12 +113,10 @@ require (
 	github.com/goburrow/serial v0.1.0 // indirect
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid v3.3.0+incompatible
-	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v4 v4.1.0
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
 	github.com/google/flatbuffers v2.0.0+incompatible // indirect
 	github.com/google/go-cmp v0.5.6
@@ -339,6 +337,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
 	github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f // indirect
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.2 // indirect
@@ -366,3 +366,9 @@ replace github.com/mdlayher/apcupsd => github.com/influxdata/apcupsd v0.0.0-2021
 //https://github.com/WireGuard/wgctrl-go/blob/e35592f146e40ce8057113d14aafcc3da231fbac/go.mod#L12 ) was not working when using GOPROXY=direct.
 //Replacing with the pseudo-version works around this.
 replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v0.0.0-20200121152719-05b03c675090
+
+// replaced due to open PR updating protobuf https://github.com/cisco-ie/nx-telemetry-proto/pull/1
+replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemetry-proto v0.0.0-20210629125746-3c19a51b1abc
+
+// replaced due to open PR updating protobuf https://github.com/riemann/riemann-go-client/pull/27
+replace github.com/riemann/riemann-go-client => github.com/dstrand1/riemann-go-client v0.5.1-0.20211028194734-b5eb11fb5754
