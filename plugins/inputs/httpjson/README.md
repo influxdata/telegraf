@@ -1,8 +1,8 @@
 # HTTP JSON Input Plugin
 
-The httpjson plugin collects data from HTTP URLs which respond with JSON.  It flattens the JSON and finds all numeric values, treating them as floats.
+***DEPRECATED in Telegraf v1.6***. Use [HTTP input plugin](../http).
 
-Deprecated (1.6): use the [http](../http) input.
+The httpjson plugin collects data from HTTP URLs which respond with JSON.  It flattens the JSON and finds all numeric values, treating them as floats.
 
 ### Configuration:
 
