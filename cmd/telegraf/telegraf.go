@@ -28,7 +28,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+
+	"github.com/lthibault/jitterbug"
 	"gopkg.in/tomb.v1"
+
+	ctls "github.com/influxdata/telegraf/plugins/common/tls"
 )
 
 type sliceFlags []string
@@ -56,6 +60,18 @@ var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for servi
 var fConfigs sliceFlags
 var fConfigDirs sliceFlags
 var fWatchConfig = flag.String("watch-config", "", "Monitoring config changes [notify, poll]")
+
+var fHTTPConfWatchInterval = flag.Duration("watch-interval", 0, "Interval to monitor http based config files ( default 0 = deactivated)")
+var fHTTPConfWatchJitter = flag.Duration("watch-jitter", time.Second*3, "time variation to ensure avoid all agents downloading the config file from the server hosting it at the same time (default 10s)")
+var fHTTPConfRetryInterval = flag.Duration("watch-retry-interval", time.Second*20, "time in seconds to retry download config if download failed (default 20s)")
+var fHTTPConfMaxRetries = flag.Int("watch-max-retries", 3, "number of retries to download config file if previously failed (default 3)")
+var fHTTPConfTLSCert = flag.String("watch-tls-cert", "", "Certificate File path for TLS Config on HTTP(S) Config downloads")
+var fHTTPConfTLSKey = flag.String("watch-tls-key", "", "Certificate Key File path for TLS Config on HTTP(S) Config downloads")
+var fHTTPConfTLSKeyPwd = flag.String("watch-tls-key-pwd", "", "Certificate Key File password")
+var fHTTPConfTLSCA = flag.String("watch-tls-ca", "", "CA File path for TLS Config on HTTP(S) Config downloads")
+var fHTTPConfSSLInsecureSkipVerify = flag.Bool("watch-insecure-skip-verify", false, "If set this flag we use TLS but skip chain & host verification")
+var fHTTPConfSNI = flag.String("watch-tls-sni", "", "indicates which hostname it is attempting to connect to at the start of the TLS handshaking process")
+
 var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
@@ -126,6 +142,25 @@ func reloadLoop(
 				}
 			}
 		}
+		if *fHTTPConfWatchInterval != 0 {
+			log.Printf("I! Reloading Telegraf config")
+			settings = &config.HTTPLoadSettings{
+				ReloadInterval: *fHTTPConfWatchInterval,
+				ReloadJitter:   *fHTTPConfWatchJitter,
+				MaxRetries:     *fHTTPConfMaxRetries,
+				RetryInterval:  *fHTTPConfRetryInterval,
+				ClientConf: &ctls.ClientConfig{
+					TLSCA:              *fHTTPConfTLSCA,
+					TLSCert:            *fHTTPConfTLSCert,
+					TLSKey:             *fHTTPConfTLSKey,
+					TLSKeyPwd:          *fHTTPConfTLSKeyPwd,
+					InsecureSkipVerify: *fHTTPConfSSLInsecureSkipVerify,
+					ServerName:         *fHTTPConfSNI,
+				},
+				CacheData: make(map[string]*config.HTTPCacheInfo),
+			}
+			go watchRemoteConfig(signals, settings)
+		}
 		go func() {
 			select {
 			case sig := <-signals:
@@ -143,6 +178,30 @@ func reloadLoop(
 		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
+		}
+	}
+}
+
+func watchRemoteConfig(signals chan os.Signal, settings *config.HTTPLoadSettings) {
+
+	t := jitterbug.New(settings.ReloadInterval, &jitterbug.Norm{Stdev: settings.ReloadJitter})
+	log.Printf("D! config reload Period set each  [%s] with Jitter [%s]", settings.ReloadInterval, settings.ReloadJitter)
+	for tick := range t.C {
+		log.Printf("I! retrieving new HTTP based remote config at Tick[%s]", tick.Format(time.RFC1123))
+
+		c := config.NewConfig()
+		for _, fConfig := range fConfigs {
+			modified, err := c.LoadConfig(fConfig, settings)
+			if err != nil {
+				log.Printf("E! can not get remote config file %s: Error %s", fConfig, err)
+				continue
+			}
+			if modified {
+				log.Printf("I! Remote Config [%s] Modified !! ", fConfig)
+				signals <- syscall.SIGHUP
+				return
+			}
+			log.Printf("I! Remote Config [%s] Not Modified ", fConfig)
 		}
 	}
 }
@@ -187,6 +246,8 @@ func watchLocalConfig(signals chan os.Signal, fConfig string) {
 	signals <- syscall.SIGHUP
 }
 
+var settings *config.HTTPLoadSettings
+
 func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
@@ -200,20 +261,21 @@ func runAgent(ctx context.Context,
 	var err error
 	// providing no "config" flag should load default config
 	if len(fConfigs) == 0 {
-		err = c.LoadConfig("")
+		_, err = c.LoadConfig("", nil) // config settings not needed on default config file
 		if err != nil {
 			return err
 		}
 	}
+
 	for _, fConfig := range fConfigs {
-		err = c.LoadConfig(fConfig)
+		_, err := c.LoadConfig(fConfig, settings)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, fConfigDirectory := range fConfigDirs {
-		err = c.LoadDirectory(fConfigDirectory)
+		err = c.LoadDirectory(fConfigDirectory) //settings not needed when
 		if err != nil {
 			return err
 		}

@@ -23,7 +23,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
 	require.NoError(t, os.Setenv("TEST_INTERVAL", "10s"))
-	c.LoadConfig("./testdata/single_plugin_env_vars.toml")
+	c.LoadConfig("./testdata/single_plugin_env_vars.toml", nil)
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"192.168.1.1"}
@@ -63,7 +63,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := NewConfig()
-	c.LoadConfig("./testdata/single_plugin.toml")
+	c.LoadConfig("./testdata/single_plugin.toml", nil)
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
@@ -103,7 +103,8 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 
 func TestConfig_LoadDirectory(t *testing.T) {
 	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
+	_, err := c.LoadConfig("./testdata/single_plugin.toml", nil)
+	require.NoError(t, err)
 	require.NoError(t, c.LoadDirectory("./testdata/subconfig"))
 
 	// Create the expected data
@@ -209,7 +210,8 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 func TestConfig_LoadSpecialTypes(t *testing.T) {
 	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/special_types.toml"))
+	_, err := c.LoadConfig("./testdata/special_types.toml", nil)
+	require.NoError(t, err)
 	require.Len(t, c.Inputs, 1)
 
 	input, ok := c.Inputs[0].Input.(*MockupInputPlugin)
@@ -224,19 +226,19 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 
 func TestConfig_FieldNotDefined(t *testing.T) {
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/invalid_field.toml")
+	_, err := c.LoadConfig("./testdata/invalid_field.toml", nil)
 	require.Error(t, err, "invalid field name")
 	require.Equal(t, "Error loading config file ./testdata/invalid_field.toml: plugin inputs.http_listener_v2: line 1: configuration specified the fields [\"not_a_field\"], but they weren't used", err.Error())
 }
 
 func TestConfig_WrongFieldType(t *testing.T) {
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/wrong_field_type.toml")
+	_, err := c.LoadConfig("./testdata/wrong_field_type.toml", nil)
 	require.Error(t, err, "invalid field type")
 	require.Equal(t, "Error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Port) cannot unmarshal TOML string into int", err.Error())
 
 	c = NewConfig()
-	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
+	_, err = c.LoadConfig("./testdata/wrong_field_type2.toml", nil)
 	require.Error(t, err, "invalid field type2")
 	require.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
 }
@@ -244,7 +246,8 @@ func TestConfig_WrongFieldType(t *testing.T) {
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
 	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/inline_table.toml"))
+	_, err := c.LoadConfig("./testdata/inline_table.toml", nil)
+	require.NoError(t, err)
 	require.Len(t, c.Outputs, 2)
 
 	output, ok := c.Outputs[1].Output.(*MockupOuputPlugin)
@@ -257,7 +260,8 @@ func TestConfig_SliceComment(t *testing.T) {
 	t.Skipf("Skipping until #3642 is resolved")
 
 	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/slice_comment.toml"))
+	_, err := c.LoadConfig("./testdata/slice_comment.toml", nil)
+	require.NoError(t, err, nil)
 	require.Len(t, c.Outputs, 1)
 
 	output, ok := c.Outputs[0].Output.(*MockupOuputPlugin)
@@ -269,7 +273,7 @@ func TestConfig_BadOrdering(t *testing.T) {
 	// #3444: when not using inline tables, care has to be taken so subsequent configuration
 	// doesn't become part of the table. This is not a bug, but TOML syntax.
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/non_slice_slice.toml")
+	_, err := c.LoadConfig("./testdata/non_slice_slice.toml", nil)
 	require.Error(t, err, "bad ordering")
 	require.Equal(t, "Error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
 }
@@ -277,7 +281,8 @@ func TestConfig_BadOrdering(t *testing.T) {
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	// #8256 Cannot use empty string as the namespace prefix
 	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/azure_monitor.toml"))
+	_, err := c.LoadConfig("./testdata/azure_monitor.toml", nil)
+	require.NoError(t, err)
 	require.Len(t, c.Outputs, 2)
 
 	expectedPrefix := []string{"Telegraf/", ""}
@@ -289,7 +294,6 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 }
 
 func TestConfig_URLRetries3Fails(t *testing.T) {
-	httpLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -300,14 +304,18 @@ func TestConfig_URLRetries3Fails(t *testing.T) {
 	expected := fmt.Sprintf("Error loading config file %s: Retry 3 of 3 failed to retrieve remote config: 404 Not Found", ts.URL)
 
 	c := NewConfig()
-	err := c.LoadConfig(ts.URL)
+	settings := &HTTPLoadSettings{
+		RetryInterval: 0,
+		MaxRetries:    3,
+		ClientConf:    &tls.ClientConfig{},
+	}
+	_, err := c.LoadConfig(ts.URL, settings)
 	require.Error(t, err)
 	require.Equal(t, expected, err.Error())
 	require.Equal(t, 4, responseCounter)
 }
 
 func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
-	httpLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if responseCounter <= 2 {
@@ -320,8 +328,99 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 	defer ts.Close()
 
 	c := NewConfig()
-	require.NoError(t, c.LoadConfig(ts.URL))
+	settings := &HTTPLoadSettings{
+		RetryInterval: 0,
+		MaxRetries:    3,
+		ClientConf:    &tls.ClientConfig{},
+		CacheData:     make(map[string]*HTTPCacheInfo),
+	}
+	modified, err := c.LoadConfig(ts.URL, settings)
+	require.NoError(t, err)
 	require.Equal(t, 4, responseCounter)
+	require.Equal(t, true, modified)
+}
+
+func TestConfig_URLLastModifiedCheck(t *testing.T) {
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Last-Modified", "Thu, 11 Nov 2021 10:50:02 GMT")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	c := NewConfig()
+	settings := &HTTPLoadSettings{
+		RetryInterval: 20 * time.Second,
+		MaxRetries:    3,
+		ClientConf:    &tls.ClientConfig{},
+		CacheData:     make(map[string]*HTTPCacheInfo),
+	}
+	modified, err := c.LoadConfig(ts.URL, settings)
+	require.NoError(t, err)
+	require.Equal(t, true, modified)
+	tm, _ := time.Parse(time.RFC1123, "Thu, 11 Nov 2021 10:50:02 GMT")
+	require.Equal(t, settings.CacheData[ts.URL].LastModified, tm)
+}
+
+func TestConfig_URLModifiedWhenRecheckTwice(t *testing.T) {
+	responseCounter := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch responseCounter {
+		case 0: //first download
+			w.Header().Set("Last-Modified", "Thu, 11 Nov 2021 10:50:02 GMT")
+			w.WriteHeader(http.StatusOK)
+		case 1: //second iteration
+			w.WriteHeader(http.StatusNotModified)
+		case 2: //file modified
+			w.Header().Set("Last-Modified", "Thu, 18 Nov 2021 10:50:02 GMT")
+			w.WriteHeader(http.StatusOK)
+		}
+		responseCounter++
+	}))
+	defer ts.Close()
+
+	c := NewConfig()
+	settings := &HTTPLoadSettings{
+		RetryInterval: 20 * time.Second,
+		MaxRetries:    3,
+		ClientConf:    &tls.ClientConfig{},
+		CacheData:     make(map[string]*HTTPCacheInfo),
+	}
+	modified, err := c.LoadConfig(ts.URL, settings)
+	require.NoError(t, err)
+	require.Equal(t, true, modified)
+	tm, _ := time.Parse(time.RFC1123, "Thu, 11 Nov 2021 10:50:02 GMT")
+	require.Equal(t, settings.CacheData[ts.URL].LastModified, tm)
+	// now recheck not modified
+	modified, err = c.LoadConfig(ts.URL, settings)
+	require.NoError(t, err)
+	require.Equal(t, false, modified)
+	tm, _ = time.Parse(time.RFC1123, "Thu, 11 Nov 2021 10:50:02 GMT")
+	require.Equal(t, settings.CacheData[ts.URL].LastModified, tm)
+	// now recheck modified again
+	modified, err = c.LoadConfig(ts.URL, settings)
+	require.NoError(t, err)
+	require.Equal(t, true, modified)
+	tm, _ = time.Parse(time.RFC1123, "Thu, 18 Nov 2021 10:50:02 GMT")
+	require.Equal(t, settings.CacheData[ts.URL].LastModified, tm)
+}
+
+func TestConfig_URLNotModified(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotModified)
+	}))
+	defer ts.Close()
+
+	c := NewConfig()
+	settings := &HTTPLoadSettings{
+		RetryInterval: 20 * time.Second,
+		MaxRetries:    3,
+		ClientConf:    &tls.ClientConfig{},
+		CacheData:     make(map[string]*HTTPCacheInfo),
+	}
+	modified, err := c.LoadConfig(ts.URL, settings)
+	require.NoError(t, err)
+	require.Equal(t, false, modified)
 }
 
 func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
@@ -331,18 +430,29 @@ func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
 	defer ts.Close()
 
 	c := NewConfig()
+	settings := &HTTPLoadSettings{
+		RetryInterval: 20 * time.Second,
+		MaxRetries:    3,
+		ClientConf:    &tls.ClientConfig{},
+		CacheData:     make(map[string]*HTTPCacheInfo),
+	}
 	err := os.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
 	require.NoError(t, err)
 	configPath, err := getDefaultConfigPath()
 	require.NoError(t, err)
 	require.Equal(t, ts.URL, configPath)
-	err = c.LoadConfig("")
+	_, err = c.LoadConfig("", settings)
 	require.NoError(t, err)
 }
 
 func TestConfig_URLLikeFileName(t *testing.T) {
 	c := NewConfig()
-	err := c.LoadConfig("http:##www.example.com.conf")
+	settings := &HTTPLoadSettings{
+		RetryInterval: 20 * time.Second,
+		MaxRetries:    3,
+		ClientConf:    &tls.ClientConfig{},
+	}
+	_, err := c.LoadConfig("http:##www.example.com.conf", settings)
 	require.Error(t, err)
 
 	if runtime.GOOS == "windows" {

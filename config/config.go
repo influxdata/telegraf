@@ -30,6 +30,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
+
+	ctls "github.com/influxdata/telegraf/plugins/common/tls"
 )
 
 var (
@@ -51,7 +53,6 @@ var (
 		`"`, `\"`,
 		`\`, `\\`,
 	)
-	httpLoadConfigRetryInterval = 10 * time.Second
 
 	// fetchURLRe is a regex to determine whether the requested file should
 	// be fetched from a remote or read from the filesystem.
@@ -77,6 +78,20 @@ type Config struct {
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
+}
+
+type HTTPCacheInfo struct {
+	LastModified time.Time
+	Etag         string
+}
+
+type HTTPLoadSettings struct {
+	ReloadInterval time.Duration
+	ReloadJitter   time.Duration
+	RetryInterval  time.Duration
+	MaxRetries     int
+	ClientConf     *ctls.ClientConfig
+	CacheData      map[string]*HTTPCacheInfo
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -688,7 +703,7 @@ func (c *Config) LoadDirectory(path string) error {
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
 			return nil
 		}
-		err := c.LoadConfig(thispath)
+		_, err := c.LoadConfig(thispath, nil)
 		if err != nil {
 			return err
 		}
@@ -736,22 +751,27 @@ func isURL(str string) bool {
 }
 
 // LoadConfig loads the given config file and applies it to c
-func (c *Config) LoadConfig(path string) error {
+func (c *Config) LoadConfig(path string, settings *HTTPLoadSettings) (bool, error) {
 	var err error
 	if path == "" {
 		if path, err = getDefaultConfigPath(); err != nil {
-			return err
+			return false, err
 		}
 	}
-	data, err := loadConfig(path)
+	data, changed, err := loadConfig(path, settings)
 	if err != nil {
-		return fmt.Errorf("Error loading config file %s: %w", path, err)
+		return false, fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
-
 	if err = c.LoadConfigData(data); err != nil {
-		return fmt.Errorf("Error loading config file %s: %w", path, err)
+		if changed {
+			return true, fmt.Errorf("Error loading config file %s: %w", path, err)
+		}
+		return false, fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
-	return nil
+	if changed {
+		return true, nil
+	}
+	return false, nil
 }
 
 // LoadConfigData loads TOML-formatted config data
@@ -917,29 +937,44 @@ func escapeEnv(value string) string {
 	return envVarEscaper.Replace(value)
 }
 
-func loadConfig(config string) ([]byte, error) {
+func loadConfig(config string, settings *HTTPLoadSettings) ([]byte, bool, error) {
 	if fetchURLRe.MatchString(config) {
 		u, err := url.Parse(config)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		switch u.Scheme {
 		case "https", "http":
-			return fetchConfig(u)
+			return fetchConfig(u, settings)
 		default:
-			return nil, fmt.Errorf("scheme %q not supported", u.Scheme)
+			return nil, false, fmt.Errorf("scheme %q not supported", u.Scheme)
 		}
 	}
 
 	// If it isn't a https scheme, try it as a file
-	return os.ReadFile(config)
+	data, err := os.ReadFile(config)
+	return data, false, err // when reading config files not sense to return changed boolean  as true ( only useful for http config)
 }
 
-func fetchConfig(u *url.URL) ([]byte, error) {
-	req, err := http.NewRequest("GET", u.String(), nil)
+func fetchConfig(u *url.URL, settings *HTTPLoadSettings) ([]byte, bool, error) {
+	url := u.String()
+	tls, err := settings.ClientConf.TLSConfig()
 	if err != nil {
-		return nil, err
+		return nil, false, err
+	}
+	transCfg := &http.Transport{
+		TLSClientConfig: tls,
+	}
+	client := &http.Client{Transport: transCfg}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, false, err
+	}
+	proxy, _ := http.ProxyFromEnvironment(req)
+	if proxy != nil {
+		transCfg.Proxy = http.ProxyURL(proxy)
 	}
 
 	if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
@@ -947,27 +982,55 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 	}
 	req.Header.Add("Accept", "application/toml")
 	req.Header.Set("User-Agent", internal.ProductToken())
-
-	retries := 3
+	//check if previously downloaded
+	if cache, ok := settings.CacheData[url]; ok {
+		// add header to download only if modified
+		modtime := cache.LastModified.Format(time.RFC1123)
+		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since
+		// If-Modified-Since: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
+		// Example:
+		// If-Modified-Since: Thu, 11 Nov 2021 10:50:02 GMT
+		log.Printf("D! Added Header If-Modified-Since [%s]  or URL [%s]", modtime, url)
+		req.Header.Add("If-Modified-Since", modtime)
+	}
+	retries := settings.MaxRetries
 	for i := 0; i <= retries; i++ {
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
-			return nil, fmt.Errorf("Retry %d of %d failed connecting to HTTP config server %s", i, retries, err)
+			return nil, false, fmt.Errorf("Retry %d of %d failed connecting to HTTP config server %s", i, retries, err)
 		}
-
-		if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotModified {
 			if i < retries {
-				log.Printf("Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, httpLoadConfigRetryInterval, resp.StatusCode)
-				time.Sleep(httpLoadConfigRetryInterval)
+				log.Printf("E! Error getting HTTP config.  Retry %d of %d in %s.  Status=%d", i, retries, settings.RetryInterval, resp.StatusCode)
+				time.Sleep(settings.RetryInterval)
 				continue
 			}
-			return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
+			return nil, false, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
 		}
 		defer resp.Body.Close()
-		return io.ReadAll(resp.Body)
+		if resp.StatusCode == http.StatusOK {
+			// Set now() as default LastModified
+			settings.CacheData[url] = &HTTPCacheInfo{
+				LastModified: time.Now(),
+			}
+			// If Last-Modified exits we will use it instead
+			lastmod := resp.Header.Get("Last-Modified")
+			if len(lastmod) > 0 {
+				t, err := time.Parse(time.RFC1123, lastmod)
+				if err == nil {
+					settings.CacheData[url].LastModified = t
+				}
+			}
+			log.Printf("D! Caching URL [%s] Last Modified as [%s] ", url, lastmod)
+			d, err := io.ReadAll(resp.Body)
+			return d, true, err
+		}
+		if resp.StatusCode == http.StatusNotModified {
+			return nil, false, err
+		}
 	}
 
-	return nil, nil
+	return nil, false, nil
 }
 
 // parseConfig loads a TOML configuration from a provided path and

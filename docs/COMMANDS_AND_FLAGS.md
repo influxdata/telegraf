@@ -39,6 +39,17 @@ telegraf [flags]
 |`--test-wait`                    |wait up to this many seconds for service inputs to complete in test or once mode|
 |`--usage <plugin>`               |print usage for a plugin, ie, `telegraf --usage mysql`|
 |`--version`                      |display the version and exit|
+|`--watch-interval <interval>`    |Interval to monitor http based config files ( default 0 = deactivated) it sets a backgroup process continuously checking for new config files each <interval> duration. Server side should control if changed,a HTTP 200 (OK) response will mean there is a change since last download, a HTTP 304 (Not modified) will mean no changes. |
+|`--watch-jitter <jitter>`        |time variation to ensure avoid all agents downloading the config file from the server hosting it at the same time (default 10s) (only used if --watch-interval is set) |
+|`--watch-retry-interval <interval>`| time in seconds to retry download config if download failed (default 20s) |
+|`--watch-max-retries <retries>`  |number of retries to download config file if previously failed (default 3) |
+|`--watch-tls-cert  <path>`       |Certificate File path for TLS Config on HTTP(S) Config downloads |
+|`--watch-tls-key   <path>`       |Certificate Key File path for TLS Config on HTTP(S) Config downloads |
+|`--watch-tls-key-pwd <password>` |Password to decode Key file |
+|`--watch-tls-ca    <path>`       |CA File path for TLS Config on HTTP(S) Config downloads |
+|`--watch-tls-sni   <name>`       |SNI(Server Name Indication) indicates which hostname it is attempting to connect to at the start of the TLS handshaking process |
+|`--watch-insecure-skip-verify`   |If set this flag we use TLS but skip chain & host verification (default false) |
+
 
 ### Examples
 
@@ -65,3 +76,16 @@ telegraf [flags]
 **Run telegraf with pprof:**
 
 `telegraf --config telegraf.conf --pprof-addr localhost:6060`
+
+
+**download some config files from a central server:**
+
+```
+telegraf --config https://myserver/telegraf_base.conf \
+        --config https://myserver/telegraf_inputs.conf \
+        --config https://myserver/telegraf_outputs.conf \
+        --watch-interval 10m --watch-jitter 5m \
+        --watch-max-retries 2 -watch-retry-interval 5s \
+        --watch-insecure-skip-verify
+```
+
