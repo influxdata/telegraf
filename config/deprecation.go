@@ -17,11 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-const (
-	pluginWarnNotice = "Deprecated plugin will be removed soon, please switch to a supported plugin!"
-	optionWarnNotice = "Deprecated options will be removed with the next major version, please adapt your config!"
-)
-
 // Escalation level for the plugin or option
 type Escalation int
 
@@ -44,24 +39,73 @@ const (
 	Error
 )
 
-// DeprecationInfo contains all important information to describe a deprecated entity
-type DeprecationInfo struct {
+// deprecationInfo contains all important information to describe a deprecated entity
+type deprecationInfo struct {
 	// Name of the plugin or plugin option
 	Name string
 	// Level of deprecation
 	Level Escalation
 	// Since which version the plugin or plugin option is deprecated
 	Since string
+	// RemovalIn is an optional field denoting in which version the plugin or plugin option is actually removed
+	RemovalIn string
 	// Notice to the user about alternatives or further information
 	Notice string
 }
 
-// PluginDeprecationInfo holds all information about a deprecated plugin or it's options
-type PluginDeprecationInfo struct {
-	DeprecationInfo
+func (di *deprecationInfo) determineEscalation(major, minor int) {
+	var removalMajor, removalMinor int
+
+	sinceMajor, sinceMinor := ParseVersion(di.Since)
+	if di.RemovalIn != "" {
+		removalMajor, removalMinor = ParseVersion(di.RemovalIn)
+	} else {
+		removalMajor, removalMinor = sinceMajor+1, 0
+		di.RemovalIn = fmt.Sprintf("%d.%d", removalMajor, removalMinor)
+	}
+
+	di.Level = None
+	if major > removalMajor || (major == removalMajor && minor >= removalMinor) {
+		di.Level = Error
+	} else if major > sinceMajor || (major == sinceMajor && minor >= sinceMinor) {
+		di.Level = Warn
+	}
+}
+
+func (di *deprecationInfo) printPluginDeprecationNotice(prefix string) {
+	if di.Notice != "" {
+		log.Printf(
+			"%s: Plugin %q deprecated since version %s and will be removed in %s: %s",
+			prefix, di.Name, di.Since, di.RemovalIn, di.Notice,
+		)
+	} else {
+		log.Printf(
+			"%s: Plugin %q deprecated since version %s and will be removed in %s",
+			prefix, di.Name, di.Since, di.RemovalIn,
+		)
+	}
+}
+
+func (di *deprecationInfo) printOptionDeprecationNotice(prefix, plugin string) {
+	if di.Notice != "" {
+		log.Printf(
+			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
+			prefix, di.Name, plugin, di.Since, di.RemovalIn, di.Notice,
+		)
+	} else {
+		log.Printf(
+			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s",
+			prefix, di.Name, plugin, di.Since, di.RemovalIn,
+		)
+	}
+}
+
+// pluginDeprecationInfo holds all information about a deprecated plugin or it's options
+type pluginDeprecationInfo struct {
+	deprecationInfo
 
 	// Options deprecated for this plugin
-	Options []DeprecationInfo
+	Options []deprecationInfo
 }
 
 func (c *Config) incrementPluginDeprecations(category string) {
@@ -80,14 +124,14 @@ func (c *Config) incrementPluginOptionDeprecations(category string) {
 	c.Deprecations[category] = newcounts
 }
 
-func (c *Config) collectDeprecationInfo(category, name string, plugin interface{}, all bool) PluginDeprecationInfo {
-	info := PluginDeprecationInfo{}
+func (c *Config) collectDeprecationInfo(category, name string, plugin interface{}, all bool) pluginDeprecationInfo {
+	info := pluginDeprecationInfo{}
 	info.Name = category + "." + name
 
 	// First check if the whole plugin is deprecated
 	if deprecatedPlugin, ok := plugin.(telegraf.PluginDeprecator); ok {
-		info.Since, info.Notice = deprecatedPlugin.DeprecationNotice()
-		info.Level = c.getDeprecationEscalation(info.Since)
+		info.Since, info.RemovalIn, info.Notice = deprecatedPlugin.DeprecationNotice()
+		info.determineEscalation(c.VersionMajor, c.VersionMinor)
 		if info.Level != None {
 			c.incrementPluginDeprecations(category)
 		}
@@ -100,14 +144,13 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 			return
 		}
 
-		tags := strings.SplitN(field.Tag.Get("deprecated"), ";", 2)
+		tags := strings.SplitN(field.Tag.Get("deprecated"), ";", 3)
 		if len(tags) < 1 || tags[0] == "" {
 			return
 		}
-		optionInfo := DeprecationInfo{
+		optionInfo := deprecationInfo{
 			Name:  field.Name,
 			Since: tags[0],
-			Level: c.getDeprecationEscalation(tags[0]),
 		}
 
 		if optionInfo.Level != None {
@@ -115,8 +158,13 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		}
 
 		if len(tags) > 1 {
-			optionInfo.Notice = tags[1]
+			optionInfo.Notice = tags[len(tags)-1]
 		}
+		if len(tags) > 2 {
+			optionInfo.RemovalIn = tags[1]
+		}
+		optionInfo.determineEscalation(c.VersionMajor, c.VersionMinor)
+
 		// Get the toml field name
 		option := field.Tag.Get("toml")
 		if option != "" {
@@ -134,12 +182,12 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 	switch info.Level {
 	case Warn:
 		prefix := "W! " + color.YellowString("DeprecationWarning")
-		printPluginDeprecationNotice(prefix, info.Name, info.Since, info.Notice)
+		info.printPluginDeprecationNotice(prefix)
 		// We will not check for any deprecated options as the whole plugin is deprecated anyway.
 		return nil
 	case Error:
 		prefix := "E! " + color.RedString("DeprecationError")
-		printPluginDeprecationNotice(prefix, info.Name, info.Since, info.Notice)
+		info.printPluginDeprecationNotice(prefix)
 		// We are past the grace period
 		return fmt.Errorf("plugin deprecated")
 	}
@@ -150,10 +198,10 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 		switch option.Level {
 		case Warn:
 			prefix := "W! " + color.YellowString("DeprecationWarning")
-			printOptionDeprecationNotice(prefix, info.Name, option.Name, option.Since, option.Notice)
+			option.printOptionDeprecationNotice(prefix, info.Name)
 		case Error:
 			prefix := "E! " + color.RedString("DeprecationError")
-			printOptionDeprecationNotice(prefix, info.Name, option.Name, option.Since, option.Notice)
+			option.printOptionDeprecationNotice(prefix, info.Name)
 			deprecatedOptions = append(deprecatedOptions, option.Name)
 		}
 	}
@@ -165,10 +213,10 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 	return nil
 }
 
-func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFilter []string) map[string][]PluginDeprecationInfo {
-	infos := make(map[string][]PluginDeprecationInfo)
+func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFilter []string) map[string][]pluginDeprecationInfo {
+	infos := make(map[string][]pluginDeprecationInfo)
 
-	infos["inputs"] = make([]PluginDeprecationInfo, 0)
+	infos["inputs"] = make([]pluginDeprecationInfo, 0)
 	for name, creator := range inputs.Inputs {
 		if len(inFilter) > 0 && !sliceContains(name, inFilter) {
 			continue
@@ -182,7 +230,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		}
 	}
 
-	infos["outputs"] = make([]PluginDeprecationInfo, 0)
+	infos["outputs"] = make([]pluginDeprecationInfo, 0)
 	for name, creator := range outputs.Outputs {
 		if len(outFilter) > 0 && !sliceContains(name, outFilter) {
 			continue
@@ -196,7 +244,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		}
 	}
 
-	infos["processors"] = make([]PluginDeprecationInfo, 0)
+	infos["processors"] = make([]pluginDeprecationInfo, 0)
 	for name, creator := range processors.Processors {
 		if len(procFilter) > 0 && !sliceContains(name, procFilter) {
 			continue
@@ -210,7 +258,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		}
 	}
 
-	infos["aggregators"] = make([]PluginDeprecationInfo, 0)
+	infos["aggregators"] = make([]pluginDeprecationInfo, 0)
 	for name, creator := range aggregators.Aggregators {
 		if len(aggFilter) > 0 && !sliceContains(name, aggFilter) {
 			continue
@@ -227,7 +275,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 	return infos
 }
 
-func (c *Config) PrintDeprecationList(infos []PluginDeprecationInfo) {
+func (c *Config) PrintDeprecationList(infos []pluginDeprecationInfo) {
 	sort.Slice(infos, func(i, j int) bool { return infos[i].Name < infos[j].Name })
 
 	for _, info := range infos {
@@ -244,36 +292,6 @@ func (c *Config) PrintDeprecationList(infos []PluginDeprecationInfo) {
 			_, _ = fmt.Printf("  %-40s %-5s since %5s %s\n", info.Name+"/"+option.Name, option.Level, option.Since, option.Notice)
 		}
 	}
-}
-
-func (c *Config) getDeprecationEscalation(since string) Escalation {
-	sinceMajor, sinceMinor := ParseVersion(since)
-	if c.VersionMajor > sinceMajor {
-		return Error
-	}
-	if c.VersionMajor == sinceMajor && c.VersionMinor >= sinceMinor {
-		return Warn
-	}
-
-	return None
-}
-
-func printPluginDeprecationNotice(prefix, name, since, notice string) {
-	if notice != "" {
-		log.Printf("%s: Plugin %q deprecated since version %s: %s", prefix, name, since, notice)
-	} else {
-		log.Printf("%s: Plugin %q deprecated since version %s", prefix, name, since)
-	}
-	log.Printf("Please note: %s", pluginWarnNotice)
-}
-
-func printOptionDeprecationNotice(prefix, name, option, since, notice string) {
-	if notice != "" {
-		log.Printf("%s: Option %q of plugin %q deprecated since version %s: %s", prefix, option, name, since, notice)
-	} else {
-		log.Printf("%s: Option %q of plugin %q deprecated since version %s", prefix, option, name, since)
-	}
-	log.Printf("Please note: %s", optionWarnNotice)
 }
 
 // walkPluginStruct iterates over the fields of a structure in depth-first search (to cover nested structures)
