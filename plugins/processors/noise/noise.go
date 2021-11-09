@@ -1,12 +1,13 @@
 package noise
 
 import (
-	"time"
+	"fmt"
+	"math"
+	"reflect"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
@@ -25,33 +26,35 @@ const (
 	defaultMu        = 0.0
 	defaultSigma     = 0.1
 	defaultNoiseType = "laplace"
-	defaultNoiseLog  = false
 )
 
-type Distribution struct {
-	active   ActiveDistribution
-	laplace  distuv.Laplace
-	gaussian distuv.Normal
-	uniform  distuv.Uniform
-}
-
-var noise float64
-var fieldFilter filter.Filter
-var sampleConfig = `
+const sampleConfig = `
   [[processors.noise]]
-    scale = 1.0
-	min = 1.0
-	max = 5.0
-	mu = 0.0
-	sigma = 2.0
-	noise_type = "laplace"
-	noise_log = false
-    include_fields = []
-	exclude_fields = []
+    ## Specified the type of the random distribution.
+    ## Can be "laplace", "gaussian" or "uniform".
+    # type = "laplace
+
+    ## Center of the distribution.
+    ## Only used for "laplacian" and "gaussian" distributions.
+    # mu = 0.0
+
+    ## Scale parameter of the Laplacian distribution
+    # scale = 1.0
+
+    ## Standard deviation of the Gaussian distribution
+    # sigma = 0.1
+
+    ## Upper and lower bound of the Uniform distribution
+    # min = -1.0
+    # max = 1.0
+
+    ## Apply the noise only to numeric fields matching the filter criteria below.
+    ## Excludes takes precedence over includes.
+    # include_fields = []
+    # exclude_fields = []
 `
 
 type Noise struct {
-	Generator     Distribution
 	Scale         float64         `toml:"scale"`
 	Min           float64         `toml:"min"`
 	Max           float64         `toml:"max"`
@@ -59,22 +62,10 @@ type Noise struct {
 	Sigma         float64         `toml:"sigma"`
 	IncludeFields []string        `toml:"include_fields"`
 	ExcludeFields []string        `toml:"exclude_fields"`
-	NoiseType     string          `toml:"noise_type"`
-	NoiseLog      bool            `toml:"noise_log"`
+	NoiseType     string          `toml:"type"`
 	Log           telegraf.Logger `toml:"-"`
-}
-
-// returns a random float value, with a probability densitity of the current
-// active distribution
-func (d Distribution) getNoise() float64 {
-	switch d.active {
-	case Uniform:
-		return d.uniform.Rand()
-	case Gaussian:
-		return d.gaussian.Rand()
-	default:
-		return d.laplace.Rand()
-	}
+	Generator     distuv.Rander
+	FieldFilter   filter.Filter
 }
 
 func (p *Noise) SampleConfig() string {
@@ -86,43 +77,72 @@ func (p *Noise) Description() string {
 }
 
 // generates a random noise value depending on the defined probability density
-// function and adds that to the original value
+// function and adds that to the original value. If any integer overflows
+// happen during the calculation, the result is set to MaxInt or 0 (for uint)
 func (p *Noise) addNoise(value interface{}) interface{} {
-	noise = p.Generator.getNoise()
+	noise := p.Generator.Rand()
+	if value == 0 {
+		return noise
+	}
 	switch v := value.(type) {
+	case int:
+	case int8:
+	case int16:
+	case int32:
 	case int64:
-		return int64(float64(v) + float64(v)*noise)
+		n := float64(v) + float64(v)*noise
+		if n > float64(math.MaxInt64) {
+			p.Log.Debug("Int64 overflow, setting value to MaxInt64")
+			return int64(math.MaxInt64)
+		}
+		if n < float64(math.MinInt64) {
+			p.Log.Debug("Int64 (negative) overflow, setting value to MinInt64")
+			return int64(math.MinInt64)
+		}
+		return int64(n)
+	case uint:
+	case uint8:
+	case uint16:
+	case uint32:
 	case uint64:
-		newV := float64(v) + float64(v)*noise
-		if newV < 0 {
+		n := float64(v) + float64(v)*noise
+		if n > float64(math.MaxUint64) {
+			p.Log.Debug("UInt64 overflow, setting value to MaxInt64")
+			return uint64(math.MaxUint64)
+		}
+		if n < 0 {
+			p.Log.Debug("UInt64 (negative) overflow, setting value to 0")
 			return uint64(0)
 		}
-		return uint64(newV)
+		return uint64(n)
+	case float32:
 	case float64:
 		return (v + v*noise)
 	default:
-		p.Log.Debugf("Value (%s) type invalid: [%s] is not an int64, uint64 or float64", v, value)
+		p.Log.Debugf("Value (%v) type invalid: [%v] is not an int, uint or float", v, reflect.TypeOf(value))
 	}
 	return value
 }
 
-// Creates a filter for Include and Exclude fields and sets the desired noise distribution
+// Creates a filter for Include and Exclude fields and sets the desired noise
+// distribution
 // BUG(wizarq): according to the logs, this function is called twice. Why?
 func (p *Noise) Init() error {
-	rand.Seed(uint64(time.Now().UnixNano()))
-	fieldFilter, _ = filter.NewIncludeExcludeFilter(p.IncludeFields, p.ExcludeFields)
-	p.Generator = Distribution{
-		laplace:  distuv.Laplace{Mu: defaultMu, Scale: defaultScale, Src: nil},
-		gaussian: distuv.Normal{Mu: defaultMu, Sigma: defaultSigma, Src: nil},
-		uniform:  distuv.Uniform{Min: defaultMin, Max: defaultMax, Src: nil},
+	fieldFilter, err := filter.NewIncludeExcludeFilter(p.IncludeFields, p.ExcludeFields)
+	if err != nil {
+		return fmt.Errorf("creating fieldFilter failed: %v", err)
 	}
+	p.FieldFilter = fieldFilter
+
 	switch p.NoiseType {
+	case "", "laplace":
+		p.Generator = &distuv.Laplace{Mu: p.Mu, Scale: p.Scale}
 	case "uniform":
-		p.Generator.active = Uniform
+		p.Generator = &distuv.Uniform{Min: p.Min, Max: p.Max}
 	case "gaussian":
-		p.Generator.active = Gaussian
+		p.Generator = &distuv.Normal{Mu: p.Mu, Sigma: p.Sigma}
 	default:
-		p.Generator.active = Laplace
+		return fmt.Errorf("unknown distribution type %q", p.NoiseType)
 	}
 	return nil
 }
@@ -130,16 +150,11 @@ func (p *Noise) Init() error {
 func (p *Noise) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range metrics {
 		p.Log.Debugf("Adding noise to [%s]", metric.Name())
-		for key, value := range metric.Fields() {
-			if !fieldFilter.Match(key) {
+		for _, field := range metric.FieldList() {
+			if !p.FieldFilter.Match(field.Key) {
 				continue
 			}
-			newVal := p.addNoise(value)
-			metric.RemoveField(key)
-			metric.AddField(key, newVal)
-			if p.NoiseLog {
-				metric.AddField("telegraf_noise", noise)
-			}
+			field.Value = p.addNoise(field.Value)
 		}
 	}
 	return metrics
@@ -148,11 +163,12 @@ func (p *Noise) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 func init() {
 	processors.Add("noise", func() telegraf.Processor {
 		return &Noise{
-			NoiseType:     defaultNoiseType,
-			NoiseLog:      defaultNoiseLog,
-			Scale:         defaultScale,
-			IncludeFields: []string{},
-			ExcludeFields: []string{},
+			NoiseType: defaultNoiseType,
+			Mu:        defaultMu,
+			Scale:     defaultScale,
+			Sigma:     defaultSigma,
+			Min:       defaultMin,
+			Max:       defaultMax,
 		}
 	})
 }
