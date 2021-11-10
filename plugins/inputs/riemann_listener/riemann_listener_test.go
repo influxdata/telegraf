@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/testutil"
 	riemanngo "github.com/riemann/riemann-go-client"
 	"github.com/stretchr/testify/require"
 	"gotest.tools/assert"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSocketListener_tcp(t *testing.T) {

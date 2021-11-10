@@ -15,15 +15,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/metric"
-
-	"github.com/gogo/protobuf/proto"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	riemanngo "github.com/riemann/riemann-go-client"
 	riemangoProto "github.com/riemann/riemann-go-client/proto"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type RiemannSocketListener struct {
