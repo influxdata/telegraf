@@ -79,6 +79,7 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 
 	rv, err := s.Call("apply")
 	if err != nil {
+		s.LogError(err)
 		metric.Reject()
 		return err
 	}

@@ -88,12 +88,16 @@ func (s *Starlark) Add(metric telegraf.Metric) {
 	}
 	parameters[0].(*common.Metric).Wrap(metric)
 
-	s.Call("add") //nolint - error already checked within the Call function
+	_, err := s.Call("add")
+	if err != nil {
+		s.LogError(err)
+	}
 }
 
 func (s *Starlark) Push(acc telegraf.Accumulator) {
 	rv, err := s.Call("push")
 	if err != nil {
+		s.LogError(err)
 		return
 	}
 
@@ -121,7 +125,10 @@ func (s *Starlark) Push(acc telegraf.Accumulator) {
 }
 
 func (s *Starlark) Reset() {
-	s.Call("reset") //nolint - error already checked within the Call function
+	_, err := s.Call("reset")
+	if err != nil {
+		s.LogError(err)
+	}
 }
 
 // init initializes starlark aggregator plugin

@@ -133,17 +133,17 @@ func (s *StarlarkCommon) Call(name string) (starlark.Value, error) {
 	if !ok {
 		return nil, fmt.Errorf("params for function %q do not exist", name)
 	}
-	rv, err := starlark.Call(s.thread, fn, args, nil)
-	if err != nil {
-		if err, ok := err.(*starlark.EvalError); ok {
-			for _, line := range strings.Split(err.Backtrace(), "\n") {
-				s.Log.Error(line)
-			}
-		} else {
-			s.Log.Error(err.Msg)
+	return starlark.Call(s.thread, fn, args, nil)
+}
+
+func (s *StarlarkCommon) LogError(err error) {
+	if err, ok := err.(*starlark.EvalError); ok {
+		for _, line := range strings.Split(err.Backtrace(), "\n") {
+			s.Log.Error(line)
 		}
+	} else {
+		s.Log.Error(err.Msg)
 	}
-	return rv, err
 }
 
 func LoadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error) {
