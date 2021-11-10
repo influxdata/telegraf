@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -16,7 +17,7 @@ import (
 
 	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/wlog"
@@ -26,7 +27,7 @@ const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
   ## Agent addresses to retrieve values from.
   ##   format:  agents = ["<scheme://><hostname>:<port>"]
-  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.            
+  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.
   ##            default is udp
   ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
@@ -172,6 +173,12 @@ type Table struct {
 
 // Init() builds & initializes the nested fields.
 func (t *Table) Init() error {
+	//makes sure oid or name is set in config file
+	//otherwise snmp will produce metrics with an empty name
+	if t.Oid == "" && t.Name == "" {
+		return fmt.Errorf("SNMP table in config file is not named. One or both of the oid and name settings must be set")
+	}
+
 	if t.initialized {
 		return nil
 	}
@@ -180,10 +187,17 @@ func (t *Table) Init() error {
 		return err
 	}
 
+	secondaryIndexTablePresent := false
 	// initialize all the nested fields
 	for i := range t.Fields {
 		if err := t.Fields[i].init(); err != nil {
 			return fmt.Errorf("initializing field %s: %w", t.Fields[i].Name, err)
+		}
+		if t.Fields[i].SecondaryIndexTable {
+			if secondaryIndexTablePresent {
+				return fmt.Errorf("only one field can be SecondaryIndexTable")
+			}
+			secondaryIndexTablePresent = true
 		}
 	}
 
@@ -245,6 +259,19 @@ type Field struct {
 	Conversion string
 	// Translate tells if the value of the field should be snmptranslated
 	Translate bool
+	// Secondary index table allows to merge data from two tables with different index
+	//  that this filed will be used to join them. There can be only one secondary index table.
+	SecondaryIndexTable bool
+	// This field is using secondary index, and will be later merged with primary index
+	//  using SecondaryIndexTable. SecondaryIndexTable and SecondaryIndexUse are exclusive.
+	SecondaryIndexUse bool
+	// Controls if entries from secondary table should be added or not if joining
+	//  index is present or not. I set to true, means that join is outer, and
+	//  index is prepended with "Secondary." for missing values to avoid overlaping
+	//  indexes from both tables.
+	// Can be set per field or globally with SecondaryIndexTable, global true overrides
+	//  per field false.
+	SecondaryOuterJoin bool
 
 	initialized bool
 }
@@ -255,19 +282,29 @@ func (f *Field) init() error {
 		return nil
 	}
 
-	_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
-	if err != nil {
-		return fmt.Errorf("translating: %w", err)
-	}
-	f.Oid = oidNum
-	if f.Name == "" {
-		f.Name = oidText
-	}
-	if f.Conversion == "" {
-		f.Conversion = conversion
+	// check if oid needs translation or name is not set
+	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
+		_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
+		if err != nil {
+			return fmt.Errorf("translating: %w", err)
+		}
+		f.Oid = oidNum
+		if f.Name == "" {
+			f.Name = oidText
+		}
+		if f.Conversion == "" {
+			f.Conversion = conversion
+		}
+		//TODO use textual convention conversion from the MIB
 	}
 
-	//TODO use textual convention conversion from the MIB
+	if f.SecondaryIndexTable && f.SecondaryIndexUse {
+		return fmt.Errorf("SecondaryIndexTable and UseSecondaryIndex are exclusive")
+	}
+
+	if !f.SecondaryIndexTable && !f.SecondaryIndexUse && f.SecondaryOuterJoin {
+		return fmt.Errorf("SecondaryOuterJoin set to true, but field is not being used in join")
+	}
 
 	f.initialized = true
 	return nil
@@ -312,7 +349,7 @@ func init() {
 			ClientConfig: snmp.ClientConfig{
 				Retries:        3,
 				MaxRepetitions: 10,
-				Timeout:        internal.Duration{Duration: 5 * time.Second},
+				Timeout:        config.Duration(5 * time.Second),
 				Version:        2,
 				Community:      "public",
 			},
@@ -405,6 +442,19 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 	rows := map[string]RTableRow{}
 
+	//translation table for secondary index (when preforming join on two tables)
+	secIdxTab := make(map[string]string)
+	secGlobalOuterJoin := false
+	for i, f := range t.Fields {
+		if f.SecondaryIndexTable {
+			secGlobalOuterJoin = f.SecondaryOuterJoin
+			if i != 0 {
+				t.Fields[0], t.Fields[i] = t.Fields[i], t.Fields[0]
+			}
+			break
+		}
+	}
+
 	tagCount := 0
 	for _, f := range t.Fields {
 		if f.IsTag {
@@ -432,7 +482,17 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			// empty string. This results in all the non-table fields sharing the same
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
-				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
+				if errors.Is(err, gosnmp.ErrUnknownSecurityLevel) {
+					return nil, fmt.Errorf("unknown security level (sec_level)")
+				} else if errors.Is(err, gosnmp.ErrUnknownUsername) {
+					return nil, fmt.Errorf("unknown username (sec_name)")
+				} else if errors.Is(err, gosnmp.ErrWrongDigest) {
+					return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
+				} else if errors.Is(err, gosnmp.ErrDecryption) {
+					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
+				} else {
+					return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
+				}
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(f.Conversion, ent.Value)
@@ -500,6 +560,16 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		}
 
 		for idx, v := range ifv {
+			if f.SecondaryIndexUse {
+				if newidx, ok := secIdxTab[idx]; ok {
+					idx = newidx
+				} else {
+					if !secGlobalOuterJoin && !f.SecondaryOuterJoin {
+						continue
+					}
+					idx = ".Secondary" + idx
+				}
+			}
 			rtr, ok := rows[idx]
 			if !ok {
 				rtr = RTableRow{}
@@ -523,6 +593,20 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					}
 				} else {
 					rtr.Fields[f.Name] = v
+				}
+				if f.SecondaryIndexTable {
+					//indexes are stored here with prepending "." so we need to add them if needed
+					var vss string
+					if ok {
+						vss = "." + vs
+					} else {
+						vss = fmt.Sprintf(".%v", v)
+					}
+					if idx[0] == '.' {
+						secIdxTab[vss] = idx
+					} else {
+						secIdxTab[vss] = "." + idx
+					}
 				}
 			}
 		}
@@ -674,7 +758,6 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 
 	split := strings.Split(conv, ":")
 	if split[0] == "hextoint" && len(split) == 3 {
-
 		endian := split[1]
 		bit := split[2]
 

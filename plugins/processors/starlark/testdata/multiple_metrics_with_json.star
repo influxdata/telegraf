@@ -4,11 +4,12 @@
 # json value="[{\"label\": \"hello\"}, {\"label\": \"world\"}]"
 #
 # Example Output:
-# json value="hello" 1465839830100400201
-# json value="world" 1465839830100400201
+# json value="hello" 1618488000000000999
+# json value="world" 1618488000000000999
 
 # loads json.encode(), json.decode(), json.indent()
 load("json.star", "json")
+load("time.star", "time")
 
 def apply(metric):
     # Initialize a list of metrics
@@ -20,7 +21,7 @@ def apply(metric):
         # Set the field "value" to the label extracted from the current json object
         current_metric.fields["value"] = obj["label"]
         # Reset the time (only needed for testing purpose)
-        current_metric.time = 0
+        current_metric.time = time.now().unix_nano
         # Add metric to the list of metrics
         metrics.append(current_metric)
     return metrics

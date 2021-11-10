@@ -3,11 +3,12 @@ package proxmox
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -66,7 +67,7 @@ func (px *Proxmox) Init() error {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: px.ResponseTimeout.Duration,
+		Timeout: time.Duration(px.ResponseTimeout),
 	}
 
 	return nil
@@ -114,7 +115,7 @@ func performRequest(px *Proxmox, apiURL string, method string, data url.Values) 
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -157,18 +158,13 @@ func gatherVMData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 			return
 		}
 
-		fields, err := getFields(currentVMStatus)
-		if err != nil {
-			px.Log.Errorf("Error getting VM measurements: %v", err)
-			return
-		}
-
+		fields := getFields(currentVMStatus)
 		acc.AddFields("proxmox", fields, tags)
 	}
 }
 
-func getCurrentVMStatus(px *Proxmox, rt ResourceType, id string) (VMStat, error) {
-	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + id + "/status/current"
+func getCurrentVMStatus(px *Proxmox, rt ResourceType, id json.Number) (VMStat, error) {
+	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + string(id) + "/status/current"
 
 	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
 	if err != nil {
@@ -200,8 +196,8 @@ func getVMStats(px *Proxmox, rt ResourceType) (VMStats, error) {
 	return vmStats, nil
 }
 
-func getVMConfig(px *Proxmox, vmID string, rt ResourceType) (VMConfig, error) {
-	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + vmID + "/config"
+func getVMConfig(px *Proxmox, vmID json.Number, rt ResourceType) (VMConfig, error) {
+	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + string(vmID) + "/config"
 	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
 	if err != nil {
 		return VMConfig{}, err
@@ -216,7 +212,7 @@ func getVMConfig(px *Proxmox, vmID string, rt ResourceType) (VMConfig, error) {
 	return vmConfig, nil
 }
 
-func getFields(vmStat VMStat) (map[string]interface{}, error) {
+func getFields(vmStat VMStat) map[string]interface{} {
 	memTotal, memUsed, memFree, memUsedPercentage := getByteMetrics(vmStat.TotalMem, vmStat.UsedMem)
 	swapTotal, swapUsed, swapFree, swapUsedPercentage := getByteMetrics(vmStat.TotalSwap, vmStat.UsedSwap)
 	diskTotal, diskUsed, diskFree, diskUsedPercentage := getByteMetrics(vmStat.TotalDisk, vmStat.UsedDisk)
@@ -237,7 +233,7 @@ func getFields(vmStat VMStat) (map[string]interface{}, error) {
 		"disk_total":           diskTotal,
 		"disk_free":            diskFree,
 		"disk_used_percentage": diskUsedPercentage,
-	}, nil
+	}
 }
 
 func getByteMetrics(total json.Number, used json.Number) (int64, int64, int64, float64) {

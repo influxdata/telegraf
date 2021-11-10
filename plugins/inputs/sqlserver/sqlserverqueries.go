@@ -409,6 +409,8 @@ SELECT DISTINCT
 			,'Mirrored Write Transactions/sec'
 			,'Group Commit Time'
 			,'Group Commits/Sec'
+			,'Workfiles Created/sec'
+			,'Worktables Created/sec'
 			,'Distributed Query'
 			,'DTC calls'
 			,'Query Store CPU usage'
@@ -1063,6 +1065,7 @@ SELECT
 	,s.[program_name]
 	,s.[host_name]
 	,s.[nt_user_name]
+	,s.[login_name]
 	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
 		WHEN 0 THEN ''0-Read Committed''
 		WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)''
@@ -1136,37 +1139,59 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterp
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
 	RAISERROR (@ErrorMessage,11,1)
 	RETURN
-END
+END;
 
-SELECT
-	 'sqlserver_cpu' AS [measurement]
-	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,[SQLProcessUtilization] AS [sqlserver_process_cpu]
-	,[SystemIdle] AS [system_idle_cpu]
-	,100 - [SystemIdle] - [SQLProcessUtilization] AS [other_process_cpu]
-FROM (
-	SELECT TOP 1
-		 [record_id]
-		,[SQLProcessUtilization]
-		,[SystemIdle]
+WITH utilization_cte AS
+(
+	SELECT
+		 [SQLProcessUtilization] AS [sqlserver_process_cpu]
+		,[SystemIdle] AS [system_idle_cpu]
+		,100 - [SystemIdle] - [SQLProcessUtilization] AS [other_process_cpu]
 	FROM (
-		SELECT
-			 record.value('(./Record/@id)[1]', 'int') AS [record_id]
-			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
-			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
-			,[TIMESTAMP]
+		SELECT TOP 1
+			 [record_id]
+			,[SQLProcessUtilization]
+			,[SystemIdle]
 		FROM (
 			SELECT
-				 [TIMESTAMP]
-				,convert(XML, [record]) AS [record]
-			FROM sys.dm_os_ring_buffers
-			WHERE
-				[ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
-				AND [record] LIKE '%<SystemHealth>%'
-			) AS x
-		) AS y
-	ORDER BY [record_id] DESC
-) AS z
+				 record.value('(./Record/@id)[1]', 'int') AS [record_id]
+				,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
+				,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
+				,[TIMESTAMP]
+			FROM (
+				SELECT
+					 [TIMESTAMP]
+					,convert(XML, [record]) AS [record]
+				FROM sys.dm_os_ring_buffers
+				WHERE
+					[ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
+					AND [record] LIKE '%<SystemHealth>%'
+				) AS x
+			) AS y
+		ORDER BY [record_id] DESC
+	) AS z
+),
+processor_Info_cte AS
+(
+	SELECT ([cpu_count] / [hyperthread_ratio]) as [number_of_physical_cpus]
+	FROM sys.dm_os_sys_info
+)
+SELECT
+	'sqlserver_cpu' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,[sqlserver_process_cpu]
+	,[system_idle_cpu]
+	,100 - [system_idle_cpu] - [sqlserver_process_cpu] AS [other_process_cpu]
+FROM (
+	SELECT
+		(CASE
+			WHEN u.[other_process_cpu] < 0 THEN u.[sqlserver_process_cpu] / p.[number_of_physical_cpus]
+			ELSE u.[sqlserver_process_cpu]
+		END) AS [sqlserver_process_cpu]
+		,u.[system_idle_cpu]
+	FROM utilization_cte AS u
+		CROSS APPLY processor_Info_cte AS p
+	) AS b
 `
 
 // Collects availability replica state information from `sys.dm_hadr_availability_replica_states` for a High Availability / Disaster Recovery (HADR) setup

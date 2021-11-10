@@ -5,12 +5,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/inputs/system"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/shirou/gopsutil/disk"
-	"github.com/stretchr/testify/assert"
+	diskUtil "github.com/shirou/gopsutil/disk"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/inputs/system"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type MockFileInfo struct {
@@ -25,7 +25,7 @@ func TestDiskUsage(t *testing.T) {
 	var acc testutil.Accumulator
 	var err error
 
-	psAll := []disk.PartitionStat{
+	psAll := []diskUtil.PartitionStat{
 		{
 			Device:     "/dev/sda",
 			Mountpoint: "/",
@@ -39,7 +39,7 @@ func TestDiskUsage(t *testing.T) {
 			Opts:       "rw,noatime,nodiratime,errors=remount-ro",
 		},
 	}
-	duAll := []disk.UsageStat{
+	duAll := []diskUtil.UsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -72,7 +72,7 @@ func TestDiskUsage(t *testing.T) {
 
 	numDiskMetrics := acc.NFields()
 	expectedAllDiskMetrics := 14
-	assert.Equal(t, expectedAllDiskMetrics, numDiskMetrics)
+	require.Equal(t, expectedAllDiskMetrics, numDiskMetrics)
 
 	tags1 := map[string]string{
 		"path":   string(os.PathSeparator),
@@ -111,26 +111,28 @@ func TestDiskUsage(t *testing.T) {
 	// We expect 6 more DiskMetrics to show up with an explicit match on "/"
 	// and /home not matching the /dev in MountPoints
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
-	assert.Equal(t, expectedAllDiskMetrics+7, acc.NFields())
+	require.NoError(t, err)
+	require.Equal(t, expectedAllDiskMetrics+7, acc.NFields())
 
 	// We should see all the diskpoints as MountPoints includes both
 	// / and /home
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
-	assert.Equal(t, 2*expectedAllDiskMetrics+7, acc.NFields())
+	require.NoError(t, err)
+	require.Equal(t, 2*expectedAllDiskMetrics+7, acc.NFields())
 }
 
 func TestDiskUsageHostMountPrefix(t *testing.T) {
 	tests := []struct {
 		name            string
-		partitionStats  []disk.PartitionStat
-		usageStats      []*disk.UsageStat
+		partitionStats  []diskUtil.PartitionStat
+		usageStats      []*diskUtil.UsageStat
 		hostMountPrefix string
 		expectedTags    map[string]string
 		expectedFields  map[string]interface{}
 	}{
 		{
 			name: "no host mount prefix",
-			partitionStats: []disk.PartitionStat{
+			partitionStats: []diskUtil.PartitionStat{
 				{
 					Device:     "/dev/sda",
 					Mountpoint: "/",
@@ -138,7 +140,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 					Opts:       "ro",
 				},
 			},
-			usageStats: []*disk.UsageStat{
+			usageStats: []*diskUtil.UsageStat{
 				{
 					Path:  "/",
 					Total: 42,
@@ -162,7 +164,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 		},
 		{
 			name: "host mount prefix",
-			partitionStats: []disk.PartitionStat{
+			partitionStats: []diskUtil.PartitionStat{
 				{
 					Device:     "/dev/sda",
 					Mountpoint: "/hostfs/var",
@@ -170,7 +172,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 					Opts:       "ro",
 				},
 			},
-			usageStats: []*disk.UsageStat{
+			usageStats: []*diskUtil.UsageStat{
 				{
 					Path:  "/hostfs/var",
 					Total: 42,
@@ -195,7 +197,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 		},
 		{
 			name: "host mount prefix exact match",
-			partitionStats: []disk.PartitionStat{
+			partitionStats: []diskUtil.PartitionStat{
 				{
 					Device:     "/dev/sda",
 					Mountpoint: "/hostfs",
@@ -203,7 +205,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 					Opts:       "ro",
 				},
 			},
-			usageStats: []*disk.UsageStat{
+			usageStats: []*diskUtil.UsageStat{
 				{
 					Path:  "/hostfs",
 					Total: 42,
@@ -259,7 +261,7 @@ func TestDiskStats(t *testing.T) {
 	var acc testutil.Accumulator
 	var err error
 
-	duAll := []*disk.UsageStat{
+	duAll := []*diskUtil.UsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -281,7 +283,7 @@ func TestDiskStats(t *testing.T) {
 			InodesUsed:  2000,
 		},
 	}
-	duFiltered := []*disk.UsageStat{
+	duFiltered := []*diskUtil.UsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -294,7 +296,7 @@ func TestDiskStats(t *testing.T) {
 		},
 	}
 
-	psAll := []*disk.PartitionStat{
+	psAll := []*diskUtil.PartitionStat{
 		{
 			Device:     "/dev/sda",
 			Mountpoint: "/",
@@ -309,7 +311,7 @@ func TestDiskStats(t *testing.T) {
 		},
 	}
 
-	psFiltered := []*disk.PartitionStat{
+	psFiltered := []*diskUtil.PartitionStat{
 		{
 			Device:     "/dev/sda",
 			Mountpoint: "/",
@@ -327,7 +329,7 @@ func TestDiskStats(t *testing.T) {
 
 	numDiskMetrics := acc.NFields()
 	expectedAllDiskMetrics := 14
-	assert.Equal(t, expectedAllDiskMetrics, numDiskMetrics)
+	require.Equal(t, expectedAllDiskMetrics, numDiskMetrics)
 
 	tags1 := map[string]string{
 		"path":   "/",
@@ -366,10 +368,12 @@ func TestDiskStats(t *testing.T) {
 	// We expect 6 more DiskMetrics to show up with an explicit match on "/"
 	// and /home not matching the /dev in MountPoints
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/dev"}}).Gather(&acc)
-	assert.Equal(t, expectedAllDiskMetrics+7, acc.NFields())
+	require.NoError(t, err)
+	require.Equal(t, expectedAllDiskMetrics+7, acc.NFields())
 
 	// We should see all the diskpoints as MountPoints includes both
 	// / and /home
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
-	assert.Equal(t, 2*expectedAllDiskMetrics+7, acc.NFields())
+	require.NoError(t, err)
+	require.Equal(t, 2*expectedAllDiskMetrics+7, acc.NFields())
 }

@@ -1,9 +1,9 @@
+//go:build linux
 // +build linux
 
 package synproxy
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -59,6 +59,8 @@ func TestSynproxyFileInvalidHex(t *testing.T) {
 func TestNoSynproxyFile(t *testing.T) {
 	tmpfile := makeFakeSynproxyFile([]byte(synproxyFileNormal))
 	// Remove file to generate "no such file" error
+	// Ignore errors if file does not yet exist
+	//nolint:errcheck,revive
 	os.Remove(tmpfile)
 
 	k := Synproxy{
@@ -153,7 +155,7 @@ func testSynproxyFileData(t *testing.T, fileData string, telegrafData map[string
 }
 
 func makeFakeSynproxyFile(content []byte) string {
-	tmpfile, err := ioutil.TempFile("", "synproxy_test")
+	tmpfile, err := os.CreateTemp("", "synproxy_test")
 	if err != nil {
 		panic(err)
 	}

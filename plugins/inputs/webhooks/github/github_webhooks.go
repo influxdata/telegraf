@@ -5,7 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
@@ -28,7 +28,7 @@ func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator) 
 func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	eventType := r.Header.Get("X-Github-Event")
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -126,7 +126,9 @@ func checkSignature(secret string, data []byte, signature string) bool {
 
 func generateSignature(secret string, data []byte) string {
 	mac := hmac.New(sha1.New, []byte(secret))
-	mac.Write(data)
+	if _, err := mac.Write(data); err != nil {
+		return err.Error()
+	}
 	result := mac.Sum(nil)
 	return "sha1=" + hex.EncodeToString(result)
 }

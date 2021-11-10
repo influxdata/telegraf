@@ -15,8 +15,9 @@ import (
 )
 
 type Graphite struct {
-	GraphiteTagSupport bool   `toml:"graphite_tag_support"`
-	GraphiteSeparator  string `toml:"graphite_separator"`
+	GraphiteTagSupport      bool   `toml:"graphite_tag_support"`
+	GraphiteTagSanitizeMode string `toml:"graphite_tag_sanitize_mode"`
+	GraphiteSeparator       string `toml:"graphite_separator"`
 	// URL is only for backwards compatibility
 	Servers   []string        `toml:"servers"`
 	Prefix    string          `toml:"prefix"`
@@ -42,6 +43,11 @@ var sampleConfig = `
 
   ## Enable Graphite tags support
   # graphite_tag_support = false
+
+  ## Define how metric names and tags are sanitized; options are "strict", or "compatible"
+  ## strict - Default method, and backwards compatible with previous versionf of Telegraf
+  ## compatible - More relaxed sanitizing when using tags, and compatible with the graphite spec
+  # graphite_tag_sanitize_mode = "strict"
 
   ## Character for separating metric name and field for Graphite tags
   # graphite_separator = "."
@@ -150,7 +156,7 @@ func (g *Graphite) checkEOF(conn net.Conn) {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteSeparator, g.Templates)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteTagSanitizeMode, g.GraphiteSeparator, g.Templates)
 	if err != nil {
 		return err
 	}
@@ -189,9 +195,8 @@ func (g *Graphite) send(batch []byte) error {
 		if _, e := g.conns[n].Write(batch); e != nil {
 			// Error
 			g.Log.Errorf("Graphite Error: " + e.Error())
-			// Close explicitly
+			// Close explicitly and let's try the next one
 			g.conns[n].Close()
-			// Let's try the next one
 		} else {
 			// Success
 			err = nil

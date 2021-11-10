@@ -11,7 +11,7 @@ import (
 )
 
 func createTestMetric() telegraf.Metric {
-	metric, _ := metric.New("m1",
+	m := metric.New("m1",
 		map[string]string{
 			"tag":           "tag_value",
 			"duplicate_tag": "tag_value",
@@ -26,7 +26,7 @@ func createTestMetric() telegraf.Metric {
 		},
 		time.Now(),
 	)
-	return metric
+	return m
 }
 
 func calculateProcessedValues(mapper EnumMapper, metric telegraf.Metric) map[string]interface{} {
@@ -63,6 +63,7 @@ func TestRetainsMetric(t *testing.T) {
 	assertFieldValue(t, "test", "string_value", fields)
 	assertFieldValue(t, 200, "int_value", fields)
 	assertFieldValue(t, 500, "uint_value", fields)
+	assertFieldValue(t, float64(3.14), "float_value", fields)
 	assertFieldValue(t, true, "true_value", fields)
 	assert.Equal(t, "m1", target.Name())
 	assert.Equal(t, source.Tags(), target.Tags())
@@ -76,15 +77,6 @@ func TestMapsSingleStringValueTag(t *testing.T) {
 	tags := calculateProcessedTags(mapper, createTestMetric())
 
 	assertTagValue(t, "valuable", "tag", tags)
-}
-
-func TestNoFailureOnMappingsOnNonSupportedValuedFields(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{Field: "float_value", ValueMappings: map[string]interface{}{"3.14": "pi"}}}}
-	err := mapper.Init()
-	require.Nil(t, err)
-	fields := calculateProcessedValues(mapper, createTestMetric())
-
-	assertFieldValue(t, float64(3.14), "float_value", fields)
 }
 
 func TestMappings(t *testing.T) {
@@ -112,6 +104,12 @@ func TestMappings(t *testing.T) {
 			"target_value":   []interface{}{"500", "500", "500", "test", "false", "5"},
 			"mapped_value":   []interface{}{"internal_error", 1, false, false, false, false},
 			"expected_value": []interface{}{"internal_error", 1, false, 500, 500, 500},
+		},
+		{
+			"field_name":     []interface{}{"float_value"},
+			"target_value":   []interface{}{"3.14", "3.14", "3.14", "3.14", "not_float", "5"},
+			"mapped_value":   []interface{}{"pi", 1, false, float64(100.2), float64(3.14), "pi"},
+			"expected_value": []interface{}{"pi", 1, false, float64(100.2), float64(3.14), float64(3.14)},
 		},
 	}
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/aristanetworks/goarista/lanz"
 	pb "github.com/aristanetworks/goarista/lanz/proto"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -43,12 +44,11 @@ func (l *Lanz) Description() string {
 	return "Read metrics off Arista LANZ, via socket"
 }
 
-func (l *Lanz) Gather(acc telegraf.Accumulator) error {
+func (l *Lanz) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
 func (l *Lanz) Start(acc telegraf.Accumulator) error {
-
 	if len(l.Servers) == 0 {
 		l.Servers = append(l.Servers, "tcp://127.0.0.1:50001")
 	}
@@ -86,6 +86,7 @@ func (l *Lanz) Stop() {
 }
 
 func receive(acc telegraf.Accumulator, in <-chan *pb.LanzRecord, deviceURL *url.URL) {
+	//nolint:gosimple // for-select used on purpose
 	for {
 		select {
 		case msg, ok := <-in:

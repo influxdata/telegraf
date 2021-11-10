@@ -3,7 +3,6 @@ package starlark
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	starlarktime "go.starlark.net/lib/time"
+	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkstruct"
 )
 
 // Tests for runtime errors in the processors Init function.
@@ -26,8 +28,9 @@ func TestInitError(t *testing.T) {
 		{
 			name: "source must define apply",
 			plugin: &Starlark{
-				Source: "",
-				Log:    testutil.Logger{},
+				Source:           "",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 		},
 		{
@@ -36,7 +39,8 @@ func TestInitError(t *testing.T) {
 				Source: `
 apply = 42
 `,
-				Log: testutil.Logger{},
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 		},
 		{
@@ -46,7 +50,8 @@ apply = 42
 def apply():
 	pass
 `,
-				Log: testutil.Logger{},
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 		},
 		{
@@ -55,13 +60,15 @@ def apply():
 				Source: `
 for
 `,
-				Log: testutil.Logger{},
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 		},
 		{
 			name: "no source no script",
 			plugin: &Starlark{
-				Log: testutil.Logger{},
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 		},
 		{
@@ -71,15 +78,17 @@ for
 def apply():
 	pass
 `,
-				Script: "testdata/ratio.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/ratio.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 		},
 		{
 			name: "script file not found",
 			plugin: &Starlark{
-				Script: "testdata/file_not_found.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/file_not_found.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 		},
 	}
@@ -219,8 +228,9 @@ def apply(metric):
 	for _, tt := range applyTests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Starlark{
-				Source: tt.source,
-				Log:    testutil.Logger{},
+				Source:           tt.source,
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			}
 			err := plugin.Init()
 			require.NoError(t, err)
@@ -689,6 +699,49 @@ def apply(metric):
 				testutil.MustMetric("cpu",
 					map[string]string{
 						"host2": "example.org",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "pop tag (default)",
+			source: `
+def apply(metric):
+	metric.tags['host2'] = metric.tags.pop('url', 'foo.org')
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host": "example.org",
+						"url":  "bar.org",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host":  "example.org",
+						"host2": "foo.org",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host":  "example.org",
+						"host2": "bar.org",
 					},
 					map[string]interface{}{"time_idle": 0},
 					time.Unix(0, 0),
@@ -1764,6 +1817,53 @@ def apply(metric):
 			},
 		},
 		{
+			name: "pop field (default)",
+			source: `
+def apply(metric):
+	metric.fields['idle_count'] = metric.fields.pop('count', 10)
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":  0,
+						"time_guest": 0,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":  0,
+						"time_guest": 0,
+						"count":      0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":  0,
+						"time_guest": 0,
+						"idle_count": 10,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":  0,
+						"time_guest": 0,
+						"idle_count": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "popitem field",
 			source: `
 def apply(metric):
@@ -2476,9 +2576,10 @@ def apply(metric):
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Starlark{
-				Source:    tt.source,
-				Log:       testutil.Logger{},
-				Constants: tt.constants,
+				Source:           tt.source,
+				Log:              testutil.Logger{},
+				Constants:        tt.constants,
+				starlarkLoadFunc: testLoadFunc,
 			}
 			err := plugin.Init()
 			require.NoError(t, err)
@@ -2618,8 +2719,9 @@ func TestScript(t *testing.T) {
 		{
 			name: "rename",
 			plugin: &Starlark{
-				Script: "testdata/rename.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/rename.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("cpu",
@@ -2645,8 +2747,9 @@ func TestScript(t *testing.T) {
 		{
 			name: "drop fields by type",
 			plugin: &Starlark{
-				Script: "testdata/drop_string_fields.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/drop_string_fields.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("device",
@@ -2676,8 +2779,9 @@ func TestScript(t *testing.T) {
 		{
 			name: "drop fields with unexpected type",
 			plugin: &Starlark{
-				Script: "testdata/drop_fields_with_unexpected_type.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/drop_fields_with_unexpected_type.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("device",
@@ -2710,8 +2814,9 @@ func TestScript(t *testing.T) {
 		{
 			name: "scale",
 			plugin: &Starlark{
-				Script: "testdata/scale.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/scale.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("cpu",
@@ -2731,8 +2836,9 @@ func TestScript(t *testing.T) {
 		{
 			name: "ratio",
 			plugin: &Starlark{
-				Script: "testdata/ratio.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/ratio.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("mem",
@@ -2759,8 +2865,9 @@ func TestScript(t *testing.T) {
 		{
 			name: "logging",
 			plugin: &Starlark{
-				Script: "testdata/logging.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/logging.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("log",
@@ -2784,8 +2891,9 @@ func TestScript(t *testing.T) {
 		{
 			name: "multiple_metrics",
 			plugin: &Starlark{
-				Script: "testdata/multiple_metrics.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/multiple_metrics.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("mm",
@@ -2816,8 +2924,9 @@ func TestScript(t *testing.T) {
 		{
 			name: "multiple_metrics_with_json",
 			plugin: &Starlark{
-				Script: "testdata/multiple_metrics_with_json.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/multiple_metrics_with_json.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("json",
@@ -2825,7 +2934,7 @@ func TestScript(t *testing.T) {
 					map[string]interface{}{
 						"value": "[{\"label\": \"hello\"}, {\"label\": \"world\"}]",
 					},
-					time.Unix(0, 0),
+					time.Unix(1618488000, 999),
 				),
 			},
 			expected: []telegraf.Metric{
@@ -2834,22 +2943,23 @@ func TestScript(t *testing.T) {
 					map[string]interface{}{
 						"value": "hello",
 					},
-					time.Unix(0, 0),
+					time.Unix(1618488000, 999),
 				),
 				testutil.MustMetric("json",
 					map[string]string{},
 					map[string]interface{}{
 						"value": "world",
 					},
-					time.Unix(0, 0),
+					time.Unix(1618488000, 999),
 				),
 			},
 		},
 		{
 			name: "fail",
 			plugin: &Starlark{
-				Script: "testdata/fail.star",
-				Log:    testutil.Logger{},
+				Script:           "testdata/fail.star",
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("fail",
@@ -3137,8 +3247,9 @@ def apply(metric):
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			plugin := &Starlark{
-				Source: tt.source,
-				Log:    testutil.Logger{},
+				Source:           tt.source,
+				Log:              testutil.Logger{},
+				starlarkLoadFunc: testLoadFunc,
 			}
 
 			err := plugin.Init()
@@ -3172,7 +3283,7 @@ func TestAllScriptTestData(t *testing.T) {
 			}
 			fn := path
 			t.Run(fn, func(t *testing.T) {
-				b, err := ioutil.ReadFile(fn)
+				b, err := os.ReadFile(fn)
 				require.NoError(t, err)
 				lines := strings.Split(string(b), "\n")
 				inputMetrics := parseMetricsFrom(t, lines, "Example Input:")
@@ -3182,8 +3293,9 @@ func TestAllScriptTestData(t *testing.T) {
 					outputMetrics = parseMetricsFrom(t, lines, "Example Output:")
 				}
 				plugin := &Starlark{
-					Script: fn,
-					Log:    testutil.Logger{},
+					Script:           fn,
+					Log:              testutil.Logger{},
+					starlarkLoadFunc: testLoadFunc,
 				}
 				require.NoError(t, plugin.Init())
 
@@ -3204,7 +3316,7 @@ func TestAllScriptTestData(t *testing.T) {
 				err = plugin.Stop()
 				require.NoError(t, err)
 
-				testutil.RequireMetricsEqual(t, outputMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
+				testutil.RequireMetricsEqual(t, outputMetrics, acc.GetTelegrafMetrics(), testutil.SortMetrics())
 			})
 			return nil
 		})
@@ -3255,4 +3367,23 @@ func parseErrorMessage(t *testing.T, lines []string, header string) string {
 	}
 	require.True(t, startIdx < len(lines), fmt.Sprintf("Expected to find the error message after %q, but found none", header))
 	return strings.TrimLeft(lines[startIdx], "# ")
+}
+
+func testLoadFunc(module string, logger telegraf.Logger) (starlark.StringDict, error) {
+	result, err := loadFunc(module, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	if module == "time.star" {
+		customModule := result["time"].(*starlarkstruct.Module)
+		customModule.Members["now"] = starlark.NewBuiltin("now", testNow)
+		result["time"] = customModule
+	}
+
+	return result, nil
+}
+
+func testNow(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	return starlarktime.Time(time.Date(2021, 4, 15, 12, 0, 0, 999, time.UTC)), nil
 }

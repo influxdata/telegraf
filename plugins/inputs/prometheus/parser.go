@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
-func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
+func Parse(buf []byte, header http.Header, ignoreTimestamp bool) ([]telegraf.Metric, error) {
 	var parser expfmt.TextParser
 	var metrics []telegraf.Metric
 	var err error
@@ -69,7 +69,6 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				fields = makeBuckets(m)
 				fields["count"] = float64(m.GetHistogram().GetSampleCount())
 				fields["sum"] = float64(m.GetHistogram().GetSampleSum())
-
 			} else {
 				// standard metric
 				fields = getNameAndValue(m)
@@ -77,15 +76,13 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 			// converting to telegraf metric
 			if len(fields) > 0 {
 				var t time.Time
-				if m.TimestampMs != nil && *m.TimestampMs > 0 {
+				if !ignoreTimestamp && m.TimestampMs != nil && *m.TimestampMs > 0 {
 					t = time.Unix(0, *m.TimestampMs*1000000)
 				} else {
 					t = now
 				}
-				metric, err := metric.New(metricName, tags, fields, t, common.ValueType(mf.GetType()))
-				if err == nil {
-					metrics = append(metrics, metric)
-				}
+				m := metric.New(metricName, tags, fields, t, common.ValueType(mf.GetType()))
+				metrics = append(metrics, m)
 			}
 		}
 	}
@@ -94,9 +91,8 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 }
 
 func isProtobuf(header http.Header) bool {
-	mediatype, params, error := mime.ParseMediaType(header.Get("Content-Type"))
-
-	if error != nil {
+	mediatype, params, err := mime.ParseMediaType(header.Get("Content-Type"))
+	if err != nil {
 		return false
 	}
 

@@ -39,7 +39,7 @@ func (r *Raindrops) Gather(acc telegraf.Accumulator) error {
 	for _, u := range r.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			acc.AddError(fmt.Errorf("unable to parse address '%s': %s", u, err))
 			continue
 		}
 
@@ -147,7 +147,6 @@ func (r *Raindrops) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 				"ip":   listener[0],
 				"port": listener[1],
 			}
-
 		} else {
 			tags = map[string]string{
 				"socket": listenName,
@@ -179,9 +178,9 @@ func init() {
 	inputs.Add("raindrops", func() telegraf.Input {
 		return &Raindrops{httpClient: &http.Client{
 			Transport: &http.Transport{
-				ResponseHeaderTimeout: time.Duration(3 * time.Second),
+				ResponseHeaderTimeout: 3 * time.Second,
 			},
-			Timeout: time.Duration(4 * time.Second),
+			Timeout: 4 * time.Second,
 		}}
 	})
 }

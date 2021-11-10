@@ -71,7 +71,7 @@ func (i *erroringInput) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (i *erroringInput) Start(acc telegraf.Accumulator) error {
+func (i *erroringInput) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 

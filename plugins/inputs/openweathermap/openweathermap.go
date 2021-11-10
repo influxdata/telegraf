@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -23,23 +23,23 @@ const (
 	// The limit of locations is 20.
 	owmRequestSeveralCityID int = 20
 
-	defaultBaseURL                       = "https://api.openweathermap.org/"
-	defaultResponseTimeout time.Duration = time.Second * 5
-	defaultUnits           string        = "metric"
-	defaultLang            string        = "en"
+	defaultBaseURL         = "https://api.openweathermap.org/"
+	defaultResponseTimeout = time.Second * 5
+	defaultUnits           = "metric"
+	defaultLang            = "en"
 )
 
 type OpenWeatherMap struct {
-	AppID           string            `toml:"app_id"`
-	CityID          []string          `toml:"city_id"`
-	Lang            string            `toml:"lang"`
-	Fetch           []string          `toml:"fetch"`
-	BaseURL         string            `toml:"base_url"`
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
-	Units           string            `toml:"units"`
+	AppID           string          `toml:"app_id"`
+	CityID          []string        `toml:"city_id"`
+	Lang            string          `toml:"lang"`
+	Fetch           []string        `toml:"fetch"`
+	BaseURL         string          `toml:"base_url"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
+	Units           string          `toml:"units"`
 
-	client  *http.Client
-	baseURL *url.URL
+	client        *http.Client
+	baseParsedURL *url.URL
 }
 
 var sampleConfig = `
@@ -124,7 +124,6 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 					gatherWeather(acc, status)
 				}()
 			}
-
 		}
 	}
 
@@ -132,17 +131,17 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *OpenWeatherMap) createHTTPClient() (*http.Client, error) {
-	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = defaultResponseTimeout
+func (n *OpenWeatherMap) createHTTPClient() *http.Client {
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(defaultResponseTimeout)
 	}
 
 	client := &http.Client{
 		Transport: &http.Transport{},
-		Timeout:   n.ResponseTimeout.Duration,
+		Timeout:   time.Duration(n.ResponseTimeout),
 	}
 
-	return client, nil
+	return client
 }
 
 func (n *OpenWeatherMap) gatherURL(addr string) (*Status, error) {
@@ -300,9 +299,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 
 func init() {
 	inputs.Add("openweathermap", func() telegraf.Input {
-		tmout := internal.Duration{
-			Duration: defaultResponseTimeout,
-		}
+		tmout := config.Duration(defaultResponseTimeout)
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
 			BaseURL:         defaultBaseURL,
@@ -312,17 +309,14 @@ func init() {
 
 func (n *OpenWeatherMap) Init() error {
 	var err error
-	n.baseURL, err = url.Parse(n.BaseURL)
+	n.baseParsedURL, err = url.Parse(n.BaseURL)
 	if err != nil {
 		return err
 	}
 
 	// Create an HTTP client that is re-used for each
 	// collection interval
-	n.client, err = n.createHTTPClient()
-	if err != nil {
-		return err
-	}
+	n.client = n.createHTTPClient()
 
 	switch n.Units {
 	case "imperial", "standard", "metric":
@@ -359,5 +353,5 @@ func (n *OpenWeatherMap) formatURL(path string, city string) string {
 		RawQuery: v.Encode(),
 	}
 
-	return n.baseURL.ResolveReference(relative).String()
+	return n.baseParsedURL.ResolveReference(relative).String()
 }

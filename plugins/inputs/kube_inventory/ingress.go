@@ -2,9 +2,8 @@ package kube_inventory
 
 import (
 	"context"
-	"time"
 
-	v1beta1EXT "github.com/ericchiang/k8s/apis/extensions/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 
 	"github.com/influxdata/telegraf"
 )
@@ -16,45 +15,47 @@ func collectIngress(ctx context.Context, acc telegraf.Accumulator, ki *Kubernete
 		return
 	}
 	for _, i := range list.Items {
-		if err = ki.gatherIngress(*i, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherIngress(i, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherIngress(i v1beta1EXT.Ingress, acc telegraf.Accumulator) error {
-	if i.Metadata.CreationTimestamp.GetSeconds() == 0 && i.Metadata.CreationTimestamp.GetNanos() == 0 {
-		return nil
+func (ki *KubernetesInventory) gatherIngress(i netv1.Ingress, acc telegraf.Accumulator) {
+	creationTs := i.GetCreationTimestamp()
+	if creationTs.IsZero() {
+		return
 	}
 
 	fields := map[string]interface{}{
-		"created":    time.Unix(i.Metadata.CreationTimestamp.GetSeconds(), int64(i.Metadata.CreationTimestamp.GetNanos())).UnixNano(),
-		"generation": i.Metadata.GetGeneration(),
+		"created":    i.GetCreationTimestamp().UnixNano(),
+		"generation": i.Generation,
 	}
 
 	tags := map[string]string{
-		"ingress_name": i.Metadata.GetName(),
-		"namespace":    i.Metadata.GetNamespace(),
+		"ingress_name": i.Name,
+		"namespace":    i.Namespace,
 	}
 
-	for _, ingress := range i.GetStatus().GetLoadBalancer().GetIngress() {
-		tags["hostname"] = ingress.GetHostname()
-		tags["ip"] = ingress.GetIp()
+	for _, ingress := range i.Status.LoadBalancer.Ingress {
+		tags["hostname"] = ingress.Hostname
+		tags["ip"] = ingress.IP
 
-		for _, rule := range i.GetSpec().GetRules() {
-			for _, path := range rule.GetIngressRuleValue().GetHttp().GetPaths() {
-				fields["backend_service_port"] = path.GetBackend().GetServicePort().GetIntVal()
-				fields["tls"] = i.GetSpec().GetTls() != nil
+		for _, rule := range i.Spec.Rules {
+			if rule.IngressRuleValue.HTTP == nil {
+				continue
+			}
+			for _, path := range rule.IngressRuleValue.HTTP.Paths {
+				if path.Backend.Service != nil {
+					tags["backend_service_name"] = path.Backend.Service.Name
+					fields["backend_service_port"] = path.Backend.Service.Port.Number
+				}
 
-				tags["backend_service_name"] = path.GetBackend().GetServiceName()
-				tags["path"] = path.GetPath()
-				tags["host"] = rule.GetHost()
+				fields["tls"] = i.Spec.TLS != nil
+
+				tags["path"] = path.Path
+				tags["host"] = rule.Host
 
 				acc.AddFields(ingressMeasurement, fields, tags)
 			}
 		}
 	}
-
-	return nil
 }

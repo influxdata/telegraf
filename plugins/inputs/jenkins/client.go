@@ -69,6 +69,8 @@ func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
 		return err
 	}
 	defer func() {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		resp.Body.Close()
 		<-c.semaphore
 	}()

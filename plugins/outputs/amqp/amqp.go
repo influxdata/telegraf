@@ -2,11 +2,11 @@ package amqp
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -29,7 +29,7 @@ func (a *externalAuth) Mechanism() string {
 }
 
 func (a *externalAuth) Response() string {
-	return fmt.Sprintf("\000")
+	return "\000"
 }
 
 type AMQP struct {
@@ -51,7 +51,7 @@ type AMQP struct {
 	RetentionPolicy    string            `toml:"retention_policy"` // deprecated in 1.7; use headers
 	Precision          string            `toml:"precision"`        // deprecated; has no effect
 	Headers            map[string]string `toml:"headers"`
-	Timeout            internal.Duration `toml:"timeout"`
+	Timeout            config.Duration   `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
 	ContentEncoding    string            `toml:"content_encoding"`
 	Log                telegraf.Logger   `toml:"-"`
@@ -320,7 +320,7 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 		exchangeType:    q.ExchangeType,
 		exchangePassive: q.ExchangePassive,
 		encoding:        q.ContentEncoding,
-		timeout:         q.Timeout.Duration,
+		timeout:         time.Duration(q.Timeout),
 	}
 
 	switch q.ExchangeDurability {
@@ -398,7 +398,7 @@ func init() {
 			AuthMethod:      DefaultAuthMethod,
 			Database:        DefaultDatabase,
 			RetentionPolicy: DefaultRetentionPolicy,
-			Timeout:         internal.Duration{Duration: time.Second * 5},
+			Timeout:         config.Duration(time.Second * 5),
 			connect:         connect,
 		}
 	})

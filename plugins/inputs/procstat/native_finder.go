@@ -2,7 +2,7 @@ package procstat
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -43,7 +43,7 @@ func (pg *NativeFinder) UID(user string) ([]PID, error) {
 //PidFile returns the pid from the pid file given.
 func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	var pids []PID
-	pidString, err := ioutil.ReadFile(path)
+	pidString, err := os.ReadFile(path)
 	if err != nil {
 		return pids, fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'",
 			path, err)
@@ -54,7 +54,6 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	}
 	pids = append(pids, PID(pid))
 	return pids, nil
-
 }
 
 //FullPattern matches on the command line when the process was executed

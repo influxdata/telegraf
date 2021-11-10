@@ -7,12 +7,18 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
 ```toml
 # Pulls statistics from nvidia GPUs attached to the host
 [[inputs.nvidia_smi]]
-  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
+  ## Optional: path to nvidia-smi binary, defaults "/usr/bin/nvidia-smi"
+  ## We will first try to locate the nvidia-smi binary with the explicitly specified value (or default value), 
+  ## if it is not found, we will try to locate it on PATH(exec.LookPath), if it is still not found, an error will be returned
   # bin_path = "/usr/bin/nvidia-smi"
 
   ## Optional: timeout for GPU polling
   # timeout = "5s"
 ```
+
+#### Linux
+
+On Linux, `nvidia-smi` is generally located at `/usr/bin/nvidia-smi`
 
 #### Windows
 
@@ -89,3 +95,5 @@ nvidia_smi,compute_mode=Default,host=8218cf,index=2,name=GeForce\ GTX\ 1080,psta
 ### Limitations
 Note that there seems to be an issue with getting current memory clock values when the memory is overclocked.
 This may or may not apply to everyone but it's confirmed to be an issue on an EVGA 2080 Ti.
+
+**NOTE:** For use with docker either generate your own custom docker image based on nvidia/cuda which also installs a telegraf package or use [volume mount binding](https://docs.docker.com/storage/bind-mounts/) to inject the required binary into the docker container.

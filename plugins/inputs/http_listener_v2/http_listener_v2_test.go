@@ -4,19 +4,21 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/golang/snappy"
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -52,7 +54,7 @@ func newTestHTTPListenerV2() *HTTPListenerV2 {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
-		MaxBodySize:    internal.Size{Size: 70000},
+		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
 	}
 	return listener
@@ -113,7 +115,7 @@ func TestInvalidListenerConfig(t *testing.T) {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
-		MaxBodySize:    internal.Size{Size: 70000},
+		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
 	}
 
@@ -145,7 +147,7 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	// post single message to listener
 	resp, err := noClientAuthClient.Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -159,7 +161,7 @@ func TestWriteHTTPSWithClientAuth(t *testing.T) {
 	// post single message to listener
 	resp, err := getHTTPSClient().Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -177,7 +179,7 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 	req.SetBasicAuth(basicUsername, basicPassword)
 	resp, err := client.Do(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 }
 
@@ -191,7 +193,7 @@ func TestWriteHTTP(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
@@ -203,7 +205,7 @@ func TestWriteHTTP(t *testing.T) {
 	// post multiple message to listener
 	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(2)
@@ -219,13 +221,69 @@ func TestWriteHTTP(t *testing.T) {
 	// Post a gigantic metric to the listener and verify that an error is returned:
 	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 413, resp.StatusCode)
 
 	acc.Wait(3)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
+	)
+}
+
+// http listener should add request path as configured path_tag
+func TestWriteHTTPWithPathTag(t *testing.T) {
+	listener := newTestHTTPListenerV2()
+	listener.PathTag = true
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to listener
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
+	)
+}
+
+// http listener should add request path as configured path_tag (trimming it before)
+func TestWriteHTTPWithMultiplePaths(t *testing.T) {
+	listener := newTestHTTPListenerV2()
+	listener.Paths = []string{"/alternative_write"}
+	listener.PathTag = true
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to /write
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	// post single message to /alternative_write
+	resp, err = http.Post(createURL(listener, "http", "/alternative_write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/write"},
+	)
+
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "http_listener_v2_path": "/alternative_write"},
 	)
 }
 
@@ -240,7 +298,7 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
@@ -259,7 +317,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
-		MaxBodySize:    internal.Size{Size: int64(len(hugeMetric))},
+		MaxBodySize:    config.Size(len(hugeMetric)),
 		TimeFunc:       time.Now,
 	}
 
@@ -269,7 +327,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 
 	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -282,7 +340,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
-		MaxBodySize:    internal.Size{Size: 4096},
+		MaxBodySize:    config.Size(4096),
 		TimeFunc:       time.Now,
 	}
 
@@ -292,7 +350,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 
 	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 413, resp.StatusCode)
 }
 
@@ -304,7 +362,7 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	data, err := ioutil.ReadFile("./testdata/testmsgs.gz")
+	data, err := os.ReadFile("./testdata/testmsgs.gz")
 	require.NoError(t, err)
 
 	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(data))
@@ -314,11 +372,47 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
 	acc.Wait(len(hostTags))
+	for _, hostTag := range hostTags {
+		acc.AssertContainsTaggedFields(t, "cpu_load_short",
+			map[string]interface{}{"value": float64(12)},
+			map[string]string{"host": hostTag},
+		)
+	}
+}
+
+// test that writing snappy data works
+func TestWriteHTTPSnappyData(t *testing.T) {
+	listener := newTestHTTPListenerV2()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	testData := "cpu_load_short,host=server01 value=12.0 1422568543702900257\n"
+	encodedData := snappy.Encode(nil, []byte(testData))
+
+	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(encodedData))
+	require.NoError(t, err)
+	req.Header.Set("Content-Encoding", "snappy")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Log("Test client request failed. Error: ", err)
+	}
+	require.NoErrorf(t, resp.Body.Close(), "Test client close failed. Error: %v", err)
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	hostTags := []string{"server01"}
+	acc.Wait(1)
+
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},
@@ -346,15 +440,21 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 			defer innerwg.Done()
 			for i := 0; i < 500; i++ {
 				resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
-				require.NoError(t, err)
-				resp.Body.Close()
-				require.EqualValues(t, 204, resp.StatusCode)
+				if err != nil {
+					return
+				}
+				if err := resp.Body.Close(); err != nil {
+					return
+				}
+				if resp.StatusCode != 204 {
+					return
+				}
 			}
 		}(&wg)
 	}
 
 	wg.Wait()
-	listener.Gather(acc)
+	require.NoError(t, listener.Gather(acc))
 
 	acc.Wait(25000)
 	require.Equal(t, int64(25000), int64(acc.NMetrics()))
@@ -370,7 +470,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "http", "/foobar", ""), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 404, resp.StatusCode)
 }
 
@@ -384,7 +484,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(badMsg)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)
 }
 
@@ -398,7 +498,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(emptyMsg)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -418,7 +518,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
@@ -430,7 +530,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
 	// post single message to listener
 	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
@@ -456,7 +556,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsBulkWrite(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(2)
@@ -481,7 +581,7 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 
 	resp, err := http.Post(createURL(listener, "http", "/write", "tagKey=tagValue&fieldKey=42"), "", bytes.NewBuffer([]byte(emptyMsg)))
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
@@ -505,7 +605,7 @@ func TestWriteHTTPFormData(t *testing.T) {
 		"fieldKey": {"42"},
 	})
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)

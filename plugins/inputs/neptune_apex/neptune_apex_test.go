@@ -1,22 +1,23 @@
 package neptuneapex
 
 import (
-	"bytes"
 	"context"
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGather(t *testing.T) {
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("data"))
+		_, err := w.Write([]byte("data"))
+		require.NoError(t, err)
 	})
 	c, destroy := fakeHTTPClient(h)
 	defer destroy()
@@ -46,12 +47,9 @@ func TestGather(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			n.Servers = test.servers
-			n.Gather(&acc)
-			if len(acc.Errors) != len(test.servers) {
-				t.Errorf("Number of servers mismatch. got=%d, want=%d",
-					len(acc.Errors), len(test.servers))
-			}
-
+			require.NoError(t, n.Gather(&acc))
+			require.Lenf(t, acc.Errors, len(test.servers),
+				"Number of servers mismatch. got=%d, want=%d", len(acc.Errors), len(test.servers))
 		})
 	}
 }
@@ -63,33 +61,32 @@ func TestParseXML(t *testing.T) {
 	tests := []struct {
 		name        string
 		xmlResponse []byte
-		wantMetrics []*testutil.Metric
+		wantMetrics []telegraf.Metric
 		wantAccErr  bool
 		wantErr     bool
 	}{
 		{
 			name:        "Good test",
 			xmlResponse: []byte(APEX2016),
-			wantMetrics: []*testutil.Metric{
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+			wantMetrics: []telegraf.Metric{
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":   "apex",
 						"type":     "controller",
 						"software": "5.04_7A18",
 						"hardware": "1.0",
 					},
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"serial":         "AC5:12345",
 						"power_failed":   int64(1544814000000000000),
 						"power_restored": int64(1544833875000000000),
 					},
-				},
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+					goodTime,
+				),
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":      "apex",
 						"output_id":   "0",
 						"device_id":   "base_Var1",
@@ -99,12 +96,12 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					Fields: map[string]interface{}{"state": "PF1"},
-				},
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+					map[string]interface{}{"state": "PF1"},
+					goodTime,
+				),
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":      "apex",
 						"output_id":   "6",
 						"device_id":   "base_email",
@@ -114,12 +111,12 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					Fields: map[string]interface{}{"state": "AOF"},
-				},
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+					map[string]interface{}{"state": "AOF"},
+					goodTime,
+				),
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":      "apex",
 						"output_id":   "8",
 						"device_id":   "2_1",
@@ -129,16 +126,16 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"state": "AON",
 						"watt":  35.0,
 						"amp":   0.3,
 					},
-				},
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+					goodTime,
+				),
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":      "apex",
 						"output_id":   "18",
 						"device_id":   "3_1",
@@ -148,15 +145,15 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"state":   "TBL",
 						"xstatus": "OK",
 					},
-				},
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+					goodTime,
+				),
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":      "apex",
 						"output_id":   "28",
 						"device_id":   "4_9",
@@ -166,12 +163,12 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					Fields: map[string]interface{}{"state": "AOF"},
-				},
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+					map[string]interface{}{"state": "AOF"},
+					goodTime,
+				),
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":      "apex",
 						"output_id":   "32",
 						"device_id":   "Cntl_A2",
@@ -181,12 +178,12 @@ func TestParseXML(t *testing.T) {
 						"software":    "5.04_7A18",
 						"hardware":    "1.0",
 					},
-					Fields: map[string]interface{}{"state": "AOF"},
-				},
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+					map[string]interface{}{"state": "AOF"},
+					goodTime,
+				),
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":     "apex",
 						"name":       "Salt",
 						"type":       "probe",
@@ -194,20 +191,21 @@ func TestParseXML(t *testing.T) {
 						"software":   "5.04_7A18",
 						"hardware":   "1.0",
 					},
-					Fields: map[string]interface{}{"value": 30.1},
-				},
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+					map[string]interface{}{"value": 30.1},
+					goodTime,
+				),
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":   "apex",
 						"name":     "Volt_2",
 						"type":     "probe",
 						"software": "5.04_7A18",
 						"hardware": "1.0",
 					},
-					Fields: map[string]interface{}{"value": 115.0},
-				},
+					map[string]interface{}{"value": 115.0},
+					goodTime,
+				),
 			},
 		},
 		{
@@ -226,21 +224,21 @@ func TestParseXML(t *testing.T) {
 				`<status><date>12/22/2018 21:55:37</date>
 				<timezone>-8.0</timezone><power><failed>a</failed>
 				<restored>12/22/2018 22:55:37</restored></power></status>`),
-			wantMetrics: []*testutil.Metric{
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+			wantMetrics: []telegraf.Metric{
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":   "",
 						"type":     "controller",
 						"hardware": "",
 						"software": "",
 					},
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"serial":         "",
 						"power_restored": int64(1545548137000000000),
 					},
-				},
+					goodTime,
+				),
 			},
 		},
 		{
@@ -249,21 +247,21 @@ func TestParseXML(t *testing.T) {
 				`<status><date>12/22/2018 21:55:37</date>
 				<timezone>-8.0</timezone><power><restored>a</restored>
 				<failed>12/22/2018 22:55:37</failed></power></status>`),
-			wantMetrics: []*testutil.Metric{
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+			wantMetrics: []telegraf.Metric{
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":   "",
 						"type":     "controller",
 						"hardware": "",
 						"software": "",
 					},
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"serial":       "",
 						"power_failed": int64(1545548137000000000),
 					},
-				},
+					goodTime,
+				),
 			},
 		},
 		{
@@ -283,22 +281,22 @@ func TestParseXML(t *testing.T) {
 				<probes><probe><name>o1W</name><value>abc</value></probe>
 				</probes></status>`),
 			wantAccErr: true,
-			wantMetrics: []*testutil.Metric{
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+			wantMetrics: []telegraf.Metric{
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":   "",
 						"type":     "controller",
 						"hardware": "",
 						"software": "",
 					},
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"serial":         "",
 						"power_failed":   int64(1545544537000000000),
 						"power_restored": int64(1545544537000000000),
 					},
-				},
+					goodTime,
+				),
 			},
 		},
 		{
@@ -312,22 +310,22 @@ func TestParseXML(t *testing.T) {
 				<probes><probe><name>o1A</name><value>abc</value></probe>
 				</probes></status>`),
 			wantAccErr: true,
-			wantMetrics: []*testutil.Metric{
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+			wantMetrics: []telegraf.Metric{
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":   "",
 						"type":     "controller",
 						"hardware": "",
 						"software": "",
 					},
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"serial":         "",
 						"power_failed":   int64(1545544537000000000),
 						"power_restored": int64(1545544537000000000),
 					},
-				},
+					goodTime,
+				),
 			},
 		},
 		{
@@ -340,22 +338,22 @@ func TestParseXML(t *testing.T) {
 				<probes><probe><name>p1</name><value>abc</value></probe>
 				</probes></status>`),
 			wantAccErr: true,
-			wantMetrics: []*testutil.Metric{
-				{
-					Measurement: Measurement,
-					Time:        goodTime,
-					Tags: map[string]string{
+			wantMetrics: []telegraf.Metric{
+				testutil.MustMetric(
+					Measurement,
+					map[string]string{
 						"source":   "",
 						"type":     "controller",
 						"hardware": "",
 						"software": "",
 					},
-					Fields: map[string]interface{}{
+					map[string]interface{}{
 						"serial":         "",
 						"power_failed":   int64(1545544537000000000),
 						"power_restored": int64(1545544537000000000),
 					},
-				},
+					goodTime,
+				),
 			},
 		},
 	}
@@ -364,33 +362,17 @@ func TestParseXML(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			err := n.parseXML(&acc, []byte(test.xmlResponse))
-			if (err != nil) != test.wantErr {
-				t.Errorf("err mismatch. got=%v, want=%t", err, test.wantErr)
-			}
+			err := n.parseXML(&acc, test.xmlResponse)
 			if test.wantErr {
+				require.Error(t, err, "expected error but got <nil>")
 				return
 			}
-			if len(acc.Errors) > 0 != test.wantAccErr {
-				t.Errorf("Accumulator errors. got=%v, want=none", acc.Errors)
-			}
-			if len(acc.Metrics) != len(test.wantMetrics) {
-				t.Fatalf("Invalid number of metrics received. got=%d, want=%d", len(acc.Metrics), len(test.wantMetrics))
-			}
-			for i, m := range acc.Metrics {
-				if m.Measurement != test.wantMetrics[i].Measurement {
-					t.Errorf("Metric measurement mismatch at position %d:\ngot=\n%s\nWant=\n%s", i, m.Measurement, test.wantMetrics[i].Measurement)
-				}
-				if !reflect.DeepEqual(m.Tags, test.wantMetrics[i].Tags) {
-					t.Errorf("Metric tags mismatch at position %d:\ngot=\n%v\nwant=\n%v", i, m.Tags, test.wantMetrics[i].Tags)
-				}
-				if !reflect.DeepEqual(m.Fields, test.wantMetrics[i].Fields) {
-					t.Errorf("Metric fields mismatch at position %d:\ngot=\n%#v\nwant=:\n%#v", i, m.Fields, test.wantMetrics[i].Fields)
-				}
-				if !m.Time.Equal(test.wantMetrics[i].Time) {
-					t.Errorf("Metric time mismatch at position %d:\ngot=\n%s\nwant=\n%s", i, m.Time, test.wantMetrics[i].Time)
-				}
-			}
+			// No error case
+			require.NoErrorf(t, err, "expected no error but got: %v", err)
+			require.Equalf(t, len(acc.Errors) > 0, test.wantAccErr,
+				"Accumulator errors. got=%v, want=%t", acc.Errors, test.wantAccErr)
+
+			testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), test.wantMetrics)
 		})
 	}
 }
@@ -424,7 +406,8 @@ func TestSendRequest(t *testing.T) {
 			h := http.HandlerFunc(func(
 				w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(test.statusCode)
-				w.Write([]byte("data"))
+				_, err := w.Write([]byte("data"))
+				require.NoError(t, err)
 			})
 			c, destroy := fakeHTTPClient(h)
 			defer destroy()
@@ -432,16 +415,14 @@ func TestSendRequest(t *testing.T) {
 				httpClient: c,
 			}
 			resp, err := n.sendRequest("http://abc")
-			if (err != nil) != test.wantErr {
-				t.Errorf("err mismatch. got=%v, want=%t", err, test.wantErr)
-			}
 			if test.wantErr {
+				require.Error(t, err, "expected error but got <nil>")
 				return
 			}
-			if bytes.Compare(resp, []byte("data")) != 0 {
-				t.Errorf(
-					"Response data mismatch. got=%q, want=%q", resp, "data")
-			}
+
+			// No error case
+			require.NoErrorf(t, err, "expected no error but got: %v", err)
+			require.Equalf(t, resp, []byte("data"), "Response data mismatch. got=%q, want=%q", resp, "data")
 		})
 	}
 }
@@ -480,15 +461,14 @@ func TestParseTime(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			res, err := parseTime(test.input, test.timeZone)
-			if (err != nil) != test.wantErr {
-				t.Errorf("err mismatch. got=%v, want=%t", err, test.wantErr)
-			}
 			if test.wantErr {
+				require.Error(t, err, "expected error but got <nil>")
 				return
 			}
-			if !test.wantTime.Equal(res) {
-				t.Errorf("err mismatch. got=%s, want=%s", res, test.wantTime)
-			}
+
+			// No error case
+			require.NoErrorf(t, err, "expected no error but got: %v", err)
+			require.Truef(t, test.wantTime.Equal(res), "time mismatch. got=%q, want=%q", res, test.wantTime)
 		})
 	}
 }
@@ -524,24 +504,8 @@ func TestFindProbe(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			index := findProbe(test.probeName, fakeProbes)
-			if index != test.wantIndex {
-				t.Errorf("probe index mismatch; got=%d, want %d", index, test.wantIndex)
-			}
+			require.Equalf(t, index, test.wantIndex, "probe index mismatch; got=%d, want %d", index, test.wantIndex)
 		})
-	}
-}
-
-func TestDescription(t *testing.T) {
-	n := &NeptuneApex{}
-	if n.Description() == "" {
-		t.Errorf("Empty description")
-	}
-}
-
-func TestSampleConfig(t *testing.T) {
-	n := &NeptuneApex{}
-	if n.SampleConfig() == "" {
-		t.Errorf("Empty sample config")
 	}
 }
 

@@ -27,8 +27,6 @@ avoid cardinality issues:
 
 - Use [metric filtering][] options to exclude unneeded measurements and tags.
 - Write to a database with an appropriate [retention policy][].
-- Limit series cardinality in your database using the
-  [max-series-per-database][] and [max-values-per-tag][] settings.
 - Consider using the [Time Series Index][tsi].
 - Monitor your databases [series cardinality][].
 - Consult the [InfluxDB documentation][influx-docs] for the most up-to-date techniques.
@@ -70,8 +68,11 @@ avoid cardinality issues:
   selector_exclude = ["*"]
 
   ## Optional TLS Config
+  ## Trusted root certificates for server
   # tls_ca = "/path/to/cafile"
+  ## Used for TLS client certificate authentication
   # tls_cert = "/path/to/certfile"
+  ## Used for TLS client certificate authentication
   # tls_key = "/path/to/keyfile"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
@@ -127,6 +128,26 @@ subjects:
   - kind: ServiceAccount
     name: telegraf
     namespace: default
+```
+
+## Quickstart in k3s
+
+When monitoring [k3s](https://k3s.io) server instances one can re-use already generated administration token.
+This is less secure than using the more restrictive dedicated telegraf user but more convienient to set up.
+
+```console
+# an empty token will make telegraf use the client cert/key files instead
+$ touch /run/telegraf-kubernetes-token
+# replace `telegraf` with the user the telegraf process is running as
+$ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.crt /run/telegraf-kubernetes-cert
+$ install -o telegraf -m400 /var/lib/rancher/k3s/server/tls/client-admin.key /run/telegraf-kubernetes-key
+```
+
+```toml
+[kube_inventory]
+bearer_token = "/run/telegraf-kubernetes-token"
+tls_cert = "/run/telegraf-kubernetes-cert"
+tls_key = "/run/telegraf-kubernetes-key"
 ```
 
 ### Metrics:
@@ -309,8 +330,6 @@ kubernetes_statefulset,namespace=default,selector_select1=s1,statefulset_name=et
 
 [metric filtering]: https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering
 [retention policy]: https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/
-[max-series-per-database]: https://docs.influxdata.com/influxdb/latest/administration/config/#max-series-per-database-1000000
-[max-values-per-tag]: https://docs.influxdata.com/influxdb/latest/administration/config/#max-values-per-tag-100000
 [tsi]: https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/

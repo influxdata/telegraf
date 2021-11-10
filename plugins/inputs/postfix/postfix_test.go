@@ -1,9 +1,9 @@
+//go:build !windows
 // +build !windows
 
 package postfix
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +14,7 @@ import (
 )
 
 func TestGather(t *testing.T) {
-	td, err := ioutil.TempDir("", "")
+	td, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(td)
 
@@ -22,12 +22,12 @@ func TestGather(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.FromSlash(td+"/"+q), 0755))
 	}
 
-	require.NoError(t, ioutil.WriteFile(filepath.FromSlash(td+"/active/01"), []byte("abc"), 0644))
-	require.NoError(t, ioutil.WriteFile(filepath.FromSlash(td+"/active/02"), []byte("defg"), 0644))
-	require.NoError(t, ioutil.WriteFile(filepath.FromSlash(td+"/hold/01"), []byte("abc"), 0644))
-	require.NoError(t, ioutil.WriteFile(filepath.FromSlash(td+"/incoming/01"), []byte("abcd"), 0644))
-	require.NoError(t, ioutil.WriteFile(filepath.FromSlash(td+"/deferred/0/0/01"), []byte("abc"), 0644))
-	require.NoError(t, ioutil.WriteFile(filepath.FromSlash(td+"/deferred/F/F/F1"), []byte("abc"), 0644))
+	require.NoError(t, os.WriteFile(filepath.FromSlash(td+"/active/01"), []byte("abc"), 0644))
+	require.NoError(t, os.WriteFile(filepath.FromSlash(td+"/active/02"), []byte("defg"), 0644))
+	require.NoError(t, os.WriteFile(filepath.FromSlash(td+"/hold/01"), []byte("abc"), 0644))
+	require.NoError(t, os.WriteFile(filepath.FromSlash(td+"/incoming/01"), []byte("abcd"), 0644))
+	require.NoError(t, os.WriteFile(filepath.FromSlash(td+"/deferred/0/0/01"), []byte("abc"), 0644))
+	require.NoError(t, os.WriteFile(filepath.FromSlash(td+"/deferred/F/F/F1"), []byte("abc"), 0644))
 
 	p := Postfix{
 		QueueDirectory: td,

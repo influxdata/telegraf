@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package sysstat
@@ -10,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var s = Sysstat{
@@ -303,7 +305,8 @@ dell-xps	5	2016-03-25 16:18:10 UTC	sdb	%util	0.30
 
 	switch path.Base(cmd) {
 	case "sadf":
-		fmt.Fprint(os.Stdout, mockData[args[3]])
+		_, err := fmt.Fprint(os.Stdout, mockData[args[3]])
+		require.NoError(t, err)
 	default:
 	}
 	// some code here to check arguments perhaps?

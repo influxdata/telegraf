@@ -2,7 +2,7 @@ package mandrill
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -25,13 +25,13 @@ func (md *MandrillWebhook) Register(router *mux.Router, acc telegraf.Accumulator
 	md.acc = acc
 }
 
-func (md *MandrillWebhook) returnOK(w http.ResponseWriter, r *http.Request) {
+func (md *MandrillWebhook) returnOK(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
 func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

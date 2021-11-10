@@ -6,8 +6,10 @@ import (
 	"log"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -17,7 +19,7 @@ import (
 type SocketWriter struct {
 	ContentEncoding string `toml:"content_encoding"`
 	Address         string
-	KeepAlivePeriod *internal.Duration
+	KeepAlivePeriod *config.Duration
 	tlsint.ClientConfig
 
 	serializers.Serializer
@@ -117,13 +119,13 @@ func (sw *SocketWriter) setKeepAlive(c net.Conn) error {
 	if !ok {
 		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(sw.Address, "://", 2)[0])
 	}
-	if sw.KeepAlivePeriod.Duration == 0 {
+	if *sw.KeepAlivePeriod == 0 {
 		return tcpc.SetKeepAlive(false)
 	}
 	if err := tcpc.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return tcpc.SetKeepAlivePeriod(sw.KeepAlivePeriod.Duration)
+	return tcpc.SetKeepAlivePeriod(time.Duration(*sw.KeepAlivePeriod))
 }
 
 // Write writes the given metrics to the destination.

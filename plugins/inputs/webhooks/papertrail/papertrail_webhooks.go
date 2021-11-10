@@ -2,6 +2,7 @@ package papertrail
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -41,7 +42,6 @@ func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	if payload.Events != nil {
-
 		// Handle event-based payload
 		for _, e := range payload.Events {
 			// Warning: Duplicate event timestamps will overwrite each other
@@ -50,13 +50,21 @@ func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request
 				"event": payload.SavedSearch.Name,
 			}
 			fields := map[string]interface{}{
-				"count": uint64(1),
+				"count":       uint64(1),
+				"id":          e.ID,
+				"source_ip":   e.SourceIP,
+				"source_name": e.SourceName,
+				"source_id":   int64(e.SourceID),
+				"program":     e.Program,
+				"severity":    e.Severity,
+				"facility":    e.Facility,
+				"message":     e.Message,
+				"url":         fmt.Sprintf("%s?centered_on_id=%d", payload.SavedSearch.SearchURL, e.ID),
+				"search_id":   payload.SavedSearch.ID,
 			}
 			pt.acc.AddFields("papertrail", fields, tags, e.ReceivedAt)
 		}
-
 	} else if payload.Counts != nil {
-
 		// Handle count-based payload
 		for _, c := range payload.Counts {
 			for ts, count := range *c.TimeSeries {

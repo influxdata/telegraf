@@ -497,13 +497,6 @@ func containsAll(t1 map[string]string, t2 map[string]string) bool {
 	return true
 }
 
-func Metric(v telegraf.Metric, err error) telegraf.Metric {
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
-
 func NoError(t *testing.T, err error) {
 	require.NoError(t, err)
 }
@@ -519,17 +512,15 @@ func TestDropWizard(t *testing.T) {
 			name:  "minimal",
 			input: []byte(`{"version": "3.0.0", "counters": {"cpu": {"value": 42}}}`),
 			metrics: []telegraf.Metric{
-				Metric(
-					metric.New(
-						"cpu",
-						map[string]string{
-							"metric_type": "counter",
-						},
-						map[string]interface{}{
-							"value": 42.0,
-						},
-						testTimeFunc(),
-					),
+				metric.New(
+					"cpu",
+					map[string]string{
+						"metric_type": "counter",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					testTimeFunc(),
 				),
 			},
 			errFunc: NoError,
@@ -538,17 +529,15 @@ func TestDropWizard(t *testing.T) {
 			name:  "name with space unescaped",
 			input: []byte(`{"version": "3.0.0", "counters": {"hello world": {"value": 42}}}`),
 			metrics: []telegraf.Metric{
-				Metric(
-					metric.New(
-						"hello world",
-						map[string]string{
-							"metric_type": "counter",
-						},
-						map[string]interface{}{
-							"value": 42.0,
-						},
-						testTimeFunc(),
-					),
+				metric.New(
+					"hello world",
+					map[string]string{
+						"metric_type": "counter",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					testTimeFunc(),
 				),
 			},
 			errFunc: NoError,
@@ -564,17 +553,15 @@ func TestDropWizard(t *testing.T) {
 			name:  "name with space double slash escape",
 			input: []byte(`{"version": "3.0.0", "counters": {"hello\\ world": {"value": 42}}}`),
 			metrics: []telegraf.Metric{
-				Metric(
-					metric.New(
-						"hello world",
-						map[string]string{
-							"metric_type": "counter",
-						},
-						map[string]interface{}{
-							"value": 42.0,
-						},
-						testTimeFunc(),
-					),
+				metric.New(
+					"hello world",
+					map[string]string{
+						"metric_type": "counter",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					testTimeFunc(),
 				),
 			},
 			errFunc: NoError,

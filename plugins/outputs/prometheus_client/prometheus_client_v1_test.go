@@ -2,9 +2,10 @@ package prometheus
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -260,7 +261,7 @@ rpc_duration_seconds_count 2693
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
 			require.Equal(t,
@@ -391,7 +392,7 @@ rpc_duration_seconds_count 2693
 			resp, err := http.Get(output.URL())
 			require.NoError(t, err)
 
-			actual, err := ioutil.ReadAll(resp.Body)
+			actual, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
 			require.Equal(t,
@@ -399,4 +400,30 @@ rpc_duration_seconds_count 2693
 				strings.TrimSpace(string(actual)))
 		})
 	}
+}
+
+func TestLandingPage(t *testing.T) {
+	Logger := testutil.Logger{Name: "outputs.prometheus_client"}
+	output := PrometheusClient{
+		Listen:            ":0",
+		CollectorsExclude: []string{"process"},
+		MetricVersion:     1,
+		Log:               Logger,
+	}
+	expected := "Telegraf Output Plugin: Prometheus Client"
+
+	err := output.Init()
+	require.NoError(t, err)
+
+	err = output.Connect()
+	require.NoError(t, err)
+
+	u, err := url.Parse(fmt.Sprintf("http://%s/", output.url.Host))
+	resp, err := http.Get(u.String())
+	require.NoError(t, err)
+
+	actual, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	require.Equal(t, expected, strings.TrimSpace(string(actual)))
 }

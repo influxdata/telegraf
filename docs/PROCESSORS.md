@@ -14,9 +14,9 @@ This section is for developers who want to create a new processor plugin.
   config`.
 - The `SampleConfig` function should return valid toml that describes how the
   plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [SampleConfig][] page for the latest style guidelines.
+  consult the [Sample Config][] page for the latest style guidelines.
 * The `Description` function should say in one line what this processor does.
-- Follow the recommended [CodeStyle][].
+- Follow the recommended [Code Style][].
 
 ### Processor Plugin Example
 
@@ -160,7 +160,7 @@ func init() {
 }
 ```
 
-[SampleConfig]: https://github.com/influxdata/telegraf/wiki/SampleConfig
-[CodeStyle]: https://github.com/influxdata/telegraf/wiki/CodeStyle
+[Sample Config]: https://github.com/influxdata/telegraf/blob/master/docs/developers/SAMPLE_CONFIG.md
+[Code Style]: https://github.com/influxdata/telegraf/blob/master/docs/developers/CODE_STYLE.md
 [telegraf.Processor]: https://godoc.org/github.com/influxdata/telegraf#Processor
 [telegraf.StreamingProcessor]: https://godoc.org/github.com/influxdata/telegraf#StreamingProcessor
