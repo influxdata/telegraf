@@ -36,19 +36,19 @@ func TestClientConfig(t *testing.T) {
 		{
 			name: "success with tls key password set",
 			client: tls.ClientConfig{
-				TLSCA:     pki.CACertPath(),
-				TLSCert:   pki.ClientCertPath(),
-				TLSKey:    pki.ClientKeyPath(),
-				TLSKeyPwd: "",
+				TLSCA:          pki.CACertPath(),
+				TLSCert:        pki.ClientCertPath(),
+				TLSKey:         pki.ClientKeyPath(),
+				TLSKeyPassword: "",
 			},
 		},
 		{
 			name: "fail with enc tls key",
 			client: tls.ClientConfig{
-				TLSCA:     pki.CACertPath(),
-				TLSCert:   pki.ClientCertPath(),
-				TLSKey:    pki.ClientEncKeyPath(),
-				TLSKeyPwd: "changeme",
+				TLSCA:          pki.CACertPath(),
+				TLSCert:        pki.ClientCertPath(),
+				TLSKey:         pki.ClientEncKeyPath(),
+				TLSKeyPassword: "changeme",
 			},
 			expNil: true,
 			expErr: true,
@@ -63,9 +63,9 @@ func TestClientConfig(t *testing.T) {
 		{
 			name: "fail with cert and enc key",
 			client: tls.ClientConfig{
-				TLSCA:         pki.CACertPath(),
-				TLSCertAndKey: pki.ClientCertAndEncKeyPath(),
-				TLSKeyPwd:     "changeme",
+				TLSCA:          pki.CACertPath(),
+				TLSCertAndKey:  pki.ClientCertAndEncKeyPath(),
+				TLSKeyPassword: "changeme",
 			},
 			expNil: true,
 			expErr: true,
@@ -179,7 +179,7 @@ func TestServerConfig(t *testing.T) {
 			server: tls.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),
-				TLSKeyPwd:         "",
+				TLSKeyPassword:    "",
 				TLSAllowedCACerts: []string{pki.CACertPath()},
 				TLSCipherSuites:   []string{pki.CipherSuite()},
 				TLSMinVersion:     pki.TLSMinVersion(),
@@ -191,7 +191,7 @@ func TestServerConfig(t *testing.T) {
 			server: tls.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerEncKeyPath(),
-				TLSKeyPwd:         "changeme",
+				TLSKeyPassword:    "changeme",
 				TLSAllowedCACerts: []string{pki.CACertPath()},
 				TLSCipherSuites:   []string{pki.CipherSuite()},
 				TLSMinVersion:     pki.TLSMinVersion(),
@@ -214,7 +214,7 @@ func TestServerConfig(t *testing.T) {
 			name: "fail with cert and enc key",
 			server: tls.ServerConfig{
 				TLSCertAndKey:     pki.ServerCertAndEncKeyPath(),
-				TLSKeyPwd:         "changeme",
+				TLSKeyPassword:    "changeme",
 				TLSAllowedCACerts: []string{pki.CACertPath()},
 				TLSCipherSuites:   []string{pki.CipherSuite()},
 				TLSMinVersion:     pki.TLSMinVersion(),

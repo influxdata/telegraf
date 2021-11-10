@@ -20,7 +20,7 @@ For client TLS support we have the following options:
 ## Configuration for single file containing both cert and key
 # tls_cert_key = "/etc/telegraf/client.pem"
 ## For encrypted key files, supply a password for decryption
-# tls_key_pwd = "***" 
+# tls_key_password = "***" 
 ## Skip TLS verification.
 # insecure_skip_verify = false
 ## Send the specified TLS server name via SNI.
@@ -49,7 +49,7 @@ The server TLS configuration provides support for TLS mutual authentication:
 ## Configuration for single file containing both cert and key
 # tls_cert_key = "/etc/telegraf/client.pem"
 ## For encrypted key files, supply a password for decryption
-# tls_key_pwd = "***" 
+# tls_key_password = "***" 
 ```
 
 #### Advanced Configuration

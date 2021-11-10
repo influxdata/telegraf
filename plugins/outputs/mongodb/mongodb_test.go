@@ -136,7 +136,7 @@ func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
 				ClientConfig: tls.ClientConfig{
 					TLSCA:              "dev/cacert.pem",
 					TLSKey:             "dev/clientenc.pem",
-					TLSKeyPwd:          "changeme",
+					TLSKeyPassword:     "changeme",
 					InsecureSkipVerify: false,
 				},
 			},
@@ -192,7 +192,7 @@ func TestConnectAndWriteIntegrationX509Auth(t *testing.T) {
 				ClientConfig: tls.ClientConfig{
 					TLSCA:              "dev/cacert.pem",
 					TLSKey:             "dev/clientenc.pem",
-					TLSKeyPwd:          "badpassword",
+					TLSKeyPassword:     "badpassword",
 					InsecureSkipVerify: false,
 				},
 			},

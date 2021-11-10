@@ -85,7 +85,7 @@ var sampleConfig = `
   # authentication = "X509"
   # tls_ca = "ca.pem"
   # tls_key = "client.pem"
-  # # tls_key_pwd = "changeme" # required for encrypted tls_key
+  # # tls_key_password = "changeme" # required for encrypted tls_key
   # insecure_skip_verify = false
 
   # database to store measurements and time series collections
@@ -156,8 +156,8 @@ func (s *MongoDB) Init() error {
 			q.Set("tlsCAFile", s.TLSCA)
 		}
 		q.Set("sslClientCertificateKeyFile", s.TLSKey)
-		if s.TLSKeyPwd != "" {
-			q.Set("sslClientCertificateKeyPassword", s.TLSKeyPwd)
+		if s.TLSKeyPassword != "" {
+			q.Set("sslClientCertificateKeyPassword", s.TLSKeyPassword)
 		}
 		newConnectionString.RawQuery = q.Encode()
 		s.Dsn = newConnectionString.String()
