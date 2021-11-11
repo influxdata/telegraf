@@ -110,6 +110,13 @@ func NewConfig() *Config {
 		Deprecations:  make(map[string][]int64),
 	}
 
+	// Handle unknown version
+	version := internal.Version()
+	if version == "" || version == "unknown" {
+		version = "0.0.0-unknown"
+	}
+	c.Version = semver.New(version)
+
 	tomlCfg := &toml.Config{
 		NormFieldName: toml.DefaultConfig.NormFieldName,
 		FieldToKey:    toml.DefaultConfig.FieldToKey,
@@ -205,11 +212,6 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
-}
-
-// SetVersion stores the telegraf version
-func (c *Config) SetVersion(version string) {
-	c.Version = semver.New(version)
 }
 
 // InputNames returns a list of strings of the configured inputs.

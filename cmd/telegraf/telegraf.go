@@ -197,7 +197,6 @@ func runAgent(ctx context.Context,
 
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
-	c.SetVersion(version)
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
 	var err error
@@ -364,6 +363,11 @@ func main() {
 
 	logger.SetupLogging(logger.LogConfig{})
 
+	// Configure version
+	if err := internal.SetVersion(version); err != nil {
+		log.Println("Telegraf version already configured to: " + internal.Version())
+	}
+
 	// Load external plugins, if requested.
 	if *fPlugins != "" {
 		log.Printf("I! Loading external plugins from: %s", *fPlugins)
@@ -410,7 +414,6 @@ func main() {
 	switch {
 	case *fDeprecationList:
 		c := config.NewConfig()
-		c.SetVersion(version)
 		infos := c.CollectDeprecationInfos(
 			inputFilters,
 			outputFilters,
@@ -471,16 +474,6 @@ func main() {
 			log.Fatalf("E! %s and %s", err, err2)
 		}
 		return
-	}
-
-	shortVersion := version
-	if shortVersion == "" {
-		shortVersion = "unknown"
-	}
-
-	// Configure version
-	if err := internal.SetVersion(shortVersion); err != nil {
-		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
 	run(
