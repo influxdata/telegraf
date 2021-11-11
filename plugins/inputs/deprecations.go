@@ -7,6 +7,10 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		Since:  "1.7",
 		Notice: "use 'inputs.jolokia2' with the 'cassandra.conf' example configuration instead",
 	},
+	"io": {
+		Since:  "1.20",
+		Notice: "use 'inputs.diskio' instead",
+	},
 	"http_listener_v2": {
 		Since:  "1.9",
 		Notice: "has been renamed to 'influxdb_listener', use 'inputs.influxdb_listener' or 'inputs.influxdb_listener_v2' instead",
