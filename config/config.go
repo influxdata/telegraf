@@ -80,8 +80,8 @@ type Config struct {
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
 
-	Version      *semver.Version
 	Deprecations map[string][]int64
+	version      *semver.Version
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -115,7 +115,7 @@ func NewConfig() *Config {
 	if version == "" || version == "unknown" {
 		version = "0.0.0-unknown"
 	}
-	c.Version = semver.New(version)
+	c.version = semver.New(version)
 
 	tomlCfg := &toml.Config{
 		NormFieldName: toml.DefaultConfig.NormFieldName,

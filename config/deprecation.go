@@ -121,7 +121,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 			info.deprecationInfo.info = pi
 		}
 	}
-	info.determineEscalation(c.Version)
+	info.determineEscalation(c.version)
 	if info.Level != None {
 		c.incrementPluginDeprecations(category)
 	}
@@ -151,7 +151,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		if len(tags) > 2 {
 			optionInfo.info.RemovalIn = tags[1]
 		}
-		optionInfo.determineEscalation(c.Version)
+		optionInfo.determineEscalation(c.version)
 
 		if optionInfo.Level != None {
 			c.incrementPluginOptionDeprecations(category)
