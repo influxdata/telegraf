@@ -8,28 +8,17 @@ import (
 	"sort"
 	"strings"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3/v2" // Imports the Stackdriver Monitoring client package.
-	"google.golang.org/api/option"
-	metricpb "google.golang.org/genproto/googleapis/api/metric"
-	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
-	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
-	"google.golang.org/protobuf/types/known/timestamppb"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"google.golang.org/api/option"
+	"google.golang.org/genproto/googleapis/api/metric"
+	"google.golang.org/genproto/googleapis/api/monitoredres"
+
+	mon "cloud.google.com/go/monitoring/apiv3/v2"
+	monpb "google.golang.org/genproto/googleapis/monitoring/v3"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
-
-// Stackdriver is the Google Stackdriver config info.
-type Stackdriver struct {
-	Project        string
-	Namespace      string
-	ResourceType   string            `toml:"resource_type"`
-	ResourceLabels map[string]string `toml:"resource_labels"`
-	Log            telegraf.Logger   `toml:"-"`
-
-	client *monitoring.MetricClient
-}
 
 const (
 	// QuotaLabelsPerMetricDescriptor is the limit
@@ -42,8 +31,6 @@ const (
 	// to string length for label value.
 	QuotaStringLengthForLabelValue = 1024
 
-	// StartTime for cumulative metrics.
-	StartTime = int64(1)
 	// MaxInt is the max int64 value.
 	MaxInt = int(^uint(0) >> 1)
 
@@ -69,6 +56,18 @@ var sampleConfig = `
   #   location = "eu-north0"
 `
 
+// Stackdriver is the Google Stackdriver config info.
+type Stackdriver struct {
+	Project        string
+	Namespace      string
+	ResourceType   string            `toml:"resource_type"`
+	ResourceLabels map[string]string `toml:"resource_labels"`
+	Log            telegraf.Logger   `toml:"-"`
+
+	client       *mon.MetricClient
+	counterCache *CounterCache
+}
+
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {
 	if s.Project == "" {
@@ -87,11 +86,15 @@ func (s *Stackdriver) Connect() error {
 		s.ResourceLabels = make(map[string]string, 1)
 	}
 
+	if s.counterCache == nil {
+		s.counterCache = NewCounterCache(s.Log)
+	}
+
 	s.ResourceLabels["project_id"] = s.Project
 
 	if s.client == nil {
 		ctx := context.Background()
-		client, err := monitoring.NewMetricClient(ctx, option.WithUserAgent(internal.ProductToken()))
+		client, err := mon.NewMetricClient(ctx, option.WithUserAgent(internal.ProductToken()))
 		if err != nil {
 			return err
 		}
@@ -115,9 +118,9 @@ func sorted(metrics []telegraf.Metric) []telegraf.Metric {
 	return batch
 }
 
-type timeSeriesBuckets map[uint64][]*monitoringpb.TimeSeries
+type timeSeriesBuckets map[uint64][]*monpb.TimeSeries
 
-func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f *telegraf.Field, ts *monitoringpb.TimeSeries) {
+func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f *telegraf.Field, ts *monpb.TimeSeries) {
 	h := fnv.New64a()
 	h.Write([]byte(m.Name())) //nolint:revive // from hash.go: "It never returns an error"
 	h.Write([]byte{'\n'})     //nolint:revive // from hash.go: "It never returns an error"
@@ -156,34 +159,34 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 			metricKind, err := getStackdriverMetricKind(m.Type())
 			if err != nil {
-				s.Log.Errorf("Get metric failed: %s", err)
+				s.Log.Errorf("Get kind for metric '%s' type '%T' field '%s' failed: %s", m.Name(), m.Type(), f, err)
 				continue
 			}
 
-			timeInterval, err := getStackdriverTimeInterval(metricKind, StartTime, m.Time().Unix())
+			timeInterval, err := getStackdriverTimeInterval(metricKind, value, m, f, s.counterCache)
 			if err != nil {
 				s.Log.Errorf("Get time interval failed: %s", err)
 				continue
 			}
 
 			// Prepare an individual data point.
-			dataPoint := &monitoringpb.Point{
+			dataPoint := &monpb.Point{
 				Interval: timeInterval,
 				Value:    value,
 			}
 
 			// Prepare time series.
-			timeSeries := &monitoringpb.TimeSeries{
-				Metric: &metricpb.Metric{
+			timeSeries := &monpb.TimeSeries{
+				Metric: &metric.Metric{
 					Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), f.Key),
 					Labels: s.getStackdriverLabels(m.TagList()),
 				},
 				MetricKind: metricKind,
-				Resource: &monitoredrespb.MonitoredResource{
+				Resource: &monitoredres.MonitoredResource{
 					Type:   s.ResourceType,
 					Labels: s.ResourceLabels,
 				},
-				Points: []*monitoringpb.Point{
+				Points: []*monpb.Point{
 					dataPoint,
 				},
 			}
@@ -201,7 +204,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 	for len(buckets) != 0 {
 		// can send up to 200 time series to stackdriver
-		timeSeries := make([]*monitoringpb.TimeSeries, 0, 200)
+		timeSeries := make([]*monpb.TimeSeries, 0, 200)
 		for i := 0; i < len(keys) && len(timeSeries) < cap(timeSeries); i++ {
 			k := keys[i]
 			s := buckets[k]
@@ -218,7 +221,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		}
 
 		// Prepare time series request.
-		timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
+		timeSeriesRequest := &monpb.CreateTimeSeriesRequest{
 			Name:       fmt.Sprintf("projects/%s", s.Project),
 			TimeSeries: timeSeries,
 		}
@@ -241,78 +244,83 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 }
 
 func getStackdriverTimeInterval(
-	m metricpb.MetricDescriptor_MetricKind,
-	start int64,
-	end int64,
-) (*monitoringpb.TimeInterval, error) {
-	switch m {
-	case metricpb.MetricDescriptor_GAUGE:
-		return &monitoringpb.TimeInterval{
-			EndTime: &timestamppb.Timestamp{
-				Seconds: end,
-			},
+	kind metric.MetricDescriptor_MetricKind,
+	value *monpb.TypedValue,
+	m telegraf.Metric,
+	f *telegraf.Field,
+	cc *CounterCache,
+) (*monpb.TimeInterval, error) {
+	endTime := tspb.New(m.Time())
+	switch kind {
+	case metric.MetricDescriptor_GAUGE:
+		return &monpb.TimeInterval{
+			EndTime: endTime,
 		}, nil
-	case metricpb.MetricDescriptor_CUMULATIVE:
-		return &monitoringpb.TimeInterval{
-			StartTime: &timestamppb.Timestamp{
-				Seconds: start,
-			},
-			EndTime: &timestamppb.Timestamp{
-				Seconds: end,
-			},
+	case metric.MetricDescriptor_CUMULATIVE:
+		// Interval starts for stackdriver CUMULATIVE metrics must reset any time
+		// the counter resets, so we keep a cache of the start times and last
+		// observed values for each counter in the batch.
+		var startTime *tspb.Timestamp
+		key := GetCounterCacheKey(m, f)
+		startTime = cc.GetStartTime(key, value, endTime)
+		return &monpb.TimeInterval{
+			StartTime: startTime,
+			EndTime:   endTime,
 		}, nil
-	case metricpb.MetricDescriptor_DELTA, metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED:
+	case metric.MetricDescriptor_DELTA, metric.MetricDescriptor_METRIC_KIND_UNSPECIFIED:
 		fallthrough
 	default:
 		return nil, fmt.Errorf("unsupported metric kind %T", m)
 	}
 }
 
-func getStackdriverMetricKind(vt telegraf.ValueType) (metricpb.MetricDescriptor_MetricKind, error) {
+func getStackdriverMetricKind(vt telegraf.ValueType) (metric.MetricDescriptor_MetricKind, error) {
 	switch vt {
 	case telegraf.Untyped:
-		return metricpb.MetricDescriptor_GAUGE, nil
+		return metric.MetricDescriptor_GAUGE, nil
 	case telegraf.Gauge:
-		return metricpb.MetricDescriptor_GAUGE, nil
+		return metric.MetricDescriptor_GAUGE, nil
 	case telegraf.Counter:
-		return metricpb.MetricDescriptor_CUMULATIVE, nil
-	case telegraf.Histogram, telegraf.Summary:
-		fallthrough
+		return metric.MetricDescriptor_CUMULATIVE, nil
+	case telegraf.Histogram:
+		return metric.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("histograms not yet supported")
+	case telegraf.Summary:
+		return metric.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("summary metrics not supported")
 	default:
-		return metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("unsupported telegraf value type")
+		return metric.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("unsupported telegraf value type: %T", vt)
 	}
 }
 
-func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, error) {
+func getStackdriverTypedValue(value interface{}) (*monpb.TypedValue, error) {
 	switch v := value.(type) {
 	case uint64:
 		if v <= uint64(MaxInt) {
-			return &monitoringpb.TypedValue{
-				Value: &monitoringpb.TypedValue_Int64Value{
+			return &monpb.TypedValue{
+				Value: &monpb.TypedValue_Int64Value{
 					Int64Value: int64(v),
 				},
 			}, nil
 		}
-		return &monitoringpb.TypedValue{
-			Value: &monitoringpb.TypedValue_Int64Value{
+		return &monpb.TypedValue{
+			Value: &monpb.TypedValue_Int64Value{
 				Int64Value: int64(MaxInt),
 			},
 		}, nil
 	case int64:
-		return &monitoringpb.TypedValue{
-			Value: &monitoringpb.TypedValue_Int64Value{
+		return &monpb.TypedValue{
+			Value: &monpb.TypedValue_Int64Value{
 				Int64Value: v,
 			},
 		}, nil
 	case float64:
-		return &monitoringpb.TypedValue{
-			Value: &monitoringpb.TypedValue_DoubleValue{
+		return &monpb.TypedValue{
+			Value: &monpb.TypedValue_DoubleValue{
 				DoubleValue: v,
 			},
 		}, nil
 	case bool:
-		return &monitoringpb.TypedValue{
-			Value: &monitoringpb.TypedValue_BoolValue{
+		return &monpb.TypedValue{
+			Value: &monpb.TypedValue_BoolValue{
 				BoolValue: v,
 			},
 		}, nil

@@ -11,18 +11,18 @@ import (
 	"testing"
 	"time"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
-	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
+	mon "cloud.google.com/go/monitoring/apiv3/v2"
+	monpb "google.golang.org/genproto/googleapis/monitoring/v3"
+	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // clientOpt is the option tests should use to connect to the test server.
@@ -35,7 +35,7 @@ type mockMetricServer struct {
 	// Embed for forward compatibility.
 	// Tests will keep working if more methods are added
 	// in the future.
-	monitoringpb.MetricServiceServer
+	monpb.MetricServiceServer
 
 	reqs []proto.Message
 
@@ -46,7 +46,7 @@ type mockMetricServer struct {
 	resps []proto.Message
 }
 
-func (s *mockMetricServer) CreateTimeSeries(ctx context.Context, req *monitoringpb.CreateTimeSeriesRequest) (*emptypb.Empty, error) {
+func (s *mockMetricServer) CreateTimeSeries(ctx context.Context, req *monpb.CreateTimeSeriesRequest) (*emptypb.Empty, error) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	if xg := md["x-goog-api-client"]; len(xg) == 0 || !strings.Contains(xg[0], "gl-go/") {
 		return nil, fmt.Errorf("x-goog-api-client = %v, expected gl-go key", xg)
@@ -60,7 +60,7 @@ func (s *mockMetricServer) CreateTimeSeries(ctx context.Context, req *monitoring
 
 func TestMain(m *testing.M) {
 	serv := grpc.NewServer()
-	monitoringpb.RegisterMetricServiceServer(serv, &mockMetric)
+	monpb.RegisterMetricServiceServer(serv, &mockMetric)
 
 	lis, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -86,7 +86,7 @@ func TestWrite(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := mon.NewMetricClient(context.Background(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestWrite(t *testing.T) {
 	err = s.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 
-	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	request := mockMetric.reqs[0].(*monpb.CreateTimeSeriesRequest)
 	require.Equal(t, request.TimeSeries[0].Resource.Type, "global")
 	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
 }
@@ -114,7 +114,7 @@ func TestWriteResourceTypeAndLabels(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := mon.NewMetricClient(context.Background(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestWriteResourceTypeAndLabels(t *testing.T) {
 	err = s.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 
-	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	request := mockMetric.reqs[0].(*monpb.CreateTimeSeriesRequest)
 	require.Equal(t, request.TimeSeries[0].Resource.Type, "foo")
 	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
 	require.Equal(t, request.TimeSeries[0].Resource.Labels["mylabel"], "myvalue")
@@ -147,7 +147,7 @@ func TestWriteAscendingTime(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := mon.NewMetricClient(context.Background(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,32 +183,32 @@ func TestWriteAscendingTime(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, mockMetric.reqs, 2)
-	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	request := mockMetric.reqs[0].(*monpb.CreateTimeSeriesRequest)
 	require.Len(t, request.TimeSeries, 1)
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &timestamppb.Timestamp{
+	require.Equal(t, ts.Points[0].Interval, &monpb.TimeInterval{
+		EndTime: &tspb.Timestamp{
 			Seconds: 1,
 		},
 	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
+	require.Equal(t, ts.Points[0].Value, &monpb.TypedValue{
+		Value: &monpb.TypedValue_Int64Value{
 			Int64Value: int64(43),
 		},
 	})
 
-	request = mockMetric.reqs[1].(*monitoringpb.CreateTimeSeriesRequest)
+	request = mockMetric.reqs[1].(*monpb.CreateTimeSeriesRequest)
 	require.Len(t, request.TimeSeries, 1)
 	ts = request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &timestamppb.Timestamp{
+	require.Equal(t, ts.Points[0].Interval, &monpb.TimeInterval{
+		EndTime: &tspb.Timestamp{
 			Seconds: 2,
 		},
 	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
+	require.Equal(t, ts.Points[0].Value, &monpb.TypedValue{
+		Value: &monpb.TypedValue_Int64Value{
 			Int64Value: int64(42),
 		},
 	})
@@ -220,7 +220,7 @@ func TestWriteBatchable(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := mon.NewMetricClient(context.Background(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,56 +314,56 @@ func TestWriteBatchable(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, mockMetric.reqs, 2)
-	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	request := mockMetric.reqs[0].(*monpb.CreateTimeSeriesRequest)
 	require.Len(t, request.TimeSeries, 6)
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &timestamppb.Timestamp{
+	require.Equal(t, ts.Points[0].Interval, &monpb.TimeInterval{
+		EndTime: &tspb.Timestamp{
 			Seconds: 3,
 		},
 	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
+	require.Equal(t, ts.Points[0].Value, &monpb.TypedValue{
+		Value: &monpb.TypedValue_Int64Value{
 			Int64Value: int64(43),
 		},
 	})
 
 	ts = request.TimeSeries[1]
 	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &timestamppb.Timestamp{
+	require.Equal(t, ts.Points[0].Interval, &monpb.TimeInterval{
+		EndTime: &tspb.Timestamp{
 			Seconds: 1,
 		},
 	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
+	require.Equal(t, ts.Points[0].Value, &monpb.TypedValue{
+		Value: &monpb.TypedValue_Int64Value{
 			Int64Value: int64(43),
 		},
 	})
 
 	ts = request.TimeSeries[2]
 	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &timestamppb.Timestamp{
+	require.Equal(t, ts.Points[0].Interval, &monpb.TimeInterval{
+		EndTime: &tspb.Timestamp{
 			Seconds: 3,
 		},
 	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
+	require.Equal(t, ts.Points[0].Value, &monpb.TypedValue{
+		Value: &monpb.TypedValue_Int64Value{
 			Int64Value: int64(43),
 		},
 	})
 
 	ts = request.TimeSeries[4]
 	require.Len(t, ts.Points, 1)
-	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &timestamppb.Timestamp{
+	require.Equal(t, ts.Points[0].Interval, &monpb.TimeInterval{
+		EndTime: &tspb.Timestamp{
 			Seconds: 5,
 		},
 	})
-	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
-		Value: &monitoringpb.TypedValue_Int64Value{
+	require.Equal(t, ts.Points[0].Value, &monpb.TypedValue{
+		Value: &monpb.TypedValue_Int64Value{
 			Int64Value: int64(43),
 		},
 	})
@@ -398,7 +398,7 @@ func TestWriteIgnoredErrors(t *testing.T) {
 			mockMetric.err = tt.err
 			mockMetric.reqs = nil
 
-			c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+			c, err := mon.NewMetricClient(context.Background(), clientOpt)
 			if err != nil {
 				t.Fatal(err)
 			}
