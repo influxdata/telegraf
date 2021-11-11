@@ -5,8 +5,9 @@ import (
 	"log" //nolint:revive // log is ok here as the logging facility is not set-up yet
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
+
+	"github.com/coreos/go-semver/semver"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
@@ -46,28 +47,35 @@ type deprecationInfo struct {
 	info  telegraf.DeprecationInfo
 }
 
-func (di *deprecationInfo) determineEscalation(major, minor int) {
-	var removalMajor, removalMinor int
-
+func (di *deprecationInfo) determineEscalation(version *semver.Version) error {
 	di.Level = None
 	if di.info.Since == "" {
-		return
+		return nil
 	}
 
-	sinceMajor, sinceMinor := ParseVersion(di.info.Since)
+	since, err := semver.NewVersion(di.info.Since+".0")
+	if err != nil {
+		return fmt.Errorf("cannot parse 'since' version %q: %v", di.info.Since+".0", err)
+	}
+
+	var removal *semver.Version
 	if di.info.RemovalIn != "" {
-		removalMajor, removalMinor = ParseVersion(di.info.RemovalIn)
+		removal, err = semver.NewVersion(di.info.RemovalIn+".0")
+		if err != nil {
+			return fmt.Errorf("cannot parse 'removal' version %q: %v", di.info.RemovalIn+".0", err)
+		}
 	} else {
-		removalMajor, removalMinor = sinceMajor+1, 0
-		di.info.RemovalIn = fmt.Sprintf("%d.%d", removalMajor, removalMinor)
+		removal = &semver.Version{Major: since.Major,	Minor: since.Minor}
+		removal.BumpMajor()
+		di.info.RemovalIn = removal.String()
 	}
 
-	di.Level = None
-	if major > removalMajor || (major == removalMajor && minor >= removalMinor) {
+	if !version.LessThan(*removal) {
 		di.Level = Error
-	} else if major > sinceMajor || (major == sinceMajor && minor >= sinceMinor) {
+	} else if !version.LessThan(*since) {
 		di.Level = Warn
 	}
+	return nil
 }
 
 // pluginDeprecationInfo holds all information about a deprecated plugin or it's options
@@ -113,7 +121,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 			info.deprecationInfo.info = pi
 		}
 	}
-	info.determineEscalation(c.VersionMajor, c.VersionMinor)
+	info.determineEscalation(c.Version)
 	if info.Level != None {
 		c.incrementPluginDeprecations(category)
 	}
@@ -143,7 +151,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		if len(tags) > 2 {
 			optionInfo.info.RemovalIn = tags[1]
 		}
-		optionInfo.determineEscalation(c.VersionMajor, c.VersionMinor)
+		optionInfo.determineEscalation(c.Version)
 
 		if optionInfo.Level != None {
 			c.incrementPluginOptionDeprecations(category)
@@ -348,22 +356,4 @@ func walkPluginStruct(value reflect.Value, fn func(f reflect.StructField, fv ref
 		}
 		fn(field, fieldValue)
 	}
-}
-
-func ParseVersion(version string) (major, minor int) {
-	parts := strings.SplitN(version, ".", 3)
-	if len(parts) < 2 {
-		panic(fmt.Errorf("insufficient version fields in %q", version))
-	}
-
-	major, err := strconv.Atoi(parts[0])
-	if err != nil {
-		panic(fmt.Errorf("invalid version major in %q", version))
-	}
-
-	minor, err = strconv.Atoi(parts[1])
-	if err != nil {
-		panic(fmt.Errorf("invalid version major in %q", version))
-	}
-	return major, minor
 }

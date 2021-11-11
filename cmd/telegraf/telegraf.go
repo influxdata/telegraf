@@ -197,7 +197,7 @@ func runAgent(ctx context.Context,
 
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
-	c.VersionMajor, c.VersionMinor = config.ParseVersion(version)
+	c.SetVersion(version)
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
 	var err error
@@ -410,7 +410,7 @@ func main() {
 	switch {
 	case *fDeprecationList:
 		c := config.NewConfig()
-		c.VersionMajor, c.VersionMinor = config.ParseVersion(version)
+		c.SetVersion(version)
 		infos := c.CollectDeprecationInfos(
 			inputFilters,
 			outputFilters,
