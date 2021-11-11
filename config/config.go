@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
@@ -78,8 +80,7 @@ type Config struct {
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
 
-	VersionMajor int
-	VersionMinor int
+	Version      *semver.Version
 	Deprecations map[string][]int64
 }
 
@@ -204,6 +205,11 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
+}
+
+// SetVersion stores the telegraf version
+func (c *Config) SetVersion(version string) {
+	c.Version = semver.New(version)
 }
 
 // InputNames returns a list of strings of the configured inputs.
