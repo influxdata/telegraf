@@ -150,19 +150,18 @@ lint-install:
 
 .PHONY: lint
 lint:
-	@which golangci-lint >/dev/null 2>&1 || { \
-		echo "golangci-lint not found, please run: make lint-install"; \
-		exit 1; \
-	}
+	ifeq (, $(shell which golangci-lint))
+		$(info golangci-lint can't be found, please run: make lint-install)
+		exit 1
+	endif
 
-	golangci-lint run
+		golangci-lint run
 
-	@which markdownlint >/dev/null 2>&1 || { \
-		echo "markdownlint not found, please run: make lint-install"; \
-		exit 1; \
-	}
-
-	markdownlint .
+	ifeq (, $(shell which markdownlint-cli))
+		$(info markdownlint-cli can't be found, please run: make lint-install)
+		exit 1
+	endif
+	markdownlint-cli
 
 .PHONY: lint-branch
 lint-branch:
