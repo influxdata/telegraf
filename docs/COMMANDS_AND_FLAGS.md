@@ -1,20 +1,20 @@
 # Telegraf Commands & Flags
 
-### Usage
+## Usage
 
-```
+```shell
 telegraf [commands]
 telegraf [flags]
 ```
 
-### Commands
+## Commands
 
 |command|description|
 |--------|-----------------------------------------------|
 |`config` |print out full sample configuration to stdout|
 |`version`|print the version to stdout|
 
-### Flags
+## Flags
 
 |flag|description|
 |-------------------|------------|
@@ -41,7 +41,7 @@ telegraf [flags]
 |`--usage <plugin>`               |print usage for a plugin, ie, `telegraf --usage mysql`|
 |`--version`                      |display the version and exit|
 
-### Examples
+## Examples
 
 **Generate a telegraf config file:**
 
