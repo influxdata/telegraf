@@ -155,12 +155,12 @@ endif
 
 	golangci-lint run
 
-ifeq (, $(shell which markdownlint-cli))
+ifeq (, $(shell which markdownlint))
 	$(info markdownlint-cli can't be found, please run: make lint-install)
 	exit 1
 endif
 
-	markdownlint-cli
+	markdownlint .
 
 .PHONY: lint-branch
 lint-branch:
