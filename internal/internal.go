@@ -42,6 +42,10 @@ func SetVersion(v string) error {
 		return ErrorVersionAlreadySet
 	}
 	version = v
+	if version == "" {
+		version = "unknown"
+	}
+
 	return nil
 }
 
