@@ -8,8 +8,9 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		Notice: "use 'inputs.jolokia2' with the 'cassandra.conf' example configuration instead",
 	},
 	"io": {
-		Since:  "1.20",
-		Notice: "use 'inputs.diskio' instead",
+		Since:     "0.10",
+		RemovalIn: "2.0",
+		Notice:    "use 'inputs.diskio' instead",
 	},
 	"http_listener_v2": {
 		Since:  "1.9",
@@ -24,7 +25,7 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		Notice: "use 'inputs.jolokia2' instead",
 	},
 	"kafka_consumer_legacy": {
-		Since:  "1.20",
+		Since:  "1.4",
 		Notice: "use 'inputs.kafka_consumer' instead, NOTE: 'kafka_consumer' only supports Kafka v0.8+",
 	},
 	"logparser": {
@@ -32,7 +33,7 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		Notice: "use 'inputs.tail' with 'grok' data format instead",
 	},
 	"snmp_legacy": {
-		Since:  "1.20",
+		Since:  "1.0",
 		Notice: "use 'inputs.snmp' instead",
 	},
 	"tcp_listener": {
