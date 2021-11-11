@@ -758,14 +758,19 @@ be used as a tag.
 You can change the default binary location and custom arguments for `varnishstat` and `varnishadm` command output. This
 is useful when running varnish in docker or executing using varnish by SSH on a different machine.
 
+It's important to note that `instance_name` parameter is not take into account when using custom `binary_args` or
+`adm_binary_args`. You have to add `"-n", "/instance_name"` manually into configuration.
+
 #### Example for SSH
 
 ```toml
 [[inputs.varnish]]
-   binary = "/usr/bin/ssh"
-   binaryArgs = ["root@10.100.0.108", "varnishstat", "-j"]
-   admBinary   =  "/usr/bin/ssh"
-   admArgs =  ["root@10.100.0.108", "varnishadm", "vcl.list"]
+  binary = "/usr/bin/ssh"
+  binary_args = ["root@10.100.0.112", "varnishstat", "-n", "/var/lib/varnish/ubuntu", "-j"]
+  adm_binary   =  "/usr/bin/ssh"
+  adm_binary_args = ["root@10.100.0.112", "varnishadm", "-n", "/var/lib/varnish/ubuntu", "vcl.list", "-j"]
+  metric_version = 2
+  stats = ["*"]
 ```
 
 #### Example for Docker
@@ -773,9 +778,11 @@ is useful when running varnish in docker or executing using varnish by SSH on a 
 ```toml
 [[inputs.varnish]]
   binary = "/usr/local/bin/docker"
-  binaryArgs = ["exec", "-t", "varnish_varnish_1", "varnishstat",  "-j"]
-  admBinary   =  "/usr/local/bin/docker"
-  admArgs =  ["exec", "-t", "varnish_varnish_1", "varnishadm", "vcl.list"]
+  binary_args = ["exec", "-t", "container_name", "varnishstat",  "-j"]
+  adm_binary   =  "/usr/local/bin/docker"
+  adm_binary_args =  ["exec", "-t", "container_name", "varnishadm", "vcl.list", "-j"]
+  metric_version = 2
+  stats = ["*"]
 ```
 
 ### Permissions
