@@ -1143,6 +1143,9 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// Legacy support renaming io input to diskio
 	if name == "io" {
+		if err := c.printUserDeprecation("inputs", name, nil); err != nil {
+			return err
+		}
 		name = "diskio"
 	}
 

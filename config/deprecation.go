@@ -120,6 +120,11 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		c.incrementPluginDeprecations(category)
 	}
 
+	// Allow checking for names only.
+	if plugin == nil {
+		return info
+	}
+
 	// Check for deprecated options
 	walkPluginStruct(reflect.ValueOf(plugin), func(field reflect.StructField, value reflect.Value) {
 		// Try to report only those fields that are set
