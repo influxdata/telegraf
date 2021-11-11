@@ -47,22 +47,22 @@ type deprecationInfo struct {
 	info  telegraf.DeprecationInfo
 }
 
-func (di *deprecationInfo) determineEscalation(version *semver.Version) error {
+func (di *deprecationInfo) determineEscalation(version *semver.Version) {
 	di.Level = None
 	if di.info.Since == "" {
-		return nil
+		return
 	}
 
 	since, err := semver.NewVersion(di.info.Since + ".0")
 	if err != nil {
-		return fmt.Errorf("cannot parse 'since' version %q: %v", di.info.Since+".0", err)
+		panic(fmt.Errorf("cannot parse 'since' version %q: %v", di.info.Since+".0", err))
 	}
 
 	var removal *semver.Version
 	if di.info.RemovalIn != "" {
 		removal, err = semver.NewVersion(di.info.RemovalIn + ".0")
 		if err != nil {
-			return fmt.Errorf("cannot parse 'removal' version %q: %v", di.info.RemovalIn+".0", err)
+			panic(fmt.Errorf("cannot parse 'removal' version %q: %v", di.info.RemovalIn+".0", err))
 		}
 	} else {
 		removal = &semver.Version{Major: since.Major, Minor: since.Minor}
@@ -75,7 +75,6 @@ func (di *deprecationInfo) determineEscalation(version *semver.Version) error {
 	} else if !version.LessThan(*since) {
 		di.Level = Warn
 	}
-	return nil
 }
 
 // pluginDeprecationInfo holds all information about a deprecated plugin or it's options
