@@ -423,9 +423,8 @@ func convertSentinelInfoOutput(
 		// This comes in handy when we want to ensure we're processing the correct configuration option
 		// For example, when we are renaming fields before sending them to the accumulator
 		if line[0] == '#' {
-			if len(line) > 2 {
-				section = line[2:]
-			}
+			// Example of the section header: # Clients
+			section = line[2:]
 			continue
 		}
 
