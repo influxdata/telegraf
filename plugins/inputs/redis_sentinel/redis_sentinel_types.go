@@ -13,7 +13,6 @@ var measurementMastersFields = map[string]string{
 	"last_ping_sent":          "integer",
 	"link_pending_commands":   "integer",
 	"link_refcount":           "integer",
-	"name":                    "string",
 	"num_other_sentinels":     "integer",
 	"num_slaves":              "integer",
 	"parallel_syncs":          "integer",

@@ -60,7 +60,6 @@ func TestRedisSentinelMasters(t *testing.T) {
 		"last_ping_sent":          0,
 		"link_pending_commands":   0,
 		"link_refcount":           1,
-		"name":                    "mymaster",
 		"num_other_sentinels":     1,
 		"num_slaves":              0,
 		"parallel_syncs":          1,

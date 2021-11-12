@@ -64,7 +64,6 @@ There are 5 remote network requests made for each server listed in the config.
     - last_ping_sent (int)
     - link_pending_commands (int)
     - link_refcount (int)
-    - name (string)
     - num_other_sentinels (int)
     - num_slaves (int)
     - parallel_syncs (int)
@@ -179,9 +178,9 @@ An example of 2 Redis Sentinel instances monitoring a single master and replica.
 
 redis_sentinel_masters:
 ```
-redis_sentinel_masters,host=somehostname,master=mymaster,port=26380,source=localhost config_epoch=0i,down_after_milliseconds=30000i,failover_timeout=180000i,flags="master",has_quorum=1i,info_refresh=110i,ip="127.0.0.1",last_ok_ping_reply=819i,last_ping_reply=819i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,name="mymaster",num_other_sentinels=1i,num_slaves=1i,parallel_syncs=1i,port=6379i,quorum=2i,role_reported="master",role_reported_time=311248i 1570207377000000000
+redis_sentinel_masters,host=somehostname,master=mymaster,port=26380,source=localhost config_epoch=0i,down_after_milliseconds=30000i,failover_timeout=180000i,flags="master",has_quorum=1i,info_refresh=110i,ip="127.0.0.1",last_ok_ping_reply=819i,last_ping_reply=819i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,num_other_sentinels=1i,num_slaves=1i,parallel_syncs=1i,port=6379i,quorum=2i,role_reported="master",role_reported_time=311248i 1570207377000000000
 
-redis_sentinel_masters,host=somehostname,master=mymaster,port=26379,source=localhost config_epoch=0i,down_after_milliseconds=30000i,failover_timeout=180000i,flags="master",has_quorum=1i,info_refresh=1650i,ip="127.0.0.1",last_ok_ping_reply=1003i,last_ping_reply=1003i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,name="mymaster",num_other_sentinels=1i,num_slaves=1i,parallel_syncs=1i,port=6379i,quorum=2i,role_reported="master",role_reported_time=302990i 1570207377000000000
+redis_sentinel_masters,host=somehostname,master=mymaster,port=26379,source=localhost config_epoch=0i,down_after_milliseconds=30000i,failover_timeout=180000i,flags="master",has_quorum=1i,info_refresh=1650i,ip="127.0.0.1",last_ok_ping_reply=1003i,last_ping_reply=1003i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,num_other_sentinels=1i,num_slaves=1i,parallel_syncs=1i,port=6379i,quorum=2i,role_reported="master",role_reported_time=302990i 1570207377000000000
 ```
 
 redis_sentinel_sentinels:
