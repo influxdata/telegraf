@@ -4,14 +4,14 @@ The *Noise* processor is used to add noise to numerical field values. For each f
 Depending on the function, various parameters need to be configured:
 
 ### Laplace:
-* `noise_type = laplace`
+* `noise_type = laplacian`
 * `scale`: also referred to as _diversity_ parameter, regulates the width & height of the function, a bigger `scale` value means a higher probability of larger noise, default set to 1.0
 * `mu`: location of the curve, default set to 0.0
 
 ### Gaussian:
 * `noise_type = gaussian`
 * `mu`: mean value, default set to 0.0
-* `sigma`: standard deviation, default set to 0.1
+* `scale`: standard deviation, default set to 1.0
 
 ### Uniform
 * `noise_type = uniform`
@@ -19,22 +19,18 @@ Depending on the function, various parameters need to be configured:
 * `max`: maximal interval value, default set to 1.0
 
 ### Configuration
-Depending on the choice of the distribution function, the respective parameters must be set. Default settings are `noise_type = "laplace"` with `mu = 0.0` and `scale = 1.0`:
+Depending on the choice of the distribution function, the respective parameters must be set. Default settings are `noise_type = "laplacian"` with `mu = 0.0` and `scale = 1.0`:
 
 ```toml
 [[processors.noise]]
   scale = 1.0
-  min = -1.0
-  max = 1.0
   mu = 0.0
-  sigma = 0.1
-  noise_type = "laplace"
-  noise_log = true
+  noise_type = "laplacian"
   include_fields = []
   exclude_fields = []
 ```
 
-If the generated noise values should be saved as a new field value, the option `noise_log` can be enabled.
+Using the `include_fields` and `exclude_fields` options a filter can be configured to apply noise only to numeric fields matching it.
 
 ### Example
 Add noise to each value the *Inputs.CPU*  plugin generates, except for the _usage\_steal_, _usage\_user_, _uptime\_format_, _usage\_idle_ field and all fields of the metrics _swap_, _disk_ and _net_:
@@ -50,8 +46,7 @@ Add noise to each value the *Inputs.CPU*  plugin generates, except for the _usag
 [[processors.noise]]
   scale = 1.0
   mu = 0.0
-  noise_type = "laplace"
-  noise_log = true
+  noise_type = "laplacian"
   include_fields = []
   exclude_fields = ["usage_steal", "usage_user", "uptime_format", "usage_idle" ]
   namedrop = ["swap", "disk", "net"]
