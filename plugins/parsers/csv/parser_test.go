@@ -381,10 +381,14 @@ hello,80,test_name2`
 	expectedFields := map[string]interface{}{
 		"line2": int64(80),
 	}
+	expectedTags := map[string]string{
+		"line1": "hello",
+	}
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 	require.Equal(t, "test_name2", metrics[0].Name())
 	require.Equal(t, expectedFields, metrics[0].Fields())
+	require.Equal(t, expectedTags, metrics[0].Tags())
 
 	p, err = NewParser(
 		&Config{
@@ -409,6 +413,7 @@ hello,80,test_name2`
 	require.NoError(t, err)
 	require.Equal(t, "test_name2", m.Name())
 	require.Equal(t, expectedFields, m.Fields())
+	require.Equal(t, expectedTags, m.Tags())
 }
 
 func TestSkipColumns(t *testing.T) {
