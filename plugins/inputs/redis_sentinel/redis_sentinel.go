@@ -297,10 +297,7 @@ func convertSentinelMastersOutput(
 	master map[string]string,
 	quorumErr error,
 ) (map[string]string, map[string]interface{}, error) {
-	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	tags := globalTags
 
 	tags["master"] = master["name"]
 
