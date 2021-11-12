@@ -179,11 +179,11 @@ func gatherInfoStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 
 	rdr := strings.NewReader(info)
 	infoTags, infoFields, err := convertSentinelInfoOutput(client.baseTags(), rdr)
-	if err == nil {
-		acc.AddFields(measurementSentinel, infoFields, infoTags)
-	} else {
+	if err != nil {
 		acc.AddError(err)
+		return
 	}
+	acc.AddFields(measurementSentinel, infoFields, infoTags)
 }
 
 func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
