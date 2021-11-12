@@ -453,7 +453,12 @@ func TestWinPerfcountersConfigError1Integration(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{
+		PrintValid: false,
+		Object:     perfobjects,
+		query:      &PerformanceQueryImpl{},
+		Log:        testutil.Logger{},
+	}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -487,7 +492,12 @@ func TestWinPerfcountersConfigError2Integration(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{
+		PrintValid: false,
+		Object:     perfobjects,
+		query:      &PerformanceQueryImpl{},
+		Log:        testutil.Logger{},
+	}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -523,7 +533,12 @@ func TestWinPerfcountersConfigError3Integration(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{
+		PrintValid: false,
+		Object:     perfobjects,
+		query:      &PerformanceQueryImpl{},
+		Log:        testutil.Logger{},
+	}
 	m.query.Open()
 
 	err := m.ParseConfig()
@@ -558,7 +573,12 @@ func TestWinPerfcountersCollect1Integration(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{
+		PrintValid: false,
+		Object:     perfobjects,
+		query:      &PerformanceQueryImpl{},
+		Log:        testutil.Logger{},
+	}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
@@ -604,7 +624,14 @@ func TestWinPerfcountersCollect2Integration(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, UsePerfCounterTime: true, Object: perfobjects, query: &PerformanceQueryImpl{}, UseWildcardsExpansion: true}
+	m := Win_PerfCounters{
+		PrintValid:            false,
+		UsePerfCounterTime:    true,
+		Object:                perfobjects,
+		query:                 &PerformanceQueryImpl{},
+		UseWildcardsExpansion: true,
+		Log:                   testutil.Logger{},
+	}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)

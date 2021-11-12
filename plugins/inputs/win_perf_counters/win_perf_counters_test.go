@@ -1024,3 +1024,39 @@ func TestUTF16ToStringArray(t *testing.T) {
 	czechStrings := UTF16ToStringArray(unicodeStringListWithCzechChars)
 	assert.True(t, assert.ObjectsAreEqual(czechStrings, stringArrayWithCzechChars), "Not equal czech arrays")
 }
+
+func TestNoWildcards(t *testing.T) {
+	m := Win_PerfCounters{
+		Object:  createPerfObject("measurement", "object", []string{"instance"}, []string{"counter*"}, false, false),
+		Fix2463: true,
+		Log:     testutil.Logger{},
+	}
+	require.Error(t, m.Init())
+}
+
+func TestFix2463(t *testing.T) {
+	// this test is valid only on localized windows
+	if testing.Short() {
+		t.Skip("Skipping long taking test in short mode")
+	}
+
+	const counter = "% Processor Time"
+	m := Win_PerfCounters{
+		query:                   &PerformanceQueryImpl{},
+		CountersRefreshInterval: config.Duration(time.Second * 60),
+		Object: createPerfObject("measurement", "Processor Information",
+			[]string{"_Total"}, []string{counter}, false, false),
+		Fix2463:               true,
+		UseWildcardsExpansion: true,
+		Log:                   testutil.Logger{},
+	}
+	require.NoError(t, m.Init())
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+	require.Len(t, acc.Metrics, 1)
+
+	//running on localized windows with UseWildcardsExpansion and
+	//without Fix2463, this will be localized. Using Fix2463 it will
+	//be English.
+	require.Contains(t, acc.Metrics[0].Fields, sanitizedChars.Replace(counter))
+}

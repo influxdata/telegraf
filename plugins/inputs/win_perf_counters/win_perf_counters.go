@@ -31,6 +31,12 @@ var sampleConfig = `
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
 
+  # When running on a localized version of Windows and UseWildcardsExpansion = true, Windows will
+  # localize counter names. When Fix2463 = true, use the counter names in object.Counters instead
+  # of the localized names. Counter names in object.Counter must not have wildcards when this
+  # setting is true.
+  #Fix2463 = false
+
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
     ObjectName = "Processor"
@@ -146,6 +152,7 @@ type Win_PerfCounters struct {
 	Object                  []perfobject
 	CountersRefreshInterval config.Duration
 	UseWildcardsExpansion   bool
+	Fix2463                 bool `toml:"fix_2463"`
 
 	Log telegraf.Logger
 
@@ -246,7 +253,8 @@ func (m *Win_PerfCounters) SampleConfig() string {
 }
 
 //objectName string, counter string, instance string, measurement string, include_total bool
-func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
+func (m *Win_PerfCounters) AddItem(origCounterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
+	counterPath := origCounterPath
 	var err error
 	var counterHandle PDH_HCOUNTER
 	if !m.query.IsVistaOrNewer() {
@@ -273,21 +281,55 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			return err
 		}
 
+		origObjectName, _, origCounterName, err := extractCounterInfoFromCounterPath(origCounterPath)
+		if err != nil {
+			return err
+		}
+
 		for _, counterPath := range counters {
 			var err error
-			counterHandle, err := m.query.AddCounterToQuery(counterPath)
 
 			objectName, instance, counterName, err = extractCounterInfoFromCounterPath(counterPath)
 			if err != nil {
 				return err
 			}
 
+			var newItem *counter
+			if m.Fix2463 {
+				// On localized installations of Windows, Telegraf
+				// should return English metrics, but
+				// ExpandWildCardPath returns localized counters. Undo
+				// that by using the original object and counter
+				// names, along with the expanded instance.
+
+				var newInstance string
+				if instance == "" {
+					newInstance = emptyInstance
+				} else {
+					newInstance = instance
+				}
+				counterPath = formatPath(origObjectName, newInstance, origCounterName)
+				counterHandle, err = m.query.AddEnglishCounterToQuery(counterPath)
+				newItem = &counter{
+					counterPath,
+					origObjectName, origCounterName,
+					instance, measurement,
+					includeTotal, counterHandle,
+				}
+			} else {
+				counterHandle, err = m.query.AddCounterToQuery(counterPath)
+				newItem = &counter{
+					counterPath,
+					objectName, counterName,
+					instance, measurement,
+					includeTotal, counterHandle,
+				}
+			}
+
 			if instance == "_Total" && origInstance == "*" && !includeTotal {
 				continue
 			}
 
-			newItem := &counter{counterPath, objectName, counterName, instance, measurement,
-				includeTotal, counterHandle}
 			m.counters = append(m.counters, newItem)
 
 			if m.PrintValid {
@@ -306,6 +348,16 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 	return nil
 }
 
+const emptyInstance = "------"
+
+func formatPath(objectname string, instance string, counter string) string {
+	if instance == emptyInstance {
+		return "\\" + objectname + "\\" + counter
+	} else {
+		return "\\" + objectname + "(" + instance + ")\\" + counter
+	}
+}
+
 func (m *Win_PerfCounters) ParseConfig() error {
 	var counterPath string
 
@@ -315,11 +367,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 				for _, instance := range PerfObject.Instances {
 					objectname := PerfObject.ObjectName
 
-					if instance == "------" {
-						counterPath = "\\" + objectname + "\\" + counter
-					} else {
-						counterPath = "\\" + objectname + "(" + instance + ")\\" + counter
-					}
+					counterPath = formatPath(objectname, instance, counter)
 
 					err := m.AddItem(counterPath, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal)
 
@@ -447,7 +495,7 @@ func shouldIncludeMetric(metric *counter, cValue CounterValue) bool {
 		// Catch if we set it to total or some form of it
 		return true
 	}
-	if metric.instance == "------" {
+	if metric.instance == emptyInstance {
 		return true
 	}
 	return false
@@ -474,6 +522,44 @@ func isKnownCounterDataError(err error) bool {
 		return true
 	}
 	return false
+}
+
+const wildcardError = "Counter wildcards can't be used with fix_2463"
+
+func (m *Win_PerfCounters) Init() error {
+	if m.Fix2463 {
+		// Counters must not have wildcards with this option
+		// type wildcardContext struct {
+		// 	obj      string
+		// 	counter  string
+		// 	wildcard string
+		// }
+
+		// var bad []wildcardContext
+
+		found := false
+
+		for _, object := range m.Object {
+			for _, counter := range object.Counters {
+				for _, wildcard := range []string{"*", "?"} {
+					if strings.Contains(counter, wildcard) {
+						if !found {
+							m.Log.Errorf(wildcardError)
+						}
+						found = true
+						m.Log.Errorf("object: %s, counter: %s contains wildcard %s", object.ObjectName, counter, wildcard)
+						// bad = append(bad, wildcardContext{object.ObjectName, counter, wildcard})
+					}
+				}
+			}
+		}
+		// if len(bad) != 0 {
+
+		if found {
+			return fmt.Errorf(wildcardError)
+		}
+	}
+	return nil
 }
 
 func init() {
