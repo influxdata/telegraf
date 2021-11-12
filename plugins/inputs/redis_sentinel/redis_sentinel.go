@@ -41,10 +41,6 @@ func init() {
 	})
 }
 
-func (r *RedisSentinelClient) baseTags() map[string]string {
-	return r.tags
-}
-
 func (r *RedisSentinel) SampleConfig() string {
 	return `
   ## specify servers via a url matching:
@@ -178,7 +174,7 @@ func gatherInfoStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 	}
 
 	rdr := strings.NewReader(info)
-	infoTags, infoFields, err := convertSentinelInfoOutput(client.baseTags(), rdr)
+	infoTags, infoFields, err := convertSentinelInfoOutput(client.tags, rdr)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -219,7 +215,7 @@ func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 
 		_, quorumErr := quorumCmd.Result()
 
-		sentinelMastersTags, sentinelMastersFields, err := convertSentinelMastersOutput(client.baseTags(), m, quorumErr)
+		sentinelMastersTags, sentinelMastersFields, err := convertSentinelMastersOutput(client.tags, m, quorumErr)
 		if err == nil {
 			acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
 		} else {
@@ -251,7 +247,7 @@ func gatherReplicaStats(
 		if replica, replicaOk := replica.([]interface{}); replicaOk {
 			rm := toMap(replica)
 
-			replicaTags, replicaFields, err := convertSentinelReplicaOutput(client.baseTags(), masterName, rm)
+			replicaTags, replicaFields, err := convertSentinelReplicaOutput(client.tags, masterName, rm)
 			if err == nil {
 				acc.AddFields(measurementReplicas, replicaFields, replicaTags)
 			} else {
@@ -281,7 +277,7 @@ func gatherSentinelStats(
 		if sentinel, sentinelOk := sentinel.([]interface{}); sentinelOk {
 			sm := toMap(sentinel)
 
-			sentinelTags, sentinelFields, err := convertSentinelSentinelsOutput(client.baseTags(), masterName, sm)
+			sentinelTags, sentinelFields, err := convertSentinelSentinelsOutput(client.tags, masterName, sm)
 			if err == nil {
 				acc.AddFields(measurementSentinels, sentinelFields, sentinelTags)
 			} else {
