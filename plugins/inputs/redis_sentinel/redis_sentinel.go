@@ -96,19 +96,15 @@ func (r *RedisSentinel) Init() error {
 			return fmt.Errorf("invalid scheme %q. expected tcp or unix", u.Scheme)
 		}
 
-		password := r.Password
-
-		var address string
+		address := u.Host
 		if u.Scheme == "unix" {
 			address = u.Path
-		} else {
-			address = u.Host
 		}
 
 		sentinel := redis.NewSentinelClient(
 			&redis.Options{
 				Addr:      address,
-				Password:  password,
+				Password:  r.password,
 				Network:   u.Scheme,
 				PoolSize:  1,
 				TLSConfig: tlsConfig,
