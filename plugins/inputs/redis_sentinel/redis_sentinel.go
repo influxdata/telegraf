@@ -104,7 +104,7 @@ func (r *RedisSentinel) Init() error {
 		sentinel := redis.NewSentinelClient(
 			&redis.Options{
 				Addr:      address,
-				Password:  r.password,
+				Password:  r.Password,
 				Network:   u.Scheme,
 				PoolSize:  1,
 				TLSConfig: tlsConfig,
@@ -335,10 +335,7 @@ func convertSentinelSentinelsOutput(
 	masterName string,
 	sentinelMaster map[string]string,
 ) (map[string]string, map[string]interface{}, error) {
-	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	tags := globalTags
 
 	tags["sentinel_ip"] = sentinelMaster["ip"]
 	tags["sentinel_port"] = sentinelMaster["port"]
@@ -376,10 +373,7 @@ func convertSentinelReplicaOutput(
 	masterName string,
 	replica map[string]string,
 ) (map[string]string, map[string]interface{}, error) {
-	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	tags := globalTags
 
 	tags["replica_ip"] = replica["ip"]
 	tags["replica_port"] = replica["port"]
@@ -420,10 +414,7 @@ func convertSentinelInfoOutput(
 	scanner := bufio.NewScanner(rdr)
 	fields := make(map[string]interface{})
 
-	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	tags := globalTags
 
 	var section string
 	for scanner.Scan() {
