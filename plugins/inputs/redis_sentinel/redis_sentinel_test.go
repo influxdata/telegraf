@@ -97,9 +97,11 @@ func TestRedisSentinelMasters(t *testing.T) {
 		"runid":                   "ff3dadd1cfea3043de4d25711d93f01a564562f7",
 	}
 
-	smTags, smFields, _ := convertSentinelMastersOutput(globalTags, sentinelMastersOutput, nil)
+	sentinelTags, sentinelFields, sentinalErr := convertSentinelMastersOutput(globalTags, sentinelMastersOutput, nil)
+	require.NoErrorf(t, sentinalErr, "failed converting output: %v", sentinalErr)
+
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementMasters, smTags, smFields, now),
+		testutil.MustMetric(measurementMasters, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics, testutil.IgnoreTime())
@@ -150,7 +152,9 @@ func TestRedisSentinels(t *testing.T) {
 		"voted_leader_epoch":      "0",
 	}
 
-	sentinelTags, sentinelFields, _ := convertSentinelSentinelsOutput(globalTags, masterName, sentinelsOutput)
+	sentinelTags, sentinelFields, sentinelErr := convertSentinelSentinelsOutput(globalTags, masterName, sentinelsOutput)
+	require.NoErrorf(t, sentinelErr, "failed converting output: %v", sentinelErr)
+
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementSentinels, sentinelTags, sentinelFields, now),
 	}
@@ -215,7 +219,9 @@ func TestRedisSentinelReplicas(t *testing.T) {
 		"slave_repl_offset":       "1392400",
 	}
 
-	sentinelTags, sentinelFields, _ := convertSentinelReplicaOutput(globalTags, masterName, replicasOutput)
+	sentinelTags, sentinelFields, sentinalErr := convertSentinelReplicaOutput(globalTags, masterName, replicasOutput)
+	require.NoErrorf(t, sentinalErr, "failed converting output: %v", sentinalErr)
+
 	actualMetrics := []telegraf.Metric{
 		testutil.MustMetric(measurementReplicas, sentinelTags, sentinelFields, now),
 	}
@@ -294,10 +300,11 @@ func TestRedisSentinelInfoAll(t *testing.T) {
 
 	rdr := bufio.NewReader(bytes.NewReader(sentinelInfoResponse))
 
-	infoTags, infoFields, _ := convertSentinelInfoOutput(globalTags, rdr)
+	sentinelTags, sentinelFields, sentinalErr := convertSentinelInfoOutput(globalTags, rdr)
+	require.NoErrorf(t, sentinalErr, "failed converting output: %v", sentinalErr)
 
 	actualMetrics := []telegraf.Metric{
-		testutil.MustMetric(measurementSentinel, infoTags, infoFields, now),
+		testutil.MustMetric(measurementSentinel, sentinelTags, sentinelFields, now),
 	}
 
 	testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics)

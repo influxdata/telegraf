@@ -140,6 +140,55 @@ func toMap(vals []interface{}) map[string]string {
 	return m
 }
 
+func castFieldValue(value string, fieldType configFieldType) (interface{}, error) {
+	var castedValue interface{}
+	var err error
+
+	switch fieldType {
+	case configFieldTypeFloat:
+		castedValue, err = strconv.ParseFloat(value, 64)
+	case configFieldTypeInteger:
+		castedValue, err = strconv.ParseInt(value, 10, 64)
+	case configFieldTypeString:
+		castedValue = value
+	default:
+		return nil, fmt.Errorf("unsupported field type %v", fieldType)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed cating value %v: %v", value, err)
+	}
+
+	return castedValue, nil
+}
+
+func prepareFieldValues(
+	fields map[string]string,
+	configFieldTypeMap map[string]configFieldType,
+) (map[string]interface{}, error) {
+	preparedFields := make(map[string]interface{})
+
+	for key, val := range fields {
+		key = strings.Replace(key, "-", "_", -1)
+
+		valType, valTypeOk := configFieldTypeMap[key]
+
+		if !valTypeOk {
+			continue
+		}
+
+		castedVal, castedValErr := castFieldValue(val, valType)
+
+		if castedValErr != nil {
+			return nil, castedValErr
+		}
+
+		preparedFields[key] = castedVal
+	}
+
+	return preparedFields, nil
+}
+
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
@@ -308,30 +357,13 @@ func convertSentinelMastersOutput(
 
 	tags["master"] = master["name"]
 
-	fields := make(map[string]interface{})
+	fields, fieldsErr := prepareFieldValues(master, measurementMastersFields)
+
+	if fieldsErr != nil {
+		return nil, nil, fieldsErr
+	}
 
 	fields["has_quorum"] = quorumErr == nil
-
-	for key, val := range master {
-		key = strings.Replace(key, "-", "_", -1)
-
-		switch valType := measurementMastersFields[key]; valType {
-		case "float":
-			val, err := strconv.ParseFloat(val, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
-			}
-			fields[key] = val
-		case "integer":
-			val, err := strconv.ParseInt(val, 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
-			}
-			fields[key] = val
-		case "string":
-			fields[key] = val
-		}
-	}
 
 	return tags, fields, nil
 }
@@ -348,27 +380,10 @@ func convertSentinelSentinelsOutput(
 	tags["sentinel_port"] = sentinelMaster["port"]
 	tags["master"] = masterName
 
-	fields := make(map[string]interface{})
+	fields, fieldsErr := prepareFieldValues(sentinelMaster, measurementSentinelsFields)
 
-	for key, val := range sentinelMaster {
-		key = strings.Replace(key, "-", "_", -1)
-
-		switch valType := measurementSentinelsFields[key]; valType {
-		case "float":
-			val, err := strconv.ParseFloat(val, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
-			}
-			fields[key] = val
-		case "integer":
-			val, err := strconv.ParseInt(val, 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
-			}
-			fields[key] = val
-		case "string":
-			fields[key] = val
-		}
+	if fieldsErr != nil {
+		return nil, nil, fieldsErr
 	}
 
 	return tags, fields, nil
@@ -386,27 +401,10 @@ func convertSentinelReplicaOutput(
 	tags["replica_port"] = replica["port"]
 	tags["master"] = masterName
 
-	fields := make(map[string]interface{})
+	fields, fieldsErr := prepareFieldValues(replica, measurementReplicasFields)
 
-	for key, val := range replica {
-		key = strings.Replace(key, "-", "_", -1)
-
-		switch valType := measurementReplicasFields[key]; valType {
-		case "float":
-			val, err := strconv.ParseFloat(val, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
-			}
-			fields[key] = val
-		case "integer":
-			val, err := strconv.ParseInt(val, 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed parsing field %v: %v", key, err)
-			}
-			fields[key] = val
-		case "string":
-			fields[key] = val
-		}
+	if fieldsErr != nil {
+		return nil, nil, fieldsErr
 	}
 
 	return tags, fields, nil
@@ -419,11 +417,10 @@ func convertSentinelInfoOutput(
 	rdr io.Reader,
 ) (map[string]string, map[string]interface{}, error) {
 	scanner := bufio.NewScanner(rdr)
-	fields := make(map[string]interface{})
+	rawFields := make(map[string]string)
 
 	tags := globalTags
 
-	var section string
 	for scanner.Scan() {
 		line := scanner.Text()
 		if len(line) == 0 {
@@ -431,59 +428,36 @@ func convertSentinelInfoOutput(
 		}
 
 		// Redis denotes configuration sections with a hashtag
-		// This comes in handy when we want to ensure we're processing the correct configuration option
-		// For example, when we are renaming fields before sending them to the accumulator
+		// Example of the section header: # Clients
 		if line[0] == '#' {
-			// Example of the section header: # Clients
-			section = line[2:]
+			// Nothing interesting here
 			continue
 		}
 
 		parts := strings.SplitN(line, ":", 2)
 		if len(parts) < 2 {
+			// Not a valid configuration option
 			continue
 		}
 
-		name := parts[0]
-
-		if section == "Server" {
-			// Rename and convert to nanoseconds
-			if name == "uptime_in_seconds" {
-				uptimeInSeconds, uptimeParseErr := strconv.ParseInt(parts[1], 10, 64)
-				if uptimeParseErr != nil {
-					return nil, nil, fmt.Errorf("failed parsing field uptime_in_seconds: %v", uptimeParseErr)
-				}
-				fields["uptime_ns"] = int64(time.Duration(uptimeInSeconds) * time.Second)
-
-				continue
-			}
-		} else if section == "Clients" {
-			// Rename in order to match the "redis" input plugin
-			if name == "connected_clients" {
-				name = "clients"
-			}
-		}
-
-		metric := strings.Replace(name, "-", "_", -1)
-
+		key := strings.TrimSpace(parts[0])
 		val := strings.TrimSpace(parts[1])
 
-		switch valType := measurementSentinelFields[metric]; valType {
-		case "float":
-			val, err := strconv.ParseFloat(val, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed parsing field %v: %v", metric, err)
-			}
-			fields[metric] = val
-		case "integer":
-			val, err := strconv.ParseInt(val, 10, 64)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed parsing field %v: %v", metric, err)
-			}
-			fields[metric] = val
-		case "string":
-			fields[metric] = val
-		}
+		rawFields[key] = val
+	}
+
+	fields, fieldsErr := prepareFieldValues(rawFields, measurementSentinelFields)
+
+	// Rename the field and convert it to nanoseconds
+	fields["uptime_ns"] = int64(time.Duration(fields["uptime_in_seconds"].(int64)) * time.Second)
+	delete(fields, "uptime_in_seconds")
+
+	// Rename in order to match the "redis" input plugin
+	fields["clients"] = fields["connected_clients"]
+	delete(fields, "connected_clients")
+
+	if fieldsErr != nil {
+		return nil, nil, fieldsErr
 	}
 
 	return tags, fields, nil
