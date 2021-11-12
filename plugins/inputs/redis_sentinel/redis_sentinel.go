@@ -179,6 +179,7 @@ func gatherInfoStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 		acc.AddError(err)
 		return
 	}
+
 	acc.AddFields(measurementSentinel, infoFields, infoTags)
 }
 
@@ -197,6 +198,7 @@ func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 	for _, master := range masters {
 		master, masterOk := master.([]interface{})
 		if !masterOk {
+			acc.AddError(fmt.Errorf("unable to process master response"))
 			continue
 		}
 
@@ -205,7 +207,7 @@ func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 		masterName, masterNameOk := m["name"]
 		if !masterNameOk {
 			acc.AddError(fmt.Errorf("unable to resolve master name"))
-			return
+			continue
 		}
 
 		quorumCmd := redis.NewStringCmd("sentinel", "ckquorum", masterName)
@@ -216,10 +218,10 @@ func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 		_, quorumErr := quorumCmd.Result()
 
 		sentinelMastersTags, sentinelMastersFields, err := convertSentinelMastersOutput(client.tags, m, quorumErr)
-		if err == nil {
-			acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
-		} else {
+		if err != nil {
 			acc.AddError(err)
+		} else {
+			acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
 		}
 
 		gatherReplicaStats(acc, client, masterName)
@@ -244,16 +246,20 @@ func gatherReplicaStats(
 	}
 
 	for _, replica := range replicas {
-		if replica, replicaOk := replica.([]interface{}); replicaOk {
-			rm := toMap(replica)
-
-			replicaTags, replicaFields, err := convertSentinelReplicaOutput(client.tags, masterName, rm)
-			if err == nil {
-				acc.AddFields(measurementReplicas, replicaFields, replicaTags)
-			} else {
-				acc.AddError(err)
-			}
+		replica, replicaOk := replica.([]interface{})
+		if !replicaOk {
+			acc.AddError(fmt.Errorf("unable to process replica response"))
+			continue
 		}
+
+		rm := toMap(replica)
+		replicaTags, replicaFields, err := convertSentinelReplicaOutput(client.tags, masterName, rm)
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+
+		acc.AddFields(measurementReplicas, replicaFields, replicaTags)
 	}
 }
 
@@ -274,16 +280,20 @@ func gatherSentinelStats(
 	}
 
 	for _, sentinel := range sentinels {
-		if sentinel, sentinelOk := sentinel.([]interface{}); sentinelOk {
-			sm := toMap(sentinel)
-
-			sentinelTags, sentinelFields, err := convertSentinelSentinelsOutput(client.tags, masterName, sm)
-			if err == nil {
-				acc.AddFields(measurementSentinels, sentinelFields, sentinelTags)
-			} else {
-				acc.AddError(err)
-			}
+		sentinel, sentinelOk := sentinel.([]interface{})
+		if !sentinelOk {
+			acc.AddError(fmt.Errorf("unable to process sentinel response"))
+			continue
 		}
+
+		sm := toMap(sentinel)
+		sentinelTags, sentinelFields, err := convertSentinelSentinelsOutput(client.tags, masterName, sm)
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+
+		acc.AddFields(measurementSentinels, sentinelFields, sentinelTags)
 	}
 }
 
