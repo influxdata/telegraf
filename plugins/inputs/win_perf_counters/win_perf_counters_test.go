@@ -1027,14 +1027,22 @@ func TestUTF16ToStringArray(t *testing.T) {
 
 func TestNoWildcards(t *testing.T) {
 	m := Win_PerfCounters{
-		Object:  createPerfObject("measurement", "object", []string{"instance"}, []string{"counter*"}, false, false),
-		Fix2463: true,
-		Log:     testutil.Logger{},
+		Object:                     createPerfObject("measurement", "object", []string{"instance"}, []string{"counter*"}, false, false),
+		UseWildcardsExpansion:      true,
+		LocalizeWildcardsExpansion: false,
+		Log:                        testutil.Logger{},
+	}
+	require.Error(t, m.Init())
+	m = Win_PerfCounters{
+		Object:                     createPerfObject("measurement", "object?", []string{"instance"}, []string{"counter"}, false, false),
+		UseWildcardsExpansion:      true,
+		LocalizeWildcardsExpansion: false,
+		Log:                        testutil.Logger{},
 	}
 	require.Error(t, m.Init())
 }
 
-func TestFix2463(t *testing.T) {
+func TestLocalizeWildcardsExpansion(t *testing.T) {
 	// this test is valid only on localized windows
 	if testing.Short() {
 		t.Skip("Skipping long taking test in short mode")
@@ -1046,9 +1054,9 @@ func TestFix2463(t *testing.T) {
 		CountersRefreshInterval: config.Duration(time.Second * 60),
 		Object: createPerfObject("measurement", "Processor Information",
 			[]string{"_Total"}, []string{counter}, false, false),
-		Fix2463:               true,
-		UseWildcardsExpansion: true,
-		Log:                   testutil.Logger{},
+		LocalizeWildcardsExpansion: false,
+		UseWildcardsExpansion:      true,
+		Log:                        testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 	var acc testutil.Accumulator
@@ -1056,7 +1064,7 @@ func TestFix2463(t *testing.T) {
 	require.Len(t, acc.Metrics, 1)
 
 	//running on localized windows with UseWildcardsExpansion and
-	//without Fix2463, this will be localized. Using Fix2463 it will
+	//with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
 	//be English.
 	require.Contains(t, acc.Metrics[0].Fields, sanitizedChars.Replace(counter))
 }

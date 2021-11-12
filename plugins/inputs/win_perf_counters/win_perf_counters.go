@@ -28,14 +28,13 @@ var sampleConfig = `
   # and in case of localized Windows, counter paths will be also localized. It also returns instance indexes in instance names.
   # If false, wildcards (not partial) in instance names will still be expanded, but instance indexes will not be returned in instance names.
   #UseWildcardsExpansion = false
+  # When running on a localized version of Windows and UseWildcardsExpansion = true, Windows will
+  # localize object and counter names. When LocalizeWildcardsExpansion = false, use the names in object.Counters instead
+  # of the localized names. Only Instances can have wildcards in this case. ObjectName and Counters must not have wildcards when this
+  # setting is false.
+  #LocalizeWildcardsExpansion = true
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
-
-  # When running on a localized version of Windows and UseWildcardsExpansion = true, Windows will
-  # localize counter names. When Fix2463 = true, use the counter names in object.Counters instead
-  # of the localized names. Counter names in object.Counter must not have wildcards when this
-  # setting is true.
-  #Fix2463 = false
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
@@ -147,12 +146,12 @@ var sampleConfig = `
 type Win_PerfCounters struct {
 	PrintValid bool
 	//deprecated: determined dynamically
-	PreVistaSupport         bool
-	UsePerfCounterTime      bool
-	Object                  []perfobject
-	CountersRefreshInterval config.Duration
-	UseWildcardsExpansion   bool
-	Fix2463                 bool `toml:"fix_2463"`
+	PreVistaSupport            bool
+	UsePerfCounterTime         bool
+	Object                     []perfobject
+	CountersRefreshInterval    config.Duration
+	UseWildcardsExpansion      bool
+	LocalizeWildcardsExpansion bool
 
 	Log telegraf.Logger
 
@@ -295,7 +294,7 @@ func (m *Win_PerfCounters) AddItem(origCounterPath string, objectName string, in
 			}
 
 			var newItem *counter
-			if m.Fix2463 {
+			if !m.LocalizeWildcardsExpansion {
 				// On localized installations of Windows, Telegraf
 				// should return English metrics, but
 				// ExpandWildCardPath returns localized counters. Undo
@@ -527,36 +526,31 @@ func isKnownCounterDataError(err error) bool {
 const wildcardError = "Counter wildcards can't be used with fix_2463"
 
 func (m *Win_PerfCounters) Init() error {
-	if m.Fix2463 {
+	if m.UseWildcardsExpansion && !m.LocalizeWildcardsExpansion {
 		// Counters must not have wildcards with this option
-		// type wildcardContext struct {
-		// 	obj      string
-		// 	counter  string
-		// 	wildcard string
-		// }
-
-		// var bad []wildcardContext
 
 		found := false
+		wildcards := []string{"*", "?"}
 
 		for _, object := range m.Object {
+			for _, wildcard := range wildcards {
+				if strings.Contains(object.ObjectName, wildcard) {
+					found = true
+					m.Log.Errorf("object: %s, contains wildcard %s", object.ObjectName, wildcard)
+				}
+			}
 			for _, counter := range object.Counters {
-				for _, wildcard := range []string{"*", "?"} {
+				for _, wildcard := range wildcards {
 					if strings.Contains(counter, wildcard) {
-						if !found {
-							m.Log.Errorf(wildcardError)
-						}
 						found = true
 						m.Log.Errorf("object: %s, counter: %s contains wildcard %s", object.ObjectName, counter, wildcard)
-						// bad = append(bad, wildcardContext{object.ObjectName, counter, wildcard})
 					}
 				}
 			}
 		}
-		// if len(bad) != 0 {
 
 		if found {
-			return fmt.Errorf(wildcardError)
+			return fmt.Errorf("wildcards can't be used with LocalizeWildcardsExpansion=false")
 		}
 	}
 	return nil
@@ -564,6 +558,10 @@ func (m *Win_PerfCounters) Init() error {
 
 func init() {
 	inputs.Add("win_perf_counters", func() telegraf.Input {
-		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: config.Duration(time.Second * 60)}
+		return &Win_PerfCounters{
+			query:                      &PerformanceQueryImpl{},
+			CountersRefreshInterval:    config.Duration(time.Second * 60),
+			LocalizeWildcardsExpansion: true,
+		}
 	})
 }
