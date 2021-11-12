@@ -306,10 +306,7 @@ func convertSentinelMastersOutput(
 
 	fields := make(map[string]interface{})
 
-	fields["has_quorum"] = false
-	if quorumErr == nil {
-		fields["has_quorum"] = true
-	}
+	fields["has_quorum"] = quorumErr == nil
 
 	for key, val := range master {
 		key = strings.Replace(key, "-", "_", -1)
