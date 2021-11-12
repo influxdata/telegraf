@@ -21,12 +21,6 @@ and creates metrics using one of the supported [input data formats][].
     "sensors/#",
   ]
 
-  ## Enable extracting tag values from MQTT topics
-  ## _ denotes an ignored entry in the topic path
-  # topic_tags = "_/format/client/_"
-  # topic_measurement = "measurement/_/_/_"
-  # topic_fields = "_/_/_/temperature" 
-
   ## The message topic will be stored in a tag specified by this value.  If set
   ## to the empty string no topic tag will be created.
   # topic_tag = "topic"
@@ -79,6 +73,17 @@ and creates metrics using one of the supported [input data formats][].
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Enable extracting tag values from MQTT topics
+  ## _ denotes an ignored entry in the topic path 
+  ## [[inputs.mqtt_consumer.topic_parsing]]
+  ##   topic = ""
+  ##   measurement = ""
+  ##   tags = ""
+  ##   fields = ""
+  ## Value supported is int, float, unit
+  ##   [[inputs.mqtt_consumer.topic.types]]
+  ##      key = type
 ```
 
 ### Metrics

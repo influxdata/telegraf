@@ -381,3 +381,33 @@ func TestSubscribeNotCalledIfSession(t *testing.T) {
 
 	require.Equal(t, client.subscribeCallCount, 0)
 }
+
+// func TestTopicConfig(t *testing.T) {
+
+// 	// Process the telegraf config file for the test
+// 	buf, err := os.ReadFile("testdata/basic/telegraf.conf")
+// 	require.NoError(t, err)
+// 	// inputs.Add("file", func() telegraf.Input {
+// 	// 	return &file.File{}
+// 	// })
+// 	cfg := config.NewConfig()
+// 	err = cfg.LoadConfigData(buf)
+// 	require.NoError(t, err)
+
+// 	inputs.Add("mqtt_consumer", func() telegraf.Input {
+// 		return &mqtt_consumer.MQTTConsumer{}
+// 	})
+
+// 	for _, i := range cfg.Inputs {
+// 		err = i.Init()
+// 		require.NoError(t, err)
+// 		err = i.Gather(&acc)
+// 		require.NoError(t, err)
+// 	}
+// }
+
+// func TestTopicParsing(t *testing.T) {
+// 	measurement, err := parseTopic("telegraf/+/cpu/23", "_/_/measurement/_")
+// 	require.NoError(t, err)
+// 	require.Equal(t, measurement, "cpu")
+// }
