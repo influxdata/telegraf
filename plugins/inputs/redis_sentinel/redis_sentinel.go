@@ -163,9 +163,10 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 func gatherInfoStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 	infoCmd := redis.NewStringCmd("info", "all")
-	// We check the command result below
-	//nolint:errcheck
-	client.sentinel.Process(infoCmd)
+	if err := client.sentinel.Process(infoCmd); err != nil {
+		acc.AddError(err)
+		return
+	}
 
 	info, infoErr := infoCmd.Result()
 	if infoErr != nil {
@@ -185,9 +186,10 @@ func gatherInfoStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 
 func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 	mastersCmd := redis.NewSliceCmd("sentinel", "masters")
-	// We check the command result below
-	//nolint:errcheck
-	client.sentinel.Process(mastersCmd)
+	if err := client.sentinel.Process(mastersCmd); err != nil {
+		acc.AddError(err)
+		return
+	}
 
 	masters, mastersErr := mastersCmd.Result()
 	if mastersErr != nil {
@@ -211,11 +213,8 @@ func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 		}
 
 		quorumCmd := redis.NewStringCmd("sentinel", "ckquorum", masterName)
-		// We check the command result below
-		//nolint:errcheck
-		client.sentinel.Process(quorumCmd)
 
-		_, quorumErr := quorumCmd.Result()
+		quorumErr := client.sentinel.Process(quorumCmd)
 
 		sentinelMastersTags, sentinelMastersFields, err := convertSentinelMastersOutput(client.tags, m, quorumErr)
 		if err != nil {
@@ -235,9 +234,10 @@ func gatherReplicaStats(
 	masterName string,
 ) {
 	replicasCmd := redis.NewSliceCmd("sentinel", "replicas", masterName)
-	// We check the command result below
-	//nolint:errcheck
-	client.sentinel.Process(replicasCmd)
+	if err := client.sentinel.Process(replicasCmd); err != nil {
+		acc.AddError(err)
+		return
+	}
 
 	replicas, replicasErr := replicasCmd.Result()
 	if replicasErr != nil {
@@ -269,9 +269,10 @@ func gatherSentinelStats(
 	masterName string,
 ) {
 	sentinelsCmd := redis.NewSliceCmd("sentinel", "sentinels", masterName)
-	// We check the command result below
-	//nolint:errcheck
-	client.sentinel.Process(sentinelsCmd)
+	if err := client.sentinel.Process(sentinelsCmd); err != nil {
+		acc.AddError(err)
+		return
+	}
 
 	sentinels, sentinelsErr := sentinelsCmd.Result()
 	if sentinelsErr != nil {
