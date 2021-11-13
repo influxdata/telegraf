@@ -157,15 +157,16 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	md := batch.GetMetrics()
-	if md.ResourceMetrics().Len() == 0 {
+	md := otlpgrpc.NewMetricsRequest()
+	md.SetMetrics(batch.GetMetrics())
+	if md.Metrics().ResourceMetrics().Len() == 0 {
 		return nil
 	}
 
 	if len(o.Attributes) > 0 {
-		for i := 0; i < md.ResourceMetrics().Len(); i++ {
+		for i := 0; i < md.Metrics().ResourceMetrics().Len(); i++ {
 			for k, v := range o.Attributes {
-				md.ResourceMetrics().At(i).Resource().Attributes().UpsertString(k, v)
+				md.Metrics().ResourceMetrics().At(i).Resource().Attributes().UpsertString(k, v)
 			}
 		}
 	}

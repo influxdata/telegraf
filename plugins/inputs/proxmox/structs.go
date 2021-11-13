@@ -41,7 +41,7 @@ type VMCurrentStats struct {
 }
 
 type VMStat struct {
-	ID        string      `json:"vmid"`
+	ID        json.Number `json:"vmid"`
 	Name      string      `json:"name"`
 	Status    string      `json:"status"`
 	UsedMem   json.Number `json:"mem"`
