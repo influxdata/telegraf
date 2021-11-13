@@ -143,7 +143,7 @@ func reloadLoop(
 			}
 		}
 		if *fHTTPConfWatchInterval != 0 {
-			log.Printf("I! Reloading Telegraf config")
+			log.Printf("I! Reloading Telegraf config from HTTP Server")
 			settings = &config.HTTPLoadSettings{
 				ReloadInterval: *fHTTPConfWatchInterval,
 				ReloadJitter:   *fHTTPConfWatchJitter,
@@ -175,9 +175,25 @@ func reloadLoop(
 			}
 		}()
 
-		err := runAgent(ctx, inputFilters, outputFilters)
-		if err != nil && err != context.Canceled {
-			log.Fatalf("E! [telegraf] Error running agent: %v", err)
+		if *fHTTPConfWatchInterval == 0 {
+			//working with file based config, should exit
+			err := runAgent(ctx, inputFilters, outputFilters)
+			if err != nil && err != context.Canceled {
+				log.Fatalf("E! [telegraf] Error running agent: %v", err)
+			}
+		} else {
+			// working with http remote base config and with watch interval
+			// should wait until config server is ok, the watchRemoteConfig
+			// background process will detect and context will be canceled then.
+			err := runAgent(ctx, inputFilters, outputFilters)
+			if err != nil && err != context.Canceled {
+				log.Printf("W! [telegraf] Error when running agent: %v [Waiting for Config Served OK]", err)
+				select {
+				case <-ctx.Done():
+					log.Printf("D! Context Canceled ")
+				}
+
+			}
 		}
 	}
 }
