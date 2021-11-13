@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/robertkrimen/otto"
+	"go.starlark.net/starlark"
 )
 
 const (
@@ -59,6 +59,9 @@ type HTTPResponse struct {
 	ScriptSetENV   map[string]string `toml:"script_set_env"`
 	Script         string            `toml:"script"`
 
+	thread   *starlark.Thread
+	builtins starlark.StringDict
+
 	Log telegraf.Logger
 
 	compiledStringMatch *regexp.Regexp
@@ -67,6 +70,19 @@ type HTTPResponse struct {
 
 type httpClient interface {
 	Do(req *http.Request) (*http.Response, error)
+}
+
+func (h *HTTPResponse) Init() error {
+	h.thread = &starlark.Thread{
+		Print: func(_ *starlark.Thread, msg string) { h.Log.Debug(msg) },
+	}
+	builtins := starlark.StringDict{}
+	builtins["md5"] = starlark.NewBuiltin("md5", builtinMD5)
+	builtins["sha256"] = starlark.NewBuiltin("sha256", builtinSHA256)
+	builtins["now"] = starlark.NewBuiltin("now", builtinNow)
+	builtins["rand"] = starlark.NewBuiltin("rand", builtinRand)
+	h.builtins = builtins
+	return nil
 }
 
 // Description returns the plugin Description
@@ -134,8 +150,8 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Optional pre-request script using JavaScript.
-  # script = 'var timestamp = (Date.now()/1000).toFixed()'
+  ## Optional pre-request script using Starlark.
+  # script = 'timestamp = now()'
 
   ## Optional environment variable exporting from pre-request script
   ## Assign variable name from script to environment variable name, then reference
@@ -305,7 +321,7 @@ func (h *HTTPResponse) findField(field, value string, m map[string]interface{}) 
 	return ""
 }
 
-// replaceENV replaces environment variable reference with actual value in body, header and pre-request script.
+// setENV replaces environment variable reference with actual value in body, header and pre-request script.
 func (h *HTTPResponse) setENV(target string) error {
 	rx := regexp.MustCompile(`(?s)` + regexp.QuoteMeta("${") + `(.*?)` + regexp.QuoteMeta("}"))
 	for _, match := range rx.FindAllStringSubmatch(target, -1) {
@@ -543,24 +559,27 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if h.Script != "" {
-		vm := otto.New()
-		_, err := vm.Run(h.Script)
+		_, program, err := starlark.SourceProgram("script", h.Script, h.builtins.Has)
 		if err != nil {
-			return fmt.Errorf("failed to run pre-request script : %s", err)
+			return err
+		}
+		globals, err := program.Init(h.thread, h.builtins)
+		if err != nil {
+			return err
 		}
 		if h.ScriptSetENV != nil {
 			for envVar, scriptVar := range h.ScriptSetENV {
-				scriptValue, err := vm.Get(scriptVar)
-				if err != nil {
-					return fmt.Errorf("failed to get pre-request result value for variable %s : %s", scriptVar, err)
+				val, ok := globals[scriptVar]
+				if !ok {
+					return fmt.Errorf("failed to get pre-request value for variable %s", scriptVar)
 				}
-				scriptValueString, err := scriptValue.ToString()
-				if err != nil {
-					return fmt.Errorf("failed to convert pre-request result value %v to string : %s", scriptValueString, err)
+				valStr, ok := starlark.AsString(val)
+				if !ok {
+					return fmt.Errorf("failed to convert pre-request result value %v to string", val)
 				}
-				err = os.Setenv(envVar, scriptValueString)
+				err = os.Setenv(envVar, starlark.String(valStr).GoString())
 				if err != nil {
-					return fmt.Errorf("failed to set environment variable %s with value %v : %s", envVar, scriptValueString, err)
+					return fmt.Errorf("failed to set environment variable %s with value %v, error: %s", envVar, val.String(), err)
 				}
 			}
 		}
