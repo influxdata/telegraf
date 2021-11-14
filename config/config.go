@@ -958,7 +958,7 @@ func loadConfig(config string, settings *HTTPLoadSettings) ([]byte, bool, error)
 }
 
 func fetchConfig(u *url.URL, settings *HTTPLoadSettings) ([]byte, bool, error) {
-	url := u.String()
+	curl := u.String()
 	tls, err := settings.ClientConf.TLSConfig()
 	if err != nil {
 		return nil, false, err
@@ -968,7 +968,7 @@ func fetchConfig(u *url.URL, settings *HTTPLoadSettings) ([]byte, bool, error) {
 	}
 	client := &http.Client{Transport: transCfg}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", curl, nil)
 	if err != nil {
 		return nil, false, err
 	}
@@ -983,14 +983,14 @@ func fetchConfig(u *url.URL, settings *HTTPLoadSettings) ([]byte, bool, error) {
 	req.Header.Add("Accept", "application/toml")
 	req.Header.Set("User-Agent", internal.ProductToken())
 	//check if previously downloaded
-	if cache, ok := settings.CacheData[url]; ok {
+	if cache, ok := settings.CacheData[curl]; ok {
 		// add header to download only if modified
 		modtime := cache.LastModified.Format(time.RFC1123)
 		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since
 		// If-Modified-Since: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
 		// Example:
 		// If-Modified-Since: Thu, 11 Nov 2021 10:50:02 GMT
-		log.Printf("D! Added Header If-Modified-Since [%s]  or URL [%s]", modtime, url)
+		log.Printf("D! Added Header If-Modified-Since [%s]  or URL [%s]", modtime, curl)
 		req.Header.Add("If-Modified-Since", modtime)
 	}
 	retries := settings.MaxRetries
@@ -1010,7 +1010,7 @@ func fetchConfig(u *url.URL, settings *HTTPLoadSettings) ([]byte, bool, error) {
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			// Set now() as default LastModified
-			settings.CacheData[url] = &HTTPCacheInfo{
+			settings.CacheData[curl] = &HTTPCacheInfo{
 				LastModified: time.Now(),
 			}
 			// If Last-Modified exits we will use it instead
@@ -1018,10 +1018,10 @@ func fetchConfig(u *url.URL, settings *HTTPLoadSettings) ([]byte, bool, error) {
 			if len(lastmod) > 0 {
 				t, err := time.Parse(time.RFC1123, lastmod)
 				if err == nil {
-					settings.CacheData[url].LastModified = t
+					settings.CacheData[curl].LastModified = t
 				}
 			}
-			log.Printf("D! Caching URL [%s] Last Modified as [%s] ", url, lastmod)
+			log.Printf("D! Caching URL [%s] Last Modified as [%s] ", curl, lastmod)
 			d, err := io.ReadAll(resp.Body)
 			return d, true, err
 		}

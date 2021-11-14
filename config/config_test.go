@@ -23,7 +23,11 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, os.Setenv("MY_TEST_SERVER", "192.168.1.1"))
 	require.NoError(t, os.Setenv("TEST_INTERVAL", "10s"))
-	c.LoadConfig("./testdata/single_plugin_env_vars.toml", nil)
+	_, err := c.LoadConfig("./testdata/single_plugin_env_vars.toml", nil)
+	if err != nil {
+		t.Error("Error on loading ./testdata/single_plugin_env_vars.toml file")
+		return
+	}
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"192.168.1.1"}
@@ -63,7 +67,11 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := NewConfig()
-	c.LoadConfig("./testdata/single_plugin.toml", nil)
+	_, err := c.LoadConfig("./testdata/single_plugin.toml", nil)
+	if err != nil {
+		t.Error("Error on loading ./testdata/single_plugin.toml file")
+		return
+	}
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
@@ -341,7 +349,6 @@ func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
 }
 
 func TestConfig_URLLastModifiedCheck(t *testing.T) {
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Last-Modified", "Thu, 11 Nov 2021 10:50:02 GMT")
 		w.WriteHeader(http.StatusOK)

@@ -179,7 +179,8 @@ func reloadLoop(
 			//working with file based config, should exit
 			err := runAgent(ctx, inputFilters, outputFilters)
 			if err != nil && err != context.Canceled {
-				log.Fatalf("E! [telegraf] Error running agent: %v", err)
+				log.Printf("E! [telegraf] Error running agent: %v", err)
+				return
 			}
 		} else {
 			// working with http remote base config and with watch interval
@@ -188,18 +189,14 @@ func reloadLoop(
 			err := runAgent(ctx, inputFilters, outputFilters)
 			if err != nil && err != context.Canceled {
 				log.Printf("W! [telegraf] Error when running agent: %v [Waiting for Config Served OK]", err)
-				select {
-				case <-ctx.Done():
-					log.Printf("D! Context Canceled ")
-				}
-
+				<-ctx.Done()
+				log.Printf("D! Context Canceled ")
 			}
 		}
 	}
 }
 
 func watchRemoteConfig(signals chan os.Signal, settings *config.HTTPLoadSettings) {
-
 	t := jitterbug.New(settings.ReloadInterval, &jitterbug.Norm{Stdev: settings.ReloadJitter})
 	log.Printf("D! config reload Period set each  [%s] with Jitter [%s]", settings.ReloadInterval, settings.ReloadJitter)
 	for tick := range t.C {

@@ -158,6 +158,7 @@ following works:
 - github.com/klauspost/compress [BSD 3-Clause Clear License](https://github.com/klauspost/compress/blob/master/LICENSE)
 - github.com/kylelemons/godebug [Apache License](https://github.com/kylelemons/godebug/blob/master/LICENSE)
 - github.com/leodido/ragel-machinery [MIT License](https://github.com/leodido/ragel-machinery/blob/develop/LICENSE)
+- github.com/lthibault/jitterbug [MIT Licence](https://github.com/lthibault/jitterbug/blob/master/LICENSE)
 - github.com/mailru/easyjson [MIT License](https://github.com/mailru/easyjson/blob/master/LICENSE)
 - github.com/mattn/go-colorable [MIT License](https://github.com/mattn/go-colorable/blob/master/LICENSE)
 - github.com/mattn/go-ieproxy [MIT License](https://github.com/mattn/go-ieproxy/blob/master/LICENSE)

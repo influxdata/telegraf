@@ -1430,8 +1430,6 @@ github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0U
 github.com/logrusorgru/aurora v0.0.0-20181002194514-a7b3b318ed4e/go.mod h1:7rIyQOR62GCctdiQpZ/zOJlFyk6y+94wXzv6RNZgaR4=
 github.com/lthibault/jitterbug v2.0.0+incompatible h1:qouq51IKzlMx25+15jbxhC/d79YyTj0q6XFoptNqaUw=
 github.com/lthibault/jitterbug v2.0.0+incompatible/go.mod h1:2l7akWd27PScEs6YkjyUVj/8hKgNhbbQ3KiJgJtlf6o=
-github.com/lthibault/jitterbug/v2 v2.2.2 h1:v4+0tqryaI/TlYzgYE0Vhz7ha6Jtz4yRjmBP+PcqWPQ=
-github.com/lthibault/jitterbug/v2 v2.2.2/go.mod h1:evaHKX+60nFbFnEvGNPybQMJ5vXay9auziApDGo47Sw=
 github.com/lucasb-eyer/go-colorful v1.0.2/go.mod h1:0MS4r+7BZKSJ5mw4/S5MPN+qHFF1fYclkSPilDOKW0s=
 github.com/lucasb-eyer/go-colorful v1.0.3/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/lyft/protoc-gen-validate v0.0.13/go.mod h1:XbGvPuh87YZc5TdIa2/I4pLk0QoUACkjt2znoq26NVQ=
