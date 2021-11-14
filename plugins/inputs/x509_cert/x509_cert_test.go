@@ -14,8 +14,6 @@ import (
 	"time"
 
 	"github.com/pion/dtls/v2"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -199,30 +197,30 @@ func TestTags(t *testing.T) {
 	acc := testutil.Accumulator{}
 	require.NoError(t, sc.Gather(&acc))
 
-	assert.True(t, acc.HasMeasurement("x509_cert"))
+	require.True(t, acc.HasMeasurement("x509_cert"))
 
-	assert.True(t, acc.HasTag("x509_cert", "common_name"))
-	assert.Equal(t, "server.localdomain", acc.TagValue("x509_cert", "common_name"))
+	require.True(t, acc.HasTag("x509_cert", "common_name"))
+	require.Equal(t, "server.localdomain", acc.TagValue("x509_cert", "common_name"))
 
-	assert.True(t, acc.HasTag("x509_cert", "signature_algorithm"))
-	assert.Equal(t, "SHA256-RSA", acc.TagValue("x509_cert", "signature_algorithm"))
+	require.True(t, acc.HasTag("x509_cert", "signature_algorithm"))
+	require.Equal(t, "SHA256-RSA", acc.TagValue("x509_cert", "signature_algorithm"))
 
-	assert.True(t, acc.HasTag("x509_cert", "public_key_algorithm"))
-	assert.Equal(t, "RSA", acc.TagValue("x509_cert", "public_key_algorithm"))
+	require.True(t, acc.HasTag("x509_cert", "public_key_algorithm"))
+	require.Equal(t, "RSA", acc.TagValue("x509_cert", "public_key_algorithm"))
 
-	assert.True(t, acc.HasTag("x509_cert", "issuer_common_name"))
-	assert.Equal(t, "Telegraf Test CA", acc.TagValue("x509_cert", "issuer_common_name"))
+	require.True(t, acc.HasTag("x509_cert", "issuer_common_name"))
+	require.Equal(t, "Telegraf Test CA", acc.TagValue("x509_cert", "issuer_common_name"))
 
-	assert.True(t, acc.HasTag("x509_cert", "san"))
-	assert.Equal(t, "localhost,127.0.0.1", acc.TagValue("x509_cert", "san"))
+	require.True(t, acc.HasTag("x509_cert", "san"))
+	require.Equal(t, "localhost,127.0.0.1", acc.TagValue("x509_cert", "san"))
 
-	assert.True(t, acc.HasTag("x509_cert", "serial_number"))
+	require.True(t, acc.HasTag("x509_cert", "serial_number"))
 	serialNumber := new(big.Int)
 	_, validSerialNumber := serialNumber.SetString(acc.TagValue("x509_cert", "serial_number"), 16)
 	if !validSerialNumber {
 		t.Errorf("Expected a valid Hex serial number but got %s", acc.TagValue("x509_cert", "serial_number"))
 	}
-	assert.Equal(t, big.NewInt(1), serialNumber)
+	require.Equal(t, big.NewInt(1), serialNumber)
 }
 
 func TestGatherChain(t *testing.T) {
@@ -288,8 +286,8 @@ func TestGatherUDPCert(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
 
-	assert.Len(t, acc.Errors, 0)
-	assert.True(t, acc.HasMeasurement("x509_cert"))
+	require.Len(t, acc.Errors, 0)
+	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 
 func TestStrings(t *testing.T) {
@@ -328,7 +326,7 @@ func TestGatherCertIntegration(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
 
-	assert.True(t, acc.HasMeasurement("x509_cert"))
+	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 
 func TestGatherCertMustNotTimeout(t *testing.T) {
@@ -345,7 +343,7 @@ func TestGatherCertMustNotTimeout(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
 	require.Empty(t, acc.Errors)
-	assert.True(t, acc.HasMeasurement("x509_cert"))
+	require.True(t, acc.HasMeasurement("x509_cert"))
 }
 
 func TestSourcesToURLs(t *testing.T) {
@@ -354,8 +352,8 @@ func TestSourcesToURLs(t *testing.T) {
 	}
 	require.NoError(t, m.Init())
 
-	assert.Equal(t, len(m.globpaths), 2)
-	assert.Equal(t, len(m.locations), 2)
+	require.Equal(t, len(m.globpaths), 2)
+	require.Equal(t, len(m.locations), 2)
 }
 
 func TestServerName(t *testing.T) {
@@ -385,11 +383,11 @@ func TestServerName(t *testing.T) {
 			require.NoError(t, err)
 			actual, err := sc.serverName(u)
 			if test.err {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
-			assert.Equal(t, test.expected, actual)
+			require.Equal(t, test.expected, actual)
 		})
 	}
 }
