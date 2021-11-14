@@ -1296,6 +1296,8 @@ github.com/jaegertracing/jaeger v1.26.0 h1:4LbUdb9l/Mx83zYvjLbkrayheX+Aga26NEI+f
 github.com/jaegertracing/jaeger v1.26.0/go.mod h1:SwHsl1PLZVAdkQTPrziQ+4xV9FxzJXRvTDW1YrUIWEA=
 github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a h1:JxcWget6X/VfBMKxPIc28Jel37LGREut2fpV+ObkwJ0=
 github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a/go.mod h1:1qNVsDcmNQDsAXYfUuF/Z0rtK5eT8x9D6Pi7S3PjXAg=
+github.com/jarcoal/httpmock v1.0.8 h1:8kI16SoO6LQKgPE7PvQuV+YuD/inwHd7fOOe2zMbo4k=
+github.com/jarcoal/httpmock v1.0.8/go.mod h1:ATjnClrvW/3tijVmpL/va5Z3aAyGvqU3gCT8nX0Txik=
 github.com/jcmturner/aescts/v2 v2.0.0 h1:9YKLH6ey7H4eDBXW8khjYslgyqG2xZikXP0EQFKrle8=
 github.com/jcmturner/aescts/v2 v2.0.0/go.mod h1:AiaICIRyfYg35RUkr8yESTqvSy7csK90qZ5xfvvsoNs=
 github.com/jcmturner/dnsutils/v2 v2.0.0 h1:lltnkeZGL0wILNvrNiVCR6Ro5PGU/SeBvVO/8c/iPbo=
