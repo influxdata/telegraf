@@ -203,10 +203,10 @@ func TestSnmpInit(t *testing.T) {
 
 	s := &Snmp{
 		Tables: []Table{
-			{Oid: "TEST::testTable"},
+			{Oid: "RFC1213-MIB::atTable"},
 		},
 		Fields: []Field{
-			{Oid: "TEST::hostname"},
+			{Oid: "RFC1213-MIB::atPhysAddress"},
 		},
 		ClientConfig: snmp.ClientConfig{
 			Path: []string{testDataPath},
@@ -216,9 +216,15 @@ func TestSnmpInit(t *testing.T) {
 	err = s.init()
 	require.NoError(t, err)
 
+	assert.Len(t, s.Tables[0].Fields, 3)
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", IsTag: true, initialized: true})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", IsTag: true, initialized: true})
+
 	assert.Equal(t, Field{
-		Oid:         ".1.0.0.1.1",
-		Name:        "hostname",
+		Oid:         ".1.3.6.1.2.1.3.1.1.2",
+		Name:        "atPhysAddress",
+		Conversion:  "hwaddr",
 		initialized: true,
 	}, s.Fields[0])
 }
