@@ -3,7 +3,7 @@
 The [MQTT][mqtt] consumer plugin reads from the specified MQTT topics
 and creates metrics using one of the supported [input data formats][].
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.mqtt_consumer]]
@@ -76,20 +76,68 @@ and creates metrics using one of the supported [input data formats][].
 
   ## Enable extracting tag values from MQTT topics
   ## _ denotes an ignored entry in the topic path 
-  ## [[inputs.mqtt_consumer.topic_parsing]]
-  ##   topic = ""
-  ##   measurement = ""
-  ##   tags = ""
-  ##   fields = ""
+  # [[inputs.mqtt_consumer.topic_parsing]]
+  #   topic = ""
+  #   measurement = ""
+  #   tags = ""
+  #   fields = ""
   ## Value supported is int, float, unit
-  ##   [[inputs.mqtt_consumer.topic.types]]
-  ##      key = type
+  #   [[inputs.mqtt_consumer.topic.types]]
+  #      key = type
+```
+
+## About Topic Pasring
+
+The MQTT topic as a whole is stored as a tag, but this can be far too coarse
+too be easily used when utilising the data further down the line. This
+change allows tag values to be extracted from the MQTT topic letting you
+store the information provided in the topic in a meaningful way. An _ denotes an
+ignored entry in the topic path. Please see the following example.
+
+## Example Configuration for topic parsing
+
+```toml
+[[inputs.mqtt_consumer]]
+  ## Broker URLs for the MQTT server or cluster.  To connect to multiple
+  ## clusters or standalone servers, use a separate plugin instance.
+  ##   example: servers = ["tcp://localhost:1883"]
+  ##            servers = ["ssl://localhost:1883"]
+  ##            servers = ["ws://localhost:1883"]
+  servers = ["tcp://127.0.0.1:1883"]
+
+  ## Topics that will be subscribed to.
+  topics = [
+    "telegraf/+/cpu/23",
+  ]
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "value"
+  data_type = "float"
+
+  [[inputs.mqtt_consumer.topic_parsing]]
+    topic = "telegraf/one/cpu/23"
+    measurement = "_/_/measurement/_"
+    tags = "tag/_/_/_"
+    fields = "_/_/_/test"
+    [inputs.mqtt_consumer.topic_parsing.types]
+      test = "int"
+```
+
+Result:
+
+```shell
+cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
 ```
 
 ### Metrics
 
 - All measurements are tagged with the incoming topic, ie
 `topic=telegraf/host01/cpu`
+
+- example when [[inputs.mqtt_consumer.topic_parsing]] is set
 
 [mqtt]: https://mqtt.org
 [input data formats]: /docs/DATA_FORMATS_INPUT.md

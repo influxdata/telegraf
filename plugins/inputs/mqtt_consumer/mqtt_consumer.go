@@ -170,6 +170,8 @@ var sampleConfig = `
   ##  measurement = ""
   ##  tags = ""
   ##  fields = ""
+  ## [inputs.mqtt_consumer.topic_parsing.types]
+  ##    
 `
 
 func (m *MQTTConsumer) SampleConfig() string {
@@ -303,22 +305,36 @@ func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 	}
 }
 
+// compareTopics is used to support the mqtt wild card `+` which allows for one topic of any value
+func compareTopics(expected string, incoming string) bool {
+	expectedSplit := strings.Split(expected, "/")
+	incomingSplit := strings.Split(incoming, "/")
+	if len(expectedSplit) != len(incomingSplit) {
+		return false
+	}
+
+	for i := range expectedSplit {
+		if incomingSplit[i] != expectedSplit[i] && expectedSplit[i] != "+" {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
-	println("onMessgae")
+
 	metrics, err := m.parser.Parse(msg.Payload())
-	println(err)
 	if err != nil {
 		return err
 	}
 
 	for _, metric := range metrics {
-		println("in for loop")
 		if m.topicTag != "" {
 			metric.AddTag(m.topicTag, msg.Topic())
 		}
 		for _, p := range m.TopicParsing {
-			fmt.Printf("parsing topics %s \n", p)
-			if p.Topic == msg.Topic() {
+			if compareTopics(p.Topic, msg.Topic()) {
 				values := strings.Split(msg.Topic(), "/")
 
 				if p.Measurement != "" {
@@ -433,6 +449,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	return opts, nil
 }
 
+// parseMeasurement gets a single value from the incoming topic based on the user configuration (TopicParsing.Measurement)
 func parseMeasurement(keys []string, values []string) (string, error) {
 	for i, k := range keys {
 		if k != "_" {
@@ -442,6 +459,7 @@ func parseMeasurement(keys []string, values []string) (string, error) {
 	return "", fmt.Errorf("no measurements found")
 }
 
+// parseTags gets multiple tags from the topic based on the user configuration (TopicParsing.Tags)
 func parseTags(keys []string, values []string) (map[string]string, error) {
 	results := make(map[string]string)
 	for i, k := range keys {
@@ -455,6 +473,7 @@ func parseTags(keys []string, values []string) (map[string]string, error) {
 	return results, nil
 }
 
+// parseFields gets multiple fields from the topic based on the user configuration (TopicParsing.Fields)
 func parseFields(keys []string, values []string, types map[string]string) (map[string]interface{}, error) {
 	results := make(map[string]interface{})
 	for i, k := range keys {
