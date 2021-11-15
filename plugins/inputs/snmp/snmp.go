@@ -107,10 +107,7 @@ func (s *Snmp) init() error {
 		return nil
 	}
 
-	err := s.getMibsPath()
-	if err != nil {
-		return fmt.Errorf("could not get path %v", err)
-	}
+	s.getMibsPath()
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
