@@ -73,7 +73,7 @@ type MQTTConsumer struct {
 	sem           semaphore
 	messages      map[telegraf.TrackingID]bool
 	messagesMutex sync.Mutex
-	topicTag      string
+	topicTagParse string
 	ctx           context.Context
 	cancel        context.CancelFunc
 }
@@ -171,9 +171,9 @@ func (m *MQTTConsumer) Init() error {
 	if time.Duration(m.ConnectionTimeout) < 1*time.Second {
 		return fmt.Errorf("connection_timeout must be greater than 1s: %s", time.Duration(m.ConnectionTimeout))
 	}
-	m.topicTag = "topic"
+	m.topicTagParse = "topic"
 	if m.TopicTag != nil {
-		m.topicTag = *m.TopicTag
+		m.topicTagParse = *m.TopicTag
 	}
 	opts, err := m.createOpts()
 	if err != nil {
@@ -284,8 +284,8 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 	}
 
 	for _, metric := range metrics {
-		if m.topicTag != "" {
-			metric.AddTag(m.topicTag, msg.Topic())
+		if m.topicTagParse != "" {
+			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
 		for _, p := range m.TopicParsing {
 			if compareTopics(p.Topic, msg.Topic()) {
