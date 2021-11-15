@@ -46,6 +46,18 @@ instance indexes will not be returned in the instance names.
 Example:
 `UseWildcardsExpansion=true`
 
+#### LocalizeWildcardsExpansion
+
+When running on a localized version of Windows and with
+UseWildcardsExpansion = true, Windows will localize object and counter
+names. When LocalizeWildcardsExpansion = false, use the names in
+object.Counters instead of the localized names. Only Instances can
+have wildcards in this case. ObjectName and Counters must not have
+wildcards when this setting is false.
+
+Example:
+`LocalizeWildcardsExpansion = true`
+
 #### CountersRefreshInterval
 
 Configured counters are matched against available counters at the interval
