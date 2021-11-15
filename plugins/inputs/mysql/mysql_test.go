@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -21,6 +23,7 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
+	require.Empty(t, acc.Errors)
 
 	require.True(t, acc.HasMeasurement("mysql"))
 }
@@ -42,6 +45,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	var acc, acc2 testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
+	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("mysql"))
 	// acc should have global variables
 	require.True(t, acc.HasMeasurement("mysql_variables"))
@@ -52,6 +56,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	}
 	err = m2.Gather(&acc2)
 	require.NoError(t, err)
+	require.Empty(t, acc.Errors)
 	require.True(t, acc2.HasMeasurement("mysql"))
 	// acc2 should not have global variables
 	require.False(t, acc2.HasMeasurement("mysql_variables"))
@@ -174,6 +179,200 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 		output, _ := dsnAddTimeout(test.input)
 		if output != test.output {
 			t.Errorf("Expected %s, got %s\n", test.output, output)
+		}
+	}
+}
+
+func TestGatherGlobalVariables(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	m := Mysql{
+		Log:           testutil.Logger{},
+		MetricVersion: 2,
+	}
+	m.InitMysql()
+
+	columns := []string{"Variable_name", "Value"}
+	measurement := "mysql_variables"
+
+	type fields []*struct {
+		key         string
+		rawValue    string
+		parsedValue interface{}
+		observed    bool
+	}
+	type tags map[string]string
+	testCases := []struct {
+		name   string
+		fields fields
+		tags   tags
+	}{
+		{
+			"basic variables",
+			fields{
+				{"__test__string_variable", "text", "text", false},
+				{"__test__int_variable", "5", int64(5), false},
+				{"__test__off_variable", "OFF", int64(0), false},
+				{"__test__on_variable", "ON", int64(1), false},
+				{"__test__empty_variable", "", nil, false},
+			},
+			tags{"server": "127.0.0.1:3306"},
+		},
+		{
+			"version tag is present",
+			fields{
+				{"__test__string_variable", "text", "text", false},
+				{"version", "8.0.27-0ubuntu0.20.04.1", "8.0.27-0ubuntu0.20.04.1", false},
+			},
+			tags{"server": "127.0.0.1:3306", "version": "8.0.27-0ubuntu0.20.04.1"},
+		},
+
+		{"", fields{{"delay_key_write", "OFF", "OFF", false}}, nil},
+		{"", fields{{"delay_key_write", "ON", "ON", false}}, nil},
+		{"", fields{{"delay_key_write", "ALL", "ALL", false}}, nil},
+		{"", fields{{"enforce_gtid_consistency", "OFF", "OFF", false}}, nil},
+		{"", fields{{"enforce_gtid_consistency", "ON", "ON", false}}, nil},
+		{"", fields{{"enforce_gtid_consistency", "WARN", "WARN", false}}, nil},
+		{"", fields{{"event_scheduler", "NO", "NO", false}}, nil},
+		{"", fields{{"event_scheduler", "YES", "YES", false}}, nil},
+		{"", fields{{"event_scheduler", "DISABLED", "DISABLED", false}}, nil},
+		{"", fields{{"have_ssl", "DISABLED", int64(0), false}}, nil},
+		{"", fields{{"have_ssl", "YES", int64(1), false}}, nil},
+		{"", fields{{"have_symlink", "NO", int64(0), false}}, nil},
+		{"", fields{{"have_symlink", "DISABLED", int64(0), false}}, nil},
+		{"", fields{{"have_symlink", "YES", int64(1), false}}, nil},
+		{"", fields{{"session_track_gtids", "OFF", "OFF", false}}, nil},
+		{"", fields{{"session_track_gtids", "OWN_GTID", "OWN_GTID", false}}, nil},
+		{"", fields{{"session_track_gtids", "ALL_GTIDS", "ALL_GTIDS", false}}, nil},
+		{"", fields{{"session_track_transaction_info", "OFF", "OFF", false}}, nil},
+		{"", fields{{"session_track_transaction_info", "STATE", "STATE", false}}, nil},
+		{"", fields{{"session_track_transaction_info", "CHARACTERISTICS", "CHARACTERISTICS", false}}, nil},
+		{"", fields{{"ssl_fips_mode", "0", "0", false}}, nil}, // TODO: map this to OFF or vice versa using integers
+		{"", fields{{"ssl_fips_mode", "1", "1", false}}, nil}, // TODO: map this to ON or vice versa using integers
+		{"", fields{{"ssl_fips_mode", "2", "2", false}}, nil}, // TODO: map this to STRICT or vice versa using integers
+		{"", fields{{"ssl_fips_mode", "OFF", "OFF", false}}, nil},
+		{"", fields{{"ssl_fips_mode", "ON", "ON", false}}, nil},
+		{"", fields{{"ssl_fips_mode", "STRICT", "STRICT", false}}, nil},
+		{"", fields{{"use_secondary_engine", "OFF", "OFF", false}}, nil},
+		{"", fields{{"use_secondary_engine", "ON", "ON", false}}, nil},
+		{"", fields{{"use_secondary_engine", "FORCED", "FORCED", false}}, nil},
+		{"", fields{{"transaction_write_set_extraction", "OFF", "OFF", false}}, nil},
+		{"", fields{{"transaction_write_set_extraction", "MURMUR32", "MURMUR32", false}}, nil},
+		{"", fields{{"transaction_write_set_extraction", "XXHASH64", "XXHASH64", false}}, nil},
+		{"", fields{{"slave_skip_errors", "OFF", "OFF", false}}, nil},
+		{"", fields{{"slave_skip_errors", "0", "0", false}}, nil},
+		{"", fields{{"slave_skip_errors", "1007,1008,1050", "1007,1008,1050", false}}, nil},
+		{"", fields{{"slave_skip_errors", "all", "all", false}}, nil},
+		{"", fields{{"slave_skip_errors", "ddl_exist_errors", "ddl_exist_errors", false}}, nil},
+		{"", fields{{"gtid_mode", "OFF", int64(0), false}}, nil},
+		{"", fields{{"gtid_mode", "OFF_PERMISSIVE", int64(0), false}}, nil},
+		{"", fields{{"gtid_mode", "ON", int64(1), false}}, nil},
+		{"", fields{{"gtid_mode", "ON_PERMISSIVE", int64(1), false}}, nil},
+
+		// TODO: enable following failing tests by fixing the plugin:
+
+		// {
+		// 	"version tag with many fields", // metrics are sent in packages of 20 fields, so the tags can vary (but should not)
+		// 	fields{
+		// 		{"__test__var01", "text", "text", false},
+		// 		{"__test__var02", "text", "text", false},
+		// 		{"__test__var03", "text", "text", false},
+		// 		{"__test__var04", "text", "text", false},
+		// 		{"__test__var05", "text", "text", false},
+		// 		{"__test__var06", "text", "text", false},
+		// 		{"__test__var07", "text", "text", false},
+		// 		{"__test__var08", "text", "text", false},
+		// 		{"__test__var09", "text", "text", false},
+		// 		{"__test__var10", "text", "text", false},
+		// 		{"__test__var11", "text", "text", false},
+		// 		{"__test__var12", "text", "text", false},
+		// 		{"__test__var13", "text", "text", false},
+		// 		{"__test__var14", "text", "text", false},
+		// 		{"__test__var15", "text", "text", false},
+		// 		{"__test__var16", "text", "text", false},
+		// 		{"__test__var17", "text", "text", false},
+		// 		{"__test__var18", "text", "text", false},
+		// 		{"__test__var19", "text", "text", false},
+		// 		{"__test__var20", "text", "text", false},
+		// 		{"__test__var21", "text", "text", false},
+		// 		{"version", "8.0.27-0ubuntu0.20.04.1", "8.0.27-0ubuntu0.20.04.1", false},
+		// 	},
+		// 	tags{"server": "127.0.0.1:3306", "version": "8.0.27-0ubuntu0.20.04.1"},
+		// },
+		// {
+		// 	"misinterpreted version tags", // e.g. contains("version") also matches "conversion"
+		// 	fields{
+		// 		{"admin_tls_version", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3", false},
+		// 		{"innodb_version", "8.0.27", "8.0.27", false},
+		// 		{"protocol_version", "10", "10", false},
+		// 		{"replica_type_conversions", "", "", false},
+		// 		{"server", "127.0.0.1:3306", "127.0.0.1:3306", false},
+		// 		{"slave_type_conversions", "", "", false},
+		// 		{"tls_version", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3", false},
+		// 		{"version", "8.0.27-0ubuntu0.20.04.1", "8.0.27-0ubuntu0.20.04.1", false},
+		// 		{"version_comment", "(Ubuntu)", "(Ubuntu)", false},
+		// 		{"version_compile_machine", "x86_64", "x86_64", false},
+		// 		{"version_compile_os", "Linux", "Linux", false},
+		// 		{"version_compile_zlib", "1.2.11", "1.2.11", false},
+		// 	},
+		// 	tags{"server": "127.0.0.1:3306", "version": "8.0.27-0ubuntu0.20.04.1"}, // TODO: Discuss which version tags should be used as tags
+		// },
+	}
+
+	for i, testCase := range testCases {
+		if testCase.name == "" {
+			testCase.name = fmt.Sprintf("#%d", i)
+		}
+
+		// uncomment this to run only a single test case:
+		// if testCase.name != "#1" {
+		// 	continue
+		// }
+
+		rows := sqlmock.NewRows(columns)
+		for _, field := range testCase.fields {
+			rows.AddRow(field.key, field.rawValue)
+		}
+
+		mock.ExpectQuery(globalVariablesQuery).WillReturnRows(rows).RowsWillBeClosed()
+
+		acc := &testutil.Accumulator{}
+
+		err = m.gatherGlobalVariables(db, "test", acc)
+		if !assert.NoErrorf(t, err, "err on gatherGlobalVariables (test case %q)", testCase.name) {
+			continue
+		}
+
+		for _, metric := range acc.Metrics {
+			assert.Equalf(t, measurement, metric.Measurement, "wrong measurement (test case %q)", testCase.name)
+
+			if testCase.tags != nil {
+				assert.Equalf(t, testCase.tags, tags(metric.Tags), "wrong tags (test case %q)", testCase.name)
+			}
+
+			for key, value := range metric.Fields {
+				foundField := false
+
+				for _, field := range testCase.fields {
+					if field.key == key {
+						assert.Falsef(t, field.observed, "field %s observed multiple times (test case %q)", key, testCase.name)
+						assert.Equalf(t, field.parsedValue, value, "wrong value for field %s (test case %q)", key, testCase.name)
+						field.observed = true
+						foundField = true
+						break
+					}
+				}
+
+				if !assert.Truef(t, foundField, "unexpected field %s=%v (test case %q)", key, value, testCase.name) {
+					continue
+				}
+			}
+		}
+
+		for _, field := range testCase.fields {
+			assert.Truef(t, field.observed, "missing field %s=%v (test case %q)", field.key, field.parsedValue, testCase.name)
 		}
 	}
 }
