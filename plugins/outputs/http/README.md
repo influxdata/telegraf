@@ -1,7 +1,8 @@
 # HTTP Output Plugin
 
 This plugin sends metrics in a HTTP message encoded using one of the output
-data formats. For data_formats that support batching, metrics are sent in batch format.
+data formats. For data_formats that support batching, metrics are sent in
+batch format by default.
 
 ### Configuration:
 
@@ -48,6 +49,11 @@ data formats. For data_formats that support batching, metrics are sent in batch 
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
+
+  ## Use batch serialization format (default) instead of line based format.
+  ## Batch format is more efficient and should be used unless line based
+  ## format is really needed.
+  # use_batch_format = true
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.

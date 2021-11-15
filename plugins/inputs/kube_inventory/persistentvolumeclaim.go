@@ -34,10 +34,12 @@ func (ki *KubernetesInventory) gatherPersistentVolumeClaim(pvc corev1.Persistent
 		"phase_type": phaseType,
 	}
 	tags := map[string]string{
-		"pvc_name":     pvc.Name,
-		"namespace":    pvc.Namespace,
-		"phase":        string(pvc.Status.Phase),
-		"storageclass": *pvc.Spec.StorageClassName,
+		"pvc_name":  pvc.Name,
+		"namespace": pvc.Namespace,
+		"phase":     string(pvc.Status.Phase),
+	}
+	if pvc.Spec.StorageClassName != nil {
+		tags["storageclass"] = *pvc.Spec.StorageClassName
 	}
 	if pvc.Spec.Selector != nil {
 		for key, val := range pvc.Spec.Selector.MatchLabels {

@@ -3,13 +3,14 @@ package kafka_consumer
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Shopify/sarama"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -66,6 +67,9 @@ const sampleConfig = `
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
+
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
 
@@ -98,6 +102,15 @@ const sampleConfig = `
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
 
+  ## Maximum amount of time the consumer should take to process messages. If
+  ## the debug log prints messages from sarama about 'abandoning subscription
+  ## to [topic] because consuming was taking too long', increase this value to
+  ## longer than the time taken by the output plugin(s).
+  ##
+  ## Note that the effective timeout could be between 'max_processing_time' and
+  ## '2 * max_processing_time'.
+  # max_processing_time = "100ms"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -107,6 +120,7 @@ const sampleConfig = `
 
 const (
 	defaultMaxUndeliveredMessages = 1000
+	defaultMaxProcessingTime      = config.Duration(100 * time.Millisecond)
 	defaultConsumerGroup          = "telegraf_metrics_consumers"
 	reconnectDelay                = 5 * time.Second
 )
@@ -115,14 +129,15 @@ type empty struct{}
 type semaphore chan empty
 
 type KafkaConsumer struct {
-	Brokers                []string `toml:"brokers"`
-	ConsumerGroup          string   `toml:"consumer_group"`
-	MaxMessageLen          int      `toml:"max_message_len"`
-	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
-	Offset                 string   `toml:"offset"`
-	BalanceStrategy        string   `toml:"balance_strategy"`
-	Topics                 []string `toml:"topics"`
-	TopicTag               string   `toml:"topic_tag"`
+	Brokers                []string        `toml:"brokers"`
+	ConsumerGroup          string          `toml:"consumer_group"`
+	MaxMessageLen          int             `toml:"max_message_len"`
+	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
+	MaxProcessingTime      config.Duration `toml:"max_processing_time"`
+	Offset                 string          `toml:"offset"`
+	BalanceStrategy        string          `toml:"balance_strategy"`
+	Topics                 []string        `toml:"topics"`
+	TopicTag               string          `toml:"topic_tag"`
 
 	kafka.ReadConfig
 
@@ -169,6 +184,9 @@ func (k *KafkaConsumer) Init() error {
 	if k.MaxUndeliveredMessages == 0 {
 		k.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
 	}
+	if time.Duration(k.MaxProcessingTime) == 0 {
+		k.MaxProcessingTime = defaultMaxProcessingTime
+	}
 	if k.ConsumerGroup == "" {
 		k.ConsumerGroup = defaultConsumerGroup
 	}
@@ -206,6 +224,8 @@ func (k *KafkaConsumer) Init() error {
 		k.ConsumerCreator = &SaramaCreator{}
 	}
 
+	config.Consumer.MaxProcessingTime = time.Duration(k.MaxProcessingTime)
+
 	k.config = config
 	return nil
 }
@@ -229,7 +249,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer k.wg.Done()
 		for ctx.Err() == nil {
-			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser)
+			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
 			err := k.consumer.Consume(ctx, k.Topics, handler)
@@ -273,12 +293,13 @@ type Message struct {
 	session sarama.ConsumerGroupSession
 }
 
-func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser parsers.Parser) *ConsumerGroupHandler {
+func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser parsers.Parser, log telegraf.Logger) *ConsumerGroupHandler {
 	handler := &ConsumerGroupHandler{
 		acc:         acc.WithTracking(maxUndelivered),
 		sem:         make(chan empty, maxUndelivered),
 		undelivered: make(map[telegraf.TrackingID]Message, maxUndelivered),
 		parser:      parser,
+		log:         log,
 	}
 	return handler
 }
@@ -296,6 +317,8 @@ type ConsumerGroupHandler struct {
 
 	mu          sync.Mutex
 	undelivered map[telegraf.TrackingID]Message
+
+	log telegraf.Logger
 }
 
 // Setup is called once when a new session is opened.  It setups up the handler
@@ -332,7 +355,7 @@ func (h *ConsumerGroupHandler) onDelivery(track telegraf.DeliveryInfo) {
 
 	msg, ok := h.undelivered[track.ID()]
 	if !ok {
-		log.Printf("E! [inputs.kafka_consumer] Could not mark message delivered: %d", track.ID())
+		h.log.Errorf("Could not mark message delivered: %d", track.ID())
 		return
 	}
 

@@ -95,7 +95,7 @@ type jolokiaResponse struct {
 	Status  int            `json:"status"`
 }
 
-func NewClient(url string, config *ClientConfig) (*Client, error) {
+func NewClient(address string, config *ClientConfig) (*Client, error) {
 	tlsConfig, err := config.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func NewClient(url string, config *ClientConfig) (*Client, error) {
 	}
 
 	return &Client{
-		URL:    url,
+		URL:    address,
 		config: config,
 		client: client,
 	}, nil
