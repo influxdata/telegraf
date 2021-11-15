@@ -68,7 +68,7 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 		for _, url := range ja.URLs {
 			client, err := ja.createClient(url)
 			if err != nil {
-				acc.AddError(fmt.Errorf("Unable to create client for %s: %v", url, err))
+				acc.AddError(fmt.Errorf("unable to create client for %s: %v", url, err))
 				continue
 			}
 			ja.clients = append(ja.clients, client)
@@ -97,8 +97,8 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 func (ja *JolokiaAgent) createMetrics() []Metric {
 	var metrics []Metric
 
-	for _, config := range ja.Metrics {
-		metrics = append(metrics, NewMetric(config,
+	for _, metricConfig := range ja.Metrics {
+		metrics = append(metrics, NewMetric(metricConfig,
 			ja.DefaultFieldPrefix, ja.DefaultFieldSeparator, ja.DefaultTagPrefix))
 	}
 

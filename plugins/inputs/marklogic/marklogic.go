@@ -163,9 +163,9 @@ func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 	return nil
 }
 
-func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, url string) error {
+func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, address string) error {
 	ml := &MlHost{}
-	if err := c.gatherJSONData(url, ml); err != nil {
+	if err := c.gatherJSONData(address, ml); err != nil {
 		return err
 	}
 
@@ -225,8 +225,8 @@ func (c *Marklogic) createHTTPClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (c *Marklogic) gatherJSONData(url string, v interface{}) error {
-	req, err := http.NewRequest("GET", url, nil)
+func (c *Marklogic) gatherJSONData(address string, v interface{}) error {
+	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
 	}

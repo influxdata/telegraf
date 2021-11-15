@@ -10,6 +10,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -75,15 +76,15 @@ type MQTTConsumer struct {
 
 	Log telegraf.Logger
 
-	clientFactory ClientFactory
-	client        Client
-	opts          *mqtt.ClientOptions
-	acc           telegraf.TrackingAccumulator
-	state         ConnectionState
-	sem           semaphore
-	messages      map[telegraf.TrackingID]bool
-	messagesMutex sync.Mutex
-	topicTag      string
+	clientFactory  ClientFactory
+	client         Client
+	opts           *mqtt.ClientOptions
+	acc            telegraf.TrackingAccumulator
+	state          ConnectionState
+	sem            semaphore
+	messages       map[telegraf.TrackingID]bool
+	messagesMutex  sync.Mutex
+	chosenTopicTag string
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -91,7 +92,7 @@ type MQTTConsumer struct {
 
 var sampleConfig = `
   ## Broker URLs for the MQTT server or cluster.  To connect to multiple
-  ## clusters or standalone servers, use a seperate plugin instance.
+  ## clusters or standalone servers, use a separate plugin instance.
   ##   example: servers = ["tcp://localhost:1883"]
   ##            servers = ["ssl://localhost:1883"]
   ##            servers = ["ws://localhost:1883"]
@@ -201,9 +202,9 @@ func (m *MQTTConsumer) Init() error {
 		return fmt.Errorf("connection_timeout must be greater than 1s: %s", time.Duration(m.ConnectionTimeout))
 	}
 
-	m.topicTag = "topic"
+	m.chosenTopicTag = "topic"
 	if m.TopicTag != nil {
-		m.topicTag = *m.TopicTag
+		m.chosenTopicTag = *m.TopicTag
 	}
 
 	opts, err := m.createOpts()

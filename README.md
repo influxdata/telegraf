@@ -43,24 +43,29 @@ page or from each [GitHub Releases](https://github.com/influxdata/telegraf/relea
 
 InfluxData also provides a package repo that contains both DEB and RPM downloads.
 
-For deb-based platforms run the following to add the repo key and setup a new
-sources.list entry:
+For deb-based platforms (e.g. Ubuntu and Debian) run the following to add the
+repo key and setup a new sources.list entry:
 
 ```shell
-curl -s https://repos.influxdata.com/influxdb.key | gpg --dearmor > /etc/apt/trusted.gpg.d/influxdb.gpg
-export DISTRIB_ID=$(lsb_release -si); export DISTRIB_CODENAME=$(lsb_release -sc)
-echo "deb [signed-by=/etc/apt/trusted.gpg.d/influxdb.gpg] https://repos.influxdata.com/${DISTRIB_ID,,} ${DISTRIB_CODENAME} stable" > /etc/apt/sources.list.d/influxdb.list
+wget -qO- https://repos.influxdata.com/influxdb.key | sudo tee /etc/apt/trusted.gpg.d/influxdb.asc >/dev/null
+source /etc/os-release
+echo "deb https://repos.influxdata.com/${ID} ${VERSION_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+sudo apt-get update && sudo apt-get install telegraf
 ```
 
-For RPM-based platforms use the following repo file in `/etc/yum.repos.d/`:
+For RPM-based platforms (e.g. RHEL, CentOS) use the following to create a repo
+file and install telegraf:
 
-```text
+```shell
+cat <<EOF | sudo tee /etc/yum.repos.d/influxdb.repo
 [influxdb]
 name = InfluxDB Repository - RHEL $releasever
 baseurl = https://repos.influxdata.com/rhel/$releasever/$basearch/stable
 enabled = 1
 gpgcheck = 1
 gpgkey = https://repos.influxdata.com/influxdb.key
+EOF
+sudo yum install telegraf
 ```
 
 ### Build From Source
@@ -69,11 +74,14 @@ Telegraf requires Go version 1.17 or newer, the Makefile requires GNU make.
 
 1. [Install Go](https://golang.org/doc/install) >=1.17 (1.17.2 recommended)
 2. Clone the Telegraf repository:
-   ```
+
+   ```shell
    git clone https://github.com/influxdata/telegraf.git
    ```
+
 3. Run `make` from the source directory
-   ```
+
+   ```shell
    cd telegraf
    make
    ```
@@ -101,31 +109,31 @@ See usage with:
 telegraf --help
 ```
 
-#### Generate a telegraf config file:
+### Generate a telegraf config file
 
 ```shell
 telegraf config > telegraf.conf
 ```
 
-#### Generate config with only cpu input & influxdb output plugins defined:
+### Generate config with only cpu input & influxdb output plugins defined
 
 ```shell
 telegraf --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb config
 ```
 
-#### Run a single telegraf collection, outputting metrics to stdout:
+### Run a single telegraf collection, outputting metrics to stdout
 
 ```shell
 telegraf --config telegraf.conf --test
 ```
 
-#### Run telegraf with all plugins defined in config file:
+### Run telegraf with all plugins defined in config file
 
 ```shell
 telegraf --config telegraf.conf
 ```
 
-#### Run telegraf, enabling the cpu & memory input, and influxdb output plugins:
+### Run telegraf, enabling the cpu & memory input, and influxdb output plugins
 
 ```shell
 telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
@@ -133,7 +141,7 @@ telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 
 ## Documentation
 
-[Latest Release Documentation](https://docs.influxdata.com/telegraf)
+[Latest Release Documentation](https://docs.influxdata.com/telegraf/latest/)
 
 For documentation on the latest development code see the [documentation index](/docs).
 

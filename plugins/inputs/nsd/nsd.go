@@ -61,20 +61,20 @@ func (s *NSD) SampleConfig() string {
 }
 
 // Shell out to nsd_stat and return the output
-func nsdRunner(cmdName string, timeout config.Duration, useSudo bool, Server string, ConfigFile string) (*bytes.Buffer, error) {
+func nsdRunner(cmdName string, timeout config.Duration, useSudo bool, server string, configFile string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
-	if Server != "" {
-		host, port, err := net.SplitHostPort(Server)
+	if server != "" {
+		host, port, err := net.SplitHostPort(server)
 		if err == nil {
-			Server = host + "@" + port
+			server = host + "@" + port
 		}
 
-		cmdArgs = append([]string{"-s", Server}, cmdArgs...)
+		cmdArgs = append([]string{"-s", server}, cmdArgs...)
 	}
 
-	if ConfigFile != "" {
-		cmdArgs = append([]string{"-c", ConfigFile}, cmdArgs...)
+	if configFile != "" {
+		cmdArgs = append([]string{"-c", configFile}, cmdArgs...)
 	}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
@@ -119,7 +119,7 @@ func (s *NSD) Gather(acc telegraf.Accumulator) error {
 
 		fieldValue, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Expected a numerical value for %s = %v",
+			acc.AddError(fmt.Errorf("expected a numerical value for %s = %v",
 				stat, value))
 			continue
 		}

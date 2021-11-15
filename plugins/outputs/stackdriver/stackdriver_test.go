@@ -12,9 +12,6 @@ import (
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
-	"github.com/golang/protobuf/proto"
-	emptypb "github.com/golang/protobuf/ptypes/empty"
-	googlepb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -22,6 +19,9 @@ import (
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // clientOpt is the option tests should use to connect to the test server.
@@ -181,7 +181,7 @@ func TestWriteAscendingTime(t *testing.T) {
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 1,
 		},
 	})
@@ -196,7 +196,7 @@ func TestWriteAscendingTime(t *testing.T) {
 	ts = request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 2,
 		},
 	})
@@ -311,7 +311,7 @@ func TestWriteBatchable(t *testing.T) {
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 3,
 		},
 	})
@@ -324,7 +324,7 @@ func TestWriteBatchable(t *testing.T) {
 	ts = request.TimeSeries[1]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 1,
 		},
 	})
@@ -337,7 +337,7 @@ func TestWriteBatchable(t *testing.T) {
 	ts = request.TimeSeries[2]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 3,
 		},
 	})
@@ -350,7 +350,7 @@ func TestWriteBatchable(t *testing.T) {
 	ts = request.TimeSeries[4]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
-		EndTime: &googlepb.Timestamp{
+		EndTime: &timestamppb.Timestamp{
 			Seconds: 5,
 		},
 	})
