@@ -304,7 +304,6 @@ func (f *Field) init() error {
 	// check if oid needs translation or name is not set
 	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
 		_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
-		//maybe turn this into a warning
 		if err != nil {
 			return fmt.Errorf("translating: %w", err)
 		}
