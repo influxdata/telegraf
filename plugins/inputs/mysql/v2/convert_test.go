@@ -95,12 +95,12 @@ func TestParseValue(t *testing.T) {
 		{sql.RawBytes("123"), int64(123), ""},
 		{sql.RawBytes("abc"), "abc", ""},
 		{sql.RawBytes("10.1"), 10.1, ""},
-		{sql.RawBytes("ON"), 1, ""},
-		{sql.RawBytes("OFF"), 0, ""},
-		{sql.RawBytes("NO"), 0, ""},
-		{sql.RawBytes("YES"), 1, ""},
-		{sql.RawBytes("No"), 0, ""},
-		{sql.RawBytes("Yes"), 1, ""},
+		{sql.RawBytes("ON"), int64(1), ""},
+		{sql.RawBytes("OFF"), int64(0), ""},
+		{sql.RawBytes("NO"), int64(0), ""},
+		{sql.RawBytes("YES"), int64(1), ""},
+		{sql.RawBytes("No"), int64(0), ""},
+		{sql.RawBytes("Yes"), int64(1), ""},
 		{sql.RawBytes("-794"), int64(-794), ""},
 		{sql.RawBytes("2147483647"), int64(2147483647), ""},                       // max int32
 		{sql.RawBytes("2147483648"), int64(2147483648), ""},                       // too big for int32
