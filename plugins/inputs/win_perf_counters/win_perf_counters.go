@@ -28,7 +28,7 @@ var sampleConfig = `
   # and in case of localized Windows, counter paths will be also localized. It also returns instance indexes in instance names.
   # If false, wildcards (not partial) in instance names will still be expanded, but instance indexes will not be returned in instance names.
   #UseWildcardsExpansion = false
-  # When running on a localized version of Windows and UseWildcardsExpansion = true, Windows will
+  # When running on a localized version of Windows and with UseWildcardsExpansion = true, Windows will
   # localize object and counter names. When LocalizeWildcardsExpansion = false, use the names in object.Counters instead
   # of the localized names. Only Instances can have wildcards in this case. ObjectName and Counters must not have wildcards when this
   # setting is false.
@@ -522,8 +522,6 @@ func isKnownCounterDataError(err error) bool {
 	}
 	return false
 }
-
-const wildcardError = "Counter wildcards can't be used with fix_2463"
 
 func (m *Win_PerfCounters) Init() error {
 	if m.UseWildcardsExpansion && !m.LocalizeWildcardsExpansion {
