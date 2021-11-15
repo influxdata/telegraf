@@ -355,7 +355,7 @@ require (
 	gonum.org/v1/gonum v0.9.3
 )
 
-require golang.org/x/exp v0.0.0-20200513190911-00229845015e // direct
+require golang.org/x/exp v0.0.0-20200513190911-00229845015e // indirect
 
 // replaced due to https://github.com/satori/go.uuid/issues/73
 replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible

@@ -67,17 +67,16 @@ func (p *Noise) Description() string {
 // function and adds that to the original value. If any integer overflows
 // happen during the calculation, the result is set to MaxInt or 0 (for uint)
 func (p *Noise) addNoise(value interface{}) interface{} {
-	noise := p.generator.Rand()
+	n := p.generator.Rand()
 	switch v := value.(type) {
 	case int:
 	case int8:
 	case int16:
 	case int32:
 	case int64:
-		if v == 0 {
-			return int64(noise)
+		if v > -1 && v < 1 {
+			return int64(n)
 		}
-		n := float64(v) * noise
 		if v > 0 && (n > math.Nextafter(float64(math.MaxInt64), 0) || int64(n) > math.MaxInt64-v) {
 			p.Log.Debug("Int64 overflow, setting value to MaxInt64")
 			return int64(math.MaxInt64)
@@ -92,10 +91,9 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 	case uint16:
 	case uint32:
 	case uint64:
-		if v == 0 {
-			return uint64(noise)
+		if v == uint64(0) {
+			return uint64(math.Abs(n))
 		}
-		n := float64(v) * noise
 		if n > math.Nextafter(float64(math.MaxUint64), 0) || uint64(n) > math.MaxUint64-v {
 			p.Log.Debug("Uint64 overflow, setting value to MaxUint64")
 			return uint64(math.MaxUint64)
@@ -107,10 +105,10 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 		return v + uint64(n)
 	case float32:
 	case float64:
-		if v == 0.0 {
-			return noise
+		if v > -1.0 && v < 1.0 {
+			return n
 		}
-		return v + v*noise
+		return v + n
 	default:
 		p.Log.Debugf("Value (%v) type invalid: [%v] is not an int, uint or float", v, reflect.TypeOf(value))
 	}
