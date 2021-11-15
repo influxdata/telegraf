@@ -43,13 +43,13 @@ type Proc struct {
 }
 
 func NewProc(pid PID) (Process, error) {
-	process, err := process.NewProcess(int32(pid))
+	p, err := process.NewProcess(int32(pid))
 	if err != nil {
 		return nil, err
 	}
 
 	proc := &Proc{
-		Process:     process,
+		Process:     p,
 		hasCPUTimes: false,
 		tags:        make(map[string]string),
 	}

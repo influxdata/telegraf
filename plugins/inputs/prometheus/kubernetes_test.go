@@ -3,21 +3,21 @@ package prometheus
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestScrapeURLNoAnnotations(t *testing.T) {
 	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{}}
 	p.Annotations = map[string]string{}
 	url, err := getScrapeURL(p)
-	assert.NoError(t, err)
-	assert.Nil(t, url)
+	require.NoError(t, err)
+	require.Nil(t, url)
 }
 
 func TestScrapeURLAnnotationsNoScrape(t *testing.T) {
@@ -25,56 +25,56 @@ func TestScrapeURLAnnotationsNoScrape(t *testing.T) {
 	p.Name = "myPod"
 	p.Annotations = map[string]string{"prometheus.io/scrape": "false"}
 	url, err := getScrapeURL(p)
-	assert.NoError(t, err)
-	assert.Nil(t, url)
+	require.NoError(t, err)
+	require.Nil(t, url)
 }
 
 func TestScrapeURLAnnotations(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	url, err := getScrapeURL(p)
-	assert.NoError(t, err)
-	assert.Equal(t, "http://127.0.0.1:9102/metrics", url.String())
+	require.NoError(t, err)
+	require.Equal(t, "http://127.0.0.1:9102/metrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPort(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/port": "9000"}
 	url, err := getScrapeURL(p)
-	assert.NoError(t, err)
-	assert.Equal(t, "http://127.0.0.1:9000/metrics", url.String())
+	require.NoError(t, err)
+	require.Equal(t, "http://127.0.0.1:9000/metrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPath(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "mymetrics"}
 	url, err := getScrapeURL(p)
-	assert.NoError(t, err)
-	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", url.String())
+	require.NoError(t, err)
+	require.Equal(t, "http://127.0.0.1:9102/mymetrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/mymetrics"}
 	url, err := getScrapeURL(p)
-	assert.NoError(t, err)
-	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", url.String())
+	require.NoError(t, err)
+	require.Equal(t, "http://127.0.0.1:9102/mymetrics", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPathWithQueryParameters(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/v1/agent/metrics?format=prometheus"}
 	url, err := getScrapeURL(p)
-	assert.NoError(t, err)
-	assert.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics?format=prometheus", url.String())
+	require.NoError(t, err)
+	require.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics?format=prometheus", url.String())
 }
 
 func TestScrapeURLAnnotationsCustomPathWithFragment(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/v1/agent/metrics#prometheus"}
 	url, err := getScrapeURL(p)
-	assert.NoError(t, err)
-	assert.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics#prometheus", url.String())
+	require.NoError(t, err)
+	require.Equal(t, "http://127.0.0.1:9102/v1/agent/metrics#prometheus", url.String())
 }
 
 func TestAddPod(t *testing.T) {
@@ -83,7 +83,7 @@ func TestAddPod(t *testing.T) {
 	p := pod()
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
-	assert.Equal(t, 1, len(prom.kubernetesPods))
+	require.Equal(t, 1, len(prom.kubernetesPods))
 }
 
 func TestAddMultipleDuplicatePods(t *testing.T) {
@@ -94,7 +94,7 @@ func TestAddMultipleDuplicatePods(t *testing.T) {
 	registerPod(p, prom)
 	p.Name = "Pod2"
 	registerPod(p, prom)
-	assert.Equal(t, 1, len(prom.kubernetesPods))
+	require.Equal(t, 1, len(prom.kubernetesPods))
 }
 
 func TestAddMultiplePods(t *testing.T) {
@@ -106,7 +106,7 @@ func TestAddMultiplePods(t *testing.T) {
 	p.Name = "Pod2"
 	p.Status.PodIP = "127.0.0.2"
 	registerPod(p, prom)
-	assert.Equal(t, 2, len(prom.kubernetesPods))
+	require.Equal(t, 2, len(prom.kubernetesPods))
 }
 
 func TestDeletePods(t *testing.T) {
@@ -116,7 +116,7 @@ func TestDeletePods(t *testing.T) {
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 	unregisterPod(p, prom)
-	assert.Equal(t, 0, len(prom.kubernetesPods))
+	require.Equal(t, 0, len(prom.kubernetesPods))
 }
 
 func TestPodHasMatchingNamespace(t *testing.T) {
@@ -126,12 +126,12 @@ func TestPodHasMatchingNamespace(t *testing.T) {
 	pod.Name = "Pod1"
 	pod.Namespace = "default"
 	shouldMatch := podHasMatchingNamespace(pod, prom)
-	assert.Equal(t, true, shouldMatch)
+	require.Equal(t, true, shouldMatch)
 
 	pod.Name = "Pod2"
 	pod.Namespace = "namespace"
 	shouldNotMatch := podHasMatchingNamespace(pod, prom)
-	assert.Equal(t, false, shouldNotMatch)
+	require.Equal(t, false, shouldNotMatch)
 }
 
 func TestPodHasMatchingLabelSelector(t *testing.T) {
@@ -148,8 +148,8 @@ func TestPodHasMatchingLabelSelector(t *testing.T) {
 	pod.Labels["label5"] = "label5"
 
 	labelSelector, err := labels.Parse(prom.KubernetesLabelSelector)
-	assert.Equal(t, err, nil)
-	assert.Equal(t, true, podHasMatchingLabelSelector(pod, labelSelector))
+	require.Equal(t, err, nil)
+	require.Equal(t, true, podHasMatchingLabelSelector(pod, labelSelector))
 }
 
 func TestPodHasMatchingFieldSelector(t *testing.T) {
@@ -160,8 +160,8 @@ func TestPodHasMatchingFieldSelector(t *testing.T) {
 	pod.Spec.NodeName = "node1000"
 
 	fieldSelector, err := fields.ParseSelector(prom.KubernetesFieldSelector)
-	assert.Equal(t, err, nil)
-	assert.Equal(t, true, podHasMatchingFieldSelector(pod, fieldSelector))
+	require.Equal(t, err, nil)
+	require.Equal(t, true, podHasMatchingFieldSelector(pod, fieldSelector))
 }
 
 func TestInvalidFieldSelector(t *testing.T) {
@@ -172,7 +172,7 @@ func TestInvalidFieldSelector(t *testing.T) {
 	pod.Spec.NodeName = "node1000"
 
 	_, err := fields.ParseSelector(prom.KubernetesFieldSelector)
-	assert.NotEqual(t, err, nil)
+	require.NotEqual(t, err, nil)
 }
 
 func pod() *corev1.Pod {

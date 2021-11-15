@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bmizerany/assert"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var nodeSearchDomainTestData = `{"data":{"search":"test.example.com","dns1":"1.0.0.1"}}`
@@ -59,7 +59,7 @@ func TestGetNodeSearchDomain(t *testing.T) {
 	err := getNodeSearchDomain(px)
 
 	require.NoError(t, err)
-	assert.Equal(t, px.nodeSearchDomain, "test.example.com")
+	require.Equal(t, px.nodeSearchDomain, "test.example.com")
 }
 
 func TestGatherLxcData(t *testing.T) {
@@ -69,7 +69,7 @@ func TestGatherLxcData(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	gatherLxcData(px, acc)
 
-	assert.Equal(t, acc.NFields(), 15)
+	require.Equal(t, acc.NFields(), 15)
 	testFields := map[string]interface{}{
 		"status":               "running",
 		"uptime":               int64(2078164),
@@ -103,7 +103,7 @@ func TestGatherQemuData(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	gatherQemuData(px, acc)
 
-	assert.Equal(t, acc.NFields(), 15)
+	require.Equal(t, acc.NFields(), 15)
 	testFields := map[string]interface{}{
 		"status":               "running",
 		"uptime":               int64(2159739),
@@ -139,5 +139,5 @@ func TestGather(t *testing.T) {
 	require.NoError(t, err)
 
 	// Results from both tests above
-	assert.Equal(t, acc.NFields(), 30)
+	require.Equal(t, acc.NFields(), 30)
 }

@@ -142,7 +142,7 @@ func (p *Service) Stop() {
 	p.DB.Close()
 }
 
-var kvMatcher, _ = regexp.Compile("(password|sslcert|sslkey|sslmode|sslrootcert)=\\S+ ?")
+var kvMatcher, _ = regexp.Compile(`(password|sslcert|sslkey|sslmode|sslrootcert)=\S+ ?`)
 
 // SanitizedAddress utility function to strip sensitive information from the connection string.
 func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
