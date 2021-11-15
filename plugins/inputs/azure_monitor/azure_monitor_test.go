@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var resourceMetricsDefinitionsBody = `
@@ -238,18 +239,12 @@ func TestGetAccessToken_Success(t *testing.T) {
 
 	err := am.getAccessToken()
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
-
+	require.NoError(t, err)
 	assert.Equal(t, "abc123456789", am.azureClient.accessToken)
 
 	expiresOn, err := strconv.ParseInt("1636548796", 10, 64)
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
-
+	require.NoError(t, err)
 	assert.Equal(t, time.Unix(expiresOn, 0).UTC(), am.azureClient.accessTokenExpiresOn)
 }
 
@@ -263,9 +258,7 @@ func TestRefreshAccessToken_AccessTokenRefreshed(t *testing.T) {
 
 	expiresOn, err := strconv.ParseInt("1636548796", 10, 64)
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
+	require.NoError(t, err)
 
 	am.azureClient.accessToken = "abc123456789"
 	am.azureClient.accessTokenExpiresOn = time.Unix(expiresOn, 0).UTC()
@@ -280,18 +273,12 @@ func TestRefreshAccessToken_AccessTokenRefreshed(t *testing.T) {
 
 	err = am.refreshAccessToken()
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
-
+	require.NoError(t, err)
 	assert.Equal(t, "123456789abc", am.azureClient.accessToken)
 
 	expiresOn, err = strconv.ParseInt("1736548796", 10, 64)
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
-
+	require.NoError(t, err)
 	assert.Equal(t, time.Unix(expiresOn, 0).UTC(), am.azureClient.accessTokenExpiresOn)
 }
 
@@ -305,9 +292,7 @@ func TestRefreshAccessToken_AccessTokenNotRefreshed(t *testing.T) {
 
 	expiresOn, err := strconv.ParseInt("1736548796", 10, 64)
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
+	require.NoError(t, err)
 
 	am.azureClient.accessToken = "abc123456789"
 	am.azureClient.accessTokenExpiresOn = time.Unix(expiresOn, 0).UTC()
@@ -322,10 +307,7 @@ func TestRefreshAccessToken_AccessTokenNotRefreshed(t *testing.T) {
 
 	err = am.refreshAccessToken()
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
-
+	require.NoError(t, err)
 	assert.Equal(t, "abc123456789", am.azureClient.accessToken)
 }
 
@@ -362,9 +344,7 @@ func TestGetAllTargetsMetricsNames_Success(t *testing.T) {
 
 	err := am.getAllTargetsMetricsNames()
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
+	require.NoError(t, err)
 
 	assert.Equal(t, 2, len(am.Targets[0].Metrics))
 	assert.Equal(t, target1.Metrics, am.Targets[0].Metrics)
@@ -438,9 +418,7 @@ func TestInit_Success(t *testing.T) {
 
 	err := am.Init()
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
+	require.NoError(t, err)
 }
 
 func TestInit_NoSubscriptionID(t *testing.T) {
@@ -458,9 +436,7 @@ func TestInit_NoSubscriptionID(t *testing.T) {
 
 	err := am.Init()
 
-	if err == nil {
-		assert.Fail(t, "Did not get an error")
-	}
+	require.Error(t, err)
 }
 
 func TestInit_NoClientID(t *testing.T) {
@@ -478,9 +454,7 @@ func TestInit_NoClientID(t *testing.T) {
 
 	err := am.Init()
 
-	if err == nil {
-		assert.Fail(t, "Did not get an error")
-	}
+	require.Error(t, err)
 }
 
 func TestInit_NoClientSecret(t *testing.T) {
@@ -498,9 +472,7 @@ func TestInit_NoClientSecret(t *testing.T) {
 
 	err := am.Init()
 
-	if err == nil {
-		assert.Fail(t, "Did not get an error")
-	}
+	require.Error(t, err)
 }
 
 func TestInit_NoTenantID(t *testing.T) {
@@ -518,9 +490,7 @@ func TestInit_NoTenantID(t *testing.T) {
 
 	err := am.Init()
 
-	if err == nil {
-		assert.Fail(t, "Did not get an error")
-	}
+	require.Error(t, err)
 }
 
 func TestInit_NoTargets(t *testing.T) {
@@ -533,9 +503,7 @@ func TestInit_NoTargets(t *testing.T) {
 
 	err := am.Init()
 
-	if err == nil {
-		assert.Fail(t, "Did not get an error")
-	}
+	require.Error(t, err)
 }
 
 func TestInit_NoTargetResourceID(t *testing.T) {
@@ -553,9 +521,7 @@ func TestInit_NoTargetResourceID(t *testing.T) {
 
 	err := am.Init()
 
-	if err == nil {
-		assert.Fail(t, "Did not get an error")
-	}
+	require.Error(t, err)
 }
 
 func TestGather_Success(t *testing.T) {
@@ -597,9 +563,7 @@ func TestGather_Success(t *testing.T) {
 	acc := testutil.Accumulator{}
 	err := acc.GatherError(am.Gather)
 
-	if err != nil {
-		assert.Fail(t, "Got an error", err)
-	}
+	require.NoError(t, err)
 
 	target1Metrics := getTarget1Metrics()
 	target2Metrics := getTarget2Metrics()
