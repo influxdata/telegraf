@@ -10,8 +10,6 @@ import (
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
-	googlepbduration "github.com/golang/protobuf/ptypes/duration"
-	googlepbts "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/limiter"
@@ -22,6 +20,8 @@ import (
 	distributionpb "google.golang.org/genproto/googleapis/api/distribution"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -393,8 +393,8 @@ func (s *Stackdriver) newTimeSeriesConf(
 ) *timeSeriesConf {
 	filter := s.newListTimeSeriesFilter(metricType)
 	interval := &monitoringpb.TimeInterval{
-		EndTime:   &googlepbts.Timestamp{Seconds: endTime.Unix()},
-		StartTime: &googlepbts.Timestamp{Seconds: startTime.Unix()},
+		EndTime:   &timestamppb.Timestamp{Seconds: endTime.Unix()},
+		StartTime: &timestamppb.Timestamp{Seconds: startTime.Unix()},
 	}
 	tsReq := &monitoringpb.ListTimeSeriesRequest{
 		Name:     fmt.Sprintf("projects/%s", s.Project),
@@ -432,7 +432,7 @@ func (t *timeSeriesConf) initForAggregate(alignerStr string) {
 	}
 	aligner := monitoringpb.Aggregation_Aligner(alignerInt)
 	agg := &monitoringpb.Aggregation{
-		AlignmentPeriod:  &googlepbduration.Duration{Seconds: 60},
+		AlignmentPeriod:  &durationpb.Duration{Seconds: 60},
 		PerSeriesAligner: aligner,
 	}
 	t.fieldKey = t.fieldKey + "_" + strings.ToLower(alignerStr)
@@ -522,8 +522,8 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 	if s.timeSeriesConfCache != nil && s.timeSeriesConfCache.IsValid() {
 		// Update interval for timeseries requests in timeseries cache
 		interval := &monitoringpb.TimeInterval{
-			EndTime:   &googlepbts.Timestamp{Seconds: endTime.Unix()},
-			StartTime: &googlepbts.Timestamp{Seconds: startTime.Unix()},
+			EndTime:   &timestamppb.Timestamp{Seconds: endTime.Unix()},
+			StartTime: &timestamppb.Timestamp{Seconds: startTime.Unix()},
 		}
 		for _, timeSeriesConf := range s.timeSeriesConfCache.TimeSeriesConfs {
 			timeSeriesConf.listTimeSeriesRequest.Interval = interval
