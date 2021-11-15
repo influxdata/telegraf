@@ -1,15 +1,13 @@
 package snmp
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
-	"os/exec"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,7 +18,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/wlog"
+	"github.com/sleepinggenius2/gosmi"
+	"github.com/sleepinggenius2/gosmi/types"
 )
 
 const description = `Retrieves SNMP values from remote agents`
@@ -40,6 +39,9 @@ const sampleConfig = `
 
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
+
+  ## Path to mib files
+  # path = ["/usr/share/snmp/mibs"]
 
   ## Agent host tag; the tag used to reference the source host
   # agent_host_tag = "agent_host"
@@ -69,35 +71,11 @@ const sampleConfig = `
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
   # priv_password = ""
-
+  
   ## Add fields and tables defining the variables you wish to collect.  This
   ## example collects the system uptime and interface variables.  Reference the
   ## full plugin documentation for configuration details.
 `
-
-// execCommand is so tests can mock out exec.Command usage.
-var execCommand = exec.Command
-
-// execCmd executes the specified command, returning the STDOUT content.
-// If command exits with error status, the output is captured into the returned error.
-func execCmd(arg0 string, args ...string) ([]byte, error) {
-	if wlog.LogLevel() == wlog.DEBUG {
-		quoted := make([]string, 0, len(args))
-		for _, arg := range args {
-			quoted = append(quoted, fmt.Sprintf("%q", arg))
-		}
-		log.Printf("D! [inputs.snmp] executing %q %s", arg0, strings.Join(quoted, " "))
-	}
-
-	out, err := execCommand(arg0, args...).Output()
-	if err != nil {
-		if err, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("%s: %w", bytes.TrimRight(err.Stderr, "\r\n"), err)
-		}
-		return nil, err
-	}
-	return out, nil
-}
 
 // Snmp holds the configuration for the plugin.
 type Snmp struct {
@@ -120,11 +98,18 @@ type Snmp struct {
 
 	connectionCache []snmpConnection
 	initialized     bool
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 func (s *Snmp) init() error {
 	if s.initialized {
 		return nil
+	}
+
+	err := s.getMibsPath()
+	if err != nil {
+		return fmt.Errorf("could not get path %v", err)
 	}
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
@@ -146,6 +131,43 @@ func (s *Snmp) init() error {
 	}
 
 	s.initialized = true
+	return nil
+}
+
+func (s *Snmp) getMibsPath() error {
+	gosmi.Init()
+	var folders []string
+	for _, mibPath := range s.Path {
+		gosmi.AppendPath(mibPath)
+		folders = append(folders, mibPath)
+		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
+			if info.Mode()&os.ModeSymlink != 0 {
+				s, _ := os.Readlink(path)
+				folders = append(folders, s)
+			}
+			return nil
+		})
+		if err != nil {
+			s.Log.Errorf("Filepath could not be walked %v", err)
+		}
+		for _, folder := range folders {
+			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+				if info.IsDir() {
+					gosmi.AppendPath(path)
+				} else if info.Mode()&os.ModeSymlink == 0 {
+					_, err := gosmi.LoadModule(info.Name())
+					if err != nil {
+						s.Log.Errorf("Module could not be loaded %v", err)
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				s.Log.Errorf("Filepath could not be walked %v", err)
+			}
+		}
+		folders = []string{}
+	}
 	return nil
 }
 
@@ -285,6 +307,7 @@ func (f *Field) init() error {
 	// check if oid needs translation or name is not set
 	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
 		_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
+		//maybe turn this into a warning
 		if err != nil {
 			return fmt.Errorf("translating: %w", err)
 		}
@@ -828,8 +851,8 @@ type snmpTableCache struct {
 	err     error
 }
 
-var snmpTableCaches map[string]snmpTableCache
 var snmpTableCachesLock sync.Mutex
+var snmpTableCaches map[string]snmpTableCache
 
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
@@ -857,53 +880,31 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	}
 
 	mibPrefix := mibName + "::"
-	oidFullName := mibPrefix + oidText
 
 	// first attempt to get the table's tags
 	tagOids := map[string]struct{}{}
 	// We have to guess that the "entry" oid is `oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
-	if out, err := execCmd("snmptranslate", "-Td", oidFullName+".1"); err == nil {
-		scanner := bufio.NewScanner(bytes.NewBuffer(out))
-		for scanner.Scan() {
-			line := scanner.Text()
+	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
+	submask := oidNum + ".1"
+	node, err := gosmi.GetNodeByOID(types.OidMustFromString(submask))
 
-			if !strings.HasPrefix(line, "  INDEX") {
-				continue
-			}
-
-			i := strings.Index(line, "{ ")
-			if i == -1 { // parse error
-				continue
-			}
-			line = line[i+2:]
-			i = strings.Index(line, " }")
-			if i == -1 { // parse error
-				continue
-			}
-			line = line[:i]
-			for _, col := range strings.Split(line, ", ") {
-				tagOids[mibPrefix+col] = struct{}{}
-			}
-		}
-	}
-
-	// this won't actually try to run a query. The `-Ch` will just cause it to dump headers.
-	out, err := execCmd("snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", oidFullName)
 	if err != nil {
-		return "", "", "", nil, fmt.Errorf("getting table columns: %w", err)
+		return "", "", "", nil, fmt.Errorf("getting submask: %w", err)
 	}
-	scanner := bufio.NewScanner(bytes.NewBuffer(out))
-	scanner.Scan()
-	cols := scanner.Text()
-	if len(cols) == 0 {
-		return "", "", "", nil, fmt.Errorf("could not find any columns in table")
+
+	index := node.GetIndex()
+
+	for i := range index {
+		tagOids[mibPrefix+index[i].Name] = struct{}{}
 	}
-	for _, col := range strings.Split(cols, " ") {
-		if len(col) == 0 {
-			continue
-		}
-		_, isTag := tagOids[mibPrefix+col]
-		fields = append(fields, Field{Name: col, Oid: mibPrefix + col, IsTag: isTag})
+
+	// grabs all columns from the table
+	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
+	col := node.GetRow().AsTable().ColumnOrder
+
+	for i := range col {
+		_, isTag := tagOids[mibPrefix+col[i]]
+		fields = append(fields, Field{Name: col[i], Oid: mibPrefix + col[i], IsTag: isTag})
 	}
 
 	return mibName, oidNum, oidText, fields, err
@@ -948,71 +949,74 @@ func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 }
 
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
-	var out []byte
-	if strings.ContainsAny(oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-		out, err = execCmd("snmptranslate", "-Td", "-Ob", oid)
+	var out gosmi.SmiNode
+	var end string
+	if strings.ContainsAny(oid, "::") {
+		// slpit given oid
+		// for example RFC1213-MIB::sysUpTime.0
+		s := strings.Split(oid, "::")
+		// node becomes sysUpTime.0
+		node := s[1]
+		if strings.ContainsAny(node, ".") {
+			s = strings.Split(node, ".")
+			// node becomes sysUpTime
+			node = s[0]
+			end = "." + s[1]
+		}
+
+		out, err = gosmi.GetNode(node)
+		if err != nil {
+			return oid, oid, oid, oid, err
+		}
+
+		oidNum = "." + out.RenderNumeric() + end
+	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
+		//handle mixed oid ex. .iso.2.3
+		s := strings.Split(oid, ".")
+		for i := range s {
+			if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
+				out, err = gosmi.GetNode(s[i])
+				if err != nil {
+					return oid, oid, oid, oid, err
+				}
+				s[i] = out.RenderNumeric()
+			}
+		}
+		oidNum = strings.Join(s, ".")
+		out, _ = gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
 	} else {
-		out, err = execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
-		if err, ok := err.(*exec.Error); ok && err.Err == exec.ErrNotFound {
-			// Silently discard error if snmptranslate not found and we have a numeric OID.
-			// Meaning we can get by without the lookup.
-			return "", oid, oid, "", nil
+		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+		oidNum = oid
+		// ensure modules are loaded or node will be empty (might not error)
+		// do not return the err as the oid is numeric and telegraf can continue
+		if err != nil {
+			return oid, oid, oid, oid, nil
 		}
 	}
-	if err != nil {
-		return "", "", "", "", err
-	}
 
-	scanner := bufio.NewScanner(bytes.NewBuffer(out))
-	ok := scanner.Scan()
-	if !ok && scanner.Err() != nil {
-		return "", "", "", "", fmt.Errorf("getting OID text: %w", scanner.Err())
-	}
+	tc := out.GetSubtree()
 
-	oidText = scanner.Text()
-
-	i := strings.Index(oidText, "::")
-	if i == -1 {
-		// was not found in MIB.
-		if bytes.Contains(out, []byte("[TRUNCATED]")) {
-			return "", oid, oid, "", nil
-		}
-		// not truncated, but not fully found. We still need to parse out numeric OID, so keep going
-		oidText = oid
-	} else {
-		mibName = oidText[:i]
-		oidText = oidText[i+2:]
-	}
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if strings.HasPrefix(line, "  -- TEXTUAL CONVENTION ") {
-			tc := strings.TrimPrefix(line, "  -- TEXTUAL CONVENTION ")
-			switch tc {
-			case "MacAddress", "PhysAddress":
-				conversion = "hwaddr"
-			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
-				conversion = "ipaddr"
-			}
-		} else if strings.HasPrefix(line, "::= { ") {
-			objs := strings.TrimPrefix(line, "::= { ")
-			objs = strings.TrimSuffix(objs, " }")
-
-			for _, obj := range strings.Split(objs, " ") {
-				if len(obj) == 0 {
-					continue
-				}
-				if i := strings.Index(obj, "("); i != -1 {
-					obj = obj[i+1:]
-					oidNum += "." + obj[:strings.Index(obj, ")")]
-				} else {
-					oidNum += "." + obj
-				}
-			}
+	for i := range tc {
+		// case where the mib doesn't have a conversion so Type struct will be nil
+		// prevents seg fault
+		if tc[i].Type == nil {
 			break
 		}
+		switch tc[i].Type.Name {
+		case "MacAddress", "PhysAddress":
+			conversion = "hwaddr"
+		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
+			conversion = "ipaddr"
+		}
 	}
+
+	oidText = out.RenderQualified()
+	i := strings.Index(oidText, "::")
+	if i == -1 {
+		return "", oid, oid, oid, fmt.Errorf("not found")
+	}
+	mibName = oidText[:i]
+	oidText = oidText[i+2:] + end
 
 	return mibName, oidNum, oidText, conversion, nil
 }

@@ -1,10 +1,9 @@
-//go:generate go run -tags generate snmp_mocks_generate.go
 package snmp
 
 import (
 	"fmt"
 	"net"
-	"os/exec"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -63,33 +62,42 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 var tsc = &testSNMPConnection{
 	host: "tsc",
 	values: map[string]interface{}{
-		".1.0.0.0.1.1.0":     "foo",
-		".1.0.0.0.1.1.1":     []byte("bar"),
-		".1.0.0.0.1.1.2":     []byte(""),
-		".1.0.0.0.1.102":     "bad",
-		".1.0.0.0.1.2.0":     1,
-		".1.0.0.0.1.2.1":     2,
-		".1.0.0.0.1.2.2":     0,
-		".1.0.0.0.1.3.0":     "0.123",
-		".1.0.0.0.1.3.1":     "0.456",
-		".1.0.0.0.1.3.2":     "0.000",
-		".1.0.0.0.1.3.3":     "9.999",
-		".1.0.0.0.1.5.0":     123456,
-		".1.0.0.1.1":         "baz",
-		".1.0.0.1.2":         234,
-		".1.0.0.1.3":         []byte("byte slice"),
-		".1.0.0.2.1.5.0.9.9": 11,
-		".1.0.0.2.1.5.1.9.9": 22,
-		".1.0.0.0.1.6.0":     ".1.0.0.0.1.7",
-		".1.0.0.3.1.1.10":    "instance",
-		".1.0.0.3.1.1.11":    "instance2",
-		".1.0.0.3.1.1.12":    "instance3",
-		".1.0.0.3.1.2.10":    10,
-		".1.0.0.3.1.2.11":    20,
-		".1.0.0.3.1.2.12":    20,
-		".1.0.0.3.1.3.10":    1,
-		".1.0.0.3.1.3.11":    2,
-		".1.0.0.3.1.3.12":    3,
+		".1.3.6.1.2.1.3.1.1.1.0": "foo",
+		".1.3.6.1.2.1.3.1.1.1.1": []byte("bar"),
+		".1.3.6.1.2.1.3.1.1.1.2": []byte(""),
+		".1.3.6.1.2.1.3.1.1.102": "bad",
+		".1.3.6.1.2.1.3.1.1.2.0": 1,
+		".1.3.6.1.2.1.3.1.1.2.1": 2,
+		".1.3.6.1.2.1.3.1.1.2.2": 0,
+		".1.3.6.1.2.1.3.1.1.3.0": "1.3.6.1.2.1.3.1.1.3",
+		".1.3.6.1.2.1.3.1.1.5.0": 123456,
+		".1.0.0.0.1.1.0":         "foo",
+		".1.0.0.0.1.1.1":         []byte("bar"),
+		".1.0.0.0.1.1.2":         []byte(""),
+		".1.0.0.0.1.102":         "bad",
+		".1.0.0.0.1.2.0":         1,
+		".1.0.0.0.1.2.1":         2,
+		".1.0.0.0.1.2.2":         0,
+		".1.0.0.0.1.3.0":         "0.123",
+		".1.0.0.0.1.3.1":         "0.456",
+		".1.0.0.0.1.3.2":         "0.000",
+		".1.0.0.0.1.3.3":         "9.999",
+		".1.0.0.0.1.5.0":         123456,
+		".1.0.0.1.1":             "baz",
+		".1.0.0.1.2":             234,
+		".1.0.0.1.3":             []byte("byte slice"),
+		".1.0.0.2.1.5.0.9.9":     11,
+		".1.0.0.2.1.5.1.9.9":     22,
+		".1.0.0.0.1.6.0":         ".1.0.0.0.1.7",
+		".1.0.0.3.1.1.10":        "instance",
+		".1.0.0.3.1.1.11":        "instance2",
+		".1.0.0.3.1.1.12":        "instance3",
+		".1.0.0.3.1.2.10":        10,
+		".1.0.0.3.1.2.11":        20,
+		".1.0.0.3.1.2.12":        20,
+		".1.0.0.3.1.3.10":        1,
+		".1.0.0.3.1.3.11":        2,
+		".1.0.0.3.1.3.12":        3,
 	},
 }
 
@@ -114,6 +122,17 @@ func TestSampleConfig(t *testing.T) {
 }
 
 func TestFieldInit(t *testing.T) {
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
+	s := &Snmp{
+		ClientConfig: snmp.ClientConfig{
+			Path: []string{testDataPath},
+		},
+	}
+
+	err = s.init()
+	require.NoError(t, err)
+
 	translations := []struct {
 		inputOid           string
 		inputName          string
@@ -125,8 +144,7 @@ func TestFieldInit(t *testing.T) {
 		{".1.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".iso.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".1.0.0.0.1.1", "", "", ".1.0.0.0.1.1", "server", ""},
-		{".1.0.0.0.1.1.0", "", "", ".1.0.0.0.1.1.0", "server.0", ""},
-		{".999", "", "", ".999", ".999", ""},
+		{".1.0.0.0.1.1.0", "", "", ".1.0.0.0.1.1.0", "server", ""},
 		{"TEST::server", "", "", ".1.0.0.0.1.1", "server", ""},
 		{"TEST::server.0", "", "", ".1.0.0.0.1.1.0", "server.0", ""},
 		{"TEST::server", "foo", "", ".1.0.0.0.1.1", "foo", ""},
@@ -134,6 +152,7 @@ func TestFieldInit(t *testing.T) {
 		{"IF-MIB::ifPhysAddress.1", "", "none", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "none"},
 		{"BRIDGE-MIB::dot1dTpFdbAddress.1", "", "", ".1.3.6.1.2.1.17.4.3.1.1.1", "dot1dTpFdbAddress.1", "hwaddr"},
 		{"TCP-MIB::tcpConnectionLocalAddress.1", "", "", ".1.3.6.1.2.1.6.19.1.2.1", "tcpConnectionLocalAddress.1", "ipaddr"},
+		{".999", "", "", ".999", ".999", ""},
 	}
 
 	for _, txl := range translations {
@@ -148,27 +167,40 @@ func TestFieldInit(t *testing.T) {
 }
 
 func TestTableInit(t *testing.T) {
-	tbl := Table{
-		Oid: ".1.0.0.0",
-		Fields: []Field{
-			{Oid: ".999", Name: "foo"},
-			{Oid: "TEST::description", Name: "description", IsTag: true},
-		},
-	}
-	err := tbl.Init()
+	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	assert.Equal(t, "testTable", tbl.Name)
+	tbl := Table{
+		Oid: ".1.3.6.1.2.1.3.1",
+		Fields: []Field{
+			{Oid: ".999", Name: "foo"},
+			{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "ifIndex", IsTag: true},
+			{Oid: "RFC1213-MIB::atPhysAddress", Name: "atPhysAddress"},
+		},
+	}
+	s := &Snmp{
+		ClientConfig: snmp.ClientConfig{
+			Path: []string{testDataPath},
+		},
+	}
+	err = s.init()
+	require.NoError(t, err)
+
+	err = tbl.Init()
+	require.NoError(t, err)
+
+	assert.Equal(t, "atTable", tbl.Name)
 
 	assert.Len(t, tbl.Fields, 5)
-	assert.Contains(t, tbl.Fields, Field{Oid: ".999", Name: "foo", initialized: true})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.1", Name: "server", IsTag: true, initialized: true})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.2", Name: "connections", initialized: true})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.3", Name: "latency", initialized: true})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.4", Name: "description", IsTag: true, initialized: true})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true})
 }
 
 func TestSnmpInit(t *testing.T) {
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
+
 	s := &Snmp{
 		Tables: []Table{
 			{Oid: "TEST::testTable"},
@@ -176,16 +208,13 @@ func TestSnmpInit(t *testing.T) {
 		Fields: []Field{
 			{Oid: "TEST::hostname"},
 		},
+		ClientConfig: snmp.ClientConfig{
+			Path: []string{testDataPath},
+		},
 	}
 
-	err := s.init()
+	err = s.init()
 	require.NoError(t, err)
-
-	assert.Len(t, s.Tables[0].Fields, 4)
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.1", Name: "server", IsTag: true, initialized: true})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.2", Name: "connections", initialized: true})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.3", Name: "latency", initialized: true})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.4", Name: "description", initialized: true})
 
 	assert.Equal(t, Field{
 		Oid:         ".1.0.0.1.1",
@@ -195,53 +224,53 @@ func TestSnmpInit(t *testing.T) {
 }
 
 func TestSnmpInit_noTranslate(t *testing.T) {
-	// override execCommand so it returns exec.ErrNotFound
-	defer func(ec func(string, ...string) *exec.Cmd) { execCommand = ec }(execCommand)
-	execCommand = func(_ string, _ ...string) *exec.Cmd {
-		return exec.Command("snmptranslateExecErrNotFound")
-	}
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
 
 	s := &Snmp{
 		Fields: []Field{
-			{Oid: ".1.1.1.1", Name: "one", IsTag: true},
-			{Oid: ".1.1.1.2", Name: "two"},
-			{Oid: ".1.1.1.3"},
+			{Oid: ".9.1.1.1.1", Name: "one", IsTag: true},
+			{Oid: ".9.1.1.1.2", Name: "two"},
+			{Oid: ".9.1.1.1.3"},
 		},
 		Tables: []Table{
 			{Name: "testing",
 				Fields: []Field{
-					{Oid: ".1.1.1.4", Name: "four", IsTag: true},
-					{Oid: ".1.1.1.5", Name: "five"},
-					{Oid: ".1.1.1.6"},
+					{Oid: ".9.1.1.1.4", Name: "four", IsTag: true},
+					{Oid: ".9.1.1.1.5", Name: "five"},
+					{Oid: ".9.1.1.1.6"},
 				}},
+		},
+		ClientConfig: snmp.ClientConfig{
+			Path: []string{testDataPath},
 		},
 	}
 
-	err := s.init()
+	err = s.init()
 	require.NoError(t, err)
 
-	assert.Equal(t, ".1.1.1.1", s.Fields[0].Oid)
+	assert.Equal(t, ".9.1.1.1.1", s.Fields[0].Oid)
 	assert.Equal(t, "one", s.Fields[0].Name)
 	assert.Equal(t, true, s.Fields[0].IsTag)
 
-	assert.Equal(t, ".1.1.1.2", s.Fields[1].Oid)
+	assert.Equal(t, ".9.1.1.1.2", s.Fields[1].Oid)
 	assert.Equal(t, "two", s.Fields[1].Name)
 	assert.Equal(t, false, s.Fields[1].IsTag)
 
-	assert.Equal(t, ".1.1.1.3", s.Fields[2].Oid)
-	assert.Equal(t, ".1.1.1.3", s.Fields[2].Name)
+	assert.Equal(t, ".9.1.1.1.3", s.Fields[2].Oid)
+	assert.Equal(t, ".9.1.1.1.3", s.Fields[2].Name)
 	assert.Equal(t, false, s.Fields[2].IsTag)
 
-	assert.Equal(t, ".1.1.1.4", s.Tables[0].Fields[0].Oid)
+	assert.Equal(t, ".9.1.1.1.4", s.Tables[0].Fields[0].Oid)
 	assert.Equal(t, "four", s.Tables[0].Fields[0].Name)
 	assert.Equal(t, true, s.Tables[0].Fields[0].IsTag)
 
-	assert.Equal(t, ".1.1.1.5", s.Tables[0].Fields[1].Oid)
+	assert.Equal(t, ".9.1.1.1.5", s.Tables[0].Fields[1].Oid)
 	assert.Equal(t, "five", s.Tables[0].Fields[1].Name)
 	assert.Equal(t, false, s.Tables[0].Fields[1].IsTag)
 
-	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Oid)
-	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Name)
+	assert.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Oid)
+	assert.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Name)
 	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
 }
 
@@ -614,7 +643,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	assert.Equal(t, (gs.Retries+1)*2, reqCount)
 }
 
-func TestTableBuild_walk(t *testing.T) {
+func TestTableBuild_walk_noTranslate(t *testing.T) {
 	tbl := Table{
 		Name:       "mytable",
 		IndexAsTag: true,
@@ -643,22 +672,11 @@ func TestTableBuild_walk(t *testing.T) {
 				Oid:            ".1.0.0.2.1.5",
 				OidIndexLength: 1,
 			},
-			{
-				Name:      "myfield6",
-				Oid:       ".1.0.0.0.1.6",
-				Translate: true,
-			},
-			{
-				Name:      "myfield7",
-				Oid:       ".1.0.0.0.1.6",
-				Translate: false,
-			},
 		},
 	}
 
 	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
-
 	assert.Equal(t, tb.Name, "mytable")
 	rtr1 := RTableRow{
 		Tags: map[string]string{
@@ -670,8 +688,6 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield3": float64(0.123),
 			"myfield4": 11,
 			"myfield5": 11,
-			"myfield6": "testTableEntry.7",
-			"myfield7": ".1.0.0.0.1.7",
 		},
 	}
 	rtr2 := RTableRow{
@@ -708,6 +724,80 @@ func TestTableBuild_walk(t *testing.T) {
 	assert.Contains(t, tb.Rows, rtr2)
 	assert.Contains(t, tb.Rows, rtr3)
 	assert.Contains(t, tb.Rows, rtr4)
+}
+
+func TestTableBuild_walk_Translate(t *testing.T) {
+	testDataPath, err := filepath.Abs("./testdata")
+	require.NoError(t, err)
+	s := &Snmp{
+		ClientConfig: snmp.ClientConfig{
+			Path: []string{testDataPath},
+		},
+	}
+	err = s.init()
+	require.NoError(t, err)
+
+	tbl := Table{
+		Name:       "atTable",
+		IndexAsTag: true,
+		Fields: []Field{
+			{
+				Name:  "ifIndex",
+				Oid:   "1.3.6.1.2.1.3.1.1.1",
+				IsTag: true,
+			},
+			{
+				Name:      "atPhysAddress",
+				Oid:       "1.3.6.1.2.1.3.1.1.2",
+				Translate: false,
+			},
+			{
+				Name:      "atNetAddress",
+				Oid:       "1.3.6.1.2.1.3.1.1.3",
+				Translate: true,
+			},
+		},
+	}
+
+	err = tbl.Init()
+	require.NoError(t, err)
+	tb, err := tbl.Build(tsc, true)
+	require.NoError(t, err)
+
+	assert.Equal(t, tb.Name, "atTable")
+
+	rtr1 := RTableRow{
+		Tags: map[string]string{
+			"ifIndex": "foo",
+			"index":   "0",
+		},
+		Fields: map[string]interface{}{
+			"atPhysAddress": 1,
+			"atNetAddress":  "atNetAddress",
+		},
+	}
+	rtr2 := RTableRow{
+		Tags: map[string]string{
+			"ifIndex": "bar",
+			"index":   "1",
+		},
+		Fields: map[string]interface{}{
+			"atPhysAddress": 2,
+		},
+	}
+	rtr3 := RTableRow{
+		Tags: map[string]string{
+			"index": "2",
+		},
+		Fields: map[string]interface{}{
+			"atPhysAddress": 0,
+		},
+	}
+
+	assert.Len(t, tb.Rows, 3)
+	assert.Contains(t, tb.Rows, rtr1)
+	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
 }
 
 func TestTableBuild_noWalk(t *testing.T) {
