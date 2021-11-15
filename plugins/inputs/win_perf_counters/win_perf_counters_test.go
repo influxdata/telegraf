@@ -237,7 +237,7 @@ func TestCounterPathParsing(t *testing.T) {
 	for path, vals := range counterPathsAndRes {
 		o, i, c, err := extractCounterInfoFromCounterPath(path)
 		require.NoError(t, err)
-		require.True(t, require.ObjectsAreEqual(vals, []string{o, i, c}), "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
+		require.Equalf(t, vals, []string{o, i, c}, "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
 	}
 	for _, path := range invalidCounterPaths {
 		_, _, _, err := extractCounterInfoFromCounterPath(path)
@@ -1013,14 +1013,14 @@ var stringArraySingleItem = []string{
 
 func TestUTF16ToStringArray(t *testing.T) {
 	singleItem := UTF16ToStringArray(unicodeStringListSingleItem)
-	require.True(t, require.ObjectsAreEqual(singleItem, stringArraySingleItem), "Not equal single arrays")
+	require.Equal(t, singleItem, stringArraySingleItem, "Not equal single arrays")
 
 	noItem := UTF16ToStringArray(unicodeStringListNoItem)
 	require.Nil(t, noItem)
 
 	engStrings := UTF16ToStringArray(unicodeStringListWithEnglishChars)
-	require.True(t, require.ObjectsAreEqual(engStrings, stringArrayWithEnglishChars), "Not equal eng arrays")
+	require.Equal(t, engStrings, stringArrayWithEnglishChars, "Not equal eng arrays")
 
 	czechStrings := UTF16ToStringArray(unicodeStringListWithCzechChars)
-	require.True(t, require.ObjectsAreEqual(czechStrings, stringArrayWithCzechChars), "Not equal czech arrays")
+	require.Equal(t, czechStrings, stringArrayWithCzechChars, "Not equal czech arrays")
 }
