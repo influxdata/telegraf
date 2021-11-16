@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
+	"github.com/influxdata/telegraf/plugins/serializers/cdp"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -129,6 +130,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewPrometheusSerializer(config)
 	case "ubazaar":
 		serializer, err = NewUBazaarSerializer()
+	case "cdp":
+		serializer, err = NewCdpSerializer()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -168,6 +171,10 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 
 func NewUBazaarSerializer() (Serializer, error) {
 	return ubazaar.NewSerializer()
+}
+
+func NewCdpSerializer() (Serializer, error) {
+	return cdp.NewSerializer()
 }
 
 func NewCarbon2Serializer(carbon2format string) (Serializer, error) {
