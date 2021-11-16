@@ -50,9 +50,7 @@ func TestLoadWirelessTable(t *testing.T) {
 		Log: testutil.Logger{},
 	}
 	metrics, err := w.loadWirelessTable(testInput)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	as := require.New(t)
 	as.Equal(metrics, expectedMetrics)
