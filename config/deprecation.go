@@ -112,12 +112,20 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 
 	// First check if the whole plugin is deprecated
 	switch category {
+	case "aggregators":
+		if pi, deprecated := aggregators.Deprecations[name]; deprecated {
+			info.deprecationInfo.info = pi
+		}
 	case "inputs":
 		if pi, deprecated := inputs.Deprecations[name]; deprecated {
 			info.deprecationInfo.info = pi
 		}
 	case "outputs":
 		if pi, deprecated := outputs.Deprecations[name]; deprecated {
+			info.deprecationInfo.info = pi
+		}
+	case "processors":
+		if pi, deprecated := processors.Deprecations[name]; deprecated {
 			info.deprecationInfo.info = pi
 		}
 	}
