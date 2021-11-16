@@ -231,6 +231,9 @@ The agent table configures Telegraf and the defaults used across all plugins.
 - **omit_hostname**:
   If set to true, do no set the "host" tag in the telegraf agent.
 
+- **skip_failed_outputs**:
+  If set to true, skips failed outputs and starts the agent
+
 ### Plugins
 
 Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
