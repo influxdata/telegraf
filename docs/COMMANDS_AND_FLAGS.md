@@ -39,6 +39,7 @@ telegraf [flags]
 |`--test-wait`                    |wait up to this many seconds for service inputs to complete in test or once mode|
 |`--usage <plugin>`               |print usage for a plugin, ie, `telegraf --usage mysql`|
 |`--version`                      |display the version and exit|
+|`--skip-failed-outputs`          |allows the agent to run even if some outputs fail
 
 ### Examples
 

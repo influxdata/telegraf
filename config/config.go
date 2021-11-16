@@ -199,6 +199,9 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
+
+	// Allows running the agents even if some outputs fail
+	SkipFailedOutputs bool `toml:"skip_failed_outputs"`
 }
 
 // InputNames returns a list of strings of the configured inputs.

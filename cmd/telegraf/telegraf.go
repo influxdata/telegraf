@@ -96,6 +96,9 @@ var fPlugins = flag.String("plugin-directory", "",
 	"path to directory containing external plugins")
 var fRunOnce = flag.Bool("once", false, "run one gather and exit")
 
+var fSkipFailedOutputs = flag.Bool("skip-failed-outputs", false,
+	"allows running the agent even if some outputs fail to start")
+
 var (
 	version string
 	commit  string

@@ -110,7 +110,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	startTime := time.Now()
 
 	log.Printf("D! [agent] Connecting outputs")
-	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
+	next, ou, err := a.startOutputs(ctx, a.Config.Outputs, a.Config.Agent.SkipFailedOutputs)
 	if err != nil {
 		return err
 	}
@@ -674,19 +674,25 @@ func (a *Agent) push(
 func (a *Agent) startOutputs(
 	ctx context.Context,
 	outputs []*models.RunningOutput,
+	skipFailedOutputs bool,
 ) (chan<- telegraf.Metric, *outputUnit, error) {
 	src := make(chan telegraf.Metric, 100)
 	unit := &outputUnit{src: src}
 	for _, output := range outputs {
 		err := a.connectOutput(ctx, output)
 		if err != nil {
-			for _, output := range unit.outputs {
-				output.Close()
+			if !skipFailedOutputs {
+				for _, output := range unit.outputs {
+					output.Close()
+				}
+				return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
 			}
-			return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
+		} else {
+			unit.outputs = append(unit.outputs, output)
 		}
-
-		unit.outputs = append(unit.outputs, output)
+	}
+	if skipFailedOutputs && (unit.outputs == nil || len(unit.outputs) == 0) {
+		return nil, nil, fmt.Errorf("all outputs failed to start")
 	}
 
 	return src, unit, nil
@@ -984,7 +990,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 	startTime := time.Now()
 
 	log.Printf("D! [agent] Connecting outputs")
-	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
+	next, ou, err := a.startOutputs(ctx, a.Config.Outputs, a.Config.Agent.SkipFailedOutputs)
 	if err != nil {
 		return err
 	}
