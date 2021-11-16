@@ -23,8 +23,9 @@ import (
 // Tests for runtime errors in the processors Init function.
 func TestInitError(t *testing.T) {
 	tests := []struct {
-		name   string
-		plugin *Starlark
+		name      string
+		constants map[string]interface{}
+		plugin    *Starlark
 	}{
 		{
 			name:   "source must define apply",
@@ -64,9 +65,21 @@ def apply():
 			name:   "script file not found",
 			plugin: newStarlarkFromScript("testdata/file_not_found.star"),
 		},
+		{
+			name: "source and script",
+			plugin: newStarlarkFromSrouce(`
+def apply(metric):
+	metric.fields["p1"] = unsupported_type
+	return metric
+`),
+			constants: map[string]interface{}{
+				"unsupported_type": time.Now(),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.plugin.Constants = tt.constants
 			err := tt.plugin.Init()
 			require.Error(t, err)
 		})
@@ -2514,7 +2527,6 @@ def apply(metric):
 					2:   "two",
 					"3": "three",
 				},
-				"unsupported_type": time.Now(),
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("cpu",
@@ -2602,7 +2614,6 @@ def apply(metric):
 	debug_mode = true
 	supported_values = ["2", "3"]
 	supported_entries = { "2" = "two", "3" = "three" }
-	unsupported_type = 2009-06-12
            `,
 			input: []telegraf.Metric{
 				testutil.MustMetric("cpu",

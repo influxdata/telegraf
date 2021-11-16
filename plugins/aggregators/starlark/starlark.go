@@ -98,6 +98,7 @@ func (s *Starlark) Push(acc telegraf.Accumulator) {
 	rv, err := s.Call("push")
 	if err != nil {
 		s.LogError(err)
+		acc.AddError(err)
 		return
 	}
 

@@ -46,10 +46,12 @@ func (s *StarlarkCommon) Init() error {
 	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
 	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
 	builtins["catch"] = starlark.NewBuiltin("catch", catch)
-	s.addConstants(&builtins)
+	err := s.addConstants(&builtins)
+	if err != nil {
+		return err
+	}
 
 	program, err := s.sourceProgram(builtins, "")
-
 	if err != nil {
 		return err
 	}
@@ -81,7 +83,6 @@ func (s *StarlarkCommon) GetParameters(name string) (starlark.Tuple, bool) {
 
 func (s *StarlarkCommon) AddFunction(name string, params ...starlark.Value) error {
 	globalFn, found := s.globals[name]
-
 	if !found {
 		return fmt.Errorf("%s is not defined", name)
 	}
@@ -104,22 +105,23 @@ func (s *StarlarkCommon) AddFunction(name string, params ...starlark.Value) erro
 }
 
 // Add all the constants defined in the plugin as constants of the script
-func (s *StarlarkCommon) addConstants(builtins *starlark.StringDict) {
+func (s *StarlarkCommon) addConstants(builtins *starlark.StringDict) error {
 	for key, val := range s.Constants {
 		sVal, err := asStarlarkValue(val)
 		if err != nil {
-			s.Log.Errorf("Unsupported type: %T", val)
+			return fmt.Errorf("converting type %T failed: %v", val, err)
 		}
 		(*builtins)[key] = sVal
 	}
+	return nil
 }
 
 func (s *StarlarkCommon) sourceProgram(builtins starlark.StringDict, filename string) (*starlark.Program, error) {
+	var src interface{}
 	if s.Source != "" {
-		_, program, err := starlark.SourceProgram(filename, s.Source, builtins.Has)
-		return program, err
+		src = s.Source
 	}
-	_, program, err := starlark.SourceProgram(s.Script, nil, builtins.Has)
+	_, program, err := starlark.SourceProgram(s.Script, src, builtins.Has)
 	return program, err
 }
 
