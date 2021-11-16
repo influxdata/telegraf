@@ -43,13 +43,13 @@ const (
 type deprecationInfo struct {
 	// Name of the plugin or plugin option
 	Name string
-	// Level of deprecation
-	Level Escalation
-	info  telegraf.DeprecationInfo
+	// LogLevel is the level of deprecation which currently corresponds to a log-level
+	LogLevel Escalation
+	info     telegraf.DeprecationInfo
 }
 
 func (di *deprecationInfo) determineEscalation(version *semver.Version) {
-	di.Level = None
+	di.LogLevel = None
 	if di.info.Since == "" {
 		return
 	}
@@ -72,9 +72,9 @@ func (di *deprecationInfo) determineEscalation(version *semver.Version) {
 	}
 
 	if !version.LessThan(*removal) {
-		di.Level = Error
+		di.LogLevel = Error
 	} else if !version.LessThan(*since) {
-		di.Level = Warn
+		di.LogLevel = Warn
 	}
 }
 
@@ -105,8 +105,8 @@ func (c *Config) incrementPluginOptionDeprecations(category string) {
 func (c *Config) collectDeprecationInfo(category, name string, plugin interface{}, all bool) pluginDeprecationInfo {
 	info := pluginDeprecationInfo{
 		deprecationInfo: deprecationInfo{
-			Name:  category + "." + name,
-			Level: None,
+			Name:     category + "." + name,
+			LogLevel: None,
 		},
 	}
 
@@ -130,7 +130,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		}
 	}
 	info.determineEscalation(c.version)
-	if info.Level != None {
+	if info.LogLevel != None {
 		c.incrementPluginDeprecations(category)
 	}
 
@@ -161,7 +161,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		}
 		optionInfo.determineEscalation(c.version)
 
-		if optionInfo.Level != None {
+		if optionInfo.LogLevel != None {
 			c.incrementPluginOptionDeprecations(category)
 		}
 
@@ -179,7 +179,7 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 func (c *Config) printUserDeprecation(category, name string, plugin interface{}) error {
 	info := c.collectDeprecationInfo(category, name, plugin, false)
 
-	switch info.Level {
+	switch info.LogLevel {
 	case Warn:
 		prefix := "W! " + color.YellowString("DeprecationWarning")
 		printPluginDeprecationNotice(prefix, info.Name, info.info)
@@ -195,7 +195,7 @@ func (c *Config) printUserDeprecation(category, name string, plugin interface{})
 	// Print deprecated options
 	deprecatedOptions := make([]string, 0)
 	for _, option := range info.Options {
-		switch option.Level {
+		switch option.LogLevel {
 		case Warn:
 			prefix := "W! " + color.YellowString("DeprecationWarning")
 			printOptionDeprecationNotice(prefix, info.Name, option.Name, option.info)
@@ -225,7 +225,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		plugin := creator()
 		info := c.collectDeprecationInfo("inputs", name, plugin, true)
 
-		if info.Level != None || len(info.Options) > 0 {
+		if info.LogLevel != None || len(info.Options) > 0 {
 			infos["inputs"] = append(infos["inputs"], info)
 		}
 	}
@@ -239,7 +239,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		plugin := creator()
 		info := c.collectDeprecationInfo("outputs", name, plugin, true)
 
-		if info.Level != None || len(info.Options) > 0 {
+		if info.LogLevel != None || len(info.Options) > 0 {
 			infos["outputs"] = append(infos["outputs"], info)
 		}
 	}
@@ -253,7 +253,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		plugin := creator()
 		info := c.collectDeprecationInfo("processors", name, plugin, true)
 
-		if info.Level != None || len(info.Options) > 0 {
+		if info.LogLevel != None || len(info.Options) > 0 {
 			infos["processors"] = append(infos["processors"], info)
 		}
 	}
@@ -267,7 +267,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 		plugin := creator()
 		info := c.collectDeprecationInfo("aggregators", name, plugin, true)
 
-		if info.Level != None || len(info.Options) > 0 {
+		if info.LogLevel != None || len(info.Options) > 0 {
 			infos["aggregators"] = append(infos["aggregators"], info)
 		}
 	}
@@ -279,11 +279,11 @@ func (c *Config) PrintDeprecationList(plugins []pluginDeprecationInfo) {
 	sort.Slice(plugins, func(i, j int) bool { return plugins[i].Name < plugins[j].Name })
 
 	for _, plugin := range plugins {
-		switch plugin.Level {
+		switch plugin.LogLevel {
 		case Warn, Error:
 			_, _ = fmt.Printf(
 				"  %-40s %-5s since %-5s removal in %-5s %s\n",
-				plugin.Name, plugin.Level, plugin.info.Since, plugin.info.RemovalIn, plugin.info.Notice,
+				plugin.Name, plugin.LogLevel, plugin.info.Since, plugin.info.RemovalIn, plugin.info.Notice,
 			)
 		}
 
@@ -294,7 +294,7 @@ func (c *Config) PrintDeprecationList(plugins []pluginDeprecationInfo) {
 		for _, option := range plugin.Options {
 			_, _ = fmt.Printf(
 				"  %-40s %-5s since %-5s removal in %-5s %s\n",
-				plugin.Name+"/"+option.Name, option.Level, option.info.Since, option.info.RemovalIn, option.info.Notice,
+				plugin.Name+"/"+option.Name, option.LogLevel, option.info.Since, option.info.RemovalIn, option.info.Notice,
 			)
 		}
 	}
