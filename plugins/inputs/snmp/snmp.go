@@ -680,8 +680,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case float32:
 			v = float64(vt) / math.Pow10(d)
 		case float64:
-			//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
-			v = float64(vt) / math.Pow10(d)
+			v = vt / math.Pow10(d)
 		case int:
 			v = float64(vt) / math.Pow10(d)
 		case int8:

@@ -215,7 +215,7 @@ func (s *SQLServer) initQueries() error {
 			queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: sqlServerVolumeSpaceV2, ResultByRow: false}
 			queries["Cpu"] = Query{ScriptName: "Cpu", Script: sqlServerCPUV2, ResultByRow: false}
 		} else {
-			s.Log.Warn("W! DEPRECATED: query_version=1 has been deprecated in favor of database_type.")
+			s.Log.Warn("DEPRECATED: query_version=1 has been deprecated in favor of database_type.")
 			queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCounters, ResultByRow: true}
 			queries["WaitStatsCategorized"] = Query{ScriptName: "WaitStatsCategorized", Script: sqlWaitStatsCategorized, ResultByRow: false}
 			queries["CPUHistory"] = Query{ScriptName: "CPUHistory", Script: sqlCPUHistory, ResultByRow: false}

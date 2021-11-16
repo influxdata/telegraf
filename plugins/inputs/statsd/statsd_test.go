@@ -475,8 +475,7 @@ func TestParse_Distributions(t *testing.T) {
 	parseMetrics()
 	for key, value := range validMeasurementMap {
 		field := map[string]interface{}{
-			//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
-			"value": float64(value),
+			"value": value,
 		}
 		acc.AssertContainsFields(t, key, field)
 	}
