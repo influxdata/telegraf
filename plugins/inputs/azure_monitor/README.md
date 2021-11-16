@@ -9,7 +9,7 @@ and `subscription_id` is for accessing Azure resources.
 
 ### Azure Properties Locations
 
-`subscription_id ` and target `resource_id` can be found under properties in the Azure portal for your
+`subscription_id` and target `resource_id` can be found under properties in the Azure portal for your
 application/service.
 
 `client_id` and `client_secret` can be obtained by registering an application under Azure Active Directory.
@@ -19,7 +19,7 @@ application/service.
 ### More Information
 
 for more information about how to get target `metrics` and Azure Monitor API, please use this link:
-https://docs.microsoft.com/en-us/azure/azure-monitor/essentials/rest-api-walkthrough
+<https://docs.microsoft.com/en-us/azure/azure-monitor/essentials/rest-api-walkthrough>
 
 ### Configuration
 
@@ -82,7 +82,7 @@ Each metric will have the following tags:
 
 ### Example Output
 
-```
+```shell
 > azure_monitor_microsoft_storage_storageaccounts_used_capacity,host=Azure-MBP,namespace=Microsoft.Storage/storageAccounts,resource_group=azure-rg,resource_name=azuresa,resource_region=eastus,subscription_id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,unit=Bytes average=9065573,maximum=9065573,minimum=9065573,timeStamp="2021-11-08T09:52:00Z",total=9065573 1636368744000000000
 > azure_monitor_microsoft_storage_storageaccounts_transactions,host=Azure-MBP,namespace=Microsoft.Storage/storageAccounts,resource_group=azure-rg,resource_name=azuresa,resource_region=eastus,subscription_id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,unit=Count average=1,count=6,maximum=1,minimum=0,timeStamp="2021-11-08T09:52:00Z",total=6 1636368744000000000
 > azure_monitor_microsoft_storage_storageaccounts_ingress,host=Azure-MBP,namespace=Microsoft.Storage/storageAccounts,resource_group=azure-rg,resource_name=azuresa,resource_region=eastus,subscription_id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,unit=Bytes average=5822.333333333333,count=6,maximum=5833,minimum=0,timeStamp="2021-11-08T09:52:00Z",total=34934 1636368744000000000

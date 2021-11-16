@@ -334,12 +334,12 @@ func TestGetAllTargetsMetricsNames_Success(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsApiURL(target1),
+		am.buildMetricDefinitionsAPIURL(target1),
 		httpmock.NewStringResponder(200, ``))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsApiURL(target2),
+		am.buildMetricDefinitionsAPIURL(target2),
 		httpmock.NewStringResponder(200, resourceMetricsDefinitionsBody))
 
 	err := am.getAllTargetsMetricsNames()
@@ -408,12 +408,12 @@ func TestInit_Success(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsApiURL(target1),
+		am.buildMetricDefinitionsAPIURL(target1),
 		httpmock.NewStringResponder(200, ``))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsApiURL(target2),
+		am.buildMetricDefinitionsAPIURL(target2),
 		httpmock.NewStringResponder(200, resourceMetricsDefinitionsBody))
 
 	err := am.Init()
@@ -552,12 +552,12 @@ func TestGather_Success(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricValuesApiURL(target1),
+		am.buildMetricValuesAPIURL(target1),
 		httpmock.NewStringResponder(200, target1MetricsValues))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricValuesApiURL(target2),
+		am.buildMetricValuesAPIURL(target2),
 		httpmock.NewStringResponder(200, target2MetricsValues))
 
 	acc := testutil.Accumulator{}

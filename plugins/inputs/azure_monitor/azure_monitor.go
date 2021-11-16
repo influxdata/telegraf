@@ -193,7 +193,7 @@ func (am *AzureMonitor) getAllTargetsMetricsNames() error {
 }
 
 func (am *AzureMonitor) getTargetMetricsNames(target *Target) error {
-	apiURL := am.buildMetricDefinitionsApiURL(target)
+	apiURL := am.buildMetricDefinitionsAPIURL(target)
 	body, err := am.getTargetResponseBody(apiURL)
 
 	if err != nil {
@@ -276,7 +276,7 @@ func (am *AzureMonitor) getAccessToken() error {
 		return err
 	}
 
-	data, err := unmarshalJson(body)
+	data, err := unmarshalJSON(body)
 
 	if err != nil {
 		return err
@@ -309,7 +309,7 @@ func (am *AzureMonitor) refreshAccessToken() error {
 	return nil
 }
 
-func (am *AzureMonitor) buildMetricDefinitionsApiURL(target *Target) string {
+func (am *AzureMonitor) buildMetricDefinitionsAPIURL(target *Target) string {
 	apiURL := fmt.Sprintf(
 		"https://management.azure.com/subscriptions/%s/%s/providers/microsoft.insights/metricDefinitions?api-version=2018-01-01",
 		am.SubscriptionID, target.ResourceID)
@@ -317,7 +317,7 @@ func (am *AzureMonitor) buildMetricDefinitionsApiURL(target *Target) string {
 	return apiURL
 }
 
-func (am *AzureMonitor) buildMetricValuesApiURL(target *Target) string {
+func (am *AzureMonitor) buildMetricValuesAPIURL(target *Target) string {
 	apiURL := fmt.Sprintf(
 		"https://management.azure.com/subscriptions/%s/%s/providers/microsoft.insights/metrics?metricnames=%s&"+
 			"aggregation=%s&api-version=2019-07-01",
@@ -371,7 +371,7 @@ func (am *AzureMonitor) collectAllTargetsMetrics(acc telegraf.Accumulator) error
 			default:
 			}
 
-			apiURL := am.buildMetricValuesApiURL(target)
+			apiURL := am.buildMetricValuesAPIURL(target)
 			body, err := am.getTargetResponseBody(apiURL)
 
 			if err != nil {
@@ -414,7 +414,7 @@ func (am *AzureMonitor) collectAllTargetsMetrics(acc telegraf.Accumulator) error
 }
 
 func (t *Target) getTargetMetricsNames(body []byte) error {
-	bodyData, err := unmarshalJson(body)
+	bodyData, err := unmarshalJSON(body)
 
 	if err != nil {
 		return err
@@ -457,7 +457,7 @@ func (m *Metric) getMetricTags(bodyData map[string]interface{}, value map[string
 }
 
 func collectTargetMetrics(body []byte) ([]*Metric, error) {
-	bodyData, err := unmarshalJson(body)
+	bodyData, err := unmarshalJSON(body)
 
 	if err != nil {
 		return nil, err
@@ -511,7 +511,7 @@ func closeResponseBody(body io.ReadCloser, err *error) {
 	}
 }
 
-func unmarshalJson(body []byte) (map[string]interface{}, error) {
+func unmarshalJSON(body []byte) (map[string]interface{}, error) {
 	var data map[string]interface{}
 	err := json.Unmarshal(body, &data)
 
