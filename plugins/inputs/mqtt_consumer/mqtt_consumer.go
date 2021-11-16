@@ -80,7 +80,7 @@ type MQTTConsumer struct {
 
 var sampleConfig = `
   ## Broker URLs for the MQTT server or cluster.  To connect to multiple
-  ## clusters or standalone servers, use a seperate plugin instance.
+  ## clusters or standalone servers, use a separate plugin instance.
   ##   example: servers = ["tcp://localhost:1883"]
   ##            servers = ["ssl://localhost:1883"]
   ##            servers = ["ws://localhost:1883"]
