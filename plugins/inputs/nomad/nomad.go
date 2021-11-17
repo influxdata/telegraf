@@ -10,27 +10,22 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// Nomad configuration object
 type Nomad struct {
-	URL string
+	URL string `toml:"url"`
 
 	AuthToken       string `toml:"auth_token"`
 	AuthTokenString string `toml:"auth_token_string"`
 
-	LabelInclude []string `toml:"label_include"`
-	LabelExclude []string `toml:"label_exclude"`
-
-	labelFilter filter.Filter
-
-	ResponseTimeout config.Duration
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
 
-	RoundTripper http.RoundTripper
+	roundTripper http.RoundTripper
 }
 
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
@@ -39,16 +34,12 @@ var sampleConfig = `
   ## URL for the Nomad agent
   url = "http://127.0.0.1:4646"
 
-  ## Use auth token for authorization. ('auth_token' takes priority)
-  ## If both of these are empty, no token will be used.
+  ## Use auth token for authorization. 
+  ## If both are set, an error is thrown.
+  ## If both are empty, no token will be used.
   # auth_token = "/path/to/auth/token"
   ## OR
   # auth_token_string = "a1234567-40c7-9048-7bae-378687048181"
-
-  ## Labels to be added as tags. An empty array for both include and
-  ## exclude will include all labels.
-  # label_include = []
-  # label_exclude = ["*"]
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -61,22 +52,26 @@ var sampleConfig = `
 
 func init() {
 	inputs.Add("nomad", func() telegraf.Input {
-		return &Nomad{
-			LabelInclude: []string{},
-			LabelExclude: []string{"*"},
-		}
+		return &Nomad{}
 	})
 }
 
+// SampleConfig returns a sample config
 func (n *Nomad) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns a description of the plugin
 func (n *Nomad) Description() string {
 	return "Read metrics from the Nomad api"
 }
 
 func (n *Nomad) Init() error {
+
+	if n.AuthToken != "" && n.AuthTokenString != "" {
+		return fmt.Errorf("config error: both auth_token and auth_token_string are set")
+	}
+
 	if n.AuthToken == "" && n.AuthTokenString == "" {
 		n.AuthToken = ""
 	}
@@ -84,86 +79,90 @@ func (n *Nomad) Init() error {
 	if n.AuthToken != "" {
 		token, err := os.ReadFile(n.AuthToken)
 		if err != nil {
-			return err
+			return fmt.Errorf("reading file failed: %v", err)
 		}
 		n.AuthTokenString = strings.TrimSpace(string(token))
 	}
 
-	labelFilter, err := filter.NewIncludeExcludeFilter(n.LabelInclude, n.LabelExclude)
-	if err != nil {
-		return err
-	}
-	n.labelFilter = labelFilter
-
-	return nil
-}
-
-func (n *Nomad) Gather(acc telegraf.Accumulator) error {
-	acc.AddError(n.gatherSummary(n.URL, acc))
-	return nil
-}
-
-func (n *Nomad) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
-	summaryMetrics := &MetricsSummary{}
-	err := n.LoadJSON(fmt.Sprintf("%s/v1/metrics", baseURL), summaryMetrics)
-	if err != nil {
-		return err
-	}
-
-	buildNomadMetrics(summaryMetrics, acc)
-
-	return nil
-}
-
-func (n *Nomad) LoadJSON(url string, v interface{}) error {
-	var req, err = http.NewRequest("GET", url, nil)
-	if err != nil {
-		return err
-	}
-	var resp *http.Response
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
-	if n.RoundTripper == nil {
+	if n.roundTripper == nil {
 		if n.ResponseTimeout < config.Duration(time.Second) {
 			n.ResponseTimeout = config.Duration(time.Second * 5)
 		}
-		n.RoundTripper = &http.Transport{
+		n.roundTripper = &http.Transport{
 			TLSHandshakeTimeout:   5 * time.Second,
 			TLSClientConfig:       tlsCfg,
 			ResponseHeaderTimeout: time.Duration(n.ResponseTimeout),
 		}
 	}
+
+	return nil
+}
+
+// Gather, collects metrics from Nomad endpoint
+func (n *Nomad) Gather(acc telegraf.Accumulator) error {
+	return n.gatherSummary(acc, n.URL)
+}
+
+// gatherSummary, decodes response from Nomad api and triggers the builder
+func (n *Nomad) gatherSummary(acc telegraf.Accumulator, baseURL string) error {
+	summaryMetrics := &MetricsSummary{}
+	err := n.loadJSON(fmt.Sprintf("%s/v1/metrics", baseURL), summaryMetrics)
+	if err != nil {
+		return err
+	}
+
+	err = buildNomadMetrics(acc, summaryMetrics)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (n *Nomad) loadJSON(url string, v interface{}) error {
+	var req, err = http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	var resp *http.Response
+
 	req.Header.Set("Authorization", "X-Nomad-Token "+n.AuthTokenString)
 	req.Header.Add("Accept", "application/json")
-	resp, err = n.RoundTripper.RoundTrip(req)
+
+	resp, err = n.roundTripper.RoundTrip(req)
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
-		return fmt.Errorf(`error parsing response: %s`, err)
+		return fmt.Errorf("error parsing json response: %s", err)
 	}
 
 	return nil
 }
 
-func buildNomadMetrics(summaryMetrics *MetricsSummary, acc telegraf.Accumulator) {
+// buildNomadMetrics, it builds all the metrics and adds them to the accumulator)
+func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *MetricsSummary) error {
 
 	t, err := time.Parse(timeLayout, summaryMetrics.Timestamp)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("error parsing time: %s", err)
 	}
 	sampledValueFields := make(map[string]interface{})
 
-	for c, counters := range summaryMetrics.Counters {
-		tags := summaryMetrics.Counters[c].DisplayLabels
+	for _, counters := range summaryMetrics.Counters {
+		tags := counters.DisplayLabels
 
 		sampledValueFields["count"] = counters.Count
 		sampledValueFields["rate"] = counters.Rate
@@ -176,17 +175,14 @@ func buildNomadMetrics(summaryMetrics *MetricsSummary, acc telegraf.Accumulator)
 		acc.AddCounter(counters.Name, sampledValueFields, tags, t)
 	}
 
-	for c, gauges := range summaryMetrics.Gauges {
-		tags := summaryMetrics.Gauges[c].DisplayLabels
+	for _, gauges := range summaryMetrics.Gauges {
+		tags := gauges.DisplayLabels
 
 		fields := make(map[string]interface{})
 		fields["value"] = gauges.Value
 
-		t, err := time.Parse(timeLayout, summaryMetrics.Timestamp)
-		if err != nil {
-			panic(err)
-		}
 		acc.AddGauge(gauges.Name, fields, tags, t)
+
 	}
 
 	for _, points := range summaryMetrics.Points {
@@ -198,18 +194,21 @@ func buildNomadMetrics(summaryMetrics *MetricsSummary, acc telegraf.Accumulator)
 		acc.AddFields(points.Name, fields, tags, t)
 	}
 
-	for c, samples := range summaryMetrics.Samples {
-		tags := summaryMetrics.Samples[c].DisplayLabels
+	for _, samples := range summaryMetrics.Samples {
+		tags := samples.DisplayLabels
 
 		sampledValueFields := make(map[string]interface{})
 		sampledValueFields["count"] = samples.Count
 		sampledValueFields["rate"] = samples.Rate
 		sampledValueFields["sum"] = samples.Sum
 		sampledValueFields["sumsq"] = samples.SumSq
+		sampledValueFields["stddev"] = samples.Stddev
 		sampledValueFields["min"] = samples.Min
 		sampledValueFields["max"] = samples.Max
 		sampledValueFields["mean"] = samples.Mean
 
 		acc.AddCounter(samples.Name, sampledValueFields, tags, t)
 	}
+
+	return nil
 }
