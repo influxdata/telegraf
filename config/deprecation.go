@@ -48,7 +48,7 @@ type deprecationInfo struct {
 	info     telegraf.DeprecationInfo
 }
 
-func (di *deprecationInfo) determineEscalation(version semver.Version) error {
+func (di *deprecationInfo) determineEscalation(telegrafVersion semver.Version) error {
 	di.LogLevel = None
 	if di.info.Since == "" {
 		return nil
@@ -70,6 +70,12 @@ func (di *deprecationInfo) determineEscalation(version semver.Version) error {
 		di.info.RemovalIn = removal.String()
 	}
 
+	// Drop potential pre-release tags
+	version := semver.Version{
+		Major: telegrafVersion.Major,
+		Minor: telegrafVersion.Minor,
+		Patch: telegrafVersion.Patch,
+	}
 	if version.GTE(removal) {
 		di.LogLevel = Error
 	} else if version.GTE(since) {
