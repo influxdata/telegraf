@@ -914,8 +914,8 @@ type snmpTranslateCache struct {
 	err        error
 }
 
-var snmpTranslateCachesLock sync.Mutex
 var snmpTranslateCaches map[string]snmpTranslateCache
+var snmpTranslateCachesLock sync.Mutex
 
 // snmpTranslate resolves the given OID.
 func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
