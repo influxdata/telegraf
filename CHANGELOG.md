@@ -1,3 +1,38 @@
+## v1.20.4 [2021-11-17]
+
+#### Release Notes
+
+  - [#10073](https://github.com/influxdata/telegraf/pull/10073) Update go version from 1.17.2 to 1.17.3
+  - [#10100](https://github.com/influxdata/telegraf/pull/10100) Update deprecated plugin READMEs to better indicate deprecation
+
+Thank you to @zak-pawel for lots of linter fixes!
+
+  - [#9986](https://github.com/influxdata/telegraf/pull/9986) Linter fixes for plugins/inputs/[h-j]*
+  - [#9999](https://github.com/influxdata/telegraf/pull/9999) Linter fixes for plugins/inputs/[k-l]*
+  - [#10006](https://github.com/influxdata/telegraf/pull/10006) Linter fixes for plugins/inputs/m*
+  - [#10011](https://github.com/influxdata/telegraf/pull/10011) Linter fixes for plugins/inputs/[n-o]*
+
+#### Bugfixes
+
+  - [#10089](https://github.com/influxdata/telegraf/pull/10089) Update BurntSushi/toml from 0.3.1 to 0.4.1
+  - [#10075](https://github.com/influxdata/telegraf/pull/10075) `inputs.mongodb` Update readme with correct connection URI
+  - [#10076](https://github.com/influxdata/telegraf/pull/10076) Update gosnmp module from 1.32 to 1.33
+  - [#9966](https://github.com/influxdata/telegraf/pull/9966) `inputs.mysql` Fix type conversion follow-up
+  - [#10068](https://github.com/influxdata/telegraf/pull/10068) `inputs.proxmox` Changed VM ID from string to int
+  - [#10047](https://github.com/influxdata/telegraf/pull/10047) `inputs.modbus` Do not build modbus on openbsd
+  - [#10019](https://github.com/influxdata/telegraf/pull/10019) `inputs.cisco_telemetry_mdt` Move to new protobuf library
+  - [#10001](https://github.com/influxdata/telegraf/pull/10001) `outputs.loki` Add metric name with label "__name"
+  - [#9980](https://github.com/influxdata/telegraf/pull/9980) `inputs.nvidia_smi` Set the default path correctly
+  - [#10010](https://github.com/influxdata/telegraf/pull/10010) Update go.opentelemetry.io/otel from v0.23.0 to v0.24.0
+  - [#10044](https://github.com/influxdata/telegraf/pull/10044) `inputs.sqlserver` Add elastic pool in supported versions in sqlserver
+  - [#10029](https://github.com/influxdata/telegraf/pull/10029) `inputs.influxdb` Update influxdb input schema docs
+  - [#10026](https://github.com/influxdata/telegraf/pull/10026) `inputs.intel_rdt` Correct timezone handling
+
+#### Features
+#### New Input Plugins
+#### New Output Plugins
+#### New External Plugins
+
 ## v1.20.3 [2021-10-27]
 
 #### Release Notes
