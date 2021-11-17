@@ -3,7 +3,8 @@
 supported_types = (["int", "float"])
 state = {}
 def add(metric):
-    aggregate = state.get(metric)
+    gId = groupID(metric)
+    aggregate = state.get(gId)
     if aggregate == None:
         aggregate = {
             "name": metric.name, 
@@ -16,7 +17,7 @@ def add(metric):
 				    "min": v,
 				    "max": v,
 			    }
-        state[metric] = aggregate
+        state[gId] = aggregate
     else:
         for k, v in metric.fields.items():
             if type(v) in supported_types:
@@ -43,4 +44,10 @@ def push():
     return metrics
 
 def reset():
-  state.clear()
+    state.clear()
+
+def groupID(metric):
+    key = metric.name + "-"
+    for k, v in metric.tags.items():
+        key = key + k + "-" + v
+    return hash(key)

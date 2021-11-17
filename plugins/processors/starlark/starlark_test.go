@@ -29,24 +29,24 @@ func TestInitError(t *testing.T) {
 	}{
 		{
 			name:   "source must define apply",
-			plugin: newStarlarkFromSrouce(""),
+			plugin: newStarlarkFromSource(""),
 		},
 		{
 			name: "apply must be a function",
-			plugin: newStarlarkFromSrouce(`
+			plugin: newStarlarkFromSource(`
 apply = 42
 `),
 		},
 		{
 			name: "apply function must take one arg",
-			plugin: newStarlarkFromSrouce(`
+			plugin: newStarlarkFromSource(`
 def apply():
 	pass
 `),
 		},
 		{
 			name: "package scope must have valid syntax",
-			plugin: newStarlarkFromSrouce(`
+			plugin: newStarlarkFromSource(`
 for
 `),
 		},
@@ -56,7 +56,7 @@ for
 		},
 		{
 			name: "source and script",
-			plugin: newStarlarkFromSrouce(`
+			plugin: newStarlarkFromSource(`
 def apply():
 	pass
 `),
@@ -67,7 +67,7 @@ def apply():
 		},
 		{
 			name: "source and script",
-			plugin: newStarlarkFromSrouce(`
+			plugin: newStarlarkFromSource(`
 def apply(metric):
 	metric.fields["p1"] = unsupported_type
 	return metric
@@ -213,7 +213,7 @@ def apply(metric):
 
 	for _, tt := range applyTests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := newStarlarkFromSrouce(tt.source)
+			plugin := newStarlarkFromSource(tt.source)
 			err := plugin.Init()
 			require.NoError(t, err)
 
@@ -2556,7 +2556,7 @@ def apply(metric):
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := newStarlarkFromSrouce(tt.source)
+			plugin := newStarlarkFromSource(tt.source)
 			plugin.Constants = tt.constants
 			err := plugin.Init()
 			require.NoError(t, err)
@@ -3186,7 +3186,7 @@ def apply(metric):
 
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
-			plugin := newStarlarkFromSrouce(tt.source)
+			plugin := newStarlarkFromSource(tt.source)
 
 			err := plugin.Init()
 			require.NoError(b, err)
@@ -3320,7 +3320,7 @@ func testNow(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, 
 	return starlarktime.Time(time.Date(2021, 4, 15, 12, 0, 0, 999, time.UTC)), nil
 }
 
-func newStarlarkFromSrouce(source string) *Starlark {
+func newStarlarkFromSource(source string) *Starlark {
 	return &Starlark{
 		StarlarkCommon: common.StarlarkCommon{
 			StarlarkLoadFunc: testLoadFunc,

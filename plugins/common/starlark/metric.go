@@ -61,7 +61,7 @@ func (m *Metric) Truth() starlark.Bool {
 }
 
 func (m *Metric) Hash() (uint32, error) {
-	return uint32(m.Unwrap().HashID()), nil
+	return 0, errors.New("not hashable")
 }
 
 // AttrNames implements the starlark.HasAttrs interface.

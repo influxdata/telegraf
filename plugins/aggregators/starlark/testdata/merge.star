@@ -1,5 +1,4 @@
 # Example of a merge aggregator implemented with a starlark script.
-
 load('time.star', 'time')
 state = {}
 def add(metric):
@@ -8,10 +7,11 @@ def add(metric):
         metrics = {}
         state["metrics"] = metrics
         state["ordered"] = []
-    m = metrics.get(metric)
+    gId = groupID(metric)
+    m = metrics.get(gId)
     if m == None:
         m = deepcopy(metric)
-        metrics[metric] = m 
+        metrics[gId] = m 
         state["ordered"].append(m)
     else:
         for k, v in metric.fields.items():
@@ -21,4 +21,11 @@ def push():
     return state.get("ordered")
 
 def reset():
-  state.clear()
+    state.clear()
+
+def groupID(metric):
+    key = metric.name + "-"
+    for k, v in metric.tags.items():
+        key = key + k + "-" + v + "-"
+    key = key + "-" + str(metric.time)
+    return hash(key)
