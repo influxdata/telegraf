@@ -48,22 +48,22 @@ type deprecationInfo struct {
 	info     telegraf.DeprecationInfo
 }
 
-func (di *deprecationInfo) determineEscalation(version *semver.Version) {
+func (di *deprecationInfo) determineEscalation(version *semver.Version) error {
 	di.LogLevel = None
 	if di.info.Since == "" {
-		return
+		return nil
 	}
 
 	since, err := semver.NewVersion(di.info.Since)
 	if err != nil {
-		panic(fmt.Errorf("cannot parse 'since' version %q: %v", di.info.Since, err))
+		return fmt.Errorf("cannot parse 'since' version %q: %v", di.info.Since, err)
 	}
 
 	var removal *semver.Version
 	if di.info.RemovalIn != "" {
 		removal, err = semver.NewVersion(di.info.RemovalIn)
 		if err != nil {
-			panic(fmt.Errorf("cannot parse 'removal' version %q: %v", di.info.RemovalIn, err))
+			return fmt.Errorf("cannot parse 'removal' version %q: %v", di.info.RemovalIn, err)
 		}
 	} else {
 		removal = &semver.Version{Major: since.Major}
@@ -76,6 +76,7 @@ func (di *deprecationInfo) determineEscalation(version *semver.Version) {
 	} else if !version.LessThan(*since) {
 		di.LogLevel = Warn
 	}
+	return nil
 }
 
 // pluginDeprecationInfo holds all information about a deprecated plugin or it's options
@@ -129,7 +130,9 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 			info.deprecationInfo.info = pi
 		}
 	}
-	info.determineEscalation(c.version)
+	if err := info.determineEscalation(c.version); err != nil {
+		panic(fmt.Errorf("plugin %q: %v", info.Name, err))
+	}
 	if info.LogLevel != None {
 		c.incrementPluginDeprecations(category)
 	}
@@ -159,7 +162,9 @@ func (c *Config) collectDeprecationInfo(category, name string, plugin interface{
 		if len(tags) > 2 {
 			optionInfo.info.RemovalIn = tags[1]
 		}
-		optionInfo.determineEscalation(c.version)
+		if err := optionInfo.determineEscalation(c.version); err != nil {
+			panic(fmt.Errorf("plugin %q option %q: %v", info.Name, field.Name, err))
+		}
 
 		if optionInfo.LogLevel != None {
 			c.incrementPluginOptionDeprecations(category)
