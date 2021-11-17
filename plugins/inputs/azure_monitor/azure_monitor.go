@@ -318,10 +318,11 @@ func (am *AzureMonitor) buildMetricDefinitionsAPIURL(target *Target) string {
 }
 
 func (am *AzureMonitor) buildMetricValuesAPIURL(target *Target) string {
+	metrics := url.QueryEscape(strings.Join(target.Metrics, ","))
 	apiURL := fmt.Sprintf(
 		"https://management.azure.com/subscriptions/%s/%s/providers/microsoft.insights/metrics?metricnames=%s&"+
 			"aggregation=%s&api-version=2019-07-01",
-		am.SubscriptionID, target.ResourceID, strings.Join(target.Metrics, ","), strings.Join(target.Aggregation, ","))
+		am.SubscriptionID, target.ResourceID, metrics, strings.Join(target.Aggregation, ","))
 
 	return apiURL
 }
