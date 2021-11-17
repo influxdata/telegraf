@@ -28,7 +28,7 @@ const (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address         string   `toml:"address" deprecated:"1.12;use 'urls' instead"`
+	Address         string   `toml:"address" deprecated:"1.12.0;use 'urls' instead"`
 	URLs            []string `toml:"urls"`
 	HTTPProxy       string   `toml:"http_proxy"`
 	Body            string

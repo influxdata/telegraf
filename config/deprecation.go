@@ -54,21 +54,21 @@ func (di *deprecationInfo) determineEscalation(version *semver.Version) {
 		return
 	}
 
-	since, err := semver.NewVersion(di.info.Since + ".0")
+	since, err := semver.NewVersion(di.info.Since)
 	if err != nil {
 		panic(fmt.Errorf("cannot parse 'since' version %q: %v", di.info.Since, err))
 	}
 
 	var removal *semver.Version
 	if di.info.RemovalIn != "" {
-		removal, err = semver.NewVersion(di.info.RemovalIn + ".0")
+		removal, err = semver.NewVersion(di.info.RemovalIn)
 		if err != nil {
 			panic(fmt.Errorf("cannot parse 'removal' version %q: %v", di.info.RemovalIn, err))
 		}
 	} else {
-		removal = &semver.Version{Major: since.Major, Minor: since.Minor}
+		removal = &semver.Version{Major: since.Major}
 		removal.BumpMajor()
-		di.info.RemovalIn = strings.TrimSuffix(removal.String(), ".0")
+		di.info.RemovalIn = removal.String()
 	}
 
 	if !version.LessThan(*removal) {
