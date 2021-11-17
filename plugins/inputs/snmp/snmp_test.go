@@ -146,7 +146,6 @@ func TestFieldInit(t *testing.T) {
 		{".1.0.0.0.1.1", "", "", ".1.0.0.0.1.1", "server", ""},
 		{".1.0.0.0.1.1.0", "", "", ".1.0.0.0.1.1.0", "server", ""},
 		{"TEST::server", "", "", ".1.0.0.0.1.1", "server", ""},
-		{"TEST::server.0", "", "", ".1.0.0.0.1.1.0", "server.0", ""},
 		{"TEST::server", "foo", "", ".1.0.0.0.1.1", "foo", ""},
 		{"IF-MIB::ifPhysAddress.1", "", "", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "hwaddr"},
 		{"IF-MIB::ifPhysAddress.1", "", "none", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "none"},
@@ -192,6 +191,7 @@ func TestTableInit(t *testing.T) {
 	assert.Equal(t, "atTable", tbl.Name)
 
 	assert.Len(t, tbl.Fields, 5)
+	assert.Contains(t, tbl.Fields, Field{Oid: ".999", Name: "foo", initialized: true})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true})
@@ -230,53 +230,51 @@ func TestSnmpInit(t *testing.T) {
 }
 
 func TestSnmpInit_noTranslate(t *testing.T) {
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
 
 	s := &Snmp{
 		Fields: []Field{
-			{Oid: ".9.1.1.1.1", Name: "one", IsTag: true},
-			{Oid: ".9.1.1.1.2", Name: "two"},
-			{Oid: ".9.1.1.1.3"},
+			{Oid: ".1.1.1.1", Name: "one", IsTag: true},
+			{Oid: ".1.1.1.2", Name: "two"},
+			{Oid: ".1.1.1.3"},
 		},
 		Tables: []Table{
 			{Name: "testing",
 				Fields: []Field{
-					{Oid: ".9.1.1.1.4", Name: "four", IsTag: true},
-					{Oid: ".9.1.1.1.5", Name: "five"},
-					{Oid: ".9.1.1.1.6"},
+					{Oid: ".1.1.1.4", Name: "four", IsTag: true},
+					{Oid: ".1.1.1.5", Name: "five"},
+					{Oid: ".1.1.1.6"},
 				}},
 		},
 		ClientConfig: snmp.ClientConfig{
-			Path: []string{testDataPath},
+			Path: []string{},
 		},
 	}
 
-	err = s.init()
+	err := s.init()
 	require.NoError(t, err)
 
-	assert.Equal(t, ".9.1.1.1.1", s.Fields[0].Oid)
+	assert.Equal(t, ".1.1.1.1", s.Fields[0].Oid)
 	assert.Equal(t, "one", s.Fields[0].Name)
 	assert.Equal(t, true, s.Fields[0].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.2", s.Fields[1].Oid)
+	assert.Equal(t, ".1.1.1.2", s.Fields[1].Oid)
 	assert.Equal(t, "two", s.Fields[1].Name)
 	assert.Equal(t, false, s.Fields[1].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.3", s.Fields[2].Oid)
-	assert.Equal(t, ".9.1.1.1.3", s.Fields[2].Name)
+	assert.Equal(t, ".1.1.1.3", s.Fields[2].Oid)
+	assert.Equal(t, ".1.1.1.3", s.Fields[2].Name)
 	assert.Equal(t, false, s.Fields[2].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.4", s.Tables[0].Fields[0].Oid)
+	assert.Equal(t, ".1.1.1.4", s.Tables[0].Fields[0].Oid)
 	assert.Equal(t, "four", s.Tables[0].Fields[0].Name)
 	assert.Equal(t, true, s.Tables[0].Fields[0].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.5", s.Tables[0].Fields[1].Oid)
+	assert.Equal(t, ".1.1.1.5", s.Tables[0].Fields[1].Oid)
 	assert.Equal(t, "five", s.Tables[0].Fields[1].Name)
 	assert.Equal(t, false, s.Tables[0].Fields[1].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Oid)
-	assert.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Name)
+	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Oid)
+	assert.Equal(t, ".1.1.1.6", s.Tables[0].Fields[2].Name)
 	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
 }
 

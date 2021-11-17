@@ -985,7 +985,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		oidNum = oid
 		// ensure modules are loaded or node will be empty (might not error)
 		// do not return the err as the oid is numeric and telegraf can continue
-		if err != nil {
+		if err != nil || out.Name == "iso" {
 			return oid, oid, oid, oid, nil
 		}
 	}
