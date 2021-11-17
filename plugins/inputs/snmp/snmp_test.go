@@ -173,7 +173,7 @@ func TestTableInit(t *testing.T) {
 		Oid: ".1.3.6.1.2.1.3.1",
 		Fields: []Field{
 			{Oid: ".999", Name: "foo"},
-			{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "ifIndex", IsTag: true},
+			{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", IsTag: true},
 			{Oid: "RFC1213-MIB::atPhysAddress", Name: "atPhysAddress"},
 		},
 	}
