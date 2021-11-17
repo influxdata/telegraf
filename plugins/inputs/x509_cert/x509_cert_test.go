@@ -217,9 +217,7 @@ func TestTags(t *testing.T) {
 	require.True(t, acc.HasTag("x509_cert", "serial_number"))
 	serialNumber := new(big.Int)
 	_, validSerialNumber := serialNumber.SetString(acc.TagValue("x509_cert", "serial_number"), 16)
-	if !validSerialNumber {
-		t.Errorf("Expected a valid Hex serial number but got %s", acc.TagValue("x509_cert", "serial_number"))
-	}
+	require.Truef(t, validSerialNumber, "Expected a valid Hex serial number but got %s", acc.TagValue("x509_cert", "serial_number"))
 	require.Equal(t, big.NewInt(1), serialNumber)
 }
 
