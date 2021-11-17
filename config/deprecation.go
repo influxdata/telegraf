@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/coreos/go-semver/semver"
+	"github.com/blang/semver"
 	"github.com/fatih/color"
 
 	"github.com/influxdata/telegraf"
@@ -48,32 +48,31 @@ type deprecationInfo struct {
 	info     telegraf.DeprecationInfo
 }
 
-func (di *deprecationInfo) determineEscalation(version *semver.Version) error {
+func (di *deprecationInfo) determineEscalation(version semver.Version) error {
 	di.LogLevel = None
 	if di.info.Since == "" {
 		return nil
 	}
 
-	since, err := semver.NewVersion(di.info.Since)
+	since, err := semver.Parse(di.info.Since)
 	if err != nil {
 		return fmt.Errorf("cannot parse 'since' version %q: %v", di.info.Since, err)
 	}
 
-	var removal *semver.Version
+	var removal semver.Version
 	if di.info.RemovalIn != "" {
-		removal, err = semver.NewVersion(di.info.RemovalIn)
+		removal, err = semver.Parse(di.info.RemovalIn)
 		if err != nil {
 			return fmt.Errorf("cannot parse 'removal' version %q: %v", di.info.RemovalIn, err)
 		}
 	} else {
-		removal = &semver.Version{Major: since.Major}
-		removal.BumpMajor()
+		removal = semver.Version{Major: since.Major + 1}
 		di.info.RemovalIn = removal.String()
 	}
 
-	if !version.LessThan(*removal) {
+	if version.GTE(removal) {
 		di.LogLevel = Error
-	} else if !version.LessThan(*since) {
+	} else if version.GTE(since) {
 		di.LogLevel = Warn
 	}
 	return nil
