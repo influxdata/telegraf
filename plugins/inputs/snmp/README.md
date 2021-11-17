@@ -4,7 +4,7 @@ The `snmp` input plugin uses polling to gather metrics from SNMP agents.
 Support for gathering individual OIDs as well as complete SNMP tables is
 included.
 
-### Prerequisites
+## Prerequisites
 
 This plugin uses the `snmptable` and `snmptranslate` programs from the
 [net-snmp][] project.  These tools will need to be installed into the `PATH` in
@@ -19,6 +19,7 @@ location of these files can be configured in the `snmp.conf` or via the
 information.
 
 ### Configuration
+
 ```toml
 [[inputs.snmp]]
   ## Agent addresses to retrieve values from.
@@ -204,7 +205,7 @@ One [metric][] is created for each row of the SNMP table.
       ## Specifies if the value of given field should be snmptranslated
       ## by default no field values are translated
       # translate = true
-		
+  
       ## Secondary index table allows to merge data from two tables with
       ## different index that this filed will be used to join them. There can
       ## be only one secondary index table.
@@ -224,16 +225,18 @@ One [metric][] is created for each row of the SNMP table.
 ```
 
 ##### Two Table Join
+
 Snmp plugin can join two snmp tables that have different indexes. For this to work one table
 should have translation field that return index of second table as value. Examples
 of such fields are:
- * Cisco portTable with translation field: `CISCO-STACK-MIB::portIfIndex`,
+
+* Cisco portTable with translation field: `CISCO-STACK-MIB::portIfIndex`,
 which value is IfIndex from ifTable
- * Adva entityFacilityTable with translation field: `ADVA-FSPR7-MIB::entityFacilityOneIndex`,
+* Adva entityFacilityTable with translation field: `ADVA-FSPR7-MIB::entityFacilityOneIndex`,
 which value is IfIndex from ifTable
- * Cisco cpeExtPsePortTable with translation field: `CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex`,
+* Cisco cpeExtPsePortTable with translation field: `CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex`,
 which value is index from entPhysicalTable
-   
+
 Such field can be used to translate index to secondary table with `secondary_index_table = true`
 and all fields from secondary table (with index pointed from translation field), should have added option
 `secondary_index_use = true`. Telegraf cannot duplicate entries during join so translation
@@ -243,7 +246,8 @@ in translation table (outer join), there is a second option for translation inde
 ###### Example configuration for table joins
 
 CISCO-POWER-ETHERNET-EXT-MIB table before join:
-```
+
+```toml
 [[inputs.snmp.table]]
 name = "ciscoPower"
 index_as_tag = true
@@ -258,14 +262,16 @@ oid = "CISCO-POWER-ETHERNET-EXT-MIB::cpeExtPsePortEntPhyIndex"
 ```
 
 Partial result (removed agent_host and host columns from all following outputs in this section):
-```
+
+```shell
 > ciscoPower,index=1.2 EntPhyIndex=1002i,PortPwrConsumption=6643i 1621460628000000000
 > ciscoPower,index=1.6 EntPhyIndex=1006i,PortPwrConsumption=10287i 1621460628000000000
 > ciscoPower,index=1.5 EntPhyIndex=1005i,PortPwrConsumption=8358i 1621460628000000000
 ```
 
 Note here that EntPhyIndex column carries index from ENTITY-MIB table, config for it:
-```
+
+```toml
 [[inputs.snmp.table]]
 name = "entityTable"
 index_as_tag = true
@@ -274,8 +280,10 @@ index_as_tag = true
 name = "EntPhysicalName"
 oid = "ENTITY-MIB::entPhysicalName"
 ```
+
 Partial result:
-```
+
+```shell
 > entityTable,index=1006 EntPhysicalName="GigabitEthernet1/6" 1621460809000000000
 > entityTable,index=1002 EntPhysicalName="GigabitEthernet1/2" 1621460809000000000
 > entityTable,index=1005 EntPhysicalName="GigabitEthernet1/5" 1621460809000000000
@@ -285,7 +293,7 @@ Now, lets attempt to join these results into one table. EntPhyIndex matches inde
 from second table, and lets convert EntPhysicalName into tag, so second table will
 only provide tags into result. Configuration:
 
-```
+```toml
 [[inputs.snmp.table]]
 name = "ciscoPowerEntity"
 index_as_tag = true
@@ -307,7 +315,8 @@ is_tag = true
 ```
 
 Result:
-```
+
+```shell
 > ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/2,index=1.2 EntPhyIndex=1002i,PortPwrConsumption=6643i 1621461148000000000
 > ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/6,index=1.6 EntPhyIndex=1006i,PortPwrConsumption=10287i 1621461148000000000
 > ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/5,index=1.5 EntPhyIndex=1005i,PortPwrConsumption=8358i 1621461148000000000
@@ -316,31 +325,35 @@ Result:
 ### Troubleshooting
 
 Check that a numeric field can be translated to a textual field:
-```
+
+```shell
 $ snmptranslate .1.3.6.1.2.1.1.3.0
 DISMAN-EVENT-MIB::sysUpTimeInstance
 ```
 
 Request a top-level field:
-```
-$ snmpget -v2c -c public 127.0.0.1 sysUpTime.0
+
+```shell
+snmpget -v2c -c public 127.0.0.1 sysUpTime.0
 ```
 
 Request a table:
-```
-$ snmptable -v2c -c public 127.0.0.1 ifTable
+
+```sehll
+snmptable -v2c -c public 127.0.0.1 ifTable
 ```
 
 To collect a packet capture, run this command in the background while running
 Telegraf or one of the above commands.  Adjust the interface, host and port as
 needed:
-```
-$ sudo tcpdump -s 0 -i eth0 -w telegraf-snmp.pcap host 127.0.0.1 and port 161
+
+```shell
+sudo tcpdump -s 0 -i eth0 -w telegraf-snmp.pcap host 127.0.0.1 and port 161
 ```
 
 ### Example Output
 
-```
+```shell
 snmp,agent_host=127.0.0.1,source=loaner uptime=11331974i 1575509815000000000
 interface,agent_host=127.0.0.1,ifDescr=wlan0,ifIndex=3,source=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=3436617431i,ifInUcastPkts=2717778i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=581368041i,ifOutQLen=0i,ifOutUcastPkts=1354338i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=0i,ifType=6i 1575509815000000000
 interface,agent_host=127.0.0.1,ifDescr=eth0,ifIndex=2,source=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=21i,ifInOctets=3852386380i,ifInUcastPkts=3634004i,ifInUnknownProtos=0i,ifLastChange=9088763i,ifMtu=1500i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=434865441i,ifOutQLen=0i,ifOutUcastPkts=2110394i,ifPhysAddress="c8:5b:76:c9:e6:8c",ifSpecific=".0.0",ifSpeed=1000000000i,ifType=6i 1575509815000000000

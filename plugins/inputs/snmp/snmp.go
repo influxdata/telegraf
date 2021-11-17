@@ -106,7 +106,7 @@ func (s *Snmp) init() error {
 	if s.initialized {
 		return nil
 	}
-
+	//nolint:errcheck
 	s.getMibsPath()
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
@@ -985,6 +985,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		oidNum = oid
 		// ensure modules are loaded or node will be empty (might not error)
 		// do not return the err as the oid is numeric and telegraf can continue
+		//nolint:nilerr
 		if err != nil || out.Name == "iso" {
 			return oid, oid, oid, oid, nil
 		}
