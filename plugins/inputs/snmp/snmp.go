@@ -106,7 +106,7 @@ func (s *Snmp) init() error {
 	if s.initialized {
 		return nil
 	}
-	//nolint:errcheck
+	//nolint:errcheck,revive
 	s.getMibsPath()
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
