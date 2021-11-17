@@ -847,8 +847,8 @@ type snmpTableCache struct {
 	err     error
 }
 
-var snmpTableCachesLock sync.Mutex
 var snmpTableCaches map[string]snmpTableCache
+var snmpTableCachesLock sync.Mutex
 
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
@@ -914,8 +914,8 @@ type snmpTranslateCache struct {
 	err        error
 }
 
-var snmpTranslateCaches map[string]snmpTranslateCache
 var snmpTranslateCachesLock sync.Mutex
+var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
 func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
