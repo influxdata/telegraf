@@ -111,3 +111,100 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 	err = client.Write(ctx, metrics)
 	require.NoError(t, err)
 }
+
+func TestTooLargeWriteRetry(t *testing.T) {
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/api/v2/write":
+				r.ParseForm()
+
+				body, err := io.ReadAll(r.Body)
+				require.NoError(t, err)
+
+				// Ensure metric body size is small
+				if len(body) > 16 {
+					w.WriteHeader(http.StatusRequestEntityTooLarge)
+				} else {
+					w.WriteHeader(http.StatusNoContent)
+				}
+
+				return
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+		}),
+	)
+	defer ts.Close()
+
+	addr := &url.URL{
+		Scheme: "http",
+		Host:   ts.Listener.Addr().String(),
+	}
+
+	config := &influxdb.HTTPConfig{
+		URL:              addr,
+		Bucket:           "telegraf",
+		BucketTag:        "bucket",
+		ExcludeBucketTag: true,
+	}
+
+	client, err := influxdb.NewHTTPClient(config)
+	require.NoError(t, err)
+
+	// Together the metric batch size is too big, split up, we get success
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"bucket": "foo",
+			},
+			map[string]interface{}{
+				"value": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"bucket": "bar",
+			},
+			map[string]interface{}{
+				"value": 99.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	ctx := context.Background()
+	err = client.Write(ctx, metrics)
+	require.NoError(t, err)
+
+	// These metrics are too big, even after splitting in half, expect error
+	hugeMetrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"reallyLargeMetric",
+			map[string]string{
+				"bucket": "foobar",
+			},
+			map[string]interface{}{
+				"value": 123.456,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"evenBiggerMetric",
+			map[string]string{
+				"bucket": "fizzbuzzbang",
+			},
+			map[string]interface{}{
+				"value": 999.999,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	err = client.Write(ctx, hugeMetrics)
+	require.Error(t, err)
+}
