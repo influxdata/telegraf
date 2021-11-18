@@ -52,7 +52,7 @@ func (r *RedisSentinel) SampleConfig() string {
   ##
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 26379 is used
-  servers = ["tcp://localhost:26379"]
+  # servers = ["tcp://localhost:26379"]
 
   ## specify server password
   # password = "s#cr@t%"
@@ -90,7 +90,7 @@ func (r *RedisSentinel) Init() error {
 
 		var address string
 		tags := map[string]string{}
-		
+
 		switch u.Scheme {
 		case "tcp":
 			address = u.Host
