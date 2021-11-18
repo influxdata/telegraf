@@ -166,16 +166,14 @@ func prepareFieldValues(fields map[string]string, typeMap map[string]configField
 	for key, val := range fields {
 		key = strings.Replace(key, "-", "_", -1)
 
-		valType, valTypeOk := typeMap[key]
-
-		if !valTypeOk {
+		valType, ok := typeMap[key]
+		if !ok {
 			continue
 		}
 
-		castedVal, castedValErr := castFieldValue(val, valType)
-
-		if castedValErr != nil {
-			return nil, castedValErr
+		castedVal, err := castFieldValue(val, valType)
+		if err != nil {
+			return nil, err
 		}
 
 		preparedFields[key] = castedVal
@@ -212,9 +210,9 @@ func gatherInfoStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 		return
 	}
 
-	info, infoErr := infoCmd.Result()
-	if infoErr != nil {
-		acc.AddError(infoErr)
+	info, err := infoCmd.Result()
+	if err != nil {
+		acc.AddError(err)
 		return
 	}
 
@@ -235,9 +233,9 @@ func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 		return
 	}
 
-	masters, mastersErr := mastersCmd.Result()
-	if mastersErr != nil {
-		acc.AddError(mastersErr)
+	masters, err := mastersCmd.Result()
+	if err != nil {
+		acc.AddError(err)
 		return
 	}
 
@@ -250,8 +248,8 @@ func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 
 		m := toMap(master)
 
-		masterName, masterNameOk := m["name"]
-		if !masterNameOk {
+		masterName, ok := m["name"]
+		if !ok {
 			acc.AddError(fmt.Errorf("unable to resolve master name"))
 			continue
 		}
@@ -283,15 +281,15 @@ func gatherReplicaStats(
 		return
 	}
 
-	replicas, replicasErr := replicasCmd.Result()
-	if replicasErr != nil {
-		acc.AddError(replicasErr)
+	replicas, err := replicasCmd.Result()
+	if err != nil {
+		acc.AddError(err)
 		return
 	}
 
 	for _, replica := range replicas {
-		replica, replicaOk := replica.([]interface{})
-		if !replicaOk {
+		replica, ok := replica.([]interface{})
+		if !ok {
 			acc.AddError(fmt.Errorf("unable to process replica response"))
 			continue
 		}
@@ -318,15 +316,15 @@ func gatherSentinelStats(
 		return
 	}
 
-	sentinels, sentinelsErr := sentinelsCmd.Result()
-	if sentinelsErr != nil {
-		acc.AddError(sentinelsErr)
+	sentinels, err := sentinelsCmd.Result()
+	if err != nil {
+		acc.AddError(err)
 		return
 	}
 
 	for _, sentinel := range sentinels {
-		sentinel, sentinelOk := sentinel.([]interface{})
-		if !sentinelOk {
+		sentinel, ok := sentinel.([]interface{})
+		if !ok {
 			acc.AddError(fmt.Errorf("unable to process sentinel response"))
 			continue
 		}
@@ -352,10 +350,9 @@ func convertSentinelMastersOutput(
 
 	tags["master"] = master["name"]
 
-	fields, fieldsErr := prepareFieldValues(master, measurementMastersFields)
-
-	if fieldsErr != nil {
-		return nil, nil, fieldsErr
+	fields, err := prepareFieldValues(master, measurementMastersFields)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	fields["has_quorum"] = quorumErr == nil
@@ -375,10 +372,9 @@ func convertSentinelSentinelsOutput(
 	tags["sentinel_port"] = sentinelMaster["port"]
 	tags["master"] = masterName
 
-	fields, fieldsErr := prepareFieldValues(sentinelMaster, measurementSentinelsFields)
-
-	if fieldsErr != nil {
-		return nil, nil, fieldsErr
+	fields, err := prepareFieldValues(sentinelMaster, measurementSentinelsFields)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return tags, fields, nil
@@ -396,10 +392,9 @@ func convertSentinelReplicaOutput(
 	tags["replica_port"] = replica["port"]
 	tags["master"] = masterName
 
-	fields, fieldsErr := prepareFieldValues(replica, measurementReplicasFields)
-
-	if fieldsErr != nil {
-		return nil, nil, fieldsErr
+	fields, err := prepareFieldValues(replica, measurementReplicasFields)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return tags, fields, nil
@@ -441,7 +436,10 @@ func convertSentinelInfoOutput(
 		rawFields[key] = val
 	}
 
-	fields, fieldsErr := prepareFieldValues(rawFields, measurementSentinelFields)
+	fields, err := prepareFieldValues(rawFields, measurementSentinelFields)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Rename the field and convert it to nanoseconds
 	fields["uptime_ns"] = int64(time.Duration(fields["uptime_in_seconds"].(int64)) * time.Second)
@@ -450,10 +448,6 @@ func convertSentinelInfoOutput(
 	// Rename in order to match the "redis" input plugin
 	fields["clients"] = fields["connected_clients"]
 	delete(fields, "connected_clients")
-
-	if fieldsErr != nil {
-		return nil, nil, fieldsErr
-	}
 
 	return tags, fields, nil
 }
