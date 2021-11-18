@@ -139,13 +139,16 @@ func (s *Snmp) getMibsPath() {
 		folders = append(folders, mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
 			if info.Mode()&os.ModeSymlink != 0 {
-				s, _ := os.Readlink(path)
-				folders = append(folders, s)
+				link, err := os.Readlink(path)
+				if err != nil {
+					s.Log.Warnf("Bad symbolic link %v")
+				}
+				folders = append(folders, link)
 			}
 			return nil
 		})
 		if err != nil {
-			s.Log.Errorf("Filepath could not be walked %v", err)
+			s.Log.Warnf("Filepath could not be walked %v", err)
 		}
 		for _, folder := range folders {
 			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
@@ -154,13 +157,13 @@ func (s *Snmp) getMibsPath() {
 				} else if info.Mode()&os.ModeSymlink == 0 {
 					_, err := gosmi.LoadModule(info.Name())
 					if err != nil {
-						s.Log.Errorf("Module could not be loaded %v", err)
+						s.Log.Warnf("Module could not be loaded %v", err)
 					}
 				}
 				return nil
 			})
 			if err != nil {
-				s.Log.Errorf("Filepath could not be walked %v", err)
+				s.Log.Warnf("Filepath could not be walked %v", err)
 			}
 		}
 		folders = []string{}
