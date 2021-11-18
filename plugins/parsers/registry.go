@@ -21,9 +21,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
-type Parser telegraf.Parser
-type ParserFunc telegraf.ParserFunc
-
 type Creator func(defaultMetricName string) telegraf.Parser
 
 var Parsers = map[string]Creator{}

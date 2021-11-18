@@ -1242,6 +1242,23 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		}
 	}
 
+	// Keep the old interface for backward compatibility
+	if t, ok := input.(parsers.ParserInput); ok {
+		// TODO: Issue deprecation warning using #9857
+		missThreshold = 1
+		if parser, err := c.addParser(name, table, true); err == nil {
+			t.SetParser(parser)
+		} else {
+			missThreshold = 0
+			// Fallback to the old way of instantiating the parsers.
+			parser, err := c.buildParserOld(name, table)
+			if err != nil {
+				return err
+			}
+			t.SetParser(parser)
+		}
+	}
+
 	if t, ok := input.(telegraf.ParserFuncInput); ok {
 		missThreshold = 1
 		if parser, err := c.addParser(name, table, false); err == nil {
@@ -1254,6 +1271,24 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 				return err
 			}
 			t.SetParserFunc(func() (telegraf.Parser, error) {
+				return parsers.NewParser(config)
+			})
+		}
+	}
+
+	if t, ok := input.(parsers.ParserFuncInput); ok {
+		// TODO: Issue deprecation warning using #9857
+		missThreshold = 1
+		if parser, err := c.addParser(name, table, false); err == nil {
+			t.SetParserFunc(parser.GetParserFuncOld())
+		} else {
+			missThreshold = 0
+			// Fallback to the old way
+			config, err := c.getParserConfig(name, table)
+			if err != nil {
+				return err
+			}
+			t.SetParserFunc(func() (parsers.Parser, error) {
 				return parsers.NewParser(config)
 			})
 		}
