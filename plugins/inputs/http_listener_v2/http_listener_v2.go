@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -55,7 +56,8 @@ type HTTPListenerV2 struct {
 	TimeFunc
 	Log telegraf.Logger
 
-	wg sync.WaitGroup
+	wg    sync.WaitGroup
+	close chan struct{}
 
 	listener net.Listener
 
@@ -180,10 +182,14 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 	h.Port = listener.Addr().(*net.TCPAddr).Port
 
 	h.wg.Add(1)
+
 	go func() {
 		defer h.wg.Done()
 		if err := server.Serve(h.listener); err != nil {
-			h.Log.Errorf("Serve failed: %v", err)
+			if !errors.Is(err, net.ErrClosed) {
+				h.Log.Errorf("Serve failed: %v", err)
+			}
+			close(h.close)
 		}
 	}()
 
@@ -213,6 +219,13 @@ func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) {
+	select {
+	case <-h.close:
+		res.WriteHeader(http.StatusGone)
+		return
+	default:
+	}
+
 	// Check that the content length is not too large for us to handle.
 	if req.ContentLength > int64(h.MaxBodySize) {
 		if err := tooLarge(res); err != nil {
@@ -393,6 +406,7 @@ func init() {
 			Paths:          []string{"/telegraf"},
 			Methods:        []string{"POST", "PUT"},
 			DataSource:     body,
+			close:          make(chan struct{}),
 		}
 	})
 }

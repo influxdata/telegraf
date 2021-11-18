@@ -56,6 +56,7 @@ func newTestHTTPListenerV2() *HTTPListenerV2 {
 		TimeFunc:       time.Now,
 		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
+		close:          make(chan struct{}),
 	}
 	return listener
 }
@@ -78,6 +79,7 @@ func newTestHTTPSListenerV2() *HTTPListenerV2 {
 		Parser:         parser,
 		ServerConfig:   *pki.TLSServerConfig(),
 		TimeFunc:       time.Now,
+		close:          make(chan struct{}),
 	}
 
 	return listener
@@ -117,6 +119,7 @@ func TestInvalidListenerConfig(t *testing.T) {
 		TimeFunc:       time.Now,
 		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
+		close:          make(chan struct{}),
 	}
 
 	acc := &testutil.Accumulator{}
@@ -319,6 +322,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 		Parser:         parser,
 		MaxBodySize:    config.Size(len(hugeMetric)),
 		TimeFunc:       time.Now,
+		close:          make(chan struct{}),
 	}
 
 	acc := &testutil.Accumulator{}
@@ -342,6 +346,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 		Parser:         parser,
 		MaxBodySize:    config.Size(4096),
 		TimeFunc:       time.Now,
+		close:          make(chan struct{}),
 	}
 
 	acc := &testutil.Accumulator{}

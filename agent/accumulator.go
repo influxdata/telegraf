@@ -16,6 +16,7 @@ type MetricMaker interface {
 type accumulator struct {
 	maker     MetricMaker
 	metrics   chan<- telegraf.Metric
+	closed    chan struct{}
 	precision time.Duration
 }
 
@@ -26,6 +27,7 @@ func NewAccumulator(
 	acc := accumulator{
 		maker:     maker,
 		metrics:   metrics,
+		closed:    make(chan struct{}),
 		precision: time.Nanosecond,
 	}
 	return &acc
