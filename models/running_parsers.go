@@ -95,9 +95,6 @@ func (r *RunningParser) SetDefaultTags(tags map[string]string) {
 }
 
 func (r *RunningParser) GetParserFunc() telegraf.ParserFunc {
-	if p, ok := r.Parser.(telegraf.StatefulParser); ok {
-		return p.NewInstance
-	}
 	if p, ok := r.Parser.(telegraf.Initializer); ok {
 		defaultNewInstance := func() (telegraf.Parser, error) {
 			var err error
