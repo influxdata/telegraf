@@ -45,7 +45,7 @@ type (
 	stubTopic struct {
 		Settings  pubsub.PublishSettings
 		ReturnErr map[string]bool
-		telegraf.Parser
+		parsers.Parser
 		*testing.T
 
 		stopped bool

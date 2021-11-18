@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type (
@@ -38,7 +39,7 @@ type (
 		Log telegraf.Logger
 
 		cons   *consumer.Consumer
-		parser telegraf.Parser
+		parser parsers.Parser
 		cancel context.CancelFunc
 		acc    telegraf.TrackingAccumulator
 		sem    chan struct{}
@@ -147,7 +148,7 @@ func (k *KinesisConsumer) Description() string {
 	return "Configuration for the AWS Kinesis input."
 }
 
-func (k *KinesisConsumer) SetParser(parser telegraf.Parser) {
+func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }
 

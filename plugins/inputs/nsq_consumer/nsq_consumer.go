@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	nsq "github.com/nsqio/go-nsq"
 )
 
@@ -37,7 +38,7 @@ type NSQConsumer struct {
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
-	parser   telegraf.Parser
+	parser   parsers.Parser
 	consumer *nsq.Consumer
 
 	Log telegraf.Logger
@@ -79,7 +80,7 @@ var sampleConfig = `
 `
 
 // SetParser takes the data_format from the config and finds the right parser for that format
-func (n *NSQConsumer) SetParser(parser telegraf.Parser) {
+func (n *NSQConsumer) SetParser(parser parsers.Parser) {
 	n.parser = parser
 }
 

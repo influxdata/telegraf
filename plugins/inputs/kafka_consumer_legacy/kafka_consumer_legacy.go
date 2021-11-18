@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/Shopify/sarama"
 	"github.com/wvanbergen/kafka/consumergroup"
@@ -26,7 +27,7 @@ type Kafka struct {
 	PointBuffer int
 
 	Offset string
-	parser telegraf.Parser
+	parser parsers.Parser
 
 	Log telegraf.Logger
 
@@ -81,7 +82,7 @@ func (k *Kafka) Description() string {
 	return "Read metrics from Kafka topic(s)"
 }
 
-func (k *Kafka) SetParser(parser telegraf.Parser) {
+func (k *Kafka) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }
 

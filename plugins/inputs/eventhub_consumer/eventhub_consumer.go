@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const (
@@ -58,7 +59,7 @@ type EventHub struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
-	parser telegraf.Parser
+	parser parsers.Parser
 	in     chan []telegraf.Metric
 }
 
@@ -156,7 +157,7 @@ func (*EventHub) Description() string {
 }
 
 // SetParser sets the parser
-func (e *EventHub) SetParser(parser telegraf.Parser) {
+func (e *EventHub) SetParser(parser parsers.Parser) {
 	e.parser = parser
 }
 

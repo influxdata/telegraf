@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const sampleConfig = `
@@ -146,7 +147,7 @@ type KafkaConsumer struct {
 	consumer        ConsumerGroup
 	config          *sarama.Config
 
-	parser telegraf.Parser
+	parser parsers.Parser
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 }
@@ -175,7 +176,7 @@ func (k *KafkaConsumer) Description() string {
 	return "Read metrics from Kafka topics"
 }
 
-func (k *KafkaConsumer) SetParser(parser telegraf.Parser) {
+func (k *KafkaConsumer) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }
 
@@ -292,7 +293,7 @@ type Message struct {
 	session sarama.ConsumerGroupSession
 }
 
-func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser telegraf.Parser, log telegraf.Logger) *ConsumerGroupHandler {
+func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser parsers.Parser, log telegraf.Logger) *ConsumerGroupHandler {
 	handler := &ConsumerGroupHandler{
 		acc:         acc.WithTracking(maxUndelivered),
 		sem:         make(chan empty, maxUndelivered),
@@ -310,7 +311,7 @@ type ConsumerGroupHandler struct {
 
 	acc    telegraf.TrackingAccumulator
 	sem    semaphore
-	parser telegraf.Parser
+	parser parsers.Parser
 	wg     sync.WaitGroup
 	cancel context.CancelFunc
 

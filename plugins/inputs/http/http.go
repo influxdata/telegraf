@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type HTTP struct {
@@ -38,7 +39,7 @@ type HTTP struct {
 
 	// The parser will automatically be set by Telegraf core code because
 	// this plugin implements the ParserInput interface (i.e. the SetParser method)
-	parser telegraf.Parser
+	parser parsers.Parser
 }
 
 var sampleConfig = `
@@ -153,7 +154,7 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 }
 
 // SetParser takes the data_format from the config and finds the right parser for that format
-func (h *HTTP) SetParser(parser telegraf.Parser) {
+func (h *HTTP) SetParser(parser parsers.Parser) {
 	h.parser = parser
 }
 

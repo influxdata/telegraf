@@ -32,7 +32,7 @@ type Execd struct {
 	Log          telegraf.Logger
 
 	parserConfig     *parsers.Config
-	parser           telegraf.Parser
+	parser           parsers.Parser
 	serializerConfig *serializers.Config
 	serializer       serializers.Serializer
 	acc              telegraf.Accumulator
