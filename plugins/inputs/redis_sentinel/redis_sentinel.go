@@ -192,8 +192,15 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 		go func(acc telegraf.Accumulator, client *RedisSentinelClient) {
 			defer wg.Done()
 
-			gatherMasterStats(acc, client)
-			gatherInfoStats(acc, client)
+			masters, err := client.gatherMasterStats(acc)
+			acc.AddError(err)
+
+			for _, master := range masters {
+				acc.AddError(client.gatherReplicaStats(acc, master))
+				acc.AddError(client.gatherSentinelStats(acc, master))
+			}
+
+			acc.AddError(client.gatherInfoStats(acc))
 		}(acc, client)
 	}
 
@@ -202,141 +209,123 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func gatherInfoStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
+func (client *RedisSentinelClient) gatherInfoStats(acc telegraf.Accumulator) error {
 	infoCmd := redis.NewStringCmd("info", "all")
 	if err := client.sentinel.Process(infoCmd); err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 
 	info, err := infoCmd.Result()
 	if err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 
 	rdr := strings.NewReader(info)
 	infoTags, infoFields, err := convertSentinelInfoOutput(client.tags, rdr)
 	if err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 
 	acc.AddFields(measurementSentinel, infoFields, infoTags)
+
+	return nil
 }
 
-func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
+func (client *RedisSentinelClient) gatherMasterStats(acc telegraf.Accumulator) ([]string, error) {
+	var masterNames []string
+
 	mastersCmd := redis.NewSliceCmd("sentinel", "masters")
 	if err := client.sentinel.Process(mastersCmd); err != nil {
-		acc.AddError(err)
-		return
+		return masterNames, err
 	}
 
 	masters, err := mastersCmd.Result()
 	if err != nil {
-		acc.AddError(err)
-		return
+		return masterNames, err
 	}
 
 	for _, master := range masters {
 		master, ok := master.([]interface{})
 		if !ok {
-			acc.AddError(fmt.Errorf("unable to process master response"))
-			continue
+			return masterNames, fmt.Errorf("unable to process master response")
 		}
 
 		m := toMap(master)
 
 		masterName, ok := m["name"]
 		if !ok {
-			acc.AddError(fmt.Errorf("unable to resolve master name"))
-			continue
+			return masterNames, fmt.Errorf("unable to resolve master name")
 		}
 
 		quorumCmd := redis.NewStringCmd("sentinel", "ckquorum", masterName)
-
 		quorumErr := client.sentinel.Process(quorumCmd)
 
 		sentinelMastersTags, sentinelMastersFields, err := convertSentinelMastersOutput(client.tags, m, quorumErr)
 		if err != nil {
-			acc.AddError(err)
-		} else {
-			acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
+			return masterNames, err
 		}
-
-		gatherReplicaStats(acc, client, masterName)
-		gatherSentinelStats(acc, client, masterName)
+		acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
 	}
+
+	return masterNames, nil
 }
 
-func gatherReplicaStats(
-	acc telegraf.Accumulator,
-	client *RedisSentinelClient,
-	masterName string,
-) {
+func (client *RedisSentinelClient) gatherReplicaStats(acc telegraf.Accumulator, masterName string) error {
 	replicasCmd := redis.NewSliceCmd("sentinel", "replicas", masterName)
 	if err := client.sentinel.Process(replicasCmd); err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 
 	replicas, err := replicasCmd.Result()
 	if err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 
 	for _, replica := range replicas {
 		replica, ok := replica.([]interface{})
 		if !ok {
-			acc.AddError(fmt.Errorf("unable to process replica response"))
-			continue
+			return fmt.Errorf("unable to process replica response")
 		}
 
 		rm := toMap(replica)
 		replicaTags, replicaFields, err := convertSentinelReplicaOutput(client.tags, masterName, rm)
 		if err != nil {
-			acc.AddError(err)
-			continue
+			return err
 		}
 
 		acc.AddFields(measurementReplicas, replicaFields, replicaTags)
 	}
+
+	return nil
 }
 
-func gatherSentinelStats(
-	acc telegraf.Accumulator,
-	client *RedisSentinelClient,
-	masterName string,
-) {
+func (client *RedisSentinelClient) gatherSentinelStats(acc telegraf.Accumulator, masterName string) error {
 	sentinelsCmd := redis.NewSliceCmd("sentinel", "sentinels", masterName)
 	if err := client.sentinel.Process(sentinelsCmd); err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 
 	sentinels, err := sentinelsCmd.Result()
 	if err != nil {
-		acc.AddError(err)
-		return
+		return err
 	}
 
 	for _, sentinel := range sentinels {
 		sentinel, ok := sentinel.([]interface{})
 		if !ok {
-			acc.AddError(fmt.Errorf("unable to process sentinel response"))
-			continue
+			return fmt.Errorf("unable to process sentinel response")
 		}
 
 		sm := toMap(sentinel)
 		sentinelTags, sentinelFields, err := convertSentinelSentinelsOutput(client.tags, masterName, sm)
 		if err != nil {
-			acc.AddError(err)
-			continue
+			return err
 		}
 
 		acc.AddFields(measurementSentinels, sentinelFields, sentinelTags)
 	}
+
+	return nil
 }
 
 // converts `sentinel masters <name>` output to tags and fields
