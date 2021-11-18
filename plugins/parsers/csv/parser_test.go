@@ -69,14 +69,13 @@ func TestHeaderOverride(t *testing.T) {
 
 	testCSVRows := []string{"line1,line2,line3\r\n", "3.4,70,test_name\r\n"}
 
-	p, err = NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p = &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimeFunc:          DefaultTime,
+	}
+	err = p.Init()
 	require.NoError(t, err)
 	metrics, err = p.Parse([]byte(testCSVRows[0]))
 	require.NoError(t, err)
@@ -311,13 +310,12 @@ func TestTrimSpace(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedFields, metrics[0].Fields())
 
-	p, err = NewParser(
-		&Config{
-			HeaderRowCount: 2,
-			TrimSpace:      true,
-			TimeFunc:       DefaultTime,
-		},
-	)
+	p = &Parser{
+		HeaderRowCount: 2,
+		TrimSpace:      true,
+		TimeFunc:       DefaultTime,
+	}
+	err = p.Init()
 	require.NoError(t, err)
 	testCSV = "   col  ,  col  ,col\n" +
 		"  1  ,  2  ,3\n" +
@@ -382,15 +380,14 @@ hello,80,test_name2`
 	require.Equal(t, expectedFields, metrics[0].Fields())
 	require.Equal(t, expectedTags, metrics[0].Tags())
 
-	p, err = NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			SkipRows:          1,
-			TagColumns:        []string{"line1"},
-			MeasurementColumn: "line3",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p = &Parser{
+		HeaderRowCount:    1,
+		SkipRows:          1,
+		TagColumns:        []string{"line1"},
+		MeasurementColumn: "line3",
+		TimeFunc:          DefaultTime,
+	}
+	err = p.Init()
 	require.NoError(t, err)
 	testCSVRows := []string{"garbage nonsense\r\n", "line1,line2,line3\r\n", "hello,80,test_name2\r\n"}
 
@@ -447,13 +444,11 @@ trash,80,test_name`
 }
 
 func TestMultiHeader(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount: 2,
-			TimeFunc:       DefaultTime,
-		},
-	)
-	require.NoError(t, err)
+	p := &Parser{
+		HeaderRowCount: 2,
+		TimeFunc:       DefaultTime,
+	}
+	require.NoError(t, p.Init())
 	testCSV := `col,col
 1,2
 80,test_name`
@@ -464,12 +459,11 @@ func TestMultiHeader(t *testing.T) {
 
 	testCSVRows := []string{"col,col\r\n", "1,2\r\n", "80,test_name\r\n"}
 
-	p, err = NewParser(
-		&Config{
-			HeaderRowCount: 2,
-			TimeFunc:       DefaultTime,
-		},
-	)
+	p = &Parser{
+		HeaderRowCount: 2,
+		TimeFunc:       DefaultTime,
+	}
+	err = p.Init()
 	require.NoError(t, err)
 
 	metrics, err = p.Parse([]byte(testCSVRows[0]))
@@ -515,14 +509,12 @@ func TestParseStream(t *testing.T) {
 }
 
 func TestParseLineMultiMetricErrorMessage(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:     "csv",
-			HeaderRowCount: 1,
-			TimeFunc:       DefaultTime,
-		},
-	)
-	require.NoError(t, err)
+	p := &Parser{
+		MetricName:     "csv",
+		HeaderRowCount: 1,
+		TimeFunc:       DefaultTime,
+	}
+	require.NoError(t, p.Init())
 
 	csvHeader := "a,b,c"
 	csvOneRow := "1,2,3"

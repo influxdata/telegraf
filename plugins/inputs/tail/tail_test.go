@@ -361,14 +361,16 @@ skip2,mem,100
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
-	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		return csv.NewParser(&csv.Config{
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &csv.Parser{
 			MeasurementColumn: "measurement1",
 			HeaderRowCount:    2,
 			SkipRows:          1,
 			SkipColumns:       1,
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
-		})
+		}
+		err := parser.Init()
+		return parser, err
 	})
 
 	err = plugin.Init()

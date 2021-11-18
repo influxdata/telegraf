@@ -165,7 +165,7 @@ func TestFileTag(t *testing.T) {
 		JSONNameKey: "Name",
 	}
 
-	r.SetParserFunc(func() (parsers.Parser, error) {
+	r.SetParserFunc(func() (telegraf.Parser, error) {
 		return parsers.NewParser(&parserConfig)
 	})
 
@@ -218,15 +218,14 @@ func TestCSVNoSkipRows(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err)
 
-	parserConfig := parsers.Config{
-		DataFormat:        "csv",
-		CSVHeaderRowCount: 1,
-		CSVSkipRows:       0,
-		CSVTagColumns:     []string{"line1"},
-	}
-	require.NoError(t, err)
-	r.SetParserFunc(func() (parsers.Parser, error) {
-		return parsers.NewParser(&parserConfig)
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &csv.Parser{
+			HeaderRowCount: 1,
+			SkipRows:       0,
+			TagColumns:     []string{"line1"},
+		}
+		err := parser.Init()
+		return parser, err
 	})
 	r.Log = testutil.Logger{}
 
@@ -291,15 +290,14 @@ func TestCSVSkipRows(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err)
 
-	parserConfig := parsers.Config{
-		DataFormat:        "csv",
-		CSVHeaderRowCount: 1,
-		CSVSkipRows:       2,
-		CSVTagColumns:     []string{"line1"},
-	}
-	require.NoError(t, err)
-	r.SetParserFunc(func() (parsers.Parser, error) {
-		return parsers.NewParser(&parserConfig)
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &csv.Parser{
+			HeaderRowCount: 1,
+			SkipRows:       2,
+			TagColumns:     []string{"line1"},
+		}
+		err := parser.Init()
+		return parser, err
 	})
 	r.Log = testutil.Logger{}
 
@@ -366,14 +364,13 @@ func TestCSVMultiHeader(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err)
 
-	parserConfig := parsers.Config{
-		DataFormat:        "csv",
-		CSVHeaderRowCount: 2,
-		CSVTagColumns:     []string{"line1"},
-	}
-	require.NoError(t, err)
-	r.SetParserFunc(func() (parsers.Parser, error) {
-		return parsers.NewParser(&parserConfig)
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &csv.Parser{
+			HeaderRowCount: 2,
+			TagColumns:     []string{"line1"},
+		}
+		err := parser.Init()
+		return parser, err
 	})
 	r.Log = testutil.Logger{}
 

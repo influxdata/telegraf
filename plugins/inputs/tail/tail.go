@@ -287,21 +287,14 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 // ParseLine parses a line of text.
 func parseLine(parser telegraf.Parser, line string) ([]telegraf.Metric, error) {
-	switch parser.(type) {
-	case *csv.Parser:
-		m, err := parser.Parse([]byte(line))
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil, nil
-			}
-			return nil, err
+	m, err := parser.Parse([]byte(line))
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil, nil
 		}
-		return m, err
-	default:
-		return parser.Parse([]byte(line))
+		return nil, err
 	}
-
-	return parser.Parse([]byte(line))
+	return m, err
 }
 
 // Receiver is launched as a goroutine to continuously watch a tailed logfile

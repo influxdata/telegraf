@@ -373,13 +373,13 @@ type MockupInputPlugin struct {
 	Log          telegraf.Logger `toml:"-"`
 	tls.ServerConfig
 
-	parser parsers.Parser
+	parser telegraf.Parser
 }
 
 func (m *MockupInputPlugin) SampleConfig() string                  { return "Mockup test intput plugin" }
 func (m *MockupInputPlugin) Description() string                   { return "Mockup test intput plugin" }
 func (m *MockupInputPlugin) Gather(acc telegraf.Accumulator) error { return nil }
-func (m *MockupInputPlugin) SetParser(parser parsers.Parser)       { m.parser = parser }
+func (m *MockupInputPlugin) SetParser(parser telegraf.Parser)      { m.parser = parser }
 
 /*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupOuputPlugin struct {
