@@ -154,7 +154,7 @@ func castFieldValue(value string, fieldType configFieldType) (interface{}, error
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("failed cating value %v: %v", value, err)
+		return nil, fmt.Errorf("casting value %v failed: %v", value, err)
 	}
 
 	return castedValue, nil
