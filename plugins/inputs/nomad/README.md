@@ -4,7 +4,7 @@ The Nomad plugin must grab metrics from every Nomad agent of the cluster. Telegr
 
 > Tested on Nomad 1.1.6
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.nomad]]
@@ -27,8 +27,7 @@ The Nomad plugin must grab metrics from every Nomad agent of the cluster. Telegr
   # tls_key = /path/to/keyfile
 ```
 
-
-### Metrics
+## Metrics
 
 Both Nomad servers and agents collect various metrics. For every details, please have a look at Nomad following documentation:
 
