@@ -88,13 +88,19 @@ func (r *RedisSentinel) Init() error {
 			return fmt.Errorf("unable to parse to address %q: %v", serv, err)
 		}
 
-		if u.Scheme != "tcp" && u.Scheme != "unix" {
-			return fmt.Errorf("invalid scheme %q. expected tcp or unix", u.Scheme)
-		}
-
-		address := u.Host
-		if u.Scheme == "unix" {
+		var address string
+		tags := map[string]string{}
+		
+		switch u.Scheme {
+		case "tcp":
+			address = u.Host
+			tags["source"] = u.Hostname()
+			tags["port"] = u.Port()
+		case "unix":
 			address = u.Path
+			tags["socket"] = u.Path
+		default:
+			return fmt.Errorf("invalid scheme %q, expected tcp or unix", u.Scheme)
 		}
 
 		sentinel := redis.NewSentinelClient(
@@ -106,14 +112,6 @@ func (r *RedisSentinel) Init() error {
 				TLSConfig: tlsConfig,
 			},
 		)
-
-		tags := map[string]string{}
-		if u.Scheme == "unix" {
-			tags["socket"] = u.Path
-		} else {
-			tags["source"] = u.Hostname()
-			tags["port"] = u.Port()
-		}
 
 		r.clients[i] = &RedisSentinelClient{
 			sentinel: sentinel,
