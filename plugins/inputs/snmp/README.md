@@ -137,7 +137,7 @@ Use a `field` to collect a variable by OID.
 
 ##### Table
 
-Use a `table` to configure the collection of a SNMP table. 
+Use a `table` to configure the collection of a SNMP table.
 
 Control the handling of specific table columns using a nested `field`.  These
 nested fields are specified similarly to a top-level `field`.
