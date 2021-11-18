@@ -1225,8 +1225,8 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 	input := creator()
 
-	// If the input has a SetParser function, then this means it can accept
-	// arbitrary types of input, so build the parser and set it.
+	// If the input has a SetParser or SetParserFunc function, it can accept
+	// arbitrary data-formats, so build the requested parser and set it.
 	if t, ok := input.(telegraf.ParserInput); ok {
 		missThreshold = 1
 		if parser, err := c.addParser(name, table, true); err == nil {
