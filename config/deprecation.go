@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/blang/semver"
+	"github.com/coreos/go-semver/semver"
 	"github.com/fatih/color"
 
 	"github.com/influxdata/telegraf"
@@ -48,25 +48,26 @@ type deprecationInfo struct {
 	info     telegraf.DeprecationInfo
 }
 
-func (di *deprecationInfo) determineEscalation(telegrafVersion semver.Version) error {
+func (di *deprecationInfo) determineEscalation(telegrafVersion *semver.Version) error {
 	di.LogLevel = None
 	if di.info.Since == "" {
 		return nil
 	}
 
-	since, err := semver.Parse(di.info.Since)
+	since, err := semver.NewVersion(di.info.Since)
 	if err != nil {
 		return fmt.Errorf("cannot parse 'since' version %q: %v", di.info.Since, err)
 	}
 
-	var removal semver.Version
+	var removal *semver.Version
 	if di.info.RemovalIn != "" {
-		removal, err = semver.Parse(di.info.RemovalIn)
+		removal, err = semver.NewVersion(di.info.RemovalIn)
 		if err != nil {
 			return fmt.Errorf("cannot parse 'removal' version %q: %v", di.info.RemovalIn, err)
 		}
 	} else {
-		removal = semver.Version{Major: since.Major + 1}
+		removal = &semver.Version{Major: since.Major}
+		removal.BumpMajor()
 		di.info.RemovalIn = removal.String()
 	}
 
@@ -76,9 +77,9 @@ func (di *deprecationInfo) determineEscalation(telegrafVersion semver.Version) e
 		Minor: telegrafVersion.Minor,
 		Patch: telegrafVersion.Patch,
 	}
-	if version.GTE(removal) {
+	if !version.LessThan(*removal) {
 		di.LogLevel = Error
-	} else if version.GTE(since) {
+	} else if !version.LessThan(*since) {
 		di.LogLevel = Warn
 	}
 	return nil

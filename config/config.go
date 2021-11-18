@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blang/semver"
+	"github.com/coreos/go-semver/semver"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -81,7 +81,7 @@ type Config struct {
 	AggProcessors models.RunningProcessors
 
 	Deprecations map[string][]int64
-	version      semver.Version
+	version      *semver.Version
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -115,7 +115,7 @@ func NewConfig() *Config {
 	if version == "" || version == "unknown" {
 		version = "0.0.0-unknown"
 	}
-	c.version = semver.MustParse(version)
+	c.version = semver.New(version)
 
 	tomlCfg := &toml.Config{
 		NormFieldName: toml.DefaultConfig.NormFieldName,
