@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/go-redis/redis"
 
@@ -442,7 +441,11 @@ func convertSentinelInfoOutput(
 	}
 
 	// Rename the field and convert it to nanoseconds
-	fields["uptime_ns"] = int64(time.Duration(fields["uptime_in_seconds"].(int64)) * time.Second)
+	secs, ok := fields["uptime_in_seconds"].(int64)
+	if !ok {
+		return nil, nil, fmt.Errorf("uptime type %T is not int64", fields["uptime_in_seconds"])
+	}
+	fields["uptime_ns"] = secs * 1000_000_000
 	delete(fields, "uptime_in_seconds")
 
 	// Rename in order to match the "redis" input plugin
