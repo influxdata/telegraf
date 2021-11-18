@@ -471,13 +471,14 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 		for j, metric := range filtered.metrics {
 			id := strconv.Itoa(j) + "_" + strconv.Itoa(i)
 			dimension := ctod(metric.Dimensions)
+			m := metric // Needed to avoid pointing to the same memory address in the loop see issue #10122
 			if filtered.statFilter.Match("average") {
 				c.queryDimensions["average_"+id] = dimension
 				dataQueries[*metric.Namespace] = append(dataQueries[*metric.Namespace], types.MetricDataQuery{
 					Id:    aws.String("average_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_average")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &m,
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticAverage),
 					},
@@ -489,7 +490,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					Id:    aws.String("maximum_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_maximum")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &m,
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticMaximum),
 					},
@@ -501,7 +502,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					Id:    aws.String("minimum_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_minimum")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &m,
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticMinimum),
 					},
@@ -513,7 +514,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					Id:    aws.String("sum_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_sum")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &m,
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticSum),
 					},
@@ -525,7 +526,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					Id:    aws.String("sample_count_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_sample_count")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &m,
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticSampleCount),
 					},
