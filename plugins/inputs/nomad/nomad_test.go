@@ -14,7 +14,6 @@ import (
 )
 
 func TestNomadStats(t *testing.T) {
-
 	var applyTests = []struct {
 		name     string
 		expected []telegraf.Metric
@@ -78,7 +77,6 @@ func TestNomadStats(t *testing.T) {
 	}
 
 	for _, tt := range applyTests {
-
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.RequestURI == "/v1/metrics" {
 				w.WriteHeader(http.StatusOK)
@@ -92,7 +90,6 @@ func TestNomadStats(t *testing.T) {
 		plugin := &Nomad{
 			URL: ts.URL,
 		}
-
 		t.Run(tt.name, func(t *testing.T) {
 
 			err := plugin.Init()

@@ -32,11 +32,10 @@ const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 
 var sampleConfig = `
   ## URL for the Nomad agent
-  url = "http://127.0.0.1:4646"
+  # url = "http://127.0.0.1:4646"
 
   ## Use auth token for authorization. 
-  ## If both are set, an error is thrown.
-  ## If both are empty, no token will be used.
+  ## Only one of the options can be set. Leave empty to not use any token.
   # auth_token = "/path/to/auth/token"
   ## OR
   # auth_token_string = "a1234567-40c7-9048-7bae-378687048181"
@@ -63,17 +62,16 @@ func (n *Nomad) SampleConfig() string {
 
 // Description returns a description of the plugin
 func (n *Nomad) Description() string {
-	return "Read metrics from the Nomad api"
+	return "Read metrics from the Nomad API"
 }
 
 func (n *Nomad) Init() error {
+	if n.URL == "" {
+		n.URL = "http://127.0.0.1:4646"
+	}
 
 	if n.AuthToken != "" && n.AuthTokenString != "" {
 		return fmt.Errorf("config error: both auth_token and auth_token_string are set")
-	}
-
-	if n.AuthToken == "" && n.AuthTokenString == "" {
-		n.AuthToken = ""
 	}
 
 	if n.AuthToken != "" {
@@ -86,17 +84,16 @@ func (n *Nomad) Init() error {
 
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("setting up TLS configuration failed: %v", err)
 	}
-	if n.roundTripper == nil {
-		if n.ResponseTimeout < config.Duration(time.Second) {
-			n.ResponseTimeout = config.Duration(time.Second * 5)
-		}
-		n.roundTripper = &http.Transport{
-			TLSHandshakeTimeout:   5 * time.Second,
-			TLSClientConfig:       tlsCfg,
-			ResponseHeaderTimeout: time.Duration(n.ResponseTimeout),
-		}
+
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(time.Second * 5)
+	}
+	n.roundTripper = &http.Transport{
+		TLSHandshakeTimeout:   5 * time.Second,
+		TLSClientConfig:       tlsCfg,
+		ResponseHeaderTimeout: time.Duration(n.ResponseTimeout),
 	}
 
 	return nil
@@ -104,13 +101,8 @@ func (n *Nomad) Init() error {
 
 // Gather, collects metrics from Nomad endpoint
 func (n *Nomad) Gather(acc telegraf.Accumulator) error {
-	return n.gatherSummary(acc, n.URL)
-}
-
-// gatherSummary, decodes response from Nomad api and triggers the builder
-func (n *Nomad) gatherSummary(acc telegraf.Accumulator, baseURL string) error {
 	summaryMetrics := &MetricsSummary{}
-	err := n.loadJSON(fmt.Sprintf("%s/v1/metrics", baseURL), summaryMetrics)
+	err := n.loadJSON(n.URL+"/v1/metrics", summaryMetrics)
 	if err != nil {
 		return err
 	}
@@ -124,17 +116,15 @@ func (n *Nomad) gatherSummary(acc telegraf.Accumulator, baseURL string) error {
 }
 
 func (n *Nomad) loadJSON(url string, v interface{}) error {
-	var req, err = http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 
-	var resp *http.Response
-
 	req.Header.Set("Authorization", "X-Nomad-Token "+n.AuthTokenString)
 	req.Header.Add("Accept", "application/json")
 
-	resp, err = n.roundTripper.RoundTrip(req)
+	resp, err := n.roundTripper.RoundTrip(req)
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}
@@ -154,32 +144,32 @@ func (n *Nomad) loadJSON(url string, v interface{}) error {
 
 // buildNomadMetrics, it builds all the metrics and adds them to the accumulator)
 func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *MetricsSummary) error {
-
 	t, err := time.Parse(timeLayout, summaryMetrics.Timestamp)
 	if err != nil {
 		return fmt.Errorf("error parsing time: %s", err)
 	}
-	sampledValueFields := make(map[string]interface{})
 
 	for _, counters := range summaryMetrics.Counters {
 		tags := counters.DisplayLabels
 
-		sampledValueFields["count"] = counters.Count
-		sampledValueFields["rate"] = counters.Rate
-		sampledValueFields["sum"] = counters.Sum
-		sampledValueFields["sumsq"] = counters.SumSq
-		sampledValueFields["min"] = counters.Min
-		sampledValueFields["max"] = counters.Max
-		sampledValueFields["mean"] = counters.Mean
-
-		acc.AddCounter(counters.Name, sampledValueFields, tags, t)
+		fields := map[string]interface{}{
+			"count": counters.Count,
+			"rate":  counters.Rate,
+			"sum":   counters.Sum,
+			"sumsq": counters.SumSq,
+			"min":   counters.Min,
+			"max":   counters.Max,
+			"mean":  counters.Mean,
+		}
+		acc.AddCounter(counters.Name, fields, tags, t)
 	}
 
 	for _, gauges := range summaryMetrics.Gauges {
 		tags := gauges.DisplayLabels
 
-		fields := make(map[string]interface{})
-		fields["value"] = gauges.Value
+		fields := map[string]interface{}{
+			"value": gauges.Value,
+		}
 
 		acc.AddGauge(gauges.Name, fields, tags, t)
 
@@ -188,8 +178,9 @@ func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *MetricsSummary)
 	for _, points := range summaryMetrics.Points {
 		tags := make(map[string]string)
 
-		fields := make(map[string]interface{})
-		fields["value"] = points.Points
+		fields := map[string]interface{}{
+			"value": points.Points,
+		}
 
 		acc.AddFields(points.Name, fields, tags, t)
 	}
@@ -197,17 +188,17 @@ func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *MetricsSummary)
 	for _, samples := range summaryMetrics.Samples {
 		tags := samples.DisplayLabels
 
-		sampledValueFields := make(map[string]interface{})
-		sampledValueFields["count"] = samples.Count
-		sampledValueFields["rate"] = samples.Rate
-		sampledValueFields["sum"] = samples.Sum
-		sampledValueFields["sumsq"] = samples.SumSq
-		sampledValueFields["stddev"] = samples.Stddev
-		sampledValueFields["min"] = samples.Min
-		sampledValueFields["max"] = samples.Max
-		sampledValueFields["mean"] = samples.Mean
-
-		acc.AddCounter(samples.Name, sampledValueFields, tags, t)
+		fields := map[string]interface{}{
+			"count":  samples.Count,
+			"rate":   samples.Rate,
+			"sum":    samples.Sum,
+			"stddev": samples.Stddev,
+			"sumsq":  samples.SumSq,
+			"min":    samples.Min,
+			"max":    samples.Max,
+			"mean":   samples.Mean,
+		}
+		acc.AddCounter(samples.Name, fields, tags, t)
 	}
 
 	return nil
