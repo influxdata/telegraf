@@ -1,7 +1,7 @@
 # Redis Sentinel Input Plugin
 
 A plugin for Redis Sentinel to monitor multiple Sentinel instances that are
-mointoring multiple Redis servers and replicas.
+monitoring multiple Redis servers and replicas.
 
 ## Configuration
 
