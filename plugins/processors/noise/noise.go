@@ -74,9 +74,6 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 	case int16:
 	case int32:
 	case int64:
-		if v > -1 && v < 1 {
-			return int64(n)
-		}
 		if v > 0 && (n > math.Nextafter(float64(math.MaxInt64), 0) || int64(n) > math.MaxInt64-v) {
 			p.Log.Debug("Int64 overflow, setting value to MaxInt64")
 			return int64(math.MaxInt64)
@@ -91,23 +88,20 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 	case uint16:
 	case uint32:
 	case uint64:
-		if v == uint64(0) {
-			return uint64(math.Abs(n))
+		if n < 0 {
+			if uint64(-n) > v {
+				p.Log.Debug("Uint64 (negative) overflow, setting value to 0")
+				return uint64(0)
+			}
+			return v - uint64(-n)
 		}
 		if n > math.Nextafter(float64(math.MaxUint64), 0) || uint64(n) > math.MaxUint64-v {
 			p.Log.Debug("Uint64 overflow, setting value to MaxUint64")
 			return uint64(math.MaxUint64)
 		}
-		if n < 0 && uint64(-n) > v {
-			p.Log.Debug("Uint64 (negative) overflow, setting value to 0")
-			return uint64(0)
-		}
 		return v + uint64(n)
 	case float32:
 	case float64:
-		if v > -1.0 && v < 1.0 {
-			return n
-		}
 		return v + n
 	default:
 		p.Log.Debugf("Value (%v) type invalid: [%v] is not an int, uint or float", v, reflect.TypeOf(value))
@@ -117,7 +111,6 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 
 // Creates a filter for Include and Exclude fields and sets the desired noise
 // distribution
-// BUG(wizarq): according to the logs, this function is called twice. Why?
 func (p *Noise) Init() error {
 	fieldFilter, err := filter.NewIncludeExcludeFilter(p.IncludeFields, p.ExcludeFields)
 	if err != nil {

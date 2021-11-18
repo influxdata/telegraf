@@ -121,7 +121,7 @@ func TestAddNoise(t *testing.T) {
 			expected: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(5)},
+					map[string]interface{}{"value": float64(5.0005)},
 					time.Unix(0, 0),
 				),
 				testutil.MustMetric("cpu",
@@ -149,7 +149,7 @@ func TestAddNoise(t *testing.T) {
 			expected: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(-0.5)},
+					map[string]interface{}{"value": float64(-0.4995)},
 					time.Unix(0, 0),
 				),
 				testutil.MustMetric("cpu",
@@ -193,7 +193,12 @@ func TestAddNoiseOverflowCheck(t *testing.T) {
 					map[string]interface{}{"value": math.MinInt64},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("underflow_uint64",
+				testutil.MustMetric("underflow_uint64_1",
+					map[string]string{},
+					map[string]interface{}{"value": uint64(5)},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("underflow_uint64_2",
 					map[string]string{},
 					map[string]interface{}{"value": uint64(0)},
 					time.Unix(0, 0),
@@ -205,9 +210,14 @@ func TestAddNoiseOverflowCheck(t *testing.T) {
 					map[string]interface{}{"value": math.MinInt64},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("underflow_uint64",
+				testutil.MustMetric("underflow_uint64_1",
 					map[string]string{},
-					map[string]interface{}{"value": uint64(1)},
+					map[string]interface{}{"value": uint64(4)},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric("underflow_uint64_2",
+					map[string]string{},
+					map[string]interface{}{"value": uint64(0)},
 					time.Unix(0, 0),
 				),
 			},
@@ -354,5 +364,5 @@ func TestInvalidDistributionFunction(t *testing.T) {
 		Log:       testutil.Logger{},
 	}
 	err := p.Init()
-	require.Errorf(t, err, "unknown distribution type \"invalid\"")
+	require.EqualError(t, err, "unknown distribution type \"invalid\"")
 }

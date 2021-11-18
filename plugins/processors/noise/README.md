@@ -3,12 +3,12 @@
 The *Noise* processor is used to add noise to numerical field values. For each field a noise is generated using a defined probability densitiy function and added to the value. The function type can be configured as _Laplace_, _Gaussian_ or _Uniform_.
 Depending on the function, various parameters need to be configured:
 
-### Laplace:
+### Laplacian
 * `noise_type = laplacian`
 * `scale`: also referred to as _diversity_ parameter, regulates the width & height of the function, a bigger `scale` value means a higher probability of larger noise, default set to 1.0
 * `mu`: location of the curve, default set to 0.0
 
-### Gaussian:
+### Gaussian
 * `noise_type = gaussian`
 * `mu`: mean value, default set to 0.0
 * `scale`: standard deviation, default set to 1.0
@@ -26,8 +26,6 @@ Depending on the choice of the distribution function, the respective parameters 
   scale = 1.0
   mu = 0.0
   noise_type = "laplacian"
-  include_fields = []
-  exclude_fields = []
 ```
 
 Using the `include_fields` and `exclude_fields` options a filter can be configured to apply noise only to numeric fields matching it.
