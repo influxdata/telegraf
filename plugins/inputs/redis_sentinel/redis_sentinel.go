@@ -160,10 +160,7 @@ func castFieldValue(value string, fieldType configFieldType) (interface{}, error
 	return castedValue, nil
 }
 
-func prepareFieldValues(
-	fields map[string]string,
-	configFieldTypeMap map[string]configFieldType,
-) (map[string]interface{}, error) {
+func prepareFieldValues(fields map[string]string, typeMap map[string]configFieldType) (map[string]interface{}, error) {
 	preparedFields := make(map[string]interface{})
 
 	for key, val := range fields {
