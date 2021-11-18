@@ -239,8 +239,8 @@ func gatherMasterStats(acc telegraf.Accumulator, client *RedisSentinelClient) {
 	}
 
 	for _, master := range masters {
-		master, masterOk := master.([]interface{})
-		if !masterOk {
+		master, ok := master.([]interface{})
+		if !ok {
 			acc.AddError(fmt.Errorf("unable to process master response"))
 			continue
 		}
