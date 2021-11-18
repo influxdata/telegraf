@@ -236,8 +236,6 @@ func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metr
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	log.Printf("D! [outputs.influxdb_v2] writting %d metrics", len(metrics))
-
 	loc, err := makeWriteURL(*c.url, c.Organization, bucket)
 	if err != nil {
 		return err
