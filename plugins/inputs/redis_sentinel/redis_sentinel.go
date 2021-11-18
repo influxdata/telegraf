@@ -166,7 +166,7 @@ func prepareFieldValues(fields map[string]string, typeMap map[string]configField
 	for key, val := range fields {
 		key = strings.Replace(key, "-", "_", -1)
 
-		valType, valTypeOk := configFieldTypeMap[key]
+		valType, valTypeOk := typeMap[key]
 
 		if !valTypeOk {
 			continue
