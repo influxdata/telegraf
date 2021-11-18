@@ -1209,7 +1209,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// for the input both need to miss the entry. We count the
 	// missing entries at the end.
 	missThreshold := 0
-	missCount := make(map[string]int, 0)
+	missCount := make(map[string]int)
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
