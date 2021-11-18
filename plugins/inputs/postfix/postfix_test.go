@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestGather(t *testing.T) {
@@ -41,20 +41,20 @@ func TestGather(t *testing.T) {
 		metrics[m.Tags["queue"]] = m
 	}
 
-	assert.Equal(t, int64(2), metrics["active"].Fields["length"])
-	assert.Equal(t, int64(7), metrics["active"].Fields["size"])
-	assert.InDelta(t, 0, metrics["active"].Fields["age"], 10)
+	require.Equal(t, int64(2), metrics["active"].Fields["length"])
+	require.Equal(t, int64(7), metrics["active"].Fields["size"])
+	require.InDelta(t, 0, metrics["active"].Fields["age"], 10)
 
-	assert.Equal(t, int64(1), metrics["hold"].Fields["length"])
-	assert.Equal(t, int64(3), metrics["hold"].Fields["size"])
+	require.Equal(t, int64(1), metrics["hold"].Fields["length"])
+	require.Equal(t, int64(3), metrics["hold"].Fields["size"])
 
-	assert.Equal(t, int64(1), metrics["incoming"].Fields["length"])
-	assert.Equal(t, int64(4), metrics["incoming"].Fields["size"])
+	require.Equal(t, int64(1), metrics["incoming"].Fields["length"])
+	require.Equal(t, int64(4), metrics["incoming"].Fields["size"])
 
-	assert.Equal(t, int64(0), metrics["maildrop"].Fields["length"])
-	assert.Equal(t, int64(0), metrics["maildrop"].Fields["size"])
-	assert.Equal(t, int64(0), metrics["maildrop"].Fields["age"])
+	require.Equal(t, int64(0), metrics["maildrop"].Fields["length"])
+	require.Equal(t, int64(0), metrics["maildrop"].Fields["size"])
+	require.Equal(t, int64(0), metrics["maildrop"].Fields["age"])
 
-	assert.Equal(t, int64(2), metrics["deferred"].Fields["length"])
-	assert.Equal(t, int64(6), metrics["deferred"].Fields["size"])
+	require.Equal(t, int64(2), metrics["deferred"].Fields["length"])
+	require.Equal(t, int64(6), metrics["deferred"].Fields["size"])
 }

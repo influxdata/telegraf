@@ -10,11 +10,10 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/require"
 )
 
 func newMsgFlagsV3(secLevel string) gosnmp.SnmpV3MsgFlags {
@@ -1267,7 +1266,7 @@ func TestReceiveTrap(t *testing.T) {
 							return mibEntry{entry.e.mibName, entry.e.oidText}, nil
 						}
 					}
-					return mibEntry{}, fmt.Errorf("Unexpected oid")
+					return mibEntry{}, fmt.Errorf("unexpected oid")
 				},
 				//if cold start be answer otherwise err
 				Log:          testutil.Logger{},
@@ -1311,7 +1310,6 @@ func TestReceiveTrap(t *testing.T) {
 				testutil.SortMetrics())
 		})
 	}
-
 }
 
 func TestGosmiSingleMib(t *testing.T) {

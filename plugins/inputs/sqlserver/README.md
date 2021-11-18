@@ -10,6 +10,7 @@ lightweight and use Dynamic Management Views supplied by SQL Server.
   - End-of-life SQL Server versions are not guaranteed to be supported by Telegraf. Any issues with the SQL Server plugin for these EOL versions will need to be addressed by the community.
 - Azure SQL Database (Single)
 - Azure SQL Managed Instance
+- Azure SQL Elastic Pool
 
 ### Additional Setup
 

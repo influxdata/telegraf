@@ -6,9 +6,9 @@ package mongodb
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestGetDefaultTags(t *testing.T) {
@@ -37,7 +37,7 @@ func TestAddDefaultStats(t *testing.T) {
 	require.NoError(t, err)
 
 	for key := range defaultStats {
-		assert.True(t, acc.HasInt64Field("mongodb", key))
+		require.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }
 

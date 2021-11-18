@@ -1,5 +1,7 @@
 # SNMP Legacy Input Plugin
 
+### Deprecated in version 1.0. Use [SNMP input plugin][].
+
 The SNMP input plugin gathers metrics from SNMP agents
 
 ### Configuration:
@@ -547,3 +549,5 @@ ifHCOutOctets,host=127.0.0.1,instance=enp5s0,unit=octets ifHCOutOctets=10565628i
 ifInDiscards,host=127.0.0.1,instance=enp5s0 ifInDiscards=0i 1456878706044510264
 ifHCInOctets,host=127.0.0.1,instance=enp5s0,unit=octets ifHCInOctets=76351777i 1456878706044531312
 ```
+
+[SNMP input plugin]: /plugins/inputs/snmp

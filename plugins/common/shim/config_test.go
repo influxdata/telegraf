@@ -54,6 +54,7 @@ func TestLoadingSpecialTypes(t *testing.T) {
 
 	require.EqualValues(t, 3*time.Second, inp.Duration)
 	require.EqualValues(t, 3*1000*1000, inp.Size)
+	require.EqualValues(t, 52, inp.Hex)
 }
 
 func TestLoadingProcessorWithConfig(t *testing.T) {
@@ -72,6 +73,7 @@ func TestLoadingProcessorWithConfig(t *testing.T) {
 type testDurationInput struct {
 	Duration tgConfig.Duration `toml:"duration"`
 	Size     tgConfig.Size     `toml:"size"`
+	Hex      int64             `toml:"hex"`
 }
 
 func (i *testDurationInput) SampleConfig() string {

@@ -25,6 +25,10 @@ func ParseUint(value sql.RawBytes) (interface{}, error) {
 	return strconv.ParseUint(string(value), 10, 64)
 }
 
+func ParseFloat(value sql.RawBytes) (interface{}, error) {
+	return strconv.ParseFloat(string(value), 64)
+}
+
 func ParseBoolAsInteger(value sql.RawBytes) (interface{}, error) {
 	if bytes.EqualFold(value, []byte("YES")) || bytes.EqualFold(value, []byte("ON")) {
 		return int64(1), nil
@@ -86,11 +90,15 @@ var GlobalStatusConversions = map[string]ConversionFunc{
 	"innodb_data_pending_fsyncs":    ParseUint,
 	"ssl_ctx_verify_depth":          ParseUint,
 	"ssl_verify_depth":              ParseUint,
+
+	// see https://galeracluster.com/library/documentation/galera-status-variables.html
+	"wsrep_local_index":          ParseUint,
+	"wsrep_local_send_queue_avg": ParseFloat,
 }
 
-// see https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html
-// see https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
 var GlobalVariableConversions = map[string]ConversionFunc{
+	// see https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html
+	// see https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
 	"delay_key_write":                  ParseString, // ON, OFF, ALL
 	"enforce_gtid_consistency":         ParseString, // ON, OFF, WARN
 	"event_scheduler":                  ParseString, // YES, NO, DISABLED
