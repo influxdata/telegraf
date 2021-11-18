@@ -226,13 +226,11 @@ func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metr
 	log.Printf("W! [outputs.influxdb_v2] Retrying write after splitting metric payload in half to reduce batch size")
 	midpoint := len(metrics) / 2
 
-	firstHalf := metrics[:midpoint]
-	if err := c.writeBatch(ctx, bucket, firstHalf); err != nil {
+	if err := c.writeBatch(ctx, bucket, metrics[:midpoint]); err != nil {
 		return err
 	}
 
-	secondHalf := metrics[midpoint:]
-	return c.writeBatch(ctx, bucket, secondHalf)
+	return c.writeBatch(ctx, bucket, metrics[midpoint:])
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
