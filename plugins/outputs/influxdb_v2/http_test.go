@@ -117,7 +117,8 @@ func TestTooLargeWriteRetry(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/api/v2/write":
-				r.ParseForm()
+				err := r.ParseForm()
+				require.NoError(t, err)
 
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
