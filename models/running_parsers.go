@@ -94,27 +94,6 @@ func (r *RunningParser) SetDefaultTags(tags map[string]string) {
 	r.Parser.SetDefaultTags(tags)
 }
 
-func (r *RunningParser) GetSkipLineCount() int {
-	if p, ok := r.Parser.(telegraf.HeaderParser); ok {
-		return p.GetSkipLineCount()
-	}
-	return 0
-}
-
-func (r *RunningParser) GetHeaderLineCount() int {
-	if p, ok := r.Parser.(telegraf.HeaderParser); ok {
-		return p.GetHeaderLineCount()
-	}
-	return 0
-}
-
-func (r *RunningParser) ParseHeaderLine(line string) error {
-	if p, ok := r.Parser.(telegraf.HeaderParser); ok {
-		return p.ParseHeaderLine(line)
-	}
-	return nil
-}
-
 func (r *RunningParser) GetParserFunc() telegraf.ParserFunc {
 	if p, ok := r.Parser.(telegraf.StatefulParser); ok {
 		return p.NewInstance

@@ -22,26 +22,6 @@ type Parser interface {
 	SetDefaultTags(tags map[string]string)
 }
 
-// HeaderParser is an optional interface for parsers that require
-// parsing of header-information. This is relevant for input plugins
-// using the ParseLine function.
-type HeaderParser interface {
-	// Return the number of lines to skip before start parsing
-	// This might be necessary to drop some garbage at the beginning
-	// of the data returning malformed data or invalid metrics.
-	GetSkipLineCount() int
-
-	// Return the number of lines required read the complete header
-	// This might be necessary to read header information at the
-	// beginning of the data.
-	GetHeaderLineCount() int
-
-	// Read the header information
-	// It might be necessary to call this multiple times for the
-	// header information to complete.
-	ParseHeaderLine(line string) error
-}
-
 type ParserFunc func() (Parser, error)
 
 // StatefulParser is an optional interface for parsers
