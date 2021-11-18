@@ -106,7 +106,7 @@ func (s *Snmp) init() error {
 	if s.initialized {
 		return nil
 	}
-	//nolint:errcheck,revive
+
 	s.getMibsPath()
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
@@ -131,7 +131,7 @@ func (s *Snmp) init() error {
 	return nil
 }
 
-func (s *Snmp) getMibsPath() error {
+func (s *Snmp) getMibsPath() {
 	gosmi.Init()
 	var folders []string
 	for _, mibPath := range s.Path {
@@ -165,7 +165,6 @@ func (s *Snmp) getMibsPath() error {
 		}
 		folders = []string{}
 	}
-	return nil
 }
 
 // Table holds the configuration for a SNMP table.
