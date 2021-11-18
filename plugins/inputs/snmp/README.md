@@ -6,17 +6,11 @@ included.
 
 ## Prerequisites
 
-This plugin uses the `snmptable` and `snmptranslate` programs from the
-[net-snmp][] project.  These tools will need to be installed into the `PATH` in
-order to be located.  Other utilities from the net-snmp project may be useful
-for troubleshooting, but are not directly used by the plugin.
+This plugin uses the `gosmi` library to look up and translate mib files.
 
-These programs will load available MIBs on the system.  Typically the default
-directory for MIBs is `/usr/share/snmp/mibs`, but if your MIBs are in a
-different location you may need to make the paths known to net-snmp.  The
-location of these files can be configured in the `snmp.conf` or via the
-`MIBDIRS` environment variable. See [`man 1 snmpcmd`][man snmpcmd] for more
-information.
+Typically the default directory for MIBs is `/usr/share/snmp/mibs`, but
+if your MIBs are in a different location you need to specificy where in
+the config.  
 
 ### Configuration
 
@@ -103,8 +97,7 @@ To collect SNMP tables, use the `table` option.
 
 ##### Field
 
-Use a `field` to collect a variable by OID.  Requests specified with this
-option operate similar to the `snmpget` utility.
+Use a `field` to collect a variable by OID.  
 
 ```toml
 [[inputs.snmp]]
@@ -144,8 +137,7 @@ option operate similar to the `snmpget` utility.
 
 ##### Table
 
-Use a `table` to configure the collection of a SNMP table.  SNMP requests
-formed with this option operate similarly way to the `snmptable` command.
+Use a `table` to configure the collection of a SNMP table. 
 
 Control the handling of specific table columns using a nested `field`.  These
 nested fields are specified similarly to a top-level `field`.
@@ -360,7 +352,5 @@ interface,agent_host=127.0.0.1,ifDescr=eth0,ifIndex=2,source=example.org ifAdmin
 interface,agent_host=127.0.0.1,ifDescr=lo,ifIndex=1,source=example.org ifAdminStatus=1i,ifInDiscards=0i,ifInErrors=0i,ifInNUcastPkts=0i,ifInOctets=51555569i,ifInUcastPkts=339097i,ifInUnknownProtos=0i,ifLastChange=0i,ifMtu=65536i,ifOperStatus=1i,ifOutDiscards=0i,ifOutErrors=0i,ifOutNUcastPkts=0i,ifOutOctets=51555569i,ifOutQLen=0i,ifOutUcastPkts=339097i,ifSpecific=".0.0",ifSpeed=10000000i,ifType=24i 1575509815000000000
 ```
 
-[net-snmp]: http://www.net-snmp.org/
-[man snmpcmd]: http://net-snmp.sourceforge.net/docs/man/snmpcmd.html#lbAK
 [metric filtering]: /docs/CONFIGURATION.md#metric-filtering
 [metric]: /docs/METRICS.md
