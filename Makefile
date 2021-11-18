@@ -155,8 +155,8 @@ lint:
 
 	golangci-lint run
 
-	ifeq (, $(shell which markdownlint-cli))
-		$(info markdownlint-cli can't be found, please run: make lint-install)
+	ifeq (, $(shell which markdownlint))
+		$(info markdownlint can't be found, please run: make lint-install)
 		exit 1
 	endif
 
