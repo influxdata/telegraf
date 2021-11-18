@@ -241,9 +241,9 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 	}
 
 	r := bufio.NewReader(stdout)
-	csv := csv.NewReader(r)
-	csv.Comma = '\t'
-	csv.FieldsPerRecord = 6
+	csvReader := csv.NewReader(r)
+	csvReader.Comma = '\t'
+	csvReader.FieldsPerRecord = 6
 	var measurement string
 	// groupData to accumulate data when Group=true
 	type groupData struct {
@@ -252,7 +252,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 	}
 	m := make(map[string]groupData)
 	for {
-		record, err := csv.Read()
+		record, err := csvReader.Read()
 		if err == io.EOF {
 			break
 		}
