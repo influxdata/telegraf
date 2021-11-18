@@ -18,9 +18,6 @@ monitoring multiple Redis servers and replicas.
   ## If no port is specified, 26379 is used
   # servers = ["tcp://localhost:26379"]
 
-  ## specify server password
-  # password = "s#cr@t%"
-
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
