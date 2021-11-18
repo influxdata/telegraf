@@ -1,10 +1,10 @@
 # Logparser Input Plugin
 
+### Deprecated in Telegraf 1.15: Please use the [tail][] plugin along with the [`grok` data format][grok parser].
+
 The `logparser` plugin streams and parses the given logfiles. Currently it
 has the capability of parsing "grok" patterns from logfiles, which also supports
 regex patterns.
-
-**Deprecated in Telegraf 1.15**: Please use the [tail][] plugin along with the [`grok` data format][grok parser].
 
 The `tail` plugin now provides all the functionality of the `logparser` plugin.
 Most options can be translated directly to the `tail` plugin:
