@@ -155,15 +155,6 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 	return fmt.Errorf("Couldn't find status info for '%s' ", bondName)
 }
 
-func readFile(filePath string) (string, error) {
-	file, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", fmt.Errorf("error inspecting '%s' interface: %v", filePath, err)
-	}
-	rawFile := strings.TrimSpace(string(file))
-	return rawFile, nil
-}
-
 func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 	/*
 		Files we may need
@@ -174,19 +165,22 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 	var err error
 	var output sysFiles
 
-	output.ModeFile, err = readFile(bondDir + "/bonding/mode")
+	file, err := os.ReadFile(bondDir + "/bonding/mode")
 	if err != nil {
-		return sysFiles{}, err
+		return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", filePath, err)
 	}
-	output.SlaveFile, err = readFile(bondDir + "/bonding/slaves")
+	output.ModeFile = strings.TrimSpace(string(file))
+	file, err := os.ReadFile(bondDir + "/bonding/slaves")
 	if err != nil {
-		return sysFiles{}, err
+		return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", filePath, err)
 	}
+	output.SlaveFile = strings.TrimSpace(string(file))
 	if bond.BondType == "IEEE 802.3ad Dynamic link aggregation" {
-		output.ADPortsFile, err = readFile(bondDir + "/bonding/ad_num_ports")
+		file, err := os.ReadFile(bondDir + "/bonding/ad_num_ports")
 		if err != nil {
-			return sysFiles{}, err
+			return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", filePath, err)
 		}
+		output.ADPortsFile = strings.TrimSpace(string(file))
 	}
 	return output, nil
 }
