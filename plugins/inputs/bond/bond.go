@@ -167,18 +167,18 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 
 	file, err := os.ReadFile(bondDir + "/bonding/mode")
 	if err != nil {
-		return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", filePath, err)
+		return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", bondDir + "/bonding/mode", err)
 	}
 	output.ModeFile = strings.TrimSpace(string(file))
-	file, err := os.ReadFile(bondDir + "/bonding/slaves")
+	file, err = os.ReadFile(bondDir + "/bonding/slaves")
 	if err != nil {
-		return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", filePath, err)
+		return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", bondDir + "/bonding/slaves", err)
 	}
 	output.SlaveFile = strings.TrimSpace(string(file))
 	if bond.BondType == "IEEE 802.3ad Dynamic link aggregation" {
-		file, err := os.ReadFile(bondDir + "/bonding/ad_num_ports")
+		file, err = os.ReadFile(bondDir + "/bonding/ad_num_ports")
 		if err != nil {
-			return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", filePath, err)
+			return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", bondDir + "/bonding/ad_num_ports", err)
 		}
 		output.ADPortsFile = strings.TrimSpace(string(file))
 	}
