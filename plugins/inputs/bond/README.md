@@ -12,10 +12,18 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
   ## If not specified, then default is /proc
   # host_proc = "/proc"
 
+  ## Sets 'sys' directory path
+  ## If not specified, then default is /sys
+  # host_proc = "/sys"
+
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
   ## bond interfaces.
   # bond_interfaces = ["bond0"]
+
+  ## Tries to collect additional bond details from /sys/class/net/{bond}
+  ## currently only useful for LACP (mode 4) bonds
+  # collect_sys_details = false
 ```
 
 ### Measurements & Fields:
@@ -28,6 +36,13 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
   - failures
   - status
   - count
+  - actor_churned (for LACP bonds)
+  - partner_churned (for LACP bonds)
+  - total_churned (for LACP bonds)
+
+- bond_sys
+  - slave_count
+  - ad_port_count
 
 ### Description:
 
@@ -53,6 +68,10 @@ count
 - bond_slave
   - bond
   - interface
+
+- bond_sys
+  - bond
+  - mode
 
 ### Example output:
 

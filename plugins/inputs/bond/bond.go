@@ -18,13 +18,20 @@ const defaultHostSys = "/sys"
 
 // env host proc variable name
 const envProc = "HOST_PROC"
-const envProc = "HOST_SYS"
+const envSys = "HOST_SYS"
 
 type Bond struct {
 	HostProc       string   `toml:"host_proc"`
 	HostSys        string   `toml:"host_sys"`
 	SysDetails     bool     `toml:"collect_sys_details"`
 	BondInterfaces []string `toml:"bond_interfaces"`
+	BondType       string
+}
+
+type sysFiles struct {
+	ModeFile    string
+	SlaveFile   string
+	ADPortsFile string
 }
 
 var sampleConfig = `
@@ -36,14 +43,15 @@ var sampleConfig = `
   ## If not specified, then default is /sys
   # host_proc = "/sys"
 
-  ## Tries to collect additional bond details from /sys/class/net/{bond}
-  ## currently only useful for LACP (mode 4) bonds
-  # collect_sys_details = false
-
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
   ## bond interfaces.
   # bond_interfaces = ["bond0"]
+
+  ## Tries to collect additional bond details from /sys/class/net/{bond}
+  ## currently only useful for LACP (mode 4) bonds
+  # collect_sys_details = false
+
 `
 
 func (bond *Bond) Description() string {
@@ -75,10 +83,16 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondName, err))
 		}
 
+		/*
+			Some details about bonds only exist in /sys/class/net/
+			In particular, LACP bonds track upstream port state here
+		*/
 		if bond.SysDetails {
-			// Some details about bonds only exist in /sys/class/net/
-			sysPath := bond.HostSys + "/class/net/" + bondName
-			err = bond.gatherSysDetails(bondName, sysPath, acc)
+			files, err := bond.readSysFiles(bond.HostSys + "/class/net/" + bondName)
+			if err != nil {
+				acc.AddError(err)
+			}
+			err = bond.gatherSysDetails(bondName, files, acc)
 			if err != nil {
 				acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondName, err))
 			}
@@ -111,7 +125,6 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 	tags := map[string]string{
 		"bond": bondName,
 	}
-
 	scanner := bufio.NewScanner(strings.NewReader(rawFile))
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -121,6 +134,9 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 		}
 		name := strings.TrimSpace(stats[0])
 		value := strings.TrimSpace(stats[1])
+		if name == "Bonding Mode" {
+			bond.BondType = value
+		}
 		if strings.Contains(name, "Currently Active Slave") {
 			fields["active_slave"] = value
 		}
@@ -139,29 +155,53 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 	return fmt.Errorf("Couldn't find status info for '%s' ", bondName)
 }
 
-func (bond *Bond) gatherSysDetails(bondName string, bondDir string, acc telegraf.Accumulator) error {
+func readFile(filePath string) (string, error) {
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("error inspecting '%s' interface: %v", filePath, err)
+	}
+	rawFile := strings.TrimSpace(string(file))
+	return rawFile, nil
+}
+
+func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 	/*
 		Files we may need
 		bonding/mode
 		bonding/slaves
 		bonding/ad_num_ports
 	*/
+	var err error
+	var output sysFiles
 
+	output.ModeFile, err = readFile(bondDir + "/bonding/mode")
+	if err != nil {
+		return sysFiles{}, err
+	}
+	output.SlaveFile, err = readFile(bondDir + "/bonding/slaves")
+	if err != nil {
+		return sysFiles{}, err
+	}
+	if bond.BondType == "IEEE 802.3ad Dynamic link aggregation" {
+		output.ADPortsFile, err = readFile(bondDir + "/bonding/ad_num_ports")
+		if err != nil {
+			return sysFiles{}, err
+		}
+	}
+	return output, nil
+}
+
+func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) error {
 	var mode string
 	var slaves []string
+	var slaves_tmp []string
 	var ad_port_count int
 
 	// To start with, we get the bond operating mode
-	file, err := os.ReadFile(bondDir + "/bonding/mode")
-	if err != nil {
-		acc.AddError(fmt.Errorf("error inspecting '%s/bonding/mode' interface: %v", bondDir, err))
-		continue
-	}
-	rawFile := strings.TrimSpace(string(file))
-	scanner := bufio.NewScanner(strings.NewReader(rawFile))
+	scanner := bufio.NewScanner(strings.NewReader(files.ModeFile))
 	for scanner.Scan() {
 		line := scanner.Text()
-		mode = strings.Split(line, " ")[0]
+		mode = strings.TrimSpace(strings.Split(line, " ")[0])
 	}
 
 	tags := map[string]string{
@@ -170,32 +210,26 @@ func (bond *Bond) gatherSysDetails(bondName string, bondDir string, acc telegraf
 	}
 
 	// Next we collect the number of bond slaves the system expects
-	file, err := os.ReadFile(bondDir + "/bonding/slaves")
-	if err != nil {
-		acc.AddError(fmt.Errorf("error inspecting '%s/bonding/slaves' interface: %v", bondDir, err))
-		continue
-	}
-	rawFile := strings.TrimSpace(string(file))
-	scanner := bufio.NewScanner(strings.NewReader(rawFile))
+	scanner = bufio.NewScanner(strings.NewReader(files.SlaveFile))
 	for scanner.Scan() {
-		line := scanner.Text()
-		slaves = strings.Split(line, " ")
+		slaves_tmp = strings.Split(scanner.Text(), " ")
 	}
-
+	for _, slave := range slaves_tmp {
+		if slave != "" {
+			slaves = append(slaves, slave)
+		}
+	}
+	fmt.Println("Slaves ", slaves)
 	if mode == "802.3ad" {
 		/*
 			If we're in LACP mode, we should check on how the bond ports are
 			interacting with the upstream switch ports
 		*/
-		file, err := os.ReadFile(bondDir + "/bonding/ad_num_ports")
-		if err != nil {
-			acc.AddError(fmt.Errorf("error inspecting '%s/bonding/ad_num_ports' interface: %v", bondDir, err))
-			continue
-		}
-		rawFile := strings.TrimSpace(string(file))
-		scanner := bufio.NewScanner(strings.NewReader(rawFile))
+		scanner = bufio.NewScanner(strings.NewReader(files.ADPortsFile))
 		for scanner.Scan() {
-			ad_port_count = int(scanner.Text())
+			fmt.Println("AD Ports ", scanner.Text())
+			// a failed conversion can be treated as 0 ports
+			ad_port_count, _ = strconv.Atoi(strings.TrimSpace(scanner.Text()))
 		}
 	} else {
 		ad_port_count = len(slaves)
@@ -210,10 +244,17 @@ func (bond *Bond) gatherSysDetails(bondName string, bondDir string, acc telegraf
 }
 
 func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
-	var slave string
-	var status int
 	var slaveCount int
-	var churned int
+	tags := map[string]string{
+		"bond": bondName,
+	}
+	fields := map[string]interface{}{
+		"status": 0,
+	}
+	var scanPast bool
+	if bond.BondType == "IEEE 802.3ad Dynamic link aggregation" {
+		scanPast = true
+	}
 
 	scanner := bufio.NewScanner(strings.NewReader(rawFile))
 	for scanner.Scan() {
@@ -225,41 +266,44 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 		name := strings.TrimSpace(stats[0])
 		value := strings.TrimSpace(stats[1])
 		if strings.Contains(name, "Slave Interface") {
-			slave = value
+			tags["interface"] = value
+			slaveCount++
 		}
-		if strings.Contains(name, "MII Status") {
-			status = 0
-			if value == "up" {
-				status = 1
-			}
-		}
-		if strings.Contains(name, "Actor Churned Count") || strings.Contains(name, "Partner Churned Count") {
-			count, err := strconv.Atoi(value)
-			churned += count
+		if strings.Contains(name, "MII Status") && value == "up" {
+			fields["status"] = 1
 		}
 		if strings.Contains(name, "Link Failure Count") {
 			count, err := strconv.Atoi(value)
 			if err != nil {
 				return err
 			}
-			fields := map[string]interface{}{
-				"status":   status,
-				"failures": count,
-				"churned":  churned,
+			fields["failures"] = count
+			if !scanPast {
+				acc.AddFields("bond_slave", fields, tags)
 			}
-			tags := map[string]string{
-				"bond":      bondName,
-				"interface": slave,
+		}
+		if strings.Contains(name, "Actor Churned Count") {
+			count, err := strconv.Atoi(value)
+			if err != nil {
+				return err
 			}
+			fields["actor_churned"] = count
+		}
+		if strings.Contains(name, "Partner Churned Count") {
+			count, err := strconv.Atoi(value)
+			if err != nil {
+				return err
+			}
+			fields["partner_churned"] = count
+			fields["total_churned"] = fields["actor_churned"].(int) + fields["partner_churned"].(int)
 			acc.AddFields("bond_slave", fields, tags)
-			slaveCount++
 		}
 	}
-	fields := map[string]interface{}{
-		"count": slaveCount,
-	}
-	tags := map[string]string{
+	tags = map[string]string{
 		"bond": bondName,
+	}
+	fields = map[string]interface{}{
+		"count": slaveCount,
 	}
 	acc.AddFields("bond_slave", fields, tags)
 
