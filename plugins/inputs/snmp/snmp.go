@@ -900,9 +900,9 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
 	col := node.GetRow().AsTable().ColumnOrder
 
-	for i := range col {
-		_, isTag := tagOids[mibPrefix+col[i]]
-		fields = append(fields, Field{Name: col[i], Oid: mibPrefix + col[i], IsTag: isTag})
+	for i,c  := range col {
+		_, isTag := tagOids[mibPrefix+c]
+		fields = append(fields, Field{Name: c, Oid: mibPrefix + c, IsTag: isTag})
 	}
 
 	return mibName, oidNum, oidText, fields, err
