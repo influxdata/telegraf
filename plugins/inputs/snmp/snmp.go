@@ -890,10 +890,8 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 		return "", "", "", nil, fmt.Errorf("getting submask: %w", err)
 	}
 
-	index := node.GetIndex()
-
-	for i := range index {
-		tagOids[mibPrefix+index[i].Name] = struct{}{}
+	for i, index := range node.GetIndex() {
+		tagOids[mibPrefix+index.Name] = struct{}{}
 	}
 
 	// grabs all columns from the table
