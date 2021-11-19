@@ -883,8 +883,7 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	tagOids := map[string]struct{}{}
 	// We have to guess that the "entry" oid is `oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
 	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
-	submask := oidNum + ".1"
-	node, err := gosmi.GetNodeByOID(types.OidMustFromString(submask))
+	node, err := gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
 
 	if err != nil {
 		return "", "", "", nil, fmt.Errorf("getting submask: %w", err)
