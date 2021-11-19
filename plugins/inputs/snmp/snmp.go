@@ -950,7 +950,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	var out gosmi.SmiNode
 	var end string
 	if strings.ContainsAny(oid, "::") {
-		// slpit given oid
+		// split given oid
 		// for example RFC1213-MIB::sysUpTime.0
 		s := strings.Split(oid, "::")
 		// node becomes sysUpTime.0
