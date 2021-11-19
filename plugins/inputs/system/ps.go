@@ -7,11 +7,11 @@ import (
 
 	"github.com/influxdata/telegraf/internal"
 
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/disk"
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/mem"
-	"github.com/shirou/gopsutil/net"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
 )
 
 type PS interface {
@@ -46,18 +46,18 @@ type SystemPSDisk struct{}
 func (s *SystemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	var cpuTimes []cpu.TimesStat
 	if perCPU {
-		if perCPUTimes, err := cpu.Times(true); err == nil {
-			cpuTimes = append(cpuTimes, perCPUTimes...)
-		} else {
+		perCPUTimes, err := cpu.Times(true)
+		if err != nil {
 			return nil, err
 		}
+		cpuTimes = append(cpuTimes, perCPUTimes...)
 	}
 	if totalCPU {
-		if totalCPUTimes, err := cpu.Times(false); err == nil {
-			cpuTimes = append(cpuTimes, totalCPUTimes...)
-		} else {
+		totalCPUTimes, err := cpu.Times(false)
+		if err != nil {
 			return nil, err
 		}
+		cpuTimes = append(cpuTimes, totalCPUTimes...)
 	}
 	return cpuTimes, nil
 }

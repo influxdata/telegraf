@@ -143,6 +143,8 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 	})
 
 	for _, m := range metrics {
+		m.AddTag("__name", m.Name())
+
 		tags := m.TagList()
 		var line string
 

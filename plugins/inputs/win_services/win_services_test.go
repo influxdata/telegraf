@@ -10,11 +10,11 @@ import (
 	"log"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 //testData is DD wrapper for unit testing of WinServices
@@ -136,8 +136,8 @@ func TestBasicInfo(t *testing.T) {
 		mgrProvider: &FakeMgProvider{testErrors[0]},
 	}
 	winServices.Init()
-	assert.NotEmpty(t, winServices.SampleConfig())
-	assert.NotEmpty(t, winServices.Description())
+	require.NotEmpty(t, winServices.SampleConfig())
+	require.NotEmpty(t, winServices.Description())
 }
 
 func TestMgrErrors(t *testing.T) {
@@ -149,7 +149,7 @@ func TestMgrErrors(t *testing.T) {
 	var acc1 testutil.Accumulator
 	err := winServices.Gather(&acc1)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), testErrors[0].mgrConnectError.Error())
+	require.Contains(t, err.Error(), testErrors[0].mgrConnectError.Error())
 
 	////mgr.listServices error
 	winServices = &WinServices{
@@ -159,7 +159,7 @@ func TestMgrErrors(t *testing.T) {
 	var acc2 testutil.Accumulator
 	err = winServices.Gather(&acc2)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), testErrors[1].mgrListServicesError.Error())
+	require.Contains(t, err.Error(), testErrors[1].mgrListServicesError.Error())
 
 	////mgr.listServices error 2
 	winServices = &WinServices{
@@ -213,7 +213,7 @@ func TestGatherContainsTag(t *testing.T) {
 	winServices.Init()
 	var acc1 testutil.Accumulator
 	require.NoError(t, winServices.Gather(&acc1))
-	assert.Len(t, acc1.Errors, 0, "There should be no errors after gather")
+	require.Len(t, acc1.Errors, 0, "There should be no errors after gather")
 
 	for _, s := range testSimpleData[0].services {
 		fields := make(map[string]interface{})

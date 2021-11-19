@@ -7,7 +7,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,16 +42,16 @@ func TestMemStats(t *testing.T) {
 		Mapped:         42236,
 		PageTables:     1236,
 		Shared:         0,
-		SReclaimable:   1923022848,
-		SUnreclaim:     157728768,
+		Sreclaimable:   1923022848,
+		Sunreclaim:     157728768,
 		SwapCached:     0,
 		SwapFree:       524280,
 		SwapTotal:      524280,
-		VMallocChunk:   3872908,
-		VMallocTotal:   3874808,
-		VMallocUsed:    1416,
-		Writeback:      0,
-		WritebackTmp:   0,
+		VmallocChunk:   3872908,
+		VmallocTotal:   3874808,
+		VmallocUsed:    1416,
+		WriteBack:      0,
+		WriteBackTmp:   0,
 	}
 
 	mps.On("VMStat").Return(vms, nil)

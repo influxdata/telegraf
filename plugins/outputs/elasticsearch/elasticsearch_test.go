@@ -29,6 +29,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		TemplateName:        "telegraf",
 		OverwriteTemplate:   false,
 		HealthCheckInterval: config.Duration(time.Second * 10),
+		Log:                 testutil.Logger{},
 	}
 
 	// Verify that we can connect to Elasticsearch
@@ -57,6 +58,7 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 		ManageTemplate:    true,
 		TemplateName:      "",
 		OverwriteTemplate: true,
+		Log:               testutil.Logger{},
 	}
 
 	err := e.manageTemplate(ctx)
@@ -78,6 +80,7 @@ func TestTemplateManagementIntegration(t *testing.T) {
 		ManageTemplate:    true,
 		TemplateName:      "telegraf",
 		OverwriteTemplate: true,
+		Log:               testutil.Logger{},
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
@@ -105,6 +108,7 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 		ManageTemplate:    true,
 		TemplateName:      "telegraf",
 		OverwriteTemplate: true,
+		Log:               testutil.Logger{},
 	}
 
 	err := e.Connect()
@@ -114,6 +118,7 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 func TestGetTagKeys(t *testing.T) {
 	e := &Elasticsearch{
 		DefaultTagValue: "none",
+		Log:             testutil.Logger{},
 	}
 
 	var tests = []struct {
@@ -173,6 +178,7 @@ func TestGetTagKeys(t *testing.T) {
 func TestGetIndexName(t *testing.T) {
 	e := &Elasticsearch{
 		DefaultTagValue: "none",
+		Log:             testutil.Logger{},
 	}
 
 	var tests = []struct {
@@ -286,6 +292,7 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     true,
 		ManageTemplate: false,
+		Log:            testutil.Logger{},
 	}
 
 	err := e.Connect()
@@ -319,6 +326,7 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 		Timeout:        config.Duration(time.Second * 5),
 		EnableGzip:     false,
 		ManageTemplate: false,
+		Log:            testutil.Logger{},
 	}
 
 	err := e.Connect()

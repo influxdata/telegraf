@@ -148,26 +148,26 @@ lint-install:
 
 .PHONY: lint
 lint:
-ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please run: make lint-install)
-	exit 1
-endif
+	ifeq (, $(shell which golangci-lint))
+		$(info golangci-lint can't be found, please run: make lint-install)
+		exit 1
+	endif
 
 	golangci-lint run
 
-ifeq (, $(shell which markdownlint-cli))
-	$(info markdownlint-cli can't be found, please run: make lint-install)
-	exit 1
-endif
+	ifeq (, $(shell which markdownlint))
+		$(info markdownlint can't be found, please run: make lint-install)
+		exit 1
+	endif
 
 	markdownlint-cli
 
 .PHONY: lint-branch
 lint-branch:
-ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please run: make lint-install)
-	exit 1
-endif
+	ifeq (, $(shell which golangci-lint))
+		$(info golangci-lint can't be found, please run: make lint-install)
+		exit 1
+	endif
 
 	golangci-lint run --new-from-rev master
 
@@ -211,8 +211,8 @@ plugin-%:
 
 .PHONY: ci-1.17
 ci-1.17:
-	docker build -t quay.io/influxdb/telegraf-ci:1.17.2 - < scripts/ci-1.17.docker
-	docker push quay.io/influxdb/telegraf-ci:1.17.2
+	docker build -t quay.io/influxdb/telegraf-ci:1.17.3 - < scripts/ci-1.17.docker
+	docker push quay.io/influxdb/telegraf-ci:1.17.3
 
 .PHONY: install
 install: $(buildbin)
