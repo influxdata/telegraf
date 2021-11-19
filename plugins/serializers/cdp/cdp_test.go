@@ -60,28 +60,31 @@ func Test_Serialize_HappyPath(t *testing.T) {
 
 	buf, err := s.Serialize(m)
 	assert.NoError(t, err)
-	cdpEvent := &event{}
-	json.Unmarshal(buf, cdpEvent)
+	cdpEventPayload := &eventPayload{}
+	json.Unmarshal(buf, cdpEventPayload)
 
-	expectedEvent := &event{
-		Timestamp:        cdpEvent.Timestamp,
-		EventID:          cdpEvent.EventID,
-		ServiceID:        serviceID,
-		ProjectID:        "",
-		ProjectGenesisID: projectGenesisID,
-		EnvironmentID:    environmentID,
-		Region:           region,
-		StartTime:        toCdpTimestamp(eventTime),
-		EndTime:          toCdpTimestamp(metricTime),
-		Type:             metricType,
-		Amount:           amount,
-		Tags: eventTags{
-			FleedID:   fleetID,
-			MachineID: machineID,
-			InfraType: infraType,
+	expectedPayload := &eventPayload{
+		Type: "unity.services.systemUsage.v1",
+		Message: event{
+			Timestamp:        cdpEventPayload.Message.Timestamp,
+			EventID:          cdpEventPayload.Message.EventID,
+			ServiceID:        serviceID,
+			ProjectID:        "",
+			ProjectGenesisID: projectGenesisID,
+			EnvironmentID:    environmentID,
+			Region:           region,
+			StartTime:        toCdpTimestamp(eventTime),
+			EndTime:          toCdpTimestamp(metricTime),
+			Type:             metricType,
+			Amount:           amount,
+			Tags: eventTags{
+				FleedID:   fleetID,
+				MachineID: machineID,
+				InfraType: infraType,
+			},
 		},
 	}
-	assert.Equal(t, expectedEvent, cdpEvent)
+	assert.Equal(t, expectedPayload, cdpEventPayload)
 }
 
 // Tests a variety of error scenarios where specific tags or fields are missing from the Telegraf metric.

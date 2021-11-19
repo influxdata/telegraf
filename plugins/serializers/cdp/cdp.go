@@ -9,6 +9,12 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+/// The eventPayload format to wrap a usage event in.
+type eventPayload struct {
+	Type    string `json:"type"`
+	Message event  `json:"msg"`
+}
+
 /// The format of the system usage events defined in CDP.
 type event struct {
 	Timestamp        int       `json:"ts" validate:"required"`
@@ -52,7 +58,12 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	serialized, err := json.Marshal(e)
+	p := eventPayload{
+		Type:    "unity.services.systemUsage.v1",
+		Message: *e,
+	}
+
+	serialized, err := json.Marshal(p)
 	if err != nil {
 		return []byte{}, err
 	}

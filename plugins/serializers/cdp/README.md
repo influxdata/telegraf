@@ -36,21 +36,24 @@ It also expects the following fields to be defined on the metric.
 
 ```json
 {
-  "ts": 1636983542529,
-  "eventId": "2669820a-5d85-4eb7-9a79-f6fd339b85c9",
-  "serviceId": "MP",
-  "projectId": "",
-  "projectGenesisId": "some-project-id",
-  "environmentId": "dev",
-  "region": "some-billing-region-id",
-  "startTime": 1636983540000,
-  "endTime": 1636983541000,
-  "type": "egress",
-  "amount": 4822.75390625,
-  "tags":{
-    "fleetId": "some-fleet-id",
-    "machineId": "some-machine-id",
-    "infraType": "some-infra-type"
+  "type": "unity.services.systemUsage.v1",
+  "msg": {
+    "ts": 1636983542529,
+    "eventId": "2669820a-5d85-4eb7-9a79-f6fd339b85c9",
+    "serviceId": "MP",
+    "projectId": "",
+    "projectGenesisId": "some-project-id",
+    "environmentId": "dev",
+    "region": "some-billing-region-id",
+    "startTime": 1636983540000,
+    "endTime": 1636983541000,
+    "type": "egress",
+    "amount": 4822.75390625,
+    "tags":{
+      "fleetId": "some-fleet-id",
+      "machineId": "some-machine-id",
+      "infraType": "some-infra-type"
+    }
   }
 }
 ```
