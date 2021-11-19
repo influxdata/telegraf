@@ -1,6 +1,6 @@
 # Jolokia Input Plugin
 
-### Deprecated in version 1.5: Please use the [jolokia2](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2) plugin.
+### Deprecated in version 1.5: Please use the [jolokia2][] plugin.
 
 #### Configuration
 
@@ -71,3 +71,5 @@ See: https://jolokia.org/
 # Measurements:
 Jolokia plugin produces one measure for each metric configured,
 adding Server's `jolokia_name`, `jolokia_host` and `jolokia_port` as tags.
+
+[jolokia2]: /plugins/inputs/jolokia2
