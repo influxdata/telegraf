@@ -560,11 +560,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 
 	// Print Inputs
 	for _, pname := range pnames {
-		// Skip inputs that are registered twice for backward compatibility
 		if pname == "cisco_telemetry_gnmi" {
-			continue
-		}
-		if pname == "KNXListener" {
 			continue
 		}
 		creator := inputs.Inputs[pname]
@@ -1539,6 +1535,8 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
 	c.getFieldBool(tbl, "prometheus_string_as_label", &sc.PrometheusStringAsLabel)
+
+	c.getFieldBool(tbl, "convert_paths", &sc.WavefrontConvertPaths)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()

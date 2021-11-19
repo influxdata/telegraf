@@ -14,6 +14,7 @@ import (
 type WavefrontSerializer struct {
 	Prefix         string
 	UseStrict      bool
+	ConvertPaths   bool
 	SourceOverride []string
 	scratch        buffer
 	mu             sync.Mutex // buffer mutex
@@ -40,11 +41,12 @@ var tagValueReplacer = strings.NewReplacer("\"", "\\\"", "*", "-")
 
 var pathReplacer = strings.NewReplacer("_", ".")
 
-func NewSerializer(prefix string, useStrict bool, sourceOverride []string) (*WavefrontSerializer, error) {
+func NewSerializer(prefix string, useStrict bool, sourceOverride []string, convertPaths bool) (*WavefrontSerializer, error) {
 	s := &WavefrontSerializer{
 		Prefix:         prefix,
 		UseStrict:      useStrict,
 		SourceOverride: sourceOverride,
+		ConvertPaths: convertPaths,
 	}
 	return s, nil
 }
@@ -67,7 +69,9 @@ func (s *WavefrontSerializer) serialize(m telegraf.Metric) {
 			name = sanitizedChars.Replace(name)
 		}
 
-		name = pathReplacer.Replace(name)
+		if s.ConvertPaths == true {
+			name = pathReplacer.Replace(name)
+		}
 
 		metricValue, valid := buildValue(value, name)
 		if !valid {
