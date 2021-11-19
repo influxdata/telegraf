@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/golang-jwt/jwt"
-	"github.com/influxdata/telegraf/config"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/golang-jwt/jwt"
+	"github.com/influxdata/telegraf/config"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -63,8 +64,8 @@ const (
 )
 
 type CloudRun struct {
-	URL string `toml:"url"`
-	Timeout         config.Duration `toml:"timeout"`
+	URL             string            `toml:"url"`
+	Timeout         config.Duration   `toml:"timeout"`
 	Headers         map[string]string `toml:"headers"`
 	JSONSecret      string            `toml:"json_file_location"`
 	GCPEmailAddress string            `toml:"cloudrun_email"`
