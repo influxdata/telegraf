@@ -46,20 +46,20 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
 
 ## Description
 
-* active_slave
-  * Currently active slave interface for active-backup mode.
-* status
-  * Status of bond interface or bonds's slave interface (down = 0, up = 1).
-* failures
-  * Amount of failures for bond's slave interface.
-* count
-  * Number of slaves attached to bond
-* actor_churned
-  * number of times local end of LACP bond flapped
-* partner_churned
-  * number of times remote end of LACP bond flapped
-* total_churned
-  * full count of all churn events
+- active_slave
+  - Currently active slave interface for active-backup mode.
+- status
+  - Status of bond interface or bonds's slave interface (down = 0, up = 1).
+- failures
+  - Amount of failures for bond's slave interface.
+- count
+  - Number of slaves attached to bond
+- actor_churned
+  - number of times local end of LACP bond flapped
+- partner_churned
+  - number of times remote end of LACP bond flapped
+- total_churned
+  - full count of all churn events
 
 ## Tags
 

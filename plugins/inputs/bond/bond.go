@@ -194,8 +194,8 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) error {
 	var mode string
 	var slaves []string
-	var slaves_tmp []string
-	var ad_port_count int
+	var slavesTmp []string
+	var adPortCount int
 
 	// To start with, we get the bond operating mode
 	scanner := bufio.NewScanner(strings.NewReader(files.ModeFile))
@@ -212,9 +212,9 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 	// Next we collect the number of bond slaves the system expects
 	scanner = bufio.NewScanner(strings.NewReader(files.SlaveFile))
 	for scanner.Scan() {
-		slaves_tmp = strings.Split(scanner.Text(), " ")
+		slavesTmp = strings.Split(scanner.Text(), " ")
 	}
-	for _, slave := range slaves_tmp {
+	for _, slave := range slavesTmp {
 		if slave != "" {
 			slaves = append(slaves, slave)
 		}
@@ -229,10 +229,10 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 		for scanner.Scan() {
 			fmt.Println("AD Ports ", scanner.Text())
 			// a failed conversion can be treated as 0 ports
-			ad_port_count, _ = strconv.Atoi(strings.TrimSpace(scanner.Text()))
+			adPortCount, _ = strconv.Atoi(strings.TrimSpace(scanner.Text()))
 		}
 	} else {
-		ad_port_count = len(slaves)
+		adPortCount = len(slaves)
 	}
 
 	fields := map[string]interface{}{
