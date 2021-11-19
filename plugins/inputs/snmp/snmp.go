@@ -138,6 +138,8 @@ func (s *Snmp) getMibsPath() {
 		gosmi.AppendPath(mibPath)
 		folders = append(folders, mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
+			// symlinks are files so we need to double check if any of them are folders
+			// Will check file vs directory later on
 			if info.Mode()&os.ModeSymlink != 0 {
 				link, err := os.Readlink(path)
 				if err != nil {
@@ -152,6 +154,7 @@ func (s *Snmp) getMibsPath() {
 		}
 		for _, folder := range folders {
 			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+				// checks if file or directory
 				if info.IsDir() {
 					gosmi.AppendPath(path)
 				} else if info.Mode()&os.ModeSymlink == 0 {
