@@ -4,15 +4,7 @@ The `snmp` input plugin uses polling to gather metrics from SNMP agents.
 Support for gathering individual OIDs as well as complete SNMP tables is
 included.
 
-## Prerequisites
-
-This plugin uses the `gosmi` library to look up and translate mib files.
-
-Typically the default directory for MIBs is `/usr/share/snmp/mibs`, but
-if your MIBs are in a different location you need to specificy where in
-the config.  
-
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.snmp]]
@@ -89,13 +81,13 @@ the config.
       is_tag = true
 ```
 
-#### Configure SNMP Requests
+### Configure SNMP Requests
 
 This plugin provides two methods for configuring the SNMP requests: `fields`
 and `tables`.  Use the `field` option to gather single ad-hoc variables.
 To collect SNMP tables, use the `table` option.
 
-##### Field
+#### Field
 
 Use a `field` to collect a variable by OID.  
 
@@ -135,7 +127,7 @@ Use a `field` to collect a variable by OID.
     # conversion = ""
 ```
 
-##### Table
+#### Table
 
 Use a `table` to configure the collection of a SNMP table.
 
@@ -216,7 +208,7 @@ One [metric][] is created for each row of the SNMP table.
       # secondary_outer_join = false
 ```
 
-##### Two Table Join
+#### Two Table Join
 
 Snmp plugin can join two snmp tables that have different indexes. For this to work one table
 should have translation field that return index of second table as value. Examples
@@ -235,7 +227,7 @@ and all fields from secondary table (with index pointed from translation field),
 must be 1-to-1 (not 1-to-many). To add fields from secondary table with index that is not present
 in translation table (outer join), there is a second option for translation index `secondary_outer_join = true`.
 
-###### Example configuration for table joins
+##### Example configuration for table joins
 
 CISCO-POWER-ETHERNET-EXT-MIB table before join:
 
@@ -314,7 +306,7 @@ Result:
 > ciscoPowerEntity,EntPhysicalName=GigabitEthernet1/5,index=1.5 EntPhyIndex=1005i,PortPwrConsumption=8358i 1621461148000000000
 ```
 
-### Troubleshooting
+## Troubleshooting
 
 Check that a numeric field can be translated to a textual field:
 
@@ -343,7 +335,7 @@ needed:
 sudo tcpdump -s 0 -i eth0 -w telegraf-snmp.pcap host 127.0.0.1 and port 161
 ```
 
-### Example Output
+## Example Output
 
 ```shell
 snmp,agent_host=127.0.0.1,source=loaner uptime=11331974i 1575509815000000000
