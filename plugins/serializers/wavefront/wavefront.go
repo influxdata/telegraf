@@ -46,7 +46,7 @@ func NewSerializer(prefix string, useStrict bool, sourceOverride []string, conve
 		Prefix:         prefix,
 		UseStrict:      useStrict,
 		SourceOverride: sourceOverride,
-		ConvertPaths: convertPaths,
+		ConvertPaths:   convertPaths,
 	}
 	return s, nil
 }
