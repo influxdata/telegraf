@@ -237,7 +237,7 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 
 	fields := map[string]interface{}{
 		"slave_count":   len(slaves),
-		"ad_port_count": ad_port_count,
+		"ad_port_count": adPortCount,
 	}
 	acc.AddFields("bond_sys", fields, tags)
 	return nil
