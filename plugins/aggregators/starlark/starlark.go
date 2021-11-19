@@ -1,4 +1,4 @@
-package starlark //nolint - Needed to avoid getting import-shadowing: The name 'starlark' shadows an import name (revive)
+package starlark
 
 import (
 	"github.com/influxdata/telegraf"

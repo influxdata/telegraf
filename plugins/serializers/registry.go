@@ -114,6 +114,9 @@ type Config struct {
 	// Output string fields as metric labels; when false string fields are
 	// discarded.
 	PrometheusStringAsLabel bool `toml:"prometheus_string_as_label"`
+
+	// Convert "_" in paths to "." for Wavefront
+	WavefrontConvertPaths bool `toml:"convert_paths"`
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -134,7 +137,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "carbon2":
 		serializer, err = NewCarbon2Serializer(config.Carbon2Format, config.Carbon2SanitizeReplaceChar)
 	case "wavefront":
-		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
+		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride, config.WavefrontConvertPaths)
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config)
 	case "prometheusremotewrite":
@@ -187,8 +190,8 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 	})
 }
 
-func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string) (Serializer, error) {
-	return wavefront.NewSerializer(prefix, useStrict, sourceOverride)
+func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string, convertPaths bool) (Serializer, error) {
+	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, convertPaths)
 }
 
 func NewJSONSerializer(timestampUnits time.Duration, timestampFormat string) (Serializer, error) {
