@@ -38,7 +38,7 @@ func TestCSVGZImport(t *testing.T) {
 
 	r.SetParserFunc(func() (parsers.Parser, error) {
 		parser := csv.Parser{
-			HeaderRowCount:    1,
+			HeaderRowCount: 1,
 		}
 		err := parser.Init()
 		return &parser, err
@@ -217,8 +217,8 @@ func TestCSVNoSkipRows(t *testing.T) {
 
 	r.SetParserFunc(func() (parsers.Parser, error) {
 		parser := csv.Parser{
-			HeaderRowCount:    1,
-			SkipRows:    0,
+			HeaderRowCount: 1,
+			SkipRows:       0,
 			TagColumns:     []string{"line1"},
 		}
 		err := parser.Init()
@@ -289,8 +289,8 @@ func TestCSVSkipRows(t *testing.T) {
 
 	r.SetParserFunc(func() (parsers.Parser, error) {
 		parser := csv.Parser{
-			HeaderRowCount:    1,
-			SkipRows:    2,
+			HeaderRowCount: 1,
+			SkipRows:       2,
 			TagColumns:     []string{"line1"},
 		}
 		err := parser.Init()
@@ -363,7 +363,7 @@ func TestCSVMultiHeader(t *testing.T) {
 
 	r.SetParserFunc(func() (parsers.Parser, error) {
 		parser := csv.Parser{
-			HeaderRowCount:    2,
+			HeaderRowCount: 2,
 			TagColumns:     []string{"line1"},
 		}
 		err := parser.Init()
