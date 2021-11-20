@@ -45,7 +45,6 @@ type Parser struct {
 }
 
 func (p *Parser) Init() error {
-	fmt.Printf("c.HeaderRowCount = %d && c.ColumnNames = %v\n", p.HeaderRowCount, p.ColumnNames)
 	if p.HeaderRowCount == 0 && len(p.ColumnNames) == 0 {
 		return fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
 	}
