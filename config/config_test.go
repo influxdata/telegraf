@@ -486,6 +486,126 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	}
 }
 
+func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
+	formats := []string{
+		"collectd",
+		"csv",
+		"dropwizard",
+		"form_urlencoded",
+		"graphite",
+		"grok",
+		"influx",
+		"json",
+		"json_v2",
+		"logfmt",
+		"nagios",
+		"prometheus",
+		"prometheusremotewrite",
+		"value",
+		"wavefront",
+		"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf",
+	}
+
+	c := NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/parsers_old.toml"))
+	require.Len(t, c.Inputs, len(formats))
+
+	cfg := parsers.Config{
+		DropwizardTagPathsMap: make(map[string]string),
+		GrokPatterns:          []string{"%{COMBINED_LOG_FORMAT}"},
+		JSONStrict:            true,
+		MetricName:            "parser_test_old",
+	}
+	oldParsersOverride := map[string]parsers.Config{
+		"xpath_protobuf": {
+			MetricName:        "parser_test_old",
+			XPathProtobufFile: "testdata/addressbook.proto",
+			XPathProtobufType: "addressbook.AddressBook",
+		},
+	}
+	newParsersOverride := map[string]telegraf.Parser{
+		"csv": &csv.Parser{
+			MetricName:     "parser_test_old",
+			HeaderRowCount: 42,
+		},
+	}
+	expected := make([]telegraf.Parser, 0, len(formats))
+	for _, format := range formats {
+		formatCfg := cfg
+		if override, found := oldParsersOverride[format]; found {
+			formatCfg = override
+		}
+		formatCfg.DataFormat = format
+		p, err := parsers.NewParser(&formatCfg)
+		if err == nil {
+			expected = append(expected, p)
+			continue
+		}
+
+		require.Containsf(t, err.Error(), "Invalid data format:", "setup %q failed: %v", format, err)
+
+		// Try with the new format
+		if override, found := newParsersOverride[format]; found {
+			expected = append(expected, override)
+			continue
+		}
+		creator, found := parsers.Parsers[format]
+		require.Truef(t, found, "%q neither found in old nor new format", format)
+		expected = append(expected, creator(""))
+	}
+	require.Len(t, expected, len(formats))
+
+	actual := make([]interface{}, 0)
+	generated := make([]interface{}, 0)
+	for _, plugin := range c.Inputs {
+		input, ok := plugin.Input.(*MockupInputPluginParserOld)
+		require.True(t, ok)
+		// Get the parser set with 'SetParser()'
+		if p, ok := input.Parser.(*models.RunningParser); ok {
+			actual = append(actual, p.Parser)
+		} else {
+			actual = append(actual, input.Parser)
+		}
+		// Get the parser set with 'SetParserFunc()'
+		g, err := input.ParserFunc()
+		require.NoError(t, err)
+		generated = append(generated, g)
+	}
+	require.Len(t, actual, len(formats))
+
+	for i, format := range formats {
+		// We need special handling for same parsers as they internally contain pointers
+		// to other structs that inherently differ between instances
+		switch format {
+		case "csv":
+			generated[i].(*csv.Parser).TimeFunc = nil
+		case "dropwizard", "grok", "influx", "wavefront":
+			// At least check if we have the same type
+			require.IsType(t, expected[i], actual[i])
+			require.IsType(t, expected[i], generated[i])
+			continue
+		case "json_v2":
+			actual[i].(*json_v2.Parser).Log = nil
+			generated[i].(*json_v2.Parser).Log = nil
+		case "xml", "xpath_json", "xpath_msgpack":
+			require.NoError(t, expected[i].(*xpath.Parser).Init())
+			actual[i].(*xpath.Parser).Log = nil
+			generated[i].(*xpath.Parser).Log = nil
+		case "xpath_protobuf":
+			// At least check if we have the same type
+			require.IsType(t, expected[i], actual[i])
+			require.IsType(t, expected[i], generated[i])
+			continue
+		case "logfmt":
+			expected[i].(*logfmt.Parser).Now = nil
+			actual[i].(*logfmt.Parser).Now = nil
+			generated[i].(*logfmt.Parser).Now = nil
+		}
+		require.EqualValues(t, expected[i], actual[i], "in SetParser()")
+		require.EqualValues(t, expected[i], generated[i], "in SetParserFunc()")
+	}
+}
+
 /*** Mockup INPUT plugin for (old) parser testing to avoid cyclic dependencies ***/
 type MockupInputPluginParserOld struct {
 	Parser     parsers.Parser
