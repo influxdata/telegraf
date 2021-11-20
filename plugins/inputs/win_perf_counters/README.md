@@ -20,6 +20,10 @@ as counters used when performance monitoring
  This file is likely to be updated in the future with more examples for
  useful configurations for separate scenarios.
 
+For more information on concepts and terminology including object,
+counter, and instance names, see the help in the Windows Performance
+Monitor app.
+
 ### Plugin wide
 
 Plugin wide entries are underneath `[[inputs.win_perf_counters]]`.
@@ -33,30 +37,38 @@ Example:
 
 #### UseWildcardsExpansion
 
-If `UseWildcardsExpansion` is set to true, wildcards can be used in the
-instance name and the counter name.  When using localized Windows, counters
-will be also be localized.  Instance indexes will also be returned in the
-instance name.
+If `UseWildcardsExpansion` is true, wildcards can be used in the
+instance name and the counter name. Instance indexes will also be
+returned in the instance name.
 
-Partial wildcards (e.g. `chrome*`) are supported only in the instance name on Windows Vista and newer.
+Partial wildcards (e.g. `chrome*`) are supported only in the instance
+name on Windows Vista and newer.
 
-If disabled, wildcards (not partial) in instance names can still be used, but
-instance indexes will not be returned in the instance names.
+If disabled, wildcards (not partial) in instance names can still be
+used, but instance indexes will not be returned in the instance names.
 
 Example:
 `UseWildcardsExpansion=true`
 
 #### LocalizeWildcardsExpansion
 
-When running on a localized version of Windows and with
-UseWildcardsExpansion = true, Windows will localize object and counter
-names. When LocalizeWildcardsExpansion = false, use the names in
-object.Counters instead of the localized names. Only Instances can
-have wildcards in this case. ObjectName and Counters must not have
-wildcards when this setting is false.
+`LocalizeWildcardsExpansion` selects whether object and counter names
+are localized when `UseWildcardsExpansion` is true and Telegraf is
+running on a localized installation of Windows.
+
+When `LocalizeWildcardsExpansion` is true, Telegraf produces metrics
+with localized tags and fields even when object and counter names are
+in English.
+
+When `LocalizeWildcardsExpansion` is false, Telegraf expects object
+and counter names to be in English and produces metrics with English
+tags and fields.
+
+When `LocalizeWildcardsExpansion` is false, wildcards can only be used
+in instances. Object and counter names must not have wildcards.
 
 Example:
-`LocalizeWildcardsExpansion = true`
+`LocalizeWildcardsExpansion=true`
 
 #### CountersRefreshInterval
 
