@@ -271,7 +271,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 		})
 }
 
-func createGrokParser() (telegraf.Parser, error) {
+func createGrokParser() (parsers.Parser, error) {
 	grokConfig := &parsers.Config{
 		MetricName:             "tail_grok",
 		GrokPatterns:           []string{"%{TEST_LOG_MULTILINE}"},
@@ -300,14 +300,14 @@ cpu,42
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
-	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		p := &csv.Parser{
+	plugin.SetParserFunc(func() (parsers.Parser, error) {
+		parser := csv.Parser{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}
-		err := p.Init()
-		return p, err
+		err := parser.Init()
+		return &parser, err
 	})
 
 	err = plugin.Init()
@@ -361,8 +361,8 @@ skip2,mem,100
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
-	plugin.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := &csv.Parser{
+	plugin.SetParserFunc(func() (parsers.Parser, error) {
+		parser := csv.Parser{
 			MeasurementColumn: "measurement1",
 			HeaderRowCount:    2,
 			SkipRows:          1,
@@ -370,7 +370,7 @@ skip2,mem,100
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}
 		err := parser.Init()
-		return parser, err
+		return &parser, err
 	})
 
 	err = plugin.Init()
@@ -423,7 +423,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.PathTag = "customPathTagMyFile"
-	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+	plugin.SetParserFunc(func() (parsers.Parser, error) {
 		return json.New(
 			&json.Config{
 				MetricName: "cpu",
@@ -573,7 +573,7 @@ func TestCharacterEncoding(t *testing.T) {
 				WatchMethod:         watchMethod,
 			}
 
-			plugin.SetParserFunc(func() (telegraf.Parser, error) {
+			plugin.SetParserFunc(func() (parsers.Parser, error) {
 				handler := influx.NewMetricHandler()
 				return influx.NewParser(handler), nil
 			})
