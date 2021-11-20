@@ -1234,7 +1234,11 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		} else {
 			missThreshold = 0
 			// Fallback to the old way of instantiating the parsers.
-			parser, err := c.buildParserOld(name, table)
+			config, err := c.getParserConfig(name, table)
+			if err != nil {
+				return err
+			}
+			parser, err := c.buildParserOld(name, config)
 			if err != nil {
 				return err
 			}
@@ -1251,7 +1255,11 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		} else {
 			missThreshold = 0
 			// Fallback to the old way of instantiating the parsers.
-			parser, err := c.buildParserOld(name, table)
+			config, err := c.getParserConfig(name, table)
+			if err != nil {
+				return err
+			}
+			parser, err := c.buildParserOld(name, config)
 			if err != nil {
 				return err
 			}
@@ -1271,7 +1279,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 				return err
 			}
 			t.SetParserFunc(func() (telegraf.Parser, error) {
-				return parsers.NewParser(config)
+				return c.buildParserOld(name, config)
 			})
 		}
 	}
@@ -1289,7 +1297,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 				return err
 			}
 			t.SetParserFunc(func() (parsers.Parser, error) {
-				return parsers.NewParser(config)
+				return c.buildParserOld(name, config)
 			})
 		}
 	}
@@ -1471,11 +1479,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 // buildParserOld grabs the necessary entries from the ast.Table for creating
 // a parsers.Parser object, and creates it, which can then be added onto
 // an Input object.
-func (c *Config) buildParserOld(name string, tbl *ast.Table) (telegraf.Parser, error) {
-	config, err := c.getParserConfig(name, tbl)
-	if err != nil {
-		return nil, err
-	}
+func (c *Config) buildParserOld(name string, config *parsers.Config) (telegraf.Parser, error) {
 	parser, err := parsers.NewParser(config)
 	if err != nil {
 		return nil, err
