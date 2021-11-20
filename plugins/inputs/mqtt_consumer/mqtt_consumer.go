@@ -267,8 +267,8 @@ func compareTopics(expected string, incoming string) bool {
 		return false
 	}
 
-	for i := range expectedSplit {
-		if incomingSplit[i] != expectedSplit[i] && expectedSplit[i] != "+" {
+	for i, expected := range expectedSplit {
+		if incomingSplit[i] != expected && expected != "+" {
 			return false
 		}
 	}
