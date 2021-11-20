@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/testutil"
@@ -37,14 +36,12 @@ func TestCSVGZImport(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (telegraf.Parser, error) {
-		p := &csv.Parser{
-			HeaderRowCount: 1,
+	r.SetParserFunc(func() (parsers.Parser, error) {
+		parser := csv.Parser{
+			HeaderRowCount:    1,
 		}
-		if err := p.Init(); err != nil {
-			return nil, err
-		}
-		return p, nil
+		err := parser.Init()
+		return &parser, err
 	})
 	r.Log = testutil.Logger{}
 
@@ -112,7 +109,7 @@ func TestMultipleJSONFileImports(t *testing.T) {
 		JSONNameKey: "Name",
 	}
 
-	r.SetParserFunc(func() (telegraf.Parser, error) {
+	r.SetParserFunc(func() (parsers.Parser, error) {
 		return parsers.NewParser(&parserConfig)
 	})
 
@@ -165,7 +162,7 @@ func TestFileTag(t *testing.T) {
 		JSONNameKey: "Name",
 	}
 
-	r.SetParserFunc(func() (telegraf.Parser, error) {
+	r.SetParserFunc(func() (parsers.Parser, error) {
 		return parsers.NewParser(&parserConfig)
 	})
 
@@ -218,14 +215,14 @@ func TestCSVNoSkipRows(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := &csv.Parser{
-			HeaderRowCount: 1,
-			SkipRows:       0,
+	r.SetParserFunc(func() (parsers.Parser, error) {
+		parser := csv.Parser{
+			HeaderRowCount:    1,
+			SkipRows:    0,
 			TagColumns:     []string{"line1"},
 		}
 		err := parser.Init()
-		return parser, err
+		return &parser, err
 	})
 	r.Log = testutil.Logger{}
 
@@ -290,14 +287,14 @@ func TestCSVSkipRows(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := &csv.Parser{
-			HeaderRowCount: 1,
-			SkipRows:       2,
+	r.SetParserFunc(func() (parsers.Parser, error) {
+		parser := csv.Parser{
+			HeaderRowCount:    1,
+			SkipRows:    2,
 			TagColumns:     []string{"line1"},
 		}
 		err := parser.Init()
-		return parser, err
+		return &parser, err
 	})
 	r.Log = testutil.Logger{}
 
@@ -364,13 +361,13 @@ func TestCSVMultiHeader(t *testing.T) {
 	err = r.Init()
 	require.NoError(t, err)
 
-	r.SetParserFunc(func() (telegraf.Parser, error) {
-		parser := &csv.Parser{
-			HeaderRowCount: 2,
+	r.SetParserFunc(func() (parsers.Parser, error) {
+		parser := csv.Parser{
+			HeaderRowCount:    2,
 			TagColumns:     []string{"line1"},
 		}
 		err := parser.Init()
-		return parser, err
+		return &parser, err
 	})
 	r.Log = testutil.Logger{}
 

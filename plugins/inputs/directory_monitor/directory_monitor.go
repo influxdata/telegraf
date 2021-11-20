@@ -93,7 +93,7 @@ type DirectoryMonitor struct {
 	filesInUse          sync.Map
 	cancel              context.CancelFunc
 	context             context.Context
-	parserFunc          telegraf.ParserFunc
+	parserFunc          parsers.ParserFunc
 	filesProcessed      selfstat.Stat
 	filesDropped        selfstat.Stat
 	waitGroup           *sync.WaitGroup
@@ -344,7 +344,7 @@ func (monitor *DirectoryMonitor) isIgnoredFile(fileName string) bool {
 	return false
 }
 
-func (monitor *DirectoryMonitor) SetParserFunc(fn telegraf.ParserFunc) {
+func (monitor *DirectoryMonitor) SetParserFunc(fn parsers.ParserFunc) {
 	monitor.parserFunc = fn
 }
 
