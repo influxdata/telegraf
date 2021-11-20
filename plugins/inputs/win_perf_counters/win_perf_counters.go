@@ -252,8 +252,8 @@ func (m *Win_PerfCounters) SampleConfig() string {
 }
 
 //objectName string, counter string, instance string, measurement string, include_total bool
-func (m *Win_PerfCounters) AddItem(origCounterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
-	counterPath := origCounterPath
+func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
+	origCounterPath := counterPath
 	var err error
 	var counterHandle PDH_HCOUNTER
 	if !m.query.IsVistaOrNewer() {
