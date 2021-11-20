@@ -11,13 +11,14 @@ import (
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type File struct {
 	Files             []string `toml:"files"`
 	FileTag           string   `toml:"file_tag"`
 	CharacterEncoding string   `toml:"character_encoding"`
-	parser            telegraf.Parser
+	parser            parsers.Parser
 
 	filenames []string
 	decoder   *encoding.Decoder
@@ -88,7 +89,7 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (f *File) SetParser(p telegraf.Parser) {
+func (f *File) SetParser(p parsers.Parser) {
 	f.parser = p
 }
 
