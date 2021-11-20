@@ -21,12 +21,55 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
+// Creator is the function to create a new parser
 type Creator func(defaultMetricName string) telegraf.Parser
 
+// Parsers contains the registry of all known parsers (following the new style)
 var Parsers = map[string]Creator{}
 
+// Add adds a parser to the registry. Usually this function is called in the plugin's init function
 func Add(name string, creator Creator) {
 	Parsers[name] = creator
+}
+
+type ParserFunc func() (Parser, error)
+
+// ParserInput is an interface for input plugins that are able to parse
+// arbitrary data formats.
+type ParserInput interface {
+	// SetParser sets the parser function for the interface
+	SetParser(parser Parser)
+}
+
+// ParserFuncInput is an interface for input plugins that are able to parse
+// arbitrary data formats.
+type ParserFuncInput interface {
+	// GetParser returns a new parser.
+	SetParserFunc(fn ParserFunc)
+}
+
+// Parser is an interface defining functions that a parser plugin must satisfy.
+type Parser interface {
+	// Parse takes a byte buffer separated by newlines
+	// ie, `cpu.usage.idle 90\ncpu.usage.busy 10`
+	// and parses it into telegraf metrics
+	//
+	// Must be thread-safe.
+	Parse(buf []byte) ([]telegraf.Metric, error)
+
+	// ParseLine takes a single string metric
+	// ie, "cpu.usage.idle 90"
+	// and parses it into a telegraf metric.
+	//
+	// Must be thread-safe.
+	// This function is only called by plugins that expect line based protocols
+	// Doesn't need to be implemented by non-linebased parsers (e.g. json, xml)
+	ParseLine(line string) (telegraf.Metric, error)
+
+	// SetDefaultTags tells the parser to add all of the given tags
+	// to each parsed metric.
+	// NOTE: do _not_ modify the map after you've passed it here!!
+	SetDefaultTags(tags map[string]string)
 }
 
 // Config is a struct that covers the data types needed for all parser types,
@@ -130,9 +173,9 @@ type JSONV2Config struct {
 }
 
 // NewParser returns a Parser interface based on the given config.
-func NewParser(config *Config) (telegraf.Parser, error) {
+func NewParser(config *Config) (Parser, error) {
 	var err error
-	var parser telegraf.Parser
+	var parser Parser
 	switch config.DataFormat {
 	case "json":
 		parser, err = json.New(
@@ -218,7 +261,7 @@ func NewParser(config *Config) (telegraf.Parser, error) {
 func newGrokParser(metricName string,
 	patterns []string, nPatterns []string,
 	cPatterns string, cPatternFiles []string,
-	tZone string, uniqueTimestamp string) (telegraf.Parser, error) {
+	tZone string, uniqueTimestamp string) (Parser, error) {
 	parser := grok.Parser{
 		Measurement:        metricName,
 		Patterns:           patterns,
@@ -233,11 +276,11 @@ func newGrokParser(metricName string,
 	return &parser, err
 }
 
-func NewNagiosParser() (telegraf.Parser, error) {
+func NewNagiosParser() (Parser, error) {
 	return &nagios.NagiosParser{}, nil
 }
 
-func NewInfluxParser() (telegraf.Parser, error) {
+func NewInfluxParser() (Parser, error) {
 	handler := influx.NewMetricHandler()
 	return influx.NewParser(handler), nil
 }
@@ -246,7 +289,7 @@ func NewGraphiteParser(
 	separator string,
 	templates []string,
 	defaultTags map[string]string,
-) (telegraf.Parser, error) {
+) (Parser, error) {
 	return graphite.NewGraphiteParser(separator, templates, defaultTags)
 }
 
@@ -255,7 +298,7 @@ func NewValueParser(
 	dataType string,
 	fieldName string,
 	defaultTags map[string]string,
-) (telegraf.Parser, error) {
+) (Parser, error) {
 	return value.NewValueParser(metricName, dataType, fieldName, defaultTags), nil
 }
 
@@ -264,7 +307,7 @@ func NewCollectdParser(
 	securityLevel string,
 	typesDB []string,
 	split string,
-) (telegraf.Parser, error) {
+) (Parser, error) {
 	return collectd.NewCollectdParser(authFile, securityLevel, typesDB, split)
 }
 
@@ -278,7 +321,7 @@ func NewDropwizardParser(
 	separator string,
 	templates []string,
 
-) (telegraf.Parser, error) {
+) (Parser, error) {
 	parser := dropwizard.NewParser()
 	parser.MetricRegistryPath = metricRegistryPath
 	parser.TimePath = timePath
@@ -294,11 +337,11 @@ func NewDropwizardParser(
 }
 
 // NewLogFmtParser returns a logfmt parser with the default options.
-func NewLogFmtParser(metricName string, defaultTags map[string]string) (telegraf.Parser, error) {
+func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, error) {
 	return logfmt.NewParser(metricName, defaultTags), nil
 }
 
-func NewWavefrontParser(defaultTags map[string]string) (telegraf.Parser, error) {
+func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
 	return wavefront.NewWavefrontParser(defaultTags), nil
 }
 
@@ -306,7 +349,7 @@ func NewFormUrlencodedParser(
 	metricName string,
 	defaultTags map[string]string,
 	tagKeys []string,
-) (telegraf.Parser, error) {
+) (Parser, error) {
 	return &form_urlencoded.Parser{
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
@@ -314,7 +357,7 @@ func NewFormUrlencodedParser(
 	}, nil
 }
 
-func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (telegraf.Parser, error) {
+func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (Parser, error) {
 	return &prometheus.Parser{
 		DefaultTags:     defaultTags,
 		IgnoreTimestamp: ignoreTimestamp,
