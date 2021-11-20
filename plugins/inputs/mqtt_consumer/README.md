@@ -86,7 +86,7 @@ and creates metrics using one of the supported [input data formats][].
   #      key = type
 ```
 
-## About Topic Pasring
+## About Topic Parsing
 
 The MQTT topic as a whole is stored as a tag, but this can be far too coarse
 too be easily used when utilising the data further down the line. This
