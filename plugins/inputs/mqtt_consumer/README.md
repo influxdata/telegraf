@@ -89,7 +89,7 @@ and creates metrics using one of the supported [input data formats][].
 ## About Topic Parsing
 
 The MQTT topic as a whole is stored as a tag, but this can be far too coarse
-too be easily used when utilising the data further down the line. This
+to be easily used when utilizing the data further down the line. This
 change allows tag values to be extracted from the MQTT topic letting you
 store the information provided in the topic in a meaningful way. An _ denotes an
 ignored entry in the topic path. Please see the following example.
