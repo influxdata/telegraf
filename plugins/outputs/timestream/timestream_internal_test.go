@@ -4,40 +4,36 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite/types"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGetTimestreamTime(t *testing.T) {
-	assertions := assert.New(t)
-
 	tWithNanos := time.Date(2020, time.November, 10, 23, 44, 20, 123, time.UTC)
 	tWithMicros := time.Date(2020, time.November, 10, 23, 44, 20, 123000, time.UTC)
 	tWithMillis := time.Date(2020, time.November, 10, 23, 44, 20, 123000000, time.UTC)
 	tOnlySeconds := time.Date(2020, time.November, 10, 23, 44, 20, 0, time.UTC)
 
 	tUnitNanos, tValueNanos := getTimestreamTime(tWithNanos)
-	assertions.Equal(types.TimeUnitNanoseconds, tUnitNanos)
-	assertions.Equal("1605051860000000123", tValueNanos)
+	require.Equal(t, types.TimeUnitNanoseconds, tUnitNanos)
+	require.Equal(t, "1605051860000000123", tValueNanos)
 
 	tUnitMicros, tValueMicros := getTimestreamTime(tWithMicros)
-	assertions.Equal(types.TimeUnitMicroseconds, tUnitMicros)
-	assertions.Equal("1605051860000123", tValueMicros)
+	require.Equal(t, types.TimeUnitMicroseconds, tUnitMicros)
+	require.Equal(t, "1605051860000123", tValueMicros)
 
 	tUnitMillis, tValueMillis := getTimestreamTime(tWithMillis)
-	assertions.Equal(types.TimeUnitMilliseconds, tUnitMillis)
-	assertions.Equal("1605051860123", tValueMillis)
+	require.Equal(t, types.TimeUnitMilliseconds, tUnitMillis)
+	require.Equal(t, "1605051860123", tValueMillis)
 
 	tUnitSeconds, tValueSeconds := getTimestreamTime(tOnlySeconds)
-	assertions.Equal(types.TimeUnitSeconds, tUnitSeconds)
-	assertions.Equal("1605051860", tValueSeconds)
+	require.Equal(t, types.TimeUnitSeconds, tUnitSeconds)
+	require.Equal(t, "1605051860", tValueSeconds)
 }
 
 func TestPartitionRecords(t *testing.T) {
-	assertions := assert.New(t)
-
 	testDatum := types.Record{
 		MeasureName:      aws.String("Foo"),
 		MeasureValueType: types.MeasureValueTypeDouble,
@@ -49,11 +45,11 @@ func TestPartitionRecords(t *testing.T) {
 	twoDatum := []types.Record{testDatum, testDatum}
 	threeDatum := []types.Record{testDatum, testDatum, testDatum}
 
-	assertions.Equal([][]types.Record{}, partitionRecords(2, zeroDatum))
-	assertions.Equal([][]types.Record{oneDatum}, partitionRecords(2, oneDatum))
-	assertions.Equal([][]types.Record{oneDatum}, partitionRecords(2, oneDatum))
-	assertions.Equal([][]types.Record{twoDatum}, partitionRecords(2, twoDatum))
-	assertions.Equal([][]types.Record{twoDatum, oneDatum}, partitionRecords(2, threeDatum))
+	require.Equal(t, [][]types.Record{}, partitionRecords(2, zeroDatum))
+	require.Equal(t, [][]types.Record{oneDatum}, partitionRecords(2, oneDatum))
+	require.Equal(t, [][]types.Record{oneDatum}, partitionRecords(2, oneDatum))
+	require.Equal(t, [][]types.Record{twoDatum}, partitionRecords(2, twoDatum))
+	require.Equal(t, [][]types.Record{twoDatum, oneDatum}, partitionRecords(2, threeDatum))
 }
 
 func TestConvertValueSupported(t *testing.T) {
@@ -74,18 +70,16 @@ func TestConvertValueSupported(t *testing.T) {
 }
 
 func TestConvertValueUnsupported(t *testing.T) {
-	assertions := assert.New(t)
 	_, _, ok := convertValue(time.Date(2020, time.November, 10, 23, 44, 20, 0, time.UTC))
-	assertions.False(ok, "Expected unsuccessful conversion")
+	require.False(t, ok, "Expected unsuccessful conversion")
 }
 
 func testConvertValueSupportedCases(t *testing.T,
 	inputValues []interface{}, outputValues []string, outputValueTypes []types.MeasureValueType) {
-	assertions := assert.New(t)
 	for i, inputValue := range inputValues {
 		v, vt, ok := convertValue(inputValue)
-		assertions.Equal(true, ok, "Expected successful conversion")
-		assertions.Equal(outputValues[i], v, "Expected different string representation of converted value")
-		assertions.Equal(outputValueTypes[i], vt, "Expected different value type of converted value")
+		require.Equal(t, true, ok, "Expected successful conversion")
+		require.Equal(t, outputValues[i], v, "Expected different string representation of converted value")
+		require.Equal(t, outputValueTypes[i], vt, "Expected different value type of converted value")
 	}
 }

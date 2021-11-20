@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/go-syslog/v3/rfc5424"
+
 	"github.com/influxdata/telegraf"
 )
 
@@ -90,6 +91,7 @@ func mapMsgID(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 
 func mapVersion(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 	if value, ok := metric.GetField("version"); ok {
+		//nolint: revive // Need switch with only one case to handle `.(type)`
 		switch v := value.(type) {
 		case uint64:
 			msg.SetVersion(uint16(v))
@@ -142,6 +144,7 @@ func mapHostname(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 
 func mapTimestamp(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 	timestamp := metric.Time()
+	//nolint: revive // Need switch with only one case to handle `.(type)`
 	if value, ok := metric.GetField("timestamp"); ok {
 		switch v := value.(type) {
 		case int64:
