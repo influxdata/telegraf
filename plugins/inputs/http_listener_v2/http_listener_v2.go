@@ -51,7 +51,9 @@ type HTTPListenerV2 struct {
 	BasicUsername  string            `toml:"basic_username"`
 	BasicPassword  string            `toml:"basic_password"`
 	HTTPHeaderTags map[string]string `toml:"http_header_tags"`
+
 	tlsint.ServerConfig
+	tlsConf *tls.Config
 
 	TimeFunc
 	Log telegraf.Logger
@@ -156,17 +158,48 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 
 	h.acc = acc
 
-	tlsConf, err := h.ServerConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
+	server := h.createHTTPServer()
 
-	server := &http.Server{
+	h.wg.Add(1)
+	go func() {
+		defer h.wg.Done()
+		if err := server.Serve(h.listener); err != nil {
+			if !errors.Is(err, net.ErrClosed) {
+				h.Log.Errorf("Serve failed: %v", err)
+			}
+			close(h.close)
+		}
+	}()
+
+	h.Log.Infof("Listening on %s", h.listener.Addr().String())
+
+	return nil
+}
+
+func (h *HTTPListenerV2) createHTTPServer() *http.Server {
+	return &http.Server{
 		Addr:         h.ServiceAddress,
 		Handler:      h,
 		ReadTimeout:  time.Duration(h.ReadTimeout),
 		WriteTimeout: time.Duration(h.WriteTimeout),
-		TLSConfig:    tlsConf,
+		TLSConfig:    h.tlsConf,
+	}
+}
+
+// Stop cleans up all resources
+func (h *HTTPListenerV2) Stop() {
+	if h.listener != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
+		h.listener.Close()
+	}
+	h.wg.Wait()
+}
+
+func (h *HTTPListenerV2) Init() error {
+	tlsConf, err := h.ServerConfig.TLSConfig()
+	if err != nil {
+		return err
 	}
 
 	var listener net.Listener
@@ -178,34 +211,11 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+	h.tlsConf = tlsConf
 	h.listener = listener
 	h.Port = listener.Addr().(*net.TCPAddr).Port
 
-	h.wg.Add(1)
-
-	go func() {
-		defer h.wg.Done()
-		if err := server.Serve(h.listener); err != nil {
-			if !errors.Is(err, net.ErrClosed) {
-				h.Log.Errorf("Serve failed: %v", err)
-			}
-			close(h.close)
-		}
-	}()
-
-	h.Log.Infof("Listening on %s", listener.Addr().String())
-
 	return nil
-}
-
-// Stop cleans up all resources
-func (h *HTTPListenerV2) Stop() {
-	if h.listener != nil {
-		// Ignore the returned error as we cannot do anything about it anyway
-		//nolint:errcheck,revive
-		h.listener.Close()
-	}
-	h.wg.Wait()
 }
 
 func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
