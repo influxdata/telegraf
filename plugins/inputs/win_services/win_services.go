@@ -86,7 +86,7 @@ var sampleConfig = `
 	"TermService",
 	"Win*",
   ]
-  #excluded_service_names = [] ## optional, list of service names to exclude
+  #excluded_service_names = [] # optional, list of service names to exclude
 `
 
 var description = "Input plugin to report Windows services info."
