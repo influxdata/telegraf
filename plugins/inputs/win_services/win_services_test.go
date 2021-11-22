@@ -237,7 +237,6 @@ func TestExcludingNamesTag(t *testing.T) {
 	winServices.Init()
 	var acc1 testutil.Accumulator
 	require.NoError(t, winServices.Gather(&acc1))
-	assert.Len(t, acc1.Errors, 0, "There should be no errors after gather")
 
 	for _, s := range testSimpleData[0].services {
 		fields := make(map[string]interface{})
