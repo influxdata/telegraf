@@ -188,9 +188,9 @@ func (m *MQTTConsumer) Init() error {
 	m.messages = map[telegraf.TrackingID]bool{}
 
 	for i, p := range m.TopicParsing {
-		split_measurement := strings.Split(p.Measurement, "/")
-		for j := range split_measurement {
-			if split_measurement[j] != "_" {
+		splitMeasurement := strings.Split(p.Measurement, "/")
+		for j := range splitMeasurement {
+			if splitMeasurement[j] != "_" {
 				m.TopicParsing[i].MeasurementIndex = j
 				break
 			}
@@ -199,7 +199,7 @@ func (m *MQTTConsumer) Init() error {
 		m.TopicParsing[i].SplitFields = strings.Split(p.Fields, "/")
 		m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
 
-		if len(split_measurement) != len(m.TopicParsing[i].SplitTopic) {
+		if len(splitMeasurement) != len(m.TopicParsing[i].SplitTopic) {
 			return fmt.Errorf("config error topic parsing: measurement length does not equal topic length")
 		}
 
@@ -210,7 +210,6 @@ func (m *MQTTConsumer) Init() error {
 		if len(m.TopicParsing[i].SplitTags) != len(m.TopicParsing[i].SplitTopic) {
 			return fmt.Errorf("config error topic parsing: tags length does not equal topic length")
 		}
-
 	}
 
 	return nil
@@ -307,7 +306,6 @@ func compareTopics(expected []string, incoming []string) bool {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
-
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
 		return err
@@ -337,7 +335,6 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 				if err != nil {
 					return err
 				}
-
 			}
 		}
 	}
@@ -411,7 +408,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 
 // parseFields gets multiple fields from the topic based on the user configuration (TopicParsing.Fields)
 func parseMetric(keys []string, values []string, types map[string]string, isTag bool, metric telegraf.Metric) error {
-	var metric_found bool
+	var metricFound bool
 	for i, k := range keys {
 		if k == "_" {
 			continue
@@ -419,18 +416,17 @@ func parseMetric(keys []string, values []string, types map[string]string, isTag 
 
 		if isTag {
 			metric.AddTag(k, values[i])
-			metric_found = true
+			metricFound = true
 		} else {
 			newType, err := typeConvert(types, values[i], k)
 			if err != nil {
 				return err
 			}
 			metric.AddField(k, newType)
-			metric_found = true
+			metricFound = true
 		}
-
 	}
-	if !metric_found {
+	if !metricFound {
 		return fmt.Errorf("no fields or tags found")
 	}
 	return nil
