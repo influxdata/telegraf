@@ -247,7 +247,7 @@ func (c *CloudWatch) WriteToCloudWatch(datums []types.MetricDatum) error {
 	return err
 }
 
-// Partition the MetricDatums into smaller slices of a max size so that are under the limit
+// PartitionDatums partitions the MetricDatums into smaller slices of a max size so that are under the limit
 // for the AWS API calls.
 func PartitionDatums(size int, datums []types.MetricDatum) [][]types.MetricDatum {
 	numberOfPartitions := len(datums) / size
@@ -270,7 +270,7 @@ func PartitionDatums(size int, datums []types.MetricDatum) [][]types.MetricDatum
 	return partitions
 }
 
-// Make a MetricDatum from telegraf.Metric. It would check if all required fields of
+// BuildMetricDatum makes a MetricDatum from telegraf.Metric. It would check if all required fields of
 // cloudwatch.StatisticSet are available. If so, it would build MetricDatum from statistic values.
 // Otherwise, fields would still been built independently.
 func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point telegraf.Metric) []types.MetricDatum {
@@ -332,14 +332,14 @@ func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point tel
 	return datums
 }
 
-// Make a list of Dimensions by using a Point's tags. CloudWatch supports up to
-// 10 dimensions per metric so we only keep up to the first 10 alphabetically.
+// BuildDimensions makes a list of Dimensions by using a Point's tags. CloudWatch supports up to
+// 10 dimensions per metric, so we only keep up to the first 10 alphabetically.
 // This always includes the "host" tag if it exists.
 func BuildDimensions(mTags map[string]string) []types.Dimension {
-	const MaxDimensions = 10
-	dimensions := make([]types.Dimension, 0, MaxDimensions)
+	const maxDimensions = 10
+	dimensions := make([]types.Dimension, 0, maxDimensions)
 
-	// This is pretty ugly but we always want to include the "host" tag if it exists.
+	// This is pretty ugly, but we always want to include the "host" tag if it exists.
 	if host, ok := mTags["host"]; ok {
 		dimensions = append(dimensions, types.Dimension{
 			Name:  aws.String("host"),
@@ -356,7 +356,7 @@ func BuildDimensions(mTags map[string]string) []types.Dimension {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		if len(dimensions) >= MaxDimensions {
+		if len(dimensions) >= maxDimensions {
 			break
 		}
 
@@ -392,7 +392,8 @@ func getStatisticType(name string) (sType statisticType, fieldName string) {
 		sType = statisticTypeNone
 		fieldName = name
 	}
-	return
+
+	return sType, fieldName
 }
 
 func convert(v interface{}) (value float64, ok bool) {
@@ -420,7 +421,7 @@ func convert(v interface{}) (value float64, ok bool) {
 	default:
 		// Skip unsupported type.
 		ok = false
-		return
+		return value, ok
 	}
 
 	// Do CloudWatch boundary checking
@@ -436,7 +437,7 @@ func convert(v interface{}) (value float64, ok bool) {
 		return 0, false
 	}
 
-	return
+	return value, ok
 }
 
 func init() {

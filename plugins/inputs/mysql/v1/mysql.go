@@ -182,14 +182,14 @@ var Mappings = []*Mapping{
 	},
 }
 
-func ParseValue(value sql.RawBytes) (float64, bool) {
+func ParseValue(value sql.RawBytes) (float64, error) {
 	if bytes.Equal(value, []byte("Yes")) || bytes.Equal(value, []byte("ON")) {
-		return 1, true
+		return 1, nil
 	}
 
 	if bytes.Equal(value, []byte("No")) || bytes.Equal(value, []byte("OFF")) {
-		return 0, true
+		return 0, nil
 	}
 	n, err := strconv.ParseFloat(string(value), 64)
-	return n, err == nil
+	return n, err
 }
