@@ -1,6 +1,6 @@
 # HTTP JSON Input Plugin
 
-### DEPRECATED in Telegraf v1.6: Use [HTTP input plugin](../http) as replacement.
+### DEPRECATED in Telegraf v1.6: Use [HTTP input plugin][] as replacement.
 
 The httpjson plugin collects data from HTTP URLs which respond with JSON.  It flattens the JSON and finds all numeric values, treating them as floats.
 
@@ -133,3 +133,5 @@ If the service returns an array of objects, one metric is be created for each ob
 
 `httpjson,server=http://localhost:9999/stats/,service=service01 a=0.5,b_d=0.1,b_e=5,response_time=0.003`
 `httpjson,server=http://localhost:9999/stats/,service=service02 a=0.6,b_d=0.2,b_e=6,response_time=0.003`
+
+[HTTP input plugin]: /plugins/inputs/http
