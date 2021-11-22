@@ -78,13 +78,12 @@ func Test_generateJWT(t *testing.T) {
 		{
 			name: "Same values in claims",
 			args: args{
-				saKeyfile:    "./test_key_file.json",
+				saKeyfile:    "./testdata/test_key_file.json",
 				saEmail:      "test-service-account-email@example.com",
 				audience:     "http://example.com",
 				expiryLength: time.Now().Unix() + 120,
 			},
 			want: args{
-				saKeyfile:    "./test_key_file.json",
 				saEmail:      "test-service-account-email@example.com",
 				audience:     "https://www.googleapis.com/oauth2/v4/token",
 				expiryLength: time.Now().Unix() + 120,
@@ -100,11 +99,9 @@ func Test_generateJWT(t *testing.T) {
 				t.Errorf("generateJWT() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-
 			// _, err = jwt.ParseWithClaims(h.signedJWT, &claims, func(token *jwt.Token) (interface{}, error) {
 			// 	return nil, nil
 			// })
-
 			claims := jwt.StandardClaims{}
 			jwt.ParseWithClaims(got, &claims, func(token *jwt.Token) (interface{}, error) {
 				return nil, nil
@@ -112,6 +109,9 @@ func Test_generateJWT(t *testing.T) {
 
 			if claims.Audience != tt.want.audience {
 				t.Errorf("generateJWT() got = %v, want %v", claims.Audience, tt.want.audience)
+			}
+			if claims.Subject != tt.want.saEmail {
+				t.Errorf("generateJWT() got = %v, want %v", claims.Subject, tt.want.saEmail)
 			}
 		})
 	}
