@@ -229,10 +229,10 @@ func TestGatherContainsTag(t *testing.T) {
 
 func TestExcludingNamesTag(t *testing.T) {
 	winServices := &WinServices{
-		Log:          testutil.Logger{},
-		ServiceNames: []string{"*"}, // '*' == default, all included
+		Log:                  testutil.Logger{},
+		ServiceNames:         []string{"*"}, // '*' == default, all included
 		ServiceNamesExcluded: []string{"Service*"},
-		mgrProvider:  &FakeMgProvider{testSimpleData[0]},
+		mgrProvider:          &FakeMgProvider{testSimpleData[0]},
 	}
 	winServices.Init()
 	var acc1 testutil.Accumulator
@@ -246,6 +246,6 @@ func TestExcludingNamesTag(t *testing.T) {
 		fields["startup_mode"] = int(s.startUpMode)
 		tags["service_name"] = s.serviceName
 		tags["display_name"] = s.displayName
-		acc1.AssertDoesNotContainsTaggedFields(t, "win_services", fields, tags) 
+		acc1.AssertDoesNotContainsTaggedFields(t, "win_services", fields, tags)
 	}
 }

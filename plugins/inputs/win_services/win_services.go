@@ -95,9 +95,9 @@ var description = "Input plugin to report Windows services info."
 type WinServices struct {
 	Log telegraf.Logger
 
-	ServiceNames []string `toml:"service_names"`
+	ServiceNames         []string `toml:"service_names"`
 	ServiceNamesExcluded []string `toml:"excluded_service_names"`
-	mgrProvider  ManagerProvider
+	mgrProvider          ManagerProvider
 
 	servicesFilter filter.Filter
 }
