@@ -160,7 +160,7 @@ lint:
 		exit 1; \
 	}
 
-	markdownlint
+	markdownlint .
 
 .PHONY: lint-branch
 lint-branch:
