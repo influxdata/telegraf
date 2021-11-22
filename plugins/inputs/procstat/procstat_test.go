@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/process"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/process"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"

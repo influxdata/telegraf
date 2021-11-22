@@ -573,7 +573,11 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 
 	// Print Inputs
 	for _, pname := range pnames {
+		// Skip inputs that are registered twice for backward compatibility
 		if pname == "cisco_telemetry_gnmi" {
+			continue
+		}
+		if pname == "KNXListener" {
 			continue
 		}
 		creator := inputs.Inputs[pname]

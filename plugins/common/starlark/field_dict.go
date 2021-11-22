@@ -274,3 +274,27 @@ func asGoValue(value interface{}) (interface{}, error) {
 
 	return nil, errors.New("invalid starlark type")
 }
+
+// ToFields converts a starlark.Value to a map of values.
+func toFields(value starlark.Value) (map[string]interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+	items, err := items(value, "The type %T is unsupported as type of collection of fields")
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]interface{}, len(items))
+	for _, item := range items {
+		key, err := toString(item[0], "The type %T is unsupported as type of key for fields")
+		if err != nil {
+			return nil, err
+		}
+		value, err := asGoValue(item[1])
+		if err != nil {
+			return nil, err
+		}
+		result[key] = value
+	}
+	return result, nil
+}

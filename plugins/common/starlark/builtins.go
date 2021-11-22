@@ -10,14 +10,40 @@ import (
 )
 
 func newMetric(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var name starlark.String
-	if err := starlark.UnpackPositionalArgs("Metric", args, kwargs, 1, &name); err != nil {
+	var (
+		name         starlark.String
+		tags, fields starlark.Value
+	)
+	if err := starlark.UnpackArgs("Metric", args, kwargs, "name", &name, "tags?", &tags, "fields?", &fields); err != nil {
 		return nil, err
 	}
 
-	m := metric.New(string(name), nil, nil, time.Now())
+	allFields, err := toFields(fields)
+	if err != nil {
+		return nil, err
+	}
+	allTags, err := toTags(tags)
+	if err != nil {
+		return nil, err
+	}
+
+	m := metric.New(string(name), allTags, allFields, time.Now())
 
 	return &Metric{metric: m}, nil
+}
+
+func toString(value starlark.Value, errorMsg string) (string, error) {
+	if value, ok := value.(starlark.String); ok {
+		return string(value), nil
+	}
+	return "", fmt.Errorf(errorMsg, value)
+}
+
+func items(value starlark.Value, errorMsg string) ([]starlark.Tuple, error) {
+	if iter, ok := value.(starlark.IterableMapping); ok {
+		return iter.Items(), nil
+	}
+	return nil, fmt.Errorf(errorMsg, value)
 }
 
 func deepcopy(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {

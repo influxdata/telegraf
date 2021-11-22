@@ -196,3 +196,27 @@ func (i *TagIterator) Next(p *starlark.Value) bool {
 func (i *TagIterator) Done() {
 	i.tagIterCount--
 }
+
+// ToTags converts a starlark.Value to a map of string.
+func toTags(value starlark.Value) (map[string]string, error) {
+	if value == nil {
+		return nil, nil
+	}
+	items, err := items(value, "The type %T is unsupported as type of collection of tags")
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]string, len(items))
+	for _, item := range items {
+		key, err := toString(item[0], "The type %T is unsupported as type of key for tags")
+		if err != nil {
+			return nil, err
+		}
+		value, err := toString(item[1], "The type %T is unsupported as type of value for tags")
+		if err != nil {
+			return nil, err
+		}
+		result[key] = value
+	}
+	return result, nil
+}

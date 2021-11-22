@@ -155,7 +155,12 @@ lint:
 		exit 1
 	endif
 
-		golangci-lint run
+	golangci-lint run
+
+	ifeq (, $(shell which markdownlint))
+		$(info markdownlint can't be found, please run: make lint-install)
+		exit 1
+	endif
 
 	ifeq (, $(shell which markdownlint-cli))
 		$(info markdownlint-cli can't be found, please run: make lint-install)
@@ -165,10 +170,10 @@ lint:
 
 .PHONY: lint-branch
 lint-branch:
-ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please run: make lint-install)
-	exit 1
-endif
+	ifeq (, $(shell which golangci-lint))
+		$(info golangci-lint can't be found, please run: make lint-install)
+		exit 1
+	endif
 
 	golangci-lint run --new-from-rev master
 
