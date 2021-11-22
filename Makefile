@@ -149,14 +149,14 @@ lint-install:
 .PHONY: lint
 lint:
 	@which golangci-lint >/dev/null 2>&1 || { \
-		{ echo "golangci-lint not found, please run: make lint-install"; \
+		echo "golangci-lint not found, please run: make lint-install"; \
 		exit 1; \
 	}
 
 	golangci-lint run
 
 	@which markdownlint >/dev/null 2>&1 || { \
-		{ echo "markdownlint not found, please run: make lint-install"; \
+		echo "markdownlint not found, please run: make lint-install"; \
 		exit 1; \
 	}
 
