@@ -16,6 +16,20 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
+func GetToken(secret string, email string, url string) string {
+	token, err := generateJWT(secret, email, url, 120)
+
+	if err != nil {
+		println(err.Error())
+	}
+
+	accessToken, err := getGoogleID(token)
+	if err != nil {
+		println(err.Error())
+	}
+	return accessToken
+}
+
 // https://cloud.google.com/endpoints/docs/openapi/service-account-authentication#go
 func generateJWT(saKeyfile, saEmail, audience string, expiryLength int64) (string, error) {
 	now := time.Now().Unix()
@@ -46,12 +60,14 @@ func generateJWT(saKeyfile, saEmail, audience string, expiryLength int64) (strin
 	if err != nil {
 		return "", fmt.Errorf("could not read service account file: %v", err)
 	}
+
 	conf, err := google.JWTConfigFromJSON(sa)
 	if err != nil {
 		return "", fmt.Errorf("could not parse service account JSON: %v", err)
 	}
 
 	block, _ := pem.Decode(conf.PrivateKey)
+
 	parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		return "", fmt.Errorf("private key parse error: %v", err)
@@ -100,18 +116,4 @@ func callAPIEndpoint(method string, urls string, token string, payload io.Reader
 		return []byte{}, fmt.Errorf("error generating google id token jwt")
 	}
 	return body, nil
-}
-
-func GetToken(secret string, email string, url string) string {
-	token, err := generateJWT(secret, email, url, 120)
-
-	if err != nil {
-		println(err.Error())
-	}
-
-	accessToken, err := getGoogleID(token)
-	if err != nil {
-		println(err.Error())
-	}
-	return accessToken
 }

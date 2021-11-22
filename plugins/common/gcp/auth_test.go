@@ -1,9 +1,13 @@
 package gcp
 
 import (
+	"fmt"
 	"io"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/golang-jwt/jwt"
 )
 
 func TestGetToken(t *testing.T) {
@@ -67,20 +71,47 @@ func Test_generateJWT(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    string
+		want    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// WIP: Adding test cases.
+		{
+			name: "Same values in claims",
+			args: args{
+				saKeyfile:    "./test_key_file.json",
+				saEmail:      "test-service-account-email@example.com",
+				audience:     "http://example.com",
+				expiryLength: time.Now().Unix() + 120,
+			},
+			want: args{
+				saKeyfile:    "./test_key_file.json",
+				saEmail:      "test-service-account-email@example.com",
+				audience:     "https://www.googleapis.com/oauth2/v4/token",
+				expiryLength: time.Now().Unix() + 120,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			fmt.Println("tt.args.saKeyfile", tt.args.saKeyfile, "tt.args.saEmail", tt.args.saEmail, "tt.args.audience", tt.args.audience, "tt.args.expiryLength", tt.args.expiryLength)
 			got, err := generateJWT(tt.args.saKeyfile, tt.args.saEmail, tt.args.audience, tt.args.expiryLength)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("generateJWT() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("generateJWT() got = %v, want %v", got, tt.want)
+
+			// _, err = jwt.ParseWithClaims(h.signedJWT, &claims, func(token *jwt.Token) (interface{}, error) {
+			// 	return nil, nil
+			// })
+
+			claims := jwt.StandardClaims{}
+			jwt.ParseWithClaims(got, &claims, func(token *jwt.Token) (interface{}, error) {
+				return nil, nil
+			})
+
+			if claims.Audience != tt.want.audience {
+				t.Errorf("generateJWT() got = %v, want %v", claims.Audience, tt.want.audience)
 			}
 		})
 	}
