@@ -47,6 +47,11 @@ type TopicParsingConfig struct {
 	Tags        string            `toml:"tags"`
 	Fields      string            `toml:"fields"`
 	FieldTypes  map[string]string `toml:"types"`
+	// cached split of user given information
+	MeasurementIndex int
+	SplitTags        []string
+	SplitFields      []string
+	SplitTopic       []string
 }
 type MQTTConsumer struct {
 	Servers                []string             `toml:"servers"`
@@ -181,6 +186,33 @@ func (m *MQTTConsumer) Init() error {
 	}
 	m.opts = opts
 	m.messages = map[telegraf.TrackingID]bool{}
+
+	for i, p := range m.TopicParsing {
+		split_measurement := strings.Split(p.Measurement, "/")
+		for j := range split_measurement {
+			if split_measurement[j] != "_" {
+				m.TopicParsing[i].MeasurementIndex = j
+				break
+			}
+		}
+		m.TopicParsing[i].SplitTags = strings.Split(p.Tags, "/")
+		m.TopicParsing[i].SplitFields = strings.Split(p.Fields, "/")
+		m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
+
+		if len(split_measurement) != len(m.TopicParsing[i].SplitTopic) {
+			return fmt.Errorf("config error topic parsing: measurement length does not equal topic length")
+		}
+
+		if len(m.TopicParsing[i].SplitFields) != len(m.TopicParsing[i].SplitTopic) {
+			return fmt.Errorf("config error topic parsing: fields length does not equal topic length")
+		}
+
+		if len(m.TopicParsing[i].SplitTags) != len(m.TopicParsing[i].SplitTopic) {
+			return fmt.Errorf("config error topic parsing: tags length does not equal topic length")
+		}
+
+	}
+
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
@@ -260,15 +292,13 @@ func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 }
 
 // compareTopics is used to support the mqtt wild card `+` which allows for one topic of any value
-func compareTopics(expected string, incoming string) bool {
-	expectedSplit := strings.Split(expected, "/")
-	incomingSplit := strings.Split(incoming, "/")
-	if len(expectedSplit) != len(incomingSplit) {
+func compareTopics(expected []string, incoming []string) bool {
+	if len(expected) != len(incoming) {
 		return false
 	}
 
-	for i, expected := range expectedSplit {
-		if incomingSplit[i] != expected && expected != "+" {
+	for i, expected := range expected {
+		if incoming[i] != expected && expected != "+" {
 			return false
 		}
 	}
@@ -288,35 +318,26 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
 		for _, p := range m.TopicParsing {
-			if !compareTopics(p.Topic, msg.Topic()) {
+			values := strings.Split(msg.Topic(), "/")
+			if !compareTopics(p.SplitTopic, values) {
 				continue
 			}
 
-			values := strings.Split(msg.Topic(), "/")
 			if p.Measurement != "" {
-				m, err := parseMeasurement(strings.Split(p.Measurement, "/"), values)
-				if err != nil {
-					return err
-				}
-				metric.SetName(m)
+				metric.SetName(values[p.MeasurementIndex])
 			}
 			if p.Tags != "" {
-				tags, err := parseTags(strings.Split(p.Tags, "/"), values)
+				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
 				if err != nil {
 					return err
-				}
-				for k, v := range tags {
-					metric.AddTag(k, v)
 				}
 			}
 			if p.Fields != "" {
-				fields, err := parseFields(strings.Split(p.Fields, "/"), values, p.FieldTypes)
+				err := parseMetric(p.SplitFields, values, p.FieldTypes, false, metric)
 				if err != nil {
 					return err
 				}
-				for k, v := range fields {
-					metric.AddField(k, v)
-				}
+
 			}
 		}
 	}
@@ -388,71 +409,64 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	return opts, nil
 }
 
-// parseMeasurement gets a single value from the incoming topic based on the user configuration (TopicParsing.Measurement)
-func parseMeasurement(keys []string, values []string) (string, error) {
-	for i, k := range keys {
-		if k != "_" {
-			return values[i], nil
-		}
-	}
-	return "", fmt.Errorf("no measurements found")
-}
-
-// parseTags gets multiple tags from the topic based on the user configuration (TopicParsing.Tags)
-func parseTags(keys []string, values []string) (map[string]string, error) {
-	results := make(map[string]string)
-	for i, k := range keys {
-		if k != "_" {
-			results[k] = values[i]
-		}
-	}
-	if len(results) == 0 {
-		return nil, fmt.Errorf("no tags found")
-	}
-	return results, nil
-}
-
 // parseFields gets multiple fields from the topic based on the user configuration (TopicParsing.Fields)
-func parseFields(keys []string, values []string, types map[string]string) (map[string]interface{}, error) {
-	results := make(map[string]interface{})
+func parseMetric(keys []string, values []string, types map[string]string, isTag bool, metric telegraf.Metric) error {
+	var metric_found bool
 	for i, k := range keys {
 		if k == "_" {
 			continue
 		}
-		topicValue := values[i]
-		var newType interface{}
-		var err error
-		// If the user configured inputs.mqtt_consumer.topic.types, check for the desired type
-		if desiredType, ok := types[k]; ok {
-			switch desiredType {
-			case "uint":
-				newType, err = strconv.ParseUint(topicValue, 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf("uunable to contopicValueert field '%s' to type uint: %v", topicValue, err)
-				}
-			case "int":
-				newType, err = strconv.ParseInt(topicValue, 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf("unable to convert field '%s' to type int: %v", topicValue, err)
-				}
-			case "float":
-				newType, err = strconv.ParseFloat(topicValue, 64)
-				if err != nil {
-					return nil, fmt.Errorf("unable to convert field '%s' to type float: %v", topicValue, err)
-				}
-			default:
-				return nil, fmt.Errorf("converting to the type %s is not supported: use int, uint, or float", desiredType)
-			}
+
+		if isTag {
+			metric.AddTag(k, values[i])
+			metric_found = true
 		} else {
-			newType = topicValue
+			newType, err := typeConvert(types, values[i], k)
+			if err != nil {
+				return err
+			}
+			metric.AddField(k, newType)
+			metric_found = true
 		}
-		results[k] = newType
+
 	}
-	if len(results) == 0 {
-		return nil, fmt.Errorf("no fields found")
+	if !metric_found {
+		return fmt.Errorf("no fields or tags found")
 	}
-	return results, nil
+	return nil
 }
+
+func typeConvert(types map[string]string, topicValue string, key string) (interface{}, error) {
+	var newType interface{}
+	var err error
+	// If the user configured inputs.mqtt_consumer.topic.types, check for the desired type
+	if desiredType, ok := types[key]; ok {
+		switch desiredType {
+		case "uint":
+			newType, err = strconv.ParseUint(topicValue, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert field '%s' to type uint: %v", topicValue, err)
+			}
+		case "int":
+			newType, err = strconv.ParseInt(topicValue, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert field '%s' to type int: %v", topicValue, err)
+			}
+		case "float":
+			newType, err = strconv.ParseFloat(topicValue, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unable to convert field '%s' to type float: %v", topicValue, err)
+			}
+		default:
+			return nil, fmt.Errorf("converting to the type %s is not supported: use int, uint, or float", desiredType)
+		}
+	} else {
+		newType = topicValue
+	}
+
+	return newType, nil
+}
+
 func New(factory ClientFactory) *MQTTConsumer {
 	return &MQTTConsumer{
 		Servers:                []string{"tcp://127.0.0.1:1883"},

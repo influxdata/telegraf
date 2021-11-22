@@ -1,6 +1,7 @@
 package mqtt_consumer
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -186,11 +187,12 @@ func (m *Message) Ack() {
 
 func TestTopicTag(t *testing.T) {
 	tests := []struct {
-		name         string
-		topic        string
-		topicTag     func() *string
-		topicParsing []TopicParsingConfig
-		expected     []telegraf.Metric
+		name          string
+		topic         string
+		topicTag      func() *string
+		expectedError error
+		topicParsing  []TopicParsingConfig
+		expected      []telegraf.Metric
 	}{
 		{
 			name:  "default topic when topic tag is unset for backwards compatibility",
@@ -314,6 +316,40 @@ func TestTopicTag(t *testing.T) {
 				),
 			},
 		},
+		{
+			name:  "topic parsing configured incorrectly",
+			topic: "telegraf/123/test/hello",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			expectedError: fmt.Errorf("config error topic parsing: fields length does not equal topic length"),
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "telegraf/+/test/hello",
+					Measurement: "_/_/measurement/_",
+					Tags:        "testTag/_/_/_",
+					Fields:      "_/_/testNumber:int/_/testString:string",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"testTag": "telegraf",
+					},
+					map[string]interface{}{
+						"testNumber": 123,
+						"testString": "hello",
+						"time_idle":  42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -345,7 +381,10 @@ func TestTopicTag(t *testing.T) {
 			plugin.SetParser(parser)
 
 			err = plugin.Init()
-			require.NoError(t, err)
+			require.Equal(t, tt.expectedError, err)
+			if tt.expectedError != nil {
+				return
+			}
 
 			var acc testutil.Accumulator
 			err = plugin.Start(&acc)
