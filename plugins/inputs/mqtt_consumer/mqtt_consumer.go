@@ -288,33 +288,34 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
 		for _, p := range m.TopicParsing {
-			if compareTopics(p.Topic, msg.Topic()) {
-				values := strings.Split(msg.Topic(), "/")
+			if !compareTopics(p.Topic, msg.Topic()) {
+				continue
+			}
 
-				if p.Measurement != "" {
-					m, err := parseMeasurement(strings.Split(p.Measurement, "/"), values)
-					if err != nil {
-						return err
-					}
-					metric.SetName(m)
+			values := strings.Split(msg.Topic(), "/")
+			if p.Measurement != "" {
+				m, err := parseMeasurement(strings.Split(p.Measurement, "/"), values)
+				if err != nil {
+					return err
 				}
-				if p.Tags != "" {
-					tags, err := parseTags(strings.Split(p.Tags, "/"), values)
-					if err != nil {
-						return err
-					}
-					for k, v := range tags {
-						metric.AddTag(k, v)
-					}
+				metric.SetName(m)
+			}
+			if p.Tags != "" {
+				tags, err := parseTags(strings.Split(p.Tags, "/"), values)
+				if err != nil {
+					return err
 				}
-				if p.Fields != "" {
-					fields, err := parseFields(strings.Split(p.Fields, "/"), values, p.FieldTypes)
-					if err != nil {
-						return err
-					}
-					for k, v := range fields {
-						metric.AddField(k, v)
-					}
+				for k, v := range tags {
+					metric.AddTag(k, v)
+				}
+			}
+			if p.Fields != "" {
+				fields, err := parseFields(strings.Split(p.Fields, "/"), values, p.FieldTypes)
+				if err != nil {
+					return err
+				}
+				for k, v := range fields {
+					metric.AddField(k, v)
 				}
 			}
 		}
