@@ -3,9 +3,9 @@ package zookeeper
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
@@ -37,6 +37,6 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasInt64Field("zookeeper", metric), metric)
+		require.True(t, acc.HasInt64Field("zookeeper", metric), metric)
 	}
 }
