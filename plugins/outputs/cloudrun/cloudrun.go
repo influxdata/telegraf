@@ -64,18 +64,18 @@ const (
 )
 
 type CloudRun struct {
-	URL             string            `toml:"url"`
-	Timeout         config.Duration   `toml:"timeout"`
-	Headers         map[string]string `toml:"headers"`
-	JSONSecret      string            `toml:"json_file_location"`
-	GCPEmailAddress string            `toml:"cloudrun_email"`
-	ConvertPaths    bool              `toml:"convert_paths"`
-	Method          string
+	URL        string            `toml:"url"`
+	Timeout    config.Duration   `toml:"timeout"`
+	Headers    map[string]string `toml:"headers"`
+	JSONSecret string            `toml:"json_file_location"`
+	// GCPEmailAddress string            `toml:"cloudrun_email"`
+	ConvertPaths bool `toml:"convert_paths"`
+	Method       string
 	tls.ClientConfig
 
-	client     *http.Client
-	serializer serializers.Serializer
-	signedJWT  string
+	client      *http.Client
+	serializer  serializers.Serializer
+	accessToken string
 }
 
 // SetSerializer Allows you to use data_format
@@ -152,15 +152,15 @@ func (h *CloudRun) write(reqBody []byte) error {
 	}
 
 	claims := jwt.StandardClaims{}
-	_, err = jwt.ParseWithClaims(h.signedJWT, &claims, func(token *jwt.Token) (interface{}, error) {
+	jwt.ParseWithClaims(h.accessToken, &claims, func(token *jwt.Token) (interface{}, error) {
 		return nil, nil
 	})
 
-	if h.signedJWT == "" || claims.VerifyExpiresAt(time.Now().Unix(), true) == false {
-		h.signedJWT = gcp.GetToken(h.JSONSecret, h.GCPEmailAddress, h.URL)
+	if h.accessToken == "" || !claims.VerifyExpiresAt(time.Now().Unix(), true) {
+		h.accessToken = gcp.GetAccessToken(h.JSONSecret, h.URL)
 	}
 
-	bearerToken := fmt.Sprintf("Bearer %s", h.signedJWT)
+	bearerToken := fmt.Sprintf("Bearer %s", h.accessToken)
 
 	req.Header.Set("User-Agent", internal.ProductToken())
 	req.Header.Set("Content-Type", defaultContentType)
@@ -179,7 +179,10 @@ func (h *CloudRun) write(reqBody []byte) error {
 		return err
 	}
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+
+	if _, err := ioutil.ReadAll(resp.Body); err != nil {
+		return err
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
