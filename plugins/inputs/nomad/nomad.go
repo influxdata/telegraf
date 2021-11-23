@@ -51,7 +51,9 @@ var sampleConfig = `
 
 func init() {
 	inputs.Add("nomad", func() telegraf.Input {
-		return &Nomad{}
+		return &Nomad{
+			ResponseTimeout: config.Duration(5 * time.Second),
+		}
 	})
 }
 
@@ -87,9 +89,6 @@ func (n *Nomad) Init() error {
 		return fmt.Errorf("setting up TLS configuration failed: %v", err)
 	}
 
-	if n.ResponseTimeout < config.Duration(time.Second) {
-		n.ResponseTimeout = config.Duration(time.Second * 5)
-	}
 	n.roundTripper = &http.Transport{
 		TLSHandshakeTimeout:   5 * time.Second,
 		TLSClientConfig:       tlsCfg,

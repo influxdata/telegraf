@@ -91,7 +91,6 @@ func TestNomadStats(t *testing.T) {
 			URL: ts.URL,
 		}
 		t.Run(tt.name, func(t *testing.T) {
-
 			err := plugin.Init()
 			require.NoError(t, err)
 
@@ -100,7 +99,6 @@ func TestNomadStats(t *testing.T) {
 			require.NoError(t, err)
 
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
-
 		})
 	}
 }

@@ -9,7 +9,7 @@ The Nomad plugin must grab metrics from every Nomad agent of the cluster. Telegr
 ```toml
 [[inputs.nomad]]
   ## URL for the Nomad agent
-  url = "http://127.0.0.1:4646"
+  # url = "http://127.0.0.1:4646"
 
   ## Use auth token for authorization. 
   ## If both are set, an error is thrown.
