@@ -107,7 +107,10 @@ func (s *Snmp) init() error {
 		return nil
 	}
 
-	s.getMibsPath()
+	err := s.getMibsPath()
+	if err != nil {
+		return err
+	}
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
@@ -131,7 +134,7 @@ func (s *Snmp) init() error {
 	return nil
 }
 
-func (s *Snmp) getMibsPath() {
+func (s *Snmp) getMibsPath() error {
 	gosmi.Init()
 	var folders []string
 	for _, mibPath := range s.Path {
@@ -143,14 +146,14 @@ func (s *Snmp) getMibsPath() {
 			if info.Mode()&os.ModeSymlink != 0 {
 				link, err := os.Readlink(path)
 				if err != nil {
-					s.Log.Warnf("Bad symbolic link %v")
+					s.Log.Warnf("Bad symbolic link %v", link)
 				}
 				folders = append(folders, link)
 			}
 			return nil
 		})
 		if err != nil {
-			s.Log.Warnf("Filepath could not be walked %v", err)
+			return fmt.Errorf("Filepath could not be walked %v", err)
 		}
 		for _, folder := range folders {
 			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
@@ -171,6 +174,7 @@ func (s *Snmp) getMibsPath() {
 		}
 		folders = []string{}
 	}
+	return nil
 }
 
 // Table holds the configuration for a SNMP table.
