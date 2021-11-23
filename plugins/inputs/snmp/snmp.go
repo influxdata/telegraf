@@ -169,7 +169,7 @@ func (s *Snmp) getMibsPath() error {
 				return nil
 			})
 			if err != nil {
-				s.Log.Warnf("Filepath could not be walked %v", err)
+				return fmt.Errorf("Filepath could not be walked %v", err)
 			}
 		}
 		folders = []string{}
