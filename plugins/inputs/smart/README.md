@@ -112,6 +112,14 @@ smartctl --scan -d nvme
   
     ## Timeout for the cli command to complete.
     # timeout = "30s"
+    
+    ## Optionally call smartctl and nvme-cli with a specific concurrency policy.
+    ## By default, smartctl and nvme-cli are called in separate threads (goroutines) to gather disk attributes.
+    ## Some devices (e.g. disks in RAID arrays) may have access limitations that require sequential reading of
+    ## SMART data - one individual array drive at the time. In such case please set this configuration option
+    ## to "sequential" to get readings for all drives.
+    ## valid options: concurrent, sequential
+    # read_method = "concurrent"
 ```
 
 ## Permissions
@@ -235,11 +243,25 @@ the DEVICE (name of the device could be taken from the previous command):
 smartctl --info --health --attributes --tolerance=verypermissive --nocheck NOCHECK --format=brief -d DEVICE
 ```
 
-If you try to gather vendor specific metrics, please provide this commad
+If you try to gather vendor specific metrics, please provide this command
 and replace vendor and device to match your case:
 
 ```sh
 nvme VENDOR smart-log-add DEVICE
+```
+
+If you have specified devices array in configuration file, and Telegraf only shows data from one device, you should
+change the plugin configuration to sequentially gather disk attributes instead of collecting it in separate threads
+(goroutines). To do this find in plugin configuration read_method and change it to sequential:
+
+```toml
+    ## Optionally call smartctl and nvme-cli with a specific concurrency policy.
+    ## By default, smartctl and nvme-cli are called in separate threads (goroutines) to gather disk attributes.
+    ## Some devices (e.g. disks in RAID arrays) may have access limitations that require sequential reading of
+    ## SMART data - one individual array drive at the time. In such case please set this configuration option
+    ## to "sequential" to get readings for all drives.
+    ## valid options: concurrent, sequential
+    read_method = "sequential"
 ```
 
 ## Example SMART Plugin Outputs
