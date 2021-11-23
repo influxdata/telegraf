@@ -91,9 +91,7 @@ func mapMsgID(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 
 func mapVersion(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 	if value, ok := metric.GetField("version"); ok {
-		//nolint: revive // Need switch with only one case to handle `.(type)`
-		switch v := value.(type) {
-		case uint64:
+		if v, ok := value.(uint64); ok {
 			msg.SetVersion(uint16(v))
 			return
 		}
@@ -146,8 +144,7 @@ func mapTimestamp(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 	timestamp := metric.Time()
 	//nolint: revive // Need switch with only one case to handle `.(type)`
 	if value, ok := metric.GetField("timestamp"); ok {
-		switch v := value.(type) {
-		case int64:
+		if v, ok := value.(int64); ok {
 			timestamp = time.Unix(0, v).UTC()
 		}
 	}
