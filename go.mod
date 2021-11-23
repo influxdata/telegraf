@@ -327,11 +327,10 @@ require (
 	modernc.org/token v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
+	github.com/gwos/tcg/transit v0.0.0-20211124103916-e2b3b806f031
 )
 
 require github.com/libp2p/go-reuseport v0.1.0
-
-require github.com/gwos/tcg v0.0.0-20211123085413-fa76511f6546
 
 require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
@@ -354,7 +353,6 @@ require (
 	go.opentelemetry.io/otel/sdk/export/metric v0.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.0.1 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
-	github.com/patrickmn/go-cache v2.1.0+incompatible
 )
 
 // replaced due to https://github.com/satori/go.uuid/issues/73

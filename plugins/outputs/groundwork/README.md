@@ -1,6 +1,6 @@
 # Groundwork Output Plugin
 
-This plugin writes to a [GroundWork Monitor][1] instance.
+This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports GW8+
 
 [1]: https://www.gwos.com/product/groundwork-monitor/
 
@@ -29,4 +29,3 @@ This plugin writes to a [GroundWork Monitor][1] instance.
   ## The name of the tag that contains the hostname [default - "host"]
   resource_tag = "host"
 ```
-#### NOTE: Plugin only supports GW8+ 

@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gwos/tcg/clients"
-	"github.com/gwos/tcg/milliseconds"
 	"github.com/gwos/tcg/transit"
+	"github.com/gwos/tcg/transit/clients"
 	"github.com/hashicorp/go-uuid"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -33,9 +32,6 @@ var (
 
   ## Agent uuid for Groundwork API Server
   agent_id = ""
-
-  ## Groundwork application type
-  app_type = ""
 
   ## Username to access Groundwork API
   username = ""
@@ -73,6 +69,9 @@ func (g *Groundwork) Init() error {
 	if g.Server == "" {
 		return errors.New("no 'groundwork_endpoint' provided")
 	}
+	if g.AgentID == "" {
+		return errors.New("no 'agent_id' provided")
+	}
 	if g.Username == "" {
 		return errors.New("no 'username' provided")
 	}
@@ -80,13 +79,16 @@ func (g *Groundwork) Init() error {
 		return errors.New("no 'password' provided")
 	}
 	if g.DefaultHost == "" {
-		g.DefaultHost = "telegraf"
+		return errors.New("no 'default_host' provided")
+	}
+	if g.DefaultServiceState == "" {
+		return errors.New("no 'default_service_state' provided")
 	}
 	if g.ResourceTag == "" {
-		g.ResourceTag = "host"
+		return errors.New("no 'resource_tag' provided")
 	}
-	if g.DefaultServiceState == "" || !validStatus(g.DefaultServiceState) {
-		g.DefaultServiceState = string(transit.ServiceOk)
+	if !validStatus(g.DefaultServiceState) {
+		return errors.New("invalid 'default_service_state' provided")
 	}
 
 	return nil
@@ -109,6 +111,7 @@ func (g *Groundwork) Close() error {
 
 	headers := map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
+		"User-Agent":   internal.ProductToken(),
 	}
 
 	_, _, err := clients.SendRequest(http.MethodPost, g.Server+logoutURL, headers, formValues, nil)
@@ -119,7 +122,7 @@ func (g *Groundwork) Close() error {
 func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	resourceToServicesMap := make(map[string][]transit.DynamicMonitoredService)
 	for _, metric := range metrics {
-		resource, service := parseMetric(g.DefaultHost, g.DefaultServiceState, g.ResourceTag, metric)
+		resource, service := g.parseMetric(metric)
 		resourceToServicesMap[resource] = append(resourceToServicesMap[resource], service)
 	}
 
@@ -133,8 +136,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 				},
 			},
 			Status:        transit.HostUp,
-			LastCheckTime: milliseconds.MillisecondTimestamp{Time: time.Now()},
-			NextCheckTime: milliseconds.MillisecondTimestamp{Time: time.Now()},
+			LastCheckTime: transit.MillisecondTimestamp{Time: time.Now()},
 			Services:      services,
 		})
 	}
@@ -145,7 +147,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 			AppType:    "TELEGRAF",
 			AgentID:    g.AgentID,
 			TraceToken: traceToken,
-			TimeStamp:  milliseconds.MillisecondTimestamp{Time: time.Now()},
+			TimeStamp:  transit.MillisecondTimestamp{Time: time.Now()},
 			Version:    transit.ModelVersion,
 		},
 		Resources: resources,
@@ -157,13 +159,14 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	}
 
 	headers := map[string]string{
-		"GWOS-APP-NAME":  "groundwork",
+		"GWOS-APP-NAME":  "telegraf",
 		"GWOS-API-TOKEN": g.authToken,
 		"Content-Type":   "application/json",
 		"Accept":         "application/json",
+		"User-Agent":     internal.ProductToken(),
 	}
 
-	statusCode, _, err := clients.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
+	statusCode, body, err := clients.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
 	if err != nil {
 		return err
 	}
@@ -174,13 +177,14 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 		headers["GWOS-API-TOKEN"] = g.authToken
-		statusCode, body, httpErr := clients.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
-		if httpErr != nil {
-			return httpErr
+		statusCode, body, err = clients.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
+		if err != nil {
+			return err
 		}
-		if statusCode != 200 {
-			return fmt.Errorf("something went wrong during processing an http request[http_status = %d, body = %s]", statusCode, string(body))
-		}
+	}
+
+	if statusCode != 200 {
+		return fmt.Errorf("something went wrong during processing an http request[http_status = %d, body = %s]", statusCode, string(body))
 	}
 
 	return nil
@@ -192,14 +196,17 @@ func (g *Groundwork) Description() string {
 
 func init() {
 	outputs.Add("groundwork", func() telegraf.Output {
-		return &Groundwork{}
+		return &Groundwork{
+			ResourceTag:         "host",
+			DefaultHost:         "telegraf",
+			DefaultServiceState: string(transit.ServiceOk),
+		}
 	})
 }
 
-func parseMetric(defaultHostname, defaultServiceState, resourceTag string, metric telegraf.Metric) (string, transit.DynamicMonitoredService) {
-	resource := defaultHostname
-
-	if value, present := metric.GetTag(resourceTag); present {
+func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.DynamicMonitoredService) {
+	resource := g.DefaultHost
+	if value, present := metric.GetTag(g.ResourceTag); present {
 		resource = value
 	}
 
@@ -208,11 +215,10 @@ func parseMetric(defaultHostname, defaultServiceState, resourceTag string, metri
 		service = value
 	}
 
-	status := defaultServiceState
-	if value, present := metric.GetTag("status"); present {
-		if validStatus(value) {
-			status = value
-		}
+	status := g.DefaultServiceState
+	value, statusPresent := metric.GetTag("status")
+	if validStatus(value) {
+		status = value
 	}
 
 	message := ""
@@ -246,8 +252,7 @@ func parseMetric(defaultHostname, defaultServiceState, resourceTag string, metri
 			Owner: resource,
 		},
 		Status:           transit.MonitorStatus(status),
-		LastCheckTime:    milliseconds.MillisecondTimestamp{Time: time.Now()},
-		NextCheckTime:    milliseconds.MillisecondTimestamp{},
+		LastCheckTime:    transit.MillisecondTimestamp{Time: metric.Time()},
 		LastPlugInOutput: message,
 		Metrics:          nil,
 	}
@@ -287,7 +292,7 @@ func parseMetric(defaultHostname, defaultServiceState, resourceTag string, metri
 			MetricName: value.Key,
 			SampleType: transit.Value,
 			Interval: &transit.TimeInterval{
-				EndTime: milliseconds.MillisecondTimestamp{Time: metric.Time()},
+				EndTime: transit.MillisecondTimestamp{Time: metric.Time()},
 			},
 			Value: &transit.TypedValue{
 				ValueType:   valueType,
@@ -299,7 +304,12 @@ func parseMetric(defaultHostname, defaultServiceState, resourceTag string, metri
 		})
 	}
 
-	serviceObject.Status, _ = transit.CalculateServiceStatus(&serviceObject.Metrics)
+	if !statusPresent {
+		var err error
+		if serviceObject.Status, err = transit.CalculateServiceStatus(&serviceObject.Metrics); err != nil {
+			serviceObject.Status = transit.MonitorStatus(g.DefaultServiceState)
+		}
+	}
 
 	return resource, serviceObject
 }
@@ -308,11 +318,12 @@ func login(url, username, password string) ([]byte, error) {
 	formValues := map[string]string{
 		"user":          username,
 		"password":      password,
-		"gwos-app-name": "groundwork",
+		"gwos-app-name": "telegraf",
 	}
 	headers := map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
 		"Accept":       "text/plain",
+		"User-Agent":   internal.ProductToken(),
 	}
 
 	statusCode, body, err := clients.SendRequest(http.MethodPost, url, headers, formValues, nil)
