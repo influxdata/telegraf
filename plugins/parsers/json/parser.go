@@ -112,9 +112,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 
 	// checks if json_name_key is set
 	if p.nameKey != "" {
-		//nolint: revive // Need switch with only one case to handle `.(type)`
-		switch field := f.Fields[p.nameKey].(type) {
-		case string:
+		if field, ok := f.Fields[p.nameKey].(string); ok {
 			name = field
 		}
 	}
