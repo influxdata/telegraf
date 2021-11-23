@@ -797,6 +797,12 @@ func parseKeyValue(keyValue string) (key string, val string) {
 		val = split[1]
 	} else if len(split) == 1 {
 		val = split[0]
+	} else if len(split) > 2 {
+		// fix: https://github.com/influxdata/telegraf/issues/10113
+		// fix: value has "=" parse error
+		// uri=/service/endpoint?sampleParam={paramValue} parse value key="uri", val="/service/endpoint?sampleParam\={paramValue}"
+		key = split[0]
+		val = strings.Join(split[1:], "=")
 	}
 
 	return key, val
