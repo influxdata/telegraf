@@ -49,5 +49,38 @@ func (ki *KubernetesInventory) gatherNode(n corev1.Node, acc telegraf.Accumulato
 		}
 	}
 
+	convertConditionStatusToNumber := func(status corev1.ConditionStatus) int64 {
+		switch status {
+		case corev1.ConditionTrue:
+			return 1
+		case corev1.ConditionFalse:
+			return 0
+		case corev1.ConditionUnknown:
+			return 2
+		default:
+			return 2
+		}
+	}
+
+	for _, condition := range n.Status.Conditions {
+		status := convertConditionStatusToNumber(condition.Status)
+		var conditionTypeName string
+		switch condition.Type {
+		case corev1.NodeReady:
+			conditionTypeName = "condition_ready"
+		case corev1.NodeDiskPressure:
+			conditionTypeName = "condition_disk_pressure"
+		case corev1.NodeMemoryPressure:
+			conditionTypeName = "condition_memory_pressure"
+		case corev1.NodeNetworkUnavailable:
+			conditionTypeName = "condition_network_unavailable"
+		case corev1.NodePIDPressure:
+			conditionTypeName = "condition_pid_pressure"
+		}
+		if conditionTypeName != "" {
+			fields[conditionTypeName] = status
+		}
+	}
+
 	acc.AddFields(nodeMeasurement, fields, tags)
 }

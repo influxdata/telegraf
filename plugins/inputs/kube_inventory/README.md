@@ -222,6 +222,11 @@ tls_key = "/run/telegraf-kubernetes-key"
     - allocatable_millicpu_cores
     - allocatable_memory_bytes
     - allocatable_pods
+    - condition_ready
+    - condition_disk_pressure
+    - condition_memory_pressure
+    - condition_network_unavailable
+    - condition_pid_pressure
 
 - kubernetes_persistentvolume
   - tags:
