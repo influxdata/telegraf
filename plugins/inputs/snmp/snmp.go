@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
@@ -707,7 +708,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case float32:
 			v = float64(vt) / math.Pow10(d)
 		case float64:
-			v = float64(vt) / math.Pow10(d)
+			v = vt / math.Pow10(d)
 		case int:
 			v = float64(vt) / math.Pow10(d)
 		case int8:
@@ -794,7 +795,8 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 			return v, nil
 		}
 
-		if endian == "LittleEndian" {
+		switch endian {
+		case "LittleEndian":
 			switch bit {
 			case "uint64":
 				v = binary.LittleEndian.Uint64(bv)
@@ -805,7 +807,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 			default:
 				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
 			}
-		} else if endian == "BigEndian" {
+		case "BigEndian":
 			switch bit {
 			case "uint64":
 				v = binary.BigEndian.Uint64(bv)
@@ -816,7 +818,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 			default:
 				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
 			}
-		} else {
+		default:
 			return nil, fmt.Errorf("invalid Endian value (%s) for hex to int conversion", endian)
 		}
 

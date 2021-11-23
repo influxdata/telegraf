@@ -944,11 +944,12 @@ func TestFieldConvert(t *testing.T) {
 		conv     string
 		expected interface{}
 	}{
-		{[]byte("foo"), "", string("foo")},
+		{[]byte("foo"), "", "foo"},
 		{"0.123", "float", float64(0.123)},
 		{[]byte("0.123"), "float", float64(0.123)},
 		{float32(0.123), "float", float64(float32(0.123))},
 		{float64(0.123), "float", float64(0.123)},
+		{float64(0.123123123123), "float", float64(0.123123123123)},
 		{123, "float", float64(123)},
 		{123, "float(0)", float64(123)},
 		{123, "float(4)", float64(0.0123)},
