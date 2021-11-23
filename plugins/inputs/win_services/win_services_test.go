@@ -201,7 +201,6 @@ var testSimpleData = []testData{
 	{[]string{"Service 1", "Service 2"}, nil, nil, []serviceTestInfo{
 		{nil, nil, nil, "Service 1", "Fake service 1", 1, 2},
 		{nil, nil, nil, "Service 2", "Fake service 2", 1, 2},
-		//{nil, nil, nil, "NoService 3", "Fake service 3", 1, 2},
 	}},
 }
 
@@ -230,7 +229,6 @@ func TestGatherContainsTag(t *testing.T) {
 func TestExcludingNamesTag(t *testing.T) {
 	winServices := &WinServices{
 		Log:                  testutil.Logger{},
-		ServiceNames:         []string{"*"}, // '*' == default, all included
 		ServiceNamesExcluded: []string{"Service*"},
 		mgrProvider:          &FakeMgProvider{testSimpleData[0]},
 	}
