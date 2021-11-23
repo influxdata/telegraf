@@ -331,6 +331,8 @@ require (
 
 require github.com/libp2p/go-reuseport v0.1.0
 
+require github.com/gwos/tcg v0.0.0-20211123085413-fa76511f6546
+
 require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
