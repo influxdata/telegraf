@@ -12,8 +12,6 @@ import (
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
@@ -22,6 +20,9 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // clientOpt is the option tests should use to connect to the test server.
@@ -65,6 +66,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Ignore the returned error as the tests will fail anyway
+	//nolint:errcheck,revive
 	go serv.Serve(lis)
 
 	conn, err := grpc.Dial(lis.Addr().String(), grpc.WithInsecure())
@@ -90,6 +94,7 @@ func TestWrite(t *testing.T) {
 	s := &Stackdriver{
 		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
 		Namespace: "test",
+		Log:       testutil.Logger{},
 		client:    c,
 	}
 
@@ -121,6 +126,7 @@ func TestWriteResourceTypeAndLabels(t *testing.T) {
 		ResourceLabels: map[string]string{
 			"mylabel": "myvalue",
 		},
+		Log:    testutil.Logger{},
 		client: c,
 	}
 
@@ -149,6 +155,7 @@ func TestWriteAscendingTime(t *testing.T) {
 	s := &Stackdriver{
 		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
 		Namespace: "test",
+		Log:       testutil.Logger{},
 		client:    c,
 	}
 
@@ -221,6 +228,7 @@ func TestWriteBatchable(t *testing.T) {
 	s := &Stackdriver{
 		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
 		Namespace: "test",
+		Log:       testutil.Logger{},
 		client:    c,
 	}
 
@@ -398,6 +406,7 @@ func TestWriteIgnoredErrors(t *testing.T) {
 			s := &Stackdriver{
 				Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
 				Namespace: "test",
+				Log:       testutil.Logger{},
 				client:    c,
 			}
 
@@ -431,6 +440,10 @@ func TestGetStackdriverLabels(t *testing.T) {
 		{Key: "valuequota", Value: "icym5wcpejnhljcvy2vwk15svmhrtueoppwlvix61vlbaeedufn1g6u4jgwjoekwew9s2dboxtgrkiyuircnl8h1lbzntt9gzcf60qunhxurhiz0g2bynzy1v6eyn4ravndeiiugobsrsj2bfaguahg4gxn7nx4irwfknunhkk6jdlldevawj8levebjajcrcbeugewd14fa8o34ycfwx2ymalyeqxhfqrsksxnii2deqq6cghrzi6qzwmittkzdtye3imoygqmjjshiskvnzz1e4ipd9c6wfor5jsygn1kvcg6jm4clnsl1fnxotbei9xp4swrkjpgursmfmkyvxcgq9hoy435nwnolo3ipnvdlhk6pmlzpdjn6gqi3v9gv7jn5ro2p1t5ufxzfsvqq1fyrgoi7gvmttil1banh3cftkph1dcoaqfhl7y0wkvhwwvrmslmmxp1wedyn8bacd7akmjgfwdvcmrymbzvmrzfvq1gs1xnmmg8rsfxci2h6r1ralo3splf4f3bdg4c7cy0yy9qbxzxhcmdpwekwc7tdjs8uj6wmofm2aor4hum8nwyfwwlxy3yvsnbjy32oucsrmhcnu6l2i8laujkrhvsr9fcix5jflygznlydbqw5uhw1rg1g5wiihqumwmqgggemzoaivm3ut41vjaff4uqtqyuhuwblmuiphfkd7si49vgeeswzg7tpuw0oxmkesgibkcjtev2h9ouxzjs3eb71jffhdacyiuyhuxwvm5bnrjewbm4x2kmhgbirz3eoj7ijgplggdkx5vixufg65ont8zi1jabsuxx0vsqgprunwkugqkxg2r7iy6fmgs4lob4dlseinowkst6gp6x1ejreauyzjz7atzm3hbmr5rbynuqp4lxrnhhcbuoun69mavvaaki0bdz5ybmbbbz5qdv0odtpjo2aezat5uosjuhzbvic05jlyclikynjgfhencdkz3qcqzbzhnsynj1zdke0sk4zfpvfyryzsxv9pu0qm"},
 	}
 
-	labels := getStackdriverLabels(tags)
+	s := &Stackdriver{
+		Log: testutil.Logger{},
+	}
+
+	labels := s.getStackdriverLabels(tags)
 	require.Equal(t, QuotaLabelsPerMetricDescriptor, len(labels))
 }
