@@ -132,6 +132,7 @@ following works:
 - github.com/influxdata/tail [MIT License](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
 - github.com/influxdata/toml [MIT License](https://github.com/influxdata/toml/blob/master/LICENSE)
 - github.com/influxdata/wlog [MIT License](https://github.com/influxdata/wlog/blob/master/LICENSE)
+- github.com/intel/iaevents [Apache License 2.0](https://github.com/intel/iaevents/blob/main/LICENSE)
 - github.com/jackc/chunkreader [MIT License](https://github.com/jackc/chunkreader/blob/master/LICENSE)
 - github.com/jackc/pgconn [MIT License](https://github.com/jackc/pgconn/blob/master/LICENSE)
 - github.com/jackc/pgio [MIT License](https://github.com/jackc/pgio/blob/master/LICENSE)

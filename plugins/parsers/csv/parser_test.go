@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var DefaultTime = func() time.Time {
@@ -100,6 +101,8 @@ func TestTimestamp(t *testing.T) {
 			TimeFunc:          DefaultTime,
 		},
 	)
+	require.NoError(t, err)
+
 	testCSV := `line1,line2,line3
 23/05/09 04:05:06 PM,70,test_name
 07/11/09 04:05:06 PM,80,test_name2`
@@ -121,6 +124,8 @@ func TestTimestampYYYYMMDDHHmm(t *testing.T) {
 			TimeFunc:          DefaultTime,
 		},
 	)
+	require.NoError(t, err)
+
 	testCSV := `line1,line2,line3
 200905231605,70,test_name
 200907111605,80,test_name2`
