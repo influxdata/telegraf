@@ -245,6 +245,9 @@ func (client *RedisSentinelClient) gatherMasterStats(acc telegraf.Accumulator) (
 		return masterNames, err
 	}
 
+	// Break out of the loop if one of the items comes out malformed
+	// It's safe to assume that if we fail parsing one item that the rest will fail too
+	// This is because we are iterating over a single server response
 	for _, master := range masters {
 		master, ok := master.([]interface{})
 		if !ok {
@@ -282,6 +285,9 @@ func (client *RedisSentinelClient) gatherReplicaStats(acc telegraf.Accumulator, 
 		return err
 	}
 
+	// Break out of the loop if one of the items comes out malformed
+	// It's safe to assume that if we fail parsing one item that the rest will fail too
+	// This is because we are iterating over a single server response
 	for _, replica := range replicas {
 		replica, ok := replica.([]interface{})
 		if !ok {
@@ -311,6 +317,9 @@ func (client *RedisSentinelClient) gatherSentinelStats(acc telegraf.Accumulator,
 		return err
 	}
 
+	// Break out of the loop if one of the items comes out malformed
+	// It's safe to assume that if we fail parsing one item that the rest will fail too
+	// This is because we are iterating over a single server response
 	for _, sentinel := range sentinels {
 		sentinel, ok := sentinel.([]interface{})
 		if !ok {
