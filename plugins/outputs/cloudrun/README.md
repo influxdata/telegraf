@@ -10,9 +10,7 @@ CloudRun Conf file syntax:
 
   ## Timeout for HTTP message
   timeout = "30s"
-
-  <!-- TODO: Strike cloudrun_email -->
-  cloudrun_email = "svc-acct-proxy@domain.iam.gserviceaccount.com"
+  
   json_file_location = "C:/Path/To/Secrets/file.json"
   data_format = "wavefront"
   convert_paths = false
