@@ -28,25 +28,25 @@ const (
 var (
 	sampleConfig = `
   ## HTTP endpoint for your groundwork instance.
-  endpoint = ""
+  # endpoint = ""
 
   ## Agent uuid for Groundwork API Server
-  agent_id = ""
+  # agent_id = ""
 
   ## Username to access Groundwork API
-  username = ""
+  # username = ""
 
   ## Password to use in pair with username
-  password = ""
+  # password = ""
 
   ## Default display name for the host with services(metrics)
-  default_host = "default_telegraf"
+  # default_host = "telegraf"
 
   ## Default service state [default - "SERVICE_OK"]
-  default_service_state = "SERVICE_OK"
+  # default_service_state = "SERVICE_OK"
 
   ## The name of the tag that contains the hostname [default - "host"]
-  resource_tag = "host"
+  # resource_tag = "host"
 `
 )
 
