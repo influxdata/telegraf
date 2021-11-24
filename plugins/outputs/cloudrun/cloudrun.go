@@ -64,12 +64,11 @@ const (
 )
 
 type CloudRun struct {
-	URL        string            `toml:"url"`
-	Timeout    config.Duration   `toml:"timeout"`
-	Headers    map[string]string `toml:"headers"`
-	JSONSecret string            `toml:"json_file_location"`
-	// GCPEmailAddress string            `toml:"cloudrun_email"`
-	ConvertPaths bool `toml:"convert_paths"`
+	URL          string            `toml:"url"`
+	Timeout      config.Duration   `toml:"timeout"`
+	Headers      map[string]string `toml:"headers"`
+	JSONSecret   string            `toml:"json_file_location"`
+	ConvertPaths bool              `toml:"convert_paths"`
 	Method       string
 	tls.ClientConfig
 
