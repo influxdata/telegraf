@@ -1,8 +1,8 @@
 # Jolokia Input Plugin
 
-### Deprecated in version 1.5: Please use the [jolokia2][] plugin
+## Deprecated in version 1.5: Please use the [jolokia2][] plugin
 
-#### Configuration
+### Configuration
 
 ```toml
 # Read JMX metrics through Jolokia
@@ -61,13 +61,13 @@
     attribute = "LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
 ```
 
-#### Description
+### Description
 
 The Jolokia plugin collects JVM metrics exposed as MBean's attributes through
 jolokia REST endpoint. All metrics are collected for each server configured.
 See [official Jolokia website](https://jolokia.org/) for more information.
 
-# Measurements
+## Measurements
 
 Jolokia plugin produces one measure for each metric configured,
 adding Server's `jolokia_name`, `jolokia_host` and `jolokia_port` as tags.
