@@ -2,7 +2,7 @@
 
 ## Deprecated in version 1.5: Please use the [jolokia2][] plugin
 
-### Configuration
+## Configuration
 
 ```toml
 # Read JMX metrics through Jolokia
@@ -61,7 +61,7 @@
     attribute = "LoadedClassCount,UnloadedClassCount,TotalLoadedClassCount"
 ```
 
-### Description
+## Description
 
 The Jolokia plugin collects JVM metrics exposed as MBean's attributes through
 jolokia REST endpoint. All metrics are collected for each server configured.
