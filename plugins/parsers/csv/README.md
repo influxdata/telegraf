@@ -94,7 +94,7 @@ or a format string in using the Go "reference time" which is defined to be the
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.
 
-### Metrics
+## Metrics
 
 One metric is created for each row with the columns added as fields.  The type
 of the field is automatically determined based on the contents of the value.
@@ -102,7 +102,7 @@ of the field is automatically determined based on the contents of the value.
 In addition to the options above, you can use [metric filtering][] to skip over
 columns and rows.
 
-### Examples
+## Examples
 
 Config:
 
