@@ -1,7 +1,8 @@
 # PostgreSQL Input Plugin
 
 This postgresql plugin provides metrics for your postgres database. It currently works with postgres versions 8.1+. It uses data from the built in _pg_stat_database_ and pg_stat_bgwriter views. The metrics recorded depend on your version of postgres. See table:
-```
+
+```sh
 pg version      9.2+   9.1   8.3-9.0   8.1-8.2   7.4-8.0(unsupported)
 ---             ---    ---   -------   -------   -------
 datid            x      x       x         x
@@ -27,10 +28,10 @@ stats_reset*     x      x
 
 _* value ignored and therefore not recorded._
 
-
 More information about the meaning of these metrics can be found in the [PostgreSQL Documentation](http://www.postgresql.org/docs/9.2/static/monitoring-stats.html#PG-STAT-DATABASE-VIEW)
 
 ## Configuration
+
 Specify address via a postgresql connection string:
 
   `host=localhost port=5432 user=telegraf database=telegraf`
@@ -52,11 +53,13 @@ A list of databases to pull metrics about. If not specified, metrics for all dat
 ### TLS Configuration
 
 Add the `sslkey`, `sslcert` and `sslrootcert` options to your DSN:
-```
+
+```shell
 host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/telegraf/key.pem sslcert=/etc/telegraf/cert.pem sslrootcert=/etc/telegraf/ca.pem
 ```
 
 ### Configuration example
+
 ```toml
 [[inputs.postgresql]]
   address = "postgres://telegraf@localhost/someDB"
