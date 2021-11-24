@@ -9,15 +9,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	influxdb "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func genURL(u string) *url.URL {
-	URL, _ := url.Parse(u)
-	return URL
+	address, _ := url.Parse(u)
+	return address
 }
 func TestNewHTTPClient(t *testing.T) {
 	tests := []struct {
@@ -60,7 +61,8 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/api/v2/write":
-				r.ParseForm()
+				err := r.ParseForm()
+				require.NoError(t, err)
 				require.Equal(t, r.Form["bucket"], []string{"foo"})
 
 				body, err := io.ReadAll(r.Body)
