@@ -14,13 +14,42 @@ import (
 	"time"
 
 	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/jwt"
 )
 
 // https://cloud.google.com/endpoints/docs/openapi/service-account-authentication#go
-func generateJWT(saKeyfile, saEmail, audience string, expiryLength int64) (string, error) {
-	now := time.Now().Unix()
-	gcpauth := "https://www.googleapis.com/oauth2/v4/token"
+// https://developers.google.com/identity/protocols/oauth2
+type GoogleID struct {
+	Token string `json:"id_token"`
+}
 
+func GetAccessToken(saKeyfile string, url string) (string, error) {
+	sa, err := ioutil.ReadFile(saKeyfile)
+	if err != nil {
+		return "", fmt.Errorf("could not read service account file: %v", err)
+	}
+
+	conf, err := google.JWTConfigFromJSON(sa)
+	if err != nil {
+		return "", fmt.Errorf("could not parse service account JSON: %v", err)
+	}
+
+	signedJWT, err := generateJWT(conf, url, 120)
+
+	if err != nil {
+		println(err.Error())
+	}
+	// aud ~= token_uri ~= conf.TokenURL
+	accessToken, err := getGoogleID(signedJWT, conf.TokenURL)
+	if err != nil {
+		println(err.Error())
+	}
+
+	return accessToken, nil
+}
+
+func generateJWT(conf *jwt.Config, audience string, expiryLength int64) (string, error) {
+	now := time.Now().Unix()
 	// Build the JWT payload.
 	jwt := &ClaimSet{
 		Iat: now,
@@ -28,12 +57,12 @@ func generateJWT(saKeyfile, saEmail, audience string, expiryLength int64) (strin
 		Exp: now + expiryLength,
 		// Iss must match 'issuer' in the security configuration in your
 		// swagger spec (e.g. service account email). It can be any string.
-		Iss: saEmail,
+		Iss: conf.Email,
 		// Aud must be either your Endpoints service name, or match the value
 		// specified as the 'x-google-audience' in the OpenAPI document.
-		Aud: gcpauth,
+		Aud: conf.TokenURL,
 		// Sub and Email should match the service account's email address.
-		Sub:           saEmail,
+		Sub:           conf.Email,
 		PrivateClaims: map[string]interface{}{"target_audience": audience},
 	}
 	jwsHeader := &Header{
@@ -41,17 +70,8 @@ func generateJWT(saKeyfile, saEmail, audience string, expiryLength int64) (strin
 		Typ:       "JWT",
 	}
 
-	// Extract the RSA private key from the service account keyfile.
-	sa, err := ioutil.ReadFile(saKeyfile)
-	if err != nil {
-		return "", fmt.Errorf("could not read service account file: %v", err)
-	}
-	conf, err := google.JWTConfigFromJSON(sa)
-	if err != nil {
-		return "", fmt.Errorf("could not parse service account JSON: %v", err)
-	}
-
 	block, _ := pem.Decode(conf.PrivateKey)
+
 	parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		return "", fmt.Errorf("private key parse error: %v", err)
@@ -66,23 +86,20 @@ func generateJWT(saKeyfile, saEmail, audience string, expiryLength int64) (strin
 	return Encode(jwsHeader, jwt, rsaKey)
 }
 
-func getGoogleID(jwtToken string) (string, error) {
-	var accessToken GoogleID
-	googleidurl := "https://www.googleapis.com/oauth2/v4/token"
+func getGoogleID(jwtToken, googleidurl string) (string, error) {
+	var googleID GoogleID
+
 	responseBody, err := callAPIEndpoint("POST", googleidurl, jwtToken, nil)
 	if err != nil {
 		return "", err
 	}
-	err = json.Unmarshal(responseBody, &accessToken)
+
+	err = json.Unmarshal(responseBody, &googleID)
 	if err != nil {
 		return "", err
 	}
-	return accessToken.Token, err
-}
 
-//GoogleID is used to capture token
-type GoogleID struct {
-	Token string `json:"id_token"`
+	return googleID.Token, err
 }
 
 // CallAPIEndpoint Makes a call to a specified endpoint taking parameters method, url token and some payload
@@ -100,18 +117,4 @@ func callAPIEndpoint(method string, urls string, token string, payload io.Reader
 		return []byte{}, fmt.Errorf("error generating google id token jwt")
 	}
 	return body, nil
-}
-
-func GetToken(secret string, email string, url string) string {
-	token, err := generateJWT(secret, email, url, 120)
-
-	if err != nil {
-		println(err.Error())
-	}
-
-	accessToken, err := getGoogleID(token)
-	if err != nil {
-		println(err.Error())
-	}
-	return accessToken
 }
