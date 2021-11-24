@@ -33,9 +33,12 @@ func TestSimpleReverseLookup(t *testing.T) {
 		},
 	}
 	acc := &testutil.Accumulator{}
-	dns.Start(acc)
-	dns.Add(m, acc)
-	dns.Stop()
+	err := dns.Start(acc)
+	require.NoError(t, err)
+	err = dns.Add(m, acc)
+	require.NoError(t, err)
+	err = dns.Stop()
+	require.NoError(t, err)
 	// should be processed now.
 
 	require.Len(t, acc.GetTelegrafMetrics(), 1)

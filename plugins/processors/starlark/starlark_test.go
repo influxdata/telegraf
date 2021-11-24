@@ -9,15 +9,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	starlarktime "go.starlark.net/lib/time"
+	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkstruct"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	starlarktime "go.starlark.net/lib/time"
-	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkstruct"
 )
 
 // Tests for runtime errors in the processors Init function.
@@ -2674,11 +2675,11 @@ func buildPlugin(configContent string) (*Starlark, error) {
 		return nil, err
 	}
 	if len(c.Processors) != 1 {
-		return nil, errors.New("Only one processor was expected")
+		return nil, errors.New("only one processor was expected")
 	}
 	plugin, ok := (c.Processors[0].Processor).(*Starlark)
 	if !ok {
-		return nil, errors.New("Only a Starlark processor was expected")
+		return nil, errors.New("only a Starlark processor was expected")
 	}
 	plugin.Log = testutil.Logger{}
 	return plugin, nil
@@ -3199,7 +3200,8 @@ def apply(metric):
 			b.ResetTimer()
 			for n := 0; n < b.N; n++ {
 				for _, m := range tt.input {
-					plugin.Add(m, &acc)
+					err = plugin.Add(m, &acc)
+					require.NoError(b, err)
 				}
 			}
 
@@ -3213,7 +3215,7 @@ func TestAllScriptTestData(t *testing.T) {
 	// can be run from multiple folders
 	paths := []string{"testdata", "plugins/processors/starlark/testdata"}
 	for _, testdataPath := range paths {
-		filepath.Walk(testdataPath, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(testdataPath, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
 				return nil
 			}
@@ -3252,6 +3254,7 @@ func TestAllScriptTestData(t *testing.T) {
 			})
 			return nil
 		})
+		require.NoError(t, err)
 	}
 }
 
@@ -3316,7 +3319,7 @@ func testLoadFunc(module string, logger telegraf.Logger) (starlark.StringDict, e
 	return result, nil
 }
 
-func testNow(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func testNow(_ *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
 	return starlarktime.Time(time.Date(2021, 4, 15, 12, 0, 0, 999, time.UTC)), nil
 }
 
