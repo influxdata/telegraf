@@ -17,8 +17,7 @@ import (
 )
 
 type RedisSentinel struct {
-	Servers  []string `toml:"servers"`
-	Password string   `toml:"password"`
+	Servers []string `toml:"servers"`
 	tls.ClientConfig
 
 	clients []*RedisSentinelClient
@@ -84,6 +83,11 @@ func (r *RedisSentinel) Init() error {
 			return fmt.Errorf("unable to parse to address %q: %v", serv, err)
 		}
 
+		password := ""
+		if u.User != nil {
+			password, _ = u.User.Password()
+		}
+
 		var address string
 		tags := map[string]string{}
 
@@ -102,7 +106,7 @@ func (r *RedisSentinel) Init() error {
 		sentinel := redis.NewSentinelClient(
 			&redis.Options{
 				Addr:      address,
-				Password:  r.Password,
+				Password:  password,
 				Network:   u.Scheme,
 				PoolSize:  1,
 				TLSConfig: tlsConfig,
