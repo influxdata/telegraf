@@ -11,8 +11,8 @@ import (
 )
 
 func genURL(u string) *url.URL {
-	address, _ := url.Parse(u)
-	return address
+	URL, _ := url.Parse(u)
+	return URL
 }
 
 func TestMakeWriteURL(t *testing.T) {

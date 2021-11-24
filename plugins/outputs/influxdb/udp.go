@@ -106,7 +106,7 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 			_, err = c.conn.Write(scanner.Bytes())
 		}
 		if err != nil {
-			_ = c.conn.Close()
+			c.conn.Close()
 			c.conn = nil
 			return err
 		}

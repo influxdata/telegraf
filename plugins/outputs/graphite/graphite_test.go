@@ -8,11 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGraphiteError(t *testing.T) {
@@ -37,7 +39,7 @@ func TestGraphiteError(t *testing.T) {
 	require.NoError(t, err1)
 	err2 := g.Write(metrics)
 	require.Error(t, err2)
-	require.Equal(t, "could not write to any Graphite server in cluster", err2.Error())
+	assert.Equal(t, "could not write to any Graphite server in cluster", err2.Error())
 }
 
 func TestGraphiteOK(t *testing.T) {
@@ -488,9 +490,9 @@ func TCPServer1(t *testing.T, wg *sync.WaitGroup) {
 		reader := bufio.NewReader(conn)
 		tp := textproto.NewReader(reader)
 		data1, _ := tp.ReadLine()
-		require.Equal(t, "my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
+		assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
+		conn.Close()
+		tcpServer.Close()
 	}()
 }
 
@@ -502,11 +504,11 @@ func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
 		reader := bufio.NewReader(conn2)
 		tp := textproto.NewReader(reader)
 		data2, _ := tp.ReadLine()
-		require.Equal(t, "my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
+		assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
 		data3, _ := tp.ReadLine()
-		require.Equal(t, "my.prefix.192_168_0_1.my_measurement 3.14 1289430000", data3)
-		require.NoError(t, conn2.Close())
-		require.NoError(t, tcpServer.Close())
+		assert.Equal(t, "my.prefix.192_168_0_1.my_measurement 3.14 1289430000", data3)
+		conn2.Close()
+		tcpServer.Close()
 	}()
 }
 
@@ -518,9 +520,9 @@ func TCPServer1WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 		reader := bufio.NewReader(conn)
 		tp := textproto.NewReader(reader)
 		data1, _ := tp.ReadLine()
-		require.Equal(t, "my.prefix.mymeasurement.valuetag.192_168_0_1.myfield 3.14 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
+		assert.Equal(t, "my.prefix.mymeasurement.valuetag.192_168_0_1.myfield 3.14 1289430000", data1)
+		conn.Close()
+		tcpServer.Close()
 	}()
 }
 
@@ -532,11 +534,11 @@ func TCPServer2WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 		reader := bufio.NewReader(conn2)
 		tp := textproto.NewReader(reader)
 		data2, _ := tp.ReadLine()
-		require.Equal(t, "my.prefix.mymeasurement.valuetag.192_168_0_1 3.14 1289430000", data2)
+		assert.Equal(t, "my.prefix.mymeasurement.valuetag.192_168_0_1 3.14 1289430000", data2)
 		data3, _ := tp.ReadLine()
-		require.Equal(t, "my.prefix.192_168_0_1.my_measurement.valuetag 3.14 1289430000", data3)
-		require.NoError(t, conn2.Close())
-		require.NoError(t, tcpServer.Close())
+		assert.Equal(t, "my.prefix.192_168_0_1.my_measurement.valuetag 3.14 1289430000", data3)
+		conn2.Close()
+		tcpServer.Close()
 	}()
 }
 
@@ -548,9 +550,9 @@ func TCPServer1WithTags(t *testing.T, wg *sync.WaitGroup) {
 		reader := bufio.NewReader(conn)
 		tp := textproto.NewReader(reader)
 		data1, _ := tp.ReadLine()
-		require.Equal(t, "my.prefix.mymeasurement.myfield;host=192.168.0.1 3.14 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
+		assert.Equal(t, "my.prefix.mymeasurement.myfield;host=192.168.0.1 3.14 1289430000", data1)
+		conn.Close()
+		tcpServer.Close()
 	}()
 }
 
@@ -562,11 +564,11 @@ func TCPServer2WithTags(t *testing.T, wg *sync.WaitGroup) {
 		reader := bufio.NewReader(conn2)
 		tp := textproto.NewReader(reader)
 		data2, _ := tp.ReadLine()
-		require.Equal(t, "my.prefix.mymeasurement;host=192.168.0.1 3.14 1289430000", data2)
+		assert.Equal(t, "my.prefix.mymeasurement;host=192.168.0.1 3.14 1289430000", data2)
 		data3, _ := tp.ReadLine()
-		require.Equal(t, "my.prefix.my_measurement;host=192.168.0.1 3.14 1289430000", data3)
-		require.NoError(t, conn2.Close())
-		require.NoError(t, tcpServer.Close())
+		assert.Equal(t, "my.prefix.my_measurement;host=192.168.0.1 3.14 1289430000", data3)
+		conn2.Close()
+		tcpServer.Close()
 	}()
 }
 
@@ -578,9 +580,9 @@ func TCPServer1WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
 		reader := bufio.NewReader(conn)
 		tp := textproto.NewReader(reader)
 		data1, _ := tp.ReadLine()
-		require.Equal(t, "my_prefix_mymeasurement_myfield;host=192.168.0.1 3.14 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
+		assert.Equal(t, "my_prefix_mymeasurement_myfield;host=192.168.0.1 3.14 1289430000", data1)
+		conn.Close()
+		tcpServer.Close()
 	}()
 }
 
@@ -592,10 +594,10 @@ func TCPServer2WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
 		reader := bufio.NewReader(conn2)
 		tp := textproto.NewReader(reader)
 		data2, _ := tp.ReadLine()
-		require.Equal(t, "my_prefix_mymeasurement;host=192.168.0.1 3.14 1289430000", data2)
+		assert.Equal(t, "my_prefix_mymeasurement;host=192.168.0.1 3.14 1289430000", data2)
 		data3, _ := tp.ReadLine()
-		require.Equal(t, "my_prefix_my_measurement;host=192.168.0.1 3.14 1289430000", data3)
-		require.NoError(t, conn2.Close())
-		require.NoError(t, tcpServer.Close())
+		assert.Equal(t, "my_prefix_my_measurement;host=192.168.0.1 3.14 1289430000", data3)
+		conn2.Close()
+		tcpServer.Close()
 	}()
 }

@@ -75,9 +75,9 @@ func (i *Instrumental) Connect() error {
 }
 
 func (i *Instrumental) Close() error {
-	err := i.conn.Close()
+	i.conn.Close()
 	i.conn = nil
-	return err
+	return nil
 }
 
 func (i *Instrumental) Write(metrics []telegraf.Metric) error {
@@ -138,23 +138,23 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 			splitStat := strings.SplitN(stat, " ", 3)
 			name := splitStat[0]
 			value := splitStat[1]
-			timestamp := splitStat[2]
+			time := splitStat[2]
 
 			// replace invalid components of metric name with underscore
 			cleanMetric := MetricNameReplacer.ReplaceAllString(name, "_")
 
 			if !ValueIncludesBadChar.MatchString(value) {
-				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, cleanMetric, value, timestamp))
+				points = append(points, fmt.Sprintf("%s %s %s %s", metricType, cleanMetric, value, time))
 			}
 		}
 	}
 
 	allPoints := strings.Join(points, "")
-	_, err = fmt.Fprint(i.conn, allPoints)
+	_, err = fmt.Fprintf(i.conn, allPoints)
 
 	if err != nil {
 		if err == io.EOF {
-			_ = i.Close()
+			i.Close()
 		}
 
 		return err
@@ -163,7 +163,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	// force the connection closed after sending data
 	// to deal with various disconnection scenarios and eschew holding
 	// open idle connections en masse
-	_ = i.Close()
+	i.Close()
 
 	return nil
 }

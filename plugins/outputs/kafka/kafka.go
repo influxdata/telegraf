@@ -8,7 +8,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/gofrs/uuid"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -229,7 +228,7 @@ func ValidateTopicSuffixMethod(method string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("unknown topic suffix method provided: %s", method)
+	return fmt.Errorf("Unknown topic suffix method provided: %s", method)
 }
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
@@ -380,7 +379,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
 					return nil
 				}
-				return prodErr //nolint:staticcheck // Return first error encountered
+				return prodErr
 			}
 		}
 		return err

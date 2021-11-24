@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func getMetric() telegraf.Metric {
@@ -329,8 +329,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				values.Add("access_token", token)
 				values.Add("token_type", "bearer")
 				values.Add("expires_in", "3600")
-				_, err = w.Write([]byte(values.Encode()))
-				require.NoError(t, err)
+				w.Write([]byte(values.Encode()))
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])

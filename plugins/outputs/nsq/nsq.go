@@ -2,20 +2,19 @@ package nsq
 
 import (
 	"fmt"
-
-	"github.com/nsqio/go-nsq"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/nsqio/go-nsq"
 )
 
 type NSQ struct {
-	Server string
-	Topic  string
-	Log    telegraf.Logger `toml:"-"`
+	Server   string
+	Topic    string
+	producer *nsq.Producer
 
-	producer   *nsq.Producer
 	serializer serializers.Serializer
 }
 
@@ -69,13 +68,13 @@ func (n *NSQ) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
-			n.Log.Debugf("Could not serialize metric: %v", err)
+			log.Printf("D! [outputs.nsq] Could not serialize metric: %v", err)
 			continue
 		}
 
 		err = n.producer.Publish(n.Topic, buf)
 		if err != nil {
-			return fmt.Errorf("failed to send NSQD message: %s", err)
+			return fmt.Errorf("FAILED to send NSQD message: %s", err)
 		}
 	}
 	return nil

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net"
 	"net/http"
@@ -54,7 +55,6 @@ type HTTPConfig struct {
 	TLSConfig        *tls.Config
 
 	Serializer *influx.Serializer
-	Log        telegraf.Logger
 }
 
 type httpClient struct {
@@ -71,7 +71,6 @@ type httpClient struct {
 	url        *url.URL
 	retryTime  time.Time
 	retryCount int
-	log        telegraf.Logger
 }
 
 func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
@@ -143,7 +142,6 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		Bucket:           config.Bucket,
 		BucketTag:        config.BucketTag,
 		ExcludeBucketTag: config.ExcludeBucketTag,
-		log:              config.Log,
 	}
 	return client, nil
 }
@@ -298,7 +296,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		// Clients should *not* repeat the request and the metrics should be dropped.
 		http.StatusUnprocessableEntity,
 		http.StatusNotAcceptable:
-		c.log.Errorf("Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		log.Printf("E! [outputs.influxdb_v2] Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
 		return nil
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return fmt.Errorf("failed to write metric (%s): %s", resp.Status, desc)
@@ -310,14 +308,14 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		c.retryCount++
 		retryDuration := c.getRetryDuration(resp.Header)
 		c.retryTime = time.Now().Add(retryDuration)
-		c.log.Warnf("Failed to write; will retry in %s. (%s)\n", retryDuration, resp.Status)
+		log.Printf("W! [outputs.influxdb_v2] Failed to write; will retry in %s. (%s)\n", retryDuration, resp.Status)
 		return fmt.Errorf("waiting %s for server before sending metric again", retryDuration)
 	}
 
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
-		c.log.Errorf("Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		log.Printf("E! [outputs.influxdb_v2] Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
 		return nil
 	}
 
@@ -359,10 +357,10 @@ func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 	return time.Duration(retry*1000) * time.Millisecond
 }
 
-func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
+func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
 	var err error
 
-	req, err := http.NewRequest("POST", address, body)
+	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return nil, err
 	}
