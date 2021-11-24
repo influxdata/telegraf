@@ -3,7 +3,7 @@
 The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding
 Registers via Modbus TCP or Modbus RTU/ASCII.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.modbus]]
@@ -103,17 +103,18 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
     # close_connection_after_gather = false
 ```
 
-### Notes
+## Notes
+
 You can debug Modbus connection issues by enabling `debug_connection`. To see those debug messages Telegraf has to be started with debugging enabled (i.e. with `--debug` option). Please be aware that connection tracing will produce a lot of messages and should **NOT** be used in production environments.
 
 Please use `pause_between_requests` with care. Especially make sure that the total gather time, including the pause(s), does not exceed the configured collection interval. Note, that pauses add up if multiple requests are sent!
 
-### Metrics
+## Metrics
 
 Metric are custom and configured using the `discrete_inputs`, `coils`,
 `holding_register` and `input_registers` options.
 
-### Usage of `data_type`
+## Usage of `data_type`
 
 The field `data_type` defines the representation of the data value on input from the modbus registers.
 The input values are then converted from the given `data_type` to a type that is apropriate when
@@ -122,16 +123,16 @@ integer or floating-point-number. The size of the output type is assumed to be l
 for all supported input types. The mapping from the input type to the output type is fixed
 and cannot be configured.
 
-#### Integers: `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64`, `UINT64`
+### Integers: `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64`, `UINT64`
 
 These types are used for integer input values. Select the one that matches your modbus data source.
 
-#### Floating Point: `FLOAT32-IEEE`, `FLOAT64-IEEE`
+### Floating Point: `FLOAT32-IEEE`, `FLOAT64-IEEE`
 
 Use these types if your modbus registers contain a value that is encoded in this format. These types
 always include the sign and therefore there exists no variant.
 
-#### Fixed Point: `FIXED`, `UFIXED` (`FLOAT32`)
+### Fixed Point: `FIXED`, `UFIXED` (`FLOAT32`)
 
 These types are handled as an integer type on input, but are converted to floating point representation
 for further processing (e.g. scaling). Use one of these types when the input value is a decimal fixed point
@@ -148,9 +149,10 @@ with N decimal places'.
 (FLOAT32 is deprecated and should not be used any more. UFIXED provides the same conversion
 from unsigned values).
 
-### Trouble shooting
+## Trouble shooting
 
-#### Strange data
+### Strange data
+
 Modbus documentations are often a mess. People confuse memory-address (starts at one) and register address (starts at zero) or stay unclear about the used word-order. Furthermore, there are some non-standard implementations that also
 swap the bytes within the register word (16-bit).
 
@@ -164,7 +166,8 @@ In case you see strange values, the `byte_order` might be off. You can either pr
 
 If your data still looks corrupted, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
 
-#### Workarounds
+### Workarounds
+
 Some Modbus devices need special read characteristics when reading data and will fail otherwise. For example, there are certain serial devices that need a certain pause between register read requests. Others might only offer a limited number of simultaneously connected devices, like serial devices or some ModbusTCP devices. In case you need to access those devices in parallel you might want to disconnect immediately after the plugin finished reading.
 
 To allow this plugin to also handle those "special" devices there is the `workarounds` configuration options. In case your documentation states certain read requirements or you get read timeouts or other read errors you might want to try one or more workaround options.
@@ -172,7 +175,7 @@ If you find that other/more workarounds are required for your device, please let
 
 In case your device needs a workaround that is not yet implemented, please open an issue or submit a pull-request.
 
-### Example Output
+## Example Output
 
 ```sh
 $ ./telegraf -config telegraf.conf -input-filter modbus -test

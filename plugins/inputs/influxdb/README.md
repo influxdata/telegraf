@@ -1,13 +1,13 @@
 # InfluxDB Input Plugin
 
-The InfluxDB plugin will collect metrics on the given InfluxDB servers. Read our 
-[documentation](https://docs.influxdata.com/platform/monitoring/influxdata-platform/tools/measurements-internal/) 
-for detailed information about `influxdb` metrics. 
+The InfluxDB plugin will collect metrics on the given InfluxDB servers. Read our
+[documentation](https://docs.influxdata.com/platform/monitoring/influxdata-platform/tools/measurements-internal/)
+for detailed information about `influxdb` metrics.
 
 This plugin can also gather metrics from endpoints that expose
 InfluxDB-formatted endpoints. See below for more information.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Read InfluxDB-formatted JSON metrics from one or more HTTP endpoints
@@ -37,7 +37,7 @@ InfluxDB-formatted endpoints. See below for more information.
   timeout = "5s"
 ```
 
-### Measurements & Fields
+## Measurements & Fields
 
 **Note:** The measurements and fields included in this plugin are dynamically built from the InfluxDB source, and may vary between versions:
 
@@ -80,7 +80,7 @@ InfluxDB-formatted endpoints. See below for more information.
 - **influxdb_hh_processor** _(Enterprise Only)_: Statistics stored for a single queue (shard).
   - **bytesRead**: Size, in bytes, of points read from the hinted handoff queue and sent to its destination data node.
   - **bytesWritten**: Total number of bytes written to the hinted handoff queue.
-  - **queueBytes**: Total number of bytes remaining in the hinted handoff queue. 
+  - **queueBytes**: Total number of bytes remaining in the hinted handoff queue.
   - **queueDepth**: Total number of segments in the hinted handoff queue. The HH queue is a sequence of 10MB “segment” files.
   - **writeBlocked**: Number of writes blocked because the number of concurrent HH requests exceeds the limit.
   - **writeDropped**: Number of writes dropped from the HH queue because the write appeared to be corrupted.
@@ -125,7 +125,7 @@ InfluxDB-formatted endpoints. See below for more information.
   - **HeapInuse**: Number of bytes in in-use spans.
   - **HeapObjects**: Number of allocated heap objects.
   - **HeapReleased**: Number of bytes of physical memory returned to the OS.
-  - **HeapSys**: Number of bytes of heap memory obtained from the OS. 
+  - **HeapSys**: Number of bytes of heap memory obtained from the OS.
   - **LastGC**: Time the last garbage collection finished.
   - **Lookups**: Number of pointer lookups performed by the runtime.
   - **MCacheInuse**: Number of bytes of allocated mcache structures.
@@ -258,9 +258,9 @@ InfluxDB-formatted endpoints. See below for more information.
   - **writePartial** _(Enterprise only)_: Total number of batches written to at least one node, but did not meet the requested consistency level.
   - **writeTimeout**: Total number of write requests that failed to complete within the default write timeout duration.
 
-### Example Output:
+## Example Output
 
-```
+```sh
 telegraf --config ~/ws/telegraf.conf --input-filter influxdb --test
 * Plugin: influxdb, Collection 1
 > influxdb_database,database=_internal,host=tyrion,url=http://localhost:8086/debug/vars numMeasurements=10,numSeries=29 1463590500247354636
@@ -292,7 +292,7 @@ telegraf --config ~/ws/telegraf.conf --input-filter influxdb --test
 > influxdb_shard,host=tyrion n_shards=4i 1463590500247354636
 ```
 
-### InfluxDB-formatted endpoints
+## InfluxDB-formatted endpoints
 
 The influxdb plugin can collect InfluxDB-formatted data from JSON endpoints.
 Whether associated with an Influx database or not.

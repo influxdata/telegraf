@@ -1,6 +1,6 @@
 # Kafka Consumer Legacy Input Plugin
 
-### Deprecated in version 1.4. Please use [Kafka Consumer input plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer).
+## Deprecated in version 1.4. Please use [Kafka Consumer input plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/kafka_consumer)
 
 The [Kafka](http://kafka.apache.org/) consumer plugin polls a specified Kafka
 topic and adds messages to InfluxDB. The plugin assumes messages follow the
