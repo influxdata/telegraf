@@ -151,6 +151,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 		Bucket:           "telegraf",
 		BucketTag:        "bucket",
 		ExcludeBucketTag: true,
+		Log:              testutil.Logger{},
 	}
 
 	client, err := influxdb.NewHTTPClient(config)
