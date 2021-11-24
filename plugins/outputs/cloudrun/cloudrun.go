@@ -157,7 +157,10 @@ func (h *CloudRun) write(reqBody []byte) error {
 	})
 
 	if h.accessToken == "" || !claims.VerifyExpiresAt(time.Now().Unix(), true) {
-		h.accessToken = gcp.GetAccessToken(h.JSONSecret, h.URL)
+		h.accessToken, err = gcp.GetAccessToken(h.JSONSecret, h.URL)
+		if err != nil {
+			return err
+		}
 	}
 
 	bearerToken := fmt.Sprintf("Bearer %s", h.accessToken)

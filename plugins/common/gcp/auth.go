@@ -14,34 +14,16 @@ import (
 	"time"
 
 	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/jwt"
 )
 
+// https://cloud.google.com/endpoints/docs/openapi/service-account-authentication#go
 // https://developers.google.com/identity/protocols/oauth2
-
-//GoogleID is used to capture token
 type GoogleID struct {
 	Token string `json:"id_token"`
 }
 
-func GetAccessToken(saKeyfile string, url string) string {
-	// TODO: parse secret here instead of generateJWT?
-	signedJWT, err := generateJWT(saKeyfile, url, 120)
-
-	if err != nil {
-		println(err.Error())
-	}
-
-	accessToken, err := getGoogleID(signedJWT)
-	if err != nil {
-		println(err.Error())
-	}
-
-	return accessToken
-}
-
-// https://cloud.google.com/endpoints/docs/openapi/service-account-authentication#go
-func generateJWT(saKeyfile, audience string, expiryLength int64) (string, error) {
-	now := time.Now().Unix()
+func GetAccessToken(saKeyfile string, url string) (string, error) {
 	sa, err := ioutil.ReadFile(saKeyfile)
 	if err != nil {
 		return "", fmt.Errorf("could not read service account file: %v", err)
@@ -52,6 +34,22 @@ func generateJWT(saKeyfile, audience string, expiryLength int64) (string, error)
 		return "", fmt.Errorf("could not parse service account JSON: %v", err)
 	}
 
+	signedJWT, err := generateJWT(conf, url, 120)
+
+	if err != nil {
+		println(err.Error())
+	}
+	// aud ~= token_uri ~= conf.TokenURL
+	accessToken, err := getGoogleID(signedJWT, conf.TokenURL)
+	if err != nil {
+		println(err.Error())
+	}
+
+	return accessToken, nil
+}
+
+func generateJWT(conf *jwt.Config, audience string, expiryLength int64) (string, error) {
+	now := time.Now().Unix()
 	// Build the JWT payload.
 	jwt := &ClaimSet{
 		Iat: now,
@@ -88,18 +86,14 @@ func generateJWT(saKeyfile, audience string, expiryLength int64) (string, error)
 	return Encode(jwsHeader, jwt, rsaKey)
 }
 
-func getGoogleID(jwtToken string) (string, error) {
+func getGoogleID(jwtToken, googleidurl string) (string, error) {
 	var googleID GoogleID
-	// googleidurl := "https://www.googleapis.com/oauth2/v4/token"
 
-	// TODO: Pull token_uri from secret.json (token_uri)
-	googleidurl := "https://oauth2.googleapis.com/token"
-
-	// TODO: Could pull googleidurl from fakesecret.json and spin up a test server and return a fake token from there
 	responseBody, err := callAPIEndpoint("POST", googleidurl, jwtToken, nil)
 	if err != nil {
 		return "", err
 	}
+
 	err = json.Unmarshal(responseBody, &googleID)
 	if err != nil {
 		return "", err
