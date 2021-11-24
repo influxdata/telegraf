@@ -177,6 +177,12 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	if c.BucketTag == "" {
 		err := c.writeBatch(ctx, c.Bucket, metrics)
 		if err != nil {
+			if err, ok := err.(*APIError); ok {
+				if err.StatusCode == http.StatusRequestEntityTooLarge {
+					return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
+				}
+			}
+
 			return err
 		}
 	} else {
@@ -203,11 +209,28 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		for bucket, batch := range batches {
 			err := c.writeBatch(ctx, bucket, batch)
 			if err != nil {
+				if err, ok := err.(*APIError); ok {
+					if err.StatusCode == http.StatusRequestEntityTooLarge {
+						return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
+					}
+				}
+
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
+	log.Printf("W! [outputs.influxdb_v2] Retrying write after splitting metric payload in half to reduce batch size")
+	midpoint := len(metrics) / 2
+
+	if err := c.writeBatch(ctx, bucket, metrics[:midpoint]); err != nil {
+		return err
+	}
+
+	return c.writeBatch(ctx, bucket, metrics[midpoint:])
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
@@ -257,11 +280,17 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 
 	switch resp.StatusCode {
+	// request was too large, send back to try again
+	case http.StatusRequestEntityTooLarge:
+		log.Printf("E! [outputs.influxdb_v2] Failed to write metric, request was too large (413)")
+		return &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: desc,
+		}
 	case
 		// request was malformed:
 		http.StatusBadRequest,
-		// request was too large:
-		http.StatusRequestEntityTooLarge,
 		// request was received but server refused to process it due to a semantic problem with the request.
 		// for example, submitting metrics outside the retention period.
 		// Clients should *not* repeat the request and the metrics should be dropped.
