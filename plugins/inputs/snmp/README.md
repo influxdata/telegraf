@@ -323,7 +323,7 @@ snmpget -v2c -c public 127.0.0.1 sysUpTime.0
 
 Request a table:
 
-```sehll
+```shell
 snmptable -v2c -c public 127.0.0.1 ifTable
 ```
 

@@ -112,6 +112,7 @@ func TestSampleConfig(t *testing.T) {
 		ClientConfig: snmp.ClientConfig{
 			Timeout:        config.Duration(5 * time.Second),
 			Version:        2,
+			Path:           []string{"/usr/share/snmp/mibs"},
 			Community:      "public",
 			MaxRepetitions: 10,
 			Retries:        3,
