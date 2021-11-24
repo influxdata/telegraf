@@ -10,14 +10,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite"
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite/types"
 	"github.com/aws/smithy-go"
+
+	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type (
@@ -332,12 +332,12 @@ func (t *Timestream) logWriteToTimestreamError(err error, tableName *string) {
 func (t *Timestream) createTableAndRetry(writeRecordsInput *timestreamwrite.WriteRecordsInput) error {
 	if t.CreateTableIfNotExists {
 		t.Log.Infof("Trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'true'.", *writeRecordsInput.TableName, t.DatabaseName)
-		if err := t.createTable(writeRecordsInput.TableName); err != nil {
-			t.Log.Errorf("Failed to create table '%s' in database '%s': %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err)
-		} else {
+		err := t.createTable(writeRecordsInput.TableName)
+		if err == nil {
 			t.Log.Infof("Table '%s' in database '%s' created. Retrying writing.", *writeRecordsInput.TableName, t.DatabaseName)
 			return t.writeToTimestream(writeRecordsInput, false)
 		}
+		t.Log.Errorf("Failed to create table '%s' in database '%s': %s. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName, err)
 	} else {
 		t.Log.Errorf("Not trying to create table '%s' in database '%s', as 'CreateTableIfNotExists' config key is 'false'. Skipping metric!", *writeRecordsInput.TableName, t.DatabaseName)
 	}
@@ -434,22 +434,22 @@ func (t *Timestream) TransformMetrics(metrics []telegraf.Metric) []*timestreamwr
 
 func hashFromMetricTimeNameTagKeys(m telegraf.Metric) uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(m.Name()))
-	h.Write([]byte("\n"))
+	h.Write([]byte(m.Name())) //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte("\n"))     //nolint:revive // from hash.go: "It never returns an error"
 	for _, tag := range m.TagList() {
 		if tag.Key == "" {
 			continue
 		}
 
-		h.Write([]byte(tag.Key))
-		h.Write([]byte("\n"))
-		h.Write([]byte(tag.Value))
-		h.Write([]byte("\n"))
+		h.Write([]byte(tag.Key))   //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte("\n"))      //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte(tag.Value)) //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte("\n"))      //nolint:revive // from hash.go: "It never returns an error"
 	}
 	b := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(b, uint64(m.Time().UnixNano()))
-	h.Write(b[:n])
-	h.Write([]byte("\n"))
+	h.Write(b[:n])        //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte("\n")) //nolint:revive // from hash.go: "It never returns an error"
 	return h.Sum64()
 }
 
@@ -537,7 +537,7 @@ func getTimestreamTime(t time.Time) (timeUnit types.TimeUnit, timeValue string) 
 		timeUnit = types.TimeUnitNanoseconds
 		timeValue = strconv.FormatInt(nanosTime, 10)
 	}
-	return
+	return timeUnit, timeValue
 }
 
 // convertValue converts single Field value from Telegraf Metric and produces
@@ -595,7 +595,7 @@ func convertValue(v interface{}) (value string, valueType types.MeasureValueType
 	default:
 		// Skip unsupported type.
 		ok = false
-		return
+		return value, valueType, ok
 	}
-	return
+	return value, valueType, ok
 }

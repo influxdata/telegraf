@@ -11,11 +11,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -91,7 +92,7 @@ func TestUDP_Simple(t *testing.T) {
 			DialContextF: func(network, address string) (influxdb.Conn, error) {
 				conn := &MockConn{
 					WriteF: func(b []byte) (n int, err error) {
-						buffer.Write(b)
+						buffer.Write(b) //nolint:revive // MockConn with always-success return
 						return 0, nil
 					},
 				}

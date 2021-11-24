@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestName(t *testing.T) {
@@ -90,7 +90,7 @@ func TestMetricMissingTagsIsNotLost(t *testing.T) {
 
 	// assert
 	// make sure no metrics are lost when a template process fails
-	assert.Equal(t, 2, len(actual), "Number of metrics input should equal number of metrics output")
+	require.Equal(t, 2, len(actual), "Number of metrics input should equal number of metrics output")
 }
 
 func TestTagAndFieldConcatenate(t *testing.T) {
