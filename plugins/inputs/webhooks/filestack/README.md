@@ -11,7 +11,9 @@ See the [webhook doc](https://www.filestack.com/docs/webhooks).
 All events for logs the original timestamp, the action and the id.
 
 **Tags:**
+
 * 'action' = `event.action` string
 
 **Fields:**
+
 * 'id' = `event.id` string
