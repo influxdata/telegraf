@@ -20,19 +20,32 @@ import (
 type AzureMonitor struct {
 	azureClient *AzureClient
 
-	SubscriptionID string    `toml:"subscription_id"`
-	ClientID       string    `toml:"client_id"`
-	ClientSecret   string    `toml:"client_secret"`
-	TenantID       string    `toml:"tenant_id"`
-	Targets        []*Target `toml:"targets"`
+	SubscriptionID       string                 `toml:"subscription_id"`
+	ClientID             string                 `toml:"client_id"`
+	ClientSecret         string                 `toml:"client_secret"`
+	TenantID             string                 `toml:"tenant_id"`
+	ResourceTargets      []*ResourceTarget      `toml:"resource_target"`
+	ResourceGroupTargets []*ResourceGroupTarget `toml:"resource_group_target"`
+	SubscriptionTargets  []*Resource            `toml:"subscription_target"`
 
 	Log telegraf.Logger `toml:"-"`
 }
 
-type Target struct {
-	ResourceID  string
-	Metrics     []string
-	Aggregation []string
+type ResourceTarget struct {
+	ResourceID  string   `toml:"resource_id"`
+	Metrics     []string `toml:"metrics"`
+	Aggregation []string `toml:"aggregation"`
+}
+
+type ResourceGroupTarget struct {
+	ResourceGroup string      `toml:"resource_group"`
+	Resources     []*Resource `toml:"resource"`
+}
+
+type Resource struct {
+	ResourceType string   `toml:"resource_type"`
+	Metrics      []string `toml:"metrics"`
+	Aggregation  []string `toml:"aggregation"`
 }
 
 type AzureClient struct {
@@ -47,36 +60,79 @@ type Metric struct {
 	tags   map[string]string
 }
 
+const (
+	maxMetricsPerRequest int = 20
+	minMetricsFields         = 2
+)
+
 var sampleConfig = `
-# can be found under properties in the Azure portal for your application/service
+# can be found under Overview->Essentials in the Azure portal for your application/service
 subscription_id = "<<SUBSCRIPTION_ID>>"
 # can be obtained by registering an application under Azure Active Directory
 client_id = "<<CLIENT_ID>>"
 # can be obtained by registering an application under Azure Active Directory
 client_secret = "<<CLIENT_SECRET>>"
-# can be found under Azure Active Directory properties
+# can be found under Azure Active Directory->Properties
 tenant_id = "<<TENANT_ID>>"
 
-# represents a target to collect metrics from
-[[inputs.azure_monitor.targets]]
-# can be found under properties in the Azure portal for your application/service
-# must start with 'resourceGroups/...' ('/subscriptions/xxxxxxxx-xxxx-xxxx-xxx-xxxxxxxxxxxx'
-# must be removed from the beginning of Resource ID property value)
-resource_id = "<<RESOURCE_ID>>"
-# the metrics names to collect
-# leave the array empty to use all metrics available to this resource
-metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-# metrics aggregation type value to collect
-# can be 'Total', 'Count', 'Average', 'Minimum', 'Maximum'
-# leave the array empty to collect all aggregation types values for each metric (if available)
-aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+  # resource target #1 to collect metrics from
+  [[inputs.azure_monitor.resource_target]]
+    # can be found undet Overview->Essentials->JSON View in the Azure portal for your application/service
+    # must start with 'resourceGroups/...' ('/subscriptions/xxxxxxxx-xxxx-xxxx-xxx-xxxxxxxxxxxx'
+    # must be removed from the beginning of Resource ID property value)
+    resource_id = "<<RESOURCE_ID>>"
+    # the metric names to collect
+    # leave the array empty to use all metrics available to this resource
+    metrics = [ "<<METRIC>>", "<<METRIC>>" ]
+    # metrics aggregation type value to collect
+    # can be 'Total', 'Count', 'Average', 'Minimum', 'Maximum'
+    # leave the array empty to collect all aggregation types values for each metric
+    aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+    
+  # resource target #2 to collect metrics from
+  [[inputs.azure_monitor.resource_target]]
+    resource_id = "<<RESOURCE_ID>>"
+    metrics = [ "<<METRIC>>", "<<METRIC>>" ]
+    aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+
+  # resource group target #1 to collect metrics from resources under it with resource type
+  [[inputs.azure_monitor.resource_group_target]]
+    # the resource group name
+    resource_group = "<<RESOURCE_GROUP_NAME>>"
+
+    # defines the resources to collect metrics from
+    [[inputs.azure_monitor.resource_group_target.resource]]
+      # the resource type
+      resource_type = "<<RESOURCE_TYPE>>"
+      metrics = [ "<<METRIC>>", "<<METRIC>>" ]
+      aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+    
+    # defines the resources to collect metrics from
+    [[inputs.azure_monitor.resource_group_target.resource]]
+      resource_type = "<<RESOURCE_TYPE>>"
+      metrics = [ "<<METRIC>>", "<<METRIC>>" ]
+      aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+      
+  # resource group target #2 to collect metrics from resources under it with resource type
+  [[inputs.azure_monitor.resource_group_target]]
+    resource_group = "<<RESOURCE_GROUP_NAME>>"
+
+    [[inputs.azure_monitor.resource_group_target.resource]]
+      resource_type = "<<RESOURCE_TYPE>>"
+      metrics = [ "<<METRIC>>", "<<METRIC>>" ]
+      aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
   
-# represents a target to collect metrics from
-[[inputs.azure_monitor.targets]]
-resource_id = "<<RESOURCE_ID>>"
-metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-filter = "<<FILTER>>"
-aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+  # subscription target #1 to collect metrics from resources under it with resource type    
+  [[inputs.azure_monitor.subscription_target]]
+    resource_type = "<<RESOURCE_TYPE>>"
+    metrics = [ "<<METRIC>>", "<<METRIC>>" ]
+    aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+    
+  # subscription target #2 to collect metrics from resources under it with resource type    
+  [[inputs.azure_monitor.subscription_target]]
+    resource_type = "<<RESOURCE_TYPE>>"
+    metrics = [ "<<METRIC>>", "<<METRIC>>" ]
+    aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
 `
 
 func (am *AzureMonitor) Description() string {
@@ -101,13 +157,28 @@ func (am *AzureMonitor) Init() error {
 		return err
 	}
 
-	err = am.getAllTargetsMetricsNames()
+	err = am.createResourceGroupTargetsFromSubscriptionTargets()
 
 	if err != nil {
 		return err
 	}
 
-	am.getAllTargetsAggregation()
+	err = am.createResourceTargetsFromResourceGroupTargets()
+
+	if err != nil {
+		return err
+	}
+
+	err = am.getResourceTargetsMetrics()
+
+	if err != nil {
+		return err
+	}
+
+	am.setResourceTargetsAggregation()
+	am.checkTargetsMaximumMetrics()
+
+	am.Log.Info("Total targets: ", len(am.ResourceTargets))
 
 	return nil
 }
@@ -129,20 +200,74 @@ func (am *AzureMonitor) checkConfigValidation() error {
 		return fmt.Errorf("tenant_id is empty or missing. Please check your configuration")
 	}
 
-	if len(am.Targets) == 0 {
-		return fmt.Errorf("targets is empty or missing. Please check your configuration")
+	if len(am.ResourceTargets) == 0 && len(am.ResourceGroupTargets) == 0 && len(am.SubscriptionTargets) == 0 {
+		return fmt.Errorf("there is no target to collect metrics from. Please check your configuration")
 	}
 
-	for index, target := range am.Targets {
-		if target.ResourceID == "" {
-			return fmt.Errorf("target #%d resource_id is empty or missing. Please check your configuration", index+1)
+	for index, resourceTarget := range am.ResourceTargets {
+		if resourceTarget.ResourceID == "" {
+			return fmt.Errorf(
+				"resource target #%d resource_id is empty or missing. Please check your configuration", index+1)
+		}
+	}
+
+	for resourceGroupIndex, resourceGroupTarget := range am.ResourceGroupTargets {
+		if resourceGroupTarget.ResourceGroup == "" {
+			return fmt.Errorf(
+				"resource group target #%d resource_group is empty or missing. Please check your configuration",
+				resourceGroupIndex+1)
+		}
+
+		for resourceIndex, resource := range resourceGroupTarget.Resources {
+			if resource.ResourceType == "" {
+				return fmt.Errorf(
+					"resource group target #%d resource #%d resource_type is empty or missing. Please check your configuration",
+					resourceGroupIndex+1, resourceIndex+1)
+			}
+		}
+	}
+
+	for index, target := range am.SubscriptionTargets {
+		if target.ResourceType == "" {
+			return fmt.Errorf(
+				"subscription target #%d resource_type is empty or missing. Please check your configuration", index+1)
 		}
 	}
 
 	return nil
 }
 
-func (am *AzureMonitor) getAllTargetsMetricsNames() error {
+func (am *AzureMonitor) createResourceGroupTargetsFromSubscriptionTargets() error {
+	if len(am.SubscriptionTargets) == 0 {
+		return nil
+	}
+
+	am.Log.Info("Creating resource group targets from subscription targets")
+
+	apiURL := am.buildSubscriptionResourceGroupsAPIURL()
+	body, err := am.getTargetResponseBody(apiURL)
+
+	if err != nil {
+		return err
+	}
+
+	bodyData, err := unmarshalJSON(body)
+
+	if err != nil {
+		return err
+	}
+
+	for _, value := range bodyData["value"].([]interface{}) {
+		resourceGroup := value.(map[string]interface{})["name"].(string)
+		resourceGroupTarget := NewResourceGroupTarget(resourceGroup, am.SubscriptionTargets)
+
+		am.ResourceGroupTargets = append(am.ResourceGroupTargets, resourceGroupTarget)
+	}
+
+	return nil
+}
+
+func (am *AzureMonitor) createResourceTargetsFromResourceGroupTargets() error {
 	var waitGroup sync.WaitGroup
 
 	errChan := make(chan error, 1)
@@ -150,15 +275,11 @@ func (am *AzureMonitor) getAllTargetsMetricsNames() error {
 
 	defer cancel()
 
-	for index, target := range am.Targets {
-		if len(target.Metrics) > 0 {
-			continue
-		}
-
-		am.Log.Info("Getting metrics names for target #", index+1)
+	for index, target := range am.ResourceGroupTargets {
+		am.Log.Info("Creating resource targets from resource group target #", index+1)
 		waitGroup.Add(1)
 
-		go func(target *Target) {
+		go func(target *ResourceGroupTarget) {
 			defer waitGroup.Done()
 
 			select {
@@ -167,7 +288,7 @@ func (am *AzureMonitor) getAllTargetsMetricsNames() error {
 			default:
 			}
 
-			err := am.getTargetMetricsNames(target)
+			err := am.createResourceTargetFromResourceGroupTarget(target)
 
 			if err != nil {
 				select {
@@ -192,7 +313,89 @@ func (am *AzureMonitor) getAllTargetsMetricsNames() error {
 	return nil
 }
 
-func (am *AzureMonitor) getTargetMetricsNames(target *Target) error {
+func (am *AzureMonitor) createResourceTargetFromResourceGroupTarget(target *ResourceGroupTarget) error {
+	apiURL := am.buildResourceGroupResourcesAPIURL(target)
+	body, err := am.getTargetResponseBody(apiURL)
+
+	if err != nil {
+		return err
+	}
+
+	bodyData, err := unmarshalJSON(body)
+
+	if err != nil {
+		return err
+	}
+
+	for _, value := range bodyData["value"].([]interface{}) {
+		resourceType := value.(map[string]interface{})["type"].(string)
+		resourceIndex := target.getResourceWithResourceTypeIndex(resourceType)
+
+		if resourceIndex == -1 {
+			continue
+		}
+
+		resourceName := value.(map[string]interface{})["name"].(string)
+		resourceID := fmt.Sprintf("resourceGroups/%s/providers/%s/%s", target.ResourceGroup, resourceType, resourceName)
+		resourceTarget := NewResourceTarget(resourceID, target.Resources[resourceIndex].Metrics, target.Resources[resourceIndex].Aggregation)
+
+		am.ResourceTargets = append(am.ResourceTargets, resourceTarget)
+	}
+
+	return nil
+}
+
+func (am *AzureMonitor) getResourceTargetsMetrics() error {
+	var waitGroup sync.WaitGroup
+
+	errChan := make(chan error, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	defer cancel()
+
+	for index, target := range am.ResourceTargets {
+		if len(target.Metrics) > 0 {
+			continue
+		}
+
+		am.Log.Info("Getting metrics for target #", index+1)
+		waitGroup.Add(1)
+
+		go func(target *ResourceTarget) {
+			defer waitGroup.Done()
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			err := am.getResourceTargetMetrics(target)
+
+			if err != nil {
+				select {
+				case errChan <- err:
+				default:
+				}
+
+				cancel()
+				return
+			}
+		}(target)
+	}
+
+	waitGroup.Wait()
+
+	select {
+	case err := <-errChan:
+		return err
+	default:
+	}
+
+	return nil
+}
+
+func (am *AzureMonitor) getResourceTargetMetrics(target *ResourceTarget) error {
 	apiURL := am.buildMetricDefinitionsAPIURL(target)
 	body, err := am.getTargetResponseBody(apiURL)
 
@@ -200,7 +403,7 @@ func (am *AzureMonitor) getTargetMetricsNames(target *Target) error {
 		return err
 	}
 
-	err = target.getTargetMetricsNames(body)
+	err = target.setResourceTargetMetrics(body)
 
 	if err != nil {
 		return err
@@ -209,8 +412,38 @@ func (am *AzureMonitor) getTargetMetricsNames(target *Target) error {
 	return nil
 }
 
-func (am *AzureMonitor) getAllTargetsAggregation() {
-	for _, target := range am.Targets {
+func (am *AzureMonitor) checkTargetsMaximumMetrics() {
+	for _, target := range am.ResourceTargets {
+		if len(target.Metrics) <= maxMetricsPerRequest {
+			continue
+		}
+
+		for start := maxMetricsPerRequest; start < len(target.Metrics); start += maxMetricsPerRequest {
+			end := start + maxMetricsPerRequest
+
+			if end > len(target.Metrics) {
+				end = len(target.Metrics)
+			}
+
+			newTargetMetrics := target.Metrics[start:end]
+
+			var newTargetAggregation []string
+
+			for _, aggregation := range target.Aggregation {
+				newTargetAggregation = append(newTargetAggregation, aggregation)
+			}
+
+			newTarget := NewResourceTarget(target.ResourceID, newTargetMetrics, newTargetAggregation)
+
+			am.ResourceTargets = append(am.ResourceTargets, newTarget)
+		}
+
+		target.Metrics = target.Metrics[:maxMetricsPerRequest]
+	}
+}
+
+func (am *AzureMonitor) setResourceTargetsAggregation() {
+	for _, target := range am.ResourceTargets {
 		if len(target.Aggregation) > 0 {
 			continue
 		}
@@ -226,13 +459,32 @@ func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	err = am.collectAllTargetsMetrics(acc)
+	err = am.collectResourceTargetsMetrics(acc)
 
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func NewResourceTarget(
+	resourceID string,
+	metrics []string,
+	aggregation []string,
+) *ResourceTarget {
+	return &ResourceTarget{
+		ResourceID:  resourceID,
+		Metrics:     metrics,
+		Aggregation: aggregation,
+	}
+}
+
+func NewResourceGroupTarget(resourceGroup string, resources []*Resource) *ResourceGroupTarget {
+	return &ResourceGroupTarget{
+		ResourceGroup: resourceGroup,
+		Resources:     resources,
+	}
 }
 
 func NewAzureClient() *AzureClient {
@@ -309,7 +561,7 @@ func (am *AzureMonitor) refreshAccessToken() error {
 	return nil
 }
 
-func (am *AzureMonitor) buildMetricDefinitionsAPIURL(target *Target) string {
+func (am *AzureMonitor) buildMetricDefinitionsAPIURL(target *ResourceTarget) string {
 	apiURL := fmt.Sprintf(
 		"https://management.azure.com/subscriptions/%s/%s/providers/microsoft.insights/metricDefinitions?api-version=2018-01-01",
 		am.SubscriptionID, target.ResourceID)
@@ -317,12 +569,27 @@ func (am *AzureMonitor) buildMetricDefinitionsAPIURL(target *Target) string {
 	return apiURL
 }
 
-func (am *AzureMonitor) buildMetricValuesAPIURL(target *Target) string {
-	metrics := url.QueryEscape(strings.Join(target.Metrics, ","))
+func (am *AzureMonitor) buildMetricValuesAPIURL(target *ResourceTarget) string {
+	metrics := strings.Join(target.Metrics, ",")
+	metrics = strings.Replace(metrics, " ", "+", -1)
 	apiURL := fmt.Sprintf(
 		"https://management.azure.com/subscriptions/%s/%s/providers/microsoft.insights/metrics?metricnames=%s&"+
 			"aggregation=%s&api-version=2019-07-01",
 		am.SubscriptionID, target.ResourceID, metrics, strings.Join(target.Aggregation, ","))
+
+	return apiURL
+}
+
+func (am *AzureMonitor) buildResourceGroupResourcesAPIURL(target *ResourceGroupTarget) string {
+	apiURL := fmt.Sprintf("https://management.azure.com/subscriptions/%s/resourceGroups/%s/resources?api-version=2018-02-01",
+		am.SubscriptionID, target.ResourceGroup)
+
+	return apiURL
+}
+
+func (am *AzureMonitor) buildSubscriptionResourceGroupsAPIURL() string {
+	apiURL := fmt.Sprintf("https://management.azure.com/subscriptions/%s/resourceGroups?api-version=2018-02-01",
+		am.SubscriptionID)
 
 	return apiURL
 }
@@ -351,7 +618,7 @@ func (am *AzureMonitor) getTargetResponseBody(apiURL string) ([]byte, error) {
 	return body, err
 }
 
-func (am *AzureMonitor) collectAllTargetsMetrics(acc telegraf.Accumulator) error {
+func (am *AzureMonitor) collectResourceTargetsMetrics(acc telegraf.Accumulator) error {
 	var waitGroup sync.WaitGroup
 
 	errChan := make(chan error, 1)
@@ -359,11 +626,11 @@ func (am *AzureMonitor) collectAllTargetsMetrics(acc telegraf.Accumulator) error
 
 	defer cancel()
 
-	for index, target := range am.Targets {
+	for index, target := range am.ResourceTargets {
 		am.Log.Info("Collecting metrics for target #", index+1)
 		waitGroup.Add(1)
 
-		go func(target *Target) {
+		go func(target *ResourceTarget) {
 			defer waitGroup.Done()
 
 			select {
@@ -385,7 +652,7 @@ func (am *AzureMonitor) collectAllTargetsMetrics(acc telegraf.Accumulator) error
 				return
 			}
 
-			metrics, err := collectTargetMetrics(body)
+			metrics, err := collectResourceTargetMetrics(body)
 
 			if err != nil {
 				select {
@@ -414,7 +681,7 @@ func (am *AzureMonitor) collectAllTargetsMetrics(acc telegraf.Accumulator) error
 	return nil
 }
 
-func (t *Target) getTargetMetricsNames(body []byte) error {
+func (rt *ResourceTarget) setResourceTargetMetrics(body []byte) error {
 	bodyData, err := unmarshalJSON(body)
 
 	if err != nil {
@@ -423,24 +690,46 @@ func (t *Target) getTargetMetricsNames(body []byte) error {
 
 	for _, value := range bodyData["value"].([]interface{}) {
 		metricName := value.(map[string]interface{})["name"].(map[string]interface{})["value"].(string)
-		t.Metrics = append(t.Metrics, metricName)
+		rt.Metrics = append(rt.Metrics, metricName)
 	}
 
 	return nil
 }
 
+func (rgt *ResourceGroupTarget) getResourceWithResourceTypeIndex(resourceType string) int {
+	for index, resource := range rgt.Resources {
+		if resource.ResourceType == resourceType {
+			return index
+		}
+	}
+
+	return -1
+}
+
 func (m *Metric) getMetricName(value map[string]interface{}) {
 	resourceID := strings.Split(value["id"].(string), "/")
-	replacer := strings.NewReplacer(".", "_", "/", "_")
-	metricName := strings.ToLower(value["name"].(map[string]interface{})["localizedValue"].(string))
+	replacer := strings.NewReplacer(".", "_", "/", "_", " ", "_", "(", "_", ")", "_")
+	metricName := value["name"].(map[string]interface{})["localizedValue"].(string)
 
 	m.name = fmt.Sprintf("azure_monitor_%s_%s",
 		replacer.Replace(strings.ToLower(resourceID[6]+"_"+resourceID[7])),
-		strings.Replace(metricName, " ", "_", -1),
+		replacer.Replace(strings.ToLower(metricName)),
 	)
 }
 
 func (m *Metric) getMetricFields(data []interface{}) {
+	for index := len(data) - 1; index >= 0; index-- {
+		if len(data[index].(map[string]interface{})) < minMetricsFields {
+			continue
+		}
+
+		for key, element := range data[index].(map[string]interface{}) {
+			m.fields[key] = element
+		}
+
+		return
+	}
+
 	for key, element := range data[len(data)-1].(map[string]interface{}) {
 		m.fields[key] = element
 	}
@@ -457,7 +746,7 @@ func (m *Metric) getMetricTags(bodyData map[string]interface{}, value map[string
 	m.tags["unit"] = value["unit"].(string)
 }
 
-func collectTargetMetrics(body []byte) ([]*Metric, error) {
+func collectResourceTargetMetrics(body []byte) ([]*Metric, error) {
 	bodyData, err := unmarshalJSON(body)
 
 	if err != nil {

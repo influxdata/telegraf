@@ -2,42 +2,91 @@ package azure_monitor
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf/testutil"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var resourceMetricsDefinitionsBody = `
+const (
+	resourceID1 = "resourceGroups/azure-rg1/providers/Microsoft.Storage/storageAccounts/azuresa1"
+	resourceID2 = "resourceGroups/azure-rg1/providers/Microsoft.Storage/storageAccounts/azuresa2"
+	resourceID3 = "resourceGroups/azure-rg2/providers/Microsoft.Storage/storageAccounts/azuresa3"
+	resourceID4 = "resourceGroups/azure-rg2/providers/Microsoft.Storage/storageAccounts/azuresa4"
+)
+
+var subscriptionResourceGroupsBody = `
 {
-  "value": [
-    {
-      "name": {
-        "value": "UsedCapacity",
-        "localizedValue": "Used capacity"
-      }
-    },
-	{
-      "name": {
-        "value": "Transactions",
-        "localizedValue": "Transactions"
-      }
-	},
-	{
-	  "name": {
-        "value": "Ingress",
-        "localizedValue": "Ingress"
-      }
-	}
-  ]
+    "value": [
+        {
+            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg1",
+            "name": "azure-rg1",
+            "location": "eastus",
+            "properties": {
+                "provisioningState": "Succeeded"
+            }
+        },
+        {
+            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg2",
+            "name": "azure-rg2",
+            "location": "eastus",
+            "properties": {
+                "provisioningState": "Succeeded"
+            }
+        }
+	]
 }
 `
 
-var target1MetricsValues = `
+// azure-rg1 resource group resources
+var resourceGroup1ResourcesBody = `
+{
+    "value": [
+        {
+            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg1/providers/Microsoft.Storage/storageAccounts/azuresa1",
+            "name": "azuresa1",
+            "type": "Microsoft.Storage/storageAccounts",
+            "location": "eastus",
+            "tags": {}
+        },
+        {
+            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg1/providers/Microsoft.Storage/storageAccounts/azuresa2",
+            "name": "azuresa2",
+            "type": "Microsoft.Storage/storageAccounts",
+            "location": "eastus",
+            "tags": {}
+        }
+	]
+}
+`
+
+// azure-rg2 resource group resources
+var resourceGroup2ResourcesBody = `
+{
+    "value": [
+        {
+            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg2/providers/Microsoft.Storage/storageAccounts/azuresa3",
+            "name": "azuresa3",
+            "type": "Microsoft.Storage/storageAccounts",
+            "location": "eastus",
+            "tags": {}
+        },
+        {
+            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg2/providers/Microsoft.Storage/storageAccounts/azuresa4",
+            "name": "azuresa4",
+            "type": "Microsoft.Storage/storageAccounts",
+            "location": "eastus",
+            "tags": {}
+        }
+	]
+}
+`
+
+var resourceTarget1MetricValues = `
 {
   "cost": 0,
   "timespan": "2021-11-05T10:00:00Z/2021-11-05T11:01:00Z",
@@ -92,7 +141,7 @@ var target1MetricsValues = `
 }
 `
 
-var target2MetricsValues = `
+var resourceTarget2MetricValues = `
 {
   "cost": 0,
   "timespan": "2021-11-05T10:00:00Z/2021-11-05T11:01:00Z",
@@ -146,27 +195,88 @@ var target2MetricsValues = `
 }
 `
 
-func getTarget(resourceID string, metrics []string, aggregation []string) *Target {
-	return &Target{
-		ResourceID:  resourceID,
-		Metrics:     metrics,
-		Aggregation: aggregation,
+var resourceMetricDefinitionsBody = `
+{
+  "value": [
+    {
+      "name": {
+        "value": "UsedCapacity",
+        "localizedValue": "Used capacity"
+      }
+    },
+	{
+      "name": {
+        "value": "Transactions",
+        "localizedValue": "Transactions"
+      }
+	},
+	{
+	  "name": {
+        "value": "Ingress",
+        "localizedValue": "Ingress"
+      }
 	}
+  ]
 }
+`
 
-func getAzureMonitor(subscriptionID string, clientID string, clientSecret string, tenantID string, targets []*Target) *AzureMonitor {
-	return &AzureMonitor{
+var (
+	am = &AzureMonitor{
 		azureClient:    NewAzureClient(),
-		SubscriptionID: subscriptionID,
-		ClientID:       clientID,
-		ClientSecret:   clientSecret,
-		TenantID:       tenantID,
-		Targets:        targets,
+		SubscriptionID: "subscription_id",
+		ClientID:       "client_id",
+		ClientSecret:   "client_secret",
+		TenantID:       "tenant_id",
 		Log:            testutil.Logger{},
 	}
+	resource = &Resource{
+		ResourceType: "Microsoft.Storage/storageAccounts",
+		Metrics:      []string{"UsedCapacity"},
+		Aggregation:  []string{"Total"},
+	}
+	subscriptionTargets  = getSubscriptionTargets()
+	resourceGroupTargets = getResourceGroupTargets()
+	resourceTarget1      = NewResourceTarget(
+		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa1",
+		[]string{"UsedCapacity", "Transactions"},
+		[]string{"Total", "Average"},
+	)
+	resourceTarget2 = NewResourceTarget(
+		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa2",
+		[]string{},
+		[]string{},
+	)
+	resourceTarget3 = NewResourceTarget(
+		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa2",
+		[]string{"Ingress"},
+		[]string{"Minimum, Maximum"})
+)
+
+func resetAzureMonitor() {
+	am.azureClient = NewAzureClient()
+	am.ResourceTargets = make([]*ResourceTarget, 0)
+	am.ResourceGroupTargets = make([]*ResourceGroupTarget, 0)
+	am.SubscriptionTargets = make([]*Resource, 0)
 }
 
-func getTarget1Metrics() []*Metric {
+func getSubscriptionTargets() []*Resource {
+	subscriptionTargets := make([]*Resource, 0)
+	subscriptionTargets = append(subscriptionTargets, resource)
+
+	return subscriptionTargets
+}
+
+func getResourceGroupTargets() []*ResourceGroupTarget {
+	resourceGroupTargets := make([]*ResourceGroupTarget, 0)
+	resourceGroupTargets = append(resourceGroupTargets,
+		NewResourceGroupTarget("azure-rg1", []*Resource{resource}),
+		NewResourceGroupTarget("azure-rg2", []*Resource{resource}),
+	)
+
+	return resourceGroupTargets
+}
+
+func getResourceTarget1Metrics() []*Metric {
 	var metrics []*Metric
 
 	metric1 := NewMetric()
@@ -200,7 +310,7 @@ func getTarget1Metrics() []*Metric {
 	return metrics
 }
 
-func getTarget2Metrics() []*Metric {
+func getResourceTarget2Metrics() []*Metric {
 	var metrics []*Metric
 
 	metric := NewMetric()
@@ -222,13 +332,6 @@ func getTarget2Metrics() []*Metric {
 }
 
 func TestGetAccessToken_Success(t *testing.T) {
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{})
-
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
@@ -246,16 +349,11 @@ func TestGetAccessToken_Success(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, time.Unix(expiresOn, 0).UTC(), am.azureClient.accessTokenExpiresOn)
+
+	resetAzureMonitor()
 }
 
 func TestRefreshAccessToken_AccessTokenRefreshed(t *testing.T) {
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{})
-
 	expiresOn, err := strconv.ParseInt("1636548796", 10, 64)
 
 	require.NoError(t, err)
@@ -280,16 +378,11 @@ func TestRefreshAccessToken_AccessTokenRefreshed(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, time.Unix(expiresOn, 0).UTC(), am.azureClient.accessTokenExpiresOn)
+
+	resetAzureMonitor()
 }
 
 func TestRefreshAccessToken_AccessTokenNotRefreshed(t *testing.T) {
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{})
-
 	expiresOn, err := strconv.ParseInt("1736548796", 10, 64)
 
 	require.NoError(t, err)
@@ -309,94 +402,129 @@ func TestRefreshAccessToken_AccessTokenNotRefreshed(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "abc123456789", am.azureClient.accessToken)
+
+	resetAzureMonitor()
 }
 
-func TestGetAllTargetsMetricsNames_Success(t *testing.T) {
-	target1 := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa1",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"})
-
-	target2 := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa2",
-		[]string{},
-		[]string{"Total", "Average"})
-
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{target1, target2})
+func TestCreateResourceGroupTargetsFromSubscriptionTargets_Success(t *testing.T) {
+	am.SubscriptionTargets = subscriptionTargets
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsAPIURL(target1),
-		httpmock.NewStringResponder(200, ``))
+		am.buildSubscriptionResourceGroupsAPIURL(),
+		httpmock.NewStringResponder(200, subscriptionResourceGroupsBody))
 
-	httpmock.RegisterResponder(
-		"GET",
-		am.buildMetricDefinitionsAPIURL(target2),
-		httpmock.NewStringResponder(200, resourceMetricsDefinitionsBody))
-
-	err := am.getAllTargetsMetricsNames()
+	err := am.createResourceGroupTargetsFromSubscriptionTargets()
 
 	require.NoError(t, err)
 
-	assert.Equal(t, 2, len(am.Targets[0].Metrics))
-	assert.Equal(t, target1.Metrics, am.Targets[0].Metrics)
+	assert.Equal(t, 2, len(am.ResourceGroupTargets))
 
-	assert.Equal(t, 3, len(am.Targets[1].Metrics))
-	assert.Equal(t, []string{"UsedCapacity", "Transactions", "Ingress"}, am.Targets[1].Metrics)
+	assert.Equal(t, "azure-rg1", am.ResourceGroupTargets[0].ResourceGroup)
+	assert.Equal(t, 1, len(am.ResourceGroupTargets[0].Resources))
+	assert.Equal(t, subscriptionTargets[0].ResourceType, am.ResourceGroupTargets[0].Resources[0].ResourceType)
+	assert.Equal(t, subscriptionTargets[0].Metrics, am.ResourceGroupTargets[0].Resources[0].Metrics)
+	assert.Equal(t, subscriptionTargets[0].Aggregation, am.ResourceGroupTargets[0].Resources[0].Aggregation)
+
+	assert.Equal(t, "azure-rg2", am.ResourceGroupTargets[1].ResourceGroup)
+	assert.Equal(t, 1, len(am.ResourceGroupTargets[1].Resources))
+	assert.Equal(t, subscriptionTargets[0].ResourceType, am.ResourceGroupTargets[1].Resources[0].ResourceType)
+	assert.Equal(t, subscriptionTargets[0].Metrics, am.ResourceGroupTargets[1].Resources[0].Metrics)
+	assert.Equal(t, subscriptionTargets[0].Aggregation, am.ResourceGroupTargets[1].Resources[0].Aggregation)
+
+	resetAzureMonitor()
 }
 
-func TestGetAllTargetsAggregation_Success(t *testing.T) {
-	target1 := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa1",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"})
+func TestCreateResourceTargetsFromResourceGroupTargets_Success(t *testing.T) {
+	am.ResourceGroupTargets = resourceGroupTargets
 
-	target2 := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa2",
-		[]string{"Ingress"},
-		[]string{})
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
 
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{target1, target2})
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[0]),
+		httpmock.NewStringResponder(200, resourceGroup1ResourcesBody))
 
-	am.getAllTargetsAggregation()
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[1]),
+		httpmock.NewStringResponder(200, resourceGroup2ResourcesBody))
 
-	assert.Equal(t, 2, len(am.Targets[0].Aggregation))
-	assert.Equal(t, target1.Aggregation, am.Targets[0].Aggregation)
+	err := am.createResourceTargetsFromResourceGroupTargets()
 
-	assert.Equal(t, 5, len(am.Targets[1].Aggregation))
-	assert.Equal(t, []string{"Total", "Count", "Average", "Minimum", "Maximum"}, am.Targets[1].Aggregation)
+	require.NoError(t, err)
+
+	assert.Equal(t, 4, len(am.ResourceTargets))
+
+	for _, target := range am.ResourceTargets {
+		if target.ResourceID == resourceID1 {
+			assert.Equal(t, resourceGroupTargets[0].Resources[0].Metrics, target.Metrics)
+			assert.Equal(t, resourceGroupTargets[0].Resources[0].Aggregation, target.Aggregation)
+		} else if target.ResourceID == resourceID2 {
+			assert.Equal(t, resourceGroupTargets[0].Resources[0].Metrics, target.Metrics)
+			assert.Equal(t, resourceGroupTargets[0].Resources[0].Aggregation, target.Aggregation)
+		} else if target.ResourceID == resourceID3 {
+			assert.Equal(t, resourceGroupTargets[1].Resources[0].Metrics, target.Metrics)
+			assert.Equal(t, resourceGroupTargets[1].Resources[0].Aggregation, target.Aggregation)
+		} else if target.ResourceID == resourceID4 {
+			assert.Equal(t, resourceGroupTargets[1].Resources[0].Metrics, target.Metrics)
+			assert.Equal(t, resourceGroupTargets[1].Resources[0].Aggregation, target.Aggregation)
+		} else {
+			assert.FailNowf(t, "Did not get any expected resource id", "Test failed")
+		}
+	}
+
+	resetAzureMonitor()
 }
 
-func TestInit_Success(t *testing.T) {
-	target1 := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa1",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"})
+func TestGetResourceTargetsMetrics(t *testing.T) {
+	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget2)
 
-	target2 := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa2",
-		[]string{},
-		[]string{})
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
 
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{target1, target2})
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(resourceTarget1),
+		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(resourceTarget2),
+		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
+
+	err := am.getResourceTargetsMetrics()
+
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, len(am.ResourceTargets[0].Metrics))
+	assert.Equal(t, resourceTarget1.Metrics, am.ResourceTargets[0].Metrics)
+
+	assert.Equal(t, 3, len(am.ResourceTargets[1].Metrics))
+	assert.Equal(t, []string{"UsedCapacity", "Transactions", "Ingress"}, am.ResourceTargets[1].Metrics)
+
+	resetAzureMonitor()
+}
+
+func TestSetResourceTargetsAggregation_Success(t *testing.T) {
+	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget2)
+	am.setResourceTargetsAggregation()
+
+	assert.Equal(t, 2, len(am.ResourceTargets[0].Aggregation))
+	assert.Equal(t, resourceTarget1.Aggregation, am.ResourceTargets[0].Aggregation)
+
+	assert.Equal(t, 5, len(am.ResourceTargets[1].Aggregation))
+	assert.Equal(t, []string{"Total", "Count", "Average", "Minimum", "Maximum"}, am.ResourceTargets[1].Aggregation)
+
+	resetAzureMonitor()
+}
+
+func TestInitOnlyResourceTargets_Success(t *testing.T) {
+	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget2)
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -408,139 +536,208 @@ func TestInit_Success(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsAPIURL(target1),
-		httpmock.NewStringResponder(200, ``))
+		am.buildMetricDefinitionsAPIURL(resourceTarget1),
+		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsAPIURL(target2),
-		httpmock.NewStringResponder(200, resourceMetricsDefinitionsBody))
+		am.buildMetricDefinitionsAPIURL(resourceTarget2),
+		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
 
 	err := am.Init()
 
 	require.NoError(t, err)
+	assert.Equal(t, 2, len(am.ResourceTargets))
+
+	resetAzureMonitor()
+}
+
+func TestInitOnlyResourceGroupTargets_Success(t *testing.T) {
+	am.ResourceGroupTargets = resourceGroupTargets
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"POST",
+		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
+		httpmock.NewStringResponder(200, `{"access_token": "abc123456789", "expires_on": "1636548796"}`))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[0]),
+		httpmock.NewStringResponder(200, resourceGroup1ResourcesBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[1]),
+		httpmock.NewStringResponder(200, resourceGroup2ResourcesBody))
+
+	err := am.Init()
+
+	require.NoError(t, err)
+	assert.Equal(t, 4, len(am.ResourceTargets))
+
+	resetAzureMonitor()
+}
+
+func TestInitOnlySubscriptionTargets_Success(t *testing.T) {
+	am.SubscriptionTargets = subscriptionTargets
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"POST",
+		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
+		httpmock.NewStringResponder(200, `{"access_token": "abc123456789", "expires_on": "1636548796"}`))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildSubscriptionResourceGroupsAPIURL(),
+		httpmock.NewStringResponder(200, subscriptionResourceGroupsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(resourceGroupTargets[0]),
+		httpmock.NewStringResponder(200, resourceGroup1ResourcesBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(resourceGroupTargets[1]),
+		httpmock.NewStringResponder(200, resourceGroup2ResourcesBody))
+
+	err := am.Init()
+
+	require.NoError(t, err)
+	assert.Equal(t, 4, len(am.ResourceTargets))
+
+	resetAzureMonitor()
+}
+
+func TestInitAllTargetTypes_Success(t *testing.T) {
+	am.SubscriptionTargets = subscriptionTargets
+	am.ResourceGroupTargets = resourceGroupTargets
+	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget2)
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"POST",
+		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
+		httpmock.NewStringResponder(200, `{"access_token": "abc123456789", "expires_on": "1636548796"}`))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildSubscriptionResourceGroupsAPIURL(),
+		httpmock.NewStringResponder(200, subscriptionResourceGroupsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(resourceGroupTargets[0]),
+		httpmock.NewStringResponder(200, resourceGroup1ResourcesBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(resourceGroupTargets[1]),
+		httpmock.NewStringResponder(200, resourceGroup2ResourcesBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(resourceTarget2),
+		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
+
+	err := am.Init()
+
+	require.NoError(t, err)
+	assert.Equal(t, 10, len(am.ResourceTargets))
+
+	resetAzureMonitor()
 }
 
 func TestInit_NoSubscriptionID(t *testing.T) {
-	target := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"})
-
-	am := getAzureMonitor(
-		"",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{target})
-
+	am.SubscriptionID = ""
 	err := am.Init()
 
 	require.Error(t, err)
+
+	resetAzureMonitor()
 }
 
 func TestInit_NoClientID(t *testing.T) {
-	target := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"})
-
-	am := getAzureMonitor(
-		"subscription_id",
-		"",
-		"client_secret",
-		"tenant_id",
-		[]*Target{target})
-
+	am.ClientID = ""
 	err := am.Init()
 
 	require.Error(t, err)
+
+	resetAzureMonitor()
 }
 
 func TestInit_NoClientSecret(t *testing.T) {
-	target := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"})
-
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"",
-		"tenant_id",
-		[]*Target{target})
-
+	am.ClientSecret = ""
 	err := am.Init()
 
 	require.Error(t, err)
+
+	resetAzureMonitor()
 }
 
 func TestInit_NoTenantID(t *testing.T) {
-	target := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"})
-
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"",
-		[]*Target{target})
-
+	am.TenantID = ""
 	err := am.Init()
 
 	require.Error(t, err)
+
+	resetAzureMonitor()
 }
 
 func TestInit_NoTargets(t *testing.T) {
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{})
-
 	err := am.Init()
 
 	require.Error(t, err)
+
+	resetAzureMonitor()
 }
 
-func TestInit_NoTargetResourceID(t *testing.T) {
-	target := getTarget(
-		"",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"})
-
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{target})
-
+func TestInit_NoResourceTargetResourceID(t *testing.T) {
+	am.ResourceTargets = append(am.ResourceTargets, NewResourceTarget("", []string{}, []string{}))
 	err := am.Init()
 
 	require.Error(t, err)
+
+	resetAzureMonitor()
+}
+
+func TestInit_NoResourceGroupTargetResourceGroup(t *testing.T) {
+	am.ResourceGroupTargets = append(am.ResourceGroupTargets, NewResourceGroupTarget("", []*Resource{}))
+	err := am.Init()
+
+	require.Error(t, err)
+
+	resetAzureMonitor()
+}
+
+func TestInit_NoResourceGroupTargetResourceType(t *testing.T) {
+	am.ResourceGroupTargets = append(am.ResourceGroupTargets, NewResourceGroupTarget("azure-rg1", []*Resource{}))
+	err := am.Init()
+
+	require.Error(t, err)
+
+	resetAzureMonitor()
+}
+
+func TestInit_NoSubscriptionTargetResourceType(t *testing.T) {
+	am.SubscriptionTargets = append(am.SubscriptionTargets, &Resource{})
+	err := am.Init()
+
+	require.Error(t, err)
+
+	resetAzureMonitor()
 }
 
 func TestGather_Success(t *testing.T) {
-	target1 := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa1",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"})
-
-	target2 := getTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa2",
-		[]string{"Ingress"},
-		[]string{"Minimum, Maximum"})
-
-	am := getAzureMonitor(
-		"subscription_id",
-		"client_id",
-		"client_secret",
-		"tenant_id",
-		[]*Target{target1, target2})
+	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget3)
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -552,24 +749,26 @@ func TestGather_Success(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricValuesAPIURL(target1),
-		httpmock.NewStringResponder(200, target1MetricsValues))
+		am.buildMetricValuesAPIURL(resourceTarget1),
+		httpmock.NewStringResponder(200, resourceTarget1MetricValues))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricValuesAPIURL(target2),
-		httpmock.NewStringResponder(200, target2MetricsValues))
+		am.buildMetricValuesAPIURL(resourceTarget3),
+		httpmock.NewStringResponder(200, resourceTarget2MetricValues))
 
 	acc := testutil.Accumulator{}
 	err := acc.GatherError(am.Gather)
 
 	require.NoError(t, err)
 
-	target1Metrics := getTarget1Metrics()
-	target2Metrics := getTarget2Metrics()
+	resourceTarget1Metrics := getResourceTarget1Metrics()
+	resourceTarget2Metrics := getResourceTarget2Metrics()
 
-	acc.AssertContainsTaggedFields(t, target1Metrics[0].name, target1Metrics[0].fields, target1Metrics[0].tags)
-	acc.AssertContainsTaggedFields(t, target1Metrics[1].name, target1Metrics[1].fields, target1Metrics[1].tags)
+	acc.AssertContainsTaggedFields(t, resourceTarget1Metrics[0].name, resourceTarget1Metrics[0].fields, resourceTarget1Metrics[0].tags)
+	acc.AssertContainsTaggedFields(t, resourceTarget1Metrics[1].name, resourceTarget1Metrics[1].fields, resourceTarget1Metrics[1].tags)
 
-	acc.AssertContainsTaggedFields(t, target2Metrics[0].name, target2Metrics[0].fields, target2Metrics[0].tags)
+	acc.AssertContainsTaggedFields(t, resourceTarget2Metrics[0].name, resourceTarget2Metrics[0].fields, resourceTarget2Metrics[0].tags)
+
+	resetAzureMonitor()
 }
