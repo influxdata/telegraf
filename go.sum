@@ -1145,8 +1145,8 @@ github.com/grpc-ecosystem/grpc-gateway v1.14.5/go.mod h1:UJ0EZAp832vCd54Wev9N1BM
 github.com/grpc-ecosystem/grpc-gateway v1.16.0 h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645/go.mod h1:6iZfnjpejD4L/4DwD7NryNaJyCQdzwWwH2MWhCA90Kw=
-github.com/gwos/tcg/transit v0.0.0-20211124103916-e2b3b806f031 h1:FLKSa4N5aS/Bvj7YcuAZpfjtlfMF/e9/agL8pW0rtgc=
-github.com/gwos/tcg/transit v0.0.0-20211124103916-e2b3b806f031/go.mod h1:1AyzNx6r9l3khJ/ae4cJyn4NLlAZMy1l3K5QIIm2nBc=
+github.com/gwos/tcg/sdk v0.0.0-20211125122009-24221bf01623 h1:WiBrZ6coNJJhqJeaUpWT4jVSMJoIjKa+wumRUhLQy9Y=
+github.com/gwos/tcg/sdk v0.0.0-20211125122009-24221bf01623/go.mod h1:OjlJNRXwlEjznVfU3YtLWH8FyM7KWHUevXDI47UeZeM=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
 github.com/harlow/kinesis-consumer v0.3.6-0.20210911031324-5a873d6e9fec h1:ya+kv1eNnd5QhcHuaj5g5eMq5Ra3VCNaPY2ZI7Aq91o=

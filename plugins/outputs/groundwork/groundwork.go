@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gwos/tcg/transit"
-	"github.com/gwos/tcg/transit/clients"
+	"net/http"
+	"strconv"
+
+	"github.com/gwos/tcg/sdk/clients"
+	"github.com/gwos/tcg/sdk/transit"
 	"github.com/hashicorp/go-uuid"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 const (
@@ -27,31 +27,29 @@ const (
 
 var (
 	sampleConfig = `
-  ## HTTP endpoint for your groundwork instance.
-  # endpoint = ""
+  ## URL of your groundwork instance.
+  url = "https://groundwork.example.com"
 
-  ## Agent uuid for Groundwork API Server
-  # agent_id = ""
+  ## Agent uuid for GroundWork API Server.
+  agent_id = ""
 
-  ## Username to access Groundwork API
-  # username = ""
+  ## Username and password to access GroundWork API.
+  username = ""
+  password = ""
 
-  ## Password to use in pair with username
-  # password = ""
-
-  ## Default display name for the host with services(metrics)
+  ## Default display name for the host with services(metrics).
   # default_host = "telegraf"
 
-  ## Default service state [default - "SERVICE_OK"]
+  ## Default service state.
   # default_service_state = "SERVICE_OK"
 
-  ## The name of the tag that contains the hostname [default - "host"]
+  ## The name of the tag that contains the hostname.
   # resource_tag = "host"
 `
 )
 
 type Groundwork struct {
-	Server              string `toml:"groundwork_endpoint"`
+	Server              string `toml:"url"`
 	AgentID             string `toml:"agent_id"`
 	Username            string `toml:"username"`
 	Password            string `toml:"password"`
@@ -59,6 +57,8 @@ type Groundwork struct {
 	DefaultServiceState string `toml:"default_service_state"`
 	ResourceTag         string `toml:"resource_tag"`
 	authToken           string
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 func (g *Groundwork) SampleConfig() string {
@@ -67,7 +67,7 @@ func (g *Groundwork) SampleConfig() string {
 
 func (g *Groundwork) Init() error {
 	if g.Server == "" {
-		return errors.New("no 'groundwork_endpoint' provided")
+		return errors.New("no 'url' provided")
 	}
 	if g.AgentID == "" {
 		return errors.New("no 'agent_id' provided")
@@ -81,9 +81,6 @@ func (g *Groundwork) Init() error {
 	if g.DefaultHost == "" {
 		return errors.New("no 'default_host' provided")
 	}
-	if g.DefaultServiceState == "" {
-		return errors.New("no 'default_service_state' provided")
-	}
 	if g.ResourceTag == "" {
 		return errors.New("no 'resource_tag' provided")
 	}
@@ -96,11 +93,13 @@ func (g *Groundwork) Init() error {
 
 func (g *Groundwork) Connect() error {
 	byteToken, err := login(g.Server+loginURL, g.Username, g.Password)
-	if err == nil {
-		g.authToken = string(byteToken)
+	if err != nil {
+		return fmt.Errorf("could not log in at %s: %v", g.Server+loginURL, err)
 	}
 
-	return err
+	g.authToken = string(byteToken)
+
+	return nil
 }
 
 func (g *Groundwork) Close() error {
@@ -114,9 +113,11 @@ func (g *Groundwork) Close() error {
 		"User-Agent":   internal.ProductToken(),
 	}
 
-	_, _, err := clients.SendRequest(http.MethodPost, g.Server+logoutURL, headers, formValues, nil)
+	if _, _, err := clients.SendRequest(http.MethodPost, g.Server+logoutURL, headers, formValues, nil); err != nil {
+		return fmt.Errorf("could not log out at %s: %v", g.Server+logoutURL, err)
+	}
 
-	return err
+	return nil
 }
 
 func (g *Groundwork) Write(metrics []telegraf.Metric) error {
@@ -136,7 +137,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 				},
 			},
 			Status:        transit.HostUp,
-			LastCheckTime: transit.MillisecondTimestamp{Time: time.Now()},
+			LastCheckTime: transit.NewTimestamp(),
 			Services:      services,
 		})
 	}
@@ -147,7 +148,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 			AppType:    "TELEGRAF",
 			AgentID:    g.AgentID,
 			TraceToken: traceToken,
-			TimeStamp:  transit.MillisecondTimestamp{Time: time.Now()},
+			TimeStamp:  transit.NewTimestamp(),
 			Version:    transit.ModelVersion,
 		},
 		Resources: resources,
@@ -168,23 +169,23 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 
 	statusCode, body, err := clients.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while sending: %v", err)
 	}
 
 	/* Re-login mechanism */
 	if statusCode == 401 {
 		if err = g.Connect(); err != nil {
-			return err
+			return fmt.Errorf("re-login failed: %v", err)
 		}
 		headers["GWOS-API-TOKEN"] = g.authToken
 		statusCode, body, err = clients.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
 		if err != nil {
-			return err
+			return fmt.Errorf("error while sending: %v", err)
 		}
 	}
 
 	if statusCode != 200 {
-		return fmt.Errorf("something went wrong during processing an http request[http_status = %d, body = %s]", statusCode, string(body))
+		return fmt.Errorf("HTTP request failed. [Status code]: %d, [Response]: %s", statusCode, string(body))
 	}
 
 	return nil
@@ -232,19 +233,23 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 	}
 
 	critical := -1.0
-	if value, present := metric.GetTag("critical"); present {
+	value, criticalPresent := metric.GetTag("critical")
+	if criticalPresent {
 		if s, err := strconv.ParseFloat(value, 64); err == nil {
 			critical = s
 		}
 	}
 
 	warning := -1.0
-	if value, present := metric.GetTag("warning"); present {
+	value, warningPresent := metric.GetTag("warning")
+	if warningPresent {
 		if s, err := strconv.ParseFloat(value, 64); err == nil {
 			warning = s
 		}
 	}
 
+	lastCheckTime := transit.NewTimestamp()
+	lastCheckTime.Time = metric.Time()
 	serviceObject := transit.DynamicMonitoredService{
 		BaseTransitData: transit.BaseTransitData{
 			Name:  service,
@@ -252,29 +257,34 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 			Owner: resource,
 		},
 		Status:           transit.MonitorStatus(status),
-		LastCheckTime:    transit.MillisecondTimestamp{Time: metric.Time()},
+		LastCheckTime:    lastCheckTime,
 		LastPlugInOutput: message,
 		Metrics:          nil,
 	}
 
+	var err error
 	for _, value := range metric.FieldList() {
 		var thresholds []transit.ThresholdValue
-		thresholds = append(thresholds, transit.ThresholdValue{
-			SampleType: transit.Warning,
-			Label:      value.Key + "_wn",
-			Value: &transit.TypedValue{
-				ValueType:   transit.DoubleType,
-				DoubleValue: warning,
-			},
-		})
-		thresholds = append(thresholds, transit.ThresholdValue{
-			SampleType: transit.Critical,
-			Label:      value.Key + "_cr",
-			Value: &transit.TypedValue{
-				ValueType:   transit.DoubleType,
-				DoubleValue: critical,
-			},
-		})
+		if warningPresent {
+			thresholds = append(thresholds, transit.ThresholdValue{
+				SampleType: transit.Warning,
+				Label:      value.Key + "_wn",
+				Value: &transit.TypedValue{
+					ValueType:   transit.DoubleType,
+					DoubleValue: warning,
+				},
+			})
+		}
+		if criticalPresent {
+			thresholds = append(thresholds, transit.ThresholdValue{
+				SampleType: transit.Critical,
+				Label:      value.Key + "_cr",
+				Value: &transit.TypedValue{
+					ValueType:   transit.DoubleType,
+					DoubleValue: critical,
+				},
+			})
+		}
 
 		valueType := transit.DoubleType
 		var floatVal float64
@@ -286,13 +296,19 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 			tmpStr := value.Value.(string)
 			stringVal = tmpStr
 		default:
-			floatVal, _ = internal.ToFloat64(value.Value)
+			floatVal, err = internal.ToFloat64(value.Value)
+			if err != nil {
+				g.Log.Warnf("could not convert %s to float: %v", value.Key, err)
+			}
 		}
+
+		endTime := transit.NewTimestamp()
+		endTime.Time = metric.Time()
 		serviceObject.Metrics = append(serviceObject.Metrics, transit.TimeSeries{
 			MetricName: value.Key,
 			SampleType: transit.Value,
 			Interval: &transit.TimeInterval{
-				EndTime: transit.MillisecondTimestamp{Time: metric.Time()},
+				EndTime: endTime,
 			},
 			Value: &transit.TypedValue{
 				ValueType:   valueType,
@@ -305,8 +321,8 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 	}
 
 	if !statusPresent {
-		var err error
 		if serviceObject.Status, err = transit.CalculateServiceStatus(&serviceObject.Metrics); err != nil {
+			g.Log.Infof("could not calculate service status, reverting to default_service_state: %v", err)
 			serviceObject.Status = transit.MonitorStatus(g.DefaultServiceState)
 		}
 	}
@@ -331,7 +347,7 @@ func login(url, username, password string) ([]byte, error) {
 		return nil, err
 	}
 	if statusCode != 200 {
-		return nil, fmt.Errorf("[ERROR]: Http request failed. [Status code]: %d, [Response]: %s", statusCode, string(body))
+		return nil, fmt.Errorf("request failed with status-code %d: %v", statusCode, string(body))
 	}
 
 	return body, nil
