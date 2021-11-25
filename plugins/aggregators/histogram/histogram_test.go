@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 type fields map[string]interface{}
@@ -83,7 +84,7 @@ func TestHistogram(t *testing.T) {
 	histogram.Push(acc)
 
 	if len(acc.Metrics) != 6 {
-		assert.Fail(t, "Incorrect number of metrics")
+		require.Fail(t, "Incorrect number of metrics")
 	}
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketRightTag: "0"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketRightTag: "10"})
@@ -107,7 +108,7 @@ func TestHistogramNonCumulative(t *testing.T) {
 	histogram.Push(acc)
 
 	if len(acc.Metrics) != 6 {
-		assert.Fail(t, "Incorrect number of metrics")
+		require.Fail(t, "Incorrect number of metrics")
 	}
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketLeftTag: bucketNegInf, bucketRightTag: "0"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketLeftTag: "0", bucketRightTag: "10"})
@@ -131,7 +132,7 @@ func TestHistogramWithReset(t *testing.T) {
 	histogram.Push(acc)
 
 	if len(acc.Metrics) != 6 {
-		assert.Fail(t, "Incorrect number of metrics")
+		require.Fail(t, "Incorrect number of metrics")
 	}
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketRightTag: "0"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketRightTag: "10"})
@@ -156,7 +157,7 @@ func TestHistogramWithAllFields(t *testing.T) {
 	histogram.Push(acc)
 
 	if len(acc.Metrics) != 12 {
-		assert.Fail(t, "Incorrect number of metrics")
+		require.Fail(t, "Incorrect number of metrics")
 	}
 
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "0"})
@@ -189,7 +190,7 @@ func TestHistogramWithAllFieldsNonCumulative(t *testing.T) {
 	histogram.Push(acc)
 
 	if len(acc.Metrics) != 12 {
-		assert.Fail(t, "Incorrect number of metrics")
+		require.Fail(t, "Incorrect number of metrics")
 	}
 
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketLeftTag: bucketNegInf, bucketRightTag: "0"})
@@ -241,7 +242,7 @@ func TestHistogramWithTwoPeriodsAndAllFields(t *testing.T) {
 func TestWrongBucketsOrder(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			assert.Equal(
+			require.Equal(
 				t,
 				"histogram buckets must be in increasing order: 90.00 >= 20.00, metrics: first_metric_name, field: a",
 				fmt.Sprint(r),
@@ -291,12 +292,9 @@ func assertContainsTaggedField(t *testing.T, acc *testutil.Accumulator, metricNa
 		}
 
 		// check fields with their counts
-		if assert.Equal(t, fields, checkedMetric.Fields) {
-			return
-		}
-
-		assert.Fail(t, fmt.Sprintf("incorrect fields %v of metric %s", checkedMetric.Fields, metricName))
+		require.Equal(t, fields, checkedMetric.Fields)
+		return
 	}
 
-	assert.Fail(t, fmt.Sprintf("unknown measurement '%s' with tags: %v, fields: %v", metricName, tags, fields))
+	require.Fail(t, fmt.Sprintf("unknown measurement '%s' with tags: %v, fields: %v", metricName, tags, fields))
 }
