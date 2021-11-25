@@ -61,8 +61,10 @@ type Metric struct {
 }
 
 const (
-	maxMetricsPerRequest int = 20
-	minMetricsFields         = 2
+	maxMetricsPerRequest    int = 20
+	minMetricsFields            = 2
+	accessTokenURLGrantType     = "client_credentials"
+	accessTokenURLResource      = "https://management.azure.com/"
 )
 
 var sampleConfig = `
@@ -509,8 +511,8 @@ func (am *AzureMonitor) getAccessToken() error {
 
 	target := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID)
 	form := url.Values{
-		"grant_type":    {"client_credentials"},
-		"resource":      {"https://management.azure.com/"},
+		"grant_type":    {accessTokenURLGrantType},
+		"resource":      {accessTokenURLResource},
 		"client_id":     {am.ClientID},
 		"client_secret": {am.ClientSecret},
 	}
@@ -652,7 +654,7 @@ func (am *AzureMonitor) collectResourceTargetsMetrics(acc telegraf.Accumulator) 
 				return
 			}
 
-			metrics, err := collectResourceTargetMetrics(body)
+			metrics, err := am.collectResourceTargetMetrics(body)
 
 			if err != nil {
 				select {
@@ -679,6 +681,47 @@ func (am *AzureMonitor) collectResourceTargetsMetrics(acc telegraf.Accumulator) 
 	}
 
 	return nil
+}
+
+func (am *AzureMonitor) collectResourceTargetMetrics(body []byte) ([]*Metric, error) {
+	bodyData, err := unmarshalJSON(body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var metrics []*Metric
+
+	for _, value := range bodyData["value"].([]interface{}) {
+		var metric *Metric
+
+		timeSeries := value.(map[string]interface{})["timeseries"].([]interface{})[0]
+		data := timeSeries.(map[string]interface{})["data"].([]interface{})
+
+		if len(data) == 0 {
+			metricName, fullResourceName := getMetricAndFullResourceNames(value.(map[string]interface{}))
+
+			am.Log.Info("There is no value to metric: ", metricName, " for resource: ", fullResourceName)
+			continue
+		}
+
+		if !isMetricHaveValue(data) {
+			metricName, fullResourceName := getMetricAndFullResourceNames(value.(map[string]interface{}))
+
+			am.Log.Info("There is no value to metric: ", metricName, " for resource: ", fullResourceName)
+			continue
+		}
+
+		metric = NewMetric()
+
+		metric.getMetricName(value.(map[string]interface{}))
+		metric.getMetricFields(data)
+		metric.getMetricTags(bodyData, value.(map[string]interface{}))
+
+		metrics = append(metrics, metric)
+	}
+
+	return metrics, err
 }
 
 func (rt *ResourceTarget) setResourceTargetMetrics(body []byte) error {
@@ -729,10 +772,6 @@ func (m *Metric) getMetricFields(data []interface{}) {
 
 		return
 	}
-
-	for key, element := range data[len(data)-1].(map[string]interface{}) {
-		m.fields[key] = element
-	}
 }
 
 func (m *Metric) getMetricTags(bodyData map[string]interface{}, value map[string]interface{}) {
@@ -746,35 +785,22 @@ func (m *Metric) getMetricTags(bodyData map[string]interface{}, value map[string
 	m.tags["unit"] = value["unit"].(string)
 }
 
-func collectResourceTargetMetrics(body []byte) ([]*Metric, error) {
-	bodyData, err := unmarshalJSON(body)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var metrics []*Metric
-
-	for _, value := range bodyData["value"].([]interface{}) {
-		var metric *Metric
-
-		timeSeries := value.(map[string]interface{})["timeseries"].([]interface{})[0]
-		data := timeSeries.(map[string]interface{})["data"].([]interface{})
-
-		if len(data) == 0 {
-			continue
+func isMetricHaveValue(data []interface{}) bool {
+	for index := len(data) - 1; index >= 0; index-- {
+		if len(data[index].(map[string]interface{})) >= minMetricsFields {
+			return true
 		}
-
-		metric = NewMetric()
-
-		metric.getMetricName(value.(map[string]interface{}))
-		metric.getMetricFields(data)
-		metric.getMetricTags(bodyData, value.(map[string]interface{}))
-
-		metrics = append(metrics, metric)
 	}
 
-	return metrics, err
+	return false
+}
+
+func getMetricAndFullResourceNames(value map[string]interface{}) (string, string) {
+	metricName := value["name"].(map[string]interface{})["value"].(string)
+	resourceID := strings.Split(value["id"].(string), "/")
+	fullResourceName := fmt.Sprintf("%s/%s", resourceID[4], resourceID[8])
+
+	return metricName, fullResourceName
 }
 
 func getResponseBody(response *http.Response) ([]byte, error) {
