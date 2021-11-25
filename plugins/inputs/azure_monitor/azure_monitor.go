@@ -699,16 +699,16 @@ func (am *AzureMonitor) collectResourceTargetMetrics(body []byte) ([]*Metric, er
 		data := timeSeries.(map[string]interface{})["data"].([]interface{})
 
 		if len(data) == 0 {
-			metricName, fullResourceName := getMetricAndFullResourceNames(value.(map[string]interface{}))
+			metricName, fullResourceName, resourceType := getMetricWithNoValueDetails(value.(map[string]interface{}))
 
-			am.Log.Info("There is no value to metric: ", metricName, " for resource: ", fullResourceName)
+			am.Log.Info("There is no value to metric: ", metricName, " for resource: ", fullResourceName, " type: ", resourceType)
 			continue
 		}
 
 		if !isMetricHaveValue(data) {
-			metricName, fullResourceName := getMetricAndFullResourceNames(value.(map[string]interface{}))
+			metricName, fullResourceName, resourceType := getMetricWithNoValueDetails(value.(map[string]interface{}))
 
-			am.Log.Info("There is no value to metric: ", metricName, " for resource: ", fullResourceName)
+			am.Log.Info("There is no value to metric: ", metricName, " for resource: ", fullResourceName, " type: ", resourceType)
 			continue
 		}
 
@@ -795,12 +795,13 @@ func isMetricHaveValue(data []interface{}) bool {
 	return false
 }
 
-func getMetricAndFullResourceNames(value map[string]interface{}) (string, string) {
+func getMetricWithNoValueDetails(value map[string]interface{}) (string, string, string) {
 	metricName := value["name"].(map[string]interface{})["value"].(string)
 	resourceID := strings.Split(value["id"].(string), "/")
-	fullResourceName := fmt.Sprintf("%s/%s", resourceID[4], resourceID[8])
+	fullResourceName := resourceID[4] + "/" + resourceID[8]
+	resourceType := resourceID[6] + "/" + resourceID[7]
 
-	return metricName, fullResourceName
+	return metricName, fullResourceName, resourceType
 }
 
 func getResponseBody(response *http.Response) ([]byte, error) {
