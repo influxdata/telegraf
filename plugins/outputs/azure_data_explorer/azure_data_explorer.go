@@ -37,6 +37,9 @@ type AzureDataExplorer struct {
 const (
 	tablePerMetric = "tablepermetric"
 	singleTable    = "singletable"
+	// These control the amount of memory we use when ingesting blobs
+	azureBlobBlockSize   = 1 * 1024 * 1024
+	azureBlobConcurrency = 50
 )
 
 type localIngestor interface {
@@ -144,6 +147,16 @@ func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) err
 			return err
 		}
 	}
+	//push metrics to a single table
+	f, err := os.Create("profile." + strconv.Itoa(len(tableMetricGroups)))
+	if err != nil {
+		adx.Log.Error("could not create memory profile: ", err)
+	}
+	defer f.Close() // error handling omitted for example
+	runtime.GC()    // get up-to-date statistics
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		adx.Log.Error("could not write memory profile: ", err)
+	}
 
 	return nil
 }
@@ -166,6 +179,15 @@ func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error 
 	//push metrics to a single table
 	format := ingest.FileFormat(ingest.JSON)
 	err := adx.pushMetrics(ctx, format, adx.TableName, metricsArray)
+	f, err := os.Create("profile." + strconv.Itoa(len(metricsArray)))
+	if err != nil {
+		adx.Log.Error("could not create memory profile: ", err)
+	}
+	defer f.Close() // error handling omitted for example
+	runtime.GC()    // get up-to-date statistics
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		adx.Log.Error("could not write memory profile: ", err)
+	}
 	return err
 }
 
@@ -256,7 +278,7 @@ func init() {
 }
 
 func createRealIngestor(client localClient, database string, tableName string) (localIngestor, error) {
-	ingestor, err := ingest.New(client.(*kusto.Client), database, tableName)
+	ingestor, err := ingest.NewWithBlobProperties(client.(*kusto.Client), database, tableName, azureBlobBlockSize, azureBlobConcurrency)
 	if ingestor != nil {
 		return ingestor, nil
 	}
