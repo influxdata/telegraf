@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	"github.com/prometheus/prometheus/prompb"
 
 	"github.com/influxdata/telegraf"
-	"github.com/prometheus/prometheus/prompb"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 type MetricKey uint64
@@ -210,8 +210,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		i++
 	}
 
-	switch s.config.MetricSortOrder {
-	case SortMetrics:
+	if s.config.MetricSortOrder == SortMetrics {
 		sort.Slice(promTS, func(i, j int) bool {
 			lhs := promTS[i].Labels
 			rhs := promTS[j].Labels
@@ -241,7 +240,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		return nil, fmt.Errorf("unable to marshal protobuf: %v", err)
 	}
 	encoded := snappy.Encode(nil, data)
-	buf.Write(encoded)
+	buf.Write(encoded) //nolint:revive // from buffer.go: "err is always nil"
 	return buf.Bytes(), nil
 }
 
@@ -320,10 +319,10 @@ func (s *Serializer) createLabels(metric telegraf.Metric) []prompb.Label {
 func MakeMetricKey(labels []prompb.Label) MetricKey {
 	h := fnv.New64a()
 	for _, label := range labels {
-		h.Write([]byte(label.Name))
-		h.Write([]byte("\x00"))
-		h.Write([]byte(label.Value))
-		h.Write([]byte("\x00"))
+		h.Write([]byte(label.Name))  //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte("\x00"))      //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte(label.Value)) //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte("\x00"))      //nolint:revive // from hash.go: "It never returns an error"
 	}
 	return MetricKey(h.Sum64())
 }
