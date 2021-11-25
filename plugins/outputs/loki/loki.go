@@ -11,13 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 const (
@@ -126,7 +127,7 @@ func (l *Loki) Connect() (err error) {
 		return fmt.Errorf("http client fail: %w", err)
 	}
 
-	return
+	return nil
 }
 
 func (l *Loki) Close() error {
@@ -155,10 +156,10 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line})
 	}
 
-	return l.write(s)
+	return l.writeMetrics(s)
 }
 
-func (l *Loki) write(s Streams) error {
+func (l *Loki) writeMetrics(s Streams) error {
 	bs, err := json.Marshal(s)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)

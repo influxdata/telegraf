@@ -213,30 +213,30 @@ func getVMConfig(px *Proxmox, vmID json.Number, rt ResourceType) (VMConfig, erro
 }
 
 func getFields(vmStat VMStat) map[string]interface{} {
-	memTotal, memUsed, memFree, memUsedPercentage := getByteMetrics(vmStat.TotalMem, vmStat.UsedMem)
-	swapTotal, swapUsed, swapFree, swapUsedPercentage := getByteMetrics(vmStat.TotalSwap, vmStat.UsedSwap)
-	diskTotal, diskUsed, diskFree, diskUsedPercentage := getByteMetrics(vmStat.TotalDisk, vmStat.UsedDisk)
+	memMetrics := getByteMetrics(vmStat.TotalMem, vmStat.UsedMem)
+	swapMetrics := getByteMetrics(vmStat.TotalSwap, vmStat.UsedSwap)
+	diskMetrics := getByteMetrics(vmStat.TotalDisk, vmStat.UsedDisk)
 
 	return map[string]interface{}{
 		"status":               vmStat.Status,
 		"uptime":               jsonNumberToInt64(vmStat.Uptime),
 		"cpuload":              jsonNumberToFloat64(vmStat.CPULoad),
-		"mem_used":             memUsed,
-		"mem_total":            memTotal,
-		"mem_free":             memFree,
-		"mem_used_percentage":  memUsedPercentage,
-		"swap_used":            swapUsed,
-		"swap_total":           swapTotal,
-		"swap_free":            swapFree,
-		"swap_used_percentage": swapUsedPercentage,
-		"disk_used":            diskUsed,
-		"disk_total":           diskTotal,
-		"disk_free":            diskFree,
-		"disk_used_percentage": diskUsedPercentage,
+		"mem_used":             memMetrics.used,
+		"mem_total":            memMetrics.total,
+		"mem_free":             memMetrics.free,
+		"mem_used_percentage":  memMetrics.usedPercentage,
+		"swap_used":            swapMetrics.used,
+		"swap_total":           swapMetrics.total,
+		"swap_free":            swapMetrics.free,
+		"swap_used_percentage": swapMetrics.usedPercentage,
+		"disk_used":            diskMetrics.used,
+		"disk_total":           diskMetrics.total,
+		"disk_free":            diskMetrics.free,
+		"disk_used_percentage": diskMetrics.usedPercentage,
 	}
 }
 
-func getByteMetrics(total json.Number, used json.Number) (int64, int64, int64, float64) {
+func getByteMetrics(total json.Number, used json.Number) metrics {
 	int64Total := jsonNumberToInt64(total)
 	int64Used := jsonNumberToInt64(used)
 	int64Free := int64Total - int64Used
@@ -245,7 +245,12 @@ func getByteMetrics(total json.Number, used json.Number) (int64, int64, int64, f
 		usedPercentage = float64(int64Used) * 100 / float64(int64Total)
 	}
 
-	return int64Total, int64Used, int64Free, usedPercentage
+	return metrics{
+		total:          int64Total,
+		used:           int64Used,
+		free:           int64Free,
+		usedPercentage: usedPercentage,
+	}
 }
 
 func jsonNumberToInt64(value json.Number) int64 {

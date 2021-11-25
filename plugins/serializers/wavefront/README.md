@@ -2,7 +2,7 @@
 
 The `wavefront` serializer translates the Telegraf metric format to the [Wavefront Data Format](https://docs.wavefront.com/wavefront_data_format.html).
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.file]]
@@ -22,7 +22,7 @@ The `wavefront` serializer translates the Telegraf metric format to the [Wavefro
   data_format = "wavefront"
 ```
 
-### Metrics
+## Metrics
 
 A Wavefront metric is equivalent to a single field value of a Telegraf measurement.
 The Wavefront metric name will be: `<measurement_name>.<field_name>`
@@ -30,17 +30,17 @@ If a prefix is specified it will be honored.
 Only boolean and numeric metrics will be serialized, all other types will generate
 an error.
 
-### Example
+## Example
 
 The following Telegraf metric
 
-```
+```text
 cpu,cpu=cpu0,host=testHost user=12,idle=88,system=0 1234567890
 ```
 
 will serialize into the following Wavefront metrics
 
-```
+```text
 "cpu.user" 12.000000 1234567890 source="testHost" "cpu"="cpu0"
 "cpu.idle" 88.000000 1234567890 source="testHost" "cpu"="cpu0"
 "cpu.system" 0.000000 1234567890 source="testHost" "cpu"="cpu0"

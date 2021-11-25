@@ -150,7 +150,7 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 
-		return h.write(reqBody)
+		return h.writeMetric(reqBody)
 	}
 
 	for _, metric := range metrics {
@@ -160,14 +160,14 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 
-		if err := h.write(reqBody); err != nil {
+		if err := h.writeMetric(reqBody); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (h *HTTP) write(reqBody []byte) error {
+func (h *HTTP) writeMetric(reqBody []byte) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 
 	var err error

@@ -456,10 +456,10 @@ func (c *httpClient) makeQueryRequest(query string) (*http.Request, error) {
 	return req, nil
 }
 
-func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
+func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
 	var err error
 
-	req, err := http.NewRequest("POST", url, body)
+	req, err := http.NewRequest("POST", address, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating new request: %s", err.Error())
 	}

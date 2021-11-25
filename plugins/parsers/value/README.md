@@ -4,7 +4,7 @@ The "value" data format translates single values into Telegraf metrics. This
 is done by assigning a measurement name and setting a single field ("value")
 as the parsed metric.
 
-### Configuration
+## Configuration
 
 You **must** tell Telegraf what type of metric to collect by using the
 `data_type` configuration option. Available options are:
@@ -33,4 +33,3 @@ name of the plugin.
   data_format = "value"
   data_type = "integer" # required
 ```
-

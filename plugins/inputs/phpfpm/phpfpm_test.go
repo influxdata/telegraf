@@ -16,9 +16,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type statServer struct{}
@@ -283,7 +283,7 @@ func TestPhpFpmDefaultGetFromLocalhost(t *testing.T) {
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "/status")
+	require.Contains(t, err.Error(), "/status")
 }
 
 func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t *testing.T) {
@@ -297,8 +297,8 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), `unable to connect to phpfpm status page 'http://aninvalidone'`)
-	assert.Contains(t, err.Error(), `lookup aninvalidone`)
+	require.Contains(t, err.Error(), `unable to connect to phpfpm status page 'http://aninvalidone'`)
+	require.Contains(t, err.Error(), `lookup aninvalidone`)
 }
 
 func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testing.T) {
@@ -312,7 +312,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Equal(t, `socket doesn't exist "/tmp/invalid.sock"`, err.Error())
+	require.Equal(t, `socket doesn't exist "/tmp/invalid.sock"`, err.Error())
 }
 
 const outputSample = `

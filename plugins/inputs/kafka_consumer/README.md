@@ -6,7 +6,7 @@ and creates metrics using one of the supported [input data formats][].
 For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input plugin
 and use the old zookeeper connection method.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.kafka_consumer]]

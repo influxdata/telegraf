@@ -52,7 +52,7 @@ func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
 			continue
 		}
-		mountOpts := parseOptions(partitions[i].Opts)
+		mountOpts := MountOptions(partitions[i].Opts)
 		tags := map[string]string{
 			"path":   du.Path,
 			"device": strings.Replace(partitions[i].Device, "/dev/", "", -1),
@@ -99,10 +99,6 @@ func (opts MountOptions) exists(opt string) bool {
 		}
 	}
 	return false
-}
-
-func parseOptions(opts string) MountOptions {
-	return strings.Split(opts, ",")
 }
 
 func init() {
