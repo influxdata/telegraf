@@ -171,7 +171,6 @@ func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *MetricsSummary)
 		}
 
 		acc.AddGauge(gauges.Name, fields, tags, t)
-
 	}
 
 	for _, points := range summaryMetrics.Points {
