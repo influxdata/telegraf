@@ -49,11 +49,11 @@ const description = "Reads metrics from a SSL certificate"
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Sources    []string        `toml:"sources"`
-	Timeout    config.Duration `toml:"timeout"`
-	ServerName string          `toml:"server_name"`
-	ExcludeRootCerts bool      `toml:"exclude_root_certs"`
-	tlsCfg     *tls.Config
+	Sources          []string        `toml:"sources"`
+	Timeout          config.Duration `toml:"timeout"`
+	ServerName       string          `toml:"server_name"`
+	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
+	tlsCfg           *tls.Config
 	_tls.ClientConfig
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
@@ -339,7 +339,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 			acc.AddFields("x509_cert", fields, tags)
 			if c.ExcludeRootCerts {
-				break;
+				break
 			}
 		}
 	}
