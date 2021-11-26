@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/plugins/serializers/influx_protobuf"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
@@ -75,6 +76,12 @@ type Config struct {
 	// Support unsigned integer output; influx format only
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 
+	// Database name for binary protocol
+	InfluxProtobufDatabase string `toml:"influx_protobuf_database"`
+
+	// Use IOx format
+	InfluxProtobufIOx bool `toml:"influx_protobuf_iox"`
+
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string `toml:"prefix"`
 
@@ -123,6 +130,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 	switch config.DataFormat {
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
+	case "influx_protobuf":
+		serializer, err = NewInfluxProtobufSerializer(config.InfluxProtobufDatabase, config.InfluxProtobufIOx)
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
@@ -227,6 +236,14 @@ func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
 
 func NewInfluxSerializer() (Serializer, error) {
 	return influx.NewSerializer(), nil
+}
+
+func NewInfluxProtobufSerializer(db string, iox bool) (Serializer, error) {
+	s := influx_protobuf.Serializer{
+		DatabaseName: db,
+		IsIox:        iox,
+	}
+	return &s, nil
 }
 
 func NewGraphiteSerializer(prefix, template string, tagSupport bool, tagSanitizeMode string, separator string, templates []string) (Serializer, error) {
