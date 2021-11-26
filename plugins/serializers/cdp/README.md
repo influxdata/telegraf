@@ -40,19 +40,23 @@ It also expects the following fields to be defined on the metric.
   "msg": {
     "ts": 1636983542529,
     "eventId": "2669820a-5d85-4eb7-9a79-f6fd339b85c9",
+    "fingerprint": "6199419141951568871",
     "serviceId": "MP",
-    "projectId": "",
-    "projectGenesisId": "some-project-id",
+    "projectId": "some-project-id",
     "environmentId": "dev",
+    "playerId": "",
     "region": "some-billing-region-id",
     "startTime": 1636983540000,
     "endTime": 1636983541000,
     "type": "egress",
-    "amount": 4822.75390625,
+    "amount": 1151801145,
     "tags":{
-      "fleetId": "some-fleet-id",
-      "machineId": "some-machine-id",
-      "infraType": "some-infra-type"
+      "multiplayFleetId": "some-fleet-id",
+      "multiplayMachineId": "some-machine-id",
+      "multiplayInfraType": "some-infra-type",
+      "multiplayProjectId": "ASID:123",
+      "analyticsEventType": "",
+      "analyticsEventName": "",
     }
   }
 }

@@ -17,25 +17,29 @@ type eventPayload struct {
 
 /// The format of the system usage events defined in CDP.
 type event struct {
-	Timestamp        int       `json:"ts" validate:"required"`
-	EventID          string    `json:"eventId" validate:"required"`
-	ServiceID        string    `json:"serviceId" validate:"required"`
-	ProjectID        string    `json:"projectId"`
-	ProjectGenesisID string    `json:"projectGenesisId" validate:"required"`
-	EnvironmentID    string    `json:"environmentId"`
-	Region           string    `json:"region"`
-	StartTime        int       `json:"startTime" validate:"required"`
-	EndTime          int       `json:"endTime" validate:"required"`
-	Type             string    `json:"type" validate:"required"`
-	Amount           float64   `json:"amount" validate:"required"`
-	Tags             eventTags `json:"tags"`
+	Timestamp     int       `json:"ts" validate:"required"`
+	EventID       string    `json:"eventId" validate:"required"`
+	Fingerprint   string    `json:"fingerprint"`
+	ServiceID     string    `json:"serviceId" validate:"required"`
+	ProjectID     string    `json:"projectId"`
+	EnvironmentID string    `json:"environmentId"`
+	PlayerID      string    `json:"playerId"`
+	Region        string    `json:"region"`
+	StartTime     int       `json:"startTime" validate:"required"`
+	EndTime       int       `json:"endTime" validate:"required"`
+	Type          string    `json:"type" validate:"required"`
+	Amount        float64   `json:"amount" validate:"required"`
+	Tags          eventTags `json:"tags"`
 }
 
 /// Additional event tags that can be optionally specified.
 type eventTags struct {
-	FleedID   string `json:"fleetId"`
-	MachineID string `json:"machineId"`
-	InfraType string `json:"infraType"`
+	MultiplayFleetID   string `json:"multiplayFleetId"`
+	MultiplayMachineID string `json:"multiplayMachineId"`
+	MultiplayInfraType string `json:"multiplayInfraType"`
+	MultiplayProjectID string `json:"multiplayProjectId"`
+	AnalyticsEventType string `json:"analyticsEventType"`
+	AnalyticsEventName string `json:"analyticsEventName"`
 }
 
 type errMissingTag string
@@ -95,81 +99,73 @@ func (s *Serializer) createEvent(metric telegraf.Metric) (*event, error) {
 	// prepare identifying information for the system usage event
 	eventID := uuid.Must(uuid.NewV4()).String()
 	timestamp := toCdpTimestamp(time.Now())
+	fingerprint := fmt.Sprintf("%v", metric.HashID())
 	endTime := toCdpTimestamp(metric.Time())
 
-	// extract the event properties
-	serviceID, ok := metric.GetTag("service")
-	if !ok {
-		return nil, errMissingTag("service")
+	// mapping of required tag/field names to a function which pulls their values from "metric"
+	requiredKeys := map[string]func(telegraf.Metric, string) (interface{}, error){
+		"billing_region_id":      getTag,
+		"bytes_sent_sum":         getFieldAsAmount,
+		"customer_id":            getTag,
+		"environment_id":         getTag,
+		"fleet_id":               getTag,
+		"metering_event_machine": getTag,
+		"project_id":             getTag,
+		"service":                getTag,
+		"start_time":             getFieldAsStartTime,
+		"virtual_type":           getTag,
 	}
 
-	projectGenesisID, ok := metric.GetTag("project_id")
-	if !ok {
-		return nil, errMissingTag("project_id")
+	// populate a map with the values of each key
+	values := map[string]interface{}{}
+	for key, getter := range requiredKeys {
+		value, err := getter(metric, key)
+		if err != nil {
+			return nil, err
+		}
+		values[key] = value
 	}
 
-	environmentID, ok := metric.GetTag("environment_id")
-	if !ok {
-		return nil, errMissingTag("environment_id")
-	}
-
-	region, ok := metric.GetTag("billing_region_id")
-	if !ok {
-		return nil, errMissingTag("billing_region_id")
-	}
-
-	startTime, err := getStartTime(metric)
-	if err != nil {
-		return nil, err
-	}
-
-	amount, err := getAmount(metric)
-	if err != nil {
-		return nil, err
-	}
-
-	fleetID, ok := metric.GetTag("fleet_id")
-	if !ok {
-		return nil, errMissingTag("fleet_id")
-	}
-
-	machineID, ok := metric.GetTag("metering_event_machine")
-	if !ok {
-		return nil, errMissingTag("metering_event_machine")
-	}
-
-	infraType, ok := metric.GetTag("virtual_type")
-	if !ok {
-		return nil, errMissingTag("virtual_type")
-	}
-
-	// convert the properties extracted to the CDP structure
-	e := &event{
-		Timestamp:        timestamp,
-		EventID:          eventID,
-		ServiceID:        serviceID,
-		ProjectID:        "",
-		ProjectGenesisID: projectGenesisID,
-		EnvironmentID:    environmentID,
-		Region:           region,
-		StartTime:        startTime,
-		EndTime:          endTime,
-		Type:             "egress",
-		Amount:           amount,
+	// pull the values from the map into the final event
+	return &event{
+		Timestamp:     timestamp,
+		EventID:       eventID,
+		Fingerprint:   fingerprint,
+		ServiceID:     values["service"].(string),
+		ProjectID:     values["project_id"].(string),
+		EnvironmentID: values["environment_id"].(string),
+		PlayerID:      "",
+		Region:        values["billing_region_id"].(string),
+		StartTime:     values["start_time"].(int),
+		EndTime:       endTime,
+		Type:          "egress",
+		Amount:        values["bytes_sent_sum"].(float64),
 		Tags: eventTags{
-			FleedID:   fleetID,
-			MachineID: machineID,
-			InfraType: infraType,
+			MultiplayFleetID:   values["fleet_id"].(string),
+			MultiplayMachineID: values["metering_event_machine"].(string),
+			MultiplayInfraType: values["virtual_type"].(string),
+			MultiplayProjectID: values["customer_id"].(string),
+			AnalyticsEventType: "",
+			AnalyticsEventName: "",
 		},
-	}
-	return e, nil
+	}, nil
 }
 
-func getStartTime(metric telegraf.Metric) (int, error) {
-
-	rawStartTime, ok := metric.GetField("start_time")
+// Given a tag name, extracts it from "metric" and returns its value verbatim.
+func getTag(metric telegraf.Metric, tagName string) (interface{}, error) {
+	value, ok := metric.GetTag(tagName)
 	if !ok {
-		return 0, fmt.Errorf("missing required field: start_time")
+		return nil, fmt.Errorf("missing required tag: %v", tagName)
+	}
+	return value, nil
+}
+
+// Given a field name, extracts it from "metric" and converts it into a value compatible with a CDP "start_time".
+func getFieldAsStartTime(metric telegraf.Metric, propertyName string) (interface{}, error) {
+
+	rawStartTime, ok := metric.GetField(propertyName)
+	if !ok {
+		return 0, fmt.Errorf("missing required field: %v", propertyName)
 	}
 
 	startTime, err := time.Parse(time.RFC3339, rawStartTime.(string))
@@ -180,14 +176,15 @@ func getStartTime(metric telegraf.Metric) (int, error) {
 	return toCdpTimestamp(startTime), nil
 }
 
-func getAmount(metric telegraf.Metric) (float64, error) {
+// Given a field name, extracts it from "metric" and converts it into a value compatible with a CDP "amount".
+func getFieldAsAmount(metric telegraf.Metric, fieldName string) (interface{}, error) {
 
-	quantity, ok := metric.GetField("quantity_total")
+	amount, ok := metric.GetField(fieldName)
 	if !ok {
-		return 0, fmt.Errorf("missing required field: quantity_total")
+		return 0, fmt.Errorf("missing required field: %v", fieldName)
 	}
 
-	switch i := quantity.(type) {
+	switch i := amount.(type) {
 	case float64:
 		return i, nil
 	case float32:
@@ -199,11 +196,11 @@ func getAmount(metric telegraf.Metric) (float64, error) {
 	case int:
 		return float64(i), nil
 	default:
-		return 0, fmt.Errorf("unrecognized type %T (value: %v)", quantity, quantity)
+		return 0, fmt.Errorf("unrecognized type %T (value: %v)", amount, amount)
 	}
 }
 
-/// Convenience method for converting 'time.Time' to the milliseconds required by CDP.
+// Convenience method for converting 'time.Time' to the milliseconds required by CDP.
 func toCdpTimestamp(t time.Time) int {
 	return int(t.UnixNano() / 1000000)
 }

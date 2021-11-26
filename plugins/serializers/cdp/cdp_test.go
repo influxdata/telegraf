@@ -12,15 +12,16 @@ import (
 )
 
 const (
-	serviceID        = "service-id"
-	projectGenesisID = "project-genesis-id"
-	environmentID    = "environment-id"
-	region           = "region"
-	amount           = 1.0
-	fleetID          = "fleet-id"
-	machineID        = "metering-event-machine"
-	infraType        = "infra-type"
-	metricType       = "egress"
+	serviceID     = "service-id"
+	projectID     = "project-genesis-id"
+	environmentID = "environment-id"
+	region        = "region"
+	bytesSent     = 1234567.0
+	fleetID       = "fleet-id"
+	machineID     = "metering-event-machine"
+	infraType     = "infra-type"
+	mpProjectID   = "customer-id"
+	metricType    = "egress"
 )
 
 func getValidTime() time.Time {
@@ -30,18 +31,21 @@ func getValidTime() time.Time {
 func getValidTags() map[string]string {
 	return map[string]string{
 		"service":                serviceID,
-		"project_id":             projectGenesisID,
+		"project_id":             projectID,
 		"environment_id":         environmentID,
 		"billing_region_id":      region,
 		"fleet_id":               fleetID,
 		"metering_event_machine": machineID,
 		"virtual_type":           infraType,
+		"customer_id":            mpProjectID,
+		"host":                   "host-name",
+		"interface":              "interface-name",
 	}
 }
 
 func getValidFields(t time.Time) map[string]interface{} {
 	return map[string]interface{}{
-		"quantity_total": amount,
+		"bytes_sent_sum": bytesSent,
 		"start_time":     t.Format(time.RFC3339Nano),
 	}
 }
@@ -66,21 +70,25 @@ func Test_Serialize_HappyPath(t *testing.T) {
 	expectedPayload := &eventPayload{
 		Type: "unity.services.systemUsage.v1",
 		Message: event{
-			Timestamp:        cdpEventPayload.Message.Timestamp,
-			EventID:          cdpEventPayload.Message.EventID,
-			ServiceID:        serviceID,
-			ProjectID:        "",
-			ProjectGenesisID: projectGenesisID,
-			EnvironmentID:    environmentID,
-			Region:           region,
-			StartTime:        toCdpTimestamp(eventTime),
-			EndTime:          toCdpTimestamp(metricTime),
-			Type:             metricType,
-			Amount:           amount,
+			Timestamp:     cdpEventPayload.Message.Timestamp,
+			EventID:       cdpEventPayload.Message.EventID,
+			Fingerprint:   cdpEventPayload.Message.Fingerprint,
+			ServiceID:     serviceID,
+			ProjectID:     projectID,
+			EnvironmentID: environmentID,
+			PlayerID:      "",
+			Region:        region,
+			StartTime:     toCdpTimestamp(eventTime),
+			EndTime:       toCdpTimestamp(metricTime),
+			Type:          metricType,
+			Amount:        bytesSent,
 			Tags: eventTags{
-				FleedID:   fleetID,
-				MachineID: machineID,
-				InfraType: infraType,
+				MultiplayFleetID:   fleetID,
+				MultiplayMachineID: machineID,
+				MultiplayInfraType: infraType,
+				MultiplayProjectID: mpProjectID,
+				AnalyticsEventType: "",
+				AnalyticsEventName: "",
 			},
 		},
 	}
@@ -97,12 +105,13 @@ func Test_Serialize_MissingTags(t *testing.T) {
 		{tagOrFieldName: "service", isTag: true},
 		{tagOrFieldName: "project_id", isTag: true},
 		{tagOrFieldName: "start_time", isTag: false},
-		{tagOrFieldName: "quantity_total", isTag: false},
+		{tagOrFieldName: "bytes_sent_sum", isTag: false},
 		{tagOrFieldName: "billing_region_id", isTag: true},
 		{tagOrFieldName: "environment_id", isTag: true},
 		{tagOrFieldName: "fleet_id", isTag: true},
 		{tagOrFieldName: "metering_event_machine", isTag: true},
 		{tagOrFieldName: "virtual_type", isTag: true},
+		{tagOrFieldName: "customer_id", isTag: true},
 	}
 
 	for _, test := range tests {
@@ -135,13 +144,13 @@ func Test_Serialize_MissingTags(t *testing.T) {
 	}
 }
 
-func Test_Serialize_InvalidQuantity(t *testing.T) {
+func Test_Serialize_InvalidAmount(t *testing.T) {
 
 	metricTime := getValidTime()
 	eventTime := metricTime.Add(time.Second * -30)
 	tags := getValidTags()
 	fields := getValidFields(eventTime)
-	fields["quantity_total"] = "hello" // invalid
+	fields["bytes_sent_sum"] = "hello" // invalid
 
 	s, err := NewSerializer()
 	assert.NoError(t, err)
@@ -175,39 +184,47 @@ func Test_SerializeBatch_HappyPath(t *testing.T) {
 	json.Unmarshal(buf, &cdpEvents)
 
 	expectedEvent1 := &event{
-		Timestamp:        cdpEvents[0].Timestamp,
-		EventID:          cdpEvents[0].EventID,
-		ServiceID:        serviceID,
-		ProjectID:        "",
-		ProjectGenesisID: projectGenesisID,
-		EnvironmentID:    environmentID,
-		Region:           region,
-		StartTime:        toCdpTimestamp(eventTime1),
-		EndTime:          toCdpTimestamp(metricTime1),
-		Type:             metricType,
-		Amount:           amount,
+		Timestamp:     cdpEvents[0].Timestamp,
+		EventID:       cdpEvents[0].EventID,
+		Fingerprint:   cdpEvents[0].Fingerprint,
+		ServiceID:     serviceID,
+		ProjectID:     projectID,
+		EnvironmentID: environmentID,
+		PlayerID:      "",
+		Region:        region,
+		StartTime:     toCdpTimestamp(eventTime1),
+		EndTime:       toCdpTimestamp(metricTime1),
+		Type:          metricType,
+		Amount:        bytesSent,
 		Tags: eventTags{
-			FleedID:   fleetID,
-			MachineID: machineID,
-			InfraType: infraType,
+			MultiplayFleetID:   fleetID,
+			MultiplayMachineID: machineID,
+			MultiplayInfraType: infraType,
+			MultiplayProjectID: mpProjectID,
+			AnalyticsEventType: "",
+			AnalyticsEventName: "",
 		},
 	}
 	expectedEvent2 := &event{
-		Timestamp:        cdpEvents[1].Timestamp,
-		EventID:          cdpEvents[1].EventID,
-		ServiceID:        serviceID,
-		ProjectID:        "",
-		ProjectGenesisID: projectGenesisID,
-		EnvironmentID:    environmentID,
-		Region:           region,
-		StartTime:        toCdpTimestamp(eventTime2),
-		EndTime:          toCdpTimestamp(metricTime2),
-		Type:             metricType,
-		Amount:           amount,
+		Timestamp:     cdpEvents[1].Timestamp,
+		EventID:       cdpEvents[1].EventID,
+		Fingerprint:   cdpEvents[1].Fingerprint,
+		ServiceID:     serviceID,
+		ProjectID:     projectID,
+		EnvironmentID: environmentID,
+		PlayerID:      "",
+		Region:        region,
+		StartTime:     toCdpTimestamp(eventTime2),
+		EndTime:       toCdpTimestamp(metricTime2),
+		Type:          metricType,
+		Amount:        bytesSent,
 		Tags: eventTags{
-			FleedID:   fleetID,
-			MachineID: machineID,
-			InfraType: infraType,
+			MultiplayFleetID:   fleetID,
+			MultiplayMachineID: machineID,
+			MultiplayInfraType: infraType,
+			MultiplayProjectID: mpProjectID,
+			AnalyticsEventType: "",
+			AnalyticsEventName: "",
 		},
 	}
 	expectedEvents := []event{*expectedEvent1, *expectedEvent2}
