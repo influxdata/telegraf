@@ -172,9 +172,20 @@ func TestStatusCode(t *testing.T) {
 			plugin: &HTTP{
 				URL: u.String(),
 			},
-			statusCode: http.StatusMultipleChoices,
+			statusCode: http.StatusBadRequest,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
+			},
+		},
+		{
+			name: "Do not retry on configured non-retryable statuscode",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				NonRetryableStatusCodes: []int{409},
+			},
+			statusCode: http.StatusConflict,
+			errFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
 			},
 		},
 	}
