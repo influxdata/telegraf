@@ -11,6 +11,7 @@ serialized data yourself.
 ## Example
 
 This is the most simple usage example for this serializer.
+
 ```toml
 [[outputs.file]]
   ## Files to write to, "stdout" is a specially handled file.
@@ -25,21 +26,26 @@ This is the most simple usage example for this serializer.
   ## Database name to use in DatabaseBatch.
   # influx_protobuf_database = ""
 
-  ## Serialize to line-protocol-like representation if `false` and to IOx representation otherwise.
+  ## Serialize to line-protocol-like representation if `false`
+  ## and to IOx representation otherwise.
   ## Please note: IOx representation will loose information on tag-field separation.
   # influx_protobuf_iox = false
 ```
+
 The shown configuration will serialize metrics to the line-protocol-like binary
 format preserving tag and field separation with an empty _database name_.
 For a more sophisticated use-case check the configuration options below.
 
 ## Options
+
 ### `influx_protobuf_database` (string)
+
 With this option you can set the `DatabaseName` in `DatabaseBatch`. This can
 be handy in case you want to directly push the serialized data to an InfluxDB
 or IOx instance. By default, the database-name will be empty.
 
 ### `influx_protobuf_iox` (bool)
+
 If set to true, the `IOx` [semantic type][4] will be used for all columns.
 Please note, that this type will drop information on whether a column is a tag
 or a field and is most suited to be ingested by IOx itself. By default,
