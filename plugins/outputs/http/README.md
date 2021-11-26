@@ -90,6 +90,7 @@ batch format by default.
   #profile = ""
   #shared_credential_file = ""
   ## Optional list of statuscodes (<100 or >300) upon which requests should not be retried
+  ## Optional list of statuscodes (<200 or >300) upon which requests should not be retried
   # non_retryable_statuscodes = [409, 413]
 ```
 
