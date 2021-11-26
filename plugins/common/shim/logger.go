@@ -2,7 +2,7 @@ package shim
 
 import (
 	"fmt"
-	"log" //nolint: revive // "Logger" is wrapper for "log", it is right place to use it
+	"log"
 	"os"
 	"reflect"
 
