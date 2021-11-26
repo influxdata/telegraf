@@ -5,6 +5,7 @@ standard data formats that may be selected from when configuring many output
 plugins.
 
 1. [InfluxDB Line Protocol](/plugins/serializers/influx)
+1. [InfluxDB Protobuf Data Protocol](/plugins/serializers/influx_protobuf)
 1. [Carbon2](/plugins/serializers/carbon2)
 1. [Graphite](/plugins/serializers/graphite)
 1. [JSON](/plugins/serializers/json)
