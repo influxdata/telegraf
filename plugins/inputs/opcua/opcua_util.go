@@ -9,7 +9,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"math/big"
 	"net"
 	"net/url"
@@ -146,7 +145,7 @@ func pemBlockForKey(priv interface{}) (*pem.Block, error) {
 }
 
 //revive:disable-next-line
-func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string, requestTimeout time.Duration) ([]opcua.Option, error) {
+func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string, requestTimeout time.Duration) ([]opcua.Option, error) {
 	opts := []opcua.Option{}
 	appuri := "urn:telegraf:gopcua:client"
 	appname := "Telegraf"
@@ -172,7 +171,7 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 		debug.Printf("Loading cert/key from %s/%s", certFile, keyFile)
 		c, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err != nil {
-			log.Printf("Failed to load certificate: %s", err)
+			o.Log.Warnf("Failed to load certificate: %s", err)
 		} else {
 			pk, ok := c.PrivateKey.(*rsa.PrivateKey)
 			if !ok {
@@ -198,7 +197,7 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 	}
 
 	// Select the most appropriate authentication mode from server capabilities and user input
-	authMode, authOption, err := generateAuth(auth, cert, username, password)
+	authMode, authOption, err := o.generateAuth(auth, cert, username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +275,7 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 	return opts, nil
 }
 
-func generateAuth(a string, cert []byte, un, pw string) (ua.UserTokenType, opcua.Option, error) {
+func (o *OpcUA) generateAuth(a string, cert []byte, un, pw string) (ua.UserTokenType, opcua.Option, error) {
 	var err error
 
 	var authMode ua.UserTokenType
@@ -313,7 +312,7 @@ func generateAuth(a string, cert []byte, un, pw string) (ua.UserTokenType, opcua
 		authOption = opcua.AuthIssuedToken([]byte(nil))
 
 	default:
-		log.Printf("unknown auth-mode, defaulting to Anonymous")
+		o.Log.Warnf("unknown auth-mode, defaulting to Anonymous")
 		authMode = ua.UserTokenTypeAnonymous
 		authOption = opcua.AuthAnonymous()
 	}

@@ -67,17 +67,17 @@ func (p Packet) Compile() (payload []byte, err error) {
 	var padding [PacketPaddingSize]byte
 
 	if err = binary.Write(&buffer, binary.LittleEndian, &size); nil != err {
-		return
+		return nil, err
 	} else if err = binary.Write(&buffer, binary.LittleEndian, &p.Header.Challenge); nil != err {
-		return
+		return nil, err
 	} else if err = binary.Write(&buffer, binary.LittleEndian, &p.Header.Type); nil != err {
-		return
-	}
-
-	if _, err := buffer.WriteString(p.Body); err != nil {
 		return nil, err
 	}
-	if _, err := buffer.Write(padding[:]); err != nil {
+
+	if _, err = buffer.WriteString(p.Body); err != nil {
+		return nil, err
+	}
+	if _, err = buffer.Write(padding[:]); err != nil {
 		return nil, err
 	}
 
@@ -95,16 +95,13 @@ func NewPacket(challenge, typ int32, body string) (packet *Packet) {
 // or a potential error.
 func (c *Client) Authorize(password string) (response *Packet, err error) {
 	if response, err = c.Send(Auth, password); nil == err {
-		if response.Header.Type == AuthResponse {
-			c.Authorized = true
-		} else {
-			err = ErrFailedAuthorization
-			response = nil
-			return
+		if response.Header.Type != AuthResponse {
+			return nil, ErrFailedAuthorization
 		}
+		c.Authorized = true
 	}
 
-	return
+	return response, err
 }
 
 // Execute calls Send with the appropriate command type and the provided
@@ -213,5 +210,5 @@ func NewClient(host string, port int) (client *Client, err error) {
 	client.Host = host
 	client.Port = port
 	client.Connection, err = net.Dial("tcp", fmt.Sprintf("%v:%v", client.Host, client.Port))
-	return
+	return client, err
 }
