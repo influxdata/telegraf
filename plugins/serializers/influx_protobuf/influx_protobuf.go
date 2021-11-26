@@ -48,14 +48,12 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			Columns:   make([]*influx.Column, 0, len(tbl.Tags)+len(tbl.Fields)+1),
 			RowCount:  tbl.rows,
 		}
-		table.Columns = append(table.Columns, &tbl.Time)
-		for i := range tbl.Tags {
-			col := tbl.Tags[i]
-			table.Columns = append(table.Columns, &col)
+		table.Columns = append(table.Columns, tbl.Time)
+		for _, col := range tbl.Tags {
+			table.Columns = append(table.Columns, col)
 		}
-		for i := range tbl.Fields {
-			col := tbl.Fields[i]
-			table.Columns = append(table.Columns, &col)
+		for _, col := range tbl.Fields {
+			table.Columns = append(table.Columns, col)
 		}
 		tables = append(tables, &table)
 	}

@@ -10,21 +10,21 @@ import (
 )
 
 type table struct {
-	Time   influx.Column
-	Tags   map[string]influx.Column
-	Fields map[string]influx.Column
+	Time   *influx.Column
+	Tags   map[string]*influx.Column
+	Fields map[string]*influx.Column
 	rows   uint32
 }
 
 func newTable() table {
 	return table{
-		Time: influx.Column{
+		Time: &influx.Column{
 			ColumnName:   "time",
 			SemanticType: influx.Column_SEMANTIC_TYPE_TIME,
 			Values:       &influx.Column_Values{},
 		},
-		Tags:   make(map[string]influx.Column),
-		Fields: make(map[string]influx.Column),
+		Tags:   make(map[string]*influx.Column),
+		Fields: make(map[string]*influx.Column),
 	}
 }
 
@@ -37,10 +37,11 @@ func (t *table) addMetric(metric telegraf.Metric, isiox bool) error {
 
 	// Add tag columns
 	for _, tag := range metric.TagList() {
-		if _, found := t.Tags[tag.Key]; !found {
+		col, found := t.Tags[tag.Key]
+		if !found {
 			// We get a new tag column, so create a new column and mark
 			// all previous entries as null-values
-			col := influx.Column{
+			col = &influx.Column{
 				ColumnName:   tag.Key,
 				SemanticType: influx.Column_SEMANTIC_TYPE_TAG,
 				Values:       &influx.Column_Values{StringValues: make([]string, t.rows)},
@@ -54,11 +55,9 @@ func (t *table) addMetric(metric telegraf.Metric, isiox bool) error {
 				col.NullMask[i] = ^byte(0)
 			}
 			col.NullMask[offset] = byte(1<<bit+1) - 1
-			t.Tags[tag.Key] = col
 		}
 
-		col := t.Tags[tag.Key]
-		missing := int(offset+1) - len(t.Tags[tag.Key].NullMask)
+		missing := int(offset+1) - len(col.NullMask)
 		if missing > 0 {
 			col.NullMask = append(col.NullMask, make([]byte, missing)...)
 		}
@@ -71,10 +70,11 @@ func (t *table) addMetric(metric telegraf.Metric, isiox bool) error {
 
 	// Add field columns
 	for _, field := range metric.FieldList() {
-		if _, found := t.Fields[field.Key]; !found {
+		col, found := t.Fields[field.Key]
+		if !found {
 			// We get a new tag column, so create a new column and mark
 			// all previous entries as null-values
-			col := influx.Column{
+			col = &influx.Column{
 				ColumnName:   field.Key,
 				SemanticType: influx.Column_SEMANTIC_TYPE_FIELD,
 				Values:       &influx.Column_Values{},
@@ -88,10 +88,8 @@ func (t *table) addMetric(metric telegraf.Metric, isiox bool) error {
 				col.NullMask[i] = ^byte(0)
 			}
 			col.NullMask[offset] = byte(1<<bit+1) - 1
-			t.Fields[field.Key] = col
 		}
 
-		col := t.Fields[field.Key]
 		missing := int(offset+1) - len(col.NullMask)
 		if missing > 0 {
 			col.NullMask = append(col.NullMask, make([]byte, missing)...)
