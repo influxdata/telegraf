@@ -129,6 +129,7 @@ following works:
 - github.com/influxdata/influxdb-observability/common [MIT License](https://github.com/influxdata/influxdb-observability/blob/main/LICENSE)
 - github.com/influxdata/influxdb-observability/influx2otel [MIT License](https://github.com/influxdata/influxdb-observability/blob/main/LICENSE)
 - github.com/influxdata/influxdb-observability/otel2influx [MIT License](https://github.com/influxdata/influxdb-observability/blob/main/LICENSE)
+- github.com/influxdata/influxdb-pb-data-protocol/golang [Apache License 2.0](https://github.com/influxdata/influxdb-pb-data-protocol/blob/main/LICENSE-APACHE)
 - github.com/influxdata/tail [MIT License](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
 - github.com/influxdata/toml [MIT License](https://github.com/influxdata/toml/blob/master/LICENSE)
 - github.com/influxdata/wlog [MIT License](https://github.com/influxdata/wlog/blob/master/LICENSE)
