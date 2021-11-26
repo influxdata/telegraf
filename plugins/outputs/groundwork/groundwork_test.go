@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -19,40 +19,40 @@ const (
 
 func TestWrite(t *testing.T) {
 	// Generate test metric with default name to test Write logic
-	floatMetric := testutil.TestMetric(1, "Float")
+	floatMetric := testutil.TestMetric(1.0, "Float")
 	stringMetric := testutil.TestMetric("Test", "String")
 
 	// Simulate Groundwork server that should receive custom metrics
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Decode body to use in assertations below
-		var obj GroundworkObject
+		var obj groundworkObject
 		err = json.Unmarshal(body, &obj)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Check if server gets valid metrics object
-		assert.Equal(t, obj.Context.AgentID, defaultTestAgentID)
-		assert.Equal(t, obj.Resources[0].Name, defaultHost)
-		assert.Equal(
+		require.Equal(t, obj.Context.AgentID, defaultTestAgentID)
+		require.Equal(t, obj.Resources[0].Name, defaultHost)
+		require.Equal(
 			t,
 			obj.Resources[0].Services[0].Name,
 			"Float",
 		)
-		assert.Equal(
+		require.Equal(
 			t,
 			obj.Resources[0].Services[0].Metrics[0].Value.DoubleValue,
 			1.0,
 		)
-		assert.Equal(
+		require.Equal(
 			t,
 			obj.Resources[0].Services[1].Metrics[0].Value.StringValue,
 			"Test",
 		)
 
 		_, err = fmt.Fprintln(w, `OK`)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}))
 
 	i := Groundwork{
@@ -62,12 +62,12 @@ func TestWrite(t *testing.T) {
 	}
 
 	err := i.Write([]telegraf.Metric{floatMetric, stringMetric})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	defer server.Close()
 }
 
-type GroundworkObject struct {
+type groundworkObject struct {
 	Context struct {
 		AgentID string `json:"agentId"`
 	} `json:"context"`

@@ -25,7 +25,7 @@ const (
 	logoutURL = "/api/auth/logout"
 )
 
-var (
+const (
 	sampleConfig = `
   ## URL of your groundwork instance.
   url = "https://groundwork.example.com"
@@ -49,16 +49,16 @@ var (
 )
 
 type Groundwork struct {
-	Server              string `toml:"url"`
-	AgentID             string `toml:"agent_id"`
-	Username            string `toml:"username"`
-	Password            string `toml:"password"`
-	DefaultHost         string `toml:"default_host"`
-	DefaultServiceState string `toml:"default_service_state"`
-	ResourceTag         string `toml:"resource_tag"`
-	authToken           string
+	Server              string          `toml:"url"`
+	AgentID             string          `toml:"agent_id"`
+	Username            string          `toml:"username"`
+	Password            string          `toml:"password"`
+	DefaultHost         string          `toml:"default_host"`
+	DefaultServiceState string          `toml:"default_service_state"`
+	ResourceTag         string          `toml:"resource_tag"`
+	Log                 telegraf.Logger `toml:"-"`
 
-	Log telegraf.Logger `toml:"-"`
+	authToken string
 }
 
 func (g *Groundwork) SampleConfig() string {
@@ -142,7 +142,10 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 		})
 	}
 
-	traceToken, _ := uuid.GenerateUUID()
+	traceToken, err := uuid.GenerateUUID()
+	if err != nil {
+		return err
+	}
 	requestJSON, err := json.Marshal(transit.DynamicResourcesWithServicesRequest{
 		Context: &transit.TracerContext{
 			AppType:    "TELEGRAF",
@@ -222,10 +225,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 		status = value
 	}
 
-	message := ""
-	if value, present := metric.GetTag("message"); present {
-		message = value
-	}
+	message, _ := metric.GetTag("message")
 
 	unitType := string(transit.UnitCounter)
 	if value, present := metric.GetTag("unitType"); present {
@@ -262,7 +262,6 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 		Metrics:          nil,
 	}
 
-	var err error
 	for _, value := range metric.FieldList() {
 		var thresholds []transit.ThresholdValue
 		if warningPresent {
@@ -286,45 +285,32 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 			})
 		}
 
-		valueType := transit.DoubleType
-		var floatVal float64
-		var stringVal string
-
-		switch value.Value.(type) {
-		case string:
-			valueType = transit.StringType
-			tmpStr := value.Value.(string)
-			stringVal = tmpStr
-		default:
-			floatVal, err = internal.ToFloat64(value.Value)
-			if err != nil {
-				g.Log.Warnf("could not convert %s to float: %v", value.Key, err)
-			}
+		typedValue := new(transit.TypedValue)
+		err := typedValue.FromInterface(value.Value)
+		if err != nil {
+			typedValue = nil
+			g.Log.Errorf("%v", err)
 		}
 
-		endTime := transit.NewTimestamp()
-		endTime.Time = metric.Time()
 		serviceObject.Metrics = append(serviceObject.Metrics, transit.TimeSeries{
 			MetricName: value.Key,
 			SampleType: transit.Value,
 			Interval: &transit.TimeInterval{
-				EndTime: endTime,
+				EndTime: lastCheckTime,
 			},
-			Value: &transit.TypedValue{
-				ValueType:   valueType,
-				DoubleValue: floatVal,
-				StringValue: stringVal,
-			},
+			Value:      typedValue,
 			Unit:       transit.UnitType(unitType),
 			Thresholds: &thresholds,
 		})
 	}
 
 	if !statusPresent {
-		if serviceObject.Status, err = transit.CalculateServiceStatus(&serviceObject.Metrics); err != nil {
+		serviceStatus, err := transit.CalculateServiceStatus(&serviceObject.Metrics)
+		if err != nil {
 			g.Log.Infof("could not calculate service status, reverting to default_service_state: %v", err)
 			serviceObject.Status = transit.MonitorStatus(g.DefaultServiceState)
 		}
+		serviceObject.Status = serviceStatus
 	}
 
 	return resource, serviceObject
