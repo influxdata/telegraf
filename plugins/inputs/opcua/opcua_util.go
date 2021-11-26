@@ -159,7 +159,7 @@ func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription, certFile
 	var err error
 	if certFile == "" && keyFile == "" {
 		if policy != "None" || mode != "None" {
-			certFile, keyFile, err = generateCert(appuri, 2048, certFile, keyFile, (365 * 24 * time.Hour))
+			certFile, keyFile, err = generateCert(appuri, 2048, certFile, keyFile, 365*24*time.Hour)
 			if err != nil {
 				return nil, err
 			}

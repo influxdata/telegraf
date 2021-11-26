@@ -70,7 +70,7 @@ func TestGatheringRootDomain(t *testing.T) {
 		"result":      "success",
 	}
 	fields := map[string]interface{}{
-		"rcode_value": int(0),
+		"rcode_value": 0,
 		"result_code": uint64(0),
 	}
 
@@ -101,7 +101,7 @@ func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
 		"result":      "success",
 	}
 	fields := map[string]interface{}{
-		"rcode_value": int(0),
+		"rcode_value": 0,
 		"result_code": uint64(0),
 	}
 

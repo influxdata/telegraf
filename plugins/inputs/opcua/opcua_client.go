@@ -52,7 +52,6 @@ type OpcUA struct {
 	opts   []opcua.Option
 }
 
-// OPCTag type
 type NodeSettings struct {
 	FieldName      string     `toml:"name"`
 	Namespace      string     `toml:"namespace"`
