@@ -83,9 +83,7 @@ func TestHistogram(t *testing.T) {
 	histogram.Add(firstMetric2)
 	histogram.Push(acc)
 
-	if len(acc.Metrics) != 6 {
-		require.Fail(t, "Incorrect number of metrics")
-	}
+	require.Len(t, acc.Metrics, 6, "Incorrect number of metrics")
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketRightTag: "0"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketRightTag: "10"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2)}, tags{bucketRightTag: "20"})
@@ -107,9 +105,7 @@ func TestHistogramNonCumulative(t *testing.T) {
 	histogram.Add(firstMetric2)
 	histogram.Push(acc)
 
-	if len(acc.Metrics) != 6 {
-		require.Fail(t, "Incorrect number of metrics")
-	}
+	require.Len(t, acc.Metrics, 6, "Incorrect number of metrics")
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketLeftTag: bucketNegInf, bucketRightTag: "0"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketLeftTag: "0", bucketRightTag: "10"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2)}, tags{bucketLeftTag: "10", bucketRightTag: "20"})
@@ -131,9 +127,7 @@ func TestHistogramWithReset(t *testing.T) {
 	histogram.Add(firstMetric2)
 	histogram.Push(acc)
 
-	if len(acc.Metrics) != 6 {
-		require.Fail(t, "Incorrect number of metrics")
-	}
+	require.Len(t, acc.Metrics, 6, "Incorrect number of metrics")
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketRightTag: "0"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0)}, tags{bucketRightTag: "10"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(1)}, tags{bucketRightTag: "20"})
@@ -156,10 +150,7 @@ func TestHistogramWithAllFields(t *testing.T) {
 	histogram.Add(secondMetric)
 	histogram.Push(acc)
 
-	if len(acc.Metrics) != 12 {
-		require.Fail(t, "Incorrect number of metrics")
-	}
-
+	require.Len(t, acc.Metrics, 12, "Incorrect number of metrics")
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "0"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(1), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "15.5"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(2), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketRightTag: "20"})
@@ -189,10 +180,7 @@ func TestHistogramWithAllFieldsNonCumulative(t *testing.T) {
 	histogram.Add(secondMetric)
 	histogram.Push(acc)
 
-	if len(acc.Metrics) != 12 {
-		require.Fail(t, "Incorrect number of metrics")
-	}
-
+	require.Len(t, acc.Metrics, 12, "Incorrect number of metrics")
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(0), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketLeftTag: bucketNegInf, bucketRightTag: "0"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(1), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketLeftTag: "0", bucketRightTag: "15.5"})
 	assertContainsTaggedField(t, acc, "first_metric_name", fields{"a_bucket": int64(1), "b_bucket": int64(0), "c_bucket": int64(0)}, tags{bucketLeftTag: "15.5", bucketRightTag: "20"})
