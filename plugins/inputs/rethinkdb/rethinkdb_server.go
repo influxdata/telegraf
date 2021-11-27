@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf"
-
 	"gopkg.in/gorethink/gorethink.v3"
+
+	"github.com/influxdata/telegraf"
 )
 
 type Server struct {
@@ -49,7 +49,7 @@ func (s *Server) validateVersion() error {
 		return errors.New("could not determine the RethinkDB server version: process.version key missing")
 	}
 
-	versionRegexp := regexp.MustCompile("\\d.\\d.\\d")
+	versionRegexp := regexp.MustCompile(`\d.\d.\d`)
 	versionString := versionRegexp.FindString(s.serverStatus.Process.Version)
 	if versionString == "" {
 		return fmt.Errorf("could not determine the RethinkDB server version: malformed version string (%v)", s.serverStatus.Process.Version)
@@ -174,23 +174,27 @@ func (s *Server) addTableStats(acc telegraf.Accumulator) error {
 		return errors.New("could not parse table_status results")
 	}
 	for _, table := range tables {
-		cursor, err := gorethink.DB("rethinkdb").Table("stats").
-			Get([]string{"table_server", table.ID, s.serverStatus.ID}).
-			Run(s.session)
-		if err != nil {
-			return fmt.Errorf("table stats query error, %s", err.Error())
-		}
-		defer cursor.Close()
-		var ts tableStats
-		if err := cursor.One(&ts); err != nil {
-			return fmt.Errorf("failure to parse table stats, %s", err.Error())
-		}
+		return func() error {
+			cursor, err := gorethink.DB("rethinkdb").Table("stats").
+				Get([]string{"table_server", table.ID, s.serverStatus.ID}).
+				Run(s.session)
+			if err != nil {
+				return fmt.Errorf("table stats query error, %s", err.Error())
+			}
+			defer cursor.Close()
+			var ts tableStats
+			if err := cursor.One(&ts); err != nil {
+				return fmt.Errorf("failure to parse table stats, %s", err.Error())
+			}
 
-		tags := s.getDefaultTags()
-		tags["type"] = "data"
-		tags["ns"] = fmt.Sprintf("%s.%s", table.DB, table.Name)
-		ts.Engine.AddEngineStats(TableTracking, acc, tags)
-		ts.Storage.AddStats(acc, tags)
+			tags := s.getDefaultTags()
+			tags["type"] = "data"
+			tags["ns"] = fmt.Sprintf("%s.%s", table.DB, table.Name)
+			ts.Engine.AddEngineStats(TableTracking, acc, tags)
+			ts.Storage.AddStats(acc, tags)
+
+			return nil
+		}()
 	}
 	return nil
 }

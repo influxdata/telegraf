@@ -11,7 +11,7 @@ import (
 
 func GithubWebhookRequest(event string, jsonString string, t *testing.T) {
 	var acc testutil.Accumulator
-	gh := &GithubWebhook{Path: "/github", acc: &acc}
+	gh := &GithubWebhook{Path: "/github", acc: &acc, log: testutil.Logger{}}
 	req, _ := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", event)
 	w := httptest.NewRecorder()
@@ -23,7 +23,7 @@ func GithubWebhookRequest(event string, jsonString string, t *testing.T) {
 
 func GithubWebhookRequestWithSignature(event string, jsonString string, t *testing.T, signature string, expectedStatus int) {
 	var acc testutil.Accumulator
-	gh := &GithubWebhook{Path: "/github", Secret: "signature", acc: &acc}
+	gh := &GithubWebhook{Path: "/github", Secret: "signature", acc: &acc, log: testutil.Logger{}}
 	req, _ := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
 	req.Header.Add("X-Github-Event", event)
 	req.Header.Add("X-Hub-Signature", signature)

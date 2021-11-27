@@ -3,22 +3,24 @@ package papertrail
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
 )
 
 type PapertrailWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
+	log  telegraf.Logger
 }
 
-func (pt *PapertrailWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
+func (pt *PapertrailWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(pt.Path, pt.eventHandler).Methods("POST")
-	log.Printf("I! Started the papertrail_webhook on %s", pt.Path)
+	pt.log = log
+	pt.log.Infof("Started the papertrail_webhook on %s", pt.Path)
 	pt.acc = acc
 }
 
@@ -64,7 +66,7 @@ func (pt *PapertrailWebhook) eventHandler(w http.ResponseWriter, r *http.Request
 			}
 			pt.acc.AddFields("papertrail", fields, tags, e.ReceivedAt)
 		}
-	} else if payload.Counts != nil {
+	} else if payload.Counts != nil { //nolint: revive // "Simplifying" if c {...} else {... return } would not simplify anything at all in this case
 		// Handle count-based payload
 		for _, c := range payload.Counts {
 			for ts, count := range *c.TimeSeries {
