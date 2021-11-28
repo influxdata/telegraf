@@ -38,8 +38,7 @@ const (
 	tablePerMetric = "tablepermetric"
 	singleTable    = "singletable"
 	// These control the amount of memory we use when ingesting blobs
-	azureBlobBlockSize   = 1 * 1024 * 1024
-	azureBlobConcurrency = 50
+	azureBlobBlockSize = 1 * 1024 * 1024
 )
 
 type localIngestor interface {
@@ -259,7 +258,7 @@ func init() {
 }
 
 func createRealIngestor(client localClient, database string, tableName string) (localIngestor, error) {
-	ingestor, err := ingest.NewWithBlobProperties(client.(*kusto.Client), database, tableName, azureBlobBlockSize, azureBlobConcurrency)
+	ingestor, err := ingest.New(client.(*kusto.Client), database, tableName, ingest.WithBlockSize(azureBlobBlockSize))
 	if ingestor != nil {
 		return ingestor, nil
 	}
