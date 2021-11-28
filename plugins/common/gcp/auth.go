@@ -23,23 +23,21 @@ type GoogleID struct {
 	Token string `json:"id_token"`
 }
 
-func GetAccessToken(saKeyfile string, url string) (string, error) {
+func GetAccessToken(saKeyfile string, audience string) (string, error) {
 	sa, err := ioutil.ReadFile(saKeyfile)
 	if err != nil {
 		return "", fmt.Errorf("could not read service account file: %v", err)
 	}
-
 	conf, err := google.JWTConfigFromJSON(sa)
 	if err != nil {
 		return "", fmt.Errorf("could not parse service account JSON: %v", err)
 	}
 
-	signedJWT, err := generateJWT(conf, url, 120)
-
+	signedJWT, err := generateSignedJWT(conf, audience, 120)
 	if err != nil {
 		println(err.Error())
 	}
-	// aud ~= token_uri ~= conf.TokenURL
+
 	accessToken, err := getGoogleID(signedJWT, conf.TokenURL)
 	if err != nil {
 		println(err.Error())
@@ -48,10 +46,10 @@ func GetAccessToken(saKeyfile string, url string) (string, error) {
 	return accessToken, nil
 }
 
-func generateJWT(conf *jwt.Config, audience string, expiryLength int64) (string, error) {
+func generateSignedJWT(conf *jwt.Config, audience string, expiryLength int64) (string, error) {
 	now := time.Now().Unix()
 	// Build the JWT payload.
-	jwt := &ClaimSet{
+	claims := &ClaimSet{
 		Iat: now,
 		// expires after 'expiraryLength' seconds.
 		Exp: now + expiryLength,
@@ -83,7 +81,7 @@ func generateJWT(conf *jwt.Config, audience string, expiryLength int64) (string,
 		return "", errors.New("private key failed rsa.PrivateKey type assertion")
 	}
 
-	return Encode(jwsHeader, jwt, rsaKey)
+	return Encode(jwsHeader, claims, rsaKey)
 }
 
 func getGoogleID(jwtToken, googleidurl string) (string, error) {
