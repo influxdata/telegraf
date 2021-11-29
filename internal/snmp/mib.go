@@ -86,7 +86,7 @@ func TrapLookup(oid string) (e MibEntry, err error) {
 
 func GetIndex(oidNum string, mibPrefix string) (col []string, tagOids map[string]struct{}, err error) {
 	// first attempt to get the table's tags
-	// tagOids = map[string]struct{}{}
+	tagOids = map[string]struct{}{}
 
 	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
 	node, err := gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
