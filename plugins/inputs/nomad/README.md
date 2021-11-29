@@ -14,9 +14,9 @@ The Nomad plugin must grab metrics from every Nomad agent of the cluster. Telegr
   ## Use auth token for authorization. 
   ## If both are set, an error is thrown.
   ## If both are empty, no token will be used.
-  # auth_token = "/path/to/auth/token"
+  # nomad_token = "/path/to/auth/token"
   ## OR
-  # auth_token_string = "a1234567-40c7-9048-7bae-378687048181"
+  # nomad_token_string = "a1234567-40c7-9048-7bae-378687048181"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"

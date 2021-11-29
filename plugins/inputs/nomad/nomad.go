@@ -18,8 +18,8 @@ import (
 type Nomad struct {
 	URL string `toml:"url"`
 
-	AuthToken       string `toml:"auth_token"`
-	AuthTokenString string `toml:"auth_token_string"`
+	NomadToken       string `toml:"nomad_token"`
+	NomadTokenString string `toml:"nomad_token_string"`
 
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
@@ -36,9 +36,9 @@ var sampleConfig = `
 
   ## Use auth token for authorization. 
   ## Only one of the options can be set. Leave empty to not use any token.
-  # auth_token = "/path/to/auth/token"
+  # nomad_token = "/path/to/auth/token"
   ## OR
-  # auth_token_string = "a1234567-40c7-9048-7bae-378687048181"
+  # nomad_token_string = "a1234567-40c7-9048-7bae-378687048181"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -72,16 +72,16 @@ func (n *Nomad) Init() error {
 		n.URL = "http://127.0.0.1:4646"
 	}
 
-	if n.AuthToken != "" && n.AuthTokenString != "" {
-		return fmt.Errorf("config error: both auth_token and auth_token_string are set")
+	if n.NomadToken != "" && n.NomadTokenString != "" {
+		return fmt.Errorf("config error: both nomad_token and nomad_token_string are set")
 	}
 
-	if n.AuthToken != "" {
-		token, err := os.ReadFile(n.AuthToken)
+	if n.NomadToken != "" {
+		token, err := os.ReadFile(n.NomadToken)
 		if err != nil {
 			return fmt.Errorf("reading file failed: %v", err)
 		}
-		n.AuthTokenString = strings.TrimSpace(string(token))
+		n.NomadTokenString = strings.TrimSpace(string(token))
 	}
 
 	tlsCfg, err := n.ClientConfig.TLSConfig()
@@ -120,7 +120,7 @@ func (n *Nomad) loadJSON(url string, v interface{}) error {
 		return err
 	}
 
-	req.Header.Set("Authorization", "X-Nomad-Token "+n.AuthTokenString)
+	req.Header.Set("Authorization", "X-Nomad-Token "+n.NomadTokenString)
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := n.roundTripper.RoundTrip(req)
