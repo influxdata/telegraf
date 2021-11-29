@@ -3,13 +3,16 @@ package groundwork
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gwos/tcg/sdk/clients"
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const (
@@ -59,6 +62,13 @@ func TestWrite(t *testing.T) {
 		Server:      server.URL,
 		AgentID:     defaultTestAgentID,
 		DefaultHost: "telegraf",
+		client: clients.GWClient{
+			AppName: "telegraf",
+			AppType: "TELEGRAF",
+			GWConnection: &clients.GWConnection{
+				HostName: server.URL,
+			},
+		},
 	}
 
 	err := i.Write([]telegraf.Metric{floatMetric, stringMetric})

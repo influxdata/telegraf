@@ -4,7 +4,7 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
 
 [1]: https://www.gwos.com/product/groundwork-monitor/
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.groundwork]]
@@ -28,7 +28,7 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
   # resource_tag = "host"
 ```
 
-### List of tags used by the plugin
+## List of tags used by the plugin
 
 * service  - to define the name of the service you want to monitor.
 * status   - to define the status of the service.

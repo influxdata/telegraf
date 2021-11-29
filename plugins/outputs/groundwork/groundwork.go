@@ -1,32 +1,21 @@
 package groundwork
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/gwos/tcg/sdk/clients"
 	"github.com/gwos/tcg/sdk/transit"
 	"github.com/hashicorp/go-uuid"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const (
-	defaultMonitoringRoute = "/api/monitoring?dynamic=true"
-)
-
-// Login and logout routes from Groundwork API
-const (
-	loginURL  = "/api/auth/login"
-	logoutURL = "/api/auth/logout"
-)
-
-const (
-	sampleConfig = `
+const sampleConfig = `
   ## URL of your groundwork instance.
   url = "https://groundwork.example.com"
 
@@ -46,7 +35,6 @@ const (
   ## The name of the tag that contains the hostname.
   # resource_tag = "host"
 `
-)
 
 type Groundwork struct {
 	Server              string          `toml:"url"`
@@ -57,8 +45,7 @@ type Groundwork struct {
 	DefaultServiceState string          `toml:"default_service_state"`
 	ResourceTag         string          `toml:"resource_tag"`
 	Log                 telegraf.Logger `toml:"-"`
-
-	authToken string
+	client              clients.GWClient
 }
 
 func (g *Groundwork) SampleConfig() string {
@@ -88,43 +75,44 @@ func (g *Groundwork) Init() error {
 		return errors.New("invalid 'default_service_state' provided")
 	}
 
+	g.client = clients.GWClient{
+		AppName: "telegraf",
+		AppType: "TELEGRAF",
+		GWConnection: &clients.GWConnection{
+			HostName:           g.Server,
+			UserName:           g.Username,
+			Password:           g.Password,
+			IsDynamicInventory: true,
+		},
+	}
 	return nil
 }
 
 func (g *Groundwork) Connect() error {
-	byteToken, err := login(g.Server+loginURL, g.Username, g.Password)
+	err := g.client.Connect()
 	if err != nil {
-		return fmt.Errorf("could not log in at %s: %v", g.Server+loginURL, err)
+		return fmt.Errorf("could not log in: %v", err)
 	}
-
-	g.authToken = string(byteToken)
-
 	return nil
 }
 
 func (g *Groundwork) Close() error {
-	formValues := map[string]string{
-		"gwos-app-name":  "telegraf",
-		"gwos-api-token": g.authToken,
+	err := g.client.Disconnect()
+	if err != nil {
+		return fmt.Errorf("could not log out: %v", err)
 	}
-
-	headers := map[string]string{
-		"Content-Type": "application/x-www-form-urlencoded",
-		"User-Agent":   internal.ProductToken(),
-	}
-
-	if _, _, err := clients.SendRequest(http.MethodPost, g.Server+logoutURL, headers, formValues, nil); err != nil {
-		return fmt.Errorf("could not log out at %s: %v", g.Server+logoutURL, err)
-	}
-
 	return nil
 }
 
 func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	resourceToServicesMap := make(map[string][]transit.DynamicMonitoredService)
 	for _, metric := range metrics {
-		resource, service := g.parseMetric(metric)
-		resourceToServicesMap[resource] = append(resourceToServicesMap[resource], service)
+		resource, service, err := g.parseMetric(metric)
+		if err != nil {
+			g.Log.Errorf("%v", err)
+			continue
+		}
+		resourceToServicesMap[resource] = append(resourceToServicesMap[resource], *service)
 	}
 
 	var resources []transit.DynamicMonitoredResource
@@ -162,33 +150,9 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	headers := map[string]string{
-		"GWOS-APP-NAME":  "telegraf",
-		"GWOS-API-TOKEN": g.authToken,
-		"Content-Type":   "application/json",
-		"Accept":         "application/json",
-		"User-Agent":     internal.ProductToken(),
-	}
-
-	statusCode, body, err := clients.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
+	_, err = g.client.SendResourcesWithMetrics(context.Background(), requestJSON)
 	if err != nil {
 		return fmt.Errorf("error while sending: %v", err)
-	}
-
-	/* Re-login mechanism */
-	if statusCode == 401 {
-		if err = g.Connect(); err != nil {
-			return fmt.Errorf("re-login failed: %v", err)
-		}
-		headers["GWOS-API-TOKEN"] = g.authToken
-		statusCode, body, err = clients.SendRequest(http.MethodPost, g.Server+defaultMonitoringRoute, headers, nil, requestJSON)
-		if err != nil {
-			return fmt.Errorf("error while sending: %v", err)
-		}
-	}
-
-	if statusCode != 200 {
-		return fmt.Errorf("HTTP request failed. [Status code]: %d, [Response]: %s", statusCode, string(body))
 	}
 
 	return nil
@@ -208,7 +172,7 @@ func init() {
 	})
 }
 
-func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.DynamicMonitoredService) {
+func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.DynamicMonitoredService, error) {
 	resource := g.DefaultHost
 	if value, present := metric.GetTag(g.ResourceTag); present {
 		resource = value
@@ -232,7 +196,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 		unitType = value
 	}
 
-	critical := -1.0
+	var critical float64
 	value, criticalPresent := metric.GetTag("critical")
 	if criticalPresent {
 		if s, err := strconv.ParseFloat(value, 64); err == nil {
@@ -240,7 +204,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 		}
 	}
 
-	warning := -1.0
+	var warning float64
 	value, warningPresent := metric.GetTag("warning")
 	if warningPresent {
 		if s, err := strconv.ParseFloat(value, 64); err == nil {
@@ -288,8 +252,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 		typedValue := new(transit.TypedValue)
 		err := typedValue.FromInterface(value.Value)
 		if err != nil {
-			typedValue = nil
-			g.Log.Errorf("%v", err)
+			return "", nil, err
 		}
 
 		serviceObject.Metrics = append(serviceObject.Metrics, transit.TimeSeries{
@@ -313,30 +276,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, transit.Dynami
 		serviceObject.Status = serviceStatus
 	}
 
-	return resource, serviceObject
-}
-
-func login(url, username, password string) ([]byte, error) {
-	formValues := map[string]string{
-		"user":          username,
-		"password":      password,
-		"gwos-app-name": "telegraf",
-	}
-	headers := map[string]string{
-		"Content-Type": "application/x-www-form-urlencoded",
-		"Accept":       "text/plain",
-		"User-Agent":   internal.ProductToken(),
-	}
-
-	statusCode, body, err := clients.SendRequest(http.MethodPost, url, headers, formValues, nil)
-	if err != nil {
-		return nil, err
-	}
-	if statusCode != 200 {
-		return nil, fmt.Errorf("request failed with status-code %d: %v", statusCode, string(body))
-	}
-
-	return body, nil
+	return resource, &serviceObject, nil
 }
 
 func validStatus(status string) bool {
