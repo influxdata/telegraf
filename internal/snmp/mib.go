@@ -96,6 +96,7 @@ func GetIndex(oidNum string, mibPrefix string) (col []string, tagOids map[string
 	}
 
 	for _, index := range node.GetIndex() {
+		//nolint:staticcheck //assaignment to nil map to keep backwards compatibilty
 		tagOids[mibPrefix+index.Name] = struct{}{}
 	}
 
@@ -106,6 +107,7 @@ func GetIndex(oidNum string, mibPrefix string) (col []string, tagOids map[string
 	return col, tagOids, nil
 }
 
+//nolint:revive //Too many return variable but necessary
 func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	var out gosmi.SmiNode
 	var end string

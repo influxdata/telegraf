@@ -231,7 +231,6 @@ func TestSnmpInit(t *testing.T) {
 }
 
 func TestSnmpInit_noTranslate(t *testing.T) {
-
 	s := &Snmp{
 		Fields: []Field{
 			{Oid: ".9.1.1.1.1", Name: "one", IsTag: true},

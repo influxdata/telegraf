@@ -807,6 +807,7 @@ var snmpTableCachesLock sync.Mutex
 
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
+//nolint:revive //Too many return variable but necessary
 func snmpTable(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
 	snmpTableCachesLock.Lock()
 	if snmpTableCaches == nil {
@@ -824,6 +825,7 @@ func snmpTable(oid string) (mibName string, oidNum string, oidText string, field
 	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
 }
 
+//nolint:revive //Too many return variable but necessary
 func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
 	mibName, oidNum, oidText, _, err = SnmpTranslate(oid)
 	if err != nil {
@@ -854,6 +856,7 @@ var snmpTranslateCachesLock sync.Mutex
 var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
+//nolint:revive //Too many return variable but necessary
 func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	snmpTranslateCachesLock.Lock()
 	if snmpTranslateCaches == nil {
