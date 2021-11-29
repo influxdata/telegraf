@@ -105,6 +105,7 @@ func init() {
 			lookupFunc:     lookup,
 			ServiceAddress: "udp://:162",
 			Timeout:        defaultTimeout,
+			Path:           []string{"/usr/share/snmp/mibs"},
 			Version:        "2c",
 		}
 	})

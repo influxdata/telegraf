@@ -1674,3 +1674,30 @@ func TestParse_Ints(t *testing.T) {
 	require.NoError(t, s.Gather(acc))
 	require.Equal(t, s.Percentiles, []Number{90.0})
 }
+
+func TestParse_KeyValue(t *testing.T) {
+	type output struct {
+		key string
+		val string
+	}
+
+	validLines := []struct {
+		input  string
+		output output
+	}{
+		{"", output{"", ""}},
+		{"only value", output{"", "only value"}},
+		{"key=value", output{"key", "value"}},
+		{"url=/api/querystring?key1=val1&key2=value", output{"url", "/api/querystring?key1=val1&key2=value"}},
+	}
+
+	for _, line := range validLines {
+		key, val := parseKeyValue(line.input)
+		if key != line.output.key {
+			t.Errorf("line: %s,  key expected %s, actual %s", line, line.output.key, key)
+		}
+		if val != line.output.val {
+			t.Errorf("line: %s,  val expected %s, actual %s", line, line.output.val, val)
+		}
+	}
+}

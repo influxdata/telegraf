@@ -225,3 +225,24 @@ func TestGatherContainsTag(t *testing.T) {
 		acc1.AssertContainsTaggedFields(t, "win_services", fields, tags)
 	}
 }
+
+func TestExcludingNamesTag(t *testing.T) {
+	winServices := &WinServices{
+		Log:                  testutil.Logger{},
+		ServiceNamesExcluded: []string{"Service*"},
+		mgrProvider:          &FakeMgProvider{testSimpleData[0]},
+	}
+	winServices.Init()
+	var acc1 testutil.Accumulator
+	require.NoError(t, winServices.Gather(&acc1))
+
+	for _, s := range testSimpleData[0].services {
+		fields := make(map[string]interface{})
+		tags := make(map[string]string)
+		fields["state"] = int(s.state)
+		fields["startup_mode"] = int(s.startUpMode)
+		tags["service_name"] = s.serviceName
+		tags["display_name"] = s.displayName
+		acc1.AssertDoesNotContainsTaggedFields(t, "win_services", fields, tags)
+	}
+}

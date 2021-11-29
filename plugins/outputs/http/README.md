@@ -4,7 +4,7 @@ This plugin sends metrics in a HTTP message encoded using one of the output
 data formats. For data_formats that support batching, metrics are sent in
 batch format by default.
 
-### Configuration:
+## Configuration
 
 ```toml
 # A plugin that can transmit metrics over HTTP
@@ -70,6 +70,6 @@ batch format by default.
   # idle_conn_timeout = 0
 ```
 
-### Optional Cookie Authentication Settings:
+### Optional Cookie Authentication Settings
 
 The optional Cookie Authentication Settings will retrieve a cookie from the given authorization endpoint, and use it in subsequent API requests.  This is useful for services that do not provide OAuth or Basic Auth authentication, e.g. the [Tesla Powerwall API](https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network), which uses a Cookie Auth Body to retrieve an authorization cookie.  The Cookie Auth Renewal interval will renew the authorization by retrieving a new cookie at the given interval.

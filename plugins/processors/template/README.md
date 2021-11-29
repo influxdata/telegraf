@@ -10,7 +10,7 @@ timestamp using the [interface in `/template_metric.go`](template_metric.go).
 
 Read the full [Go Template Documentation][].
 
-### Configuration
+## Configuration
 
 ```toml
 [[processors.template]]
@@ -23,9 +23,10 @@ Read the full [Go Template Documentation][].
   template = '{{ .Tag "hostname" }}.{{ .Tag "level" }}'
 ```
 
-### Example
+## Example
 
 Combine multiple tags to create a single tag:
+
 ```toml
 [[processors.template]]
   tag = "topic"
@@ -38,6 +39,7 @@ Combine multiple tags to create a single tag:
 ```
 
 Add measurement name as a tag:
+
 ```toml
 [[processors.template]]
   tag = "measurement"
@@ -50,6 +52,7 @@ Add measurement name as a tag:
 ```
 
 Add the year as a tag, similar to the date processor:
+
 ```toml
 [[processors.template]]
   tag = "year"
