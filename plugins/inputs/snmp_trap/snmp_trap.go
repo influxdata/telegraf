@@ -11,18 +11,11 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/sleepinggenius2/gosmi"
-	"github.com/sleepinggenius2/gosmi/types"
 
 	"github.com/gosnmp/gosnmp"
 )
 
 var defaultTimeout = config.Duration(time.Second * 5)
-
-type mibEntry struct {
-	mibName string
-	oidText string
-}
 
 type SnmpTrap struct {
 	ServiceAddress string          `toml:"service_address"`
@@ -44,7 +37,7 @@ type SnmpTrap struct {
 	acc        telegraf.Accumulator
 	listener   *gosnmp.TrapListener
 	timeFunc   func() time.Time
-	lookupFunc func(string) (mibEntry, error)
+	lookupFunc func(string) (snmp.MibEntry, error)
 	errCh      chan error
 
 	makeHandlerWrapper func(gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc
@@ -101,7 +94,7 @@ func init() {
 	inputs.Add("snmp_trap", func() telegraf.Input {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
-			lookupFunc:     lookup,
+			lookupFunc:     snmp.TrapLookup,
 			ServiceAddress: "udp://:162",
 			Timeout:        defaultTimeout,
 			Path:           []string{"/usr/share/snmp/mibs"},
@@ -244,10 +237,10 @@ func (s *SnmpTrap) Stop() {
 	}
 }
 
-func setTrapOid(tags map[string]string, oid string, e mibEntry) {
+func setTrapOid(tags map[string]string, oid string, e snmp.MibEntry) {
 	tags["oid"] = oid
-	tags["name"] = e.oidText
-	tags["mib"] = e.mibName
+	tags["name"] = e.OidText
+	tags["mib"] = e.MibName
 }
 
 func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
@@ -307,7 +300,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 					return
 				}
 
-				var e mibEntry
+				var e snmp.MibEntry
 				var err error
 				e, err = s.lookupFunc(val)
 				if nil != err {
@@ -315,7 +308,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 					return
 				}
 
-				value = e.oidText
+				value = e.OidText
 
 				// 1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.
 				// If v.Name is this oid, set a tag of the trap name.
@@ -333,7 +326,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 				return
 			}
 
-			name := e.oidText
+			name := e.OidText
 
 			fields[name] = value
 		}
@@ -354,24 +347,4 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 
 		s.acc.AddFields("snmp_trap", fields, tags, tm)
 	}
-}
-
-func lookup(oid string) (e mibEntry, err error) {
-	var node gosmi.SmiNode
-	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
-
-	// ensure modules are loaded or node will be empty (might not error)
-	if err != nil {
-		return e, err
-	}
-
-	e.oidText = node.RenderQualified()
-
-	i := strings.Index(e.oidText, "::")
-	if i == -1 {
-		return e, fmt.Errorf("not found")
-	}
-	e.mibName = e.oidText[:i]
-	e.oidText = e.oidText[i+2:]
-	return e, nil
 }

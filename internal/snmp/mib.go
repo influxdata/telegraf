@@ -4,10 +4,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/sleepinggenius2/gosmi"
+	"github.com/sleepinggenius2/gosmi/types"
 )
+
+type MibEntry struct {
+	MibName string
+	OidText string
+}
 
 // must init, append path for each directory, load module for every file
 // or gosmi will fail without saying why
@@ -52,4 +59,24 @@ func GetMibsPath(paths []string, log telegraf.Logger) error {
 		folders = []string{}
 	}
 	return nil
+}
+
+func TrapLookup(oid string) (e MibEntry, err error) {
+	var node gosmi.SmiNode
+	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+
+	// ensure modules are loaded or node will be empty (might not error)
+	if err != nil {
+		return e, err
+	}
+
+	e.OidText = node.RenderQualified()
+
+	i := strings.Index(e.OidText, "::")
+	if i == -1 {
+		return e, fmt.Errorf("not found")
+	}
+	e.MibName = e.OidText[:i]
+	e.OidText = e.OidText[i+2:]
+	return e, nil
 }
