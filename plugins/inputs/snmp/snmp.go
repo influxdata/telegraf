@@ -17,8 +17,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/sleepinggenius2/gosmi"
-	"github.com/sleepinggenius2/gosmi/types"
 )
 
 const description = `Retrieves SNMP values from remote agents`
@@ -834,22 +832,7 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 
 	mibPrefix := mibName + "::"
 
-	// first attempt to get the table's tags
-	tagOids := map[string]struct{}{}
-	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
-	node, err := gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
-
-	if err != nil {
-		return "", "", "", nil, fmt.Errorf("getting submask: %w", err)
-	}
-
-	for _, index := range node.GetIndex() {
-		tagOids[mibPrefix+index.Name] = struct{}{}
-	}
-
-	// grabs all columns from the table
-	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
-	col := node.GetRow().AsTable().ColumnOrder
+	col, tagOids, err := snmp.GetIndex(oidNum, mibPrefix)
 
 	for _, c := range col {
 		_, isTag := tagOids[mibPrefix+c]
@@ -888,85 +871,11 @@ func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 		// is worth it. Especially when it would slam the system pretty hard if lots
 		// of lookups are being performed.
 
-		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = snmpTranslateCall(oid)
+		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = snmp.SnmpTranslateCall(oid)
 		snmpTranslateCaches[oid] = stc
 	}
 
 	snmpTranslateCachesLock.Unlock()
 
 	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
-}
-
-func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
-	var out gosmi.SmiNode
-	var end string
-	if strings.ContainsAny(oid, "::") {
-		// split given oid
-		// for example RFC1213-MIB::sysUpTime.0
-		s := strings.Split(oid, "::")
-		// node becomes sysUpTime.0
-		node := s[1]
-		if strings.ContainsAny(node, ".") {
-			s = strings.Split(node, ".")
-			// node becomes sysUpTime
-			node = s[0]
-			end = "." + s[1]
-		}
-
-		out, err = gosmi.GetNode(node)
-		if err != nil {
-			return oid, oid, oid, oid, err
-		}
-
-		oidNum = "." + out.RenderNumeric() + end
-	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
-		//handle mixed oid ex. .iso.2.3
-		s := strings.Split(oid, ".")
-		for i := range s {
-			if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
-				out, err = gosmi.GetNode(s[i])
-				if err != nil {
-					return oid, oid, oid, oid, err
-				}
-				s[i] = out.RenderNumeric()
-			}
-		}
-		oidNum = strings.Join(s, ".")
-		out, _ = gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
-	} else {
-		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
-		oidNum = oid
-		// ensure modules are loaded or node will be empty (might not error)
-		// do not return the err as the oid is numeric and telegraf can continue
-		//nolint:nilerr
-		if err != nil || out.Name == "iso" {
-			return oid, oid, oid, oid, nil
-		}
-	}
-
-	tc := out.GetSubtree()
-
-	for i := range tc {
-		// case where the mib doesn't have a conversion so Type struct will be nil
-		// prevents seg fault
-		if tc[i].Type == nil {
-			break
-		}
-		switch tc[i].Type.Name {
-		case "MacAddress", "PhysAddress":
-			conversion = "hwaddr"
-		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
-			conversion = "ipaddr"
-		}
-	}
-
-	oidText = out.RenderQualified()
-	i := strings.Index(oidText, "::")
-	if i == -1 {
-		return "", oid, oid, oid, fmt.Errorf("not found")
-	}
-	mibName = oidText[:i]
-	oidText = oidText[i+2:] + end
-
-	return mibName, oidNum, oidText, conversion, nil
 }

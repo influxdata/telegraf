@@ -11,11 +11,6 @@ import (
 	"github.com/sleepinggenius2/gosmi/types"
 )
 
-type MibEntry struct {
-	MibName string
-	OidText string
-}
-
 // must init, append path for each directory, load module for every file
 // or gosmi will fail without saying why
 func GetMibsPath(paths []string, log telegraf.Logger) error {
@@ -61,6 +56,12 @@ func GetMibsPath(paths []string, log telegraf.Logger) error {
 	return nil
 }
 
+// The following is for snmp_trap
+type MibEntry struct {
+	MibName string
+	OidText string
+}
+
 func TrapLookup(oid string) (e MibEntry, err error) {
 	var node gosmi.SmiNode
 	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
@@ -79,4 +80,102 @@ func TrapLookup(oid string) (e MibEntry, err error) {
 	e.MibName = e.OidText[:i]
 	e.OidText = e.OidText[i+2:]
 	return e, nil
+}
+
+// The following is for snmp
+
+func GetIndex(oidNum string, mibPrefix string) (col []string, tagOids map[string]struct{}, err error) {
+	// first attempt to get the table's tags
+	// tagOids = map[string]struct{}{}
+
+	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
+	node, err := gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
+
+	if err != nil {
+		return []string{}, map[string]struct{}{}, fmt.Errorf("getting submask: %w", err)
+	}
+
+	for _, index := range node.GetIndex() {
+		tagOids[mibPrefix+index.Name] = struct{}{}
+	}
+
+	// grabs all columns from the table
+	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
+	col = node.GetRow().AsTable().ColumnOrder
+
+	return col, tagOids, nil
+}
+
+func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+	var out gosmi.SmiNode
+	var end string
+	if strings.ContainsAny(oid, "::") {
+		// split given oid
+		// for example RFC1213-MIB::sysUpTime.0
+		s := strings.Split(oid, "::")
+		// node becomes sysUpTime.0
+		node := s[1]
+		if strings.ContainsAny(node, ".") {
+			s = strings.Split(node, ".")
+			// node becomes sysUpTime
+			node = s[0]
+			end = "." + s[1]
+		}
+
+		out, err = gosmi.GetNode(node)
+		if err != nil {
+			return oid, oid, oid, oid, err
+		}
+
+		oidNum = "." + out.RenderNumeric() + end
+	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
+		//handle mixed oid ex. .iso.2.3
+		s := strings.Split(oid, ".")
+		for i := range s {
+			if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
+				out, err = gosmi.GetNode(s[i])
+				if err != nil {
+					return oid, oid, oid, oid, err
+				}
+				s[i] = out.RenderNumeric()
+			}
+		}
+		oidNum = strings.Join(s, ".")
+		out, _ = gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
+	} else {
+		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+		oidNum = oid
+		// ensure modules are loaded or node will be empty (might not error)
+		// do not return the err as the oid is numeric and telegraf can continue
+		//nolint:nilerr
+		if err != nil || out.Name == "iso" {
+			return oid, oid, oid, oid, nil
+		}
+	}
+
+	tc := out.GetSubtree()
+
+	for i := range tc {
+		// case where the mib doesn't have a conversion so Type struct will be nil
+		// prevents seg fault
+		if tc[i].Type == nil {
+			break
+		}
+		switch tc[i].Type.Name {
+		case "MacAddress", "PhysAddress":
+			conversion = "hwaddr"
+		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
+			conversion = "ipaddr"
+		}
+	}
+
+	oidText = out.RenderQualified()
+	i := strings.Index(oidText, "::")
+	if i == -1 {
+		return "", oid, oid, oid, fmt.Errorf("not found")
+	}
+	mibName = oidText[:i]
+	oidText = oidText[i+2:] + end
+
+	return mibName, oidNum, oidText, conversion, nil
 }
