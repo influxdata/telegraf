@@ -11,9 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var ex2 = `{"timestamp":"2017-03-06T07:43:39.000397+0000","event_type":"stats","stats":{"capture":{"kernel_packets":905344474,"kernel_drops":78355440,"kernel_packets_delta":2376742,"kernel_drops_delta":82049}}}`
@@ -388,11 +389,13 @@ func TestSuricataParse(t *testing.T) {
 	for _, tc := range tests {
 		data, err := os.ReadFile("testdata/" + tc.filename)
 		require.NoError(t, err)
+
 		s := Suricata{
 			Delimiter: "_",
 		}
 		acc := testutil.Accumulator{}
-		s.parse(&acc, data)
+		err = s.parse(&acc, data)
+		require.NoError(t, err)
 
 		testutil.RequireMetricsEqual(t, tc.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 	}

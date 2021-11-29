@@ -1,6 +1,6 @@
 # JSON Parser - Version 2
 
-This parser takes valid JSON input and turns it into line protocol. The query syntax supported is [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to this playground to test out your GJSON path here: https://gjson.dev/. You can find multiple examples under the `testdata` folder.
+This parser takes valid JSON input and turns it into line protocol. The query syntax supported is [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to this playground to test out your GJSON path here: [gjson.dev/](https://gjson.dev). You can find multiple examples under the `testdata` folder.
 
 ## Configuration
 
@@ -79,12 +79,12 @@ such as `America/New_York`, to `Local` to utilize the system timezone, or to `UT
 Note that objects are handled separately, therefore if you provide a path that returns a object it will be ignored. You will need use the `object` config table to parse objects, because `field` and `tag` doesn't handle relationships between data. Each `field` and `tag` you define is handled as a separate data point.
 
 The notable difference between `field` and `tag`, is that `tag` values will always be type string while `field` can be multiple types. You can define the type of `field` to be any [type that line protocol supports](https://docs.influxdata.com/influxdb/v2.0/reference/syntax/line-protocol/#data-types-and-format), which are:
+
 * float
 * int
 * uint
 * string
 * bool
-
 
 #### **field**
 
@@ -97,7 +97,6 @@ Using this field configuration you can gather a non-array/non-object values. Not
 #### **tag**
 
 Using this tag configuration you can gather a non-array/non-object values. Note this acts as a global tag when used with the `object` configuration, if you gather an array of values using `object` then the tag gathered will be added to each resulting line protocol without acknowledging its location in the original JSON. This is defined in TOML as an array table using double brackets.
-
 
 * **path (REQUIRED)**: A string with valid GJSON path syntax to a non-array/non-object value
 * **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
@@ -193,7 +192,7 @@ Example configuration:
 
 Expected line protocol:
 
-```
+```text
 file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="A Long-expected Party"
 file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",chapters="The Shadow of the Past"
 file,title=The\ Lord\ Of\ The\ Rings author="Tolkien",name="Bilbo",species="hobbit"

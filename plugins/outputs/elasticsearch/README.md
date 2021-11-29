@@ -4,7 +4,7 @@ This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Ela
 
 It supports Elasticsearch releases from 5.x up to 7.x.
 
-### Elasticsearch indexes and templates
+## Elasticsearch indexes and templates
 
 ### Indexes per time-frame
 
@@ -12,12 +12,12 @@ This plugin can manage indexes per time-frame, as commonly done in other tools w
 
 The timestamp of the metric collected will be used to decide the index destination.
 
-For more information about this usage on Elasticsearch, check https://www.elastic.co/guide/en/elasticsearch/guide/master/time-based.html#index-per-timeframe
+For more information about this usage on Elasticsearch, check [the docs](https://www.elastic.co/guide/en/elasticsearch/guide/master/time-based.html#index-per-timeframe).
 
 ### Template management
 
 Index templates are used in Elasticsearch to define settings and mappings for the indexes and how the fields should be analyzed.
-For more information on how this works, see https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html
+For more information on how this works, see [the docs](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-templates.html).
 
 This plugin can create a working template for use with telegraf metrics. It uses Elasticsearch dynamic templates feature to set proper types for the tags and metrics fields.
 If the template specified already exists, it will not overwrite unless you configure this plugin to do so. Thus you can customize this template after its creation if necessary.
@@ -98,7 +98,7 @@ Example of an index template created by telegraf on Elasticsearch 5.x:
 
 ```
 
-### Example events:
+### Example events
 
 This plugin will format the events in the following way:
 
@@ -144,7 +144,7 @@ This plugin will format the events in the following way:
 }
 ```
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.elasticsearch]]
@@ -201,7 +201,7 @@ This plugin will format the events in the following way:
   force_document_id = false
 ```
 
-#### Permissions
+### Permissions
 
 If you are using authentication within your Elasticsearch cluster, you need
 to create a account and create a role with at least the manage role in the
@@ -210,7 +210,7 @@ connect to your Elasticsearch cluster and send logs to your cluster.  After
 that, you need to add "create_indice" and "write" permission to your specific
 index pattern.
 
-#### Required parameters:
+### Required parameters
 
 * `urls`: A list containing the full HTTP URL of one or more nodes from your Elasticsearch instance.
 * `index_name`: The target index for metrics. You can use the date specifiers below to create indexes per time frame.
@@ -225,7 +225,7 @@ index pattern.
 
 Additionally, you can specify dynamic index names by using tags with the notation ```{{tag_name}}```. This will store the metrics with different tag values in different indices. If the tag does not exist in a particular metric, the `default_tag_value` will be used instead.
 
-#### Optional parameters:
+### Optional parameters
 
 * `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
 * `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster nodes, thus it is not necessary to list all nodes in the urls config option.
@@ -237,7 +237,7 @@ Additionally, you can specify dynamic index names by using tags with the notatio
 * `overwrite_template`: Set to true if you want telegraf to overwrite an existing template.
 * `force_document_id`: Set to true will compute a unique hash from as sha256(concat(timestamp,measurement,series-hash)),enables resend or update data withoud ES duplicated documents.
 
-### Known issues
+## Known issues
 
 Integer values collected that are bigger than 2^63 and smaller than 1e21 (or in this exact same window of their negative counterparts) are encoded by golang JSON encoder in decimal format and that is not fully supported by Elasticsearch dynamic field mapping. This causes the metrics with such values to be dropped in case a field mapping has not been created yet on the telegraf index. If that's the case you will see an exception on Elasticsearch side like this:
 
