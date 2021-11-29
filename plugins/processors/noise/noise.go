@@ -20,7 +20,6 @@ const (
 )
 
 const sampleConfig = `
-  [[processors.noise]]
     ## Specified the type of the random distribution.
     ## Can be "laplacian", "gaussian" or "uniform".
     # type = "laplacian
