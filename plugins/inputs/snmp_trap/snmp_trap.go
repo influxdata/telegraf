@@ -3,14 +3,13 @@ package snmp_trap
 import (
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/sleepinggenius2/gosmi"
 	"github.com/sleepinggenius2/gosmi/types"
@@ -112,48 +111,9 @@ func init() {
 }
 
 func (s *SnmpTrap) Init() error {
-	// must init, append path for each directory, load module for every file
-	// or gosmi will fail without saying why
-	gosmi.Init()
-	err := s.getMibsPath()
+	err := snmp.GetMibsPath(s.Path, s.Log)
 	if err != nil {
 		s.Log.Errorf("Could not get path %v", err)
-	}
-	return nil
-}
-
-func (s *SnmpTrap) getMibsPath() error {
-	var folders []string
-	for _, mibPath := range s.Path {
-		gosmi.AppendPath(mibPath)
-		folders = append(folders, mibPath)
-		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
-			if info.Mode()&os.ModeSymlink != 0 {
-				s, _ := os.Readlink(path)
-				folders = append(folders, s)
-			}
-			return nil
-		})
-		if err != nil {
-			s.Log.Errorf("Filepath could not be walked %v", err)
-		}
-		for _, folder := range folders {
-			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
-				if info.IsDir() {
-					gosmi.AppendPath(path)
-				} else if info.Mode()&os.ModeSymlink == 0 {
-					_, err := gosmi.LoadModule(info.Name())
-					if err != nil {
-						s.Log.Errorf("Module could not be loaded %v", err)
-					}
-				}
-				return nil
-			})
-			if err != nil {
-				s.Log.Errorf("Filepath could not be walked %v", err)
-			}
-		}
-		folders = []string{}
 	}
 	return nil
 }
@@ -278,7 +238,6 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 
 func (s *SnmpTrap) Stop() {
 	s.listener.Close()
-	defer gosmi.Exit()
 	err := <-s.errCh
 	if nil != err {
 		s.Log.Errorf("Error stopping trap listener %v", err)

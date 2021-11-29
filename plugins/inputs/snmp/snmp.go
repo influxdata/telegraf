@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"math"
 	"net"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -98,17 +96,12 @@ type Snmp struct {
 	Fields []Field `toml:"field"`
 
 	connectionCache []snmpConnection
-	initialized     bool
 
 	Log telegraf.Logger `toml:"-"`
 }
 
-func (s *Snmp) init() error {
-	if s.initialized {
-		return nil
-	}
-
-	err := s.getMibsPath()
+func (s *Snmp) Init() error {
+	err := snmp.GetMibsPath(s.Path, s.Log)
 	if err != nil {
 		return err
 	}
@@ -131,50 +124,6 @@ func (s *Snmp) init() error {
 		s.AgentHostTag = "agent_host"
 	}
 
-	s.initialized = true
-	return nil
-}
-
-func (s *Snmp) getMibsPath() error {
-	gosmi.Init()
-	var folders []string
-	for _, mibPath := range s.Path {
-		gosmi.AppendPath(mibPath)
-		folders = append(folders, mibPath)
-		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
-			// symlinks are files so we need to double check if any of them are folders
-			// Will check file vs directory later on
-			if info.Mode()&os.ModeSymlink != 0 {
-				link, err := os.Readlink(path)
-				if err != nil {
-					s.Log.Warnf("Bad symbolic link %v", link)
-				}
-				folders = append(folders, link)
-			}
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("Filepath could not be walked %v", err)
-		}
-		for _, folder := range folders {
-			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
-				// checks if file or directory
-				if info.IsDir() {
-					gosmi.AppendPath(path)
-				} else if info.Mode()&os.ModeSymlink == 0 {
-					_, err := gosmi.LoadModule(info.Name())
-					if err != nil {
-						s.Log.Warnf("Module could not be loaded %v", err)
-					}
-				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("Filepath could not be walked %v", err)
-			}
-		}
-		folders = []string{}
-	}
 	return nil
 }
 
@@ -401,10 +350,6 @@ func (s *Snmp) Description() string {
 // Any error encountered does not halt the process. The errors are accumulated
 // and returned at the end.
 func (s *Snmp) Gather(acc telegraf.Accumulator) error {
-	if err := s.init(); err != nil {
-		return err
-	}
-
 	var wg sync.WaitGroup
 	for i, agent := range s.Agents {
 		wg.Add(1)

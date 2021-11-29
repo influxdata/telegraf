@@ -131,7 +131,7 @@ func TestFieldInit(t *testing.T) {
 		},
 	}
 
-	err = s.init()
+	err = s.Init()
 	require.NoError(t, err)
 
 	translations := []struct {
@@ -183,7 +183,7 @@ func TestTableInit(t *testing.T) {
 			Path: []string{testDataPath},
 		},
 	}
-	err = s.init()
+	err = s.Init()
 	require.NoError(t, err)
 
 	err = tbl.Init()
@@ -214,7 +214,7 @@ func TestSnmpInit(t *testing.T) {
 		},
 	}
 
-	err = s.init()
+	err = s.Init()
 	require.NoError(t, err)
 
 	assert.Len(t, s.Tables[0].Fields, 3)
@@ -251,7 +251,7 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 		},
 	}
 
-	err := s.init()
+	err := s.Init()
 	require.NoError(t, err)
 
 	assert.Equal(t, ".9.1.1.1.1", s.Fields[0].Oid)
@@ -290,7 +290,7 @@ func TestSnmpInit_noName_noOid(t *testing.T) {
 		},
 	}
 
-	err := s.init()
+	err := s.Init()
 	require.Error(t, err)
 }
 
@@ -304,7 +304,7 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 			Community: "foo",
 		},
 	}
-	err := s.init()
+	err := s.Init()
 	require.NoError(t, err)
 
 	gsc, err := s.getConnection(0)
@@ -340,7 +340,7 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"tcp://127.0.0.1:56789"},
 	}
-	err := s.init()
+	err := s.Init()
 	require.NoError(t, err)
 
 	wg.Add(1)
@@ -381,7 +381,7 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 			EngineTime:     2,
 		},
 	}
-	err := s.init()
+	err := s.Init()
 	require.NoError(t, err)
 
 	gsc, err := s.getConnection(0)
@@ -498,7 +498,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			s := tc.Config
-			err := s.init()
+			err := s.Init()
 			require.NoError(t, err)
 
 			gsc, err := s.getConnection(0)
@@ -526,7 +526,7 @@ func TestGetSNMPConnection_caching(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
 	}
-	err := s.init()
+	err := s.Init()
 	require.NoError(t, err)
 	gs1, err := s.getConnection(0)
 	require.NoError(t, err)
@@ -739,7 +739,7 @@ func TestTableBuild_walk_Translate(t *testing.T) {
 			Path: []string{testDataPath},
 		},
 	}
-	err = s.init()
+	err = s.Init()
 	require.NoError(t, err)
 
 	tbl := Table{
@@ -880,7 +880,6 @@ func TestGather(t *testing.T) {
 		connectionCache: []snmpConnection{
 			tsc,
 		},
-		initialized: true,
 	}
 	acc := &testutil.Accumulator{}
 
@@ -927,7 +926,6 @@ func TestGather_host(t *testing.T) {
 		connectionCache: []snmpConnection{
 			tsc,
 		},
-		initialized: true,
 	}
 
 	acc := &testutil.Accumulator{}
