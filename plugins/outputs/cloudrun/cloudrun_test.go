@@ -75,49 +75,10 @@ func generateFakeAccessToken(saKeyfile string) (string, error) {
 	return jws.Encode(jwsHeader, claims, rsaKey)
 }
 
-// TODO: This is may only be useful as a reference
-func TestCloudRun_Close(t *testing.T) {
-	cr := defaultCloudrun()
-
-	tests := []struct {
-		name    string
-		wantErr bool
-	}{
-		{name: "close success", wantErr: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := cr.Close(); (err != nil) != tt.wantErr {
-				t.Errorf("Close() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-// TODO: This is may only be useful as a reference
-func TestCloudRun_Connect(t *testing.T) {
-	cr := defaultCloudrun()
-
-	tests := []struct {
-		name    string
-		wantErr bool
-	}{
-		{name: "connect success", wantErr: false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := cr.Connect(); (err != nil) != tt.wantErr {
-				t.Errorf("Connect() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestCloudRun_Write(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
-		// TODO: For stronger testing, check the mock metrics received here to ensure accuracy
+		// TODO: For stronger testing, could inspect the mock metrics received here to ensure accuracy?
 	}))
 	defer fakeServer.Close()
 
@@ -151,4 +112,7 @@ func TestCloudRun_Write(t *testing.T) {
 			}
 		})
 	}
+
+	err = cr.Close()
+	require.NoError(t, err)
 }
