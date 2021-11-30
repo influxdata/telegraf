@@ -88,7 +88,7 @@ func gather(lines []string, fileLines int) ([]string, []string, error) {
 	keys := strings.Fields(lines[1])
 	values := strings.Fields(lines[2])
 	if len(keys) != len(values) {
-		return nil, nil, fmt.Errorf("Key and value count don't match Keys:%v Values:%v", keys, values)
+		return nil, nil, fmt.Errorf("key and value count don't match Keys:%v Values:%v", keys, values)
 	}
 
 	return keys, values, nil
