@@ -170,32 +170,32 @@ func TestTableInit(t *testing.T) {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	tbl := Table{
-		Oid: ".1.3.6.1.2.1.3.1",
-		Fields: []Field{
-			{Oid: ".999", Name: "foo"},
-			{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", IsTag: true},
-			{Oid: "RFC1213-MIB::atPhysAddress", Name: "atPhysAddress"},
-		},
-	}
 	s := &Snmp{
 		ClientConfig: snmp.ClientConfig{
 			Path: []string{testDataPath},
+		},
+		Tables: []Table{
+			{Oid: ".1.3.6.1.2.1.3.1",
+				Fields: []Field{
+					{Oid: ".999", Name: "foo"},
+					{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", IsTag: true},
+					{Oid: "RFC1213-MIB::atPhysAddress", Name: "atPhysAddress"},
+				}},
 		},
 	}
 	err = s.Init()
 	require.NoError(t, err)
 
-	err = tbl.Init()
-	require.NoError(t, err)
+	// err = tbl.Init()
+	// require.NoError(t, err)
 
-	assert.Equal(t, "atTable", tbl.Name)
+	assert.Equal(t, "atTable", s.Tables[0].Name)
 
-	assert.Len(t, tbl.Fields, 5)
-	assert.Contains(t, tbl.Fields, Field{Oid: ".999", Name: "foo", initialized: true})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
-	assert.Contains(t, tbl.Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true})
+	assert.Len(t, s.Tables[0].Fields, 5)
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".999", Name: "foo", initialized: true})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true})
 }
 
 func TestSnmpInit(t *testing.T) {
