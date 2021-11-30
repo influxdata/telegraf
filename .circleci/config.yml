@@ -32,10 +32,6 @@ commands:
       - store_artifacts:
           path: './new-config'
           destination: 'new-config'
-      - persist_to_workspace:
-          root: './new-config'
-          paths:
-            - '*'
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
