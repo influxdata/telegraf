@@ -135,7 +135,8 @@ option operate similar to the `snmpget` utility.
 
 #### Table
 
-Use a `table` to configure the collection of a SNMP table.
+Use a `table` to configure the collection of a SNMP table.  SNMP requests
+formed with this option operate similarly way to the `snmptable` command.
 
 Control the handling of specific table columns using a nested `field`.  These
 nested fields are specified similarly to a top-level `field`.
