@@ -124,7 +124,7 @@ func (n *Vault) loadJSON(url string, v interface{}) error {
 		return err
 	}
 
-	req.Header.Set("Authorization", "X-Vault-Token "+n.VaultTokenString)
+	req.Header.Set("X-Vault-Token", n.VaultTokenString)
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := n.roundTripper.RoundTrip(req)
