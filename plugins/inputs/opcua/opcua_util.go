@@ -145,7 +145,7 @@ func pemBlockForKey(priv interface{}) (*pem.Block, error) {
 }
 
 //revive:disable-next-line
-func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string, requestTimeout time.Duration) ([]opcua.Option, error) {
+func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription) ([]opcua.Option, error) {
 	opts := []opcua.Option{}
 	appuri := "urn:telegraf:gopcua:client"
 	appname := "Telegraf"
@@ -153,9 +153,12 @@ func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription, certFile
 	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
 	opts = append(opts, opcua.ApplicationURI(appuri))
 	opts = append(opts, opcua.ApplicationName(appname))
+	opts = append(opts, opcua.RequestTimeout(time.Duration(o.RequestTimeout)))
 
-	opts = append(opts, opcua.RequestTimeout(requestTimeout))
-
+	certFile := o.Certificate
+	keyFile := o.PrivateKey
+	policy := o.SecurityPolicy
+	mode := o.SecurityMode
 	var err error
 	if certFile == "" && keyFile == "" {
 		if policy != "None" || mode != "None" {
@@ -197,7 +200,7 @@ func (o *OpcUA) generateClientOpts(endpoints []*ua.EndpointDescription, certFile
 	}
 
 	// Select the most appropriate authentication mode from server capabilities and user input
-	authMode, authOption, err := o.generateAuth(auth, cert, username, password)
+	authMode, authOption, err := o.generateAuth(o.AuthMethod, cert, o.Username, o.Password)
 	if err != nil {
 		return nil, err
 	}
