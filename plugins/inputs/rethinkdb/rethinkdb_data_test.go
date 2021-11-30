@@ -3,8 +3,9 @@ package rethinkdb
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 var tags = make(map[string]string)
@@ -36,7 +37,7 @@ func TestAddEngineStats(t *testing.T) {
 	engine.AddEngineStats(keys, &acc, tags)
 
 	for _, metric := range keys {
-		assert.True(t, acc.HasInt64Field("rethinkdb_engine", metric))
+		require.True(t, acc.HasInt64Field("rethinkdb_engine", metric))
 	}
 }
 
@@ -67,7 +68,7 @@ func TestAddEngineStatsPartial(t *testing.T) {
 	engine.AddEngineStats(keys, &acc, tags)
 
 	for _, metric := range missingKeys {
-		assert.False(t, acc.HasInt64Field("rethinkdb", metric))
+		require.False(t, acc.HasInt64Field("rethinkdb", metric))
 	}
 }
 
@@ -107,6 +108,6 @@ func TestAddStorageStats(t *testing.T) {
 	storage.AddStats(&acc, tags)
 
 	for _, metric := range keys {
-		assert.True(t, acc.HasInt64Field("rethinkdb", metric))
+		require.True(t, acc.HasInt64Field("rethinkdb", metric))
 	}
 }

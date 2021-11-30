@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
+	"github.com/influxdata/toml"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type testSNMPConnection struct {
@@ -158,11 +158,10 @@ func TestFieldInit(t *testing.T) {
 	for _, txl := range translations {
 		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
 		err := f.init()
-		if !assert.NoError(t, err, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName) {
-			continue
-		}
-		assert.Equal(t, txl.expectedOid, f.Oid, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
-		assert.Equal(t, txl.expectedName, f.Name, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
+		require.NoError(t, err, "inputOid='%s' inputName='%s'", txl.inputOid, txl.inputName)
+
+		require.Equal(t, txl.expectedOid, f.Oid, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
+		require.Equal(t, txl.expectedName, f.Name, "inputOid='%s' inputName='%s' inputConversion='%s'", txl.inputOid, txl.inputName, txl.inputConversion)
 	}
 }
 
@@ -186,13 +185,13 @@ func TestTableInit(t *testing.T) {
 	err = s.Init()
 	require.NoError(t, err)
 
-	assert.Equal(t, "atTable", s.Tables[0].Name)
+	require.Equal(t, "atTable", s.Tables[0].Name)
 
-	assert.Len(t, s.Tables[0].Fields, 5)
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".999", Name: "foo", initialized: true})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true})
+	require.Len(t, s.Tables[0].Fields, 5)
+	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".999", Name: "foo", initialized: true})
+	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", initialized: true, IsTag: true})
+	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
+	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", initialized: true, IsTag: true})
 }
 
 func TestSnmpInit(t *testing.T) {
@@ -214,12 +213,12 @@ func TestSnmpInit(t *testing.T) {
 	err = s.Init()
 	require.NoError(t, err)
 
-	assert.Len(t, s.Tables[0].Fields, 3)
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", IsTag: true, initialized: true})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
-	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", IsTag: true, initialized: true})
+	require.Len(t, s.Tables[0].Fields, 3)
+	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.1", Name: "atIfIndex", IsTag: true, initialized: true})
+	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.2", Name: "atPhysAddress", initialized: true, Conversion: "hwaddr"})
+	require.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.3.6.1.2.1.3.1.1.3", Name: "atNetAddress", IsTag: true, initialized: true})
 
-	assert.Equal(t, Field{
+	require.Equal(t, Field{
 		Oid:         ".1.3.6.1.2.1.3.1.1.2",
 		Name:        "atPhysAddress",
 		Conversion:  "hwaddr",
@@ -250,29 +249,29 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 	err := s.Init()
 	require.NoError(t, err)
 
-	assert.Equal(t, ".9.1.1.1.1", s.Fields[0].Oid)
-	assert.Equal(t, "one", s.Fields[0].Name)
-	assert.Equal(t, true, s.Fields[0].IsTag)
+	require.Equal(t, ".9.1.1.1.1", s.Fields[0].Oid)
+	require.Equal(t, "one", s.Fields[0].Name)
+	require.Equal(t, true, s.Fields[0].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.2", s.Fields[1].Oid)
-	assert.Equal(t, "two", s.Fields[1].Name)
-	assert.Equal(t, false, s.Fields[1].IsTag)
+	require.Equal(t, ".9.1.1.1.2", s.Fields[1].Oid)
+	require.Equal(t, "two", s.Fields[1].Name)
+	require.Equal(t, false, s.Fields[1].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.3", s.Fields[2].Oid)
-	assert.Equal(t, ".9.1.1.1.3", s.Fields[2].Name)
-	assert.Equal(t, false, s.Fields[2].IsTag)
+	require.Equal(t, ".9.1.1.1.3", s.Fields[2].Oid)
+	require.Equal(t, ".9.1.1.1.3", s.Fields[2].Name)
+	require.Equal(t, false, s.Fields[2].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.4", s.Tables[0].Fields[0].Oid)
-	assert.Equal(t, "four", s.Tables[0].Fields[0].Name)
-	assert.Equal(t, true, s.Tables[0].Fields[0].IsTag)
+	require.Equal(t, ".9.1.1.1.4", s.Tables[0].Fields[0].Oid)
+	require.Equal(t, "four", s.Tables[0].Fields[0].Name)
+	require.Equal(t, true, s.Tables[0].Fields[0].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.5", s.Tables[0].Fields[1].Oid)
-	assert.Equal(t, "five", s.Tables[0].Fields[1].Name)
-	assert.Equal(t, false, s.Tables[0].Fields[1].IsTag)
+	require.Equal(t, ".9.1.1.1.5", s.Tables[0].Fields[1].Oid)
+	require.Equal(t, "five", s.Tables[0].Fields[1].Name)
+	require.Equal(t, false, s.Tables[0].Fields[1].IsTag)
 
-	assert.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Oid)
-	assert.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Name)
-	assert.Equal(t, false, s.Tables[0].Fields[2].IsTag)
+	require.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Oid)
+	require.Equal(t, ".9.1.1.1.6", s.Tables[0].Fields[2].Name)
+	require.Equal(t, false, s.Tables[0].Fields[2].IsTag)
 }
 
 func TestSnmpInit_noName_noOid(t *testing.T) {
@@ -306,25 +305,25 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(snmp.GosnmpWrapper)
-	assert.Equal(t, "1.2.3.4", gs.Target)
-	assert.EqualValues(t, 567, gs.Port)
-	assert.Equal(t, gosnmp.Version2c, gs.Version)
-	assert.Equal(t, "foo", gs.Community)
-	assert.Equal(t, "udp", gs.Transport)
+	require.Equal(t, "1.2.3.4", gs.Target)
+	require.EqualValues(t, 567, gs.Port)
+	require.Equal(t, gosnmp.Version2c, gs.Version)
+	require.Equal(t, "foo", gs.Community)
+	require.Equal(t, "udp", gs.Transport)
 
 	gsc, err = s.getConnection(1)
 	require.NoError(t, err)
 	gs = gsc.(snmp.GosnmpWrapper)
-	assert.Equal(t, "1.2.3.4", gs.Target)
-	assert.EqualValues(t, 161, gs.Port)
-	assert.Equal(t, "udp", gs.Transport)
+	require.Equal(t, "1.2.3.4", gs.Target)
+	require.EqualValues(t, 161, gs.Port)
+	require.Equal(t, "udp", gs.Transport)
 
 	gsc, err = s.getConnection(2)
 	require.NoError(t, err)
 	gs = gsc.(snmp.GosnmpWrapper)
-	assert.Equal(t, "127.0.0.1", gs.Target)
-	assert.EqualValues(t, 161, gs.Port)
-	assert.Equal(t, "udp", gs.Transport)
+	require.Equal(t, "127.0.0.1", gs.Target)
+	require.EqualValues(t, 161, gs.Port)
+	require.Equal(t, "udp", gs.Transport)
 }
 
 func TestGetSNMPConnectionTCP(t *testing.T) {
@@ -343,9 +342,9 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(snmp.GosnmpWrapper)
-	assert.Equal(t, "127.0.0.1", gs.Target)
-	assert.EqualValues(t, 56789, gs.Port)
-	assert.Equal(t, "tcp", gs.Transport)
+	require.Equal(t, "127.0.0.1", gs.Target)
+	require.EqualValues(t, 56789, gs.Port)
+	require.Equal(t, "tcp", gs.Transport)
 	wg.Wait()
 }
 
@@ -383,20 +382,20 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(snmp.GosnmpWrapper)
-	assert.Equal(t, gs.Version, gosnmp.Version3)
+	require.Equal(t, gs.Version, gosnmp.Version3)
 	sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
-	assert.Equal(t, "1.2.3.4", gsc.Host())
-	assert.EqualValues(t, 20, gs.MaxRepetitions)
-	assert.Equal(t, "mycontext", gs.ContextName)
-	assert.Equal(t, gosnmp.AuthPriv, gs.MsgFlags&gosnmp.AuthPriv)
-	assert.Equal(t, "myuser", sp.UserName)
-	assert.Equal(t, gosnmp.MD5, sp.AuthenticationProtocol)
-	assert.Equal(t, "password123", sp.AuthenticationPassphrase)
-	assert.Equal(t, gosnmp.DES, sp.PrivacyProtocol)
-	assert.Equal(t, "321drowssap", sp.PrivacyPassphrase)
-	assert.Equal(t, "myengineid", sp.AuthoritativeEngineID)
-	assert.EqualValues(t, 1, sp.AuthoritativeEngineBoots)
-	assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
+	require.Equal(t, "1.2.3.4", gsc.Host())
+	require.EqualValues(t, 20, gs.MaxRepetitions)
+	require.Equal(t, "mycontext", gs.ContextName)
+	require.Equal(t, gosnmp.AuthPriv, gs.MsgFlags&gosnmp.AuthPriv)
+	require.Equal(t, "myuser", sp.UserName)
+	require.Equal(t, gosnmp.MD5, sp.AuthenticationProtocol)
+	require.Equal(t, "password123", sp.AuthenticationPassphrase)
+	require.Equal(t, gosnmp.DES, sp.PrivacyProtocol)
+	require.Equal(t, "321drowssap", sp.PrivacyPassphrase)
+	require.Equal(t, "myengineid", sp.AuthoritativeEngineID)
+	require.EqualValues(t, 1, sp.AuthoritativeEngineBoots)
+	require.EqualValues(t, 2, sp.AuthoritativeEngineTime)
 }
 
 func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
@@ -500,20 +499,20 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			gsc, err := s.getConnection(0)
 			require.NoError(t, err)
 			gs := gsc.(snmp.GosnmpWrapper)
-			assert.Equal(t, gs.Version, gosnmp.Version3)
+			require.Equal(t, gs.Version, gosnmp.Version3)
 			sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
-			assert.Equal(t, "1.2.3.4", gsc.Host())
-			assert.EqualValues(t, 20, gs.MaxRepetitions)
-			assert.Equal(t, "mycontext", gs.ContextName)
-			assert.Equal(t, gosnmp.AuthPriv, gs.MsgFlags&gosnmp.AuthPriv)
-			assert.Equal(t, "myuser", sp.UserName)
-			assert.Equal(t, gosnmp.MD5, sp.AuthenticationProtocol)
-			assert.Equal(t, "password123", sp.AuthenticationPassphrase)
-			assert.Equal(t, tc.Algorithm, sp.PrivacyProtocol)
-			assert.Equal(t, "password123", sp.PrivacyPassphrase)
-			assert.Equal(t, "myengineid", sp.AuthoritativeEngineID)
-			assert.EqualValues(t, 1, sp.AuthoritativeEngineBoots)
-			assert.EqualValues(t, 2, sp.AuthoritativeEngineTime)
+			require.Equal(t, "1.2.3.4", gsc.Host())
+			require.EqualValues(t, 20, gs.MaxRepetitions)
+			require.Equal(t, "mycontext", gs.ContextName)
+			require.Equal(t, gosnmp.AuthPriv, gs.MsgFlags&gosnmp.AuthPriv)
+			require.Equal(t, "myuser", sp.UserName)
+			require.Equal(t, gosnmp.MD5, sp.AuthenticationProtocol)
+			require.Equal(t, "password123", sp.AuthenticationPassphrase)
+			require.Equal(t, tc.Algorithm, sp.PrivacyProtocol)
+			require.Equal(t, "password123", sp.PrivacyPassphrase)
+			require.Equal(t, "myengineid", sp.AuthoritativeEngineID)
+			require.EqualValues(t, 1, sp.AuthoritativeEngineBoots)
+			require.EqualValues(t, 2, sp.AuthoritativeEngineTime)
 		})
 	}
 }
@@ -532,9 +531,9 @@ func TestGetSNMPConnection_caching(t *testing.T) {
 	require.NoError(t, err)
 	gs4, err := s.getConnection(2)
 	require.NoError(t, err)
-	assert.True(t, gs1 == gs2)
-	assert.False(t, gs2 == gs3)
-	assert.False(t, gs3 == gs4)
+	require.Equal(t, gs1, gs2)
+	require.NotEqual(t, gs2, gs3)
+	require.NotEqual(t, gs3, gs4)
 }
 
 func TestGosnmpWrapper_walk_retry(t *testing.T) {
@@ -584,11 +583,11 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 		GoSNMP: gs,
 	}
 	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
-	assert.NoError(t, srvr.Close())
+	require.NoError(t, srvr.Close())
 	wg.Wait()
-	assert.Error(t, err)
-	assert.False(t, gs.Conn == conn)
-	assert.Equal(t, (gs.Retries+1)*2, reqCount)
+	require.Error(t, err)
+	require.NotEqual(t, gs.Conn, conn)
+	require.Equal(t, (gs.Retries+1)*2, reqCount)
 }
 
 func TestGosnmpWrapper_get_retry(t *testing.T) {
@@ -639,9 +638,9 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	_, err = gsw.Get([]string{".1.0.0"})
 	require.NoError(t, srvr.Close())
 	wg.Wait()
-	assert.Error(t, err)
-	assert.False(t, gs.Conn == conn)
-	assert.Equal(t, (gs.Retries+1)*2, reqCount)
+	require.Error(t, err)
+	require.NotEqual(t, gs.Conn, conn)
+	require.Equal(t, (gs.Retries+1)*2, reqCount)
 }
 
 func TestTableBuild_walk_noTranslate(t *testing.T) {
@@ -678,7 +677,7 @@ func TestTableBuild_walk_noTranslate(t *testing.T) {
 
 	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
-	assert.Equal(t, tb.Name, "mytable")
+	require.Equal(t, tb.Name, "mytable")
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "foo",
@@ -720,11 +719,11 @@ func TestTableBuild_walk_noTranslate(t *testing.T) {
 			"myfield3": float64(9.999),
 		},
 	}
-	assert.Len(t, tb.Rows, 4)
-	assert.Contains(t, tb.Rows, rtr1)
-	assert.Contains(t, tb.Rows, rtr2)
-	assert.Contains(t, tb.Rows, rtr3)
-	assert.Contains(t, tb.Rows, rtr4)
+	require.Len(t, tb.Rows, 4)
+	require.Contains(t, tb.Rows, rtr1)
+	require.Contains(t, tb.Rows, rtr2)
+	require.Contains(t, tb.Rows, rtr3)
+	require.Contains(t, tb.Rows, rtr4)
 }
 
 func TestTableBuild_walk_Translate(t *testing.T) {
@@ -837,8 +836,8 @@ func TestTableBuild_noWalk(t *testing.T) {
 		Tags:   map[string]string{"myfield1": "baz", "myfield3": "234"},
 		Fields: map[string]interface{}{"myfield2": 234},
 	}
-	assert.Len(t, tb.Rows, 1)
-	assert.Contains(t, tb.Rows, rtr)
+	require.Len(t, tb.Rows, 1)
+	require.Contains(t, tb.Rows, rtr)
 }
 
 func TestGather(t *testing.T) {
@@ -886,21 +885,21 @@ func TestGather(t *testing.T) {
 	require.Len(t, acc.Metrics, 2)
 
 	m := acc.Metrics[0]
-	assert.Equal(t, "mytable", m.Measurement)
-	assert.Equal(t, "tsc", m.Tags[s.AgentHostTag])
-	assert.Equal(t, "baz", m.Tags["myfield1"])
-	assert.Len(t, m.Fields, 2)
-	assert.Equal(t, 234, m.Fields["myfield2"])
-	assert.Equal(t, "baz", m.Fields["myfield3"])
-	assert.True(t, !tstart.After(m.Time))
-	assert.True(t, !tstop.Before(m.Time))
+	require.Equal(t, "mytable", m.Measurement)
+	require.Equal(t, "tsc", m.Tags[s.AgentHostTag])
+	require.Equal(t, "baz", m.Tags["myfield1"])
+	require.Len(t, m.Fields, 2)
+	require.Equal(t, 234, m.Fields["myfield2"])
+	require.Equal(t, "baz", m.Fields["myfield3"])
+	require.False(t, tstart.After(m.Time))
+	require.False(t, tstop.Before(m.Time))
 
 	m2 := acc.Metrics[1]
-	assert.Equal(t, "myOtherTable", m2.Measurement)
-	assert.Equal(t, "tsc", m2.Tags[s.AgentHostTag])
-	assert.Equal(t, "baz", m2.Tags["myfield1"])
-	assert.Len(t, m2.Fields, 1)
-	assert.Equal(t, 123456, m2.Fields["myOtherField"])
+	require.Equal(t, "myOtherTable", m2.Measurement)
+	require.Equal(t, "tsc", m2.Tags[s.AgentHostTag])
+	require.Equal(t, "baz", m2.Tags["myfield1"])
+	require.Len(t, m2.Fields, 1)
+	require.Equal(t, 123456, m2.Fields["myOtherField"])
 }
 
 func TestGather_host(t *testing.T) {
@@ -930,7 +929,7 @@ func TestGather_host(t *testing.T) {
 
 	require.Len(t, acc.Metrics, 1)
 	m := acc.Metrics[0]
-	assert.Equal(t, "baz", m.Tags["host"])
+	require.Equal(t, "baz", m.Tags["host"])
 }
 
 func TestFieldConvert(t *testing.T) {
@@ -963,7 +962,7 @@ func TestFieldConvert(t *testing.T) {
 		{[]byte("123123123123"), "int", int64(123123123123)},
 		{float32(12.3), "int", int64(12)},
 		{float64(12.3), "int", int64(12)},
-		{int(123), "int", int64(123)},
+		{123, "int", int64(123)},
 		{int8(123), "int", int64(123)},
 		{int16(123), "int", int64(123)},
 		{int32(123), "int", int64(123)},
@@ -988,10 +987,8 @@ func TestFieldConvert(t *testing.T) {
 
 	for _, tc := range testTable {
 		act, err := fieldConvert(tc.conv, tc.input)
-		if !assert.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected) {
-			continue
-		}
-		assert.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
+		require.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
+		require.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 	}
 }
 
@@ -999,14 +996,14 @@ func TestSnmpTranslateCache_miss(t *testing.T) {
 	snmpTranslateCaches = nil
 	oid := "IF-MIB::ifPhysAddress.1"
 	mibName, oidNum, oidText, conversion, err := SnmpTranslate(oid)
-	assert.Len(t, snmpTranslateCaches, 1)
+	require.Len(t, snmpTranslateCaches, 1)
 	stc := snmpTranslateCaches[oid]
 	require.NotNil(t, stc)
-	assert.Equal(t, mibName, stc.mibName)
-	assert.Equal(t, oidNum, stc.oidNum)
-	assert.Equal(t, oidText, stc.oidText)
-	assert.Equal(t, conversion, stc.conversion)
-	assert.Equal(t, err, stc.err)
+	require.Equal(t, mibName, stc.mibName)
+	require.Equal(t, oidNum, stc.oidNum)
+	require.Equal(t, oidText, stc.oidText)
+	require.Equal(t, conversion, stc.conversion)
+	require.Equal(t, err, stc.err)
 }
 
 func TestSnmpTranslateCache_hit(t *testing.T) {
@@ -1020,11 +1017,11 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 		},
 	}
 	mibName, oidNum, oidText, conversion, err := SnmpTranslate("foo")
-	assert.Equal(t, "a", mibName)
-	assert.Equal(t, "b", oidNum)
-	assert.Equal(t, "c", oidText)
-	assert.Equal(t, "d", conversion)
-	assert.Equal(t, fmt.Errorf("e"), err)
+	require.Equal(t, "a", mibName)
+	require.Equal(t, "b", oidNum)
+	require.Equal(t, "c", oidText)
+	require.Equal(t, "d", conversion)
+	require.Equal(t, fmt.Errorf("e"), err)
 	snmpTranslateCaches = nil
 }
 
@@ -1032,14 +1029,14 @@ func TestSnmpTableCache_miss(t *testing.T) {
 	snmpTableCaches = nil
 	oid := ".1.0.0.0"
 	mibName, oidNum, oidText, fields, err := snmpTable(oid)
-	assert.Len(t, snmpTableCaches, 1)
+	require.Len(t, snmpTableCaches, 1)
 	stc := snmpTableCaches[oid]
 	require.NotNil(t, stc)
-	assert.Equal(t, mibName, stc.mibName)
-	assert.Equal(t, oidNum, stc.oidNum)
-	assert.Equal(t, oidText, stc.oidText)
-	assert.Equal(t, fields, stc.fields)
-	assert.Equal(t, err, stc.err)
+	require.Equal(t, mibName, stc.mibName)
+	require.Equal(t, oidNum, stc.oidNum)
+	require.Equal(t, oidText, stc.oidText)
+	require.Equal(t, fields, stc.fields)
+	require.Equal(t, err, stc.err)
 }
 
 func TestSnmpTableCache_hit(t *testing.T) {
@@ -1053,11 +1050,11 @@ func TestSnmpTableCache_hit(t *testing.T) {
 		},
 	}
 	mibName, oidNum, oidText, fields, err := snmpTable("foo")
-	assert.Equal(t, "a", mibName)
-	assert.Equal(t, "b", oidNum)
-	assert.Equal(t, "c", oidText)
-	assert.Equal(t, []Field{{Name: "d"}}, fields)
-	assert.Equal(t, fmt.Errorf("e"), err)
+	require.Equal(t, "a", mibName)
+	require.Equal(t, "b", oidNum)
+	require.Equal(t, "c", oidText)
+	require.Equal(t, []Field{{Name: "d"}}, fields)
+	require.Equal(t, fmt.Errorf("e"), err)
 }
 
 func TestTableJoin_walk(t *testing.T) {
@@ -1096,7 +1093,7 @@ func TestTableJoin_walk(t *testing.T) {
 	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 
-	assert.Equal(t, tb.Name, "mytable")
+	require.Equal(t, tb.Name, "mytable")
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance",
@@ -1130,10 +1127,10 @@ func TestTableJoin_walk(t *testing.T) {
 			"myfield3": 3,
 		},
 	}
-	assert.Len(t, tb.Rows, 3)
-	assert.Contains(t, tb.Rows, rtr1)
-	assert.Contains(t, tb.Rows, rtr2)
-	assert.Contains(t, tb.Rows, rtr3)
+	require.Len(t, tb.Rows, 3)
+	require.Contains(t, tb.Rows, rtr1)
+	require.Contains(t, tb.Rows, rtr2)
+	require.Contains(t, tb.Rows, rtr3)
 }
 
 func TestTableOuterJoin_walk(t *testing.T) {
@@ -1173,7 +1170,7 @@ func TestTableOuterJoin_walk(t *testing.T) {
 	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 
-	assert.Equal(t, tb.Name, "mytable")
+	require.Equal(t, tb.Name, "mytable")
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance",
@@ -1216,11 +1213,11 @@ func TestTableOuterJoin_walk(t *testing.T) {
 			"myfield5": 1,
 		},
 	}
-	assert.Len(t, tb.Rows, 4)
-	assert.Contains(t, tb.Rows, rtr1)
-	assert.Contains(t, tb.Rows, rtr2)
-	assert.Contains(t, tb.Rows, rtr3)
-	assert.Contains(t, tb.Rows, rtr4)
+	require.Len(t, tb.Rows, 4)
+	require.Contains(t, tb.Rows, rtr1)
+	require.Contains(t, tb.Rows, rtr2)
+	require.Contains(t, tb.Rows, rtr3)
+	require.Contains(t, tb.Rows, rtr4)
 }
 
 func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
@@ -1259,7 +1256,7 @@ func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
 	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 
-	assert.Equal(t, tb.Name, "mytable")
+	require.Equal(t, tb.Name, "mytable")
 	rtr1 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance",
@@ -1293,8 +1290,8 @@ func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
 			"myfield3": 3,
 		},
 	}
-	assert.Len(t, tb.Rows, 3)
-	assert.Contains(t, tb.Rows, rtr1)
-	assert.Contains(t, tb.Rows, rtr2)
-	assert.Contains(t, tb.Rows, rtr3)
+	require.Len(t, tb.Rows, 3)
+	require.Contains(t, tb.Rows, rtr1)
+	require.Contains(t, tb.Rows, rtr2)
+	require.Contains(t, tb.Rows, rtr3)
 }
