@@ -122,7 +122,7 @@ const sampleConfigStart = `
   ##  |---request  -- define fields on a requests base
   configuration_type = "register"
 `
-const sampleConfigEnd =	`
+const sampleConfigEnd = `
   ## Enable workarounds required by some devices to work correctly
   # [inputs.modbus.workarounds]
     ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
