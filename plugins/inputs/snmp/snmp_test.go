@@ -764,7 +764,7 @@ func TestTableBuild_walk_Translate(t *testing.T) {
 	tb, err := tbl.Build(tsc, true)
 	require.NoError(t, err)
 
-	assert.Equal(t, tb.Name, "atTable")
+	require.Equal(t, tb.Name, "atTable")
 
 	rtr1 := RTableRow{
 		Tags: map[string]string{
@@ -794,10 +794,10 @@ func TestTableBuild_walk_Translate(t *testing.T) {
 		},
 	}
 
-	assert.Len(t, tb.Rows, 3)
-	assert.Contains(t, tb.Rows, rtr1)
-	assert.Contains(t, tb.Rows, rtr2)
-	assert.Contains(t, tb.Rows, rtr3)
+	require.Len(t, tb.Rows, 3)
+	require.Contains(t, tb.Rows, rtr1)
+	require.Contains(t, tb.Rows, rtr2)
+	require.Contains(t, tb.Rows, rtr3)
 }
 
 func TestTableBuild_noWalk(t *testing.T) {
