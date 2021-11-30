@@ -501,9 +501,9 @@ func TestGetSNMPConnection_caching(t *testing.T) {
 	require.NoError(t, err)
 	gs4, err := s.getConnection(2)
 	require.NoError(t, err)
-	require.True(t, gs1 == gs2)
-	require.False(t, gs2 == gs3)
-	require.False(t, gs3 == gs4)
+	require.Equal(t, gs1, gs2)
+	require.NotEqual(t, gs2, gs3)
+	require.NotEqual(t, gs3, gs4)
 }
 
 func TestGosnmpWrapper_walk_retry(t *testing.T) {
@@ -556,7 +556,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 	require.NoError(t, srvr.Close())
 	wg.Wait()
 	require.Error(t, err)
-	require.False(t, gs.Conn == conn)
+	require.NotEqual(t, gs.Conn, conn)
 	require.Equal(t, (gs.Retries+1)*2, reqCount)
 }
 
@@ -609,7 +609,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	require.NoError(t, srvr.Close())
 	wg.Wait()
 	require.Error(t, err)
-	require.False(t, gs.Conn == conn)
+	require.NotEqual(t, gs.Conn, conn)
 	require.Equal(t, (gs.Retries+1)*2, reqCount)
 }
 
@@ -801,8 +801,8 @@ func TestGather(t *testing.T) {
 	require.Len(t, m.Fields, 2)
 	require.Equal(t, 234, m.Fields["myfield2"])
 	require.Equal(t, "baz", m.Fields["myfield3"])
-	require.True(t, !tstart.After(m.Time))
-	require.True(t, !tstop.Before(m.Time))
+	require.False(t, tstart.After(m.Time))
+	require.False(t, tstop.Before(m.Time))
 
 	m2 := acc.Metrics[1]
 	require.Equal(t, "myOtherTable", m2.Measurement)

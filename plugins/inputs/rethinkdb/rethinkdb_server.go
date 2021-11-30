@@ -37,7 +37,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error adding member stats, %s", err.Error())
 	}
 
-	if err := s.addTableStats(acc); err != nil {
+	if err := s.addTablesStats(acc); err != nil {
 		return fmt.Errorf("error adding table stats, %s", err.Error())
 	}
 
@@ -161,7 +161,7 @@ var TableTracking = []string{
 	"total_writes",
 }
 
-func (s *Server) addTableStats(acc telegraf.Accumulator) error {
+func (s *Server) addTablesStats(acc telegraf.Accumulator) error {
 	tablesCursor, err := gorethink.DB("rethinkdb").Table("table_status").Run(s.session)
 	if err != nil {
 		return fmt.Errorf("table stats query error, %s", err.Error())
@@ -174,27 +174,33 @@ func (s *Server) addTableStats(acc telegraf.Accumulator) error {
 		return errors.New("could not parse table_status results")
 	}
 	for _, table := range tables {
-		return func() error {
-			cursor, err := gorethink.DB("rethinkdb").Table("stats").
-				Get([]string{"table_server", table.ID, s.serverStatus.ID}).
-				Run(s.session)
-			if err != nil {
-				return fmt.Errorf("table stats query error, %s", err.Error())
-			}
-			defer cursor.Close()
-			var ts tableStats
-			if err := cursor.One(&ts); err != nil {
-				return fmt.Errorf("failure to parse table stats, %s", err.Error())
-			}
-
-			tags := s.getDefaultTags()
-			tags["type"] = "data"
-			tags["ns"] = fmt.Sprintf("%s.%s", table.DB, table.Name)
-			ts.Engine.AddEngineStats(TableTracking, acc, tags)
-			ts.Storage.AddStats(acc, tags)
-
-			return nil
-		}()
+		err = s.addTableStats(acc, table)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+func (s *Server) addTableStats(acc telegraf.Accumulator, table tableStatus) error {
+	cursor, err := gorethink.DB("rethinkdb").Table("stats").
+		Get([]string{"table_server", table.ID, s.serverStatus.ID}).
+		Run(s.session)
+	if err != nil {
+		return fmt.Errorf("table stats query error, %s", err.Error())
+	}
+	defer cursor.Close()
+
+	var ts tableStats
+	if err := cursor.One(&ts); err != nil {
+		return fmt.Errorf("failure to parse table stats, %s", err.Error())
+	}
+
+	tags := s.getDefaultTags()
+	tags["type"] = "data"
+	tags["ns"] = fmt.Sprintf("%s.%s", table.DB, table.Name)
+	ts.Engine.AddEngineStats(TableTracking, acc, tags)
+	ts.Storage.AddStats(acc, tags)
+
 	return nil
 }
