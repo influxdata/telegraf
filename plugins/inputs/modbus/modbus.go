@@ -107,7 +107,6 @@ const sampleConfigStart = `
   # data_bits = 8
   # parity = "N"
   # stop_bits = 1
-  # transmission_mode = "RTU"
 
   ## Trace the connection to the modbus device as debug messages
   ## Note: You have to enable telegraf's debug mode to see those messages!
@@ -119,9 +118,9 @@ const sampleConfigStart = `
   # transmission_mode = "RTU"
 
 	## Define the configuration schema
-  ##  |---original -- original style defining fields per register type (only supports one slave ID)
+  ##  |---register -- define fields per register type in the original style (only supports one slave ID)
   ##  |---request  -- define fields on a requests base
-  configuration_type = "original"
+  configuration_type = "register"
 `
 const sampleConfigEnd =	`
   ## Enable workarounds required by some devices to work correctly
@@ -168,7 +167,7 @@ func (m *Modbus) Init() error {
 	// Determine the configuration style
 	var cfg Configuration
 	switch m.ConfigurationType {
-	case "", "original":
+	case "", "register":
 		cfg = &m.ConfigurationOriginal
 	case "request":
 		cfg = &m.ConfigurationPerRequest

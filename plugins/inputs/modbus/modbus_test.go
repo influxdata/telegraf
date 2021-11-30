@@ -1100,11 +1100,11 @@ func TestRetryFailIllegal(t *testing.T) {
 	require.Equal(t, counter, 1)
 }
 
-func TestConfigurationOriginal(t *testing.T) {
+func TestConfigurationRegister(t *testing.T) {
 	modbus := Modbus{
 		Name:              "TestRetryFailExhausted",
 		Controller:        "tcp://localhost:1502",
-		ConfigurationType: "original",
+		ConfigurationType: "register",
 		Log:               testutil.Logger{},
 	}
 	modbus.SlaveID = 1
