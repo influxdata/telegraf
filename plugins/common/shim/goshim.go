@@ -84,7 +84,7 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 		if err != nil {
 			return fmt.Errorf("RunProcessor error: %w", err)
 		}
-	} else if s.Output != nil { //nolint: revive // "Simplifying" if c {...} else {... return } would not simplify anything at all in this case
+	} else if s.Output != nil { //nolint:revive // Not simplifying here to stay in the structure for better understanding the code
 		err := s.RunOutput()
 		if err != nil {
 			return fmt.Errorf("RunOutput error: %w", err)
