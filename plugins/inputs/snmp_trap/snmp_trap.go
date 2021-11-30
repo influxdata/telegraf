@@ -104,7 +104,7 @@ func init() {
 }
 
 func (s *SnmpTrap) Init() error {
-	err := snmp.GetMibsPath(s.Path, s.Log)
+	err := snmp.LoadMibsFromPath(s.Path, s.Log)
 	if err != nil {
 		s.Log.Errorf("Could not get path %v", err)
 	}

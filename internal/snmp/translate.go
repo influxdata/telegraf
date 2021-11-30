@@ -13,7 +13,7 @@ import (
 
 // must init, append path for each directory, load module for every file
 // or gosmi will fail without saying why
-func GetMibsPath(paths []string, log telegraf.Logger) error {
+func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 	gosmi.Init()
 	var folders []string
 	for _, mibPath := range paths {

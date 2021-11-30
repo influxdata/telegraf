@@ -4,7 +4,7 @@ The `snmp` input plugin uses polling to gather metrics from SNMP agents.
 Support for gathering individual OIDs as well as complete SNMP tables is
 included.
 
-## Prerequisites
+## Note about Paths
 
 Path is a global variable, separate snmp instances will append the specified
 path onto the global path variable
@@ -94,7 +94,8 @@ To collect SNMP tables, use the `table` option.
 
 #### Field
 
-Use a `field` to collect a variable by OID.  
+Use a `field` to collect a variable by OID.  Requests specified with this
+option operate similar to the `snmpget` utility.
 
 ```toml
 [[inputs.snmp]]

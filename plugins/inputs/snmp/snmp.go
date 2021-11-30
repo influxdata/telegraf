@@ -99,7 +99,7 @@ type Snmp struct {
 }
 
 func (s *Snmp) Init() error {
-	err := snmp.GetMibsPath(s.Path, s.Log)
+	err := snmp.LoadMibsFromPath(s.Path, s.Log)
 	if err != nil {
 		return err
 	}
