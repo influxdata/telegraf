@@ -43,7 +43,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestConnectAndWriteMetricWithNaNValue(t *testing.T) {
+func TestConnectAndWriteMetricWithNaNValueEmpty(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -58,17 +58,132 @@ func TestConnectAndWriteMetricWithNaNValue(t *testing.T) {
 		TemplateName:        "telegraf",
 		OverwriteTemplate:   false,
 		HealthCheckInterval: config.Duration(time.Second * 10),
+		Log:                 testutil.Logger{},
+	}
+
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(math.NaN()),
+		testutil.TestMetric(math.Inf(1)),
+		testutil.TestMetric(math.Inf(-1)),
 	}
 
 	// Verify that we can connect to Elasticsearch
 	err := e.Connect()
 	require.NoError(t, err)
 
-	// Verify that we can successfully write a metric with NaN value
-	err = e.Write([]telegraf.Metric{
+	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+	for _, m := range metrics {
+		err = e.Write([]telegraf.Metric{m})
+		require.Error(t, err, "error sending bulk request to Elasticsearch: json: unsupported value: NaN")
+	}
+}
+
+func TestConnectAndWriteMetricWithNaNValueNone(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+
+	e := &Elasticsearch{
+		URLs:                urls,
+		IndexName:           "test-%Y.%m.%d",
+		Timeout:             config.Duration(time.Second * 5),
+		ManageTemplate:      true,
+		TemplateName:        "telegraf",
+		OverwriteTemplate:   false,
+		HealthCheckInterval: config.Duration(time.Second * 10),
+		NaNHandling:         "none",
+		Log:                 testutil.Logger{},
+	}
+
+	metrics := []telegraf.Metric{
 		testutil.TestMetric(math.NaN()),
-	})
+		testutil.TestMetric(math.Inf(1)),
+		testutil.TestMetric(math.Inf(-1)),
+	}
+
+	// Verify that we can connect to Elasticsearch
+	err := e.Connect()
 	require.NoError(t, err)
+
+	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+	for _, m := range metrics {
+		err = e.Write([]telegraf.Metric{m})
+		require.Error(t, err, "error sending bulk request to Elasticsearch: json: unsupported value: NaN")
+	}
+}
+
+func TestConnectAndWriteMetricWithNaNValueDrop(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+
+	e := &Elasticsearch{
+		URLs:                urls,
+		IndexName:           "test-%Y.%m.%d",
+		Timeout:             config.Duration(time.Second * 5),
+		ManageTemplate:      true,
+		TemplateName:        "telegraf",
+		OverwriteTemplate:   false,
+		HealthCheckInterval: config.Duration(time.Second * 10),
+		NaNHandling:         "drop",
+		Log:                 testutil.Logger{},
+	}
+
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(math.NaN()),
+		testutil.TestMetric(math.Inf(1)),
+		testutil.TestMetric(math.Inf(-1)),
+	}
+
+	// Verify that we can connect to Elasticsearch
+	err := e.Connect()
+	require.NoError(t, err)
+
+	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+	for _, m := range metrics {
+		err = e.Write([]telegraf.Metric{m})
+		require.NoError(t, err)
+	}
+}
+
+func TestConnectAndWriteMetricWithNaNValueReplacement(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+
+	e := &Elasticsearch{
+		URLs:                urls,
+		IndexName:           "test-%Y.%m.%d",
+		Timeout:             config.Duration(time.Second * 5),
+		ManageTemplate:      true,
+		TemplateName:        "telegraf",
+		OverwriteTemplate:   false,
+		HealthCheckInterval: config.Duration(time.Second * 10),
+		NaNHandling:         "3.1415",
+		Log:                 testutil.Logger{},
+	}
+
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(math.NaN()),
+		testutil.TestMetric(math.Inf(1)),
+		testutil.TestMetric(math.Inf(-1)),
+	}
+
+	// Verify that we can connect to Elasticsearch
+	err := e.Connect()
+	require.NoError(t, err)
+
+	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+	for _, m := range metrics {
+		err = e.Write([]telegraf.Metric{m})
+		require.NoError(t, err)
+	}
 }
 
 func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,10 +36,13 @@ type Elasticsearch struct {
 	OverwriteTemplate   bool
 	ForceDocumentID     bool `toml:"force_document_id"`
 	MajorReleaseNumber  int
+	NaNHandling         string          `toml:"nan_handling"`
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
 	Client *elastic.Client
+
+	nanReplacement float64
 }
 
 var sampleConfig = `
@@ -95,6 +99,13 @@ var sampleConfig = `
   ## If set to true a unique ID hash will be sent as sha256(concat(timestamp,measurement,series-hash)) string
   ## it will enable data resend and update metric points avoiding duplicated metrics with diferent id's
   force_document_id = false
+
+  ## Specifies the handling of NaN and Inf values.
+  ## This option can have the following values:
+  ##    none -- do not modify field-values (default); will produce an error if NaNs or infs are encountered
+  ##    drop -- drop fields containing NaNs or infs
+  ##    <any float> -- Replace NaNs and inf with the given number and -inf with the negative number
+  # nan_handling = "none"
 `
 
 const telegrafTemplate = `
@@ -175,6 +186,19 @@ type templatePart struct {
 func (a *Elasticsearch) Connect() error {
 	if a.URLs == nil || a.IndexName == "" {
 		return fmt.Errorf("elasticsearch urls or index_name is not defined")
+	}
+
+	// Determine if we should process NaN and inf values
+	switch a.NaNHandling {
+	case "", "none":
+		a.NaNHandling = "none"
+	case "drop":
+	default:
+		number, err := strconv.ParseFloat(a.NaNHandling, 64)
+		if err != nil {
+			return fmt.Errorf("invalid value %q for 'nan_handling'", a.NaNHandling)
+		}
+		a.nanReplacement = number
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
@@ -278,12 +302,31 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		// to send the metric to the correct time-based index
 		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
 
+		// Handle NaN and inf field-values
+		fields := make(map[string]interface{})
+		for k, value := range metric.Fields() {
+			v, ok := value.(float64)
+			if !ok || a.NaNHandling == "none" || !(math.IsNaN(v) || math.IsInf(v, 0)) {
+				fields[k] = value
+				continue
+			}
+			if a.NaNHandling == "drop" {
+				continue
+			}
+
+			if math.IsNaN(v) || math.IsInf(v, 1) {
+				fields[k] = a.nanReplacement
+			} else {
+				fields[k] = -a.nanReplacement
+			}
+		}
+
 		m := make(map[string]interface{})
 
 		m["@timestamp"] = metric.Time()
 		m["measurement_name"] = name
 		m["tag"] = metric.Tags()
-		m[name] = metric.Fields()
+		m[name] = fields
 
 		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
 

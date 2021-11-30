@@ -199,6 +199,13 @@ This plugin will format the events in the following way:
   ## If set to true a unique ID hash will be sent as sha256(concat(timestamp,measurement,series-hash)) string
   ## it will enable data resend and update metric points avoiding duplicated metrics with diferent id's
   force_document_id = false
+
+  ## Specifies the handling of NaN and Inf values.
+  ## This option can have the following values:
+  ##    none -- do not modify field-values (default); will produce an error if NaNs or infs are encountered
+  ##    drop -- drop fields containing NaNs or infs
+  ##    <any float> -- Replace NaNs and inf with the given number and -inf with the negative number
+  # nan_handling = "none"
 ```
 
 ### Permissions
@@ -236,6 +243,7 @@ Additionally, you can specify dynamic index names by using tags with the notatio
 * `template_name`: The template name used for telegraf indexes.
 * `overwrite_template`: Set to true if you want telegraf to overwrite an existing template.
 * `force_document_id`: Set to true will compute a unique hash from as sha256(concat(timestamp,measurement,series-hash)),enables resend or update data withoud ES duplicated documents.
+* `nan_handling`: Specifies how to handle `NaN` and infinite field values. `"none"` (default) will do nothing, `"drop"` will drop the field. Any valid float number will replace the field's value with the given value respecting the infinite's sign.
 
 ## Known issues
 
