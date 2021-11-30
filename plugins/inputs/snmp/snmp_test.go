@@ -186,9 +186,6 @@ func TestTableInit(t *testing.T) {
 	err = s.Init()
 	require.NoError(t, err)
 
-	// err = tbl.Init()
-	// require.NoError(t, err)
-
 	assert.Equal(t, "atTable", s.Tables[0].Name)
 
 	assert.Len(t, s.Tables[0].Fields, 5)
