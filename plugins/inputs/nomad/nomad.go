@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -17,9 +15,6 @@ import (
 // Nomad configuration object
 type Nomad struct {
 	URL string `toml:"url"`
-
-	NomadToken       string `toml:"nomad_token"`
-	NomadTokenString string `toml:"nomad_token_string"`
 
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
@@ -33,12 +28,6 @@ const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 var sampleConfig = `
   ## URL for the Nomad agent
   # url = "http://127.0.0.1:4646"
-
-  ## Use auth token for authorization. 
-  ## Only one of the options can be set. Leave empty to not use any token.
-  # nomad_token = "/path/to/auth/token"
-  ## OR
-  # nomad_token_string = "a1234567-40c7-9048-7bae-378687048181"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -70,18 +59,6 @@ func (n *Nomad) Description() string {
 func (n *Nomad) Init() error {
 	if n.URL == "" {
 		n.URL = "http://127.0.0.1:4646"
-	}
-
-	if n.NomadToken != "" && n.NomadTokenString != "" {
-		return fmt.Errorf("config error: both nomad_token and nomad_token_string are set")
-	}
-
-	if n.NomadToken != "" {
-		token, err := os.ReadFile(n.NomadToken)
-		if err != nil {
-			return fmt.Errorf("reading file failed: %v", err)
-		}
-		n.NomadTokenString = strings.TrimSpace(string(token))
 	}
 
 	tlsCfg, err := n.ClientConfig.TLSConfig()
@@ -119,9 +96,6 @@ func (n *Nomad) loadJSON(url string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-
-	req.Header.Set("Authorization", "X-Nomad-Token "+n.NomadTokenString)
-	req.Header.Add("Accept", "application/json")
 
 	resp, err := n.roundTripper.RoundTrip(req)
 	if err != nil {

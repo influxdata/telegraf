@@ -11,13 +11,6 @@ The Nomad plugin must grab metrics from every Nomad agent of the cluster. Telegr
   ## URL for the Nomad agent
   # url = "http://127.0.0.1:4646"
 
-  ## Use auth token for authorization. 
-  ## If both are set, an error is thrown.
-  ## If both are empty, no token will be used.
-  # nomad_token = "/path/to/auth/token"
-  ## OR
-  # nomad_token_string = "a1234567-40c7-9048-7bae-378687048181"
-
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
 
