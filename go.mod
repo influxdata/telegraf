@@ -133,7 +133,7 @@ require (
 	github.com/grid-x/modbus v0.0.0-20210224155242-c4a3d042e99b
 	github.com/grid-x/serial v0.0.0-20191104121038-e24bc9bf6f08 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
-	github.com/gwos/tcg/sdk v0.0.0-20211126104958-5206dbbe3426
+	github.com/gwos/tcg/sdk v0.0.0-20211130162655-32ad77586ccf
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/harlow/kinesis-consumer v0.3.6-0.20210911031324-5a873d6e9fec
 	github.com/hashicorp/consul/api v1.9.1
