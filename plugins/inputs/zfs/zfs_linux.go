@@ -82,7 +82,7 @@ func getTags(pools []poolInfo) map[string]string {
 
 func gather(lines []string, fileLines int) ([]string, []string, error) {
 	if len(lines) != fileLines {
-		return nil, nil, errors.New("Expected lines in kstat does not match")
+		return nil, nil, errors.New("expected lines in kstat does not match")
 	}
 
 	keys := strings.Fields(lines[1])
