@@ -1,21 +1,20 @@
 # XtremIO Input Plugin
 
 The `xtremio` plugin gathers metrics from a Dell EMC XtremIO Storage Array's V3 Rest API. Documentation can be found [here](https://dl.dell.com/content/docu96624_xtremio-storage-array-x1-and-x2-cluster-types-with-xms-6-3-0-to-6-3-3-and-xios-4-0-15-to-4-0-31-and-6-0-0-to-6-3-3-restful-api-3-x-guide.pdf?language=en_us)
-### Configuration
 
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage xtremio`.
+### Configuration
 
 ```toml
 [[inputs.xtremio]]
-  ## XtremIO Username
-  username = "user1" # required
-  ## XtremIO Password
-  password = "pass123" # required
   ## XtremIO User Interface Endpoint
   url = "https://xtremio.example.com/" # required
+  
+  ## Credentials
+  username = "user1"
+  password = "pass123"
+
   ## Metrics to collect from the XtremIO
-  collectors = ["bbus","clusters","ssds","volumes","xms"]
+  # collectors = ["bbus","clusters","ssds","volumes","xms"]
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -106,3 +105,9 @@ generate it using `telegraf --usage xtremio`.
     - xms_write_latency
     - xms_read_latency
     - xms_user_accounts_count
+
+### Example Output
+
+> xio,guid=abcdefghifklmnopqrstuvwxyz111111,host=HOSTNAME,model_name=Eaton\ 5P\ 1550,name=X2-BBU,power_feed=PWR-B,serial_number=SER1234567890 bbus_average_daily_temp=22i,bbus_enabled=1i,bbus_power=286i,bbus_ups_low_battery_no_input=0i,bbus_ups_need_battery_replacement=0i 1638295340000000000
+> xio,guid=abcdefghifklmnopqrstuvwxyz222222,host=HOSTNAME,model_name=Eaton\ 5P\ 1550,name=X1-BBU,power_feed=PWR-A,serial_number=SER1234567891 bbus_average_daily_temp=22i,bbus_enabled=1i,bbus_power=246i,bbus_ups_low_battery_no_input=0i,bbus_ups_need_battery_replacement=0i 1638295340000000000
+> xio,guid=abcdefghifklmnopqrstuvwxyz333333,hardware_platform=X1,host=HOSTNAME,license_id=LIC123456789,name=SERVER01,sys_psnt_serial_number=FNM01234567890 clusters_compression_factor=1.5160012465000001,clusters_data_reduction_ratio=2.1613617899,clusters_free_ssd_space_in_percent=34i,clusters_number_of_volumes=36i,clusters_percent_memory_in_use=29i,clusters_read_iops=331i,clusters_ssd_num=50i,clusters_write_iops=4649i 1638295341000000000
