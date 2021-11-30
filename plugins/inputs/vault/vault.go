@@ -38,7 +38,7 @@ var sampleConfig = `
   ## Only one of the options can be set. Leave empty to not use any token.
   # vault_token = "/path/to/auth/token"
   ## OR
-  # vault_token_string = "a1234567-40c7-9048-7bae-378687048181"
+  vault_token_string = "a1234567-40c7-9048-7bae-378687048181"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -72,8 +72,12 @@ func (n *Vault) Init() error {
 		n.URL = "http://127.0.0.1:8200"
 	}
 
+	if n.VaultToken == "" && n.VaultTokenString == "" {
+		return fmt.Errorf("Vault token missing")
+	}
+
 	if n.VaultToken != "" && n.VaultTokenString != "" {
-		return fmt.Errorf("config error: both auth_token and auth_token_string are set")
+		return fmt.Errorf("config error: both vault_token and vault_token_string are set")
 	}
 
 	if n.VaultToken != "" {
