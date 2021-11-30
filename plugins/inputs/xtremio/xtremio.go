@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/tidwall/gjson"
 )
 
@@ -25,21 +26,22 @@ type XtremIO struct {
 }
 
 const sampleConfig = `
-  ## XtremIO Username
-  username = "user1" # required
-  ## XtremIO Password
-  password = "pass123" # required
-  ## XtremIO User Interface Endpoint
-  url = "https://xtremio.example.com/" # required
-  ## Metrics to collect from the XtremIO
-  collectors = ["bbus","clusters","ssds","volumes","xms"]
+## XtremIO User Interface Endpoint
+url = "https://xtremio.example.com/" # required
 
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
+## Credentials
+username = "user1"
+password = "pass123"
+
+## Metrics to collect from the XtremIO
+# collectors = ["bbus","clusters","ssds","volumes","xms"]
+
+## Optional TLS Config
+# tls_ca = "/etc/telegraf/ca.pem"
+# tls_cert = "/etc/telegraf/cert.pem"
+# tls_key = "/etc/telegraf/key.pem"
+## Use SSL but skip chain & host verification
+# insecure_skip_verify = false
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -62,17 +64,28 @@ func (xio *XtremIO) Init() error {
 	if xio.URL == "" {
 		return fmt.Errorf("URL cannot be empty")
 	}
+	if len(xio.Collectors) == 0 {
+		xio.Collectors = []string{"bbus","clusters","ssds","volumes","xms"}
+	}
+
+	availableCollectors := []string{"bbus", "clusters", "ssds", "volumes", "xms"}
+	if !choice.Contains(collector,availableCollectors) {
+		acc.AddError(fmt.Errorf("Specified Collector Isn't Supported: " + collector))
+		return
+	}
+
+	tlsCfg, err := xio.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = tlsCfg
 
 	return nil
 }
 
 func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
-	tlsCfg, err := xio.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = tlsCfg
-	err = xio.Authenticate()
+	var err = xio.Authenticate()
 	if err != nil {
 		return err
 	}
@@ -80,16 +93,11 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("no authentication cookie set")
 	}
 
-	availableCollectors := []string{"bbus", "clusters", "ssds", "volumes", "xms"}
 	var wg sync.WaitGroup
 	for _, collector := range xio.Collectors {
 		wg.Add(1)
 		go func(collector string) {
 			defer wg.Done()
-			if !contains(availableCollectors, collector) {
-				acc.AddError(fmt.Errorf("Specified Collector Isn't Supported: " + collector))
-				return
-			}
 
 			resp, err := xio.Call(collector)
 			if err != nil {
@@ -138,7 +146,7 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 
-	xio.ResetCookie()
+	xio.Cookie = nil
 
 	return nil
 }
@@ -304,21 +312,8 @@ func (xio *XtremIO) Authenticate() error {
 	return nil
 }
 
-func (xio *XtremIO) ResetCookie() {
-	xio.Cookie = nil
-}
-
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-	return false
-}
-
 func init() {
 	inputs.Add("xtremio", func() telegraf.Input {
-		return &XtremIO{Collectors: []string{"bbus", "clusters", "ssds", "volumes", "xms"}, Cookie: nil}
+		return &XtremIO{Cookie: nil}
 	})
 }
