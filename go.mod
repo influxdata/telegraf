@@ -78,7 +78,7 @@ require (
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
 	github.com/containerd/cgroups v1.0.1 // indirect
 	github.com/containerd/containerd v1.5.7 // indirect
-	github.com/coreos/go-semver v0.3.0 // indirect
+	github.com/coreos/go-semver v0.3.0
 	github.com/couchbase/go-couchbase v0.1.0
 	github.com/couchbase/gomemcached v0.1.3 // indirect
 	github.com/couchbase/goutils v0.1.0 // indirect
@@ -98,7 +98,7 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/echlebek/timeproxy v1.0.0 // indirect
 	github.com/eclipse/paho.mqtt.golang v1.3.0
-	github.com/fatih/color v1.10.0 // indirect
+	github.com/fatih/color v1.10.0
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logfmt/logfmt v0.5.0

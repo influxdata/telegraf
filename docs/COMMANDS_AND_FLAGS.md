@@ -24,6 +24,7 @@ telegraf [flags]
 |`--watch-config`                 |Telegraf will restart on local config changes. Monitor changes using either fs notifications or polling. Valid values: `inotify` or `poll`. Monitoring is off by default.|
 |`--plugin-directory`             |directory containing *.so files, this directory will be searched recursively. Any Plugin found will be loaded and namespaced.|
 |`--debug`                        |turn on debug logging|
+|`--deprecation-list`             |print all deprecated plugins or plugin options|
 |`--input-filter <filter>`        |filter the inputs to enable, separator is `:`|
 |`--input-list`                   |print available input plugins.|
 |`--output-filter <filter>`       |filter the outputs to enable, separator is `:`|
