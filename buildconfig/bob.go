@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/toml"
 )
 
-const usageText = `Bob-the-builder, The configuration tool for generating stripped-down telegraf binaries.
+const usageText = `Bob is a configuration tool for generating stripped-down telegraf binaries.
 
 Usage:
 
