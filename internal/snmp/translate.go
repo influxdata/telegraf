@@ -15,11 +15,12 @@ import (
 // must init, append path for each directory, load module for every file
 // or gosmi will fail without saying why
 var m sync.Mutex
+var once sync.Once
 
 func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 	m.Lock()
 	defer m.Unlock()
-	gosmi.Init()
+	once.Do(gosmi.Init)
 	var folders []string
 	for _, mibPath := range paths {
 		gosmi.AppendPath(mibPath)
