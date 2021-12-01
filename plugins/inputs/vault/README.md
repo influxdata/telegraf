@@ -11,12 +11,12 @@ The Vault plugin could grab metrics from every Vault agent of the cluster. Teleg
   ## URL for the vault agent
   # url = "http://127.0.0.1:8200"
 
-  ## Use auth token for authorization.
+  ## Use Vault token for authorization.
   ## Vault token configuration is mandatory.
   ## If both are empty or both are set, an error is thrown.
-  # token = "/path/to/auth/token"
+  # token_file = "/path/to/auth/token"
   ## OR
-  token_string = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
+  token = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"

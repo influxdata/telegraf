@@ -81,8 +81,8 @@ func TestVaultStats(t *testing.T) {
 			defer ts.Close()
 
 			plugin := &Vault{
-				URL:         ts.URL,
-				TokenString: "s.CDDrgg5zPv5ssI0Z2P4qxJj2",
+				URL:   ts.URL,
+				Token: "s.CDDrgg5zPv5ssI0Z2P4qxJj2",
 			}
 			err := plugin.Init()
 			require.NoError(t, err)
