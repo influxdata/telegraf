@@ -72,6 +72,12 @@ type Parser interface {
 	SetDefaultTags(tags map[string]string)
 }
 
+// ParserCompatibility is an interface for backward-compatible initialization of new parsers
+type ParserCompatibility interface {
+	// InitFromConfig sets the parser internal variables from the old-style config
+	InitFromConfig(config *Config) error
+}
+
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
@@ -146,6 +152,22 @@ type Config struct {
 	GrokCustomPatternFiles []string `toml:"grok_custom_pattern_files"`
 	GrokTimezone           string   `toml:"grok_timezone"`
 	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
+
+	//csv configuration
+	CSVColumnNames       []string `toml:"csv_column_names"`
+	CSVColumnTypes       []string `toml:"csv_column_types"`
+	CSVComment           string   `toml:"csv_comment"`
+	CSVDelimiter         string   `toml:"csv_delimiter"`
+	CSVHeaderRowCount    int      `toml:"csv_header_row_count"`
+	CSVMeasurementColumn string   `toml:"csv_measurement_column"`
+	CSVSkipColumns       int      `toml:"csv_skip_columns"`
+	CSVSkipRows          int      `toml:"csv_skip_rows"`
+	CSVTagColumns        []string `toml:"csv_tag_columns"`
+	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
+	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
+	CSVTimezone          string   `toml:"csv_timezone"`
+	CSVTrimSpace         bool     `toml:"csv_trim_space"`
+	CSVSkipValues        []string `toml:"csv_skip_values"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -253,7 +275,19 @@ func NewParser(config *Config) (Parser, error) {
 	case "json_v2":
 		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
-		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
+		creator, found := Parsers[config.DataFormat]
+		if !found {
+			return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
+		}
+
+		// Try to create new-style parsers the old way...
+		// TODO: Issue deprecation warning using #9857
+		parser = creator(config.MetricName)
+		p, ok := parser.(ParserCompatibility)
+		if !ok {
+			return nil, fmt.Errorf("parser for %q cannot be created the old way", config.DataFormat)
+		}
+		err = p.InitFromConfig(config)
 	}
 	return parser, err
 }
