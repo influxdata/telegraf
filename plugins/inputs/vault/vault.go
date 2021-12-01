@@ -14,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// Nomad configuration object
+// Vault configuration object
 type Vault struct {
 	URL string `toml:"url"`
 
@@ -34,11 +34,12 @@ var sampleConfig = `
   ## URL for the Vault agent
   # url = "http://127.0.0.1:8200"
 
-  ## Use vault token for authorization. 
-  ## Only one of the options can be set. Leave empty to not use any token.
+  ## Use Vault token for authorization.
+  ## Vault token configuration is mandatory.
+  ## If both are empty or both are set, an error is thrown.
   # vault_token = "/path/to/auth/token"
   ## OR
-  vault_token_string = "a1234567-40c7-9048-7bae-378687048181"
+  vault_token_string = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -73,7 +74,7 @@ func (n *Vault) Init() error {
 	}
 
 	if n.VaultToken == "" && n.VaultTokenString == "" {
-		return fmt.Errorf("Vault token missing")
+		return fmt.Errorf("vault token missing")
 	}
 
 	if n.VaultToken != "" && n.VaultTokenString != "" {
@@ -145,7 +146,7 @@ func (n *Vault) loadJSON(url string, v interface{}) error {
 	return nil
 }
 
-// buildVaultMetrics, it builds all the metrics and adds them to the accumulator)
+// buildVaultMetrics, it builds all the metrics and adds them to the accumulator
 func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 	t, err := time.Parse(timeLayout, sysMetrics.Timestamp)
 	if err != nil {
@@ -159,12 +160,13 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 		}
 
 		fields := map[string]interface{}{
-			"count": counters.Count,
-			"rate":  counters.Rate,
-			"sum":   counters.Sum,
-			"min":   counters.Min,
-			"max":   counters.Max,
-			"mean":  counters.Mean,
+			"count":  counters.Count,
+			"rate":   counters.Rate,
+			"sum":    counters.Sum,
+			"min":    counters.Min,
+			"max":    counters.Max,
+			"mean":   counters.Mean,
+			"stddev": counters.Stddev,
 		}
 		acc.AddCounter(counters.baseInfo.Name, fields, tags, t)
 	}
@@ -182,22 +184,22 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 		acc.AddGauge(gauges.Name, fields, tags, t)
 	}
 
-	for _, summaries := range sysMetrics.Summaries {
+	for _, summary := range sysMetrics.Summaries {
 		tags := make(map[string]string)
-		for key, val := range summaries.baseInfo.Labels {
+		for key, val := range summary.baseInfo.Labels {
 			tags[key] = val.(string)
 		}
 
 		fields := map[string]interface{}{
-			"count":  summaries.Count,
-			"rate":   summaries.Rate,
-			"sum":    summaries.Sum,
-			"stddev": summaries.Stddev,
-			"min":    summaries.Min,
-			"max":    summaries.Max,
-			"mean":   summaries.Mean,
+			"count":  summary.Count,
+			"rate":   summary.Rate,
+			"sum":    summary.Sum,
+			"stddev": summary.Stddev,
+			"min":    summary.Min,
+			"max":    summary.Max,
+			"mean":   summary.Mean,
 		}
-		acc.AddCounter(summaries.Name, fields, tags, t)
+		acc.AddCounter(summary.Name, fields, tags, t)
 	}
 
 	return nil
