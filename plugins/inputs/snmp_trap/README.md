@@ -6,6 +6,11 @@ notifications (traps and inform requests).
 Notifications are received on plain UDP. The port to listen is
 configurable.
 
+## Note about Paths
+
+Path is a global variable, separate snmp instances will append the specified
+path onto the global path variable
+
 ## Configuration
 
 ```toml

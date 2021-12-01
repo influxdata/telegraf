@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"go.starlark.net/starlark"
+
+	"github.com/influxdata/telegraf"
 )
 
 type Metric struct {
@@ -36,15 +37,15 @@ func (m *Metric) Unwrap() telegraf.Metric {
 // it behaves more like the repr function would in Python.
 func (m *Metric) String() string {
 	buf := new(strings.Builder)
-	buf.WriteString("Metric(")
-	buf.WriteString(m.Name().String())
-	buf.WriteString(", tags=")
-	buf.WriteString(m.Tags().String())
-	buf.WriteString(", fields=")
-	buf.WriteString(m.Fields().String())
-	buf.WriteString(", time=")
-	buf.WriteString(m.Time().String())
-	buf.WriteString(")")
+	buf.WriteString("Metric(")           //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString(m.Name().String())   //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString(", tags=")           //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString(m.Tags().String())   //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString(", fields=")         //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString(m.Fields().String()) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString(", time=")           //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString(m.Time().String())   //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+	buf.WriteString(")")                 //nolint:revive // from builder.go: "It returns the length of r and a nil error."
 	return buf.String()
 }
 
