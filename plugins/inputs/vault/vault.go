@@ -19,8 +19,8 @@ import (
 type Vault struct {
 	URL string `toml:"url"`
 
-	Token       string `toml:"token"`
-	TokenString string `toml:"token_string"`
+	TokenFile string `toml:"token_file"`
+	Token     string `toml:"token"`
 
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
@@ -38,9 +38,9 @@ var sampleConfig = `
   ## Use Vault token for authorization.
   ## Vault token configuration is mandatory.
   ## If both are empty or both are set, an error is thrown.
-  # token = "/path/to/auth/token"
+  # token_file = "/path/to/auth/token"
   ## OR
-  token_string = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
+  token = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -74,20 +74,20 @@ func (n *Vault) Init() error {
 		n.URL = "http://127.0.0.1:8200"
 	}
 
-	if n.Token == "" && n.TokenString == "" {
+	if n.TokenFile == "" && n.Token == "" {
 		return fmt.Errorf("token missing")
 	}
 
-	if n.Token != "" && n.TokenString != "" {
-		return fmt.Errorf("both token and token_string are set")
+	if n.TokenFile != "" && n.Token != "" {
+		return fmt.Errorf("both token_file and token are set")
 	}
 
-	if n.Token != "" {
-		token, err := os.ReadFile(n.Token)
+	if n.TokenFile != "" {
+		token, err := os.ReadFile(n.TokenFile)
 		if err != nil {
 			return fmt.Errorf("reading file failed: %v", err)
 		}
-		n.TokenString = strings.TrimSpace(string(token))
+		n.Token = strings.TrimSpace(string(token))
 	}
 
 	tlsCfg, err := n.ClientConfig.TLSConfig()
@@ -106,8 +106,7 @@ func (n *Vault) Init() error {
 
 // Gather, collects metrics from Vault endpoint
 func (n *Vault) Gather(acc telegraf.Accumulator) error {
-	sysMetrics := &SysMetrics{}
-	err := n.loadJSON(n.URL+"/v1/sys/metrics", sysMetrics)
+	sysMetrics, err := n.loadJSON(n.URL + "/v1/sys/metrics")
 	if err != nil {
 		return err
 	}
@@ -120,31 +119,32 @@ func (n *Vault) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Vault) loadJSON(url string, v interface{}) error {
+func (n *Vault) loadJSON(url string) (*SysMetrics, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return &SysMetrics{}, err
 	}
 
-	req.Header.Set("X-Vault-Token", n.TokenString)
+	req.Header.Set("X-Vault-Token", n.Token)
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := n.roundTripper.RoundTrip(req)
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return &SysMetrics{}, fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
+		return &SysMetrics{}, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(v)
+	var metrics SysMetrics
+	err = json.NewDecoder(resp.Body).Decode(&metrics)
 	if err != nil {
-		return fmt.Errorf("error parsing json response: %s", err)
+		return &SysMetrics{}, fmt.Errorf("error parsing json response: %s", err)
 	}
 
-	return nil
+	return &metrics, nil
 }
 
 // buildVaultMetrics, it builds all the metrics and adds them to the accumulator
@@ -159,7 +159,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 		for key, val := range counters.baseInfo.Labels {
 			convertedVal, err := internal.ToString(val)
 			if err != nil {
-				return fmt.Errorf("error converting value: %s", err)
+				return fmt.Errorf("converting counter %s=%v failed: %v", key, val, err)
 			}
 			tags[key] = convertedVal
 		}
@@ -181,7 +181,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 		for key, val := range gauges.baseInfo.Labels {
 			convertedVal, err := internal.ToString(val)
 			if err != nil {
-				return fmt.Errorf("error converting value: %s", err)
+				return fmt.Errorf("converting gauges %s=%v failed: %v", key, val, err)
 			}
 			tags[key] = convertedVal
 		}
@@ -198,7 +198,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 		for key, val := range summary.baseInfo.Labels {
 			convertedVal, err := internal.ToString(val)
 			if err != nil {
-				return fmt.Errorf("error converting value: %s", err)
+				return fmt.Errorf("converting summary %s=%v failed: %v", key, val, err)
 			}
 			tags[key] = convertedVal
 		}
