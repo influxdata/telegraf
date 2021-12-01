@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -18,8 +19,8 @@ import (
 type Vault struct {
 	URL string `toml:"url"`
 
-	VaultToken       string `toml:"vault_token"`
-	VaultTokenString string `toml:"vault_token_string"`
+	Token       string `toml:"token"`
+	TokenString string `toml:"token_string"`
 
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 
@@ -37,9 +38,9 @@ var sampleConfig = `
   ## Use Vault token for authorization.
   ## Vault token configuration is mandatory.
   ## If both are empty or both are set, an error is thrown.
-  # vault_token = "/path/to/auth/token"
+  # token = "/path/to/auth/token"
   ## OR
-  vault_token_string = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
+  token_string = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -73,20 +74,20 @@ func (n *Vault) Init() error {
 		n.URL = "http://127.0.0.1:8200"
 	}
 
-	if n.VaultToken == "" && n.VaultTokenString == "" {
-		return fmt.Errorf("vault token missing")
+	if n.Token == "" && n.TokenString == "" {
+		return fmt.Errorf("token missing")
 	}
 
-	if n.VaultToken != "" && n.VaultTokenString != "" {
-		return fmt.Errorf("config error: both vault_token and vault_token_string are set")
+	if n.Token != "" && n.TokenString != "" {
+		return fmt.Errorf("both token and token_string are set")
 	}
 
-	if n.VaultToken != "" {
-		token, err := os.ReadFile(n.VaultToken)
+	if n.Token != "" {
+		token, err := os.ReadFile(n.Token)
 		if err != nil {
 			return fmt.Errorf("reading file failed: %v", err)
 		}
-		n.VaultTokenString = strings.TrimSpace(string(token))
+		n.TokenString = strings.TrimSpace(string(token))
 	}
 
 	tlsCfg, err := n.ClientConfig.TLSConfig()
@@ -125,7 +126,7 @@ func (n *Vault) loadJSON(url string, v interface{}) error {
 		return err
 	}
 
-	req.Header.Set("X-Vault-Token", n.VaultTokenString)
+	req.Header.Set("X-Vault-Token", n.TokenString)
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := n.roundTripper.RoundTrip(req)
@@ -156,7 +157,11 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 	for _, counters := range sysMetrics.Counters {
 		tags := make(map[string]string)
 		for key, val := range counters.baseInfo.Labels {
-			tags[key] = val.(string)
+			convertedVal, err := internal.ToString(val)
+			if err != nil {
+				return fmt.Errorf("error converting value: %s", err)
+			}
+			tags[key] = convertedVal
 		}
 
 		fields := map[string]interface{}{
@@ -174,7 +179,11 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 	for _, gauges := range sysMetrics.Gauges {
 		tags := make(map[string]string)
 		for key, val := range gauges.baseInfo.Labels {
-			tags[key] = val.(string)
+			convertedVal, err := internal.ToString(val)
+			if err != nil {
+				return fmt.Errorf("error converting value: %s", err)
+			}
+			tags[key] = convertedVal
 		}
 
 		fields := map[string]interface{}{
@@ -187,7 +196,11 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 	for _, summary := range sysMetrics.Summaries {
 		tags := make(map[string]string)
 		for key, val := range summary.baseInfo.Labels {
-			tags[key] = val.(string)
+			convertedVal, err := internal.ToString(val)
+			if err != nil {
+				return fmt.Errorf("error converting value: %s", err)
+			}
+			tags[key] = convertedVal
 		}
 
 		fields := map[string]interface{}{

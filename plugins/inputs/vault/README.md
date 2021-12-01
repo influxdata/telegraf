@@ -14,9 +14,9 @@ The Vault plugin could grab metrics from every Vault agent of the cluster. Teleg
   ## Use auth token for authorization.
   ## Vault token configuration is mandatory.
   ## If both are empty or both are set, an error is thrown.
-  # vault_token = "/path/to/auth/token"
+  # token = "/path/to/auth/token"
   ## OR
-  vault_token_string = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
+  token_string = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
