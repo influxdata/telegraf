@@ -5,7 +5,6 @@ import (
 	"compress/zlib"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -46,7 +45,6 @@ func TestSerializer(t *testing.T) {
 		var obj GelfObject
 		err = json.Unmarshal([]byte(r), &obj)
 		require.NoError(t, err)
-		fmt.Println(r)
 
 		require.Equal(t, obj["version"], "1.1")
 		require.Equal(t, obj["_name"], "testing")
