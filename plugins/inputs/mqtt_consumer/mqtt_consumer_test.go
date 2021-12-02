@@ -350,6 +350,36 @@ func TestTopicTag(t *testing.T) {
 				),
 			},
 		},
+		{
+			name:  "topic parsing configured without fields",
+			topic: "telegraf/123/test/hello",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "telegraf/+/test/hello",
+					Measurement: "_/_/measurement/_",
+					Tags:        "testTag/_/_/_",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"testTag": "telegraf",
+					},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

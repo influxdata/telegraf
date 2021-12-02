@@ -96,10 +96,6 @@ var sampleConfig = `
     "telegraf/+/mem",
     "sensors/#",
   ]
-  ## Enable extracting tag values from MQTT topics
-  ## _ denotes an ignored entry in the topic path
-  # topic_tags = "_/format/client/_"
-  # topic_measurement = "measurement/_/_/_"
   # topic_fields = "_/_/_/temperature" 
   ## The message topic will be stored in a tag specified by this value.  If set
   ## to the empty string no topic tag will be created.
@@ -199,15 +195,15 @@ func (m *MQTTConsumer) Init() error {
 		m.TopicParsing[i].SplitFields = strings.Split(p.Fields, "/")
 		m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
 
-		if len(splitMeasurement) != len(m.TopicParsing[i].SplitTopic) {
+		if len(splitMeasurement) != len(m.TopicParsing[i].SplitTopic) && p.Topic != "" {
 			return fmt.Errorf("config error topic parsing: measurement length does not equal topic length")
 		}
 
-		if len(m.TopicParsing[i].SplitFields) != len(m.TopicParsing[i].SplitTopic) {
+		if len(m.TopicParsing[i].SplitFields) != len(m.TopicParsing[i].SplitTopic) && p.Fields != "" {
 			return fmt.Errorf("config error topic parsing: fields length does not equal topic length")
 		}
 
-		if len(m.TopicParsing[i].SplitTags) != len(m.TopicParsing[i].SplitTopic) {
+		if len(m.TopicParsing[i].SplitTags) != len(m.TopicParsing[i].SplitTopic) && p.Tags != "" {
 			return fmt.Errorf("config error topic parsing: tags length does not equal topic length")
 		}
 	}
@@ -408,7 +404,6 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 
 // parseFields gets multiple fields from the topic based on the user configuration (TopicParsing.Fields)
 func parseMetric(keys []string, values []string, types map[string]string, isTag bool, metric telegraf.Metric) error {
-	var metricFound bool
 	for i, k := range keys {
 		if k == "_" {
 			continue
@@ -416,18 +411,13 @@ func parseMetric(keys []string, values []string, types map[string]string, isTag 
 
 		if isTag {
 			metric.AddTag(k, values[i])
-			metricFound = true
 		} else {
 			newType, err := typeConvert(types, values[i], k)
 			if err != nil {
 				return err
 			}
 			metric.AddField(k, newType)
-			metricFound = true
 		}
-	}
-	if !metricFound {
-		return fmt.Errorf("no fields or tags found")
 	}
 	return nil
 }
