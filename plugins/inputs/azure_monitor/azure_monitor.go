@@ -330,6 +330,8 @@ func (am *AzureMonitor) createResourceTargetFromResourceGroupTarget(target *Reso
 	}
 
 	for _, value := range bodyData["value"].([]interface{}) {
+		fullResourceID := strings.Split(value.(map[string]interface{})["id"].(string), "/")
+		resourceID := strings.Join(fullResourceID[3:], "/")
 		resourceType := value.(map[string]interface{})["type"].(string)
 		resourceIndex := target.getResourceWithResourceTypeIndex(resourceType)
 
@@ -337,8 +339,6 @@ func (am *AzureMonitor) createResourceTargetFromResourceGroupTarget(target *Reso
 			continue
 		}
 
-		resourceName := value.(map[string]interface{})["name"].(string)
-		resourceID := fmt.Sprintf("resourceGroups/%s/providers/%s/%s", target.ResourceGroup, resourceType, resourceName)
 		resourceTarget := NewResourceTarget(resourceID, target.Resources[resourceIndex].Metrics, target.Resources[resourceIndex].Aggregation)
 
 		am.ResourceTargets = append(am.ResourceTargets, resourceTarget)
