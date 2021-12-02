@@ -20,8 +20,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
@@ -447,6 +445,7 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 
 		// Try with the new format
 		if creator, found := parsers.Parsers[format]; found {
+			t.Logf("using new format parser for %q...", format)
 			parserNew := creator(formatCfg.MetricName)
 			if settings, found := override[format]; found {
 				s := reflect.Indirect(reflect.ValueOf(parserNew))
@@ -466,6 +465,7 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 		// Try with the old format
 		parserOld, err := parsers.NewParser(formatCfg)
 		if err == nil {
+			t.Logf("using old format parser for %q...", format)
 			models.SetLoggerOnPlugin(parserOld, logger)
 			if p, ok := parserOld.(telegraf.Initializer); ok {
 				require.NoError(t, p.Init())
@@ -611,6 +611,7 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 
 		// Try with the new format
 		if creator, found := parsers.Parsers[format]; found {
+			t.Logf("using new format parser for %q...", format)
 			parserNew := creator(formatCfg.MetricName)
 			if settings, found := override[format]; found {
 				s := reflect.Indirect(reflect.ValueOf(parserNew))
@@ -630,6 +631,7 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 		// Try with the old format
 		parserOld, err := parsers.NewParser(formatCfg)
 		if err == nil {
+			t.Logf("using old format parser for %q...", format)
 			models.SetLoggerOnPlugin(parserOld, logger)
 			if p, ok := parserOld.(telegraf.Initializer); ok {
 				require.NoError(t, p.Init())
