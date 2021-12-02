@@ -284,6 +284,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		for _, nonRetryableStatusCode := range h.NonRetryableStatusCodes {
 			if resp.StatusCode == nonRetryableStatusCode {
+				h.Log.Errorf("Received non-retryable status %v. Metrics are lost.", resp.StatusCode)
 				return nil
 			}
 		}
