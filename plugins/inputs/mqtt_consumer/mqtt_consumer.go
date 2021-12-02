@@ -195,7 +195,7 @@ func (m *MQTTConsumer) Init() error {
 		m.TopicParsing[i].SplitFields = strings.Split(p.Fields, "/")
 		m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
 
-		if len(splitMeasurement) != len(m.TopicParsing[i].SplitTopic) && p.Topic != "" {
+		if len(splitMeasurement) != len(m.TopicParsing[i].SplitTopic) && len(splitMeasurement) != 1 {
 			return fmt.Errorf("config error topic parsing: measurement length does not equal topic length")
 		}
 
