@@ -695,18 +695,26 @@ func (am *AzureMonitor) collectResourceTargetMetrics(body []byte) ([]*Metric, er
 	for _, value := range bodyData["value"].([]interface{}) {
 		var metric *Metric
 
-		timeSeries := value.(map[string]interface{})["timeseries"].([]interface{})[0]
-		data := timeSeries.(map[string]interface{})["data"].([]interface{})
+		timeSeries := value.(map[string]interface{})["timeseries"].([]interface{})
+
+		if len(timeSeries) == 0 {
+			metricName, fullResourceName, resourceType := getMetricDetails(value.(map[string]interface{}))
+
+			am.Log.Info("There is no timeSeries to metric: ", metricName, " for resource: ", fullResourceName, " type: ", resourceType)
+			continue
+		}
+
+		data := timeSeries[0].(map[string]interface{})["data"].([]interface{})
 
 		if len(data) == 0 {
-			metricName, fullResourceName, resourceType := getMetricWithNoValueDetails(value.(map[string]interface{}))
+			metricName, fullResourceName, resourceType := getMetricDetails(value.(map[string]interface{}))
 
 			am.Log.Info("There is no value to metric: ", metricName, " for resource: ", fullResourceName, " type: ", resourceType)
 			continue
 		}
 
 		if !isMetricHaveValue(data) {
-			metricName, fullResourceName, resourceType := getMetricWithNoValueDetails(value.(map[string]interface{}))
+			metricName, fullResourceName, resourceType := getMetricDetails(value.(map[string]interface{}))
 
 			am.Log.Info("There is no value to metric: ", metricName, " for resource: ", fullResourceName, " type: ", resourceType)
 			continue
@@ -795,7 +803,7 @@ func isMetricHaveValue(data []interface{}) bool {
 	return false
 }
 
-func getMetricWithNoValueDetails(value map[string]interface{}) (string, string, string) {
+func getMetricDetails(value map[string]interface{}) (string, string, string) {
 	metricName := value["name"].(map[string]interface{})["value"].(string)
 	resourceID := strings.Split(value["id"].(string), "/")
 	fullResourceName := resourceID[4] + "/" + resourceID[8]
