@@ -281,7 +281,7 @@ func NewParser(config *Config) (Parser, error) {
 		}
 
 		// Try to create new-style parsers the old way...
-		// TODO: Issue deprecation warning using #9857
+		// DEPRECATED: Please instantiate the parser directly instead of using this function.
 		parser = creator(config.MetricName)
 		p, ok := parser.(ParserCompatibility)
 		if !ok {
