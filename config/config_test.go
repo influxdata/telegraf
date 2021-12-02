@@ -20,10 +20,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
-	// "github.com/influxdata/telegraf/plugins/parsers/csv"
-	// "github.com/influxdata/telegraf/plugins/parsers/json_v2"
-	// "github.com/influxdata/telegraf/plugins/parsers/logfmt"
-	// "github.com/influxdata/telegraf/plugins/parsers/xpath"
 
 	"github.com/stretchr/testify/require"
 )
