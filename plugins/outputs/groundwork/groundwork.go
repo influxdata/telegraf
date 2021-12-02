@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/gwos/tcg/sdk/clients"
 	"github.com/gwos/tcg/sdk/transit"
@@ -126,6 +127,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 			},
 			Status:        transit.HostUp,
 			LastCheckTime: transit.NewTimestamp(),
+			NextCheckTime: transit.NewTimestamp(),
 			Services:      services,
 		})
 	}
@@ -213,7 +215,10 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Dynam
 	}
 
 	lastCheckTime := transit.NewTimestamp()
+	// Temporary work around to avoid error from the server.
+	nextCheckTime := transit.NewTimestamp()
 	lastCheckTime.Time = metric.Time()
+	nextCheckTime.Time = time.Now().Add(1*time.Minute)
 	serviceObject := transit.DynamicMonitoredService{
 		BaseTransitData: transit.BaseTransitData{
 			Name:  service,
@@ -222,6 +227,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Dynam
 		},
 		Status:           transit.MonitorStatus(status),
 		LastCheckTime:    lastCheckTime,
+		NextCheckTime:    nextCheckTime,
 		LastPlugInOutput: message,
 		Metrics:          nil,
 	}
@@ -254,12 +260,18 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Dynam
 		if err != nil {
 			return "", nil, err
 		}
+		if typedValue.ValueType == transit.StringType {
+			g.Log.Warn("string values are not supported, skipping")
+			continue
+		}
 
 		serviceObject.Metrics = append(serviceObject.Metrics, transit.TimeSeries{
 			MetricName: value.Key,
 			SampleType: transit.Value,
 			Interval: &transit.TimeInterval{
 				EndTime: lastCheckTime,
+				// Temporary work around to avoid error from the server.
+				StartTime: transit.NewTimestamp(),
 			},
 			Value:      typedValue,
 			Unit:       transit.UnitType(unitType),
