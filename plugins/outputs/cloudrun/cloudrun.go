@@ -32,10 +32,6 @@ var sampleConfig = `
   ## Timeout for Cloud Run message, suggested as 30s to account for handshaking
   # timeout = "30s"
 
-  ## Cloud Run service account email address
-  ## This is the authorized GCP service account email address from your GCP project
-  # cloudrun_email = The authorized service account email
-
   ## Cloud Run JSON file location
   ## This is the location of the JSON file generated from your GCP project that's authorized to send
   ## metrics into CloudRun.
@@ -77,15 +73,12 @@ type CloudRun struct {
 	accessToken string
 }
 
-// SetSerializer Allows you to use data_format
-// TODO: Should I write a test for SetSerializer method? Is there a test case elsewhere? Don't see it in registry where the interface lives...
-// 	Nothing serializer/wavefront_test.go. Nor config_test.go.
-func (h *CloudRun) SetSerializer(serializer serializers.Serializer) {
-	h.serializer = serializer
+func (cr *CloudRun) SetSerializer(serializer serializers.Serializer) {
+	cr.serializer = serializer
 }
 
-func (h *CloudRun) createHTTPClient(ctx context.Context) (*http.Client, error) {
-	tlsCfg, err := h.ClientConfig.TLSConfig()
+func (cr *CloudRun) createHTTPClient(ctx context.Context) (*http.Client, error) {
+	tlsCfg, err := cr.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -95,37 +88,37 @@ func (h *CloudRun) createHTTPClient(ctx context.Context) (*http.Client, error) {
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
 		},
-		Timeout: time.Duration(h.Timeout),
+		Timeout: time.Duration(cr.Timeout),
 	}
 
 	return client, nil
 }
 
-func (h *CloudRun) Connect() error {
-	if h.Timeout == 0 {
-		h.Timeout = config.Duration(defaultClientTimeout)
+func (cr *CloudRun) Connect() error {
+	if cr.Timeout == 0 {
+		cr.Timeout = config.Duration(defaultClientTimeout)
 	}
 
 	ctx := context.Background()
-	client, err := h.createHTTPClient(ctx)
+	client, err := cr.createHTTPClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	h.client = client
+	cr.client = client
 
 	return nil
 }
 
-func (h *CloudRun) Close() error {
+func (cr *CloudRun) Close() error {
 	return nil
 }
 
-func (h *CloudRun) Description() string {
+func (cr *CloudRun) Description() string {
 	return "A plugin that is capable of transmitting metrics over HTTPS to a Cloud Run Wavefront proxy"
 }
 
-func (h *CloudRun) SampleConfig() string {
+func (cr *CloudRun) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -142,41 +135,41 @@ func (h *CloudRun) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (h *CloudRun) write(reqBody []byte) error {
+func (cr *CloudRun) write(reqBody []byte) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 	var err error
-	req, err := http.NewRequest(defaultMethod, h.URL, reqBodyBuffer)
+	req, err := http.NewRequest(defaultMethod, cr.URL, reqBodyBuffer)
 	if err != nil {
 		return err
 	}
 
 	claims := jwt.StandardClaims{}
-	jwt.ParseWithClaims(h.accessToken, &claims, func(token *jwt.Token) (interface{}, error) {
+	jwt.ParseWithClaims(cr.accessToken, &claims, func(token *jwt.Token) (interface{}, error) {
 		return nil, nil
 	})
 
-	if h.accessToken == "" || !claims.VerifyExpiresAt(time.Now().Unix(), true) {
-		h.accessToken, err = gcp.GetAccessToken(h.JSONSecret, h.URL)
+	if cr.accessToken == "" || !claims.VerifyExpiresAt(time.Now().Unix(), true) {
+		cr.accessToken, err = gcp.GetAccessToken(cr.JSONSecret, cr.URL)
 		if err != nil {
 			return err
 		}
 	}
 
-	bearerToken := fmt.Sprintf("Bearer %s", h.accessToken)
+	bearerToken := fmt.Sprintf("Bearer %s", cr.accessToken)
 
 	req.Header.Set("User-Agent", internal.ProductToken())
 	req.Header.Set("Content-Type", defaultContentType)
 	req.Header.Set("Accept", defaultAccept)
 	req.Header.Set("Authorization", bearerToken)
 
-	for k, v := range h.Headers {
+	for k, v := range cr.Headers {
 		if strings.ToLower(k) == "host" {
 			req.Host = v
 		}
 		req.Header.Set(k, v)
 	}
 
-	resp, err := h.client.Do(req)
+	resp, err := cr.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -187,7 +180,7 @@ func (h *CloudRun) write(reqBody []byte) error {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("when writing to [%s] received status code: %d", h.URL, resp.StatusCode)
+		return fmt.Errorf("when writing to [%s] received status code: %d", cr.URL, resp.StatusCode)
 	}
 
 	return nil
