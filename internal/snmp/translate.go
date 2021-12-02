@@ -17,13 +17,27 @@ import (
 var m sync.Mutex
 var once sync.Once
 
-func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
+func appendPath(path string) {
 	m.Lock()
 	defer m.Unlock()
+
+	gosmi.AppendPath(path)
+}
+
+func loadModule(path string) error {
+	m.Lock()
+	defer m.Unlock()
+
+	_, err := gosmi.LoadModule(path)
+	return err
+}
+
+func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 	once.Do(gosmi.Init)
+
 	var folders []string
 	for _, mibPath := range paths {
-		gosmi.AppendPath(mibPath)
+		appendPath(mibPath)
 		folders = append(folders, mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
 			// symlinks are files so we need to double check if any of them are folders
@@ -40,14 +54,14 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 		if err != nil {
 			return fmt.Errorf("Filepath could not be walked %v", err)
 		}
+
 		for _, folder := range folders {
 			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 				// checks if file or directory
 				if info.IsDir() {
-					gosmi.AppendPath(path)
+					appendPath(path)
 				} else if info.Mode()&os.ModeSymlink == 0 {
-					_, err := gosmi.LoadModule(info.Name())
-					if err != nil {
+					if err := loadModule(info.Name()); err != nil {
 						log.Warnf("Module could not be loaded %v", err)
 					}
 				}
