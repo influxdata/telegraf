@@ -16,6 +16,7 @@ import (
 // or gosmi will fail without saying why
 var m sync.Mutex
 var once sync.Once
+var cache = make(map[string]bool)
 
 func appendPath(path string) {
 	m.Lock()
@@ -32,11 +33,22 @@ func loadModule(path string) error {
 	return err
 }
 
+func ClearCache() {
+	cache = make(map[string]bool)
+}
+
 func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 	once.Do(gosmi.Init)
 
-	var folders []string
 	for _, mibPath := range paths {
+		folders := []string{}
+
+		// Check if we loaded that path already and skip it if so
+		if cache[mibPath] {
+			continue
+		}
+		cache[mibPath] = true
+
 		appendPath(mibPath)
 		folders = append(folders, mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
@@ -71,7 +83,6 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 				return fmt.Errorf("Filepath could not be walked %v", err)
 			}
 		}
-		folders = []string{}
 	}
 	return nil
 }
