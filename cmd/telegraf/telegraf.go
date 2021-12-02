@@ -261,7 +261,7 @@ func runAgent(ctx context.Context,
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
-	if *fTest || *fTestWait != 0 {
+	if !*fRunOnce && (*fTest || *fTestWait != 0) {
 		log.Print(color.RedString("W! Outputs are not used in testing mode!"))
 	} else {
 		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
