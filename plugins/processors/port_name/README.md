@@ -8,7 +8,7 @@ If the source was found in tag, the service name will be added as a tag. If the 
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Configuration
+## Configuration
 
 ```toml
 [[processors.port_name]]
@@ -30,7 +30,7 @@ Telegraf minimum version: Telegraf 1.15.0
   # protocol_field = "proto"
 ```
 
-### Example
+## Example
 
 ```diff
 - measurement,port=80 field=123 1560540094000000000

@@ -477,7 +477,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					Id:    aws.String("average_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_average")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &filtered.metrics[j],
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticAverage),
 					},
@@ -489,7 +489,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					Id:    aws.String("maximum_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_maximum")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &filtered.metrics[j],
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticMaximum),
 					},
@@ -501,7 +501,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					Id:    aws.String("minimum_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_minimum")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &filtered.metrics[j],
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticMinimum),
 					},
@@ -513,7 +513,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					Id:    aws.String("sum_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_sum")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &filtered.metrics[j],
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticSum),
 					},
@@ -525,7 +525,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 					Id:    aws.String("sample_count_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_sample_count")),
 					MetricStat: &types.MetricStat{
-						Metric: &metric,
+						Metric: &filtered.metrics[j],
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
 						Stat:   aws.String(StatisticSampleCount),
 					},

@@ -4,7 +4,7 @@ The Bond input plugin collects network bond interface status for both the
 network bond interface as well as slave interfaces.
 The plugin collects these metrics from `/proc/net/bonding/*` files.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[inputs.bond]]
@@ -18,7 +18,7 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
   # bond_interfaces = ["bond0"]
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - bond
   - active_slave (for active-backup mode)
@@ -29,9 +29,9 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
   - status
   - count
 
-### Description:
+## Description
 
-```
+```shell
 active_slave
   Currently active slave interface for active-backup mode.
 
@@ -45,7 +45,7 @@ count
   Number of slaves attached to bond
 ```
 
-### Tags:
+## Tags
 
 - bond
   - bond
@@ -54,11 +54,11 @@ count
   - bond
   - interface
 
-### Example output:
+## Example output
 
 Configuration:
 
-```
+```toml
 [[inputs.bond]]
   ## Sets 'proc' directory path
   ## If not specified, then default is /proc
@@ -72,13 +72,13 @@ Configuration:
 
 Run:
 
-```
+```shell
 telegraf --config telegraf.conf --input-filter bond --test
 ```
 
 Output:
 
-```
+```shell
 * Plugin: inputs.bond, Collection 1
 > bond,bond=bond1,host=local active_slave="eth0",status=1i 1509704525000000000
 > bond_slave,bond=bond1,interface=eth0,host=local status=1i,failures=0i 1509704525000000000

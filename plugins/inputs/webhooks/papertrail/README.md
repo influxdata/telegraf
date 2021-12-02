@@ -28,7 +28,7 @@ Events from Papertrail come in two forms:
 
 When a callback is received, an event-based point will look similar to:
 
-```
+```shell
 papertrail,host=myserver.example.com,event=saved_search_name count=1i,source_name="abc",program="CROND",severity="Info",source_id=2i,message="message body",source_ip="208.75.57.121",id=7711561783320576i,facility="Cron",url="https://papertrailapp.com/searches/42?centered_on_id=7711561783320576",search_id=42i 1453248892000000000
 ```
 
@@ -41,6 +41,6 @@ papertrail,host=myserver.example.com,event=saved_search_name count=1i,source_nam
 
 When a callback is received, a count-based point will look similar to:
 
-```
+```shell
 papertrail,host=myserver.example.com,event=saved_search_name count=3i 1453248892000000000
 ```

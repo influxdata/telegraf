@@ -80,7 +80,7 @@ type valType = nameMap
 type mapFunc func(agent string) (nameMap, error)
 type makeTableFunc func(string) (*si.Table, error)
 
-type sigMap map[string](chan struct{})
+type sigMap map[string]chan struct{}
 
 type IfName struct {
 	SourceTag string `toml:"tag"`
@@ -96,24 +96,24 @@ type IfName struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	ifTable  *si.Table `toml:"-"`
-	ifXTable *si.Table `toml:"-"`
+	ifTable  *si.Table
+	ifXTable *si.Table
 
-	lock  sync.Mutex `toml:"-"`
-	cache *TTLCache  `toml:"-"`
+	lock  sync.Mutex
+	cache *TTLCache
 
-	parallel parallel.Parallel    `toml:"-"`
-	acc      telegraf.Accumulator `toml:"-"`
+	parallel parallel.Parallel
+	acc      telegraf.Accumulator
 
-	getMapRemote mapFunc       `toml:"-"`
-	makeTable    makeTableFunc `toml:"-"`
+	getMapRemote mapFunc
+	makeTable    makeTableFunc
 
-	gsBase snmp.GosnmpWrapper `toml:"-"`
+	gsBase snmp.GosnmpWrapper
 
-	sigs sigMap `toml:"-"`
+	sigs sigMap
 }
 
-const minRetry time.Duration = 5 * time.Minute
+const minRetry = 5 * time.Minute
 
 func (d *IfName) SampleConfig() string {
 	return sampleConfig

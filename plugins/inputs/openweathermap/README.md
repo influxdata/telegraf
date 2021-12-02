@@ -6,11 +6,11 @@ To use this plugin you will need an [api key][] (app_id).
 
 City identifiers can be found in the [city list][]. Alternately you
 can [search][] by name; the `city_id` can be found as the last digits
-of the URL: https://openweathermap.org/city/2643743. Language
+of the URL: <https://openweathermap.org/city/2643743>. Language
 identifiers can be found in the [lang list][]. Documentation for
 condition ID, icon, and main is at [weather conditions][].
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.openweathermap]]
@@ -44,7 +44,7 @@ condition ID, icon, and main is at [weather conditions][].
   interval = "10m"
 ```
 
-### Metrics
+## Metrics
 
 - weather
   - tags:
@@ -66,10 +66,9 @@ condition ID, icon, and main is at [weather conditions][].
     - condition_description (string, localized long description)
     - condition_icon
 
+## Example Output
 
-### Example Output
-
-```
+```shell
 > weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=* cloudiness=1i,condition_description="clear sky",condition_icon="01d",humidity=35i,pressure=1012,rain=0,sunrise=1570630329000000000i,sunset=1570671689000000000i,temperature=21.52,visibility=16093i,wind_degrees=280,wind_speed=5.7 1570659256000000000
 > weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=3h cloudiness=0i,condition_description="clear sky",condition_icon="01n",humidity=41i,pressure=1010,rain=0,temperature=22.34,wind_degrees=249.393,wind_speed=2.085 1570665600000000000
 > weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=6h cloudiness=0i,condition_description="clear sky",condition_icon="01n",humidity=50i,pressure=1012,rain=0,temperature=17.09,wind_degrees=310.754,wind_speed=3.009 1570676400000000000

@@ -44,6 +44,8 @@ HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
 	LDFLAGS += -X main.version=$(version)
+else
+	LDFLAGS += -X main.version=$(version)-$(commit)
 endif
 
 # Go built-in race detector works only for 64 bits architectures.
@@ -148,26 +150,24 @@ lint-install:
 
 .PHONY: lint
 lint:
-	ifeq (, $(shell which golangci-lint))
-		$(info golangci-lint can't be found, please run: make lint-install)
-		exit 1
-	endif
-
+	@which golangci-lint >/dev/null 2>&1 || { \
+		echo "golangci-lint not found, please run: make lint-install"; \
+		exit 1; \
+	}
 	golangci-lint run
 
-	ifeq (, $(shell which markdownlint))
-		$(info markdownlint can't be found, please run: make lint-install)
-		exit 1
-	endif
-
-	markdownlint-cli
+	@which markdownlint >/dev/null 2>&1 || { \
+		echo "markdownlint not found, please run: make lint-install"; \
+		exit 1; \
+	}
+	markdownlint .
 
 .PHONY: lint-branch
 lint-branch:
-	ifeq (, $(shell which golangci-lint))
-		$(info golangci-lint can't be found, please run: make lint-install)
-		exit 1
-	endif
+	@which golangci-lint >/dev/null 2>&1 || { \
+		echo "golangci-lint not found, please run: make lint-install"; \
+		exit 1; \
+	}
 
 	golangci-lint run --new-from-rev master
 
