@@ -44,10 +44,13 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 		folders := []string{}
 
 		// Check if we loaded that path already and skip it if so
-		if cache[mibPath] {
+		m.Lock()
+		cached := cache[mibPath]
+		cache[mibPath] = true
+		m.Unlock()
+		if cached {
 			continue
 		}
-		cache[mibPath] = true
 
 		appendPath(mibPath)
 		folders = append(folders, mibPath)
