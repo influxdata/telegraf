@@ -224,6 +224,36 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return errors.Wrap(err, "build gps")
 			}
 			influx.Gps = append(influx.Gps, &m)
+		case "able_metrics":
+			m := Able{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build ABLE")
+			}
+			influx.Able = append(influx.Able, &m)
+		case "camera_control_metrics":
+			m := CameraControl{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build Camera Control")
+			}
+			influx.CameraControl = append(influx.CameraControl, &m)
+		case "uploader_metrics":
+			m := Uploader{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build Uploader")
+			}
+			influx.Uploader = append(influx.Uploader, &m)
+		case "segnet_metrics":
+			m := SegNet{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build Segnet")
+			}
+			influx.SegNet = append(influx.SegNet, &m)
+		case "detectnet_metrics":
+			m := DetectNet{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build Detectnet")
+			}
+			influx.Detectnet = append(influx.Detectnet, &m)
 		case "glog":
 			m := Glog{}
 			if err := json.Unmarshal(b, &m); err != nil {

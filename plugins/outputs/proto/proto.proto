@@ -673,6 +673,115 @@ message GPS {
   double timestamp = 4;
 }
 
+message Uploader {
+
+  message Fields {
+    string auth_token_status = 1;
+    string initialized = 2;
+    string uploading_status = 3;
+  }
+
+  message Tags {
+    string host = 1;
+    string url = 2;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+
+message DetectNet {
+
+  message Fields {
+    string detection_sent = 1;
+    string frames_loaded = 2;
+    string frames_proccessed = 3;
+    string initialized = 4;
+    string net_processed = 5;
+    string tracker_processed = 6;
+  }
+
+  message Tags {
+    string host = 1;
+    string url = 2;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message SegNet {
+
+  message Fields {
+    string data_sent = 1;
+    string detection_loaded = 2;
+    string frames_loaded = 3;
+    string frames_proccessed = 4;
+    string initialized = 5;
+    string net_processed = 6;
+  }
+
+  message Tags {
+    string host = 1;
+    string url = 2;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message Able {
+
+  message Fields {
+    string alpr_loaded = 1;
+    string context_frame_loaded = 2;
+    string frame_gps_time_diff_ok = 3;
+    string frame_model_time_diff_ok = 4;
+    string gps_active = 5;
+    string gps_time_status = 6;
+    string initialized = 7;
+    string lpr_frames_loaded = 8;
+    string model_data_loaded = 9;
+    string route_loaded = 10;
+  }
+
+  message Tags {
+    string host = 1;
+    string url = 2;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
+message CameraControl {
+
+  message Fields {
+    string autoexposure_status = 1;
+    string initialized = 2;
+    string pipeline_status = 3;
+  }
+
+  message Tags {
+    string host = 1;
+    string url = 2;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
 message Influx {
   repeated Kernel kernel = 1;
   repeated LinuxSysctlFs linux_sysctl_fs = 2;
@@ -696,6 +805,11 @@ message Influx {
   repeated Diskio diskio = 20;
   repeated Netstat netstat = 21;
   repeated GPS gps = 22;
+  repeated Able able = 23;
+  repeated CameraControl cameraControl = 24;
+  repeated SegNet segNet = 25;
+  repeated DetectNet detectnet = 26;
+  repeated Uploader uploader = 27;
 }
 
 

@@ -162,7 +162,7 @@ docker-image:
 	docker build -f scripts/stretch.docker -t "telegraf:$(commit)" .
 
 hayden-docker-image:
-	docker build --platform linux/arm64 -f scripts/stretch.docker -t "103206102534.dkr.ecr.us-west-2.amazonaws.com/telegraf-base:$(commit)" .
+	docker buildx build --platform linux/arm64 -f scripts/stretch.docker -t "103206102534.dkr.ecr.us-west-2.amazonaws.com/telegraf-base:$(commit)"  --load .
 
 hayden-push: login-ecr
 	@echo "Pushing 103206102534.dkr.ecr.us-west-2.amazonaws.com/telegraf-base:$(commit) container..."

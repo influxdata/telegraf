@@ -9,6 +9,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
 	_ "github.com/influxdata/telegraf/plugins/inputs/execd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/file"
+	_ "github.com/influxdata/telegraf/plugins/inputs/http"
 	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
 	_ "github.com/influxdata/telegraf/plugins/inputs/interrupts"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kernel"
