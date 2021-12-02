@@ -256,16 +256,6 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 
-	if *fRunOnce {
-		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Once(ctx, wait)
-	}
-
-	if *fTest || *fTestWait != 0 {
-		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, wait)
-	}
-
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
@@ -283,6 +273,16 @@ func runAgent(ctx context.Context,
 	}
 	if count, found := c.Deprecations["outputs"]; found && (count[0] > 0 || count[1] > 0) {
 		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
+	}
+
+	if *fRunOnce {
+		wait := time.Duration(*fTestWait) * time.Second
+		return ag.Once(ctx, wait)
+	}
+
+	if *fTest || *fTestWait != 0 {
+		wait := time.Duration(*fTestWait) * time.Second
+		return ag.Test(ctx, wait)
 	}
 
 	if *fPidfile != "" {
