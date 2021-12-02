@@ -130,7 +130,7 @@ func TestFormatMetricPoint(t *testing.T) {
 		},
 	}
 
-	s := WavefrontSerializer{}
+	s := WavefrontSerializer{ConvertPaths: true}
 
 	for _, pt := range pointTests {
 		bout := formatMetricPoint(new(buffer), pt.ptIn, &s)
@@ -180,7 +180,8 @@ func TestSerializeMetricFloat(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s := WavefrontSerializer{}
+	s := WavefrontSerializer{ConvertPaths: true}
+	fmt.Println("s.ConvertPaths", s.ConvertPaths)
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
@@ -199,7 +200,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s := WavefrontSerializer{}
+	s := WavefrontSerializer{ConvertPaths: true}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
@@ -218,7 +219,7 @@ func TestSerializeMetricBoolTrue(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s := WavefrontSerializer{}
+	s := WavefrontSerializer{ConvertPaths: true}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
@@ -237,7 +238,7 @@ func TestSerializeMetricBoolFalse(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s := WavefrontSerializer{}
+	s := WavefrontSerializer{ConvertPaths: true}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
@@ -256,7 +257,7 @@ func TestSerializeMetricFieldValue(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s := WavefrontSerializer{}
+	s := WavefrontSerializer{ConvertPaths: true}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
@@ -275,7 +276,7 @@ func TestSerializeMetricPrefix(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s := WavefrontSerializer{Prefix: "telegraf."}
+	s := WavefrontSerializer{Prefix: "telegraf.", ConvertPaths: true}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
