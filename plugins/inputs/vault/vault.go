@@ -31,7 +31,7 @@ type Vault struct {
 
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 
-var sampleConfig = `
+const sampleConfig = `
   ## URL for the Vault agent
   # url = "http://127.0.0.1:8200"
 
@@ -122,7 +122,7 @@ func (n *Vault) Gather(acc telegraf.Accumulator) error {
 func (n *Vault) loadJSON(url string) (*SysMetrics, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return &SysMetrics{}, err
+		return nil, err
 	}
 
 	req.Header.Set("X-Vault-Token", n.Token)
@@ -130,18 +130,18 @@ func (n *Vault) loadJSON(url string) (*SysMetrics, error) {
 
 	resp, err := n.roundTripper.RoundTrip(req)
 	if err != nil {
-		return &SysMetrics{}, fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return nil, fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return &SysMetrics{}, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
+		return nil, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
 	var metrics SysMetrics
 	err = json.NewDecoder(resp.Body).Decode(&metrics)
 	if err != nil {
-		return &SysMetrics{}, fmt.Errorf("error parsing json response: %s", err)
+		return nil, fmt.Errorf("error parsing json response: %s", err)
 	}
 
 	return &metrics, nil
