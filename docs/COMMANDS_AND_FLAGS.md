@@ -36,8 +36,8 @@ telegraf [flags]
 |`--section-filter`               |filter config sections to output, separator is `:`.  Valid values are `agent`, `global_tags`, `outputs`, `processors`, `aggregators` and `inputs`|
 |`--sample-config`                |print out full sample configuration|
 |`--once`                         |enable once mode: gather metrics once, write them, and exit|
-|`--test`                         |enable test mode: gather metrics once and print them|
-|`--test-wait`                    |wait up to this many seconds for service inputs to complete in test or once mode|
+|`--test`                         |enable test mode: gather metrics once and print them.<br>**No outputs are written!**|
+|`--test-wait`                    |wait up to this many seconds for service inputs to complete in test or once mode. <br> **Implies `--test` if not used with `--once`**|
 |`--usage <plugin>`               |print usage for a plugin, ie, `telegraf --usage mysql`|
 |`--version`                      |display the version and exit|
 
