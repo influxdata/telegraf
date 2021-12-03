@@ -175,7 +175,6 @@ metadata:
   name: telegraf-k8s-{{ .Release.Name }}
 ```
 
-
 ### Consul Service Discovery
 
 Enabling this option and configuring consul `agent` url will allow the plugin to query
