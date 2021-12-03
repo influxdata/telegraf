@@ -83,7 +83,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("Filepath could not be walked %v", err)
+				return fmt.Errorf("Filepath could not be walked: %v", err)
 			}
 		}
 	}
