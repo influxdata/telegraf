@@ -39,9 +39,9 @@ The commands & flags are:
   --sample-config                print out full sample configuration
   --once                         enable once mode: gather metrics once, write them, and exit
   --test                         enable test mode: gather metrics once and print them.
-                                 NO OUTPUTS ARE WRITTEN!
+                                 No outputs are executed!
   --test-wait                    wait up to this many seconds for service inputs to complete
-                                 in test or once mode. IMPLIES --test if not used with --once.
+                                 in test or once mode. Implies --test if not used with --once.
   --usage <plugin>               print usage for a plugin, ie, 'telegraf --usage mysql'
   --version                      display the version and exit
 
