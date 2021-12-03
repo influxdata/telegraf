@@ -111,12 +111,7 @@ func (n *Vault) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	err = buildVaultMetrics(acc, sysMetrics)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return buildVaultMetrics(acc, sysMetrics)
 }
 
 func (n *Vault) loadJSON(url string) (*SysMetrics, error) {
