@@ -137,7 +137,7 @@ If using node level scrape scope, `pod_scrape_interval` specifies how often (in 
 
 The pod running telegraf will need to have the proper rbac configuration in order to be allowed to call the k8s api to discover and watch pods in the cluster.
 A typical configuration will create a service account, a cluster role with the appropriate rules and a cluster role binding to tie the cluster role to the service account.
-Example of configuration:
+Example of configuration for cluster level discovery:
 
 ```yaml
 ---
