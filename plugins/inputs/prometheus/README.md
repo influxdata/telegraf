@@ -135,6 +135,47 @@ env:
 
 If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated. If not specified, the default is 60 seconds.
 
+The pod running telegraf will need to have the proper rbac configuration in order to be allowed to call the k8s api to discover and watch pods in the cluster.
+A typical configuration will create a service account, a cluster role with the appropriate rules and a cluster role binding to tie the cluster role to the service account.
+Example of configuration:
+
+```yaml
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: telegraf-k8s-role-{{.Release.Name}}
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+---
+# Rolebinding for namespace to cluster-admin
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: telegraf-k8s-role-{{.Release.Name}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: telegraf-k8s-role-{{.Release.Name}}
+subjects:
+- kind: ServiceAccount
+  name: telegraf-k8s-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: telegraf-k8s-{{ .Release.Name }}
+```
+
+
 ### Consul Service Discovery
 
 Enabling this option and configuring consul `agent` url will allow the plugin to query
