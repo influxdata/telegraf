@@ -291,27 +291,27 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 }
 
 func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
-	gs, _ := snmp.NewWrapper(d.ClientConfig)
-	err := gs.SetAgent(agent)
+	gs, err := snmp.NewWrapper(d.ClientConfig)
 	if err != nil {
+		return nil, fmt.Errorf("parsing SNMP client config: %w", err)
+	}
+
+	if err = gs.SetAgent(agent); err != nil {
 		return nil, fmt.Errorf("parsing agent tag: %w", err)
 	}
 
-	err = gs.Connect()
-	if err != nil {
+	if err = gs.Connect(); err != nil {
 		return nil, fmt.Errorf("connecting when fetching interface names: %w", err)
 	}
 
 	//try ifXtable and ifName first.  if that fails, fall back to
 	//ifTable and ifDescr
 	var m nameMap
-	m, err = buildMap(gs, d.ifXTable, "ifName")
-	if err == nil {
+	if m, err = buildMap(gs, d.ifXTable, "ifName"); err == nil {
 		return m, nil
 	}
 
-	m, err = buildMap(gs, d.ifTable, "ifDescr")
-	if err == nil {
+	if m, err = buildMap(gs, d.ifTable, "ifDescr"); err == nil {
 		return m, nil
 	}
 
