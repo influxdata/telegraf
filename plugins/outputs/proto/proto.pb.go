@@ -1658,6 +1658,77 @@ func (x *Uploader) GetTimestamp() float64 {
 	return 0
 }
 
+type UploaderStats struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Fields    *UploaderStats_Fields `protobuf:"bytes,1,opt,name=fields,proto3" json:"fields,omitempty"`
+	Name      string                `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Tags      *UploaderStats_Tags   `protobuf:"bytes,3,opt,name=tags,proto3" json:"tags,omitempty"`
+	Timestamp float64               `protobuf:"fixed64,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+}
+
+func (x *UploaderStats) Reset() {
+	*x = UploaderStats{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_proto_msgTypes[23]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UploaderStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploaderStats) ProtoMessage() {}
+
+func (x *UploaderStats) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_proto_msgTypes[23]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploaderStats.ProtoReflect.Descriptor instead.
+func (*UploaderStats) Descriptor() ([]byte, []int) {
+	return file_proto_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *UploaderStats) GetFields() *UploaderStats_Fields {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
+}
+
+func (x *UploaderStats) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UploaderStats) GetTags() *UploaderStats_Tags {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *UploaderStats) GetTimestamp() float64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
 type DetectNet struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1672,7 +1743,7 @@ type DetectNet struct {
 func (x *DetectNet) Reset() {
 	*x = DetectNet{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[23]
+		mi := &file_proto_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1685,7 +1756,7 @@ func (x *DetectNet) String() string {
 func (*DetectNet) ProtoMessage() {}
 
 func (x *DetectNet) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[23]
+	mi := &file_proto_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1698,7 +1769,7 @@ func (x *DetectNet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DetectNet.ProtoReflect.Descriptor instead.
 func (*DetectNet) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{23}
+	return file_proto_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *DetectNet) GetFields() *DetectNet_Fields {
@@ -1743,7 +1814,7 @@ type SegNet struct {
 func (x *SegNet) Reset() {
 	*x = SegNet{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[24]
+		mi := &file_proto_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1756,7 +1827,7 @@ func (x *SegNet) String() string {
 func (*SegNet) ProtoMessage() {}
 
 func (x *SegNet) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[24]
+	mi := &file_proto_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1769,7 +1840,7 @@ func (x *SegNet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SegNet.ProtoReflect.Descriptor instead.
 func (*SegNet) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{24}
+	return file_proto_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *SegNet) GetFields() *SegNet_Fields {
@@ -1814,7 +1885,7 @@ type Able struct {
 func (x *Able) Reset() {
 	*x = Able{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[25]
+		mi := &file_proto_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1827,7 +1898,7 @@ func (x *Able) String() string {
 func (*Able) ProtoMessage() {}
 
 func (x *Able) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[25]
+	mi := &file_proto_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1840,7 +1911,7 @@ func (x *Able) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Able.ProtoReflect.Descriptor instead.
 func (*Able) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{25}
+	return file_proto_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *Able) GetFields() *Able_Fields {
@@ -1885,7 +1956,7 @@ type CameraControl struct {
 func (x *CameraControl) Reset() {
 	*x = CameraControl{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[26]
+		mi := &file_proto_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1898,7 +1969,7 @@ func (x *CameraControl) String() string {
 func (*CameraControl) ProtoMessage() {}
 
 func (x *CameraControl) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[26]
+	mi := &file_proto_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1911,7 +1982,7 @@ func (x *CameraControl) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CameraControl.ProtoReflect.Descriptor instead.
 func (*CameraControl) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{26}
+	return file_proto_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *CameraControl) GetFields() *CameraControl_Fields {
@@ -1974,12 +2045,13 @@ type Influx struct {
 	SegNet        []*SegNet        `protobuf:"bytes,25,rep,name=segNet,proto3" json:"segNet,omitempty"`
 	Detectnet     []*DetectNet     `protobuf:"bytes,26,rep,name=detectnet,proto3" json:"detectnet,omitempty"`
 	Uploader      []*Uploader      `protobuf:"bytes,27,rep,name=uploader,proto3" json:"uploader,omitempty"`
+	UploaderStats []*UploaderStats `protobuf:"bytes,28,rep,name=uploader_stats,json=uploaderStats,proto3" json:"uploader_stats,omitempty"`
 }
 
 func (x *Influx) Reset() {
 	*x = Influx{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[27]
+		mi := &file_proto_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1992,7 +2064,7 @@ func (x *Influx) String() string {
 func (*Influx) ProtoMessage() {}
 
 func (x *Influx) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[27]
+	mi := &file_proto_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2005,7 +2077,7 @@ func (x *Influx) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Influx.ProtoReflect.Descriptor instead.
 func (*Influx) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{27}
+	return file_proto_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *Influx) GetKernel() []*Kernel {
@@ -2197,6 +2269,13 @@ func (x *Influx) GetUploader() []*Uploader {
 	return nil
 }
 
+func (x *Influx) GetUploaderStats() []*UploaderStats {
+	if x != nil {
+		return x.UploaderStats
+	}
+	return nil
+}
+
 type Diskio_Fields struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2218,7 +2297,7 @@ type Diskio_Fields struct {
 func (x *Diskio_Fields) Reset() {
 	*x = Diskio_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[28]
+		mi := &file_proto_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2231,7 +2310,7 @@ func (x *Diskio_Fields) String() string {
 func (*Diskio_Fields) ProtoMessage() {}
 
 func (x *Diskio_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[28]
+	mi := &file_proto_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2336,7 +2415,7 @@ type Diskio_Tags struct {
 func (x *Diskio_Tags) Reset() {
 	*x = Diskio_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[29]
+		mi := &file_proto_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2349,7 +2428,7 @@ func (x *Diskio_Tags) String() string {
 func (*Diskio_Tags) ProtoMessage() {}
 
 func (x *Diskio_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[29]
+	mi := &file_proto_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2393,7 +2472,7 @@ type Glog_Fields struct {
 func (x *Glog_Fields) Reset() {
 	*x = Glog_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[30]
+		mi := &file_proto_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2406,7 +2485,7 @@ func (x *Glog_Fields) String() string {
 func (*Glog_Fields) ProtoMessage() {}
 
 func (x *Glog_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[30]
+	mi := &file_proto_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2463,7 +2542,7 @@ type Glog_Tags struct {
 func (x *Glog_Tags) Reset() {
 	*x = Glog_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[31]
+		mi := &file_proto_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2476,7 +2555,7 @@ func (x *Glog_Tags) String() string {
 func (*Glog_Tags) ProtoMessage() {}
 
 func (x *Glog_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[31]
+	mi := &file_proto_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2538,7 +2617,7 @@ type LTE_Fields struct {
 func (x *LTE_Fields) Reset() {
 	*x = LTE_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[32]
+		mi := &file_proto_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2551,7 +2630,7 @@ func (x *LTE_Fields) String() string {
 func (*LTE_Fields) ProtoMessage() {}
 
 func (x *LTE_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[32]
+	mi := &file_proto_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2684,7 +2763,7 @@ type LTE_Tags struct {
 func (x *LTE_Tags) Reset() {
 	*x = LTE_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[33]
+		mi := &file_proto_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2697,7 +2776,7 @@ func (x *LTE_Tags) String() string {
 func (*LTE_Tags) ProtoMessage() {}
 
 func (x *LTE_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[33]
+	mi := &file_proto_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2740,7 +2819,7 @@ type SMART_Fields struct {
 func (x *SMART_Fields) Reset() {
 	*x = SMART_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[34]
+		mi := &file_proto_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2753,7 +2832,7 @@ func (x *SMART_Fields) String() string {
 func (*SMART_Fields) ProtoMessage() {}
 
 func (x *SMART_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[34]
+	mi := &file_proto_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2804,7 +2883,7 @@ type SMART_TAGS struct {
 func (x *SMART_TAGS) Reset() {
 	*x = SMART_TAGS{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[35]
+		mi := &file_proto_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2817,7 +2896,7 @@ func (x *SMART_TAGS) String() string {
 func (*SMART_TAGS) ProtoMessage() {}
 
 func (x *SMART_TAGS) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[35]
+	mi := &file_proto_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2899,7 +2978,7 @@ type Tegrastats_Fields struct {
 func (x *Tegrastats_Fields) Reset() {
 	*x = Tegrastats_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[36]
+		mi := &file_proto_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2912,7 +2991,7 @@ func (x *Tegrastats_Fields) String() string {
 func (*Tegrastats_Fields) ProtoMessage() {}
 
 func (x *Tegrastats_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[36]
+	mi := &file_proto_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3136,7 +3215,7 @@ type Tegrastats_Tags struct {
 func (x *Tegrastats_Tags) Reset() {
 	*x = Tegrastats_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[37]
+		mi := &file_proto_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3149,7 +3228,7 @@ func (x *Tegrastats_Tags) String() string {
 func (*Tegrastats_Tags) ProtoMessage() {}
 
 func (x *Tegrastats_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[37]
+	mi := &file_proto_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3199,7 +3278,7 @@ type CPU_Fields struct {
 func (x *CPU_Fields) Reset() {
 	*x = CPU_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[38]
+		mi := &file_proto_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3212,7 +3291,7 @@ func (x *CPU_Fields) String() string {
 func (*CPU_Fields) ProtoMessage() {}
 
 func (x *CPU_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[38]
+	mi := &file_proto_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3310,7 +3389,7 @@ type CPU_Tags struct {
 func (x *CPU_Tags) Reset() {
 	*x = CPU_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[39]
+		mi := &file_proto_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3323,7 +3402,7 @@ func (x *CPU_Tags) String() string {
 func (*CPU_Tags) ProtoMessage() {}
 
 func (x *CPU_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[39]
+	mi := &file_proto_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3368,7 +3447,7 @@ type Kernel_Fields struct {
 func (x *Kernel_Fields) Reset() {
 	*x = Kernel_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[40]
+		mi := &file_proto_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3381,7 +3460,7 @@ func (x *Kernel_Fields) String() string {
 func (*Kernel_Fields) ProtoMessage() {}
 
 func (x *Kernel_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[40]
+	mi := &file_proto_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3443,7 +3522,7 @@ type Kernel_Tags struct {
 func (x *Kernel_Tags) Reset() {
 	*x = Kernel_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[41]
+		mi := &file_proto_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3456,7 +3535,7 @@ func (x *Kernel_Tags) String() string {
 func (*Kernel_Tags) ProtoMessage() {}
 
 func (x *Kernel_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[41]
+	mi := &file_proto_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3500,7 +3579,7 @@ type LinuxSysctlFs_Fields struct {
 func (x *LinuxSysctlFs_Fields) Reset() {
 	*x = LinuxSysctlFs_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[42]
+		mi := &file_proto_proto_msgTypes[43]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3513,7 +3592,7 @@ func (x *LinuxSysctlFs_Fields) String() string {
 func (*LinuxSysctlFs_Fields) ProtoMessage() {}
 
 func (x *LinuxSysctlFs_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[42]
+	mi := &file_proto_proto_msgTypes[43]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3617,7 +3696,7 @@ type LinuxSysctlFs_Tags struct {
 func (x *LinuxSysctlFs_Tags) Reset() {
 	*x = LinuxSysctlFs_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[43]
+		mi := &file_proto_proto_msgTypes[44]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3630,7 +3709,7 @@ func (x *LinuxSysctlFs_Tags) String() string {
 func (*LinuxSysctlFs_Tags) ProtoMessage() {}
 
 func (x *LinuxSysctlFs_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[43]
+	mi := &file_proto_proto_msgTypes[44]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3668,7 +3747,7 @@ type System_Fields struct {
 func (x *System_Fields) Reset() {
 	*x = System_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[44]
+		mi := &file_proto_proto_msgTypes[45]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3681,7 +3760,7 @@ func (x *System_Fields) String() string {
 func (*System_Fields) ProtoMessage() {}
 
 func (x *System_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[44]
+	mi := &file_proto_proto_msgTypes[45]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3743,7 +3822,7 @@ type System_Tags struct {
 func (x *System_Tags) Reset() {
 	*x = System_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[45]
+		mi := &file_proto_proto_msgTypes[46]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3756,7 +3835,7 @@ func (x *System_Tags) String() string {
 func (*System_Tags) ProtoMessage() {}
 
 func (x *System_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[45]
+	mi := &file_proto_proto_msgTypes[46]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3874,7 +3953,7 @@ type Net_Fields struct {
 func (x *Net_Fields) Reset() {
 	*x = Net_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[46]
+		mi := &file_proto_proto_msgTypes[47]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3887,7 +3966,7 @@ func (x *Net_Fields) String() string {
 func (*Net_Fields) ProtoMessage() {}
 
 func (x *Net_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[46]
+	mi := &file_proto_proto_msgTypes[47]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4510,7 +4589,7 @@ type Net_Tags struct {
 func (x *Net_Tags) Reset() {
 	*x = Net_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[47]
+		mi := &file_proto_proto_msgTypes[48]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4523,7 +4602,7 @@ func (x *Net_Tags) String() string {
 func (*Net_Tags) ProtoMessage() {}
 
 func (x *Net_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[47]
+	mi := &file_proto_proto_msgTypes[48]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4570,7 +4649,7 @@ type Interrupts_Fields struct {
 func (x *Interrupts_Fields) Reset() {
 	*x = Interrupts_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[48]
+		mi := &file_proto_proto_msgTypes[49]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4583,7 +4662,7 @@ func (x *Interrupts_Fields) String() string {
 func (*Interrupts_Fields) ProtoMessage() {}
 
 func (x *Interrupts_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[48]
+	mi := &file_proto_proto_msgTypes[49]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4662,7 +4741,7 @@ type Interrupts_Tags struct {
 func (x *Interrupts_Tags) Reset() {
 	*x = Interrupts_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[49]
+		mi := &file_proto_proto_msgTypes[50]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4675,7 +4754,7 @@ func (x *Interrupts_Tags) String() string {
 func (*Interrupts_Tags) ProtoMessage() {}
 
 func (x *Interrupts_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[49]
+	mi := &file_proto_proto_msgTypes[50]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4763,7 +4842,7 @@ type Mem_Fields struct {
 func (x *Mem_Fields) Reset() {
 	*x = Mem_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[50]
+		mi := &file_proto_proto_msgTypes[51]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4776,7 +4855,7 @@ func (x *Mem_Fields) String() string {
 func (*Mem_Fields) ProtoMessage() {}
 
 func (x *Mem_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[50]
+	mi := &file_proto_proto_msgTypes[51]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5041,7 +5120,7 @@ type Mem_Tags struct {
 func (x *Mem_Tags) Reset() {
 	*x = Mem_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[51]
+		mi := &file_proto_proto_msgTypes[52]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5054,7 +5133,7 @@ func (x *Mem_Tags) String() string {
 func (*Mem_Tags) ProtoMessage() {}
 
 func (x *Mem_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[51]
+	mi := &file_proto_proto_msgTypes[52]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5094,7 +5173,7 @@ type Disk_Fields struct {
 func (x *Disk_Fields) Reset() {
 	*x = Disk_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[52]
+		mi := &file_proto_proto_msgTypes[53]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5107,7 +5186,7 @@ func (x *Disk_Fields) String() string {
 func (*Disk_Fields) ProtoMessage() {}
 
 func (x *Disk_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[52]
+	mi := &file_proto_proto_msgTypes[53]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5187,7 +5266,7 @@ type Disk_Tags struct {
 func (x *Disk_Tags) Reset() {
 	*x = Disk_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[53]
+		mi := &file_proto_proto_msgTypes[54]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5200,7 +5279,7 @@ func (x *Disk_Tags) String() string {
 func (*Disk_Tags) ProtoMessage() {}
 
 func (x *Disk_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[53]
+	mi := &file_proto_proto_msgTypes[54]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5265,7 +5344,7 @@ type Swap_Fields struct {
 func (x *Swap_Fields) Reset() {
 	*x = Swap_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[54]
+		mi := &file_proto_proto_msgTypes[55]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5278,7 +5357,7 @@ func (x *Swap_Fields) String() string {
 func (*Swap_Fields) ProtoMessage() {}
 
 func (x *Swap_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[54]
+	mi := &file_proto_proto_msgTypes[55]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5333,7 +5412,7 @@ type Swap_Tags struct {
 func (x *Swap_Tags) Reset() {
 	*x = Swap_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[55]
+		mi := &file_proto_proto_msgTypes[56]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5346,7 +5425,7 @@ func (x *Swap_Tags) String() string {
 func (*Swap_Tags) ProtoMessage() {}
 
 func (x *Swap_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[55]
+	mi := &file_proto_proto_msgTypes[56]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5390,7 +5469,7 @@ type Processes_Fields struct {
 func (x *Processes_Fields) Reset() {
 	*x = Processes_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[56]
+		mi := &file_proto_proto_msgTypes[57]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5403,7 +5482,7 @@ func (x *Processes_Fields) String() string {
 func (*Processes_Fields) ProtoMessage() {}
 
 func (x *Processes_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[56]
+	mi := &file_proto_proto_msgTypes[57]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5507,7 +5586,7 @@ type Processes_Tags struct {
 func (x *Processes_Tags) Reset() {
 	*x = Processes_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[57]
+		mi := &file_proto_proto_msgTypes[58]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5520,7 +5599,7 @@ func (x *Processes_Tags) String() string {
 func (*Processes_Tags) ProtoMessage() {}
 
 func (x *Processes_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[57]
+	mi := &file_proto_proto_msgTypes[58]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5563,7 +5642,7 @@ type DockerBlkio_Fields struct {
 func (x *DockerBlkio_Fields) Reset() {
 	*x = DockerBlkio_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[58]
+		mi := &file_proto_proto_msgTypes[59]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5576,7 +5655,7 @@ func (x *DockerBlkio_Fields) String() string {
 func (*DockerBlkio_Fields) ProtoMessage() {}
 
 func (x *DockerBlkio_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[58]
+	mi := &file_proto_proto_msgTypes[59]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5680,7 +5759,7 @@ type DockerBlkio_Tags struct {
 func (x *DockerBlkio_Tags) Reset() {
 	*x = DockerBlkio_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[59]
+		mi := &file_proto_proto_msgTypes[60]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5693,7 +5772,7 @@ func (x *DockerBlkio_Tags) String() string {
 func (*DockerBlkio_Tags) ProtoMessage() {}
 
 func (x *DockerBlkio_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[59]
+	mi := &file_proto_proto_msgTypes[60]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5785,7 +5864,7 @@ type DockerStats_FIELDS struct {
 func (x *DockerStats_FIELDS) Reset() {
 	*x = DockerStats_FIELDS{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[60]
+		mi := &file_proto_proto_msgTypes[61]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5798,7 +5877,7 @@ func (x *DockerStats_FIELDS) String() string {
 func (*DockerStats_FIELDS) ProtoMessage() {}
 
 func (x *DockerStats_FIELDS) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[60]
+	mi := &file_proto_proto_msgTypes[61]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5897,7 +5976,7 @@ type DockerStats_TAGS struct {
 func (x *DockerStats_TAGS) Reset() {
 	*x = DockerStats_TAGS{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[61]
+		mi := &file_proto_proto_msgTypes[62]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5910,7 +5989,7 @@ func (x *DockerStats_TAGS) String() string {
 func (*DockerStats_TAGS) ProtoMessage() {}
 
 func (x *DockerStats_TAGS) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[61]
+	mi := &file_proto_proto_msgTypes[62]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5958,7 +6037,7 @@ type DockerMem_Fields struct {
 func (x *DockerMem_Fields) Reset() {
 	*x = DockerMem_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[62]
+		mi := &file_proto_proto_msgTypes[63]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5971,7 +6050,7 @@ func (x *DockerMem_Fields) String() string {
 func (*DockerMem_Fields) ProtoMessage() {}
 
 func (x *DockerMem_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[62]
+	mi := &file_proto_proto_msgTypes[63]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6011,7 +6090,7 @@ type DockerMem_Tags struct {
 func (x *DockerMem_Tags) Reset() {
 	*x = DockerMem_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[63]
+		mi := &file_proto_proto_msgTypes[64]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6024,7 +6103,7 @@ func (x *DockerMem_Tags) String() string {
 func (*DockerMem_Tags) ProtoMessage() {}
 
 func (x *DockerMem_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[63]
+	mi := &file_proto_proto_msgTypes[64]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6102,7 +6181,7 @@ type DockerCpu_Fields struct {
 func (x *DockerCpu_Fields) Reset() {
 	*x = DockerCpu_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[64]
+		mi := &file_proto_proto_msgTypes[65]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6115,7 +6194,7 @@ func (x *DockerCpu_Fields) String() string {
 func (*DockerCpu_Fields) ProtoMessage() {}
 
 func (x *DockerCpu_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[64]
+	mi := &file_proto_proto_msgTypes[65]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6170,7 +6249,7 @@ type DockerCpu_Tags struct {
 func (x *DockerCpu_Tags) Reset() {
 	*x = DockerCpu_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[65]
+		mi := &file_proto_proto_msgTypes[66]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6183,7 +6262,7 @@ func (x *DockerCpu_Tags) String() string {
 func (*DockerCpu_Tags) ProtoMessage() {}
 
 func (x *DockerCpu_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[65]
+	mi := &file_proto_proto_msgTypes[66]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6273,7 +6352,7 @@ type DockerNet_Fields struct {
 func (x *DockerNet_Fields) Reset() {
 	*x = DockerNet_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[66]
+		mi := &file_proto_proto_msgTypes[67]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6286,7 +6365,7 @@ func (x *DockerNet_Fields) String() string {
 func (*DockerNet_Fields) ProtoMessage() {}
 
 func (x *DockerNet_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[66]
+	mi := &file_proto_proto_msgTypes[67]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6376,7 +6455,7 @@ type DockerNet_Tags struct {
 func (x *DockerNet_Tags) Reset() {
 	*x = DockerNet_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[67]
+		mi := &file_proto_proto_msgTypes[68]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6389,7 +6468,7 @@ func (x *DockerNet_Tags) String() string {
 func (*DockerNet_Tags) ProtoMessage() {}
 
 func (x *DockerNet_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[67]
+	mi := &file_proto_proto_msgTypes[68]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6484,7 +6563,7 @@ type Netstat_Fields struct {
 func (x *Netstat_Fields) Reset() {
 	*x = Netstat_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[68]
+		mi := &file_proto_proto_msgTypes[69]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6497,7 +6576,7 @@ func (x *Netstat_Fields) String() string {
 func (*Netstat_Fields) ProtoMessage() {}
 
 func (x *Netstat_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[68]
+	mi := &file_proto_proto_msgTypes[69]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6615,7 +6694,7 @@ type Netstat_Tags struct {
 func (x *Netstat_Tags) Reset() {
 	*x = Netstat_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[69]
+		mi := &file_proto_proto_msgTypes[70]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6628,7 +6707,7 @@ func (x *Netstat_Tags) String() string {
 func (*Netstat_Tags) ProtoMessage() {}
 
 func (x *Netstat_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[69]
+	mi := &file_proto_proto_msgTypes[70]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6663,7 +6742,7 @@ type GPS_Fields struct {
 func (x *GPS_Fields) Reset() {
 	*x = GPS_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[70]
+		mi := &file_proto_proto_msgTypes[71]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6676,7 +6755,7 @@ func (x *GPS_Fields) String() string {
 func (*GPS_Fields) ProtoMessage() {}
 
 func (x *GPS_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[70]
+	mi := &file_proto_proto_msgTypes[71]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6717,7 +6796,7 @@ type GPS_Tags struct {
 func (x *GPS_Tags) Reset() {
 	*x = GPS_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[71]
+		mi := &file_proto_proto_msgTypes[72]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6730,7 +6809,7 @@ func (x *GPS_Tags) String() string {
 func (*GPS_Tags) ProtoMessage() {}
 
 func (x *GPS_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[71]
+	mi := &file_proto_proto_msgTypes[72]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6766,7 +6845,7 @@ type Uploader_Fields struct {
 func (x *Uploader_Fields) Reset() {
 	*x = Uploader_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[72]
+		mi := &file_proto_proto_msgTypes[73]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6779,7 +6858,7 @@ func (x *Uploader_Fields) String() string {
 func (*Uploader_Fields) ProtoMessage() {}
 
 func (x *Uploader_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[72]
+	mi := &file_proto_proto_msgTypes[73]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6828,7 +6907,7 @@ type Uploader_Tags struct {
 func (x *Uploader_Tags) Reset() {
 	*x = Uploader_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[73]
+		mi := &file_proto_proto_msgTypes[74]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6841,7 +6920,7 @@ func (x *Uploader_Tags) String() string {
 func (*Uploader_Tags) ProtoMessage() {}
 
 func (x *Uploader_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[73]
+	mi := &file_proto_proto_msgTypes[74]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6871,6 +6950,132 @@ func (x *Uploader_Tags) GetUrl() string {
 	return ""
 }
 
+type UploaderStats_Fields struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Completed int64 `protobuf:"varint,1,opt,name=completed,proto3" json:"completed,omitempty"`
+	Error     int64 `protobuf:"varint,2,opt,name=error,proto3" json:"error,omitempty"`
+	InQueue   int64 `protobuf:"varint,3,opt,name=in_queue,json=inQueue,proto3" json:"in_queue,omitempty"`
+	Part      int64 `protobuf:"varint,4,opt,name=part,proto3" json:"part,omitempty"`
+}
+
+func (x *UploaderStats_Fields) Reset() {
+	*x = UploaderStats_Fields{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_proto_msgTypes[75]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UploaderStats_Fields) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploaderStats_Fields) ProtoMessage() {}
+
+func (x *UploaderStats_Fields) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_proto_msgTypes[75]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploaderStats_Fields.ProtoReflect.Descriptor instead.
+func (*UploaderStats_Fields) Descriptor() ([]byte, []int) {
+	return file_proto_proto_rawDescGZIP(), []int{23, 0}
+}
+
+func (x *UploaderStats_Fields) GetCompleted() int64 {
+	if x != nil {
+		return x.Completed
+	}
+	return 0
+}
+
+func (x *UploaderStats_Fields) GetError() int64 {
+	if x != nil {
+		return x.Error
+	}
+	return 0
+}
+
+func (x *UploaderStats_Fields) GetInQueue() int64 {
+	if x != nil {
+		return x.InQueue
+	}
+	return 0
+}
+
+func (x *UploaderStats_Fields) GetPart() int64 {
+	if x != nil {
+		return x.Part
+	}
+	return 0
+}
+
+type UploaderStats_Tags struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Host string `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Url  string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
+}
+
+func (x *UploaderStats_Tags) Reset() {
+	*x = UploaderStats_Tags{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_proto_msgTypes[76]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UploaderStats_Tags) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploaderStats_Tags) ProtoMessage() {}
+
+func (x *UploaderStats_Tags) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_proto_msgTypes[76]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploaderStats_Tags.ProtoReflect.Descriptor instead.
+func (*UploaderStats_Tags) Descriptor() ([]byte, []int) {
+	return file_proto_proto_rawDescGZIP(), []int{23, 1}
+}
+
+func (x *UploaderStats_Tags) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *UploaderStats_Tags) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
 type DetectNet_Fields struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -6887,7 +7092,7 @@ type DetectNet_Fields struct {
 func (x *DetectNet_Fields) Reset() {
 	*x = DetectNet_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[74]
+		mi := &file_proto_proto_msgTypes[77]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6900,7 +7105,7 @@ func (x *DetectNet_Fields) String() string {
 func (*DetectNet_Fields) ProtoMessage() {}
 
 func (x *DetectNet_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[74]
+	mi := &file_proto_proto_msgTypes[77]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6913,7 +7118,7 @@ func (x *DetectNet_Fields) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DetectNet_Fields.ProtoReflect.Descriptor instead.
 func (*DetectNet_Fields) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{23, 0}
+	return file_proto_proto_rawDescGZIP(), []int{24, 0}
 }
 
 func (x *DetectNet_Fields) GetDetectionSent() string {
@@ -6970,7 +7175,7 @@ type DetectNet_Tags struct {
 func (x *DetectNet_Tags) Reset() {
 	*x = DetectNet_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[75]
+		mi := &file_proto_proto_msgTypes[78]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6983,7 +7188,7 @@ func (x *DetectNet_Tags) String() string {
 func (*DetectNet_Tags) ProtoMessage() {}
 
 func (x *DetectNet_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[75]
+	mi := &file_proto_proto_msgTypes[78]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6996,7 +7201,7 @@ func (x *DetectNet_Tags) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DetectNet_Tags.ProtoReflect.Descriptor instead.
 func (*DetectNet_Tags) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{23, 1}
+	return file_proto_proto_rawDescGZIP(), []int{24, 1}
 }
 
 func (x *DetectNet_Tags) GetHost() string {
@@ -7029,7 +7234,7 @@ type SegNet_Fields struct {
 func (x *SegNet_Fields) Reset() {
 	*x = SegNet_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[76]
+		mi := &file_proto_proto_msgTypes[79]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7042,7 +7247,7 @@ func (x *SegNet_Fields) String() string {
 func (*SegNet_Fields) ProtoMessage() {}
 
 func (x *SegNet_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[76]
+	mi := &file_proto_proto_msgTypes[79]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7055,7 +7260,7 @@ func (x *SegNet_Fields) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SegNet_Fields.ProtoReflect.Descriptor instead.
 func (*SegNet_Fields) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{24, 0}
+	return file_proto_proto_rawDescGZIP(), []int{25, 0}
 }
 
 func (x *SegNet_Fields) GetDataSent() string {
@@ -7112,7 +7317,7 @@ type SegNet_Tags struct {
 func (x *SegNet_Tags) Reset() {
 	*x = SegNet_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[77]
+		mi := &file_proto_proto_msgTypes[80]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7125,7 +7330,7 @@ func (x *SegNet_Tags) String() string {
 func (*SegNet_Tags) ProtoMessage() {}
 
 func (x *SegNet_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[77]
+	mi := &file_proto_proto_msgTypes[80]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7138,7 +7343,7 @@ func (x *SegNet_Tags) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SegNet_Tags.ProtoReflect.Descriptor instead.
 func (*SegNet_Tags) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{24, 1}
+	return file_proto_proto_rawDescGZIP(), []int{25, 1}
 }
 
 func (x *SegNet_Tags) GetHost() string {
@@ -7175,7 +7380,7 @@ type Able_Fields struct {
 func (x *Able_Fields) Reset() {
 	*x = Able_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[78]
+		mi := &file_proto_proto_msgTypes[81]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7188,7 +7393,7 @@ func (x *Able_Fields) String() string {
 func (*Able_Fields) ProtoMessage() {}
 
 func (x *Able_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[78]
+	mi := &file_proto_proto_msgTypes[81]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7201,7 +7406,7 @@ func (x *Able_Fields) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Able_Fields.ProtoReflect.Descriptor instead.
 func (*Able_Fields) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{25, 0}
+	return file_proto_proto_rawDescGZIP(), []int{26, 0}
 }
 
 func (x *Able_Fields) GetAlprLoaded() string {
@@ -7286,7 +7491,7 @@ type Able_Tags struct {
 func (x *Able_Tags) Reset() {
 	*x = Able_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[79]
+		mi := &file_proto_proto_msgTypes[82]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7299,7 +7504,7 @@ func (x *Able_Tags) String() string {
 func (*Able_Tags) ProtoMessage() {}
 
 func (x *Able_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[79]
+	mi := &file_proto_proto_msgTypes[82]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7312,7 +7517,7 @@ func (x *Able_Tags) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Able_Tags.ProtoReflect.Descriptor instead.
 func (*Able_Tags) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{25, 1}
+	return file_proto_proto_rawDescGZIP(), []int{26, 1}
 }
 
 func (x *Able_Tags) GetHost() string {
@@ -7342,7 +7547,7 @@ type CameraControl_Fields struct {
 func (x *CameraControl_Fields) Reset() {
 	*x = CameraControl_Fields{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[80]
+		mi := &file_proto_proto_msgTypes[83]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7355,7 +7560,7 @@ func (x *CameraControl_Fields) String() string {
 func (*CameraControl_Fields) ProtoMessage() {}
 
 func (x *CameraControl_Fields) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[80]
+	mi := &file_proto_proto_msgTypes[83]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7368,7 +7573,7 @@ func (x *CameraControl_Fields) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CameraControl_Fields.ProtoReflect.Descriptor instead.
 func (*CameraControl_Fields) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{26, 0}
+	return file_proto_proto_rawDescGZIP(), []int{27, 0}
 }
 
 func (x *CameraControl_Fields) GetAutoexposureStatus() string {
@@ -7404,7 +7609,7 @@ type CameraControl_Tags struct {
 func (x *CameraControl_Tags) Reset() {
 	*x = CameraControl_Tags{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_proto_msgTypes[81]
+		mi := &file_proto_proto_msgTypes[84]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7417,7 +7622,7 @@ func (x *CameraControl_Tags) String() string {
 func (*CameraControl_Tags) ProtoMessage() {}
 
 func (x *CameraControl_Tags) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_proto_msgTypes[81]
+	mi := &file_proto_proto_msgTypes[84]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7430,7 +7635,7 @@ func (x *CameraControl_Tags) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CameraControl_Tags.ProtoReflect.Descriptor instead.
 func (*CameraControl_Tags) Descriptor() ([]byte, []int) {
-	return file_proto_proto_rawDescGZIP(), []int{26, 1}
+	return file_proto_proto_rawDescGZIP(), []int{27, 1}
 }
 
 func (x *CameraControl_Tags) GetHost() string {
@@ -8427,181 +8632,204 @@ var file_proto_proto_rawDesc = []byte{
 	0x61, 0x64, 0x69, 0x6e, 0x67, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x1a, 0x2c, 0x0a, 0x04, 0x54,
 	0x61, 0x67, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28,
 	0x09, 0x52, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x6c, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x22, 0xb3, 0x03, 0x0a, 0x09, 0x44, 0x65,
-	0x74, 0x65, 0x63, 0x74, 0x4e, 0x65, 0x74, 0x12, 0x29, 0x0a, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64,
-	0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x44, 0x65, 0x74, 0x65, 0x63, 0x74,
-	0x4e, 0x65, 0x74, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c,
-	0x64, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x23, 0x0a, 0x04, 0x74, 0x61, 0x67, 0x73, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x44, 0x65, 0x74, 0x65, 0x63, 0x74, 0x4e, 0x65, 0x74,
-	0x2e, 0x54, 0x61, 0x67, 0x73, 0x52, 0x04, 0x74, 0x61, 0x67, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x74,
-	0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x04, 0x20, 0x01, 0x28, 0x01, 0x52, 0x09,
-	0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x1a, 0xf5, 0x01, 0x0a, 0x06, 0x46, 0x69,
-	0x65, 0x6c, 0x64, 0x73, 0x12, 0x25, 0x0a, 0x0e, 0x64, 0x65, 0x74, 0x65, 0x63, 0x74, 0x69, 0x6f,
-	0x6e, 0x5f, 0x73, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x64, 0x65,
-	0x74, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x65, 0x6e, 0x74, 0x12, 0x23, 0x0a, 0x0d, 0x66,
-	0x72, 0x61, 0x6d, 0x65, 0x73, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x0c, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64,
-	0x12, 0x2b, 0x0a, 0x11, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x63, 0x63,
-	0x65, 0x73, 0x73, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x10, 0x66, 0x72, 0x61,
-	0x6d, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x63, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x12, 0x20, 0x0a,
-	0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x12,
-	0x23, 0x0a, 0x0d, 0x6e, 0x65, 0x74, 0x5f, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64,
-	0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x6e, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x63, 0x65,
-	0x73, 0x73, 0x65, 0x64, 0x12, 0x2b, 0x0a, 0x11, 0x74, 0x72, 0x61, 0x63, 0x6b, 0x65, 0x72, 0x5f,
-	0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x10, 0x74, 0x72, 0x61, 0x63, 0x6b, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65,
-	0x64, 0x1a, 0x2c, 0x0a, 0x04, 0x54, 0x61, 0x67, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x6f, 0x73,
-	0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x12, 0x10, 0x0a,
-	0x03, 0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x22,
-	0x9e, 0x03, 0x0a, 0x06, 0x53, 0x65, 0x67, 0x4e, 0x65, 0x74, 0x12, 0x26, 0x0a, 0x06, 0x66, 0x69,
-	0x65, 0x6c, 0x64, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x53, 0x65, 0x67,
-	0x4e, 0x65, 0x74, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c,
-	0x64, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x20, 0x0a, 0x04, 0x74, 0x61, 0x67, 0x73, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x53, 0x65, 0x67, 0x4e, 0x65, 0x74, 0x2e, 0x54, 0x61,
-	0x67, 0x73, 0x52, 0x04, 0x74, 0x61, 0x67, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x74, 0x69, 0x6d, 0x65,
-	0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x04, 0x20, 0x01, 0x28, 0x01, 0x52, 0x09, 0x74, 0x69, 0x6d,
-	0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x1a, 0xe9, 0x01, 0x0a, 0x06, 0x46, 0x69, 0x65, 0x6c, 0x64,
-	0x73, 0x12, 0x1b, 0x0a, 0x09, 0x64, 0x61, 0x74, 0x61, 0x5f, 0x73, 0x65, 0x6e, 0x74, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x64, 0x61, 0x74, 0x61, 0x53, 0x65, 0x6e, 0x74, 0x12, 0x29,
-	0x0a, 0x10, 0x64, 0x65, 0x74, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x6c, 0x6f, 0x61, 0x64,
-	0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x64, 0x65, 0x74, 0x65, 0x63, 0x74,
-	0x69, 0x6f, 0x6e, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x12, 0x23, 0x0a, 0x0d, 0x66, 0x72, 0x61,
-	0x6d, 0x65, 0x73, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x0c, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x12, 0x2b,
-	0x0a, 0x11, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x63, 0x63, 0x65, 0x73,
-	0x73, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x10, 0x66, 0x72, 0x61, 0x6d, 0x65,
-	0x73, 0x50, 0x72, 0x6f, 0x63, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x12, 0x20, 0x0a, 0x0b, 0x69,
-	0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x12, 0x23, 0x0a,
-	0x0d, 0x6e, 0x65, 0x74, 0x5f, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x18, 0x06,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x6e, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73,
-	0x65, 0x64, 0x1a, 0x2c, 0x0a, 0x04, 0x54, 0x61, 0x67, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x6f,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x22, 0xb4, 0x02, 0x0a, 0x0d, 0x55, 0x70,
+	0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x53, 0x74, 0x61, 0x74, 0x73, 0x12, 0x2d, 0x0a, 0x06, 0x66,
+	0x69, 0x65, 0x6c, 0x64, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x55, 0x70,
+	0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x53, 0x74, 0x61, 0x74, 0x73, 0x2e, 0x46, 0x69, 0x65, 0x6c,
+	0x64, 0x73, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61,
+	0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x27,
+	0x0a, 0x04, 0x74, 0x61, 0x67, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x55,
+	0x70, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x53, 0x74, 0x61, 0x74, 0x73, 0x2e, 0x54, 0x61, 0x67,
+	0x73, 0x52, 0x04, 0x74, 0x61, 0x67, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73,
+	0x74, 0x61, 0x6d, 0x70, 0x18, 0x04, 0x20, 0x01, 0x28, 0x01, 0x52, 0x09, 0x74, 0x69, 0x6d, 0x65,
+	0x73, 0x74, 0x61, 0x6d, 0x70, 0x1a, 0x6b, 0x0a, 0x06, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12,
+	0x1c, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x03, 0x52, 0x09, 0x63, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x12, 0x14, 0x0a,
+	0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x05, 0x65, 0x72,
+	0x72, 0x6f, 0x72, 0x12, 0x19, 0x0a, 0x08, 0x69, 0x6e, 0x5f, 0x71, 0x75, 0x65, 0x75, 0x65, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x07, 0x69, 0x6e, 0x51, 0x75, 0x65, 0x75, 0x65, 0x12, 0x12,
+	0x0a, 0x04, 0x70, 0x61, 0x72, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x03, 0x52, 0x04, 0x70, 0x61,
+	0x72, 0x74, 0x1a, 0x2c, 0x0a, 0x04, 0x54, 0x61, 0x67, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x6f,
 	0x73, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x12, 0x10,
 	0x0a, 0x03, 0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c,
-	0x22, 0xda, 0x04, 0x0a, 0x04, 0x41, 0x62, 0x6c, 0x65, 0x12, 0x24, 0x0a, 0x06, 0x66, 0x69, 0x65,
-	0x6c, 0x64, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x41, 0x62, 0x6c, 0x65,
-	0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12,
-	0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e,
-	0x61, 0x6d, 0x65, 0x12, 0x1e, 0x0a, 0x04, 0x74, 0x61, 0x67, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x0b, 0x32, 0x0a, 0x2e, 0x41, 0x62, 0x6c, 0x65, 0x2e, 0x54, 0x61, 0x67, 0x73, 0x52, 0x04, 0x74,
-	0x61, 0x67, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70,
-	0x18, 0x04, 0x20, 0x01, 0x28, 0x01, 0x52, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d,
-	0x70, 0x1a, 0xab, 0x03, 0x0a, 0x06, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x1f, 0x0a, 0x0b,
-	0x61, 0x6c, 0x70, 0x72, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x0a, 0x61, 0x6c, 0x70, 0x72, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x12, 0x30, 0x0a,
-	0x14, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x5f, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x5f, 0x6c,
-	0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x12, 0x63, 0x6f, 0x6e,
-	0x74, 0x65, 0x78, 0x74, 0x46, 0x72, 0x61, 0x6d, 0x65, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x12,
-	0x32, 0x0a, 0x16, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x5f, 0x67, 0x70, 0x73, 0x5f, 0x74, 0x69, 0x6d,
-	0x65, 0x5f, 0x64, 0x69, 0x66, 0x66, 0x5f, 0x6f, 0x6b, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x12, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x47, 0x70, 0x73, 0x54, 0x69, 0x6d, 0x65, 0x44, 0x69, 0x66,
-	0x66, 0x4f, 0x6b, 0x12, 0x36, 0x0a, 0x18, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x5f, 0x6d, 0x6f, 0x64,
-	0x65, 0x6c, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x5f, 0x64, 0x69, 0x66, 0x66, 0x5f, 0x6f, 0x6b, 0x18,
-	0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x14, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x4d, 0x6f, 0x64, 0x65,
-	0x6c, 0x54, 0x69, 0x6d, 0x65, 0x44, 0x69, 0x66, 0x66, 0x4f, 0x6b, 0x12, 0x1d, 0x0a, 0x0a, 0x67,
-	0x70, 0x73, 0x5f, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x09, 0x67, 0x70, 0x73, 0x41, 0x63, 0x74, 0x69, 0x76, 0x65, 0x12, 0x26, 0x0a, 0x0f, 0x67, 0x70,
-	0x73, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x06, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x0d, 0x67, 0x70, 0x73, 0x54, 0x69, 0x6d, 0x65, 0x53, 0x74, 0x61, 0x74,
-	0x75, 0x73, 0x12, 0x20, 0x0a, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65,
-	0x64, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c,
-	0x69, 0x7a, 0x65, 0x64, 0x12, 0x2a, 0x0a, 0x11, 0x6c, 0x70, 0x72, 0x5f, 0x66, 0x72, 0x61, 0x6d,
-	0x65, 0x73, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x0f, 0x6c, 0x70, 0x72, 0x46, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64,
-	0x12, 0x2a, 0x0a, 0x11, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x5f, 0x64, 0x61, 0x74, 0x61, 0x5f, 0x6c,
-	0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x09, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x6d, 0x6f, 0x64,
-	0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x12, 0x21, 0x0a, 0x0c,
-	0x72, 0x6f, 0x75, 0x74, 0x65, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x0a, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x0b, 0x72, 0x6f, 0x75, 0x74, 0x65, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x1a,
-	0x2c, 0x0a, 0x04, 0x54, 0x61, 0x67, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x75,
-	0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x22, 0xce, 0x02,
-	0x0a, 0x0d, 0x43, 0x61, 0x6d, 0x65, 0x72, 0x61, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x12,
-	0x2d, 0x0a, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
-	0x15, 0x2e, 0x43, 0x61, 0x6d, 0x65, 0x72, 0x61, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e,
-	0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x12,
-	0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61,
-	0x6d, 0x65, 0x12, 0x27, 0x0a, 0x04, 0x74, 0x61, 0x67, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x13, 0x2e, 0x43, 0x61, 0x6d, 0x65, 0x72, 0x61, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c,
-	0x2e, 0x54, 0x61, 0x67, 0x73, 0x52, 0x04, 0x74, 0x61, 0x67, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x74,
-	0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x04, 0x20, 0x01, 0x28, 0x01, 0x52, 0x09,
-	0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x1a, 0x84, 0x01, 0x0a, 0x06, 0x46, 0x69,
-	0x65, 0x6c, 0x64, 0x73, 0x12, 0x2f, 0x0a, 0x13, 0x61, 0x75, 0x74, 0x6f, 0x65, 0x78, 0x70, 0x6f,
-	0x73, 0x75, 0x72, 0x65, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x12, 0x61, 0x75, 0x74, 0x6f, 0x65, 0x78, 0x70, 0x6f, 0x73, 0x75, 0x72, 0x65, 0x53,
-	0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x20, 0x0a, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c,
-	0x69, 0x7a, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x69, 0x6e, 0x69, 0x74,
-	0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x12, 0x27, 0x0a, 0x0f, 0x70, 0x69, 0x70, 0x65, 0x6c,
-	0x69, 0x6e, 0x65, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x0e, 0x70, 0x69, 0x70, 0x65, 0x6c, 0x69, 0x6e, 0x65, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
-	0x1a, 0x2c, 0x0a, 0x04, 0x54, 0x61, 0x67, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x6f, 0x73, 0x74,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03,
-	0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x22, 0xd3,
-	0x07, 0x0a, 0x06, 0x49, 0x6e, 0x66, 0x6c, 0x75, 0x78, 0x12, 0x1f, 0x0a, 0x06, 0x6b, 0x65, 0x72,
-	0x6e, 0x65, 0x6c, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x4b, 0x65, 0x72, 0x6e,
-	0x65, 0x6c, 0x52, 0x06, 0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x12, 0x36, 0x0a, 0x0f, 0x6c, 0x69,
-	0x6e, 0x75, 0x78, 0x5f, 0x73, 0x79, 0x73, 0x63, 0x74, 0x6c, 0x5f, 0x66, 0x73, 0x18, 0x02, 0x20,
-	0x03, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x4c, 0x69, 0x6e, 0x75, 0x78, 0x53, 0x79, 0x73, 0x63, 0x74,
-	0x6c, 0x46, 0x73, 0x52, 0x0d, 0x6c, 0x69, 0x6e, 0x75, 0x78, 0x53, 0x79, 0x73, 0x63, 0x74, 0x6c,
-	0x46, 0x73, 0x12, 0x1f, 0x0a, 0x06, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x18, 0x03, 0x20, 0x03,
-	0x28, 0x0b, 0x32, 0x07, 0x2e, 0x53, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x52, 0x06, 0x73, 0x79, 0x73,
-	0x74, 0x65, 0x6d, 0x12, 0x16, 0x0a, 0x03, 0x6e, 0x65, 0x74, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b,
-	0x32, 0x04, 0x2e, 0x4e, 0x65, 0x74, 0x52, 0x03, 0x6e, 0x65, 0x74, 0x12, 0x2b, 0x0a, 0x0a, 0x69,
-	0x6e, 0x74, 0x65, 0x72, 0x72, 0x75, 0x70, 0x74, 0x73, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32,
-	0x0b, 0x2e, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x72, 0x75, 0x70, 0x74, 0x73, 0x52, 0x0a, 0x69, 0x6e,
-	0x74, 0x65, 0x72, 0x72, 0x75, 0x70, 0x74, 0x73, 0x12, 0x16, 0x0a, 0x03, 0x6d, 0x65, 0x6d, 0x18,
-	0x06, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x04, 0x2e, 0x4d, 0x65, 0x6d, 0x52, 0x03, 0x6d, 0x65, 0x6d,
-	0x12, 0x19, 0x0a, 0x04, 0x64, 0x69, 0x73, 0x6b, 0x18, 0x07, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05,
-	0x2e, 0x44, 0x69, 0x73, 0x6b, 0x52, 0x04, 0x64, 0x69, 0x73, 0x6b, 0x12, 0x28, 0x0a, 0x09, 0x70,
-	0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x73, 0x18, 0x08, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a,
-	0x2e, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x73, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x63,
-	0x65, 0x73, 0x73, 0x65, 0x73, 0x12, 0x16, 0x0a, 0x03, 0x63, 0x70, 0x75, 0x18, 0x09, 0x20, 0x03,
-	0x28, 0x0b, 0x32, 0x04, 0x2e, 0x43, 0x50, 0x55, 0x52, 0x03, 0x63, 0x70, 0x75, 0x12, 0x19, 0x0a,
-	0x04, 0x73, 0x77, 0x61, 0x70, 0x18, 0x0a, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x53, 0x77,
-	0x61, 0x70, 0x52, 0x04, 0x73, 0x77, 0x61, 0x70, 0x12, 0x2b, 0x0a, 0x0a, 0x74, 0x65, 0x67, 0x72,
-	0x61, 0x73, 0x74, 0x61, 0x74, 0x73, 0x18, 0x0b, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x54,
-	0x65, 0x67, 0x72, 0x61, 0x73, 0x74, 0x61, 0x74, 0x73, 0x52, 0x0a, 0x74, 0x65, 0x67, 0x72, 0x61,
-	0x73, 0x74, 0x61, 0x74, 0x73, 0x12, 0x2e, 0x0a, 0x0b, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x42,
-	0x6c, 0x6b, 0x69, 0x6f, 0x18, 0x0c, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x44, 0x6f, 0x63,
-	0x6b, 0x65, 0x72, 0x42, 0x6c, 0x6b, 0x69, 0x6f, 0x52, 0x0b, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72,
-	0x42, 0x6c, 0x6b, 0x69, 0x6f, 0x12, 0x28, 0x0a, 0x09, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x4e,
-	0x65, 0x74, 0x18, 0x0d, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x44, 0x6f, 0x63, 0x6b, 0x65,
-	0x72, 0x4e, 0x65, 0x74, 0x52, 0x09, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x4e, 0x65, 0x74, 0x12,
-	0x28, 0x0a, 0x09, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x43, 0x70, 0x75, 0x18, 0x0e, 0x20, 0x03,
-	0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x44, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x43, 0x70, 0x75, 0x52, 0x09,
-	0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x43, 0x70, 0x75, 0x12, 0x28, 0x0a, 0x09, 0x64, 0x6f, 0x63,
-	0x6b, 0x65, 0x72, 0x4d, 0x65, 0x6d, 0x18, 0x0f, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x44,
-	0x6f, 0x63, 0x6b, 0x65, 0x72, 0x4d, 0x65, 0x6d, 0x52, 0x09, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72,
-	0x4d, 0x65, 0x6d, 0x12, 0x2e, 0x0a, 0x0b, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x53, 0x74, 0x61,
-	0x74, 0x73, 0x18, 0x10, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x44, 0x6f, 0x63, 0x6b, 0x65,
-	0x72, 0x53, 0x74, 0x61, 0x74, 0x73, 0x52, 0x0b, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x53, 0x74,
-	0x61, 0x74, 0x73, 0x12, 0x1c, 0x0a, 0x05, 0x73, 0x6d, 0x61, 0x72, 0x74, 0x18, 0x11, 0x20, 0x03,
-	0x28, 0x0b, 0x32, 0x06, 0x2e, 0x53, 0x4d, 0x41, 0x52, 0x54, 0x52, 0x05, 0x73, 0x6d, 0x61, 0x72,
-	0x74, 0x12, 0x16, 0x0a, 0x03, 0x6c, 0x74, 0x65, 0x18, 0x12, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x04,
-	0x2e, 0x4c, 0x54, 0x45, 0x52, 0x03, 0x6c, 0x74, 0x65, 0x12, 0x19, 0x0a, 0x04, 0x67, 0x6c, 0x6f,
-	0x67, 0x18, 0x13, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x47, 0x6c, 0x6f, 0x67, 0x52, 0x04,
-	0x67, 0x6c, 0x6f, 0x67, 0x12, 0x1f, 0x0a, 0x06, 0x64, 0x69, 0x73, 0x6b, 0x69, 0x6f, 0x18, 0x14,
-	0x20, 0x03, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x44, 0x69, 0x73, 0x6b, 0x69, 0x6f, 0x52, 0x06, 0x64,
-	0x69, 0x73, 0x6b, 0x69, 0x6f, 0x12, 0x22, 0x0a, 0x07, 0x6e, 0x65, 0x74, 0x73, 0x74, 0x61, 0x74,
-	0x18, 0x15, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x08, 0x2e, 0x4e, 0x65, 0x74, 0x73, 0x74, 0x61, 0x74,
-	0x52, 0x07, 0x6e, 0x65, 0x74, 0x73, 0x74, 0x61, 0x74, 0x12, 0x16, 0x0a, 0x03, 0x67, 0x70, 0x73,
-	0x18, 0x16, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x04, 0x2e, 0x47, 0x50, 0x53, 0x52, 0x03, 0x67, 0x70,
-	0x73, 0x12, 0x19, 0x0a, 0x04, 0x61, 0x62, 0x6c, 0x65, 0x18, 0x17, 0x20, 0x03, 0x28, 0x0b, 0x32,
-	0x05, 0x2e, 0x41, 0x62, 0x6c, 0x65, 0x52, 0x04, 0x61, 0x62, 0x6c, 0x65, 0x12, 0x34, 0x0a, 0x0d,
-	0x63, 0x61, 0x6d, 0x65, 0x72, 0x61, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x18, 0x18, 0x20,
-	0x03, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x43, 0x61, 0x6d, 0x65, 0x72, 0x61, 0x43, 0x6f, 0x6e, 0x74,
-	0x72, 0x6f, 0x6c, 0x52, 0x0d, 0x63, 0x61, 0x6d, 0x65, 0x72, 0x61, 0x43, 0x6f, 0x6e, 0x74, 0x72,
-	0x6f, 0x6c, 0x12, 0x1f, 0x0a, 0x06, 0x73, 0x65, 0x67, 0x4e, 0x65, 0x74, 0x18, 0x19, 0x20, 0x03,
-	0x28, 0x0b, 0x32, 0x07, 0x2e, 0x53, 0x65, 0x67, 0x4e, 0x65, 0x74, 0x52, 0x06, 0x73, 0x65, 0x67,
-	0x4e, 0x65, 0x74, 0x12, 0x28, 0x0a, 0x09, 0x64, 0x65, 0x74, 0x65, 0x63, 0x74, 0x6e, 0x65, 0x74,
-	0x18, 0x1a, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x44, 0x65, 0x74, 0x65, 0x63, 0x74, 0x4e,
-	0x65, 0x74, 0x52, 0x09, 0x64, 0x65, 0x74, 0x65, 0x63, 0x74, 0x6e, 0x65, 0x74, 0x12, 0x25, 0x0a,
-	0x08, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x18, 0x1b, 0x20, 0x03, 0x28, 0x0b, 0x32,
-	0x09, 0x2e, 0x55, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x52, 0x08, 0x75, 0x70, 0x6c, 0x6f,
-	0x61, 0x64, 0x65, 0x72, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x22, 0xb3, 0x03, 0x0a, 0x09, 0x44, 0x65, 0x74, 0x65, 0x63, 0x74, 0x4e, 0x65, 0x74, 0x12, 0x29,
+	0x0a, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11,
+	0x2e, 0x44, 0x65, 0x74, 0x65, 0x63, 0x74, 0x4e, 0x65, 0x74, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64,
+	0x73, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x23, 0x0a,
+	0x04, 0x74, 0x61, 0x67, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x44, 0x65,
+	0x74, 0x65, 0x63, 0x74, 0x4e, 0x65, 0x74, 0x2e, 0x54, 0x61, 0x67, 0x73, 0x52, 0x04, 0x74, 0x61,
+	0x67, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18,
+	0x04, 0x20, 0x01, 0x28, 0x01, 0x52, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70,
+	0x1a, 0xf5, 0x01, 0x0a, 0x06, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x25, 0x0a, 0x0e, 0x64,
+	0x65, 0x74, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x73, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x0d, 0x64, 0x65, 0x74, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x65,
+	0x6e, 0x74, 0x12, 0x23, 0x0a, 0x0d, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x5f, 0x6c, 0x6f, 0x61,
+	0x64, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x66, 0x72, 0x61, 0x6d, 0x65,
+	0x73, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x12, 0x2b, 0x0a, 0x11, 0x66, 0x72, 0x61, 0x6d, 0x65,
+	0x73, 0x5f, 0x70, 0x72, 0x6f, 0x63, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x10, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x63, 0x63, 0x65,
+	0x73, 0x73, 0x65, 0x64, 0x12, 0x20, 0x0a, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69,
+	0x7a, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69,
+	0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x12, 0x23, 0x0a, 0x0d, 0x6e, 0x65, 0x74, 0x5f, 0x70, 0x72,
+	0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x6e,
+	0x65, 0x74, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x12, 0x2b, 0x0a, 0x11, 0x74,
+	0x72, 0x61, 0x63, 0x6b, 0x65, 0x72, 0x5f, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64,
+	0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x10, 0x74, 0x72, 0x61, 0x63, 0x6b, 0x65, 0x72, 0x50,
+	0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x1a, 0x2c, 0x0a, 0x04, 0x54, 0x61, 0x67, 0x73,
+	0x12, 0x12, 0x0a, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
+	0x68, 0x6f, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x22, 0x9e, 0x03, 0x0a, 0x06, 0x53, 0x65, 0x67, 0x4e, 0x65,
+	0x74, 0x12, 0x26, 0x0a, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x0e, 0x2e, 0x53, 0x65, 0x67, 0x4e, 0x65, 0x74, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64,
+	0x73, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x20, 0x0a,
+	0x04, 0x74, 0x61, 0x67, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x53, 0x65,
+	0x67, 0x4e, 0x65, 0x74, 0x2e, 0x54, 0x61, 0x67, 0x73, 0x52, 0x04, 0x74, 0x61, 0x67, 0x73, 0x12,
+	0x1c, 0x0a, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x01, 0x52, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x1a, 0xe9, 0x01,
+	0x0a, 0x06, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x1b, 0x0a, 0x09, 0x64, 0x61, 0x74, 0x61,
+	0x5f, 0x73, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x64, 0x61, 0x74,
+	0x61, 0x53, 0x65, 0x6e, 0x74, 0x12, 0x29, 0x0a, 0x10, 0x64, 0x65, 0x74, 0x65, 0x63, 0x74, 0x69,
+	0x6f, 0x6e, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0f, 0x64, 0x65, 0x74, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64,
+	0x12, 0x23, 0x0a, 0x0d, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65,
+	0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x4c,
+	0x6f, 0x61, 0x64, 0x65, 0x64, 0x12, 0x2b, 0x0a, 0x11, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x5f,
+	0x70, 0x72, 0x6f, 0x63, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x10, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x63, 0x63, 0x65, 0x73, 0x73,
+	0x65, 0x64, 0x12, 0x20, 0x0a, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65,
+	0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c,
+	0x69, 0x7a, 0x65, 0x64, 0x12, 0x23, 0x0a, 0x0d, 0x6e, 0x65, 0x74, 0x5f, 0x70, 0x72, 0x6f, 0x63,
+	0x65, 0x73, 0x73, 0x65, 0x64, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x6e, 0x65, 0x74,
+	0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x64, 0x1a, 0x2c, 0x0a, 0x04, 0x54, 0x61, 0x67,
+	0x73, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x04, 0x68, 0x6f, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x22, 0xda, 0x04, 0x0a, 0x04, 0x41, 0x62, 0x6c, 0x65,
+	0x12, 0x24, 0x0a, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x0c, 0x2e, 0x41, 0x62, 0x6c, 0x65, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x52, 0x06,
+	0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1e, 0x0a, 0x04, 0x74, 0x61,
+	0x67, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x41, 0x62, 0x6c, 0x65, 0x2e,
+	0x54, 0x61, 0x67, 0x73, 0x52, 0x04, 0x74, 0x61, 0x67, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x74, 0x69,
+	0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x04, 0x20, 0x01, 0x28, 0x01, 0x52, 0x09, 0x74,
+	0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x1a, 0xab, 0x03, 0x0a, 0x06, 0x46, 0x69, 0x65,
+	0x6c, 0x64, 0x73, 0x12, 0x1f, 0x0a, 0x0b, 0x61, 0x6c, 0x70, 0x72, 0x5f, 0x6c, 0x6f, 0x61, 0x64,
+	0x65, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x61, 0x6c, 0x70, 0x72, 0x4c, 0x6f,
+	0x61, 0x64, 0x65, 0x64, 0x12, 0x30, 0x0a, 0x14, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x5f,
+	0x66, 0x72, 0x61, 0x6d, 0x65, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x12, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x46, 0x72, 0x61, 0x6d, 0x65,
+	0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x12, 0x32, 0x0a, 0x16, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x5f,
+	0x67, 0x70, 0x73, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x5f, 0x64, 0x69, 0x66, 0x66, 0x5f, 0x6f, 0x6b,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x12, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x47, 0x70, 0x73,
+	0x54, 0x69, 0x6d, 0x65, 0x44, 0x69, 0x66, 0x66, 0x4f, 0x6b, 0x12, 0x36, 0x0a, 0x18, 0x66, 0x72,
+	0x61, 0x6d, 0x65, 0x5f, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x5f, 0x64,
+	0x69, 0x66, 0x66, 0x5f, 0x6f, 0x6b, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x14, 0x66, 0x72,
+	0x61, 0x6d, 0x65, 0x4d, 0x6f, 0x64, 0x65, 0x6c, 0x54, 0x69, 0x6d, 0x65, 0x44, 0x69, 0x66, 0x66,
+	0x4f, 0x6b, 0x12, 0x1d, 0x0a, 0x0a, 0x67, 0x70, 0x73, 0x5f, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65,
+	0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x67, 0x70, 0x73, 0x41, 0x63, 0x74, 0x69, 0x76,
+	0x65, 0x12, 0x26, 0x0a, 0x0f, 0x67, 0x70, 0x73, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x5f, 0x73, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x67, 0x70, 0x73, 0x54,
+	0x69, 0x6d, 0x65, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x20, 0x0a, 0x0b, 0x69, 0x6e, 0x69,
+	0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b,
+	0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x12, 0x2a, 0x0a, 0x11, 0x6c,
+	0x70, 0x72, 0x5f, 0x66, 0x72, 0x61, 0x6d, 0x65, 0x73, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x64,
+	0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0f, 0x6c, 0x70, 0x72, 0x46, 0x72, 0x61, 0x6d, 0x65,
+	0x73, 0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x12, 0x2a, 0x0a, 0x11, 0x6d, 0x6f, 0x64, 0x65, 0x6c,
+	0x5f, 0x64, 0x61, 0x74, 0x61, 0x5f, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x18, 0x09, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x0f, 0x6d, 0x6f, 0x64, 0x65, 0x6c, 0x44, 0x61, 0x74, 0x61, 0x4c, 0x6f, 0x61,
+	0x64, 0x65, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x72, 0x6f, 0x75, 0x74, 0x65, 0x5f, 0x6c, 0x6f, 0x61,
+	0x64, 0x65, 0x64, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x72, 0x6f, 0x75, 0x74, 0x65,
+	0x4c, 0x6f, 0x61, 0x64, 0x65, 0x64, 0x1a, 0x2c, 0x0a, 0x04, 0x54, 0x61, 0x67, 0x73, 0x12, 0x12,
+	0x0a, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x68, 0x6f,
+	0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x03, 0x75, 0x72, 0x6c, 0x22, 0xce, 0x02, 0x0a, 0x0d, 0x43, 0x61, 0x6d, 0x65, 0x72, 0x61, 0x43,
+	0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x12, 0x2d, 0x0a, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x43, 0x61, 0x6d, 0x65, 0x72, 0x61, 0x43,
+	0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x52, 0x06, 0x66,
+	0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x27, 0x0a, 0x04, 0x74, 0x61, 0x67,
+	0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x43, 0x61, 0x6d, 0x65, 0x72, 0x61,
+	0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e, 0x54, 0x61, 0x67, 0x73, 0x52, 0x04, 0x74, 0x61,
+	0x67, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18,
+	0x04, 0x20, 0x01, 0x28, 0x01, 0x52, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70,
+	0x1a, 0x84, 0x01, 0x0a, 0x06, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x2f, 0x0a, 0x13, 0x61,
+	0x75, 0x74, 0x6f, 0x65, 0x78, 0x70, 0x6f, 0x73, 0x75, 0x72, 0x65, 0x5f, 0x73, 0x74, 0x61, 0x74,
+	0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x12, 0x61, 0x75, 0x74, 0x6f, 0x65, 0x78,
+	0x70, 0x6f, 0x73, 0x75, 0x72, 0x65, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x20, 0x0a, 0x0b,
+	0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x0b, 0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x12, 0x27,
+	0x0a, 0x0f, 0x70, 0x69, 0x70, 0x65, 0x6c, 0x69, 0x6e, 0x65, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x75,
+	0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0e, 0x70, 0x69, 0x70, 0x65, 0x6c, 0x69, 0x6e,
+	0x65, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x1a, 0x2c, 0x0a, 0x04, 0x54, 0x61, 0x67, 0x73, 0x12,
+	0x12, 0x0a, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x68,
+	0x6f, 0x73, 0x74, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x03, 0x75, 0x72, 0x6c, 0x22, 0x8a, 0x08, 0x0a, 0x06, 0x49, 0x6e, 0x66, 0x6c, 0x75, 0x78,
+	0x12, 0x1f, 0x0a, 0x06, 0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x07, 0x2e, 0x4b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x52, 0x06, 0x6b, 0x65, 0x72, 0x6e, 0x65,
+	0x6c, 0x12, 0x36, 0x0a, 0x0f, 0x6c, 0x69, 0x6e, 0x75, 0x78, 0x5f, 0x73, 0x79, 0x73, 0x63, 0x74,
+	0x6c, 0x5f, 0x66, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x4c, 0x69, 0x6e,
+	0x75, 0x78, 0x53, 0x79, 0x73, 0x63, 0x74, 0x6c, 0x46, 0x73, 0x52, 0x0d, 0x6c, 0x69, 0x6e, 0x75,
+	0x78, 0x53, 0x79, 0x73, 0x63, 0x74, 0x6c, 0x46, 0x73, 0x12, 0x1f, 0x0a, 0x06, 0x73, 0x79, 0x73,
+	0x74, 0x65, 0x6d, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x53, 0x79, 0x73, 0x74,
+	0x65, 0x6d, 0x52, 0x06, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x12, 0x16, 0x0a, 0x03, 0x6e, 0x65,
+	0x74, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x04, 0x2e, 0x4e, 0x65, 0x74, 0x52, 0x03, 0x6e,
+	0x65, 0x74, 0x12, 0x2b, 0x0a, 0x0a, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x72, 0x75, 0x70, 0x74, 0x73,
+	0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x72, 0x75,
+	0x70, 0x74, 0x73, 0x52, 0x0a, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x72, 0x75, 0x70, 0x74, 0x73, 0x12,
+	0x16, 0x0a, 0x03, 0x6d, 0x65, 0x6d, 0x18, 0x06, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x04, 0x2e, 0x4d,
+	0x65, 0x6d, 0x52, 0x03, 0x6d, 0x65, 0x6d, 0x12, 0x19, 0x0a, 0x04, 0x64, 0x69, 0x73, 0x6b, 0x18,
+	0x07, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x44, 0x69, 0x73, 0x6b, 0x52, 0x04, 0x64, 0x69,
+	0x73, 0x6b, 0x12, 0x28, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x73, 0x18,
+	0x08, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x50, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65,
+	0x73, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x63, 0x65, 0x73, 0x73, 0x65, 0x73, 0x12, 0x16, 0x0a, 0x03,
+	0x63, 0x70, 0x75, 0x18, 0x09, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x04, 0x2e, 0x43, 0x50, 0x55, 0x52,
+	0x03, 0x63, 0x70, 0x75, 0x12, 0x19, 0x0a, 0x04, 0x73, 0x77, 0x61, 0x70, 0x18, 0x0a, 0x20, 0x03,
+	0x28, 0x0b, 0x32, 0x05, 0x2e, 0x53, 0x77, 0x61, 0x70, 0x52, 0x04, 0x73, 0x77, 0x61, 0x70, 0x12,
+	0x2b, 0x0a, 0x0a, 0x74, 0x65, 0x67, 0x72, 0x61, 0x73, 0x74, 0x61, 0x74, 0x73, 0x18, 0x0b, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x54, 0x65, 0x67, 0x72, 0x61, 0x73, 0x74, 0x61, 0x74, 0x73,
+	0x52, 0x0a, 0x74, 0x65, 0x67, 0x72, 0x61, 0x73, 0x74, 0x61, 0x74, 0x73, 0x12, 0x2e, 0x0a, 0x0b,
+	0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x42, 0x6c, 0x6b, 0x69, 0x6f, 0x18, 0x0c, 0x20, 0x03, 0x28,
+	0x0b, 0x32, 0x0c, 0x2e, 0x44, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x42, 0x6c, 0x6b, 0x69, 0x6f, 0x52,
+	0x0b, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x42, 0x6c, 0x6b, 0x69, 0x6f, 0x12, 0x28, 0x0a, 0x09,
+	0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x4e, 0x65, 0x74, 0x18, 0x0d, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x0a, 0x2e, 0x44, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x4e, 0x65, 0x74, 0x52, 0x09, 0x64, 0x6f, 0x63,
+	0x6b, 0x65, 0x72, 0x4e, 0x65, 0x74, 0x12, 0x28, 0x0a, 0x09, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72,
+	0x43, 0x70, 0x75, 0x18, 0x0e, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x44, 0x6f, 0x63, 0x6b,
+	0x65, 0x72, 0x43, 0x70, 0x75, 0x52, 0x09, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x43, 0x70, 0x75,
+	0x12, 0x28, 0x0a, 0x09, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x4d, 0x65, 0x6d, 0x18, 0x0f, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x44, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x4d, 0x65, 0x6d, 0x52,
+	0x09, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x4d, 0x65, 0x6d, 0x12, 0x2e, 0x0a, 0x0b, 0x64, 0x6f,
+	0x63, 0x6b, 0x65, 0x72, 0x53, 0x74, 0x61, 0x74, 0x73, 0x18, 0x10, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x0c, 0x2e, 0x44, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x53, 0x74, 0x61, 0x74, 0x73, 0x52, 0x0b, 0x64,
+	0x6f, 0x63, 0x6b, 0x65, 0x72, 0x53, 0x74, 0x61, 0x74, 0x73, 0x12, 0x1c, 0x0a, 0x05, 0x73, 0x6d,
+	0x61, 0x72, 0x74, 0x18, 0x11, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x06, 0x2e, 0x53, 0x4d, 0x41, 0x52,
+	0x54, 0x52, 0x05, 0x73, 0x6d, 0x61, 0x72, 0x74, 0x12, 0x16, 0x0a, 0x03, 0x6c, 0x74, 0x65, 0x18,
+	0x12, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x04, 0x2e, 0x4c, 0x54, 0x45, 0x52, 0x03, 0x6c, 0x74, 0x65,
+	0x12, 0x19, 0x0a, 0x04, 0x67, 0x6c, 0x6f, 0x67, 0x18, 0x13, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05,
+	0x2e, 0x47, 0x6c, 0x6f, 0x67, 0x52, 0x04, 0x67, 0x6c, 0x6f, 0x67, 0x12, 0x1f, 0x0a, 0x06, 0x64,
+	0x69, 0x73, 0x6b, 0x69, 0x6f, 0x18, 0x14, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x44, 0x69,
+	0x73, 0x6b, 0x69, 0x6f, 0x52, 0x06, 0x64, 0x69, 0x73, 0x6b, 0x69, 0x6f, 0x12, 0x22, 0x0a, 0x07,
+	0x6e, 0x65, 0x74, 0x73, 0x74, 0x61, 0x74, 0x18, 0x15, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x08, 0x2e,
+	0x4e, 0x65, 0x74, 0x73, 0x74, 0x61, 0x74, 0x52, 0x07, 0x6e, 0x65, 0x74, 0x73, 0x74, 0x61, 0x74,
+	0x12, 0x16, 0x0a, 0x03, 0x67, 0x70, 0x73, 0x18, 0x16, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x04, 0x2e,
+	0x47, 0x50, 0x53, 0x52, 0x03, 0x67, 0x70, 0x73, 0x12, 0x19, 0x0a, 0x04, 0x61, 0x62, 0x6c, 0x65,
+	0x18, 0x17, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x05, 0x2e, 0x41, 0x62, 0x6c, 0x65, 0x52, 0x04, 0x61,
+	0x62, 0x6c, 0x65, 0x12, 0x34, 0x0a, 0x0d, 0x63, 0x61, 0x6d, 0x65, 0x72, 0x61, 0x43, 0x6f, 0x6e,
+	0x74, 0x72, 0x6f, 0x6c, 0x18, 0x18, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x43, 0x61, 0x6d,
+	0x65, 0x72, 0x61, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x52, 0x0d, 0x63, 0x61, 0x6d, 0x65,
+	0x72, 0x61, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x12, 0x1f, 0x0a, 0x06, 0x73, 0x65, 0x67,
+	0x4e, 0x65, 0x74, 0x18, 0x19, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x07, 0x2e, 0x53, 0x65, 0x67, 0x4e,
+	0x65, 0x74, 0x52, 0x06, 0x73, 0x65, 0x67, 0x4e, 0x65, 0x74, 0x12, 0x28, 0x0a, 0x09, 0x64, 0x65,
+	0x74, 0x65, 0x63, 0x74, 0x6e, 0x65, 0x74, 0x18, 0x1a, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e,
+	0x44, 0x65, 0x74, 0x65, 0x63, 0x74, 0x4e, 0x65, 0x74, 0x52, 0x09, 0x64, 0x65, 0x74, 0x65, 0x63,
+	0x74, 0x6e, 0x65, 0x74, 0x12, 0x25, 0x0a, 0x08, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72,
+	0x18, 0x1b, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x09, 0x2e, 0x55, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x65,
+	0x72, 0x52, 0x08, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x12, 0x35, 0x0a, 0x0e, 0x75,
+	0x70, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x73, 0x18, 0x1c, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x55, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x53, 0x74,
+	0x61, 0x74, 0x73, 0x52, 0x0d, 0x75, 0x70, 0x6c, 0x6f, 0x61, 0x64, 0x65, 0x72, 0x53, 0x74, 0x61,
+	0x74, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -8616,7 +8844,7 @@ func file_proto_proto_rawDescGZIP() []byte {
 	return file_proto_proto_rawDescData
 }
 
-var file_proto_proto_msgTypes = make([]protoimpl.MessageInfo, 82)
+var file_proto_proto_msgTypes = make([]protoimpl.MessageInfo, 85)
 var file_proto_proto_goTypes = []interface{}{
 	(*Diskio)(nil),               // 0: Diskio
 	(*Glog)(nil),                 // 1: Glog
@@ -8641,153 +8869,159 @@ var file_proto_proto_goTypes = []interface{}{
 	(*Netstat)(nil),              // 20: Netstat
 	(*GPS)(nil),                  // 21: GPS
 	(*Uploader)(nil),             // 22: Uploader
-	(*DetectNet)(nil),            // 23: DetectNet
-	(*SegNet)(nil),               // 24: SegNet
-	(*Able)(nil),                 // 25: Able
-	(*CameraControl)(nil),        // 26: CameraControl
-	(*Influx)(nil),               // 27: Influx
-	(*Diskio_Fields)(nil),        // 28: Diskio.Fields
-	(*Diskio_Tags)(nil),          // 29: Diskio.Tags
-	(*Glog_Fields)(nil),          // 30: Glog.Fields
-	(*Glog_Tags)(nil),            // 31: Glog.Tags
-	(*LTE_Fields)(nil),           // 32: LTE.Fields
-	(*LTE_Tags)(nil),             // 33: LTE.Tags
-	(*SMART_Fields)(nil),         // 34: SMART.Fields
-	(*SMART_TAGS)(nil),           // 35: SMART.TAGS
-	(*Tegrastats_Fields)(nil),    // 36: Tegrastats.Fields
-	(*Tegrastats_Tags)(nil),      // 37: Tegrastats.Tags
-	(*CPU_Fields)(nil),           // 38: CPU.Fields
-	(*CPU_Tags)(nil),             // 39: CPU.Tags
-	(*Kernel_Fields)(nil),        // 40: Kernel.Fields
-	(*Kernel_Tags)(nil),          // 41: Kernel.Tags
-	(*LinuxSysctlFs_Fields)(nil), // 42: LinuxSysctlFs.Fields
-	(*LinuxSysctlFs_Tags)(nil),   // 43: LinuxSysctlFs.Tags
-	(*System_Fields)(nil),        // 44: System.Fields
-	(*System_Tags)(nil),          // 45: System.Tags
-	(*Net_Fields)(nil),           // 46: Net.Fields
-	(*Net_Tags)(nil),             // 47: Net.Tags
-	(*Interrupts_Fields)(nil),    // 48: Interrupts.Fields
-	(*Interrupts_Tags)(nil),      // 49: Interrupts.Tags
-	(*Mem_Fields)(nil),           // 50: Mem.Fields
-	(*Mem_Tags)(nil),             // 51: Mem.Tags
-	(*Disk_Fields)(nil),          // 52: Disk.Fields
-	(*Disk_Tags)(nil),            // 53: Disk.Tags
-	(*Swap_Fields)(nil),          // 54: Swap.Fields
-	(*Swap_Tags)(nil),            // 55: Swap.Tags
-	(*Processes_Fields)(nil),     // 56: Processes.Fields
-	(*Processes_Tags)(nil),       // 57: Processes.Tags
-	(*DockerBlkio_Fields)(nil),   // 58: DockerBlkio.Fields
-	(*DockerBlkio_Tags)(nil),     // 59: DockerBlkio.Tags
-	(*DockerStats_FIELDS)(nil),   // 60: DockerStats.FIELDS
-	(*DockerStats_TAGS)(nil),     // 61: DockerStats.TAGS
-	(*DockerMem_Fields)(nil),     // 62: DockerMem.Fields
-	(*DockerMem_Tags)(nil),       // 63: DockerMem.Tags
-	(*DockerCpu_Fields)(nil),     // 64: DockerCpu.Fields
-	(*DockerCpu_Tags)(nil),       // 65: DockerCpu.Tags
-	(*DockerNet_Fields)(nil),     // 66: DockerNet.Fields
-	(*DockerNet_Tags)(nil),       // 67: DockerNet.Tags
-	(*Netstat_Fields)(nil),       // 68: Netstat.Fields
-	(*Netstat_Tags)(nil),         // 69: Netstat.Tags
-	(*GPS_Fields)(nil),           // 70: GPS.Fields
-	(*GPS_Tags)(nil),             // 71: GPS.Tags
-	(*Uploader_Fields)(nil),      // 72: Uploader.Fields
-	(*Uploader_Tags)(nil),        // 73: Uploader.Tags
-	(*DetectNet_Fields)(nil),     // 74: DetectNet.Fields
-	(*DetectNet_Tags)(nil),       // 75: DetectNet.Tags
-	(*SegNet_Fields)(nil),        // 76: SegNet.Fields
-	(*SegNet_Tags)(nil),          // 77: SegNet.Tags
-	(*Able_Fields)(nil),          // 78: Able.Fields
-	(*Able_Tags)(nil),            // 79: Able.Tags
-	(*CameraControl_Fields)(nil), // 80: CameraControl.Fields
-	(*CameraControl_Tags)(nil),   // 81: CameraControl.Tags
+	(*UploaderStats)(nil),        // 23: UploaderStats
+	(*DetectNet)(nil),            // 24: DetectNet
+	(*SegNet)(nil),               // 25: SegNet
+	(*Able)(nil),                 // 26: Able
+	(*CameraControl)(nil),        // 27: CameraControl
+	(*Influx)(nil),               // 28: Influx
+	(*Diskio_Fields)(nil),        // 29: Diskio.Fields
+	(*Diskio_Tags)(nil),          // 30: Diskio.Tags
+	(*Glog_Fields)(nil),          // 31: Glog.Fields
+	(*Glog_Tags)(nil),            // 32: Glog.Tags
+	(*LTE_Fields)(nil),           // 33: LTE.Fields
+	(*LTE_Tags)(nil),             // 34: LTE.Tags
+	(*SMART_Fields)(nil),         // 35: SMART.Fields
+	(*SMART_TAGS)(nil),           // 36: SMART.TAGS
+	(*Tegrastats_Fields)(nil),    // 37: Tegrastats.Fields
+	(*Tegrastats_Tags)(nil),      // 38: Tegrastats.Tags
+	(*CPU_Fields)(nil),           // 39: CPU.Fields
+	(*CPU_Tags)(nil),             // 40: CPU.Tags
+	(*Kernel_Fields)(nil),        // 41: Kernel.Fields
+	(*Kernel_Tags)(nil),          // 42: Kernel.Tags
+	(*LinuxSysctlFs_Fields)(nil), // 43: LinuxSysctlFs.Fields
+	(*LinuxSysctlFs_Tags)(nil),   // 44: LinuxSysctlFs.Tags
+	(*System_Fields)(nil),        // 45: System.Fields
+	(*System_Tags)(nil),          // 46: System.Tags
+	(*Net_Fields)(nil),           // 47: Net.Fields
+	(*Net_Tags)(nil),             // 48: Net.Tags
+	(*Interrupts_Fields)(nil),    // 49: Interrupts.Fields
+	(*Interrupts_Tags)(nil),      // 50: Interrupts.Tags
+	(*Mem_Fields)(nil),           // 51: Mem.Fields
+	(*Mem_Tags)(nil),             // 52: Mem.Tags
+	(*Disk_Fields)(nil),          // 53: Disk.Fields
+	(*Disk_Tags)(nil),            // 54: Disk.Tags
+	(*Swap_Fields)(nil),          // 55: Swap.Fields
+	(*Swap_Tags)(nil),            // 56: Swap.Tags
+	(*Processes_Fields)(nil),     // 57: Processes.Fields
+	(*Processes_Tags)(nil),       // 58: Processes.Tags
+	(*DockerBlkio_Fields)(nil),   // 59: DockerBlkio.Fields
+	(*DockerBlkio_Tags)(nil),     // 60: DockerBlkio.Tags
+	(*DockerStats_FIELDS)(nil),   // 61: DockerStats.FIELDS
+	(*DockerStats_TAGS)(nil),     // 62: DockerStats.TAGS
+	(*DockerMem_Fields)(nil),     // 63: DockerMem.Fields
+	(*DockerMem_Tags)(nil),       // 64: DockerMem.Tags
+	(*DockerCpu_Fields)(nil),     // 65: DockerCpu.Fields
+	(*DockerCpu_Tags)(nil),       // 66: DockerCpu.Tags
+	(*DockerNet_Fields)(nil),     // 67: DockerNet.Fields
+	(*DockerNet_Tags)(nil),       // 68: DockerNet.Tags
+	(*Netstat_Fields)(nil),       // 69: Netstat.Fields
+	(*Netstat_Tags)(nil),         // 70: Netstat.Tags
+	(*GPS_Fields)(nil),           // 71: GPS.Fields
+	(*GPS_Tags)(nil),             // 72: GPS.Tags
+	(*Uploader_Fields)(nil),      // 73: Uploader.Fields
+	(*Uploader_Tags)(nil),        // 74: Uploader.Tags
+	(*UploaderStats_Fields)(nil), // 75: UploaderStats.Fields
+	(*UploaderStats_Tags)(nil),   // 76: UploaderStats.Tags
+	(*DetectNet_Fields)(nil),     // 77: DetectNet.Fields
+	(*DetectNet_Tags)(nil),       // 78: DetectNet.Tags
+	(*SegNet_Fields)(nil),        // 79: SegNet.Fields
+	(*SegNet_Tags)(nil),          // 80: SegNet.Tags
+	(*Able_Fields)(nil),          // 81: Able.Fields
+	(*Able_Tags)(nil),            // 82: Able.Tags
+	(*CameraControl_Fields)(nil), // 83: CameraControl.Fields
+	(*CameraControl_Tags)(nil),   // 84: CameraControl.Tags
 }
 var file_proto_proto_depIdxs = []int32{
-	28, // 0: Diskio.fields:type_name -> Diskio.Fields
-	29, // 1: Diskio.tags:type_name -> Diskio.Tags
-	30, // 2: Glog.fields:type_name -> Glog.Fields
-	31, // 3: Glog.tags:type_name -> Glog.Tags
-	32, // 4: LTE.fields:type_name -> LTE.Fields
-	33, // 5: LTE.tags:type_name -> LTE.Tags
-	34, // 6: SMART.fields:type_name -> SMART.Fields
-	35, // 7: SMART.tags:type_name -> SMART.TAGS
-	36, // 8: Tegrastats.fields:type_name -> Tegrastats.Fields
-	37, // 9: Tegrastats.tags:type_name -> Tegrastats.Tags
-	38, // 10: CPU.fields:type_name -> CPU.Fields
-	39, // 11: CPU.tags:type_name -> CPU.Tags
-	40, // 12: Kernel.fields:type_name -> Kernel.Fields
-	41, // 13: Kernel.tags:type_name -> Kernel.Tags
-	42, // 14: LinuxSysctlFs.fields:type_name -> LinuxSysctlFs.Fields
-	43, // 15: LinuxSysctlFs.tags:type_name -> LinuxSysctlFs.Tags
-	44, // 16: System.fields:type_name -> System.Fields
-	45, // 17: System.tags:type_name -> System.Tags
-	46, // 18: Net.fields:type_name -> Net.Fields
-	47, // 19: Net.tags:type_name -> Net.Tags
-	48, // 20: Interrupts.fields:type_name -> Interrupts.Fields
-	49, // 21: Interrupts.tags:type_name -> Interrupts.Tags
-	50, // 22: Mem.fields:type_name -> Mem.Fields
-	51, // 23: Mem.tags:type_name -> Mem.Tags
-	52, // 24: Disk.fields:type_name -> Disk.Fields
-	53, // 25: Disk.tags:type_name -> Disk.Tags
-	54, // 26: Swap.fields:type_name -> Swap.Fields
-	55, // 27: Swap.tags:type_name -> Swap.Tags
-	56, // 28: Processes.fields:type_name -> Processes.Fields
-	57, // 29: Processes.tags:type_name -> Processes.Tags
-	58, // 30: DockerBlkio.fields:type_name -> DockerBlkio.Fields
-	59, // 31: DockerBlkio.tags:type_name -> DockerBlkio.Tags
-	60, // 32: DockerStats.fields:type_name -> DockerStats.FIELDS
-	61, // 33: DockerStats.tags:type_name -> DockerStats.TAGS
-	62, // 34: DockerMem.fields:type_name -> DockerMem.Fields
-	63, // 35: DockerMem.tags:type_name -> DockerMem.Tags
-	64, // 36: DockerCpu.fields:type_name -> DockerCpu.Fields
-	65, // 37: DockerCpu.tags:type_name -> DockerCpu.Tags
-	66, // 38: DockerNet.fields:type_name -> DockerNet.Fields
-	67, // 39: DockerNet.tags:type_name -> DockerNet.Tags
-	68, // 40: Netstat.fields:type_name -> Netstat.Fields
-	69, // 41: Netstat.tags:type_name -> Netstat.Tags
-	70, // 42: GPS.fields:type_name -> GPS.Fields
-	71, // 43: GPS.tags:type_name -> GPS.Tags
-	72, // 44: Uploader.fields:type_name -> Uploader.Fields
-	73, // 45: Uploader.tags:type_name -> Uploader.Tags
-	74, // 46: DetectNet.fields:type_name -> DetectNet.Fields
-	75, // 47: DetectNet.tags:type_name -> DetectNet.Tags
-	76, // 48: SegNet.fields:type_name -> SegNet.Fields
-	77, // 49: SegNet.tags:type_name -> SegNet.Tags
-	78, // 50: Able.fields:type_name -> Able.Fields
-	79, // 51: Able.tags:type_name -> Able.Tags
-	80, // 52: CameraControl.fields:type_name -> CameraControl.Fields
-	81, // 53: CameraControl.tags:type_name -> CameraControl.Tags
-	6,  // 54: Influx.kernel:type_name -> Kernel
-	7,  // 55: Influx.linux_sysctl_fs:type_name -> LinuxSysctlFs
-	8,  // 56: Influx.system:type_name -> System
-	9,  // 57: Influx.net:type_name -> Net
-	10, // 58: Influx.interrupts:type_name -> Interrupts
-	11, // 59: Influx.mem:type_name -> Mem
-	12, // 60: Influx.disk:type_name -> Disk
-	14, // 61: Influx.processes:type_name -> Processes
-	5,  // 62: Influx.cpu:type_name -> CPU
-	13, // 63: Influx.swap:type_name -> Swap
-	4,  // 64: Influx.tegrastats:type_name -> Tegrastats
-	15, // 65: Influx.dockerBlkio:type_name -> DockerBlkio
-	19, // 66: Influx.dockerNet:type_name -> DockerNet
-	18, // 67: Influx.dockerCpu:type_name -> DockerCpu
-	17, // 68: Influx.dockerMem:type_name -> DockerMem
-	16, // 69: Influx.dockerStats:type_name -> DockerStats
-	3,  // 70: Influx.smart:type_name -> SMART
-	2,  // 71: Influx.lte:type_name -> LTE
-	1,  // 72: Influx.glog:type_name -> Glog
-	0,  // 73: Influx.diskio:type_name -> Diskio
-	20, // 74: Influx.netstat:type_name -> Netstat
-	21, // 75: Influx.gps:type_name -> GPS
-	25, // 76: Influx.able:type_name -> Able
-	26, // 77: Influx.cameraControl:type_name -> CameraControl
-	24, // 78: Influx.segNet:type_name -> SegNet
-	23, // 79: Influx.detectnet:type_name -> DetectNet
-	22, // 80: Influx.uploader:type_name -> Uploader
-	81, // [81:81] is the sub-list for method output_type
-	81, // [81:81] is the sub-list for method input_type
-	81, // [81:81] is the sub-list for extension type_name
-	81, // [81:81] is the sub-list for extension extendee
-	0,  // [0:81] is the sub-list for field type_name
+	29, // 0: Diskio.fields:type_name -> Diskio.Fields
+	30, // 1: Diskio.tags:type_name -> Diskio.Tags
+	31, // 2: Glog.fields:type_name -> Glog.Fields
+	32, // 3: Glog.tags:type_name -> Glog.Tags
+	33, // 4: LTE.fields:type_name -> LTE.Fields
+	34, // 5: LTE.tags:type_name -> LTE.Tags
+	35, // 6: SMART.fields:type_name -> SMART.Fields
+	36, // 7: SMART.tags:type_name -> SMART.TAGS
+	37, // 8: Tegrastats.fields:type_name -> Tegrastats.Fields
+	38, // 9: Tegrastats.tags:type_name -> Tegrastats.Tags
+	39, // 10: CPU.fields:type_name -> CPU.Fields
+	40, // 11: CPU.tags:type_name -> CPU.Tags
+	41, // 12: Kernel.fields:type_name -> Kernel.Fields
+	42, // 13: Kernel.tags:type_name -> Kernel.Tags
+	43, // 14: LinuxSysctlFs.fields:type_name -> LinuxSysctlFs.Fields
+	44, // 15: LinuxSysctlFs.tags:type_name -> LinuxSysctlFs.Tags
+	45, // 16: System.fields:type_name -> System.Fields
+	46, // 17: System.tags:type_name -> System.Tags
+	47, // 18: Net.fields:type_name -> Net.Fields
+	48, // 19: Net.tags:type_name -> Net.Tags
+	49, // 20: Interrupts.fields:type_name -> Interrupts.Fields
+	50, // 21: Interrupts.tags:type_name -> Interrupts.Tags
+	51, // 22: Mem.fields:type_name -> Mem.Fields
+	52, // 23: Mem.tags:type_name -> Mem.Tags
+	53, // 24: Disk.fields:type_name -> Disk.Fields
+	54, // 25: Disk.tags:type_name -> Disk.Tags
+	55, // 26: Swap.fields:type_name -> Swap.Fields
+	56, // 27: Swap.tags:type_name -> Swap.Tags
+	57, // 28: Processes.fields:type_name -> Processes.Fields
+	58, // 29: Processes.tags:type_name -> Processes.Tags
+	59, // 30: DockerBlkio.fields:type_name -> DockerBlkio.Fields
+	60, // 31: DockerBlkio.tags:type_name -> DockerBlkio.Tags
+	61, // 32: DockerStats.fields:type_name -> DockerStats.FIELDS
+	62, // 33: DockerStats.tags:type_name -> DockerStats.TAGS
+	63, // 34: DockerMem.fields:type_name -> DockerMem.Fields
+	64, // 35: DockerMem.tags:type_name -> DockerMem.Tags
+	65, // 36: DockerCpu.fields:type_name -> DockerCpu.Fields
+	66, // 37: DockerCpu.tags:type_name -> DockerCpu.Tags
+	67, // 38: DockerNet.fields:type_name -> DockerNet.Fields
+	68, // 39: DockerNet.tags:type_name -> DockerNet.Tags
+	69, // 40: Netstat.fields:type_name -> Netstat.Fields
+	70, // 41: Netstat.tags:type_name -> Netstat.Tags
+	71, // 42: GPS.fields:type_name -> GPS.Fields
+	72, // 43: GPS.tags:type_name -> GPS.Tags
+	73, // 44: Uploader.fields:type_name -> Uploader.Fields
+	74, // 45: Uploader.tags:type_name -> Uploader.Tags
+	75, // 46: UploaderStats.fields:type_name -> UploaderStats.Fields
+	76, // 47: UploaderStats.tags:type_name -> UploaderStats.Tags
+	77, // 48: DetectNet.fields:type_name -> DetectNet.Fields
+	78, // 49: DetectNet.tags:type_name -> DetectNet.Tags
+	79, // 50: SegNet.fields:type_name -> SegNet.Fields
+	80, // 51: SegNet.tags:type_name -> SegNet.Tags
+	81, // 52: Able.fields:type_name -> Able.Fields
+	82, // 53: Able.tags:type_name -> Able.Tags
+	83, // 54: CameraControl.fields:type_name -> CameraControl.Fields
+	84, // 55: CameraControl.tags:type_name -> CameraControl.Tags
+	6,  // 56: Influx.kernel:type_name -> Kernel
+	7,  // 57: Influx.linux_sysctl_fs:type_name -> LinuxSysctlFs
+	8,  // 58: Influx.system:type_name -> System
+	9,  // 59: Influx.net:type_name -> Net
+	10, // 60: Influx.interrupts:type_name -> Interrupts
+	11, // 61: Influx.mem:type_name -> Mem
+	12, // 62: Influx.disk:type_name -> Disk
+	14, // 63: Influx.processes:type_name -> Processes
+	5,  // 64: Influx.cpu:type_name -> CPU
+	13, // 65: Influx.swap:type_name -> Swap
+	4,  // 66: Influx.tegrastats:type_name -> Tegrastats
+	15, // 67: Influx.dockerBlkio:type_name -> DockerBlkio
+	19, // 68: Influx.dockerNet:type_name -> DockerNet
+	18, // 69: Influx.dockerCpu:type_name -> DockerCpu
+	17, // 70: Influx.dockerMem:type_name -> DockerMem
+	16, // 71: Influx.dockerStats:type_name -> DockerStats
+	3,  // 72: Influx.smart:type_name -> SMART
+	2,  // 73: Influx.lte:type_name -> LTE
+	1,  // 74: Influx.glog:type_name -> Glog
+	0,  // 75: Influx.diskio:type_name -> Diskio
+	20, // 76: Influx.netstat:type_name -> Netstat
+	21, // 77: Influx.gps:type_name -> GPS
+	26, // 78: Influx.able:type_name -> Able
+	27, // 79: Influx.cameraControl:type_name -> CameraControl
+	25, // 80: Influx.segNet:type_name -> SegNet
+	24, // 81: Influx.detectnet:type_name -> DetectNet
+	22, // 82: Influx.uploader:type_name -> Uploader
+	23, // 83: Influx.uploader_stats:type_name -> UploaderStats
+	84, // [84:84] is the sub-list for method output_type
+	84, // [84:84] is the sub-list for method input_type
+	84, // [84:84] is the sub-list for extension type_name
+	84, // [84:84] is the sub-list for extension extendee
+	0,  // [0:84] is the sub-list for field type_name
 }
 
 func init() { file_proto_proto_init() }
@@ -9073,7 +9307,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DetectNet); i {
+			switch v := v.(*UploaderStats); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9085,7 +9319,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SegNet); i {
+			switch v := v.(*DetectNet); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9097,7 +9331,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Able); i {
+			switch v := v.(*SegNet); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9109,7 +9343,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CameraControl); i {
+			switch v := v.(*Able); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9121,7 +9355,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Influx); i {
+			switch v := v.(*CameraControl); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9133,7 +9367,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Diskio_Fields); i {
+			switch v := v.(*Influx); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9145,7 +9379,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Diskio_Tags); i {
+			switch v := v.(*Diskio_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9157,7 +9391,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Glog_Fields); i {
+			switch v := v.(*Diskio_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9169,7 +9403,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Glog_Tags); i {
+			switch v := v.(*Glog_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9181,7 +9415,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LTE_Fields); i {
+			switch v := v.(*Glog_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9193,7 +9427,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LTE_Tags); i {
+			switch v := v.(*LTE_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9205,7 +9439,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SMART_Fields); i {
+			switch v := v.(*LTE_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9217,7 +9451,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SMART_TAGS); i {
+			switch v := v.(*SMART_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9229,7 +9463,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Tegrastats_Fields); i {
+			switch v := v.(*SMART_TAGS); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9241,7 +9475,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Tegrastats_Tags); i {
+			switch v := v.(*Tegrastats_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9253,7 +9487,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CPU_Fields); i {
+			switch v := v.(*Tegrastats_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9265,7 +9499,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CPU_Tags); i {
+			switch v := v.(*CPU_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9277,7 +9511,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Kernel_Fields); i {
+			switch v := v.(*CPU_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9289,7 +9523,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Kernel_Tags); i {
+			switch v := v.(*Kernel_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9301,7 +9535,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LinuxSysctlFs_Fields); i {
+			switch v := v.(*Kernel_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9313,7 +9547,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LinuxSysctlFs_Tags); i {
+			switch v := v.(*LinuxSysctlFs_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9325,7 +9559,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*System_Fields); i {
+			switch v := v.(*LinuxSysctlFs_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9337,7 +9571,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*System_Tags); i {
+			switch v := v.(*System_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9349,7 +9583,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Net_Fields); i {
+			switch v := v.(*System_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9361,7 +9595,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[47].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Net_Tags); i {
+			switch v := v.(*Net_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9373,7 +9607,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[48].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Interrupts_Fields); i {
+			switch v := v.(*Net_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9385,7 +9619,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[49].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Interrupts_Tags); i {
+			switch v := v.(*Interrupts_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9397,7 +9631,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[50].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Mem_Fields); i {
+			switch v := v.(*Interrupts_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9409,7 +9643,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[51].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Mem_Tags); i {
+			switch v := v.(*Mem_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9421,7 +9655,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[52].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Disk_Fields); i {
+			switch v := v.(*Mem_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9433,7 +9667,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[53].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Disk_Tags); i {
+			switch v := v.(*Disk_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9445,7 +9679,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[54].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Swap_Fields); i {
+			switch v := v.(*Disk_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9457,7 +9691,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[55].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Swap_Tags); i {
+			switch v := v.(*Swap_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9469,7 +9703,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[56].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Processes_Fields); i {
+			switch v := v.(*Swap_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9481,7 +9715,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[57].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Processes_Tags); i {
+			switch v := v.(*Processes_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9493,7 +9727,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[58].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerBlkio_Fields); i {
+			switch v := v.(*Processes_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9505,7 +9739,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[59].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerBlkio_Tags); i {
+			switch v := v.(*DockerBlkio_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9517,7 +9751,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[60].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerStats_FIELDS); i {
+			switch v := v.(*DockerBlkio_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9529,7 +9763,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[61].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerStats_TAGS); i {
+			switch v := v.(*DockerStats_FIELDS); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9541,7 +9775,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[62].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerMem_Fields); i {
+			switch v := v.(*DockerStats_TAGS); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9553,7 +9787,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[63].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerMem_Tags); i {
+			switch v := v.(*DockerMem_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9565,7 +9799,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[64].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerCpu_Fields); i {
+			switch v := v.(*DockerMem_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9577,7 +9811,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[65].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerCpu_Tags); i {
+			switch v := v.(*DockerCpu_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9589,7 +9823,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[66].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerNet_Fields); i {
+			switch v := v.(*DockerCpu_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9601,7 +9835,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[67].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DockerNet_Tags); i {
+			switch v := v.(*DockerNet_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9613,7 +9847,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[68].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Netstat_Fields); i {
+			switch v := v.(*DockerNet_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9625,7 +9859,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[69].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Netstat_Tags); i {
+			switch v := v.(*Netstat_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9637,7 +9871,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[70].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GPS_Fields); i {
+			switch v := v.(*Netstat_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9649,7 +9883,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[71].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GPS_Tags); i {
+			switch v := v.(*GPS_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9661,7 +9895,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[72].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Uploader_Fields); i {
+			switch v := v.(*GPS_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9673,7 +9907,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[73].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Uploader_Tags); i {
+			switch v := v.(*Uploader_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9685,7 +9919,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[74].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DetectNet_Fields); i {
+			switch v := v.(*Uploader_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9697,7 +9931,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[75].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DetectNet_Tags); i {
+			switch v := v.(*UploaderStats_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9709,7 +9943,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[76].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SegNet_Fields); i {
+			switch v := v.(*UploaderStats_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9721,7 +9955,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[77].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SegNet_Tags); i {
+			switch v := v.(*DetectNet_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9733,7 +9967,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[78].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Able_Fields); i {
+			switch v := v.(*DetectNet_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9745,7 +9979,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[79].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Able_Tags); i {
+			switch v := v.(*SegNet_Fields); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9757,7 +9991,7 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[80].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CameraControl_Fields); i {
+			switch v := v.(*SegNet_Tags); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -9769,6 +10003,42 @@ func file_proto_proto_init() {
 			}
 		}
 		file_proto_proto_msgTypes[81].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Able_Fields); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_proto_msgTypes[82].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Able_Tags); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_proto_msgTypes[83].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CameraControl_Fields); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_proto_msgTypes[84].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CameraControl_Tags); i {
 			case 0:
 				return &v.state
@@ -9787,7 +10057,7 @@ func file_proto_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   82,
+			NumMessages:   85,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -242,6 +242,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return errors.Wrap(err, "build Uploader")
 			}
 			influx.Uploader = append(influx.Uploader, &m)
+		case "uploader_stats":
+			m := UploaderStats{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build UploaderStats")
+			}
+			influx.UploaderStats = append(influx.UploaderStats, &m)
 		case "segnet_metrics":
 			m := SegNet{}
 			if err := json.Unmarshal(b, &m); err != nil {

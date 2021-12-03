@@ -692,6 +692,26 @@ message Uploader {
   double timestamp = 4;
 }
 
+message UploaderStats {
+
+  message Fields {
+    int64 completed = 1;
+    int64 error = 2;
+    int64 in_queue = 3;
+    int64 part = 4;
+  }
+
+  message Tags {
+    string host = 1;
+    string url = 2;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
 
 message DetectNet {
 
@@ -810,6 +830,7 @@ message Influx {
   repeated SegNet segNet = 25;
   repeated DetectNet detectnet = 26;
   repeated Uploader uploader = 27;
+  repeated UploaderStats uploader_stats = 28;
 }
 
 
