@@ -695,7 +695,7 @@ message Uploader {
 message UploaderStats {
 
   message Fields {
-    int64 completed = 1;
+    int64 complete = 1;
     int64 error = 2;
     int64 in_queue = 3;
     int64 part = 4;
