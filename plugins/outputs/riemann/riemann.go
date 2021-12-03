@@ -2,7 +2,6 @@ package riemann
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"sort"
@@ -10,21 +9,23 @@ import (
 	"time"
 
 	"github.com/amir/raidman"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type Riemann struct {
-	URL                    string
-	TTL                    float32
-	Separator              string
-	MeasurementAsAttribute bool
-	StringAsState          bool
-	TagKeys                []string
-	Tags                   []string
-	DescriptionText        string
-	Timeout                internal.Duration
+	URL                    string          `toml:"url"`
+	TTL                    float32         `toml:"ttl"`
+	Separator              string          `toml:"separator"`
+	MeasurementAsAttribute bool            `toml:"measurement_as_attribute"`
+	StringAsState          bool            `toml:"string_as_state"`
+	TagKeys                []string        `toml:"tag_keys"`
+	Tags                   []string        `toml:"tags"`
+	DescriptionText        string          `toml:"description_text"`
+	Timeout                config.Duration `toml:"timeout"`
+	Log                    telegraf.Logger `toml:"-"`
 
 	client *raidman.Client
 }
@@ -63,12 +64,12 @@ var sampleConfig = `
 `
 
 func (r *Riemann) Connect() error {
-	parsed_url, err := url.Parse(r.URL)
+	parsedURL, err := url.Parse(r.URL)
 	if err != nil {
 		return err
 	}
 
-	client, err := raidman.DialWithTimeout(parsed_url.Scheme, parsed_url.Host, r.Timeout.Duration)
+	client, err := raidman.DialWithTimeout(parsedURL.Scheme, parsedURL.Host, time.Duration(r.Timeout))
 	if err != nil {
 		r.client = nil
 		return err
@@ -78,12 +79,12 @@ func (r *Riemann) Connect() error {
 	return nil
 }
 
-func (r *Riemann) Close() error {
+func (r *Riemann) Close() (err error) {
 	if r.client != nil {
-		r.client.Close()
+		err = r.client.Close()
 		r.client = nil
 	}
-	return nil
+	return err
 }
 
 func (r *Riemann) SampleConfig() string {
@@ -101,7 +102,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 
 	if r.client == nil {
 		if err := r.Connect(); err != nil {
-			return fmt.Errorf("Failed to (re)connect to Riemann: %s", err.Error())
+			return fmt.Errorf("failed to (re)connect to Riemann: %s", err.Error())
 		}
 	}
 
@@ -109,14 +110,12 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	var events []*raidman.Event
 	for _, m := range metrics {
 		evs := r.buildRiemannEvents(m)
-		for _, ev := range evs {
-			events = append(events, ev)
-		}
+		events = append(events, evs...)
 	}
 
 	if err := r.client.SendMulti(events); err != nil {
-		r.Close()
-		return fmt.Errorf("Failed to send riemann message: %s", err)
+		r.Close() //nolint:revive // There is another error which will be returned here
+		return fmt.Errorf("failed to send riemann message: %s", err)
 	}
 	return nil
 }
@@ -145,18 +144,18 @@ func (r *Riemann) buildRiemannEvents(m telegraf.Metric) []*raidman.Event {
 			Tags:       r.tags(m.Tags()),
 		}
 
-		switch value.(type) {
+		switch value := value.(type) {
 		case string:
 			// only send string metrics if explicitly enabled, skip otherwise
 			if !r.StringAsState {
-				log.Printf("D! Riemann event states disabled, skipping metric value [%s]\n", value)
+				r.Log.Debugf("Riemann event states disabled, skipping metric value [%s]", value)
 				continue
 			}
-			event.State = value.(string)
+			event.State = value
 		case int, int64, uint64, float32, float64:
 			event.Metric = value
 		default:
-			log.Printf("D! Riemann does not support metric value [%s]\n", value)
+			r.Log.Debugf("Riemann does not support metric value [%s]", value)
 			continue
 		}
 
@@ -219,7 +218,7 @@ func (r *Riemann) tags(tags map[string]string) []string {
 func init() {
 	outputs.Add("riemann", func() telegraf.Output {
 		return &Riemann{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }

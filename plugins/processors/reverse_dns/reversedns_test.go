@@ -14,7 +14,7 @@ import (
 
 func TestSimpleReverseLookup(t *testing.T) {
 	now := time.Now()
-	m, _ := metric.New("name", map[string]string{
+	m := metric.New("name", map[string]string{
 		"dest_ip": "8.8.8.8",
 	}, map[string]interface{}{
 		"source_ip": "127.0.0.1",
@@ -33,9 +33,12 @@ func TestSimpleReverseLookup(t *testing.T) {
 		},
 	}
 	acc := &testutil.Accumulator{}
-	dns.Start(acc)
-	dns.Add(m, acc)
-	dns.Stop()
+	err := dns.Start(acc)
+	require.NoError(t, err)
+	err = dns.Add(m, acc)
+	require.NoError(t, err)
+	err = dns.Stop()
+	require.NoError(t, err)
 	// should be processed now.
 
 	require.Len(t, acc.GetTelegrafMetrics(), 1)

@@ -1,17 +1,14 @@
 package elasticsearch
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-
-	"fmt"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func defaultTags() map[string]string {
@@ -33,9 +30,9 @@ type transportMock struct {
 	body       string
 }
 
-func newTransportMock(statusCode int, body string) http.RoundTripper {
+func newTransportMock(body string) http.RoundTripper {
 	return &transportMock{
-		statusCode: statusCode,
+		statusCode: http.StatusOK,
 		body:       body,
 	}
 }
@@ -47,19 +44,11 @@ func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 		StatusCode: t.statusCode,
 	}
 	res.Header.Set("Content-Type", "application/json")
-	res.Body = ioutil.NopCloser(strings.NewReader(t.body))
+	res.Body = io.NopCloser(strings.NewReader(t.body))
 	return res, nil
 }
 
-func (t *transportMock) CancelRequest(_ *http.Request) {
-}
-
-func checkIsMaster(es *Elasticsearch, server string, expected bool, t *testing.T) {
-	if es.serverInfo[server].isMaster() != expected {
-		msg := fmt.Sprintf("IsMaster set incorrectly")
-		assert.Fail(t, msg)
-	}
-}
+func (t *transportMock) CancelRequest(_ *http.Request) {}
 
 func checkNodeStatsResult(t *testing.T, acc *testutil.Accumulator) {
 	tags := defaultTags()
@@ -77,16 +66,13 @@ func checkNodeStatsResult(t *testing.T, acc *testutil.Accumulator) {
 func TestGather(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	es.client.Transport = newTransportMock(nodeStatsResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
 	var acc testutil.Accumulator
-	if err := acc.GatherError(es.Gather); err != nil {
-		t.Fatal(err)
-	}
-
-	checkIsMaster(es, es.Servers[0], false, t)
+	require.NoError(t, acc.GatherError(es.Gather))
+	require.False(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
 	checkNodeStatsResult(t, &acc)
 }
 
@@ -94,16 +80,13 @@ func TestGatherIndividualStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
 	es.NodeStats = []string{"jvm", "process"}
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponseJVMProcess)
+	es.client.Transport = newTransportMock(nodeStatsResponseJVMProcess)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
 	var acc testutil.Accumulator
-	if err := acc.GatherError(es.Gather); err != nil {
-		t.Fatal(err)
-	}
-
-	checkIsMaster(es, es.Servers[0], false, t)
+	require.NoError(t, acc.GatherError(es.Gather))
+	require.False(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
 
 	tags := defaultTags()
 	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
@@ -120,16 +103,13 @@ func TestGatherIndividualStats(t *testing.T) {
 func TestGatherNodeStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	es.client.Transport = newTransportMock(nodeStatsResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
 	var acc testutil.Accumulator
-	if err := es.gatherNodeStats("junk", &acc); err != nil {
-		t.Fatal(err)
-	}
-
-	checkIsMaster(es, es.Servers[0], false, t)
+	require.NoError(t, es.gatherNodeStats("junk", &acc))
+	require.False(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
 	checkNodeStatsResult(t, &acc)
 }
 
@@ -138,14 +118,13 @@ func TestGatherClusterHealthEmptyClusterHealth(t *testing.T) {
 	es.Servers = []string{"http://example.com:9200"}
 	es.ClusterHealth = true
 	es.ClusterHealthLevel = ""
-	es.client.Transport = newTransportMock(http.StatusOK, clusterHealthResponse)
+	es.client.Transport = newTransportMock(clusterHealthResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
 	var acc testutil.Accumulator
 	require.NoError(t, es.gatherClusterHealth("junk", &acc))
-
-	checkIsMaster(es, es.Servers[0], false, t)
+	require.False(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
 
 	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health",
 		clusterHealthExpected,
@@ -165,14 +144,13 @@ func TestGatherClusterHealthSpecificClusterHealth(t *testing.T) {
 	es.Servers = []string{"http://example.com:9200"}
 	es.ClusterHealth = true
 	es.ClusterHealthLevel = "cluster"
-	es.client.Transport = newTransportMock(http.StatusOK, clusterHealthResponse)
+	es.client.Transport = newTransportMock(clusterHealthResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
 	var acc testutil.Accumulator
 	require.NoError(t, es.gatherClusterHealth("junk", &acc))
-
-	checkIsMaster(es, es.Servers[0], false, t)
+	require.False(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
 
 	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health",
 		clusterHealthExpected,
@@ -192,14 +170,13 @@ func TestGatherClusterHealthAlsoIndicesHealth(t *testing.T) {
 	es.Servers = []string{"http://example.com:9200"}
 	es.ClusterHealth = true
 	es.ClusterHealthLevel = "indices"
-	es.client.Transport = newTransportMock(http.StatusOK, clusterHealthResponseWithIndices)
+	es.client.Transport = newTransportMock(clusterHealthResponseWithIndices)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
 	var acc testutil.Accumulator
 	require.NoError(t, es.gatherClusterHealth("junk", &acc))
-
-	checkIsMaster(es, es.Servers[0], false, t)
+	require.False(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
 
 	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health",
 		clusterHealthExpected,
@@ -223,31 +200,25 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	info := serverInfo{nodeID: "SDFsfSDFsdfFSDSDfSFDSDF", masterID: ""}
 
 	// first get catMaster
-	es.client.Transport = newTransportMock(http.StatusOK, IsMasterResult)
+	es.client.Transport = newTransportMock(IsMasterResult)
 	masterID, err := es.getCatMaster("junk")
 	require.NoError(t, err)
 	info.masterID = masterID
 	es.serverInfo["http://example.com:9200"] = info
 
-	IsMasterResultTokens := strings.Split(string(IsMasterResult), " ")
-	if masterID != IsMasterResultTokens[0] {
-		msg := fmt.Sprintf("catmaster is incorrect")
-		assert.Fail(t, msg)
-	}
+	isMasterResultTokens := strings.Split(IsMasterResult, " ")
+	require.Equal(t, masterID, isMasterResultTokens[0], "catmaster is incorrect")
 
 	// now get node status, which determines whether we're master
 	var acc testutil.Accumulator
 	es.Local = true
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
-	if err := es.gatherNodeStats("junk", &acc); err != nil {
-		t.Fatal(err)
-	}
-
-	checkIsMaster(es, es.Servers[0], true, t)
+	es.client.Transport = newTransportMock(nodeStatsResponse)
+	require.NoError(t, es.gatherNodeStats("junk", &acc))
+	require.True(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
 	checkNodeStatsResult(t, &acc)
 
 	// now test the clusterstats method
-	es.client.Transport = newTransportMock(http.StatusOK, clusterStatsResponse)
+	es.client.Transport = newTransportMock(clusterStatsResponse)
 	require.NoError(t, es.gatherClusterStats("junk", &acc))
 
 	tags := map[string]string{
@@ -269,26 +240,21 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	es.serverInfo["http://example.com:9200"] = serverInfo{nodeID: "SDFsfSDFsdfFSDSDfSFDSDF", masterID: ""}
 
 	// first get catMaster
-	es.client.Transport = newTransportMock(http.StatusOK, IsNotMasterResult)
+	es.client.Transport = newTransportMock(IsNotMasterResult)
 	masterID, err := es.getCatMaster("junk")
 	require.NoError(t, err)
 
-	IsNotMasterResultTokens := strings.Split(string(IsNotMasterResult), " ")
-	if masterID != IsNotMasterResultTokens[0] {
-		msg := fmt.Sprintf("catmaster is incorrect")
-		assert.Fail(t, msg)
-	}
+	isNotMasterResultTokens := strings.Split(IsNotMasterResult, " ")
+	require.Equal(t, masterID, isNotMasterResultTokens[0], "catmaster is incorrect")
 
 	// now get node status, which determines whether we're master
 	var acc testutil.Accumulator
 	es.Local = true
-	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
-	if err := es.gatherNodeStats("junk", &acc); err != nil {
-		t.Fatal(err)
-	}
+	es.client.Transport = newTransportMock(nodeStatsResponse)
+	require.NoError(t, es.gatherNodeStats("junk", &acc))
 
 	// ensure flag is clear so Cluster Stats would not be done
-	checkIsMaster(es, es.Servers[0], false, t)
+	require.False(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
 	checkNodeStatsResult(t, &acc)
 }
 
@@ -296,32 +262,69 @@ func TestGatherClusterIndicesStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.IndicesInclude = []string{"_all"}
 	es.Servers = []string{"http://example.com:9200"}
-	es.client.Transport = newTransportMock(http.StatusOK, clusterIndicesResponse)
+	es.client.Transport = newTransportMock(clusterIndicesResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
 	var acc testutil.Accumulator
-	if err := es.gatherIndicesStats("junk", &acc); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, es.gatherIndicesStats("junk", &acc))
 
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
 		clusterIndicesExpected,
 		map[string]string{"index_name": "twitter"})
 }
 
+func TestGatherDateStampedIndicesStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.IndicesInclude = []string{"twitter*", "influx*", "penguins"}
+	es.NumMostRecentIndices = 2
+	es.Servers = []string{"http://example.com:9200"}
+	es.client.Transport = newTransportMock(dateStampedIndicesResponse)
+	es.serverInfo = make(map[string]serverInfo)
+	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
+	require.NoError(t, es.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, es.gatherIndicesStats(es.Servers[0]+"/"+strings.Join(es.IndicesInclude, ",")+"/_stats", &acc))
+
+	// includes 2 most recent indices for "twitter", only expect the most recent two.
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "twitter_2020_08_02"})
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "twitter_2020_08_01"})
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "twitter_2020_07_31"})
+
+	// includes 2 most recent indices for "influx", only expect the most recent two.
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "influx2021.01.02"})
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "influx2021.01.01"})
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "influx2020.12.31"})
+
+	// not configured to sort the 'penguins' index, but ensure it is also included.
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "penguins"})
+}
+
 func TestGatherClusterIndiceShardsStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.IndicesLevel = "shards"
 	es.Servers = []string{"http://example.com:9200"}
-	es.client.Transport = newTransportMock(http.StatusOK, clusterIndicesShardsResponse)
+	es.client.Transport = newTransportMock(clusterIndicesShardsResponse)
 	es.serverInfo = make(map[string]serverInfo)
 	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
 
 	var acc testutil.Accumulator
-	if err := es.gatherIndicesStats("junk", &acc); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, es.gatherIndicesStats("junk", &acc))
 
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
 		clusterIndicesExpected,

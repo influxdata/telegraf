@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<Gateway>
+  <Name>Main Gateway</Name>
+  <Timestamp>2020-08-01T15:04:03Z</Timestamp>
+  <Sequence>12</Sequence>
+  <Status>ok</Status>
+</Gateway>
+
+<Bus>
+  <Sensor name="Sensor Facility A">
+    <Variable temperature="20.0"/>
+    <Variable power="123.4"/>
+    <Variable frequency="49.78"/>
+    <Variable consumers="3"/>
+    <Mode>busy</Mode>
+  </Sensor>
+  <Sensor name="Sensor Facility B">
+    <Variable temperature="23.1"/>
+    <Variable power="14.3"/>
+    <Variable frequency="49.78"/>
+    <Variable consumers="1"/>
+    <Mode>standby</Mode>
+  </Sensor>
+  <Sensor name="Sensor Facility C">
+    <Variable temperature="19.7"/>
+    <Variable power="0.02"/>
+    <Variable frequency="49.78"/>
+    <Variable consumers="0"/>
+    <Mode>error</Mode>
+  </Sensor>
+</Bus>

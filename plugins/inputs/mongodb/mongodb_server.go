@@ -1,19 +1,23 @@
 package mongodb
 
 import (
+	"context"
 	"fmt"
-	"net/url"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
 type Server struct {
-	Url        *url.URL
-	Session    *mgo.Session
+	client     *mongo.Client
+	hostname   string
 	lastResult *MongoStatus
 
 	Log telegraf.Logger
@@ -21,12 +25,12 @@ type Server struct {
 
 func (s *Server) getDefaultTags() map[string]string {
 	tags := make(map[string]string)
-	tags["hostname"] = s.Url.Host
+	tags["hostname"] = s.hostname
 	return tags
 }
 
 type oplogEntry struct {
-	Timestamp bson.MongoTimestamp `bson:"ts"`
+	Timestamp primitive.Timestamp `bson:"ts"`
 }
 
 func IsAuthorization(err error) bool {
@@ -41,15 +45,23 @@ func (s *Server) authLog(err error) {
 	}
 }
 
+func (s *Server) runCommand(database string, cmd interface{}, result interface{}) error {
+	r := s.client.Database(database).RunCommand(context.Background(), cmd)
+	if r.Err() != nil {
+		return r.Err()
+	}
+	return r.Decode(result)
+}
+
 func (s *Server) gatherServerStatus() (*ServerStatus, error) {
 	serverStatus := &ServerStatus{}
-	err := s.Session.DB("admin").Run(bson.D{
+	err := s.runCommand("admin", bson.D{
 		{
-			Name:  "serverStatus",
+			Key:   "serverStatus",
 			Value: 1,
 		},
 		{
-			Name:  "recordStats",
+			Key:   "recordStats",
 			Value: 0,
 		},
 	}, serverStatus)
@@ -61,9 +73,9 @@ func (s *Server) gatherServerStatus() (*ServerStatus, error) {
 
 func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
 	replSetStatus := &ReplSetStatus{}
-	err := s.Session.DB("admin").Run(bson.D{
+	err := s.runCommand("admin", bson.D{
 		{
-			Name:  "replSetGetStatus",
+			Key:   "replSetGetStatus",
 			Value: 1,
 		},
 	}, replSetStatus)
@@ -73,22 +85,71 @@ func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
 	return replSetStatus, nil
 }
 
+func (s *Server) gatherTopStatData() (*TopStats, error) {
+	dest := &bsonx.Doc{}
+	err := s.runCommand("admin", bson.D{
+		{
+			Key:   "top",
+			Value: 1,
+		},
+	}, dest)
+	if err != nil {
+		return nil, err
+	}
+
+	// From: https://github.com/mongodb/mongo-tools/blob/master/mongotop/mongotop.go#L49-L70
+	// Remove 'note' field that prevents easy decoding, then round-trip
+	// again to simplify unpacking into the nested data structure
+	totals, err := dest.LookupErr("totals")
+	if err != nil {
+		return nil, err
+	}
+	recoded, err := totals.Document().Delete("note").MarshalBSON()
+	if err != nil {
+		return nil, err
+	}
+	topInfo := make(map[string]TopStatCollection)
+	if err := bson.Unmarshal(recoded, &topInfo); err != nil {
+		return nil, err
+	}
+
+	return &TopStats{Totals: topInfo}, nil
+}
+
 func (s *Server) gatherClusterStatus() (*ClusterStatus, error) {
-	chunkCount, err := s.Session.DB("config").C("chunks").Find(bson.M{"jumbo": true}).Count()
+	chunkCount, err := s.client.Database("config").Collection("chunks").CountDocuments(context.Background(), bson.M{"jumbo": true})
 	if err != nil {
 		return nil, err
 	}
 
 	return &ClusterStatus{
-		JumboChunksCount: int64(chunkCount),
+		JumboChunksCount: chunkCount,
 	}, nil
 }
 
-func (s *Server) gatherShardConnPoolStats() (*ShardStats, error) {
+func poolStatsCommand(version string) (string, error) {
+	majorPart := string(version[0])
+	major, err := strconv.ParseInt(majorPart, 10, 64)
+	if err != nil {
+		return "", err
+	}
+
+	if major == 5 {
+		return "connPoolStats", nil
+	}
+	return "shardConnPoolStats", nil
+}
+
+func (s *Server) gatherShardConnPoolStats(version string) (*ShardStats, error) {
+	command, err := poolStatsCommand(version)
+	if err != nil {
+		return nil, err
+	}
+
 	shardStats := &ShardStats{}
-	err := s.Session.DB("admin").Run(bson.D{
+	err = s.runCommand("admin", bson.D{
 		{
-			Name:  "shardConnPoolStats",
+			Key:   command,
 			Value: 1,
 		},
 	}, &shardStats)
@@ -100,9 +161,9 @@ func (s *Server) gatherShardConnPoolStats() (*ShardStats, error) {
 
 func (s *Server) gatherDBStats(name string) (*Db, error) {
 	stats := &DbStatsData{}
-	err := s.Session.DB(name).Run(bson.D{
+	err := s.runCommand(name, bson.D{
 		{
-			Name:  "dbStats",
+			Key:   "dbStats",
 			Value: 1,
 		},
 	}, stats)
@@ -120,19 +181,25 @@ func (s *Server) getOplogReplLag(collection string) (*OplogStats, error) {
 	query := bson.M{"ts": bson.M{"$exists": true}}
 
 	var first oplogEntry
-	err := s.Session.DB("local").C(collection).Find(query).Sort("$natural").Limit(1).One(&first)
-	if err != nil {
+	firstResult := s.client.Database("local").Collection(collection).FindOne(context.Background(), query, options.FindOne().SetSort(bson.M{"$natural": 1}))
+	if firstResult.Err() != nil {
+		return nil, firstResult.Err()
+	}
+	if err := firstResult.Decode(&first); err != nil {
 		return nil, err
 	}
 
 	var last oplogEntry
-	err = s.Session.DB("local").C(collection).Find(query).Sort("-$natural").Limit(1).One(&last)
-	if err != nil {
+	lastResult := s.client.Database("local").Collection(collection).FindOne(context.Background(), query, options.FindOne().SetSort(bson.M{"$natural": -1}))
+	if lastResult.Err() != nil {
+		return nil, lastResult.Err()
+	}
+	if err := lastResult.Decode(&last); err != nil {
 		return nil, err
 	}
 
-	firstTime := time.Unix(int64(first.Timestamp>>32), 0)
-	lastTime := time.Unix(int64(last.Timestamp>>32), 0)
+	firstTime := time.Unix(int64(first.Timestamp.T), 0)
+	lastTime := time.Unix(int64(last.Timestamp.T), 0)
 	stats := &OplogStats{
 		TimeDiff: int64(lastTime.Sub(firstTime).Seconds()),
 	}
@@ -154,7 +221,7 @@ func (s *Server) gatherOplogStats() (*OplogStats, error) {
 }
 
 func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) {
-	names, err := s.Session.DatabaseNames()
+	names, err := s.client.ListDatabaseNames(context.Background(), bson.D{})
 	if err != nil {
 		return nil, err
 	}
@@ -163,16 +230,16 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	for _, dbName := range names {
 		if stringInSlice(dbName, colStatsDbs) || len(colStatsDbs) == 0 {
 			var colls []string
-			colls, err = s.Session.DB(dbName).CollectionNames()
+			colls, err = s.client.Database(dbName).ListCollectionNames(context.Background(), bson.D{})
 			if err != nil {
 				s.Log.Errorf("Error getting collection names: %s", err.Error())
 				continue
 			}
 			for _, colName := range colls {
 				colStatLine := &ColStatsData{}
-				err = s.Session.DB(dbName).Run(bson.D{
+				err = s.runCommand(dbName, bson.D{
 					{
-						Name:  "collStats",
+						Key:   "collStats",
 						Value: colName,
 					},
 				}, colStatLine)
@@ -192,10 +259,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, colStatsDbs []string) error {
-	s.Session.SetMode(mgo.Eventual, true)
-	s.Session.SetSocketTimeout(0)
-
+func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, gatherDbStats bool, gatherColStats bool, gatherTopStat bool, colStatsDbs []string) error {
 	serverStatus, err := s.gatherServerStatus()
 	if err != nil {
 		return err
@@ -227,7 +291,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 		clusterStatus = status
 	}
 
-	shardStats, err := s.gatherShardConnPoolStats()
+	shardStats, err := s.gatherShardConnPoolStats(serverStatus.Version)
 	if err != nil {
 		s.authLog(fmt.Errorf("unable to gather shard connection pool stats: %s", err.Error()))
 	}
@@ -243,7 +307,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 
 	dbStats := &DbStats{}
 	if gatherDbStats {
-		names, err := s.Session.DatabaseNames()
+		names, err := s.client.ListDatabaseNames(context.Background(), bson.D{})
 		if err != nil {
 			return err
 		}
@@ -257,6 +321,16 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 		}
 	}
 
+	topStatData := &TopStats{}
+	if gatherTopStat {
+		topStats, err := s.gatherTopStatData()
+		if err != nil {
+			s.Log.Debugf("Unable to gather top stat data: %s", err.Error())
+			return err
+		}
+		topStatData = topStats
+	}
+
 	result := &MongoStatus{
 		ServerStatus:  serverStatus,
 		ReplSetStatus: replSetStatus,
@@ -265,6 +339,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 		ColStats:      collectionStats,
 		ShardStats:    shardStats,
 		OplogStats:    oplogStats,
+		TopStats:      topStatData,
 	}
 
 	result.SampleTime = time.Now()
@@ -275,13 +350,14 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 			durationInSeconds = 1
 		}
 		data := NewMongodbData(
-			NewStatLine(*s.lastResult, *result, s.Url.Host, true, durationInSeconds),
+			NewStatLine(*s.lastResult, *result, s.hostname, true, durationInSeconds),
 			s.getDefaultTags(),
 		)
 		data.AddDefaultStats()
 		data.AddDbStats()
 		data.AddColStats()
 		data.AddShardHostStats()
+		data.AddTopStats()
 		data.flush(acc)
 	}
 

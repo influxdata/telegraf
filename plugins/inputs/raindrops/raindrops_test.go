@@ -7,11 +7,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"time"
 )
 
 const sampleResponse = `
@@ -41,7 +41,7 @@ func TestRaindropsTags(t *testing.T) {
 	for _, url1 := range urls {
 		addr, _ = url.Parse(url1)
 		tagMap := r.getTags(addr)
-		assert.Contains(t, tagMap["server"], "localhost")
+		require.Contains(t, tagMap["server"], "localhost")
 	}
 }
 
@@ -49,20 +49,18 @@ func TestRaindropsGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 
-		if r.URL.Path == "/_raindrops" {
-			rsp = sampleResponse
-		} else {
-			panic("Cannot handle request")
-		}
+		require.Equal(t, r.URL.Path, "/_raindrops", "Cannot handle request")
+		rsp = sampleResponse
 
-		fmt.Fprintln(w, rsp)
+		_, err := fmt.Fprintln(w, rsp)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
 	n := &Raindrops{
 		Urls: []string{fmt.Sprintf("%s/_raindrops", ts.URL)},
-		http_client: &http.Client{Transport: &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+		httpClient: &http.Client{Transport: &http.Transport{
+			ResponseHeaderTimeout: 3 * time.Second,
 		}},
 	}
 

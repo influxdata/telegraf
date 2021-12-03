@@ -8,10 +8,11 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"testing"
 )
+
+const requestID uint16 = 1
 
 var sizeTests = []struct {
 	size  uint32
@@ -44,7 +45,7 @@ func TestSize(t *testing.T) {
 var streamTests = []struct {
 	desc    string
 	recType recType
-	reqId   uint16
+	reqID   uint16
 	content []byte
 	raw     []byte
 }{
@@ -90,8 +91,8 @@ outer:
 			t.Errorf("%s: got type %d expected %d", test.desc, rec.h.Type, test.recType)
 			continue
 		}
-		if rec.h.Id != test.reqId {
-			t.Errorf("%s: got request ID %d expected %d", test.desc, rec.h.Id, test.reqId)
+		if rec.h.ID != test.reqID {
+			t.Errorf("%s: got request ID %d expected %d", test.desc, rec.h.ID, test.reqID)
 			continue
 		}
 		if !bytes.Equal(content, test.content) {
@@ -100,7 +101,7 @@ outer:
 		}
 		buf.Reset()
 		c := newConn(&nilCloser{buf})
-		w := newWriter(c, test.recType, test.reqId)
+		w := newWriter(c, test.recType, test.reqID)
 		if _, err := w.Write(test.content); err != nil {
 			t.Errorf("%s: error writing record: %v", test.desc, err)
 			continue
@@ -124,7 +125,7 @@ func (c *writeOnlyConn) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (c *writeOnlyConn) Read(p []byte) (int, error) {
+func (c *writeOnlyConn) Read(_ []byte) (int, error) {
 	return 0, errors.New("conn is write-only")
 }
 
@@ -164,17 +165,16 @@ func nameValuePair11(nameData, valueData string) []byte {
 
 func makeRecord(
 	recordType recType,
-	requestId uint16,
 	contentData []byte,
 ) []byte {
-	requestIdB1 := byte(requestId >> 8)
-	requestIdB0 := byte(requestId)
+	requestIDB1 := byte(requestID >> 8)
+	requestIDB0 := byte(requestID)
 
 	contentLength := len(contentData)
 	contentLengthB1 := byte(contentLength >> 8)
 	contentLengthB0 := byte(contentLength)
 	return bytes.Join([][]byte{
-		{1, byte(recordType), requestIdB1, requestIdB0, contentLengthB1,
+		{1, byte(recordType), requestIDB1, requestIDB0, contentLengthB1,
 			contentLengthB0, 0, 0},
 		contentData,
 	},
@@ -185,14 +185,13 @@ func makeRecord(
 // request body
 var streamBeginTypeStdin = bytes.Join([][]byte{
 	// set up request 1
-	makeRecord(typeBeginRequest, 1,
-		[]byte{0, byte(roleResponder), 0, 0, 0, 0, 0, 0}),
+	makeRecord(typeBeginRequest, []byte{0, byte(roleResponder), 0, 0, 0, 0, 0, 0}),
 	// add required parameters to request 1
-	makeRecord(typeParams, 1, nameValuePair11("REQUEST_METHOD", "GET")),
-	makeRecord(typeParams, 1, nameValuePair11("SERVER_PROTOCOL", "HTTP/1.1")),
-	makeRecord(typeParams, 1, nil),
+	makeRecord(typeParams, nameValuePair11("REQUEST_METHOD", "GET")),
+	makeRecord(typeParams, nameValuePair11("SERVER_PROTOCOL", "HTTP/1.1")),
+	makeRecord(typeParams, nil),
 	// begin sending body of request 1
-	makeRecord(typeStdin, 1, []byte("0123456789abcdef")),
+	makeRecord(typeStdin, []byte("0123456789abcdef")),
 },
 	nil)
 
@@ -204,7 +203,7 @@ var cleanUpTests = []struct {
 	{
 		bytes.Join([][]byte{
 			streamBeginTypeStdin,
-			makeRecord(typeAbortRequest, 1, nil),
+			makeRecord(typeAbortRequest, nil),
 		},
 			nil),
 		ErrRequestAborted,
@@ -242,7 +241,7 @@ func TestChildServeCleansUp(t *testing.T) {
 			r *http.Request,
 		) {
 			// block on reading body of request
-			_, err := io.Copy(ioutil.Discard, r.Body)
+			_, err := io.Copy(io.Discard, r.Body)
 			if err != tt.err {
 				t.Errorf("Expected %#v, got %#v", tt.err, err)
 			}
@@ -265,7 +264,7 @@ func (rwNopCloser) Close() error {
 }
 
 // Verifies it doesn't crash. 	Issue 11824.
-func TestMalformedParams(t *testing.T) {
+func TestMalformedParams(_ *testing.T) {
 	input := []byte{
 		// beginRequest, requestId=1, contentLength=8, role=1, keepConn=1
 		1, 1, 0, 1, 0, 8, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
@@ -274,7 +273,7 @@ func TestMalformedParams(t *testing.T) {
 		// end of params
 		1, 4, 0, 1, 0, 0, 0, 0,
 	}
-	rw := rwNopCloser{bytes.NewReader(input), ioutil.Discard}
+	rw := rwNopCloser{bytes.NewReader(input), io.Discard}
 	c := newChild(rw, http.DefaultServeMux)
 	c.serve()
 }

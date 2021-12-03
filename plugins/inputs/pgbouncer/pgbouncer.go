@@ -5,10 +5,10 @@ import (
 	"strconv"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
-	_ "github.com/jackc/pgx/stdlib" // register driver
+	_ "github.com/jackc/pgx/v4/stdlib" // register driver
 )
 
 type PgBouncer struct {
@@ -61,7 +61,7 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for rows.Next() {
-		tags, columnMap, err := p.accRow(rows, acc, columns)
+		tags, columnMap, err := p.accRow(rows, columns)
 
 		if err != nil {
 			return err
@@ -111,7 +111,7 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for poolRows.Next() {
-		tags, columnMap, err := p.accRow(poolRows, acc, columns)
+		tags, columnMap, err := p.accRow(poolRows, columns)
 		if err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func (p *PgBouncer) accRow(row scanner, acc telegraf.Accumulator, columns []string) (map[string]string,
+func (p *PgBouncer) accRow(row scanner, columns []string) (map[string]string,
 	map[string]*interface{}, error) {
 	var columnVars []interface{}
 	var dbname bytes.Buffer
@@ -170,9 +170,13 @@ func (p *PgBouncer) accRow(row scanner, acc telegraf.Accumulator, columns []stri
 	}
 	if columnMap["database"] != nil {
 		// extract the database name from the column map
-		dbname.WriteString((*columnMap["database"]).(string))
+		if _, err := dbname.WriteString((*columnMap["database"]).(string)); err != nil {
+			return nil, nil, err
+		}
 	} else {
-		dbname.WriteString("postgres")
+		if _, err := dbname.WriteString("postgres"); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	var tagAddress string
@@ -189,11 +193,9 @@ func init() {
 	inputs.Add("pgbouncer", func() telegraf.Input {
 		return &PgBouncer{
 			Service: postgresql.Service{
-				MaxIdle: 1,
-				MaxOpen: 1,
-				MaxLifetime: internal.Duration{
-					Duration: 0,
-				},
+				MaxIdle:     1,
+				MaxOpen:     1,
+				MaxLifetime: config.Duration(0),
 				IsPgBouncer: true,
 			},
 		}

@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs/wavefront"
+	"github.com/influxdata/telegraf/plugins/outputs/wavefront" // TODO: this dependency is going the wrong way: Move MetricPoint into the serializer.
 )
 
 // WavefrontSerializer : WavefrontSerializer struct
@@ -49,7 +49,7 @@ func NewSerializer(prefix string, useStrict bool, sourceOverride []string) (*Wav
 	return s, nil
 }
 
-func (s *WavefrontSerializer) serialize(buf *buffer, m telegraf.Metric) {
+func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
 	const metricSeparator = "."
 
 	for fieldName, value := range m.Fields() {
@@ -90,7 +90,7 @@ func (s *WavefrontSerializer) serialize(buf *buffer, m telegraf.Metric) {
 func (s *WavefrontSerializer) Serialize(m telegraf.Metric) ([]byte, error) {
 	s.mu.Lock()
 	s.scratch.Reset()
-	s.serialize(&s.scratch, m)
+	s.serializeMetric(m)
 	out := s.scratch.Copy()
 	s.mu.Unlock()
 	return out, nil
@@ -100,7 +100,7 @@ func (s *WavefrontSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte,
 	s.mu.Lock()
 	s.scratch.Reset()
 	for _, m := range metrics {
-		s.serialize(&s.scratch, m)
+		s.serializeMetric(m)
 	}
 	out := s.scratch.Copy()
 	s.mu.Unlock()
@@ -200,7 +200,7 @@ func (b *buffer) WriteString(s string) {
 	*b = append(*b, s...)
 }
 
-// This is named WriteChar instead of WriteByte because the 'stdmethods' check
+// WriteChar has this name instead of WriteByte because the 'stdmethods' check
 // of 'go vet' wants WriteByte to have the signature:
 //
 // 	func (b *buffer) WriteByte(c byte) error { ... }

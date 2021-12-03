@@ -5,32 +5,33 @@ import (
 	"regexp"
 	"strings"
 
+	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
 )
 
 const maxTagLength = 254
 
 type Wavefront struct {
-	Url             string
-	Token           string
-	Host            string
-	Port            int
-	Prefix          string
-	SimpleFields    bool
-	MetricSeparator string
-	ConvertPaths    bool
-	ConvertBool     bool
-	UseRegex        bool
-	UseStrict       bool
-	TruncateTags    bool
-	ImmediateFlush  bool
-	SourceOverride  []string
-	StringToNumber  map[string][]map[string]float64
+	URL             string                          `toml:"url"`
+	Token           string                          `toml:"token"`
+	Host            string                          `toml:"host"`
+	Port            int                             `toml:"port"`
+	Prefix          string                          `toml:"prefix"`
+	SimpleFields    bool                            `toml:"simple_fields"`
+	MetricSeparator string                          `toml:"metric_separator"`
+	ConvertPaths    bool                            `toml:"convert_paths"`
+	ConvertBool     bool                            `toml:"convert_bool"`
+	UseRegex        bool                            `toml:"use_regex"`
+	UseStrict       bool                            `toml:"use_strict"`
+	TruncateTags    bool                            `toml:"truncate_tags"`
+	ImmediateFlush  bool                            `toml:"immediate_flush"`
+	SourceOverride  []string                        `toml:"source_override"`
+	StringToNumber  map[string][]map[string]float64 `toml:"string_to_number"`
 
 	sender wavefront.Sender
-	Log    telegraf.Logger
+	Log    telegraf.Logger `toml:"-"`
 }
 
 // catch many of the invalid chars that could appear in a metric or tag name
@@ -51,7 +52,7 @@ var strictSanitizedChars = strings.NewReplacer(
 )
 
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
-var sanitizedRegex = regexp.MustCompile("[^a-zA-Z\\d_.-]")
+var sanitizedRegex = regexp.MustCompile(`[^a-zA-Z\d_.-]`)
 
 var tagValueReplacer = strings.NewReplacer("*", "-")
 
@@ -125,7 +126,6 @@ type MetricPoint struct {
 }
 
 func (w *Wavefront) Connect() error {
-
 	if len(w.StringToNumber) > 0 {
 		w.Log.Warn("The string_to_number option is deprecated; please use the enum processor instead")
 	}
@@ -134,15 +134,15 @@ func (w *Wavefront) Connect() error {
 	if w.ImmediateFlush {
 		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
 	}
-	if w.Url != "" {
-		w.Log.Debug("connecting over http/https using Url: %s", w.Url)
+	if w.URL != "" {
+		w.Log.Debug("connecting over http/https using Url: %s", w.URL)
 		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
-			Server:               w.Url,
+			Server:               w.URL,
 			Token:                w.Token,
 			FlushIntervalSeconds: flushSeconds,
 		})
 		if err != nil {
-			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Url: %s", w.Url)
+			return fmt.Errorf("could not create Wavefront Sender for Url: %s", w.URL)
 		}
 		w.sender = sender
 	} else {
@@ -153,7 +153,7 @@ func (w *Wavefront) Connect() error {
 			FlushIntervalSeconds: flushSeconds,
 		})
 		if err != nil {
-			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
+			return fmt.Errorf("could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
 		}
 		w.sender = sender
 	}
@@ -168,13 +168,12 @@ func (w *Wavefront) Connect() error {
 }
 
 func (w *Wavefront) Write(metrics []telegraf.Metric) error {
-
 	for _, m := range metrics {
 		for _, point := range w.buildMetrics(m) {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
 				if isRetryable(err) {
-					return fmt.Errorf("Wavefront sending error: %v", err)
+					return fmt.Errorf("wavefront sending error: %v", err)
 				}
 				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
 				w.Log.Debugf("Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ", point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
@@ -233,7 +232,6 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
 }
 
 func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]string) {
-
 	// Remove all empty tags.
 	for k, v := range mTags {
 		if v == "" {
@@ -306,9 +304,8 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 		if w.ConvertBool {
 			if p {
 				return 1, nil
-			} else {
-				return 0, nil
 			}
+			return 0, nil
 		}
 	case int64:
 		return float64(v.(int64)), nil
@@ -320,7 +317,7 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 		for prefix, mappings := range w.StringToNumber {
 			if strings.HasPrefix(name, prefix) {
 				for _, mapping := range mappings {
-					val, hasVal := mapping[string(p)]
+					val, hasVal := mapping[p]
 					if hasVal {
 						return val, nil
 					}

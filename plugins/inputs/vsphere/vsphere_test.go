@@ -11,15 +11,16 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/influxdata/telegraf/internal"
-	itls "github.com/influxdata/telegraf/plugins/common/tls"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
+
+	"github.com/influxdata/telegraf/config"
+	itls "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var configHeader = `
@@ -147,12 +148,13 @@ func defaultVSphere() *VSphere {
 
 		MaxQueryObjects:         256,
 		MaxQueryMetrics:         256,
-		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-		Timeout:                 internal.Duration{Duration: time.Second * 20},
+		ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+		Timeout:                 config.Duration(time.Second * 20),
 		ForceDiscoverOnInit:     true,
 		DiscoverConcurrency:     1,
 		CollectConcurrency:      1,
 		Separator:               ".",
+		HistoricalInterval:      config.Duration(time.Second * 300),
 	}
 }
 
@@ -224,12 +226,15 @@ func TestParseConfig(t *testing.T) {
 	v := VSphere{}
 	c := v.SampleConfig()
 	p := regexp.MustCompile("\n#")
-	fmt.Printf("Source=%s", p.ReplaceAllLiteralString(c, "\n"))
 	c = configHeader + "\n[[inputs.vsphere]]\n" + p.ReplaceAllLiteralString(c, "\n")
-	fmt.Printf("Source=%s", c)
 	tab, err := toml.Parse([]byte(c))
 	require.NoError(t, err)
 	require.NotNil(t, tab)
+}
+
+func TestConfigDurationParsing(t *testing.T) {
+	v := defaultVSphere()
+	require.Equal(t, int32(300), int32(time.Duration(v.HistoricalInterval).Seconds()), "HistoricalInterval.Seconds() with default duration should resolve 300")
 }
 
 func TestMaxQuery(t *testing.T) {
@@ -308,6 +313,7 @@ func TestFinder(t *testing.T) {
 	ctx := context.Background()
 
 	c, err := NewClient(ctx, s.URL, v)
+	require.NoError(t, err)
 
 	f := Finder{c}
 
@@ -424,6 +430,7 @@ func TestFolders(t *testing.T) {
 	v := defaultVSphere()
 
 	c, err := NewClient(ctx, s.URL, v)
+	require.NoError(t, err)
 
 	f := Finder{c}
 
@@ -444,7 +451,7 @@ func TestFolders(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
-func TestCollection(t *testing.T) {
+func TestCollectionWithClusterMetrics(t *testing.T) {
 	testCollection(t, false)
 }
 
@@ -471,7 +478,6 @@ func testCollection(t *testing.T, excludeClusters bool) {
 		v.Username = username
 		v.Password = password
 	} else {
-
 		// Don't run test on 32-bit machines due to bug in simulator.
 		// https://github.com/vmware/govmomi/issues/1330
 		var i int
@@ -513,16 +519,17 @@ func testCollection(t *testing.T, excludeClusters bool) {
 				// We have to follow the host parent path to locate a cluster. Look up the host!
 				finder := Finder{client}
 				var hosts []mo.HostSystem
-				finder.Find(context.Background(), "HostSystem", "/**/"+hostName, &hosts)
+				err := finder.Find(context.Background(), "HostSystem", "/**/"+hostName, &hosts)
+				require.NoError(t, err)
 				require.NotEmpty(t, hosts)
 				hostMoid = hosts[0].Reference().Value
 				hostCache[hostName] = hostMoid
 			}
-			if isInCluster(t, v, client, cache, "HostSystem", hostMoid) { // If the VM lives in a cluster
+			if isInCluster(v, client, cache, "HostSystem", hostMoid) { // If the VM lives in a cluster
 				mustContainAll(t, m.Tags, []string{"clustername"})
 			}
 		} else if strings.HasPrefix(m.Measurement, "vsphere.host.") {
-			if isInCluster(t, v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
+			if isInCluster(v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
 				mustContainAll(t, m.Tags, []string{"esxhostname", "clustername", "moid", "dcname"})
 			} else {
 				mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "dcname"})
@@ -536,7 +543,7 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	require.Empty(t, mustHaveMetrics, "Some metrics were not found")
 }
 
-func isInCluster(t *testing.T, v *VSphere, client *Client, cache map[string]string, resourceKind, moid string) bool {
+func isInCluster(v *VSphere, client *Client, cache map[string]string, resourceKind, moid string) bool {
 	ctx := context.Background()
 	ref := types.ManagedObjectReference{
 		Type:  resourceKind,

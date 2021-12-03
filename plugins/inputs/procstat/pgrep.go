@@ -2,7 +2,7 @@ package procstat
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -25,7 +25,7 @@ func NewPgrep() (PIDFinder, error) {
 
 func (pg *Pgrep) PidFile(path string) ([]PID, error) {
 	var pids []PID
-	pidString, err := ioutil.ReadFile(path)
+	pidString, err := os.ReadFile(path)
 	if err != nil {
 		return pids, fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'",
 			path, err)
@@ -43,7 +43,7 @@ func (pg *Pgrep) Pattern(pattern string) ([]PID, error) {
 	return find(pg.path, args)
 }
 
-func (pg *Pgrep) Uid(user string) ([]PID, error) {
+func (pg *Pgrep) UID(user string) ([]PID, error) {
 	args := []string{"-u", user}
 	return find(pg.path, args)
 }

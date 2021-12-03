@@ -4,27 +4,27 @@ type Token int
 
 const (
 	// Special tokens
-	ILLEGAL Token = iota
+	Illegal Token = iota
 	EOF
-	WS
+	Ws
 
 	// Literals
-	literal_beg
-	LETTER // metric name, source/point tags
-	NUMBER
-	MINUS_SIGN
-	UNDERSCORE
-	DOT
-	SLASH
-	BACKSLASH
-	COMMA
-	DELTA
-	literal_end
+	literalBeg
+	Letter // metric name, source/point tags
+	Number
+	MinusSign
+	Underscore
+	Dot
+	Slash
+	Backslash
+	Comma
+	Delta
+	literalEnd
 
 	// Misc characters
-	QUOTES
-	EQUALS
-	NEWLINE
+	Quotes
+	Equals
+	Newline
 )
 
 func isWhitespace(ch rune) bool {

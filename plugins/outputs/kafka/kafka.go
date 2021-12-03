@@ -1,7 +1,6 @@
 package kafka
 
 import (
-	"crypto/tls"
 	"fmt"
 	"log"
 	"strings"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/gofrs/uuid"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -44,8 +44,7 @@ type Kafka struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	tlsConfig tls.Config
-
+	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer
 
@@ -66,7 +65,6 @@ func (*DebugLogger) Print(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
 	args = append(append(args, "D! [sarama] "), v...)
 	log.Print(args...)
-
 }
 
 func (*DebugLogger) Printf(format string, v ...interface{}) {
@@ -215,6 +213,9 @@ var sampleConfig = `
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -228,7 +229,7 @@ func ValidateTopicSuffixMethod(method string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Unknown topic suffix method provided: %s", method)
+	return fmt.Errorf("unknown topic suffix method provided: %s", method)
 }
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
@@ -282,6 +283,8 @@ func (k *Kafka) Init() error {
 		return err
 	}
 
+	k.saramaConfig = config
+
 	// Legacy support ssl config
 	if k.Certificate != "" {
 		k.TLSCert = k.Certificate
@@ -289,15 +292,15 @@ func (k *Kafka) Init() error {
 		k.TLSKey = k.Key
 	}
 
-	producer, err := k.producerFunc(k.Brokers, config)
-	if err != nil {
-		return err
-	}
-	k.producer = producer
 	return nil
 }
 
 func (k *Kafka) Connect() error {
+	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
+	if err != nil {
+		return err
+	}
+	k.producer = producer
 	return nil
 }
 
@@ -377,7 +380,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
 					return nil
 				}
-				return prodErr
+				return prodErr //nolint:staticcheck // Return first error encountered
 			}
 		}
 		return err

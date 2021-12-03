@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package processes
@@ -8,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestProcesses(t *testing.T) {
@@ -26,13 +27,13 @@ func TestProcesses(t *testing.T) {
 	err := processes.Gather(&acc)
 	require.NoError(t, err)
 
-	assert.True(t, acc.HasInt64Field("processes", "running"))
-	assert.True(t, acc.HasInt64Field("processes", "sleeping"))
-	assert.True(t, acc.HasInt64Field("processes", "stopped"))
-	assert.True(t, acc.HasInt64Field("processes", "total"))
+	require.True(t, acc.HasInt64Field("processes", "running"))
+	require.True(t, acc.HasInt64Field("processes", "sleeping"))
+	require.True(t, acc.HasInt64Field("processes", "stopped"))
+	require.True(t, acc.HasInt64Field("processes", "total"))
 	total, ok := acc.Get("processes")
 	require.True(t, ok)
-	assert.True(t, total.Fields["total"].(int64) > 0)
+	require.True(t, total.Fields["total"].(int64) > 0)
 }
 
 func TestFromPS(t *testing.T) {
@@ -189,7 +190,7 @@ func (t *tester) testProcFile2(_ string) ([]byte, error) {
 }
 
 func testExecPSError() ([]byte, error) {
-	return []byte("\nSTAT\nD\nI\nL\nR\nR+\nS\nS+\nSNs\nSs\nU\nZ\n"), fmt.Errorf("ERROR!")
+	return []byte("\nSTAT\nD\nI\nL\nR\nR+\nS\nS+\nSNs\nSs\nU\nZ\n"), fmt.Errorf("error")
 }
 
 const testProcStat = `10 (rcuob/0) %s 2 0 0 0 -1 2129984 0 0 0 0 0 0 0 0 20 0 %s 0 11 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0

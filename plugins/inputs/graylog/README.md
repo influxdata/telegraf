@@ -4,15 +4,14 @@ The Graylog plugin can collect data from remote Graylog service URLs.
 
 Plugin currently support two type of end points:-
 
-- multiple  (Ex http://[graylog-server-ip]:12900/system/metrics/multiple)
-- namespace (Ex http://[graylog-server-ip]:12900/system/metrics/namespace/{namespace})
+- multiple  (e.g. `http://[graylog-server-ip]:12900/system/metrics/multiple`)
+- namespace (e.g. `http://[graylog-server-ip]:12900/system/metrics/namespace/{namespace}`)
 
 End Point can be a mix of one  multiple end point  and several namespaces end points
 
-
 Note: if namespace end point specified metrics array will be ignored for that call.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Read flattened metrics from one or more GrayLog HTTP endpoints
@@ -52,4 +51,4 @@ Note: if namespace end point specified metrics array will be ignored for that ca
   # insecure_skip_verify = false
 ```
 
-Please refer to GrayLog metrics api browser for full metric end points http://host:12900/api-browser
+Please refer to GrayLog metrics api browser for full metric end points `http://host:12900/api-browser`

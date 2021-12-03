@@ -1,18 +1,21 @@
+//go:build !windows
 // +build !windows
 
 package ping
 
 import (
-	"context"
 	"errors"
-	"net"
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/go-ping/ping"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // BSD/Darwin ping output
@@ -77,45 +80,45 @@ ping: -i interval too short: Operation not permitted
 
 // Test that ping command output is processed properly
 func TestProcessPingOutput(t *testing.T) {
-	trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(bsdPingOutput)
-	assert.NoError(t, err)
-	assert.Equal(t, 55, ttl, "ttl value is 55")
-	assert.Equal(t, 5, trans, "5 packets were transmitted")
-	assert.Equal(t, 5, rec, "5 packets were received")
-	assert.InDelta(t, 15.087, min, 0.001)
-	assert.InDelta(t, 20.224, avg, 0.001)
-	assert.InDelta(t, 27.263, max, 0.001)
-	assert.InDelta(t, 4.076, stddev, 0.001)
+	stats, err := processPingOutput(bsdPingOutput)
+	require.NoError(t, err)
+	require.Equal(t, 55, stats.ttl, "ttl value is 55")
+	require.Equal(t, 5, stats.trans, "5 packets were transmitted")
+	require.Equal(t, 5, stats.recv, "5 packets were received")
+	require.InDelta(t, 15.087, stats.min, 0.001)
+	require.InDelta(t, 20.224, stats.avg, 0.001)
+	require.InDelta(t, 27.263, stats.max, 0.001)
+	require.InDelta(t, 4.076, stats.stddev, 0.001)
 
-	trans, rec, ttl, min, avg, max, stddev, err = processPingOutput(freebsdPing6Output)
-	assert.NoError(t, err)
-	assert.Equal(t, 117, ttl, "ttl value is 117")
-	assert.Equal(t, 5, trans, "5 packets were transmitted")
-	assert.Equal(t, 5, rec, "5 packets were received")
-	assert.InDelta(t, 35.727, min, 0.001)
-	assert.InDelta(t, 53.211, avg, 0.001)
-	assert.InDelta(t, 93.870, max, 0.001)
-	assert.InDelta(t, 22.000, stddev, 0.001)
+	stats, err = processPingOutput(freebsdPing6Output)
+	require.NoError(t, err)
+	require.Equal(t, 117, stats.ttl, "ttl value is 117")
+	require.Equal(t, 5, stats.trans, "5 packets were transmitted")
+	require.Equal(t, 5, stats.recv, "5 packets were received")
+	require.InDelta(t, 35.727, stats.min, 0.001)
+	require.InDelta(t, 53.211, stats.avg, 0.001)
+	require.InDelta(t, 93.870, stats.max, 0.001)
+	require.InDelta(t, 22.000, stats.stddev, 0.001)
 
-	trans, rec, ttl, min, avg, max, stddev, err = processPingOutput(linuxPingOutput)
-	assert.NoError(t, err)
-	assert.Equal(t, 63, ttl, "ttl value is 63")
-	assert.Equal(t, 5, trans, "5 packets were transmitted")
-	assert.Equal(t, 5, rec, "5 packets were received")
-	assert.InDelta(t, 35.225, min, 0.001)
-	assert.InDelta(t, 43.628, avg, 0.001)
-	assert.InDelta(t, 51.806, max, 0.001)
-	assert.InDelta(t, 5.325, stddev, 0.001)
+	stats, err = processPingOutput(linuxPingOutput)
+	require.NoError(t, err)
+	require.Equal(t, 63, stats.ttl, "ttl value is 63")
+	require.Equal(t, 5, stats.trans, "5 packets were transmitted")
+	require.Equal(t, 5, stats.recv, "5 packets were received")
+	require.InDelta(t, 35.225, stats.min, 0.001)
+	require.InDelta(t, 43.628, stats.avg, 0.001)
+	require.InDelta(t, 51.806, stats.max, 0.001)
+	require.InDelta(t, 5.325, stats.stddev, 0.001)
 
-	trans, rec, ttl, min, avg, max, stddev, err = processPingOutput(busyBoxPingOutput)
-	assert.NoError(t, err)
-	assert.Equal(t, 56, ttl, "ttl value is 56")
-	assert.Equal(t, 4, trans, "4 packets were transmitted")
-	assert.Equal(t, 4, rec, "4 packets were received")
-	assert.InDelta(t, 15.810, min, 0.001)
-	assert.InDelta(t, 17.611, avg, 0.001)
-	assert.InDelta(t, 22.559, max, 0.001)
-	assert.InDelta(t, -1.0, stddev, 0.001)
+	stats, err = processPingOutput(busyBoxPingOutput)
+	require.NoError(t, err)
+	require.Equal(t, 56, stats.ttl, "ttl value is 56")
+	require.Equal(t, 4, stats.trans, "4 packets were transmitted")
+	require.Equal(t, 4, stats.recv, "4 packets were received")
+	require.InDelta(t, 15.810, stats.min, 0.001)
+	require.InDelta(t, 17.611, stats.avg, 0.001)
+	require.InDelta(t, 22.559, stats.max, 0.001)
+	require.InDelta(t, -1.0, stats.stddev, 0.001)
 }
 
 // Linux ping output with varying TTL
@@ -134,22 +137,22 @@ rtt min/avg/max/mdev = 35.225/43.628/51.806/5.325 ms
 
 // Test that ping command output is processed properly
 func TestProcessPingOutputWithVaryingTTL(t *testing.T) {
-	trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(linuxPingOutputWithVaryingTTL)
-	assert.NoError(t, err)
-	assert.Equal(t, 63, ttl, "ttl value is 63")
-	assert.Equal(t, 5, trans, "5 packets were transmitted")
-	assert.Equal(t, 5, rec, "5 packets were transmitted")
-	assert.InDelta(t, 35.225, min, 0.001)
-	assert.InDelta(t, 43.628, avg, 0.001)
-	assert.InDelta(t, 51.806, max, 0.001)
-	assert.InDelta(t, 5.325, stddev, 0.001)
+	stats, err := processPingOutput(linuxPingOutputWithVaryingTTL)
+	require.NoError(t, err)
+	require.Equal(t, 63, stats.ttl, "ttl value is 63")
+	require.Equal(t, 5, stats.trans, "5 packets were transmitted")
+	require.Equal(t, 5, stats.recv, "5 packets were transmitted")
+	require.InDelta(t, 35.225, stats.min, 0.001)
+	require.InDelta(t, 43.628, stats.avg, 0.001)
+	require.InDelta(t, 51.806, stats.max, 0.001)
+	require.InDelta(t, 5.325, stats.stddev, 0.001)
 }
 
 // Test that processPingOutput returns an error when 'ping' fails to run, such
 // as when an invalid argument is provided
 func TestErrorProcessPingOutput(t *testing.T) {
-	_, _, _, _, _, _, _, err := processPingOutput(fatalPingOutput)
-	assert.Error(t, err, "Error was expected from processPingOutput")
+	_, err := processPingOutput(fatalPingOutput)
+	require.Error(t, err, "Error was expected from processPingOutput")
 }
 
 // Test that default arg lists are created correctly
@@ -227,7 +230,7 @@ func TestArguments(t *testing.T) {
 	}
 }
 
-func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return linuxPingOutput, nil
 }
 
@@ -239,7 +242,7 @@ func TestPingGather(t *testing.T) {
 		pingHost: mockHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "localhost"}
 	fields := map[string]interface{}{
 		"packets_transmitted":   5,
@@ -258,6 +261,22 @@ func TestPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
+func TestPingGatherIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode, retrieves systems ping utility")
+	}
+
+	var acc testutil.Accumulator
+	p, ok := inputs.Inputs["ping"]().(*Ping)
+	p.Log = testutil.Logger{}
+	require.True(t, ok)
+	p.Urls = []string{"localhost", "influxdata.com"}
+	require.NoError(t, acc.GatherError(p.Gather))
+
+	require.Equal(t, 0, acc.Metrics[0].Fields["result_code"])
+	require.Equal(t, 0, acc.Metrics[1].Fields["result_code"])
+}
+
 var lossyPingOutput = `
 PING www.google.com (216.58.218.164) 56(84) bytes of data.
 64 bytes from host.net (216.58.218.164): icmp_seq=1 ttl=63 time=35.2 ms
@@ -269,7 +288,7 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
 `
 
-func mockLossyHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -281,7 +300,7 @@ func TestLossyPingGather(t *testing.T) {
 		pingHost: mockLossyHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted":   5,
@@ -305,7 +324,7 @@ Request timeout for icmp_seq 0
 2 packets transmitted, 0 packets received, 100.0% packet loss
 `
 
-func mockErrorHostPinger(binary string, timeout float64, args ...string) (string, error) {
+func mockErrorHostPinger(_ string, _ float64, _ ...string) (string, error) {
 	// This error will not trigger correct error paths
 	return errorPingOutput, nil
 }
@@ -319,7 +338,7 @@ func TestBadPingGather(t *testing.T) {
 		pingHost: mockErrorHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
+	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.amazon.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 2,
@@ -330,8 +349,8 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(binary string, timeout float64, args ...string) (string, error) {
-	return fatalPingOutput, errors.New("So very bad")
+func mockFatalHostPinger(_ string, _ float64, _ ...string) (string, error) {
+	return fatalPingOutput, errors.New("so very bad")
 }
 
 // Test that a fatal ping command does not gather any statistics.
@@ -342,20 +361,22 @@ func TestFatalPingGather(t *testing.T) {
 		pingHost: mockFatalHostPinger,
 	}
 
-	acc.GatherError(p.Gather)
-	assert.False(t, acc.HasMeasurement("packets_transmitted"),
+	err := acc.GatherError(p.Gather)
+	require.Error(t, err)
+	require.EqualValues(t, err.Error(), "host www.amazon.com: ping: -i interval too short: Operation not permitted, so very bad")
+	require.False(t, acc.HasMeasurement("packets_transmitted"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("packets_received"),
+	require.False(t, acc.HasMeasurement("packets_received"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("percent_packet_loss"),
+	require.False(t, acc.HasMeasurement("percent_packet_loss"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("ttl"),
+	require.False(t, acc.HasMeasurement("ttl"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("minimum_response_ms"),
+	require.False(t, acc.HasMeasurement("minimum_response_ms"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("average_response_ms"),
+	require.False(t, acc.HasMeasurement("average_response_ms"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("maximum_response_ms"),
+	require.False(t, acc.HasMeasurement("maximum_response_ms"),
 		"Fatal ping should not have packet measurements")
 }
 
@@ -364,8 +385,8 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 		out   string
 		error error
 	}{
-		{"", errors.New("host www.amazon.com: So very bad")},
-		{"so bad", errors.New("host www.amazon.com: so bad, So very bad")},
+		{"", errors.New("host www.amazon.com: so very bad")},
+		{"so bad", errors.New("host www.amazon.com: so bad, so very bad")},
 	}
 
 	for _, param := range params {
@@ -373,12 +394,12 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 		p := Ping{
 			Urls: []string{"www.amazon.com"},
 			pingHost: func(binary string, timeout float64, args ...string) (string, error) {
-				return param.out, errors.New("So very bad")
+				return param.out, errors.New("so very bad")
 			},
 		}
-		acc.GatherError(p.Gather)
-		assert.True(t, len(acc.Errors) > 0)
-		assert.Contains(t, acc.Errors, param.error)
+		require.Error(t, acc.GatherError(p.Gather))
+		require.True(t, len(acc.Errors) > 0)
+		require.Contains(t, acc.Errors, param.error)
 	}
 }
 
@@ -388,56 +409,128 @@ func TestPingBinary(t *testing.T) {
 		Urls:   []string{"www.google.com"},
 		Binary: "ping6",
 		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
-			assert.True(t, binary == "ping6")
+			require.True(t, binary == "ping6")
 			return "", nil
 		},
 	}
-	acc.GatherError(p.Gather)
-}
-
-func mockHostResolver(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
-	ipaddr := net.IPAddr{}
-	ipaddr.IP = net.IPv4(127, 0, 0, 1)
-	return &ipaddr, nil
+	err := acc.GatherError(p.Gather)
+	require.Error(t, err)
+	require.EqualValues(t, err.Error(), "fatal error processing ping output: www.google.com")
 }
 
 // Test that Gather function works using native ping
 func TestPingGatherNative(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test due to permission requirements.")
+	type test struct {
+		P *Ping
 	}
 
-	var acc testutil.Accumulator
-	p := Ping{
+	fakePingFunc := func(destination string) (*pingStats, error) {
+		s := &pingStats{
+			Statistics: ping.Statistics{
+				PacketsSent: 5,
+				PacketsRecv: 5,
+				Rtts: []time.Duration{
+					3 * time.Millisecond,
+					4 * time.Millisecond,
+					1 * time.Millisecond,
+					5 * time.Millisecond,
+					2 * time.Millisecond,
+				},
+			},
+			ttl: 1,
+		}
+
+		return s, nil
+	}
+
+	tests := []test{
+		{
+			P: &Ping{
+				Urls:           []string{"localhost", "127.0.0.2"},
+				Method:         "native",
+				Count:          5,
+				Percentiles:    []int{50, 95, 99},
+				nativePingFunc: fakePingFunc,
+			},
+		},
+		{
+			P: &Ping{
+				Urls:           []string{"localhost", "127.0.0.2"},
+				Method:         "native",
+				Count:          5,
+				PingInterval:   1,
+				Percentiles:    []int{50, 95, 99},
+				nativePingFunc: fakePingFunc,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		var acc testutil.Accumulator
+		require.NoError(t, tc.P.Init())
+		require.NoError(t, acc.GatherError(tc.P.Gather))
+		require.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
+		require.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
+		require.True(t, acc.HasField("ping", "percentile50_ms"))
+		require.Equal(t, float64(3), acc.Metrics[0].Fields["percentile50_ms"])
+		require.True(t, acc.HasField("ping", "percentile95_ms"))
+		require.Equal(t, float64(4.799999), acc.Metrics[0].Fields["percentile95_ms"])
+		require.True(t, acc.HasField("ping", "percentile99_ms"))
+		require.Equal(t, float64(4.96), acc.Metrics[0].Fields["percentile99_ms"])
+		require.True(t, acc.HasField("ping", "percent_packet_loss"))
+		require.True(t, acc.HasField("ping", "minimum_response_ms"))
+		require.True(t, acc.HasField("ping", "average_response_ms"))
+		require.True(t, acc.HasField("ping", "maximum_response_ms"))
+		require.True(t, acc.HasField("ping", "standard_deviation_ms"))
+	}
+}
+
+func TestNoPacketsSent(t *testing.T) {
+	p := &Ping{
+		Log:         testutil.Logger{},
 		Urls:        []string{"localhost", "127.0.0.2"},
 		Method:      "native",
 		Count:       5,
-		resolveHost: mockHostResolver,
+		Percentiles: []int{50, 95, 99},
+		nativePingFunc: func(destination string) (*pingStats, error) {
+			s := &pingStats{
+				Statistics: ping.Statistics{
+					PacketsSent: 0,
+					PacketsRecv: 0,
+				},
+			}
+
+			return s, nil
+		},
 	}
 
-	assert.NoError(t, acc.GatherError(p.Gather))
-	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
-	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
-}
+	var testAcc testutil.Accumulator
+	require.NoError(t, p.Init())
 
-func mockHostResolverError(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
-	return nil, errors.New("myMock error")
+	p.pingToURLNative("localhost", &testAcc)
+	require.Zero(t, testAcc.Errors)
+	require.True(t, testAcc.HasField("ping", "result_code"))
+	require.Equal(t, 2, testAcc.Metrics[0].Fields["result_code"])
 }
 
 // Test failed DNS resolutions
 func TestDNSLookupError(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping test due to permission requirements.")
+	p := &Ping{
+		Count:  1,
+		Log:    testutil.Logger{},
+		Urls:   []string{"localhost"},
+		Method: "native",
+		IPv6:   false,
+		nativePingFunc: func(destination string) (*pingStats, error) {
+			return nil, fmt.Errorf("unknown")
+		},
 	}
 
-	var acc testutil.Accumulator
-	p := Ping{
-		Urls:        []string{"localhost"},
-		Method:      "native",
-		IPv6:        false,
-		resolveHost: mockHostResolverError,
-	}
+	var testAcc testutil.Accumulator
+	require.NoError(t, p.Init())
 
-	acc.GatherError(p.Gather)
-	assert.True(t, len(acc.Errors) > 0)
+	p.pingToURLNative("localhost", &testAcc)
+	require.Zero(t, testAcc.Errors)
+	require.True(t, testAcc.HasField("ping", "result_code"))
+	require.Equal(t, 1, testAcc.Metrics[0].Fields["result_code"])
 }

@@ -1,3 +1,4 @@
+//go:build !solaris
 // +build !solaris
 
 package tail
@@ -22,8 +23,7 @@ import (
 )
 
 const (
-	defaultWatchMethod         = "inotify"
-	defaultMaxUndeliveredLines = 1000
+	defaultWatchMethod = "inotify"
 )
 
 var (
@@ -41,6 +41,7 @@ type Tail struct {
 	WatchMethod         string   `toml:"watch_method"`
 	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
 	CharacterEncoding   string   `toml:"character_encoding"`
+	PathTag             string   `toml:"path_tag"`
 
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
@@ -71,6 +72,7 @@ func NewTail() *Tail {
 		FromBeginning:       false,
 		MaxUndeliveredLines: 1000,
 		offsets:             offsetsCopy,
+		PathTag:             "path",
 	}
 }
 
@@ -81,7 +83,8 @@ const sampleConfig = `
   ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
   ##   "/var/log/*/*.log" -> find all .log files with a parent dir in /var/log
   ##   "/var/log/apache.log" -> just tail the apache log file
-  ##
+  ##   "/var/log/log[!1-2]*  -> tail files without 1-2
+  ##   "/var/log/log[^1-2]*  -> identical behavior as above
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/mymetrics.out"]
@@ -114,6 +117,9 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
+  # path_tag = "path"
 
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
@@ -156,7 +162,7 @@ func (t *Tail) Init() error {
 	return err
 }
 
-func (t *Tail) Gather(acc telegraf.Accumulator) error {
+func (t *Tail) Gather(_ telegraf.Accumulator) error {
 	return t.tailNewFiles(true)
 }
 
@@ -282,25 +288,17 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 }
 
 // ParseLine parses a line of text.
-func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.Metric, error) {
+func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
 	switch parser.(type) {
 	case *csv.Parser:
-		// The csv parser parses headers in Parse and skips them in ParseLine.
-		// As a temporary solution call Parse only when getting the first
-		// line from the file.
-		if firstLine {
-			return parser.Parse([]byte(line))
-		} else {
-			m, err := parser.ParseLine(line)
-			if err != nil {
-				return nil, err
+		m, err := parser.Parse([]byte(line))
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, nil
 			}
-
-			if m != nil {
-				return []telegraf.Metric{m}, nil
-			}
-			return []telegraf.Metric{}, nil
+			return nil, err
 		}
+		return m, err
 	default:
 		return parser.Parse([]byte(line))
 	}
@@ -309,8 +307,6 @@ func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.M
 // Receiver is launched as a goroutine to continuously watch a tailed logfile
 // for changes, parse any incoming msgs, and add to the accumulator.
 func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
-	var firstLine = true
-
 	// holds the individual lines of multi-line log entries.
 	var buffer bytes.Buffer
 
@@ -320,7 +316,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	// The multiline mode requires a timer in order to flush the multiline buffer
 	// if no new lines are incoming.
 	if t.multiline.IsEnabled() {
-		timer = time.NewTimer(t.MultilineConfig.Timeout.Duration)
+		timer = time.NewTimer(time.Duration(*t.MultilineConfig.Timeout))
 		timeout = timer.C
 	}
 
@@ -332,7 +328,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		line = nil
 
 		if timer != nil {
-			timer.Reset(t.MultilineConfig.Timeout.Duration)
+			timer.Reset(time.Duration(*t.MultilineConfig.Timeout))
 		}
 
 		select {
@@ -372,16 +368,17 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 			continue
 		}
 
-		metrics, err := parseLine(parser, text, firstLine)
+		metrics, err := parseLine(parser, text)
 		if err != nil {
 			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
 				tailer.Filename, text, err.Error())
 			continue
 		}
-		firstLine = false
 
-		for _, metric := range metrics {
-			metric.AddTag("path", tailer.Filename)
+		if t.PathTag != "" {
+			for _, metric := range metrics {
+				metric.AddTag(t.PathTag, tailer.Filename)
+			}
 		}
 
 		// try writing out metric first without blocking

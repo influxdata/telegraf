@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package internal
@@ -33,7 +34,7 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 
 	// If SIGTERM was sent then treat any process error as a timeout.
 	if termSent {
-		return TimeoutErr
+		return ErrTimeout
 	}
 
 	// Otherwise there was an error unrelated to termination.

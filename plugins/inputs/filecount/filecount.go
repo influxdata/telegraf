@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/karrick/godirwalk"
@@ -57,19 +57,19 @@ type FileCount struct {
 	Recursive      bool
 	RegularOnly    bool
 	FollowSymlinks bool
-	Size           internal.Size
-	MTime          internal.Duration `toml:"mtime"`
+	Size           config.Size
+	MTime          config.Duration `toml:"mtime"`
 	fileFilters    []fileFilterFunc
 	globPaths      []globpath.GlobPath
 	Fs             fileSystem
 	Log            telegraf.Logger
 }
 
-func (_ *FileCount) Description() string {
+func (fc *FileCount) Description() string {
 	return "Count files in a directory"
 }
 
-func (_ *FileCount) SampleConfig() string { return sampleConfig }
+func (fc *FileCount) SampleConfig() string { return sampleConfig }
 
 type fileFilterFunc func(os.FileInfo) (bool, error)
 
@@ -108,7 +108,7 @@ func (fc *FileCount) regularOnlyFilter() fileFilterFunc {
 }
 
 func (fc *FileCount) sizeFilter() fileFilterFunc {
-	if fc.Size.Size == 0 {
+	if fc.Size == 0 {
 		return nil
 	}
 
@@ -116,22 +116,22 @@ func (fc *FileCount) sizeFilter() fileFilterFunc {
 		if !f.Mode().IsRegular() {
 			return false, nil
 		}
-		if fc.Size.Size < 0 {
-			return f.Size() < -fc.Size.Size, nil
+		if fc.Size < 0 {
+			return f.Size() < -int64(fc.Size), nil
 		}
-		return f.Size() >= fc.Size.Size, nil
+		return f.Size() >= int64(fc.Size), nil
 	}
 }
 
 func (fc *FileCount) mtimeFilter() fileFilterFunc {
-	if fc.MTime.Duration == 0 {
+	if time.Duration(fc.MTime) == 0 {
 		return nil
 	}
 
 	return func(f os.FileInfo) (bool, error) {
-		age := absDuration(fc.MTime.Duration)
+		age := absDuration(time.Duration(fc.MTime))
 		mtime := time.Now().Add(-age)
-		if fc.MTime.Duration < 0 {
+		if time.Duration(fc.MTime) < 0 {
 			return f.ModTime().After(mtime), nil
 		}
 		return f.ModTime().Before(mtime), nil
@@ -292,7 +292,6 @@ func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
 			fc.globPaths = append(fc.globPaths, *glob)
 		}
 	}
-
 }
 
 func NewFileCount() *FileCount {
@@ -303,8 +302,8 @@ func NewFileCount() *FileCount {
 		Recursive:      true,
 		RegularOnly:    true,
 		FollowSymlinks: false,
-		Size:           internal.Size{Size: 0},
-		MTime:          internal.Duration{Duration: 0},
+		Size:           config.Size(0),
+		MTime:          config.Duration(0),
 		fileFilters:    nil,
 		Fs:             osFS{},
 	}

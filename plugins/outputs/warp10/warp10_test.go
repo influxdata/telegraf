@@ -1,7 +1,6 @@
 package warp10
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -24,6 +23,22 @@ func TestWriteWarp10(t *testing.T) {
 	require.Exactly(t, "1257894000000000// unit.testtest1.value{source=telegraf,tag1=value1} 1.000000\n", payload)
 }
 
+func TestWriteWarp10EncodedTags(t *testing.T) {
+	w := Warp10{
+		Prefix:  "unit.test",
+		WarpURL: "http://localhost:8090",
+		Token:   "WRITE",
+	}
+
+	metrics := testutil.MockMetrics()
+	for _, metric := range metrics {
+		metric.AddTag("encoded{tag", "value1,value2")
+	}
+
+	payload := w.GenWarp10Payload(metrics)
+	require.Exactly(t, "1257894000000000// unit.testtest1.value{encoded%7Btag=value1%2Cvalue2,source=telegraf,tag1=value1} 1.000000\n", payload)
+}
+
 func TestHandleWarp10Error(t *testing.T) {
 	w := Warp10{
 		Prefix:  "unit.test",
@@ -44,7 +59,7 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: fmt.Sprintf("Invalid token"),
+			Expected: "Invalid token",
 		},
 		{
 			Message: `
@@ -59,7 +74,7 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: fmt.Sprintf("Token Expired"),
+			Expected: "Token Expired",
 		},
 		{
 			Message: `
@@ -74,7 +89,7 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: fmt.Sprintf("Token revoked"),
+			Expected: "Token revoked",
 		},
 		{
 			Message: `
@@ -101,5 +116,4 @@ func TestHandleWarp10Error(t *testing.T) {
 		payload := w.HandleError(handledError.Message, 511)
 		require.Exactly(t, handledError.Expected, payload)
 	}
-
 }

@@ -1,7 +1,7 @@
 package logrus
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"strings"
 	"sync"
@@ -14,12 +14,12 @@ var once sync.Once
 type LogHook struct {
 }
 
-// Install a logging hook into the logrus standard logger, diverting all logs
+// InstallHook installs a logging hook into the logrus standard logger, diverting all logs
 // through the Telegraf logger at debug level.  This is useful for libraries
 // that directly log to the logrus system without providing an override method.
 func InstallHook() {
 	once.Do(func() {
-		logrus.SetOutput(ioutil.Discard)
+		logrus.SetOutput(io.Discard)
 		logrus.AddHook(&LogHook{})
 	})
 }

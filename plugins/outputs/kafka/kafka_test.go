@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 type topicSuffixTestpair struct {
@@ -17,7 +18,7 @@ type topicSuffixTestpair struct {
 	expectedTopic string
 }
 
-func TestConnectAndWrite(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -43,17 +44,17 @@ func TestConnectAndWrite(t *testing.T) {
 	k.Close()
 }
 
-func TestTopicSuffixes(t *testing.T) {
+func TestTopicSuffixesIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	topic := "Test"
 
-	metric := testutil.TestMetric(1)
+	m := testutil.TestMetric(1)
 	metricTagName := "tag1"
-	metricTagValue := metric.Tags()[metricTagName]
-	metricName := metric.Name()
+	metricTagValue := m.Tags()[metricTagName]
+	metricName := m.Name()
 
 	var testcases = []topicSuffixTestpair{
 		// This ensures empty separator is okay
@@ -85,12 +86,12 @@ func TestTopicSuffixes(t *testing.T) {
 			TopicSuffix: topicSuffix,
 		}
 
-		_, topic := k.GetTopicName(metric)
+		_, topic := k.GetTopicName(m)
 		require.Equal(t, expectedTopic, topic)
 	}
 }
 
-func TestValidateTopicSuffixMethod(t *testing.T) {
+func TestValidateTopicSuffixMethodIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -117,7 +118,7 @@ func TestRoutingKey(t *testing.T) {
 				RoutingKey: "static",
 			},
 			metric: func() telegraf.Metric {
-				m, _ := metric.New(
+				m := metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -137,7 +138,7 @@ func TestRoutingKey(t *testing.T) {
 				RoutingKey: "random",
 			},
 			metric: func() telegraf.Metric {
-				m, _ := metric.New(
+				m := metric.New(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -179,7 +180,7 @@ func (p *MockProducer) Close() error {
 	return nil
 }
 
-func NewMockProducer(addrs []string, config *sarama.Config) (sarama.SyncProducer, error) {
+func NewMockProducer(_ []string, _ *sarama.Config) (sarama.SyncProducer, error) {
 	return &MockProducer{}, nil
 }
 
