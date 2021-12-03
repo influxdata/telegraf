@@ -142,7 +142,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "msgpack":
 		serializer, err = NewMsgpackSerializer()
 	default:
-		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
+		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
 	return serializer, err
 }

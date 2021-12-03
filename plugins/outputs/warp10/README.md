@@ -2,7 +2,7 @@
 
 The `warp10` output plugin writes metrics to [Warp 10][].
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.warp10]]
@@ -32,7 +32,7 @@ The `warp10` output plugin writes metrics to [Warp 10][].
   # insecure_skip_verify = false
 ```
 
-### Output Format
+## Output Format
 
 Metrics are converted and sent using the [Geo Time Series][] (GTS) input format.
 

@@ -3,7 +3,7 @@ package jolokia2
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestJolokia2_makeReadRequests(t *testing.T) {
@@ -96,9 +96,9 @@ func TestJolokia2_makeReadRequests(t *testing.T) {
 	for _, c := range cases {
 		payload := makeReadRequests([]Metric{c.metric})
 
-		assert.Equal(t, len(c.expected), len(payload), "Failing case: "+c.metric.Name)
+		require.Equal(t, len(c.expected), len(payload), "Failing case: "+c.metric.Name)
 		for _, actual := range payload {
-			assert.Contains(t, c.expected, actual, "Failing case: "+c.metric.Name)
+			require.Contains(t, c.expected, actual, "Failing case: "+c.metric.Name)
 		}
 	}
 }

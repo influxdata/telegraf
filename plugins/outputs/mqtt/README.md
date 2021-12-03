@@ -40,8 +40,8 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
   ## When true, messages will have RETAIN flag set.
   # retain = false
 
-  ## Defines the maximum length of time that the broker and client may not communicate. 
-  ## Defaults to 0 which turns the feature off. For version v2.0.12 mosquitto there is a 
+  ## Defines the maximum length of time that the broker and client may not communicate.
+  ## Defaults to 0 which turns the feature off. For version v2.0.12 mosquitto there is a
   ## [bug](https://github.com/eclipse/mosquitto/issues/2117) which requires keep_alive to be set.
   ## As a reference eclipse/paho.mqtt.golang v1.3.0 defaults to 30.
   # keep_alive = 0
@@ -50,13 +50,14 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
   # data_format = "influx"
 ```
 
-### Required parameters:
+## Required parameters
 
 * `servers`: List of strings, this is for speaking to a cluster of `mqtt` brokers. On each flush interval, Telegraf will randomly choose one of the urls to write to. Each URL should just include host and port e.g. -> `["{host}:{port}","{host2}:{port2}"]`
-* `topic_prefix`: The `mqtt` topic prefix to publish to. MQTT outputs send metrics to this topic format "<topic_prefix>/<hostname>/<pluginname>/" ( ex: prefix/web01.example.com/mem)
-* `qos`: The `mqtt` QoS policy for sending messages. See https://www.ibm.com/support/knowledgecenter/en/SSFKSJ_9.0.0/com.ibm.mq.dev.doc/q029090_.htm for details.
+* `topic_prefix`: The `mqtt` topic prefix to publish to. MQTT outputs send metrics to this topic format `<topic_prefix>/<hostname>/<pluginname>/` ( ex: `prefix/web01.example.com/mem`)
+* `qos`: The `mqtt` QoS policy for sending messages. See [these docs](https://www.ibm.com/support/knowledgecenter/en/SSFKSJ_9.0.0/com.ibm.mq.dev.doc/q029090_.htm) for details.
 
-### Optional parameters:
+## Optional parameters
+
 * `username`: The username to connect MQTT server.
 * `password`: The password to connect MQTT server.
 * `client_id`: The unique client id to connect MQTT server. If this parameter is not set then a random ID is generated.
@@ -68,4 +69,4 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 * `batch`: When true, metrics will be sent in one MQTT message per flush. Otherwise, metrics are written one metric per MQTT message.
 * `retain`: Set `retain` flag when publishing
 * `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
-* `keep_alive`: Defines the maximum length of time that the broker and client may not communicate with each other. Defaults to 0 which deactivates this feature. 
+* `keep_alive`: Defines the maximum length of time that the broker and client may not communicate with each other. Defaults to 0 which deactivates this feature.

@@ -4,22 +4,24 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
 )
 
 type RollbarWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
+	log  telegraf.Logger
 }
 
-func (rb *RollbarWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
+func (rb *RollbarWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
-	log.Printf("I! Started the webhooks_rollbar on %s\n", rb.Path)
+	rb.log = log
+	rb.log.Infof("Started the webhooks_rollbar on %s", rb.Path)
 	rb.acc = acc
 }
 

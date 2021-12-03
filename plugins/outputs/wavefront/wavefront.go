@@ -5,9 +5,10 @@ import (
 	"regexp"
 	"strings"
 
+	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
 )
 
 const maxTagLength = 254
@@ -51,7 +52,7 @@ var strictSanitizedChars = strings.NewReplacer(
 )
 
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
-var sanitizedRegex = regexp.MustCompile("[^a-zA-Z\\d_.-]")
+var sanitizedRegex = regexp.MustCompile(`[^a-zA-Z\d_.-]`)
 
 var tagValueReplacer = strings.NewReplacer("*", "-")
 

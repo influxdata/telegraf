@@ -2,8 +2,7 @@
 
 The `twemproxy` plugin gathers statistics from [Twemproxy](https://github.com/twitter/twemproxy) servers.
 
-
-### Configuration
+## Configuration
 
 ```toml
 # Read Twemproxy stats data
@@ -13,4 +12,3 @@ The `twemproxy` plugin gathers statistics from [Twemproxy](https://github.com/tw
   ## Monitor pool name
   pools = ["redis_pool", "mc_pool"]
 ```
-

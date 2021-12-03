@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaults(t *testing.T) {
@@ -124,7 +125,7 @@ func TestDefaults(t *testing.T) {
 			defaults := scenario.defaults
 
 			resultMetrics := defaults.Apply(scenario.input)
-			assert.Len(t, resultMetrics, 1)
+			require.Len(t, resultMetrics, 1)
 			testutil.RequireMetricsEqual(t, scenario.expected, resultMetrics)
 		})
 	}

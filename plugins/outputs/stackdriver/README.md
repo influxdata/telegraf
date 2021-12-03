@@ -15,7 +15,7 @@ Metrics are grouped by the `namespace` variable and metric key - eg: `custom.goo
 
 Additional resource labels can be configured by `resource_labels`. By default the required `project_id` label is always set to the `project` variable.
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.stackdriver]]
@@ -35,7 +35,7 @@ Additional resource labels can be configured by `resource_labels`. By default th
   #   location = "eu-north0"
 ```
 
-### Restrictions
+## Restrictions
 
 Stackdriver does not support string values in custom metrics, any string
 fields will not be written.

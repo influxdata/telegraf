@@ -3,7 +3,7 @@
 The `csv` parser creates metrics from a document containing comma separated
 values.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.file]]
@@ -78,7 +78,8 @@ values.
   ## The field will be skipped entirely where it matches any values inserted here.
   csv_skip_values = []
   ```
-#### csv_timestamp_column, csv_timestamp_format
+
+### csv_timestamp_column, csv_timestamp_format
 
 By default the current time will be used for all created metrics, to set the
 time using the JSON document you can use the `csv_timestamp_column` and
@@ -93,7 +94,7 @@ or a format string in using the Go "reference time" which is defined to be the
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.
 
-### Metrics
+## Metrics
 
 One metric is created for each row with the columns added as fields.  The type
 of the field is automatically determined based on the contents of the value.
@@ -101,9 +102,10 @@ of the field is automatically determined based on the contents of the value.
 In addition to the options above, you can use [metric filtering][] to skip over
 columns and rows.
 
-### Examples
+## Examples
 
 Config:
+
 ```toml
 [[inputs.file]]
   files = ["example"]
@@ -114,13 +116,15 @@ Config:
 ```
 
 Input:
-```
+
+```shell
 measurement,cpu,time_user,time_system,time_idle,time
 cpu,cpu0,42,42,42,2018-09-13T13:03:28Z
 ```
 
 Output:
-```
+
+```shell
 cpu cpu=cpu0,time_user=42,time_system=42,time_idle=42 1536869008000000000
 ```
 

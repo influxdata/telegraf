@@ -261,15 +261,12 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 }
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
-	// Read the file line-by-line and parse with the configured parse method.
-	firstLine := true
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		metrics, err := monitor.parseLine(parser, scanner.Bytes(), firstLine)
+		metrics, err := monitor.parseLine(parser, scanner.Bytes())
 		if err != nil {
 			return err
 		}
-		firstLine = false
 
 		if monitor.FileTag != "" {
 			for _, m := range metrics {
@@ -285,24 +282,17 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 	return nil
 }
 
-func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte, firstLine bool) ([]telegraf.Metric, error) {
+func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte) ([]telegraf.Metric, error) {
 	switch parser.(type) {
 	case *csv.Parser:
-		// The CSV parser parses headers in Parse and skips them in ParseLine.
-		if firstLine {
-			return parser.Parse(line)
-		}
-
-		m, err := parser.ParseLine(string(line))
+		m, err := parser.Parse(line)
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, nil
+			}
 			return nil, err
 		}
-
-		if m != nil {
-			return []telegraf.Metric{m}, nil
-		}
-
-		return []telegraf.Metric{}, nil
+		return m, err
 	default:
 		return parser.Parse(line)
 	}

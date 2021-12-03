@@ -13,11 +13,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite"
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite/types"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/assert"
 )
 
 const tsDbName = "testDb"
@@ -49,26 +49,25 @@ func (m *mockTimestreamClient) DescribeDatabase(context.Context, *timestreamwrit
 }
 
 func TestConnectValidatesConfigParameters(t *testing.T) {
-	assertions := assert.New(t)
 	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamClient{}, nil
 	}
 	// checking base arguments
 	noDatabaseName := Timestream{Log: testutil.Logger{}}
-	assertions.Contains(noDatabaseName.Connect().Error(), "DatabaseName")
+	require.Contains(t, noDatabaseName.Connect().Error(), "DatabaseName")
 
 	noMappingMode := Timestream{
 		DatabaseName: tsDbName,
 		Log:          testutil.Logger{},
 	}
-	assertions.Contains(noMappingMode.Connect().Error(), "MappingMode")
+	require.Contains(t, noMappingMode.Connect().Error(), "MappingMode")
 
 	incorrectMappingMode := Timestream{
 		DatabaseName: tsDbName,
 		MappingMode:  "foo",
 		Log:          testutil.Logger{},
 	}
-	assertions.Contains(incorrectMappingMode.Connect().Error(), "single-table")
+	require.Contains(t, incorrectMappingMode.Connect().Error(), "single-table")
 
 	// multi-table arguments
 	validMappingModeMultiTable := Timestream{
@@ -76,7 +75,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		MappingMode:  MappingModeMultiTable,
 		Log:          testutil.Logger{},
 	}
-	assertions.Nil(validMappingModeMultiTable.Connect())
+	require.Nil(t, validMappingModeMultiTable.Connect())
 
 	singleTableNameWithMultiTable := Timestream{
 		DatabaseName:    tsDbName,
@@ -84,7 +83,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		SingleTableName: testSingleTableName,
 		Log:             testutil.Logger{},
 	}
-	assertions.Contains(singleTableNameWithMultiTable.Connect().Error(), "SingleTableName")
+	require.Contains(t, singleTableNameWithMultiTable.Connect().Error(), "SingleTableName")
 
 	singleTableDimensionWithMultiTable := Timestream{
 		DatabaseName: tsDbName,
@@ -92,7 +91,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		SingleTableDimensionNameForTelegrafMeasurementName: testSingleTableDim,
 		Log: testutil.Logger{},
 	}
-	assertions.Contains(singleTableDimensionWithMultiTable.Connect().Error(),
+	require.Contains(t, singleTableDimensionWithMultiTable.Connect().Error(),
 		"SingleTableDimensionNameForTelegrafMeasurementName")
 
 	// single-table arguments
@@ -101,7 +100,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		MappingMode:  MappingModeSingleTable,
 		Log:          testutil.Logger{},
 	}
-	assertions.Contains(noTableNameMappingModeSingleTable.Connect().Error(), "SingleTableName")
+	require.Contains(t, noTableNameMappingModeSingleTable.Connect().Error(), "SingleTableName")
 
 	noDimensionNameMappingModeSingleTable := Timestream{
 		DatabaseName:    tsDbName,
@@ -109,7 +108,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		SingleTableName: testSingleTableName,
 		Log:             testutil.Logger{},
 	}
-	assertions.Contains(noDimensionNameMappingModeSingleTable.Connect().Error(),
+	require.Contains(t, noDimensionNameMappingModeSingleTable.Connect().Error(),
 		"SingleTableDimensionNameForTelegrafMeasurementName")
 
 	validConfigurationMappingModeSingleTable := Timestream{
@@ -119,7 +118,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		SingleTableDimensionNameForTelegrafMeasurementName: testSingleTableDim,
 		Log: testutil.Logger{},
 	}
-	assertions.Nil(validConfigurationMappingModeSingleTable.Connect())
+	require.Nil(t, validConfigurationMappingModeSingleTable.Connect())
 
 	// create table arguments
 	createTableNoMagneticRetention := Timestream{
@@ -128,7 +127,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		CreateTableIfNotExists: true,
 		Log:                    testutil.Logger{},
 	}
-	assertions.Contains(createTableNoMagneticRetention.Connect().Error(),
+	require.Contains(t, createTableNoMagneticRetention.Connect().Error(),
 		"CreateTableMagneticStoreRetentionPeriodInDays")
 
 	createTableNoMemoryRetention := Timestream{
@@ -138,7 +137,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		CreateTableMagneticStoreRetentionPeriodInDays: 3,
 		Log: testutil.Logger{},
 	}
-	assertions.Contains(createTableNoMemoryRetention.Connect().Error(),
+	require.Contains(t, createTableNoMemoryRetention.Connect().Error(),
 		"CreateTableMemoryStoreRetentionPeriodInHours")
 
 	createTableValid := Timestream{
@@ -149,7 +148,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		CreateTableMemoryStoreRetentionPeriodInHours:  3,
 		Log: testutil.Logger{},
 	}
-	assertions.Nil(createTableValid.Connect())
+	require.Nil(t, createTableValid.Connect())
 
 	// describe table on start arguments
 	describeTableInvoked := Timestream{
@@ -158,7 +157,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 		DescribeDatabaseOnStart: true,
 		Log:                     testutil.Logger{},
 	}
-	assertions.Contains(describeTableInvoked.Connect().Error(), "hello from DescribeDatabase")
+	require.Contains(t, describeTableInvoked.Connect().Error(), "hello from DescribeDatabase")
 }
 
 type mockTimestreamErrorClient struct {
@@ -176,7 +175,6 @@ func (m *mockTimestreamErrorClient) DescribeDatabase(context.Context, *timestrea
 }
 
 func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
-	assertions := assert.New(t)
 	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			ErrorToReturnOnWriteRecords: &types.ThrottlingException{Message: aws.String("Throttling Test")},
@@ -188,7 +186,7 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 		DatabaseName: tsDbName,
 		Log:          testutil.Logger{},
 	}
-	assertions.NoError(plugin.Connect())
+	require.NoError(t, plugin.Connect())
 	input := testutil.MustMetric(
 		metricName1,
 		map[string]string{"tag1": "value1"},
@@ -198,12 +196,11 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 
 	err := plugin.Write([]telegraf.Metric{input})
 
-	assertions.NotNil(err, "Expected an error to be returned to Telegraf, "+
+	require.NotNil(t, err, "Expected an error to be returned to Telegraf, "+
 		"so that the write will be retried by Telegraf later.")
 }
 
 func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
-	assertions := assert.New(t)
 	WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			ErrorToReturnOnWriteRecords: &types.RejectedRecordsException{Message: aws.String("RejectedRecords Test")},
@@ -215,7 +212,7 @@ func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
 		DatabaseName: tsDbName,
 		Log:          testutil.Logger{},
 	}
-	assertions.NoError(plugin.Connect())
+	require.NoError(t, plugin.Connect())
 	input := testutil.MustMetric(
 		metricName1,
 		map[string]string{"tag1": "value1"},
@@ -225,7 +222,7 @@ func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
 
 	err := plugin.Write([]telegraf.Metric{input})
 
-	assertions.Nil(err, "Expected to silently swallow the RejectedRecordsException, "+
+	require.Nil(t, err, "Expected to silently swallow the RejectedRecordsException, "+
 		"as retrying this error doesn't make sense.")
 }
 
@@ -649,13 +646,11 @@ func comparisonTest(t *testing.T,
 			Log:          testutil.Logger{},
 		}
 	}
-	assertions := assert.New(t)
-
 	result := plugin.TransformMetrics(telegrafMetrics)
 
-	assertions.Equal(len(timestreamRecords), len(result), "The number of transformed records was expected to be different")
+	require.Equal(t, len(timestreamRecords), len(result), "The number of transformed records was expected to be different")
 	for _, tsRecord := range timestreamRecords {
-		assertions.True(arrayContains(result, tsRecord), "Expected that the list of requests to Timestream: \n%s\n\n "+
+		require.True(t, arrayContains(result, tsRecord), "Expected that the list of requests to Timestream: \n%s\n\n "+
 			"will contain request: \n%s\n\nUsed MappingMode: %s", result, tsRecord, mappingMode)
 	}
 }

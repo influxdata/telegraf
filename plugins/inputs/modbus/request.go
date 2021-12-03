@@ -1,3 +1,5 @@
+//go:build !openbsd
+
 package modbus
 
 import "sort"
@@ -8,7 +10,7 @@ type request struct {
 	fields  []field
 }
 
-func newRequestsFromFields(fields []field, slaveID byte, registerType string, maxBatchSize uint16) []request {
+func newRequestsFromFields(fields []field, maxBatchSize uint16) []request {
 	if len(fields) == 0 {
 		return nil
 	}
@@ -38,9 +40,12 @@ func newRequestsFromFields(fields []field, slaveID byte, registerType string, ma
 		needInterrupt = needInterrupt || f.length+current.length > maxBatchSize // too large
 
 		if !needInterrupt {
-			// Still save to add the field to the current request
+			// Still safe to add the field to the current request
 			current.length += f.length
-			current.fields = append(current.fields, f) // TODO: omit the field with a future flag
+			if !f.omit {
+				// Omit adding the field but use it for constructing the request.
+				current.fields = append(current.fields, f)
+			}
 			continue
 		}
 

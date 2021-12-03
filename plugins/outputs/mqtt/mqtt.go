@@ -2,12 +2,12 @@ package mqtt
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -82,9 +82,10 @@ type MQTT struct {
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
-	BatchMessage bool  `toml:"batch"`
-	Retain       bool  `toml:"retain"`
-	KeepAlive    int64 `toml:"keep_alive"`
+	BatchMessage bool            `toml:"batch"`
+	Retain       bool            `toml:"retain"`
+	KeepAlive    int64           `toml:"keep_alive"`
+	Log          telegraf.Logger `toml:"-"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -164,13 +165,13 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		} else {
 			buf, err := m.serializer.Serialize(metric)
 			if err != nil {
-				log.Printf("D! [outputs.mqtt] Could not serialize metric: %v", err)
+				m.Log.Debugf("Could not serialize metric: %v", err)
 				continue
 			}
 
 			err = m.publish(topic, buf)
 			if err != nil {
-				return fmt.Errorf("Could not write to MQTT server, %s", err)
+				return fmt.Errorf("could not write to MQTT server, %s", err)
 			}
 		}
 	}
@@ -183,7 +184,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		}
 		publisherr := m.publish(key, buf)
 		if publisherr != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", publisherr)
+			return fmt.Errorf("could not write to MQTT server, %s", publisherr)
 		}
 	}
 

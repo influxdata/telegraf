@@ -44,6 +44,8 @@ HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
 	LDFLAGS += -X main.version=$(version)
+else
+	LDFLAGS += -X main.version=$(version)-$(commit)
 endif
 
 # Go built-in race detector works only for 64 bits architectures.
@@ -140,24 +142,32 @@ vet:
 
 .PHONY: lint-install
 lint-install:
-
+	@echo "Installing golangci-lint"
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
+
+	@echo "Installing markdownlint"
+	npm install -g markdownlint-cli
 
 .PHONY: lint
 lint:
-ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please run: make lint-install)
-	exit 1
-endif
-
+	@which golangci-lint >/dev/null 2>&1 || { \
+		echo "golangci-lint not found, please run: make lint-install"; \
+		exit 1; \
+	}
 	golangci-lint run
+
+	@which markdownlint >/dev/null 2>&1 || { \
+		echo "markdownlint not found, please run: make lint-install"; \
+		exit 1; \
+	}
+	markdownlint .
 
 .PHONY: lint-branch
 lint-branch:
-ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please run: make lint-install)
-	exit 1
-endif
+	@which golangci-lint >/dev/null 2>&1 || { \
+		echo "golangci-lint not found, please run: make lint-install"; \
+		exit 1; \
+	}
 
 	golangci-lint run --new-from-rev master
 
@@ -201,8 +211,8 @@ plugin-%:
 
 .PHONY: ci-1.17
 ci-1.17:
-	docker build -t quay.io/influxdb/telegraf-ci:1.17.2 - < scripts/ci-1.17.docker
-	docker push quay.io/influxdb/telegraf-ci:1.17.2
+	docker build -t quay.io/influxdb/telegraf-ci:1.17.3 - < scripts/ci-1.17.docker
+	docker push quay.io/influxdb/telegraf-ci:1.17.3
 
 .PHONY: install
 install: $(buildbin)

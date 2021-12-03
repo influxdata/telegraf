@@ -32,7 +32,6 @@ following works:
 - github.com/aristanetworks/glog [Apache License 2.0](https://github.com/aristanetworks/glog/blob/master/LICENSE)
 - github.com/aristanetworks/goarista [Apache License 2.0](https://github.com/aristanetworks/goarista/blob/master/COPYING)
 - github.com/armon/go-metrics [MIT License](https://github.com/armon/go-metrics/blob/master/LICENSE)
-- github.com/aws/aws-sdk-go [Apache License 2.0](https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2 [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/config [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/config/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/credentials [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/credentials/LICENSE.txt)
@@ -65,6 +64,7 @@ following works:
 - github.com/cespare/xxhash [MIT License](https://github.com/cespare/xxhash/blob/master/LICENSE.txt)
 - github.com/cisco-ie/nx-telemetry-proto [Apache License 2.0](https://github.com/cisco-ie/nx-telemetry-proto/blob/master/LICENSE)
 - github.com/containerd/containerd [Apache License 2.0](https://github.com/containerd/containerd/blob/master/LICENSE)
+- github.com/coreos/go-semver [Apache License 2.0](https://github.com/coreos/go-semver/blob/main/LICENSE)
 - github.com/couchbase/go-couchbase [MIT License](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT License](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
 - github.com/couchbase/goutils [Apache License 2.0](https://github.com/couchbase/goutils/blob/master/LICENSE.md)
@@ -110,11 +110,13 @@ following works:
 - github.com/googleapis/gax-go [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/gax-go/blob/master/LICENSE)
 - github.com/googleapis/gnostic [Apache License 2.0](https://github.com/google/gnostic/blob/master/LICENSE)
 - github.com/gopcua/opcua [MIT License](https://github.com/gopcua/opcua/blob/master/LICENSE)
+- github.com/gophercloud/gophercloud [Apache License 2.0](https://github.com/gophercloud/gophercloud/blob/master/LICENSE)
 - github.com/gorilla/mux [BSD 3-Clause "New" or "Revised" License](https://github.com/gorilla/mux/blob/master/LICENSE)
 - github.com/gorilla/websocket [BSD 2-Clause "Simplified" License](https://github.com/gorilla/websocket/blob/master/LICENSE)
 - github.com/gosnmp/gosnmp [BSD 2-Clause "Simplified" License](https://github.com/gosnmp/gosnmp/blob/master/LICENSE)
 - github.com/grid-x/modbus [BSD 3-Clause "New" or "Revised" License](https://github.com/grid-x/modbus/blob/master/LICENSE)
 - github.com/grid-x/serial [MIT License](https://github.com/grid-x/serial/blob/master/LICENSE)
+- github.com/gwos/tcg/sdk [MIT License](https://github.com/gwos/tcg/blob/master/LICENSE)
 - github.com/hailocab/go-hostpool [MIT License](https://github.com/hailocab/go-hostpool/blob/master/LICENSE)
 - github.com/harlow/kinesis-consumer [MIT License](https://github.com/harlow/kinesis-consumer/blob/master/MIT-LICENSE)
 - github.com/hashicorp/consul/api [Mozilla Public License 2.0](https://github.com/hashicorp/consul/blob/master/LICENSE)
@@ -132,6 +134,7 @@ following works:
 - github.com/influxdata/tail [MIT License](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
 - github.com/influxdata/toml [MIT License](https://github.com/influxdata/toml/blob/master/LICENSE)
 - github.com/influxdata/wlog [MIT License](https://github.com/influxdata/wlog/blob/master/LICENSE)
+- github.com/intel/iaevents [Apache License 2.0](https://github.com/intel/iaevents/blob/main/LICENSE)
 - github.com/jackc/chunkreader [MIT License](https://github.com/jackc/chunkreader/blob/master/LICENSE)
 - github.com/jackc/pgconn [MIT License](https://github.com/jackc/pgconn/blob/master/LICENSE)
 - github.com/jackc/pgio [MIT License](https://github.com/jackc/pgio/blob/master/LICENSE)
@@ -284,5 +287,7 @@ following works:
 - modernc.org/sqlite [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/sqlite/-/blob/master/LICENSE)
 - sigs.k8s.io/structured-merge-diff [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/yaml [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
-## telegraf used and modified code from these projects
+
+## Telegraf used and modified code from these projects
+
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)

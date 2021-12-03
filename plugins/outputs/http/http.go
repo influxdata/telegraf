@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -64,6 +63,11 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 
+  ## Use batch serialization format (default) instead of line based format.
+  ## Batch format is more efficient and should be used unless line based
+  ## format is really needed.
+  # use_batch_format = true
+
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
@@ -80,9 +84,9 @@ var sampleConfig = `
 `
 
 const (
-	defaultClientTimeout = 5 * time.Second
-	defaultContentType   = "text/plain; charset=utf-8"
-	defaultMethod        = http.MethodPost
+	defaultContentType    = "text/plain; charset=utf-8"
+	defaultMethod         = http.MethodPost
+	defaultUseBatchFormat = true
 )
 
 type HTTP struct {
@@ -92,6 +96,7 @@ type HTTP struct {
 	Password        string            `toml:"password"`
 	Headers         map[string]string `toml:"headers"`
 	ContentEncoding string            `toml:"content_encoding"`
+	UseBatchFormat  bool              `toml:"use_batch_format"`
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
@@ -136,15 +141,33 @@ func (h *HTTP) SampleConfig() string {
 }
 
 func (h *HTTP) Write(metrics []telegraf.Metric) error {
-	reqBody, err := h.serializer.SerializeBatch(metrics)
-	if err != nil {
-		return err
+	var reqBody []byte
+
+	if h.UseBatchFormat {
+		var err error
+		reqBody, err = h.serializer.SerializeBatch(metrics)
+		if err != nil {
+			return err
+		}
+
+		return h.writeMetric(reqBody)
 	}
 
-	return h.write(reqBody)
+	for _, metric := range metrics {
+		var err error
+		reqBody, err = h.serializer.Serialize(metric)
+		if err != nil {
+			return err
+		}
+
+		if err := h.writeMetric(reqBody); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (h *HTTP) write(reqBody []byte) error {
+func (h *HTTP) writeMetric(reqBody []byte) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 
 	var err error
@@ -205,8 +228,9 @@ func (h *HTTP) write(reqBody []byte) error {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &HTTP{
-			Method: defaultMethod,
-			URL:    defaultURL,
+			Method:         defaultMethod,
+			URL:            defaultURL,
+			UseBatchFormat: defaultUseBatchFormat,
 		}
 	})
 }

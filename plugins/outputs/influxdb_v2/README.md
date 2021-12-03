@@ -2,7 +2,7 @@
 
 The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Configuration for sending metrics to InfluxDB 2.0
@@ -58,8 +58,8 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
   # insecure_skip_verify = false
 ```
 
-### Metrics
-￼
+## Metrics
+
 Reference the [influx serializer][] for details about metric production.
 
 [InfluxDB v2.x]: https://github.com/influxdata/influxdb
