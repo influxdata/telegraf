@@ -77,7 +77,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 					appendPath(path)
 				} else if info.Mode()&os.ModeSymlink == 0 {
 					if err := loadModule(info.Name()); err != nil {
-						log.Warnf("Module could not be loaded %v", err)
+						log.Warn(err)
 					}
 				}
 				return nil
