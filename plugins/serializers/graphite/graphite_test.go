@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -55,9 +54,9 @@ func TestGraphiteTags(t *testing.T) {
 	tags2 := buildTags(m2.Tags())
 	tags3 := buildTags(m3.Tags())
 
-	assert.Equal(t, "192_168_0_1", tags1)
-	assert.Equal(t, "first.second.192_168_0_1", tags2)
-	assert.Equal(t, "first.second", tags3)
+	require.Equal(t, "192_168_0_1", tags1)
+	require.Equal(t, "first.second.192_168_0_1", tags2)
+	require.Equal(t, "first.second", tags3)
 }
 
 func TestSerializeMetricNoHost(t *testing.T) {
@@ -82,7 +81,7 @@ func TestSerializeMetricNoHost(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeMetricNoHostWithTagSupport(t *testing.T) {
@@ -110,7 +109,7 @@ func TestSerializeMetricNoHostWithTagSupport(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeMetricHost(t *testing.T) {
@@ -136,7 +135,7 @@ func TestSerializeMetricHost(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeMetricHostWithMultipleTemplates(t *testing.T) {
@@ -157,8 +156,8 @@ func TestSerializeMetricHostWithMultipleTemplates(t *testing.T) {
 		"cp* tags.measurement.host.field",
 		"new_cpu tags.host.measurement.field",
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, defaultTemplate, "")
+	require.NoError(t, err)
+	require.Equal(t, defaultTemplate, "")
 
 	s := GraphiteSerializer{
 		Templates: templates,
@@ -170,7 +169,7 @@ func TestSerializeMetricHostWithMultipleTemplates(t *testing.T) {
 	buf = append(buf, buf2...)
 
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expS := []string{
 		fmt.Sprintf("cpu0.us-west-2.cpu.localhost.usage_idle 91.5 %d", now.Unix()),
@@ -180,7 +179,7 @@ func TestSerializeMetricHostWithMultipleTemplates(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeMetricHostWithMultipleTemplatesWithDefault(t *testing.T) {
@@ -201,8 +200,8 @@ func TestSerializeMetricHostWithMultipleTemplatesWithDefault(t *testing.T) {
 		"cp* tags.measurement.host.field",
 		"tags.host.measurement.field",
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, defaultTemplate, "tags.host.measurement.field")
+	require.NoError(t, err)
+	require.Equal(t, defaultTemplate, "tags.host.measurement.field")
 
 	s := GraphiteSerializer{
 		Templates: templates,
@@ -215,7 +214,7 @@ func TestSerializeMetricHostWithMultipleTemplatesWithDefault(t *testing.T) {
 	buf = append(buf, buf2...)
 
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expS := []string{
 		fmt.Sprintf("cpu0.us-west-2.cpu.localhost.usage_idle 91.5 %d", now.Unix()),
@@ -225,7 +224,7 @@ func TestSerializeMetricHostWithMultipleTemplatesWithDefault(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeMetricHostWithTagSupport(t *testing.T) {
@@ -254,7 +253,7 @@ func TestSerializeMetricHostWithTagSupport(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 // test that a field named "value" gets ignored.
@@ -277,7 +276,7 @@ func TestSerializeValueField(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("localhost.cpu0.us-west-2.cpu 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeValueFieldWithTagSupport(t *testing.T) {
@@ -302,7 +301,7 @@ func TestSerializeValueFieldWithTagSupport(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("cpu;cpu=cpu0;datacenter=us-west-2;host=localhost 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 // test that a field named "value" gets ignored in middle of template.
@@ -327,7 +326,7 @@ func TestSerializeValueField2(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("localhost.cpu0.us-west-2.cpu 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeValueString(t *testing.T) {
@@ -347,7 +346,7 @@ func TestSerializeValueString(t *testing.T) {
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
-	assert.Equal(t, "", mS[0])
+	require.Equal(t, "", mS[0])
 }
 
 func TestSerializeValueStringWithTagSupport(t *testing.T) {
@@ -368,7 +367,7 @@ func TestSerializeValueStringWithTagSupport(t *testing.T) {
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
-	assert.Equal(t, "", mS[0])
+	require.Equal(t, "", mS[0])
 }
 
 func TestSerializeValueBoolean(t *testing.T) {
@@ -396,7 +395,7 @@ func TestSerializeValueBoolean(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeValueBooleanWithTagSupport(t *testing.T) {
@@ -425,7 +424,7 @@ func TestSerializeValueBooleanWithTagSupport(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeValueUnsigned(t *testing.T) {
@@ -465,7 +464,7 @@ func TestSerializeFieldWithSpaces(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("localhost.cpu0.us-west-2.cpu.field_with_spaces 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeFieldWithSpacesWithTagSupport(t *testing.T) {
@@ -490,7 +489,7 @@ func TestSerializeFieldWithSpacesWithTagSupport(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("cpu.field_with_spaces;cpu=cpu0;datacenter=us-west-2;host=localhost 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 // test that tags with spaces get fixed.
@@ -515,7 +514,7 @@ func TestSerializeTagWithSpaces(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("localhost.cpu_0.us-west-2.cpu.field_with_spaces 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeTagWithSpacesWithTagSupport(t *testing.T) {
@@ -540,7 +539,7 @@ func TestSerializeTagWithSpacesWithTagSupport(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("cpu.field_with_spaces;cpu=cpu_0;datacenter=us-west-2;host=localhost 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeTagWithSpacesWithTagSupportCompatibleSanitize(t *testing.T) {
@@ -566,7 +565,7 @@ func TestSerializeTagWithSpacesWithTagSupportCompatibleSanitize(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("cpu.field_with_spaces;cpu=cpu\\ 0;datacenter=us-west-2;host=localhost 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 // test that a field named "value" gets ignored at beginning of template.
@@ -591,7 +590,7 @@ func TestSerializeValueField3(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("localhost.cpu0.us-west-2.cpu 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 // test that a field named "value" gets ignored at beginning of template.
@@ -616,7 +615,7 @@ func TestSerializeValueField5(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("localhost.us-west-2.cpu0.cpu 91.5 %d", now.Unix()),
 	}
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeMetricPrefix(t *testing.T) {
@@ -642,7 +641,7 @@ func TestSerializeMetricPrefix(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeMetricPrefixWithTagSupport(t *testing.T) {
@@ -672,7 +671,7 @@ func TestSerializeMetricPrefixWithTagSupport(t *testing.T) {
 	}
 	sort.Strings(mS)
 	sort.Strings(expS)
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeBucketNameNoHost(t *testing.T) {
@@ -689,7 +688,7 @@ func TestSerializeBucketNameNoHost(t *testing.T) {
 	mS := SerializeBucketName(m.Name(), m.Tags(), "", "")
 
 	expS := "cpu0.us-west-2.cpu.FIELDNAME"
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeBucketNameHost(t *testing.T) {
@@ -702,7 +701,7 @@ func TestSerializeBucketNameHost(t *testing.T) {
 	mS := SerializeBucketName(m.Name(), m.Tags(), "", "")
 
 	expS := "localhost.cpu0.us-west-2.cpu.FIELDNAME"
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestSerializeBucketNamePrefix(t *testing.T) {
@@ -715,7 +714,7 @@ func TestSerializeBucketNamePrefix(t *testing.T) {
 	mS := SerializeBucketName(m.Name(), m.Tags(), "", "prefix")
 
 	expS := "prefix.localhost.cpu0.us-west-2.cpu.FIELDNAME"
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestTemplate1(t *testing.T) {
@@ -728,7 +727,7 @@ func TestTemplate1(t *testing.T) {
 	mS := SerializeBucketName(m.Name(), m.Tags(), template1, "")
 
 	expS := "cpu0.us-west-2.localhost.cpu.FIELDNAME"
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestTemplate2(t *testing.T) {
@@ -741,7 +740,7 @@ func TestTemplate2(t *testing.T) {
 	mS := SerializeBucketName(m.Name(), m.Tags(), template2, "")
 
 	expS := "localhost.cpu.FIELDNAME"
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestTemplate3(t *testing.T) {
@@ -754,7 +753,7 @@ func TestTemplate3(t *testing.T) {
 	mS := SerializeBucketName(m.Name(), m.Tags(), template3, "")
 
 	expS := "localhost.cpu0.us-west-2.FIELDNAME"
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestTemplate4(t *testing.T) {
@@ -767,7 +766,7 @@ func TestTemplate4(t *testing.T) {
 	mS := SerializeBucketName(m.Name(), m.Tags(), template4, "")
 
 	expS := "localhost.cpu0.us-west-2.cpu"
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestTemplate6(t *testing.T) {
@@ -780,7 +779,7 @@ func TestTemplate6(t *testing.T) {
 	mS := SerializeBucketName(m.Name(), m.Tags(), template6, "")
 
 	expS := "localhost.cpu0.us-west-2.cpu.FIELDNAME"
-	assert.Equal(t, expS, mS)
+	require.Equal(t, expS, mS)
 }
 
 func TestClean(t *testing.T) {

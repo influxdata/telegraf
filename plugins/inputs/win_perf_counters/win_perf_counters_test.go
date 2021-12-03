@@ -1024,3 +1024,47 @@ func TestUTF16ToStringArray(t *testing.T) {
 	czechStrings := UTF16ToStringArray(unicodeStringListWithCzechChars)
 	require.Equal(t, czechStrings, stringArrayWithCzechChars, "Not equal czech arrays")
 }
+
+func TestNoWildcards(t *testing.T) {
+	m := Win_PerfCounters{
+		Object:                     createPerfObject("measurement", "object", []string{"instance"}, []string{"counter*"}, false, false),
+		UseWildcardsExpansion:      true,
+		LocalizeWildcardsExpansion: false,
+		Log:                        testutil.Logger{},
+	}
+	require.Error(t, m.Init())
+	m = Win_PerfCounters{
+		Object:                     createPerfObject("measurement", "object?", []string{"instance"}, []string{"counter"}, false, false),
+		UseWildcardsExpansion:      true,
+		LocalizeWildcardsExpansion: false,
+		Log:                        testutil.Logger{},
+	}
+	require.Error(t, m.Init())
+}
+
+func TestLocalizeWildcardsExpansion(t *testing.T) {
+	// this test is valid only on localized windows
+	if testing.Short() {
+		t.Skip("Skipping long taking test in short mode")
+	}
+
+	const counter = "% Processor Time"
+	m := Win_PerfCounters{
+		query:                   &PerformanceQueryImpl{},
+		CountersRefreshInterval: config.Duration(time.Second * 60),
+		Object: createPerfObject("measurement", "Processor Information",
+			[]string{"_Total"}, []string{counter}, false, false),
+		LocalizeWildcardsExpansion: false,
+		UseWildcardsExpansion:      true,
+		Log:                        testutil.Logger{},
+	}
+	require.NoError(t, m.Init())
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+	require.Len(t, acc.Metrics, 1)
+
+	//running on localized windows with UseWildcardsExpansion and
+	//with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
+	//be English.
+	require.Contains(t, acc.Metrics[0].Fields, sanitizedChars.Replace(counter))
+}

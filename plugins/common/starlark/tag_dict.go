@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/influxdata/telegraf"
 	"go.starlark.net/starlark"
+
+	"github.com/influxdata/telegraf"
 )
 
 // TagDict is a starlark.Value for the metric tags.  It is heavily based on the
@@ -17,17 +18,17 @@ type TagDict struct {
 
 func (d TagDict) String() string {
 	buf := new(strings.Builder)
-	buf.WriteString("{")
+	buf.WriteString("{") //nolint:revive // from builder.go: "It returns the length of r and a nil error."
 	sep := ""
 	for _, item := range d.Items() {
 		k, v := item[0], item[1]
-		buf.WriteString(sep)
-		buf.WriteString(k.String())
-		buf.WriteString(": ")
-		buf.WriteString(v.String())
+		buf.WriteString(sep)        //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+		buf.WriteString(k.String()) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+		buf.WriteString(": ")       //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+		buf.WriteString(v.String()) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
 		sep = ", "
 	}
-	buf.WriteString("}")
+	buf.WriteString("}") //nolint:revive // from builder.go: "It returns the length of r and a nil error."
 	return buf.String()
 }
 
@@ -168,7 +169,7 @@ func (d TagDict) Delete(k starlark.Value) (v starlark.Value, found bool, err err
 	return starlark.None, false, errors.New("key must be of type 'str'")
 }
 
-// Items implements the starlark.Mapping interface.
+// Iterate implements the starlark.Iterator interface.
 func (d TagDict) Iterate() starlark.Iterator {
 	d.tagIterCount++
 	return &TagIterator{Metric: d.Metric, tags: d.metric.TagList()}
@@ -195,4 +196,28 @@ func (i *TagIterator) Next(p *starlark.Value) bool {
 // Done implements the starlark.Iterator interface.
 func (i *TagIterator) Done() {
 	i.tagIterCount--
+}
+
+// ToTags converts a starlark.Value to a map of string.
+func toTags(value starlark.Value) (map[string]string, error) {
+	if value == nil {
+		return nil, nil
+	}
+	items, err := items(value, "The type %T is unsupported as type of collection of tags")
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]string, len(items))
+	for _, item := range items {
+		key, err := toString(item[0], "The type %T is unsupported as type of key for tags")
+		if err != nil {
+			return nil, err
+		}
+		value, err := toString(item[1], "The type %T is unsupported as type of value for tags")
+		if err != nil {
+			return nil, err
+		}
+		result[key] = value
+	}
+	return result, nil
 }

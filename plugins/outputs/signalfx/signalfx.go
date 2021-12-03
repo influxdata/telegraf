@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/signalfx/golib/v3/datapoint"
 	"github.com/signalfx/golib/v3/datapoint/dpsink"
 	"github.com/signalfx/golib/v3/event"
 	"github.com/signalfx/golib/v3/sfxclient"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 //init initializes the plugin context
@@ -106,7 +107,7 @@ func (s *SignalFx) Connect() error {
 	if s.IngestURL != "" {
 		client.DatapointEndpoint = datapointEndpointForIngestURL(s.IngestURL)
 		client.EventEndpoint = eventEndpointForIngestURL(s.IngestURL)
-	} else if s.SignalFxRealm != "" {
+	} else if s.SignalFxRealm != "" { //nolint: revive // "Simplifying" if c {...} else {... return } would not simplify anything at all in this case
 		client.DatapointEndpoint = datapointEndpointForRealm(s.SignalFxRealm)
 		client.EventEndpoint = eventEndpointForRealm(s.SignalFxRealm)
 	} else {
@@ -144,7 +145,7 @@ func (s *SignalFx) ConvertToSignalFx(metrics []telegraf.Metric) ([]*datapoint.Da
 			if metricValue, err := datapoint.CastMetricValueWithBool(val); err == nil {
 				var dp = datapoint.New(metricName,
 					metricDims,
-					metricValue.(datapoint.Value),
+					metricValue,
 					metricType,
 					timestamp)
 

@@ -32,10 +32,6 @@ commands:
       - store_artifacts:
           path: './new-config'
           destination: 'new-config'
-      - persist_to_workspace:
-          root: './new-config'
-          paths:
-            - '*'
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
@@ -417,13 +413,6 @@ jobs:
     steps:
       - generate-config:
           os: windows
-  update-config:
-    executor: go-1_17
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/new-config'
-      - run: ./scripts/update_config.sh ${UPDATE_CONFIG_TOKEN}
 
 commonjobs:
   - &test-awaiter
@@ -507,14 +496,6 @@ workflows:
       - 'generate-config-win':
           requires:
             - 'windows-package'
-          filters:
-            branches:
-              only:
-                - master
-      - 'update-config':
-          requires:
-            - 'generate-config-win'
-            - 'generate-config'
           filters:
             branches:
               only:
