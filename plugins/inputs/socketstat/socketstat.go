@@ -21,11 +21,11 @@ import (
 type Socketstat struct {
         BeginsWithBlank  *regexp.Regexp
         CmdName          string
-	Lister           socketLister
+        Lister           socketLister
         Log              telegraf.Logger
         Measurement      string
-	SocketProto      []string
-	Timeout          config.Duration
+        SocketProto      []string
+        Timeout          config.Duration
         ValidValues      *regexp.Regexp
 }
 
