@@ -19,7 +19,7 @@ import (
 // Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  `ss` command.
 type Socketstat struct {
 	BeginsWithBlank *regexp.Regexp
-	CmdName         string
+	cmdName         string
 	Lister          socketLister
 	Log             telegraf.Logger
 	Measurement     string
@@ -28,7 +28,7 @@ type Socketstat struct {
 	ValidValues     *regexp.Regexp
 }
 
-type socketLister func(CmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error)
+type socketLister func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error)
 
 // Description returns a short description of the plugin
 func (ss *Socketstat) Description() string {
@@ -51,7 +51,7 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 	// best effort : we continue through the protocols even if an error is encountered,
 	// but we keep track of the last error.
 	for _, proto := range ss.SocketProto {
-		out, e := ss.Lister(ss.CmdName, proto, ss.Timeout)
+		out, e := ss.Lister(ss.cmdName, proto, ss.Timeout)
 		if e != nil {
 			acc.AddError(e)
 			continue
@@ -65,10 +65,10 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func socketList(CmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
+func socketList(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
 	// Run ss for the given protocol, return the output as bytes.Buffer
 	args := []string{"-in", "--" + proto}
-	cmd := exec.Command(CmdName, args...)
+	cmd := exec.Command(cmdName, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := internal.RunTimeout(cmd, time.Duration(timeout))
@@ -107,7 +107,6 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 			// Flush what we gathered about the previous one, if any.
 			if flushData {
 				acc.AddFields(ss.Measurement, fields, tags)
-				flushData = false
 			}
 
 			// Delegate the real parsing to getTagsAndState, which manages various
@@ -160,12 +159,12 @@ func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[str
 	case "tcp", "udp", "raw", "dccp", "sctp":
 		// Local and remote addresses are fields 3 and 4
 		// Separate addresses and ports with the last ':'
-		local_index := strings.LastIndex(words[3], ":")
-		remote_index := strings.LastIndex(words[4], ":")
-		tags["local_addr"] = words[3][:local_index]
-		tags["local_port"] = words[3][local_index+1:]
-		tags["remote_addr"] = words[4][:remote_index]
-		tags["remote_port"] = words[4][remote_index+1:]
+		localIndex := strings.LastIndex(words[3], ":")
+		remoteIndex := strings.LastIndex(words[4], ":")
+		tags["local_addr"] = words[3][:localIndex]
+		tags["local_port"] = words[3][localIndex+1:]
+		tags["remote_addr"] = words[4][:remoteIndex]
+		tags["remote_port"] = words[4][remoteIndex+1:]
 	case "unix", "packet":
 		fields["netid"] = words[0]
 		tags["local_addr"] = words[4]
@@ -175,15 +174,17 @@ func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[str
 	}
 	var err error
 	fields["recv_q"], err = strconv.ParseUint(words[1], 10, 64)
+        if err != nil {
+                log.Infof("Couldn't read recv_q in: %s", words)
+        }
 	fields["send_q"], err = strconv.ParseUint(words[2], 10, 64)
 	if err != nil {
-		log.Infof("Couldn't read recv_q and send_q in: %s", words)
+		log.Infof("Couldn't read send_q in: %s", words)
 	}
 	return tags, fields
 }
 
 func (ss *Socketstat) Init() error {
-
 	if len(ss.SocketProto) == 0 {
 		ss.SocketProto = []string{"tcp", "udp"}
 	}
@@ -193,7 +194,7 @@ func (ss *Socketstat) Init() error {
 	if err != nil {
 		return err
 	}
-	ss.CmdName = ssPath
+	ss.cmdName = ssPath
 
 	ss.Measurement = "socketstat"
 
@@ -204,10 +205,9 @@ func (ss *Socketstat) Init() error {
 	// Initialize regexps to validate input data
 	validFields := "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
 	ss.ValidValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
-	ss.BeginsWithBlank = regexp.MustCompile("^\\s+.*$")
+	ss.BeginsWithBlank = regexp.MustCompile(`^\\s+.*$`)
 
 	return nil
-
 }
 
 func init() {
