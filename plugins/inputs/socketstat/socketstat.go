@@ -205,7 +205,7 @@ func (ss *Socketstat) Init() error {
 	// Initialize regexps to validate input data
 	validFields := "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
 	ss.ValidValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
-	ss.BeginsWithBlank = regexp.MustCompile(`^\\s+.*$`)
+	ss.BeginsWithBlank = regexp.MustCompile(`^\s+.*$`)
 
 	return nil
 }
