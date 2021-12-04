@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -30,10 +31,11 @@ type Metric struct {
 }
 
 type GrayLog struct {
-	Servers  []string
-	Metrics  []string
-	Username string
-	Password string
+	Servers         []string
+	Metrics         []string
+	Username        string
+	Password        string
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	client HTTPClient
@@ -128,12 +130,12 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: 3 * time.Second,
+			ResponseHeaderTimeout: time.Duration(h.ResponseTimeout),
 			TLSClientConfig:       tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   4 * time.Second,
+			Timeout:   time.Duration(h.ResponseTimeout),
 		}
 		h.client.SetHTTPClient(client)
 	}
