@@ -6,8 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
+        "github.com/stretchr/testify/require"
 )
 
 func TestSocketstat_Gather(t *testing.T) {
@@ -77,12 +78,16 @@ ESTAB      0      0                127.0.0.1:7778                         127.0.
 			i++
 			ss := &Socketstat{
 				SocketProto: tt.proto,
-				lister: func(proto string, Timeout internal.Duration) (*bytes.Buffer, error) {
+				Lister: func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
 					return bytes.NewBufferString(tt.value), nil
 				},
 			}
 			acc := new(testutil.Accumulator)
-			err := acc.GatherError(ss.Gather)
+
+                        err := ss.Init()
+                        require.NoError(t, err)
+
+			err = acc.GatherError(ss.Gather)
 			if !reflect.DeepEqual(tt.err, err) {
 				t.Errorf("%d: expected error '%#v' got '%#v'", i, tt.err, err)
 			}
@@ -108,8 +113,8 @@ ESTAB      0      0                127.0.0.1:7778                         127.0.
 						break
 					}
 					m := acc.Metrics[n]
-					if !reflect.DeepEqual(m.Measurement, measurement) {
-						t.Errorf("%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, measurement, m.Measurement)
+					if !reflect.DeepEqual(m.Measurement, ss.Measurement) {
+						t.Errorf("%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, ss.Measurement, m.Measurement)
 					}
 					if !reflect.DeepEqual(m.Tags, tags) {
 						t.Errorf("%d %d %d: expected tags\n%#v got\n%#v\n", i, j, k, tags, m.Tags)
@@ -128,7 +133,7 @@ func TestSocketstat_Gather_listerError(t *testing.T) {
 	errFoo := errors.New("error foobar")
 	ss := &Socketstat{
 		SocketProto: []string{"foobar"},
-		lister: func(proto string, Timeout internal.Duration) (*bytes.Buffer, error) {
+		Lister: func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
 			return new(bytes.Buffer), errFoo
 		},
 	}
