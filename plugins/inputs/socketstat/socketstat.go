@@ -3,7 +3,6 @@ package socketstat
 import (
 	"bufio"
 	"bytes"
-        "errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -19,14 +18,14 @@ import (
 
 // Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  `ss` command.
 type Socketstat struct {
-        BeginsWithBlank  *regexp.Regexp
-        CmdName          string
-        Lister           socketLister
-        Log              telegraf.Logger
-        Measurement      string
-        SocketProto      []string
-        Timeout          config.Duration
-        ValidValues      *regexp.Regexp
+	BeginsWithBlank *regexp.Regexp
+	CmdName         string
+	Lister          socketLister
+	Log             telegraf.Logger
+	Measurement     string
+	SocketProto     []string
+	Timeout         config.Duration
+	ValidValues     *regexp.Regexp
 }
 
 type socketLister func(CmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error)
@@ -41,7 +40,7 @@ func (ss *Socketstat) SampleConfig() string {
 	return `
   ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets
   ## Specify here the types you want to gather
-  socket_proto = [ "tcp", "udp" ]
+  # socket_proto = [ "tcp", "udp" ]
   ## The default timeout of 1s for ss execution can be overridden here:
   # timeout = "1s"
 `
@@ -68,7 +67,7 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 
 func socketList(CmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
 	// Run ss for the given protocol, return the output as bytes.Buffer
-        args := []string{"-in", "--"+proto}
+	args := []string{"-in", "--" + proto}
 	cmd := exec.Command(CmdName, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -86,8 +85,10 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 
 	// ss output can have blank lines, and/or socket basic info lines and more advanced
 	// statistics lines, in turns.
-	// We're using the flushData variable to determine if we should add a new measurement
-	// or postpone it to a later line
+	// In all non-empty lines, we can have metrics, so we need to group those relevant to
+	// the same connection.
+	// To achieve this, we're using the flushData variable which indicates if we should add
+	// a new measurement or postpone it to a later line.
 
 	// The first line is only headers
 	scanner.Scan()
@@ -102,25 +103,38 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 
 		var err error
 		if !ss.BeginsWithBlank.MatchString(line) {
+			// A line with no starting whitespace means we're going to parse a new connection.
+			// Flush what we gathered about the previous one, if any.
 			if flushData {
 				acc.AddFields(ss.Measurement, fields, tags)
 				flushData = false
 			}
+
 			// Delegate the real parsing to getTagsAndState, which manages various
-			// formats depending on the protocol
+			// formats depending on the protocol.
 			tags, fields = getTagsAndState(proto, words, ss.Log)
+
+			// This line containted metrics, so record that.
 			flushData = true
 		} else {
+			// A line with starting whitespace means metrics about the current connection.
+			// We should never get 2 consecutive such lines. If we do, log a warning and in
+			// a best effort, extend the metrics from the 1st line with the metrics of the 2nd
+			// one, possibly overwriting.
 			for _, word := range words {
 				if ss.ValidValues.MatchString(word) {
-                                        // kv will have 2 fields because it matched the regexp
+					// kv will have 2 fields because it matched the regexp
 					kv := strings.Split(word, ":")
 					fields[kv[0]], err = strconv.ParseUint(kv[1], 10, 64)
 					if err != nil {
-                                                ss.Log.Infof("Couldn't parse metric: %s", word)
+						ss.Log.Infof("Couldn't parse metric: %s", word)
 						continue
 					}
 				}
+			}
+			if !flushData {
+				ss.Log.Warnf("Found orphaned metrics: %s", words)
+				ss.Log.Warnf("Added them to the last known connection.")
 			}
 			acc.AddFields(ss.Measurement, fields, tags)
 			flushData = false
@@ -163,43 +177,43 @@ func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[str
 	fields["recv_q"], err = strconv.ParseUint(words[1], 10, 64)
 	fields["send_q"], err = strconv.ParseUint(words[2], 10, 64)
 	if err != nil {
-                log.Infof("Couldn't read recv_q and send_q in: %s", words)
+		log.Infof("Couldn't read recv_q and send_q in: %s", words)
 	}
 	return tags, fields
 }
 
 func (ss *Socketstat) Init() error {
 
-        if len(ss.SocketProto) == 0 {
-            return errors.New("Error: no protocol specified for the socketstat input plugin.")
-        }
+	if len(ss.SocketProto) == 0 {
+		ss.SocketProto = []string{"tcp", "udp"}
+	}
 
-        // Check that ss is installed, get its path
-        ssPath, err := exec.LookPath("ss")
-        if err != nil {
-                return err
-        }
-        ss.CmdName = ssPath
+	// Check that ss is installed, get its path
+	ssPath, err := exec.LookPath("ss")
+	if err != nil {
+		return err
+	}
+	ss.CmdName = ssPath
 
-        ss.Measurement = "socketstat"
+	ss.Measurement = "socketstat"
 
-        if ss.Timeout < config.Duration(time.Second) {
-                ss.Timeout = config.Duration(time.Second)
-        }
+	if ss.Timeout < config.Duration(time.Second) {
+		ss.Timeout = config.Duration(time.Second)
+	}
 
-        // Initialize regexps to validate input data
-        validFields := "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
-        ss.ValidValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
-        ss.BeginsWithBlank = regexp.MustCompile("^\\s+.*$")
+	// Initialize regexps to validate input data
+	validFields := "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
+	ss.ValidValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
+	ss.BeginsWithBlank = regexp.MustCompile("^\\s+.*$")
 
-        return nil
+	return nil
 
 }
 
 func init() {
 	inputs.Add("socketstat", func() telegraf.Input {
 		return &Socketstat{
-			Lister:  socketList,
+			Lister: socketList,
 		}
 	})
 }
