@@ -290,7 +290,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 func init() {
 	inputs.Add("graylog", func() telegraf.Input {
 		return &GrayLog{
-			client: &RealHTTPClient{},
+			client:          &RealHTTPClient{},
 			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
