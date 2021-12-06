@@ -91,6 +91,9 @@ var sampleConfig = `
     "http://[graylog-server-ip]:12900/system/metrics/multiple",
   ]
 
+  ## Set response_timeout (default 5 seconds)
+  # response_timeout = "5s"
+
   ## Metrics list
   ## List of metrics can be found on Graylog webservice documentation.
   ## Or by hitting the the web service api at:
@@ -288,6 +291,7 @@ func init() {
 	inputs.Add("graylog", func() telegraf.Input {
 		return &GrayLog{
 			client: &RealHTTPClient{},
+			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }
