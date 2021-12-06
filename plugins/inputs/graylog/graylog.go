@@ -31,11 +31,11 @@ type Metric struct {
 }
 
 type GrayLog struct {
-	Servers         []string
-	Metrics         []string
-	Username        string
-	Password        string
-	ResponseTimeout config.Duration
+	Servers  []string
+	Metrics  []string
+	Username string
+	Password string
+	Timeout  config.Duration
 	tls.ClientConfig
 
 	client HTTPClient
@@ -91,8 +91,8 @@ var sampleConfig = `
     "http://[graylog-server-ip]:12900/system/metrics/multiple",
   ]
 
-  ## Set response_timeout (default 5 seconds)
-  # response_timeout = "5s"
+  ## Set timeout (default 5 seconds)
+  # timeout = "5s"
 
   ## Metrics list
   ## List of metrics can be found on Graylog webservice documentation.
@@ -133,12 +133,12 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: time.Duration(h.ResponseTimeout),
+			ResponseHeaderTimeout: time.Duration(h.Timeout),
 			TLSClientConfig:       tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   time.Duration(h.ResponseTimeout),
+			Timeout:   time.Duration(h.Timeout),
 		}
 		h.client.SetHTTPClient(client)
 	}
@@ -290,8 +290,8 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 func init() {
 	inputs.Add("graylog", func() telegraf.Input {
 		return &GrayLog{
-			client:          &RealHTTPClient{},
-			ResponseTimeout: config.Duration(5 * time.Second),
+			client:  &RealHTTPClient{},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }

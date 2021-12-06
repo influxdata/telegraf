@@ -30,8 +30,8 @@ Note: if namespace end point specified metrics array will be ignored for that ca
     "http://[graylog-server-ip]:12900/system/metrics/multiple",
   ]
 
-  ## Set response_timeout (default 5 seconds)
-  # response_timeout = "5s"
+  ## Set timeout (default 5 seconds)
+  # timeout = "5s"
 
   ## Metrics list
   ## List of metrics can be found on Graylog webservice documentation.
