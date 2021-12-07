@@ -93,7 +93,7 @@ func TestConnectAndWriteMetricWithNaNValueNone(t *testing.T) {
 		TemplateName:        "telegraf",
 		OverwriteTemplate:   false,
 		HealthCheckInterval: config.Duration(time.Second * 10),
-		NaNHandling:         "none",
+		FloatHandling:       "none",
 		Log:                 testutil.Logger{},
 	}
 
@@ -129,7 +129,7 @@ func TestConnectAndWriteMetricWithNaNValueDrop(t *testing.T) {
 		TemplateName:        "telegraf",
 		OverwriteTemplate:   false,
 		HealthCheckInterval: config.Duration(time.Second * 10),
-		NaNHandling:         "drop",
+		FloatHandling:       "drop",
 		Log:                 testutil.Logger{},
 	}
 
@@ -165,7 +165,7 @@ func TestConnectAndWriteMetricWithNaNValueReplacement(t *testing.T) {
 		TemplateName:        "telegraf",
 		OverwriteTemplate:   false,
 		HealthCheckInterval: config.Duration(time.Second * 10),
-		NaNHandling:         "3.1415",
+		FloatHandling:       "3.1415",
 		Log:                 testutil.Logger{},
 	}
 
