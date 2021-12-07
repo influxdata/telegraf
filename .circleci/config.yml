@@ -581,7 +581,7 @@ workflows:
           nightly: true
           requires:
             - 'test-go-mac'
-     - 'darwin-arm-package':
+      - 'darwin-arm-package':
           name: 'darwin-arm-package-nightly'
           nightly: true
           requires:
