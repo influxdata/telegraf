@@ -284,12 +284,17 @@ windows += windows_i386.zip windows_amd64.zip
 .PHONY: windows
 windows:
 	@ echo $(windows)
-darwin += darwin_amd64.tar.gz
-.PHONY: darwin
-darwin:
-	@ echo $(darwin)
+darwin_amd += darwin_amd64.tar.gz
+.PHONY: darwin_amd
+darwin_amd:
+	@ echo $(darwin_amd)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin)
+darwin_arm += darwin_arm64.tar.gz
+.PHONY: darwin_arm
+darwin_arm:
+	@ echo $(darwin_arm)
+
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin_amd) $(darwin_arm)
 
 .PHONY: package
 package: $(include_packages)
@@ -399,6 +404,9 @@ windows_amd64.zip: export GOARCH := amd64
 
 darwin_amd64.tar.gz: export GOOS := darwin
 darwin_amd64.tar.gz: export GOARCH := amd64
+
+darwin_arm64.tar.gz: export GOOS := darwin
+darwin_arm64.tar.gz: export GOARCH := arm64
 
 windows_i386.zip: export GOOS := windows
 windows_i386.zip: export GOARCH := 386
