@@ -18,7 +18,7 @@ import (
 
 // Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  `ss` command.
 type Socketstat struct {
-	SocketProto     []string `toml:"socket_proto"`
+	SocketProto     []string `toml:"protocols"`
 	Timeout         config.Duration `toml:"timeout"`
 	Log             telegraf.Logger `toml:"-"`
 
@@ -40,8 +40,8 @@ func (ss *Socketstat) Description() string {
 func (ss *Socketstat) SampleConfig() string {
 	return `
   ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets
-  ## Specify here the types you want to gather
-  # socket_proto = [ "tcp", "udp" ]
+  ## List of protocol types to collect
+  # protocols = [ "tcp", "udp" ]
   ## The default timeout of 1s for ss execution can be overridden here:
   # timeout = "1s"
 `
