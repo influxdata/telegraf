@@ -100,18 +100,13 @@ type IfName struct {
 	ifTable  *si.Table
 	ifXTable *si.Table
 
-	lock  sync.Mutex
-	cache *TTLCache
-
+	cache    *TTLCache
+	lock     sync.Mutex
 	parallel parallel.Parallel
-	acc      telegraf.Accumulator
+	sigs     sigMap
 
 	getMapRemote mapFunc
 	makeTable    makeTableFunc
-
-	gsBase snmp.GosnmpWrapper
-
-	sigs sigMap
 }
 
 const minRetry = 5 * time.Minute
@@ -132,6 +127,10 @@ func (d *IfName) Init() error {
 	d.cache = &c
 
 	d.sigs = make(sigMap)
+
+	if _, err := snmp.NewWrapper(d.ClientConfig); err != nil {
+		return fmt.Errorf("parsing SNMP client config: %w", err)
+	}
 
 	return nil
 }
@@ -193,13 +192,7 @@ func (d *IfName) invalidate(agent string) {
 }
 
 func (d *IfName) Start(acc telegraf.Accumulator) error {
-	d.acc = acc
-
 	var err error
-	d.gsBase, err = snmp.NewWrapper(d.ClientConfig)
-	if err != nil {
-		return fmt.Errorf("parsing SNMP client config: %w", err)
-	}
 
 	d.ifTable, err = d.makeTable("1.3.6.1.2.1.2.2.1.2")
 	if err != nil {
@@ -300,27 +293,27 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 }
 
 func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
-	gs := d.gsBase
-	err := gs.SetAgent(agent)
+	gs, err := snmp.NewWrapper(d.ClientConfig)
 	if err != nil {
+		return nil, fmt.Errorf("parsing SNMP client config: %w", err)
+	}
+
+	if err = gs.SetAgent(agent); err != nil {
 		return nil, fmt.Errorf("parsing agent tag: %w", err)
 	}
 
-	err = gs.Connect()
-	if err != nil {
+	if err = gs.Connect(); err != nil {
 		return nil, fmt.Errorf("connecting when fetching interface names: %w", err)
 	}
 
 	//try ifXtable and ifName first.  if that fails, fall back to
 	//ifTable and ifDescr
 	var m nameMap
-	m, err = buildMap(gs, d.ifXTable)
-	if err == nil {
+	if m, err = buildMap(gs, d.ifXTable); err == nil {
 		return m, nil
 	}
 
-	m, err = buildMap(gs, d.ifTable)
-	if err == nil {
+	if m, err = buildMap(gs, d.ifTable); err == nil {
 		return m, nil
 	}
 

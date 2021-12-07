@@ -503,7 +503,7 @@ func (p *Parser) combineObject(result MetricNode) ([]telegraf.Metric, error) {
 				if err != nil {
 					return false
 				}
-				results = cartesianProduct(results, r)
+				results = cartesianProduct(r, results)
 			}
 
 			return true
