@@ -78,7 +78,7 @@ ESTAB      0      0                127.0.0.1:7778                         127.0.
 			i++
 			ss := &Socketstat{
 				SocketProto: tt.proto,
-				Lister: func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
+				lister: func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
 					return bytes.NewBufferString(tt.value), nil
 				},
 			}
@@ -113,8 +113,8 @@ ESTAB      0      0                127.0.0.1:7778                         127.0.
 						break
 					}
 					m := acc.Metrics[n]
-					if !reflect.DeepEqual(m.Measurement, ss.Measurement) {
-						t.Errorf("%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, ss.Measurement, m.Measurement)
+					if !reflect.DeepEqual(m.Measurement, ss.measurement) {
+						t.Errorf("%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, ss.measurement, m.Measurement)
 					}
 					if !reflect.DeepEqual(m.Tags, tags) {
 						t.Errorf("%d %d %d: expected tags\n%#v got\n%#v\n", i, j, k, tags, m.Tags)
@@ -133,7 +133,7 @@ func TestSocketstat_Gather_listerError(t *testing.T) {
 	errFoo := errors.New("error foobar")
 	ss := &Socketstat{
 		SocketProto: []string{"foobar"},
-		Lister: func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
+		lister: func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
 			return new(bytes.Buffer), errFoo
 		},
 	}

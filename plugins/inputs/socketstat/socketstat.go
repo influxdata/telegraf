@@ -52,7 +52,7 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 	// best effort : we continue through the protocols even if an error is encountered,
 	// but we keep track of the last error.
 	for _, proto := range ss.SocketProto {
-		out, e := ss.Lister(ss.cmdName, proto, ss.Timeout)
+		out, e := ss.lister(ss.cmdName, proto, ss.Timeout)
 		if e != nil {
 			acc.AddError(e)
 			continue
@@ -103,11 +103,11 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 		words := strings.Fields(line)
 
 		var err error
-		if !ss.BeginsWithBlank.MatchString(line) {
+		if !ss.beginsWithBlank.MatchString(line) {
 			// A line with no starting whitespace means we're going to parse a new connection.
 			// Flush what we gathered about the previous one, if any.
 			if flushData {
-				acc.AddFields(ss.Measurement, fields, tags)
+				acc.AddFields(ss.measurement, fields, tags)
 			}
 
 			// Delegate the real parsing to getTagsAndState, which manages various
@@ -122,7 +122,7 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 			// a best effort, extend the metrics from the 1st line with the metrics of the 2nd
 			// one, possibly overwriting.
 			for _, word := range words {
-				if ss.ValidValues.MatchString(word) {
+				if ss.validValues.MatchString(word) {
 					// kv will have 2 fields because it matched the regexp
 					kv := strings.Split(word, ":")
 					fields[kv[0]], err = strconv.ParseUint(kv[1], 10, 64)
@@ -136,12 +136,12 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 				ss.Log.Warnf("Found orphaned metrics: %s", words)
 				ss.Log.Warnf("Added them to the last known connection.")
 			}
-			acc.AddFields(ss.Measurement, fields, tags)
+			acc.AddFields(ss.measurement, fields, tags)
 			flushData = false
 		}
 	}
 	if flushData {
-		acc.AddFields(ss.Measurement, fields, tags)
+		acc.AddFields(ss.measurement, fields, tags)
 	}
 	return nil
 }
@@ -197,7 +197,7 @@ func (ss *Socketstat) Init() error {
 	}
 	ss.cmdName = ssPath
 
-	ss.Measurement = "socketstat"
+	ss.measurement = "socketstat"
 
 	if ss.Timeout < config.Duration(time.Second) {
 		ss.Timeout = config.Duration(time.Second)
@@ -205,16 +205,17 @@ func (ss *Socketstat) Init() error {
 
 	// Initialize regexps to validate input data
 	validFields := "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
-	ss.ValidValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
-	ss.BeginsWithBlank = regexp.MustCompile(`^\s+.*$`)
+	ss.validValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
+	ss.beginsWithBlank = regexp.MustCompile(`^\s+.*$`)
+
+	inputs.Add("socketstat", func() telegraf.Input {
+		return &Socketstat{
+			lister: socketList,
+		}
+	})
 
 	return nil
 }
 
 func init() {
-	inputs.Add("socketstat", func() telegraf.Input {
-		return &Socketstat{
-			Lister: socketList,
-		}
-	})
 }
