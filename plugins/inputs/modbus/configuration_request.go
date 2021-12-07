@@ -11,7 +11,7 @@ const sampleConfigPartPerRequest = `
 
   ## Define a request sent to the device
   ## Multiple of those requests can be defined. Data will be collated into metrics at the end of data collection.
-  [[inputs.modbus.request]]
+  # [[inputs.modbus.request]]
     ## ID of the modbus slave device to query.
     ## If you need to query multiple slave-devices, create several "request" definitions.
     # slave_id = 0
@@ -57,6 +57,11 @@ const sampleConfigPartPerRequest = `
     #   { address=3, name="motor1_overheating"},
     # ]
 
+    ## Per-request tags
+    ## These tags take precedence over predefined tags.
+    # [[inputs.modbus.request.tags]]
+    #	  name = "value"
+
     ## Holding / input example
     ## All of those examples will result in FLOAT64 field outputs
     # fields = [
@@ -75,6 +80,11 @@ const sampleConfigPartPerRequest = `
     #   { address=2, name="force",       type="INT32", output="FLOAT64" },  # will result in FLOAT64 field
     #   { address=4, name="hours",       type="UINT32"                  },  # will result in UIN64 field
     # ]
+
+    ## Per-request tags
+		## These tags take precedence over predefined tags.
+    # [[inputs.modbus.request.tags]]
+    #	  name = "value"
 `
 
 type requestFieldDefinition struct {
@@ -93,6 +103,7 @@ type requestDefinition struct {
 	RegisterType string                   `toml:"register"`
 	Measurement  string                   `toml:"measurement"`
 	Fields       []requestFieldDefinition `toml:"fields"`
+	Tags         map[string]string        `toml:"tags"`
 }
 
 type ConfigurationPerRequest struct {
@@ -211,19 +222,18 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 			}
 		}
 
-		tags := map[string]string{}
 		switch def.RegisterType {
 		case "coil":
-			requests := newRequestsFromFields(fields, maxQuantityCoils, tags)
+			requests := newRequestsFromFields(fields, maxQuantityCoils, def.Tags)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
-			requests := newRequestsFromFields(fields, maxQuantityDiscreteInput, tags)
+			requests := newRequestsFromFields(fields, maxQuantityDiscreteInput, def.Tags)
 			set.discrete = append(set.discrete, requests...)
 		case "holding":
-			requests := newRequestsFromFields(fields, maxQuantityHoldingRegisters, tags)
+			requests := newRequestsFromFields(fields, maxQuantityHoldingRegisters, def.Tags)
 			set.holding = append(set.holding, requests...)
 		case "input":
-			requests := newRequestsFromFields(fields, maxQuantityInputRegisters, tags)
+			requests := newRequestsFromFields(fields, maxQuantityInputRegisters, def.Tags)
 			set.input = append(set.input, requests...)
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)
