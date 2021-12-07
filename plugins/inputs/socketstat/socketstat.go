@@ -18,14 +18,15 @@ import (
 
 // Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  `ss` command.
 type Socketstat struct {
-	BeginsWithBlank *regexp.Regexp
+	SocketProto     []string `toml:"socket_proto"`
+	Timeout         config.Duration `toml:"timeout"`
+	Log             telegraf.Logger `toml:"-"`
+
+	beginsWithBlank *regexp.Regexp
+	validValues     *regexp.Regexp
 	cmdName         string
-	Lister          socketLister
-	Log             telegraf.Logger
-	Measurement     string
-	SocketProto     []string
-	Timeout         config.Duration
-	ValidValues     *regexp.Regexp
+	lister          socketLister
+	measurement     string
 }
 
 type socketLister func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error)
