@@ -284,17 +284,17 @@ windows += windows_i386.zip windows_amd64.zip
 .PHONY: windows
 windows:
 	@ echo $(windows)
-darwin-amd += darwin_amd64.tar.gz
-.PHONY: darwin-amd
-darwin-amd:
-	@ echo $(darwin-amd)
+darwin-amd64 += darwin_amd64.tar.gz
+.PHONY: darwin-amd64
+darwin-amd64:
+	@ echo $(darwin-amd64)
 
-darwin-arm += darwin_arm64.tar.gz
-.PHONY: darwin-arm
-darwin-arm:
-	@ echo $(darwin-arm)
+darwin-arm64 += darwin_arm64.tar.gz
+.PHONY: darwin-arm64
+darwin-arm64:
+	@ echo $(darwin-arm64)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd) $(darwin-arm)
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
 package: $(include_packages)

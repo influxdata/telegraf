@@ -206,7 +206,7 @@ jobs:
       - package-build:
           type: windows
           nightly: << parameters.nightly >>
-  darwin-amd-package:
+  darwin-amd64-package:
     parameters:
       nightly:
         type: boolean
@@ -214,9 +214,9 @@ jobs:
     executor: go-1_17
     steps:
       - package-build:
-          type: darwin-amd
+          type: darwin-amd64
           nightly: << parameters.nightly >>
-  darwin-arm-package:
+  darwin-arm64-package:
     parameters:
       nightly:
         type: boolean
@@ -224,7 +224,7 @@ jobs:
     executor: go-1_17
     steps:
       - package-build:
-          type: darwin-arm
+          type: darwin-arm64
           nightly: << parameters.nightly >>
   i386-package:
     parameters:
@@ -463,10 +463,10 @@ workflows:
       - 'windows-package':
           requires:
             - 'test-go-windows'
-      - 'darwin-amd-package':
+      - 'darwin-amd64-package':
           requires:
             - 'test-go-mac'
-      - 'darwin-arm-package':
+      - 'darwin-arm64-package':
           requires:
             - 'test-go-mac'
       - 'i386-package':
@@ -522,8 +522,8 @@ workflows:
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
-            - 'darwin-amd-package'
-            - 'darwin-arm-package'
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
             - 'windows-package'
             - 'static-package'
             - 'arm64-package'
@@ -576,13 +576,13 @@ workflows:
           nightly: true
           requires:
             - 'test-go-windows'
-      - 'darwin-amd-package':
-          name: 'darwin-amd-package-nightly'
+      - 'darwin-amd64-package':
+          name: 'darwin-amd64-package-nightly'
           nightly: true
           requires:
             - 'test-go-mac'
-      - 'darwin-arm-package':
-          name: 'darwin-arm-package-nightly'
+      - 'darwin-arm64-package':
+          name: 'darwin-arm64-package-nightly'
           nightly: true
           requires:
             - 'test-go-mac'
@@ -645,8 +645,8 @@ workflows:
             - 'amd64-package-nightly'
             - 'mipsel-package-nightly'
             - 'mips-package-nightly'
-            - 'darwin-amd-package-nightly'
-            - 'darwin-arm-package-nightly'
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
             - 'windows-package-nightly'
             - 'static-package-nightly'
             - 'arm64-package-nightly'
