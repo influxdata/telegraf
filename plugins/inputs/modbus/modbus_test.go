@@ -1290,6 +1290,184 @@ func TestConfigurationPerRequest(t *testing.T) {
 	require.Len(t, modbus.requests[1].input, 1)
 }
 
+func TestConfigurationPerRequestWithTags(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "coil",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "coil-0",
+					Address: uint16(0),
+				},
+				{
+					Name:    "coil-1",
+					Address: uint16(1),
+					Omit:    true,
+				},
+				{
+					Name:        "coil-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+		{
+			SlaveID:      1,
+			RegisterType: "coil",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "coil-3",
+					Address: uint16(6),
+				},
+				{
+					Name:    "coil-4",
+					Address: uint16(7),
+					Omit:    true,
+				},
+				{
+					Name:        "coil-5",
+					Address:     uint16(8),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "discrete",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "discrete-0",
+					Address: uint16(0),
+				},
+				{
+					Name:    "discrete-1",
+					Address: uint16(1),
+					Omit:    true,
+				},
+				{
+					Name:        "discrete-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:        "holding-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "input",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "input-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+				{
+					Name:      "input-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:        "input-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+	}
+
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NotNil(t, modbus.requests[1])
+	require.Len(t, modbus.requests[1].coil, 2)
+	require.Len(t, modbus.requests[1].discrete, 1)
+	require.Len(t, modbus.requests[1].holding, 1)
+	require.Len(t, modbus.requests[1].input, 1)
+
+	expectedTags := map[string]string{
+		"first":  "a",
+		"second": "bb",
+		"third":  "ccc",
+	}
+	require.Equal(t, expectedTags, modbus.requests[1].coil[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].coil[1].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].discrete[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].holding[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].input[0].tags)
+}
+
 func TestConfigurationPerRequestFail(t *testing.T) {
 	tests := []struct {
 		name     string
