@@ -22,7 +22,7 @@ type Socketstat struct {
 	Timeout         config.Duration `toml:"timeout"`
 	Log             telegraf.Logger `toml:"-"`
 
-	beginsWithBlank *regexp.Regexp
+	isNewConnection *regexp.Regexp
 	validValues     *regexp.Regexp
 	cmdName         string
 	lister          socketLister
@@ -103,7 +103,7 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 		words := strings.Fields(line)
 
 		var err error
-		if !ss.beginsWithBlank.MatchString(line) {
+		if !ss.isNewConnection.MatchString(line) {
 			// A line with no starting whitespace means we're going to parse a new connection.
 			// Flush what we gathered about the previous one, if any.
 			if flushData {
@@ -206,7 +206,7 @@ func (ss *Socketstat) Init() error {
 	// Initialize regexps to validate input data
 	validFields := "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
 	ss.validValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
-	ss.beginsWithBlank = regexp.MustCompile(`^\s+.*$`)
+	ss.isNewConnection = regexp.MustCompile(`^\s+.*$`)
 
 	inputs.Add("socketstat", func() telegraf.Input {
 		return &Socketstat{
