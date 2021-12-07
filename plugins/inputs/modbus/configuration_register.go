@@ -129,7 +129,7 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQua
 	if err != nil {
 		return nil, err
 	}
-	return newRequestsFromFields(fields, maxQuantity), nil
+	return newRequestsFromFields(fields, maxQuantity, nil), nil
 }
 
 func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field, error) {
