@@ -216,7 +216,7 @@ jobs:
       - package-build:
           type: darwin-amd
           nightly: << parameters.nightly >>
-    darwin-arm-package:
+  darwin-arm-package:
     parameters:
       nightly:
         type: boolean
