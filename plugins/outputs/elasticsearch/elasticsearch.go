@@ -106,7 +106,7 @@ var sampleConfig = `
   ##    replace -- replace with the value in "float_replacement_value" (default: 0.0)
   ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
   # float_handling = "none"
-	# float_replacement_value = 0.0
+  # float_replacement_value = 0.0
 `
 
 const telegrafTemplate = `
