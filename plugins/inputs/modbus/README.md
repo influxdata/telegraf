@@ -154,6 +154,10 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       { address=3, name="motor1_overheating"},
     ]
 
+    [[inputs.modbus.request.tags]]
+      machine = "impresser"
+      location = "main building"
+
   [[inputs.modbus.request]]
     ## Holding example
     ## All of those examples will result in FLOAT64 field outputs
@@ -169,6 +173,10 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       { address=8, name="power_factor", type="INT64",   scale=0.01  },
     ]
 
+    [[inputs.modbus.request.tags]]
+      machine = "impresser"
+      location = "main building"
+
   [[inputs.modbus.request]]
     ## Input example with type conversions
     slave_id = 1
@@ -180,6 +188,10 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       { address=2, name="force",       type="INT32", output="FLOAT64" },  # will result in FLOAT64 field
       { address=4, name="hours",       type="UINT32"                  },  # will result in UIN64 field
     ]  
+
+    [[inputs.modbus.request.tags]]
+      machine = "impresser"
+      location = "main building"
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.modbus.workarounds]
@@ -319,6 +331,11 @@ This setting is ignored if the field's `omit` is set to `true` and can be omitte
 #### omitting a field
 
 When specifying `omit=true`, the corresponding field will be ignored when collecting the metric but is taken into account when constructing the modbus requests. This way, you can fill "holes" in the addresses to construct consecutive address ranges resulting in a single request. Using a single modbus request can be beneficial as the values are all collected at the same point in time.
+
+#### Tags definitions
+
+Each `request` can be accompanied by tags valid for this request.
+__Please note:__ These tags take precedence over predefined tags such as `name`, `type` or `slave_id`.
 
 ---
 
