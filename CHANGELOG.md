@@ -2,6 +2,25 @@
 
 # Change Log
 
+## v1.21.0-rc1 [2021-12-08]
+ 
+### Bugfixes
+ 
+   - [#10196](https://github.com/influxdata/telegraf/pull/10196) `outputs.elasticsearch` Implement NaN and inf handling fo     r elasticsearch output
+   - [#10205](https://github.com/influxdata/telegraf/pull/10205) Print loaded plugins and deprecations for once and test f     lags
+   - [#10214](https://github.com/influxdata/telegraf/pull/10214) `processors.ifname` Eliminate MIB dependency for ifname p     rocessor
+   - [#10206](https://github.com/influxdata/telegraf/pull/10206) `inputs.snmp` Optimize locking for SNMP MIBs loading
+   - [#9975](https://github.com/influxdata/telegraf/pull/9975) `inputs.kube_inventory` Set TLS server name config properly
+   - [#10230](https://github.com/influxdata/telegraf/pull/10230) Sudden close of Telegraf caused by OPC UA input plugin
+   - [#9913](https://github.com/influxdata/telegraf/pull/9913) Update github.com/eclipse/paho.mqtt.golang module from 1.3.     0 to 1.3.5
+   - [#10221](https://github.com/influxdata/telegraf/pull/10221) `parsers.json_v2` Parser timestamp setting order
+   - [#10209](https://github.com/influxdata/telegraf/pull/10209) `outputs.graylog` Ensure graylog spec fields not prefixed      with _
+   - [#10099](https://github.com/influxdata/telegraf/pull/10099) `inputs.zfs` Pool detection and metrics gathering for ZFS      >= 2.1.x
+   - [#10007](https://github.com/influxdata/telegraf/pull/10007) `processors.ifname` Parallelism fix for ifname processor
+   - [#10208](https://github.com/influxdata/telegraf/pull/10208) `inputs.mqtt_consumer` Mqtt topic extracting no longer re     quires all three fields
+   - [#9616](https://github.com/influxdata/telegraf/pull/9616) Windows Service - graceful shutdown of telegraf
+   - [#10203](https://github.com/influxdata/telegraf/pull/10203) Revert unintented corruption of the Makefile  
+
 ## v1.21.0-rc0 [2021-12-01]
 
 ### Release Notes
