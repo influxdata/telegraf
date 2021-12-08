@@ -26,7 +26,7 @@ func newRequest(f field, tags map[string]string) request {
 	return r
 }
 
-func newRequestsFromFields(fields []field, maxBatchSize uint16, tags map[string]string) []request {
+func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize uint16) []request {
 	if len(fields) == 0 {
 		return nil
 	}

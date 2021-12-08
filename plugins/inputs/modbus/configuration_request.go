@@ -224,16 +224,16 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 
 		switch def.RegisterType {
 		case "coil":
-			requests := newRequestsFromFields(fields, maxQuantityCoils, def.Tags)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
-			requests := newRequestsFromFields(fields, maxQuantityDiscreteInput, def.Tags)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityDiscreteInput)
 			set.discrete = append(set.discrete, requests...)
 		case "holding":
-			requests := newRequestsFromFields(fields, maxQuantityHoldingRegisters, def.Tags)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityHoldingRegisters)
 			set.holding = append(set.holding, requests...)
 		case "input":
-			requests := newRequestsFromFields(fields, maxQuantityInputRegisters, def.Tags)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityInputRegisters)
 			set.input = append(set.input, requests...)
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)
