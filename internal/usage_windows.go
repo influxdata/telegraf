@@ -14,11 +14,18 @@ The commands & flags are:
   config              print out full sample configuration to stdout
   version             print the version to stdout
 
+  secret list [store]               list all keys stored in the given secretstore on stdout
+                                    If store is given, print all known secret-store names.
+  secret get <store>[key [...]]     print secret(s) for the given keys and store to stdout.
+                                    If no key is given, print secrets for all keys.
+  secret set <store> <key> <value>  store the given secret for a key in the secretstore.
+                                    If the key already exists, it will be overwritten.
+
   --aggregator-filter <filter>   filter the aggregators to enable, separator is :
   --config <file>                configuration file to load
   --config-directory <directory> directory containing additional *.conf files
-  --watch-config                 Telegraf will restart on local config changes. Monitor changes 
-                                 using either fs notifications or polling.  Valid values: 'inotify' or 'poll'. 
+  --watch-config                 Telegraf will restart on local config changes. Monitor changes
+                                 using either fs notifications or polling.  Valid values: 'inotify' or 'poll'.
                                  Monitoring is off by default.
   --debug                        turn on debug logging
   --input-filter <filter>        filter the inputs to enable, separator is :
@@ -34,9 +41,10 @@ The commands & flags are:
                                  Valid values are 'agent', 'global_tags', 'outputs',
                                  'processors', 'aggregators' and 'inputs'
   --once                         enable once mode: gather metrics once, write them, and exit
-  --test                         enable test mode: gather metrics once and print them
-  --test-wait                    wait up to this many seconds for service
-                                 inputs to complete in test or once mode
+  --test                         enable test mode: gather metrics once and print them.
+                                 No outputs are executed!
+  --test-wait                    wait up to this many seconds for service inputs to complete
+                                 in test or once mode. Implies --test if not used with --once.
   --usage <plugin>               print usage for a plugin, ie, 'telegraf --usage mysql'
   --version                      display the version and exit
 
