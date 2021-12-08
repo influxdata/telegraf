@@ -37,12 +37,11 @@ type Elasticsearch struct {
 	ForceDocumentID     bool `toml:"force_document_id"`
 	MajorReleaseNumber  int
 	FloatHandling       string          `toml:"float_handling"`
+	FloatReplacement    float64         `toml:"float_replacement_value"`
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
 	Client *elastic.Client
-
-	nanReplacement float64
 }
 
 var sampleConfig = `
@@ -102,10 +101,12 @@ var sampleConfig = `
 
   ## Specifies the handling of NaN and Inf values.
   ## This option can have the following values:
-  ##    none -- do not modify field-values (default); will produce an error if NaNs or infs are encountered
-  ##    drop -- drop fields containing NaNs or infs
-  ##    <any float> -- Replace NaNs and inf with the given number and -inf with the negative number
+  ##    none    -- do not modify field-values (default); will produce an error if NaNs or infs are encountered
+  ##    drop    -- drop fields containing NaNs or infs
+  ##    replace -- replace with the value in "float_replacement_value" (default: 0.0)
+  ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
   # float_handling = "none"
+	# float_replacement_value = 0.0
 `
 
 const telegrafTemplate = `
@@ -192,13 +193,9 @@ func (a *Elasticsearch) Connect() error {
 	switch a.FloatHandling {
 	case "", "none":
 		a.FloatHandling = "none"
-	case "drop":
+	case "drop", "replace":
 	default:
-		number, err := strconv.ParseFloat(a.FloatHandling, 64)
-		if err != nil {
-			return fmt.Errorf("invalid value %q for 'float_handling'", a.FloatHandling)
-		}
-		a.nanReplacement = number
+		return fmt.Errorf("invalid float_handling type %q", a.FloatHandling)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
@@ -315,9 +312,9 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 			}
 
 			if math.IsNaN(v) || math.IsInf(v, 1) {
-				fields[k] = a.nanReplacement
+				fields[k] = a.FloatReplacement
 			} else {
-				fields[k] = -a.nanReplacement
+				fields[k] = -a.FloatReplacement
 			}
 		}
 

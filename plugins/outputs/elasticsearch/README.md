@@ -202,10 +202,12 @@ This plugin will format the events in the following way:
 
   ## Specifies the handling of NaN and Inf values.
   ## This option can have the following values:
-  ##    none -- do not modify field-values (default); will produce an error if NaNs or infs are encountered
-  ##    drop -- drop fields containing NaNs or infs
-  ##    <any float> -- Replace NaNs and inf with the given number and -inf with the negative number
+  ##    none    -- do not modify field-values (default); will produce an error if NaNs or infs are encountered
+  ##    drop    -- drop fields containing NaNs or infs
+  ##    replace -- replace with the value in "float_replacement_value" (default: 0.0)
+  ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
   # float_handling = "none"
+	# float_replacement_value = 0.0
 ```
 
 ### Permissions
@@ -243,7 +245,8 @@ Additionally, you can specify dynamic index names by using tags with the notatio
 * `template_name`: The template name used for telegraf indexes.
 * `overwrite_template`: Set to true if you want telegraf to overwrite an existing template.
 * `force_document_id`: Set to true will compute a unique hash from as sha256(concat(timestamp,measurement,series-hash)),enables resend or update data withoud ES duplicated documents.
-* `float_handling`: Specifies how to handle `NaN` and infinite field values. `"none"` (default) will do nothing, `"drop"` will drop the field. Any valid float number will replace the field's value with the given value respecting the infinite's sign.
+* `float_handling`: Specifies how to handle `NaN` and infinite field values. `"none"` (default) will do nothing, `"drop"` will drop the field and `replace` will replace the field value by the number in `float_replacement_value`
+* `float_replacement_value`: Value (defaulting to `0.0`) to replace `NaN`s and `inf`s if `float_handling` is set to `replace`. Negative `inf` will be replaced by the negative value in this number to respect the sign of the field's original value.
 
 ## Known issues
 
