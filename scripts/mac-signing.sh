@@ -75,5 +75,5 @@ do
   rm -rf $extractedFolder
   ls
 
-  echo "${macFiles[$tarFile]} Signed and notarized!"
+  echo "$tarFile Signed and notarized!"
 done
