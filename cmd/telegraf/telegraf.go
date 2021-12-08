@@ -444,6 +444,7 @@ func main() {
 						//nolint:revive  // If print fails we will notice
 						fmt.Printf("    %s\n", k)
 					}
+					return
 				}
 				store, found := c.SecretStore[args[2]]
 				if !found {
