@@ -51,7 +51,7 @@ func NewKeyringStore(name, scheme, path, passwd string) (*KeyringStore, error) {
 			config.ServiceName = path
 		case "windows":
 			config.AllowedBackends = []keyring.BackendType{keyring.WinCredBackend}
-			config.WinCredPrefix = path
+			config.ServiceName = path
 		default:
 			return nil, fmt.Errorf("'os' service not supported for OS %q", runtime.GOOS)
 		}
