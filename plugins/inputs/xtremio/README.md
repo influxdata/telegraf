@@ -14,7 +14,7 @@ The `xtremio` plugin gathers metrics from a Dell EMC XtremIO Storage Array's V3 
   password = "pass123"
 
   ## Metrics to collect from the XtremIO
-  # collectors = ["bbus","clusters","ssds","volumes","xms"]
+  # collectors = ["bbus","clusters","ssds","volumes","xmss"]
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -88,7 +88,7 @@ The `xtremio` plugin gathers metrics from a Dell EMC XtremIO Storage Array's V3 
     - volumes_provisioned_space
     - volumes_used_space
 
-- xms
+- xmss
   - tags:
     - guid
     - name
