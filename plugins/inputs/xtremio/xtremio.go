@@ -34,7 +34,7 @@ username = "user1"
 password = "pass123"
 
 ## Metrics to collect from the XtremIO
-# collectors = ["bbus","clusters","ssds","volumes","xms"]
+# collectors = ["bbus","clusters","ssds","volumes","xmss"]
 
 ## Optional TLS Config
 # tls_ca = "/etc/telegraf/ca.pem"
@@ -65,10 +65,10 @@ func (xio *XtremIO) Init() error {
 		return fmt.Errorf("URL cannot be empty")
 	}
 	if len(xio.Collectors) == 0 {
-		xio.Collectors = []string{"bbus","clusters","ssds","volumes","xms"}
+		xio.Collectors = []string{"bbus","clusters","ssds","volumes","xmss"}
 	}
 
-	availableCollectors := []string{"bbus", "clusters", "ssds", "volumes", "xms"}
+	availableCollectors := []string{"bbus", "clusters", "ssds", "volumes", "xmss"}
 	if !choice.Contains(collector,availableCollectors) {
 		acc.AddError(fmt.Errorf("Specified Collector Isn't Supported: " + collector))
 		return
@@ -85,7 +85,7 @@ func (xio *XtremIO) Init() error {
 }
 
 func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
-	var err = xio.Authenticate()
+	var err = xio.authenticate()
 	if err != nil {
 		return err
 	}
@@ -99,51 +99,44 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 		go func(collector string) {
 			defer wg.Done()
 
-			resp, err := xio.Call(collector)
+			resp, err := xio.call(collector)
 			if err != nil {
 				acc.AddError(err)
 				return
 			}
 			var arr []gjson.Result
-			if collector == "xms" {
-				arr = gjson.Get(resp, "xmss").Array()
-			} else {
-				arr = gjson.Get(resp, collector).Array()
-			}
+			arr = gjson.Get(resp, collector).Array()
 
 			for _, item := range arr {
 				itemSplit := strings.Split(gjson.Get(item.Raw, "href").Str, "/")
 				url := ""
-				if len(itemSplit) > 0 {
-					url = collector + "/" + itemSplit[len(itemSplit)-1]
-				} else {
+				if len(itemSplit) < 1 {
 					continue
 				}
+				url = collector + "/" + itemSplit[len(itemSplit)-1]
 
-				if collector == "bbus" {
+				switch collector {
+				case "bbus":
 					wg.Add(1)
-					go xio.GatherBBUs(&wg, url, acc)
-				}
-				if collector == "clusters" {
+					go xio.gatherBBUs(acc, url, &wg)
+				case "clusters":
 					wg.Add(1)
-					go xio.GatherClusters(&wg, url, acc)
-				}
-				if collector == "ssds" {
+					go xio.gatherClusters(acc, url, &wg)
+				case "ssds":
 					wg.Add(1)
-					go xio.GatherSSDs(&wg, url, acc)
-				}
-				if collector == "volumes" {
+					go xio.gatherSSDs(acc, url, &wg)
+				case "volumes":
 					wg.Add(1)
-					go xio.GatherVolumes(&wg, url, acc)
-				}
-				if collector == "xms" {
+					go xio.gatherVolumes(acc, url, &wg)
+				case "xmss":
 					wg.Add(1)
-					go xio.GatherXMS(&wg, url, acc)
+					go xio.gatherXMS(acc, url, &wg)
+				default:
+					acc.AddError(fmt.Errorf("Specified Collector Isn't Supported: " + collector))
 				}
 			}
 		}(collector)
 	}
-
 	wg.Wait()
 
 	xio.Cookie = nil
@@ -151,9 +144,12 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (xio *XtremIO) GatherBBUs(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
+func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	resp, _ := xio.Call(url)
+	resp, err := xio.call(url)
+	if err != nil {
+		acc.AddError(err)
+	}
 	tags := map[string]string{
 		"serial_number": gjson.Get(resp, "content.serial-number").Str,
 		"guid":          gjson.Get(resp, "content.guid").Str,
@@ -183,9 +179,12 @@ func (xio *XtremIO) GatherBBUs(wg *sync.WaitGroup, url string, acc telegraf.Accu
 	acc.AddFields("xio", fields, tags)
 }
 
-func (xio *XtremIO) GatherClusters(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
+func (xio *XtremIO) gatherClusters(acc telegraf.Accumulator, url string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	resp, _ := xio.Call(url)
+	resp, err := xio.call(url)
+	if err != nil {
+		acc.AddError(err)
+	}
 	tags := map[string]string{
 		"hardware_platform":      gjson.Get(resp, "content.hardware-platform").Str,
 		"license_id":             gjson.Get(resp, "content.license-id").Str,
@@ -206,9 +205,12 @@ func (xio *XtremIO) GatherClusters(wg *sync.WaitGroup, url string, acc telegraf.
 	acc.AddFields("xio", fields, tags)
 }
 
-func (xio *XtremIO) GatherSSDs(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
+func (xio *XtremIO) gatherSSDs(acc telegraf.Accumulator, url string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	resp, _ := xio.Call(url)
+	resp, err := xio.call(url)
+	if err != nil {
+		acc.AddError(err)
+	}
 	tags := map[string]string{
 		"model_name":       gjson.Get(resp, "content.model-name").Str,
 		"firmware_version": gjson.Get(resp, "content.fw-version").Str,
@@ -229,9 +231,12 @@ func (xio *XtremIO) GatherSSDs(wg *sync.WaitGroup, url string, acc telegraf.Accu
 	acc.AddFields("xio", fields, tags)
 }
 
-func (xio *XtremIO) GatherVolumes(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
+func (xio *XtremIO) gatherVolumes(acc telegraf.Accumulator, url string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	resp, _ := xio.Call(url)
+	resp, err := xio.call(url)
+	if err != nil {
+		acc.AddError(err)
+	}
 	tags := map[string]string{
 		"guid":     gjson.Get(resp, "content.guid").Str,
 		"sys_name": gjson.Get(resp, "content.sys-name").Str,
@@ -249,9 +254,12 @@ func (xio *XtremIO) GatherVolumes(wg *sync.WaitGroup, url string, acc telegraf.A
 	acc.AddFields("xio", fields, tags)
 }
 
-func (xio *XtremIO) GatherXMS(wg *sync.WaitGroup, url string, acc telegraf.Accumulator) {
+func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.WaitGroup,) {
 	defer wg.Done()
-	resp, _ := xio.Call(url)
+	resp, err := xio.call(url)
+	if err != nil {
+		acc.AddError(err)
+	}
 	tags := map[string]string{
 		"guid":    gjson.Get(resp, "content.guid").Str,
 		"name":    gjson.Get(resp, "content.name").Str,
@@ -273,7 +281,7 @@ func (xio *XtremIO) GatherXMS(wg *sync.WaitGroup, url string, acc telegraf.Accum
 	acc.AddFields("xio", fields, tags)
 }
 
-func (xio *XtremIO) Call(endpoint string) (string, error) {
+func (xio *XtremIO) call(endpoint string) (string, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", xio.URL+"/api/json/v3/types/"+endpoint, nil)
 	if err != nil {
@@ -294,7 +302,7 @@ func (xio *XtremIO) Call(endpoint string) (string, error) {
 	return string(data), nil
 }
 
-func (xio *XtremIO) Authenticate() error {
+func (xio *XtremIO) authenticate() error {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", xio.URL+"/api/json/v3/commands/login?password="+xio.Password+"&user="+xio.Username, nil)
 	if err != nil {
