@@ -167,8 +167,12 @@ func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		"model_name":    gjson.Get(resp, "content.model-name").Str,
 	}
 	fields := make(map[string]interface{})
-	fields["bbus_power"], _ = strconv.Atoi(gjson.Get(resp, "content.power").Raw)
-	fields["bbus_average_daily_temp"], _ = strconv.Atoi(gjson.Get(resp, "content.avg-daily-temp").Raw)
+	fields["bbus_power"], err = strconv.Atoi(gjson.Get(resp, "content.power").Raw)
+	if err != nil {acc.AddError(err)}
+
+	fields["bbus_average_daily_temp"], err = strconv.Atoi(gjson.Get(resp, "content.avg-daily-temp").Raw)
+	if err != nil {acc.AddError(err)}
+
 	fields["bbus_enabled"] = (gjson.Get(resp, "content.enabled-state").Str == "enabled")
 	fields["bbus_ups_need_battery_replacement"] = (gjson.Get(resp, "content.ups-need-battery-replacement").Str == "true")
 	fields["bbus_ups_low_battery_no_input"] = (gjson.Get(resp, "content.is-low-battery-no-input").Str == "true")
@@ -190,14 +194,29 @@ func (xio *XtremIO) gatherClusters(acc telegraf.Accumulator, url string, wg *syn
 		"sys_psnt_serial_number": gjson.Get(resp, "content.sys-psnt-serial-number").Str,
 	}
 	fields := make(map[string]interface{})
-	fields["clusters_compression_factor"], _ = strconv.ParseFloat(gjson.Get(resp, "content.compression-factor").Raw, 64)
-	fields["clusters_percent_memory_in_use"], _ = strconv.Atoi(gjson.Get(resp, "content.total-memory-in-use-in-percent").Raw)
-	fields["clusters_read_iops"], _ = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
-	fields["clusters_write_iops"], _ = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
-	fields["clusters_number_of_volumes"], _ = strconv.Atoi(gjson.Get(resp, "content.num-of-vols").Raw)
-	fields["clusters_free_ssd_space_in_percent"], _ = strconv.Atoi(gjson.Get(resp, "content.free-ud-ssd-space-in-percent").Raw)
-	fields["clusters_ssd_num"], _ = strconv.Atoi(gjson.Get(resp, "content.num-of-ssds").Raw)
-	fields["clusters_data_reduction_ratio"], _ = strconv.ParseFloat(gjson.Get(resp, "content.data-reduction-ratio").Raw, 64)
+	fields["clusters_compression_factor"], err = strconv.ParseFloat(gjson.Get(resp, "content.compression-factor").Raw, 64)
+	if err != nil {acc.AddError(err)}
+
+	fields["clusters_percent_memory_in_use"], err = strconv.Atoi(gjson.Get(resp, "content.total-memory-in-use-in-percent").Raw)
+	if err != nil {acc.AddError(err)}
+
+	fields["clusters_read_iops"], err = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["clusters_write_iops"], err = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["clusters_number_of_volumes"], err = strconv.Atoi(gjson.Get(resp, "content.num-of-vols").Raw)
+	if err != nil {acc.AddError(err)}
+
+	fields["clusters_free_ssd_space_in_percent"], err = strconv.Atoi(gjson.Get(resp, "content.free-ud-ssd-space-in-percent").Raw)
+	if err != nil {acc.AddError(err)}
+
+	fields["clusters_ssd_num"], err = strconv.Atoi(gjson.Get(resp, "content.num-of-ssds").Raw)
+	if err != nil {acc.AddError(err)}
+
+	fields["clusters_data_reduction_ratio"], err = strconv.ParseFloat(gjson.Get(resp, "content.data-reduction-ratio").Raw, 64)
+	if err != nil {acc.AddError(err)}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -217,13 +236,26 @@ func (xio *XtremIO) gatherSSDs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		"serial_number":    gjson.Get(resp, "content.serial-number").Str,
 	}
 	fields := make(map[string]interface{})
-	fields["ssds_ssd_size"], _ = strconv.Atoi(gjson.Get(resp, "content.ssd-size").Str)
-	fields["ssds_ssd_space_in_use"], _ = strconv.Atoi(gjson.Get(resp, "content.ssd-space-in-use").Str)
-	fields["ssds_write_iops"], _ = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
-	fields["ssds_read_iops"], _ = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
-	fields["ssds_write_bandwidth"], _ = strconv.Atoi(gjson.Get(resp, "content.wr-bw").Str)
-	fields["ssds_read_bandwidth"], _ = strconv.Atoi(gjson.Get(resp, "content.rd-bw").Str)
-	fields["ssds_num_bad_sectors"], _ = strconv.Atoi(gjson.Get(resp, "content.num-bad-sectors").Raw)
+	fields["ssds_ssd_size"], err = strconv.Atoi(gjson.Get(resp, "content.ssd-size").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["ssds_ssd_space_in_use"], err = strconv.Atoi(gjson.Get(resp, "content.ssd-space-in-use").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["ssds_write_iops"], err = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["ssds_read_iops"], err = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["ssds_write_bandwidth"], err = strconv.Atoi(gjson.Get(resp, "content.wr-bw").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["ssds_read_bandwidth"], err = strconv.Atoi(gjson.Get(resp, "content.rd-bw").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["ssds_num_bad_sectors"], err = strconv.Atoi(gjson.Get(resp, "content.num-bad-sectors").Raw)
+	if err != nil {acc.AddError(err)}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -240,13 +272,26 @@ func (xio *XtremIO) gatherVolumes(acc telegraf.Accumulator, url string, wg *sync
 		"name":     gjson.Get(resp, "content.name").Str,
 	}
 	fields := make(map[string]interface{})
-	fields["volumes_read_iops"], _ = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
-	fields["volumes_write_iops"], _ = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
-	fields["volumes_read_latency"], _ = strconv.Atoi(gjson.Get(resp, "content.rd-latency").Str)
-	fields["volumes_write_latency"], _ = strconv.Atoi(gjson.Get(resp, "content.wr-latency").Str)
-	fields["volumes_data_reduction_ratio"], _ = strconv.ParseFloat(gjson.Get(resp, "content.data-reduction-ratio").Str, 64)
-	fields["volumes_provisioned_space"], _ = strconv.Atoi(gjson.Get(resp, "content.vol-size").Str)
-	fields["volumes_used_space"], _ = strconv.Atoi(gjson.Get(resp, "content.logical-space-in-use").Str)
+	fields["volumes_read_iops"], err = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["volumes_write_iops"], err = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["volumes_read_latency"], err = strconv.Atoi(gjson.Get(resp, "content.rd-latency").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["volumes_write_latency"], err = strconv.Atoi(gjson.Get(resp, "content.wr-latency").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["volumes_data_reduction_ratio"], err = strconv.ParseFloat(gjson.Get(resp, "content.data-reduction-ratio").Str, 64)
+	if err != nil {acc.AddError(err)}
+
+	fields["volumes_provisioned_space"], err = strconv.Atoi(gjson.Get(resp, "content.vol-size").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["volumes_used_space"], err = strconv.Atoi(gjson.Get(resp, "content.logical-space-in-use").Str)
+	if err != nil {acc.AddError(err)}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -264,16 +309,35 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 		"xms_ip":  gjson.Get(resp, "content.xms-ip").Str,
 	}
 	fields := make(map[string]interface{})
-	fields["xms_write_iops"], _ = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
-	fields["xms_read_iops"], _ = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
-	fields["xms_overall_efficiency_ratio"], _ = strconv.ParseFloat(gjson.Get(resp, "content.overall-efficiency-ratio").Str, 64)
-	fields["xms_ssd_space_in_use"], _ = strconv.Atoi(gjson.Get(resp, "content.ssd-space-in-use").Str)
-	fields["xms_ram_in_use"], _ = strconv.Atoi(gjson.Get(resp, "content.ram-usage").Str)
-	fields["xms_ram_total"], _ = strconv.Atoi(gjson.Get(resp, "content.ram-total").Str)
-	fields["xms_cpu_usage_total"], _ = strconv.ParseFloat(gjson.Get(resp, "content.cpu").Raw, 64)
-	fields["xms_write_latency"], _ = strconv.Atoi(gjson.Get(resp, "content.wr-latency").Str)
-	fields["xms_read_latency"], _ = strconv.Atoi(gjson.Get(resp, "content.rd-latency").Str)
-	fields["xms_user_accounts_count"], _ = strconv.Atoi(gjson.Get(resp, "content.num-of-user-accounts").Raw)
+	fields["xms_write_iops"], err = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["xms_read_iops"], err = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["xms_overall_efficiency_ratio"], err = strconv.ParseFloat(gjson.Get(resp, "content.overall-efficiency-ratio").Str, 64)
+	if err != nil {acc.AddError(err)}
+
+	fields["xms_ssd_space_in_use"], err = strconv.Atoi(gjson.Get(resp, "content.ssd-space-in-use").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["xms_ram_in_use"], err = strconv.Atoi(gjson.Get(resp, "content.ram-usage").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["xms_ram_total"], err = strconv.Atoi(gjson.Get(resp, "content.ram-total").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["xms_cpu_usage_total"], err = strconv.ParseFloat(gjson.Get(resp, "content.cpu").Raw, 64)
+	if err != nil {acc.AddError(err)}
+
+	fields["xms_write_latency"], err = strconv.Atoi(gjson.Get(resp, "content.wr-latency").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["xms_read_latency"], err = strconv.Atoi(gjson.Get(resp, "content.rd-latency").Str)
+	if err != nil {acc.AddError(err)}
+
+	fields["xms_user_accounts_count"], err = strconv.Atoi(gjson.Get(resp, "content.num-of-user-accounts").Raw)
+	if err != nil {acc.AddError(err)}
 
 	acc.AddFields("xio", fields, tags)
 }
