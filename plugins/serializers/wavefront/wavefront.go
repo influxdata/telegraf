@@ -69,7 +69,7 @@ func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
 			name = sanitizedChars.Replace(name)
 		}
 
-		if s.DisablePrefixConversions == false {
+		if !s.DisablePrefixConversions {
 			name = pathReplacer.Replace(name)
 		}
 
