@@ -34,7 +34,7 @@ username = "user1"
 password = "pass123"
 
 ## Metrics to collect from the XtremIO
-# collectors = ["bbus","clusters","ssds","volumes","xmss"]
+# collectors = ["bbus","clusters","ssds","volumes","xms"]
 
 ## Optional TLS Config
 # tls_ca = "/etc/telegraf/ca.pem"
@@ -65,15 +65,16 @@ func (xio *XtremIO) Init() error {
 		return fmt.Errorf("URL cannot be empty")
 	}
 	if len(xio.Collectors) == 0 {
-		xio.Collectors = []string{"bbus","clusters","ssds","volumes","xmss"}
+		xio.Collectors = []string{"bbus","clusters","ssds","volumes","xms"}
 	}
 
-	availableCollectors := []string{"bbus", "clusters", "ssds", "volumes", "xmss"}
-	if !choice.Contains(collector,availableCollectors) {
-		acc.AddError(fmt.Errorf("Specified Collector Isn't Supported: " + collector))
-		return
+	availableCollectors := []string{"bbus", "clusters", "ssds", "volumes", "xms"}
+	for _, collector := range xio.Collectors {
+		if !choice.Contains(collector,availableCollectors) {
+			return fmt.Errorf("Specified Collector Isn't Supported: " + collector)
+		}
 	}
-
+	
 	tlsCfg, err := xio.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
@@ -104,9 +105,17 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return
 			}
-			var arr []gjson.Result
-			arr = gjson.Get(resp, collector).Array()
 
+			// Due to an inconsistency in the XtremIO API, the XMS endpoint
+			// returns a json array with XMSS as the result. Which is why this
+			// if statement here exists
+			var arr []gjson.Result
+			if collector == "xms" {
+				arr = gjson.Get(resp, "xmss").Array()
+			}else{
+				arr = gjson.Get(resp, collector).Array()
+			}
+			
 			for _, item := range arr {
 				itemSplit := strings.Split(gjson.Get(item.Raw, "href").Str, "/")
 				url := ""
@@ -128,7 +137,7 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 				case "volumes":
 					wg.Add(1)
 					go xio.gatherVolumes(acc, url, &wg)
-				case "xmss":
+				case "xms":
 					wg.Add(1)
 					go xio.gatherXMS(acc, url, &wg)
 				default:
@@ -160,21 +169,9 @@ func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.Wa
 	fields := make(map[string]interface{})
 	fields["bbus_power"], _ = strconv.Atoi(gjson.Get(resp, "content.power").Raw)
 	fields["bbus_average_daily_temp"], _ = strconv.Atoi(gjson.Get(resp, "content.avg-daily-temp").Raw)
-
-	fields["bbus_enabled"] = 0
-	if gjson.Get(resp, "content.enabled-state").Str == "enabled" {
-		fields["bbus_enabled"] = 1
-	}
-
-	fields["bbus_ups_need_battery_replacement"] = 0
-	if gjson.Get(resp, "content.ups-need-battery-replacement").Str == "true" {
-		fields["bbus_ups_need_battery_replacement"] = 1
-	}
-
-	fields["bbus_ups_low_battery_no_input"] = 0
-	if gjson.Get(resp, "content.is-low-battery-no-input").Str == "true" {
-		fields["bbus_ups_low_battery_no_input"] = 1
-	}
+	fields["bbus_enabled"] = (gjson.Get(resp, "content.enabled-state").Str == "enabled")
+	fields["bbus_ups_need_battery_replacement"] = (gjson.Get(resp, "content.ups-need-battery-replacement").Str == "true")
+	fields["bbus_ups_low_battery_no_input"] = (gjson.Get(resp, "content.is-low-battery-no-input").Str == "true")
 
 	acc.AddFields("xio", fields, tags)
 }
