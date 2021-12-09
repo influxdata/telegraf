@@ -12,11 +12,12 @@ import (
 
 // WavefrontSerializer : WavefrontSerializer struct
 type WavefrontSerializer struct {
-	Prefix         string
-	UseStrict      bool
-	SourceOverride []string
-	scratch        buffer
-	mu             sync.Mutex // buffer mutex
+	Prefix                   string
+	UseStrict                bool
+	SourceOverride           []string
+	DisablePrefixConversions bool
+	scratch                  buffer
+	mu                       sync.Mutex // buffer mutex
 }
 
 // catch many of the invalid chars that could appear in a metric or tag name
@@ -40,11 +41,12 @@ var tagValueReplacer = strings.NewReplacer("\"", "\\\"", "*", "-")
 
 var pathReplacer = strings.NewReplacer("_", ".")
 
-func NewSerializer(prefix string, useStrict bool, sourceOverride []string) (*WavefrontSerializer, error) {
+func NewSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversion bool) (*WavefrontSerializer, error) {
 	s := &WavefrontSerializer{
-		Prefix:         prefix,
-		UseStrict:      useStrict,
-		SourceOverride: sourceOverride,
+		Prefix:                   prefix,
+		UseStrict:                useStrict,
+		SourceOverride:           sourceOverride,
+		DisablePrefixConversions: disablePrefixConversion,
 	}
 	return s, nil
 }
@@ -67,7 +69,9 @@ func (s *WavefrontSerializer) serializeMetric(m telegraf.Metric) {
 			name = sanitizedChars.Replace(name)
 		}
 
-		name = pathReplacer.Replace(name)
+		if s.DisablePrefixConversions == false {
+			name = pathReplacer.Replace(name)
+		}
 
 		metricValue, valid := buildValue(value, name)
 		if !valid {
