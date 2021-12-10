@@ -218,7 +218,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Dynam
 	// Temporary work around to avoid error from the server.
 	nextCheckTime := transit.NewTimestamp()
 	lastCheckTime.Time = metric.Time()
-	nextCheckTime.Time = time.Now().Add(1*time.Minute)
+	nextCheckTime.Time = time.Now().Add(1 * time.Minute)
 	serviceObject := transit.DynamicMonitoredService{
 		BaseTransitData: transit.BaseTransitData{
 			Name:  service,
