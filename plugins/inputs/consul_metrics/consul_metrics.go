@@ -15,7 +15,7 @@ import (
 )
 
 // Consul_metrics configuration object
-type Consul_metrics struct {
+type ConsulMetrics struct {
 	URL string `toml:"url"`
 
 	TokenFile string `toml:"token_file"`
@@ -51,23 +51,23 @@ var sampleConfig = `
 
 func init() {
 	inputs.Add("consul_metrics", func() telegraf.Input {
-		return &Consul_metrics{
+		return &ConsulMetrics{
 			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }
 
 // SampleConfig returns a sample config
-func (n *Consul_metrics) SampleConfig() string {
+func (n *ConsulMetrics) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns a description of the plugin
-func (n *Consul_metrics) Description() string {
+func (n *ConsulMetrics) Description() string {
 	return "Read metrics from the Consul API"
 }
 
-func (n *Consul_metrics) Init() error {
+func (n *ConsulMetrics) Init() error {
 	if n.URL == "" {
 		n.URL = "http://127.0.0.1:8500"
 	}
@@ -99,7 +99,7 @@ func (n *Consul_metrics) Init() error {
 }
 
 // Gather, collects metrics from Consul endpoint
-func (n *Consul_metrics) Gather(acc telegraf.Accumulator) error {
+func (n *ConsulMetrics) Gather(acc telegraf.Accumulator) error {
 	summaryMetrics, err := n.loadJSON(n.URL + "/v1/agent/metrics")
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (n *Consul_metrics) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Consul_metrics) loadJSON(url string) (*MetricsInfo, error) {
+func (n *ConsulMetrics) loadJSON(url string) (*MetricsInfo, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
