@@ -73,7 +73,7 @@ func (n *Consul_metrics) Init() error {
 	}
 
 	if n.TokenFile != "" && n.Token != "" {
-		return fmt.Errorf("config error: both auth_token and auth_token_string are set")
+		return fmt.Errorf("config error: both token_file and token are set")
 	}
 
 	if n.TokenFile != "" {
