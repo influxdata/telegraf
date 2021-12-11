@@ -149,8 +149,6 @@ func buildConsulMetrics(acc telegraf.Accumulator, metricsInfo *MetricsInfo) erro
 	}
 
 	for _, counters := range metricsInfo.Counters {
-		tags := counters.Labels
-
 		fields := map[string]interface{}{
 			"count":  counters.Count,
 			"sum":    counters.Sum,
@@ -160,22 +158,21 @@ func buildConsulMetrics(acc telegraf.Accumulator, metricsInfo *MetricsInfo) erro
 			"rate":   counters.Rate,
 			"stddev": counters.Stddev,
 		}
+		tags := counters.Labels
+
 		acc.AddCounter(counters.Name, fields, tags, t)
 	}
 
 	for _, gauges := range metricsInfo.Gauges {
-
 		fields := map[string]interface{}{
 			"value": gauges.Value,
 		}
 		tags := gauges.Labels
 
 		acc.AddGauge(gauges.Name, fields, tags, t)
-
 	}
 
 	for _, points := range metricsInfo.Points {
-
 		fields := map[string]interface{}{
 			"value": points.Points,
 		}
@@ -185,7 +182,6 @@ func buildConsulMetrics(acc telegraf.Accumulator, metricsInfo *MetricsInfo) erro
 	}
 
 	for _, samples := range metricsInfo.Samples {
-
 		fields := map[string]interface{}{
 			"count":  samples.Count,
 			"sum":    samples.Sum,

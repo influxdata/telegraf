@@ -70,20 +70,20 @@ func TestConsulStats(t *testing.T) {
 	}
 
 	for _, tt := range applyTests {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.RequestURI == "/v1/agent/metrics" {
-				w.WriteHeader(http.StatusOK)
-				responseKeyMetrics, _ := ioutil.ReadFile("testdata/response_key_metrics.json")
-				_, err := fmt.Fprintln(w, string(responseKeyMetrics))
-				require.NoError(t, err)
-			}
-		}))
-		defer ts.Close()
-
-		plugin := &ConsulMetrics{
-			URL: ts.URL,
-		}
 		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.RequestURI == "/v1/agent/metrics" {
+					w.WriteHeader(http.StatusOK)
+					responseKeyMetrics, _ := ioutil.ReadFile("testdata/response_key_metrics.json")
+					_, err := fmt.Fprintln(w, string(responseKeyMetrics))
+					require.NoError(t, err)
+				}
+			}))
+			defer ts.Close()
+
+			plugin := &ConsulMetrics{
+				URL: ts.URL,
+			}
 			err := plugin.Init()
 			require.NoError(t, err)
 
