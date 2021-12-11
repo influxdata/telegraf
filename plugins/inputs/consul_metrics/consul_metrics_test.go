@@ -80,7 +80,7 @@ func TestConsulStats(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		plugin := &Consul_metrics{
+		plugin := &ConsulMetrics{
 			URL: ts.URL,
 		}
 		t.Run(tt.name, func(t *testing.T) {
