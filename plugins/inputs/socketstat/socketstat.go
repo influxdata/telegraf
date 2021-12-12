@@ -208,14 +208,15 @@ func (ss *Socketstat) Init() error {
 	ss.validValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
 	ss.isNewConnection = regexp.MustCompile(`^\s+.*$`)
 
-	inputs.Add("socketstat", func() telegraf.Input {
-		return &Socketstat{
-			lister: socketList,
-		}
-	})
+	if ss.lister == nil {
+		ss.lister = socketList
+	}
 
 	return nil
 }
 
 func init() {
+	inputs.Add("socketstat", func() telegraf.Input {
+		return &Socketstat{}
+	})
 }
