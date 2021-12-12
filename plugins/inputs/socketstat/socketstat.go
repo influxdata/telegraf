@@ -103,20 +103,7 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 		words := strings.Fields(line)
 
 		var err error
-		if !ss.isNewConnection.MatchString(line) {
-			// A line with no starting whitespace means we're going to parse a new connection.
-			// Flush what we gathered about the previous one, if any.
-			if flushData {
-				acc.AddFields(ss.measurement, fields, tags)
-			}
-
-			// Delegate the real parsing to getTagsAndState, which manages various
-			// formats depending on the protocol.
-			tags, fields = getTagsAndState(proto, words, ss.Log)
-
-			// This line containted metrics, so record that.
-			flushData = true
-		} else {
+		if ss.isNewConnection.MatchString(line) {
 			// A line with starting whitespace means metrics about the current connection.
 			// We should never get 2 consecutive such lines. If we do, log a warning and in
 			// a best effort, extend the metrics from the 1st line with the metrics of the 2nd
@@ -138,7 +125,20 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 			}
 			acc.AddFields(ss.measurement, fields, tags)
 			flushData = false
+			continue
 		}
+		// A line with no starting whitespace means we're going to parse a new connection.
+		// Flush what we gathered about the previous one, if any.
+		if flushData {
+			acc.AddFields(ss.measurement, fields, tags)
+		}
+
+		// Delegate the real parsing to getTagsAndState, which manages various
+		// formats depending on the protocol.
+		tags, fields = getTagsAndState(proto, words, ss.Log)
+
+		// This line containted metrics, so record that.
+		flushData = true
 	}
 	if flushData {
 		acc.AddFields(ss.measurement, fields, tags)
