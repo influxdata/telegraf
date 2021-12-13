@@ -355,6 +355,7 @@ func init() {
 				MaxLifetime: config.Duration(0),
 				IsPgBouncer: false,
 			},
+			PreparedStatements: true,
 		}
 	})
 }
