@@ -21,12 +21,14 @@ building the rpm/deb as it is less system dependent.
 
 Pull the CI images from quay, the version corresponds to the version of Go
 that is used to build the binary:
-```
+
+```shell
 docker pull quay.io/influxdb/telegraf-ci:1.9.7
 ```
 
 Start a shell in the container:
-```
+
+```shell
 docker run -ti quay.io/influxdb/telegraf-ci:1.9.7 /bin/bash
 ```
 
@@ -42,6 +44,7 @@ From within the container:
     * Change `include_packages` to change what package you want, run `make help` to see possible values
 
 From the host system, copy the build artifacts out of the container:
-```
+
+```shell
 docker cp romantic_ptolemy:/go/src/github.com/influxdata/telegraf/build/telegraf-1.10.2-1.x86_64.rpm .
 ```

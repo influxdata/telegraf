@@ -8,12 +8,13 @@ need to be specified for each log call.
 
 ```go
 type MyPlugin struct {
-	Log telegraf.Logger `toml:"-"`
+    Log telegraf.Logger `toml:"-"`
 }
 ```
 
 You can then use this Logger in the plugin.  Use the method corresponding to
 the log level of the message.
+
 ```go
 p.Log.Errorf("Unable to write to file: %v", err)
 ```
@@ -22,6 +23,7 @@ p.Log.Errorf("Unable to write to file: %v", err)
 
 In other sections of the code it is required to add the log level and module
 manually:
+
 ```go
 log.Printf("E! [agent] Error writing to %s: %v", output.LogName(), err)
 ```
@@ -37,6 +39,7 @@ support setting the log level on a per module basis, it is especially important
 to not over do it with debug logging.
 
 If the plugin is listening on a socket, log a message with the address of the socket:
+
 ```go
 p.log.InfoF("Listening on %s://%s", protocol, l.Addr())
 ```
@@ -59,6 +62,7 @@ normal on some systems.
 
 The log level is indicated by a single character at the start of the log
 message.  Adding this prefix is not required when using the Plugin Logger.
+
 - `D!` Debug
 - `I!` Info
 - `W!` Warning

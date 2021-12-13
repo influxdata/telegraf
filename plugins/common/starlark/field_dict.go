@@ -6,8 +6,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/influxdata/telegraf"
 	"go.starlark.net/starlark"
+
+	"github.com/influxdata/telegraf"
 )
 
 // FieldDict is a starlark.Value for the metric fields.  It is heavily based on the
@@ -18,17 +19,17 @@ type FieldDict struct {
 
 func (d FieldDict) String() string {
 	buf := new(strings.Builder)
-	buf.WriteString("{")
+	buf.WriteString("{") //nolint:revive // from builder.go: "It returns the length of r and a nil error."
 	sep := ""
 	for _, item := range d.Items() {
 		k, v := item[0], item[1]
-		buf.WriteString(sep)
-		buf.WriteString(k.String())
-		buf.WriteString(": ")
-		buf.WriteString(v.String())
+		buf.WriteString(sep)        //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+		buf.WriteString(k.String()) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+		buf.WriteString(": ")       //nolint:revive // from builder.go: "It returns the length of r and a nil error."
+		buf.WriteString(v.String()) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
 		sep = ", "
 	}
-	buf.WriteString("}")
+	buf.WriteString("}") //nolint:revive // from builder.go: "It returns the length of r and a nil error."
 	return buf.String()
 }
 
@@ -181,7 +182,7 @@ func (d FieldDict) Delete(k starlark.Value) (v starlark.Value, found bool, err e
 	return starlark.None, false, errors.New("key must be of type 'str'")
 }
 
-// Items implements the starlark.Mapping interface.
+// Iterate implements the starlark.Iterator interface.
 func (d FieldDict) Iterate() starlark.Iterator {
 	d.fieldIterCount++
 	return &FieldIterator{Metric: d.Metric, fields: d.metric.FieldList()}
@@ -273,4 +274,28 @@ func asGoValue(value interface{}) (interface{}, error) {
 	}
 
 	return nil, errors.New("invalid starlark type")
+}
+
+// ToFields converts a starlark.Value to a map of values.
+func toFields(value starlark.Value) (map[string]interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+	items, err := items(value, "The type %T is unsupported as type of collection of fields")
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]interface{}, len(items))
+	for _, item := range items {
+		key, err := toString(item[0], "The type %T is unsupported as type of key for fields")
+		if err != nil {
+			return nil, err
+		}
+		value, err := asGoValue(item[1])
+		if err != nil {
+			return nil, err
+		}
+		result[key] = value
+	}
+	return result, nil
 }

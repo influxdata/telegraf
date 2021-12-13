@@ -1,0 +1,40 @@
+{
+	"Gauges": [
+		{
+			"Name": "vault.core.unsealed",
+			"Value": 1,
+			"Labels": {
+				"cluster": "vault-cluster-23b671c7"
+			}
+		}
+	],
+	"Counters": [
+		{
+			"Name": "vault.raft.replication.appendEntries.logs",
+			"Count": 130,
+			"Rate": 0.2,
+			"Sum": 2,
+			"Min": 0,
+			"Max": 1,
+			"Mean": 0.015384615384615385,
+			"Stddev": 0.12355304447984486,
+			"Labels": {
+				"peer_id": "clustnode-02"
+			}
+		}
+	],
+	"Samples": [
+		{
+			"Name": "vault.token.lookup",
+			"Count": 5135,
+			"Rate": 87.21228296905755,
+			"Sum": 872.1228296905756,
+			"Min": 0.06690400093793869,
+			"Max": 16.22449493408203,
+			"Mean": 0.1698389152269865,
+			"Stddev": 0.24637634000854705,
+			"Labels": {}
+		}
+	],
+	"Timestamp": "2021-11-30 15:49:00 +0000 UTC"
+}

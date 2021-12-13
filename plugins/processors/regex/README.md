@@ -6,7 +6,7 @@ For tags transforms, if `append` is set to `true`, it will append the transforma
 
 For metrics transforms, `key` denotes the element that should be transformed. Furthermore, `result_key` allows control over the behavior applied in case the resulting `tag` or `field` name already exists.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[processors.regex]]
@@ -74,11 +74,12 @@ For metrics transforms, `key` denotes the element that should be transformed. Fu
   #   replacement = "${1}"
 ```
 
-### Tags:
+## Tags
 
 No tags are applied by this processor.
 
-### Example Output:
-```
+## Example
+
+```text
 nginx_requests,verb=GET,resp_code=2xx request="/api/search/?category=plugins&q=regex&sort=asc",method="/search/",category="plugins",referrer="-",ident="-",http_version=1.1,agent="UserAgent",client_ip="127.0.0.1",auth="-",resp_bytes=270i 1519652321000000000
 ```

@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
@@ -108,8 +109,8 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	z.address = ln.Addr().String()
 	z.Log.Infof("Started the zipkin listener on %s", z.address)
 
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 
 		z.Listen(ln, acc)
@@ -140,7 +141,7 @@ func (z *Zipkin) Listen(ln net.Listener, acc telegraf.Accumulator) {
 		// This interferes with telegraf's internal data collection,
 		// by making it appear as if a serious error occurred.
 		if err != http.ErrServerClosed {
-			acc.AddError(fmt.Errorf("E! Error listening: %v", err))
+			acc.AddError(fmt.Errorf("error listening: %v", err))
 		}
 	}
 }
