@@ -18,9 +18,9 @@ import (
 
 // Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  `ss` command.
 type Socketstat struct {
-	SocketProto     []string `toml:"protocols"`
-	Timeout         config.Duration `toml:"timeout"`
-	Log             telegraf.Logger `toml:"-"`
+	SocketProto []string        `toml:"protocols"`
+	Timeout     config.Duration `toml:"timeout"`
+	Log         telegraf.Logger `toml:"-"`
 
 	isNewConnection *regexp.Regexp
 	validValues     *regexp.Regexp
@@ -175,9 +175,9 @@ func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[str
 	}
 	var err error
 	fields["recv_q"], err = strconv.ParseUint(words[1], 10, 64)
-        if err != nil {
-                log.Warnf("Couldn't read recv_q in: %s", words)
-        }
+	if err != nil {
+		log.Warnf("Couldn't read recv_q in: %s", words)
+	}
 	fields["send_q"], err = strconv.ParseUint(words[2], 10, 64)
 	if err != nil {
 		log.Warnf("Couldn't read send_q in: %s", words)
