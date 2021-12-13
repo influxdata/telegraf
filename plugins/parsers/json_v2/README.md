@@ -41,15 +41,15 @@ You configure this parser by describing the line protocol you want by defining t
             # If the resulting values aren't included in the object/array returned by the root object path, it won't be included.
             # You can define as many tag/field sub-tables as you want.
             [[inputs.file.json_v2.object.tag]]
-                path = "" # # A string with valid GJSON path syntax, can include array's and object's
+                path = "" # A string with valid GJSON path syntax, can include array's and object's
                 rename = "new name" # A string with a new name for the tag key
             [[inputs.file.json_v2.object.field]]
-                path = "" # # A string with valid GJSON path syntax, can include array's and object's
+                path = "" # A string with valid GJSON path syntax, can include array's and object's
                 rename = "new name" # A string with a new name for the tag key
                 type = "int" # A string specifying the type (int,uint,float,string,bool)
 
             ### Configuration to modify the resutling line protocol ###
-            disable_prepend_keys = false (or true, just not both)
+            disable_prepend_keys = false # (or true, just not both)
             [inputs.file.json_v2.object.renames] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a new name for the tag key
                 key = "new name"
             [inputs.file.json_v2.object.fields] # A map of JSON keys (for a nested key, prepend the parent keys with underscores) with a type (int,uint,float,string,bool)
