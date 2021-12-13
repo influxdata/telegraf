@@ -36,3 +36,7 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
 * unitType - to use in monitoring contexts(subset of The Unified Code for Units of Measure standard). Supported types: "1", "%cpu", "KB", "GB", "MB".
 * warning  - to define warning threshold value.
 * critical - to define critical threshold value.
+
+## NOTE
+
+The current version of the plugin does not support metrics whose values are strings. Such metrics will be skipped and will not be added to the final payload.
