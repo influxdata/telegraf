@@ -694,7 +694,7 @@ workflows:
           requires:
             - 'i386-package-nightly'
             - 'ppc64le-package-nightly'
-            - 'riscv64-package-nighty'
+            - 'riscv64-package-nightly'
             - 's390x-package-nightly'
             - 'armel-package-nightly'
             - 'amd64-package-nightly'
