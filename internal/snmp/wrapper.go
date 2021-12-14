@@ -25,9 +25,8 @@ func (gs GosnmpWrapper) Host() string {
 func (gs GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
 	if gs.Version == gosnmp.Version1 {
 		return gs.GoSNMP.Walk(oid, fn)
-	} else {
-		return gs.GoSNMP.BulkWalk(oid, fn)
 	}
+	return gs.GoSNMP.BulkWalk(oid, fn)
 }
 
 func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
