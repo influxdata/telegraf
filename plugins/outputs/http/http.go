@@ -123,12 +123,8 @@ type HTTP struct {
 	Headers                 map[string]string `toml:"headers"`
 	ContentEncoding         string            `toml:"content_encoding"`
 	UseBatchFormat          bool              `toml:"use_batch_format"`
-<<<<<<< HEAD
 	AwsService              string            `toml:"aws_service"`
 	NonRetryableStatusCodes []int             `toml:"non_retryable_statuscodes`
-=======
-	NonRetryableStatusCodes []int             `toml:"non_retryable_statuscodes"`
->>>>>>> a11e9202 (fix: fix toml field)
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 

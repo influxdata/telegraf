@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func getMetric() telegraf.Metric {
@@ -200,6 +201,8 @@ func TestStatusCode(t *testing.T) {
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
+
+			tt.plugin.Log = testutil.Logger{}
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			tt.errFunc(t, err)
