@@ -199,7 +199,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/uwsgi"
 	_ "github.com/influxdata/telegraf/plugins/inputs/varnish"
 	_ "github.com/influxdata/telegraf/plugins/inputs/vault"
-	_ "github.com/influxdata/telegraf/plugins/inputs/varnish_cache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/vsphere"
 	_ "github.com/influxdata/telegraf/plugins/inputs/webhooks"
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_eventlog"
