@@ -6,7 +6,6 @@ package varnish
 import (
 	"bytes"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -520,7 +519,7 @@ func TestV2ParseVarnishNames(t *testing.T) {
 		},
 	} {
 		v := &Varnish{regexpsCompiled: defaultRegexps, Regexps: c.customRegexps}
-		assert.NoError(t, v.Init())
+		require.NoError(t, v.Init())
 		vMetric := v.parseMetricV2(c.vName)
 		require.Equal(t, c.activeVcl, vMetric.vclName)
 		require.Equal(t, "varnish", vMetric.measurement, c.vName)
@@ -531,7 +530,7 @@ func TestV2ParseVarnishNames(t *testing.T) {
 
 func TestVersions(t *testing.T) {
 	server := &Varnish{regexpsCompiled: defaultRegexps}
-	assert.NoError(t, server.Init())
+	require.NoError(t, server.Init())
 	require.Equal(t, "A plugin to collect stats from Varnish HTTP Cache", server.Description())
 	acc := &testutil.Accumulator{}
 
@@ -610,7 +609,7 @@ func TestJsonTypes(t *testing.T) {
 		Stats:           []string{"*"},
 		MetricVersion:   2,
 	}
-	assert.NoError(t, v.Gather(acc))
+	require.NoError(t, v.Gather(acc))
 	require.Equal(t, len(exp), len(acc.Metrics))
 	for _, metric := range acc.Metrics {
 		require.Equal(t, "varnish", metric.Measurement)
@@ -623,11 +622,11 @@ func TestJsonTypes(t *testing.T) {
 func TestVarnishAdmJson(t *testing.T) {
 	admJSON, _ := ioutil.ReadFile("test_data/" + "varnishadm-200.json")
 	activeVcl, err := getActiveVCLJson(bytes.NewBuffer(admJSON))
-	assert.NoError(t, err)
-	assert.Equal(t, activeVcl, "boot-123")
+	require.NoError(t, err)
+	require.Equal(t, activeVcl, "boot-123")
 
 	admJSON, _ = ioutil.ReadFile("test_data/" + "varnishadm-reload.json")
 	activeVcl, err = getActiveVCLJson(bytes.NewBuffer(admJSON))
-	assert.NoError(t, err)
-	assert.Equal(t, activeVcl, "reload_20210723_091821_2056185")
+	require.NoError(t, err)
+	require.Equal(t, activeVcl, "reload_20210723_091821_2056185")
 }
