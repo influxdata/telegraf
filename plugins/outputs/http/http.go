@@ -124,7 +124,7 @@ type HTTP struct {
 	ContentEncoding         string            `toml:"content_encoding"`
 	UseBatchFormat          bool              `toml:"use_batch_format"`
 	AwsService              string            `toml:"aws_service"`
-	NonRetryableStatusCodes []int             `toml:"non_retryable_statuscodes`
+	NonRetryableStatusCodes []int             `toml:"non_retryable_statuscodes"`
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
