@@ -4,7 +4,7 @@ The socketstat plugin gathers indicators from established connections, using ipr
 
 The `ss` command does not require specific privileges.
 
-**The output format will have a very high cardinality. It should either be stored by an engine which doesn't suffer from it, of with a short retention policy.**
+**WARNING: The output format will produce series with very high cardinality.** You should either store those by an engine which doesn't suffer from it, use a short retention policy or do appropriate filtering.
 
 ## Configuration
 
