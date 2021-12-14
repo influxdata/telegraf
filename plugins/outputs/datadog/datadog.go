@@ -18,12 +18,11 @@ import (
 )
 
 type Datadog struct {
-	Apikey     string          `toml:"apikey"`
-	Timeout    config.Duration `toml:"timeout"`
-	URL        string          `toml:"url"`
-	Compress   bool            `toml:"compress"`
-	DDInterval config.Duration `toml:"dd_interval"`
-	Log        telegraf.Logger `toml:"-"`
+	Apikey   string          `toml:"apikey"`
+	Timeout  config.Duration `toml:"timeout"`
+	URL      string          `toml:"url"`
+	Compress bool            `toml:"compress"`
+	Log      telegraf.Logger `toml:"-"`
 
 	client *http.Client
 	proxy.HTTPProxy
@@ -44,9 +43,6 @@ var sampleConfig = `
 
   ## Whether to compress the HTTP request body
   # compress = true
-
-  ## Interval in seconds to divide counters by for Datadog rates/counters
-  # dd_interval = 1s
 `
 
 type TimeSeries struct {
@@ -89,7 +85,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	metricCounter := 0
 
 	for _, m := range metrics {
-		if dogMs, err := buildMetrics(m, d.DDInterval); err == nil {
+		if dogMs, err := buildMetrics(m); err == nil {
 			metricTags := buildTags(m.TagList())
 			host, _ := m.GetTag("host")
 
@@ -182,7 +178,7 @@ func (d *Datadog) authenticatedURL() string {
 	return fmt.Sprintf("%s?%s", d.URL, q.Encode())
 }
 
-func buildMetrics(m telegraf.Metric, interval config.Duration) (map[string]Point, error) {
+func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 	ms := make(map[string]Point)
 	for _, field := range m.FieldList() {
 		if !verifyValue(field.Value) {
@@ -193,9 +189,6 @@ func buildMetrics(m telegraf.Metric, interval config.Duration) (map[string]Point
 			return ms, fmt.Errorf("unable to extract value from Fields %v error %v", field.Key, err.Error())
 		}
 		p[0] = float64(m.Time().Unix())
-		if m.Type() == telegraf.Counter {
-			p[1] /= time.Duration(interval).Seconds()
-		}
 		ms[field.Key] = p
 	}
 	return ms, nil
@@ -248,8 +241,7 @@ func (d *Datadog) Close() error {
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
 		return &Datadog{
-			URL:        datadogAPI,
-			DDInterval: config.Duration(1 * time.Second),
+			URL: datadogAPI,
 		}
 	})
 }
