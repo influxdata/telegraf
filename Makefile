@@ -317,6 +317,7 @@ $(include_packages):
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
 			--depends coreutils \
 			--depends shadow-utils \
+			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
 			--name telegraf \
 			--version $(version) \
