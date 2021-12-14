@@ -2,11 +2,11 @@ package beat
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -31,7 +31,7 @@ func Test_BeatStats(t *testing.T) {
 			require.FailNow(t, "cannot handle request")
 		}
 
-		data, err := ioutil.ReadFile(jsonFilePath)
+		data, err := os.ReadFile(jsonFilePath)
 		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
 		_, err = w.Write(data)
 		require.NoError(t, err, "could not write data")
@@ -175,7 +175,7 @@ func Test_BeatRequest(t *testing.T) {
 			require.FailNow(t, "cannot handle request")
 		}
 
-		data, err := ioutil.ReadFile(jsonFilePath)
+		data, err := os.ReadFile(jsonFilePath)
 		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
 		require.Equal(t, request.Host, "beat.test.local")
 		require.Equal(t, request.Method, "POST")

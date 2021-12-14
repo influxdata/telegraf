@@ -8,7 +8,7 @@ The syslog output plugin sends syslog messages transmitted over
 Syslog messages are formatted according to
 [RFC 5424](https://tools.ietf.org/html/rfc5424).
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.syslog]]
@@ -88,7 +88,8 @@ Syslog messages are formatted according to
   # default_appname = "Telegraf"
 ```
 
-### Metric mapping
+## Metric mapping
+
 The output plugin expects syslog metrics tags and fields to match up with the
 ones created in the [syslog input][].
 

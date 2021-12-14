@@ -44,13 +44,13 @@ func TestJobRequest(t *testing.T) {
 	}
 	for _, test := range tests {
 		hierarchyName := test.input.hierarchyName()
-		URL := test.input.URL()
+		address := test.input.URL()
 		if hierarchyName != test.hierarchyName {
 			t.Errorf("Expected %s, got %s\n", test.hierarchyName, hierarchyName)
 		}
 
-		if test.URL != "" && URL != test.URL {
-			t.Errorf("Expected %s, got %s\n", test.URL, URL)
+		if test.URL != "" && address != test.URL {
+			t.Errorf("Expected %s, got %s\n", test.URL, address)
 		}
 	}
 }
@@ -429,7 +429,7 @@ func TestInitialize(t *testing.T) {
 			}
 			if test.output != nil {
 				if test.input.client == nil {
-					t.Fatalf("%s: failed %s, jenkins instance shouldn't be nil", test.name, te.Error())
+					t.Fatalf("%s: failed %v, jenkins instance shouldn't be nil", test.name, te)
 				}
 				if test.input.MaxConnections != test.output.MaxConnections {
 					t.Fatalf("%s: different MaxConnections Expected %d, got %d\n", test.name, test.output.MaxConnections, test.input.MaxConnections)

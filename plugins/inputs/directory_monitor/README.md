@@ -5,7 +5,7 @@ The plugin will gather all files in the directory at a configurable interval (`m
 
 This plugin is intended to read files that are moved or copied to the monitored directory, and thus files should also not be used by another process or else they may fail to be gathered. Please be advised that this plugin pulls files directly after they've been in the directory for the length of the configurable `directory_duration_threshold`, and thus files should not be written 'live' to the monitored directory. If you absolutely must write files directly, they must be guaranteed to finish writing before the `directory_duration_threshold`.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[inputs.directory_monitor]]
@@ -22,7 +22,7 @@ This plugin is intended to read files that are moved or copied to the monitored 
   ## The amount of time a file is allowed to sit in the directory before it is picked up.
   ## This time can generally be low but if you choose to have a very large file written to the directory and it's potentially slow,
   ## set this higher so that the plugin will wait until the file is fully copied to the directory.
-  # directory_duration_threshold = "50ms" 
+  # directory_duration_threshold = "50ms"
   #
   ## A list of the only file names to monitor, if necessary. Supports regex. If left blank, all files are ingested.
   # files_to_monitor = ["^.*\.csv"]
@@ -37,7 +37,13 @@ This plugin is intended to read files that are moved or copied to the monitored 
   #
   ## The maximum amount of file paths to queue up for processing at once, before waiting until files are processed to find more files.
   ## Lowering this value will result in *slightly* less memory use, with a potential sacrifice in speed efficiency, if absolutely necessary.
-  #	file_queue_size = 100000
+  # file_queue_size = 100000
+  #
+  ## Name a tag containing the name of the file the data was parsed from.  Leave empty
+  ## to disable. Cautious when file name variation is high, this can increase the cardinality
+  ## significantly. Read more about cardinality here:
+  ## https://docs.influxdata.com/influxdb/cloud/reference/glossary/#series-cardinality
+  # file_tag = ""
   #
   ## The dataformat to be read from the files.
   ## Each data format has its own unique set of configuration options, read

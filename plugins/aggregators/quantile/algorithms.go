@@ -49,8 +49,7 @@ func (e *exactAlgorithmR7) Quantile(q float64) float64 {
 	// Get the quantile index and the fraction to the neighbor
 	// Hyndman & Fan; Sample Quantiles in Statistical Packages; The American Statistician vol 50; pp 361-365; 1996 -- R7
 	// Same as Excel and Numpy.
-	N := float64(size)
-	n := q * (N - 1)
+	n := q * (float64(size) - 1)
 	i, gamma := math.Modf(n)
 	j := int(i)
 	if j < 0 {
@@ -95,8 +94,7 @@ func (e *exactAlgorithmR8) Quantile(q float64) float64 {
 
 	// Get the quantile index and the fraction to the neighbor
 	// Hyndman & Fan; Sample Quantiles in Statistical Packages; The American Statistician vol 50; pp 361-365; 1996 -- R8
-	N := float64(size)
-	n := q*(N+1.0/3.0) - (2.0 / 3.0) // Indices are zero-base here but one-based in the paper
+	n := q*(float64(size)+1.0/3.0) - (2.0 / 3.0) // Indices are zero-base here but one-based in the paper
 	i, gamma := math.Modf(n)
 	j := int(i)
 	if j < 0 {

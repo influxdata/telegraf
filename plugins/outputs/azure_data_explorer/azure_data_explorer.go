@@ -27,6 +27,7 @@ type AzureDataExplorer struct {
 	Timeout         config.Duration `toml:"timeout"`
 	MetricsGrouping string          `toml:"metrics_grouping_type"`
 	TableName       string          `toml:"table_name"`
+	CreateTables    bool            `toml:"create_tables"`
 	client          localClient
 	ingesters       map[string]localIngestor
 	serializer      serializers.Serializer
@@ -57,7 +58,7 @@ func (adx *AzureDataExplorer) Description() string {
 
 func (adx *AzureDataExplorer) SampleConfig() string {
 	return `
-  ## Azure Data Exlorer cluster endpoint
+  ## Azure Data Explorer cluster endpoint
   ## ex: endpoint_url = "https://clustername.australiasoutheast.kusto.windows.net"
   endpoint_url = ""
   
@@ -77,6 +78,9 @@ func (adx *AzureDataExplorer) SampleConfig() string {
   ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
   # table_name = ""
 
+  ## Creates tables and relevant mapping if set to true(default). 
+  ## Skips table and mapping creation if set to false, this is useful for running Telegraf with the lowest possible permissions i.e. table ingestor role.
+  # create_tables = true
 `
 }
 
@@ -198,6 +202,10 @@ func (adx *AzureDataExplorer) getIngestor(ctx context.Context, tableName string)
 }
 
 func (adx *AzureDataExplorer) createAzureDataExplorerTable(ctx context.Context, tableName string) error {
+	if !adx.CreateTables {
+		adx.Log.Info("skipped table creation")
+		return nil
+	}
 	createStmt := kusto.NewStmt("", kusto.UnsafeStmt(unsafe.Stmt{Add: true, SuppressWarning: true})).UnsafeAdd(fmt.Sprintf(createTableCommand, tableName))
 	if _, err := adx.client.Mgmt(ctx, adx.Database, createStmt); err != nil {
 		return err
@@ -230,7 +238,7 @@ func (adx *AzureDataExplorer) Init() error {
 		return errors.New("Metrics grouping type is not valid")
 	}
 
-	serializer, err := json.NewSerializer(time.Second)
+	serializer, err := json.NewSerializer(time.Second, "") // FIXME: get the json.TimestampFormat from the config file
 	if err != nil {
 		return err
 	}
@@ -241,7 +249,8 @@ func (adx *AzureDataExplorer) Init() error {
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
-			Timeout: config.Duration(20 * time.Second),
+			Timeout:      config.Duration(20 * time.Second),
+			CreateTables: true,
 		}
 	})
 }

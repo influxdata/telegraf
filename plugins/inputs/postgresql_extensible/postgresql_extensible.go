@@ -3,7 +3,7 @@ package postgresql_extensible
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -147,7 +147,7 @@ func ReadQueryFromFile(filePath string) (string, error) {
 	}
 	defer file.Close()
 
-	query, err := ioutil.ReadAll(file)
+	query, err := io.ReadAll(file)
 	if err != nil {
 		return "", err
 	}
@@ -161,10 +161,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		queryAddon string
 		dbVersion  int
 		query      string
-		tagValue   string
 		measName   string
-		timestamp  string
-		columns    []string
 	)
 
 	// Retrieving the database version
@@ -177,8 +174,6 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// Query is not run if Database version does not match the query version.
 	for i := range p.Query {
 		sqlQuery = p.Query[i].Sqlquery
-		tagValue = p.Query[i].Tagvalue
-		timestamp = p.Query[i].Timestamp
 
 		if p.Query[i].Measurement != "" {
 			measName = p.Query[i].Measurement
@@ -198,40 +193,46 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		sqlQuery += queryAddon
 
 		if p.Query[i].Version <= dbVersion {
-			rows, err := p.DB.Query(sqlQuery)
-			if err != nil {
-				p.Log.Error(err.Error())
-				continue
-			}
-
-			defer rows.Close()
-
-			// grab the column information from the result
-			if columns, err = rows.Columns(); err != nil {
-				p.Log.Error(err.Error())
-				continue
-			}
-
-			p.AdditionalTags = nil
-			if tagValue != "" {
-				tagList := strings.Split(tagValue, ",")
-				for t := range tagList {
-					p.AdditionalTags = append(p.AdditionalTags, tagList[t])
-				}
-			}
-
-			p.Timestamp = timestamp
-
-			for rows.Next() {
-				err = p.accRow(measName, rows, acc, columns)
-				if err != nil {
-					p.Log.Error(err.Error())
-					break
-				}
-			}
+			p.gatherMetricsFromQuery(acc, sqlQuery, p.Query[i].Tagvalue, p.Query[i].Timestamp, measName)
 		}
 	}
 	return nil
+}
+
+func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, sqlQuery string, tagValue string, timestamp string, measName string) {
+	var columns []string
+
+	rows, err := p.DB.Query(sqlQuery)
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	defer rows.Close()
+
+	// grab the column information from the result
+	if columns, err = rows.Columns(); err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	p.AdditionalTags = nil
+	if tagValue != "" {
+		tagList := strings.Split(tagValue, ",")
+		for t := range tagList {
+			p.AdditionalTags = append(p.AdditionalTags, tagList[t])
+		}
+	}
+
+	p.Timestamp = timestamp
+
+	for rows.Next() {
+		err = p.accRow(measName, rows, acc, columns)
+		if err != nil {
+			acc.AddError(err)
+			break
+		}
+	}
 }
 
 type scanner interface {

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"crypto/sha256"
+	"gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"gopkg.in/olivere/elastic.v5"
 )
 
 type Elasticsearch struct {
@@ -36,6 +36,9 @@ type Elasticsearch struct {
 	OverwriteTemplate   bool
 	ForceDocumentID     bool `toml:"force_document_id"`
 	MajorReleaseNumber  int
+	FloatHandling       string          `toml:"float_handling"`
+	FloatReplacement    float64         `toml:"float_replacement_value"`
+	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
 	Client *elastic.Client
@@ -95,6 +98,15 @@ var sampleConfig = `
   ## If set to true a unique ID hash will be sent as sha256(concat(timestamp,measurement,series-hash)) string
   ## it will enable data resend and update metric points avoiding duplicated metrics with diferent id's
   force_document_id = false
+
+  ## Specifies the handling of NaN and Inf values.
+  ## This option can have the following values:
+  ##    none    -- do not modify field-values (default); will produce an error if NaNs or infs are encountered
+  ##    drop    -- drop fields containing NaNs or infs
+  ##    replace -- replace with the value in "float_replacement_value" (default: 0.0)
+  ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
+  # float_handling = "none"
+  # float_replacement_value = 0.0
 `
 
 const telegrafTemplate = `
@@ -174,7 +186,16 @@ type templatePart struct {
 
 func (a *Elasticsearch) Connect() error {
 	if a.URLs == nil || a.IndexName == "" {
-		return fmt.Errorf("Elasticsearch urls or index_name is not defined")
+		return fmt.Errorf("elasticsearch urls or index_name is not defined")
+	}
+
+	// Determine if we should process NaN and inf values
+	switch a.FloatHandling {
+	case "", "none":
+		a.FloatHandling = "none"
+	case "drop", "replace":
+	default:
+		return fmt.Errorf("invalid float_handling type %q", a.FloatHandling)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
@@ -213,7 +234,7 @@ func (a *Elasticsearch) Connect() error {
 		clientOptions = append(clientOptions,
 			elastic.SetHealthcheck(false),
 		)
-		log.Printf("D! Elasticsearch output: disabling health check")
+		a.Log.Debugf("Disabling health check")
 	}
 
 	client, err := elastic.NewClient(clientOptions...)
@@ -226,16 +247,16 @@ func (a *Elasticsearch) Connect() error {
 	esVersion, err := client.ElasticsearchVersion(a.URLs[0])
 
 	if err != nil {
-		return fmt.Errorf("Elasticsearch version check failed: %s", err)
+		return fmt.Errorf("elasticsearch version check failed: %s", err)
 	}
 
 	// quit if ES version is not supported
 	majorReleaseNumber, err := strconv.Atoi(strings.Split(esVersion, ".")[0])
 	if err != nil || majorReleaseNumber < 5 {
-		return fmt.Errorf("Elasticsearch version not supported: %s", esVersion)
+		return fmt.Errorf("elasticsearch version not supported: %s", esVersion)
 	}
 
-	log.Println("I! Elasticsearch version: " + esVersion)
+	a.Log.Infof("Elasticsearch version: %q", esVersion)
 
 	a.Client = client
 	a.MajorReleaseNumber = majorReleaseNumber
@@ -257,9 +278,9 @@ func GetPointID(m telegraf.Metric) string {
 	var buffer bytes.Buffer
 	//Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
 
-	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10))
-	buffer.WriteString(m.Name())
-	buffer.WriteString(strconv.FormatUint(m.HashID(), 10))
+	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10)) //nolint:revive // from buffer.go: "err is always nil"
+	buffer.WriteString(m.Name())                                           //nolint:revive // from buffer.go: "err is always nil"
+	buffer.WriteString(strconv.FormatUint(m.HashID(), 10))                 //nolint:revive // from buffer.go: "err is always nil"
 
 	return fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
 }
@@ -278,12 +299,31 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		// to send the metric to the correct time-based index
 		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
 
+		// Handle NaN and inf field-values
+		fields := make(map[string]interface{})
+		for k, value := range metric.Fields() {
+			v, ok := value.(float64)
+			if !ok || a.FloatHandling == "none" || !(math.IsNaN(v) || math.IsInf(v, 0)) {
+				fields[k] = value
+				continue
+			}
+			if a.FloatHandling == "drop" {
+				continue
+			}
+
+			if math.IsNaN(v) || math.IsInf(v, 1) {
+				fields[k] = a.FloatReplacement
+			} else {
+				fields[k] = -a.FloatReplacement
+			}
+		}
+
 		m := make(map[string]interface{})
 
 		m["@timestamp"] = metric.Time()
 		m["measurement_name"] = name
 		m["tag"] = metric.Tags()
-		m[name] = metric.Fields()
+		m[name] = fields
 
 		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
 
@@ -305,15 +345,15 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	res, err := bulkRequest.Do(ctx)
 
 	if err != nil {
-		return fmt.Errorf("Error sending bulk request to Elasticsearch: %s", err)
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %s", err)
 	}
 
 	if res.Errors {
 		for id, err := range res.Failed() {
-			log.Printf("E! Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s", id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"])
+			a.Log.Errorf("Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s", id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"])
 			break
 		}
-		return fmt.Errorf("W! Elasticsearch failed to index %d metrics", len(res.Failed()))
+		return fmt.Errorf("elasticsearch failed to index %d metrics", len(res.Failed()))
 	}
 
 	return nil
@@ -321,13 +361,13 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if a.TemplateName == "" {
-		return fmt.Errorf("Elasticsearch template_name configuration not defined")
+		return fmt.Errorf("elasticsearch template_name configuration not defined")
 	}
 
 	templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
 
 	if errExists != nil {
-		return fmt.Errorf("Elasticsearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
+		return fmt.Errorf("elasticsearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
 	}
 
 	templatePattern := a.IndexName
@@ -341,7 +381,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	}
 
 	if templatePattern == "" {
-		return fmt.Errorf("Template cannot be created for dynamic index names without an index prefix")
+		return fmt.Errorf("template cannot be created for dynamic index names without an index prefix")
 	}
 
 	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
@@ -353,16 +393,18 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		t := template.Must(template.New("template").Parse(telegrafTemplate))
 		var tmpl bytes.Buffer
 
-		t.Execute(&tmpl, tp)
+		if err := t.Execute(&tmpl, tp); err != nil {
+			return err
+		}
 		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl.String()).Do(ctx)
 
 		if errCreateTemplate != nil {
-			return fmt.Errorf("Elasticsearch failed to create index template %s : %s", a.TemplateName, errCreateTemplate)
+			return fmt.Errorf("elasticsearch failed to create index template %s : %s", a.TemplateName, errCreateTemplate)
 		}
 
-		log.Printf("D! Elasticsearch template %s created or updated\n", a.TemplateName)
+		a.Log.Debugf("Template %s created or updated\n", a.TemplateName)
 	} else {
-		log.Println("D! Found existing Elasticsearch template. Skipping template management")
+		a.Log.Debug("Found existing Elasticsearch template. Skipping template management")
 	}
 	return nil
 }
@@ -384,7 +426,7 @@ func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
 			)
 
 			indexName = tagReplacer.Replace(indexName)
-			tagKeys = append(tagKeys, (strings.TrimSpace(tagName)))
+			tagKeys = append(tagKeys, strings.TrimSpace(tagName))
 
 			startTag = strings.Index(indexName, "{{")
 		}
@@ -413,7 +455,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)
 		} else {
-			log.Printf("D! Tag '%s' not found, using '%s' on index name instead\n", key, a.DefaultTagValue)
+			a.Log.Debugf("Tag '%s' not found, using '%s' on index name instead\n", key, a.DefaultTagValue)
 			tagValues = append(tagValues, a.DefaultTagValue)
 		}
 	}

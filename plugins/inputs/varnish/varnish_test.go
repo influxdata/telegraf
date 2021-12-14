@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package varnish
@@ -8,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
@@ -26,7 +27,7 @@ func TestGather(t *testing.T) {
 		run:   fakeVarnishStat(smOutput),
 		Stats: []string{"*"},
 	}
-	assert.NoError(t, v.Gather(acc))
+	require.NoError(t, v.Gather(acc))
 
 	acc.HasMeasurement("varnish")
 	for tag, fields := range parsedSmOutput {
@@ -42,12 +43,12 @@ func TestParseFullOutput(t *testing.T) {
 		run:   fakeVarnishStat(fullOutput),
 		Stats: []string{"*"},
 	}
-	assert.NoError(t, v.Gather(acc))
+	require.NoError(t, v.Gather(acc))
 
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
-	assert.Len(t, acc.Metrics, 6)
-	assert.Equal(t, 293, len(flat))
+	require.Len(t, acc.Metrics, 6)
+	require.Equal(t, 293, len(flat))
 }
 
 func TestFilterSomeStats(t *testing.T) {
@@ -56,12 +57,12 @@ func TestFilterSomeStats(t *testing.T) {
 		run:   fakeVarnishStat(fullOutput),
 		Stats: []string{"MGT.*", "VBE.*"},
 	}
-	assert.NoError(t, v.Gather(acc))
+	require.NoError(t, v.Gather(acc))
 
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
-	assert.Len(t, acc.Metrics, 2)
-	assert.Equal(t, 16, len(flat))
+	require.Len(t, acc.Metrics, 2)
+	require.Equal(t, 16, len(flat))
 }
 
 func TestFieldConfig(t *testing.T) {
@@ -78,11 +79,11 @@ func TestFieldConfig(t *testing.T) {
 			run:   fakeVarnishStat(fullOutput),
 			Stats: strings.Split(fieldCfg, ","),
 		}
-		assert.NoError(t, v.Gather(acc))
+		require.NoError(t, v.Gather(acc))
 
 		acc.HasMeasurement("varnish")
 		flat := flatten(acc.Metrics)
-		assert.Equal(t, expected, len(flat))
+		require.Equal(t, expected, len(flat))
 	}
 }
 

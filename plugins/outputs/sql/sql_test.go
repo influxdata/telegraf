@@ -3,7 +3,6 @@ package sql
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -100,6 +99,14 @@ var (
 					Key:   "int64_two",
 					Value: int64(2345),
 				},
+				{
+					Key:   "bool_one",
+					Value: true,
+				},
+				{
+					Key:   "bool_two",
+					Value: false,
+				},
 			},
 			ts,
 		),
@@ -154,7 +161,7 @@ func TestMysqlIntegration(t *testing.T) {
 	const username = "root"
 
 	password := pwgen(32)
-	outDir, err := ioutil.TempDir("", "tg-mysql-*")
+	outDir, err := os.MkdirTemp("", "tg-mysql-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(outDir)
 
@@ -222,9 +229,9 @@ func TestMysqlIntegration(t *testing.T) {
 	require.FileExists(t, dumpfile)
 
 	//compare the dump to what we expected
-	expected, err := ioutil.ReadFile("testdata/mariadb/expected.sql")
+	expected, err := os.ReadFile("testdata/mariadb/expected.sql")
 	require.NoError(t, err)
-	actual, err := ioutil.ReadFile(dumpfile)
+	actual, err := os.ReadFile(dumpfile)
 	require.NoError(t, err)
 	require.Equal(t, string(expected), string(actual))
 }
@@ -244,7 +251,7 @@ func TestPostgresIntegration(t *testing.T) {
 	const username = "postgres"
 
 	password := pwgen(32)
-	outDir, err := ioutil.TempDir("", "tg-postgres-*")
+	outDir, err := os.MkdirTemp("", "tg-postgres-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(outDir)
 
@@ -321,9 +328,9 @@ func TestPostgresIntegration(t *testing.T) {
 	require.FileExists(t, dumpfile)
 
 	//compare the dump to what we expected
-	expected, err := ioutil.ReadFile("testdata/postgres/expected.sql")
+	expected, err := os.ReadFile("testdata/postgres/expected.sql")
 	require.NoError(t, err)
-	actual, err := ioutil.ReadFile(dumpfile)
+	actual, err := os.ReadFile(dumpfile)
 	require.NoError(t, err)
 	require.Equal(t, string(expected), string(actual))
 }

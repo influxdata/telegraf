@@ -7,7 +7,7 @@ Use this plugin when fields are split over multiple metrics, with the same
 measurement, tag set and timestamp.  By merging into a single metric they can
 be handled more efficiently by the output.
 
-### Configuration
+## Configuration
 
 ```toml
 [[aggregators.merge]]
@@ -16,7 +16,7 @@ be handled more efficiently by the output.
   drop_original = true
 ```
 
-### Example
+## Example
 
 ```diff
 - cpu,host=localhost usage_time=42 1567562620000000000

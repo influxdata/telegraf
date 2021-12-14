@@ -65,7 +65,7 @@ through the convert settings.
 
 ## Configuration
 
-```
+```toml
 # Save metrics to an SQL Database
 [[outputs.sql]]
   ## Database driver
@@ -104,6 +104,7 @@ through the convert settings.
   #  timestamp            = "TIMESTAMP"
   #  defaultvalue         = "TEXT"
   #  unsigned             = "UNSIGNED"
+  #  bool                 = "BOOL"
 ```
 
 ## Driver-specific information

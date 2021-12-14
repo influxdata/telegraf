@@ -1,9 +1,9 @@
+//go:build linux
 // +build linux
 
 package kernel_vmstat
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -299,7 +299,7 @@ thp_collapse_alloc_failed 102214
 thp_split abcd`
 
 func makeFakeVMStatFile(t *testing.T, content []byte) string {
-	tmpfile, err := ioutil.TempFile("", "kernel_vmstat_test")
+	tmpfile, err := os.CreateTemp("", "kernel_vmstat_test")
 	require.NoError(t, err)
 
 	_, err = tmpfile.Write(content)
