@@ -7,7 +7,7 @@ The `kibana` plugin queries the [Kibana][] API to obtain the service status.
 
 [Kibana]: https://www.elastic.co/
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.kibana]]
@@ -29,7 +29,7 @@ The `kibana` plugin queries the [Kibana][] API to obtain the service status.
   # insecure_skip_verify = false
 ```
 
-### Metrics
+## Metrics
 
 - kibana
   - tags:
@@ -48,9 +48,9 @@ The `kibana` plugin queries the [Kibana][] API to obtain the service status.
     - concurrent_connections (integer)
     - requests_per_sec (float)
 
-### Example Output
+## Example Output
 
-```
+```shell
 kibana,host=myhost,name=my-kibana,source=localhost:5601,status=green,version=6.5.4 concurrent_connections=8i,heap_max_bytes=447778816i,heap_total_bytes=447778816i,heap_used_bytes=380603352i,requests_per_sec=1,response_time_avg_ms=57.6,response_time_max_ms=220i,status_code=1i,uptime_ms=6717489805i 1534864502000000000
 ```
 
@@ -58,8 +58,8 @@ kibana,host=myhost,name=my-kibana,source=localhost:5601,status=green,version=6.5
 
 Requires the following tools:
 
-* [Docker](https://docs.docker.com/get-docker/)
-* [Docker Compose](https://docs.docker.com/compose/install/)
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
 From the root of this project execute the following script: `./plugins/inputs/kibana/test_environment/run_test_env.sh`
 

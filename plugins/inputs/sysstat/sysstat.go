@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,7 +65,6 @@ type Sysstat struct {
 
 	// DeviceTags adds the possibility to add additional tags for devices.
 	DeviceTags map[string][]map[string]string `toml:"device_tags"`
-	tmpFile    string
 	interval   int
 
 	Log telegraf.Logger
@@ -149,8 +147,15 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 			s.interval = int(time.Since(firstTimestamp).Seconds() + 0.5)
 		}
 	}
+
+	tmpfile, err := os.CreateTemp("", "sysstat-*")
+	if err != nil {
+		return fmt.Errorf("failed to create tmp file: %s", err)
+	}
+	defer os.Remove(tmpfile.Name())
+
 	ts := time.Now().Add(time.Duration(s.interval) * time.Second)
-	if err := s.collect(); err != nil {
+	if err := s.collect(tmpfile.Name()); err != nil {
 		return err
 	}
 	var wg sync.WaitGroup
@@ -158,14 +163,10 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(acc telegraf.Accumulator, option string) {
 			defer wg.Done()
-			acc.AddError(s.parse(acc, option, ts))
+			acc.AddError(s.parse(acc, option, tmpfile.Name(), ts))
 		}(acc, option)
 	}
 	wg.Wait()
-
-	if _, err := os.Stat(s.tmpFile); err == nil {
-		acc.AddError(os.Remove(s.tmpFile))
-	}
 
 	return nil
 }
@@ -175,12 +176,12 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 //     Sadc -S <Activity1> -S <Activity2> ... <collectInterval> 2 tmpFile
 // The above command collects system metrics during <collectInterval> and
 // saves it in binary form to tmpFile.
-func (s *Sysstat) collect() error {
+func (s *Sysstat) collect(tempfile string) error {
 	options := []string{}
 	for _, act := range s.Activities {
 		options = append(options, "-S", act)
 	}
-	s.tmpFile = path.Join("/tmp", fmt.Sprintf("sysstat-%d", time.Now().Unix()))
+
 	// collectInterval has to be smaller than the telegraf data collection interval
 	collectInterval := s.interval - parseInterval
 
@@ -189,13 +190,10 @@ func (s *Sysstat) collect() error {
 		collectInterval = 1 // In that case we only collect for 1 second.
 	}
 
-	options = append(options, strconv.Itoa(collectInterval), "2", s.tmpFile)
+	options = append(options, strconv.Itoa(collectInterval), "2", tempfile)
 	cmd := execCommand(s.Sadc, options...)
 	out, err := internal.CombinedOutputTimeout(cmd, time.Second*time.Duration(collectInterval+parseInterval))
 	if err != nil {
-		if err := os.Remove(s.tmpFile); err != nil {
-			s.Log.Errorf("Failed to remove tmp file after %q command: %s", strings.Join(cmd.Args, " "), err.Error())
-		}
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	return nil
@@ -229,8 +227,8 @@ func withCLocale(cmd *exec.Cmd) *exec.Cmd {
 // parse runs Sadf on the previously saved tmpFile:
 //    Sadf -p -- -p <option> tmpFile
 // and parses the output to add it to the telegraf.Accumulator acc.
-func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) error {
-	cmd := execCommand(s.Sadf, s.sadfOptions(option)...)
+func (s *Sysstat) parse(acc telegraf.Accumulator, option string, tmpfile string, ts time.Time) error {
+	cmd := execCommand(s.Sadf, s.sadfOptions(option, tmpfile)...)
 	cmd = withCLocale(cmd)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -241,9 +239,9 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 	}
 
 	r := bufio.NewReader(stdout)
-	csv := csv.NewReader(r)
-	csv.Comma = '\t'
-	csv.FieldsPerRecord = 6
+	csvReader := csv.NewReader(r)
+	csvReader.Comma = '\t'
+	csvReader.FieldsPerRecord = 6
 	var measurement string
 	// groupData to accumulate data when Group=true
 	type groupData struct {
@@ -252,7 +250,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 	}
 	m := make(map[string]groupData)
 	for {
-		record, err := csv.Read()
+		record, err := csvReader.Read()
 		if err == io.EOF {
 			break
 		}
@@ -314,7 +312,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option string, ts time.Time) e
 }
 
 // sadfOptions creates the correct options for the sadf utility.
-func (s *Sysstat) sadfOptions(activityOption string) []string {
+func (s *Sysstat) sadfOptions(activityOption string, tmpfile string) []string {
 	options := []string{
 		"-p",
 		"--",
@@ -323,7 +321,7 @@ func (s *Sysstat) sadfOptions(activityOption string) []string {
 
 	opts := strings.Split(activityOption, " ")
 	options = append(options, opts...)
-	options = append(options, s.tmpFile)
+	options = append(options, tmpfile)
 
 	return options
 }

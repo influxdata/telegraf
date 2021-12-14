@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
@@ -15,6 +14,7 @@ import (
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	"google.golang.org/genproto/googleapis/api/monitoredres"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Call struct {
@@ -105,7 +105,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -138,7 +138,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -171,7 +171,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -204,7 +204,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -249,7 +249,7 @@ func TestGather(t *testing.T) {
 				Points: []*monitoringpb.Point{
 					{
 						Interval: &monitoringpb.TimeInterval{
-							EndTime: &timestamp.Timestamp{
+							EndTime: &timestamppb.Timestamp{
 								Seconds: now.Unix(),
 							},
 						},
@@ -283,7 +283,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -378,7 +378,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -473,7 +473,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -556,7 +556,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -702,7 +702,7 @@ func TestGatherAlign(t *testing.T) {
 				createTimeSeries(
 					&monitoringpb.Point{
 						Interval: &monitoringpb.TimeInterval{
-							EndTime: &timestamp.Timestamp{
+							EndTime: &timestamppb.Timestamp{
 								Seconds: now.Unix(),
 							},
 						},
@@ -717,7 +717,7 @@ func TestGatherAlign(t *testing.T) {
 				createTimeSeries(
 					&monitoringpb.Point{
 						Interval: &monitoringpb.TimeInterval{
-							EndTime: &timestamp.Timestamp{
+							EndTime: &timestamppb.Timestamp{
 								Seconds: now.Unix(),
 							},
 						},
@@ -732,7 +732,7 @@ func TestGatherAlign(t *testing.T) {
 				createTimeSeries(
 					&monitoringpb.Point{
 						Interval: &monitoringpb.TimeInterval{
-							EndTime: &timestamp.Timestamp{
+							EndTime: &timestamppb.Timestamp{
 								Seconds: now.Unix(),
 							},
 						},
@@ -1081,7 +1081,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 					ch <- createTimeSeries(
 						&monitoringpb.Point{
 							Interval: &monitoringpb.TimeInterval{
-								EndTime: &timestamp.Timestamp{
+								EndTime: &timestamppb.Timestamp{
 									Seconds: now.Unix(),
 								},
 							},

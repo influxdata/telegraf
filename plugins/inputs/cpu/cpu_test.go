@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	cpuUtil "github.com/shirou/gopsutil/cpu"
+	cpuUtil "github.com/shirou/gopsutil/v3/cpu"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/system"

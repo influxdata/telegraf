@@ -4,7 +4,7 @@ The `ifname` plugin looks up network interface names using SNMP.
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Configuration:
+## Configuration
 
 ```toml
 [[processors.ifname]]
@@ -66,7 +66,7 @@ Telegraf minimum version: Telegraf 1.15.0
   # cache_ttl = "8h"
 ```
 
-### Example processing:
+## Example
 
 Example config:
 

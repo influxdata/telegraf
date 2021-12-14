@@ -222,7 +222,7 @@ func (p *Point) setValue(v interface{}) error {
 	case uint64:
 		p[1] = float64(d)
 	case float64:
-		p[1] = float64(d)
+		p[1] = d
 	case bool:
 		p[1] = float64(0)
 		if d {

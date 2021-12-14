@@ -57,7 +57,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 			return
 		}
 	}
-	trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(out)
+	stats, err := processPingOutput(out)
 	if err != nil {
 		// fatal error
 		acc.AddError(fmt.Errorf("%s: %s", err, u))
@@ -67,25 +67,25 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	}
 
 	// Calculate packet loss percentage
-	loss := float64(trans-rec) / float64(trans) * 100.0
+	loss := float64(stats.trans-stats.recv) / float64(stats.trans) * 100.0
 
-	fields["packets_transmitted"] = trans
-	fields["packets_received"] = rec
+	fields["packets_transmitted"] = stats.trans
+	fields["packets_received"] = stats.recv
 	fields["percent_packet_loss"] = loss
-	if ttl >= 0 {
-		fields["ttl"] = ttl
+	if stats.ttl >= 0 {
+		fields["ttl"] = stats.ttl
 	}
-	if min >= 0 {
-		fields["minimum_response_ms"] = min
+	if stats.min >= 0 {
+		fields["minimum_response_ms"] = stats.min
 	}
-	if avg >= 0 {
-		fields["average_response_ms"] = avg
+	if stats.avg >= 0 {
+		fields["average_response_ms"] = stats.avg
 	}
-	if max >= 0 {
-		fields["maximum_response_ms"] = max
+	if stats.max >= 0 {
+		fields["maximum_response_ms"] = stats.max
 	}
-	if stddev >= 0 {
-		fields["standard_deviation_ms"] = stddev
+	if stats.stddev >= 0 {
+		fields["standard_deviation_ms"] = stats.stddev
 	}
 	acc.AddFields("ping", fields, tags)
 }
@@ -165,36 +165,47 @@ func (p *Ping) args(url string, system string) []string {
 //     round-trip min/avg/max/stddev = 34.843/43.508/52.172/8.664 ms
 //
 // It returns (<transmitted packets>, <received packets>, <average response>)
-func processPingOutput(out string) (int, int, int, float64, float64, float64, float64, error) {
-	var trans, recv, ttl int = 0, 0, -1
-	var min, avg, max, stddev float64 = -1.0, -1.0, -1.0, -1.0
+func processPingOutput(out string) (stats, error) {
+	stats := stats{
+		trans: 0,
+		recv:  0,
+		ttl:   -1,
+		roundTripTimeStats: roundTripTimeStats{
+			min:    -1.0,
+			avg:    -1.0,
+			max:    -1.0,
+			stddev: -1.0,
+		},
+	}
+
 	// Set this error to nil if we find a 'transmitted' line
-	err := errors.New("Fatal error processing ping output")
+	err := errors.New("fatal error processing ping output")
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
 		// Reading only first TTL, ignoring other TTL messages
-		if ttl == -1 && (strings.Contains(line, "ttl=") || strings.Contains(line, "hlim=")) {
-			ttl, err = getTTL(line)
-		} else if strings.Contains(line, "transmitted") &&
-			strings.Contains(line, "received") {
-			trans, recv, err = getPacketStats(line, trans, recv)
+		if stats.ttl == -1 && (strings.Contains(line, "ttl=") || strings.Contains(line, "hlim=")) {
+			stats.ttl, err = getTTL(line)
+		} else if strings.Contains(line, "transmitted") && strings.Contains(line, "received") {
+			stats.trans, stats.recv, err = getPacketStats(line)
 			if err != nil {
-				return trans, recv, ttl, min, avg, max, stddev, err
+				return stats, err
 			}
 		} else if strings.Contains(line, "min/avg/max") {
-			min, avg, max, stddev, err = checkRoundTripTimeStats(line, min, avg, max, stddev)
+			stats.roundTripTimeStats, err = checkRoundTripTimeStats(line)
 			if err != nil {
-				return trans, recv, ttl, min, avg, max, stddev, err
+				return stats, err
 			}
 		}
 	}
-	return trans, recv, ttl, min, avg, max, stddev, err
+	return stats, err
 }
 
-func getPacketStats(line string, trans, recv int) (int, int, error) {
+func getPacketStats(line string) (trans int, recv int, err error) {
+	trans, recv = 0, 0
+
 	stats := strings.Split(line, ", ")
 	// Transmitted packets
-	trans, err := strconv.Atoi(strings.Split(stats[0], " ")[0])
+	trans, err = strconv.Atoi(strings.Split(stats[0], " ")[0])
 	if err != nil {
 		return trans, recv, err
 	}
@@ -209,28 +220,35 @@ func getTTL(line string) (int, error) {
 	return strconv.Atoi(ttlMatch[2])
 }
 
-func checkRoundTripTimeStats(line string, min, avg, max,
-	stddev float64) (float64, float64, float64, float64, error) {
+func checkRoundTripTimeStats(line string) (roundTripTimeStats, error) {
+	roundTripTimeStats := roundTripTimeStats{
+		min:    -1.0,
+		avg:    -1.0,
+		max:    -1.0,
+		stddev: -1.0,
+	}
+
 	stats := strings.Split(line, " ")[3]
 	data := strings.Split(stats, "/")
 
-	min, err := strconv.ParseFloat(data[0], 64)
+	var err error
+	roundTripTimeStats.min, err = strconv.ParseFloat(data[0], 64)
 	if err != nil {
-		return min, avg, max, stddev, err
+		return roundTripTimeStats, err
 	}
-	avg, err = strconv.ParseFloat(data[1], 64)
+	roundTripTimeStats.avg, err = strconv.ParseFloat(data[1], 64)
 	if err != nil {
-		return min, avg, max, stddev, err
+		return roundTripTimeStats, err
 	}
-	max, err = strconv.ParseFloat(data[2], 64)
+	roundTripTimeStats.max, err = strconv.ParseFloat(data[2], 64)
 	if err != nil {
-		return min, avg, max, stddev, err
+		return roundTripTimeStats, err
 	}
 	if len(data) == 4 {
-		stddev, err = strconv.ParseFloat(data[3], 64)
+		roundTripTimeStats.stddev, err = strconv.ParseFloat(data[3], 64)
 		if err != nil {
-			return min, avg, max, stddev, err
+			return roundTripTimeStats, err
 		}
 	}
-	return min, avg, max, stddev, err
+	return roundTripTimeStats, err
 }
