@@ -65,25 +65,6 @@ func TestMetric(value interface{}, name ...string) telegraf.Metric {
 	return pt
 }
 
-func TestMetricWithType(value interface{}, t telegraf.ValueType, name ...string) telegraf.Metric {
-	if value == nil {
-		panic("Cannot use a nil value")
-	}
-	measurement := "test1"
-	if len(name) > 0 {
-		measurement = name[0]
-	}
-	tags := map[string]string{"tag1": "value1"}
-	pt := metric.New(
-		measurement,
-		tags,
-		map[string]interface{}{"value": value},
-		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-		t,
-	)
-	return pt
-}
-
 // OnlyTags returns an option for keeping only "Tags" for a given Metric
 func OnlyTags() cmp.Option {
 	f := func(p cmp.Path) bool { return p.String() != "Tags" && p.String() != "" }
