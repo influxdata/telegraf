@@ -8,7 +8,7 @@ This can be useful when dealing with output systems (e.g. Stackdriver) that
 impose hard limits on the number of tags/labels per metric or where high
 levels of cardinality are computationally and/or financially expensive.
 
-### Configuration
+## Configuration
 
 ```toml
 [[processors.tag_limit]]
@@ -19,7 +19,7 @@ levels of cardinality are computationally and/or financially expensive.
   keep = ["environment", "region"]
 ```
 
-### Example
+## Example
 
 ```diff
 + throughput month=Jun,environment=qa,region=us-east1,lower=10i,upper=1000i,mean=500i 1560540094000000000

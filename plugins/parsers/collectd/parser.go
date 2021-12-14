@@ -3,7 +3,6 @@ package collectd
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 
 	"collectd.org/api"
@@ -24,6 +23,7 @@ type CollectdParser struct {
 	//whether or not to split multi value metric into multiple metrics
 	//default value is split
 	ParseMultiValue string
+	Log             telegraf.Logger `toml:"-"`
 	popts           network.ParseOpts
 }
 
@@ -81,7 +81,7 @@ func (p *CollectdParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	metrics := []telegraf.Metric{}
 	for _, valueList := range valueLists {
-		metrics = append(metrics, UnmarshalValueList(valueList, p.ParseMultiValue)...)
+		metrics = append(metrics, p.unmarshalValueList(valueList)...)
 	}
 
 	if len(p.DefaultTags) > 0 {
@@ -115,12 +115,13 @@ func (p *CollectdParser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-// UnmarshalValueList translates a ValueList into a Telegraf metric.
-func UnmarshalValueList(vl *api.ValueList, multiValue string) []telegraf.Metric {
+// unmarshalValueList translates a ValueList into a Telegraf metric.
+func (p *CollectdParser) unmarshalValueList(vl *api.ValueList) []telegraf.Metric {
 	timestamp := vl.Time.UTC()
 
 	var metrics []telegraf.Metric
 
+	var multiValue = p.ParseMultiValue
 	//set multiValue to default "split" if nothing is specified
 	if multiValue == "" {
 		multiValue = "split"
@@ -192,7 +193,7 @@ func UnmarshalValueList(vl *api.ValueList, multiValue string) []telegraf.Metric 
 
 		metrics = append(metrics, m)
 	default:
-		log.Printf("parse-multi-value config can only be 'split' or 'join'")
+		p.Log.Info("parse-multi-value config can only be 'split' or 'join'")
 	}
 	return metrics
 }

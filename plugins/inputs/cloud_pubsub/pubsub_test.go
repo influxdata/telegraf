@@ -5,9 +5,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -53,7 +54,7 @@ func TestRunParse(t *testing.T) {
 	sub.messages <- msg
 
 	acc.Wait(1)
-	assert.Equal(t, acc.NFields(), 1)
+	require.Equal(t, acc.NFields(), 1)
 	metric := acc.Metrics[0]
 	validateTestInfluxMetric(t, metric)
 }
@@ -98,7 +99,7 @@ func TestRunBase64(t *testing.T) {
 	sub.messages <- msg
 
 	acc.Wait(1)
-	assert.Equal(t, acc.NFields(), 1)
+	require.Equal(t, acc.NFields(), 1)
 	metric := acc.Metrics[0]
 	validateTestInfluxMetric(t, metric)
 }
@@ -145,7 +146,7 @@ func TestRunInvalidMessages(t *testing.T) {
 	// Make sure we acknowledged message so we don't receive it again.
 	testTracker.WaitForAck(1)
 
-	assert.Equal(t, acc.NFields(), 0)
+	require.Equal(t, acc.NFields(), 0)
 }
 
 func TestRunOverlongMessages(t *testing.T) {
@@ -192,7 +193,7 @@ func TestRunOverlongMessages(t *testing.T) {
 	// Make sure we acknowledged message so we don't receive it again.
 	testTracker.WaitForAck(1)
 
-	assert.Equal(t, acc.NFields(), 0)
+	require.Equal(t, acc.NFields(), 0)
 }
 
 func TestRunErrorInSubscriber(t *testing.T) {
@@ -228,12 +229,12 @@ func TestRunErrorInSubscriber(t *testing.T) {
 		t.Fatal("expected plugin subscription to be non-nil")
 	}
 	acc.WaitError(1)
-	assert.Regexp(t, fakeErrStr, acc.Errors[0])
+	require.Regexp(t, fakeErrStr, acc.Errors[0])
 }
 
 func validateTestInfluxMetric(t *testing.T, m *testutil.Metric) {
-	assert.Equal(t, "cpu_load_short", m.Measurement)
-	assert.Equal(t, "server01", m.Tags["host"])
-	assert.Equal(t, 23422.0, m.Fields["value"])
-	assert.Equal(t, int64(1422568543702900257), m.Time.UnixNano())
+	require.Equal(t, "cpu_load_short", m.Measurement)
+	require.Equal(t, "server01", m.Tags["host"])
+	require.Equal(t, 23422.0, m.Fields["value"])
+	require.Equal(t, int64(1422568543702900257), m.Time.UnixNano())
 }

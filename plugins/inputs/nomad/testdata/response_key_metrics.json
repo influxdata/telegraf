@@ -1,0 +1,48 @@
+{
+	"Counters": [
+		{
+			"Count": 7,
+			"Labels": {
+				"host": "node1"
+			},
+			"Max": 1,
+			"Mean": 1,
+			"Min": 1,
+			"Name": "nomad.nomad.rpc.query",
+			"Rate": 0.7,
+			"Stddev": 0,
+			"Sum": 7
+		}
+	],
+	"Gauges": [
+		{
+			"Labels": {
+				"node_scheduling_eligibility": "eligible",
+				"host": "node1",
+				"node_id": "2bbff078-8473-a9de-6c5e-42b4e053e12f",
+				"datacenter": "dc1",
+				"node_class": "none",
+				"node_status": "ready"
+			},
+			"Name": "nomad.client.allocated.cpu",
+			"Value": 500
+		}
+	],
+	"Points": [],
+	"Samples": [
+		{
+			"Count": 20,
+			"Labels": {
+				"host": "node1"
+			},
+			"Max": 0.03747599944472313,
+			"Mean": 0.013159099989570678,
+			"Min": 0.003459000028669834,
+			"Name": "nomad.memberlist.gossip",
+			"Rate": 0.026318199979141355,
+			"Stddev": 0.009523742715522742,
+			"Sum": 0.26318199979141355
+		}
+	],
+	"Timestamp": "2021-11-13 22:39:00 +0000 UTC"
+}

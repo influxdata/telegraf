@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/prometheus/prompb"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/prometheus/prometheus/prompb"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestParse(t *testing.T) {
@@ -35,7 +36,7 @@ func TestParse(t *testing.T) {
 	}
 
 	inoutBytes, err := prompbInput.Marshal()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -65,8 +66,8 @@ func TestParse(t *testing.T) {
 	}
 
 	metrics, err := parser.Parse(inoutBytes)
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 2)
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
@@ -86,7 +87,7 @@ func TestDefaultTags(t *testing.T) {
 	}
 
 	inoutBytes, err := prompbInput.Marshal()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -109,8 +110,8 @@ func TestDefaultTags(t *testing.T) {
 	}
 
 	metrics, err := parser.Parse(inoutBytes)
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
@@ -132,7 +133,7 @@ func TestMetricsWithTimestamp(t *testing.T) {
 	}
 
 	inoutBytes, err := prompbInput.Marshal()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -151,7 +152,7 @@ func TestMetricsWithTimestamp(t *testing.T) {
 	}
 
 	metrics, err := parser.Parse(inoutBytes)
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
 }

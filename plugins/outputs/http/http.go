@@ -4,13 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
+	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/influxdata/telegraf"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -64,6 +68,11 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 
+  ## Use batch serialization format (default) instead of line based format.
+  ## Batch format is more efficient and should be used unless line based
+  ## format is really needed.
+  # use_batch_format = true
+
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
@@ -77,12 +86,33 @@ var sampleConfig = `
   ## Maximum amount of time before idle connection is closed.
   ## Zero means no limit.
   # idle_conn_timeout = 0
+
+  ## Amazon Region
+  #region = "us-east-1"
+
+  ## Amazon Credentials
+  ## Credentials are loaded in the following order
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
+  #access_key = ""
+  #secret_key = ""
+  #token = ""
+  #role_arn = ""
+  #web_identity_token_file = ""
+  #role_session_name = ""
+  #profile = ""
+  #shared_credential_file = ""
 `
 
 const (
-	defaultClientTimeout = 5 * time.Second
-	defaultContentType   = "text/plain; charset=utf-8"
-	defaultMethod        = http.MethodPost
+	defaultContentType    = "text/plain; charset=utf-8"
+	defaultMethod         = http.MethodPost
+	defaultUseBatchFormat = true
 )
 
 type HTTP struct {
@@ -92,11 +122,16 @@ type HTTP struct {
 	Password        string            `toml:"password"`
 	Headers         map[string]string `toml:"headers"`
 	ContentEncoding string            `toml:"content_encoding"`
+	UseBatchFormat  bool              `toml:"use_batch_format"`
+	AwsService      string            `toml:"aws_service"`
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
 	client     *http.Client
 	serializer serializers.Serializer
+
+	awsCfg *awsV2.Config
+	internalaws.CredentialConfig
 }
 
 func (h *HTTP) SetSerializer(serializer serializers.Serializer) {
@@ -104,6 +139,13 @@ func (h *HTTP) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (h *HTTP) Connect() error {
+	if h.AwsService != "" {
+		cfg, err := h.CredentialConfig.Credentials()
+		if err == nil {
+			h.awsCfg = &cfg
+		}
+	}
+
 	if h.Method == "" {
 		h.Method = http.MethodPost
 	}
@@ -136,15 +178,33 @@ func (h *HTTP) SampleConfig() string {
 }
 
 func (h *HTTP) Write(metrics []telegraf.Metric) error {
-	reqBody, err := h.serializer.SerializeBatch(metrics)
-	if err != nil {
-		return err
+	var reqBody []byte
+
+	if h.UseBatchFormat {
+		var err error
+		reqBody, err = h.serializer.SerializeBatch(metrics)
+		if err != nil {
+			return err
+		}
+
+		return h.writeMetric(reqBody)
 	}
 
-	return h.write(reqBody)
+	for _, metric := range metrics {
+		var err error
+		reqBody, err = h.serializer.Serialize(metric)
+		if err != nil {
+			return err
+		}
+
+		if err := h.writeMetric(reqBody); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (h *HTTP) write(reqBody []byte) error {
+func (h *HTTP) writeMetric(reqBody []byte) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 
 	var err error
@@ -157,9 +217,41 @@ func (h *HTTP) write(reqBody []byte) error {
 		reqBodyBuffer = rc
 	}
 
+	var payloadHash *string
+	if h.awsCfg != nil {
+		// We need a local copy of the full buffer, the signature scheme requires a sha256 of the request body.
+		buf := new(bytes.Buffer)
+		_, err = io.Copy(buf, reqBodyBuffer)
+		if err != nil {
+			return err
+		}
+
+		sum := sha256.Sum256(buf.Bytes())
+		reqBodyBuffer = buf
+
+		// sha256 is hex encoded
+		hash := fmt.Sprintf("%x", sum)
+		payloadHash = &hash
+	}
+
 	req, err := http.NewRequest(h.Method, h.URL, reqBodyBuffer)
 	if err != nil {
 		return err
+	}
+
+	if h.awsCfg != nil {
+		signer := v4.NewSigner()
+		ctx := context.Background()
+
+		credentials, err := h.awsCfg.Credentials.Retrieve(ctx)
+		if err != nil {
+			return err
+		}
+
+		err = signer.SignHTTP(ctx, credentials, req, *payloadHash, h.AwsService, h.Region, time.Now().UTC())
+		if err != nil {
+			return err
+		}
 	}
 
 	if h.Username != "" || h.Password != "" {
@@ -205,8 +297,9 @@ func (h *HTTP) write(reqBody []byte) error {
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &HTTP{
-			Method: defaultMethod,
-			URL:    defaultURL,
+			Method:         defaultMethod,
+			URL:            defaultURL,
+			UseBatchFormat: defaultUseBatchFormat,
 		}
 	})
 }

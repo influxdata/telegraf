@@ -7,7 +7,7 @@ More about [performance statistics](https://cwiki.apache.org/confluence/display/
 
 Tested from 3.5 to 7.*
 
-### Configuration:
+## Configuration
 
 ```toml
 [[inputs.solr]]
@@ -22,9 +22,9 @@ Tested from 3.5 to 7.*
   # password = "pa$$word"
 ```
 
-### Example output of gathered metrics:
+## Example output of gathered metrics
 
-```
+```shell
 ➜  ~ telegraf -config telegraf.conf -input-filter solr -test
 * Plugin: solr, Collection 1
 > solr_core,core=main,handler=searcher,host=testhost deleted_docs=17616645i,max_docs=261848363i,num_docs=244231718i 1478214949000000000

@@ -13,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/shirou/gopsutil/process"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 var (
@@ -154,11 +154,16 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	tags := make(map[string]string)
 	p.procs = newProcs
 	for _, proc := range p.procs {
-		tags = proc.Tags()
 		p.addMetric(proc, acc, now)
+	}
+
+	tags := make(map[string]string)
+	for _, pidTag := range pidTags {
+		for key, value := range pidTag.Tags {
+			tags[key] = value
+		}
 	}
 
 	fields := map[string]interface{}{
