@@ -1,3 +1,4 @@
+//go:build freebsd
 // +build freebsd
 
 package zfs
@@ -29,6 +30,18 @@ var zpool_output_unavail = []string{
 
 func mock_zpool_unavail() ([]string, error) {
 	return zpool_output_unavail, nil
+}
+
+// $ zfs list -Hp -o name,avail,used,usedsnap,usedds
+var zdataset_output = []string{
+	"zata    10741741326336  8564135526400   0       90112",
+	"zata/home       10741741326336  2498560 212992  2285568",
+	"zata/import     10741741326336  196608  81920   114688",
+	"zata/storage    10741741326336  8556084379648   3601138999296   4954945380352",
+}
+
+func mock_zdataset() ([]string, error) {
+	return zdataset_output, nil
 }
 
 // sysctl -q kstat.zfs.misc.arcstats
@@ -126,6 +139,39 @@ func TestZfsPoolMetrics_unavail(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 }
 
+func TestZfsDatasetMetrics(t *testing.T) {
+	var acc testutil.Accumulator
+
+	z := &Zfs{
+		KstatMetrics: []string{"vdev_cache_stats"},
+		sysctl:       mock_sysctl,
+		zdataset:     mock_zdataset,
+	}
+	err := z.Gather(&acc)
+	require.NoError(t, err)
+
+	require.False(t, acc.HasMeasurement("zfs_dataset"))
+	acc.Metrics = nil
+
+	z = &Zfs{
+		KstatMetrics:   []string{"vdev_cache_stats"},
+		DatasetMetrics: true,
+		sysctl:         mock_sysctl,
+		zdataset:       mock_zdataset,
+	}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	//one pool, all metrics
+	tags := map[string]string{
+		"dataset": "zata",
+	}
+
+	datasetMetrics := getZataDatasetMetrics()
+
+	acc.AssertContainsTaggedFields(t, "zfs_dataset", datasetMetrics, tags)
+}
+
 func TestZfsGeneratesMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
@@ -175,6 +221,15 @@ func getFreeNasBootPoolMetrics() map[string]interface{} {
 func getTemp2PoolMetrics() map[string]interface{} {
 	return map[string]interface{}{
 		"size": int64(0),
+	}
+}
+
+func getZataDatasetMetrics() map[string]interface{} {
+	return map[string]interface{}{
+		"avail":    int64(10741741326336),
+		"used":     int64(8564135526400),
+		"usedsnap": int64(0),
+		"usedds":   int64(90112),
 	}
 }
 

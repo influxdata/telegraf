@@ -4,19 +4,20 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type Amon struct {
-	ServerKey    string
-	AmonInstance string
-	Timeout      internal.Duration
+	ServerKey    string          `toml:"server_key"`
+	AmonInstance string          `toml:"amon_instance"`
+	Timeout      config.Duration `toml:"timeout"`
+	Log          telegraf.Logger `toml:"-"`
 
 	client *http.Client
 }
@@ -51,7 +52,7 @@ func (a *Amon) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: a.Timeout.Duration,
+		Timeout: time.Duration(a.Timeout),
 	}
 	return nil
 }
@@ -76,7 +77,7 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 				metricCounter++
 			}
 		} else {
-			log.Printf("I! unable to build Metric for %s, skipping\n", m.Name())
+			a.Log.Infof("Unable to build Metric for %s, skipping", m.Name())
 		}
 	}
 
@@ -84,22 +85,22 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
-		return fmt.Errorf("unable to marshal TimeSeries, %s\n", err.Error())
+		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
 	}
-	req, err := http.NewRequest("POST", a.authenticatedUrl(), bytes.NewBuffer(tsBytes))
+	req, err := http.NewRequest("POST", a.authenticatedURL(), bytes.NewBuffer(tsBytes))
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s\n", err.Error())
+		return fmt.Errorf("unable to create http.Request, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
+		return fmt.Errorf("error POSTing metrics, %s", err.Error())
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
-		return fmt.Errorf("received bad status code, %d\n", resp.StatusCode)
+		return fmt.Errorf("received bad status code, %d", resp.StatusCode)
 	}
 
 	return nil
@@ -113,8 +114,7 @@ func (a *Amon) Description() string {
 	return "Configuration for Amon Server to send metrics to."
 }
 
-func (a *Amon) authenticatedUrl() string {
-
+func (a *Amon) authenticatedURL() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
 
@@ -134,15 +134,15 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 func (p *Point) setValue(v interface{}) error {
 	switch d := v.(type) {
 	case int:
-		p[1] = float64(int(d))
+		p[1] = float64(d)
 	case int32:
-		p[1] = float64(int32(d))
+		p[1] = float64(d)
 	case int64:
-		p[1] = float64(int64(d))
+		p[1] = float64(d)
 	case float32:
 		p[1] = float64(d)
 	case float64:
-		p[1] = float64(d)
+		p[1] = d
 	default:
 		return fmt.Errorf("undeterminable type")
 	}

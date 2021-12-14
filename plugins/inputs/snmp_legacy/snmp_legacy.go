@@ -1,17 +1,17 @@
 package snmp_legacy
 
 import (
-	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/soniah/gosnmp"
 )
 
 // Snmp is a snmp plugin
@@ -46,9 +46,9 @@ type Host struct {
 	// Table
 	Table []HostTable
 	// Oids
-	getOids  []Data
-	bulkOids []Data
-	tables   []HostTable
+	internalGetOids []Data
+	bulkOids        []Data
+	tables          []HostTable
 	// array of processed oids
 	// to skip oid duplication
 	processedOids []string
@@ -102,7 +102,7 @@ type Data struct {
 	// Unit
 	Unit string
 	//  SNMP getbulk max repetition
-	MaxRepetition uint8 `toml:"max_repetition"`
+	MaxRepetition uint32 `toml:"max_repetition"`
 	// SNMP Instance (default 0)
 	// (only used with  GET request and if
 	//  OID is a name from snmptranslate file)
@@ -230,27 +230,27 @@ func (s *Snmp) Description() string {
 	return `DEPRECATED! PLEASE USE inputs.snmp INSTEAD.`
 }
 
-func fillnode(parentNode Node, oid_name string, ids []string) {
+func fillnode(parentNode Node, oidName string, ids []string) {
 	// ids = ["1", "3", "6", ...]
 	id, ids := ids[0], ids[1:]
 	node, ok := parentNode.subnodes[id]
-	if ok == false {
+	if !ok {
 		node = Node{
 			id:       id,
 			name:     "",
 			subnodes: make(map[string]Node),
 		}
 		if len(ids) == 0 {
-			node.name = oid_name
+			node.name = oidName
 		}
 		parentNode.subnodes[id] = node
 	}
 	if len(ids) > 0 {
-		fillnode(node, oid_name, ids)
+		fillnode(node, oidName, ids)
 	}
 }
 
-func findnodename(node Node, ids []string) (string, string) {
+func findNodeName(node Node, ids []string) (oidName string, instance string) {
 	// ids = ["1", "3", "6", ...]
 	if len(ids) == 1 {
 		return node.name, ids[0]
@@ -259,7 +259,7 @@ func findnodename(node Node, ids []string) (string, string) {
 	// Get node
 	subnode, ok := node.subnodes[id]
 	if ok {
-		return findnodename(subnode, ids)
+		return findNodeName(subnode, ids)
 	}
 	// We got a node
 	// Get node name
@@ -268,7 +268,7 @@ func findnodename(node Node, ids []string) (string, string) {
 		return node.name, "0"
 	} else if node.name != "" && len(ids) == 0 && id != "0" {
 		// node with an instance
-		return node.name, string(id)
+		return node.name, id
 	} else if node.name != "" && len(ids) > 0 {
 		// node with subinstances
 		return node.name, strings.Join(ids, ".")
@@ -296,19 +296,19 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			subnodes: make(map[string]Node),
 		}
 
-		data, err := ioutil.ReadFile(s.SnmptranslateFile)
+		data, err := os.ReadFile(s.SnmptranslateFile)
 		if err != nil {
 			s.Log.Errorf("Reading SNMPtranslate file error: %s", err.Error())
 			return err
-		} else {
-			for _, line := range strings.Split(string(data), "\n") {
-				oids := strings.Fields(string(line))
-				if len(oids) == 2 && oids[1] != "" {
-					oid_name := oids[0]
-					oid := oids[1]
-					fillnode(s.initNode, oid_name, strings.Split(string(oid), "."))
-					s.nameToOid[oid_name] = oid
-				}
+		}
+
+		for _, line := range strings.Split(string(data), "\n") {
+			oids := strings.Fields(line)
+			if len(oids) == 2 && oids[1] != "" {
+				oidName := oids[0]
+				oid := oids[1]
+				fillnode(s.initNode, oidName, strings.Split(oid, "."))
+				s.nameToOid[oidName] = oid
 			}
 		}
 	}
@@ -339,19 +339,19 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			} else {
 				oid.Name = oidstring
 				oid.Oid = oidstring
-				if string(oidstring[:1]) != "." {
+				if oidstring[:1] != "." {
 					oid.rawOid = "." + oidstring
 				} else {
 					oid.rawOid = oidstring
 				}
 			}
-			host.getOids = append(host.getOids, oid)
+			host.internalGetOids = append(host.internalGetOids, oid)
 		}
 
-		for _, oid_name := range host.Collect {
+		for _, oidName := range host.Collect {
 			// Get GET oids
 			for _, oid := range s.Get {
-				if oid.Name == oid_name {
+				if oid.Name == oidName {
 					if val, ok := s.nameToOid[oid.Oid]; ok {
 						// TODO should we add the 0 instance ?
 						if oid.Instance != "" {
@@ -362,12 +362,12 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 					} else {
 						oid.rawOid = oid.Oid
 					}
-					host.getOids = append(host.getOids, oid)
+					host.internalGetOids = append(host.internalGetOids, oid)
 				}
 			}
 			// Get GETBULK oids
 			for _, oid := range s.Bulk {
-				if oid.Name == oid_name {
+				if oid.Name == oidName {
 					if val, ok := s.nameToOid[oid.Oid]; ok {
 						oid.rawOid = "." + val
 					} else {
@@ -395,7 +395,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// to do it only the first time
 		// only if len(s.OidInstanceMapping) == 0
 		if len(host.OidInstanceMapping) >= 0 {
-			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
+			if err := host.SNMPMap(s.nameToOid, s.subTableMap); err != nil {
 				s.Log.Errorf("Mapping error for host %q: %s", host.Address, err.Error())
 				continue
 			}
@@ -412,7 +412,6 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 }
 
 func (h *Host) SNMPMap(
-	acc telegraf.Accumulator,
 	nameToOid map[string]string,
 	subTableMap map[string]Subtable,
 ) error {
@@ -464,7 +463,7 @@ func (h *Host) SNMPMap(
 					}
 					// TODO check oid validity
 
-					// Add the new oid to getOids list
+					// Add the new oid to bulkOids list
 					h.bulkOids = append(h.bulkOids, oid)
 				}
 			}
@@ -473,15 +472,15 @@ func (h *Host) SNMPMap(
 			// We need to query this table
 			// To get mapping between instance id
 			// and instance name
-			oid_asked := table.mappingTable
-			oid_next := oid_asked
-			need_more_requests := true
+			oidAsked := table.mappingTable
+			oidNext := oidAsked
+			needMoreRequests := true
 			// Set max repetition
-			maxRepetition := uint8(32)
+			maxRepetition := uint32(32)
 			// Launch requests
-			for need_more_requests {
+			for needMoreRequests {
 				// Launch request
-				result, err3 := snmpClient.GetBulk([]string{oid_next}, 0, maxRepetition)
+				result, err3 := snmpClient.GetBulk([]string{oidNext}, 0, maxRepetition)
 				if err3 != nil {
 					return err3
 				}
@@ -489,7 +488,7 @@ func (h *Host) SNMPMap(
 				lastOid := ""
 				for _, variable := range result.Variables {
 					lastOid = variable.Name
-					if strings.HasPrefix(variable.Name, oid_asked) {
+					if strings.HasPrefix(variable.Name, oidAsked) {
 						switch variable.Type {
 						// handle instance names
 						case gosnmp.OctetString:
@@ -519,7 +518,7 @@ func (h *Host) SNMPMap(
 
 							// remove oid table from the complete oid
 							// in order to get the current instance id
-							key := strings.Replace(variable.Name, oid_asked, "", 1)
+							key := strings.Replace(variable.Name, oidAsked, "", 1)
 
 							if len(table.subTables) == 0 {
 								// We have a mapping table
@@ -570,8 +569,8 @@ func (h *Host) SNMPMap(
 									}
 									// TODO check oid validity
 
-									// Add the new oid to getOids list
-									h.getOids = append(h.getOids, oid)
+									// Add the new oid to internalGetOids list
+									h.internalGetOids = append(h.internalGetOids, oid)
 								}
 							}
 						default:
@@ -581,11 +580,11 @@ func (h *Host) SNMPMap(
 					}
 				}
 				// Determine if we need more requests
-				if strings.HasPrefix(lastOid, oid_asked) {
-					need_more_requests = true
-					oid_next = lastOid
+				if strings.HasPrefix(lastOid, oidAsked) {
+					needMoreRequests = true
+					oidNext = lastOid
 				} else {
-					need_more_requests = false
+					needMoreRequests = false
 				}
 			}
 		}
@@ -607,7 +606,7 @@ func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
 	defer snmpClient.Conn.Close()
 	// Prepare OIDs
 	oidsList := make(map[string]Data)
-	for _, oid := range h.getOids {
+	for _, oid := range h.internalGetOids {
 		oidsList[oid.rawOid] = oid
 	}
 	oidsNameList := make([]string, 0, len(oidsList))
@@ -617,15 +616,15 @@ func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
 
 	// gosnmp.MAX_OIDS == 60
 	// TODO use gosnmp.MAX_OIDS instead of hard coded value
-	max_oids := 60
+	maxOids := 60
 	// limit 60 (MAX_OIDS) oids by requests
-	for i := 0; i < len(oidsList); i = i + max_oids {
+	for i := 0; i < len(oidsList); i = i + maxOids {
 		// Launch request
-		max_index := i + max_oids
-		if i+max_oids > len(oidsList) {
-			max_index = len(oidsList)
+		maxIndex := i + maxOids
+		if i+maxOids > len(oidsList) {
+			maxIndex = len(oidsList)
 		}
-		result, err3 := snmpClient.Get(oidsNameList[i:max_index]) // Get() accepts up to g.MAX_OIDS
+		result, err3 := snmpClient.Get(oidsNameList[i:maxIndex]) // Get() accepts up to g.MAX_OIDS
 		if err3 != nil {
 			return err3
 		}
@@ -658,31 +657,31 @@ func (h *Host) SNMPBulk(acc telegraf.Accumulator, initNode Node) error {
 	// TODO Trying to make requests with more than one OID
 	// to reduce the number of requests
 	for _, oid := range oidsNameList {
-		oid_asked := oid
-		need_more_requests := true
+		oidAsked := oid
+		needMoreRequests := true
 		// Set max repetition
 		maxRepetition := oidsList[oid].MaxRepetition
 		if maxRepetition <= 0 {
 			maxRepetition = 32
 		}
 		// Launch requests
-		for need_more_requests {
+		for needMoreRequests {
 			// Launch request
 			result, err3 := snmpClient.GetBulk([]string{oid}, 0, maxRepetition)
 			if err3 != nil {
 				return err3
 			}
 			// Handle response
-			last_oid, err := h.HandleResponse(oidsList, result, acc, initNode)
+			lastOid, err := h.HandleResponse(oidsList, result, acc, initNode)
 			if err != nil {
 				return err
 			}
 			// Determine if we need more requests
-			if strings.HasPrefix(last_oid, oid_asked) {
-				need_more_requests = true
-				oid = last_oid
+			if strings.HasPrefix(lastOid, oidAsked) {
+				needMoreRequests = true
+				oid = lastOid
 			} else {
-				need_more_requests = false
+				needMoreRequests = false
 			}
 		}
 	}
@@ -700,13 +699,16 @@ func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
 		version = gosnmp.Version2c
 	}
 	// Prepare host and port
-	host, port_str, err := net.SplitHostPort(h.Address)
+	host, portStr, err := net.SplitHostPort(h.Address)
 	if err != nil {
-		port_str = string("161")
+		portStr = "161"
 	}
 	// convert port_str to port in uint16
-	port_64, err := strconv.ParseUint(port_str, 10, 16)
-	port := uint16(port_64)
+	port64, err := strconv.ParseUint(portStr, 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	port := uint16(port64)
 	// Get SNMP client
 	snmpClient := &gosnmp.GoSNMP{
 		Target:    host,
@@ -736,7 +738,7 @@ func (h *Host) HandleResponse(
 		lastOid = variable.Name
 	nextresult:
 		// Get only oid wanted
-		for oid_key, oid := range oids {
+		for oidKey, oid := range oids {
 			// Skip oids already processed
 			for _, processedOid := range h.processedOids {
 				if variable.Name == processedOid {
@@ -747,7 +749,7 @@ func (h *Host) HandleResponse(
 			// OR
 			// the result is SNMP table which "." comes right after oid_key.
 			// ex: oid_key: .1.3.6.1.2.1.2.2.1.16, variable.Name: .1.3.6.1.2.1.2.2.1.16.1
-			if variable.Name == oid_key || strings.HasPrefix(variable.Name, oid_key+".") {
+			if variable.Name == oidKey || strings.HasPrefix(variable.Name, oidKey+".") {
 				switch variable.Type {
 				// handle Metrics
 				case gosnmp.Boolean, gosnmp.Integer, gosnmp.Counter32, gosnmp.Gauge32,
@@ -758,19 +760,19 @@ func (h *Host) HandleResponse(
 						tags["unit"] = oid.Unit
 					}
 					// Get name and instance
-					var oid_name string
+					var oidName string
 					var instance string
 					// Get oidname and instance from translate file
-					oid_name, instance = findnodename(initNode,
-						strings.Split(string(variable.Name[1:]), "."))
+					oidName, instance = findNodeName(initNode,
+						strings.Split(variable.Name[1:], "."))
 					// Set instance tag
 					// From mapping table
-					mapping, inMappingNoSubTable := h.OidInstanceMapping[oid_key]
+					mapping, inMappingNoSubTable := h.OidInstanceMapping[oidKey]
 					if inMappingNoSubTable {
 						// filter if the instance in not in
 						// OidInstanceMapping mapping map
-						if instance_name, exists := mapping[instance]; exists {
-							tags["instance"] = instance_name
+						if instanceName, exists := mapping[instance]; exists {
+							tags["instance"] = instanceName
 						} else {
 							continue
 						}
@@ -785,24 +787,24 @@ func (h *Host) HandleResponse(
 					}
 
 					// Set name
-					var field_name string
-					if oid_name != "" {
+					var fieldName string
+					if oidName != "" {
 						// Set fieldname as oid name from translate file
-						field_name = oid_name
+						fieldName = oidName
 					} else {
 						// Set fieldname as oid name from inputs.snmp.get section
 						// Because the result oid is equal to inputs.snmp.get section
-						field_name = oid.Name
+						fieldName = oid.Name
 					}
 					tags["snmp_host"], _, _ = net.SplitHostPort(h.Address)
 					fields := make(map[string]interface{})
-					fields[string(field_name)] = variable.Value
+					fields[fieldName] = variable.Value
 
 					h.processedOids = append(h.processedOids, variable.Name)
-					acc.AddFields(field_name, fields, tags)
+					acc.AddFields(fieldName, fields, tags)
 				case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
 					// Oid not found
-					log.Printf("E! [inputs.snmp_legacy] oid %q not found", oid_key)
+					log.Printf("E! [inputs.snmp_legacy] oid %q not found", oidKey)
 				default:
 					// delete other data
 				}

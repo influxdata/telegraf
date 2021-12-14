@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -18,7 +18,7 @@ type Icinga2 struct {
 	ObjectType      string
 	Username        string
 	Password        string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	Log telegraf.Logger
@@ -53,7 +53,7 @@ type ObjectType string
 var sampleConfig = `
   ## Required Icinga2 server address
   # server = "https://localhost:5665"
-  
+
   ## Required Icinga2 object type ("services" or "hosts")
   # object_type = "services"
 
@@ -82,7 +82,7 @@ func (i *Icinga2) SampleConfig() string {
 
 func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 	for _, check := range checks {
-		url, err := url.Parse(i.Server)
+		serverURL, err := url.Parse(i.Server)
 		if err != nil {
 			i.Log.Error(err.Error())
 			continue
@@ -106,16 +106,16 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 			"check_command": check.Attrs.CheckCommand,
 			"source":        source,
 			"state":         levels[state],
-			"server":        url.Hostname(),
-			"scheme":        url.Scheme,
-			"port":          url.Port(),
+			"server":        serverURL.Hostname(),
+			"scheme":        serverURL.Scheme,
+			"port":          serverURL.Port(),
 		}
 
 		acc.AddFields(fmt.Sprintf("icinga2_%s", i.ObjectType), fields, tags)
 	}
 }
 
-func (i *Icinga2) createHttpClient() (*http.Client, error) {
+func (i *Icinga2) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -125,36 +125,36 @@ func (i *Icinga2) createHttpClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: i.ResponseTimeout.Duration,
+		Timeout: time.Duration(i.ResponseTimeout),
 	}
 
 	return client, nil
 }
 
 func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
-	if i.ResponseTimeout.Duration < time.Second {
-		i.ResponseTimeout.Duration = time.Second * 5
+	if i.ResponseTimeout < config.Duration(time.Second) {
+		i.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	if i.client == nil {
-		client, err := i.createHttpClient()
+		client, err := i.createHTTPClient()
 		if err != nil {
 			return err
 		}
 		i.client = client
 	}
 
-	requestUrl := "%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command"
+	requestURL := "%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command"
 
 	// Note: attrs=host_name is only valid for 'services' requests, using check.Attrs.HostName for the host
 	//       'hosts' requests will need to use attrs=name only, using check.Attrs.Name for the host
 	if i.ObjectType == "services" {
-		requestUrl += "&attrs=host_name"
+		requestURL += "&attrs=host_name"
 	}
 
-	url := fmt.Sprintf(requestUrl, i.Server, i.ObjectType)
+	address := fmt.Sprintf(requestURL, i.Server, i.ObjectType)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 	defer resp.Body.Close()
 
 	result := Result{}
-	json.NewDecoder(resp.Body).Decode(&result)
+	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,7 @@ func init() {
 		return &Icinga2{
 			Server:          "https://localhost:5665",
 			ObjectType:      "services",
-			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
+			ResponseTimeout: config.Duration(time.Second * 5),
 		}
 	})
 }

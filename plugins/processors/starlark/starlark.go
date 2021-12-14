@@ -1,13 +1,11 @@
 package starlark
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/influxdata/telegraf"
+	common "github.com/influxdata/telegraf/plugins/common/starlark"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
 )
 
@@ -26,89 +24,38 @@ def apply(metric):
 
   ## File containing a Starlark script.
   # script = "/usr/local/bin/myscript.star"
+
+  ## The constants of the Starlark script.
+  # [processors.starlark.constants]
+  #   max_size = 10
+  #   threshold = 0.75
+  #   default_name = "Julia"
+  #   debug_mode = true
 `
 )
 
 type Starlark struct {
-	Source string `toml:"source"`
-	Script string `toml:"script"`
+	common.StarlarkCommon
 
-	Log telegraf.Logger `toml:"-"`
-
-	thread    *starlark.Thread
-	applyFunc *starlark.Function
-	args      starlark.Tuple
-	results   []telegraf.Metric
+	results []telegraf.Metric
 }
 
 func (s *Starlark) Init() error {
-	if s.Source == "" && s.Script == "" {
-		return errors.New("one of source or script must be set")
-	}
-	if s.Source != "" && s.Script != "" {
-		return errors.New("both source or script cannot be set")
-	}
-
-	s.thread = &starlark.Thread{
-		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
-	}
-
-	builtins := starlark.StringDict{}
-	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
-	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
-
-	program, err := s.sourceProgram(builtins)
+	err := s.StarlarkCommon.Init()
 	if err != nil {
 		return err
 	}
-
-	// Execute source
-	globals, err := program.Init(s.thread, builtins)
-	if err != nil {
-		return err
-	}
-
-	// Freeze the global state.  This prevents modifications to the processor
-	// state and prevents scripts from containing errors storing tracking
-	// metrics.  Tasks that require global state will not be possible due to
-	// this, so maybe we should relax this in the future.
-	globals.Freeze()
 
 	// The source should define an apply function.
-	apply := globals["apply"]
-
-	if apply == nil {
-		return errors.New("apply is not defined")
+	err = s.AddFunction("apply", &common.Metric{})
+	if err != nil {
+		return err
 	}
-
-	var ok bool
-	if s.applyFunc, ok = apply.(*starlark.Function); !ok {
-		return errors.New("apply is not a function")
-	}
-
-	if s.applyFunc.NumParams() != 1 {
-		return errors.New("apply function must take one parameter")
-	}
-
-	// Reusing the same metric wrapper to skip an allocation.  This will cause
-	// any saved references to point to the new metric, but due to freezing the
-	// globals none should exist.
-	s.args = make(starlark.Tuple, 1)
-	s.args[0] = &Metric{}
 
 	// Preallocate a slice for return values.
 	s.results = make([]telegraf.Metric, 0, 10)
 
 	return nil
-}
-
-func (s *Starlark) sourceProgram(builtins starlark.StringDict) (*starlark.Program, error) {
-	if s.Source != "" {
-		_, program, err := starlark.SourceProgram("processor.starlark", s.Source, builtins.Has)
-		return program, err
-	}
-	_, program, err := starlark.SourceProgram(s.Script, nil, builtins.Has)
-	return program, err
 }
 
 func (s *Starlark) SampleConfig() string {
@@ -119,20 +66,20 @@ func (s *Starlark) Description() string {
 	return description
 }
 
-func (s *Starlark) Start(acc telegraf.Accumulator) error {
+func (s *Starlark) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
 func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
-	s.args[0].(*Metric).Wrap(metric)
+	parameters, found := s.GetParameters("apply")
+	if !found {
+		return fmt.Errorf("The parameters of the apply function could not be found")
+	}
+	parameters[0].(*common.Metric).Wrap(metric)
 
-	rv, err := starlark.Call(s.thread, s.applyFunc, s.args, nil)
+	rv, err := s.Call("apply")
 	if err != nil {
-		if err, ok := err.(*starlark.EvalError); ok {
-			for _, line := range strings.Split(err.Backtrace(), "\n") {
-				s.Log.Error(line)
-			}
-		}
+		s.LogError(err)
 		metric.Reject()
 		return err
 	}
@@ -144,7 +91,7 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 		var v starlark.Value
 		for iter.Next(&v) {
 			switch v := v.(type) {
-			case *Metric:
+			case *common.Metric:
 				m := v.Unwrap()
 				if containsMetric(s.results, m) {
 					s.Log.Errorf("Duplicate metric reference detected")
@@ -168,7 +115,7 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 			s.results[i] = nil
 		}
 		s.results = s.results[:0]
-	case *Metric:
+	case *common.Metric:
 		m := rv.Unwrap()
 
 		// If the script returned a different metric, mark this metric as
@@ -199,17 +146,11 @@ func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {
 }
 
 func init() {
-	// https://github.com/bazelbuild/starlark/issues/20
-	resolve.AllowNestedDef = true
-	resolve.AllowLambda = true
-	resolve.AllowFloat = true
-	resolve.AllowSet = true
-	resolve.AllowGlobalReassign = true
-	resolve.AllowRecursion = true
-}
-
-func init() {
 	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
-		return &Starlark{}
+		return &Starlark{
+			StarlarkCommon: common.StarlarkCommon{
+				StarlarkLoadFunc: common.LoadFunc,
+			},
+		}
 	})
 }

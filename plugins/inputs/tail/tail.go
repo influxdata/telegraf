@@ -1,13 +1,16 @@
+//go:build !solaris
 // +build !solaris
 
 package tail
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dimchansky/utfbom"
 	"github.com/influxdata/tail"
@@ -20,8 +23,7 @@ import (
 )
 
 const (
-	defaultWatchMethod         = "inotify"
-	defaultMaxUndeliveredLines = 1000
+	defaultWatchMethod = "inotify"
 )
 
 var (
@@ -39,17 +41,23 @@ type Tail struct {
 	WatchMethod         string   `toml:"watch_method"`
 	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
 	CharacterEncoding   string   `toml:"character_encoding"`
+	PathTag             string   `toml:"path_tag"`
 
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
 	offsets    map[string]int64
 	parserFunc parsers.ParserFunc
 	wg         sync.WaitGroup
-	ctx        context.Context
-	cancel     context.CancelFunc
-	acc        telegraf.TrackingAccumulator
-	sem        semaphore
-	decoder    *encoding.Decoder
+
+	acc telegraf.TrackingAccumulator
+
+	MultilineConfig MultilineConfig `toml:"multiline"`
+	multiline       *Multiline
+
+	ctx     context.Context
+	cancel  context.CancelFunc
+	sem     semaphore
+	decoder *encoding.Decoder
 }
 
 func NewTail() *Tail {
@@ -64,6 +72,7 @@ func NewTail() *Tail {
 		FromBeginning:       false,
 		MaxUndeliveredLines: 1000,
 		offsets:             offsetsCopy,
+		PathTag:             "path",
 	}
 }
 
@@ -74,7 +83,8 @@ const sampleConfig = `
   ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
   ##   "/var/log/*/*.log" -> find all .log files with a parent dir in /var/log
   ##   "/var/log/apache.log" -> just tail the apache log file
-  ##
+  ##   "/var/log/log[!1-2]*  -> tail files without 1-2
+  ##   "/var/log/log[^1-2]*  -> identical behavior as above
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/mymetrics.out"]
@@ -107,6 +117,30 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
+  # path_tag = "path"
+
+  ## multiline parser/codec
+  ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
+  #[inputs.tail.multiline]
+    ## The pattern should be a regexp which matches what you believe to be an
+	## indicator that the field is part of an event consisting of multiple lines of log data.
+    #pattern = "^\s"
+
+    ## This field must be either "previous" or "next".
+	## If a line matches the pattern, "previous" indicates that it belongs to the previous line,
+	## whereas "next" indicates that the line belongs to the next one.
+    #match_which_line = "previous"
+
+    ## The invert_match field can be true or false (defaults to false).
+    ## If true, a message not matching the pattern will constitute a match of the multiline
+	## filter and the what will be applied. (vice-versa is also true)
+    #invert_match = false
+
+    ## After the specified timeout, this plugin sends a multiline event even if no new pattern
+	## is found to start a new event. The default timeout is 5s.
+    #timeout = 5s
 `
 
 func (t *Tail) SampleConfig() string {
@@ -128,7 +162,7 @@ func (t *Tail) Init() error {
 	return err
 }
 
-func (t *Tail) Gather(acc telegraf.Accumulator) error {
+func (t *Tail) Gather(_ telegraf.Accumulator) error {
 	return t.tailNewFiles(true)
 }
 
@@ -150,9 +184,16 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		}
 	}()
 
+	var err error
+	t.multiline, err = t.MultilineConfig.NewMultiline()
+
+	if err != nil {
+		return err
+	}
+
 	t.tailers = make(map[string]*tail.Tail)
 
-	err := t.tailNewFiles(t.FromBeginning)
+	err = t.tailNewFiles(t.FromBeginning)
 
 	// clear offsets
 	t.offsets = make(map[string]int64)
@@ -212,6 +253,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 						return r
 					},
 				})
+
 			if err != nil {
 				t.Log.Debugf("Failed to open file (%s): %v", file, err)
 				continue
@@ -227,6 +269,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 			// create a goroutine for each "tailer"
 			t.wg.Add(1)
+
 			go func() {
 				defer t.wg.Done()
 				t.receiver(parser, tailer)
@@ -237,6 +280,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
 				}
 			}()
+
 			t.tailers[tailer.Filename] = tailer
 		}
 	}
@@ -244,25 +288,17 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 }
 
 // ParseLine parses a line of text.
-func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.Metric, error) {
+func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
 	switch parser.(type) {
 	case *csv.Parser:
-		// The csv parser parses headers in Parse and skips them in ParseLine.
-		// As a temporary solution call Parse only when getting the first
-		// line from the file.
-		if firstLine {
-			return parser.Parse([]byte(line))
-		} else {
-			m, err := parser.ParseLine(line)
-			if err != nil {
-				return nil, err
+		m, err := parser.Parse([]byte(line))
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, nil
 			}
-
-			if m != nil {
-				return []telegraf.Metric{m}, nil
-			}
-			return []telegraf.Metric{}, nil
+			return nil, err
 		}
+		return m, err
 	default:
 		return parser.Parse([]byte(line))
 	}
@@ -271,25 +307,90 @@ func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.M
 // Receiver is launched as a goroutine to continuously watch a tailed logfile
 // for changes, parse any incoming msgs, and add to the accumulator.
 func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
-	var firstLine = true
-	for line := range tailer.Lines {
-		if line.Err != nil {
+	// holds the individual lines of multi-line log entries.
+	var buffer bytes.Buffer
+
+	var timer *time.Timer
+	var timeout <-chan time.Time
+
+	// The multiline mode requires a timer in order to flush the multiline buffer
+	// if no new lines are incoming.
+	if t.multiline.IsEnabled() {
+		timer = time.NewTimer(time.Duration(*t.MultilineConfig.Timeout))
+		timeout = timer.C
+	}
+
+	channelOpen := true
+	tailerOpen := true
+	var line *tail.Line
+
+	for {
+		line = nil
+
+		if timer != nil {
+			timer.Reset(time.Duration(*t.MultilineConfig.Timeout))
+		}
+
+		select {
+		case <-t.ctx.Done():
+			channelOpen = false
+		case line, tailerOpen = <-tailer.Lines:
+			if !tailerOpen {
+				channelOpen = false
+			}
+		case <-timeout:
+		}
+
+		var text string
+
+		if line != nil {
+			// Fix up files with Windows line endings.
+			text = strings.TrimRight(line.Text, "\r")
+
+			if t.multiline.IsEnabled() {
+				if text = t.multiline.ProcessLine(text, &buffer); text == "" {
+					continue
+				}
+			}
+		}
+		if line == nil || !channelOpen || !tailerOpen {
+			if text += t.multiline.Flush(&buffer); text == "" {
+				if !channelOpen {
+					return
+				}
+
+				continue
+			}
+		}
+
+		if line != nil && line.Err != nil {
 			t.Log.Errorf("Tailing %q: %s", tailer.Filename, line.Err.Error())
 			continue
 		}
-		// Fix up files with Windows line endings.
-		text := strings.TrimRight(line.Text, "\r")
 
-		metrics, err := parseLine(parser, text, firstLine)
+		metrics, err := parseLine(parser, text)
 		if err != nil {
 			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
-				tailer.Filename, line.Text, err.Error())
+				tailer.Filename, text, err.Error())
 			continue
 		}
-		firstLine = false
 
-		for _, metric := range metrics {
-			metric.AddTag("path", tailer.Filename)
+		if t.PathTag != "" {
+			for _, metric := range metrics {
+				metric.AddTag(t.PathTag, tailer.Filename)
+			}
+		}
+
+		// try writing out metric first without blocking
+		select {
+		case t.sem <- empty{}:
+			t.acc.AddTrackingMetricGroup(metrics)
+			if t.ctx.Err() != nil {
+				return // exit!
+			}
+			continue // next loop
+		default:
+			// no room. switch to blocking write.
 		}
 
 		// Block until plugin is stopping or room is available to add metrics.

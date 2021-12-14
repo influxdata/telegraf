@@ -2,9 +2,8 @@ package kube_inventory
 
 import (
 	"context"
-	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/influxdata/telegraf"
 )
@@ -16,53 +15,51 @@ func collectServices(ctx context.Context, acc telegraf.Accumulator, ki *Kubernet
 		return
 	}
 	for _, i := range list.Items {
-		if err = ki.gatherService(*i, acc); err != nil {
-			acc.AddError(err)
-			return
-		}
+		ki.gatherService(i, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherService(s v1.Service, acc telegraf.Accumulator) error {
-	if s.Metadata.CreationTimestamp.GetSeconds() == 0 && s.Metadata.CreationTimestamp.GetNanos() == 0 {
-		return nil
+func (ki *KubernetesInventory) gatherService(s corev1.Service, acc telegraf.Accumulator) {
+	creationTs := s.GetCreationTimestamp()
+	if creationTs.IsZero() {
+		return
 	}
 
 	fields := map[string]interface{}{
-		"created":    time.Unix(s.Metadata.CreationTimestamp.GetSeconds(), int64(s.Metadata.CreationTimestamp.GetNanos())).UnixNano(),
-		"generation": s.Metadata.GetGeneration(),
+		"created":    s.GetCreationTimestamp().UnixNano(),
+		"generation": s.Generation,
 	}
 
 	tags := map[string]string{
-		"service_name": s.Metadata.GetName(),
-		"namespace":    s.Metadata.GetNamespace(),
+		"service_name": s.Name,
+		"namespace":    s.Namespace,
 	}
 
-	for key, val := range s.GetSpec().GetSelector() {
+	for key, val := range s.Spec.Selector {
 		if ki.selectorFilter.Match(key) {
 			tags["selector_"+key] = val
 		}
 	}
 
 	var getPorts = func() {
-		for _, port := range s.GetSpec().GetPorts() {
-			fields["port"] = port.GetPort()
-			fields["target_port"] = port.GetTargetPort().GetIntVal()
+		for _, port := range s.Spec.Ports {
+			fields["port"] = port.Port
+			fields["target_port"] = port.TargetPort.IntVal
 
-			tags["port_name"] = port.GetName()
-			tags["port_protocol"] = port.GetProtocol()
+			tags["port_name"] = port.Name
+			tags["port_protocol"] = string(port.Protocol)
 
-			if s.GetSpec().GetType() == "ExternalName" {
-				tags["external_name"] = s.GetSpec().GetExternalName()
+			if s.Spec.Type == "ExternalName" {
+				tags["external_name"] = s.Spec.ExternalName
 			} else {
-				tags["cluster_ip"] = s.GetSpec().GetClusterIP()
+				tags["cluster_ip"] = s.Spec.ClusterIP
 			}
 
 			acc.AddFields(serviceMeasurement, fields, tags)
 		}
 	}
 
-	if externIPs := s.GetSpec().GetExternalIPs(); externIPs != nil {
+	if externIPs := s.Spec.ExternalIPs; externIPs != nil {
 		for _, ip := range externIPs {
 			tags["ip"] = ip
 
@@ -71,6 +68,4 @@ func (ki *KubernetesInventory) gatherService(s v1.Service, acc telegraf.Accumula
 	} else {
 		getPorts()
 	}
-
-	return nil
 }

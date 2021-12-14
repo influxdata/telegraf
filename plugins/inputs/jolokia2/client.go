@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -95,7 +95,7 @@ type jolokiaResponse struct {
 	Status  int            `json:"status"`
 }
 
-func NewClient(url string, config *ClientConfig) (*Client, error) {
+func NewClient(address string, config *ClientConfig) (*Client, error) {
 	tlsConfig, err := config.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -112,25 +112,30 @@ func NewClient(url string, config *ClientConfig) (*Client, error) {
 	}
 
 	return &Client{
-		URL:    url,
+		URL:    address,
 		config: config,
 		client: client,
 	}, nil
 }
 
 func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
-	jrequests := makeJolokiaRequests(requests, c.config.ProxyConfig)
-	requestBody, err := json.Marshal(jrequests)
+	jRequests := makeJolokiaRequests(requests, c.config.ProxyConfig)
+	requestBody, err := json.Marshal(jRequests)
 	if err != nil {
 		return nil, err
 	}
 
-	requestUrl, err := formatReadUrl(c.URL, c.config.Username, c.config.Password)
+	requestURL, err := formatReadURL(c.URL, c.config.Username, c.config.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", requestUrl, bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(requestBody))
+	if err != nil {
+		//err is not contained in returned error - it may contain sensitive data (password) which should not be logged
+		return nil, fmt.Errorf("unable to create new request for: '%s'", c.URL)
+	}
+
 	req.Header.Add("Content-type", "application/json")
 
 	resp, err := c.client.Do(req)
@@ -140,21 +145,21 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		return nil, fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			c.URL, resp.StatusCode, http.StatusText(resp.StatusCode), http.StatusOK, http.StatusText(http.StatusOK))
 	}
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	var jresponses []jolokiaResponse
-	if err = json.Unmarshal([]byte(responseBody), &jresponses); err != nil {
-		return nil, fmt.Errorf("Error decoding JSON response: %s: %s", err, responseBody)
+	var jResponses []jolokiaResponse
+	if err = json.Unmarshal(responseBody, &jResponses); err != nil {
+		return nil, fmt.Errorf("decoding JSON response: %s: %s", err, responseBody)
 	}
 
-	return makeReadResponses(jresponses), nil
+	return makeReadResponses(jResponses), nil
 }
 
 func makeJolokiaRequests(rrequests []ReadRequest, proxyConfig *ProxyConfig) []jolokiaRequest {
@@ -245,22 +250,22 @@ func makeReadResponses(jresponses []jolokiaResponse) []ReadResponse {
 	return rresponses
 }
 
-func formatReadUrl(configUrl, username, password string) (string, error) {
-	parsedUrl, err := url.Parse(configUrl)
+func formatReadURL(configURL, username, password string) (string, error) {
+	parsedURL, err := url.Parse(configURL)
 	if err != nil {
 		return "", err
 	}
 
-	readUrl := url.URL{
-		Host:   parsedUrl.Host,
-		Scheme: parsedUrl.Scheme,
+	readURL := url.URL{
+		Host:   parsedURL.Host,
+		Scheme: parsedURL.Scheme,
 	}
 
 	if username != "" || password != "" {
-		readUrl.User = url.UserPassword(username, password)
+		readURL.User = url.UserPassword(username, password)
 	}
 
-	readUrl.Path = path.Join(parsedUrl.Path, "read")
-	readUrl.Query().Add("ignoreErrors", "true")
-	return readUrl.String(), nil
+	readURL.Path = path.Join(parsedURL.Path, "read")
+	readURL.Query().Add("ignoreErrors", "true")
+	return readURL.String(), nil
 }

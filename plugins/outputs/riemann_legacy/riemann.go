@@ -2,22 +2,23 @@ package riemann_legacy
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/amir/raidman"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const deprecationMsg = "E! Error: this Riemann output plugin will be deprecated in a future release, see https://github.com/influxdata/telegraf/issues/1878 for more details & discussion."
+const deprecationMsg = "Error: this Riemann output plugin will be deprecated in a future release, see https://github.com/influxdata/telegraf/issues/1878 for more details & discussion."
 
 type Riemann struct {
-	URL       string
-	Transport string
-	Separator string
+	URL       string          `toml:"url"`
+	Transport string          `toml:"transport"`
+	Separator string          `toml:"separator"`
+	Log       telegraf.Logger `toml:"-"`
 
 	client *raidman.Client
 }
@@ -32,7 +33,7 @@ var sampleConfig = `
 `
 
 func (r *Riemann) Connect() error {
-	log.Printf(deprecationMsg)
+	r.Log.Error(deprecationMsg)
 	c, err := raidman.Dial(r.Transport, r.URL)
 
 	if err != nil {
@@ -48,9 +49,9 @@ func (r *Riemann) Close() error {
 	if r.client == nil {
 		return nil
 	}
-	r.client.Close()
+	err := r.client.Close()
 	r.client = nil
-	return nil
+	return err
 }
 
 func (r *Riemann) SampleConfig() string {
@@ -62,7 +63,7 @@ func (r *Riemann) Description() string {
 }
 
 func (r *Riemann) Write(metrics []telegraf.Metric) error {
-	log.Printf(deprecationMsg)
+	r.Log.Error(deprecationMsg)
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -70,23 +71,20 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	if r.client == nil {
 		err := r.Connect()
 		if err != nil {
-			return fmt.Errorf("FAILED to (re)connect to Riemann. Error: %s\n", err)
+			return fmt.Errorf("failed to (re)connect to Riemann, error: %s", err)
 		}
 	}
 
 	var events []*raidman.Event
 	for _, p := range metrics {
 		evs := buildEvents(p, r.Separator)
-		for _, ev := range evs {
-			events = append(events, ev)
-		}
+		events = append(events, evs...)
 	}
 
 	var senderr = r.client.SendMulti(events)
 	if senderr != nil {
-		r.Close() // always returns nil
-		return fmt.Errorf("FAILED to send riemann message (will try to reconnect). Error: %s\n",
-			senderr)
+		r.Close() //nolint:revive // There is another error which will be returned here
+		return fmt.Errorf("failed to send riemann message (will try to reconnect), error: %s", senderr)
 	}
 
 	return nil
@@ -110,9 +108,9 @@ func buildEvents(p telegraf.Metric, s string) []*raidman.Event {
 			Service: serviceName(s, p.Name(), p.Tags(), fieldName),
 		}
 
-		switch value.(type) {
+		switch value := value.(type) {
 		case string:
-			event.State = value.(string)
+			event.State = value
 		default:
 			event.Metric = value
 		}
@@ -141,7 +139,7 @@ func serviceName(s string, n string, t map[string]string, f string) string {
 			tagStrings = append(tagStrings, t[tagName])
 		}
 	}
-	var tagString string = strings.Join(tagStrings, s)
+	var tagString = strings.Join(tagStrings, s)
 	if tagString != "" {
 		serviceStrings = append(serviceStrings, tagString)
 	}

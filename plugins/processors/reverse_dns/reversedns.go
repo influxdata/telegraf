@@ -5,8 +5,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/parallel"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/influxdata/telegraf/plugins/processors/reverse_dns/parallel"
 )
 
 const sampleConfig = `
@@ -104,7 +104,7 @@ func (r *ReverseDNS) Stop() error {
 	return nil
 }
 
-func (r *ReverseDNS) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+func (r *ReverseDNS) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	r.parallel.Enqueue(metric)
 	return nil
 }

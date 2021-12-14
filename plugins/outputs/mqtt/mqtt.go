@@ -2,17 +2,22 @@ package mqtt
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+)
+
+const (
+	defaultKeepAlive = 0
 )
 
 var sampleConfig = `
@@ -54,6 +59,12 @@ var sampleConfig = `
   ## actually reads it
   # retain = false
 
+  ## Defines the maximum length of time that the broker and client may not communicate. 
+  ## Defaults to 0 which turns the feature off. For version v2.0.12 of eclipse/mosquitto there is a 
+  ## [bug](https://github.com/eclipse/mosquitto/issues/2117) which requires keep_alive to be set.
+  ## As a reference eclipse/paho.mqtt.golang v1.3.0 defaults to 30.
+  # keep_alive = 0
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -66,13 +77,15 @@ type MQTT struct {
 	Username    string
 	Password    string
 	Database    string
-	Timeout     internal.Duration
+	Timeout     config.Duration
 	TopicPrefix string
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
-	BatchMessage bool `toml:"batch"`
-	Retain       bool `toml:"retain"`
+	BatchMessage bool            `toml:"batch"`
+	Retain       bool            `toml:"retain"`
+	KeepAlive    int64           `toml:"keep_alive"`
+	Log          telegraf.Logger `toml:"-"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -152,13 +165,13 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		} else {
 			buf, err := m.serializer.Serialize(metric)
 			if err != nil {
-				log.Printf("D! [outputs.mqtt] Could not serialize metric: %v", err)
+				m.Log.Debugf("Could not serialize metric: %v", err)
 				continue
 			}
 
 			err = m.publish(topic, buf)
 			if err != nil {
-				return fmt.Errorf("Could not write to MQTT server, %s", err)
+				return fmt.Errorf("could not write to MQTT server, %s", err)
 			}
 		}
 	}
@@ -171,7 +184,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		}
 		publisherr := m.publish(key, buf)
 		if publisherr != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", publisherr)
+			return fmt.Errorf("could not write to MQTT server, %s", publisherr)
 		}
 	}
 
@@ -180,7 +193,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 func (m *MQTT) publish(topic string, body []byte) error {
 	token := m.client.Publish(topic, byte(m.QoS), m.Retain, body)
-	token.WaitTimeout(m.Timeout.Duration)
+	token.WaitTimeout(time.Duration(m.Timeout))
 	if token.Error() != nil {
 		return token.Error()
 	}
@@ -189,12 +202,12 @@ func (m *MQTT) publish(topic string, body []byte) error {
 
 func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
-	opts.KeepAlive = 0
+	opts.KeepAlive = m.KeepAlive
 
-	if m.Timeout.Duration < time.Second {
-		m.Timeout.Duration = 5 * time.Second
+	if m.Timeout < config.Duration(time.Second) {
+		m.Timeout = config.Duration(5 * time.Second)
 	}
-	opts.WriteTimeout = m.Timeout.Duration
+	opts.WriteTimeout = time.Duration(m.Timeout)
 
 	if m.ClientID != "" {
 		opts.SetClientID(m.ClientID)
@@ -236,6 +249,8 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 
 func init() {
 	outputs.Add("mqtt", func() telegraf.Output {
-		return &MQTT{}
+		return &MQTT{
+			KeepAlive: defaultKeepAlive,
+		}
 	})
 }

@@ -9,10 +9,9 @@ Plugin currently support two type of end points:-
 
 End Point can be a mix of one  multiple end point  and several namespaces end points
 
-
 Note: if namespace end point specified metrics array will be ignored for that call.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Read flattened metrics from one or more GrayLog HTTP endpoints

@@ -24,10 +24,14 @@ const validJSONTags = `
 {
     "a": 5,
     "b": {
-        "c": 6
+      "c": 6
     },
     "mytag": "foobar",
-    "othertag": "baz"
+    "othertag": "baz",
+    "tags_object": {
+        "mytag": "foobar",
+        "othertag": "baz"
+    }
 }
 `
 
@@ -39,7 +43,16 @@ const validJSONArrayTags = `
         "c": 6
     },
     "mytag": "foo",
-    "othertag": "baz"
+    "othertag": "baz",
+    "tags_array": [
+        {
+        "mytag": "foo"
+        },
+        {
+        "othertag": "baz"
+        }
+    ],
+    "anothert": "foo"
 },
 {
     "a": 7,
@@ -47,8 +60,17 @@ const validJSONArrayTags = `
         "c": 8
     },
     "mytag": "bar",
+    "othertag": "baz",
+    "tags_array": [
+    {
+    "mytag": "bar"
+    },
+    {
     "othertag": "baz"
-}
+    }
+    ],
+    "anothert": "bar"
+    }
 ]
 `
 
@@ -871,6 +893,18 @@ func TestParse(t *testing.T) {
 			expected: []telegraf.Metric{},
 		},
 		{
+			name:     "parse null",
+			config:   &Config{},
+			input:    []byte(`null`),
+			expected: []telegraf.Metric{},
+		},
+		{
+			name:     "parse null with query",
+			config:   &Config{Query: "result.data"},
+			input:    []byte(`{"error":null,"result":{"data":null,"items_per_page":10,"total_items":0,"total_pages":0}}`),
+			expected: []telegraf.Metric{},
+		},
+		{
 			name: "parse simple array",
 			config: &Config{
 				MetricName: "json",
@@ -936,6 +970,394 @@ func TestParse(t *testing.T) {
 			},
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser, err := New(tt.config)
+			require.NoError(t, err)
+
+			actual, err := parser.Parse(tt.input)
+			require.NoError(t, err)
+
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
+}
+
+func TestParseWithWildcardTagKeys(t *testing.T) {
+	var tests = []struct {
+		name     string
+		config   *Config
+		input    []byte
+		expected []telegraf.Metric
+	}{
+		{
+			name: "wildcard matching with tags nested within object",
+			config: &Config{
+				MetricName: "json_test",
+				TagKeys:    []string{"tags_object_*"},
+			},
+			input: []byte(validJSONTags),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json_test",
+					map[string]string{
+						"tags_object_mytag":    "foobar",
+						"tags_object_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(5),
+						"b_c": float64(6),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "wildcard matching with keys containing tag",
+			config: &Config{
+				MetricName: "json_test",
+				TagKeys:    []string{"*tag"},
+			},
+			input: []byte(validJSONTags),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json_test",
+					map[string]string{
+						"mytag":                "foobar",
+						"othertag":             "baz",
+						"tags_object_mytag":    "foobar",
+						"tags_object_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(5),
+						"b_c": float64(6),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "strings not matching tag keys are still also ignored",
+			config: &Config{
+				MetricName: "json_test",
+				TagKeys:    []string{"wrongtagkey", "tags_object_*"},
+			},
+			input: []byte(validJSONTags),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json_test",
+					map[string]string{
+						"tags_object_mytag":    "foobar",
+						"tags_object_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(5),
+						"b_c": float64(6),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "single tag key is also found and applied",
+			config: &Config{
+				MetricName: "json_test",
+				TagKeys:    []string{"mytag", "tags_object_*"},
+			},
+			input: []byte(validJSONTags),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json_test",
+					map[string]string{
+						"mytag":                "foobar",
+						"tags_object_mytag":    "foobar",
+						"tags_object_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(5),
+						"b_c": float64(6),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser, err := New(tt.config)
+			require.NoError(t, err)
+
+			actual, err := parser.Parse(tt.input)
+			require.NoError(t, err)
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
+}
+
+func TestParseLineWithWildcardTagKeys(t *testing.T) {
+	var tests = []struct {
+		name     string
+		config   *Config
+		input    string
+		expected telegraf.Metric
+	}{
+		{
+			name: "wildcard matching with tags nested within object",
+			config: &Config{
+				MetricName: "json_test",
+				TagKeys:    []string{"tags_object_*"},
+			},
+			input: validJSONTags,
+			expected: testutil.MustMetric(
+				"json_test",
+				map[string]string{
+					"tags_object_mytag":    "foobar",
+					"tags_object_othertag": "baz",
+				},
+				map[string]interface{}{
+					"a":   float64(5),
+					"b_c": float64(6),
+				},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "wildcard matching with keys containing tag",
+			config: &Config{
+				MetricName: "json_test",
+				TagKeys:    []string{"*tag"},
+			},
+			input: validJSONTags,
+			expected: testutil.MustMetric(
+				"json_test",
+				map[string]string{
+					"mytag":                "foobar",
+					"othertag":             "baz",
+					"tags_object_mytag":    "foobar",
+					"tags_object_othertag": "baz",
+				},
+				map[string]interface{}{
+					"a":   float64(5),
+					"b_c": float64(6),
+				},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "strings not matching tag keys are ignored",
+			config: &Config{
+				MetricName: "json_test",
+				TagKeys:    []string{"wrongtagkey", "tags_object_*"},
+			},
+			input: validJSONTags,
+			expected: testutil.MustMetric(
+				"json_test",
+				map[string]string{
+					"tags_object_mytag":    "foobar",
+					"tags_object_othertag": "baz",
+				},
+				map[string]interface{}{
+					"a":   float64(5),
+					"b_c": float64(6),
+				},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "single tag key is also found and applied",
+			config: &Config{
+				MetricName: "json_test",
+				TagKeys:    []string{"mytag", "tags_object_*"},
+			},
+			input: validJSONTags,
+			expected: testutil.MustMetric(
+				"json_test",
+				map[string]string{
+					"mytag":                "foobar",
+					"tags_object_mytag":    "foobar",
+					"tags_object_othertag": "baz",
+				},
+				map[string]interface{}{
+					"a":   float64(5),
+					"b_c": float64(6),
+				},
+				time.Unix(0, 0),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser, err := New(tt.config)
+			require.NoError(t, err)
+
+			actual, err := parser.ParseLine(tt.input)
+			require.NoError(t, err)
+
+			testutil.RequireMetricEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
+}
+
+func TestParseArrayWithWildcardTagKeys(t *testing.T) {
+	var tests = []struct {
+		name     string
+		config   *Config
+		input    []byte
+		expected []telegraf.Metric
+	}{
+		{
+			name: "wildcard matching with keys containing tag within array works",
+			config: &Config{
+				MetricName: "json_array_test",
+				TagKeys:    []string{"*tag"},
+			},
+			input: []byte(validJSONArrayTags),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json_array_test",
+					map[string]string{
+						"mytag":                 "foo",
+						"othertag":              "baz",
+						"tags_array_0_mytag":    "foo",
+						"tags_array_1_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(5),
+						"b_c": float64(6),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"json_array_test",
+					map[string]string{
+						"mytag":                 "bar",
+						"othertag":              "baz",
+						"tags_array_0_mytag":    "bar",
+						"tags_array_1_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(7),
+						"b_c": float64(8),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: " wildcard matching with tags nested array within object works",
+			config: &Config{
+				MetricName: "json_array_test",
+				TagKeys:    []string{"tags_array_*"},
+			},
+			input: []byte(validJSONArrayTags),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json_array_test",
+					map[string]string{
+						"tags_array_0_mytag":    "foo",
+						"tags_array_1_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(5),
+						"b_c": float64(6),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"json_array_test",
+					map[string]string{
+						"tags_array_0_mytag":    "bar",
+						"tags_array_1_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(7),
+						"b_c": float64(8),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "strings not matching tag keys are still also ignored",
+			config: &Config{
+				MetricName: "json_array_test",
+				TagKeys:    []string{"mytag", "*tag"},
+			},
+			input: []byte(validJSONArrayTags),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json_array_test",
+					map[string]string{
+						"mytag":                 "foo",
+						"othertag":              "baz",
+						"tags_array_0_mytag":    "foo",
+						"tags_array_1_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(5),
+						"b_c": float64(6),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"json_array_test",
+					map[string]string{
+						"mytag":                 "bar",
+						"othertag":              "baz",
+						"tags_array_0_mytag":    "bar",
+						"tags_array_1_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(7),
+						"b_c": float64(8),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "single tag key is also found and applied",
+			config: &Config{
+				MetricName: "json_array_test",
+				TagKeys:    []string{"anothert", "*tag"},
+			},
+			input: []byte(validJSONArrayTags),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json_array_test",
+					map[string]string{
+						"anothert":              "foo",
+						"mytag":                 "foo",
+						"othertag":              "baz",
+						"tags_array_0_mytag":    "foo",
+						"tags_array_1_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(5),
+						"b_c": float64(6),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"json_array_test",
+					map[string]string{
+						"anothert":              "bar",
+						"mytag":                 "bar",
+						"othertag":              "baz",
+						"tags_array_0_mytag":    "bar",
+						"tags_array_1_othertag": "baz",
+					},
+					map[string]interface{}{
+						"a":   float64(7),
+						"b_c": float64(8),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser, err := New(tt.config)

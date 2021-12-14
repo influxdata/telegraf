@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package win_perf_counters
@@ -8,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type testCounter struct {
@@ -236,7 +237,7 @@ func TestCounterPathParsing(t *testing.T) {
 	for path, vals := range counterPathsAndRes {
 		o, i, c, err := extractCounterInfoFromCounterPath(path)
 		require.NoError(t, err)
-		require.True(t, assert.ObjectsAreEqual(vals, []string{o, i, c}), "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
+		require.Equalf(t, vals, []string{o, i, c}, "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
 	}
 	for _, path := range invalidCounterPaths {
 		_, _, _, err := extractCounterInfoFromCounterPath(path)
@@ -311,7 +312,7 @@ func TestParseConfigBasic(t *testing.T) {
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	err = m.query.Close()
 	require.NoError(t, err)
 
@@ -322,7 +323,7 @@ func TestParseConfigBasic(t *testing.T) {
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	err = m.query.Close()
 	require.NoError(t, err)
 }
@@ -348,7 +349,7 @@ func TestParseConfigNoInstance(t *testing.T) {
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
+	require.Len(t, m.counters, 2)
 	err = m.query.Close()
 	require.NoError(t, err)
 
@@ -359,7 +360,7 @@ func TestParseConfigNoInstance(t *testing.T) {
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
+	require.Len(t, m.counters, 2)
 	err = m.query.Close()
 	require.NoError(t, err)
 }
@@ -455,7 +456,7 @@ func TestParseConfigTotalExpansion(t *testing.T) {
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	err = m.query.Close()
 	require.NoError(t, err)
 
@@ -477,7 +478,7 @@ func TestParseConfigTotalExpansion(t *testing.T) {
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
+	require.Len(t, m.counters, 2)
 	err = m.query.Close()
 	require.NoError(t, err)
 }
@@ -502,7 +503,7 @@ func TestParseConfigExpand(t *testing.T) {
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	err = m.query.Close()
 	require.NoError(t, err)
 }
@@ -628,7 +629,7 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 		"objectname": "O",
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
-	assert.True(t, acc1.HasTimestamp(measurement, MetricTime))
+	require.True(t, acc1.HasTimestamp(measurement, MetricTime))
 }
 
 func TestGatherError(t *testing.T) {
@@ -734,13 +735,13 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		Object:                  perfObjects,
 		UseWildcardsExpansion:   true,
 		query:                   fpm,
-		CountersRefreshInterval: internal.Duration{Duration: time.Second * 10},
+		CountersRefreshInterval: config.Duration(time.Second * 10),
 	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	require.NoError(t, err)
-	assert.Len(t, acc1.Metrics, 2)
+	require.Len(t, acc1.Metrics, 2)
 
 	fields1 := map[string]interface{}{
 		"C1": float32(1.1),
@@ -785,18 +786,18 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	//test before elapsing CounterRefreshRate counters are not refreshed
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
-	assert.Len(t, acc2.Metrics, 2)
+	require.Len(t, m.counters, 4)
+	require.Len(t, acc2.Metrics, 2)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 	acc2.AssertDoesNotContainsTaggedFields(t, measurement, fields3, tags3)
-	time.Sleep(m.CountersRefreshInterval.Duration)
+	time.Sleep(time.Duration(m.CountersRefreshInterval))
 
 	var acc3 testutil.Accumulator
 	err = m.Gather(&acc3)
 	require.NoError(t, err)
-	assert.Len(t, acc3.Metrics, 3)
+	require.Len(t, acc3.Metrics, 3)
 
 	acc3.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc3.AssertContainsTaggedFields(t, measurement, fields2, tags2)
@@ -827,12 +828,12 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		Object:                  perfObjects,
 		UseWildcardsExpansion:   false,
 		query:                   fpm,
-		CountersRefreshInterval: internal.Duration{Duration: time.Second * 10}}
+		CountersRefreshInterval: config.Duration(time.Second * 10)}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
-	assert.Len(t, m.counters, 2)
+	require.Len(t, m.counters, 2)
 	require.NoError(t, err)
-	assert.Len(t, acc1.Metrics, 2)
+	require.Len(t, acc1.Metrics, 2)
 
 	fields1 := map[string]interface{}{
 		"C1": float32(1.1),
@@ -879,8 +880,8 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	//test before elapsing CounterRefreshRate counters are not refreshed
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
-	assert.Len(t, acc2.Metrics, 3)
+	require.Len(t, m.counters, 2)
+	require.Len(t, acc2.Metrics, 3)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
@@ -902,12 +903,12 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 
 	fpm.Open()
 
-	time.Sleep(m.CountersRefreshInterval.Duration)
+	time.Sleep(time.Duration(m.CountersRefreshInterval))
 
 	var acc3 testutil.Accumulator
 	err = m.Gather(&acc3)
 	require.NoError(t, err)
-	assert.Len(t, acc3.Metrics, 2)
+	require.Len(t, acc3.Metrics, 2)
 	fields4 := map[string]interface{}{
 		"C1": float32(1.1),
 		"C2": float32(1.2),
@@ -953,8 +954,8 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
-	assert.Len(t, acc1.Metrics, 2)
+	require.Len(t, m.counters, 2)
+	require.Len(t, acc1.Metrics, 2)
 	fields1 := map[string]interface{}{
 		"C1": float32(1.1),
 		"C2": float32(1.2),
@@ -983,8 +984,8 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 	var acc2 testutil.Accumulator
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
-	assert.Len(t, acc2.Metrics, 1)
+	require.Len(t, m.counters, 2)
+	require.Len(t, acc2.Metrics, 1)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
@@ -1012,14 +1013,58 @@ var stringArraySingleItem = []string{
 
 func TestUTF16ToStringArray(t *testing.T) {
 	singleItem := UTF16ToStringArray(unicodeStringListSingleItem)
-	assert.True(t, assert.ObjectsAreEqual(singleItem, stringArraySingleItem), "Not equal single arrays")
+	require.Equal(t, singleItem, stringArraySingleItem, "Not equal single arrays")
 
 	noItem := UTF16ToStringArray(unicodeStringListNoItem)
-	assert.Nil(t, noItem)
+	require.Nil(t, noItem)
 
 	engStrings := UTF16ToStringArray(unicodeStringListWithEnglishChars)
-	assert.True(t, assert.ObjectsAreEqual(engStrings, stringArrayWithEnglishChars), "Not equal eng arrays")
+	require.Equal(t, engStrings, stringArrayWithEnglishChars, "Not equal eng arrays")
 
 	czechStrings := UTF16ToStringArray(unicodeStringListWithCzechChars)
-	assert.True(t, assert.ObjectsAreEqual(czechStrings, stringArrayWithCzechChars), "Not equal czech arrays")
+	require.Equal(t, czechStrings, stringArrayWithCzechChars, "Not equal czech arrays")
+}
+
+func TestNoWildcards(t *testing.T) {
+	m := Win_PerfCounters{
+		Object:                     createPerfObject("measurement", "object", []string{"instance"}, []string{"counter*"}, false, false),
+		UseWildcardsExpansion:      true,
+		LocalizeWildcardsExpansion: false,
+		Log:                        testutil.Logger{},
+	}
+	require.Error(t, m.Init())
+	m = Win_PerfCounters{
+		Object:                     createPerfObject("measurement", "object?", []string{"instance"}, []string{"counter"}, false, false),
+		UseWildcardsExpansion:      true,
+		LocalizeWildcardsExpansion: false,
+		Log:                        testutil.Logger{},
+	}
+	require.Error(t, m.Init())
+}
+
+func TestLocalizeWildcardsExpansion(t *testing.T) {
+	// this test is valid only on localized windows
+	if testing.Short() {
+		t.Skip("Skipping long taking test in short mode")
+	}
+
+	const counter = "% Processor Time"
+	m := Win_PerfCounters{
+		query:                   &PerformanceQueryImpl{},
+		CountersRefreshInterval: config.Duration(time.Second * 60),
+		Object: createPerfObject("measurement", "Processor Information",
+			[]string{"_Total"}, []string{counter}, false, false),
+		LocalizeWildcardsExpansion: false,
+		UseWildcardsExpansion:      true,
+		Log:                        testutil.Logger{},
+	}
+	require.NoError(t, m.Init())
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+	require.Len(t, acc.Metrics, 1)
+
+	//running on localized windows with UseWildcardsExpansion and
+	//with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
+	//be English.
+	require.Contains(t, acc.Metrics[0].Fields, sanitizedChars.Replace(counter))
 }

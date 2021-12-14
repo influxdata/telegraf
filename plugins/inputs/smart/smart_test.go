@@ -7,38 +7,496 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGatherAttributes(t *testing.T) {
-	s := NewSmart()
-	s.Path = "smartctl"
+	s := newSmart()
 	s.Attributes = true
 
-	assert.Equal(t, time.Second*30, s.Timeout.Duration)
+	assert.Equal(t, time.Second*30, time.Duration(s.Timeout))
 
-	var acc testutil.Accumulator
-
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
-			if args[0] == "--scan" {
-				return []byte(mockScanData), nil
-			} else if args[0] == "--info" {
+			if args[0] == "--info" && args[7] == "/dev/ada0" {
 				return []byte(mockInfoAttributeData), nil
+			} else if args[0] == "--info" && args[7] == "/dev/nvme0" {
+				return []byte(smartctlNVMeInfoData), nil
+			} else if args[0] == "--scan" && len(args) == 1 {
+				return []byte(mockScanData), nil
+			} else if args[0] == "--scan" && len(args) >= 2 && args[1] == "--device=nvme" {
+				return []byte(mockScanNVMeData), nil
 			}
 		}
 		return nil, errors.New("command not found")
 	}
 
-	err := s.Gather(&acc)
+	t.Run("Wrong path to smartctl", func(t *testing.T) {
+		s.PathSmartctl = "this_path_to_smartctl_does_not_exist"
+		err := s.Init()
 
-	require.NoError(t, err)
-	assert.Equal(t, 65, acc.NFields(), "Wrong number of fields gathered")
+		assert.Error(t, err)
+	})
 
-	var testsAda0Attributes = []struct {
+	t.Run("Smartctl presence", func(t *testing.T) {
+		s.PathSmartctl = "smartctl"
+		s.PathNVMe = ""
+
+		t.Run("Only non NVMe device", func(t *testing.T) {
+			s.Devices = []string{"/dev/ada0"}
+			var acc testutil.Accumulator
+
+			err := s.Gather(&acc)
+
+			require.NoError(t, err)
+			assert.Equal(t, 65, acc.NFields(), "Wrong number of fields gathered")
+
+			for _, test := range testsAda0Attributes {
+				acc.AssertContainsTaggedFields(t, "smart_attribute", test.fields, test.tags)
+			}
+
+			for _, test := range testsAda0Device {
+				acc.AssertContainsTaggedFields(t, "smart_device", test.fields, test.tags)
+			}
+		})
+		t.Run("Only NVMe device", func(t *testing.T) {
+			s.Devices = []string{"/dev/nvme0"}
+			var acc testutil.Accumulator
+
+			err := s.Gather(&acc)
+
+			require.NoError(t, err)
+			assert.Equal(t, 32, acc.NFields(), "Wrong number of fields gathered")
+
+			testutil.RequireMetricsEqual(t, testSmartctlNVMeAttributes, acc.GetTelegrafMetrics(),
+				testutil.SortMetrics(), testutil.IgnoreTime())
+		})
+	})
+}
+
+func TestGatherInParallelMode(t *testing.T) {
+	s := newSmart()
+	s.Attributes = true
+	s.PathSmartctl = "smartctl"
+	s.PathNVMe = "nvmeIdentifyController"
+	s.EnableExtensions = append(s.EnableExtensions, "auto-on")
+	s.Devices = []string{"/dev/nvme0"}
+
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		if len(args) > 0 {
+			if args[0] == "--info" && args[7] == "/dev/ada0" {
+				return []byte(mockInfoAttributeData), nil
+			} else if args[0] == "--info" && args[7] == "/dev/nvmeIdentifyController" {
+				return []byte(smartctlNVMeInfoData), nil
+			} else if args[0] == "--scan" && len(args) == 1 {
+				return []byte(mockScanData), nil
+			} else if args[0] == "--scan" && len(args) >= 2 && args[1] == "--device=nvme" {
+				return []byte(mockScanNVMeData), nil
+			} else if args[0] == "intel" && args[1] == "smart-log-add" {
+				return []byte(nvmeIntelInfoDataMetricsFormat), nil
+			} else if args[0] == "id-ctrl" {
+				return []byte(nvmeIdentifyController), nil
+			}
+		}
+		return nil, errors.New("command not found")
+	}
+
+	t.Run("Gather NVMe device info in goroutine", func(t *testing.T) {
+		acc := &testutil.Accumulator{}
+		s.ReadMethod = "concurrent"
+
+		err := s.Gather(acc)
+		require.NoError(t, err)
+
+		result := acc.GetTelegrafMetrics()
+		testutil.RequireMetricsEqual(t, testIntelNVMeNewFormatAttributes, result,
+			testutil.SortMetrics(), testutil.IgnoreTime())
+	})
+
+	t.Run("Gather NVMe device info sequentially", func(t *testing.T) {
+		acc := &testutil.Accumulator{}
+		s.ReadMethod = "sequential"
+
+		err := s.Gather(acc)
+		require.NoError(t, err)
+
+		result := acc.GetTelegrafMetrics()
+		testutil.RequireMetricsEqual(t, testIntelNVMeNewFormatAttributes, result,
+			testutil.SortMetrics(), testutil.IgnoreTime())
+	})
+
+	t.Run("Gather NVMe device info - not known read method", func(t *testing.T) {
+		acc := &testutil.Accumulator{}
+		s.ReadMethod = "horizontally"
+
+		err := s.Init()
+		require.Error(t, err)
+
+		err = s.Gather(acc)
+		require.NoError(t, err)
+
+		result := acc.GetTelegrafMetrics()
+		testutil.RequireMetricsEqual(t, []telegraf.Metric{}, result)
+	})
+}
+
+func TestGatherNoAttributes(t *testing.T) {
+	s := newSmart()
+	s.Attributes = false
+
+	assert.Equal(t, time.Second*30, time.Duration(s.Timeout))
+
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		if len(args) > 0 {
+			if args[0] == "--scan" && len(args) == 1 {
+				return []byte(mockScanData), nil
+			} else if args[0] == "--info" && args[7] == "/dev/ada0" {
+				return []byte(mockInfoAttributeData), nil
+			} else if args[0] == "--info" && args[7] == "/dev/nvme0" {
+				return []byte(smartctlNVMeInfoData), nil
+			} else if args[0] == "--scan" && args[1] == "--device=nvme" {
+				return []byte(mockScanNVMeData), nil
+			}
+		}
+		return nil, errors.New("command not found")
+	}
+
+	t.Run("scan for devices", func(t *testing.T) {
+		var acc testutil.Accumulator
+		s.PathSmartctl = "smartctl"
+
+		err := s.Gather(&acc)
+
+		require.NoError(t, err)
+		assert.Equal(t, 8, acc.NFields(), "Wrong number of fields gathered")
+		acc.AssertDoesNotContainMeasurement(t, "smart_attribute")
+
+		for _, test := range testsAda0Device {
+			acc.AssertContainsTaggedFields(t, "smart_device", test.fields, test.tags)
+		}
+		for _, test := range testNVMeDevice {
+			acc.AssertContainsTaggedFields(t, "smart_device", test.fields, test.tags)
+		}
+	})
+}
+
+func TestExcludedDev(t *testing.T) {
+	assert.Equal(t, true, excludedDev([]string{"/dev/pass6"}, "/dev/pass6 -d atacam"), "Should be excluded.")
+	assert.Equal(t, false, excludedDev([]string{}, "/dev/pass6 -d atacam"), "Shouldn't be excluded.")
+	assert.Equal(t, false, excludedDev([]string{"/dev/pass6"}, "/dev/pass1 -d atacam"), "Shouldn't be excluded.")
+}
+
+var (
+	sampleSmart = Smart{
+		PathSmartctl: "",
+		Nocheck:      "",
+		Attributes:   true,
+		UseSudo:      true,
+		Timeout:      config.Duration(time.Second * 30),
+	}
+)
+
+func TestGatherSATAInfo(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(hgstSATAInfoData), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+
+	sampleSmart.gatherDisk(acc, "", wg)
+	assert.Equal(t, 101, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
+}
+
+func TestGatherSATAInfo65(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(hgstSATAInfoData65), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	sampleSmart.gatherDisk(acc, "", wg)
+	assert.Equal(t, 91, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
+}
+
+func TestGatherHgstSAS(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(hgstSASInfoData), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	sampleSmart.gatherDisk(acc, "", wg)
+	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
+}
+
+func TestGatherHtSAS(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(htSASInfoData), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	sampleSmart.gatherDisk(acc, "", wg)
+
+	testutil.RequireMetricsEqual(t, testHtsasAtributtes, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
+}
+
+func TestGatherSSD(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(ssdInfoData), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	sampleSmart.gatherDisk(acc, "", wg)
+	assert.Equal(t, 105, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
+}
+
+func TestGatherSSDRaid(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(ssdRaidInfoData), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	sampleSmart.gatherDisk(acc, "", wg)
+	assert.Equal(t, 74, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
+}
+
+func TestGatherNVMe(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(smartctlNVMeInfoData), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	sampleSmart.gatherDisk(acc, "nvme0", wg)
+
+	testutil.RequireMetricsEqual(t, testSmartctlNVMeAttributes, acc.GetTelegrafMetrics(),
+		testutil.SortMetrics(), testutil.IgnoreTime())
+}
+
+func TestGatherIntelNVMeMetrics(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(nvmeIntelInfoDataMetricsFormat), nil
+	}
+
+	var (
+		acc    = &testutil.Accumulator{}
+		wg     = &sync.WaitGroup{}
+		device = nvmeDevice{
+			name:         "nvme0",
+			model:        mockModel,
+			serialNumber: mockSerial,
+		}
+	)
+
+	wg.Add(1)
+	gatherIntelNVMeDisk(acc, config.Duration(time.Second*30), true, "", device, wg)
+
+	result := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, testIntelNVMeNewFormatAttributes, result,
+		testutil.SortMetrics(), testutil.IgnoreTime())
+}
+
+func TestGatherIntelNVMeDeprecatedFormatMetrics(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(nvmeIntelInfoDataDeprecatedMetricsFormat), nil
+	}
+
+	var (
+		acc    = &testutil.Accumulator{}
+		wg     = &sync.WaitGroup{}
+		device = nvmeDevice{
+			name:         "nvme0",
+			model:        mockModel,
+			serialNumber: mockSerial,
+		}
+	)
+
+	wg.Add(1)
+	gatherIntelNVMeDisk(acc, config.Duration(time.Second*30), true, "", device, wg)
+
+	result := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, testIntelNVMeAttributes, result,
+		testutil.SortMetrics(), testutil.IgnoreTime())
+}
+
+func Test_findVIDFromNVMeOutput(t *testing.T) {
+	device, err := findNVMeDeviceInfo(nvmeIdentifyController)
+
+	assert.Nil(t, err)
+	assert.Equal(t, "0x8086", device.vendorID)
+	assert.Equal(t, "CVFT5123456789ABCD", device.serialNumber)
+	assert.Equal(t, "INTEL SSDPEDABCDEFG", device.model)
+}
+
+func Test_checkForNVMeDevices(t *testing.T) {
+	devices := []string{"sda1", "nvme0", "sda2", "nvme2"}
+	expectedNVMeDevices := []string{"nvme0", "nvme2"}
+	resultNVMeDevices := distinguishNVMeDevices(devices, expectedNVMeDevices)
+	assert.Equal(t, expectedNVMeDevices, resultNVMeDevices)
+}
+
+func Test_contains(t *testing.T) {
+	devices := []string{"/dev/sda", "/dev/nvme1"}
+	device := "/dev/nvme1"
+	deviceNotIncluded := "/dev/nvme5"
+	assert.True(t, contains(devices, device))
+	assert.False(t, contains(devices, deviceNotIncluded))
+}
+
+func Test_difference(t *testing.T) {
+	devices := []string{"/dev/sda", "/dev/nvme1", "/dev/nvme2"}
+	secondDevices := []string{"/dev/sda", "/dev/nvme1"}
+	expected := []string{"/dev/nvme2"}
+	result := difference(devices, secondDevices)
+	assert.Equal(t, expected, result)
+}
+
+func Test_integerOverflow(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(smartctlNVMeInfoDataWithOverflow), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	t.Run("If data raw_value is out of int64 range, there should be no metrics for that attribute", func(t *testing.T) {
+		wg.Add(1)
+
+		sampleSmart.gatherDisk(acc, "nvme0", wg)
+
+		result := acc.GetTelegrafMetrics()
+		testutil.RequireMetricsEqual(t, testOverflowAttributes, result,
+			testutil.SortMetrics(), testutil.IgnoreTime())
+	})
+}
+
+var (
+	testOverflowAttributes = []telegraf.Metric{
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device": "nvme0",
+				"name":   "Temperature_Sensor_3",
+			},
+			map[string]interface{}{
+				"raw_value": int64(9223372036854775807),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device": "nvme0",
+				"name":   "Temperature_Sensor_4",
+			},
+			map[string]interface{}{
+				"raw_value": int64(-9223372036854775808),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_device",
+			map[string]string{
+				"device": "nvme0",
+			},
+			map[string]interface{}{
+				"exit_status": 0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testHtsasAtributtes = []telegraf.Metric{
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"id":        "194",
+				"model":     "HUC103030CSS600",
+				"name":      "Temperature_Celsius",
+			},
+			map[string]interface{}{
+				"raw_value": 36,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"id":        "4",
+				"model":     "HUC103030CSS600",
+				"name":      "Start_Stop_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 47,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_device",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"model":     "HUC103030CSS600",
+			},
+			map[string]interface{}{
+				"exit_status": 0,
+				"health_ok":   true,
+				"temp_c":      36,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testsAda0Attributes = []struct {
 		fields map[string]interface{}
 		tags   map[string]string
 	}{
@@ -296,249 +754,13 @@ func TestGatherAttributes(t *testing.T) {
 		},
 	}
 
-	for _, test := range testsAda0Attributes {
-		acc.AssertContainsTaggedFields(t, "smart_attribute", test.fields, test.tags)
-	}
+	mockModel  = "INTEL SSDPEDABCDEFG"
+	mockSerial = "CVFT5123456789ABCD"
 
-	var testsAda0Device = []struct {
-		fields map[string]interface{}
-		tags   map[string]string
-	}{
-		{
-			map[string]interface{}{
-				"exit_status":     int(0),
-				"health_ok":       bool(true),
-				"read_error_rate": int64(0),
-				"temp_c":          int64(34),
-				"udma_crc_errors": int64(0),
-			},
-			map[string]string{
-				"device":    "ada0",
-				"model":     "APPLE SSD SM256E",
-				"serial_no": "S0X5NZBC422720",
-				"wwn":       "5002538043584d30",
-				"enabled":   "Enabled",
-				"capacity":  "251000193024",
-			},
-		},
-	}
-
-	for _, test := range testsAda0Device {
-		acc.AssertContainsTaggedFields(t, "smart_device", test.fields, test.tags)
-	}
-}
-
-func TestGatherNoAttributes(t *testing.T) {
-	s := NewSmart()
-	s.Path = "smartctl"
-	s.Attributes = false
-
-	assert.Equal(t, time.Second*30, s.Timeout.Duration)
-
-	// overwriting exec commands with mock commands
-	var acc testutil.Accumulator
-
-	err := s.Gather(&acc)
-
-	require.NoError(t, err)
-	assert.Equal(t, 5, acc.NFields(), "Wrong number of fields gathered")
-	acc.AssertDoesNotContainMeasurement(t, "smart_attribute")
-
-	var testsAda0Device = []struct {
-		fields map[string]interface{}
-		tags   map[string]string
-	}{
-		{
-			map[string]interface{}{
-				"exit_status":     int(0),
-				"health_ok":       bool(true),
-				"read_error_rate": int64(0),
-				"temp_c":          int64(34),
-				"udma_crc_errors": int64(0),
-			},
-			map[string]string{
-				"device":    "ada0",
-				"model":     "APPLE SSD SM256E",
-				"serial_no": "S0X5NZBC422720",
-				"wwn":       "5002538043584d30",
-				"enabled":   "Enabled",
-				"capacity":  "251000193024",
-			},
-		},
-	}
-
-	for _, test := range testsAda0Device {
-		acc.AssertContainsTaggedFields(t, "smart_device", test.fields, test.tags)
-	}
-}
-
-func TestExcludedDev(t *testing.T) {
-	assert.Equal(t, true, excludedDev([]string{"/dev/pass6"}, "/dev/pass6 -d atacam"), "Should be excluded.")
-	assert.Equal(t, false, excludedDev([]string{}, "/dev/pass6 -d atacam"), "Shouldn't be excluded.")
-	assert.Equal(t, false, excludedDev([]string{"/dev/pass6"}, "/dev/pass1 -d atacam"), "Shouldn't be excluded.")
-}
-
-func TestGatherSATAInfo(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
-		return []byte(hgstSATAInfoData), nil
-	}
-
-	var (
-		acc = &testutil.Accumulator{}
-		wg  = &sync.WaitGroup{}
-	)
-
-	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
-	assert.Equal(t, 101, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
-}
-
-func TestGatherSATAInfo65(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
-		return []byte(hgstSATAInfoData65), nil
-	}
-
-	var (
-		acc = &testutil.Accumulator{}
-		wg  = &sync.WaitGroup{}
-	)
-
-	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
-	assert.Equal(t, 91, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
-}
-
-func TestGatherHgstSAS(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
-		return []byte(hgstSASInfoData), nil
-	}
-
-	var (
-		acc = &testutil.Accumulator{}
-		wg  = &sync.WaitGroup{}
-	)
-
-	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
-	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
-}
-
-func TestGatherHtSAS(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
-		return []byte(htSASInfoData), nil
-	}
-
-	var (
-		acc = &testutil.Accumulator{}
-		wg  = &sync.WaitGroup{}
-	)
-
-	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"smart_attribute",
-			map[string]string{
-				"device":    ".",
-				"serial_no": "PDWAR9GE",
-				"enabled":   "Enabled",
-				"id":        "194",
-				"model":     "HUC103030CSS600",
-				"name":      "Temperature_Celsius",
-			},
-			map[string]interface{}{
-				"raw_value": 36,
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"smart_attribute",
-			map[string]string{
-				"device":    ".",
-				"serial_no": "PDWAR9GE",
-				"enabled":   "Enabled",
-				"id":        "4",
-				"model":     "HUC103030CSS600",
-				"name":      "Start_Stop_Count",
-			},
-			map[string]interface{}{
-				"raw_value": 47,
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"smart_device",
-			map[string]string{
-				"device":    ".",
-				"serial_no": "PDWAR9GE",
-				"enabled":   "Enabled",
-				"model":     "HUC103030CSS600",
-			},
-			map[string]interface{}{
-				"exit_status": 0,
-				"health_ok":   true,
-				"temp_c":      36,
-			},
-			time.Unix(0, 0),
-		),
-	}
-
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
-}
-
-func TestGatherSSD(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
-		return []byte(ssdInfoData), nil
-	}
-
-	var (
-		acc = &testutil.Accumulator{}
-		wg  = &sync.WaitGroup{}
-	)
-
-	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
-	assert.Equal(t, 105, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
-}
-
-func TestGatherSSDRaid(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
-		return []byte(ssdRaidInfoData), nil
-	}
-
-	var (
-		acc = &testutil.Accumulator{}
-		wg  = &sync.WaitGroup{}
-	)
-
-	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
-	assert.Equal(t, 74, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
-}
-
-func TestGatherNvme(t *testing.T) {
-	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
-		return []byte(nvmeInfoData), nil
-	}
-
-	var (
-		acc = &testutil.Accumulator{}
-		wg  = &sync.WaitGroup{}
-	)
-
-	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
-
-	expected := []telegraf.Metric{
+	testSmartctlNVMeAttributes = []telegraf.Metric{
 		testutil.MustMetric("smart_device",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"model":     "TS128GMTE850",
 				"serial_no": "D704940282?",
 			},
@@ -551,7 +773,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"id":        "9",
 				"name":      "Power_On_Hours",
 				"serial_no": "D704940282?",
@@ -564,7 +786,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"id":        "12",
 				"name":      "Power_Cycle_Count",
 				"serial_no": "D704940282?",
@@ -577,7 +799,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Media_and_Data_Integrity_Errors",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -589,7 +811,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Error_Information_Log_Entries",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -601,7 +823,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Available_Spare",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -613,7 +835,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Available_Spare_Threshold",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -625,7 +847,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"id":        "194",
 				"name":      "Temperature_Celsius",
 				"serial_no": "D704940282?",
@@ -638,7 +860,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Critical_Warning",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -650,7 +872,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Percentage_Used",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -662,7 +884,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Data_Units_Read",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -674,7 +896,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Data_Units_Written",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -686,7 +908,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Host_Read_Commands",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -698,7 +920,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Host_Write_Commands",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -710,7 +932,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Controller_Busy_Time",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -722,7 +944,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Unsafe_Shutdowns",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -734,7 +956,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Warning_Temperature_Time",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -746,7 +968,7 @@ func TestGatherNvme(t *testing.T) {
 		),
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
-				"device":    ".",
+				"device":    "nvme0",
 				"name":      "Critical_Temperature_Time",
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
@@ -755,18 +977,528 @@ func TestGatherNvme(t *testing.T) {
 				"raw_value": int64(7),
 			},
 			time.Now(),
+		), testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Temperature_Sensor_1",
+			},
+			map[string]interface{}{
+				"raw_value": int64(57),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Temperature_Sensor_2",
+			},
+			map[string]interface{}{
+				"raw_value": int64(50),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Temperature_Sensor_3",
+			},
+			map[string]interface{}{
+				"raw_value": int64(44),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Temperature_Sensor_4",
+			},
+			map[string]interface{}{
+				"raw_value": int64(43),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Temperature_Sensor_5",
+			},
+			map[string]interface{}{
+				"raw_value": int64(57),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Temperature_Sensor_6",
+			},
+			map[string]interface{}{
+				"raw_value": int64(50),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Temperature_Sensor_7",
+			},
+			map[string]interface{}{
+				"raw_value": int64(44),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Temperature_Sensor_8",
+			},
+			map[string]interface{}{
+				"raw_value": int64(43),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Thermal_Management_T1_Trans_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Thermal_Management_T2_Trans_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Thermal_Management_T1_Total_Time",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+				"name":      "Thermal_Management_T2_Total_Time",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
 		),
 	}
 
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
-		testutil.SortMetrics(), testutil.IgnoreTime())
-}
+	testsAda0Device = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		{
+			map[string]interface{}{
+				"exit_status":     int(0),
+				"health_ok":       bool(true),
+				"read_error_rate": int64(0),
+				"temp_c":          int64(34),
+				"udma_crc_errors": int64(0),
+			},
+			map[string]string{
+				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
+				"serial_no": "S0X5NZBC422720",
+				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
+			},
+		},
+	}
 
-// smartctl output
-var (
+	testNVMeDevice = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		{
+			map[string]interface{}{
+				"exit_status": int(0),
+				"temp_c":      int64(38),
+				"health_ok":   true,
+			},
+			map[string]string{
+				"device":    "nvme0",
+				"model":     "TS128GMTE850",
+				"serial_no": "D704940282?",
+			},
+		},
+	}
+
+	testIntelNVMeAttributes = []telegraf.Metric{
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Program_Fail_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Erase_Fail_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "End_To_End_Error_Detection_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Crc_Error_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 13,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Retry_Buffer_Overflow_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Wear_Leveling_Min",
+			},
+			map[string]interface{}{
+				"raw_value": 39,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Wear_Leveling_Max",
+			},
+			map[string]interface{}{
+				"raw_value": 40,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Wear_Leveling_Avg",
+			},
+			map[string]interface{}{
+				"raw_value": 39,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Timed_Workload_Media_Wear",
+			},
+			map[string]interface{}{
+				"raw_value": float64(0.13),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Timed_Workload_Host_Reads",
+			},
+			map[string]interface{}{
+				"raw_value": float64(71),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Timed_Workload_Timer",
+			},
+			map[string]interface{}{
+				"raw_value": int64(1612952),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Thermal_Throttle_Status_Prc",
+			},
+			map[string]interface{}{
+				"raw_value": float64(0),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Thermal_Throttle_Status_Cnt",
+			},
+			map[string]interface{}{
+				"raw_value": int64(0),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Pll_Lock_Loss_Count",
+			},
+			map[string]interface{}{
+				"raw_value": int64(0),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Nand_Bytes_Written",
+			},
+			map[string]interface{}{
+				"raw_value": int64(0),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Host_Bytes_Written",
+			},
+			map[string]interface{}{
+				"raw_value": int64(0),
+			},
+			time.Now(),
+		),
+	}
+
+	testIntelNVMeNewFormatAttributes = []telegraf.Metric{
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Program_Fail_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Erase_Fail_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Wear_Leveling_Count",
+			},
+			map[string]interface{}{
+				"raw_value": int64(700090417315),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "End_To_End_Error_Detection_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Crc_Error_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 13,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Media_Wear_Percentage",
+			},
+			map[string]interface{}{
+				"raw_value": 552,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Host_Reads",
+			},
+			map[string]interface{}{
+				"raw_value": 73,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Timed_Workload_Timer",
+			},
+			map[string]interface{}{
+				"raw_value": int64(2343038),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Thermal_Throttle_Status",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Retry_Buffer_Overflow_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": mockSerial,
+				"model":     mockModel,
+				"name":      "Pll_Lock_Loss_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+	}
 	// smartctl --scan
-	mockScanData = `/dev/ada0 -d atacam # /dev/ada0, ATA device
-`
+	mockScanData = `/dev/ada0 -d atacam # /dev/ada0, ATA device`
+
+	// smartctl --scan -d nvme
+	mockScanNVMeData = `/dev/nvme0 -d nvme # /dev/nvme0, NVMe device`
+
 	// smartctl --info --health --attributes --tolerance=verypermissive -n standby --format=brief [DEVICE]
 	mockInfoAttributeData = `smartctl 6.5 2016-05-07 r4318 [Darwin 16.4.0 x86_64] (local build)
 Copyright (C) 2002-16, Bruce Allen, Christian Franke, www.smartmontools.org
@@ -1174,8 +1906,7 @@ Selective self-test flags (0x0):
 	After scanning selected spans, do NOT read-scan remainder of disk.
 If Selective self-test is pending on power-up, resume after 0 minute delay.
 `
-
-	nvmeInfoData = `smartctl 6.5 2016-05-07 r4318 [x86_64-linux-4.1.27-gvt-yocto-standard] (local build)
+	smartctlNVMeInfoData = `smartctl 6.5 2016-05-07 r4318 [x86_64-linux-4.1.27-gvt-yocto-standard] (local build)
 Copyright (C) 2002-16, Bruce Allen, Christian Franke, www.smartmontools.org
 
 === START OF INFORMATION SECTION ===
@@ -1211,5 +1942,122 @@ Media and Data Integrity Errors: 0
 Error Information Log Entries: 119,699
 Warning  Comp. Temperature Time: 11
 Critical Comp. Temperature Time: 7
+Thermal Temp. 1 Transition Count: 0
+Thermal Temp. 2 Transition Count: 0
+Thermal Temp. 1 Total Time: 0
+Thermal Temp. 2 Total Time: 0
+Temperature Sensor 1: 57 C
+Temperature Sensor 2: 50 C
+Temperature Sensor 3: 44 C
+Temperature Sensor 4: 43 C
+Temperature Sensor 5: 57 C
+Temperature Sensor 6: 50 C
+Temperature Sensor 7: 44 C
+Temperature Sensor 8: 43 C
+`
+
+	smartctlNVMeInfoDataWithOverflow = `
+Temperature Sensor 1: 9223372036854775808 C
+Temperature Sensor 2: -9223372036854775809 C
+Temperature Sensor 3: 9223372036854775807 C
+Temperature Sensor 4: -9223372036854775808 C
+`
+
+	nvmeIntelInfoDataDeprecatedMetricsFormat = `Additional Smart Log for NVME device:nvme0 namespace-id:ffffffff
+key                               normalized raw
+program_fail_count              : 100%       0
+erase_fail_count                : 100%       0
+wear_leveling                   : 100%       min: 39, max: 40, avg: 39
+end_to_end_error_detection_count: 100%       0
+crc_error_count                 : 100%       13
+timed_workload_media_wear       : 100%       0.130%
+timed_workload_host_reads       : 100%       71%
+timed_workload_timer            : 100%       1612952 min
+thermal_throttle_status         : 100%       0%, cnt: 0
+retry_buffer_overflow_count     : 100%       0
+pll_lock_loss_count             : 100%       0
+nand_bytes_written              :   0%       sectors: 0
+host_bytes_written              :   0%       sectors: 0
+`
+	nvmeIntelInfoDataMetricsFormat = `Additional Smart Log for NVME device:nvme0n1 namespace-id:ffffffff
+ID             KEY                                 Normalized     Raw
+0xab    program_fail_count                             100         0
+0xac    erase_fail_count                               100         0
+0xad    wear_leveling_count                            100         700090417315
+0xb8    e2e_error_detect_count                         100         0
+0xc7    crc_error_count                                100         13
+0xe2    media_wear_percentage                          100         552
+0xe3    host_reads                                     100         73
+0xe4    timed_work_load                                100         2343038
+0xea    thermal_throttle_status                        100         0
+0xf0    retry_buff_overflow_count                      100         0
+0xf3    pll_lock_loss_counter                          100         0
+`
+
+	nvmeIdentifyController = `NVME Identify Controller:
+vid     : 0x8086
+ssvid   : 0x8086
+sn      : CVFT5123456789ABCD
+mn      : INTEL SSDPEDABCDEFG
+fr      : 8DV10131
+rab     : 0
+ieee    : 5cd2e4
+cmic    : 0
+mdts    : 5
+cntlid  : 0
+ver     : 0
+rtd3r   : 0
+rtd3e   : 0
+<<<<<<< HEAD
+oaes    : 0
+ctratt  : 0
+oacs    : 0x6
+acl     : 3
+aerl    : 3
+frmw    : 0x2
+lpa     : 0
+elpe    : 63
+npss    : 0
+avscc   : 0
+apsta   : 0
+wctemp  : 0
+cctemp  : 0
+mtfa    : 0
+hmpre   : 0
+hmmin   : 0
+tnvmcap : 0
+unvmcap : 0
+rpmbs   : 0
+edstt   : 0
+dsto    : 0
+fwug    : 0
+kas     : 0
+hctma   : 0
+mntmt   : 0
+mxtmt   : 0
+sanicap : 0
+hmminds : 0
+hmmaxd  : 0
+sqes    : 0x66
+cqes    : 0x44
+maxcmd  : 0
+nn      : 1
+oncs    : 0x6
+fuses   : 0
+fna     : 0x7
+vwc     : 0
+awun    : 0
+awupf   : 0
+nvscc   : 0
+acwu    : 0
+sgls    : 0
+subnqn  :
+ioccsz  : 0
+iorcsz  : 0
+icdoff  : 0
+ctrattr : 0
+msdbd   : 0
+ps    0 : mp:25.00W operational enlat:0 exlat:0 rrt:0 rrl:0
+          rwt:0 rwl:0 idle_power:- active_power:-
 `
 )

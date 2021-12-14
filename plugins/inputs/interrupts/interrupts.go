@@ -13,7 +13,7 @@ import (
 )
 
 type Interrupts struct {
-	CpuAsTag bool `toml:"cpu_as_tag"`
+	CPUAsTag bool `toml:"cpu_as_tag"`
 }
 
 type IRQ struct {
@@ -57,7 +57,7 @@ func parseInterrupts(r io.Reader) ([]IRQ, error) {
 	if scanner.Scan() {
 		cpus := strings.Fields(scanner.Text())
 		if cpus[0] != "CPU0" {
-			return nil, fmt.Errorf("Expected first line to start with CPU0, but was %s", scanner.Text())
+			return nil, fmt.Errorf("expected first line to start with CPU0, but was %s", scanner.Text())
 		}
 		cpucount = len(cpus)
 	}
@@ -93,7 +93,7 @@ scan:
 		irqs = append(irqs, *irq)
 	}
 	if scanner.Err() != nil {
-		return nil, fmt.Errorf("Error scanning file: %s", scanner.Err())
+		return nil, fmt.Errorf("error scanning file: %s", scanner.Err())
 	}
 	return irqs, nil
 }
@@ -110,20 +110,28 @@ func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
 
 func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 	for measurement, file := range map[string]string{"interrupts": "/proc/interrupts", "soft_interrupts": "/proc/softirqs"} {
-		f, err := os.Open(file)
+		irqs, err := parseFile(file)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Could not open file: %s", file))
+			acc.AddError(err)
 			continue
 		}
-		defer f.Close()
-		irqs, err := parseInterrupts(f)
-		if err != nil {
-			acc.AddError(fmt.Errorf("Parsing %s: %s", file, err))
-			continue
-		}
-		reportMetrics(measurement, irqs, acc, s.CpuAsTag)
+		reportMetrics(measurement, irqs, acc, s.CPUAsTag)
 	}
 	return nil
+}
+
+func parseFile(file string) ([]IRQ, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file: %s", file)
+	}
+	defer f.Close()
+
+	irqs, err := parseInterrupts(f)
+	if err != nil {
+		return nil, fmt.Errorf("parsing %s: %s", file, err)
+	}
+	return irqs, nil
 }
 
 func reportMetrics(measurement string, irqs []IRQ, acc telegraf.Accumulator, cpusAsTags bool) {

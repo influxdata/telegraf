@@ -3,18 +3,17 @@ package kube_inventory
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/kubernetes/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -25,17 +24,19 @@ const (
 
 // KubernetesInventory represents the config object for the plugin.
 type KubernetesInventory struct {
-	URL               string            `toml:"url"`
-	BearerToken       string            `toml:"bearer_token"`
-	BearerTokenString string            `toml:"bearer_token_string"`
-	Namespace         string            `toml:"namespace"`
-	ResponseTimeout   internal.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
-	ResourceExclude   []string          `toml:"resource_exclude"`
-	ResourceInclude   []string          `toml:"resource_include"`
-	MaxConfigMapAge   internal.Duration `toml:"max_config_map_age"`
+	URL               string          `toml:"url"`
+	BearerToken       string          `toml:"bearer_token"`
+	BearerTokenString string          `toml:"bearer_token_string"`
+	Namespace         string          `toml:"namespace"`
+	ResponseTimeout   config.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
+	ResourceExclude   []string        `toml:"resource_exclude"`
+	ResourceInclude   []string        `toml:"resource_include"`
+	MaxConfigMapAge   config.Duration `toml:"max_config_map_age"`
 
 	SelectorInclude []string `toml:"selector_include"`
 	SelectorExclude []string `toml:"selector_exclude"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
 	client *client
@@ -80,6 +81,7 @@ var sampleConfig = `
   # tls_ca = "/path/to/cafile"
   # tls_cert = "/path/to/certfile"
   # tls_key = "/path/to/keyfile"
+  # tls_server_name = "kubernetes.example.com"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
@@ -101,7 +103,7 @@ func (ki *KubernetesInventory) Init() error {
 	}
 
 	if ki.BearerToken != "" {
-		token, err := ioutil.ReadFile(ki.BearerToken)
+		token, err := os.ReadFile(ki.BearerToken)
 		if err != nil {
 			return err
 		}
@@ -109,7 +111,7 @@ func (ki *KubernetesInventory) Init() error {
 	}
 
 	var err error
-	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerTokenString, ki.ResponseTimeout.Duration, ki.ClientConfig)
+	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerTokenString, time.Duration(ki.ResponseTimeout), ki.ClientConfig)
 
 	if err != nil {
 		return err
@@ -166,18 +168,18 @@ func atoi(s string) int64 {
 	if err != nil {
 		return 0
 	}
-	return int64(i)
+	return i
 }
 
-func convertQuantity(s string, m float64) int64 {
+func (ki *KubernetesInventory) convertQuantity(s string, m float64) int64 {
 	q, err := resource.ParseQuantity(s)
 	if err != nil {
-		log.Printf("D! [inputs.kube_inventory] failed to parse quantity: %s", err.Error())
+		ki.Log.Debugf("failed to parse quantity: %s", err.Error())
 		return 0
 	}
 	f, err := strconv.ParseFloat(fmt.Sprint(q.AsDec()), 64)
 	if err != nil {
-		log.Printf("D! [inputs.kube_inventory] failed to parse float: %s", err.Error())
+		ki.Log.Debugf("failed to parse float: %s", err.Error())
 		return 0
 	}
 	if m < 1 {
@@ -187,11 +189,11 @@ func convertQuantity(s string, m float64) int64 {
 }
 
 func (ki *KubernetesInventory) createSelectorFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(ki.SelectorInclude, ki.SelectorExclude)
+	selectorFilter, err := filter.NewIncludeExcludeFilter(ki.SelectorInclude, ki.SelectorExclude)
 	if err != nil {
 		return err
 	}
-	ki.selectorFilter = filter
+	ki.selectorFilter = selectorFilter
 	return nil
 }
 
@@ -211,7 +213,7 @@ var (
 func init() {
 	inputs.Add("kube_inventory", func() telegraf.Input {
 		return &KubernetesInventory{
-			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
+			ResponseTimeout: config.Duration(time.Second * 5),
 			Namespace:       "default",
 			SelectorInclude: []string{},
 			SelectorExclude: []string{"*"},

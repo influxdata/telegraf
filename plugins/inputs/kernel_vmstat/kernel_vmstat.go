@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package kernel_vmstat
@@ -5,7 +6,6 @@ package kernel_vmstat
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -35,7 +35,6 @@ func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 
 	dataFields := bytes.Fields(data)
 	for i, field := range dataFields {
-
 		// dataFields is an array of {"stat1_name", "stat1_value", "stat2_name",
 		// "stat2_value", ...}
 		// We only want the even number index as that contain the stat name.
@@ -46,7 +45,7 @@ func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 				return err
 			}
 
-			fields[string(field)] = int64(m)
+			fields[string(field)] = m
 		}
 	}
 
@@ -56,12 +55,12 @@ func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 
 func (k *KernelVmstat) getProcVmstat() ([]byte, error) {
 	if _, err := os.Stat(k.statFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("kernel_vmstat: %s does not exist!", k.statFile)
+		return nil, fmt.Errorf("kernel_vmstat: %s does not exist", k.statFile)
 	} else if err != nil {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(k.statFile)
+	data, err := os.ReadFile(k.statFile)
 	if err != nil {
 		return nil, err
 	}

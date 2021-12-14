@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestBindJsonStats(t *testing.T) {
@@ -20,12 +22,15 @@ func TestBindJsonStats(t *testing.T) {
 		Urls:                 []string{ts.URL + "/json/v1"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
+		client: http.Client{
+			Timeout: 4 * time.Second,
+		},
 	}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -175,8 +180,8 @@ func TestBindJsonStats(t *testing.T) {
 
 	// Subtest for per-context memory stats
 	t.Run("memory_context", func(t *testing.T) {
-		assert.True(t, acc.HasInt64Field("bind_memory_context", "total"))
-		assert.True(t, acc.HasInt64Field("bind_memory_context", "in_use"))
+		require.True(t, acc.HasInt64Field("bind_memory_context", "total"))
+		require.True(t, acc.HasInt64Field("bind_memory_context", "in_use"))
 	})
 }
 
@@ -190,12 +195,15 @@ func TestBindXmlStatsV2(t *testing.T) {
 		Urls:                 []string{ts.URL + "/xml/v2"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
+		client: http.Client{
+			Timeout: 4 * time.Second,
+		},
 	}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -377,8 +385,8 @@ func TestBindXmlStatsV2(t *testing.T) {
 
 	// Subtest for per-context memory stats
 	t.Run("memory_context", func(t *testing.T) {
-		assert.True(t, acc.HasInt64Field("bind_memory_context", "total"))
-		assert.True(t, acc.HasInt64Field("bind_memory_context", "in_use"))
+		require.True(t, acc.HasInt64Field("bind_memory_context", "total"))
+		require.True(t, acc.HasInt64Field("bind_memory_context", "in_use"))
 	})
 }
 
@@ -392,12 +400,15 @@ func TestBindXmlStatsV3(t *testing.T) {
 		Urls:                 []string{ts.URL + "/xml/v3"},
 		GatherMemoryContexts: true,
 		GatherViews:          true,
+		client: http.Client{
+			Timeout: 4 * time.Second,
+		},
 	}
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -601,8 +612,8 @@ func TestBindXmlStatsV3(t *testing.T) {
 
 	// Subtest for per-context memory stats
 	t.Run("memory_context", func(t *testing.T) {
-		assert.True(t, acc.HasInt64Field("bind_memory_context", "total"))
-		assert.True(t, acc.HasInt64Field("bind_memory_context", "in_use"))
+		require.True(t, acc.HasInt64Field("bind_memory_context", "total"))
+		require.True(t, acc.HasInt64Field("bind_memory_context", "in_use"))
 	})
 }
 
@@ -613,5 +624,5 @@ func TestBindUnparseableURL(t *testing.T) {
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
-	assert.Contains(t, err.Error(), "Unable to parse address")
+	require.Contains(t, err.Error(), "unable to parse address")
 }

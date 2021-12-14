@@ -2,17 +2,18 @@ package dcos
 
 import (
 	"context"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -56,7 +57,7 @@ type DCOS struct {
 	AppExclude       []string
 
 	MaxConnections  int
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	client Client
@@ -66,7 +67,6 @@ type DCOS struct {
 	nodeFilter      filter.Filter
 	containerFilter filter.Filter
 	appFilter       filter.Filter
-	taskNameFilter  filter.Filter
 }
 
 func (d *DCOS) Description() string {
@@ -223,7 +223,7 @@ type point struct {
 	fields map[string]interface{}
 }
 
-func (d *DCOS) createPoints(acc telegraf.Accumulator, m *Metrics) []*point {
+func (d *DCOS) createPoints(m *Metrics) []*point {
 	points := make(map[string]*point)
 	for _, dp := range m.Datapoints {
 		fieldKey := strings.Replace(dp.Name, ".", "_", -1)
@@ -237,9 +237,7 @@ func (d *DCOS) createPoints(acc telegraf.Accumulator, m *Metrics) []*point {
 			fieldKey = fieldKey + "_bytes"
 		}
 
-		if strings.HasPrefix(fieldKey, "dcos_metrics_module_") {
-			fieldKey = strings.TrimPrefix(fieldKey, "dcos_metrics_module_")
-		}
+		fieldKey = strings.TrimPrefix(fieldKey, "dcos_metrics_module_")
 
 		tagset := make([]string, 0, len(tags))
 		for k, v := range tags {
@@ -288,7 +286,7 @@ func (d *DCOS) createPoints(acc telegraf.Accumulator, m *Metrics) []*point {
 func (d *DCOS) addMetrics(acc telegraf.Accumulator, cluster, mname string, m *Metrics, tagDimensions []string) {
 	tm := time.Now()
 
-	points := d.createPoints(acc, m)
+	points := d.createPoints(m)
 
 	for _, p := range points {
 		tags := make(map[string]string)
@@ -353,14 +351,14 @@ func (d *DCOS) createClient() (Client, error) {
 		return nil, err
 	}
 
-	url, err := url.Parse(d.ClusterURL)
+	address, err := url.Parse(d.ClusterURL)
 	if err != nil {
 		return nil, err
 	}
 
 	client := NewClusterClient(
-		url,
-		d.ResponseTimeout.Duration,
+		address,
+		time.Duration(d.ResponseTimeout),
 		d.MaxConnections,
 		tlsCfg,
 	)
@@ -370,7 +368,7 @@ func (d *DCOS) createClient() (Client, error) {
 
 func (d *DCOS) createCredentials() (Credentials, error) {
 	if d.ServiceAccountID != "" && d.ServiceAccountPrivateKey != "" {
-		bs, err := ioutil.ReadFile(d.ServiceAccountPrivateKey)
+		bs, err := os.ReadFile(d.ServiceAccountPrivateKey)
 		if err != nil {
 			return nil, err
 		}
@@ -422,10 +420,8 @@ func (d *DCOS) createFilters() error {
 func init() {
 	inputs.Add("dcos", func() telegraf.Input {
 		return &DCOS{
-			MaxConnections: defaultMaxConnections,
-			ResponseTimeout: internal.Duration{
-				Duration: defaultResponseTimeout,
-			},
+			MaxConnections:  defaultMaxConnections,
+			ResponseTimeout: config.Duration(defaultResponseTimeout),
 		}
 	})
 }

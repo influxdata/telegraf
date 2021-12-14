@@ -24,7 +24,7 @@ func newFcgiClient(h string, args ...interface{}) (*conn, error) {
 		laddr := net.UnixAddr{Name: args[0].(string), Net: h}
 		con, err = net.DialUnix(h, nil, &laddr)
 	default:
-		err = errors.New("fcgi: we only accept int (port) or string (socket) params.")
+		err = errors.New("fcgi: we only accept int (port) or string (socket) params")
 	}
 	fcgi := &conn{
 		rwc: con,
@@ -33,26 +33,23 @@ func newFcgiClient(h string, args ...interface{}) (*conn, error) {
 	return fcgi, err
 }
 
-func (client *conn) Request(
-	env map[string]string,
-	requestData string,
-) (retout []byte, reterr []byte, err error) {
-	defer client.rwc.Close()
-	var reqId uint16 = 1
+func (c *conn) Request(env map[string]string, requestData string) (retout []byte, reterr []byte, err error) {
+	defer c.rwc.Close()
+	var reqID uint16 = 1
 
-	err = client.writeBeginRequest(reqId, uint16(roleResponder), 0)
+	err = c.writeBeginRequest(reqID, uint16(roleResponder), 0)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
-	err = client.writePairs(typeParams, reqId, env)
+	err = c.writePairs(typeParams, reqID, env)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
 	if len(requestData) > 0 {
-		if err = client.writeRecord(typeStdin, reqId, []byte(requestData)); err != nil {
-			return
+		if err = c.writeRecord(typeStdin, reqID, []byte(requestData)); err != nil {
+			return nil, nil, err
 		}
 	}
 
@@ -62,7 +59,7 @@ func (client *conn) Request(
 	// receive until EOF or FCGI_END_REQUEST
 READ_LOOP:
 	for {
-		err1 = rec.read(client.rwc)
+		err1 = rec.read(c.rwc)
 		if err1 != nil && strings.Contains(err1.Error(), "use of closed network connection") {
 			if err1 != io.EOF {
 				err = err1
@@ -82,5 +79,5 @@ READ_LOOP:
 		}
 	}
 
-	return
+	return retout, reterr, err
 }

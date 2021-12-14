@@ -67,8 +67,32 @@ func TestEventPayload(t *testing.T) {
 	resp := post(pt, contentType, form.Encode())
 	require.Equal(t, http.StatusOK, resp.Code)
 
-	fields := map[string]interface{}{
-		"count": uint64(1),
+	fields1 := map[string]interface{}{
+		"count":       uint64(1),
+		"id":          int64(7711561783320576),
+		"source_ip":   "208.75.57.121",
+		"source_name": "abc",
+		"source_id":   int64(2),
+		"program":     "CROND",
+		"severity":    "Info",
+		"facility":    "Cron",
+		"message":     "message body",
+		"url":         "https://papertrailapp.com/searches/42?centered_on_id=7711561783320576",
+		"search_id":   int64(42),
+	}
+
+	fields2 := map[string]interface{}{
+		"count":       uint64(1),
+		"id":          int64(7711562567655424),
+		"source_ip":   "208.75.57.120",
+		"source_name": "server1",
+		"source_id":   int64(19),
+		"program":     "CROND",
+		"severity":    "Info",
+		"facility":    "Cron",
+		"message":     "A short event",
+		"url":         "https://papertrailapp.com/searches/42?centered_on_id=7711562567655424",
+		"search_id":   int64(42),
 	}
 
 	tags1 := map[string]string{
@@ -80,8 +104,8 @@ func TestEventPayload(t *testing.T) {
 		"host":  "def",
 	}
 
-	acc.AssertContainsTaggedFields(t, "papertrail", fields, tags1)
-	acc.AssertContainsTaggedFields(t, "papertrail", fields, tags2)
+	acc.AssertContainsTaggedFields(t, "papertrail", fields1, tags1)
+	acc.AssertContainsTaggedFields(t, "papertrail", fields2, tags2)
 }
 
 func TestCountPayload(t *testing.T) {

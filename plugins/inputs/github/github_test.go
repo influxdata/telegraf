@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	gh "github.com/google/go-github/github"
+	gh "github.com/google/go-github/v32/github"
 	"github.com/stretchr/testify/require"
 )
 

@@ -386,6 +386,17 @@ FROM sys.dm_os_schedulers AS s'
 EXEC sp_executesql @SqlStatement
 `
 
+/*
+This string defines a SQL statements to retrieve Performance Counters as documented here -
+	SQL Server Performance Objects - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/use-sql-server-objects?view=sql-server-ver15#SQLServerPOs
+Some of the specific objects used are -
+	MSSQL$*:Access Methods - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-access-methods-object?view=sql-server-ver15
+	MSSQL$*:Buffer Manager - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-buffer-manager-object?view=sql-server-ver15
+	MSSQL$*:Databases - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-databases-object?view=sql-server-ver15
+	MSSQL$*:General Statistics - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-general-statistics-object?view=sql-server-ver15
+	MSSQL$*:Exec Statistics - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-execstatistics-object?view=sql-server-ver15
+	SQLServer:Query Store - https://docs.microsoft.com/en-us/sql/relational-databases/performance-monitor/sql-server-query-store-object?view=sql-server-ver15
+*/
 const sqlPerformanceCountersV2 string = `
 SET DEADLOCK_PRIORITY -10;
 
@@ -465,13 +476,19 @@ SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 				''Readahead pages/sec'',
 				''Lazy writes/sec'',
 				''Checkpoint pages/sec'',
+				''Free pages'',
+				''Extension free pages'',
+				''Table Lock Escalations/sec'',
 				''Page life expectancy'',
 				''Log File(s) Size (KB)'',
 				''Log File(s) Used Size (KB)'',
 				''Data File(s) Size (KB)'',
 				''Transactions/sec'',
 				''Write Transactions/sec'',
+				''Active Transactions'',
+				''Log Growths'',
 				''Active Temp Tables'',
+				''Logical Connections'',
 				''Temp Tables Creation Rate'',
 				''Temp Tables For Destruction'',
 				''Free Space in tempdb (KB)'',
@@ -527,7 +544,10 @@ SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 				''Redo Queue KB'',
 				''Mirrored Write Transactions/sec'',
 				''Group Commit Time'',
-				''Group Commits/Sec''
+				''Group Commits/Sec'',
+				''Distributed Query'',
+				''DTC calls'',
+				''Query Store CPU usage''
 			)
 		) OR (
 			object_name LIKE ''%User Settable%''
@@ -1328,37 +1348,62 @@ IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
 	END
 `
 
-const sqlServerCpuV2 string = `
+const sqlServerCPUV2 string = `
 /*The ring buffer has a new value every minute*/
 IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
 BEGIN
-SELECT 
-	 'sqlserver_cpu' AS [measurement]
-	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,[SQLProcessUtilization] AS [sqlserver_process_cpu]
-	,[SystemIdle] AS [system_idle_cpu]
-	,100 - [SystemIdle] - [SQLProcessUtilization] AS [other_process_cpu]
-FROM (
-	SELECT TOP 1
-		 [record_id]
-		/*,dateadd(ms, (y.[timestamp] - (SELECT CAST([ms_ticks] AS BIGINT) FROM sys.dm_os_sys_info)), GETDATE()) AS [EventTime] --use for check/debug purpose*/
-		,[SQLProcessUtilization]
-		,[SystemIdle]
+;WITH utilization_cte AS
+(
+	SELECT
+		[SQLProcessUtilization] AS [sqlserver_process_cpu]
+		,[SystemIdle] AS [system_idle_cpu]
+		,100 - [SystemIdle] - [SQLProcessUtilization] AS [other_process_cpu]
 	FROM (
-		SELECT record.value('(./Record/@id)[1]', 'int') AS [record_id]
-			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
-			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
-			,[TIMESTAMP]
+		SELECT TOP 1
+			 [record_id]
+			,[SQLProcessUtilization]
+			,[SystemIdle]
 		FROM (
-			SELECT [TIMESTAMP]
-				,convert(XML, [record]) AS [record]
-			FROM sys.dm_os_ring_buffers
-			WHERE [ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
-				AND [record] LIKE '%<SystemHealth>%'
-			) AS x
-		) AS y
-	ORDER BY record_id DESC
-) as z
+			SELECT
+				 record.value('(./Record/@id)[1]', 'int') AS [record_id]
+				,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
+				,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
+				,[TIMESTAMP]
+			FROM (
+				SELECT
+					 [TIMESTAMP]
+					,convert(XML, [record]) AS [record]
+				FROM sys.dm_os_ring_buffers
+				WHERE
+					[ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
+					AND [record] LIKE '%<SystemHealth>%'
+				) AS x
+			) AS y
+		ORDER BY [record_id] DESC
+	) AS z
+),
+processor_Info_cte AS
+(
+	SELECT (cpu_count / hyperthread_ratio) as number_of_physical_cpus
+	  FROM sys.dm_os_sys_info
+)
+SELECT
+	'sqlserver_cpu' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,[sqlserver_process_cpu]
+	,[system_idle_cpu]
+	,100 - [system_idle_cpu] - [sqlserver_process_cpu] AS [other_process_cpu]
+FROM
+	(
+		SELECT
+			(case
+				when [other_process_cpu] < 0 then [sqlserver_process_cpu] / a.number_of_physical_cpus
+				else [sqlserver_process_cpu]
+			  end) as [sqlserver_process_cpu]
+		,[system_idle_cpu]
+	FROM utilization_cte
+		CROSS APPLY processor_Info_cte a
+	) AS b
 
 END
 `

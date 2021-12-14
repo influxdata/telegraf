@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	as "github.com/aerospike/aerospike-client-go"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestAerospikeStatistics(t *testing.T) {
+func TestAerospikeStatisticsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	}
@@ -23,18 +23,17 @@ func TestAerospikeStatistics(t *testing.T) {
 	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	assert.True(t, acc.HasMeasurement("aerospike_node"))
-	assert.True(t, acc.HasTag("aerospike_node", "node_name"))
-	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
-	assert.True(t, acc.HasTag("aerospike_namespace", "node_name"))
-	assert.True(t, acc.HasInt64Field("aerospike_node", "batch_index_error"))
+	require.True(t, acc.HasMeasurement("aerospike_node"))
+	require.True(t, acc.HasTag("aerospike_node", "node_name"))
+	require.True(t, acc.HasMeasurement("aerospike_namespace"))
+	require.True(t, acc.HasTag("aerospike_namespace", "node_name"))
+	require.True(t, acc.HasInt64Field("aerospike_node", "batch_index_error"))
 
 	namespaceName := acc.TagValue("aerospike_namespace", "namespace")
-	assert.Equal(t, namespaceName, "test")
-
+	require.Equal(t, "test", namespaceName)
 }
 
-func TestAerospikeStatisticsPartialErr(t *testing.T) {
+func TestAerospikeStatisticsPartialErrIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	}
@@ -51,14 +50,14 @@ func TestAerospikeStatisticsPartialErr(t *testing.T) {
 
 	require.Error(t, err)
 
-	assert.True(t, acc.HasMeasurement("aerospike_node"))
-	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
-	assert.True(t, acc.HasInt64Field("aerospike_node", "batch_index_error"))
+	require.True(t, acc.HasMeasurement("aerospike_node"))
+	require.True(t, acc.HasMeasurement("aerospike_namespace"))
+	require.True(t, acc.HasInt64Field("aerospike_node", "batch_index_error"))
 	namespaceName := acc.TagSetValue("aerospike_namespace", "namespace")
-	assert.Equal(t, namespaceName, "test")
+	require.Equal(t, "test", namespaceName)
 }
 
-func TestSelectNamepsaces(t *testing.T) {
+func TestSelectNamespacesIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	}
@@ -74,25 +73,25 @@ func TestSelectNamepsaces(t *testing.T) {
 	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	assert.True(t, acc.HasMeasurement("aerospike_node"))
-	assert.True(t, acc.HasTag("aerospike_node", "node_name"))
-	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
-	assert.True(t, acc.HasTag("aerospike_namespace", "node_name"))
+	require.True(t, acc.HasMeasurement("aerospike_node"))
+	require.True(t, acc.HasTag("aerospike_node", "node_name"))
+	require.True(t, acc.HasMeasurement("aerospike_namespace"))
+	require.True(t, acc.HasTag("aerospike_namespace", "node_name"))
 
 	// Expect only 1 namespace
 	count := 0
 	for _, p := range acc.Metrics {
 		if p.Measurement == "aerospike_namespace" {
-			count += 1
+			count++
 		}
 	}
-	assert.Equal(t, count, 1)
+	require.Equal(t, 1, count)
 
 	// expect namespace to have no fields as nonexistent
-	assert.False(t, acc.HasInt64Field("aerospke_namespace", "appeals_tx_remaining"))
+	require.False(t, acc.HasInt64Field("aerospke_namespace", "appeals_tx_remaining"))
 }
 
-func TestDisableQueryNamespaces(t *testing.T) {
+func TestDisableQueryNamespacesIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	}
@@ -108,18 +107,18 @@ func TestDisableQueryNamespaces(t *testing.T) {
 	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	assert.True(t, acc.HasMeasurement("aerospike_node"))
-	assert.False(t, acc.HasMeasurement("aerospike_namespace"))
+	require.True(t, acc.HasMeasurement("aerospike_node"))
+	require.False(t, acc.HasMeasurement("aerospike_namespace"))
 
 	a.DisableQueryNamespaces = false
 	err = acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	assert.True(t, acc.HasMeasurement("aerospike_node"))
-	assert.True(t, acc.HasMeasurement("aerospike_namespace"))
+	require.True(t, acc.HasMeasurement("aerospike_node"))
+	require.True(t, acc.HasMeasurement("aerospike_namespace"))
 }
 
-func TestQuerySets(t *testing.T) {
+func TestQuerySetsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	}
@@ -128,6 +127,7 @@ func TestQuerySets(t *testing.T) {
 	// test is the default namespace from aerospike
 	policy := as.NewClientPolicy()
 	client, err := as.NewClientWithPolicy(policy, testutil.GetLocalHost(), 3000)
+	require.NoError(t, err)
 
 	key, err := as.NewKey("test", "foo", 123)
 	require.NoError(t, err)
@@ -159,16 +159,15 @@ func TestQuerySets(t *testing.T) {
 	err = acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	assert.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/foo"))
-	assert.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/bar"))
+	require.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/foo"))
+	require.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/bar"))
 
-	assert.True(t, acc.HasMeasurement("aerospike_set"))
-	assert.True(t, acc.HasTag("aerospike_set", "set"))
-	assert.True(t, acc.HasInt64Field("aerospike_set", "memory_data_bytes"))
-
+	require.True(t, acc.HasMeasurement("aerospike_set"))
+	require.True(t, acc.HasTag("aerospike_set", "set"))
+	require.True(t, acc.HasInt64Field("aerospike_set", "memory_data_bytes"))
 }
 
-func TestSelectQuerySets(t *testing.T) {
+func TestSelectQuerySetsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	}
@@ -177,6 +176,7 @@ func TestSelectQuerySets(t *testing.T) {
 	// test is the default namespace from aerospike
 	policy := as.NewClientPolicy()
 	client, err := as.NewClientWithPolicy(policy, testutil.GetLocalHost(), 3000)
+	require.NoError(t, err)
 
 	key, err := as.NewKey("test", "foo", 123)
 	require.NoError(t, err)
@@ -209,16 +209,15 @@ func TestSelectQuerySets(t *testing.T) {
 	err = acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	assert.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/foo"))
-	assert.False(t, FindTagValue(&acc, "aerospike_set", "set", "test/bar"))
+	require.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/foo"))
+	require.False(t, FindTagValue(&acc, "aerospike_set", "set", "test/bar"))
 
-	assert.True(t, acc.HasMeasurement("aerospike_set"))
-	assert.True(t, acc.HasTag("aerospike_set", "set"))
-	assert.True(t, acc.HasInt64Field("aerospike_set", "memory_data_bytes"))
-
+	require.True(t, acc.HasMeasurement("aerospike_set"))
+	require.True(t, acc.HasTag("aerospike_set", "set"))
+	require.True(t, acc.HasInt64Field("aerospike_set", "memory_data_bytes"))
 }
 
-func TestDisableTTLHistogram(t *testing.T) {
+func TestDisableTTLHistogramIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	}
@@ -236,9 +235,9 @@ func TestDisableTTLHistogram(t *testing.T) {
 	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	assert.False(t, acc.HasMeasurement("aerospike_histogram_ttl"))
+	require.False(t, acc.HasMeasurement("aerospike_histogram_ttl"))
 }
-func TestTTLHistogram(t *testing.T) {
+func TestTTLHistogramIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	} else {
@@ -253,7 +252,7 @@ func TestTTLHistogram(t *testing.T) {
 	}
 	/*
 		Produces histogram
-		Measurment exists
+		Measurement exists
 		Has appropriate tags (node name etc)
 		Has appropriate keys (time:value)
 		may be able to leverage histogram plugin
@@ -262,11 +261,10 @@ func TestTTLHistogram(t *testing.T) {
 	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	assert.True(t, acc.HasMeasurement("aerospike_histogram_ttl"))
-	assert.True(t, FindTagValue(&acc, "aerospike_histogram_ttl", "namespace", "test"))
-
+	require.True(t, acc.HasMeasurement("aerospike_histogram_ttl"))
+	require.True(t, FindTagValue(&acc, "aerospike_histogram_ttl", "namespace", "test"))
 }
-func TestDisableObjectSizeLinearHistogram(t *testing.T) {
+func TestDisableObjectSizeLinearHistogramIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	}
@@ -284,10 +282,9 @@ func TestDisableObjectSizeLinearHistogram(t *testing.T) {
 	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
-	assert.False(t, acc.HasMeasurement("aerospike_histogram_object_size_linear"))
+	require.False(t, acc.HasMeasurement("aerospike_histogram_object_size_linear"))
 }
-func TestObjectSizeLinearHistogram(t *testing.T) {
-
+func TestObjectSizeLinearHistogramIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping aerospike integration tests.")
 	} else {
@@ -302,7 +299,7 @@ func TestObjectSizeLinearHistogram(t *testing.T) {
 	}
 	/*
 		Produces histogram
-		Measurment exists
+		Measurement exists
 		Has appropriate tags (node name etc)
 		Has appropriate keys (time:value)
 
@@ -310,8 +307,8 @@ func TestObjectSizeLinearHistogram(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
-	assert.True(t, acc.HasMeasurement("aerospike_histogram_object_size_linear"))
-	assert.True(t, FindTagValue(&acc, "aerospike_histogram_object_size_linear", "namespace", "test"))
+	require.True(t, acc.HasMeasurement("aerospike_histogram_object_size_linear"))
+	require.True(t, FindTagValue(&acc, "aerospike_histogram_object_size_linear", "namespace", "test"))
 }
 
 func TestParseNodeInfo(t *testing.T) {
@@ -335,7 +332,7 @@ func TestParseNodeInfo(t *testing.T) {
 		"node_name":      "TestNodeName",
 	}
 
-	a.parseNodeInfo(stats, "127.0.0.1:3000", "TestNodeName", &acc)
+	a.parseNodeInfo(&acc, stats, "127.0.0.1:3000", "TestNodeName")
 	acc.AssertContainsTaggedFields(t, "aerospike_node", expectedFields, expectedTags)
 }
 
@@ -361,7 +358,7 @@ func TestParseNamespaceInfo(t *testing.T) {
 		"namespace":      "test",
 	}
 
-	a.parseNamespaceInfo(stats, "127.0.0.1:3000", "test", "TestNodeName", &acc)
+	a.parseNamespaceInfo(&acc, stats, "127.0.0.1:3000", "test", "TestNodeName")
 	acc.AssertContainsTaggedFields(t, "aerospike_namespace", expectedFields, expectedTags)
 }
 
@@ -385,7 +382,7 @@ func TestParseSetInfo(t *testing.T) {
 		"node_name":      "TestNodeName",
 		"set":            "test/foo",
 	}
-	a.parseSetInfo(stats, "127.0.0.1:3000", "test/foo", "TestNodeName", &acc)
+	a.parseSetInfo(&acc, stats, "127.0.0.1:3000", "test/foo", "TestNodeName")
 	acc.AssertContainsTaggedFields(t, "aerospike_set", expectedFields, expectedTags)
 }
 
@@ -417,9 +414,9 @@ func TestParseHistogramSet(t *testing.T) {
 		"set":            "foo",
 	}
 
-	a.parseHistogram(stats, "127.0.0.1:3000", "test", "foo", "object-size-linear", "TestNodeName", &acc)
+	nTags := createTags("127.0.0.1:3000", "TestNodeName", "test", "foo")
+	a.parseHistogram(&acc, stats, nTags, "object-size-linear")
 	acc.AssertContainsTaggedFields(t, "aerospike_histogram_object_size_linear", expectedFields, expectedTags)
-
 }
 func TestParseHistogramNamespace(t *testing.T) {
 	a := &Aerospike{
@@ -448,25 +445,33 @@ func TestParseHistogramNamespace(t *testing.T) {
 		"namespace":      "test",
 	}
 
-	a.parseHistogram(stats, "127.0.0.1:3000", "test", "", "object-size-linear", "TestNodeName", &acc)
+	nTags := createTags("127.0.0.1:3000", "TestNodeName", "test", "")
+	a.parseHistogram(&acc, stats, nTags, "object-size-linear")
 	acc.AssertContainsTaggedFields(t, "aerospike_histogram_object_size_linear", expectedFields, expectedTags)
-
 }
 func TestAerospikeParseValue(t *testing.T) {
 	// uint64 with value bigger than int64 max
-	val := parseValue("18446744041841121751")
+	val := parseAerospikeValue("", "18446744041841121751")
 	require.Equal(t, uint64(18446744041841121751), val)
 
-	val = parseValue("true")
+	val = parseAerospikeValue("", "true")
 	require.Equal(t, true, val)
 
 	// int values
-	val = parseValue("42")
-	require.Equal(t, val, int64(42), "must be parsed as int")
+	val = parseAerospikeValue("", "42")
+	require.Equal(t, int64(42), val, "must be parsed as an int64")
 
 	// string values
-	val = parseValue("BB977942A2CA502")
-	require.Equal(t, val, `BB977942A2CA502`, "must be left as string")
+	val = parseAerospikeValue("", "BB977942A2CA502")
+	require.Equal(t, `BB977942A2CA502`, val, "must be left as a string")
+
+	// all digit hex values, unprotected
+	val = parseAerospikeValue("", "1992929191")
+	require.Equal(t, int64(1992929191), val, "must be parsed as an int64")
+
+	// all digit hex values, protected
+	val = parseAerospikeValue("node_name", "1992929191")
+	require.Equal(t, `1992929191`, val, "must be left as a string")
 }
 
 func FindTagValue(acc *testutil.Accumulator, measurement string, key string, value string) bool {
@@ -476,7 +481,6 @@ func FindTagValue(acc *testutil.Accumulator, measurement string, key string, val
 			if ok && v == value {
 				return true
 			}
-
 		}
 	}
 	return false
