@@ -176,7 +176,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 					if flushErr := w.sender.Flush(); flushErr != nil {
 						w.Log.Errorf("wavefront flushing error: %v", flushErr)
 					}
-					return fmt.Errorf("wavefront sending error: %v", err)  
+					return fmt.Errorf("wavefront sending error: %v", err)
 				}
 				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)
 				w.Log.Debugf("Non-retryable metric data: Name: %v, Value: %v, Timestamp: %v, Source: %v, PointTags: %v ", point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
