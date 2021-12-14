@@ -1,6 +1,7 @@
 package groundwork
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gwos/tcg/sdk/clients"
+	"github.com/gwos/tcg/sdk/logper"
 	"github.com/gwos/tcg/sdk/transit"
 	"github.com/hashicorp/go-uuid"
 
@@ -85,6 +87,22 @@ func (g *Groundwork) Init() error {
 			IsDynamicInventory: true,
 		},
 	}
+
+	logper.SetLogger(
+		func(fields interface{}, format string, a ...interface{}) {
+			g.Log.Error(adaptLog(fields, format, a...))
+		},
+		func(fields interface{}, format string, a ...interface{}) {
+			g.Log.Warn(adaptLog(fields, format, a...))
+		},
+		func(fields interface{}, format string, a ...interface{}) {
+			g.Log.Info(adaptLog(fields, format, a...))
+		},
+		func(fields interface{}, format string, a ...interface{}) {
+			g.Log.Debug(adaptLog(fields, format, a...))
+		},
+		func() bool { return telegraf.Debug },
+	)
 	return nil
 }
 
@@ -293,4 +311,47 @@ func validStatus(status string) bool {
 		return true
 	}
 	return false
+}
+
+func adaptLog(fields interface{}, format string, a ...interface{}) string {
+	buf := &bytes.Buffer{}
+	if format != "" {
+		_, _ = fmt.Fprintf(buf, format, a...)
+	}
+	fmtField := func(k string, v interface{}) {
+		format := " %s:"
+		if len(k) == 0 {
+			format = " "
+		}
+		if _, ok := v.(int); ok {
+			format += "%d"
+		} else {
+			format += "%q"
+		}
+		_, _ = fmt.Fprintf(buf, format, k, v)
+	}
+	if ff, ok := fields.(interface {
+		LogFields() (map[string]interface{}, map[string][]byte)
+	}); ok {
+		m1, m2 := ff.LogFields()
+		for k, v := range m1 {
+			fmtField(k, v)
+		}
+		for k, v := range m2 {
+			fmtField(k, v)
+		}
+	} else if ff, ok := fields.(map[string]interface{}); ok {
+		for k, v := range ff {
+			fmtField(k, v)
+		}
+	} else if ff, ok := fields.([]interface{}); ok {
+		for _, v := range ff {
+			fmtField("", v)
+		}
+	}
+	out := buf.Bytes()
+	if len(out) > 1 {
+		out = append(bytes.ToUpper(out[0:1]), out[1:]...)
+	}
+	return string(out)
 }
