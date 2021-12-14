@@ -3,7 +3,8 @@
 This plugin writes to the [Datadog Metrics API][metrics] and requires an
 `apikey` which can be obtained [here][apikey] for the account.
 
-## Configuration
+
+### Configuration
 
 ```toml
 [[outputs.datadog]]
@@ -23,10 +24,6 @@ This plugin writes to the [Datadog Metrics API][metrics] and requires an
   # compress = true
 ```
 ### Metrics
-Note: The dd_interval config should match your current Datadog Agent flush interval if you currently use it.
-This ensures that aggregated metrics coming out of Telegraf match what Datadog Agent used to do.
-
-## Metrics
 
 Datadog metric names are formed by joining the Telegraf metric name and the field
 key with a `.` character.
