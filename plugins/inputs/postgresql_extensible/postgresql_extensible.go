@@ -63,7 +63,7 @@ var sampleConfig = `
   ## Whether to use prepared statements when connecting to the database.
   ## This should be set to false when connecting through a PgBouncer instance
   ## with pool_mode set to transaction.
-  prepared_statements = true
+  # prepared-statements = true
 
   ## A list of databases to pull metrics about. If not specified, metrics for all
   ## databases are gathered.

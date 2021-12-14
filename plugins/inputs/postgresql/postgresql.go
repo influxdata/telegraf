@@ -17,7 +17,7 @@ type Postgresql struct {
 	Service
 	Databases          []string
 	IgnoredDatabases   []string
-	PreparedStatements bool `toml:"prepared_statements"`
+	PreparedStatements bool `toml:"prepared-statements"`
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
@@ -58,7 +58,7 @@ var sampleConfig = `
   ## Whether to use prepared statements when connecting to the database.
   ## This should be set to false when connecting through a PgBouncer instance
   ## with pool_mode set to transaction.
-  prepared_statements = true
+  # prepared-statements = true
 `
 
 func (p *Postgresql) SampleConfig() string {
