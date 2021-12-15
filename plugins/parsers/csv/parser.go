@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -173,7 +172,9 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 		m, err := p.parseRecord(record)
 		if err != nil {
 			if p.SkipErrors {
-				log.Println("[parsers.csv] Malformed csv line", err.Error())
+				if p.Log != nil {
+					p.Log.Infof("[parsers.csv] Malformed csv line: %s", err.Error())
+				}
 				continue
 			}
 			return metrics, err

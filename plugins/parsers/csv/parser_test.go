@@ -828,6 +828,7 @@ func TestSkipErrorOnCorruptedCSVLine(t *testing.T) {
 			SkipErrors:      true,
 		},
 	)
+	p.Log = testutil.Logger{}
 	testCSV := `date,a,b
 23/05/09 11:05:06 PM,1,2
 corrupted_line
