@@ -1591,6 +1591,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 
 	c.getFieldStringSlice(tbl, "wavefront_source_override", &sc.WavefrontSourceOverride)
 	c.getFieldBool(tbl, "wavefront_use_strict", &sc.WavefrontUseStrict)
+	c.getFieldBool(tbl, "wavefront_disable_prefix_conversion", &sc.WavefrontDisablePrefixConversion)
 
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
