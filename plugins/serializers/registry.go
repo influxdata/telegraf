@@ -104,6 +104,9 @@ type Config struct {
 	// When enabled forward slash (/) and comma (,) will be accepted
 	WavefrontUseStrict bool `toml:"wavefront_use_strict"`
 
+	// Convert "_" in prefixes to "." for Wavefront
+	WavefrontDisablePrefixConversion bool `toml:"wavefront_disable_prefix_conversion"`
+
 	// Include the metric timestamp on each sample.
 	PrometheusExportTimestamp bool `toml:"prometheus_export_timestamp"`
 
@@ -134,7 +137,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "carbon2":
 		serializer, err = NewCarbon2Serializer(config.Carbon2Format, config.Carbon2SanitizeReplaceChar)
 	case "wavefront":
-		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
+		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride, config.WavefrontDisablePrefixConversion)
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config)
 	case "prometheusremotewrite":
@@ -187,8 +190,8 @@ func NewPrometheusSerializer(config *Config) (Serializer, error) {
 	})
 }
 
-func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string) (Serializer, error) {
-	return wavefront.NewSerializer(prefix, useStrict, sourceOverride)
+func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string, disablePrefixConversions bool) (Serializer, error) {
+	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
 }
 
 func NewJSONSerializer(timestampUnits time.Duration, timestampFormat string) (Serializer, error) {

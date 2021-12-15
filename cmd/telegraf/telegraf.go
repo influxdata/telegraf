@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fatih/color"
+
 	"github.com/influxdata/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
@@ -256,20 +258,14 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 
-	if *fRunOnce {
-		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Once(ctx, wait)
-	}
-
-	if *fTest || *fTestWait != 0 {
-		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, wait)
-	}
-
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
-	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+	if !*fRunOnce && (*fTest || *fTestWait != 0) {
+		log.Print(color.RedString("W! Outputs are not used in testing mode!"))
+	} else {
+		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+	}
 	log.Printf("I! Tags enabled: %s", c.ListTags())
 
 	if count, found := c.Deprecations["inputs"]; found && (count[0] > 0 || count[1] > 0) {
@@ -283,6 +279,16 @@ func runAgent(ctx context.Context,
 	}
 	if count, found := c.Deprecations["outputs"]; found && (count[0] > 0 || count[1] > 0) {
 		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
+	}
+
+	if *fRunOnce {
+		wait := time.Duration(*fTestWait) * time.Second
+		return ag.Once(ctx, wait)
+	}
+
+	if *fTest || *fTestWait != 0 {
+		wait := time.Duration(*fTestWait) * time.Second
+		return ag.Test(ctx, wait)
 	}
 
 	if *fPidfile != "" {

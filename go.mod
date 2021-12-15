@@ -97,7 +97,7 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/echlebek/timeproxy v1.0.0 // indirect
-	github.com/eclipse/paho.mqtt.golang v1.3.0
+	github.com/eclipse/paho.mqtt.golang v1.3.5
 	github.com/fatih/color v1.10.0
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -125,7 +125,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
-	github.com/gopcua/opcua v0.2.0-rc2.0.20210409063412-baabb9b14fd2
+	github.com/gopcua/opcua v0.2.3
 	github.com/gophercloud/gophercloud v0.16.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
@@ -255,12 +255,12 @@ require (
 	github.com/tinylib/msgp v1.1.6
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
-	github.com/vapourismo/knx-go v0.0.0-20201122213738-75fe09ace330
+	github.com/vapourismo/knx-go v0.0.0-20211128234507-8198fa17db36
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852 // indirect
 	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae // indirect
 	github.com/vjeantet/grok v1.0.1
 	github.com/vmware/govmomi v0.26.0
-	github.com/wavefronthq/wavefront-sdk-go v0.9.7
+	github.com/wavefronthq/wavefront-sdk-go v0.9.9
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
@@ -281,12 +281,12 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/mod v0.4.2 // indirect
+	golang.org/x/mod v0.5.0 // indirect
 	golang.org/x/net v0.0.0-20211005215030-d2e5035098b3
 	golang.org/x/oauth2 v0.0.0-20210805134026-6f1e6394065a
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20211013075003-97ac67df715c
-	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
+	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/text v0.3.7
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/tools v0.1.5 // indirect
