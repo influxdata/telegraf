@@ -23,11 +23,13 @@ for tarFile in "${macFiles[@]}";
 do
   echo "Processing $tarFile"
   # Extract the built mac binary and sign it.
-  extractedFolder="$(tar -txzf "$tarFile" | head -1 | cut -f1 -d"/")"
+  extractedFolder="$(tar -tzf "$tarFile" | head -1 | cut -f1 -d"/")"
+  cleanup
+  tar -xzf "$tarFile"
   echo "$extractedFolder"
   baseName=$(basename "$tarFile" .tar.gz)
   echo "$baseName"
-  cd "$(find . -name "*telegraf-*" -type d)" || exit
+  cd "$extractedFolder" || exit
   cd usr/bin || exit
   codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime telegraf
   codesign -v telegraf
@@ -40,7 +42,6 @@ do
   codesign -v ../scripts/telegraf_entry_mac
 
   # Create the .app bundle.
-  rm -rf Telegraf
   mkdir Telegraf
   cd Telegraf || exit
   mkdir Contents
