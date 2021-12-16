@@ -206,7 +206,7 @@ jobs:
       - package-build:
           type: windows
           nightly: << parameters.nightly >>
-  darwin-package:
+  darwin-amd64-package:
     parameters:
       nightly:
         type: boolean
@@ -214,7 +214,17 @@ jobs:
     executor: go-1_17
     steps:
       - package-build:
-          type: darwin
+          type: darwin-amd64
+          nightly: << parameters.nightly >>
+  darwin-arm64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
+    steps:
+      - package-build:
+          type: darwin-arm64
           nightly: << parameters.nightly >>
   i386-package:
     parameters:
@@ -453,7 +463,10 @@ workflows:
       - 'windows-package':
           requires:
             - 'test-go-windows'
-      - 'darwin-package':
+      - 'darwin-amd64-package':
+          requires:
+            - 'test-go-mac'
+      - 'darwin-arm64-package':
           requires:
             - 'test-go-mac'
       - 'i386-package':
@@ -509,7 +522,8 @@ workflows:
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
-            - 'darwin-package'
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
             - 'windows-package'
             - 'static-package'
             - 'arm64-package'
@@ -562,8 +576,13 @@ workflows:
           nightly: true
           requires:
             - 'test-go-windows'
-      - 'darwin-package':
-          name: 'darwin-package-nightly'
+      - 'darwin-amd64-package':
+          name: 'darwin-amd64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-mac'
+      - 'darwin-arm64-package':
+          name: 'darwin-arm64-package-nightly'
           nightly: true
           requires:
             - 'test-go-mac'
@@ -626,7 +645,8 @@ workflows:
             - 'amd64-package-nightly'
             - 'mipsel-package-nightly'
             - 'mips-package-nightly'
-            - 'darwin-package-nightly'
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
             - 'windows-package-nightly'
             - 'static-package-nightly'
             - 'arm64-package-nightly'
