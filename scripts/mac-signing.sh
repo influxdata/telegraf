@@ -1,39 +1,43 @@
+#!/bin/bash
+
 # Acquire the necessary certificates.
-base64 -D -o MacCertificate.p12 <<< $MacCertificate
-sudo security import MacCertificate.p12 -k /Library/Keychains/System.keychain -P $MacCertificatePassword -A
-base64 -D -o AppleSigningAuthorityCertificate.cer <<< $AppleSigningAuthorityCertificate
+# shellcheck disable=SC2154
+base64 -D -o MacCertificate.p12 <<< "$MacCertificate"
+sudo security import MacCertificate.p12 -k /Library/Keychains/System.keychain -P "$MacCertificatePassword" -A
+base64 -D -o AppleSigningAuthorityCertificate.cer <<< "$AppleSigningAuthorityCertificate"
 sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
-cd dist
-amdFile=$(find . -name "*darwin_amd64.tar*")
+cd dist || exit
+# amdFile=$(find . -name "*darwin_amd64.tar*")
 armFile=$(find . -name "*darwin_arm64.tar*")
-macFiles=(${amdFile} ${armFile})
+macFiles=("${amdFile}" "${armFile}")
 
 
 for tarFile in "${macFiles[@]}";
 do
+  echo "Processing $tarFile"
   # Extract the built mac binary and sign it.
-  tar -xzvf $tarFile
-  baseName=$(basename $tarFile .tar.gz)
-  cd $(find . -name "*telegraf-*" -type d)
-  cd usr/bin
+  tar -xzvf "$tarFile"
+  baseName=$(basename "$tarFile" .tar.gz)
+  cd "$(find . -name "*telegraf-*" -type d)" || exit
+  cd usr/bin || exit
   codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime telegraf
   codesign -v telegraf
 
   # Reset back out to the main directory.
-  cd
-  cd project/dist
+  cd || exit
+  cd project/dist || exit
   extractedFolder=$(find . -name "*telegraf-*" -type d)
 
   # Sign the 'telegraf entry' script, which is required to open Telegraf upon opening the .app bundle.
   codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime ../scripts/telegraf_entry_mac
   codesign -v ../scripts/telegraf_entry_mac
-
+s
   # Create the .app bundle.
   mkdir Telegraf
-  cd Telegraf
+  cd Telegraf || exit
   mkdir Contents
-  cd Contents
+  cd Contents || exit
   mkdir MacOS
   mkdir Resources
   cd ../..
@@ -51,7 +55,7 @@ do
 
   # Send the DMG to be notarized.
   uuid=$(xcrun altool --notarize-app --primary-bundle-id "com.influxdata.telegraf" --username "$AppleUsername" --password "$ApplePassword" --file "$baseName".dmg | awk '/RequestUUID/ { print $NF; }')
-  echo $uuid
+  echo "$uuid"
   if [[ $uuid == "" ]]; then
     echo "Could not upload for notarization."
     exit 1
@@ -61,7 +65,7 @@ do
   request_status="in progress"
   while [[ "$request_status" == "in progress" ]]; do
     sleep 10
-    request_response=$(xcrun altool --notarization-info $uuid --username "$AppleUsername" --password "$ApplePassword" 2>&1)
+    request_response=$(xcrun altool --notarization-info "$uuid" --username "$AppleUsername" --password "$ApplePassword" 2>&1)
     request_status=$(echo "$request_response" | awk -F ': ' '/Status:/ { print $2; }' )
   done
 
@@ -73,8 +77,9 @@ do
 
   # Attach the notarization to the DMG.
   xcrun stapler staple "$baseName".dmg
+  rm -rf Telegraf
   rm -rf Telegraf.app
-  rm -rf $extractedFolder
+  rm -rf "$extractedFolder"
   ls
 
   echo "$tarFile Signed and notarized!"
