@@ -5,6 +5,7 @@
 ### Bugfixes
 
 - [#10288](https://github.com/influxdata/telegraf/pull/10288) Fix panic in parsers due to missing Log for all plugins using SetParserFunc.
+- [#10288](https://github.com/influxdata/telegraf/pull/10288) Fix panic in parsers due to missing Log for all plugins using SetParserFunc
 - [#10247](https://github.com/influxdata/telegraf/pull/10247) Update go-sensu module to v2.12.0
 - [#10284](https://github.com/influxdata/telegraf/pull/10284) `inputs.openstack` Fix typo in openstack neutron input plugin (newtron)
 
@@ -12,6 +13,7 @@
 
 - [#10239](https://github.com/influxdata/telegraf/pull/10239) Enable Darwin arm64 build
 - [#10150](https://github.com/influxdata/telegraf/pull/10150) `inputs.smart` Add SMART plugin concurrency configuration option, nvme-cli v1.14+ support and lint fixes.
+- [#10150](https://github.com/influxdata/telegraf/pull/10150) `inputs.smart` Add SMART plugin concurrency configuration option, nvme-cli v1.14+ support and lint fixes
 
 ## v1.21.0 [2021-12-15]
 
