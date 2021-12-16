@@ -1190,7 +1190,18 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return err
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
-			return parsers.NewParser(config)
+			parser, err := parsers.NewParser(config)
+			if err != nil {
+				return nil, err
+			}
+			logger := models.NewLogger("parsers", config.DataFormat, name)
+			models.SetLoggerOnPlugin(parser, logger)
+			if initializer, ok := parser.(telegraf.Initializer); ok {
+				if err := initializer.Init(); err != nil {
+					return nil, err
+				}
+			}
+			return parser, nil
 		})
 	}
 
