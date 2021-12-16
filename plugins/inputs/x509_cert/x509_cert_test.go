@@ -259,6 +259,9 @@ func TestGatherChain(t *testing.T) {
 }
 
 func TestGatherUDPCert(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
 	require.NoError(t, err)
 
