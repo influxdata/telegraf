@@ -28,6 +28,7 @@ type HistogramAggregator struct {
 	ResetBuckets       bool                    `toml:"reset"`
 	Cumulative         bool                    `toml:"cumulative"`
 	ExpirationInterval telegrafConfig.Duration `toml:"expiration_interval"`
+	PushOnlyOnUpdate   bool                    `toml:"push_only_on_update"`
 
 	buckets bucketsByMetrics
 	cache   map[uint64]metricHistogramCollection
@@ -55,6 +56,7 @@ type metricHistogramCollection struct {
 	name                string
 	tags                map[string]string
 	expireTime          time.Time
+	updated             bool
 }
 
 // counts is the number of hits in the bucket
@@ -99,6 +101,10 @@ var sampleConfig = `
   ## Expiration interval for each histogram. The histogram will be expired if 
   ## there are no changes in any buckets for this time interval. 0 == no expiration.
   # expiration_interval = "0m"
+
+  ## If true, aggregated histogram are pushed to output only if it was updated since
+  ## previous push. Defaults to false.
+  # push_only_on_update = false
 
   ## Example config that aggregates all fields of the metric.
   # [[aggregators.histogram.config]]
@@ -166,6 +172,7 @@ func (h *HistogramAggregator) Add(in telegraf.Metric) {
 			if h.ExpirationInterval != 0 {
 				agr.expireTime = addTime.Add(time.Duration(h.ExpirationInterval))
 			}
+			agr.updated = true
 		}
 	}
 
@@ -182,6 +189,11 @@ func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
 			delete(h.cache, id)
 			continue
 		}
+		if h.PushOnlyOnUpdate && !h.cache[id].updated {
+			continue
+		}
+		aggregate.updated = false
+		h.cache[id] = aggregate
 		for field, counts := range aggregate.histogramCollection {
 			h.groupFieldsByBuckets(&metricsWithGroupedFields, aggregate.name, field, copyTags(aggregate.tags), counts)
 		}
