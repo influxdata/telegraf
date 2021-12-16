@@ -10,8 +10,8 @@ armFile=$(find . -name "*darwin_arm64.tar*")
 macFiles=(${amdFile} ${armFile})
 
 
-for tarFile in ${macFiles[@]};
-do 
+for tarFile in "${macFiles[@]}";
+do
   # Extract the built mac binary and sign it.
   tar -xzvf $tarFile
   baseName=$(basename $tarFile .tar.gz)
@@ -52,7 +52,7 @@ do
   # Send the DMG to be notarized.
   uuid=$(xcrun altool --notarize-app --primary-bundle-id "com.influxdata.telegraf" --username "$AppleUsername" --password "$ApplePassword" --file "$baseName".dmg | awk '/RequestUUID/ { print $NF; }')
   echo $uuid
-  if [[ $uuid == "" ]]; then 
+  if [[ $uuid == "" ]]; then
     echo "Could not upload for notarization."
     exit 1
   fi
@@ -61,11 +61,13 @@ do
   request_status="in progress"
   while [[ "$request_status" == "in progress" ]]; do
     sleep 10
-    request_status=$(xcrun altool --notarization-info $uuid --username "$AppleUsername" --password "$ApplePassword" 2>&1 | awk -F ': ' '/Status:/ { print $2; }' )
+    request_response=$(xcrun altool --notarization-info $uuid --username "$AppleUsername" --password "$ApplePassword" 2>&1)
+    request_status=$(echo "$request_response" | awk -F ': ' '/Status:/ { print $2; }' )
   done
 
   if [[ $request_status != "success" ]]; then
     echo "Failed to notarize."
+    echo "$request_response"
     exit 1
   fi
 
