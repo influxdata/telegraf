@@ -514,11 +514,11 @@ func (o *OpenStack) gatherNetworks(acc telegraf.Accumulator) error {
 func (o *OpenStack) gatherAgents(acc telegraf.Accumulator) error {
 	page, err := agents.List(o.network, &agents.ListOpts{}).AllPages()
 	if err != nil {
-		return fmt.Errorf("unable to list newtron agents %v", err)
+		return fmt.Errorf("unable to list neutron agents %v", err)
 	}
 	extractedAgents, err := agents.ExtractAgents(page)
 	if err != nil {
-		return fmt.Errorf("unable to extract newtron agents %v", err)
+		return fmt.Errorf("unable to extract neutron agents %v", err)
 	}
 	for _, agent := range extractedAgents {
 		tags := map[string]string{
@@ -538,7 +538,7 @@ func (o *OpenStack) gatherAgents(acc telegraf.Accumulator) error {
 			"started_at":          o.convertTimeFormat(agent.StartedAt),
 			"heartbeat_timestamp": o.convertTimeFormat(agent.HeartbeatTimestamp),
 		}
-		acc.AddFields("openstack_newtron_agent", fields, tags)
+		acc.AddFields("openstack_neutron_agent", fields, tags)
 	}
 	return nil
 }
