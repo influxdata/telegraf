@@ -123,7 +123,7 @@ func (g *Groundwork) Close() error {
 }
 
 func (g *Groundwork) Write(metrics []telegraf.Metric) error {
-	resourceToServicesMap := make(map[string][]transit.DynamicMonitoredService)
+	resourceToServicesMap := make(map[string][]transit.MonitoredService)
 	for _, metric := range metrics {
 		resource, service, err := g.parseMetric(metric)
 		if err != nil {
@@ -133,19 +133,20 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 		resourceToServicesMap[resource] = append(resourceToServicesMap[resource], *service)
 	}
 
-	var resources []transit.DynamicMonitoredResource
+	var resources []transit.MonitoredResource
 	for resourceName, services := range resourceToServicesMap {
-		resources = append(resources, transit.DynamicMonitoredResource{
+		resources = append(resources, transit.MonitoredResource{
 			BaseResource: transit.BaseResource{
-				BaseTransitData: transit.BaseTransitData{
+				BaseInfo: transit.BaseInfo{
 					Name: resourceName,
-					Type: transit.Host,
+					Type: transit.ResourceTypeHost,
 				},
 			},
-			Status:        transit.HostUp,
-			LastCheckTime: transit.NewTimestamp(),
-			NextCheckTime: transit.NewTimestamp(), // Temporary work around to avoid error from the server.
-			Services:      services,
+			MonitoredInfo: transit.MonitoredInfo{
+				Status:        transit.HostUp,
+				LastCheckTime: transit.NewTimestamp(),
+			},
+			Services: services,
 		})
 	}
 
@@ -153,7 +154,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return err
 	}
-	requestJSON, err := json.Marshal(transit.DynamicResourcesWithServicesRequest{
+	requestJSON, err := json.Marshal(transit.ResourcesWithServicesRequest{
 		Context: &transit.TracerContext{
 			AppType:    "TELEGRAF",
 			AgentID:    g.AgentID,
@@ -171,7 +172,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 
 	_, err = g.client.SendResourcesWithMetrics(context.Background(), requestJSON)
 	if err != nil {
-		return fmt.Errorf("error while sending: %v", err)
+		return fmt.Errorf("error while sending: %w", err)
 	}
 
 	return nil
@@ -191,7 +192,7 @@ func init() {
 	})
 }
 
-func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.DynamicMonitoredService, error) {
+func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.MonitoredService, error) {
 	resource := g.DefaultHost
 	if value, present := metric.GetTag(g.ResourceTag); present {
 		resource = value
@@ -233,17 +234,18 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Dynam
 
 	lastCheckTime := transit.NewTimestamp()
 	lastCheckTime.Time = metric.Time()
-	serviceObject := transit.DynamicMonitoredService{
-		BaseTransitData: transit.BaseTransitData{
+	serviceObject := transit.MonitoredService{
+		BaseInfo: transit.BaseInfo{
 			Name:  service,
-			Type:  transit.Service,
+			Type:  transit.ResourceTypeService,
 			Owner: resource,
 		},
-		Status:           transit.MonitorStatus(status),
-		LastCheckTime:    lastCheckTime,
-		NextCheckTime:    lastCheckTime, // Temporary work around to avoid error from the server.
-		LastPlugInOutput: message,
-		Metrics:          nil,
+		MonitoredInfo: transit.MonitoredInfo{
+			Status:           transit.MonitorStatus(status),
+			LastCheckTime:    lastCheckTime,
+			LastPluginOutput: message,
+		},
+		Metrics: nil,
 	}
 
 	for _, value := range metric.FieldList() {
@@ -254,7 +256,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Dynam
 				Label:      value.Key + "_wn",
 				Value: &transit.TypedValue{
 					ValueType:   transit.DoubleType,
-					DoubleValue: warning,
+					DoubleValue: &warning,
 				},
 			})
 		}
@@ -264,15 +266,14 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Dynam
 				Label:      value.Key + "_cr",
 				Value: &transit.TypedValue{
 					ValueType:   transit.DoubleType,
-					DoubleValue: critical,
+					DoubleValue: &critical,
 				},
 			})
 		}
 
-		typedValue := new(transit.TypedValue)
-		err := typedValue.FromInterface(value.Value)
-		if err != nil {
-			return "", nil, fmt.Errorf("could not convert %s: %w", value.Key, err)
+		typedValue := transit.NewTypedValue(value.Value)
+		if typedValue == nil {
+			return "", nil, fmt.Errorf("could not convert value %s: %v", value.Key, value.Value)
 		}
 		if typedValue.ValueType == transit.StringType {
 			g.Log.Warnf("string values are not supported, skipping field %s", value.Key)
@@ -283,12 +284,11 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Dynam
 			MetricName: value.Key,
 			SampleType: transit.Value,
 			Interval: &transit.TimeInterval{
-				EndTime:   lastCheckTime,
-				StartTime: lastCheckTime, // Temporary work around to avoid error from the server.
+				EndTime: lastCheckTime,
 			},
 			Value:      typedValue,
 			Unit:       transit.UnitType(unitType),
-			Thresholds: &thresholds,
+			Thresholds: thresholds,
 		})
 	}
 
