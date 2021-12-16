@@ -184,6 +184,10 @@ var binaryDataStringUTF8 = []byte{
 	0x4C, 0x6C, 0xA8, 0x5D,
 }
 
+var binaryDataBigEndianTimeS = []byte{
+	0x01, 0x6D, 0xD9, 0xE7,
+}
+
 var binaryDataBigEndianTimeXs = []byte{
 	0x00, 0x00, 0x01, 0x6D, 0xD9, 0xE7, 0x0B, 0x17,
 }
@@ -204,7 +208,7 @@ func TestBigEndian(t *testing.T) {
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, parser.MetricName, metrics[0].Name())
+	require.Equal(t, parser.metricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
 	assert.Equal(t, expectedParseResult, metrics[0].Fields())
 }
@@ -225,7 +229,7 @@ func TestLittleEndian(t *testing.T) {
 	metrics, err := parser.Parse(binaryDataLittleEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, parser.MetricName, metrics[0].Name())
+	require.Equal(t, parser.metricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
 	assert.Equal(t, expectedParseResult, metrics[0].Fields())
 }
@@ -294,7 +298,7 @@ func TestStringUTF8(t *testing.T) {
 	metrics, err := parser.Parse(binaryDataStringUTF8)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, parser.MetricName, metrics[0].Name())
+	require.Equal(t, parser.metricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
 	assert.Equal(t, expectedParseResultStringUTF8, metrics[0].Fields())
 }
@@ -315,7 +319,7 @@ func TestPadding(t *testing.T) {
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, parser.MetricName, metrics[0].Name())
+	require.Equal(t, parser.metricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
 	assert.Equal(t, expectedParseResultWithPadding, metrics[0].Fields())
 }
@@ -338,7 +342,7 @@ func TestTimeAddedByParser(t *testing.T) {
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, parser.MetricName, metrics[0].Name())
+	require.Equal(t, parser.metricName, metrics[0].Name())
 	assert.True(t, int64(0x5DA86C4C) < metrics[0].Time().Unix())
 	assert.Equal(t, map[string]interface{}{
 		"fieldBool0": false,
@@ -363,25 +367,95 @@ func TestInvalidFieldType(t *testing.T) {
 
 func TestTimeXs(t *testing.T) {
 
+	// Default, unix
 	var parser, err = NewBinDataParser(
-		"time_unix_ms",
-		"unix_ms",
+		"time_unix_default",
+		"",
 		"be",
 		"utf-8",
 		[]Field{
-			{Name: "time", Type: "int64", Size: 8},
+			{Name: "time", Type: "int32", Size: 4},
 		},
 		nil,
 	)
 	require.NoError(t, err)
 	assert.NotNil(t, parser)
 
-	metrics, err := parser.Parse(binaryDataBigEndianTimeXs)
+	metrics, err := parser.Parse(binaryDataBigEndianTimeS)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, parser.MetricName, metrics[0].Name())
+	require.Equal(t, parser.metricName, metrics[0].Name())
+	assert.Equal(t, int64(0x016DD9E7), metrics[0].Time().Unix())
+
+	// unix
+	parser, err = NewBinDataParser(
+		"time_unix",
+		"unix",
+		"be",
+		"utf-8",
+		[]Field{
+			{Name: "time", Type: "int32"},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
+
+	metrics, err = parser.Parse(binaryDataBigEndianTimeS)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	require.Equal(t, parser.metricName, metrics[0].Name())
+	assert.Equal(t, int64(0x016DD9E7), metrics[0].Time().Unix())
+
+	// unix, invalid time type
+	parser, err = NewBinDataParser(
+		"time_unix",
+		"unix",
+		"be",
+		"utf-8",
+		[]Field{
+			{Name: "time", Type: "int64"},
+		},
+		nil,
+	)
+	require.Error(t, err)
+	assert.Nil(t, parser)
+
+	// unix_ms
+	parser, err = NewBinDataParser(
+		"time_unix_ms",
+		"unix_ms",
+		"be",
+		"utf-8",
+		[]Field{
+			{Name: "time", Type: "int64"},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
+
+	metrics, err = parser.Parse(binaryDataBigEndianTimeXs)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	require.Equal(t, parser.metricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000000)
 
+	// unix_ms, invalid time type
+	parser, err = NewBinDataParser(
+		"time_unix_ms",
+		"unix_ms",
+		"be",
+		"utf-8",
+		[]Field{
+			{Name: "time", Type: "int32"},
+		},
+		nil,
+	)
+	require.Error(t, err)
+	assert.Nil(t, parser)
+
+	// unix_us
 	parser, err = NewBinDataParser(
 		"time_unix_us",
 		"unix_us",
@@ -398,9 +472,24 @@ func TestTimeXs(t *testing.T) {
 	metrics, err = parser.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, parser.MetricName, metrics[0].Name())
+	require.Equal(t, parser.metricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000)
 
+	// unix_us, invalid time type
+	parser, err = NewBinDataParser(
+		"time_unix_us",
+		"unix_us",
+		"be",
+		"utf-8",
+		[]Field{
+			{Name: "time", Type: "int32"},
+		},
+		nil,
+	)
+	require.Error(t, err)
+	assert.Nil(t, parser)
+
+	// unix_ns
 	parser, err = NewBinDataParser(
 		"time_unix_ns",
 		"unix_ns",
@@ -417,9 +506,24 @@ func TestTimeXs(t *testing.T) {
 	metrics, err = parser.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, parser.MetricName, metrics[0].Name())
+	require.Equal(t, parser.metricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano())
 
+	// unix_ms, invalid time type
+	parser, err = NewBinDataParser(
+		"time_unix",
+		"unix_ns",
+		"be",
+		"utf-8",
+		[]Field{
+			{Name: "time", Type: "int32"},
+		},
+		nil,
+	)
+	require.Error(t, err)
+	assert.Nil(t, parser)
+
+	// invalid
 	parser, err = NewBinDataParser(
 		"time_invalid_format",
 		"FOO",
@@ -450,7 +554,7 @@ func TestDefaultTags(t *testing.T) {
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, parser.MetricName, metrics[0].Name())
+	require.Equal(t, parser.metricName, metrics[0].Name())
 	assert.Equal(t, defaultTags, metrics[0].Tags())
 }
 
