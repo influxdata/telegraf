@@ -1,5 +1,11 @@
 #!/bin/bash
 
+function cleanup () {
+  rm -rf Telegraf
+  rm -rf Telegraf.app
+  rm -rf "$extractedFolder"
+}
+
 # Acquire the necessary certificates.
 # shellcheck disable=SC2154
 base64 -D -o MacCertificate.p12 <<< "$MacCertificate"
@@ -17,23 +23,24 @@ for tarFile in "${macFiles[@]}";
 do
   echo "Processing $tarFile"
   # Extract the built mac binary and sign it.
-  tar -xzvf "$tarFile"
+  extractedFolder="$(tar -txzf "$tarFile" | head -1 | cut -f1 -d"/")"
+  echo "$extractedFolder"
   baseName=$(basename "$tarFile" .tar.gz)
+  echo "$baseName"
   cd "$(find . -name "*telegraf-*" -type d)" || exit
   cd usr/bin || exit
   codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime telegraf
   codesign -v telegraf
 
   # Reset back out to the main directory.
-  cd || exit
-  cd project/dist || exit
-  extractedFolder=$(find . -name "*telegraf-*" -type d)
+  cd ~/project/dist || exit
 
   # Sign the 'telegraf entry' script, which is required to open Telegraf upon opening the .app bundle.
   codesign -s "Developer ID Application: InfluxData Inc. (M7DN9H35QT)" --timestamp --options=runtime ../scripts/telegraf_entry_mac
   codesign -v ../scripts/telegraf_entry_mac
-s
+
   # Create the .app bundle.
+  rm -rf Telegraf
   mkdir Telegraf
   cd Telegraf || exit
   mkdir Contents
@@ -72,14 +79,13 @@ s
   if [[ $request_status != "success" ]]; then
     echo "Failed to notarize."
     echo "$request_response"
+    cleanup
     exit 1
   fi
 
   # Attach the notarization to the DMG.
   xcrun stapler staple "$baseName".dmg
-  rm -rf Telegraf
-  rm -rf Telegraf.app
-  rm -rf "$extractedFolder"
+  cleanup
   ls
 
   echo "$tarFile Signed and notarized!"
