@@ -94,7 +94,8 @@ do
   # Attach the notarization to the DMG.
   xcrun stapler staple "$baseName".dmg
   cleanup
-  ls
+
+  mv "$baseName".dmg ~/project/dist
 
   echo "$tarFile Signed and notarized!"
 done
