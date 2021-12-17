@@ -46,22 +46,22 @@ func TestInitFail(t *testing.T) {
 		{
 			name:     "all empty",
 			plugin:   &XtremIO{},
-			expected: "Username cannot be empty",
+			expected: "username cannot be empty",
 		},
 		{
 			name:     "no username",
 			plugin:   &XtremIO{password: "testpass", url: "http://example.com"},
-			expected: "Username cannot be empty",
+			expected: "username cannot be empty",
 		},
 		{
 			name:     "no password",
 			plugin:   &XtremIO{username: "testuser", url: "http://example.com"},
-			expected: "Password cannot be empty",
+			expected: "password cannot be empty",
 		},
 		{
 			name:     "no url",
 			plugin:   &XtremIO{username: "testuser", password: "testpass"},
-			expected: "URL cannot be empty",
+			expected: "url cannot be empty",
 		},
 	}
 
