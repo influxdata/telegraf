@@ -18,8 +18,8 @@ base64 -D -o AppleSigningAuthorityCertificate.cer <<< "$AppleSigningAuthorityCer
 sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
 # amdFile=$(find . -name "*darwin_amd64.tar*")
-armFile=$(find "$HOME/project/dist" -name "*darwin_amd64.tar*")
-# armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
+# armFile=$(find "$HOME/project/dist" -name "*darwin_amd64.tar*")
+armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
 macFiles=("${armFile}")
 
 for tarFile in "${macFiles[@]}";
@@ -38,8 +38,9 @@ do
 
   # Sign telegraf binary and the telegraf_entry_mac script
   tar -xzvf "$tarFile" --strip-components=2 -C "$RootAppDir/Resources"
+  printf "\n"
   TelegrafBinPath="$RootAppDir/Resources/usr/bin/telegraf"
-  codesign -s "$DeveloperID" --timestamp --options=runtime "$TelegrafBinPath"
+  codesign --arch arm64 -s "$DeveloperID" --timestamp --options=runtime "$TelegrafBinPath"
   echo "Verify if $TelegrafBinPath was signed"
   codesign -dvv "$TelegrafBinPath"
 
