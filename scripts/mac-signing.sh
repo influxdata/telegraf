@@ -27,26 +27,27 @@ do
 
   # Create the .app bundle directory structure
   mkdir -p Telegraf.app/Contents
-  mkdir -p Telegraf.app/Contents/MacOS
-  mkdir -p Telegraf.app/Contents/Resources
+  RootAppDir="Telegraf.app/Contents"
+  mkdir -p "$RootAppDir/MacOS"
+  mkdir -p "$RootAppDir/Resources"
 
   DeveloperID="Developer ID Application: InfluxData Inc. (M7DN9H35QT)"
 
   # Sign telegraf binary and the telegraf_entry_mac script
-  tar -xzf "$tarFile" --strip-components=2 -C Telegraf.app/Contents/Resources
-  TelegrafBinPath="Telegraf.app/Contents/Resources/usr/bin/telegraf"
+  tar -xzf "$tarFile" --strip-components=2 -C "$RootAppDir/Resources"
+  TelegrafBinPath="$RootAppDir/Resources/usr/bin/telegraf"
   codesign -s "$DeveloperID" --timestamp --options=runtime "$TelegrafBinPath"
   codesign -v "$TelegrafBinPath"
 
-  cp ~/project/dist/scripts/telegraf_entry_mac Telegraf/Contents/MacOS
-  EntryMacPath="Telegraf.app/Contents/MacOS/telegraf_entry_mac"
+  cp ~/project/scripts/telegraf_entry_mac "$RootAppDir"/MacOS
+  EntryMacPath="$RootAppDir/MacOS/telegraf_entry_mac"
   codesign -s "$DeveloperID" --timestamp --options=runtime "$EntryMacPath"
   codesign -v "$EntryMacPath"
 
-  cp ~/project/dist/assets/info.plist Telegraf.app/Contents
-  cp  ~/project/dist/assets/icon.icns Telegraf.app/Contents/Resources
+  cp ~/project/assets/info.plist "$RootAppDir"
+  cp  ~/project/assets/icon.icns "$RootAppDir/Resources"
 
-  chmod +x Telegraf.app/Contents/MacOS/telegraf_entry_mac
+  chmod +x "$RootAppDir/MacOS/telegraf_entry_mac"
 
   # Sign the entire .app bundle, and wrap it in a DMG.
   codesign -s "$DeveloperID" --timestamp --options=runtime --deep --force Telegraf.app
