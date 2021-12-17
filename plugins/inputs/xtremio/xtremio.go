@@ -1,6 +1,7 @@
 package xtremio
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -22,6 +23,7 @@ type XtremIO struct {
 	url        string   `toml:"url"`
 	collectors []string `toml:"collectors"`
 	cookie     *http.Cookie
+	client     *http.Client
 	tls.ClientConfig
 	Log telegraf.Logger `toml:"-"`
 }
@@ -57,22 +59,23 @@ func (xio *XtremIO) SampleConfig() string {
 
 func (xio *XtremIO) Init() error {
 	if xio.username == "" {
-		return fmt.Errorf("Username cannot be empty")
+		return errors.New("username cannot be empty")
 	}
 	if xio.password == "" {
-		return fmt.Errorf("Password cannot be empty")
+		return errors.New("password cannot be empty")
 	}
 	if xio.url == "" {
-		return fmt.Errorf("URL cannot be empty")
-	}
-	if len(xio.collectors) == 0 {
-		xio.collectors = []string{"bbus", "clusters", "ssds", "volumes", "xms"}
+		return errors.New("url cannot be empty")
 	}
 
 	availableCollectors := []string{"bbus", "clusters", "ssds", "volumes", "xms"}
+	if len(xio.collectors) == 0 {
+		xio.collectors = availableCollectors
+	}
+
 	for _, collector := range xio.collectors {
 		if !choice.Contains(collector, availableCollectors) {
-			return fmt.Errorf("Specified Collector Isn't Supported: " + collector)
+			return fmt.Errorf("specified collector %q isn't supported", collector)
 		}
 	}
 
@@ -81,18 +84,21 @@ func (xio *XtremIO) Init() error {
 		return err
 	}
 
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = tlsCfg
+	xio.client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+	}
 
 	return nil
 }
 
 func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
-	var err = xio.authenticate()
-	if err != nil {
+	if err := xio.authenticate(); err != nil {
 		return err
 	}
 	if xio.cookie == nil {
-		return fmt.Errorf("no authentication cookie set")
+		return errors.New("no authentication cookie set")
 	}
 
 	var wg sync.WaitGroup
@@ -119,11 +125,10 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 
 			for _, item := range arr {
 				itemSplit := strings.Split(gjson.Get(item.Raw, "href").Str, "/")
-				url := ""
 				if len(itemSplit) < 1 {
 					continue
 				}
-				url = collector + "/" + itemSplit[len(itemSplit)-1]
+				url := collector + "/" + itemSplit[len(itemSplit)-1]
 
 				// Each collector is ran in a goroutine so they can be run in parallel.
 				// Each collector does an initial query to build out the subqueries it
@@ -149,7 +154,7 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 					wg.Add(1)
 					go xio.gatherXMS(acc, url, &wg)
 				default:
-					acc.AddError(fmt.Errorf("Specified Collector Isn't Supported: " + collector))
+					acc.AddError(fmt.Errorf("specified collector %q isn't supported", collector))
 				}
 			}
 		}(collector)
@@ -419,7 +424,6 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 }
 
 func (xio *XtremIO) call(endpoint string) (string, error) {
-	client := &http.Client{}
 	req, err := http.NewRequest("GET", xio.url+"/api/json/v3/types/"+endpoint, nil)
 	if err != nil {
 		return "", err
@@ -427,7 +431,7 @@ func (xio *XtremIO) call(endpoint string) (string, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.AddCookie(xio.cookie)
-	resp, err := client.Do(req)
+	resp, err := xio.client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -440,12 +444,11 @@ func (xio *XtremIO) call(endpoint string) (string, error) {
 }
 
 func (xio *XtremIO) authenticate() error {
-	client := &http.Client{}
 	req, err := http.NewRequest("GET", xio.url+"/api/json/v3/commands/login?password="+xio.password+"&user="+xio.username, nil)
 	if err != nil {
 		return err
 	}
-	resp, err := client.Do(req)
+	resp, err := xio.client.Do(req)
 	if err != nil {
 		return err
 	}
