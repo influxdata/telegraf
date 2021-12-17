@@ -19,7 +19,7 @@ sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains
 
 amdFile=$(find "$HOME/project/dist" -name "*darwin_amd64.tar*")
 armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
-macFiles=("${amdFile} ${armFile}")
+macFiles=("${amdFile}" "${armFile}")
 
 for tarFile in "${macFiles[@]}";
 do
