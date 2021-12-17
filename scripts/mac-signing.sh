@@ -34,14 +34,16 @@ do
   DeveloperID="Developer ID Application: InfluxData Inc. (M7DN9H35QT)"
 
   # Sign telegraf binary and the telegraf_entry_mac script
-  tar -xzfv "$tarFile" --strip-components=2 -C "$RootAppDir/Resources"
+  tar -xzvf "$tarFile" --strip-components=2 -C "$RootAppDir/Resources"
   TelegrafBinPath="$RootAppDir/Resources/usr/bin/telegraf"
   codesign -s "$DeveloperID" --timestamp --options=runtime "$TelegrafBinPath"
+  # Verify if signed
   codesign -v "$TelegrafBinPath"
 
   cp ~/project/scripts/telegraf_entry_mac "$RootAppDir"/MacOS
   EntryMacPath="$RootAppDir/MacOS/telegraf_entry_mac"
   codesign -s "$DeveloperID" --timestamp --options=runtime "$EntryMacPath"
+  # Verify if signed
   codesign -v "$EntryMacPath"
 
   cp ~/project/info.plist "$RootAppDir"
