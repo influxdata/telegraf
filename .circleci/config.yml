@@ -463,7 +463,7 @@ workflows:
       # - 'windows-package':
       #     requires:
       #       - 'test-go-windows'
-      #- 'darwin-amd64-package'
+      - 'darwin-amd64-package'
           # requires:
           #   - 'test-go-mac'
       - 'darwin-arm64-package'
@@ -554,7 +554,7 @@ workflows:
       #           only: /.*/
       - 'package-sign-mac':
           requires:
-            #- 'darwin-amd64-package'
+            - 'darwin-amd64-package'
             - 'darwin-arm64-package'
           #    - 'package-sign-windows'
           #  filters:

@@ -17,16 +17,13 @@ sudo security import MacCertificate.p12 -k /Library/Keychains/System.keychain -P
 base64 -D -o AppleSigningAuthorityCertificate.cer <<< "$AppleSigningAuthorityCertificate"
 sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
-# amdFile=$(find . -name "*darwin_amd64.tar*")
-# armFile=$(find "$HOME/project/dist" -name "*darwin_amd64.tar*")
+armFile=$(find "$HOME/project/dist" -name "*darwin_amd64.tar*")
 armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
 macFiles=("${armFile}")
 
 for tarFile in "${macFiles[@]}";
 do
   cleanup
-  echo "Processing $tarFile"
-  printf "\n"
 
   # Create the .app bundle directory structure
   mkdir -p Telegraf.app/Contents
@@ -37,6 +34,7 @@ do
   DeveloperID="Developer ID Application: InfluxData Inc. (M7DN9H35QT)"
 
   # Sign telegraf binary and the telegraf_entry_mac script
+  echo "Extract $tarFile to $RootAppDir/Resources"
   tar -xzvf "$tarFile" --strip-components=2 -C "$RootAppDir/Resources"
   printf "\n"
   TelegrafBinPath="$RootAppDir/Resources/usr/bin/telegraf"
