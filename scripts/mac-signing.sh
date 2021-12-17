@@ -2,6 +2,7 @@
 
 function cleanup () {
   echo "Cleaning up any existing Telegraf or Telegraf.app"
+  printf "\n"
   rm -rf Telegraf
   rm -rf Telegraf.app
 }
@@ -17,13 +18,15 @@ base64 -D -o AppleSigningAuthorityCertificate.cer <<< "$AppleSigningAuthorityCer
 sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
 # amdFile=$(find . -name "*darwin_amd64.tar*")
-armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
+armFile=$(find "$HOME/project/dist" -name "*darwin_amd64.tar*")
+# armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
 macFiles=("${armFile}")
 
 for tarFile in "${macFiles[@]}";
 do
   cleanup
   echo "Processing $tarFile"
+  printf "\n"
 
   # Create the .app bundle directory structure
   mkdir -p Telegraf.app/Contents
@@ -37,14 +40,18 @@ do
   tar -xzvf "$tarFile" --strip-components=2 -C "$RootAppDir/Resources"
   TelegrafBinPath="$RootAppDir/Resources/usr/bin/telegraf"
   codesign -s "$DeveloperID" --timestamp --options=runtime "$TelegrafBinPath"
-  # Verify if signed
-  codesign -v "$TelegrafBinPath"
+  echo "Verify if $TelegrafBinPath was signed"
+  codesign -dvv "$TelegrafBinPath"
+
+  printf "\n"
 
   cp ~/project/scripts/telegraf_entry_mac "$RootAppDir"/MacOS
   EntryMacPath="$RootAppDir/MacOS/telegraf_entry_mac"
   codesign -s "$DeveloperID" --timestamp --options=runtime "$EntryMacPath"
-  # Verify if signed
-  codesign -v "$EntryMacPath"
+  echo "Verify if $EntryMacPath was signed"
+  codesign -dvv "$EntryMacPath"
+
+  printf "\n"
 
   cp ~/project/info.plist "$RootAppDir"
   cp  ~/project/assets/icon.icns "$RootAppDir/Resources"
@@ -62,11 +69,13 @@ do
   # AppleUsername and ApplePassword are environment variables, to follow convention they should have been all caps.
   # shellcheck disable=SC2154
   uuid=$(xcrun altool --notarize-app --primary-bundle-id "com.influxdata.telegraf" --username "$AppleUsername" --password "$ApplePassword" --file "$baseName".dmg | awk '/RequestUUID/ { print $NF; }')
-  echo "$uuid"
+  echo "UUID: $uuid"
   if [[ $uuid == "" ]]; then
     echo "Could not upload for notarization."
     exit 1
   fi
+
+  printf "\n"
 
   # Wait until the status returns something other than 'in progress'.
   request_status="in progress"
