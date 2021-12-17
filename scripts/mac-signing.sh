@@ -7,12 +7,6 @@ function cleanup () {
   rm -rf Telegraf.app
 }
 
-function signBinary () {
-  tarFile=$1
-  arch=$2
-  echo "Processing $tarFile with $arch"
-}
-
 # Acquire the necessary certificates.
 # MacCertificate, MacCertificatePassword, AppleSigningAuthorityCertificate are environment variables, to follow convention they should have been all caps.
 # shellcheck disable=SC2154
@@ -46,17 +40,17 @@ do
   tar -xzvf "$tarFile" --strip-components=2 -C "$RootAppDir/Resources"
   printf "\n"
   TelegrafBinPath="$RootAppDir/Resources/usr/bin/telegraf"
-  codesign --arch arm64 -s "$DeveloperID" --timestamp --options=runtime "$TelegrafBinPath"
+  codesign --force -s "$DeveloperID" --timestamp --options=runtime "$TelegrafBinPath"
   echo "Verify if $TelegrafBinPath was signed"
-  codesign -v "$TelegrafBinPath"
+  codesign -dvv "$TelegrafBinPath"
 
   printf "\n"
 
   cp ~/project/scripts/telegraf_entry_mac "$RootAppDir"/MacOS
   EntryMacPath="$RootAppDir/MacOS/telegraf_entry_mac"
-  codesign --arch arm64 -s "$DeveloperID" --timestamp --options=runtime "$EntryMacPath"
+  codesign -s "$DeveloperID" --timestamp --options=runtime "$EntryMacPath"
   echo "Verify if $EntryMacPath was signed"
-  codesign -v "$EntryMacPath"
+  codesign -dvv "$EntryMacPath"
 
   printf "\n"
 
@@ -66,11 +60,11 @@ do
   chmod +x "$RootAppDir/MacOS/telegraf_entry_mac"
 
   # Sign the entire .app bundle, and wrap it in a DMG.
-  codesign --arch arm64 -s "$DeveloperID" --timestamp --options=runtime --deep --force Telegraf.app
+  codesign -s "$DeveloperID" --timestamp --options=runtime --deep --force Telegraf.app
   baseName=$(basename "$tarFile" .tar.gz)
   echo "$baseName"
   hdiutil create -size 500m -volname Telegraf -srcfolder Telegraf.app "$baseName".dmg
-  codesign --arch arm64 -s "$DeveloperID" --timestamp --options=runtime "$baseName".dmg
+  codesign -s "$DeveloperID" --timestamp --options=runtime "$baseName".dmg
 
   # Send the DMG to be notarized.
   # AppleUsername and ApplePassword are environment variables, to follow convention they should have been all caps.
