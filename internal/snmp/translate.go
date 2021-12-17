@@ -150,20 +150,24 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		// for example RFC1213-MIB::sysUpTime.0
 		s := strings.Split(oid, "::")
 		// node becomes sysUpTime.0
-		node := s[1]
-		if strings.ContainsAny(node, ".") {
-			s = strings.Split(node, ".")
-			// node becomes sysUpTime
-			node = s[0]
-			end = "." + s[1]
-		}
+		if s[1] != "" {
+			node := s[1]
+			if strings.ContainsAny(node, ".") {
+				s = strings.Split(node, ".")
+				// node becomes sysUpTime
+				node = s[0]
+				end = "." + s[1]
+			}
 
-		out, err = gosmi.GetNode(node)
-		if err != nil {
-			return oid, oid, oid, oid, err
-		}
+			out, err = gosmi.GetNode(node)
+			if err != nil {
+				return oid, oid, oid, oid, err
+			}
 
-		oidNum = "." + out.RenderNumeric() + end
+			oidNum = "." + out.RenderNumeric() + end
+		} else {
+			return "", oid, oid, oid, fmt.Errorf("can not parse %v\n", oid)
+		}
 	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
 		//handle mixed oid ex. .iso.2.3
 		s := strings.Split(oid, ".")
