@@ -34,12 +34,14 @@ do
 
   # Sign telegraf binary and the telegraf_entry_mac script
   tar -xzf "$tarFile" --strip-components=2 -C Telegraf.app/Contents/Resources
-  codesign -s "$DeveloperID" --timestamp --options=runtime Telegraf.app/Contents/Resources/usr/bin/telegraf
-  codesign -v telegraf
+  TelegrafBinPath="Telegraf.app/Contents/Resources/usr/bin/telegraf"
+  codesign -s "$DeveloperID" --timestamp --options=runtime "$TelegrafBinPath"
+  codesign -v "$TelegrafBinPath"
 
   cp ~/project/dist/scripts/telegraf_entry_mac Telegraf/Contents/MacOS
-  codesign -s "$DeveloperID" --timestamp --options=runtime Telegraf.app/Contents/MacOS/telegraf_entry_mac
-  codesign -v ../scripts/telegraf_entry_mac
+  EntryMacPath="Telegraf.app/Contents/MacOS/telegraf_entry_mac"
+  codesign -s "$DeveloperID" --timestamp --options=runtime "$EntryMacPath"
+  codesign -v "$EntryMacPath"
 
   cp ~/project/dist/assets/info.plist Telegraf.app/Contents
   cp  ~/project/dist/assets/icon.icns Telegraf.app/Contents/Resources
