@@ -97,5 +97,5 @@ do
 
   mv "$baseName".dmg ~/project/dist
 
-  echo "$tarFile Signed and notarized!"
+  echo "$baseName.dmg signed and notarized!"
 done
