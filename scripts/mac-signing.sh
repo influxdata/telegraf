@@ -16,11 +16,9 @@ sudo security import MacCertificate.p12 -k /Library/Keychains/System.keychain -P
 base64 -D -o AppleSigningAuthorityCertificate.cer <<< "$AppleSigningAuthorityCertificate"
 sudo security import AppleSigningAuthorityCertificate.cer -k '/Library/Keychains/System.keychain' -A
 
-cd dist || exit
 # amdFile=$(find . -name "*darwin_amd64.tar*")
-armFile=$(find . -name "$HOME/project/dist/*darwin_arm64.tar*")
+armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
 macFiles=("${armFile}")
-
 
 for tarFile in "${macFiles[@]}";
 do
@@ -35,7 +33,7 @@ do
   DeveloperID="Developer ID Application: InfluxData Inc. (M7DN9H35QT)"
 
   # Sign telegraf binary and the telegraf_entry_mac script
-  tar -xzf "$tarFile" --strip-components=2 -C Telegraf.app/Contents/Resources telegraf-*
+  tar -xzf "$tarFile" --strip-components=2 -C Telegraf.app/Contents/Resources
   codesign -s "$DeveloperID" --timestamp --options=runtime Telegraf.app/Contents/Resources/usr/bin/telegraf
   codesign -v telegraf
 
