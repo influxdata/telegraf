@@ -128,7 +128,7 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 				// Each collector is ran in a goroutine so they can be run in parallel.
 				// Each collector does an initial query to build out the subqueries it
 				// needs to run, which are started here in nested goroutines. A future
-				// refactor opportunity would be for the intial collector goroutines to 
+				// refactor opportunity would be for the intial collector goroutines to
 				// return the results while exiting the goroutine, and then a series of
 				// goroutines can be kicked off for the subqueries. That way there is no
 				// nesting of goroutines.
