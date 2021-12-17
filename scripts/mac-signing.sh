@@ -26,8 +26,8 @@ do
   cleanup
 
   # Create the .app bundle directory structure
-  mkdir -p Telegraf.app/Contents
   RootAppDir="Telegraf.app/Contents"
+  mkdir -p "$RootAppDir"
   mkdir -p "$RootAppDir/MacOS"
   mkdir -p "$RootAppDir/Resources"
 
