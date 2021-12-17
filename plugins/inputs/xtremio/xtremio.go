@@ -8,40 +8,41 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/tidwall/gjson"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/tidwall/gjson"
 )
 
 type XtremIO struct {
-	Username   string   `toml:"username"`
-	Password   string   `toml:"password"`
-	URL        string   `toml:"url"`
-	Collectors []string `toml:"collectors"`
-	Cookie     *http.Cookie
+	username   string   `toml:"username"`
+	password   string   `toml:"password"`
+	url        string   `toml:"url"`
+	collectors []string `toml:"collectors"`
+	cookie     *http.Cookie
 	tls.ClientConfig
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 }
 
 const sampleConfig = `
-## XtremIO User Interface Endpoint
-url = "https://xtremio.example.com/" # required
+  ## XtremIO User Interface Endpoint
+  url = "https://xtremio.example.com/" # required
 
-## Credentials
-username = "user1"
-password = "pass123"
+  ## Credentials
+  username = "user1"
+  password = "pass123"
 
-## Metrics to collect from the XtremIO
-# collectors = ["bbus","clusters","ssds","volumes","xms"]
+  ## Metrics to collect from the XtremIO
+  # collectors = ["bbus","clusters","ssds","volumes","xms"]
 
-## Optional TLS Config
-# tls_ca = "/etc/telegraf/ca.pem"
-# tls_cert = "/etc/telegraf/cert.pem"
-# tls_key = "/etc/telegraf/key.pem"
-## Use SSL but skip chain & host verification
-# insecure_skip_verify = false
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -55,26 +56,26 @@ func (xio *XtremIO) SampleConfig() string {
 }
 
 func (xio *XtremIO) Init() error {
-	if xio.Username == "" {
+	if xio.username == "" {
 		return fmt.Errorf("Username cannot be empty")
 	}
-	if xio.Password == "" {
+	if xio.password == "" {
 		return fmt.Errorf("Password cannot be empty")
 	}
-	if xio.URL == "" {
+	if xio.url == "" {
 		return fmt.Errorf("URL cannot be empty")
 	}
-	if len(xio.Collectors) == 0 {
-		xio.Collectors = []string{"bbus","clusters","ssds","volumes","xms"}
+	if len(xio.collectors) == 0 {
+		xio.collectors = []string{"bbus", "clusters", "ssds", "volumes", "xms"}
 	}
 
 	availableCollectors := []string{"bbus", "clusters", "ssds", "volumes", "xms"}
-	for _, collector := range xio.Collectors {
-		if !choice.Contains(collector,availableCollectors) {
+	for _, collector := range xio.collectors {
+		if !choice.Contains(collector, availableCollectors) {
 			return fmt.Errorf("Specified Collector Isn't Supported: " + collector)
 		}
 	}
-	
+
 	tlsCfg, err := xio.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
@@ -90,12 +91,12 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	if xio.Cookie == nil {
+	if xio.cookie == nil {
 		return fmt.Errorf("no authentication cookie set")
 	}
 
 	var wg sync.WaitGroup
-	for _, collector := range xio.Collectors {
+	for _, collector := range xio.collectors {
 		wg.Add(1)
 		go func(collector string) {
 			defer wg.Done()
@@ -112,10 +113,10 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 			var arr []gjson.Result
 			if collector == "xms" {
 				arr = gjson.Get(resp, "xmss").Array()
-			}else{
+			} else {
 				arr = gjson.Get(resp, collector).Array()
 			}
-			
+
 			for _, item := range arr {
 				itemSplit := strings.Split(gjson.Get(item.Raw, "href").Str, "/")
 				url := ""
@@ -124,6 +125,13 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 				}
 				url = collector + "/" + itemSplit[len(itemSplit)-1]
 
+				// Each collector is ran in a goroutine so they can be run in parallel.
+				// Each collector does an initial query to build out the subqueries it
+				// needs to run, which are started here in nested goroutines. A future
+				// refactor opportunity would be for the intial collector goroutines to 
+				// return the results while exiting the goroutine, and then a series of
+				// goroutines can be kicked off for the subqueries. That way there is no
+				// nesting of goroutines.
 				switch collector {
 				case "bbus":
 					wg.Add(1)
@@ -148,7 +156,7 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 	}
 	wg.Wait()
 
-	xio.Cookie = nil
+	xio.cookie = nil
 
 	return nil
 }
@@ -168,10 +176,14 @@ func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.Wa
 	}
 	fields := make(map[string]interface{})
 	fields["bbus_power"], err = strconv.Atoi(gjson.Get(resp, "content.power").Raw)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["bbus_average_daily_temp"], err = strconv.Atoi(gjson.Get(resp, "content.avg-daily-temp").Raw)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["bbus_enabled"] = (gjson.Get(resp, "content.enabled-state").Str == "enabled")
 	fields["bbus_ups_need_battery_replacement"] = (gjson.Get(resp, "content.ups-need-battery-replacement").Str == "true")
@@ -195,28 +207,44 @@ func (xio *XtremIO) gatherClusters(acc telegraf.Accumulator, url string, wg *syn
 	}
 	fields := make(map[string]interface{})
 	fields["clusters_compression_factor"], err = strconv.ParseFloat(gjson.Get(resp, "content.compression-factor").Raw, 64)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["clusters_percent_memory_in_use"], err = strconv.Atoi(gjson.Get(resp, "content.total-memory-in-use-in-percent").Raw)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["clusters_read_iops"], err = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["clusters_write_iops"], err = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["clusters_number_of_volumes"], err = strconv.Atoi(gjson.Get(resp, "content.num-of-vols").Raw)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["clusters_free_ssd_space_in_percent"], err = strconv.Atoi(gjson.Get(resp, "content.free-ud-ssd-space-in-percent").Raw)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["clusters_ssd_num"], err = strconv.Atoi(gjson.Get(resp, "content.num-of-ssds").Raw)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["clusters_data_reduction_ratio"], err = strconv.ParseFloat(gjson.Get(resp, "content.data-reduction-ratio").Raw, 64)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -237,25 +265,39 @@ func (xio *XtremIO) gatherSSDs(acc telegraf.Accumulator, url string, wg *sync.Wa
 	}
 	fields := make(map[string]interface{})
 	fields["ssds_ssd_size"], err = strconv.Atoi(gjson.Get(resp, "content.ssd-size").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["ssds_ssd_space_in_use"], err = strconv.Atoi(gjson.Get(resp, "content.ssd-space-in-use").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["ssds_write_iops"], err = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["ssds_read_iops"], err = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["ssds_write_bandwidth"], err = strconv.Atoi(gjson.Get(resp, "content.wr-bw").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["ssds_read_bandwidth"], err = strconv.Atoi(gjson.Get(resp, "content.rd-bw").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["ssds_num_bad_sectors"], err = strconv.Atoi(gjson.Get(resp, "content.num-bad-sectors").Raw)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -273,30 +315,44 @@ func (xio *XtremIO) gatherVolumes(acc telegraf.Accumulator, url string, wg *sync
 	}
 	fields := make(map[string]interface{})
 	fields["volumes_read_iops"], err = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["volumes_write_iops"], err = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["volumes_read_latency"], err = strconv.Atoi(gjson.Get(resp, "content.rd-latency").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["volumes_write_latency"], err = strconv.Atoi(gjson.Get(resp, "content.wr-latency").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["volumes_data_reduction_ratio"], err = strconv.ParseFloat(gjson.Get(resp, "content.data-reduction-ratio").Str, 64)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["volumes_provisioned_space"], err = strconv.Atoi(gjson.Get(resp, "content.vol-size").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["volumes_used_space"], err = strconv.Atoi(gjson.Get(resp, "content.logical-space-in-use").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	acc.AddFields("xio", fields, tags)
 }
 
-func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.WaitGroup,) {
+func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	resp, err := xio.call(url)
 	if err != nil {
@@ -310,47 +366,67 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 	}
 	fields := make(map[string]interface{})
 	fields["xms_write_iops"], err = strconv.Atoi(gjson.Get(resp, "content.wr-iops").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["xms_read_iops"], err = strconv.Atoi(gjson.Get(resp, "content.rd-iops").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["xms_overall_efficiency_ratio"], err = strconv.ParseFloat(gjson.Get(resp, "content.overall-efficiency-ratio").Str, 64)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["xms_ssd_space_in_use"], err = strconv.Atoi(gjson.Get(resp, "content.ssd-space-in-use").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["xms_ram_in_use"], err = strconv.Atoi(gjson.Get(resp, "content.ram-usage").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["xms_ram_total"], err = strconv.Atoi(gjson.Get(resp, "content.ram-total").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["xms_cpu_usage_total"], err = strconv.ParseFloat(gjson.Get(resp, "content.cpu").Raw, 64)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["xms_write_latency"], err = strconv.Atoi(gjson.Get(resp, "content.wr-latency").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["xms_read_latency"], err = strconv.Atoi(gjson.Get(resp, "content.rd-latency").Str)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	fields["xms_user_accounts_count"], err = strconv.Atoi(gjson.Get(resp, "content.num-of-user-accounts").Raw)
-	if err != nil {acc.AddError(err)}
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	acc.AddFields("xio", fields, tags)
 }
 
 func (xio *XtremIO) call(endpoint string) (string, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", xio.URL+"/api/json/v3/types/"+endpoint, nil)
+	req, err := http.NewRequest("GET", xio.url+"/api/json/v3/types/"+endpoint, nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.AddCookie(xio.Cookie)
+	req.AddCookie(xio.cookie)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -365,7 +441,7 @@ func (xio *XtremIO) call(endpoint string) (string, error) {
 
 func (xio *XtremIO) authenticate() error {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", xio.URL+"/api/json/v3/commands/login?password="+xio.Password+"&user="+xio.Username, nil)
+	req, err := http.NewRequest("GET", xio.url+"/api/json/v3/commands/login?password="+xio.password+"&user="+xio.username, nil)
 	if err != nil {
 		return err
 	}
@@ -375,7 +451,7 @@ func (xio *XtremIO) authenticate() error {
 	}
 	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "sessid" {
-			xio.Cookie = cookie
+			xio.cookie = cookie
 		}
 	}
 	return nil
@@ -383,6 +459,6 @@ func (xio *XtremIO) authenticate() error {
 
 func init() {
 	inputs.Add("xtremio", func() telegraf.Input {
-		return &XtremIO{Cookie: nil}
+		return &XtremIO{cookie: nil}
 	})
 }

@@ -3,8 +3,11 @@ package xtremio
 import (
 	"fmt"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -12,12 +15,16 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+var (
+	testdataDir = getTestdataDir()
+)
+
 func TestInitDefault(t *testing.T) {
 	// This test should succeed with the default initialization.
 	plugin := &XtremIO{
-		Username: "testuser",
-		Password: "testpass",
-		URL:      "http://example.com",
+		username: "testuser",
+		password: "testpass",
+		url:      "http://example.com",
 		Log:      testutil.Logger{},
 	}
 
@@ -25,9 +32,9 @@ func TestInitDefault(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	// Also test that default values are set correctly
-	require.Equal(t, "testuser", plugin.Username)
-	require.Equal(t, "testpass", plugin.Password)
-	require.Equal(t, "http://example.com", plugin.URL)
+	require.Equal(t, "testuser", plugin.username)
+	require.Equal(t, "testpass", plugin.password)
+	require.Equal(t, "http://example.com", plugin.url)
 }
 
 func TestInitFail(t *testing.T) {
@@ -43,17 +50,17 @@ func TestInitFail(t *testing.T) {
 		},
 		{
 			name:     "no username",
-			plugin:   &XtremIO{Password: "testpass", URL: "http://example.com"},
+			plugin:   &XtremIO{password: "testpass", url: "http://example.com"},
 			expected: "Username cannot be empty",
 		},
 		{
 			name:     "no password",
-			plugin:   &XtremIO{Username: "testuser", URL: "http://example.com"},
+			plugin:   &XtremIO{username: "testuser", url: "http://example.com"},
 			expected: "Password cannot be empty",
 		},
 		{
 			name:     "no url",
-			plugin:   &XtremIO{Username: "testuser", Password: "testpass"},
+			plugin:   &XtremIO{username: "testuser", password: "testpass"},
 			expected: "URL cannot be empty",
 		},
 	}
@@ -79,12 +86,16 @@ func TestFixedValue(t *testing.T) {
 					_, err := fmt.Fprintln(w, "authentication succeeded")
 					require.NoError(t, err)
 				} else if r.URL.Path == "/api/json/v3/types/bbus" {
+					sampleGetBBUsResponse, err := ioutil.ReadFile(filepath.Join(testdataDir, "sample_get_bbu_response.json"))
+					require.NoError(t, err)
 					w.WriteHeader(http.StatusOK)
-					_, err := fmt.Fprintln(w, sampleGetBBUsResponse)
+					_, err = fmt.Fprintln(w, string(sampleGetBBUsResponse))
 					require.NoError(t, err)
 				} else if r.URL.Path == "/api/json/v3/types/bbus/987654321abcdef" {
+					sampleBBUResponseOne, err := ioutil.ReadFile(filepath.Join(testdataDir, "sample_bbu_response.json"))
+					require.NoError(t, err)
 					w.WriteHeader(http.StatusOK)
-					_, err := fmt.Fprintln(w, sampleBBUResponseOne)
+					_, err = fmt.Fprintln(w, string(sampleBBUResponseOne))
 					require.NoError(t, err)
 				}
 			},
@@ -100,10 +111,10 @@ func TestFixedValue(t *testing.T) {
 		{
 			name: "gather bbus only",
 			plugin: &XtremIO{
-				Username:   "testuser",
-				Password:   "testpass",
-				URL:        ts.URL,
-				Collectors: []string{"bbus"},
+				username:   "testuser",
+				password:   "testpass",
+				url:        ts.URL,
+				collectors: []string{"bbus"},
 			},
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
@@ -160,9 +171,9 @@ func TestAuthenticationFailed(t *testing.T) {
 		{
 			name: "authentication failed",
 			plugin: &XtremIO{
-				Username: "usertest",
-				Password: "userpass",
-				URL:      ts.URL,
+				username: "usertest",
+				password: "userpass",
+				url:      ts.URL,
 			},
 			expected: "no authentication cookie set",
 		},
@@ -180,4 +191,14 @@ func TestAuthenticationFailed(t *testing.T) {
 			require.EqualError(t, err, tt.expected)
 		})
 	}
+}
+
+func getTestdataDir() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		// if we cannot even establish the test directory, further progress is meaningless
+		panic(err)
+	}
+
+	return filepath.Join(dir, "testdata")
 }
