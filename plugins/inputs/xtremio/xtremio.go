@@ -171,6 +171,7 @@ func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.Wa
 	resp, err := xio.call(url)
 	if err != nil {
 		acc.AddError(err)
+		return
 	}
 	tags := map[string]string{
 		"serial_number": gjson.Get(resp, "content.serial-number").Str,
@@ -202,6 +203,7 @@ func (xio *XtremIO) gatherClusters(acc telegraf.Accumulator, url string, wg *syn
 	resp, err := xio.call(url)
 	if err != nil {
 		acc.AddError(err)
+		return
 	}
 	tags := map[string]string{
 		"hardware_platform":      gjson.Get(resp, "content.hardware-platform").Str,
@@ -259,6 +261,7 @@ func (xio *XtremIO) gatherSSDs(acc telegraf.Accumulator, url string, wg *sync.Wa
 	resp, err := xio.call(url)
 	if err != nil {
 		acc.AddError(err)
+		return
 	}
 	tags := map[string]string{
 		"model_name":       gjson.Get(resp, "content.model-name").Str,
@@ -312,6 +315,7 @@ func (xio *XtremIO) gatherVolumes(acc telegraf.Accumulator, url string, wg *sync
 	resp, err := xio.call(url)
 	if err != nil {
 		acc.AddError(err)
+		return
 	}
 	tags := map[string]string{
 		"guid":     gjson.Get(resp, "content.guid").Str,
@@ -362,6 +366,7 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 	resp, err := xio.call(url)
 	if err != nil {
 		acc.AddError(err)
+		return
 	}
 	tags := map[string]string{
 		"guid":    gjson.Get(resp, "content.guid").Str,
@@ -462,6 +467,6 @@ func (xio *XtremIO) authenticate() error {
 
 func init() {
 	inputs.Add("xtremio", func() telegraf.Input {
-		return &XtremIO{cookie: nil}
+		return &XtremIO{}
 	})
 }
