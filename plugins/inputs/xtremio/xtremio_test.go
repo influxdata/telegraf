@@ -22,9 +22,9 @@ var (
 func TestInitDefault(t *testing.T) {
 	// This test should succeed with the default initialization.
 	plugin := &XtremIO{
-		username: "testuser",
-		password: "testpass",
-		url:      "http://example.com",
+		Username: "testuser",
+		Password: "testpass",
+		URL:      "http://example.com",
 		Log:      testutil.Logger{},
 	}
 
@@ -32,9 +32,9 @@ func TestInitDefault(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	// Also test that default values are set correctly
-	require.Equal(t, "testuser", plugin.username)
-	require.Equal(t, "testpass", plugin.password)
-	require.Equal(t, "http://example.com", plugin.url)
+	require.Equal(t, "testuser", plugin.Username)
+	require.Equal(t, "testpass", plugin.Password)
+	require.Equal(t, "http://example.com", plugin.URL)
 }
 
 func TestInitFail(t *testing.T) {
@@ -50,17 +50,17 @@ func TestInitFail(t *testing.T) {
 		},
 		{
 			name:     "no username",
-			plugin:   &XtremIO{password: "testpass", url: "http://example.com"},
+			plugin:   &XtremIO{Password: "testpass", URL: "http://example.com"},
 			expected: "username cannot be empty",
 		},
 		{
 			name:     "no password",
-			plugin:   &XtremIO{username: "testuser", url: "http://example.com"},
+			plugin:   &XtremIO{Username: "testuser", URL: "http://example.com"},
 			expected: "password cannot be empty",
 		},
 		{
 			name:     "no url",
-			plugin:   &XtremIO{username: "testuser", password: "testpass"},
+			plugin:   &XtremIO{Username: "testuser", Password: "testpass"},
 			expected: "url cannot be empty",
 		},
 	}
@@ -111,10 +111,10 @@ func TestFixedValue(t *testing.T) {
 		{
 			name: "gather bbus only",
 			plugin: &XtremIO{
-				username:   "testuser",
-				password:   "testpass",
-				url:        ts.URL,
-				collectors: []string{"bbus"},
+				Username:   "testuser",
+				Password:   "testpass",
+				URL:        ts.URL,
+				Collectors: []string{"bbus"},
 			},
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
@@ -171,9 +171,9 @@ func TestAuthenticationFailed(t *testing.T) {
 		{
 			name: "authentication failed",
 			plugin: &XtremIO{
-				username: "usertest",
-				password: "userpass",
-				url:      ts.URL,
+				Username: "usertest",
+				Password: "userpass",
+				URL:      ts.URL,
 			},
 			expected: "no authentication cookie set",
 		},

@@ -18,10 +18,10 @@ import (
 )
 
 type XtremIO struct {
-	username   string   `toml:"username"`
-	password   string   `toml:"password"`
-	url        string   `toml:"url"`
-	collectors []string `toml:"collectors"`
+	Username   string   `toml:"username"`
+	Password   string   `toml:"password"`
+	URL        string   `toml:"url"`
+	Collectors []string `toml:"collectors"`
 	cookie     *http.Cookie
 	client     *http.Client
 	tls.ClientConfig
@@ -58,22 +58,22 @@ func (xio *XtremIO) SampleConfig() string {
 }
 
 func (xio *XtremIO) Init() error {
-	if xio.username == "" {
+	if xio.Username == "" {
 		return errors.New("username cannot be empty")
 	}
-	if xio.password == "" {
+	if xio.Password == "" {
 		return errors.New("password cannot be empty")
 	}
-	if xio.url == "" {
+	if xio.URL == "" {
 		return errors.New("url cannot be empty")
 	}
 
 	availableCollectors := []string{"bbus", "clusters", "ssds", "volumes", "xms"}
-	if len(xio.collectors) == 0 {
-		xio.collectors = availableCollectors
+	if len(xio.Collectors) == 0 {
+		xio.Collectors = availableCollectors
 	}
 
-	for _, collector := range xio.collectors {
+	for _, collector := range xio.Collectors {
 		if !choice.Contains(collector, availableCollectors) {
 			return fmt.Errorf("specified collector %q isn't supported", collector)
 		}
@@ -102,7 +102,7 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-	for _, collector := range xio.collectors {
+	for _, collector := range xio.Collectors {
 		wg.Add(1)
 		go func(collector string) {
 			defer wg.Done()
@@ -429,7 +429,7 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 }
 
 func (xio *XtremIO) call(endpoint string) (string, error) {
-	req, err := http.NewRequest("GET", xio.url+"/api/json/v3/types/"+endpoint, nil)
+	req, err := http.NewRequest("GET", xio.URL+"/api/json/v3/types/"+endpoint, nil)
 	if err != nil {
 		return "", err
 	}
@@ -449,7 +449,7 @@ func (xio *XtremIO) call(endpoint string) (string, error) {
 }
 
 func (xio *XtremIO) authenticate() error {
-	req, err := http.NewRequest("GET", xio.url+"/api/json/v3/commands/login?password="+xio.password+"&user="+xio.username, nil)
+	req, err := http.NewRequest("GET", xio.URL+"/api/json/v3/commands/login?password="+xio.Password+"&user="+xio.Username, nil)
 	if err != nil {
 		return err
 	}
