@@ -273,7 +273,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Monit
 
 		typedValue := transit.NewTypedValue(value.Value)
 		if typedValue == nil {
-			g.Log.Warnf("could not convert value, skipping field %s: %v", value.Key, value.Value)
+			g.Log.Warnf("could not convert type %T, skipping field %s: %v", value.Value, value.Key, value.Value)
 			continue
 		}
 		if typedValue.ValueType == transit.StringType {
