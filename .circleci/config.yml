@@ -113,9 +113,6 @@ commands:
 
   package-build:
     parameters:
-      release:
-        type: boolean
-        default: false
       type:
         type: string
         default: ""
@@ -128,10 +125,6 @@ commands:
       - attach_workspace:
           at: '/go'
       - when:
-          condition: << parameters.release >>
-          steps:
-            - run: 'make package'
-      - when:
           condition: << parameters.nightly >>
           steps:
             - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
@@ -139,7 +132,6 @@ commands:
           condition:
             or:
               - << parameters.nightly >>
-              - << parameters.release >>
           steps:
             - run: 'make package include_packages="$(make << parameters.type >>)"'
       - store_artifacts:
@@ -326,12 +318,6 @@ jobs:
       - package-build:
           type: armhf
           nightly: << parameters.nightly >>
-
-  release:
-    executor: go-1_17
-    steps:
-      - package-build:
-          release: true
   nightly:
     executor: go-1_17
     steps:
@@ -535,20 +521,21 @@ workflows:
                 - release.*
             tags:
               ignore: /.*/
-      - 'release':
-          requires:
-            - 'test-go-windows'
-            - 'test-go-mac'
-            - 'test-go-1_17'
-            - 'test-go-1_17-386'
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
       - 'package-sign-windows':
           requires:
-            - 'release'
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
+            - 'windows-package'
+            - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
           filters:
               tags:
                 only: /.*/
