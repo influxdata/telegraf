@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func getMetric() telegraf.Metric {
@@ -172,9 +173,20 @@ func TestStatusCode(t *testing.T) {
 			plugin: &HTTP{
 				URL: u.String(),
 			},
-			statusCode: http.StatusMultipleChoices,
+			statusCode: http.StatusBadRequest,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
+			},
+		},
+		{
+			name: "Do not retry on configured non-retryable statuscode",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				NonRetryableStatusCodes: []int{409},
+			},
+			statusCode: http.StatusConflict,
+			errFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
 			},
 		},
 	}
@@ -189,6 +201,8 @@ func TestStatusCode(t *testing.T) {
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
+
+			tt.plugin.Log = testutil.Logger{}
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			tt.errFunc(t, err)
