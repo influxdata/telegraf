@@ -151,10 +151,11 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		_, err := gosmi.GetModule(moduleName)
 		if err != nil {
 			return oid, oid, oid, oid, gosmi.SmiNode{}, err
-		if s[1] == "" {
-			return "", oid, oid, oid, fmt.Errorf("cannot parse %v\n", oid)
 		}
-    // node becomes sysUpTime.0
+		if s[1] == "" {
+			return "", oid, oid, oid, gosmi.SmiNode{}, fmt.Errorf("cannot parse %v\n", oid)
+		}
+		// node becomes sysUpTime.0
 		node := s[1]
 		if strings.ContainsAny(node, ".") {
 			s = strings.SplitN(node, ".", 2)
