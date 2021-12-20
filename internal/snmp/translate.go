@@ -148,26 +148,25 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	if strings.ContainsAny(oid, "::") {
 		// split given oid
 		// for example RFC1213-MIB::sysUpTime.0
-		s := strings.Split(oid, "::")
+		s := strings.SplitN(oid, "::", 2)
 		// node becomes sysUpTime.0
-		if s[1] != "" {
-			node := s[1]
-			if strings.ContainsAny(node, ".") {
-				s = strings.Split(node, ".")
-				// node becomes sysUpTime
-				node = s[0]
-				end = "." + s[1]
-			}
-
-			out, err = gosmi.GetNode(node)
-			if err != nil {
-				return oid, oid, oid, oid, err
-			}
-
-			oidNum = "." + out.RenderNumeric() + end
-		} else {
-			return "", oid, oid, oid, fmt.Errorf("can not parse %v\n", oid)
+		if s[1] == "" {
+			return "", oid, oid, oid, fmt.Errorf("cannot parse %v\n", oid)
 		}
+		node := s[1]
+		if strings.ContainsAny(node, ".") {
+			s = strings.SplitN(node, ".", 2)
+			// node becomes sysUpTime
+			node = s[0]
+			end = "." + s[1]
+		}
+
+		out, err = gosmi.GetNode(node)
+		if err != nil {
+			return oid, oid, oid, oid, err
+		}
+
+		oidNum = "." + out.RenderNumeric() + end
 	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
 		//handle mixed oid ex. .iso.2.3
 		s := strings.Split(oid, ".")
