@@ -109,14 +109,15 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 			// a best effort, extend the metrics from the 1st line with the metrics of the 2nd
 			// one, possibly overwriting.
 			for _, word := range words {
-				if ss.validValues.MatchString(word) {
-					// kv will have 2 fields because it matched the regexp
-					kv := strings.Split(word, ":")
-					fields[kv[0]], err = strconv.ParseUint(kv[1], 10, 64)
-					if err != nil {
-						ss.Log.Infof("Couldn't parse metric: %s", word)
-						continue
-					}
+				if !ss.validValues.MatchString(word) {
+					continue
+				}
+				// kv will have 2 fields because it matched the regexp
+				kv := strings.Split(word, ":")
+				fields[kv[0]], err = strconv.ParseUint(kv[1], 10, 64)
+				if err != nil {
+					ss.Log.Infof("Couldn't parse metric: %s", word)
+					continue
 				}
 			}
 			if !flushData {
