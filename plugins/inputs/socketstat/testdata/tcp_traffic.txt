@@ -1,0 +1,7 @@
+State      Recv-Q Send-Q       Local Address:Port                     Peer Address:Port
+ESTAB      0      0          192.168.1.21:6514                192.168.1.21:443
+        cubic wscale:7,7 rto:204 rtt:0.057/0.033 ato:40 mss:22976 cwnd:10 bytes_acked:1126 bytes_received:532644751 segs_out:211249 segs_in:211254 data_segs_out:2 data_segs_in:211251 send 32247.0Mbps lastsnd:299082764 lastrcv:5248 lastack:5252 rcv_rtt:3.532 rcv_space:186557 minrtt:0.047
+ESTAB      0      0         192.168.122.1:55194             192.168.122.1:6514
+        cubic wscale:7,7 rto:204 rtt:0.034/0.01 ato:40 mss:65483 cwnd:10 bytes_acked:790782896 bytes_received:1126 segs_out:333361 segs_in:333361 data_segs_out:333358 data_segs_in:2 send 154077.6Mbps lastsnd:5248 lastrcv:443892492 lastack:5248 rcv_rtt:250 rcv_space:43690 minrtt:0.009
+ESTAB      0      0             127.0.0.1:7778                   127.0.0.1:50378
+        cubic wscale:7,7 rto:220 rtt:16.009/21.064 ato:44 mss:65483 cwnd:10 bytes_acked:19983121 bytes_received:266383 segs_out:15431 segs_in:17633 data_segs_out:15119 data_segs_in:5098 send 327.2Mbps lastsnd:9792 lastrcv:9840 lastack:9748 pacing_rate 654.4Mbps retrans:0/1 rcv_rtt:129800 rcv_space:44057 minrtt:0.043
