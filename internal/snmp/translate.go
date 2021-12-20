@@ -148,7 +148,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		s := strings.SplitN(oid, "::", 2)
 		// moduleName becomes RFC1213
 		moduleName := s[0]
-		_, err := gosmi.GetModule(moduleName)
+		module, err := gosmi.GetModule(moduleName)
 		if err != nil {
 			return oid, oid, oid, oid, gosmi.SmiNode{}, err
 		}
@@ -164,7 +164,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			end = "." + s[1]
 		}
 
-		out, err = gosmi.GetNode(node)
+		out, err = module.GetNode(node)
 		if err != nil {
 			return oid, oid, oid, oid, out, err
 		}
