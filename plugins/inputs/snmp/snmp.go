@@ -261,7 +261,7 @@ func (f *Field) init() error {
 
 	// check if oid needs translation or name is not set
 	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
-		_, oidNum, oidText, conversion, _, _, err := SnmpTranslate(f.Oid)
+		_, oidNum, oidText, conversion, _, err := SnmpTranslate(f.Oid)
 		if err != nil {
 			return fmt.Errorf("translating: %w", err)
 		}
@@ -505,7 +505,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				// snmptranslate table field value here
 				if f.Translate {
 					if entOid, ok := ent.Value.(string); ok {
-						_, _, oidText, _, _, _, err := SnmpTranslate(entOid)
+						_, _, oidText, _, _, err := SnmpTranslate(entOid)
 						if err == nil {
 							// If no error translating, the original value for ent.Value should be replaced
 							ent.Value = oidText
@@ -828,14 +828,14 @@ func snmpTable(oid string) (mibName string, oidNum string, oidText string, field
 
 //nolint:revive //Too many return variable but necessary
 func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	mibName, oidNum, oidText, _, module, node, err := SnmpTranslate(oid)
+	mibName, oidNum, oidText, _, node, err := SnmpTranslate(oid)
 	if err != nil {
 		return "", "", "", nil, fmt.Errorf("translating: %w", err)
 	}
 
 	mibPrefix := mibName + "::"
 
-	col, tagOids, err := snmp.GetIndex(oidNum, mibPrefix, module, node)
+	col, tagOids, err := snmp.GetIndex(oidNum, mibPrefix, node)
 
 	for _, c := range col {
 		_, isTag := tagOids[mibPrefix+c]
@@ -850,7 +850,6 @@ type snmpTranslateCache struct {
 	oidNum     string
 	oidText    string
 	conversion string
-	module     gosmi.SmiModule
 	node       gosmi.SmiNode
 	err        error
 }
@@ -860,7 +859,7 @@ var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
 //nolint:revive //Too many return variable but necessary
-func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, module gosmi.SmiModule, node gosmi.SmiNode, err error) {
+func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, node gosmi.SmiNode, err error) {
 	snmpTranslateCachesLock.Lock()
 	if snmpTranslateCaches == nil {
 		snmpTranslateCaches = map[string]snmpTranslateCache{}
@@ -877,11 +876,11 @@ func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 		// is worth it. Especially when it would slam the system pretty hard if lots
 		// of lookups are being performed.
 
-		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.module, stc.node, stc.err = snmp.SnmpTranslateCall(oid)
+		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.node, stc.err = snmp.SnmpTranslateCall(oid)
 		snmpTranslateCaches[oid] = stc
 	}
 
 	snmpTranslateCachesLock.Unlock()
 
-	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.module, stc.node, stc.err
+	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.node, stc.err
 }
