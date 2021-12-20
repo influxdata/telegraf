@@ -89,6 +89,9 @@ batch format by default.
   #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
+
+  ## Optional list of statuscodes (<200 or >300) upon which requests should not be retried
+  # non_retryable_statuscodes = [409, 413]
 ```
 
 ### Optional Cookie Authentication Settings
