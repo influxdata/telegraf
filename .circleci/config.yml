@@ -462,12 +462,8 @@ workflows:
       # - 'windows-package':
       #     requires:
       #       - 'test-go-windows'
-      - 'darwin-amd64-package':
-          requires:
-            - 'test-go-mac'
-      - 'darwin-arm64-package':
-          requires:
-            - 'test-go-mac'
+      - 'darwin-amd64-package'
+      - 'darwin-arm64-package'
       # - 'i386-package':
       #     requires:
       #       - 'test-awaiter'
