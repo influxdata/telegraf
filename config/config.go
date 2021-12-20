@@ -1190,7 +1190,18 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return err
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
-			return parsers.NewParser(config)
+			parser, err := parsers.NewParser(config)
+			if err != nil {
+				return nil, err
+			}
+			logger := models.NewLogger("parsers", config.DataFormat, name)
+			models.SetLoggerOnPlugin(parser, logger)
+			if initializer, ok := parser.(telegraf.Initializer); ok {
+				if err := initializer.Init(); err != nil {
+					return nil, err
+				}
+			}
+			return parser, nil
 		})
 	}
 
@@ -1590,6 +1601,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 
 	c.getFieldStringSlice(tbl, "wavefront_source_override", &sc.WavefrontSourceOverride)
 	c.getFieldBool(tbl, "wavefront_use_strict", &sc.WavefrontUseStrict)
+	c.getFieldBool(tbl, "wavefront_disable_prefix_conversion", &sc.WavefrontDisablePrefixConversion)
 
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)

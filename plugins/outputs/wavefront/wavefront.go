@@ -173,6 +173,9 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
 				if isRetryable(err) {
+					if flushErr := w.sender.Flush(); flushErr != nil {
+						w.Log.Errorf("wavefront flushing error: %v", flushErr)
+					}
 					return fmt.Errorf("wavefront sending error: %v", err)
 				}
 				w.Log.Errorf("non-retryable error during Wavefront.Write: %v", err)

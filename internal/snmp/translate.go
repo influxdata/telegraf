@@ -16,16 +16,48 @@ import (
 // or gosmi will fail without saying why
 var m sync.Mutex
 var once sync.Once
+var cache = make(map[string]bool)
 
-func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
+func appendPath(path string) {
 	m.Lock()
 	defer m.Unlock()
+
+	gosmi.AppendPath(path)
+}
+
+func loadModule(path string) error {
+	m.Lock()
+	defer m.Unlock()
+
+	_, err := gosmi.LoadModule(path)
+	return err
+}
+
+func ClearCache() {
+	cache = make(map[string]bool)
+}
+
+func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 	once.Do(gosmi.Init)
-	var folders []string
+
 	for _, mibPath := range paths {
-		gosmi.AppendPath(mibPath)
+		folders := []string{}
+
+		// Check if we loaded that path already and skip it if so
+		m.Lock()
+		cached := cache[mibPath]
+		cache[mibPath] = true
+		m.Unlock()
+		if cached {
+			continue
+		}
+
+		appendPath(mibPath)
 		folders = append(folders, mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
+			if info == nil {
+				return fmt.Errorf("no mibs found")
+			}
 			// symlinks are files so we need to double check if any of them are folders
 			// Will check file vs directory later on
 			if info.Mode()&os.ModeSymlink != 0 {
@@ -38,26 +70,25 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("Filepath could not be walked %v", err)
+			return fmt.Errorf("Filepath could not be walked: %v", err)
 		}
+
 		for _, folder := range folders {
 			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 				// checks if file or directory
 				if info.IsDir() {
-					gosmi.AppendPath(path)
+					appendPath(path)
 				} else if info.Mode()&os.ModeSymlink == 0 {
-					_, err := gosmi.LoadModule(info.Name())
-					if err != nil {
-						log.Warnf("Module could not be loaded %v", err)
+					if err := loadModule(info.Name()); err != nil {
+						log.Warn(err)
 					}
 				}
 				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("Filepath could not be walked %v", err)
+				return fmt.Errorf("Filepath could not be walked: %v", err)
 			}
 		}
-		folders = []string{}
 	}
 	return nil
 }

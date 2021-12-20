@@ -1,4 +1,5 @@
 //go:build !openbsd
+// +build !openbsd
 
 package modbus
 
@@ -461,6 +462,15 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, tags map[string]string, requests []request) {
 	grouper := metric.NewSeriesGrouper()
 	for _, request := range requests {
+		// Collect tags from global and per-request
+		rtags := map[string]string{}
+		for k, v := range tags {
+			rtags[k] = v
+		}
+		for k, v := range request.tags {
+			rtags[k] = v
+		}
+
 		for _, field := range request.fields {
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
@@ -469,7 +479,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			if err := grouper.Add(measurement, tags, timestamp, field.name, field.value); err != nil {
+			if err := grouper.Add(measurement, rtags, timestamp, field.name, field.value); err != nil {
 				acc.AddError(fmt.Errorf("cannot add field %q for measurement %q: %v", field.name, measurement, err))
 				continue
 			}

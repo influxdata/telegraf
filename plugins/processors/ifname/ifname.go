@@ -1,6 +1,7 @@
 package ifname
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -192,13 +193,14 @@ func (d *IfName) invalidate(agent string) {
 
 func (d *IfName) Start(acc telegraf.Accumulator) error {
 	var err error
-	d.ifTable, err = d.makeTable("IF-MIB::ifDescr")
+
+	d.ifTable, err = d.makeTable("1.3.6.1.2.1.2.2.1.2")
 	if err != nil {
-		return fmt.Errorf("looking up ifDescr in local MIB: %w", err)
+		return fmt.Errorf("preparing ifTable: %v", err)
 	}
-	d.ifXTable, err = d.makeTable("IF-MIB::ifName")
+	d.ifXTable, err = d.makeTable("1.3.6.1.2.1.31.1.1.1.1")
 	if err != nil {
-		return fmt.Errorf("looking up ifName in local MIB: %w", err)
+		return fmt.Errorf("preparing ifXTable: %v", err)
 	}
 
 	fn := func(m telegraf.Metric) []telegraf.Metric {
@@ -307,11 +309,11 @@ func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
 	//try ifXtable and ifName first.  if that fails, fall back to
 	//ifTable and ifDescr
 	var m nameMap
-	if m, err = buildMap(gs, d.ifXTable, "ifName"); err == nil {
+	if m, err = buildMap(gs, d.ifXTable); err == nil {
 		return m, nil
 	}
 
-	if m, err = buildMap(gs, d.ifTable, "ifDescr"); err == nil {
+	if m, err = buildMap(gs, d.ifTable); err == nil {
 		return m, nil
 	}
 
@@ -338,13 +340,13 @@ func init() {
 	})
 }
 
-func makeTableNoMock(fieldName string) (*si.Table, error) {
+func makeTableNoMock(oid string) (*si.Table, error) {
 	var err error
 	tab := si.Table{
 		Name:       "ifTable",
 		IndexAsTag: true,
 		Fields: []si.Field{
-			{Oid: fieldName},
+			{Oid: oid, Name: "ifName"},
 		},
 	}
 
@@ -357,7 +359,7 @@ func makeTableNoMock(fieldName string) (*si.Table, error) {
 	return &tab, nil
 }
 
-func buildMap(gs snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, error) {
+func buildMap(gs snmp.GosnmpWrapper, tab *si.Table) (nameMap, error) {
 	var err error
 
 	rtab, err := tab.Build(gs, true)
@@ -382,13 +384,13 @@ func buildMap(gs snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, err
 		if err != nil {
 			return nil, fmt.Errorf("index tag isn't a uint")
 		}
-		nameIf, ok := v.Fields[column]
+		nameIf, ok := v.Fields["ifName"]
 		if !ok {
-			return nil, fmt.Errorf("field %s is missing", column)
+			return nil, errors.New("ifName field is missing")
 		}
 		name, ok := nameIf.(string)
 		if !ok {
-			return nil, fmt.Errorf("field %s isn't a string", column)
+			return nil, errors.New("ifName field isn't a string")
 		}
 
 		t[i] = name

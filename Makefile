@@ -284,12 +284,17 @@ windows += windows_i386.zip windows_amd64.zip
 .PHONY: windows
 windows:
 	@ echo $(windows)
-darwin += darwin_amd64.tar.gz
-.PHONY: darwin
-darwin:
-	@ echo $(darwin)
+darwin-amd64 += darwin_amd64.tar.gz
+.PHONY: darwin-amd64
+darwin-amd64:
+	@ echo $(darwin-amd64)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin)
+darwin-arm64 += darwin_arm64.tar.gz
+.PHONY: darwin-arm64
+darwin-arm64:
+	@ echo $(darwin-arm64)
+
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
 package: $(include_packages)
@@ -317,6 +322,7 @@ $(include_packages):
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
 			--depends coreutils \
 			--depends shadow-utils \
+			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
 			--name telegraf \
 			--version $(version) \
@@ -399,6 +405,9 @@ windows_amd64.zip: export GOARCH := amd64
 
 darwin_amd64.tar.gz: export GOOS := darwin
 darwin_amd64.tar.gz: export GOARCH := amd64
+
+darwin_arm64.tar.gz: export GOOS := darwin
+darwin_arm64.tar.gz: export GOARCH := arm64
 
 windows_i386.zip: export GOOS := windows
 windows_i386.zip: export GOARCH := 386
