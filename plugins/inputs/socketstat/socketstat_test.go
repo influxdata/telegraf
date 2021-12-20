@@ -3,7 +3,6 @@ package socketstat
 import (
 	"bytes"
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/influxdata/telegraf/config"
@@ -27,14 +26,10 @@ func TestSocketstat_Gather(t *testing.T) {
 			require.NoError(t, err)
 
 			err = acc.GatherError(ss.Gather)
-			if !reflect.DeepEqual(tt.err, err) {
-				t.Errorf("%d: expected error '%#v' got '%#v'", i, tt.err, err)
-			}
+			require.ErrorIs(t, err, tt.err)
 			if len(tt.proto) == 0 {
 				n := acc.NFields()
-				if n != 0 {
-					t.Errorf("%d: expected 0 fields if no protocol specified got %d", i, n)
-				}
+				require.Equalf(t, 0,  n, "%d: expected 0 values got %d", i, n)
 				return
 			}
 			if len(tt.tags) == 0 {
@@ -47,20 +42,11 @@ func TestSocketstat_Gather(t *testing.T) {
 			n := 0
 			for j, tags := range tt.tags {
 				for k, fields := range tt.fields[j] {
-					if len(acc.Metrics) < n+1 {
-						t.Errorf("%d: expected at least %d values got %d", i, n+1, len(acc.Metrics))
-						break
-					}
+					require.Greater(t, len(acc.Metrics), n)
 					m := acc.Metrics[n]
-					if !reflect.DeepEqual(m.Measurement, ss.measurement) {
-						t.Errorf("%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, ss.measurement, m.Measurement)
-					}
-					if !reflect.DeepEqual(m.Tags, tags) {
-						t.Errorf("%d %d %d: expected tags\n%#v got\n%#v\n", i, j, k, tags, m.Tags)
-					}
-					if !reflect.DeepEqual(m.Fields, fields) {
-						t.Errorf("%d %d %d: expected fields\n%#v got\n%#v\n", i, j, k, fields, m.Fields)
-					}
+					require.Equal(t, ss.measurement, m.Measurement, "%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, ss.measurement, m.Measurement)
+					require.Equal(t, tags, m.Tags, "%d %d %d: expected tags\n%#v got\n%#v\n", i, j, k, tags, m.Tags)
+					require.Equal(t, fields, m.Fields, "%d %d %d: expected fields\n%#v got\n%#v\n", i, j, k, fields, m.Fields)
 					n++
 				}
 			}
@@ -78,7 +64,5 @@ func TestSocketstat_Gather_listerError(t *testing.T) {
 	}
 	acc := new(testutil.Accumulator)
 	err := acc.GatherError(ss.Gather)
-	if !reflect.DeepEqual(err, errFoo) {
-		t.Errorf("Expected error %#v got\n%#v\n", errFoo, err)
-	}
+	require.ErrorIs(t, errFoo, err)
 }
