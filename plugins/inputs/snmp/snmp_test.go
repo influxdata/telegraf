@@ -1304,3 +1304,14 @@ func BenchmarkMibLoading(b *testing.B) {
 		require.NoError(b, err)
 	}
 }
+
+func TestCanNotParse(t *testing.T) {
+	s := &Snmp{
+		Fields: []Field{
+			{Oid: "RFC1213-MIB::"},
+		},
+	}
+
+	err := s.Init()
+	require.Error(t, err)
+}
