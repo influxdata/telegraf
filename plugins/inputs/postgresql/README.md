@@ -63,8 +63,7 @@ host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/te
 ```toml
 [[inputs.postgresql]]
   ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
-  ##       ?sslmode=[disable|verify-ca|verify-full]
+  ##   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
   ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   ##
@@ -84,7 +83,7 @@ host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/te
   ## connection configuration.
   ## maxlifetime - specify the maximum lifetime of a connection.
   ## default is forever (0s)
-  max_lifetime = "0s"
+  # max_lifetime = "0s"
 
   ## A  list of databases to explicitly ignore.  If not specified, metrics for all
   ## databases are gathered.  Do NOT use with the 'databases' option.

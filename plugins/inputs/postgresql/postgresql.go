@@ -15,8 +15,8 @@ import (
 
 type Postgresql struct {
 	Service
-	Databases          []string
-	IgnoredDatabases   []string
+	Databases          []string `toml:"databases"`
+	IgnoredDatabases   []string `toml:"ignored_databases"`
 	PreparedStatements bool `toml:"prepared_statements"`
 }
 
