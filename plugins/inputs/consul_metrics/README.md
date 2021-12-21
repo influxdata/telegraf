@@ -19,7 +19,7 @@ This plugin grabs metrics from a Consul agent. Telegraf may be present in every 
   # token = "a1234567-40c7-9048-7bae-378687048181"
 
   ## Set response_timeout (default 5 seconds)
-  # response_timeout = "5s"
+  # timeout = "5s"
 
   ## Optional TLS Config
   # tls_ca = /path/to/cafile

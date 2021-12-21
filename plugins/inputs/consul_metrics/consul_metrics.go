@@ -2,6 +2,7 @@ package consul_metrics
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -21,7 +22,7 @@ type ConsulMetrics struct {
 	TokenFile string `toml:"token_file"`
 	Token     string `toml:"token"`
 
-	Timeout config.Duration `toml:"response_timeout"`
+	ResponseTimeout config.Duration `toml:"timeout"`
 
 	tls.ClientConfig
 
@@ -40,8 +41,8 @@ const sampleConfig = `
   ## OR
   # token = "a1234567-40c7-9048-7bae-378687048181"
 
-  ## Set response_timeout (default 5 seconds)
-  # response_timeout = "5s"
+  ## Set timeout (default 5 seconds)
+  # timeout = "5s"
 
   ## Optional TLS Config
   # tls_ca = /path/to/cafile
@@ -52,7 +53,7 @@ const sampleConfig = `
 func init() {
 	inputs.Add("consul_metrics", func() telegraf.Input {
 		return &ConsulMetrics{
-			Timeout: config.Duration(5 * time.Second),
+			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }
@@ -73,7 +74,7 @@ func (n *ConsulMetrics) Init() error {
 	}
 
 	if n.TokenFile != "" && n.Token != "" {
-		return fmt.Errorf("config error: both token_file and token are set")
+		return errors.New("config error: both token_file and token are set")
 	}
 
 	if n.TokenFile != "" {
@@ -90,9 +91,9 @@ func (n *ConsulMetrics) Init() error {
 	}
 
 	n.roundTripper = &http.Transport{
-		TLSHandshakeTimeout:   5 * time.Second,
+		TLSHandshakeTimeout:   time.Duration(n.ResponseTimeout),
 		TLSClientConfig:       tlsCfg,
-		ResponseHeaderTimeout: time.Duration(n.Timeout),
+		ResponseHeaderTimeout: time.Duration(n.ResponseTimeout),
 	}
 
 	return nil
