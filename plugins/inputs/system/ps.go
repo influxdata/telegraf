@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -34,11 +35,12 @@ type PSDiskDeps interface {
 }
 
 func NewSystemPS() *SystemPS {
-	return &SystemPS{&SystemPSDisk{}}
+	return &SystemPS{PSDiskDeps: &SystemPSDisk{}}
 }
 
 type SystemPS struct {
 	PSDiskDeps
+	Log telegraf.Logger `toml:"-"`
 }
 
 type SystemPSDisk struct{}
@@ -97,10 +99,17 @@ func (s *SystemPS) DiskUsage(
 	for i := range parts {
 		p := parts[i]
 
+		if s.Log != nil {
+			s.Log.Debugf("[SystemPS] partition %d: %v", i, p)
+		}
+
 		if len(mountPointFilter) > 0 {
 			// If the mount point is not a member of the filter set,
 			// don't gather info on it.
 			if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
+				if s.Log != nil {
+					s.Log.Debug("[SystemPS] => dropped by mount-point filter")
+				}
 				continue
 			}
 		}
@@ -108,6 +117,9 @@ func (s *SystemPS) DiskUsage(
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
 		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
+			if s.Log != nil {
+				s.Log.Debug("[SystemPS] => dropped by filesystem-type filter")
+			}
 			continue
 		}
 
@@ -116,12 +128,22 @@ func (s *SystemPS) DiskUsage(
 		if len(hostMountPrefix) > 0 &&
 			!strings.HasPrefix(p.Mountpoint, hostMountPrefix) &&
 			paths[hostMountPrefix+p.Mountpoint] {
+			if s.Log != nil {
+				s.Log.Debug("[SystemPS] => dropped by mount prefix")
+			}
 			continue
 		}
 
 		du, err := s.PSDiskUsage(p.Mountpoint)
 		if err != nil {
+			if s.Log != nil {
+				s.Log.Debugf("[SystemPS] => dropped by disk usage: %v", err)
+			}
 			continue
+		}
+
+		if s.Log != nil {
+			s.Log.Debug("[SystemPS] => kept...")
 		}
 
 		du.Path = filepath.Join("/", strings.TrimPrefix(p.Mountpoint, hostMountPrefix))

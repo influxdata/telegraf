@@ -429,7 +429,7 @@ func TestDiskUsageIssues(t *testing.T) {
 					"device": "sdb",
 					"fstype": "ext4",
 					"mode":   "rw",
-					"path":   "/mnt/storage",
+					"path":   "/tmp",
 				},
 			},
 		},
@@ -444,8 +444,8 @@ func TestDiskUsageIssues(t *testing.T) {
 			require.NoError(t, os.Setenv("HOST_PROC", prefix))
 
 			// Setup the plugin and test
-			ps := system.NewSystemPS()
-			plugin := &DiskStats{ps: ps}
+			plugin := &DiskStats{Log: testutil.Logger{}}
+			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Gather(&acc))
