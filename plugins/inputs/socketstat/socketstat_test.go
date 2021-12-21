@@ -70,14 +70,14 @@ func TestSocketstat_Gather(t *testing.T) {
 			i++
 			ss := &Socketstat{
 				SocketProto: tt.proto,
-				lister: func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
-					return bytes.NewBuffer(octets), nil
-				},
 			}
 			acc := new(testutil.Accumulator)
 
 			err := ss.Init()
 			require.NoError(t, err)
+			ss.lister = func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
+				return bytes.NewBuffer(octets), nil
+			}
 
 			err = acc.GatherError(ss.Gather)
 			require.ErrorIs(t, err, tt.err)
@@ -112,9 +112,9 @@ func TestSocketstat_Gather_listerError(t *testing.T) {
 	errFoo := errors.New("error foobar")
 	ss := &Socketstat{
 		SocketProto: []string{"foobar"},
-		lister: func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
-			return new(bytes.Buffer), errFoo
-		},
+	}
+	ss.lister = func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
+		return new(bytes.Buffer), errFoo
 	}
 	acc := new(testutil.Accumulator)
 	err := acc.GatherError(ss.Gather)
