@@ -539,12 +539,16 @@ workflows:
           filters:
               tags:
                 only: /.*/
+              branches:
+                ignore: /.*/
       - 'package-sign-mac':
            requires:
              - 'package-sign-windows'
            filters:
               tags:
                 only: /.*/
+              branches:
+                ignore: /.*/
 
   nightly:
     jobs:
