@@ -16,7 +16,7 @@ body:
     validations:
       required: true
   - type: textarea
-    id: config
+    id: logs
     attributes:
       label: Logs from Telegraf
       description: Please include the Telegraf logs, ideally with `--debug` used.
