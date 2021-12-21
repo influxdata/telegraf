@@ -257,6 +257,7 @@ func TestAuthConfig_Start(t *testing.T) {
 			srv.checkResp(t, tt.firstHTTPResponse)
 			mock.Add(renewalCheck)
 			// Ensure that the auth renewal goroutine has completed
+			time.Sleep(1 * time.Second)
 			cancel()
 			c.wg.Wait()
 			srv.checkAuthCount(t, tt.lastAuthCount)

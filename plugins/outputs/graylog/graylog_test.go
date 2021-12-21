@@ -118,6 +118,10 @@ func TestWriteUDP(t *testing.T) {
 }
 
 func TestWriteTCP(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	pki := testutil.NewPKI("../../../testutil/pki")
 	tlsClientConfig := pki.TLSClientConfig()
 	tlsServerConfig, err := pki.TLSServerConfig().TLSConfig()
