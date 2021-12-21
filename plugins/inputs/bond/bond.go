@@ -92,10 +92,7 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				acc.AddError(err)
 			}
-			err = bond.gatherSysDetails(bondName, files, acc)
-			if err != nil {
-				acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondName, err))
-			}
+			bond.gatherSysDetails(bondName, files, acc)
 		}
 	}
 	return nil
@@ -171,10 +168,9 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 
 		We load files here first to allow for easier testing
 	*/
-	var err error
 	var output sysFiles
 
-	file, err = os.ReadFile(bondDir + "/bonding/mode")
+	file, err := os.ReadFile(bondDir + "/bonding/mode")
 	if err != nil {
 		return sysFiles{}, fmt.Errorf("error inspecting '%q' interface: %v", bondDir+"/bonding/mode", err)
 	}
