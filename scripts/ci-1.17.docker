@@ -1,4 +1,4 @@
-FROM golang:1.17.3
+FROM golang:1.17.5
 
 RUN chmod -R 755 "$GOPATH"
 
