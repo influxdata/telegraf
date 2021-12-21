@@ -13,6 +13,10 @@ import (
 )
 
 func TestSimpleReverseLookup(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	now := time.Now()
 	m := metric.New("name", map[string]string{
 		"dest_ip": "8.8.8.8",
