@@ -92,7 +92,7 @@ func TestGatherBondInterface(t *testing.T) {
 
 	acc = testutil.Accumulator{}
 	require.NoError(t, bond.gatherBondInterface("bondLACP", sampleTestLACP, &acc))
-	require.NoError(t, bond.gatherSysDetails("bondLACP", sysFiles{ModeFile: sampleSysMode, SlaveFile: sampleSysSlaves, ADPortsFile: sampleSysAdPorts}, &acc))
+	bond.gatherSysDetails("bondLACP", sysFiles{ModeFile: sampleSysMode, SlaveFile: sampleSysSlaves, ADPortsFile: sampleSysAdPorts}, &acc)
 	acc.AssertContainsTaggedFields(t, "bond", map[string]interface{}{"status": 1}, map[string]string{"bond": "bondLACP"})
 	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 2, "status": 1, "actor_churned": 2, "partner_churned": 0, "total_churned": 2}, map[string]string{"bond": "bondLACP", "interface": "eth0"})
 	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 1, "status": 1, "actor_churned": 0, "partner_churned": 0, "total_churned": 0}, map[string]string{"bond": "bondLACP", "interface": "eth1"})
