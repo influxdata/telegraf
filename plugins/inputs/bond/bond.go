@@ -41,7 +41,7 @@ var sampleConfig = `
 
   ## Sets 'sys' directory path
   ## If not specified, then default is /sys
-  # host_proc = "/sys"
+  # host_sys = "/sys"
 
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
@@ -74,13 +74,13 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 		bondAbsPath := bond.HostProc + "/net/bonding/" + bondName
 		file, err := os.ReadFile(bondAbsPath)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondAbsPath, err))
+			acc.AddError(fmt.Errorf("error inspecting %q interface: %v", bondAbsPath, err))
 			continue
 		}
 		rawProcFile := strings.TrimSpace(string(file))
 		err = bond.gatherBondInterface(bondName, rawProcFile, acc)
 		if err != nil {
-			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondName, err))
+			acc.AddError(fmt.Errorf("error inspecting %q interface: %v", bondName, err))
 		}
 
 		/*
@@ -172,18 +172,18 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 
 	file, err := os.ReadFile(bondDir + "/bonding/mode")
 	if err != nil {
-		return sysFiles{}, fmt.Errorf("error inspecting '%q' interface: %v", bondDir+"/bonding/mode", err)
+		return sysFiles{}, fmt.Errorf("error inspecting %q interface: %v", bondDir+"/bonding/mode", err)
 	}
 	output.ModeFile = strings.TrimSpace(string(file))
 	file, err = os.ReadFile(bondDir + "/bonding/slaves")
 	if err != nil {
-		return sysFiles{}, fmt.Errorf("error inspecting '%q' interface: %v", bondDir+"/bonding/slaves", err)
+		return sysFiles{}, fmt.Errorf("error inspecting %q interface: %v", bondDir+"/bonding/slaves", err)
 	}
 	output.SlaveFile = strings.TrimSpace(string(file))
 	if bond.BondType == "IEEE 802.3ad Dynamic link aggregation" {
 		file, err = os.ReadFile(bondDir + "/bonding/ad_num_ports")
 		if err != nil {
-			return sysFiles{}, fmt.Errorf("error inspecting '%q' interface: %v", bondDir+"/bonding/ad_num_ports", err)
+			return sysFiles{}, fmt.Errorf("error inspecting %q interface: %v", bondDir+"/bonding/ad_num_ports", err)
 		}
 		output.ADPortsFile = strings.TrimSpace(string(file))
 	}

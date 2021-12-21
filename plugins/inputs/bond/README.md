@@ -14,7 +14,7 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
 
   ## Sets 'sys' directory path
   ## If not specified, then default is /sys
-  # host_proc = "/sys"
+  # host_sys = "/sys"
 
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
