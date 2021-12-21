@@ -126,6 +126,13 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 		"bond": bondName,
 	}
 	scanner := bufio.NewScanner(strings.NewReader(rawFile))
+	/*
+		/proc/bond/... files are formatted in a way that is difficult
+		to use regexes to parse. Because of that, we scan through
+		the file one line at a time and rely on specific lines to
+		mark "ends" of blocks. It's a hack that should be resolved,
+		but for now, it works.
+	*/
 	for scanner.Scan() {
 		line := scanner.Text()
 		stats := strings.Split(line, ":")
@@ -161,31 +168,33 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 		bonding/mode
 		bonding/slaves
 		bonding/ad_num_ports
+
+		We load files here first to allow for easier testing
 	*/
 	var err error
 	var output sysFiles
 
-	file, err := os.ReadFile(bondDir + "/bonding/mode")
+	file, err = os.ReadFile(bondDir + "/bonding/mode")
 	if err != nil {
-		return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", bondDir+"/bonding/mode", err)
+		return sysFiles{}, fmt.Errorf("error inspecting '%q' interface: %v", bondDir+"/bonding/mode", err)
 	}
 	output.ModeFile = strings.TrimSpace(string(file))
 	file, err = os.ReadFile(bondDir + "/bonding/slaves")
 	if err != nil {
-		return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", bondDir+"/bonding/slaves", err)
+		return sysFiles{}, fmt.Errorf("error inspecting '%q' interface: %v", bondDir+"/bonding/slaves", err)
 	}
 	output.SlaveFile = strings.TrimSpace(string(file))
 	if bond.BondType == "IEEE 802.3ad Dynamic link aggregation" {
 		file, err = os.ReadFile(bondDir + "/bonding/ad_num_ports")
 		if err != nil {
-			return sysFiles{}, fmt.Errorf("error inspecting '%s' interface: %v", bondDir+"/bonding/ad_num_ports", err)
+			return sysFiles{}, fmt.Errorf("error inspecting '%q' interface: %v", bondDir+"/bonding/ad_num_ports", err)
 		}
 		output.ADPortsFile = strings.TrimSpace(string(file))
 	}
 	return output, nil
 }
 
-func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) error {
+func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) {
 	var mode string
 	var slaves []string
 	var slavesTmp []string
@@ -193,6 +202,10 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 
 	// To start with, we get the bond operating mode
 	scanner := bufio.NewScanner(strings.NewReader(files.ModeFile))
+	/*
+		This file should only have one line in it
+		so we can simply scan the one line
+	*/
 	for scanner.Scan() {
 		line := scanner.Text()
 		mode = strings.TrimSpace(strings.Split(line, " ")[0])
@@ -205,6 +218,10 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 
 	// Next we collect the number of bond slaves the system expects
 	scanner = bufio.NewScanner(strings.NewReader(files.SlaveFile))
+	/*
+		This file should only have one line in it
+		so we can simply scan the one line
+	*/
 	for scanner.Scan() {
 		slavesTmp = strings.Split(scanner.Text(), " ")
 	}
@@ -213,15 +230,19 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 			slaves = append(slaves, slave)
 		}
 	}
-	fmt.Println("Slaves ", slaves)
+	bond.Log.Debugf("Slaves: %v", slaves)
 	if mode == "802.3ad" {
 		/*
 			If we're in LACP mode, we should check on how the bond ports are
 			interacting with the upstream switch ports
 		*/
 		scanner = bufio.NewScanner(strings.NewReader(files.ADPortsFile))
+		/*
+			This file should only have one line in it
+			so we can simply scan the one line
+		*/
 		for scanner.Scan() {
-			fmt.Println("AD Ports ", scanner.Text())
+			bond.Log.Debugf("AD Ports: %v", scanner.Text())
 			// a failed conversion can be treated as 0 ports
 			adPortCount, _ = strconv.Atoi(strings.TrimSpace(scanner.Text()))
 		}
@@ -234,7 +255,6 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 		"ad_port_count": adPortCount,
 	}
 	acc.AddFields("bond_sys", fields, tags)
-	return nil
 }
 
 func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
