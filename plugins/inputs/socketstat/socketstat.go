@@ -103,7 +103,6 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 		}
 		words := strings.Fields(line)
 
-		var err error
 		if ss.isNewConnection.MatchString(line) {
 			// A line with starting whitespace means metrics about the current connection.
 			// We should never get 2 consecutive such lines. If we do, log a warning and in
@@ -115,11 +114,12 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 				}
 				// kv will have 2 fields because it matched the regexp
 				kv := strings.Split(word, ":")
-				fields[kv[0]], err = strconv.ParseUint(kv[1], 10, 64)
+				v, err := strconv.ParseUint(kv[1], 10, 64)
 				if err != nil {
-					ss.Log.Infof("Couldn't parse metric: %s", word)
+					ss.Log.Infof("Couldn't parse metric %q: %v", word, err)
 					continue
 				}
+				fields[kv[0]] = v
 			}
 			if !flushData {
 				ss.Log.Warnf("Found orphaned metrics: %s", words)
