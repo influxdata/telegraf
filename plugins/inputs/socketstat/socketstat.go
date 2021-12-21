@@ -58,7 +58,7 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(e)
 			continue
 		}
-		e = ss.parseAndGather(out, proto, acc)
+		e = ss.parseAndGather(acc, out, proto)
 		if e != nil {
 			acc.AddError(e)
 			continue
@@ -80,7 +80,7 @@ func socketList(cmdName string, proto string, timeout config.Duration) (*bytes.B
 	return &out, nil
 }
 
-func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc telegraf.Accumulator) error {
+func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffer, proto string) error {
 	scanner := bufio.NewScanner(data)
 	tags := map[string]string{}
 	fields := make(map[string]interface{})
