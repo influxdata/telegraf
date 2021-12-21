@@ -3,6 +3,7 @@ package disk
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	diskUtil "github.com/shirou/gopsutil/v3/disk"
@@ -376,4 +377,85 @@ func TestDiskStats(t *testing.T) {
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
 	require.NoError(t, err)
 	require.Equal(t, 2*expectedAllDiskMetrics+7, acc.NFields())
+}
+
+func TestDiskUsageIssues(t *testing.T) {
+	tests := []struct {
+		name     string
+		prefix   string
+		expected []map[string]string
+	}{
+		{
+			name:   "success",
+			prefix: "success",
+			expected: []map[string]string{
+				{
+					"device": "dev",
+					"fstype": "devtmpfs",
+					"mode":   "rw",
+					"path":   "/dev",
+				},
+				{
+					"device": "run",
+					"fstype": "tmpfs",
+					"mode":   "rw",
+					"path":   "/run",
+				},
+				{
+					"device": "tmpfs",
+					"fstype": "tmpfs",
+					"mode":   "rw",
+					"path":   "/tmp",
+				},
+				{
+					"device": "nvme0n1p4",
+					"fstype": "ext4",
+					"mode":   "rw",
+					"path":   "/",
+				},
+			},
+		},
+		{
+			name:   "issue #10297",
+			prefix: "issue_10297",
+			expected: []map[string]string{
+				{
+					"device": "sda1",
+					"fstype": "ext4",
+					"mode":   "rw",
+					"path":   "/",
+				},
+				{
+					"device": "sdb",
+					"fstype": "ext4",
+					"mode":   "rw",
+					"path":   "/mnt/storage",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the environment
+			os.Clearenv()
+			prefix, err := filepath.Abs(filepath.Join("testdata", tt.prefix))
+			require.NoError(t, err)
+			require.NoError(t, os.Setenv("HOST_PROC", prefix))
+
+			// Setup the plugin and test
+			ps := system.NewSystemPS()
+			plugin := &DiskStats{ps: ps}
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+
+			metrics := acc.GetTelegrafMetrics()
+			actual := make([]map[string]string, 0, len(tt.expected))
+			for _, m := range metrics {
+				actual = append(actual, m.Tags())
+			}
+			require.ElementsMatch(t, tt.expected, actual)
+		})
+	}
 }
