@@ -59,4 +59,32 @@ Add the year as a tag, similar to the date processor:
   template = '{{.Time.UTC.Year}}'
 ```
 
+Add all fields as a tag:
+
+```toml
+[[processors.template]]
+  tag = "message"
+  template = 'Fields: {{ .FieldList }}'
+  # Advanced example:
+  # template 'Fields: {{ range $name, $value := .FieldList }}{{$name}}:{{$value}} {{end}}'
+```
+
+```diff
+- cpu,hostname=localhost time_idle=42
++ cpu,hostname=localhost,message=Fields:\ map[time_idle:42] time_idle=42
+```
+
+Just add the current metric as a tag:
+
+```toml
+[[processors.template]]
+  tag = "metric"
+  template = '{{.}}'
+```
+
+```diff
+- cpu,hostname=localhost time_idle=42
++ cpu,hostname=localhost,metric=cpu\ map[hostname:localhost]\ map[time_idle:42]\ 1257894000000000000 time_idle=42
+```
+
 [Go Template Documentation]: https://golang.org/pkg/text/template/
