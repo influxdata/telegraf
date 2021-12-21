@@ -13,7 +13,7 @@ import (
 )
 
 func TestSocketstat_Gather(t *testing.T) {
-		tests := []struct {
+	tests := []struct {
 		name   string
 		proto  []string
 		filename  string
