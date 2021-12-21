@@ -178,11 +178,11 @@ func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[str
 	var err error
 	fields["recv_q"], err = strconv.ParseUint(words[1], 10, 64)
 	if err != nil {
-		log.Warnf("Couldn't read recv_q in: %s", words)
+		log.Warnf("Couldn't read recv_q in %q: %v", words, err)
 	}
 	fields["send_q"], err = strconv.ParseUint(words[2], 10, 64)
 	if err != nil {
-		log.Warnf("Couldn't read send_q in: %s", words)
+		log.Warnf("Couldn't read send_q in %q: %v", words, err)
 	}
 	return tags, fields
 }
