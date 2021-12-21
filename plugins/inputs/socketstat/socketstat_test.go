@@ -88,9 +88,7 @@ func TestSocketstat_Gather(t *testing.T) {
 			}
 			if len(tt.tags) == 0 {
 				n := acc.NFields()
-				if n != 0 {
-					t.Errorf("%d: expected 0 values got %d", i, n)
-				}
+				require.Equalf(t, 0,  n, "%d: expected 0 values got %d", i, n)
 				return
 			}
 			n := 0
