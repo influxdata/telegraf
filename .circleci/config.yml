@@ -449,42 +449,81 @@ workflows:
       - 'windows-package':
           requires:
             - 'test-go-windows'
+          filters:
+            tags:
+              only: /.*/
       - 'darwin-amd64-package':
           requires:
             - 'test-go-mac'
+          filters:
+            tags:
+              only: /.*/
       - 'darwin-arm64-package':
           requires:
             - 'test-go-mac'
+          filters:
+            tags:
+              only: /.*/
       - 'i386-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'ppc64le-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 's390x-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'armel-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'amd64-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'arm64-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'armhf-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'static-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'mipsel-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'mips-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'generate-config':
           requires:
             - 'amd64-package'
