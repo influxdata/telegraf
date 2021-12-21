@@ -137,7 +137,7 @@ func (s *SystemPS) DiskUsage(
 		du, err := s.PSDiskUsage(p.Mountpoint)
 		if err != nil {
 			if s.Log != nil {
-				s.Log.Debugf("[SystemPS] => dropped by disk usage: %v", err)
+				s.Log.Debugf("[SystemPS] => dropped by disk usage (%q): %v", p.Mountpoint, err)
 			}
 			continue
 		}
