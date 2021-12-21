@@ -416,6 +416,9 @@ commonjobs:
       requires:
         - 'test-go-1_17'
         - 'test-go-1_17-386'
+      filters:
+        tags:
+          only: /.*/
 
 workflows:
   version: 2
