@@ -13,36 +13,36 @@ import (
 	tspb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type CounterCache struct {
+type counterCache struct {
 	sync.RWMutex
-	cache map[string]*CounterCacheEntry
+	cache map[string]*counterCacheEntry
 	log   telegraf.Logger
 }
 
-type CounterCacheEntry struct {
+type counterCacheEntry struct {
 	LastValue *monpb.TypedValue
 	StartTime *tspb.Timestamp
 }
 
-func (cce *CounterCacheEntry) Reset(ts *tspb.Timestamp) {
+func (cce *counterCacheEntry) Reset(ts *tspb.Timestamp) {
 	// always backdate a reset by -1ms, otherwise stackdriver's API will hate us
 	cce.StartTime = tspb.New(ts.AsTime().Add(time.Millisecond * -1))
 }
 
-func (cc *CounterCache) get(key string) (*CounterCacheEntry, bool) {
+func (cc *counterCache) get(key string) (*counterCacheEntry, bool) {
 	cc.RLock()
+	defer cc.RUnlock()
 	value, ok := cc.cache[key]
-	cc.RUnlock()
 	return value, ok
 }
 
-func (cc *CounterCache) set(key string, value *CounterCacheEntry) {
+func (cc *counterCache) set(key string, value *counterCacheEntry) {
 	cc.Lock()
 	cc.cache[key] = value
 	cc.Unlock()
 }
 
-func (cc *CounterCache) GetStartTime(key string, value *monpb.TypedValue, endTime *tspb.Timestamp) *tspb.Timestamp {
+func (cc *counterCache) GetStartTime(key string, value *monpb.TypedValue, endTime *tspb.Timestamp) *tspb.Timestamp {
 	lastObserved, ok := cc.get(key)
 
 	// init: create a new key, backdate the state time to 1ms before the end time
@@ -72,17 +72,17 @@ func (cc *CounterCache) GetStartTime(key string, value *monpb.TypedValue, endTim
 	return lastObserved.StartTime
 }
 
-func NewCounterCache(log telegraf.Logger) *CounterCache {
-	return &CounterCache{
-		cache: make(map[string]*CounterCacheEntry),
+func NewCounterCache(log telegraf.Logger) *counterCache {
+	return &counterCache{
+		cache: make(map[string]*counterCacheEntry),
 		log:   log}
 }
 
-func NewCounterCacheEntry(value *monpb.TypedValue, ts *tspb.Timestamp) *CounterCacheEntry {
+func NewCounterCacheEntry(value *monpb.TypedValue, ts *tspb.Timestamp) *counterCacheEntry {
 	// Start times must be _before_ the end time, so backdate our original start time
 	// to 1ms before the observed time.
 	backDatedStart := ts.AsTime().Add(time.Millisecond * -1)
-	return &CounterCacheEntry{LastValue: value, StartTime: tspb.New(backDatedStart)}
+	return &counterCacheEntry{LastValue: value, StartTime: tspb.New(backDatedStart)}
 }
 
 func GetCounterCacheKey(m telegraf.Metric, f *telegraf.Field) string {
