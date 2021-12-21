@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 
@@ -59,14 +58,13 @@ const (
 )
 
 type CloudRun struct {
-	URL             string            `toml:"url"`
-	Timeout         config.Duration   `toml:"timeout"`
+	URL string `toml:"url"`
+	// Timeout         config.Duration   `toml:"timeout"`
 	Headers         map[string]string `toml:"headers"`
 	CredentialsFile string            `toml:"credentials_file"`
 	ConvertPaths    bool              `toml:"wavefront_disable_path_conversion"`
 	Log             telegraf.Logger   `toml:"-"`
 	Method          string            /* TODO: toml */
-	// tls.ClientConfig
 	httpconfig.HTTPClientConfig
 
 	client      *http.Client
@@ -204,7 +202,7 @@ func (cr *CloudRun) send(reqBody []byte) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("when writing to %q received status code	: %d", cr.URL, resp.StatusCode)
 	} else if resp.StatusCode == 401 {
-
+		// TODO:
 	}
 
 	return nil
@@ -213,9 +211,8 @@ func (cr *CloudRun) send(reqBody []byte) error {
 func init() {
 	outputs.Add("cloudrun", func() telegraf.Output {
 		return &CloudRun{
-			Method:  defaultMethod,
-			URL:     defaultURL,
-			Timeout: config.Duration(defaultClientTimeout),
+			Method: defaultMethod,
+			URL:    defaultURL,
 		}
 	})
 }
