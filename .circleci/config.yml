@@ -7,12 +7,12 @@ executors:
   go-1_17:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.17.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.17.5'
     environment:
       GOFLAGS: -p=8
   mac:
     macos:
-      xcode: 12.4.0
+      xcode: 13.2.0
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -378,8 +378,7 @@ jobs:
           path: './build/dist'
           destination: 'build/dist'
   package-sign-mac:
-    macos:
-      xcode: "11.3"
+    executor: mac
     working_directory: /Users/distiller/project
     environment:
       FL_OUTPUT_DIR: output
