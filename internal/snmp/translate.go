@@ -121,17 +121,11 @@ func TrapLookup(oid string) (e MibEntry, err error) {
 
 // The following is for snmp
 
-func GetIndex(oidNum string, mibPrefix string) (col []string, tagOids map[string]struct{}, err error) {
+func GetIndex(oidNum string, mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[string]struct{}, err error) {
 	// first attempt to get the table's tags
 	tagOids = map[string]struct{}{}
 
 	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
-	node, err := gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
-
-	if err != nil {
-		return []string{}, map[string]struct{}{}, fmt.Errorf("getting submask: %w", err)
-	}
-
 	for _, index := range node.GetIndex() {
 		//nolint:staticcheck //assaignment to nil map to keep backwards compatibilty
 		tagOids[mibPrefix+index.Name] = struct{}{}
@@ -139,31 +133,40 @@ func GetIndex(oidNum string, mibPrefix string) (col []string, tagOids map[string
 
 	// grabs all columns from the table
 	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
-	col = node.GetRow().AsTable().ColumnOrder
+	_, col = node.GetColumns()
 
 	return col, tagOids, nil
 }
 
 //nolint:revive //Too many return variable but necessary
-func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, node gosmi.SmiNode, err error) {
 	var out gosmi.SmiNode
 	var end string
 	if strings.ContainsAny(oid, "::") {
 		// split given oid
 		// for example RFC1213-MIB::sysUpTime.0
-		s := strings.Split(oid, "::")
+		s := strings.SplitN(oid, "::", 2)
+		// moduleName becomes RFC1213
+		moduleName := s[0]
+		module, err := gosmi.GetModule(moduleName)
+		if err != nil {
+			return oid, oid, oid, oid, gosmi.SmiNode{}, err
+		}
+		if s[1] == "" {
+			return "", oid, oid, oid, gosmi.SmiNode{}, fmt.Errorf("cannot parse %v\n", oid)
+		}
 		// node becomes sysUpTime.0
 		node := s[1]
 		if strings.ContainsAny(node, ".") {
-			s = strings.Split(node, ".")
+			s = strings.SplitN(node, ".", 2)
 			// node becomes sysUpTime
 			node = s[0]
 			end = "." + s[1]
 		}
 
-		out, err = gosmi.GetNode(node)
+		out, err = module.GetNode(node)
 		if err != nil {
-			return oid, oid, oid, oid, err
+			return oid, oid, oid, oid, out, err
 		}
 
 		oidNum = "." + out.RenderNumeric() + end
@@ -174,7 +177,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			if strings.ContainsAny(s[i], "abcdefghijklmnopqrstuvwxyz") {
 				out, err = gosmi.GetNode(s[i])
 				if err != nil {
-					return oid, oid, oid, oid, err
+					return oid, oid, oid, oid, out, err
 				}
 				s[i] = out.RenderNumeric()
 			}
@@ -188,7 +191,7 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		// do not return the err as the oid is numeric and telegraf can continue
 		//nolint:nilerr
 		if err != nil || out.Name == "iso" {
-			return oid, oid, oid, oid, nil
+			return oid, oid, oid, oid, out, nil
 		}
 	}
 
@@ -211,10 +214,10 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	oidText = out.RenderQualified()
 	i := strings.Index(oidText, "::")
 	if i == -1 {
-		return "", oid, oid, oid, fmt.Errorf("not found")
+		return "", oid, oid, oid, out, fmt.Errorf("not found")
 	}
 	mibName = oidText[:i]
 	oidText = oidText[i+2:] + end
 
-	return mibName, oidNum, oidText, conversion, nil
+	return mibName, oidNum, oidText, conversion, out, nil
 }

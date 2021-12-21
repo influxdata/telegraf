@@ -145,9 +145,6 @@ func TestFieldInit(t *testing.T) {
 		{".1.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".iso.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".1.0.0.0.1.1", "", "", ".1.0.0.0.1.1", "server", ""},
-		{"TEST::server", "", "", ".1.0.0.0.1.1", "server", ""},
-		{"TEST::server.0", "", "", ".1.0.0.0.1.1.0", "server.0", ""},
-		{"TEST::server", "foo", "", ".1.0.0.0.1.1", "foo", ""},
 		{"IF-MIB::ifPhysAddress.1", "", "", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "hwaddr"},
 		{"IF-MIB::ifPhysAddress.1", "", "none", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "none"},
 		{"BRIDGE-MIB::dot1dTpFdbAddress.1", "", "", ".1.3.6.1.2.1.17.4.3.1.1.1", "dot1dTpFdbAddress.1", "hwaddr"},
@@ -995,7 +992,7 @@ func TestFieldConvert(t *testing.T) {
 func TestSnmpTranslateCache_miss(t *testing.T) {
 	snmpTranslateCaches = nil
 	oid := "IF-MIB::ifPhysAddress.1"
-	mibName, oidNum, oidText, conversion, err := SnmpTranslate(oid)
+	mibName, oidNum, oidText, conversion, _, err := SnmpTranslate(oid)
 	require.Len(t, snmpTranslateCaches, 1)
 	stc := snmpTranslateCaches[oid]
 	require.NotNil(t, stc)
@@ -1016,7 +1013,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 			err:        fmt.Errorf("e"),
 		},
 	}
-	mibName, oidNum, oidText, conversion, err := SnmpTranslate("foo")
+	mibName, oidNum, oidText, conversion, _, err := SnmpTranslate("foo")
 	require.Equal(t, "a", mibName)
 	require.Equal(t, "b", oidNum)
 	require.Equal(t, "c", oidText)
@@ -1303,4 +1300,15 @@ func BenchmarkMibLoading(b *testing.B) {
 		err := snmp.LoadMibsFromPath(path, log)
 		require.NoError(b, err)
 	}
+}
+
+func TestCanNotParse(t *testing.T) {
+	s := &Snmp{
+		Fields: []Field{
+			{Oid: "RFC1213-MIB::"},
+		},
+	}
+
+	err := s.Init()
+	require.Error(t, err)
 }
