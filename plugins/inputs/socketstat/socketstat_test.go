@@ -98,7 +98,7 @@ func TestSocketstat_Gather(t *testing.T) {
 				for k, fields := range tt.fields[j] {
 					require.Greater(t, len(acc.Metrics), n)
 					m := acc.Metrics[n]
-					require.Equal(t, ss.measurement, m.Measurement, "%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, ss.measurement, m.Measurement)
+					require.Equal(t, measurement, m.Measurement, "%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, measurement, m.Measurement)
 					require.Equal(t, tags, m.Tags, "%d %d %d: expected tags\n%#v got\n%#v\n", i, j, k, tags, m.Tags)
 					require.Equal(t, fields, m.Fields, "%d %d %d: expected fields\n%#v got\n%#v\n", i, j, k, fields, m.Fields)
 					n++
