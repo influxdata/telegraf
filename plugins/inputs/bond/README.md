@@ -61,6 +61,22 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
 - total_churned
   - full count of all churn events
 
+## Description
+
+```shell
+active_slave
+  Currently active slave interface for active-backup mode.
+
+status
+  Status of bond interface or bonds's slave interface (down = 0, up = 1).
+
+failures
+  Amount of failures for bond's slave interface.
+
+count
+  Number of slaves attached to bond
+```
+
 ## Tags
 
 - bond
@@ -93,12 +109,14 @@ Configuration:
 Run:
 
 ```bash
+```shell
 telegraf --config telegraf.conf --input-filter bond --test
 ```
 
 Output:
 
 ```bash
+```shell
 * Plugin: inputs.bond, Collection 1
 > bond,bond=bond1,host=local active_slave="eth0",status=1i 1509704525000000000
 > bond_slave,bond=bond1,interface=eth0,host=local status=1i,failures=0i 1509704525000000000

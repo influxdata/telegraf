@@ -30,6 +30,8 @@ const (
 	defaultTimeout         = 5 * time.Second
 )
 
+var defaultSpecFields = []string{"version", "host", "short_message", "full_message", "timestamp", "level", "facility", "line", "file"}
+
 type gelfConfig struct {
 	Endpoint        string
 	Connection      string
@@ -97,7 +99,10 @@ func newGelfWriter(cfg gelfConfig, dialer *net.Dialer, tlsConfig *tls.Config) ge
 }
 
 func (g *gelfUDP) Write(message []byte) (n int, err error) {
-	compressed := g.compress(message)
+	compressed, err := g.compress(message)
+	if err != nil {
+		return 0, err
+	}
 
 	chunksize := g.gelfConfig.MaxChunkSizeWan
 	length := compressed.Len()
@@ -106,10 +111,17 @@ func (g *gelfUDP) Write(message []byte) (n int, err error) {
 		chunkCountInt := int(math.Ceil(float64(length) / float64(chunksize)))
 
 		id := make([]byte, 8)
-		rand.Read(id)
+		_, err = rand.Read(id)
+		if err != nil {
+			return 0, err
+		}
 
 		for i, index := 0, 0; i < length; i, index = i+chunksize, index+1 {
-			packet := g.createChunkedMessage(index, chunkCountInt, id, &compressed)
+			packet, err := g.createChunkedMessage(index, chunkCountInt, id, &compressed)
+			if err != nil {
+				return 0, err
+			}
+
 			err = g.send(packet.Bytes())
 			if err != nil {
 				return 0, err
@@ -136,21 +148,40 @@ func (g *gelfUDP) Close() (err error) {
 	return err
 }
 
-func (g *gelfUDP) createChunkedMessage(index int, chunkCountInt int, id []byte, compressed *bytes.Buffer) bytes.Buffer {
+func (g *gelfUDP) createChunkedMessage(index int, chunkCountInt int, id []byte, compressed *bytes.Buffer) (bytes.Buffer, error) {
 	var packet bytes.Buffer
 
 	chunksize := g.getChunksize()
 
-	packet.Write(g.intToBytes(30))
-	packet.Write(g.intToBytes(15))
-	packet.Write(id)
+	b, err := g.intToBytes(30)
+	if err != nil {
+		return packet, err
+	}
+	packet.Write(b) //nolint:revive // from buffer.go: "err is always nil"
 
-	packet.Write(g.intToBytes(index))
-	packet.Write(g.intToBytes(chunkCountInt))
+	b, err = g.intToBytes(15)
+	if err != nil {
+		return packet, err
+	}
+	packet.Write(b) //nolint:revive // from buffer.go: "err is always nil"
 
-	packet.Write(compressed.Next(chunksize))
+	packet.Write(id) //nolint:revive // from buffer.go: "err is always nil"
 
-	return packet
+	b, err = g.intToBytes(index)
+	if err != nil {
+		return packet, err
+	}
+	packet.Write(b) //nolint:revive // from buffer.go: "err is always nil"
+
+	b, err = g.intToBytes(chunkCountInt)
+	if err != nil {
+		return packet, err
+	}
+	packet.Write(b) //nolint:revive // from buffer.go: "err is always nil"
+
+	packet.Write(compressed.Next(chunksize)) //nolint:revive // from buffer.go: "err is always nil"
+
+	return packet, nil
 }
 
 func (g *gelfUDP) getChunksize() int {
@@ -165,21 +196,30 @@ func (g *gelfUDP) getChunksize() int {
 	return g.gelfConfig.MaxChunkSizeWan
 }
 
-func (g *gelfUDP) intToBytes(i int) []byte {
+func (g *gelfUDP) intToBytes(i int) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
-	binary.Write(buf, binary.LittleEndian, int8(i))
-	return buf.Bytes()
+	err := binary.Write(buf, binary.LittleEndian, int8(i))
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), err
 }
 
-func (g *gelfUDP) compress(b []byte) bytes.Buffer {
+func (g *gelfUDP) compress(b []byte) (bytes.Buffer, error) {
 	var buf bytes.Buffer
 	comp := zlib.NewWriter(&buf)
 
-	comp.Write(b)
-	comp.Close()
+	if _, err := comp.Write(b); err != nil {
+		return bytes.Buffer{}, err
+	}
 
-	return buf
+	if err := comp.Close(); err != nil {
+		return bytes.Buffer{}, err
+	}
+
+	return buf, nil
 }
 
 func (g *gelfUDP) Connect() error {
@@ -385,7 +425,13 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	}
 
 	for _, tag := range metric.TagList() {
-		if tag.Key != "host" {
+		if tag.Key == "host" {
+			continue
+		}
+
+		if fieldInSpec(tag.Key) {
+			m[tag.Key] = tag.Value
+		} else {
 			m["_"+tag.Key] = tag.Value
 		}
 	}
@@ -393,6 +439,8 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	for _, field := range metric.FieldList() {
 		if field.Key == g.ShortMessageField {
 			m["short_message"] = field.Value
+		} else if fieldInSpec(field.Key) {
+			m[field.Key] = field.Value
 		} else {
 			m["_"+field.Key] = field.Value
 		}
@@ -405,6 +453,16 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	out = append(out, string(serialized))
 
 	return out, nil
+}
+
+func fieldInSpec(field string) bool {
+	for _, specField := range defaultSpecFields {
+		if specField == field {
+			return true
+		}
+	}
+
+	return false
 }
 
 func init() {

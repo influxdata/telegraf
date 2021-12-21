@@ -30,7 +30,7 @@ The `carbon2` serializer translates the Telegraf metric format to the [Carbon2 f
 
 Standard form:
 
-```
+```text
 metric=name field=field_1 host=foo  30 1234567890
 metric=name field=field_2 host=foo  4 1234567890
 metric=name field=field_N host=foo  59 1234567890
@@ -51,7 +51,7 @@ after the `_`.
 This is the behavior of `carbon2_format = "metric_includes_field"` which would
 make the above example look like:
 
-```
+```text
 metric=name_field_1 host=foo  30 1234567890
 metric=name_field_2 host=foo  4 1234567890
 metric=name_field_N host=foo  59 1234567890
@@ -62,7 +62,7 @@ metric=name_field_N host=foo  59 1234567890
 In order to sanitize the metric name one can specify `carbon2_sanitize_replace_char`
 in order to replace the following characters in the metric name:
 
-```
+```text
 !@#$%^&*()+`'\"[]{};<>,?/\\|=
 ```
 
@@ -78,13 +78,13 @@ There will be a `metric` tag that represents the name of the metric and a `field
 
 If we take the following InfluxDB Line Protocol:
 
-```
+```text
 weather,location=us-midwest,season=summer temperature=82,wind=100 1234567890
 ```
 
 after serializing in Carbon2, the result would be:
 
-```
+```text
 metric=weather field=temperature location=us-midwest season=summer  82 1234567890
 metric=weather field=wind location=us-midwest season=summer  100 1234567890
 ```

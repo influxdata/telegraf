@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
@@ -344,6 +345,8 @@ func TestConnect(t *testing.T) {
 
 	resp, err := client.Get(ts.URL)
 	require.NoError(t, err)
+
+	defer resp.Body.Close()
 	require.Equal(t, 200, resp.StatusCode)
 }
 

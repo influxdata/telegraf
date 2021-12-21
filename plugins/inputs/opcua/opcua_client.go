@@ -52,7 +52,6 @@ type OpcUA struct {
 	opts   []opcua.Option
 }
 
-// OPCTag type
 type NodeSettings struct {
 	FieldName      string     `toml:"name"`
 	Namespace      string     `toml:"namespace"`
@@ -476,7 +475,7 @@ func (o *OpcUA) setupOptions() error {
 		}
 	}
 
-	o.opts, err = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
+	o.opts, err = o.generateClientOpts(endpoints)
 
 	return err
 }

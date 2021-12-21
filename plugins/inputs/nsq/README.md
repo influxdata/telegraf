@@ -1,6 +1,6 @@
 # NSQ Input Plugin
 
-### Configuration:
+## Configuration
 
 ```toml
 # Description

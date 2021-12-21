@@ -11,12 +11,53 @@ import (
 	"testing"
 	"time"
 
+	reuse "github.com/libp2p/go-reuseport"
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/metric"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	reuse "github.com/libp2p/go-reuseport"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+func TestSerializer(t *testing.T) {
+	m1 := metric.New("testing",
+		map[string]string{
+			"verb": "GET",
+			"host": "hostname",
+		},
+		map[string]interface{}{
+			"full_message":  "full",
+			"short_message": "short",
+			"level":         "1",
+			"facility":      "demo",
+			"line":          "42",
+			"file":          "graylog.go",
+		},
+		time.Now(),
+	)
+
+	graylog := Graylog{}
+	result, err := graylog.serialize(m1)
+
+	require.NoError(t, err)
+
+	for _, r := range result {
+		var obj GelfObject
+		err = json.Unmarshal([]byte(r), &obj)
+		require.NoError(t, err)
+
+		require.Equal(t, obj["version"], "1.1")
+		require.Equal(t, obj["_name"], "testing")
+		require.Equal(t, obj["_verb"], "GET")
+		require.Equal(t, obj["host"], "hostname")
+		require.Equal(t, obj["full_message"], "full")
+		require.Equal(t, obj["short_message"], "short")
+		require.Equal(t, obj["level"], "1")
+		require.Equal(t, obj["facility"], "demo")
+		require.Equal(t, obj["line"], "42")
+		require.Equal(t, obj["file"], "graylog.go")
+	}
+}
 
 func TestWriteUDP(t *testing.T) {
 	tests := []struct {
@@ -183,14 +224,14 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Gr
 		var obj GelfObject
 		_ = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
-		assert.Equal(t, obj["short_message"], "telegraf")
+		require.Equal(t, obj["short_message"], "telegraf")
 		if config.NameFieldNoPrefix {
-			assert.Equal(t, obj["name"], "test1")
+			require.Equal(t, obj["name"], "test1")
 		} else {
-			assert.Equal(t, obj["_name"], "test1")
+			require.Equal(t, obj["_name"], "test1")
 		}
-		assert.Equal(t, obj["_tag1"], "value1")
-		assert.Equal(t, obj["_value"], float64(1))
+		require.Equal(t, obj["_tag1"], "value1")
+		require.Equal(t, obj["_value"], float64(1))
 	}
 
 	// in UDP scenario all 4 messages are received
@@ -238,10 +279,10 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 		var obj GelfObject
 		err = json.Unmarshal(bufW.Bytes(), &obj)
 		require.NoError(t, err)
-		assert.Equal(t, obj["short_message"], "telegraf")
-		assert.Equal(t, obj["_name"], "test1")
-		assert.Equal(t, obj["_tag1"], "value1")
-		assert.Equal(t, obj["_value"], float64(1))
+		require.Equal(t, obj["short_message"], "telegraf")
+		require.Equal(t, obj["_name"], "test1")
+		require.Equal(t, obj["_tag1"], "value1")
+		require.Equal(t, obj["_value"], float64(1))
 	}
 
 	conn := accept()

@@ -4,7 +4,7 @@ This plugin writes to a Graylog instance using the "[GELF][]" format.
 
 [GELF]: https://docs.graylog.org/en/3.1/pages/gelf.html#gelf-payload-specification
 
-### Configuration:
+## Configuration
 
 ```toml
 [[outputs.graylog]]

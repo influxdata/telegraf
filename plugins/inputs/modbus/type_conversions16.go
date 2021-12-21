@@ -1,4 +1,5 @@
 //go:build !openbsd
+// +build !openbsd
 
 package modbus
 
@@ -11,9 +12,9 @@ type convert16 func([]byte) uint16
 
 func endianessConverter16(byteOrder string) (convert16, error) {
 	switch byteOrder {
-	case "ABCD": // Big endian (Motorola)
+	case "ABCD", "CDAB": // Big endian (Motorola)
 		return binary.BigEndian.Uint16, nil
-	case "DCBA": // Little endian (Intel)
+	case "DCBA", "BADC": // Little endian (Intel)
 		return binary.LittleEndian.Uint16, nil
 	}
 	return nil, fmt.Errorf("invalid byte-order: %s", byteOrder)
