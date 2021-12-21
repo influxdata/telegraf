@@ -21,7 +21,7 @@ type ConsulMetrics struct {
 	TokenFile string `toml:"token_file"`
 	Token     string `toml:"token"`
 
-	ResponseTimeout config.Duration `toml:"response_timeout"`
+	Timeout config.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
 
@@ -30,7 +30,7 @@ type ConsulMetrics struct {
 
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 
-var sampleConfig = `
+const sampleConfig = `
   ## URL for the Consul agent
   # url = "http://127.0.0.1:8500"
 
@@ -52,7 +52,7 @@ var sampleConfig = `
 func init() {
 	inputs.Add("consul_metrics", func() telegraf.Input {
 		return &ConsulMetrics{
-			ResponseTimeout: config.Duration(5 * time.Second),
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }
@@ -92,7 +92,7 @@ func (n *ConsulMetrics) Init() error {
 	n.roundTripper = &http.Transport{
 		TLSHandshakeTimeout:   5 * time.Second,
 		TLSClientConfig:       tlsCfg,
-		ResponseHeaderTimeout: time.Duration(n.ResponseTimeout),
+		ResponseHeaderTimeout: time.Duration(n.Timeout),
 	}
 
 	return nil
@@ -105,12 +105,7 @@ func (n *ConsulMetrics) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	err = buildConsulMetrics(acc, summaryMetrics)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return buildConsulMetrics(acc, summaryMetrics)
 }
 
 func (n *ConsulMetrics) loadJSON(url string) (*MetricsInfo, error) {
