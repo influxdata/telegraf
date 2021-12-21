@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf/config"
@@ -74,7 +75,9 @@ func TestSocketstat_Gather(t *testing.T) {
 			acc := new(testutil.Accumulator)
 
 			err := ss.Init()
-			require.NoError(t, err)
+			if (err != nil && !strings.Contains(err.Error(), "executable file not found in $PATH")) {
+				require.NoError(t, err)
+			}
 			ss.lister = func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
 				return bytes.NewBuffer(octets), nil
 			}
