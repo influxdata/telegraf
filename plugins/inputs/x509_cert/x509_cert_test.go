@@ -221,13 +221,13 @@ func TestTags(t *testing.T) {
 	require.Equal(t, big.NewInt(1), serialNumber)
 
 	// expect root/intermediate certs (more than one cert)
-	assert.Greater(t, acc.NMetrics(), uint64(1))
+	require.Greater(t, acc.NMetrics(), uint64(1))
 }
 
 func TestGatherExcludeRootCerts(t *testing.T) {
 	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
 
-	f, err := ioutil.TempFile("", "x509_cert")
+	f, err := os.CreateTemp("", "x509_cert")
 	require.NoError(t, err)
 
 	_, err = f.Write([]byte(cert))
@@ -246,8 +246,8 @@ func TestGatherExcludeRootCerts(t *testing.T) {
 	acc := testutil.Accumulator{}
 	require.NoError(t, sc.Gather(&acc))
 
-	assert.True(t, acc.HasMeasurement("x509_cert"))
-	assert.Equal(t, acc.NMetrics(), uint64(1))
+	require.True(t, acc.HasMeasurement("x509_cert"))
+	require.Equal(t, acc.NMetrics(), uint64(1))
 }
 
 func TestGatherChain(t *testing.T) {
