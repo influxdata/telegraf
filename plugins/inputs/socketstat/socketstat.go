@@ -16,6 +16,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const measurement = "socketstat"
+
 // Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  `ss` command.
 type Socketstat struct {
 	SocketProto []string        `toml:"protocols"`
@@ -26,7 +28,6 @@ type Socketstat struct {
 	validValues     *regexp.Regexp
 	cmdName         string
 	lister          socketLister
-	measurement     string
 }
 
 type socketLister func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error)
@@ -124,14 +125,14 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 				ss.Log.Warnf("Found orphaned metrics: %s", words)
 				ss.Log.Warnf("Added them to the last known connection.")
 			}
-			acc.AddFields(ss.measurement, fields, tags)
+			acc.AddFields(measurement, fields, tags)
 			flushData = false
 			continue
 		}
 		// A line with no starting whitespace means we're going to parse a new connection.
 		// Flush what we gathered about the previous one, if any.
 		if flushData {
-			acc.AddFields(ss.measurement, fields, tags)
+			acc.AddFields(measurement, fields, tags)
 		}
 
 		// Delegate the real parsing to getTagsAndState, which manages various
@@ -142,7 +143,7 @@ func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc teleg
 		flushData = true
 	}
 	if flushData {
-		acc.AddFields(ss.measurement, fields, tags)
+		acc.AddFields(measurement, fields, tags)
 	}
 	return nil
 }
@@ -197,8 +198,6 @@ func (ss *Socketstat) Init() error {
 		return err
 	}
 	ss.cmdName = ssPath
-
-	ss.measurement = "socketstat"
 
 	if ss.Timeout < config.Duration(time.Second) {
 		ss.Timeout = config.Duration(time.Second)
