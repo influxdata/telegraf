@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	diskUtil "github.com/shirou/gopsutil/v3/disk"
@@ -380,6 +381,10 @@ func TestDiskStats(t *testing.T) {
 }
 
 func TestDiskUsageIssues(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping due to Linux-only test-cases...")
+	}
+
 	tests := []struct {
 		name     string
 		prefix   string
