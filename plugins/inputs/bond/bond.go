@@ -226,7 +226,7 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 			slaves = append(slaves, slave)
 		}
 	}
-	bond.Log.Debugf("Slaves: %v", slaves)
+	// bond.Log.Debugf("Slaves: %v", slaves)
 	if mode == "802.3ad" {
 		/*
 			If we're in LACP mode, we should check on how the bond ports are
@@ -238,7 +238,7 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 			so we can simply scan the one line
 		*/
 		for scanner.Scan() {
-			bond.Log.Debugf("AD Ports: %v", scanner.Text())
+			// bond.Log.Debugf("AD Ports: %v", scanner.Text())
 			// a failed conversion can be treated as 0 ports
 			adPortCount, _ = strconv.Atoi(strings.TrimSpace(scanner.Text()))
 		}
