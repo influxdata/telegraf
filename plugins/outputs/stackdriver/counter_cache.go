@@ -38,8 +38,8 @@ func (cc *counterCache) get(key string) (*counterCacheEntry, bool) {
 
 func (cc *counterCache) set(key string, value *counterCacheEntry) {
 	cc.Lock()
+	defer cc.Unlock()
 	cc.cache[key] = value
-	cc.Unlock()
 }
 
 func (cc *counterCache) GetStartTime(key string, value *monpb.TypedValue, endTime *tspb.Timestamp) *tspb.Timestamp {
