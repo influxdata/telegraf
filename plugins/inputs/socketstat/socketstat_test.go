@@ -14,26 +14,26 @@ import (
 
 func TestSocketstat_Gather(t *testing.T) {
 	tests := []struct {
-		name   string
-		proto  []string
-		filename  string
-		tags   []map[string]string
-		fields [][]map[string]interface{}
-		err    error
+		name     string
+		proto    []string
+		filename string
+		tags     []map[string]string
+		fields   [][]map[string]interface{}
+		err      error
 	}{
 		{
-			name:  "tcp - no sockets => no results",
-			proto: []string{"tcp"},
+			name:     "tcp - no sockets => no results",
+			proto:    []string{"tcp"},
 			filename: "tcp_no_sockets.txt",
 		},
 		{
-			name:  "udp - no sockets => no results",
-			proto: []string{"udp"},
+			name:     "udp - no sockets => no results",
+			proto:    []string{"udp"},
 			filename: "udp_no_sockets.txt",
 		},
 		{
-			name:  "tcp sockets captured",
-			proto: []string{"tcp"},
+			name:     "tcp sockets captured",
+			proto:    []string{"tcp"},
 			filename: "tcp_traffic.txt",
 			tags: []map[string]string{
 				{"proto": "tcp", "local_addr": "192.168.1.21", "local_port": "6514", "remote_addr": "192.168.1.21", "remote_port": "443"},
@@ -47,8 +47,8 @@ func TestSocketstat_Gather(t *testing.T) {
 			},
 		},
 		{
-			name:  "udp packets captured",
-			proto: []string{"udp"},
+			name:     "udp packets captured",
+			proto:    []string{"udp"},
 			filename: "udp_traffic.txt",
 			tags: []map[string]string{
 				{"proto": "udp", "local_addr": "10.10.0.4", "local_port": "33149", "remote_addr": "10.10.0.5", "remote_port": "53"},
@@ -83,12 +83,12 @@ func TestSocketstat_Gather(t *testing.T) {
 			require.ErrorIs(t, err, tt.err)
 			if len(tt.proto) == 0 {
 				n := acc.NFields()
-				require.Equalf(t, 0,  n, "%d: expected 0 values got %d", i, n)
+				require.Equalf(t, 0, n, "%d: expected 0 values got %d", i, n)
 				return
 			}
 			if len(tt.tags) == 0 {
 				n := acc.NFields()
-				require.Equalf(t, 0,  n, "%d: expected 0 values got %d", i, n)
+				require.Equalf(t, 0, n, "%d: expected 0 values got %d", i, n)
 				return
 			}
 			n := 0
