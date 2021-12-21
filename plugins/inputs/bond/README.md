@@ -61,22 +61,6 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
 - total_churned
   - full count of all churn events
 
-## Description
-
-```shell
-active_slave
-  Currently active slave interface for active-backup mode.
-
-status
-  Status of bond interface or bonds's slave interface (down = 0, up = 1).
-
-failures
-  Amount of failures for bond's slave interface.
-
-count
-  Number of slaves attached to bond
-```
-
 ## Tags
 
 - bond
