@@ -209,9 +209,7 @@ func (ss *Socketstat) Init() error {
 	ss.validValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
 	ss.isNewConnection = regexp.MustCompile(`^\s+.*$`)
 
-	if ss.lister == nil {
-		ss.lister = socketList
-	}
+	ss.lister = socketList
 
 	return nil
 }
