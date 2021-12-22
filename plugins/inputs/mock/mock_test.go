@@ -8,21 +8,22 @@ import (
 )
 
 func TestGather(t *testing.T) {
-	testRandom := &Random{
+	testRandom := &random{
 		Name: "random",
 		Min:  1.0,
 		Max:  6.0,
 	}
-	testSineWave := &SineWave{
+	testSineWave := &sineWave{
 		Name:      "sine",
-		Amplitude: 10,
+		Amplitude: 1.0,
+		Period:    0.5,
 	}
-	testStep := &Step{
+	testStep := &step{
 		Name:  "step",
 		Start: 0.0,
 		Step:  1.0,
 	}
-	testStock := &Stock{
+	testStock := &stock{
 		Name:       "abc",
 		Price:      50.00,
 		Volatility: 0.2,
@@ -37,10 +38,10 @@ func TestGather(t *testing.T) {
 		MetricName: "test",
 		Tags:       tags,
 
-		Random:   []*Random{testRandom},
-		SineWave: []*SineWave{testSineWave},
-		Step:     []*Step{testStep},
-		Stock:    []*Stock{testStock},
+		Random:   []*random{testRandom},
+		SineWave: []*sineWave{testSineWave},
+		Step:     []*step{testStep},
+		Stock:    []*stock{testStock},
 	}
 
 	var acc testutil.Accumulator
@@ -63,7 +64,7 @@ func TestGather(t *testing.T) {
 		case "step":
 			require.Equal(t, 0.0, v)
 		default:
-			t.Errorf("unexpected field %q", k)
+			t.Logf("unexpected field %q", k)
 			t.Fail()
 		}
 	}

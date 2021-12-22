@@ -12,43 +12,44 @@ import (
 type Mock struct {
 	counter int64
 
-	MetricName string            `json:"metric_name"`
-	Tags       map[string]string `json:"tags"`
+	MetricName string            `toml:"metric_name"`
+	Tags       map[string]string `toml:"tags"`
 
-	Random   []*Random   `json:"random_float"`
-	Step     []*Step     `json:"step"`
-	Stock    []*Stock    `json:"stock"`
-	SineWave []*SineWave `json:"sine_wave"`
+	Random   []*random   `toml:"random"`
+	Step     []*step     `toml:"step"`
+	Stock    []*stock    `toml:"stock"`
+	SineWave []*sineWave `toml:"sine_wave"`
 }
 
-type Random struct {
-	Name string  `json:"name"`
-	Min  float64 `json:"min"`
-	Max  float64 `json:"max"`
+type random struct {
+	Name string  `toml:"name"`
+	Min  float64 `toml:"min"`
+	Max  float64 `toml:"max"`
 }
 
-type SineWave struct {
-	Name      string  `json:"name"`
-	Amplitude float64 `json:"amplitude"`
+type sineWave struct {
+	Name      string  `toml:"name"`
+	Amplitude float64 `toml:"amplitude"`
+	Period    float64 `toml:"period"`
 }
 
-type Step struct {
+type step struct {
 	latest float64
 
-	Name  string  `json:"name"`
-	Start float64 `json:"min"`
-	Step  float64 `json:"max"`
+	Name  string  `toml:"name"`
+	Start float64 `toml:"min"`
+	Step  float64 `toml:"max"`
 }
 
-type Stock struct {
+type stock struct {
 	latest float64
 
-	Name       string  `json:"name"`
-	Price      float64 `json:"price"`
-	Volatility float64 `json:"volatility"`
+	Name       string  `toml:"name"`
+	Price      float64 `toml:"price"`
+	Volatility float64 `toml:"volatility"`
 }
 
-const SampleConfig = `
+const sampleConfig = `
   ## Set the metric name to use for reporting
   metric_name = "mock"
 
@@ -58,13 +59,14 @@ const SampleConfig = `
 
   ## One or more mock data fields *must* be defined.
   ##
-  ## [[inputs.mock.random_float]]
+  ## [[inputs.mock.random]]
   ##   name = "rand"
   ##   min = 1.0
   ##   max = 6.0
   ## [[inputs.mock.sine_wave]]
   ##   name = "wave"
-  ##   amplitude = 10.0
+  ##   amplitude = 1.0
+  ##   period = 0.5
   ## [[inputs.mock.step]]
   ##   name = "plus_one"
   ##   start = 0.0
@@ -76,7 +78,7 @@ const SampleConfig = `
 `
 
 func (m *Mock) SampleConfig() string {
-	return SampleConfig
+	return sampleConfig
 }
 
 func (m *Mock) Description() string {
@@ -117,7 +119,7 @@ func (m *Mock) generateRandomFloat64(fields map[string]interface{}) {
 // Create sine waves
 func (m *Mock) generateSineWave(fields map[string]interface{}) {
 	for _, field := range m.SineWave {
-		fields[field.Name] = math.Sin((float64(m.counter)*math.Pi)/5.0) * field.Amplitude
+		fields[field.Name] = math.Sin((float64(m.counter) * field.Period * math.Pi)) * field.Amplitude
 	}
 }
 

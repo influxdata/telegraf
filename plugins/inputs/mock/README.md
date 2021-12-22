@@ -27,13 +27,14 @@ Below is a sample config to generate one of each of the four types:
 
   ## One or more mock data fields *must* be defined.
   ##
-  ## [[inputs.mock.random_float]]
+  ## [[inputs.mock.random]]
   ##   name = "rand"
   ##   min = 1.0
   ##   max = 6.0
   ## [[inputs.mock.sine_wave]]
   ##   name = "wave"
-  ##   amplitude = 10.0
+  ##   amplitude = 1.0
+  ##   period = 0.5
   ## [[inputs.mock.step]]
   ##   name = "plus_one"
   ##   start = 0.0
@@ -49,7 +50,7 @@ Below is a sample config to generate one of each of the four types:
 The available algorithms for generating mock data include:
 
 * Random Float - generate a random float, inclusive of min and max
-* Sine Wave - produce a sine wave with a certain amplitude
+* Sine Wave - produce a sine wave with a certain amplitude and period
 * Step - always add the step value, negative values accepted
 * Stock - generate fake, stock-like price values based on a volatility variable
 
