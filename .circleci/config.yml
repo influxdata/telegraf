@@ -447,7 +447,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - *test-awaiter
       - 'windows-package':
           requires:
             - 'test-go-windows'
