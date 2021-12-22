@@ -434,7 +434,8 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
 			}
 
 			metrics = append(metrics, resp.Metrics...)
-			if resp.NextToken == nil {
+			if resp.NextToken == nil || len(*resp.NextToken) == 0 {
+				params.NextToken = token
 				break
 			}
 
