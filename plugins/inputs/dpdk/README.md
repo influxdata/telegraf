@@ -24,10 +24,11 @@ to discover and test the capabilities of DPDK libraries and to explore the expos
 > `DPDK version >= 20.05`. The default configuration include reading common statistics from `/ethdev/stats` that is
 > available from `DPDK version >= 20.11`. When using `DPDK 20.05 <= version < DPDK 20.11` it is recommended to disable
 > querying `/ethdev/stats` by setting corresponding `exclude_commands` configuration option.
->
 > **NOTE:** Since DPDK will most likely run with root privileges, the socket telemetry interface exposed by DPDK
 > will also require root access. This means that either access permissions have to be adjusted for socket telemetry
 > interface to allow Telegraf to access it, or Telegraf should run with root privileges.
+> **NOTE:** The DPDK socket must exist for Telegraf to start successfully. Telegraf will attempt
+> to connect to the DPDK socket during the initialization phase.
 
 ## Configuration
 
