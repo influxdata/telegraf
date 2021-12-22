@@ -1,3 +1,8 @@
+//go:build !windows
+// +build !windows
+
+// iproute2 doesn't exist on Windows
+
 package socketstat
 
 import (
