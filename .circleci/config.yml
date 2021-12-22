@@ -579,8 +579,8 @@ workflows:
           filters:
               tags:
                 only: /.*/
-              # branches:
-              #   ignore: /.*/
+              branches:
+                ignore: /.*/
       - 'package-sign-mac':
            requires:
             - 'darwin-amd64-package'
@@ -608,8 +608,8 @@ workflows:
            filters:
               tags:
                 only: /.*/
-              # branches:
-              #   ignore: /.*/
+              branches:
+                ignore: /.*/
 
   nightly:
     jobs:
