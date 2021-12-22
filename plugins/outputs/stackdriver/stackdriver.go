@@ -163,13 +163,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
-			startTime, endTime := getStackdriverIntervalEndpoints(
-				metricKind,
-				value,
-				m,
-				f,
-				s.counterCache,
-			)
+			startTime, endTime := getStackdriverIntervalEndpoints(metricKind, value, m, f, s.counterCache)
 
 			timeInterval, err := getStackdriverTimeInterval(metricKind, startTime, endTime)
 			if err != nil {
