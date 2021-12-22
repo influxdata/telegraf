@@ -57,10 +57,10 @@ const (
 )
 
 type CloudRun struct {
-	URL             string          `toml:"url"`
-	CredentialsFile string          `toml:"credentials_file"`
-	ConvertPaths    bool            `toml:"wavefront_disable_path_conversion"`
-	Log             telegraf.Logger `toml:"-"`
+	URL                 string          `toml:"url"`
+	CredentialsFile     string          `toml:"credentials_file"`
+	DisableConvertPaths bool            `toml:"wavefront_disable_path_conversion"`
+	Log                 telegraf.Logger `toml:"-"`
 	// Method          string          /* TODO: toml */
 	httpconfig.HTTPClientConfig
 
@@ -128,7 +128,7 @@ func (cr *CloudRun) Close() error {
 }
 
 func (cr *CloudRun) Description() string {
-	return "A plugin that is capable of transmitting metrics over HTTPS to a Cloud Run Wavefront proxy"
+	return "A plugin that is capable of transmitting metrics over HTTPS to a metrics proxy hosted in Cloud Run"
 }
 
 func (cr *CloudRun) SampleConfig() string {
