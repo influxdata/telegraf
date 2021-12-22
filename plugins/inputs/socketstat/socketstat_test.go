@@ -119,5 +119,5 @@ func TestSocketstat_Gather_listerError(t *testing.T) {
 	}
 	acc := new(testutil.Accumulator)
 	err := acc.GatherError(ss.Gather)
-	require.ErrorIs(t, errFoo, err)
+	require.EqualError(t, errFoo, err)
 }
