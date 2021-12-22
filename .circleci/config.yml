@@ -342,16 +342,6 @@ jobs:
               --include "*.rpm" \
               --include "*.zip" \
               --acl public-read
-  package-consolidate:
-    executor:
-        name: win/default
-        shell: powershell.exe
-    steps:
-      - attach_workspace:
-          at: '/build'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
   package-sign-windows:
     executor:
         name: win/default
@@ -389,13 +379,14 @@ jobs:
           root: './build'
           paths:
             - 'dist'
-  all-artifacts:
-    executor: go-1_17
+  package-consolidate:
+    docker:
+     - image: alpine
     steps:
       - attach_workspace:
           at: '.'
       - store_artifacts:
-          path: './build/dist'
+          path: './dist'
           destination: 'build/dist'
       - run:
           command: |
