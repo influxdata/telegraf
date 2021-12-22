@@ -7,12 +7,12 @@ executors:
   go-1_17:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.17.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.17.5'
     environment:
       GOFLAGS: -p=8
   mac:
     macos:
-      xcode: 12.4.0
+      xcode: 13.2.0
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -113,9 +113,6 @@ commands:
 
   package-build:
     parameters:
-      release:
-        type: boolean
-        default: false
       type:
         type: string
         default: ""
@@ -128,10 +125,6 @@ commands:
       - attach_workspace:
           at: '/go'
       - when:
-          condition: << parameters.release >>
-          steps:
-            - run: 'make package'
-      - when:
           condition: << parameters.nightly >>
           steps:
             - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
@@ -139,7 +132,6 @@ commands:
           condition:
             or:
               - << parameters.nightly >>
-              - << parameters.release >>
           steps:
             - run: 'make package include_packages="$(make << parameters.type >>)"'
       - store_artifacts:
@@ -326,12 +318,6 @@ jobs:
       - package-build:
           type: armhf
           nightly: << parameters.nightly >>
-
-  release:
-    executor: go-1_17
-    steps:
-      - package-build:
-          release: true
   nightly:
     executor: go-1_17
     steps:
@@ -378,8 +364,7 @@ jobs:
           path: './build/dist'
           destination: 'build/dist'
   package-sign-mac:
-    macos:
-      xcode: "11.3"
+    executor: mac
     working_directory: /Users/distiller/project
     environment:
       FL_OUTPUT_DIR: output
@@ -430,6 +415,9 @@ commonjobs:
       requires:
         - 'test-go-1_17'
         - 'test-go-1_17-386'
+      filters:
+        tags:
+          only: /.*/
 
 workflows:
   version: 2
@@ -463,42 +451,81 @@ workflows:
       - 'windows-package':
           requires:
             - 'test-go-windows'
+          filters:
+            tags:
+              only: /.*/
       - 'darwin-amd64-package':
           requires:
             - 'test-go-mac'
+          filters:
+            tags:
+              only: /.*/
       - 'darwin-arm64-package':
           requires:
             - 'test-go-mac'
+          filters:
+            tags:
+              only: /.*/
       - 'i386-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'ppc64le-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 's390x-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'armel-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'amd64-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'arm64-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'armhf-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'static-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'mipsel-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'mips-package':
           requires:
             - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 'generate-config':
           requires:
             - 'amd64-package'
@@ -535,29 +562,34 @@ workflows:
                 - release.*
             tags:
               ignore: /.*/
-      - 'release':
-          requires:
-            - 'test-go-windows'
-            - 'test-go-mac'
-            - 'test-go-1_17'
-            - 'test-go-1_17-386'
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
       - 'package-sign-windows':
           requires:
-            - 'release'
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
+            - 'windows-package'
+            - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
           filters:
               tags:
                 only: /.*/
+              branches:
+                ignore: /.*/
       - 'package-sign-mac':
            requires:
              - 'package-sign-windows'
            filters:
               tags:
                 only: /.*/
+              branches:
+                ignore: /.*/
 
   nightly:
     jobs:
