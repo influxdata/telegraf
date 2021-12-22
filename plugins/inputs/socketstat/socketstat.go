@@ -58,11 +58,7 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(err)
 			continue
 		}
-		err = ss.parseAndGather(acc, out, proto)
-		if err != nil {
-			acc.AddError(err)
-			continue
-		}
+		ss.parseAndGather(acc, out, proto)
 	}
 	return nil
 }
@@ -80,7 +76,7 @@ func socketList(cmdName string, proto string, timeout config.Duration) (*bytes.B
 	return &out, nil
 }
 
-func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffer, proto string) error {
+func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffer, proto string) {
 	scanner := bufio.NewScanner(data)
 	tags := map[string]string{}
 	fields := make(map[string]interface{})
@@ -145,7 +141,6 @@ func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffe
 	if flushData {
 		acc.AddFields(measurement, fields, tags)
 	}
-	return nil
 }
 
 func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[string]string, map[string]interface{}) {
