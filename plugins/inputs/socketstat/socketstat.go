@@ -53,14 +53,14 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 	// best effort : we continue through the protocols even if an error is encountered,
 	// but we keep track of the last error.
 	for _, proto := range ss.SocketProto {
-		out, e := ss.lister(ss.cmdName, proto, ss.Timeout)
-		if e != nil {
-			acc.AddError(e)
+		out, err := ss.lister(ss.cmdName, proto, ss.Timeout)
+		if err != nil {
+			acc.AddError(err)
 			continue
 		}
-		e = ss.parseAndGather(acc, out, proto)
-		if e != nil {
-			acc.AddError(e)
+		err = ss.parseAndGather(acc, out, proto)
+		if err != nil {
+			acc.AddError(err)
 			continue
 		}
 	}
