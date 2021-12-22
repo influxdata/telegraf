@@ -123,21 +123,29 @@ func (s *SystemPS) DiskUsage(
 			continue
 		}
 
-		// If there's a host mount prefix, exclude any paths which conflict
-		// with the prefix.
-		if len(hostMountPrefix) > 0 &&
-			!strings.HasPrefix(p.Mountpoint, hostMountPrefix) &&
-			paths[hostMountPrefix+p.Mountpoint] {
-			if s.Log != nil {
-				s.Log.Debug("[SystemPS] => dropped by mount prefix")
+		// If there's a host mount prefix use it as newer gopsutil version check for
+		// the init's mountpoints usually pointing to the host-mountpoint but in the
+		// container. This won't work for checking the disk-usage as the disks are
+		// mounted at HOST_MOUNT_PREFIX...
+		mountpoint := p.Mountpoint
+		if hostMountPrefix != "" && !strings.HasPrefix(p.Mountpoint, hostMountPrefix) {
+			mountpoint = filepath.Join(hostMountPrefix, p.Mountpoint)
+			// Exclude conflicting paths
+			if paths[mountpoint] {
+				if s.Log != nil {
+					s.Log.Debug("[SystemPS] => dropped by mount prefix")
+				}
+				continue
 			}
-			continue
+		}
+		if s.Log != nil {
+			s.Log.Debugf("[SystemPS] -> using mountpoint %q...", mountpoint)
 		}
 
-		du, err := s.PSDiskUsage(p.Mountpoint)
+		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
 			if s.Log != nil {
-				s.Log.Debugf("[SystemPS] => dropped by disk usage (%q): %v", p.Mountpoint, err)
+				s.Log.Debugf("[SystemPS] => dropped by disk usage (%q): %v", mountpoint, err)
 			}
 			continue
 		}
@@ -146,7 +154,7 @@ func (s *SystemPS) DiskUsage(
 			s.Log.Debug("[SystemPS] => kept...")
 		}
 
-		du.Path = filepath.Join("/", strings.TrimPrefix(p.Mountpoint, hostMountPrefix))
+		du.Path = p.Mountpoint
 		du.Fstype = p.Fstype
 		usage = append(usage, du)
 		partitions = append(partitions, &p)
