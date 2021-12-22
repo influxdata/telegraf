@@ -109,7 +109,7 @@ func TestSocketstat_Gather(t *testing.T) {
 }
 
 func TestSocketstat_Gather_listerError(t *testing.T) {
-	error_message := "error foobar"
+	errorMessage := "error foobar"
 	errFoo := errors.New(error_message)
 	ss := &Socketstat{
 		SocketProto: []string{"foobar"},
@@ -119,5 +119,5 @@ func TestSocketstat_Gather_listerError(t *testing.T) {
 	}
 	acc := new(testutil.Accumulator)
 	err := acc.GatherError(ss.Gather)
-	require.EqualError(t, err, error_message)
+	require.EqualError(t, err, errorMessage)
 }
