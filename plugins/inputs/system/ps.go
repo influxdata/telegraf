@@ -154,7 +154,7 @@ func (s *SystemPS) DiskUsage(
 			s.Log.Debug("[SystemPS] => kept...")
 		}
 
-		du.Path = p.Mountpoint
+		du.Path = filepath.Join("/", strings.TrimPrefix(p.Mountpoint, hostMountPrefix))
 		du.Fstype = p.Fstype
 		usage = append(usage, du)
 		partitions = append(partitions, &p)
