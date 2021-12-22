@@ -95,7 +95,7 @@ do
   xcrun stapler staple "$baseName".dmg
   cleanup
 
-  mv "$baseName".dmg ~/project/dist
+  mv "$baseName".dmg ~/project/build/dist
 
   echo "$baseName.dmg signed and notarized!"
 done
