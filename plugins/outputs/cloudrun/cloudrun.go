@@ -7,9 +7,9 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
+	jwtGo "github.com/golang-jwt/jwt/v4"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 
@@ -32,8 +32,7 @@ const sampleConfig = `
   ## This is the location of the JSON file generated from your GCP project that's authorized to send
   ## metrics into CloudRun.
   ## Windows users, note that you need to use forward slashes.
-  // TODO: Change to Unix paths
-  # credentials_file = "C:/GCP/example-cr.json"
+  # credentials_file = "/etc/telegraf/example_secret.json"
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
@@ -58,13 +57,11 @@ const (
 )
 
 type CloudRun struct {
-	URL string `toml:"url"`
-	// Timeout         config.Duration   `toml:"timeout"`
-	Headers         map[string]string `toml:"headers"`
-	CredentialsFile string            `toml:"credentials_file"`
-	ConvertPaths    bool              `toml:"wavefront_disable_path_conversion"`
-	Log             telegraf.Logger   `toml:"-"`
-	Method          string            /* TODO: toml */
+	URL             string          `toml:"url"`
+	CredentialsFile string          `toml:"credentials_file"`
+	ConvertPaths    bool            `toml:"wavefront_disable_path_conversion"`
+	Log             telegraf.Logger `toml:"-"`
+	// Method          string          /* TODO: toml */
 	httpconfig.HTTPClientConfig
 
 	client      *http.Client
@@ -77,9 +74,6 @@ func (cr *CloudRun) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (cr *CloudRun) Connect() error {
-	fmt.Println("cr Connect()")
-	// WIP
-
 	if cr.client == nil {
 		return cr.setUpDefaultClient()
 	}
@@ -92,6 +86,18 @@ func (cr *CloudRun) setUpDefaultClient() error {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(cr.Timeout))
 	defer cancel()
 
+	err := cr.getAccessToken(ctx)
+
+	client, err := cr.HTTPClientConfig.CreateClient(ctx, cr.Log)
+	if err != nil {
+		return err
+	}
+
+	cr.client = client
+	return nil
+}
+
+func (cr *CloudRun) getAccessToken(ctx context.Context) error {
 	data, err := ioutil.ReadFile(cr.CredentialsFile)
 	if err != nil {
 		return err
@@ -102,28 +108,18 @@ func (cr *CloudRun) setUpDefaultClient() error {
 		return err
 	}
 
-	// TODO: Trim this payload down to only what's necesary. I think there's some extra stuff here.
 	jwtConfig := &jwt.Config{
 		Email:         conf.Email,
+		TokenURL:      conf.TokenURL,
 		PrivateKey:    conf.PrivateKey,
 		PrivateClaims: map[string]interface{}{"target_audience": cr.URL},
-		Audience:      conf.TokenURL,
-		TokenURL:      conf.TokenURL,
-		Subject:       conf.Email,
 	}
 	token, err := jwtConfig.TokenSource(ctx).Token()
 	if err != nil {
 		return err
 	}
-	// TODO: What is this, technically? id_token as access token?
+
 	cr.accessToken = token.Extra("id_token").(string)
-
-	client, err := cr.HTTPClientConfig.CreateClient(ctx, cr.Log)
-	if err != nil {
-		return err
-	}
-
-	cr.client = client
 	return nil
 }
 
@@ -156,43 +152,34 @@ func (cr *CloudRun) send(reqBody []byte) error {
 		return err
 	}
 
-	// TODO: Rework this. Need to verify expiration claim.
-	// Does this need to take place one level up?
+	// Inspect jwt claims to view expiration time
+	claims := jwtGo.StandardClaims{}
+	jwtGo.ParseWithClaims(cr.accessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
+		return nil, nil
+	})
+	// Request new token if expired
+	if !claims.VerifyExpiresAt(time.Now().Unix(), true) {
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(cr.Timeout))
+		defer cancel()
 
-	// if cr.accessToken == "" || !claims.VerifyExpiresAt(time.Now().Unix(), true) {
-	// TODO: Rework this and make refresh more obvious
-	// cr.accessToken
-	// cr.accessToken, err = gcp.GetAccessToken(cr.JSONSecret, cr.URL)
-	// if err != nil {
-	// 	return err
-	// }
-	// }
+		cr.getAccessToken(ctx)
+		if err != nil {
+			return err
+		}
+	}
 
-	// TODO: I guess it's technically an ID Token...
 	bearerToken := "Bearer " + cr.accessToken
 
 	req.Header.Set("User-Agent", internal.ProductToken())
-	req.Header.Set("Content-Type", defaultContentType)
-	// TODO: Please directly set the values here instead of using default... constants as this is the only user and you directly can see what is set instead of navigating the whole file.
-	req.Header.Set("Accept", defaultAccept)
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", bearerToken)
-
-	for k, v := range cr.Headers {
-		if strings.ToLower(k) == "host" {
-			// TODO: Do you mean to continue here as otherwise host is set twice once in req.Host and another time as req.Header...
-			// req.Host = v
-			continue
-		}
-		req.Header.Set(k, v)
-	}
 
 	resp, err := cr.client.Do(req)
 	if err != nil {
 		return err
 	}
-	// Sent
-	// TODO: Remove
-	fmt.Println("resp:", resp)
 	defer resp.Body.Close()
 
 	if _, err := ioutil.ReadAll(resp.Body); err != nil {
@@ -201,8 +188,6 @@ func (cr *CloudRun) send(reqBody []byte) error {
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("when writing to %q received status code	: %d", cr.URL, resp.StatusCode)
-	} else if resp.StatusCode == 401 {
-		// TODO:
 	}
 
 	return nil
@@ -211,8 +196,7 @@ func (cr *CloudRun) send(reqBody []byte) error {
 func init() {
 	outputs.Add("cloudrun", func() telegraf.Output {
 		return &CloudRun{
-			Method: defaultMethod,
-			URL:    defaultURL,
+			URL: defaultURL,
 		}
 	})
 }
