@@ -196,8 +196,6 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 
 	/*
 		To start with, we get the bond operating mode
-		This file should only have one line in it
-		so we can simply scan the one line
 	*/
 	mode := strings.TrimSpace(strings.Split(files.ModeFile, " ")[0])
 
@@ -208,8 +206,6 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 
 	/*
 		Next we collect the number of bond slaves the system expects
-		This file should only have one line in it
-		so we can simply scan the one line
 	*/
 	slavesTmp := strings.Split(files.SlaveFile, " ")
 	for _, slave := range slavesTmp {
@@ -222,8 +218,6 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 		/*
 			If we're in LACP mode, we should check on how the bond ports are
 			interacting with the upstream switch ports
-			This file should only have one line in it
-			so we can simply scan the one line
 			a failed conversion can be treated as 0 ports
 		*/
 		// bond.Log.Debugf("AD Ports: %v", scanner.Text())
