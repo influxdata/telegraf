@@ -191,36 +191,27 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 }
 
 func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) {
-	var mode string
 	var slaves []string
-	var slavesTmp []string
 	var adPortCount int
 
-	// To start with, we get the bond operating mode
-	scanner := bufio.NewScanner(strings.NewReader(files.ModeFile))
 	/*
+		To start with, we get the bond operating mode
 		This file should only have one line in it
 		so we can simply scan the one line
 	*/
-	for scanner.Scan() {
-		line := scanner.Text()
-		mode = strings.TrimSpace(strings.Split(line, " ")[0])
-	}
+	mode := strings.TrimSpace(strings.Split(files.ModeFile, " ")[0])
 
 	tags := map[string]string{
 		"bond": bondName,
 		"mode": mode,
 	}
 
-	// Next we collect the number of bond slaves the system expects
-	scanner = bufio.NewScanner(strings.NewReader(files.SlaveFile))
 	/*
+		Next we collect the number of bond slaves the system expects
 		This file should only have one line in it
 		so we can simply scan the one line
 	*/
-	for scanner.Scan() {
-		slavesTmp = strings.Split(scanner.Text(), " ")
-	}
+	slavesTmp := strings.Split(files.SlaveFile, " ")
 	for _, slave := range slavesTmp {
 		if slave != "" {
 			slaves = append(slaves, slave)
@@ -231,17 +222,12 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 		/*
 			If we're in LACP mode, we should check on how the bond ports are
 			interacting with the upstream switch ports
-		*/
-		scanner = bufio.NewScanner(strings.NewReader(files.ADPortsFile))
-		/*
 			This file should only have one line in it
 			so we can simply scan the one line
+			a failed conversion can be treated as 0 ports
 		*/
-		for scanner.Scan() {
-			// bond.Log.Debugf("AD Ports: %v", scanner.Text())
-			// a failed conversion can be treated as 0 ports
-			adPortCount, _ = strconv.Atoi(strings.TrimSpace(scanner.Text()))
-		}
+		// bond.Log.Debugf("AD Ports: %v", scanner.Text())
+		adPortCount, _ = strconv.Atoi(strings.TrimSpace(files.ADPortsFile))
 	} else {
 		adPortCount = len(slaves)
 	}
