@@ -64,8 +64,7 @@ func TestGather(t *testing.T) {
 		case "step":
 			require.Equal(t, 0.0, v)
 		default:
-			t.Logf("unexpected field %q", k)
-			t.Fail()
+			require.Failf(t, "unexpected field %q", k)
 		}
 	}
 }
