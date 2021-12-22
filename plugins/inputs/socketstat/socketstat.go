@@ -211,6 +211,6 @@ func (ss *Socketstat) Init() error {
 
 func init() {
 	inputs.Add("socketstat", func() telegraf.Input {
-		return &Socketstat{Timeout: time.Second}
+		return &Socketstat{Timeout: config.Duration(time.Second)}
 	})
 }

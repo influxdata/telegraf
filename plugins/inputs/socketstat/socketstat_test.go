@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf/config"
@@ -110,7 +109,8 @@ func TestSocketstat_Gather(t *testing.T) {
 }
 
 func TestSocketstat_Gather_listerError(t *testing.T) {
-	errFoo := errors.New("error foobar")
+	error_message := "error foobar"
+	errFoo := errors.New(error_message)
 	ss := &Socketstat{
 		SocketProto: []string{"foobar"},
 	}
@@ -119,5 +119,5 @@ func TestSocketstat_Gather_listerError(t *testing.T) {
 	}
 	acc := new(testutil.Accumulator)
 	err := acc.GatherError(ss.Gather)
-	require.EqualError(t, errFoo, err)
+	require.EqualError(t, err, error_message)
 }
