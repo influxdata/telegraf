@@ -31,14 +31,7 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
 ## List of tags used by the plugin
 
 * service  - to define the name of the service you want to monitor.
-* status   - to define the status of the service.
-** Valid Values are:
-** Ok = "SERVICE_OK"
-** Warning = "SERVICE_WARNING"
-** Unscheduled Critical = "SERVICE_UNSCHEDULED_CRITICAL"
-** Pending = "SERVICE_PENDING"
-** Scheduled Critical = "SERVICE_SCHEDULED_CRITICAL"
-** Unknown = "SERVICE_UNKNOWN"
+* status   - to define the status of the service. Supported statuses: "SERVICE_OK", "SERVICE_WARNING", "SERVICE_UNSCHEDULED_CRITICAL", "SERVICE_PENDING", "SERVICE_SCHEDULED_CRITICAL", "SERVICE_UNKNOWN".
 * message  - to provide any message you want.
 * unitType - to use in monitoring contexts(subset of The Unified Code for Units of Measure standard). Supported types: "1", "%cpu", "KB", "GB", "MB".
 * warning  - to define warning threshold value.
@@ -46,4 +39,4 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
 
 ## NOTE
 
-The current version of Groundworks does not support metrics whose values are strings. Such metrics will be skipped and will not be added to the final payload. You can find more context in this pull request: [#10255]( https://github.com/influxdata/telegraf/pull/10255)
+The current version of GroundWork Monitor does not support metrics whose values are strings. Such metrics will be skipped and will not be added to the final payload. You can find more context in this pull request: [#10255]( https://github.com/influxdata/telegraf/pull/10255)
