@@ -391,12 +391,12 @@ jobs:
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
-  test-awaiter:
+  all-artifacts:
     executor: go-1_17
     steps:
       - run:
           command: |
-            echo "Go tests complete."
+            echo "This job contains all the final artifacts."
   share-artifacts:
     executor: aws-cli/default
     steps:
@@ -418,16 +418,6 @@ jobs:
     steps:
       - generate-config:
           os: windows
-
-commonjobs:
-  - &test-awaiter
-    'test-awaiter':
-      requires:
-        - 'test-go-1_17'
-        - 'test-go-1_17-386'
-      filters:
-        tags:
-          only: /.*/
 
 workflows:
   version: 2
@@ -478,67 +468,78 @@ workflows:
               only: /.*/
       - 'i386-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'ppc64le-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'riscv64-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 's390x-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'armel-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'amd64-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'arm64-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'armhf-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'static-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'mipsel-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'mips-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
@@ -581,32 +582,41 @@ workflows:
               ignore: /.*/
       - 'package-sign-windows':
           requires:
-            - 'i386-package'
-            - 'ppc64le-package'
-            - 's390x-package'
-            - 'armel-package'
-            - 'amd64-package'
-            - 'mipsel-package'
-            - 'mips-package'
-            - 'darwin-amd64-package'
-            - 'darwin-arm64-package'
             - 'windows-package'
-            - 'static-package'
-            - 'arm64-package'
-            - 'armhf-package'
           filters:
               tags:
                 only: /.*/
-              branches:
-                ignore: /.*/
+              # branches:
+              #   ignore: /.*/
       - 'package-sign-mac':
            requires:
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
+           filters:
+              tags:
+                only: /.*/
+              # branches:
+              #   ignore: /.*/
+      - 'all-artifacts':
+            requires:
+             - 'i386-package'
+             - 'ppc64le-package'
+             - 's390x-package'
+             - 'armel-package'
+             - 'amd64-package'
+             - 'mipsel-package'
+             - 'mips-package'
+             - 'static-package'
+             - 'arm64-package'
+             - 'armhf-package'
+             - 'riscv64-package'
+             - 'package-sign-mac'
              - 'package-sign-windows'
            filters:
               tags:
                 only: /.*/
-              branches:
-                ignore: /.*/
+              # branches:
+              #   ignore: /.*/
 
   nightly:
     jobs:
@@ -619,7 +629,6 @@ workflows:
             - 'deps'
       - 'test-go-mac'
       - 'test-go-windows'
-      - *test-awaiter
       - 'windows-package':
           name: 'windows-package-nightly'
           nightly: true
@@ -639,57 +648,68 @@ workflows:
           name: 'i386-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'ppc64le-package':
           name: 'ppc64le-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'riscv64-package':
           name: 'riscv64-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 's390x-package':
           name: 's390x-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'armel-package':
           name: 'armel-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'amd64-package':
           name: 'amd64-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'arm64-package':
           name: 'arm64-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'armhf-package':
           name: 'armhf-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'static-package':
           name: 'static-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'mipsel-package':
           name: 'mipsel-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'mips-package':
           name: 'mips-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - nightly:
           requires:
             - 'i386-package-nightly'
