@@ -32,6 +32,13 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
 
 * service  - to define the name of the service you want to monitor.
 * status   - to define the status of the service.
+** Valid Values are:
+** Ok = "SERVICE_OK"
+** Warning = "SERVICE_WARNING"
+** Unscheduled Critical = "SERVICE_UNSCHEDULED_CRITICAL"
+** Pending = "SERVICE_PENDING"
+** Scheduled Critical = "SERVICE_SCHEDULED_CRITICAL"
+** Unknown = "SERVICE_UNKNOWN"
 * message  - to provide any message you want.
 * unitType - to use in monitoring contexts(subset of The Unified Code for Units of Measure standard). Supported types: "1", "%cpu", "KB", "GB", "MB".
 * warning  - to define warning threshold value.
