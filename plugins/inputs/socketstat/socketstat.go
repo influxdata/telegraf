@@ -144,9 +144,10 @@ func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffe
 }
 
 func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[string]string, map[string]interface{}) {
-	tags := map[string]string{}
+	tags := map[string]string{
+		"proto": proto,
+	}
 	fields := make(map[string]interface{})
-	tags["proto"] = proto
 	switch proto {
 	case "udp", "raw":
 		words = append([]string{"dummy"}, words...)
