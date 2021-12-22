@@ -123,7 +123,7 @@ func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffe
 			}
 			if !flushData {
 				ss.Log.Warnf("Found orphaned metrics: %s", words)
-				ss.Log.Warnf("Added them to the last known connection.")
+				ss.Log.Warn("Added them to the last known connection.")
 			}
 			acc.AddFields(measurement, fields, tags)
 			flushData = false
