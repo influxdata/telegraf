@@ -450,7 +450,6 @@ func TestGetStackdriverLabels(t *testing.T) {
 }
 
 func TestGetStackdriverIntervalEndpoints(t *testing.T) {
-
 	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
@@ -514,29 +513,17 @@ func TestGetStackdriverIntervalEndpoints(t *testing.T) {
 	for idx, m := range metrics {
 		for _, f := range m.FieldList() {
 			value, err := getStackdriverTypedValue(f.Value)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if value == nil {
-				log.Fatalf("Got nil value for metric %q field %q", m, f)
-			}
+			require.NoError(t, err)
+			require.NotNilf(t, value, "Got nil value for metric %q field %q", m, f)
 
 			metricKind, err := getStackdriverMetricKind(m.Type())
-			if err != nil {
-				log.Fatalf("Get kind for metric %q (%T) field %q failed: %s", m.Name(), m.Type(), f, err)
-			}
+			require.NoErrorf(t, err, "Get kind for metric %q (%T) field %q failed: %v", m.Name(), m.Type(), f, err)
 
-			startTime, endTime := getStackdriverIntervalEndpoints(
-				metricKind,
-				value,
-				m,
-				f,
-				s.counterCache,
-			)
+			startTime, endTime := getStackdriverIntervalEndpoints(metricKind, value, m, f, s.counterCache)
 
 			// we only generate startTimes for counters
 			if metricKind != metricpb.MetricDescriptor_CUMULATIVE {
-				require.Equal(t, (*timestamppb.Timestamp)(nil), startTime)
+				require.Nilf(t, startTime, "startTime for non-counter metric %q (%T) field %q should be nil, was: %v", m.Name(), m.Type(), f, startTime)
 			} else {
 				if idx%2 == 0 {
 					// greaterorequal because we might pass a second boundary while the test is running
@@ -552,8 +539,6 @@ func TestGetStackdriverIntervalEndpoints(t *testing.T) {
 			} else {
 				require.Equal(t, later, endTime.AsTime())
 			}
-
 		}
 	}
-
 }
