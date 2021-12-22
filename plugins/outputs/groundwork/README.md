@@ -39,4 +39,4 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
 
 ## NOTE
 
-The current version of the plugin does not support metrics whose values are strings. Such metrics will be skipped and will not be added to the final payload.
+The current version of Groundworks does not support metrics whose values are strings. Such metrics will be skipped and will not be added to the final payload. You can find more context in this pull request: [#10255]( https://github.com/influxdata/telegraf/pull/10255)
