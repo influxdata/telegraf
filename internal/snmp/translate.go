@@ -174,11 +174,11 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			return oid, oid, oid, oid, out, err
 		}
 
-		if out.RenderNumeric() == "" {
-			return oid, oid, oid, oid, out, fmt.Errorf("cannot make %v numberic, please ensure all imported mibs are in the path", oid)
+		if oidNum = out.RenderNumeric(); oidNum == "" {
+			return oid, oid, oid, oid, out, fmt.Errorf("cannot make %v numeric, please ensure all imported mibs are in the path", oid)
 		}
 
-		oidNum = "." + out.RenderNumeric() + end
+		oidNum = "." + oidNum + end
 	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
 		//handle mixed oid ex. .iso.2.3
 		s := strings.Split(oid, ".")
