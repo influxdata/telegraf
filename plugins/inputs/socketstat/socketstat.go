@@ -191,19 +191,21 @@ func (ss *Socketstat) Init() error {
 		ss.SocketProto = []string{"tcp", "udp"}
 	}
 
-	// Check that ss is installed, get its path
-	ssPath, err := exec.LookPath("ss")
-	if err != nil {
-		return err
-	}
-	ss.cmdName = ssPath
-
 	// Initialize regexps to validate input data
 	validFields := "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
 	ss.validValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
 	ss.isNewConnection = regexp.MustCompile(`^\s+.*$`)
 
 	ss.lister = socketList
+
+	// Check that ss is installed, get its path.
+	// Do it last, because in test environments where `ss` might not be available,
+	//   we still want the other Init() actions to be performed.
+	ssPath, err := exec.LookPath("ss")
+	if err != nil {
+		return err
+	}
+	ss.cmdName = ssPath
 
 	return nil
 }
