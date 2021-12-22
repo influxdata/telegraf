@@ -45,6 +45,7 @@ require (
 	github.com/couchbase/go-couchbase v0.1.0
 	github.com/denisenkom/go-mssqldb v0.10.0
 	github.com/dimchansky/utfbom v1.1.1
+	github.com/djherbis/times v1.5.0
 	github.com/docker/docker v20.10.9+incompatible
 	github.com/doclambda/protobufquery v0.0.0-20210317203640-88ffabe06a60
 	github.com/dynatrace-oss/dynatrace-metric-utils-go v0.3.0
@@ -146,7 +147,6 @@ require (
 	google.golang.org/genproto v0.0.0-20210827211047-25e5f791fe06
 	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.27.1
-	gopkg.in/djherbis/times.v1 v1.2.0
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/ldap.v3 v3.1.0
 	gopkg.in/olivere/elastic.v5 v5.0.70
