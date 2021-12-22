@@ -110,7 +110,7 @@ func TestSocketstat_Gather(t *testing.T) {
 
 func TestSocketstat_Gather_listerError(t *testing.T) {
 	errorMessage := "error foobar"
-	errFoo := errors.New(error_message)
+	errFoo := errors.New(errorMessage)
 	ss := &Socketstat{
 		SocketProto: []string{"foobar"},
 	}
