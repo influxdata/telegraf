@@ -238,6 +238,16 @@ jobs:
       - package-build:
           type: ppc64le
           nightly: << parameters.nightly >>
+  riscv64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
+    steps:
+      - package-build:
+          type: riscv64
+          nightly: << parameters.nightly >>
   s390x-package:
     parameters:
       nightly:
@@ -478,6 +488,12 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - 'riscv64-package':
+          requires:
+            - 'test-awaiter'
+          filters:
+            tags:
+              only: /.*/
       - 's390x-package':
           requires:
             - 'test-awaiter'
@@ -544,6 +560,7 @@ workflows:
           requires:
             - 'i386-package'
             - 'ppc64le-package'
+            - 'riscv64-package'
             - 's390x-package'
             - 'armel-package'
             - 'amd64-package'
@@ -628,6 +645,11 @@ workflows:
           nightly: true
           requires:
             - 'test-awaiter'
+      - 'riscv64-package':
+          name: 'riscv64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-awaiter'
       - 's390x-package':
           name: 's390x-package-nightly'
           nightly: true
@@ -672,6 +694,7 @@ workflows:
           requires:
             - 'i386-package-nightly'
             - 'ppc64le-package-nightly'
+            - 'riscv64-package-nightly'
             - 's390x-package-nightly'
             - 'armel-package-nightly'
             - 'amd64-package-nightly'
