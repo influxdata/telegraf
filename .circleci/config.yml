@@ -140,7 +140,7 @@ commands:
       - persist_to_workspace:
           root: './build'
           paths:
-            - 'build/dist'
+            - 'dist'
 jobs:
   deps:
     executor: go-1_17
@@ -369,10 +369,7 @@ jobs:
       - persist_to_workspace:
           root: './build'
           paths:
-            - 'build/dist'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
+            - 'dist'
   package-sign-mac:
     executor: mac
     working_directory: /Users/distiller/project
@@ -388,9 +385,10 @@ jobs:
       - run:
           command: |
             sh ./scripts/mac-signing.sh
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
   all-artifacts:
     executor: go-1_17
     steps:
