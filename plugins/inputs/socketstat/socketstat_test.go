@@ -75,7 +75,7 @@ func TestSocketstat_Gather(t *testing.T) {
 
 			err := ss.Init()
 			if err != nil {
-				require.EqualError(t, err, "executable file not found in $PATH")
+				require.EqualError(t, err, "exec: \"ss\": executable file not found in $PATH")
 			}
 			ss.lister = func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
 				return bytes.NewBuffer(octets), nil
