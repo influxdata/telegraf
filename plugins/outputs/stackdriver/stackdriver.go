@@ -149,7 +149,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		for _, f := range m.FieldList() {
 			value, err := getStackdriverTypedValue(f.Value)
 			if err != nil {
-				s.Log.Errorf("Get type failed: %s", err)
+				s.Log.Errorf("Get type failed: %q", err)
 				continue
 			}
 
@@ -159,7 +159,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 			metricKind, err := getStackdriverMetricKind(m.Type())
 			if err != nil {
-				s.Log.Errorf("Get kind for metric '%s' type '%T' field '%s' failed: %s", m.Name(), m.Type(), f, err)
+				s.Log.Errorf("Get kind for metric %q (%T) field %q failed: %s", m.Name(), m.Type(), f, err)
 				continue
 			}
 
@@ -299,10 +299,8 @@ func getStackdriverMetricKind(vt telegraf.ValueType) (metricpb.MetricDescriptor_
 		return metricpb.MetricDescriptor_GAUGE, nil
 	case telegraf.Counter:
 		return metricpb.MetricDescriptor_CUMULATIVE, nil
-	case telegraf.Histogram:
-		return metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("histograms not yet supported")
-	case telegraf.Summary:
-		return metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("summary metrics not supported")
+	case telegraf.Histogram, telegraf.Summary:
+		fallthrough
 	default:
 		return metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("unsupported telegraf value type: %T", vt)
 	}
@@ -356,12 +354,12 @@ func (s *Stackdriver) getStackdriverLabels(tags []*telegraf.Tag) map[string]stri
 	}
 	for k, v := range labels {
 		if len(k) > QuotaStringLengthForLabelKey {
-			s.Log.Warnf("Removing tag [%s] key exceeds string length for label key [%d]", k, QuotaStringLengthForLabelKey)
+			s.Log.Warnf("Removing tag %q key exceeds string length for label key [%d]", k, QuotaStringLengthForLabelKey)
 			delete(labels, k)
 			continue
 		}
 		if len(v) > QuotaStringLengthForLabelValue {
-			s.Log.Warnf("Removing tag [%s] value exceeds string length for label value [%d]", k, QuotaStringLengthForLabelValue)
+			s.Log.Warnf("Removing tag %q value exceeds string length for label value [%d]", k, QuotaStringLengthForLabelValue)
 			delete(labels, k)
 			continue
 		}

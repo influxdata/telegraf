@@ -14,6 +14,7 @@ import (
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
+	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -446,4 +447,113 @@ func TestGetStackdriverLabels(t *testing.T) {
 
 	labels := s.getStackdriverLabels(tags)
 	require.Equal(t, QuotaLabelsPerMetricDescriptor, len(labels))
+}
+
+func TestGetStackdriverIntervalEndpoints(t *testing.T) {
+
+	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &Stackdriver{
+		Project:      fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Namespace:    "test",
+		Log:          testutil.Logger{},
+		client:       c,
+		counterCache: NewCounterCache(testutil.Logger{}),
+	}
+
+	now := time.Now().UTC()
+	later := time.Now().UTC().Add(time.Second * 10)
+
+	// Metrics in descending order of timestamp
+	metrics := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			now,
+			telegraf.Gauge,
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"foo": "foo",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			later,
+			telegraf.Gauge,
+		),
+		testutil.MustMetric("uptime",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			now,
+			telegraf.Counter,
+		),
+		testutil.MustMetric("uptime",
+			map[string]string{
+				"foo": "foo",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			later,
+			telegraf.Counter,
+		),
+	}
+
+	for idx, m := range metrics {
+		for _, f := range m.FieldList() {
+			value, err := getStackdriverTypedValue(f.Value)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if value == nil {
+				log.Fatalf("Got nil value for metric %q field %q", m, f)
+			}
+
+			metricKind, err := getStackdriverMetricKind(m.Type())
+			if err != nil {
+				log.Fatalf("Get kind for metric %q (%T) field %q failed: %s", m.Name(), m.Type(), f, err)
+			}
+
+			startTime, endTime := getStackdriverIntervalEndpoints(
+				metricKind,
+				value,
+				m,
+				f,
+				s.counterCache,
+			)
+
+			// we only generate startTimes for counters
+			if metricKind != metricpb.MetricDescriptor_CUMULATIVE {
+				require.Equal(t, (*timestamppb.Timestamp)(nil), startTime)
+			} else {
+				if idx%2 == 0 {
+					// greaterorequal because we might pass a second boundary while the test is running
+					// and new startTimes are backdated 1ms from the endTime.
+					require.GreaterOrEqual(t, startTime.AsTime().UTC().Unix(), now.UTC().Unix())
+				} else {
+					require.GreaterOrEqual(t, startTime.AsTime().UTC().Unix(), later.UTC().Unix())
+				}
+			}
+
+			if idx%2 == 0 {
+				require.Equal(t, now, endTime.AsTime())
+			} else {
+				require.Equal(t, later, endTime.AsTime())
+			}
+
+		}
+	}
+
 }
