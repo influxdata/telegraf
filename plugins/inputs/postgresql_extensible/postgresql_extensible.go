@@ -18,11 +18,12 @@ import (
 
 type Postgresql struct {
 	postgresql.Service
-	Databases      []string
-	AdditionalTags []string
-	Timestamp      string
-	Query          query
-	Debug          bool
+	Databases          []string
+	AdditionalTags     []string
+	Timestamp          string
+	Query              query
+	Debug              bool
+	PreparedStatements bool `toml:"prepared_statements"`
 
 	Log telegraf.Logger
 }
@@ -58,6 +59,11 @@ var sampleConfig = `
   ## maxlifetime - specify the maximum lifetime of a connection.
   ## default is forever (0s)
   max_lifetime = "0s"
+
+  ## Whether to use prepared statements when connecting to the database.
+  ## This should be set to false when connecting through a PgBouncer instance
+  ## with pool_mode set to transaction.
+  # prepared_statements = true
 
   ## A list of databases to pull metrics about. If not specified, metrics for all
   ## databases are gathered.
@@ -125,6 +131,7 @@ func (p *Postgresql) Init() error {
 			}
 		}
 	}
+	p.Service.IsPgBouncer = !p.PreparedStatements
 	return nil
 }
 
@@ -348,6 +355,7 @@ func init() {
 				MaxLifetime: config.Duration(0),
 				IsPgBouncer: false,
 			},
+			PreparedStatements: true,
 		}
 	})
 }
