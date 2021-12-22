@@ -172,9 +172,7 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 		m, err := p.parseRecord(record)
 		if err != nil {
 			if p.SkipErrors {
-				if p.Log != nil {
-					p.Log.Infof("[parsers.csv] Malformed csv line: %s", err.Error())
-				}
+				p.Log.Debugf("Parsing error: %v", err)
 				continue
 			}
 			return metrics, err
