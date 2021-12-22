@@ -395,7 +395,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.8 // indirect
-	github.com/yuin/goldmark v1.4.1 // indirect
 	go.opentelemetry.io/otel v1.0.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.24.0 // indirect
 	go.opentelemetry.io/otel/internal/metric v0.24.0 // indirect
