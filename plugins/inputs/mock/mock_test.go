@@ -4,12 +4,11 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGather(t *testing.T) {
-	testRandomFloat := &RandomFloat{
+	testRandom := &Random{
 		Name: "random",
 		Min:  1.0,
 		Max:  6.0,
@@ -35,41 +34,43 @@ func TestGather(t *testing.T) {
 	}
 
 	m := &Mock{
-		counter:    0.0,
 		MetricName: "test",
 		Tags:       tags,
 
-		RandomFloat: []*RandomFloat{testRandomFloat},
-		SineWave:    []*SineWave{testSineWave},
-		Step:        []*Step{testStep},
-		Stock:       []*Stock{testStock},
+		Random:   []*Random{testRandom},
+		SineWave: []*SineWave{testSineWave},
+		Step:     []*Step{testStep},
+		Stock:    []*Stock{testStock},
 	}
 
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
 
-	assert.Len(t, acc.Metrics, 1)
+	require.Len(t, acc.Metrics, 1)
 
 	metric := acc.Metrics[0]
-	assert.Equal(t, "test", metric.Measurement)
-	assert.Equal(t, tags, metric.Tags)
+	require.Equal(t, "test", metric.Measurement)
+	require.Equal(t, tags, metric.Tags)
 	for k, v := range metric.Fields {
-		if k == "abc" {
-			assert.Equal(t, 50.0, v)
-		} else if k == "random" {
-			assert.GreaterOrEqual(t, 6.0, v)
-			assert.LessOrEqual(t, 1.0, v)
-		} else if k == "sine" {
-			assert.Equal(t, 0.0, v)
-		} else if k == "step" {
-			assert.Equal(t, 0.0, v)
+		switch k {
+		case "abc":
+			require.Equal(t, 50.0, v)
+		case "random":
+			require.GreaterOrEqual(t, 6.0, v)
+			require.LessOrEqual(t, 1.0, v)
+		case "sine":
+			require.Equal(t, 0.0, v)
+		case "step":
+			require.Equal(t, 0.0, v)
+		default:
+			t.Errorf("unexpected field %q", k)
+			t.Fail()
 		}
 	}
 }
 
 func TestGatherEmpty(t *testing.T) {
 	m := &Mock{
-		counter:    0.0,
 		MetricName: "test_empty",
 	}
 
