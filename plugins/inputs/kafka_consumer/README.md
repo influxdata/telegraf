@@ -84,11 +84,14 @@ and use the old zookeeper connection method.
   max_message_len = 1000000
 
   ## Maximum messages to read from the broker that have not been written by
-  ## an output. For best throughput, set max_undelivered_messages to at or
-  ## above the metric_batch_size.
+  ## an output. 
+
+  ## For best performance, choose a value for `max_undelivered_messages`
+  ## (measured in kafka messages) that makes the metrics add up to the metric
+  ## batch size.
   ##
   ## For example, if each message from the queue contains 10 metrics and the
-  ## output metric_batch_size is 1000, setting this to 1000 will ensure that a
+  ## output metric_batch_size is 1000, setting this to 990 will ensure that a
   ## full batch is collected and the write is triggered immediately without
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
