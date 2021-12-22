@@ -199,10 +199,6 @@ func (ss *Socketstat) Init() error {
 	}
 	ss.cmdName = ssPath
 
-	if ss.Timeout < config.Duration(time.Second) {
-		ss.Timeout = config.Duration(time.Second)
-	}
-
 	// Initialize regexps to validate input data
 	validFields := "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
 	ss.validValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
@@ -215,6 +211,6 @@ func (ss *Socketstat) Init() error {
 
 func init() {
 	inputs.Add("socketstat", func() telegraf.Input {
-		return &Socketstat{}
+		return &Socketstat{Timeout: time.Second}
 	})
 }
