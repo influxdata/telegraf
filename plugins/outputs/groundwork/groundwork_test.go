@@ -23,7 +23,6 @@ const (
 func TestWrite(t *testing.T) {
 	// Generate test metric with default name to test Write logic
 	floatMetric := testutil.TestMetric(1.0, "Float")
-	stringMetric := testutil.TestMetric("Test", "String")
 
 	// Simulate Groundwork server that should receive custom metrics
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -48,11 +47,6 @@ func TestWrite(t *testing.T) {
 			obj.Resources[0].Services[0].Metrics[0].Value.DoubleValue,
 			1.0,
 		)
-		require.Equal(
-			t,
-			obj.Resources[0].Services[1].Metrics[0].Value.StringValue,
-			"Test",
-		)
 
 		_, err = fmt.Fprintln(w, `OK`)
 		require.NoError(t, err)
@@ -71,7 +65,7 @@ func TestWrite(t *testing.T) {
 		},
 	}
 
-	err := i.Write([]telegraf.Metric{floatMetric, stringMetric})
+	err := i.Write([]telegraf.Metric{floatMetric})
 	require.NoError(t, err)
 
 	defer server.Close()
