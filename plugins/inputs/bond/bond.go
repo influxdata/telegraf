@@ -213,14 +213,12 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 			slaves = append(slaves, slave)
 		}
 	}
-	// bond.Log.Debugf("Slaves: %v", slaves)
 	if mode == "802.3ad" {
 		/*
 			If we're in LACP mode, we should check on how the bond ports are
 			interacting with the upstream switch ports
 			a failed conversion can be treated as 0 ports
 		*/
-		// bond.Log.Debugf("AD Ports: %v", scanner.Text())
 		adPortCount, _ = strconv.Atoi(strings.TrimSpace(files.ADPortsFile))
 	} else {
 		adPortCount = len(slaves)

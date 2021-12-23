@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var sampleTestAB = `
+const sampleTestAB = `
 Ethernet Channel Bonding Driver: v3.6.0 (September 26, 2009)
 
 Bonding Mode: fault-tolerance (active-backup)
@@ -34,7 +34,7 @@ Link Failure Count: 0
 Permanent HW addr:
 `
 
-var sampleTestLACP = `
+const sampleTestLACP = `
 Ethernet Channel Bonding Driver: v3.7.1 (April 27, 2011)
 
 Bonding Mode: IEEE 802.3ad Dynamic link aggregation
@@ -76,9 +76,9 @@ Actor Churned Count: 0
 Partner Churned Count: 0
 `
 
-var sampleSysMode = "802.3ad 5"
-var sampleSysSlaves = "eth0 eth1 "
-var sampleSysAdPorts = " 2 "
+const sampleSysMode = "802.3ad 5"
+const sampleSysSlaves = "eth0 eth1 "
+const sampleSysAdPorts = " 2 "
 
 func TestGatherBondInterface(t *testing.T) {
 	var acc testutil.Accumulator
