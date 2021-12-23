@@ -90,7 +90,6 @@ func newGoSNMPV3(port uint16, contextName string, engineID string, msgFlags gosn
 	return gosnmp.GoSNMP{
 		Port:               port,
 		Version:            gosnmp.Version3,
-		Timeout:            time.Duration(2) * time.Second,
 		Retries:            1,
 		MaxOids:            gosnmp.MaxOids,
 		Target:             "127.0.0.1",
@@ -106,7 +105,6 @@ func newGoSNMP(version gosnmp.SnmpVersion, port uint16) gosnmp.GoSNMP {
 	return gosnmp.GoSNMP{
 		Port:      port,
 		Version:   version,
-		Timeout:   time.Duration(2) * time.Second,
 		Retries:   1,
 		MaxOids:   gosnmp.MaxOids,
 		Target:    "127.0.0.1",
