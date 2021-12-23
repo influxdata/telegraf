@@ -118,10 +118,6 @@ func TestWriteUDP(t *testing.T) {
 }
 
 func TestWriteTCP(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
 	pki := testutil.NewPKI("../../../testutil/pki")
 	tlsClientConfig := pki.TLSClientConfig()
 	tlsServerConfig, err := pki.TLSServerConfig().TLSConfig()
@@ -257,9 +253,11 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 		conn, err := tcpServer.Accept()
 		require.NoError(t, err)
 		if tcpConn, ok := conn.(*net.TCPConn); ok {
-			_ = tcpConn.SetLinger(0)
+			err = tcpConn.SetLinger(0)
+			require.NoError(t, err)
 		}
-		_ = conn.SetDeadline(time.Now().Add(15 * time.Second))
+		err = conn.SetDeadline(time.Now().Add(15 * time.Second))
+		require.NoError(t, err)
 		if tlsConfig != nil {
 			conn = tls.Server(conn, tlsConfig)
 		}
@@ -276,7 +274,8 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 				if bufR[0] == 0 { // message delimiter found
 					break
 				}
-				_, _ = bufW.Write(bufR)
+				_, err = bufW.Write(bufR)
+				require.NoError(t, err)
 			}
 		}
 
@@ -296,7 +295,8 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 
 	recv(conn)
 	recv(conn)
-	_ = conn.Close()
+	err = conn.Close()
+	require.NoError(t, err)
 	wg3.Done()
 	conn = accept()
 	defer conn.Close()
