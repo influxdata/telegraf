@@ -219,6 +219,7 @@ var kibanaStatusExpected6_5 = map[string]interface{}{
 	"heap_total_bytes":       int64(149954560),
 	"heap_max_bytes":         int64(149954560),
 	"heap_used_bytes":        int64(126274392),
+	"heap_size_limit":        int64(1501560832),
 	"uptime_ms":              int64(2173595337),
 	"response_time_avg_ms":   float64(12.5),
 	"response_time_max_ms":   int64(123),

@@ -69,9 +69,45 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 	n := p.generator.Rand()
 	switch v := value.(type) {
 	case int:
+		if v > 0 && (n > math.Nextafter(float64(math.MaxInt), 0) || int(n) > math.MaxInt-v) {
+			p.Log.Debug("Int overflow, setting value to MaxInt")
+			return int(math.MaxInt)
+		}
+		if v < 0 && (n < math.Nextafter(float64(math.MinInt), 0) || int(n) < math.MinInt-v) {
+			p.Log.Debug("Int (negative) overflow, setting value to MinInt")
+			return int(math.MinInt)
+		}
+		return v + int(n)
 	case int8:
+		if v > 0 && (n > math.Nextafter(float64(math.MaxInt8), 0) || int8(n) > math.MaxInt8-v) {
+			p.Log.Debug("Int8 overflow, setting value to MaxInt8")
+			return int8(math.MaxInt8)
+		}
+		if v < 0 && (n < math.Nextafter(float64(math.MinInt8), 0) || int8(n) < math.MinInt8-v) {
+			p.Log.Debug("Int8 (negative) overflow, setting value to MinInt8")
+			return int8(math.MinInt8)
+		}
+		return v + int8(n)
 	case int16:
+		if v > 0 && (n > math.Nextafter(float64(math.MaxInt16), 0) || int16(n) > math.MaxInt16-v) {
+			p.Log.Debug("Int16 overflow, setting value to MaxInt16")
+			return int16(math.MaxInt16)
+		}
+		if v < 0 && (n < math.Nextafter(float64(math.MinInt16), 0) || int16(n) < math.MinInt16-v) {
+			p.Log.Debug("Int16 (negative) overflow, setting value to MinInt16")
+			return int16(math.MinInt16)
+		}
+		return v + int16(n)
 	case int32:
+		if v > 0 && (n > math.Nextafter(float64(math.MaxInt32), 0) || int32(n) > math.MaxInt32-v) {
+			p.Log.Debug("Int32 overflow, setting value to MaxInt32")
+			return int32(math.MaxInt32)
+		}
+		if v < 0 && (n < math.Nextafter(float64(math.MinInt32), 0) || int32(n) < math.MinInt32-v) {
+			p.Log.Debug("Int32 (negative) overflow, setting value to MinInt32")
+			return int32(math.MinInt32)
+		}
+		return v + int32(n)
 	case int64:
 		if v > 0 && (n > math.Nextafter(float64(math.MaxInt64), 0) || int64(n) > math.MaxInt64-v) {
 			p.Log.Debug("Int64 overflow, setting value to MaxInt64")
@@ -83,9 +119,57 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 		}
 		return v + int64(n)
 	case uint:
+		if n < 0 {
+			if uint(-n) > v {
+				p.Log.Debug("Uint (negative) overflow, setting value to 0")
+				return uint(0)
+			}
+			return v - uint(-n)
+		}
+		if n > math.Nextafter(float64(math.MaxUint), 0) || uint(n) > math.MaxUint-v {
+			p.Log.Debug("Uint overflow, setting value to MaxUint")
+			return uint(math.MaxUint)
+		}
+		return v + uint(n)
 	case uint8:
+		if n < 0 {
+			if uint8(-n) > v {
+				p.Log.Debug("Uint8 (negative) overflow, setting value to 0")
+				return uint8(0)
+			}
+			return v - uint8(-n)
+		}
+		if n > math.Nextafter(float64(math.MaxUint8), 0) || uint8(n) > math.MaxUint8-v {
+			p.Log.Debug("Uint8 overflow, setting value to MaxUint8")
+			return uint8(math.MaxUint8)
+		}
+		return v + uint8(n)
 	case uint16:
+		if n < 0 {
+			if uint16(-n) > v {
+				p.Log.Debug("Uint16 (negative) overflow, setting value to 0")
+				return uint16(0)
+			}
+			return v - uint16(-n)
+		}
+		if n > math.Nextafter(float64(math.MaxUint16), 0) || uint16(n) > math.MaxUint16-v {
+			p.Log.Debug("Uint16 overflow, setting value to MaxUint16")
+			return uint16(math.MaxUint16)
+		}
+		return v + uint16(n)
 	case uint32:
+		if n < 0 {
+			if uint32(-n) > v {
+				p.Log.Debug("Uint32 (negative) overflow, setting value to 0")
+				return uint32(0)
+			}
+			return v - uint32(-n)
+		}
+		if n > math.Nextafter(float64(math.MaxUint32), 0) || uint32(n) > math.MaxUint32-v {
+			p.Log.Debug("Uint32 overflow, setting value to MaxUint32")
+			return uint32(math.MaxUint32)
+		}
+		return v + uint32(n)
 	case uint64:
 		if n < 0 {
 			if uint64(-n) > v {
@@ -100,6 +184,7 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 		}
 		return v + uint64(n)
 	case float32:
+		return v + float32(n)
 	case float64:
 		return v + n
 	default:
@@ -132,7 +217,6 @@ func (p *Noise) Init() error {
 
 func (p *Noise) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range metrics {
-		p.Log.Debugf("Adding noise to [%s]", metric.Name())
 		for _, field := range metric.FieldList() {
 			if !p.fieldFilter.Match(field.Key) {
 				continue

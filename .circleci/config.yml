@@ -7,12 +7,12 @@ executors:
   go-1_17:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.17.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.17.5'
     environment:
       GOFLAGS: -p=8
   mac:
     macos:
-      xcode: 12.4.0
+      xcode: 13.2.0
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -32,10 +32,6 @@ commands:
       - store_artifacts:
           path: './new-config'
           destination: 'new-config'
-      - persist_to_workspace:
-          root: './new-config'
-          paths:
-            - '*'
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
@@ -117,9 +113,6 @@ commands:
 
   package-build:
     parameters:
-      release:
-        type: boolean
-        default: false
       type:
         type: string
         default: ""
@@ -132,10 +125,6 @@ commands:
       - attach_workspace:
           at: '/go'
       - when:
-          condition: << parameters.release >>
-          steps:
-            - run: 'make package'
-      - when:
           condition: << parameters.nightly >>
           steps:
             - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
@@ -143,7 +132,6 @@ commands:
           condition:
             or:
               - << parameters.nightly >>
-              - << parameters.release >>
           steps:
             - run: 'make package include_packages="$(make << parameters.type >>)"'
       - store_artifacts:
@@ -210,7 +198,7 @@ jobs:
       - package-build:
           type: windows
           nightly: << parameters.nightly >>
-  darwin-package:
+  darwin-amd64-package:
     parameters:
       nightly:
         type: boolean
@@ -218,7 +206,17 @@ jobs:
     executor: go-1_17
     steps:
       - package-build:
-          type: darwin
+          type: darwin-amd64
+          nightly: << parameters.nightly >>
+  darwin-arm64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
+    steps:
+      - package-build:
+          type: darwin-arm64
           nightly: << parameters.nightly >>
   i386-package:
     parameters:
@@ -239,6 +237,16 @@ jobs:
     steps:
       - package-build:
           type: ppc64le
+          nightly: << parameters.nightly >>
+  riscv64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
+    steps:
+      - package-build:
+          type: riscv64
           nightly: << parameters.nightly >>
   s390x-package:
     parameters:
@@ -320,12 +328,6 @@ jobs:
       - package-build:
           type: armhf
           nightly: << parameters.nightly >>
-
-  release:
-    executor: go-1_17
-    steps:
-      - package-build:
-          release: true
   nightly:
     executor: go-1_17
     steps:
@@ -340,16 +342,6 @@ jobs:
               --include "*.rpm" \
               --include "*.zip" \
               --acl public-read
-  package-consolidate:
-    executor:
-        name: win/default
-        shell: powershell.exe
-    steps:
-      - attach_workspace:
-          at: '/build'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
   package-sign-windows:
     executor:
         name: win/default
@@ -368,12 +360,8 @@ jobs:
           root: './build'
           paths:
             - 'dist'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
   package-sign-mac:
-    macos:
-      xcode: "11.3"
+    executor: mac
     working_directory: /Users/distiller/project
     environment:
       FL_OUTPUT_DIR: output
@@ -387,15 +375,22 @@ jobs:
       - run:
           command: |
             sh ./scripts/mac-signing.sh
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
+  package-consolidate:
+    docker:
+     - image: alpine
+    steps:
+      - attach_workspace:
+          at: '.'
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
-  test-awaiter:
-    executor: go-1_17
-    steps:
       - run:
           command: |
-            echo "Go tests complete."
+            echo "This job contains all the final artifacts."
   share-artifacts:
     executor: aws-cli/default
     steps:
@@ -417,20 +412,6 @@ jobs:
     steps:
       - generate-config:
           os: windows
-  update-config:
-    executor: go-1_17
-    steps:
-      - checkout
-      - attach_workspace:
-          at: '/new-config'
-      - run: ./scripts/update_config.sh ${UPDATE_CONFIG_TOKEN}
-
-commonjobs:
-  - &test-awaiter
-    'test-awaiter':
-      requires:
-        - 'test-go-1_17'
-        - 'test-go-1_17-386'
 
 workflows:
   version: 2
@@ -460,43 +441,101 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - *test-awaiter
       - 'windows-package':
           requires:
             - 'test-go-windows'
-      - 'darwin-package':
+          filters:
+            tags:
+              only: /.*/
+      - 'darwin-amd64-package':
           requires:
             - 'test-go-mac'
+          filters:
+            tags:
+              only: /.*/
+      - 'darwin-arm64-package':
+          requires:
+            - 'test-go-mac'
+          filters:
+            tags:
+              only: /.*/
       - 'i386-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 'ppc64le-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
+      - 'riscv64-package':
+          requires:
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 's390x-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 'armel-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 'amd64-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 'arm64-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 'armhf-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 'static-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 'mipsel-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 'mips-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+          filters:
+            tags:
+              only: /.*/
       - 'generate-config':
           requires:
             - 'amd64-package'
@@ -511,24 +550,18 @@ workflows:
             branches:
               only:
                 - master
-      - 'update-config':
-          requires:
-            - 'generate-config-win'
-            - 'generate-config'
-          filters:
-            branches:
-              only:
-                - master
       - 'share-artifacts':
           requires:
             - 'i386-package'
             - 'ppc64le-package'
+            - 'riscv64-package'
             - 's390x-package'
             - 'armel-package'
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
-            - 'darwin-package'
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
             - 'windows-package'
             - 'static-package'
             - 'arm64-package'
@@ -540,29 +573,43 @@ workflows:
                 - release.*
             tags:
               ignore: /.*/
-      - 'release':
+      - 'package-sign-windows':
           requires:
-            - 'test-go-windows'
-            - 'test-go-mac'
-            - 'test-go-1_17'
-            - 'test-go-1_17-386'
+            - 'windows-package'
           filters:
+              tags:
+                only: /.*/
+              branches:
+                ignore: /.*/
+      - 'package-sign-mac':
+           requires:
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
+           filters:
+              tags:
+                only: /.*/
+              branches:
+                ignore: /.*/
+      - 'package-consolidate':
+           requires:
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
+            - 'riscv64-package'
+            - 'package-sign-mac'
+            - 'package-sign-windows'
+           filters:
             tags:
               only: /.*/
             branches:
               ignore: /.*/
-      - 'package-sign-windows':
-          requires:
-            - 'release'
-          filters:
-              tags:
-                only: /.*/
-      - 'package-sign-mac':
-           requires:
-             - 'package-sign-windows'
-           filters:
-              tags:
-                only: /.*/
 
   nightly:
     jobs:
@@ -575,14 +622,18 @@ workflows:
             - 'deps'
       - 'test-go-mac'
       - 'test-go-windows'
-      - *test-awaiter
       - 'windows-package':
           name: 'windows-package-nightly'
           nightly: true
           requires:
             - 'test-go-windows'
-      - 'darwin-package':
-          name: 'darwin-package-nightly'
+      - 'darwin-amd64-package':
+          name: 'darwin-amd64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-mac'
+      - 'darwin-arm64-package':
+          name: 'darwin-arm64-package-nightly'
           nightly: true
           requires:
             - 'test-go-mac'
@@ -590,62 +641,80 @@ workflows:
           name: 'i386-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'ppc64le-package':
           name: 'ppc64le-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
+      - 'riscv64-package':
+          name: 'riscv64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 's390x-package':
           name: 's390x-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'armel-package':
           name: 'armel-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'amd64-package':
           name: 'amd64-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'arm64-package':
           name: 'arm64-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'armhf-package':
           name: 'armhf-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'static-package':
           name: 'static-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'mipsel-package':
           name: 'mipsel-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'mips-package':
           name: 'mips-package-nightly'
           nightly: true
           requires:
-            - 'test-awaiter'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - nightly:
           requires:
             - 'i386-package-nightly'
             - 'ppc64le-package-nightly'
+            - 'riscv64-package-nightly'
             - 's390x-package-nightly'
             - 'armel-package-nightly'
             - 'amd64-package-nightly'
             - 'mipsel-package-nightly'
             - 'mips-package-nightly'
-            - 'darwin-package-nightly'
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
             - 'windows-package-nightly'
             - 'static-package-nightly'
             - 'arm64-package-nightly'

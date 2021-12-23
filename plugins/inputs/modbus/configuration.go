@@ -1,4 +1,5 @@
 //go:build !openbsd
+// +build !openbsd
 
 package modbus
 
@@ -14,6 +15,7 @@ const (
 type Configuration interface {
 	Check() error
 	Process() (map[byte]requestSet, error)
+	SampleConfigPart() string
 }
 
 func removeDuplicates(elements []uint16) []uint16 {
@@ -35,7 +37,7 @@ func normalizeInputDatatype(dataType string) (string, error) {
 	case "INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64", "FLOAT32", "FLOAT64":
 		return dataType, nil
 	}
-	return "unknown", fmt.Errorf("unknown type %q", dataType)
+	return "unknown", fmt.Errorf("unknown input type %q", dataType)
 }
 
 func normalizeOutputDatatype(dataType string) (string, error) {
@@ -45,7 +47,7 @@ func normalizeOutputDatatype(dataType string) (string, error) {
 	case "INT64", "UINT64", "FLOAT64":
 		return dataType, nil
 	}
-	return "unknown", fmt.Errorf("unknown type %q", dataType)
+	return "unknown", fmt.Errorf("unknown output type %q", dataType)
 }
 
 func normalizeByteOrder(byteOrder string) (string, error) {

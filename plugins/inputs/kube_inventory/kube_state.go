@@ -81,6 +81,7 @@ var sampleConfig = `
   # tls_ca = "/path/to/cafile"
   # tls_cert = "/path/to/certfile"
   # tls_key = "/path/to/keyfile"
+  # tls_server_name = "kubernetes.example.com"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `

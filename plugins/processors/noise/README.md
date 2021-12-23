@@ -9,9 +9,25 @@ Depending on the choice of the distribution function, the respective parameters 
 
 ```toml
 [[processors.noise]]
-  scale = 1.0
-  mu = 0.0
-  noise_type = "laplacian"
+    ## Specified the type of the random distribution.
+    ## Can be "laplacian", "gaussian" or "uniform".
+    # type = "laplacian
+
+    ## Center of the distribution.
+    ## Only used for Laplacian and Gaussian distributions.
+    # mu = 0.0
+
+    ## Scale parameter for the Laplacian or Gaussian distribution
+    # scale = 1.0
+
+    ## Upper and lower bound of the Uniform distribution
+    # min = -1.0
+    # max = 1.0
+
+    ## Apply the noise only to numeric fields matching the filter criteria below.
+    ## Excludes takes precedence over includes.
+    # include_fields = []
+    # exclude_fields = []
 ```
 
 Using the `include_fields` and `exclude_fields` options a filter can be configured to apply noise only to numeric fields matching it.

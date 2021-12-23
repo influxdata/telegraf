@@ -77,6 +77,10 @@ values.
   ## Indicates values to skip, such as an empty string value "".
   ## The field will be skipped entirely where it matches any values inserted here.
   csv_skip_values = []
+
+  ## If set to true, the parser will skip csv lines that cannot be parsed.
+  ## By default, this is false
+  csv_skip_errors = false
   ```
 
 ### csv_timestamp_column, csv_timestamp_format

@@ -22,13 +22,14 @@ import (
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	Project        string
-	Namespace      string
+	Project        string            `toml:"project"`
+	Namespace      string            `toml:"namespace"`
 	ResourceType   string            `toml:"resource_type"`
 	ResourceLabels map[string]string `toml:"resource_labels"`
 	Log            telegraf.Logger   `toml:"-"`
 
-	client *monitoring.MetricClient
+	client       *monitoring.MetricClient
+	counterCache *counterCache
 }
 
 const (
@@ -42,8 +43,6 @@ const (
 	// to string length for label value.
 	QuotaStringLengthForLabelValue = 1024
 
-	// StartTime for cumulative metrics.
-	StartTime = int64(1)
 	// MaxInt is the max int64 value.
 	MaxInt = int(^uint(0) >> 1)
 
@@ -85,6 +84,10 @@ func (s *Stackdriver) Connect() error {
 
 	if s.ResourceLabels == nil {
 		s.ResourceLabels = make(map[string]string, 1)
+	}
+
+	if s.counterCache == nil {
+		s.counterCache = NewCounterCache(s.Log)
 	}
 
 	s.ResourceLabels["project_id"] = s.Project
@@ -146,7 +149,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		for _, f := range m.FieldList() {
 			value, err := getStackdriverTypedValue(f.Value)
 			if err != nil {
-				s.Log.Errorf("Get type failed: %s", err)
+				s.Log.Errorf("Get type failed: %q", err)
 				continue
 			}
 
@@ -156,11 +159,13 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 			metricKind, err := getStackdriverMetricKind(m.Type())
 			if err != nil {
-				s.Log.Errorf("Get metric failed: %s", err)
+				s.Log.Errorf("Get kind for metric %q (%T) field %q failed: %s", m.Name(), m.Type(), f, err)
 				continue
 			}
 
-			timeInterval, err := getStackdriverTimeInterval(metricKind, StartTime, m.Time().Unix())
+			startTime, endTime := getStackdriverIntervalEndpoints(metricKind, value, m, f, s.counterCache)
+
+			timeInterval, err := getStackdriverTimeInterval(metricKind, startTime, endTime)
 			if err != nil {
 				s.Log.Errorf("Get time interval failed: %s", err)
 				continue
@@ -240,26 +245,38 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+func getStackdriverIntervalEndpoints(
+	kind metricpb.MetricDescriptor_MetricKind,
+	value *monitoringpb.TypedValue,
+	m telegraf.Metric,
+	f *telegraf.Field,
+	cc *counterCache,
+) (*timestamppb.Timestamp, *timestamppb.Timestamp) {
+	endTime := timestamppb.New(m.Time())
+	var startTime *timestamppb.Timestamp
+	if kind == metricpb.MetricDescriptor_CUMULATIVE {
+		// Interval starts for stackdriver CUMULATIVE metrics must reset any time
+		// the counter resets, so we keep a cache of the start times and last
+		// observed values for each counter in the batch.
+		startTime = cc.GetStartTime(GetCounterCacheKey(m, f), value, endTime)
+	}
+	return startTime, endTime
+}
+
 func getStackdriverTimeInterval(
 	m metricpb.MetricDescriptor_MetricKind,
-	start int64,
-	end int64,
+	startTime *timestamppb.Timestamp,
+	endTime *timestamppb.Timestamp,
 ) (*monitoringpb.TimeInterval, error) {
 	switch m {
 	case metricpb.MetricDescriptor_GAUGE:
 		return &monitoringpb.TimeInterval{
-			EndTime: &timestamppb.Timestamp{
-				Seconds: end,
-			},
+			EndTime: endTime,
 		}, nil
 	case metricpb.MetricDescriptor_CUMULATIVE:
 		return &monitoringpb.TimeInterval{
-			StartTime: &timestamppb.Timestamp{
-				Seconds: start,
-			},
-			EndTime: &timestamppb.Timestamp{
-				Seconds: end,
-			},
+			StartTime: startTime,
+			EndTime:   endTime,
 		}, nil
 	case metricpb.MetricDescriptor_DELTA, metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED:
 		fallthrough
@@ -279,7 +296,7 @@ func getStackdriverMetricKind(vt telegraf.ValueType) (metricpb.MetricDescriptor_
 	case telegraf.Histogram, telegraf.Summary:
 		fallthrough
 	default:
-		return metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("unsupported telegraf value type")
+		return metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("unsupported telegraf value type: %T", vt)
 	}
 }
 
@@ -331,12 +348,12 @@ func (s *Stackdriver) getStackdriverLabels(tags []*telegraf.Tag) map[string]stri
 	}
 	for k, v := range labels {
 		if len(k) > QuotaStringLengthForLabelKey {
-			s.Log.Warnf("Removing tag [%s] key exceeds string length for label key [%d]", k, QuotaStringLengthForLabelKey)
+			s.Log.Warnf("Removing tag %q key exceeds string length for label key [%d]", k, QuotaStringLengthForLabelKey)
 			delete(labels, k)
 			continue
 		}
 		if len(v) > QuotaStringLengthForLabelValue {
-			s.Log.Warnf("Removing tag [%s] value exceeds string length for label value [%d]", k, QuotaStringLengthForLabelValue)
+			s.Log.Warnf("Removing tag %q value exceeds string length for label value [%d]", k, QuotaStringLengthForLabelValue)
 			delete(labels, k)
 			continue
 		}
