@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -1144,6 +1145,12 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
+	if c, ok := interface{}(output).(interface{ TLSConfig() (*tls.Config, error) }); ok {
+		if _, err := c.TLSConfig(); err != nil {
+			return err
+		}
+	}
+
 	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
@@ -1216,6 +1223,12 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	if err := c.printUserDeprecation("inputs", name, input); err != nil {
 		return err
+	}
+
+	if c, ok := interface{}(input).(interface{ TLSConfig() (*tls.Config, error) }); ok {
+		if _, err := c.TLSConfig(); err != nil {
+			return err
+		}
 	}
 
 	rp := models.NewRunningInput(input, pluginConfig)

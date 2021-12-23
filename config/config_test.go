@@ -213,6 +213,11 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	}
 }
 
+func TestConfig_WrongCertPath(t *testing.T) {
+	c := NewConfig()
+	require.Error(t, c.LoadConfig("./testdata/wrong_cert_path.toml"))
+}
+
 func TestConfig_LoadSpecialTypes(t *testing.T) {
 	c := NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/special_types.toml"))
@@ -224,8 +229,12 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	require.Equal(t, Duration(time.Second), input.WriteTimeout)
 	// Tests telegraf size parsing.
 	require.Equal(t, Size(1024*1024), input.MaxBodySize)
-	// Tests toml multiline basic strings.
-	require.Equal(t, "/path/to/my/cert", strings.TrimRight(input.TLSCert, "\r\n"))
+	// Tests toml multiline basic strings on single line.
+	require.Equal(t, "./testdata/special_types.pem", input.TLSCert)
+	// Tests toml multiline basic strings on single line.
+	require.Equal(t, "./testdata/special_types.key", input.TLSKey)
+	// Tests toml multiline basic strings on multiple lines.
+	require.Equal(t, "/path/", strings.TrimRight(input.Paths[0], "\r\n"))
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
@@ -367,6 +376,7 @@ type MockupInputPlugin struct {
 	ReadTimeout  Duration `toml:"read_timeout"`
 	WriteTimeout Duration `toml:"write_timeout"`
 	MaxBodySize  Size     `toml:"max_body_size"`
+	Paths        []string `toml:"paths"`
 	Port         int      `toml:"port"`
 	Command      string
 	PidFile      string
