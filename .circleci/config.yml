@@ -6,17 +6,19 @@ orbs:
 executors:
   go-1_17:
     working_directory: '/go/src/github.com/influxdata/telegraf'
+    resource_class: large
     docker:
       - image: 'quay.io/influxdb/telegraf-ci:1.17.5'
     environment:
-      GOFLAGS: -p=8
+      GOFLAGS: -p=4
   mac:
+    working_directory: '~/go/src/github.com/influxdata/telegraf'
+    resource_class: medium
     macos:
       xcode: 13.2.0
-    working_directory: '~/go/src/github.com/influxdata/telegraf'
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
-      GOFLAGS: -p=8
+      GOFLAGS: -p=4
 
 commands:
   generate-config:
