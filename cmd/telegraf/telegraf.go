@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coreos/go-systemd/daemon"
+
 	"github.com/fatih/color"
 
 	"github.com/influxdata/tail/watch"
@@ -280,6 +282,12 @@ func runAgent(ctx context.Context,
 	if count, found := c.Deprecations["outputs"]; found && (count[0] > 0 || count[1] > 0) {
 		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
 	}
+
+	// Notify systemd that telegraf is ready
+	// SdNotify() only tries to notify if the NOTIFY_SOCKET environment is set, so it's safe to call when systemd isn't present.
+	// Ignore the return values here because they're not valid for platforms that don't use systemd.
+	// For platforms that use systemd, telegraf doesn't log if the notification failed.
+	_, _ = daemon.SdNotify(false, daemon.SdNotifyReady)
 
 	if *fRunOnce {
 		wait := time.Duration(*fTestWait) * time.Second
