@@ -61,7 +61,6 @@ type CloudRun struct {
 	CredentialsFile     string          `toml:"credentials_file"`
 	DisableConvertPaths bool            `toml:"wavefront_disable_path_conversion"`
 	Log                 telegraf.Logger `toml:"-"`
-	// Method          string          /* TODO: toml */
 	httpconfig.HTTPClientConfig
 
 	client      *http.Client
@@ -87,6 +86,9 @@ func (cr *CloudRun) setUpDefaultClient() error {
 	defer cancel()
 
 	err := cr.getAccessToken(ctx)
+	if err != nil {
+		return err
+	}
 
 	client, err := cr.HTTPClientConfig.CreateClient(ctx, cr.Log)
 	if err != nil {
@@ -153,16 +155,17 @@ func (cr *CloudRun) send(reqBody []byte) error {
 	}
 
 	// Inspect jwt claims to view expiration time
-	claims := jwtGo.StandardClaims{}
+	claims := jwtGo.RegisteredClaims{}
 	jwtGo.ParseWithClaims(cr.accessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
 		return nil, nil
 	})
+	fmt.Println("exp:", claims.ExpiresAt)
 	// Request new token if expired
-	if !claims.VerifyExpiresAt(time.Now().Unix(), true) {
+	if !claims.VerifyExpiresAt(time.Now(), true) {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(cr.Timeout))
 		defer cancel()
-
+		fmt.Println("y2k")
 		cr.getAccessToken(ctx)
 		if err != nil {
 			return err
