@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/go-ldap/ldap/v3"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/ldap.v3"
 
 	"github.com/influxdata/telegraf/testutil"
 )
