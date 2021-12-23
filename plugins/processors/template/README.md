@@ -23,9 +23,9 @@ Read the full [Go Template Documentation][].
   template = '{{ .Tag "hostname" }}.{{ .Tag "level" }}'
 ```
 
-## Example
+## Examples
 
-Combine multiple tags to create a single tag:
+### Combine multiple tags to create a single tag
 
 ```toml
 [[processors.template]]
@@ -38,7 +38,7 @@ Combine multiple tags to create a single tag:
 + cpu,level=debug,hostname=localhost,topic=localhost.debug time_idle=42
 ```
 
-Add measurement name as a tag:
+### Add measurement name as a tag
 
 ```toml
 [[processors.template]]
@@ -51,7 +51,7 @@ Add measurement name as a tag:
 + cpu,hostname=localhost,measurement=cpu time_idle=42
 ```
 
-Add the year as a tag, similar to the date processor:
+### Add the year as a tag, similar to the date processor
 
 ```toml
 [[processors.template]]
@@ -59,7 +59,7 @@ Add the year as a tag, similar to the date processor:
   template = '{{.Time.UTC.Year}}'
 ```
 
-Add all fields as a tag:
+### Add all fields as a tag
 
 ```toml
 [[processors.template]]
@@ -74,7 +74,7 @@ Add all fields as a tag:
 + cpu,hostname=localhost,message=Fields:\ map[time_idle:42] time_idle=42
 ```
 
-Just add the current metric as a tag:
+### Just add the current metric as a tag
 
 ```toml
 [[processors.template]]
