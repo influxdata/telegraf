@@ -174,7 +174,7 @@ func (am *AzureMonitor) Init() error {
 		return fmt.Errorf("no resource target was created. Please check your resource group targets and " +
 			"subscription targets in your configuration")
 	}
-	fmt.Println(am.azureClient.accessToken)
+
 	return nil
 }
 
