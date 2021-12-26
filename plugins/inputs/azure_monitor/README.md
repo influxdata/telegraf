@@ -62,13 +62,13 @@ Use `subscription_targets` to collect metrics from resources under the subscript
     # metrics aggregation type value to collect
     # can be 'Total', 'Count', 'Average', 'Minimum', 'Maximum'
     # leave the array empty to collect all aggregation types values for each metric
-    aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+    aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
     
   # resource target #2 to collect metrics from
   [[inputs.azure_monitor.resource_target]]
     resource_id = "<<RESOURCE_ID>>"
     metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-    aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+    aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
 
   # resource group target #1 to collect metrics from resources under it with resource type
   [[inputs.azure_monitor.resource_group_target]]
@@ -80,13 +80,13 @@ Use `subscription_targets` to collect metrics from resources under the subscript
       # the resource type
       resource_type = "<<RESOURCE_TYPE>>"
       metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-      aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+      aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
     
     # defines the resources to collect metrics from
     [[inputs.azure_monitor.resource_group_target.resource]]
       resource_type = "<<RESOURCE_TYPE>>"
       metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-      aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+      aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
       
   # resource group target #2 to collect metrics from resources under it with resource type
   [[inputs.azure_monitor.resource_group_target]]
@@ -95,19 +95,19 @@ Use `subscription_targets` to collect metrics from resources under the subscript
     [[inputs.azure_monitor.resource_group_target.resource]]
       resource_type = "<<RESOURCE_TYPE>>"
       metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-      aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+      aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
   
   # subscription target #1 to collect metrics from resources under it with resource type    
   [[inputs.azure_monitor.subscription_target]]
     resource_type = "<<RESOURCE_TYPE>>"
     metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-    aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+    aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
     
   # subscription target #2 to collect metrics from resources under it with resource type    
   [[inputs.azure_monitor.subscription_target]]
     resource_type = "<<RESOURCE_TYPE>>"
     metrics = [ "<<METRIC>>", "<<METRIC>>" ]
-    aggregation = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
+    aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
 ```
 
 ### Metrics
