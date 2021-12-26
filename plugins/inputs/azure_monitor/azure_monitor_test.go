@@ -188,7 +188,7 @@ func TestInit_ResourceTargetsOnly(t *testing.T) {
 		}
 	}
 
-	resourceMetricDefinitionsBody, err := getFileBody("testData/metric_definitions_body.json")
+	resourceMetricDefinitionsBody, err := getFileBody("testdata/metric_definitions_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceMetricDefinitionsBody)
 
@@ -390,19 +390,19 @@ func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
 		}
 	}
 
-	resourceGroup1ResourcesBody, err := getFileBody("testData/resource_group_1_resources_body.json")
+	resourceGroup1ResourcesBody, err := getFileBody("testdata/resource_group_1_resources_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceGroup1ResourcesBody)
 
-	resourceGroup2ResourcesBody, err := getFileBody("testData/resource_group_2_resources_body.json")
+	resourceGroup2ResourcesBody, err := getFileBody("testdata/resource_group_2_resources_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceGroup2ResourcesBody)
 
-	resourceGroup3ResourcesBody, err := getFileBody("testData/resource_group_3_resources_body.json")
+	resourceGroup3ResourcesBody, err := getFileBody("testdata/resource_group_3_resources_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceGroup3ResourcesBody)
 
-	resourceMetricDefinitionsBody, err := getFileBody("testData/metric_definitions_body.json")
+	resourceMetricDefinitionsBody, err := getFileBody("testdata/metric_definitions_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceMetricDefinitionsBody)
 
@@ -515,19 +515,19 @@ func TestInit_SubscriptionTargetsOnly(t *testing.T) {
 		}
 	}
 
-	subscriptionResourceGroupsBody, err := getFileBody("testData/subscription_resource_groups_body.json")
+	subscriptionResourceGroupsBody, err := getFileBody("testdata/subscription_resource_groups_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, subscriptionResourceGroupsBody)
 
-	resourceGroup1Body, err := getFileBody("testData/resource_group_1_resources_body.json")
+	resourceGroup1Body, err := getFileBody("testdata/resource_group_1_resources_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceGroup1Body)
 
-	resourceGroup2Body, err := getFileBody("testData/resource_group_2_resources_body.json")
+	resourceGroup2Body, err := getFileBody("testdata/resource_group_2_resources_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceGroup2Body)
 
-	resourceMetricDefinitionsBody, err := getFileBody("testData/metric_definitions_body.json")
+	resourceMetricDefinitionsBody, err := getFileBody("testdata/metric_definitions_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceMetricDefinitionsBody)
 
@@ -663,23 +663,23 @@ func TestInit_AllTargetTypes(t *testing.T) {
 		azureClient: newAzureClient(),
 	}
 
-	subscriptionResourceGroupsBody, err := getFileBody("testData/subscription_resource_groups_body.json")
+	subscriptionResourceGroupsBody, err := getFileBody("testdata/subscription_resource_groups_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, subscriptionResourceGroupsBody)
 
-	resourceGroup1ResourcesBody, err := getFileBody("testData/resource_group_1_resources_body.json")
+	resourceGroup1ResourcesBody, err := getFileBody("testdata/resource_group_1_resources_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceGroup1ResourcesBody)
 
-	resourceGroup2ResourcesBody, err := getFileBody("testData/resource_group_2_resources_body.json")
+	resourceGroup2ResourcesBody, err := getFileBody("testdata/resource_group_2_resources_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceGroup2ResourcesBody)
 
-	resourceGroup3ResourcesBody, err := getFileBody("testData/resource_group_3_resources_body.json")
+	resourceGroup3ResourcesBody, err := getFileBody("testdata/resource_group_3_resources_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceGroup3ResourcesBody)
 
-	resourceMetricDefinitionsBody, err := getFileBody("testData/metric_definitions_body.json")
+	resourceMetricDefinitionsBody, err := getFileBody("testdata/metric_definitions_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceMetricDefinitionsBody)
 
@@ -769,7 +769,7 @@ func TestInit_ResourceGroupTargetsOnlyNoResourceTargetsCreated(t *testing.T) {
 		azureClient: newAzureClient(),
 	}
 
-	resourceGroup1ResourcesBody, err := getFileBody("testData/resource_group_1_resources_body.json")
+	resourceGroup1ResourcesBody, err := getFileBody("testdata/resource_group_1_resources_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceGroup1ResourcesBody)
 
@@ -1133,11 +1133,11 @@ func TestGather_Success(t *testing.T) {
 	expectedResource2MetricsTags["resource_region"] = "eastus"
 	expectedResource2MetricsTags["unit"] = "Count"
 
-	resource1MetricValuesBody, err := getFileBody("testData/resource_1_metric_values_body.json")
+	resource1MetricValuesBody, err := getFileBody("testdata/resource_1_metric_values_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resource1MetricValuesBody)
 
-	resource2MetricValuesBody, err := getFileBody("testData/resource_2_metric_values_body.json")
+	resource2MetricValuesBody, err := getFileBody("testdata/resource_2_metric_values_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resource2MetricValuesBody)
 

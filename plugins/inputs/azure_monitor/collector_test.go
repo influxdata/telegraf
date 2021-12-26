@@ -22,7 +22,7 @@ func TestGetMetricName_Success(t *testing.T) {
 		azureClient: newAzureClient(),
 	}
 
-	resourceMetricValuesBody, err := getFileBody("testData/resource_1_metric_values_body.json")
+	resourceMetricValuesBody, err := getFileBody("testdata/resource_1_metric_values_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceMetricValuesBody)
 
@@ -73,7 +73,7 @@ func TestGetMetricFields_AllTimeSeriesWithData(t *testing.T) {
 	apiURL := am.buildMetricValuesAPIURL(am.ResourceTargets[0])
 	require.NotNil(t, apiURL)
 
-	resourceMetricValuesBody, err := getFileBody("testData/resource_1_metric_values_body.json")
+	resourceMetricValuesBody, err := getFileBody("testdata/resource_1_metric_values_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceMetricValuesBody)
 
@@ -128,7 +128,7 @@ func TestGetMetricFields_LastTimeSeriesWithoutData(t *testing.T) {
 	apiURL := am.buildMetricValuesAPIURL(am.ResourceTargets[0])
 	require.NotNil(t, apiURL)
 
-	resourceMetricValuesBody, err := getFileBody("testData/resource_1_metric_values_body.json")
+	resourceMetricValuesBody, err := getFileBody("testdata/resource_1_metric_values_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceMetricValuesBody)
 
@@ -178,7 +178,7 @@ func TestGetMetricFields_AllTimeSeriesWithoutData(t *testing.T) {
 	apiURL := am.buildMetricValuesAPIURL(am.ResourceTargets[0])
 	require.NotNil(t, apiURL)
 
-	resourceMetricValuesBody, err := getFileBody("testData/resource_2_metric_values_body.json")
+	resourceMetricValuesBody, err := getFileBody("testdata/resource_2_metric_values_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceMetricValuesBody)
 
@@ -234,7 +234,7 @@ func TestGetMetricTags_Success(t *testing.T) {
 	apiURL := am.buildMetricValuesAPIURL(am.ResourceTargets[0])
 	require.NotNil(t, apiURL)
 
-	resourceMetricValuesBody, err := getFileBody("testData/resource_1_metric_values_body.json")
+	resourceMetricValuesBody, err := getFileBody("testdata/resource_1_metric_values_body.json")
 	require.NoError(t, err)
 	require.NotNil(t, resourceMetricValuesBody)
 
