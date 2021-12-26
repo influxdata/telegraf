@@ -2,363 +2,91 @@ package azure_monitor
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/testutil"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	resourceID1 = "resourceGroups/azure-rg1/providers/Microsoft.Storage/storageAccounts/azuresa1"
-	resourceID2 = "resourceGroups/azure-rg1/providers/Microsoft.Storage/storageAccounts/azuresa2"
-	resourceID3 = "resourceGroups/azure-rg2/providers/Microsoft.Storage/storageAccounts/azuresa3"
-	resourceID4 = "resourceGroups/azure-rg2/providers/Microsoft.Storage/storageAccounts/azuresa4"
-)
-
-var subscriptionResourceGroupsBody = `
-{
-    "value": [
-        {
-            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg1",
-            "name": "azure-rg1",
-            "location": "eastus",
-            "properties": {
-                "provisioningState": "Succeeded"
-            }
-        },
-        {
-            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg2",
-            "name": "azure-rg2",
-            "location": "eastus",
-            "properties": {
-                "provisioningState": "Succeeded"
-            }
-        }
-	]
-}
-`
-
-// azure-rg1 resource group resources
-var resourceGroup1ResourcesBody = `
-{
-    "value": [
-        {
-            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg1/providers/Microsoft.Storage/storageAccounts/azuresa1",
-            "name": "azuresa1",
-            "type": "Microsoft.Storage/storageAccounts",
-            "location": "eastus",
-            "tags": {}
-        },
-        {
-            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg1/providers/Microsoft.Storage/storageAccounts/azuresa2",
-            "name": "azuresa2",
-            "type": "Microsoft.Storage/storageAccounts",
-            "location": "eastus",
-            "tags": {}
-        }
-	]
-}
-`
-
-// azure-rg2 resource group resources
-var resourceGroup2ResourcesBody = `
-{
-    "value": [
-        {
-            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg2/providers/Microsoft.Storage/storageAccounts/azuresa3",
-            "name": "azuresa3",
-            "type": "Microsoft.Storage/storageAccounts",
-            "location": "eastus",
-            "tags": {}
-        },
-        {
-            "id": "/subscriptions/subscription_id/resourceGroups/azure-rg2/providers/Microsoft.Storage/storageAccounts/azuresa4",
-            "name": "azuresa4",
-            "type": "Microsoft.Storage/storageAccounts",
-            "location": "eastus",
-            "tags": {}
-        }
-	]
-}
-`
-
-var resourceTarget1MetricValues = `
-{
-  "cost": 0,
-  "timespan": "2021-11-05T10:00:00Z/2021-11-05T11:01:00Z",
-  "interval": "PT1H",
-  "value": [
-	{
-      "id": "/subscriptions/subscription_id/resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa1/providers/Microsoft.Insights/metrics/UsedCapacity",
-      "type": "Microsoft.Insights/metrics",
-      "name": {
-        "value": "UsedCapacity",
-        "localizedValue": "Used capacity"
-      },
-      "displayDescription": "The amount of storage used by the storage account. For standard storage accounts, it's the sum of capacity used by blob, table, file, and queue. For premium storage accounts and Blob storage accounts, it is the same as BlobCapacity or FileCapacity.",
-      "unit": "Bytes",
-      "timeseries": [
-        {
-          "metadatavalues": [],
-          "data": [
-            {
-              "timeStamp": "2021-11-05T10:00:00Z",
-              "total": 9065573.0,
-			  "average": 8501235.0
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "/subscriptions/subscription_id/resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa1/providers/Microsoft.Insights/metrics/Transactions",
-      "type": "Microsoft.Insights/metrics",
-      "name": {
-        "value": "Transactions",
-        "localizedValue": "Transactions"
-      },
-      "unit": "Count",
-      "timeseries": [
-        {
-          "metadatavalues": [],
-          "data": [
-            {
-              "timeStamp": "2021-11-05T10:00:00Z",
-              "total": 5.0,
-    		  "average": 4.0
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "namespace": "Microsoft.Storage/storageAccounts",
-  "resourceregion": "eastus"
-}
-`
-
-var resourceTarget2MetricValues = `
-{
-  "cost": 0,
-  "timespan": "2021-11-05T10:00:00Z/2021-11-05T11:01:00Z",
-  "interval": "PT1M",
-  "value": [
-	{
-      "id": "/subscriptions/subscription_id/resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa2/providers/Microsoft.Insights/metrics/Ingress",
-      "type": "Microsoft.Insights/metrics",
-      "name": {
-        "value": "Ingress",
-        "localizedValue": "Ingress"
-      },
-      "displayDescription": "The amount of storage used by the storage account. For standard storage accounts, it's the sum of capacity used by blob, table, file, and queue. For premium storage accounts and Blob storage accounts, it is the same as BlobCapacity or FileCapacity.",
-      "unit": "Bytes",
-      "timeseries": [
-        {
-          "metadatavalues": [],
-          "data": [
-            {
-              "timeStamp": "2021-11-05T10:00:00Z",
-              "minimum": 200.0,
-			  "maximum": 200.0
-            },
-			{
-              "timeStamp": "2021-11-05T10:00:00Z",
-              "minimum": 190.0,
-			  "maximum": 210.0
-            },
-			{
-              "timeStamp": "2021-11-05T10:00:00Z",
-              "minimum": 180.0,
-			  "maximum": 220.0
-            },
-			{
-              "timeStamp": "2021-11-05T10:00:00Z",
-              "minimum": 150.0,
-			  "maximum": 225.0
-            },
-			{
-              "timeStamp": "2021-11-05T10:00:00Z",
-              "minimum": 125.0,
-			  "maximum": 250.0
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "namespace": "Microsoft.Storage/storageAccounts",
-  "resourceregion": "eastus"
-}
-`
-
-var resourceMetricDefinitionsBody = `
-{
-  "value": [
-    {
-      "name": {
-        "value": "UsedCapacity",
-        "localizedValue": "Used capacity"
-      }
-    },
-	{
-      "name": {
-        "value": "Transactions",
-        "localizedValue": "Transactions"
-      }
-	},
-	{
-	  "name": {
-        "value": "Ingress",
-        "localizedValue": "Ingress"
-      }
+func getFileBody(filePath string) ([]byte, error) {
+	jsonFile, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("error opening file %s: %v", filePath, err)
 	}
-  ]
-}
-`
 
-var (
-	am = &AzureMonitor{
-		azureClient:    NewAzureClient(),
-		SubscriptionID: "subscription_id",
-		ClientID:       "client_id",
-		ClientSecret:   "client_secret",
-		TenantID:       "tenant_id",
-		Log:            testutil.Logger{},
+	defer closeFile(jsonFile, &err)
+
+	body, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return nil, fmt.Errorf("error reading file %s: %v", filePath, err)
 	}
-	resource = &Resource{
-		ResourceType: "Microsoft.Storage/storageAccounts",
-		Metrics:      []string{"UsedCapacity"},
-		Aggregation:  []string{"Total"},
+
+	return body, nil
+}
+
+func closeFile(file *os.File, err *error) {
+	if closeError := file.Close(); closeError != nil {
+		*err = fmt.Errorf("error closing file: %v", err)
 	}
-	subscriptionTargets  = getSubscriptionTargets()
-	resourceGroupTargets = getResourceGroupTargets()
-	resourceTarget1      = NewResourceTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa1",
-		[]string{"UsedCapacity", "Transactions"},
-		[]string{"Total", "Average"},
-	)
-	resourceTarget2 = NewResourceTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa2",
-		[]string{},
-		[]string{},
-	)
-	resourceTarget3 = NewResourceTarget(
-		"resourceGroups/azure-rg/providers/Microsoft.Storage/storageAccounts/azuresa2",
-		[]string{"Ingress"},
-		[]string{"Minimum, Maximum"})
-)
-
-func resetAzureMonitor() {
-	am.azureClient = NewAzureClient()
-	am.ResourceTargets = make([]*ResourceTarget, 0)
-	am.ResourceGroupTargets = make([]*ResourceGroupTarget, 0)
-	am.SubscriptionTargets = make([]*Resource, 0)
-}
-
-func getSubscriptionTargets() []*Resource {
-	subscriptionTargets := make([]*Resource, 0)
-	subscriptionTargets = append(subscriptionTargets, resource)
-
-	return subscriptionTargets
-}
-
-func getResourceGroupTargets() []*ResourceGroupTarget {
-	resourceGroupTargets := make([]*ResourceGroupTarget, 0)
-	resourceGroupTargets = append(resourceGroupTargets,
-		NewResourceGroupTarget("azure-rg1", []*Resource{resource}),
-		NewResourceGroupTarget("azure-rg2", []*Resource{resource}),
-	)
-
-	return resourceGroupTargets
-}
-
-func getResourceTarget1Metrics() []*Metric {
-	var metrics []*Metric
-
-	metric1 := NewMetric()
-
-	metric1.name = "azure_monitor_microsoft_storage_storageaccounts_used_capacity"
-	metric1.fields["timeStamp"] = "2021-11-05T10:00:00Z"
-	metric1.fields["total"] = 9065573.0
-	metric1.fields["average"] = 8501235.0
-	metric1.tags["subscription_id"] = "subscription_id"
-	metric1.tags["resource_group"] = "azure-rg"
-	metric1.tags["namespace"] = "Microsoft.Storage/storageAccounts"
-	metric1.tags["resource_name"] = "azuresa1"
-	metric1.tags["resource_region"] = "eastus"
-	metric1.tags["unit"] = "Bytes"
-
-	metric2 := NewMetric()
-
-	metric2.name = "azure_monitor_microsoft_storage_storageaccounts_transactions"
-	metric2.fields["timeStamp"] = "2021-11-05T10:00:00Z"
-	metric2.fields["total"] = 5.0
-	metric2.fields["average"] = 4.0
-	metric2.tags["subscription_id"] = "subscription_id"
-	metric2.tags["resource_group"] = "azure-rg"
-	metric2.tags["namespace"] = "Microsoft.Storage/storageAccounts"
-	metric2.tags["resource_name"] = "azuresa1"
-	metric2.tags["resource_region"] = "eastus"
-	metric2.tags["unit"] = "Count"
-
-	metrics = append(metrics, metric1, metric2)
-
-	return metrics
-}
-
-func getResourceTarget2Metrics() []*Metric {
-	var metrics []*Metric
-
-	metric := NewMetric()
-
-	metric.name = "azure_monitor_microsoft_storage_storageaccounts_ingress"
-	metric.fields["timeStamp"] = "2021-11-05T10:00:00Z"
-	metric.fields["minimum"] = 125.0
-	metric.fields["maximum"] = 250.0
-	metric.tags["subscription_id"] = "subscription_id"
-	metric.tags["resource_group"] = "azure-rg"
-	metric.tags["namespace"] = "Microsoft.Storage/storageAccounts"
-	metric.tags["resource_name"] = "azuresa2"
-	metric.tags["resource_region"] = "eastus"
-	metric.tags["unit"] = "Bytes"
-
-	metrics = append(metrics, metric)
-
-	return metrics
 }
 
 func TestGetAccessToken_Success(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource", []string{}, []string{}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
 	httpmock.RegisterResponder(
 		"POST",
 		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
-		httpmock.NewStringResponder(200, `{"access_token": "abc123456789", "expires_on": "1636548796"}`))
+		httpmock.NewStringResponder(200, `{"access_token": "accessToken", "expires_on": "1636548796"}`))
 
 	err := am.getAccessToken()
-
 	require.NoError(t, err)
-	assert.Equal(t, "abc123456789", am.azureClient.accessToken)
+
+	assert.Equal(t, "accessToken", am.azureClient.accessToken)
 
 	expiresOn, err := strconv.ParseInt("1636548796", 10, 64)
-
 	require.NoError(t, err)
-	assert.Equal(t, time.Unix(expiresOn, 0).UTC(), am.azureClient.accessTokenExpiresOn)
+	require.NotNil(t, expiresOn)
 
-	resetAzureMonitor()
+	assert.Equal(t, time.Unix(expiresOn, 0).UTC(), am.azureClient.accessTokenExpiresOn)
 }
 
 func TestRefreshAccessToken_AccessTokenRefreshed(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource", []string{}, []string{}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	expiresOn, err := strconv.ParseInt("1636548796", 10, 64)
-
 	require.NoError(t, err)
+	require.NotNil(t, expiresOn)
 
-	am.azureClient.accessToken = "abc123456789"
+	am.azureClient.accessToken = "accessToken"
 	am.azureClient.accessTokenExpiresOn = time.Unix(expiresOn, 0).UTC()
 
 	httpmock.Activate()
@@ -367,27 +95,38 @@ func TestRefreshAccessToken_AccessTokenRefreshed(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
-		httpmock.NewStringResponder(200, `{"access_token": "123456789abc", "expires_on": "1736548796"}`))
+		httpmock.NewStringResponder(200, `{"access_token": "newAccessToken", "expires_on": "1736548796"}`))
 
 	err = am.refreshAccessToken()
-
 	require.NoError(t, err)
-	assert.Equal(t, "123456789abc", am.azureClient.accessToken)
+
+	assert.Equal(t, "newAccessToken", am.azureClient.accessToken)
 
 	expiresOn, err = strconv.ParseInt("1736548796", 10, 64)
-
 	require.NoError(t, err)
-	assert.Equal(t, time.Unix(expiresOn, 0).UTC(), am.azureClient.accessTokenExpiresOn)
+	require.NotNil(t, expiresOn)
 
-	resetAzureMonitor()
+	assert.Equal(t, time.Unix(expiresOn, 0).UTC(), am.azureClient.accessTokenExpiresOn)
 }
 
 func TestRefreshAccessToken_AccessTokenNotRefreshed(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource", []string{}, []string{}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	expiresOn, err := strconv.ParseInt("1736548796", 10, 64)
-
 	require.NoError(t, err)
+	require.NotNil(t, expiresOn)
 
-	am.azureClient.accessToken = "abc123456789"
+	am.azureClient.accessToken = "accessToken"
 	am.azureClient.accessTokenExpiresOn = time.Unix(expiresOn, 0).UTC()
 
 	httpmock.Activate()
@@ -396,135 +135,62 @@ func TestRefreshAccessToken_AccessTokenNotRefreshed(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
-		httpmock.NewStringResponder(200, `{"access_token": "123456789abc", "expires_on": "1836548796"}`))
+		httpmock.NewStringResponder(200, `{"access_token": "newAccessToken", "expires_on": "1836548796"}`))
 
 	err = am.refreshAccessToken()
-
 	require.NoError(t, err)
-	assert.Equal(t, "abc123456789", am.azureClient.accessToken)
 
-	resetAzureMonitor()
+	assert.Equal(t, "accessToken", am.azureClient.accessToken)
+	assert.Equal(t, time.Unix(expiresOn, 0).UTC(), am.azureClient.accessTokenExpiresOn)
 }
 
-func TestCreateResourceGroupTargetsFromSubscriptionTargets_Success(t *testing.T) {
-	am.SubscriptionTargets = subscriptionTargets
+func TestInit_ResourceTargetsOnly(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource1", []string{"metric1", "metric2", "metric3"}, []string{"Total", "Average"}),
+			newResourceTarget("resource2", []string{"metric1", "metric2"}, []string{"Total"}),
+			newResourceTarget("resource3", []string{}, []string{"Total"}),
+			newResourceTarget("resource4", []string{"metric1", "metric2"}, []string{}),
+			newResourceTarget("resource5", []string{}, []string{}),
+			newResourceTarget("resource6", []string{}, []string{"Average"}),
+			newResourceTarget("resource7", []string{}, []string{"Average"}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
 
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	httpmock.RegisterResponder(
-		"GET",
-		am.buildSubscriptionResourceGroupsAPIURL(),
-		httpmock.NewStringResponder(200, subscriptionResourceGroupsBody))
-
-	err := am.createResourceGroupTargetsFromSubscriptionTargets()
-
-	require.NoError(t, err)
-
-	assert.Equal(t, 2, len(am.ResourceGroupTargets))
-
-	assert.Equal(t, "azure-rg1", am.ResourceGroupTargets[0].ResourceGroup)
-	assert.Equal(t, 1, len(am.ResourceGroupTargets[0].Resources))
-	assert.Equal(t, subscriptionTargets[0].ResourceType, am.ResourceGroupTargets[0].Resources[0].ResourceType)
-	assert.Equal(t, subscriptionTargets[0].Metrics, am.ResourceGroupTargets[0].Resources[0].Metrics)
-	assert.Equal(t, subscriptionTargets[0].Aggregation, am.ResourceGroupTargets[0].Resources[0].Aggregation)
-
-	assert.Equal(t, "azure-rg2", am.ResourceGroupTargets[1].ResourceGroup)
-	assert.Equal(t, 1, len(am.ResourceGroupTargets[1].Resources))
-	assert.Equal(t, subscriptionTargets[0].ResourceType, am.ResourceGroupTargets[1].Resources[0].ResourceType)
-	assert.Equal(t, subscriptionTargets[0].Metrics, am.ResourceGroupTargets[1].Resources[0].Metrics)
-	assert.Equal(t, subscriptionTargets[0].Aggregation, am.ResourceGroupTargets[1].Resources[0].Aggregation)
-
-	resetAzureMonitor()
-}
-
-func TestCreateResourceTargetsFromResourceGroupTargets_Success(t *testing.T) {
-	am.ResourceGroupTargets = resourceGroupTargets
-
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	httpmock.RegisterResponder(
-		"GET",
-		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[0]),
-		httpmock.NewStringResponder(200, resourceGroup1ResourcesBody))
-
-	httpmock.RegisterResponder(
-		"GET",
-		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[1]),
-		httpmock.NewStringResponder(200, resourceGroup2ResourcesBody))
-
-	err := am.createResourceTargetsFromResourceGroupTargets()
-
-	require.NoError(t, err)
-
-	assert.Equal(t, 4, len(am.ResourceTargets))
-
-	for _, target := range am.ResourceTargets {
-		if target.ResourceID == resourceID1 {
-			assert.Equal(t, resourceGroupTargets[0].Resources[0].Metrics, target.Metrics)
-			assert.Equal(t, resourceGroupTargets[0].Resources[0].Aggregation, target.Aggregation)
-		} else if target.ResourceID == resourceID2 {
-			assert.Equal(t, resourceGroupTargets[0].Resources[0].Metrics, target.Metrics)
-			assert.Equal(t, resourceGroupTargets[0].Resources[0].Aggregation, target.Aggregation)
-		} else if target.ResourceID == resourceID3 {
-			assert.Equal(t, resourceGroupTargets[1].Resources[0].Metrics, target.Metrics)
-			assert.Equal(t, resourceGroupTargets[1].Resources[0].Aggregation, target.Aggregation)
-		} else if target.ResourceID == resourceID4 {
-			assert.Equal(t, resourceGroupTargets[1].Resources[0].Metrics, target.Metrics)
-			assert.Equal(t, resourceGroupTargets[1].Resources[0].Aggregation, target.Aggregation)
+	for index := 1; index <= 25; index++ {
+		if index <= 10 {
+			am.ResourceTargets[5].Metrics = append(am.ResourceTargets[5].Metrics, "metric1")
+			am.ResourceTargets[6].Metrics = append(am.ResourceTargets[6].Metrics, "metric1")
+		} else if index <= 22 {
+			am.ResourceTargets[5].Metrics = append(am.ResourceTargets[5].Metrics, "metric2")
+			am.ResourceTargets[6].Metrics = append(am.ResourceTargets[6].Metrics, "metric2")
 		} else {
-			assert.FailNowf(t, "Did not get any expected resource id", "Test failed")
+			am.ResourceTargets[5].Metrics = append(am.ResourceTargets[5].Metrics, "metric2")
+			am.ResourceTargets[6].Metrics = append(am.ResourceTargets[6].Metrics, "metric3")
 		}
 	}
 
-	resetAzureMonitor()
-}
+	expectedResource6Metrics := make([]string, 0)
+	expectedResource7Metrics := make([]string, 0)
+	for index := 1; index <= maxMetricsPerRequest; index++ {
+		if index <= 10 {
+			expectedResource6Metrics = append(expectedResource6Metrics, "metric1")
+			expectedResource7Metrics = append(expectedResource7Metrics, "metric1")
+		} else {
+			expectedResource6Metrics = append(expectedResource6Metrics, "metric2")
+			expectedResource7Metrics = append(expectedResource7Metrics, "metric2")
+		}
+	}
 
-func TestGetResourceTargetsMetrics(t *testing.T) {
-	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget2)
-
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	httpmock.RegisterResponder(
-		"GET",
-		am.buildMetricDefinitionsAPIURL(resourceTarget1),
-		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
-
-	httpmock.RegisterResponder(
-		"GET",
-		am.buildMetricDefinitionsAPIURL(resourceTarget2),
-		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
-
-	err := am.getResourceTargetsMetrics()
-
+	resourceMetricDefinitionsBody, err := getFileBody("testData/metric_definitions_body.json")
 	require.NoError(t, err)
-
-	assert.Equal(t, 2, len(am.ResourceTargets[0].Metrics))
-	assert.Equal(t, resourceTarget1.Metrics, am.ResourceTargets[0].Metrics)
-
-	assert.Equal(t, 3, len(am.ResourceTargets[1].Metrics))
-	assert.Equal(t, []string{"UsedCapacity", "Transactions", "Ingress"}, am.ResourceTargets[1].Metrics)
-
-	resetAzureMonitor()
-}
-
-func TestSetResourceTargetsAggregation_Success(t *testing.T) {
-	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget2)
-	am.setResourceTargetsAggregation()
-
-	assert.Equal(t, 2, len(am.ResourceTargets[0].Aggregation))
-	assert.Equal(t, resourceTarget1.Aggregation, am.ResourceTargets[0].Aggregation)
-
-	assert.Equal(t, 5, len(am.ResourceTargets[1].Aggregation))
-	assert.Equal(t, []string{"Total", "Count", "Average", "Minimum", "Maximum"}, am.ResourceTargets[1].Aggregation)
-
-	resetAzureMonitor()
-}
-
-func TestInitOnlyResourceTargets_Success(t *testing.T) {
-	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget2)
+	require.NotNil(t, resourceMetricDefinitionsBody)
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -532,28 +198,213 @@ func TestInitOnlyResourceTargets_Success(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
-		httpmock.NewStringResponder(200, `{"access_token": "abc123456789", "expires_on": "1636548796"}`))
+		httpmock.NewStringResponder(200, `{"access_token": "accessToken", "expires_on": "1636548796"}`))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsAPIURL(resourceTarget1),
-		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
+		am.buildMetricDefinitionsAPIURL(am.ResourceTargets[0].ResourceID),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsAPIURL(resourceTarget2),
-		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
+		am.buildMetricDefinitionsAPIURL(am.ResourceTargets[1].ResourceID),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
 
-	err := am.Init()
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(am.ResourceTargets[2].ResourceID),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
 
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(am.ResourceTargets[3].ResourceID),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(am.ResourceTargets[4].ResourceID),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(am.ResourceTargets[5].ResourceID),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(am.ResourceTargets[6].ResourceID),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	err = am.Init()
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(am.ResourceTargets))
 
-	resetAzureMonitor()
+	assert.Equal(t, 13, len(am.ResourceTargets))
+
+	for _, target := range am.ResourceTargets {
+		if target.ResourceID == "resource1" {
+			if len(target.Metrics) == 2 {
+				assert.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
+				assert.Equal(t, []string{"Total", "Average"}, target.Aggregations)
+			} else if len(target.Metrics) == 1 {
+				assert.Equal(t, []string{"metric3"}, target.Metrics)
+				assert.Equal(t, []string{"Total", "Average"}, target.Aggregations)
+			} else {
+				assert.FailNowf(t, "resource1 has no any expected metrics size", "Test failed")
+			}
+		} else if target.ResourceID == "resource2" {
+			assert.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
+			assert.Equal(t, []string{"Total"}, target.Aggregations)
+		} else if target.ResourceID == "resource3" {
+			if len(target.Metrics) == 2 {
+				assert.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
+				assert.Equal(t, []string{"Total"}, target.Aggregations)
+			} else if len(target.Metrics) == 1 {
+				assert.Equal(t, []string{"metric3"}, target.Metrics)
+				assert.Equal(t, []string{"Total"}, target.Aggregations)
+			} else {
+				assert.FailNowf(t, "resource3 has no any expected metrics size", "Test failed")
+			}
+		} else if target.ResourceID == "resource4" {
+			if len(target.Metrics) == 2 {
+				assert.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
+				assert.Equal(t, []string{"Total", "Count", "Average", "Minimum", "Maximum"}, target.Aggregations)
+			} else if len(target.Metrics) == 1 {
+				assert.Equal(t, []string{"metric3"}, target.Metrics)
+				assert.Equal(t, []string{"Total", "Count", "Average", "Minimum", "Maximum"}, target.Aggregations)
+			} else {
+				assert.FailNowf(t, "resource4 has no any expected metrics size", "Test failed")
+			}
+		} else if target.ResourceID == "resource5" {
+			if len(target.Metrics) == 2 {
+				assert.Equal(t, []string{"metric1", "metric2"}, target.Metrics)
+				assert.Equal(t, []string{"Total", "Count", "Average", "Minimum", "Maximum"}, target.Aggregations)
+			} else if len(target.Metrics) == 1 {
+				assert.Equal(t, []string{"metric3"}, target.Metrics)
+				assert.Equal(t, []string{"Total", "Count", "Average", "Minimum", "Maximum"}, target.Aggregations)
+			} else {
+				assert.FailNowf(t, "resource5 has no any expected metrics size", "Test failed")
+			}
+		} else if target.ResourceID == "resource6" {
+			if len(target.Metrics) == maxMetricsPerRequest {
+				assert.Equal(t, expectedResource6Metrics, target.Metrics)
+				assert.Equal(t, []string{"Average"}, target.Aggregations)
+			} else if len(target.Metrics) == 5 {
+				assert.Equal(t, []string{"metric2", "metric2", "metric2", "metric2", "metric2"}, target.Metrics)
+				assert.Equal(t, []string{"Average"}, target.Aggregations)
+			} else {
+				assert.FailNowf(t, "resource6 has no any expected metrics size", "Test failed")
+			}
+		} else if target.ResourceID == "resource7" {
+			if len(target.Metrics) == maxMetricsPerRequest {
+				assert.Equal(t, expectedResource7Metrics, target.Metrics)
+				assert.Equal(t, []string{"Average"}, target.Aggregations)
+			} else if len(target.Metrics) == 2 {
+				assert.Equal(t, []string{"metric2", "metric2"}, target.Metrics)
+				assert.Equal(t, []string{"Average"}, target.Aggregations)
+			} else if len(target.Metrics) == 3 {
+				assert.Equal(t, []string{"metric3", "metric3", "metric3"}, target.Metrics)
+				assert.Equal(t, []string{"Average"}, target.Aggregations)
+			} else {
+				assert.FailNowf(t, "resource7 has no any expected metrics size", "Test failed")
+			}
+		} else {
+			assert.FailNowf(t, "Did not get any expected resource ID", "Test failed")
+		}
+	}
 }
 
-func TestInitOnlyResourceGroupTargets_Success(t *testing.T) {
-	am.ResourceGroupTargets = resourceGroupTargets
+func TestInit_ResourceGroupTargetsOnly(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceGroupTargets: []*ResourceGroupTarget{
+			newResourceGroupTarget("resourceGroup1",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type1",
+						Metrics:      []string{"metric1", "metric2", "metric3"},
+						Aggregations: []string{"Total"},
+					},
+					{
+						ResourceType: "Microsoft/type2",
+						Metrics:      []string{"metric1", "metric2"},
+						Aggregations: []string{"Average"},
+					},
+					{
+						ResourceType: "Microsoft/type2",
+						Metrics:      []string{},
+						Aggregations: []string{},
+					},
+					{
+						ResourceType: "Microsoft/type2",
+						Metrics:      []string{},
+						Aggregations: []string{"Average"},
+					},
+					{
+						ResourceType: "Microsoft/type2",
+						Metrics:      []string{},
+						Aggregations: []string{"Average"},
+					},
+				},
+			),
+			newResourceGroupTarget("resourceGroup2",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type1",
+						Metrics:      []string{"metric1"},
+						Aggregations: []string{"Total", "Average"},
+					},
+					{
+						ResourceType: "Microsoft/type2",
+						Metrics:      []string{"metric1", "metric2"},
+						Aggregations: []string{"Total"},
+					},
+				},
+			),
+			newResourceGroupTarget("resourceGroup3",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type2",
+						Metrics:      []string{},
+						Aggregations: []string{},
+					},
+				},
+			),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	for index := 1; index <= 25; index++ {
+		if index <= 10 {
+			am.ResourceGroupTargets[0].Resources[3].Metrics = append(am.ResourceGroupTargets[0].Resources[3].Metrics, "metric1")
+			am.ResourceGroupTargets[0].Resources[4].Metrics = append(am.ResourceGroupTargets[0].Resources[4].Metrics, "metric1")
+		} else if index <= 22 {
+			am.ResourceGroupTargets[0].Resources[3].Metrics = append(am.ResourceGroupTargets[0].Resources[3].Metrics, "metric2")
+			am.ResourceGroupTargets[0].Resources[4].Metrics = append(am.ResourceGroupTargets[0].Resources[4].Metrics, "metric2")
+		} else {
+			am.ResourceGroupTargets[0].Resources[3].Metrics = append(am.ResourceGroupTargets[0].Resources[3].Metrics, "metric2")
+			am.ResourceGroupTargets[0].Resources[4].Metrics = append(am.ResourceGroupTargets[0].Resources[4].Metrics, "metric3")
+		}
+	}
+
+	resourceGroup1ResourcesBody, err := getFileBody("testData/resource_group_1_resources_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceGroup1ResourcesBody)
+
+	resourceGroup2ResourcesBody, err := getFileBody("testData/resource_group_2_resources_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceGroup2ResourcesBody)
+
+	resourceGroup3ResourcesBody, err := getFileBody("testData/resource_group_3_resources_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceGroup3ResourcesBody)
+
+	resourceMetricDefinitionsBody, err := getFileBody("testData/metric_definitions_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceMetricDefinitionsBody)
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -561,28 +412,124 @@ func TestInitOnlyResourceGroupTargets_Success(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
-		httpmock.NewStringResponder(200, `{"access_token": "abc123456789", "expires_on": "1636548796"}`))
+		httpmock.NewStringResponder(200, `{"access_token": "accessToken", "expires_on": "1636548796"}`))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[0]),
-		httpmock.NewStringResponder(200, resourceGroup1ResourcesBody))
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[0].ResourceGroup),
+		httpmock.NewBytesResponder(200, resourceGroup1ResourcesBody))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[1]),
-		httpmock.NewStringResponder(200, resourceGroup2ResourcesBody))
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[1].ResourceGroup),
+		httpmock.NewBytesResponder(200, resourceGroup2ResourcesBody))
 
-	err := am.Init()
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[2].ResourceGroup),
+		httpmock.NewBytesResponder(200, resourceGroup3ResourcesBody))
 
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup1/providers/Microsoft/type1/resourceGroup1Resource1"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup1/providers/Microsoft/type1/resourceGroup1Resource2"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup1/providers/Microsoft/type2/resourceGroup1Resource3"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup2/providers/Microsoft/type1/resourceGroup2Resource1"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup2/providers/Microsoft/type3/resourceGroup2Resource2"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup2/providers/Microsoft/type3/resourceGroup2Resource3"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	err = am.Init()
 	require.NoError(t, err)
-	assert.Equal(t, 4, len(am.ResourceTargets))
 
-	resetAzureMonitor()
+	assert.Equal(t, 13, len(am.ResourceTargets))
 }
 
-func TestInitOnlySubscriptionTargets_Success(t *testing.T) {
-	am.SubscriptionTargets = subscriptionTargets
+func TestInit_SubscriptionTargetsOnly(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		SubscriptionTargets: []*Resource{
+			{
+				ResourceType: "Microsoft/type1",
+				Metrics:      []string{"metric1", "metric2", "metric3"},
+				Aggregations: []string{"Total"},
+			},
+			{
+				ResourceType: "Microsoft/type2",
+				Metrics:      []string{"metric3"},
+				Aggregations: []string{"Total", "Average"},
+			},
+			{
+				ResourceType: "Microsoft/type3",
+				Metrics:      []string{},
+				Aggregations: []string{},
+			},
+			{
+				ResourceType: "Microsoft/type3",
+				Metrics:      []string{},
+				Aggregations: []string{},
+			},
+			{
+				ResourceType: "Microsoft/type3",
+				Metrics:      []string{},
+				Aggregations: []string{},
+			},
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	for index := 1; index <= 25; index++ {
+		if index <= 10 {
+			am.SubscriptionTargets[3].Metrics = append(am.SubscriptionTargets[3].Metrics, "metric1")
+			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, "metric1")
+		} else if index <= 22 {
+			am.SubscriptionTargets[3].Metrics = append(am.SubscriptionTargets[3].Metrics, "metric2")
+			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, "metric2")
+		} else {
+			am.SubscriptionTargets[3].Metrics = append(am.SubscriptionTargets[3].Metrics, "metric2")
+			am.SubscriptionTargets[4].Metrics = append(am.SubscriptionTargets[4].Metrics, "metric3")
+		}
+	}
+
+	subscriptionResourceGroupsBody, err := getFileBody("testData/subscription_resource_groups_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, subscriptionResourceGroupsBody)
+
+	resourceGroup1Body, err := getFileBody("testData/resource_group_1_resources_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceGroup1Body)
+
+	resourceGroup2Body, err := getFileBody("testData/resource_group_2_resources_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceGroup2Body)
+
+	resourceMetricDefinitionsBody, err := getFileBody("testData/metric_definitions_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceMetricDefinitionsBody)
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -590,35 +537,151 @@ func TestInitOnlySubscriptionTargets_Success(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
-		httpmock.NewStringResponder(200, `{"access_token": "abc123456789", "expires_on": "1636548796"}`))
+		httpmock.NewStringResponder(200, `{"access_token": "accessToken", "expires_on": "1636548796"}`))
 
 	httpmock.RegisterResponder(
 		"GET",
 		am.buildSubscriptionResourceGroupsAPIURL(),
-		httpmock.NewStringResponder(200, subscriptionResourceGroupsBody))
+		httpmock.NewBytesResponder(200, subscriptionResourceGroupsBody))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildResourceGroupResourcesAPIURL(resourceGroupTargets[0]),
-		httpmock.NewStringResponder(200, resourceGroup1ResourcesBody))
+		am.buildResourceGroupResourcesAPIURL("resourceGroup1"),
+		httpmock.NewBytesResponder(200, resourceGroup1Body))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildResourceGroupResourcesAPIURL(resourceGroupTargets[1]),
-		httpmock.NewStringResponder(200, resourceGroup2ResourcesBody))
+		am.buildResourceGroupResourcesAPIURL("resourceGroup2"),
+		httpmock.NewBytesResponder(200, resourceGroup2Body))
 
-	err := am.Init()
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup1/providers/Microsoft/type1/resourceGroup1Resource1"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
 
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup1/providers/Microsoft/type1/resourceGroup1Resource2"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup1/providers/Microsoft/type2/resourceGroup1Resource3"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup2/providers/Microsoft/type1/resourceGroup2Resource1"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup2/providers/Microsoft/type3/resourceGroup2Resource2"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup2/providers/Microsoft/type3/resourceGroup2Resource3"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	err = am.Init()
 	require.NoError(t, err)
-	assert.Equal(t, 4, len(am.ResourceTargets))
 
-	resetAzureMonitor()
+	assert.Equal(t, 21, len(am.ResourceTargets))
+	assert.Equal(t, 2, len(am.ResourceGroupTargets))
+
+	for _, target := range am.ResourceGroupTargets {
+		if target.ResourceGroup == "resourceGroup1" || target.ResourceGroup == "resourceGroup2" {
+			assert.Equal(t, 5, len(target.Resources))
+			assert.Equal(t, am.SubscriptionTargets, target.Resources)
+		}
+	}
 }
 
-func TestInitAllTargetTypes_Success(t *testing.T) {
-	am.SubscriptionTargets = subscriptionTargets
-	am.ResourceGroupTargets = resourceGroupTargets
-	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget2)
+func TestInit_AllTargetTypes(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource", []string{"metric1"}, []string{"Total"}),
+			newResourceTarget("resource", []string{}, []string{}),
+		},
+		ResourceGroupTargets: []*ResourceGroupTarget{
+			newResourceGroupTarget("resourceGroup1",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type1",
+						Metrics:      []string{"metric1", "metric2"},
+						Aggregations: []string{"Total"},
+					},
+					{
+						ResourceType: "Microsoft/type2",
+						Metrics:      []string{"metric1", "metric2"},
+						Aggregations: []string{"Average"},
+					},
+				},
+			),
+			newResourceGroupTarget("resourceGroup2",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type1",
+						Metrics:      []string{"metric1"},
+						Aggregations: []string{"Total", "Average"},
+					},
+					{
+						ResourceType: "Microsoft/type2",
+						Metrics:      []string{"metric1", "metric2"},
+						Aggregations: []string{"Total"},
+					},
+				},
+			),
+			newResourceGroupTarget("resourceGroup3",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type2",
+						Metrics:      []string{},
+						Aggregations: []string{},
+					},
+				},
+			),
+		},
+		SubscriptionTargets: []*Resource{
+			{
+				ResourceType: "Microsoft/type1",
+				Metrics:      []string{"metric1", "metric2", "metric3"},
+				Aggregations: []string{"Total"},
+			},
+			{
+				ResourceType: "Microsoft/type2",
+				Metrics:      []string{"metric3"},
+				Aggregations: []string{"Total", "Average"},
+			},
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	subscriptionResourceGroupsBody, err := getFileBody("testData/subscription_resource_groups_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, subscriptionResourceGroupsBody)
+
+	resourceGroup1ResourcesBody, err := getFileBody("testData/resource_group_1_resources_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceGroup1ResourcesBody)
+
+	resourceGroup2ResourcesBody, err := getFileBody("testData/resource_group_2_resources_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceGroup2ResourcesBody)
+
+	resourceGroup3ResourcesBody, err := getFileBody("testData/resource_group_3_resources_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceGroup3ResourcesBody)
+
+	resourceMetricDefinitionsBody, err := getFileBody("testData/metric_definitions_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceMetricDefinitionsBody)
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -626,118 +689,457 @@ func TestInitAllTargetTypes_Success(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
-		httpmock.NewStringResponder(200, `{"access_token": "abc123456789", "expires_on": "1636548796"}`))
+		httpmock.NewStringResponder(200, `{"access_token": "accessToken", "expires_on": "1636548796"}`))
 
 	httpmock.RegisterResponder(
 		"GET",
 		am.buildSubscriptionResourceGroupsAPIURL(),
-		httpmock.NewStringResponder(200, subscriptionResourceGroupsBody))
+		httpmock.NewBytesResponder(200, subscriptionResourceGroupsBody))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildResourceGroupResourcesAPIURL(resourceGroupTargets[0]),
-		httpmock.NewStringResponder(200, resourceGroup1ResourcesBody))
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[0].ResourceGroup),
+		httpmock.NewBytesResponder(200, resourceGroup1ResourcesBody))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildResourceGroupResourcesAPIURL(resourceGroupTargets[1]),
-		httpmock.NewStringResponder(200, resourceGroup2ResourcesBody))
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[1].ResourceGroup),
+		httpmock.NewBytesResponder(200, resourceGroup2ResourcesBody))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricDefinitionsAPIURL(resourceTarget2),
-		httpmock.NewStringResponder(200, resourceMetricDefinitionsBody))
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[2].ResourceGroup),
+		httpmock.NewBytesResponder(200, resourceGroup3ResourcesBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup1/providers/Microsoft/type1/resourceGroup1Resource1"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup1/providers/Microsoft/type1/resourceGroup1Resource2"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup1/providers/Microsoft/type2/resourceGroup1Resource3"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL("resourceGroups/resourceGroup2/providers/Microsoft/type1/resourceGroup2Resource1"),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(am.ResourceTargets[0].ResourceID),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildMetricDefinitionsAPIURL(am.ResourceTargets[1].ResourceID),
+		httpmock.NewBytesResponder(200, resourceMetricDefinitionsBody))
+
+	err = am.Init()
+	require.NoError(t, err)
+
+	assert.Equal(t, 14, len(am.ResourceTargets))
+	assert.Equal(t, 5, len(am.ResourceGroupTargets))
+}
+
+func TestInit_ResourceGroupTargetsOnlyNoResourceTargetsCreated(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceGroupTargets: []*ResourceGroupTarget{
+			newResourceGroupTarget("resourceGroup1",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type3",
+						Metrics:      []string{"metric1", "metric2"},
+						Aggregations: []string{"Total"},
+					},
+				},
+			),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	resourceGroup1ResourcesBody, err := getFileBody("testData/resource_group_1_resources_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resourceGroup1ResourcesBody)
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"POST",
+		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
+		httpmock.NewStringResponder(200, `{"access_token": "accessToken", "expires_on": "1636548796"}`))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildResourceGroupResourcesAPIURL(am.ResourceGroupTargets[0].ResourceGroup),
+		httpmock.NewBytesResponder(200, resourceGroup1ResourcesBody))
+
+	err = am.Init()
+	require.Error(t, err)
+}
+
+func TestInit_SubscriptionTargetsOnlyNoResourceGroupTargetsCreated(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		SubscriptionTargets: []*Resource{
+			{
+				ResourceType: "Microsoft/type1",
+				Metrics:      []string{"metric1", "metric2", "metric3"},
+				Aggregations: []string{"Total"},
+			},
+			{
+				ResourceType: "Microsoft/type2",
+				Metrics:      []string{"metric3"},
+				Aggregations: []string{"Total", "Average"},
+			},
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"POST",
+		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
+		httpmock.NewStringResponder(200, `{"access_token": "accessToken", "expires_on": "1636548796"}`))
+
+	httpmock.RegisterResponder(
+		"GET",
+		am.buildSubscriptionResourceGroupsAPIURL(),
+		httpmock.NewStringResponder(200, `{"value": []}`))
 
 	err := am.Init()
-
-	require.NoError(t, err)
-	assert.Equal(t, 10, len(am.ResourceTargets))
-
-	resetAzureMonitor()
+	require.Error(t, err)
 }
 
 func TestInit_NoSubscriptionID(t *testing.T) {
-	am.SubscriptionID = ""
+	am := &AzureMonitor{
+		ClientID:     "clientID",
+		ClientSecret: "clientSecret",
+		TenantID:     "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource", []string{}, []string{}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	err := am.Init()
-
 	require.Error(t, err)
-
-	resetAzureMonitor()
 }
 
 func TestInit_NoClientID(t *testing.T) {
-	am.ClientID = ""
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource", []string{}, []string{}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	err := am.Init()
-
 	require.Error(t, err)
-
-	resetAzureMonitor()
 }
 
 func TestInit_NoClientSecret(t *testing.T) {
-	am.ClientSecret = ""
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource", []string{}, []string{}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	err := am.Init()
-
 	require.Error(t, err)
-
-	resetAzureMonitor()
 }
 
 func TestInit_NoTenantID(t *testing.T) {
-	am.TenantID = ""
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource", []string{}, []string{}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	err := am.Init()
-
 	require.Error(t, err)
-
-	resetAzureMonitor()
 }
 
 func TestInit_NoTargets(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		Log:            testutil.Logger{},
+		azureClient:    newAzureClient(),
+	}
+
 	err := am.Init()
-
 	require.Error(t, err)
-
-	resetAzureMonitor()
 }
 
-func TestInit_NoResourceTargetResourceID(t *testing.T) {
-	am.ResourceTargets = append(am.ResourceTargets, NewResourceTarget("", []string{}, []string{}))
+func TestInit_ResourceTargetWithoutResourceID(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("", []string{}, []string{}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	err := am.Init()
-
 	require.Error(t, err)
-
-	resetAzureMonitor()
 }
 
-func TestInit_NoResourceGroupTargetResourceGroup(t *testing.T) {
-	am.ResourceGroupTargets = append(am.ResourceGroupTargets, NewResourceGroupTarget("", []*Resource{}))
+func TestInit_ResourceTargetWithInvalidAggregation(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource", []string{}, []string{"invalidAggregation"}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	err := am.Init()
-
 	require.Error(t, err)
-
-	resetAzureMonitor()
 }
 
-func TestInit_NoResourceGroupTargetResourceType(t *testing.T) {
-	am.ResourceGroupTargets = append(am.ResourceGroupTargets, NewResourceGroupTarget("azure-rg1", []*Resource{}))
+func TestInit_ResourceGroupTargetWithoutResourceGroup(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceGroupTargets: []*ResourceGroupTarget{
+			newResourceGroupTarget("",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type",
+						Metrics:      []string{},
+						Aggregations: []string{},
+					},
+				},
+			),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	err := am.Init()
-
 	require.Error(t, err)
-
-	resetAzureMonitor()
 }
 
-func TestInit_NoSubscriptionTargetResourceType(t *testing.T) {
-	am.SubscriptionTargets = append(am.SubscriptionTargets, &Resource{})
+func TestInit_ResourceGroupTargetWithResourceWithoutResourceType(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceGroupTargets: []*ResourceGroupTarget{
+			newResourceGroupTarget("",
+				[]*Resource{
+					{
+						ResourceType: "",
+						Metrics:      []string{},
+						Aggregations: []string{},
+					},
+				},
+			),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
 	err := am.Init()
-
 	require.Error(t, err)
+}
 
-	resetAzureMonitor()
+func TestInit_ResourceGroupTargetWithInvalidAggregation(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceGroupTargets: []*ResourceGroupTarget{
+			newResourceGroupTarget("",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type",
+						Metrics:      []string{},
+						Aggregations: []string{"invalidAggregation"},
+					},
+				},
+			),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	err := am.Init()
+	require.Error(t, err)
+}
+
+func TestInit_ResourceGroupTargetWithoutResources(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceGroupTargets: []*ResourceGroupTarget{
+			newResourceGroupTarget("",
+				[]*Resource{},
+			),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	err := am.Init()
+	require.Error(t, err)
+}
+
+func TestInit_SubscriptionTargetWithoutResourceType(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceGroupTargets: []*ResourceGroupTarget{
+			newResourceGroupTarget("",
+				[]*Resource{
+					{
+						ResourceType: "",
+						Metrics:      []string{},
+						Aggregations: []string{},
+					},
+				},
+			),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	err := am.Init()
+	require.Error(t, err)
+}
+
+func TestInit_SubscriptionTargetWithInvalidAggregation(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceGroupTargets: []*ResourceGroupTarget{
+			newResourceGroupTarget("",
+				[]*Resource{
+					{
+						ResourceType: "Microsoft/type",
+						Metrics:      []string{},
+						Aggregations: []string{"invalidAggregation"},
+					},
+				},
+			),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	err := am.Init()
+	require.Error(t, err)
 }
 
 func TestGather_Success(t *testing.T) {
-	am.ResourceTargets = append(am.ResourceTargets, resourceTarget1, resourceTarget3)
+	am := &AzureMonitor{
+		SubscriptionID: "subscriptionID",
+		ClientID:       "clientID",
+		ClientSecret:   "clientSecret",
+		TenantID:       "tenantID",
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget("resource1", []string{"metric1", "metric2", "metric3"}, []string{"Total", "Maximum"}),
+			newResourceTarget("resource2", []string{"metric1", "metric2", "metric3"}, []string{"Total", "Maximum"}),
+		},
+		Log:         testutil.Logger{},
+		azureClient: newAzureClient(),
+	}
+
+	expectedResource1Metric1Name := "azure_monitor_microsoft_type1_metric1"
+	expectedResource1Metric1MetricFields := make(map[string]interface{}, 0)
+	expectedResource1Metric1MetricFields["timeStamp"] = "2021-11-05T10:59:00Z"
+	expectedResource1Metric1MetricFields["total"] = 5.0
+	expectedResource1Metric1MetricFields["maximum"] = 5.0
+
+	expectedResource1Metric2Name := "azure_monitor_microsoft_type1_metric2"
+	expectedResource1Metric2MetricFields := make(map[string]interface{}, 0)
+	expectedResource1Metric2MetricFields["timeStamp"] = "2021-11-05T10:57:00Z"
+	expectedResource1Metric2MetricFields["total"] = 4.0
+	expectedResource1Metric2MetricFields["maximum"] = 9.0
+
+	expectedResource1MetricsTags := make(map[string]string, 0)
+	expectedResource1MetricsTags["subscription_id"] = "subscriptionID"
+	expectedResource1MetricsTags["resource_group"] = "resourceGroup"
+	expectedResource1MetricsTags["namespace"] = "Microsoft/type1"
+	expectedResource1MetricsTags["resource_name"] = "resource1"
+	expectedResource1MetricsTags["resource_region"] = "eastus"
+	expectedResource1MetricsTags["unit"] = "Count"
+
+	expectedResource2Metric1Name := "azure_monitor_microsoft_type2_metric1"
+	expectedResource2Metric1MetricFields := make(map[string]interface{}, 0)
+	expectedResource2Metric1MetricFields["timeStamp"] = "2021-11-05T10:59:00Z"
+	expectedResource2Metric1MetricFields["total"] = 10.0
+	expectedResource2Metric1MetricFields["maximum"] = 10.0
+
+	expectedResource2MetricsTags := make(map[string]string, 0)
+	expectedResource2MetricsTags["subscription_id"] = "subscriptionID"
+	expectedResource2MetricsTags["resource_group"] = "resourceGroup"
+	expectedResource2MetricsTags["namespace"] = "Microsoft/type2"
+	expectedResource2MetricsTags["resource_name"] = "resource2"
+	expectedResource2MetricsTags["resource_region"] = "eastus"
+	expectedResource2MetricsTags["unit"] = "Count"
+
+	resource1MetricValuesBody, err := getFileBody("testData/resource_1_metric_values_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resource1MetricValuesBody)
+
+	resource2MetricValuesBody, err := getFileBody("testData/resource_2_metric_values_body.json")
+	require.NoError(t, err)
+	require.NotNil(t, resource2MetricValuesBody)
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -745,30 +1147,25 @@ func TestGather_Success(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID),
-		httpmock.NewStringResponder(200, `{"access_token": "abc123456789", "expires_on": "1636548796"}`))
+		httpmock.NewStringResponder(200, `{"access_token": "accessToken", "expires_on": "1636548796"}`))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricValuesAPIURL(resourceTarget1),
-		httpmock.NewStringResponder(200, resourceTarget1MetricValues))
+		am.buildMetricValuesAPIURL(am.ResourceTargets[0]),
+		httpmock.NewBytesResponder(200, resource1MetricValuesBody))
 
 	httpmock.RegisterResponder(
 		"GET",
-		am.buildMetricValuesAPIURL(resourceTarget3),
-		httpmock.NewStringResponder(200, resourceTarget2MetricValues))
+		am.buildMetricValuesAPIURL(am.ResourceTargets[1]),
+		httpmock.NewBytesResponder(200, resource2MetricValuesBody))
 
 	acc := testutil.Accumulator{}
-	err := acc.GatherError(am.Gather)
-
+	err = acc.GatherError(am.Gather)
 	require.NoError(t, err)
 
-	resourceTarget1Metrics := getResourceTarget1Metrics()
-	resourceTarget2Metrics := getResourceTarget2Metrics()
+	assert.Equal(t, 3, len(acc.Metrics))
 
-	acc.AssertContainsTaggedFields(t, resourceTarget1Metrics[0].name, resourceTarget1Metrics[0].fields, resourceTarget1Metrics[0].tags)
-	acc.AssertContainsTaggedFields(t, resourceTarget1Metrics[1].name, resourceTarget1Metrics[1].fields, resourceTarget1Metrics[1].tags)
-
-	acc.AssertContainsTaggedFields(t, resourceTarget2Metrics[0].name, resourceTarget2Metrics[0].fields, resourceTarget2Metrics[0].tags)
-
-	resetAzureMonitor()
+	acc.AssertContainsTaggedFields(t, expectedResource1Metric1Name, expectedResource1Metric1MetricFields, expectedResource1MetricsTags)
+	acc.AssertContainsTaggedFields(t, expectedResource1Metric2Name, expectedResource1Metric2MetricFields, expectedResource1MetricsTags)
+	acc.AssertContainsTaggedFields(t, expectedResource2Metric1Name, expectedResource2Metric1MetricFields, expectedResource2MetricsTags)
 }

@@ -1,0 +1,20 @@
+{
+  "value": [
+    {
+      "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup1",
+      "name": "resourceGroup1",
+      "location": "eastus",
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    },
+    {
+      "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup2",
+      "name": "resourceGroup2",
+      "location": "eastus",
+      "properties": {
+        "provisioningState": "Succeeded"
+      }
+    }
+  ]
+}
