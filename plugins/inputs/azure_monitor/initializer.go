@@ -265,14 +265,8 @@ func (am *AzureMonitor) checkResourceTargetsMetricsValidation() error {
 				return fmt.Errorf("error getting resource target %s metric definitions: %v", target.ResourceID, err)
 			}
 
-			areMetricsValid, err := target.areMetricsValid(body)
-			if err != nil {
-				return fmt.Errorf("error checking if resource target %s metrics are valid: %v", target.ResourceID, err)
-			}
-
-			if !areMetricsValid {
-				return fmt.Errorf("resource target %s has invalid metrics. Please check your resource targets, "+
-					"resource group targets and subscription targets in your configuration", target.ResourceID)
+			if err = target.checkMetricsValidation(body); err != nil {
+				return fmt.Errorf("error checking resource target %s metrics: %v", target.ResourceID, err)
 			}
 		}
 	}
@@ -446,10 +440,10 @@ func (rt *ResourceTarget) setAggregations() {
 		minAggregationName, maxAggregationName)
 }
 
-func (rt *ResourceTarget) areMetricsValid(metricDefinitionsBody map[string]interface{}) (bool, error) {
+func (rt *ResourceTarget) checkMetricsValidation(metricDefinitionsBody map[string]interface{}) error {
 	values, err := getMetricDefinitionsValues(metricDefinitionsBody)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	for _, metric := range rt.Metrics {
@@ -458,7 +452,7 @@ func (rt *ResourceTarget) areMetricsValid(metricDefinitionsBody map[string]inter
 		for _, value := range values {
 			metricName, err := getMetricDefinitionsMetricName(value.(map[string]interface{}))
 			if err != nil {
-				return false, err
+				return err
 			}
 
 			if metric == *metricName {
@@ -468,11 +462,12 @@ func (rt *ResourceTarget) areMetricsValid(metricDefinitionsBody map[string]inter
 		}
 
 		if !isMetricExist {
-			return false, nil
+			return fmt.Errorf("resource target has invalid metric %s. Please check your resource targets, "+
+				"resource group targets and subscription targets in your configuration", metric)
 		}
 	}
 
-	return true, nil
+	return nil
 }
 
 func (rgt *ResourceGroupTarget) getResourcesWithResourceType(resourceType string) []*Resource {
