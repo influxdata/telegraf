@@ -10,6 +10,7 @@ import (
 	"time"
 
 	jwtGo "github.com/golang-jwt/jwt/v4"
+
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 
@@ -159,13 +160,13 @@ func (cr *CloudRun) send(reqBody []byte) error {
 	jwtGo.ParseWithClaims(cr.accessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
 		return nil, nil
 	})
-	fmt.Println("exp:", claims.ExpiresAt)
+
 	// Request new token if expired
 	if !claims.VerifyExpiresAt(time.Now(), true) {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(cr.Timeout))
 		defer cancel()
-		fmt.Println("y2k")
+
 		cr.getAccessToken(ctx)
 		if err != nil {
 			return err
