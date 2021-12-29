@@ -1329,7 +1329,7 @@ func TestCanNotParse(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestMissingDefaultMibPath(t *testing.T) {
+func TestMissingMibPath(t *testing.T) {
 	log := testutil.Logger{}
 	path := []string{"non-existing-directory"}
 	err := snmp.LoadMibsFromPath(path, log)
