@@ -54,7 +54,6 @@ const (
 	defaultContentType   = "application/octet-stream"
 	defaultAccept        = "application/json"
 	defaultMethod        = http.MethodPost
-	defaultURL           = "http://127.0.0.1:8080/telegraf"
 )
 
 type CloudRun struct {
@@ -167,7 +166,7 @@ func (cr *CloudRun) send(reqBody []byte) error {
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(cr.Timeout))
 		defer cancel()
 
-		cr.getAccessToken(ctx)
+		err = cr.getAccessToken(ctx)
 		if err != nil {
 			return err
 		}
@@ -199,8 +198,6 @@ func (cr *CloudRun) send(reqBody []byte) error {
 
 func init() {
 	outputs.Add("cloudrun", func() telegraf.Output {
-		return &CloudRun{
-			URL: defaultURL,
-		}
+		return &CloudRun{}
 	})
 }
