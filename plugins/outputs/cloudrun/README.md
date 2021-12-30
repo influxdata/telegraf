@@ -26,12 +26,10 @@ Below is an example of how to send metrics into a proxy located in Cloud Run:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "wavefront"
 
-  ## NOTE: The default headers have already been set that is appropriate to send
-  ## metrics which are set to the following so you don't have to.
+  ## NOTE: The default headers have already been set to the following by default:
   ## defaultContentType   = "application/octet-stream"
   ## defaultAccept        = "application/json"
   ## defaultMethod        = http.MethodPost
-  ## The token is generated using the URL, credentials_file, and cloudrun_email you set in your conf file
 ```
 
 Developed by Casey Flanigan, Zachary Mares, and John Farrington
