@@ -15,9 +15,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var (
-	testdataDir = getTestdataDir()
-)
+var testdataDir = getTestdataDir()
 
 func TestInitDefault(t *testing.T) {
 	// This test should succeed with the default initialization.
