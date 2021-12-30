@@ -9,10 +9,10 @@
         "avg-daily-temp": 23,
         "fw-version": "01.02.0034",
         "sys-name": "ABCXIO001",
-		"power-feed": "PWR-A",
+        "power-feed": "PWR-A",
         "ups-load-in-percent": 21,
         "name": "X1-BBU",
-		"enabled-state": "enabled",
+        "enabled-state": "enabled",
         "is-low-battery-no-input": "false",
         "ups-need-battery-replacement": "false",
         "model-name": "Eaton Model Name"

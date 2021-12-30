@@ -16,111 +16,15 @@ import (
 )
 
 type XtremIO struct {
-	Username   string   `toml:"username"`
-	Password   string   `toml:"password"`
-	URL        string   `toml:"url"`
-	Collectors []string `toml:"collectors"`
-	cookie     *http.Cookie
-	client     *http.Client
+	Username   string          `toml:"username"`
+	Password   string          `toml:"password"`
+	URL        string          `toml:"url"`
+	Collectors []string        `toml:"collectors"`
+	Log        telegraf.Logger `toml:"-"`
 	tls.ClientConfig
-	Log telegraf.Logger `toml:"-"`
-}
 
-type BBU struct {
-	Content struct {
-		Serial       string `json:"serial-number"`
-		Guid         string `json:"guid"`
-		PowerFeed    string `json:"power-feed"`
-		Name         string `json:"Name"`
-		ModelName    string `json:"model-name"`
-		BBUPower     int    `json:"power"`
-		BBUDailyTemp int    `json:"avg-daily-temp"`
-		BBUEnabled   string `json:"enabled-state"`
-		BBUNeedBat   string `json:"ups-need-battery-replacement"`
-		BBULowBat    string `json:"is-low-battery-no-input"`
-	}
-}
-
-type Clusters struct {
-	Content struct {
-		HardwarePlatform   string  `json:"hardware-platform"`
-		LicenseId          string  `json:"license-id"`
-		Guid               string  `json:"guid"`
-		Name               string  `json:"name"`
-		SerialNumber       string  `json:"sys-psnt-serial-number"`
-		CompressionFactor  float64 `json:"compression-factor"`
-		MemoryUsed         int     `json:"total-memory-in-use-in-percent"`
-		ReadIops           int     `json:"rd-iops,string"`
-		WriteIops          int     `json:"wr-iops,string"`
-		NumVolumes         int     `json:"num-of-vols"`
-		FreeSSDSpace       int     `json:"free-ud-ssd-space-in-percent"`
-		NumSSDs            int     `json:"num-of-ssds"`
-		DataReductionRatio float64 `json:"data-reduction-ratio"`
-	}
-}
-
-type SSD struct {
-	Content struct {
-		ModelName       string `json:"model-name"`
-		FirmwareVersion string `json:"fw-version"`
-		SSDuid          string `json:"ssd-uid"`
-		Guid            string `json:"guid"`
-		SysName         string `json:"sys-name"`
-		SerialNumber    string `json:"serial-number"`
-		Size            int    `json:"ssd-size,string"`
-		SpaceUsed       int    `json:"ssd-space-in-use,string"`
-		WriteIops       int    `json:"wr-iops,string"`
-		ReadIops        int    `json:"rd-iops,string"`
-		WriteBandwidth  int    `json:"wr-bw,string"`
-		ReadBandwidth   int    `json:"rd-bw,string"`
-		NumBadSectors   int    `json:"num-bad-sectors"`
-	}
-}
-
-type Volumes struct {
-	Content struct {
-		Guid               string  `json:"guid"`
-		SysName            string  `json:"sys-name"`
-		Name               string  `json:"name"`
-		ReadIops           int     `json:"rd-iops,string"`
-		WriteIops          int     `json:"wr-iops,string"`
-		ReadLatency        int     `json:"rd-latency,string"`
-		WriteLatency       int     `json:"wr-latency,string"`
-		DataReductionRatio float64 `json:"data-reduction-ratio,string"`
-		ProvisionedSpace   int     `json:"vol-size,string"`
-		UsedSpace          int     `json:"logical-space-in-use,string"`
-	}
-}
-
-type XMS struct {
-	Content struct {
-		Guid            string  `json:"guid"`
-		Name            string  `json:"name"`
-		Version         string  `json:"version"`
-		IP              string  `json:"xms-ip"`
-		WriteIops       int     `json:"wr-iops,string"`
-		ReadIops        int     `json:"rd-iops,string"`
-		EfficiencyRatio float64 `json:"overall-efficiency-ratio,string"`
-		SpaceUsed       int     `json:"ssd-space-in-use,string"`
-		RamUsage        int     `json:"ram-usage,string"`
-		RamTotal        int     `json:"ram-total,string"`
-		CpuUsage        float64 `json:"cpu"`
-		WriteLatency    int     `json:"wr-latency,string"`
-		ReadLatency     int     `json:"rd-latency,string"`
-		NumAccounts     int     `json:"num-of-user-accounts"`
-	}
-}
-
-type HREF struct {
-	Href string `json:"href"`
-}
-
-type CollectorResponse struct {
-	BBUs     []HREF `json:"bbus"`
-	Clusters []HREF `json:"clusters"`
-	SSDs     []HREF `json:"ssds"`
-	Volumes  []HREF `json:"volumes"`
-	XMS      []HREF `json:"xmss"`
+	cookie *http.Cookie
+	client *http.Client
 }
 
 const sampleConfig = `
@@ -266,6 +170,11 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 	}
 	wg.Wait()
 
+	// At the beginning of every collection, we re-authenticate.
+	// We reset this cookie so we don't accidentally use an
+	// expired cookie, we can just check if it's nil and know
+	// that we either need to re-authenticate or that the
+	// authentication failed to set the cookie.
 	xio.cookie = nil
 
 	return nil
@@ -293,12 +202,13 @@ func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		"name":          data.Content.Name,
 		"model_name":    data.Content.ModelName,
 	}
-	fields := make(map[string]interface{})
-	fields["bbus_power"] = data.Content.BBUPower
-	fields["bbus_average_daily_temp"] = data.Content.BBUDailyTemp
-	fields["bbus_enabled"] = (data.Content.BBUEnabled == "enabled")
-	fields["bbus_ups_need_battery_replacement"] = (data.Content.BBUNeedBat == "true")
-	fields["bbus_ups_low_battery_no_input"] = (data.Content.BBULowBat == "true")
+	fields := map[string]interface{}{
+		"bbus_power":                        data.Content.BBUPower,
+		"bbus_average_daily_temp":           data.Content.BBUDailyTemp,
+		"bbus_enabled":                      (data.Content.BBUEnabled == "enabled"),
+		"bbus_ups_need_battery_replacement": (data.Content.BBUNeedBat == true),
+		"bbus_ups_low_battery_no_input":     (data.Content.BBULowBat == true),
+	}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -325,15 +235,16 @@ func (xio *XtremIO) gatherClusters(acc telegraf.Accumulator, url string, wg *syn
 		"name":                   data.Content.Name,
 		"sys_psnt_serial_number": data.Content.SerialNumber,
 	}
-	fields := make(map[string]interface{})
-	fields["clusters_compression_factor"] = data.Content.CompressionFactor
-	fields["clusters_percent_memory_in_use"] = data.Content.MemoryUsed
-	fields["clusters_read_iops"] = data.Content.ReadIops
-	fields["clusters_write_iops"] = data.Content.WriteIops
-	fields["clusters_number_of_volumes"] = data.Content.NumVolumes
-	fields["clusters_free_ssd_space_in_percent"] = data.Content.FreeSSDSpace
-	fields["clusters_ssd_num"] = data.Content.NumSSDs
-	fields["clusters_data_reduction_ratio"] = data.Content.DataReductionRatio
+	fields := map[string]interface{}{
+		"clusters_compression_factor":        data.Content.CompressionFactor,
+		"clusters_percent_memory_in_use":     data.Content.MemoryUsed,
+		"clusters_read_iops":                 data.Content.ReadIops,
+		"clusters_write_iops":                data.Content.WriteIops,
+		"clusters_number_of_volumes":         data.Content.NumVolumes,
+		"clusters_free_ssd_space_in_percent": data.Content.FreeSSDSpace,
+		"clusters_ssd_num":                   data.Content.NumSSDs,
+		"clusters_data_reduction_ratio":      data.Content.DataReductionRatio,
+	}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -361,14 +272,15 @@ func (xio *XtremIO) gatherSSDs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		"sys_name":         data.Content.SysName,
 		"serial_number":    data.Content.SerialNumber,
 	}
-	fields := make(map[string]interface{})
-	fields["ssds_ssd_size"] = data.Content.Size
-	fields["ssds_ssd_space_in_use"] = data.Content.SpaceUsed
-	fields["ssds_write_iops"] = data.Content.WriteIops
-	fields["ssds_read_iops"] = data.Content.ReadIops
-	fields["ssds_write_bandwidth"] = data.Content.WriteBandwidth
-	fields["ssds_read_bandwidth"] = data.Content.ReadBandwidth
-	fields["ssds_num_bad_sectors"] = data.Content.NumBadSectors
+	fields := map[string]interface{}{
+		"ssds_ssd_size":         data.Content.Size,
+		"ssds_ssd_space_in_use": data.Content.SpaceUsed,
+		"ssds_write_iops":       data.Content.WriteIops,
+		"ssds_read_iops":        data.Content.ReadIops,
+		"ssds_write_bandwidth":  data.Content.WriteBandwidth,
+		"ssds_read_bandwidth":   data.Content.ReadBandwidth,
+		"ssds_num_bad_sectors":  data.Content.NumBadSectors,
+	}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -393,14 +305,15 @@ func (xio *XtremIO) gatherVolumes(acc telegraf.Accumulator, url string, wg *sync
 		"sys_name": data.Content.SysName,
 		"name":     data.Content.Name,
 	}
-	fields := make(map[string]interface{})
-	fields["volumes_read_iops"] = data.Content.ReadIops
-	fields["volumes_write_iops"] = data.Content.WriteIops
-	fields["volumes_read_latency"] = data.Content.ReadLatency
-	fields["volumes_write_latency"] = data.Content.WriteLatency
-	fields["volumes_data_reduction_ratio"] = data.Content.DataReductionRatio
-	fields["volumes_provisioned_space"] = data.Content.ProvisionedSpace
-	fields["volumes_used_space"] = data.Content.UsedSpace
+	fields := map[string]interface{}{
+		"volumes_read_iops":            data.Content.ReadIops,
+		"volumes_write_iops":           data.Content.WriteIops,
+		"volumes_read_latency":         data.Content.ReadLatency,
+		"volumes_write_latency":        data.Content.WriteLatency,
+		"volumes_data_reduction_ratio": data.Content.DataReductionRatio,
+		"volumes_provisioned_space":    data.Content.ProvisionedSpace,
+		"volumes_used_space":           data.Content.UsedSpace,
+	}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -426,17 +339,18 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 		"version": data.Content.Version,
 		"xms_ip":  data.Content.IP,
 	}
-	fields := make(map[string]interface{})
-	fields["xms_write_iops"] = data.Content.WriteIops
-	fields["xms_read_iops"] = data.Content.ReadIops
-	fields["xms_overall_efficiency_ratio"] = data.Content.EfficiencyRatio
-	fields["xms_ssd_space_in_use"] = data.Content.SpaceUsed
-	fields["xms_ram_in_use"] = data.Content.RamUsage
-	fields["xms_ram_total"] = data.Content.RamTotal
-	fields["xms_cpu_usage_total"] = data.Content.CpuUsage
-	fields["xms_write_latency"] = data.Content.WriteLatency
-	fields["xms_read_latency"] = data.Content.ReadLatency
-	fields["xms_user_accounts_count"] = data.Content.NumAccounts
+	fields := map[string]interface{}{
+		"xms_write_iops":               data.Content.WriteIops,
+		"xms_read_iops":                data.Content.ReadIops,
+		"xms_overall_efficiency_ratio": data.Content.EfficiencyRatio,
+		"xms_ssd_space_in_use":         data.Content.SpaceUsed,
+		"xms_ram_in_use":               data.Content.RamUsage,
+		"xms_ram_total":                data.Content.RamTotal,
+		"xms_cpu_usage_total":          data.Content.CpuUsage,
+		"xms_write_latency":            data.Content.WriteLatency,
+		"xms_read_latency":             data.Content.ReadLatency,
+		"xms_user_accounts_count":      data.Content.NumAccounts,
+	}
 
 	acc.AddFields("xio", fields, tags)
 }
@@ -473,6 +387,7 @@ func (xio *XtremIO) authenticate() error {
 	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "sessid" {
 			xio.cookie = cookie
+			break
 		}
 	}
 	return nil
