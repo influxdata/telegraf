@@ -1,4 +1,4 @@
-### Cloud Run
+### Cloud Run Output Plugin
 
 This plugin can be used to send time series metrics into a metrics proxy that is located in the Google Cloud Run service, with OAuth2 enabled, and includes token refresh. 
 There are two required fields, the URL where your Cloud Run application lives, and the JSON secret key file location, which is [generated](https://cloud.google.com/iam/docs/creating-managing-service-account-keys) by the user in their Google Cloud Run project. 
