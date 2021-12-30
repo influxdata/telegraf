@@ -23,6 +23,7 @@ import (
 )
 
 const sampleConfig = `
+  ## A plugin that can transmit metrics over OAuth2
   ## URL is the Cloud Run Wavefront proxy address to send metrics to
   # url = "http://127.0.0.1:8080/telegraf"
 
@@ -41,12 +42,10 @@ const sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "wavefront"
 
-  ## NOTE: The default headers have already been set that is appropriate to send
-  ## metrics which are set to the following so you don't have to.
+  ## NOTE: The default headers have already been set to the following by default:
   ## defaultContentType   = "application/octet-stream"
   ## defaultAccept        = "application/json"
   ## defaultMethod        = http.MethodPost
-  ## The token is generated using the URL, credentials_file, and cloudrun_email you set in your conf file
 `
 
 const (
