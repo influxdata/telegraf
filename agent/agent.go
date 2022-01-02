@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
+	`github.com/influxdata/telegraf/plugins/inputs/ping`
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -272,11 +273,15 @@ func (a *Agent) runInputs(
 	unit *inputUnit,
 ) {
 	var wg sync.WaitGroup
+	interval := time.Duration(a.Config.Agent.Interval)
 	for _, input := range unit.inputs {
 		// Overwrite agent interval if this plugin has its own.
-		interval := time.Duration(a.Config.Agent.Interval)
 		if input.Config.Interval != 0 {
 			interval = input.Config.Interval
+		}
+		switch tp := input.Input.(type) {
+		case *ping.Ping:
+			interval = time.Duration(tp.PingInterval*1000000)*time.Microsecond
 		}
 
 		// Overwrite agent precision if this plugin has its own.
