@@ -129,17 +129,19 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	var req *http.Request
-	var z *internal.ZlibEncoder
 	if d.Compress {
-		z, err = internal.NewZlibEncoder()
+		z, err := internal.NewZlibEncoder()
 		if err != nil {
 			return err
 		}
-		var buf []byte
-		if buf, err = z.Encode(tsBytes); err != nil {
+		buf, err := z.Encode(tsBytes)
+		if err != nil {
 			return err
 		}
 		req, err = http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(buf))
+		if err != nil {
+			return err
+		}
 		req.Header.Set("Content-Encoding", "deflate")
 	} else {
 		req, err = http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(tsBytes))
