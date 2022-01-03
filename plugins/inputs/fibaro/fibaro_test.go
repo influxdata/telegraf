@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -107,6 +106,7 @@ const devicesJSON = `
             "type": "com.fibaro.temperatureSensor",
             "enabled": true,
             "properties": {
+                "batteryLevel": "100",
                 "dead": "false",
                 "value": "22.80"
             },
@@ -161,7 +161,8 @@ func TestJSONSuccess(t *testing.T) {
 			payload = devicesJSON
 		}
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, payload)
+		_, err := fmt.Fprintln(w, payload)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -177,7 +178,7 @@ func TestJSONSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	// Gather should add 5 metrics
-	assert.Equal(t, uint64(5), acc.NMetrics())
+	require.Equal(t, uint64(5), acc.NMetrics())
 
 	// Ensure fields / values are correct - Device 1
 	tags := map[string]string{"deviceId": "1", "section": "Section 1", "room": "Room 1", "name": "Device 1", "type": "com.fibaro.binarySwitch"}
@@ -196,7 +197,7 @@ func TestJSONSuccess(t *testing.T) {
 
 	// Ensure fields / values are correct - Device 4
 	tags = map[string]string{"deviceId": "4", "section": "Section 3", "room": "Room 4", "name": "Device 4", "type": "com.fibaro.temperatureSensor"}
-	fields = map[string]interface{}{"value": float64(22.8)}
+	fields = map[string]interface{}{"batteryLevel": float64(100), "value": float64(22.8)}
 	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
 
 	// Ensure fields / values are correct - Device 5

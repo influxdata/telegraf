@@ -1,9 +1,32 @@
 # Datadog Output Plugin
 
-This plugin writes to the [Datadog Metrics API](http://docs.datadoghq.com/api/#metrics)
-and requires an `apikey` which can be obtained [here](https://app.datadoghq.com/account/settings#api)
-for the account.
+This plugin writes to the [Datadog Metrics API][metrics] and requires an
+`apikey` which can be obtained [here][apikey] for the account.
 
-If the point value being sent cannot be converted to a float64, the metric is skipped.
+## Configuration
 
-Metrics are grouped by converting any `_` characters to `.` in the Point Name.
+```toml
+[[outputs.datadog]]
+  ## Datadog API key
+  apikey = "my-secret-key"
+
+  ## Connection timeout.
+  # timeout = "5s"
+
+  ## Write URL override; useful for debugging.
+  # url = "https://app.datadoghq.com/api/v1/series"
+
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it isn't set)
+  # http_proxy_url = "http://localhost:8888"
+```
+
+## Metrics
+
+Datadog metric names are formed by joining the Telegraf metric name and the field
+key with a `.` character.
+
+Field values are converted to floating point numbers.  Strings and floats that
+cannot be sent over JSON, namely NaN and Inf, are ignored.
+
+[metrics]: https://docs.datadoghq.com/api/v1/metrics/#submit-metrics
+[apikey]: https://app.datadoghq.com/account/settings#api

@@ -1,23 +1,28 @@
 package strings
 
 import (
+	"encoding/base64"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type Strings struct {
-	Lowercase  []converter `toml:"lowercase"`
-	Uppercase  []converter `toml:"uppercase"`
-	Trim       []converter `toml:"trim"`
-	TrimLeft   []converter `toml:"trim_left"`
-	TrimRight  []converter `toml:"trim_right"`
-	TrimPrefix []converter `toml:"trim_prefix"`
-	TrimSuffix []converter `toml:"trim_suffix"`
-	Replace    []converter `toml:"replace"`
-	Left       []converter `toml:"left"`
+	Lowercase    []converter `toml:"lowercase"`
+	Uppercase    []converter `toml:"uppercase"`
+	Titlecase    []converter `toml:"titlecase"`
+	Trim         []converter `toml:"trim"`
+	TrimLeft     []converter `toml:"trim_left"`
+	TrimRight    []converter `toml:"trim_right"`
+	TrimPrefix   []converter `toml:"trim_prefix"`
+	TrimSuffix   []converter `toml:"trim_suffix"`
+	Replace      []converter `toml:"replace"`
+	Left         []converter `toml:"left"`
+	Base64Decode []converter `toml:"base64decode"`
+	ValidUTF8    []converter `toml:"valid_utf8"`
 
 	converters []converter
 	init       bool
@@ -38,6 +43,7 @@ type converter struct {
 	Old         string
 	New         string
 	Width       int
+	Replacement string
 
 	fn ConvertFunc
 }
@@ -51,6 +57,10 @@ const sampleConfig = `
   # [[processors.strings.lowercase]]
   #   field = "uri_stem"
   #   dest = "uri_stem_normalised"
+
+  ## Convert a field value to titlecase
+  # [[processors.strings.titlecase]]
+  #   field = "status"
 
   ## Trim leading and trailing whitespace using the default cutset
   # [[processors.strings.trim]]
@@ -86,6 +96,16 @@ const sampleConfig = `
   # [[processors.strings.left]]
   #   field = "message"
   #   width = 10
+
+  ## Decode a base64 encoded utf-8 string
+  # [[processors.strings.base64decode]]
+  #   field = "message"
+
+  ## Sanitize a string to ensure it is a valid utf-8 string
+  ## Each run of invalid UTF-8 byte sequences is replaced by the replacement string, which may be empty
+  # [[processors.strings.valid_utf8]]
+  #   field = "message"
+  #   replacement = ""
 `
 
 func (s *Strings) SampleConfig() string {
@@ -228,6 +248,10 @@ func (s *Strings) initOnce() {
 		c.fn = strings.ToUpper
 		s.converters = append(s.converters, c)
 	}
+	for _, c := range s.Titlecase {
+		c.fn = strings.Title
+		s.converters = append(s.converters, c)
+	}
 	for _, c := range s.Trim {
 		c := c
 		if c.Cutset != "" {
@@ -271,9 +295,9 @@ func (s *Strings) initOnce() {
 			newString := strings.Replace(s, c.Old, c.New, -1)
 			if newString == "" {
 				return s
-			} else {
-				return newString
 			}
+
+			return newString
 		}
 		s.converters = append(s.converters, c)
 	}
@@ -282,10 +306,29 @@ func (s *Strings) initOnce() {
 		c.fn = func(s string) string {
 			if len(s) < c.Width {
 				return s
-			} else {
-				return s[:c.Width]
 			}
+
+			return s[:c.Width]
 		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.Base64Decode {
+		c := c
+		c.fn = func(s string) string {
+			data, err := base64.StdEncoding.DecodeString(s)
+			if err != nil {
+				return s
+			}
+			if utf8.Valid(data) {
+				return string(data)
+			}
+			return s
+		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.ValidUTF8 {
+		c := c
+		c.fn = func(s string) string { return strings.ToValidUTF8(s, c.Replacement) }
 		s.converters = append(s.converters, c)
 	}
 

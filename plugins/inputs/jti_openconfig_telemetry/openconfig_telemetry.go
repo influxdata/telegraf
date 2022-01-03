@@ -2,37 +2,39 @@ package jti_openconfig_telemetry
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	internaltls "github.com/influxdata/telegraf/internal/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
-	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
+	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 )
 
 type OpenConfigTelemetry struct {
-	Servers         []string          `toml:"servers"`
-	Sensors         []string          `toml:"sensors"`
-	Username        string            `toml:"username"`
-	Password        string            `toml:"password"`
-	ClientID        string            `toml:"client_id"`
-	SampleFrequency internal.Duration `toml:"sample_frequency"`
-	StrAsTags       bool              `toml:"str_as_tags"`
-	RetryDelay      internal.Duration `toml:"retry_delay"`
-	EnableTLS       bool              `toml:"enable_tls"`
+	Servers         []string        `toml:"servers"`
+	Sensors         []string        `toml:"sensors"`
+	Username        string          `toml:"username"`
+	Password        string          `toml:"password"`
+	ClientID        string          `toml:"client_id"`
+	SampleFrequency config.Duration `toml:"sample_frequency"`
+	StrAsTags       bool            `toml:"str_as_tags"`
+	RetryDelay      config.Duration `toml:"retry_delay"`
+	EnableTLS       bool            `toml:"enable_tls"`
 	internaltls.ClientConfig
+
+	Log telegraf.Logger
 
 	sensorsConfig   []sensorConfig
 	grpcClientConns []*grpc.ClientConn
@@ -41,7 +43,7 @@ type OpenConfigTelemetry struct {
 
 var (
 	// Regex to match and extract data points from path value in received key
-	keyPathRegex = regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
+	keyPathRegex = regexp.MustCompile(`/([^/]*)\[([A-Za-z0-9\-/]*=[^\[]*)]`)
 	sampleConfig = `
   ## List of device addresses to collect telemetry from
   servers = ["localhost:1883"]
@@ -101,7 +103,7 @@ func (m *OpenConfigTelemetry) Description() string {
 	return "Read JTI OpenConfig Telemetry from listed sensors"
 }
 
-func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
+func (m *OpenConfigTelemetry) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -168,25 +170,18 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 			} else {
 				kv[xmlpath] = v.GetStrValue()
 			}
-			break
 		case *telemetry.KeyValue_DoubleValue:
 			kv[xmlpath] = v.GetDoubleValue()
-			break
 		case *telemetry.KeyValue_IntValue:
 			kv[xmlpath] = v.GetIntValue()
-			break
 		case *telemetry.KeyValue_UintValue:
 			kv[xmlpath] = v.GetUintValue()
-			break
 		case *telemetry.KeyValue_SintValue:
 			kv[xmlpath] = v.GetSintValue()
-			break
 		case *telemetry.KeyValue_BoolValue:
 			kv[xmlpath] = v.GetBoolValue()
-			break
 		case *telemetry.KeyValue_BytesValue:
 			kv[xmlpath] = v.GetBytesValue()
-			break
 		}
 
 		// Insert other tags from message
@@ -225,7 +220,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 	m.sensorsConfig = make([]sensorConfig, 0)
 	for _, sensor := range m.Sensors {
 		spathSplit := strings.Fields(sensor)
-		reportingRate = uint32(m.SampleFrequency.Duration / time.Millisecond)
+		reportingRate = uint32(time.Duration(m.SampleFrequency) / time.Millisecond)
 
 		// Extract measurement name and custom reporting rate if specified. Custom
 		// reporting rate will be specified at the beginning of sensor list,
@@ -243,7 +238,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		}
 
 		if len(spathSplit) == 0 {
-			log.Printf("E! No sensors are specified")
+			m.Log.Error("No sensors are specified")
 			continue
 		}
 
@@ -257,7 +252,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		}
 
 		if len(spathSplit) == 0 {
-			log.Printf("E! No valid sensors are specified")
+			m.Log.Error("No valid sensors are specified")
 			continue
 		}
 
@@ -271,16 +266,18 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		m.sensorsConfig = append(m.sensorsConfig, sensorConfig{
 			measurementName: measurementName, pathList: pathlist,
 		})
-
 	}
 
 	return len(m.sensorsConfig)
 }
 
 // Subscribes and collects OpenConfig telemetry data from given server
-func (m *OpenConfigTelemetry) collectData(ctx context.Context,
-	grpcServer string, grpcClientConn *grpc.ClientConn,
-	acc telegraf.Accumulator) error {
+func (m *OpenConfigTelemetry) collectData(
+	ctx context.Context,
+	grpcServer string,
+	grpcClientConn *grpc.ClientConn,
+	acc telegraf.Accumulator,
+) {
 	c := telemetry.NewOpenConfigTelemetryClient(grpcClientConn)
 	for _, sensor := range m.sensorsConfig {
 		m.wg.Add(1)
@@ -294,31 +291,29 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					rpcStatus, _ := status.FromError(err)
 					// If service is currently unavailable and may come back later, retry
 					if rpcStatus.Code() != codes.Unavailable {
-						acc.AddError(fmt.Errorf("E! Could not subscribe to %s: %v", grpcServer,
+						acc.AddError(fmt.Errorf("could not subscribe to %s: %v", grpcServer,
 							err))
 						return
-					} else {
-						// Retry with delay. If delay is not provided, use default
-						if m.RetryDelay.Duration > 0 {
-							log.Printf("D! Retrying %s with timeout %v", grpcServer,
-								m.RetryDelay.Duration)
-							time.Sleep(m.RetryDelay.Duration)
-							continue
-						} else {
-							return
-						}
 					}
+
+					// Retry with delay. If delay is not provided, use default
+					if time.Duration(m.RetryDelay) > 0 {
+						m.Log.Debugf("Retrying %s with timeout %v", grpcServer, time.Duration(m.RetryDelay))
+						time.Sleep(time.Duration(m.RetryDelay))
+						continue
+					}
+					return
 				}
 				for {
 					r, err := stream.Recv()
 					if err != nil {
 						// If we encounter error in the stream, break so we can retry
 						// the connection
-						acc.AddError(fmt.Errorf("E! Failed to read from %s: %v", err, grpcServer))
+						acc.AddError(fmt.Errorf("failed to read from %s: %s", grpcServer, err))
 						break
 					}
 
-					log.Printf("D! Received from %s: %v", grpcServer, r)
+					m.Log.Debugf("Received from %s: %v", grpcServer, r)
 
 					// Create a point and add to batch
 					tags := make(map[string]string)
@@ -329,7 +324,7 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					dgroups := m.extractData(r, grpcServer)
 
 					// Print final data collection
-					log.Printf("D! Available collection for %s is: %v", grpcServer, dgroups)
+					m.Log.Debugf("Available collection for %s is: %v", grpcServer, dgroups)
 
 					tnow := time.Now()
 					// Iterate through data groups and add them
@@ -344,15 +339,12 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 			}
 		}(ctx, sensor)
 	}
-
-	return nil
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
-
 	// Build sensors config
 	if m.splitSensorConfig() == 0 {
-		return fmt.Errorf("E! No valid sensor configuration available")
+		return fmt.Errorf("no valid sensor configuration available")
 	}
 
 	// Parse TLS config
@@ -376,15 +368,15 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 		// Extract device address and port
 		grpcServer, grpcPort, err := net.SplitHostPort(server)
 		if err != nil {
-			log.Printf("E! Invalid server address: %v", err)
+			m.Log.Errorf("Invalid server address: %s", err.Error())
 			continue
 		}
 
 		grpcClientConn, err = grpc.Dial(server, opts...)
 		if err != nil {
-			log.Printf("E! Failed to connect to %s: %v", server, err)
+			m.Log.Errorf("Failed to connect to %s: %s", server, err.Error())
 		} else {
-			log.Printf("D! Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
+			m.Log.Debugf("Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
 		}
 
 		// Add to the list of client connections
@@ -396,13 +388,13 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				&authentication.LoginRequest{UserName: m.Username,
 					Password: m.Password, ClientId: m.ClientID})
 			if loginErr != nil {
-				log.Printf("E! Could not initiate login check for %s: %v", server, loginErr)
+				m.Log.Errorf("Could not initiate login check for %s: %v", server, loginErr)
 				continue
 			}
 
 			// Check if the user is authenticated. Bail if auth error
 			if !loginReply.Result {
-				log.Printf("E! Failed to authenticate the user for %s", server)
+				m.Log.Errorf("Failed to authenticate the user for %s", server)
 				continue
 			}
 		}
@@ -417,7 +409,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("jti_openconfig_telemetry", func() telegraf.Input {
 		return &OpenConfigTelemetry{
-			RetryDelay: internal.Duration{Duration: time.Second},
+			RetryDelay: config.Duration(time.Second),
 			StrAsTags:  false,
 		}
 	})

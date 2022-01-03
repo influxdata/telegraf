@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSingleNTPQ(t *testing.T) {
@@ -16,12 +16,11 @@ func TestSingleNTPQ(t *testing.T) {
 		ret: []byte(singleNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -46,12 +45,11 @@ func TestBadIntNTPQ(t *testing.T) {
 		ret: []byte(badIntParseNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, acc.GatherError(n.Gather))
+	require.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -75,12 +73,11 @@ func TestBadFloatNTPQ(t *testing.T) {
 		ret: []byte(badFloatParseNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, acc.GatherError(n.Gather))
+	require.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(2),
@@ -104,12 +101,11 @@ func TestDaysNTPQ(t *testing.T) {
 		ret: []byte(whenDaysNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(172800),
@@ -134,12 +130,11 @@ func TestHoursNTPQ(t *testing.T) {
 		ret: []byte(whenHoursNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(7200),
@@ -164,12 +159,11 @@ func TestMinutesNTPQ(t *testing.T) {
 		ret: []byte(whenMinutesNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(120),
@@ -194,12 +188,11 @@ func TestBadWhenNTPQ(t *testing.T) {
 		ret: []byte(whenBadNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, acc.GatherError(n.Gather))
+	require.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"poll":   int64(256),
@@ -226,11 +219,10 @@ func TestParserNTPQ(t *testing.T) {
 		err: nil,
 	}
 
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"poll":   int64(64),
@@ -289,12 +281,11 @@ func TestMultiNTPQ(t *testing.T) {
 		ret: []byte(multiNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"delay":  float64(54.033),
@@ -330,17 +321,15 @@ func TestMultiNTPQ(t *testing.T) {
 }
 
 func TestBadHeaderNTPQ(t *testing.T) {
-	resetVars()
 	tt := tester{
 		ret: []byte(badHeaderNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -360,17 +349,15 @@ func TestBadHeaderNTPQ(t *testing.T) {
 }
 
 func TestMissingDelayColumnNTPQ(t *testing.T) {
-	resetVars()
 	tt := tester{
 		ret: []byte(missingDelayNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
+	require.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -391,14 +378,13 @@ func TestMissingDelayColumnNTPQ(t *testing.T) {
 func TestFailedNTPQ(t *testing.T) {
 	tt := tester{
 		ret: []byte(singleNTPQ),
-		err: fmt.Errorf("Test failure"),
+		err: fmt.Errorf("test failure"),
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, acc.GatherError(n.Gather))
+	require.Error(t, acc.GatherError(n.Gather))
 }
 
 // It is possible for the output of ntqp to be missing the refid column.  This
@@ -445,9 +431,8 @@ func TestNoRefID(t *testing.T) {
 		ret: []byte(noRefID),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{
 		TimeFunc: func() time.Time { return now },
@@ -464,38 +449,6 @@ type tester struct {
 
 func (t *tester) runqTest() ([]byte, error) {
 	return t.ret, t.err
-}
-
-func resetVars() {
-	// Mapping of ntpq header names to tag keys
-	tagHeaders = map[string]string{
-		"remote": "remote",
-		"refid":  "refid",
-		"st":     "stratum",
-		"t":      "type",
-	}
-
-	// Mapping of the ntpq tag key to the index in the command output
-	tagI = map[string]int{
-		"remote":  -1,
-		"refid":   -1,
-		"stratum": -1,
-		"type":    -1,
-	}
-
-	// Mapping of float metrics to their index in the command output
-	floatI = map[string]int{
-		"delay":  -1,
-		"offset": -1,
-		"jitter": -1,
-	}
-
-	// Mapping of int metrics to their index in the command output
-	intI = map[string]int{
-		"when":  -1,
-		"poll":  -1,
-		"reach": -1,
-	}
 }
 
 var singleNTPQ = `     remote           refid      st t when poll reach   delay   offset  jitter

@@ -1,12 +1,12 @@
 # Graphite
 
 The Graphite data format translates graphite *dot* buckets directly into
-telegraf measurement names, with a single value field, and without any tags.
+telegraf measurement names, with a single value field, and optional tags.
 By default, the separator is left as `.`, but this can be changed using the
 `separator` argument. For more advanced options, Telegraf supports specifying
 [templates](#templates) to translate graphite buckets into Telegraf metrics.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.exec]]
@@ -42,7 +42,7 @@ By default, the separator is left as `.`, but this can be changed using the
   ]
 ```
 
-#### templates
+### templates
 
 Consult the [Template Patterns](/docs/TEMPLATE_PATTERN.md) documentation for
 details.

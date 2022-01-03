@@ -1,3 +1,9 @@
+//go:build !windows
+// +build !windows
+
+// TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
+// https://github.com/influxdata/telegraf/issues/6248
+
 package filecount
 
 import (
@@ -13,7 +19,7 @@ func TestMTime(t *testing.T) {
 
 	fs := getTestFileSystem()
 	fileInfo, err := fs.Stat("/testdata/foo")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, mtime, fileInfo.ModTime())
 }
 
@@ -22,7 +28,7 @@ func TestSize(t *testing.T) {
 	size := int64(4096)
 	fs := getTestFileSystem()
 	fileInfo, err := fs.Stat("/testdata")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, size, fileInfo.Size())
 }
 
@@ -31,7 +37,7 @@ func TestIsDir(t *testing.T) {
 	dir := true
 	fs := getTestFileSystem()
 	fileInfo, err := fs.Stat("/testdata")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, dir, fileInfo.IsDir())
 }
 
@@ -40,7 +46,7 @@ func TestRealFS(t *testing.T) {
 	var fs fileSystem = osFS{}
 	//the following file exists on disk - and not in our fake fs
 	fileInfo, err := fs.Stat(getTestdataDir() + "/qux")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, false, fileInfo.IsDir())
 	require.Equal(t, int64(446), fileInfo.Size())
 
@@ -48,11 +54,12 @@ func TestRealFS(t *testing.T) {
 	fs = getTestFileSystem()
 	// now, the same test as above will return an error as the file doesn't exist in our fake fs
 	expectedError := "Stat " + getTestdataDir() + "/qux: No such file or directory"
-	fileInfo, err = fs.Stat(getTestdataDir() + "/qux")
-	require.Equal(t, expectedError, err.Error())
+	_, err = fs.Stat(getTestdataDir() + "/qux")
+	require.Error(t, err, expectedError)
 	// and verify that what we DO expect to find, we do
 	fileInfo, err = fs.Stat("/testdata/foo")
-	require.Nil(t, err)
+	require.NoError(t, err)
+	require.NotNil(t, fileInfo)
 }
 
 func getTestFileSystem() fakeFileSystem {
@@ -72,19 +79,17 @@ func getTestFileSystem() fakeFileSystem {
 
 	mtime := time.Date(2015, time.December, 14, 18, 25, 5, 0, time.UTC)
 
-	// set file permisions
+	// set file permissions
 	var fmask uint32 = 0666
 	var dmask uint32 = 0666
 
 	// set directory bit
-	dmask |= (1 << uint(32-1))
+	dmask |= 1 << uint(32-1)
 
 	fileList := map[string]fakeFileInfo{
-		"/testdata":     {name: "testdata", size: int64(4096), filemode: uint32(dmask), modtime: mtime, isdir: true},
-		"/testdata/foo": {name: "foo", filemode: uint32(fmask), modtime: mtime},
+		"/testdata":     {name: "testdata", size: int64(4096), filemode: dmask, modtime: mtime, isdir: true},
+		"/testdata/foo": {name: "foo", filemode: fmask, modtime: mtime},
 	}
 
-	fs := fakeFileSystem{files: fileList}
-	return fs
-
+	return fakeFileSystem{files: fileList}
 }

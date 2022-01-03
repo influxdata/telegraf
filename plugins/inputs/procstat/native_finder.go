@@ -2,11 +2,12 @@ package procstat
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/shirou/gopsutil/process"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 //NativeFinder uses gopsutil to find processes
@@ -19,7 +20,7 @@ func NewNativeFinder() (PIDFinder, error) {
 }
 
 //Uid will return all pids for the given user
-func (pg *NativeFinder) Uid(user string) ([]PID, error) {
+func (pg *NativeFinder) UID(user string) ([]PID, error) {
 	var dst []PID
 	procs, err := process.Processes()
 	if err != nil {
@@ -42,16 +43,53 @@ func (pg *NativeFinder) Uid(user string) ([]PID, error) {
 //PidFile returns the pid from the pid file given.
 func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	var pids []PID
-	pidString, err := ioutil.ReadFile(path)
+	pidString, err := os.ReadFile(path)
 	if err != nil {
 		return pids, fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'",
 			path, err)
 	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(pidString)))
+	pid, err := strconv.ParseInt(strings.TrimSpace(string(pidString)), 10, 32)
 	if err != nil {
 		return pids, err
 	}
 	pids = append(pids, PID(pid))
 	return pids, nil
+}
 
+//FullPattern matches on the command line when the process was executed
+func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
+	var pids []PID
+	regxPattern, err := regexp.Compile(pattern)
+	if err != nil {
+		return pids, err
+	}
+	procs, err := pg.FastProcessList()
+	if err != nil {
+		return pids, err
+	}
+	for _, p := range procs {
+		cmd, err := p.Cmdline()
+		if err != nil {
+			//skip, this can be caused by the pid no longer existing
+			//or you having no permissions to access it
+			continue
+		}
+		if regxPattern.MatchString(cmd) {
+			pids = append(pids, PID(p.Pid))
+		}
+	}
+	return pids, err
+}
+
+func (pg *NativeFinder) FastProcessList() ([]*process.Process, error) {
+	pids, err := process.Pids()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*process.Process, len(pids))
+	for i, pid := range pids {
+		result[i] = &process.Process{Pid: pid}
+	}
+	return result, nil
 }

@@ -1,17 +1,18 @@
+//go:build linux
 // +build linux
 
 package conntrack
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 
+	"path/filepath"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"path/filepath"
 )
 
 type Conntrack struct {
@@ -61,7 +62,7 @@ var sampleConfig = `
             "nf_conntrack_count","nf_conntrack_max"]
 
    ## Directories to search within for the conntrack files above.
-   ## Missing directrories will be ignored.
+   ## Missing directories will be ignored.
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
 `
 
@@ -90,7 +91,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 
-			contents, err := ioutil.ReadFile(fName)
+			contents, err := os.ReadFile(fName)
 			if err != nil {
 				acc.AddError(fmt.Errorf("E! failed to read file '%s': %v", fName, err))
 				continue

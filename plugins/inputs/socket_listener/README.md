@@ -1,4 +1,4 @@
-# socket listener service input plugin
+# Socket Listener Input Plugin
 
 The Socket Listener is a service input plugin that listens for messages from
 streaming (tcp, unix) or datagram (udp, unixgram) protocols.
@@ -6,7 +6,7 @@ streaming (tcp, unix) or datagram (udp, unixgram) protocols.
 The plugin expects messages in the
 [Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
 
-### Configuration:
+## Configuration
 
 This is a sample configuration for the plugin.
 
@@ -66,6 +66,10 @@ This is a sample configuration for the plugin.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
+
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 ```
 
 ## A Note on UDP OS Buffer Sizes
@@ -78,16 +82,17 @@ setting.
 
 Instructions on how to adjust these OS settings are available below.
 
-Some OSes (most notably, Linux) place very restricive limits on the performance
+Some OSes (most notably, Linux) place very restrictive limits on the performance
 of UDP protocols. It is _highly_ recommended that you increase these OS limits to
 at least 8MB before trying to run large amounts of UDP traffic to your instance.
 8MB is just a recommendation, and can be adjusted higher.
 
 ### Linux
+
 Check the current UDP/IP receive buffer limit & default by typing the following
 commands:
 
-```
+```sh
 sysctl net.core.rmem_max
 sysctl net.core.rmem_default
 ```
@@ -95,7 +100,7 @@ sysctl net.core.rmem_default
 If the values are less than 8388608 bytes you should add the following lines to
 the /etc/sysctl.conf file:
 
-```
+```text
 net.core.rmem_max=8388608
 net.core.rmem_default=8388608
 ```
@@ -103,7 +108,7 @@ net.core.rmem_default=8388608
 Changes to /etc/sysctl.conf do not take effect until reboot.
 To update the values immediately, type the following commands as root:
 
-```
+```sh
 sysctl -w net.core.rmem_max=8388608
 sysctl -w net.core.rmem_default=8388608
 ```
@@ -118,20 +123,20 @@ happens
 
 Check the current UDP/IP buffer limit by typing the following command:
 
-```
+```sh
 sysctl kern.ipc.maxsockbuf
 ```
 
 If the value is less than 9646900 bytes you should add the following lines
 to the /etc/sysctl.conf file (create it if necessary):
 
-```
+```text
 kern.ipc.maxsockbuf=9646900
 ```
 
 Changes to /etc/sysctl.conf do not take effect until reboot.
 To update the values immediately, type the following command as root:
 
-```
+```sh
 sysctl -w kern.ipc.maxsockbuf=9646900
 ```

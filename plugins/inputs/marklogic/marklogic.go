@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -84,7 +84,7 @@ type MlHost struct {
 
 // Description of plugin returned
 func (c *Marklogic) Description() string {
-	return "Retrives information on a specific host in a MarkLogic Cluster"
+	return "Retrieves information on a specific host in a MarkLogic Cluster"
 }
 
 var sampleConfig = `
@@ -108,7 +108,6 @@ var sampleConfig = `
 
 // Init parse all source URLs and place on the Marklogic struct
 func (c *Marklogic) Init() error {
-
 	if len(c.URL) == 0 {
 		c.URL = "http://localhost:8002/"
 	}
@@ -164,9 +163,9 @@ func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 	return nil
 }
 
-func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, url string) error {
+func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, address string) error {
 	ml := &MlHost{}
-	if err := c.gatherJSONData(url, ml); err != nil {
+	if err := c.gatherJSONData(address, ml); err != nil {
 		return err
 	}
 
@@ -220,14 +219,14 @@ func (c *Marklogic) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: time.Duration(5 * time.Second),
+		Timeout: 5 * time.Second,
 	}
 
 	return client, nil
 }
 
-func (c *Marklogic) gatherJSONData(url string, v interface{}) error {
-	req, err := http.NewRequest("GET", url, nil)
+func (c *Marklogic) gatherJSONData(address string, v interface{}) error {
+	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
 	}
@@ -246,11 +245,7 @@ func (c *Marklogic) gatherJSONData(url string, v interface{}) error {
 			response.StatusCode, http.StatusOK)
 	}
 
-	if err = json.NewDecoder(response.Body).Decode(v); err != nil {
-		return err
-	}
-
-	return nil
+	return json.NewDecoder(response.Body).Decode(v)
 }
 
 func init() {

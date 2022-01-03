@@ -2,7 +2,7 @@
 
 Reports the number and total size of files in specified directories.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[inputs.filecount]]
@@ -27,6 +27,9 @@ Reports the number and total size of files in specified directories.
   ## Only count regular files. Defaults to true.
   regular_only = true
 
+  ## Follow all symlinks while walking the directory tree. Defaults to false.
+  follow_symlinks = false
+
   ## Only count files that are at least this size. If size is
   ## a negative number, only count files that are smaller than the
   ## absolute value of size. Acceptable units are B, KiB, MiB, KB, ...
@@ -39,7 +42,7 @@ Reports the number and total size of files in specified directories.
   mtime = "0s"
 ```
 
-### Metrics
+## Metrics
 
 - filecount
   - tags:
@@ -48,9 +51,9 @@ Reports the number and total size of files in specified directories.
     - count (integer)
     - size_bytes (integer)
 
-### Example Output:
+## Example Output
 
-```
+```shell
 filecount,directory=/var/cache/apt count=7i,size_bytes=7438336i 1530034445000000000
 filecount,directory=/tmp count=17i,size_bytes=28934786i 1530034445000000000
 ```

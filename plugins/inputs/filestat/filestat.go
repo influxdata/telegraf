@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/influxdata/telegraf"
@@ -23,6 +22,7 @@ const sampleConfig = `
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/log/**.log"]
+
   ## If true, read the entire file and calculate an md5 checksum.
   md5 = false
 `
@@ -31,21 +31,30 @@ type FileStat struct {
 	Md5   bool
 	Files []string
 
+	Log telegraf.Logger
+
 	// maps full file paths to globmatch obj
 	globs map[string]*globpath.GlobPath
+
+	// files that were missing - we only log the first time it's not found.
+	missingFiles map[string]bool
+	// files that had an error in Stat - we only log the first error.
+	filesWithErrors map[string]bool
 }
 
 func NewFileStat() *FileStat {
 	return &FileStat{
-		globs: make(map[string]*globpath.GlobPath),
+		globs:           make(map[string]*globpath.GlobPath),
+		missingFiles:    make(map[string]bool),
+		filesWithErrors: make(map[string]bool),
 	}
 }
 
-func (_ *FileStat) Description() string {
+func (*FileStat) Description() string {
 	return "Read stats about given file(s)"
 }
 
-func (_ *FileStat) SampleConfig() string { return sampleConfig }
+func (*FileStat) SampleConfig() string { return sampleConfig }
 
 func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 	var err error
@@ -83,22 +92,33 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			fileInfo, err := os.Stat(fileName)
 			if os.IsNotExist(err) {
 				fields["exists"] = int64(0)
+				acc.AddFields("filestat", fields, tags)
+				if !f.missingFiles[fileName] {
+					f.Log.Warnf("File %q not found", fileName)
+					f.missingFiles[fileName] = true
+				}
+				continue
 			}
+			f.missingFiles[fileName] = false
 
 			if fileInfo == nil {
-				log.Printf("E! Unable to get info for file [%s], possible permissions issue",
-					fileName)
+				if !f.filesWithErrors[fileName] {
+					f.filesWithErrors[fileName] = true
+					f.Log.Errorf("Unable to get info for file %q: %v",
+						fileName, err)
+				}
 			} else {
+				f.filesWithErrors[fileName] = false
 				fields["size_bytes"] = fileInfo.Size()
 				fields["modification_time"] = fileInfo.ModTime().UnixNano()
 			}
 
 			if f.Md5 {
-				md5, err := getMd5(fileName)
+				md5Hash, err := getMd5(fileName)
 				if err != nil {
 					acc.AddError(err)
 				} else {
-					fields["md5_sum"] = md5
+					fields["md5_sum"] = md5Hash
 				}
 			}
 

@@ -2,13 +2,12 @@ package vsphere
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/vmware/govmomi/vim25/soap"
 )
@@ -23,41 +22,50 @@ type VSphere struct {
 	DatacenterMetricInclude []string
 	DatacenterMetricExclude []string
 	DatacenterInclude       []string
+	DatacenterExclude       []string
 	ClusterInstances        bool
 	ClusterMetricInclude    []string
 	ClusterMetricExclude    []string
 	ClusterInclude          []string
+	ClusterExclude          []string
 	HostInstances           bool
 	HostMetricInclude       []string
 	HostMetricExclude       []string
 	HostInclude             []string
+	HostExclude             []string
 	VMInstances             bool     `toml:"vm_instances"`
 	VMMetricInclude         []string `toml:"vm_metric_include"`
 	VMMetricExclude         []string `toml:"vm_metric_exclude"`
 	VMInclude               []string `toml:"vm_include"`
+	VMExclude               []string `toml:"vm_exclude"`
 	DatastoreInstances      bool
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
+	DatastoreExclude        []string
 	Separator               string
 	CustomAttributeInclude  []string
 	CustomAttributeExclude  []string
 	UseIntSamples           bool
-	IpAddresses             []string
+	IPAddresses             []string
+	MetricLookback          int
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
 	CollectConcurrency      int
 	DiscoverConcurrency     int
 	ForceDiscoverOnInit     bool
-	ObjectDiscoveryInterval internal.Duration
-	Timeout                 internal.Duration
+	ObjectDiscoveryInterval config.Duration
+	Timeout                 config.Duration
+	HistoricalInterval      config.Duration
 
 	endpoints []*Endpoint
 	cancel    context.CancelFunc
 
 	// Mix in the TLS/SSL goodness from core
 	tls.ClientConfig
+
+	Log telegraf.Logger
 }
 
 var sampleConfig = `
@@ -69,6 +77,8 @@ var sampleConfig = `
 
   ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)
+  # vm_include = [ "/*/vm/**"] # Inventory path to VMs to collect (by default all are collected)
+  # vm_exclude = [] # Inventory paths to exclude
   vm_metric_include = [
     "cpu.demand.average",
     "cpu.idle.summation",
@@ -110,6 +120,8 @@ var sampleConfig = `
 
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
+  # host_include = [ "/*/host/**"] # Inventory path to hosts to collect (by default all are collected)
+  # host_exclude [] # Inventory paths to exclude
   host_metric_include = [
     "cpu.coreUtilization.average",
     "cpu.costop.summation",
@@ -158,46 +170,49 @@ var sampleConfig = `
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
-  ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+    ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
   # ip_addresses = ["ipv6", "ipv4" ]
+
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
+
   ## Clusters
+  # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # cluster_exclude = [] # Inventory paths to exclude
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default
 
   ## Datastores
+  # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
+  # datastore_exclude = [] # Inventory paths to exclude
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
-  # datastore_instances = false ## false by default for Datastores only
+  # datastore_instances = false ## false by default
 
   ## Datacenters
+  # datacenter_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # datacenter_exclude = [] # Inventory paths to exclude
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
-  # datacenter_instances = false ## false by default for Datastores only
+  # datacenter_instances = false ## false by default
 
-  ## Plugin Settings  
+  ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
-  ## number of objects to retreive per query for realtime resources (vms and hosts)
+  ## number of objects to retrieve per query for realtime resources (vms and hosts)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_objects = 256
 
-  ## number of metrics to retreive per query for non-realtime resources (clusters and datastores)
+  ## number of metrics to retrieve per query for non-realtime resources (clusters and datastores)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # max_query_metrics = 256
 
   ## number of go routines to use for collection and discovery of objects and metrics
   # collect_concurrency = 1
   # discover_concurrency = 1
-
-  ## whether or not to force discovery of new objects on initial gather call before collecting metrics
-  ## when true for large environments this may cause errors for time elapsed while collecting metrics
-  ## when false (default) the first collection cycle may result in no or limited metrics while objects are discovered
-  # force_discover_on_init = false
 
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
@@ -216,10 +231,19 @@ var sampleConfig = `
   ## Custom attributes from vCenter can be very useful for queries in order to slice the
   ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
   ## by default, since they can add a considerable amount of tags to the resulting metrics. To
-  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
+  ## By default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exclude to [] (empty set) and use custom_attribute_include
   ## to select the attributes you want to include.
   # custom_attribute_include = []
-  # custom_attribute_exclude = ["*"] 
+  # custom_attribute_exclude = ["*"]
+
+  ## The number of vSphere 5 minute metric collection cycles to look back for non-realtime metrics. In 
+  ## some versions (6.7, 7.0 and possible more), certain metrics, such as cluster metrics, may be reported
+  ## with a significant delay (>30min). If this happens, try increasing this number. Please note that increasing
+  ## it too much may cause performance issues.
+  # metric_lookback = 3
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -227,6 +251,10 @@ var sampleConfig = `
   # ssl_key = "/path/to/keyfile"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## The Historical Interval value must match EXACTLY the interval in the daily 
+  # "Interval Duration" found on the VCenter server under Configure > General > Statistics > Statistic intervals
+  # historical_interval = "5m"
 `
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
@@ -242,10 +270,15 @@ func (v *VSphere) Description() string {
 
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
-func (v *VSphere) Start(acc telegraf.Accumulator) error {
-	log.Println("D! [inputs.vsphere]: Starting plugin")
+func (v *VSphere) Start(_ telegraf.Accumulator) error {
+	v.Log.Info("Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
+
+	// Check for deprecated settings
+	if !v.ForceDiscoverOnInit {
+		v.Log.Warn("The 'force_discover_on_init' configuration parameter has been deprecated. Setting it to 'false' has no effect")
+	}
 
 	// Create endpoints, one for each vCenter we're monitoring
 	v.endpoints = make([]*Endpoint, len(v.Vcenters))
@@ -254,7 +287,7 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		ep, err := NewEndpoint(ctx, v, u)
+		ep, err := NewEndpoint(ctx, v, u, v.Log)
 		if err != nil {
 			return err
 		}
@@ -266,7 +299,7 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
 func (v *VSphere) Stop() {
-	log.Println("D! [inputs.vsphere]: Stopping plugin")
+	v.Log.Info("Stopping plugin")
 	v.cancel()
 
 	// Wait for all endpoints to finish. No need to wait for
@@ -275,7 +308,7 @@ func (v *VSphere) Stop() {
 	// wait for any discovery to complete by trying to grab the
 	// "busy" mutex.
 	for _, ep := range v.endpoints {
-		log.Printf("D! [inputs.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
+		v.Log.Debugf("Waiting for endpoint %q to finish", ep.URL.Host)
 		func() {
 			ep.busy.Lock() // Wait until discovery is finished
 			defer ep.busy.Unlock()
@@ -294,7 +327,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
 			if err == context.Canceled {
-
 				// No need to signal errors if we were merely canceled.
 				err = nil
 			}
@@ -337,15 +369,17 @@ func init() {
 			CustomAttributeInclude:  []string{},
 			CustomAttributeExclude:  []string{"*"},
 			UseIntSamples:           true,
-			IpAddresses:             []string{},
+			IPAddresses:             []string{},
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,
 			CollectConcurrency:      1,
 			DiscoverConcurrency:     1,
-			ForceDiscoverOnInit:     false,
-			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-			Timeout:                 internal.Duration{Duration: time.Second * 60},
+			MetricLookback:          3,
+			ForceDiscoverOnInit:     true,
+			ObjectDiscoveryInterval: config.Duration(time.Second * 300),
+			Timeout:                 config.Duration(time.Second * 60),
+			HistoricalInterval:      config.Duration(time.Second * 300),
 		}
 	})
 }

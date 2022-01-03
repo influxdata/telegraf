@@ -99,16 +99,12 @@ func newMetricDiff(metric telegraf.Metric) *metricDiff {
 	m := &metricDiff{}
 	m.Measurement = metric.Name()
 
-	for _, tag := range metric.TagList() {
-		m.Tags = append(m.Tags, tag)
-	}
+	m.Tags = append(m.Tags, metric.TagList()...)
 	sort.Slice(m.Tags, func(i, j int) bool {
 		return m.Tags[i].Key < m.Tags[j].Key
 	})
 
-	for _, field := range metric.FieldList() {
-		m.Fields = append(m.Fields, field)
-	}
+	m.Fields = append(m.Fields, metric.FieldList()...)
 	sort.Slice(m.Fields, func(i, j int) bool {
 		return m.Fields[i].Key < m.Fields[j].Key
 	})
@@ -129,7 +125,7 @@ func IgnoreTime() cmp.Option {
 }
 
 // MetricEqual returns true if the metrics are equal.
-func MetricEqual(expected, actual telegraf.Metric) bool {
+func MetricEqual(expected, actual telegraf.Metric, opts ...cmp.Option) bool {
 	var lhs, rhs *metricDiff
 	if expected != nil {
 		lhs = newMetricDiff(expected)
@@ -138,7 +134,8 @@ func MetricEqual(expected, actual telegraf.Metric) bool {
 		rhs = newMetricDiff(actual)
 	}
 
-	return cmp.Equal(lhs, rhs)
+	opts = append(opts, cmpopts.EquateNaNs())
+	return cmp.Equal(lhs, rhs, opts...)
 }
 
 // RequireMetricEqual halts the test with an error if the metrics are not
@@ -154,6 +151,7 @@ func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric, opts ...
 		rhs = newMetricDiff(actual)
 	}
 
+	opts = append(opts, cmpopts.EquateNaNs())
 	if diff := cmp.Diff(lhs, rhs, opts...); diff != "" {
 		t.Fatalf("telegraf.Metric\n--- expected\n+++ actual\n%s", diff)
 	}
@@ -172,6 +170,8 @@ func RequireMetricsEqual(t *testing.T, expected, actual []telegraf.Metric, opts 
 	for _, m := range actual {
 		rhs = append(rhs, newMetricDiff(m))
 	}
+
+	opts = append(opts, cmpopts.EquateNaNs())
 	if diff := cmp.Diff(lhs, rhs, opts...); diff != "" {
 		t.Fatalf("[]telegraf.Metric\n--- expected\n+++ actual\n%s", diff)
 	}
@@ -185,17 +185,11 @@ func MustMetric(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
-	m, err := metric.New(name, tags, fields, tm, tp...)
-	if err != nil {
-		panic("MustMetric")
-	}
+	m := metric.New(name, tags, fields, tm, tp...)
 	return m
 }
 
 func FromTestMetric(met *Metric) telegraf.Metric {
-	m, err := metric.New(met.Measurement, met.Tags, met.Fields, met.Time)
-	if err != nil {
-		panic("MustMetric")
-	}
+	m := metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 	return m
 }

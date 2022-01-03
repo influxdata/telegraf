@@ -3,7 +3,6 @@ package bond
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -53,7 +52,7 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 	}
 	for _, bondName := range bondNames {
 		bondAbsPath := bond.HostProc + "/net/bonding/" + bondName
-		file, err := ioutil.ReadFile(bondAbsPath)
+		file, err := os.ReadFile(bondAbsPath)
 		if err != nil {
 			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondAbsPath, err))
 			continue
@@ -122,6 +121,7 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
 	var slave string
 	var status int
+	var slaveCount int
 
 	scanner := bufio.NewScanner(strings.NewReader(rawFile))
 	for scanner.Scan() {
@@ -155,12 +155,18 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 				"interface": slave,
 			}
 			acc.AddFields("bond_slave", fields, tags)
+			slaveCount++
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return err
+	fields := map[string]interface{}{
+		"count": slaveCount,
 	}
-	return nil
+	tags := map[string]string{
+		"bond": bondName,
+	}
+	acc.AddFields("bond_slave", fields, tags)
+
+	return scanner.Err()
 }
 
 // loadPath can be used to read path firstly from config

@@ -3,23 +3,28 @@ package socket_writer
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type SocketWriter struct {
+	ContentEncoding string `toml:"content_encoding"`
 	Address         string
-	KeepAlivePeriod *internal.Duration
+	KeepAlivePeriod *config.Duration
 	tlsint.ClientConfig
+	Log telegraf.Logger `toml:"-"`
 
 	serializers.Serializer
+
+	encoder internal.ContentEncoder
 
 	net.Conn
 }
@@ -55,6 +60,11 @@ func (sw *SocketWriter) SampleConfig() string {
   ## Defaults to the OS configuration.
   # keep_alive_period = "5m"
 
+  ## Content encoding for packet-based connections (i.e. UDP, unixgram).
+  ## Can be set to "gzip" or to "identity" to apply no encoding.
+  ##
+  # content_encoding = "identity"
+
   ## Data format to generate.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -89,7 +99,12 @@ func (sw *SocketWriter) Connect() error {
 	}
 
 	if err := sw.setKeepAlive(c); err != nil {
-		log.Printf("unable to configure keep alive (%s): %s", sw.Address, err)
+		sw.Log.Debugf("Unable to configure keep alive (%s): %s", sw.Address, err)
+	}
+	//set encoder
+	sw.encoder, err = internal.NewContentEncoder(sw.ContentEncoding)
+	if err != nil {
+		return err
 	}
 
 	sw.Conn = c
@@ -104,13 +119,13 @@ func (sw *SocketWriter) setKeepAlive(c net.Conn) error {
 	if !ok {
 		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(sw.Address, "://", 2)[0])
 	}
-	if sw.KeepAlivePeriod.Duration == 0 {
+	if *sw.KeepAlivePeriod == 0 {
 		return tcpc.SetKeepAlive(false)
 	}
 	if err := tcpc.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return tcpc.SetKeepAlivePeriod(sw.KeepAlivePeriod.Duration)
+	return tcpc.SetKeepAlivePeriod(time.Duration(*sw.KeepAlivePeriod))
 }
 
 // Write writes the given metrics to the destination.
@@ -127,14 +142,21 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		bs, err := sw.Serialize(m)
 		if err != nil {
-			log.Printf("D! [outputs.socket_writer] Could not serialize metric: %v", err)
+			sw.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
+
+		bs, err = sw.encoder.Encode(bs)
+		if err != nil {
+			sw.Log.Debugf("Could not encode metric: %v", err)
+			continue
+		}
+
 		if _, err := sw.Conn.Write(bs); err != nil {
 			//TODO log & keep going with remaining strings
 			if err, ok := err.(net.Error); !ok || !err.Temporary() {
 				// permanent error. close the connection
-				sw.Close()
+				sw.Close() //nolint:revive // There is another error which will be returned here
 				sw.Conn = nil
 				return fmt.Errorf("closing connection: %v", err)
 			}

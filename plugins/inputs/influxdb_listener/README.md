@@ -18,7 +18,7 @@ receive a 200 OK response with message body `{"results":[]}` but they are not
 relayed. The output configuration of the Telegraf instance which ultimately
 submits data to InfluxDB determines the destination database.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[inputs.influxdb_listener]]
@@ -30,13 +30,13 @@ submits data to InfluxDB determines the destination database.
   ## maximum duration before timing out write of the response
   write_timeout = "10s"
 
-  ## Maximum allowed http request body size in bytes.
-  ## 0 means to use the default of 536,870,912 bytes (500 mebibytes)
+  ## Maximum allowed HTTP request body size in bytes.
+  ## 0 means to use the default of 32MiB.
   max_body_size = 0
 
   ## Maximum line size allowed to be sent in bytes.
-  ## 0 means to use the default of 65536 bytes (64 kibibytes)
-  max_line_size = 0
+  ##   deprecated in 1.14; parser now handles lines of unlimited length and option is ignored
+  # max_line_size = 0
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -54,22 +54,27 @@ submits data to InfluxDB determines the destination database.
   ## the tag will be overwritten with the database supplied.
   # database_tag = ""
 
+  ## If set the retention policy specified in the write query will be added as
+  ## the value of this tag name.
+  # retention_policy_tag = ""
+
   ## Optional username and password to accept for HTTP basic authentication.
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"
   # basic_password = "barfoo"
 ```
 
-### Metrics:
+## Metrics
 
 Metrics are created from InfluxDB Line Protocol in the request body.
 
-### Troubleshooting:
+## Troubleshooting
 
 **Example Query:**
-```
+
+```sh
 curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 ```
 
-[influxdb_http_api]: https://docs.influxdata.com/influxdb/latest/guides/writing_data/
+[influxdb_http_api]: https://docs.influxdata.com/influxdb/v1.8/guides/write_data/
 [http_listener_v2]: /plugins/inputs/http_listener_v2/README.md

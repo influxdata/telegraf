@@ -1,6 +1,7 @@
 package influxdb_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +14,8 @@ import (
 func TestBasic(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write([]byte(basicJSON))
+			_, err := w.Write([]byte(basicJSON))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -60,7 +62,8 @@ func TestBasic(t *testing.T) {
 func TestInfluxDB(t *testing.T) {
 	fakeInfluxServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write([]byte(influxReturn))
+			_, err := w.Write([]byte(influxReturn))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -91,7 +94,7 @@ func TestInfluxDB(t *testing.T) {
 		"heap_sys":        int64(33849344),
 		"mcache_sys":      int64(16384),
 		"next_gc":         int64(20843042),
-		"gcc_pu_fraction": float64(4.287178819113636e-05),
+		"gc_cpu_fraction": float64(4.287178819113636e-05),
 		"other_sys":       int64(1229737),
 		"alloc":           int64(17034016),
 		"stack_inuse":     int64(753664),
@@ -120,7 +123,8 @@ func TestInfluxDB(t *testing.T) {
 func TestInfluxDB2(t *testing.T) {
 	fakeInfluxServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write([]byte(influxReturn2))
+			_, err := w.Write([]byte(influxReturn2))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -145,7 +149,8 @@ func TestInfluxDB2(t *testing.T) {
 func TestErrorHandling(t *testing.T) {
 	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write([]byte("not json"))
+			_, err := w.Write([]byte("not json"))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -163,7 +168,8 @@ func TestErrorHandling(t *testing.T) {
 func TestErrorHandling404(t *testing.T) {
 	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write([]byte(basicJSON))
+			_, err := w.Write([]byte(basicJSON))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -176,6 +182,32 @@ func TestErrorHandling404(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(plugin.Gather))
+}
+
+func TestErrorResponse(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, err := w.Write([]byte(`{"error": "unable to parse authentication credentials"}`))
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	plugin := &influxdb.InfluxDB{
+		URLs: []string{ts.URL},
+	}
+
+	var acc testutil.Accumulator
+	err := plugin.Gather(&acc)
+	require.NoError(t, err)
+
+	expected := []error{
+		&influxdb.APIError{
+			StatusCode:  http.StatusUnauthorized,
+			Reason:      fmt.Sprintf("%d %s", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized)),
+			Description: "unable to parse authentication credentials",
+		},
+	}
+	require.Equal(t, expected, acc.Errors)
 }
 
 const basicJSON = `

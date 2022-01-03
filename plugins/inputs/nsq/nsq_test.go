@@ -15,7 +15,8 @@ import (
 func TestNSQStatsV1(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, responseV1)
+		_, err := fmt.Fprintln(w, responseV1)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -151,7 +152,7 @@ func TestNSQStatsV1(t *testing.T) {
 	}
 }
 
-// v1 version of localhost/stats?format=json reesponse body
+// v1 version of localhost/stats?format=json response body
 var responseV1 = `
 {
     "version": "1.0.0-compat",
@@ -271,7 +272,8 @@ var responseV1 = `
 func TestNSQStatsPreV1(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, responsePreV1)
+		_, err := fmt.Fprintln(w, responsePreV1)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 

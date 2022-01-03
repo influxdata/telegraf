@@ -1,20 +1,20 @@
-# Telegraf Plugin: nginx_plus
+# Nginx Plus Input Plugin
 
 Nginx Plus is a commercial version of the open source web server Nginx. The use this plugin you will need a license. For more information about the differences between Nginx (F/OSS) and Nginx Plus, [click here](https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/).
 
 Structures for Nginx Plus have been built based on history of
 [status module documentation](http://nginx.org/en/docs/http/ngx_http_status_module.html)
 
-### Configuration:
+## Configuration
 
-```
+```toml
 # Read Nginx Plus' advanced status information
 [[inputs.nginx_plus]]
   ## An array of Nginx status URIs to gather stats.
   urls = ["http://localhost/status"]
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - nginx_plus_processes
   - respawned
@@ -59,8 +59,7 @@ Structures for Nginx Plus have been built based on history of
   - fails
   - downtime
 
-
-### Tags:
+## Tags
 
 - nginx_plus_processes, nginx_plus_connections, nginx_plus_ssl, nginx_plus_requests
   - server
@@ -78,22 +77,25 @@ Structures for Nginx Plus have been built based on history of
   - port
   - upstream_address
 
-### Example Output:
+## Example Output
 
 Using this configuration:
-```
+
+```toml
 [[inputs.nginx_plus]]
   ## An array of Nginx Plus status URIs to gather stats.
   urls = ["http://localhost/status"]
 ```
 
 When run with:
-```
+
+```sh
 ./telegraf -config telegraf.conf -input-filter nginx_plus -test
 ```
 
 It produces:
-```
+
+```text
 * Plugin: inputs.nginx_plus, Collection 1
 > nginx_plus_processes,server=localhost,port=12021,host=word.local respawned=0i 1505782513000000000
 > nginx_plus_connections,server=localhost,port=12021,host=word.local accepted=5535735212i,dropped=10140186i,active=9541i,idle=67540i 1505782513000000000

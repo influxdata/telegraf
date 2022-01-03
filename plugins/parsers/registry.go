@@ -2,7 +2,6 @@ package parsers
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
@@ -13,10 +12,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheusremotewrite"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
+	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
 
 type ParserFunc func() (Parser, error)
@@ -49,6 +52,8 @@ type Parser interface {
 	// and parses it into a telegraf metric.
 	//
 	// Must be thread-safe.
+	// This function is only called by plugins that expect line based protocols
+	// Doesn't need to be implemented by non-linebased parsers (e.g. json, xml)
 	ParseLine(line string) (telegraf.Metric, error)
 
 	// SetDefaultTags tells the parser to add all of the given tags
@@ -88,6 +93,9 @@ type Config struct {
 
 	// default timezone
 	JSONTimezone string `toml:"json_timezone"`
+
+	// Whether to continue if a JSON object can't be coerced
+	JSONStrict bool `toml:"json_strict"`
 
 	// Authentication file for collectd
 	CollectdAuthFile string `toml:"collectd_auth_file"`
@@ -141,10 +149,34 @@ type Config struct {
 	CSVTagColumns        []string `toml:"csv_tag_columns"`
 	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
+	CSVTimezone          string   `toml:"csv_timezone"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
+	CSVSkipValues        []string `toml:"csv_skip_values"`
+	CSVSkipErrors        bool     `toml:"csv_skip_errors"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
+
+	// Prometheus configuration
+	PrometheusIgnoreTimestamp bool `toml:"prometheus_ignore_timestamp"`
+
+	// Value configuration
+	ValueFieldName string `toml:"value_field_name"`
+
+	// XPath configuration
+	XPathPrintDocument bool   `toml:"xpath_print_document"`
+	XPathProtobufFile  string `toml:"xpath_protobuf_file"`
+	XPathProtobufType  string `toml:"xpath_protobuf_type"`
+	XPathConfig        []XPathConfig
+
+	// JSONPath configuration
+	JSONV2Config []JSONV2Config `toml:"json_v2"`
+}
+
+type XPathConfig xpath.Config
+
+type JSONV2Config struct {
+	json_v2.Config
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -164,11 +196,12 @@ func NewParser(config *Config) (Parser, error) {
 				TimeFormat:   config.JSONTimeFormat,
 				Timezone:     config.JSONTimezone,
 				DefaultTags:  config.DefaultTags,
+				Strict:       config.JSONStrict,
 			},
 		)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
-			config.DataType, config.DefaultTags)
+			config.DataType, config.ValueFieldName, config.DefaultTags)
 	case "influx":
 		parser, err = NewInfluxParser()
 	case "nagios":
@@ -201,20 +234,27 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
 	case "csv":
-		parser, err = newCSVParser(config.MetricName,
-			config.CSVHeaderRowCount,
-			config.CSVSkipRows,
-			config.CSVSkipColumns,
-			config.CSVDelimiter,
-			config.CSVComment,
-			config.CSVTrimSpace,
-			config.CSVColumnNames,
-			config.CSVColumnTypes,
-			config.CSVTagColumns,
-			config.CSVMeasurementColumn,
-			config.CSVTimestampColumn,
-			config.CSVTimestampFormat,
-			config.DefaultTags)
+		config := &csv.Config{
+			MetricName:        config.MetricName,
+			HeaderRowCount:    config.CSVHeaderRowCount,
+			SkipRows:          config.CSVSkipRows,
+			SkipColumns:       config.CSVSkipColumns,
+			Delimiter:         config.CSVDelimiter,
+			Comment:           config.CSVComment,
+			TrimSpace:         config.CSVTrimSpace,
+			ColumnNames:       config.CSVColumnNames,
+			ColumnTypes:       config.CSVColumnTypes,
+			TagColumns:        config.CSVTagColumns,
+			MeasurementColumn: config.CSVMeasurementColumn,
+			TimestampColumn:   config.CSVTimestampColumn,
+			TimestampFormat:   config.CSVTimestampFormat,
+			Timezone:          config.CSVTimezone,
+			DefaultTags:       config.DefaultTags,
+			SkipValues:        config.CSVSkipValues,
+			SkipErrors:        config.CSVSkipErrors,
+		}
+
+		return csv.NewParser(config)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
 	case "form_urlencoded":
@@ -223,68 +263,28 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys,
 		)
+	case "prometheus":
+		parser, err = NewPrometheusParser(
+			config.DefaultTags,
+			config.PrometheusIgnoreTimestamp,
+		)
+	case "prometheusremotewrite":
+		parser, err = NewPrometheusRemoteWriteParser(config.DefaultTags)
+	case "xml", "xpath_json", "xpath_msgpack", "xpath_protobuf":
+		parser = &xpath.Parser{
+			Format:              config.DataFormat,
+			ProtobufMessageDef:  config.XPathProtobufFile,
+			ProtobufMessageType: config.XPathProtobufType,
+			PrintDocument:       config.XPathPrintDocument,
+			DefaultTags:         config.DefaultTags,
+			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
+		}
+	case "json_v2":
+		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return parser, err
-}
-
-func newCSVParser(metricName string,
-	headerRowCount int,
-	skipRows int,
-	skipColumns int,
-	delimiter string,
-	comment string,
-	trimSpace bool,
-	columnNames []string,
-	columnTypes []string,
-	tagColumns []string,
-	nameColumn string,
-	timestampColumn string,
-	timestampFormat string,
-	defaultTags map[string]string) (Parser, error) {
-
-	if headerRowCount == 0 && len(columnNames) == 0 {
-		return nil, fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
-	}
-
-	if delimiter != "" {
-		runeStr := []rune(delimiter)
-		if len(runeStr) > 1 {
-			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", delimiter)
-		}
-	}
-
-	if comment != "" {
-		runeStr := []rune(comment)
-		if len(runeStr) > 1 {
-			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", comment)
-		}
-	}
-
-	if len(columnNames) > 0 && len(columnTypes) > 0 && len(columnNames) != len(columnTypes) {
-		return nil, fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
-	}
-
-	parser := &csv.Parser{
-		MetricName:        metricName,
-		HeaderRowCount:    headerRowCount,
-		SkipRows:          skipRows,
-		SkipColumns:       skipColumns,
-		Delimiter:         delimiter,
-		Comment:           comment,
-		TrimSpace:         trimSpace,
-		ColumnNames:       columnNames,
-		ColumnTypes:       columnTypes,
-		TagColumns:        tagColumns,
-		MeasurementColumn: nameColumn,
-		TimestampColumn:   timestampColumn,
-		TimestampFormat:   timestampFormat,
-		DefaultTags:       defaultTags,
-		TimeFunc:          time.Now,
-	}
-
-	return parser, nil
 }
 
 func newGrokParser(metricName string,
@@ -325,13 +325,10 @@ func NewGraphiteParser(
 func NewValueParser(
 	metricName string,
 	dataType string,
+	fieldName string,
 	defaultTags map[string]string,
 ) (Parser, error) {
-	return &value.ValueParser{
-		MetricName:  metricName,
-		DataType:    dataType,
-		DefaultTags: defaultTags,
-	}, nil
+	return value.NewValueParser(metricName, dataType, fieldName, defaultTags), nil
 }
 
 func NewCollectdParser(
@@ -386,5 +383,49 @@ func NewFormUrlencodedParser(
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
 		TagKeys:     tagKeys,
+	}, nil
+}
+
+func NewPrometheusParser(defaultTags map[string]string, ignoreTimestamp bool) (Parser, error) {
+	return &prometheus.Parser{
+		DefaultTags:     defaultTags,
+		IgnoreTimestamp: ignoreTimestamp,
+	}, nil
+}
+
+func NewPrometheusRemoteWriteParser(defaultTags map[string]string) (Parser, error) {
+	return &prometheusremotewrite.Parser{
+		DefaultTags: defaultTags,
+	}, nil
+}
+
+func NewXPathParserConfigs(metricName string, cfgs []XPathConfig) []xpath.Config {
+	// Convert the config formats which is a one-to-one copy
+	configs := make([]xpath.Config, 0, len(cfgs))
+	for _, cfg := range cfgs {
+		config := xpath.Config(cfg)
+		config.MetricDefaultName = metricName
+		configs = append(configs, config)
+	}
+	return configs
+}
+
+func NewJSONPathParser(jsonv2config []JSONV2Config) (Parser, error) {
+	configs := make([]json_v2.Config, len(jsonv2config))
+	for i, cfg := range jsonv2config {
+		configs[i].MeasurementName = cfg.MeasurementName
+		configs[i].MeasurementNamePath = cfg.MeasurementNamePath
+
+		configs[i].TimestampPath = cfg.TimestampPath
+		configs[i].TimestampFormat = cfg.TimestampFormat
+		configs[i].TimestampTimezone = cfg.TimestampTimezone
+
+		configs[i].Fields = cfg.Fields
+		configs[i].Tags = cfg.Tags
+
+		configs[i].JSONObjects = cfg.JSONObjects
+	}
+	return &json_v2.Parser{
+		Configs: configs,
 	}, nil
 }

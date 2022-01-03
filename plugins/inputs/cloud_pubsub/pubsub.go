@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"sync"
 
-	"cloud.google.com/go/pubsub"
 	"encoding/base64"
+	"time"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
-	"log"
-	"time"
 )
 
 type empty struct{}
@@ -31,10 +32,10 @@ type PubSub struct {
 	Subscription    string `toml:"subscription"`
 
 	// Subscription ReceiveSettings
-	MaxExtension           internal.Duration `toml:"max_extension"`
-	MaxOutstandingMessages int               `toml:"max_outstanding_messages"`
-	MaxOutstandingBytes    int               `toml:"max_outstanding_bytes"`
-	MaxReceiverGoRoutines  int               `toml:"max_receiver_go_routines"`
+	MaxExtension           config.Duration `toml:"max_extension"`
+	MaxOutstandingMessages int             `toml:"max_outstanding_messages"`
+	MaxOutstandingBytes    int             `toml:"max_outstanding_bytes"`
+	MaxReceiverGoRoutines  int             `toml:"max_receiver_go_routines"`
 
 	// Agent settings
 	MaxMessageLen            int `toml:"max_message_len"`
@@ -42,6 +43,8 @@ type PubSub struct {
 	RetryReceiveDelaySeconds int `toml:"retry_delay_seconds"`
 
 	Base64Data bool `toml:"base64_data"`
+
+	Log telegraf.Logger
 
 	sub     subscription
 	stubSub func() subscription
@@ -65,7 +68,7 @@ func (ps *PubSub) SampleConfig() string {
 }
 
 // Gather does nothing for this service input.
-func (ps *PubSub) Gather(acc telegraf.Accumulator) error {
+func (ps *PubSub) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -134,14 +137,14 @@ func (ps *PubSub) receiveWithRetry(parentCtx context.Context) {
 	err := ps.startReceiver(parentCtx)
 
 	for err != nil && parentCtx.Err() == nil {
-		log.Printf("E! [inputs.cloud_pubsub] Receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
+		ps.Log.Errorf("Receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
 
 		delay := defaultRetryDelaySeconds
 		if ps.RetryReceiveDelaySeconds > 0 {
 			delay = ps.RetryReceiveDelaySeconds
 		}
 
-		log.Printf("I! [inputs.cloud_pubsub] Waiting %d seconds before attempting to restart receiver...", delay)
+		ps.Log.Infof("Waiting %d seconds before attempting to restart receiver...", delay)
 		time.Sleep(time.Duration(delay) * time.Second)
 
 		err = ps.startReceiver(parentCtx)
@@ -149,7 +152,7 @@ func (ps *PubSub) receiveWithRetry(parentCtx context.Context) {
 }
 
 func (ps *PubSub) startReceiver(parentCtx context.Context) error {
-	log.Printf("I! [inputs.cloud_pubsub] Starting receiver for subscription %s...", ps.sub.ID())
+	ps.Log.Infof("Starting receiver for subscription %s...", ps.sub.ID())
 	cctx, ccancel := context.WithCancel(parentCtx)
 	err := ps.sub.Receive(cctx, func(ctx context.Context, msg message) {
 		if err := ps.onMessage(ctx, msg); err != nil {
@@ -159,7 +162,7 @@ func (ps *PubSub) startReceiver(parentCtx context.Context) error {
 	if err != nil {
 		ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %v", ps.sub.ID(), err))
 	} else {
-		log.Printf("I! [inputs.cloud_pubsub] subscription pull ended (no error, most likely stopped)")
+		ps.Log.Info("Subscription pull ended (no error, most likely stopped)")
 	}
 	ccancel()
 	return err
@@ -178,7 +181,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		if err != nil {
 			return fmt.Errorf("unable to base64 decode message: %v", err)
 		}
-		data = []byte(strData)
+		data = strData
 	} else {
 		data = msg.Data()
 	}
@@ -267,15 +270,15 @@ func (ps *PubSub) getPubSubClient() (*pubsub.Client, error) {
 	return client, nil
 }
 
-func (ps *PubSub) getGCPSubscription(subId string) (subscription, error) {
+func (ps *PubSub) getGCPSubscription(subID string) (subscription, error) {
 	client, err := ps.getPubSubClient()
 	if err != nil {
 		return nil, err
 	}
-	s := client.Subscription(subId)
+	s := client.Subscription(subID)
 	s.ReceiveSettings = pubsub.ReceiveSettings{
 		NumGoroutines:          ps.MaxReceiverGoRoutines,
-		MaxExtension:           ps.MaxExtension.Duration,
+		MaxExtension:           time.Duration(ps.MaxExtension),
 		MaxOutstandingMessages: ps.MaxOutstandingMessages,
 		MaxOutstandingBytes:    ps.MaxOutstandingBytes,
 	}
@@ -310,8 +313,8 @@ const sampleConfig = `
   ## Application Default Credentials, which is preferred.
   # credentials_file = "path/to/my/creds.json"
 
-  ## Optional. Number of seconds to wait before attempting to restart the 
-  ## PubSub subscription receiver after an unexpected error. 
+  ## Optional. Number of seconds to wait before attempting to restart the
+  ## PubSub subscription receiver after an unexpected error.
   ## If the streaming pull for a PubSub Subscription fails (receiver),
   ## the agent attempts to restart receiving messages after this many seconds.
   # retry_delay_seconds = 5
@@ -360,7 +363,7 @@ const sampleConfig = `
   ## processed concurrently (use "max_outstanding_messages" instead).
   # max_receiver_go_routines = 0
 
-  ## Optional. If true, Telegraf will attempt to base64 decode the 
+  ## Optional. If true, Telegraf will attempt to base64 decode the
   ## PubSub message data before parsing
   # base64_data = false
 `

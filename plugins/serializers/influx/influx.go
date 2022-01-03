@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 )
@@ -79,8 +80,8 @@ func NewSerializer() *Serializer {
 	return serializer
 }
 
-func (s *Serializer) SetMaxLineBytes(bytes int) {
-	s.maxLineBytes = bytes
+func (s *Serializer) SetMaxLineBytes(maxLineBytes int) {
+	s.maxLineBytes = maxLineBytes
 }
 
 func (s *Serializer) SetFieldSortOrder(order FieldSortOrder) {
@@ -134,7 +135,7 @@ func (s *Serializer) writeString(w io.Writer, str string) error {
 	return err
 }
 
-func (s *Serializer) write(w io.Writer, b []byte) error {
+func (s *Serializer) writeBytes(w io.Writer, b []byte) error {
 	n, err := w.Write(b)
 	s.bytesWritten += n
 	return err
@@ -154,8 +155,16 @@ func (s *Serializer) buildHeader(m telegraf.Metric) error {
 		key := escape(tag.Key)
 		value := escape(tag.Value)
 
-		// Some keys and values are not encodeable as line protocol, such as
-		// those with a trailing '\' or empty strings.
+		// Tag keys and values that end with a backslash cannot be encoded by
+		// line protocol.
+		if strings.HasSuffix(key, `\`) {
+			key = strings.TrimRight(key, `\`)
+		}
+		if strings.HasSuffix(value, `\`) {
+			value = strings.TrimRight(value, `\`)
+		}
+
+		// Tag keys and values must not be the empty string.
 		if key == "" || value == "" {
 			continue
 		}
@@ -228,7 +237,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 
 		// Additional length needed for field separator `,`
 		if !firstField {
-			bytesNeeded += 1
+			bytesNeeded++
 		}
 
 		if s.maxLineBytes > 0 && bytesNeeded > s.maxLineBytes {
@@ -238,7 +247,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 				return s.newMetricError(NeedMoreSpace)
 			}
 
-			err = s.write(w, s.footer)
+			err = s.writeBytes(w, s.footer)
 			if err != nil {
 				return err
 			}
@@ -253,7 +262,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 		}
 
 		if firstField {
-			err = s.write(w, s.header)
+			err = s.writeBytes(w, s.header)
 			if err != nil {
 				return err
 			}
@@ -264,7 +273,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 			}
 		}
 
-		err = s.write(w, s.pair)
+		err = s.writeBytes(w, s.pair)
 		if err != nil {
 			return err
 		}
@@ -277,7 +286,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 		return s.newMetricError(NoFields)
 	}
 
-	return s.write(w, s.footer)
+	return s.writeBytes(w, s.footer)
 }
 
 func (s *Serializer) newMetricError(reason string) *MetricError {
@@ -293,13 +302,11 @@ func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, er
 	case uint64:
 		if s.fieldTypeSupport&UintSupport != 0 {
 			return appendUintField(buf, v), nil
-		} else {
-			if v <= uint64(MaxInt64) {
-				return appendIntField(buf, int64(v)), nil
-			} else {
-				return appendIntField(buf, int64(MaxInt64)), nil
-			}
 		}
+		if v <= uint64(MaxInt64) {
+			return appendIntField(buf, int64(v)), nil
+		}
+		return appendIntField(buf, MaxInt64), nil
 	case int64:
 		return appendIntField(buf, v), nil
 	case float64:

@@ -2,7 +2,6 @@ package kafka_consumer_legacy
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 
@@ -30,6 +29,8 @@ type Kafka struct {
 	Offset string
 	parser parsers.Parser
 
+	Log telegraf.Logger
+
 	sync.Mutex
 
 	// channel for all incoming kafka messages
@@ -49,12 +50,16 @@ type Kafka struct {
 var sampleConfig = `
   ## topic(s) to consume
   topics = ["telegraf"]
+
   ## an array of Zookeeper connection strings
   zookeeper_peers = ["localhost:2181"]
+
   ## Zookeeper Chroot
   zookeeper_chroot = ""
+
   ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
+
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 
@@ -96,7 +101,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	case "newest":
 		config.Offsets.Initial = sarama.OffsetNewest
 	default:
-		log.Printf("I! WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
+		k.Log.Infof("WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
 			k.Offset)
 		config.Offsets.Initial = sarama.OffsetOldest
 	}
@@ -121,7 +126,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 
 	// Start the kafka message reader
 	go k.receiver()
-	log.Printf("I! Started the kafka consumer service, peers: %v, topics: %v\n",
+	k.Log.Infof("Started the kafka consumer service, peers: %v, topics: %v\n",
 		k.ZookeeperPeers, k.Topics)
 	return nil
 }
@@ -135,11 +140,11 @@ func (k *Kafka) receiver() {
 			return
 		case err := <-k.errs:
 			if err != nil {
-				k.acc.AddError(fmt.Errorf("Consumer Error: %s\n", err))
+				k.acc.AddError(fmt.Errorf("consumer Error: %s", err))
 			}
 		case msg := <-k.in:
 			if k.MaxMessageLen != 0 && len(msg.Value) > k.MaxMessageLen {
-				k.acc.AddError(fmt.Errorf("Message longer than max_message_len (%d > %d)",
+				k.acc.AddError(fmt.Errorf("message longer than max_message_len (%d > %d)",
 					len(msg.Value), k.MaxMessageLen))
 			} else {
 				metrics, err := k.parser.Parse(msg.Value)
@@ -156,8 +161,11 @@ func (k *Kafka) receiver() {
 				// TODO(cam) this locking can be removed if this PR gets merged:
 				// https://github.com/wvanbergen/kafka/pull/84
 				k.Lock()
-				k.Consumer.CommitUpto(msg)
+				err := k.Consumer.CommitUpto(msg)
 				k.Unlock()
+				if err != nil {
+					k.acc.AddError(fmt.Errorf("committing to consumer failed: %v", err))
+				}
 			}
 		}
 	}
@@ -168,11 +176,11 @@ func (k *Kafka) Stop() {
 	defer k.Unlock()
 	close(k.done)
 	if err := k.Consumer.Close(); err != nil {
-		k.acc.AddError(fmt.Errorf("Error closing consumer: %s\n", err.Error()))
+		k.acc.AddError(fmt.Errorf("error closing consumer: %s", err.Error()))
 	}
 }
 
-func (k *Kafka) Gather(acc telegraf.Accumulator) error {
+func (k *Kafka) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

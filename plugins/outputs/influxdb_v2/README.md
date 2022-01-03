@@ -2,7 +2,7 @@
 
 The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Configuration for sending metrics to InfluxDB 2.0
@@ -11,7 +11,8 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
   ##
   ## Multiple URLs can be specified for a single cluster, only ONE of the
   ## urls will be written to each interval.
-  urls = ["http://127.0.0.1:9999"]
+  ##   ex: urls = ["https://us-west-2-1.aws.cloud2.influxdata.com"]
+  urls = ["http://127.0.0.1:8086"]
 
   ## Token for authentication.
   token = ""
@@ -57,4 +58,9 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
   # insecure_skip_verify = false
 ```
 
+## Metrics
+
+Reference the [influx serializer][] for details about metric production.
+
 [InfluxDB v2.x]: https://github.com/influxdata/influxdb
+[influx serializer]: /plugins/serializers/influx/README.md#Metrics

@@ -8,7 +8,6 @@ type timingStat struct {
 	measurement string
 	field       string
 	tags        map[string]string
-	key         uint64
 	v           int64
 	prev        int64
 	count       int64
@@ -56,11 +55,4 @@ func (s *timingStat) Tags() map[string]string {
 		m[k] = v
 	}
 	return m
-}
-
-func (s *timingStat) Key() uint64 {
-	if s.key == 0 {
-		s.key = key(s.measurement, s.tags)
-	}
-	return s.key
 }

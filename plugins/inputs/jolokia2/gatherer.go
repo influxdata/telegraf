@@ -43,10 +43,10 @@ func (g *Gatherer) Gather(client *Client, acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherReponses adds points to an accumulator from the ReadResponse objects
+// gatherResponses adds points to an accumulator from the ReadResponse objects
 // returned by a Jolokia agent.
 func (g *Gatherer) gatherResponses(responses []ReadResponse, tags map[string]string, acc telegraf.Accumulator) {
-	series := make(map[string][]point, 0)
+	series := make(map[string][]point)
 
 	for _, metric := range g.metrics {
 		points, ok := series[metric.Name]
@@ -55,11 +55,7 @@ func (g *Gatherer) gatherResponses(responses []ReadResponse, tags map[string]str
 		}
 
 		responsePoints, responseErrors := g.generatePoints(metric, responses)
-
-		for _, responsePoint := range responsePoints {
-			points = append(points, responsePoint)
-		}
-
+		points = append(points, responsePoints...)
 		for _, err := range responseErrors {
 			acc.AddError(err)
 		}
@@ -84,12 +80,12 @@ func (g *Gatherer) generatePoints(metric Metric, responses []ReadResponse) ([]po
 	for _, response := range responses {
 		switch response.Status {
 		case 200:
-			break
+			// Correct response status - do nothing.
 		case 404:
 			continue
 		default:
-			errors = append(errors, fmt.Errorf("Unexpected status in response from target %s: %d",
-				response.RequestTarget, response.Status))
+			errors = append(errors, fmt.Errorf("unexpected status in response from target %s (%q): %d",
+				response.RequestTarget, response.RequestMbean, response.Status))
 			continue
 		}
 
@@ -144,7 +140,7 @@ func metricMatchesResponse(metric Metric, response ReadResponse) bool {
 	return false
 }
 
-// compactPoints attepts to remove points by compacting points
+// compactPoints attempts to remove points by compacting points
 // with matching tag sets. When a match is found, the fields from
 // one point are moved to another, and the empty point is removed.
 func compactPoints(points []point) []point {
@@ -195,7 +191,6 @@ func tagSetsMatch(a, b map[string]string) bool {
 func makeReadRequests(metrics []Metric) []ReadRequest {
 	var requests []ReadRequest
 	for _, metric := range metrics {
-
 		if len(metric.Paths) == 0 {
 			requests = append(requests, ReadRequest{
 				Mbean:      metric.Mbean,

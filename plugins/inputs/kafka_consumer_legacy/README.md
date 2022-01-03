@@ -1,4 +1,6 @@
-# Kafka Consumer Input Plugin
+# Kafka Consumer Legacy Input Plugin
+
+## Deprecated in version 1.4. Please use [Kafka Consumer input plugin][]
 
 The [Kafka](http://kafka.apache.org/) consumer plugin polls a specified Kafka
 topic and adds messages to InfluxDB. The plugin assumes messages follow the
@@ -13,12 +15,16 @@ from the same topic in parallel.
 [[inputs.kafka_consumer]]
   ## topic(s) to consume
   topics = ["telegraf"]
+
   ## an array of Zookeeper connection strings
   zookeeper_peers = ["localhost:2181"]
+
   ## Zookeeper Chroot
   zookeeper_chroot = ""
+
   ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
+
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 
@@ -37,3 +43,5 @@ from the same topic in parallel.
 
 Running integration tests requires running Zookeeper & Kafka. See Makefile
 for kafka container command.
+
+[Kafka Consumer input plugin]: /plugins/inputs/kafka_consumer

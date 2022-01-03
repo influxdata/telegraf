@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -14,8 +13,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -43,22 +43,27 @@ func (ssl *streamSocketListener) listen() {
 		c, err := ssl.Accept()
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				ssl.AddError(err)
+				ssl.Log.Error(err.Error())
 			}
 			break
 		}
 
-		if ssl.ReadBufferSize.Size > 0 {
+		if ssl.ReadBufferSize > 0 {
 			if srb, ok := c.(setReadBufferer); ok {
-				srb.SetReadBuffer(int(ssl.ReadBufferSize.Size))
+				if err := srb.SetReadBuffer(int(ssl.ReadBufferSize)); err != nil {
+					ssl.Log.Error(err.Error())
+					break
+				}
 			} else {
-				log.Printf("W! Unable to set read buffer on a %s socket", ssl.sockType)
+				ssl.Log.Warnf("Unable to set read buffer on a %s socket", ssl.sockType)
 			}
 		}
 
 		ssl.connectionsMtx.Lock()
 		if ssl.MaxConnections > 0 && len(ssl.connections) >= ssl.MaxConnections {
 			ssl.connectionsMtx.Unlock()
+			// Ignore the returned error as we cannot do anything about it anyway
+			//nolint:errcheck,revive
 			c.Close()
 			continue
 		}
@@ -66,7 +71,7 @@ func (ssl *streamSocketListener) listen() {
 		ssl.connectionsMtx.Unlock()
 
 		if err := ssl.setKeepAlive(c); err != nil {
-			ssl.AddError(fmt.Errorf("unable to configure keep alive (%s): %s", ssl.ServiceAddress, err))
+			ssl.Log.Errorf("Unable to configure keep alive %q: %s", ssl.ServiceAddress, err.Error())
 		}
 
 		wg.Add(1)
@@ -78,6 +83,8 @@ func (ssl *streamSocketListener) listen() {
 
 	ssl.connectionsMtx.Lock()
 	for _, c := range ssl.connections {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		c.Close()
 	}
 	ssl.connectionsMtx.Unlock()
@@ -93,13 +100,13 @@ func (ssl *streamSocketListener) setKeepAlive(c net.Conn) error {
 	if !ok {
 		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(ssl.ServiceAddress, "://", 2)[0])
 	}
-	if ssl.KeepAlivePeriod.Duration == 0 {
+	if *ssl.KeepAlivePeriod == 0 {
 		return tcpc.SetKeepAlive(false)
 	}
 	if err := tcpc.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return tcpc.SetKeepAlivePeriod(ssl.KeepAlivePeriod.Duration)
+	return tcpc.SetKeepAlivePeriod(time.Duration(*ssl.KeepAlivePeriod))
 }
 
 func (ssl *streamSocketListener) removeConnection(c net.Conn) {
@@ -112,17 +119,29 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	defer ssl.removeConnection(c)
 	defer c.Close()
 
-	scnr := bufio.NewScanner(c)
+	decoder, err := internal.NewStreamContentDecoder(ssl.ContentEncoding, c)
+	if err != nil {
+		ssl.Log.Error("Read error: %v", err)
+		return
+	}
+
+	scnr := bufio.NewScanner(decoder)
 	for {
-		if ssl.ReadTimeout != nil && ssl.ReadTimeout.Duration > 0 {
-			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration))
+		if ssl.ReadTimeout != nil && *ssl.ReadTimeout > 0 {
+			if err := c.SetReadDeadline(time.Now().Add(time.Duration(*ssl.ReadTimeout))); err != nil {
+				ssl.Log.Error("setting read deadline failed: %v", err)
+				return
+			}
 		}
 		if !scnr.Scan() {
 			break
 		}
-		metrics, err := ssl.Parse(scnr.Bytes())
+
+		body := scnr.Bytes()
+
+		metrics, err := ssl.Parse(body)
 		if err != nil {
-			ssl.AddError(fmt.Errorf("unable to parse incoming line: %s", err))
+			ssl.Log.Errorf("Unable to parse incoming line: %s", err.Error())
 			// TODO rate limit
 			continue
 		}
@@ -133,9 +152,9 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 
 	if err := scnr.Err(); err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			log.Printf("D! Timeout in plugin [input.socket_listener]: %s", err)
+			ssl.Log.Debugf("Timeout in plugin: %s", err.Error())
 		} else if netErr != nil && !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-			ssl.AddError(err)
+			ssl.Log.Error(err.Error())
 		}
 	}
 }
@@ -143,6 +162,7 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 type packetSocketListener struct {
 	net.PacketConn
 	*SocketListener
+	decoder internal.ContentDecoder
 }
 
 func (psl *packetSocketListener) listen() {
@@ -151,14 +171,19 @@ func (psl *packetSocketListener) listen() {
 		n, _, err := psl.ReadFrom(buf)
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				psl.AddError(err)
+				psl.Log.Error(err.Error())
 			}
 			break
 		}
 
-		metrics, err := psl.Parse(buf[:n])
+		body, err := psl.decoder.Decode(buf[:n])
 		if err != nil {
-			psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
+			psl.Log.Errorf("Unable to decode incoming packet: %s", err.Error())
+		}
+
+		metrics, err := psl.Parse(body)
+		if err != nil {
+			psl.Log.Errorf("Unable to parse incoming packet: %s", err.Error())
 			// TODO rate limit
 			continue
 		}
@@ -169,15 +194,18 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress  string             `toml:"service_address"`
-	MaxConnections  int                `toml:"max_connections"`
-	ReadBufferSize  internal.Size      `toml:"read_buffer_size"`
-	ReadTimeout     *internal.Duration `toml:"read_timeout"`
-	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
-	SocketMode      string             `toml:"socket_mode"`
+	ServiceAddress  string           `toml:"service_address"`
+	MaxConnections  int              `toml:"max_connections"`
+	ReadBufferSize  config.Size      `toml:"read_buffer_size"`
+	ReadTimeout     *config.Duration `toml:"read_timeout"`
+	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
+	SocketMode      string           `toml:"socket_mode"`
+	ContentEncoding string           `toml:"content_encoding"`
 	tlsint.ServerConfig
 
 	wg sync.WaitGroup
+
+	Log telegraf.Logger
 
 	parsers.Parser
 	telegraf.Accumulator
@@ -243,6 +271,10 @@ func (sl *SocketListener) SampleConfig() string {
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
+
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 `
 }
 
@@ -268,21 +300,18 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		// no good way of testing for "file does not exist".
 		// Instead just ignore error and blow up when we try to listen, which will
 		// indicate "address already in use" if file existed and we couldn't remove.
+		//nolint:errcheck,revive
 		os.Remove(addr)
 	}
 
 	switch protocol {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-		var (
-			err error
-			l   net.Listener
-		)
-
 		tlsCfg, err := sl.ServerConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
 
+		var l net.Listener
 		if tlsCfg == nil {
 			l, err = net.Listen(protocol, addr)
 		} else {
@@ -292,7 +321,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		log.Printf("I! [inputs.socket_listener] Listening on %s://%s", protocol, l.Addr())
+		sl.Log.Infof("Listening on %s://%s", protocol, l.Addr())
 
 		// Set permissions on socket
 		if (spl[0] == "unix" || spl[0] == "unixpacket") && sl.SocketMode != "" {
@@ -302,7 +331,9 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 				return err
 			}
 
-			os.Chmod(spl[1], os.FileMode(uint32(i)))
+			if err := os.Chmod(spl[1], os.FileMode(uint32(i))); err != nil {
+				return err
+			}
 		}
 
 		ssl := &streamSocketListener{
@@ -319,6 +350,11 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			ssl.listen()
 		}()
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
+		decoder, err := internal.NewContentDecoder(sl.ContentEncoding)
+		if err != nil {
+			return err
+		}
+
 		pc, err := udpListen(protocol, addr)
 		if err != nil {
 			return err
@@ -332,22 +368,27 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 				return err
 			}
 
-			os.Chmod(spl[1], os.FileMode(uint32(i)))
-		}
-
-		if sl.ReadBufferSize.Size > 0 {
-			if srb, ok := pc.(setReadBufferer); ok {
-				srb.SetReadBuffer(int(sl.ReadBufferSize.Size))
-			} else {
-				log.Printf("W! Unable to set read buffer on a %s socket", protocol)
+			if err := os.Chmod(spl[1], os.FileMode(uint32(i))); err != nil {
+				return err
 			}
 		}
 
-		log.Printf("I! [inputs.socket_listener] Listening on %s://%s", protocol, pc.LocalAddr())
+		if sl.ReadBufferSize > 0 {
+			if srb, ok := pc.(setReadBufferer); ok {
+				if err := srb.SetReadBuffer(int(sl.ReadBufferSize)); err != nil {
+					sl.Log.Warnf("Setting read buffer on a %s socket failed: %v", protocol, err)
+				}
+			} else {
+				sl.Log.Warnf("Unable to set read buffer on a %s socket", protocol)
+			}
+		}
+
+		sl.Log.Infof("Listening on %s://%s", protocol, pc.LocalAddr())
 
 		psl := &packetSocketListener{
 			PacketConn:     pc,
 			SocketListener: sl,
+			decoder:        decoder,
 		}
 
 		sl.Closer = psl
@@ -395,6 +436,8 @@ func udpListen(network string, address string) (net.PacketConn, error) {
 
 func (sl *SocketListener) Stop() {
 	if sl.Closer != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		sl.Close()
 		sl.Closer = nil
 	}
@@ -416,7 +459,9 @@ type unixCloser struct {
 
 func (uc unixCloser) Close() error {
 	err := uc.closer.Close()
-	os.Remove(uc.path) // ignore error
+	// Ignore the error if e.g. the file does not exist
+	//nolint:errcheck,revive
+	os.Remove(uc.path)
 	return err
 }
 

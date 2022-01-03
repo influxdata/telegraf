@@ -4,32 +4,33 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/load"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/load"
 )
 
-type SystemStats struct{}
+type SystemStats struct {
+	Log telegraf.Logger
+}
 
-func (_ *SystemStats) Description() string {
+func (*SystemStats) Description() string {
 	return "Read metrics about system load & uptime"
 }
 
-func (_ *SystemStats) SampleConfig() string {
+func (*SystemStats) SampleConfig() string {
 	return `
   ## Uncomment to remove deprecated metrics.
   # fielddrop = ["uptime_format"]
 `
 }
 
-func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
+func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return err
@@ -51,9 +52,9 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	if err == nil {
 		fields["n_users"] = len(users)
 	} else if os.IsNotExist(err) {
-		log.Printf("D! [inputs.system] Error reading users: %v", err)
+		s.Log.Debugf("Reading users: %s", err.Error())
 	} else if os.IsPermission(err) {
-		log.Printf("D! [inputs.system] %v", err)
+		s.Log.Debug(err.Error())
 	}
 
 	now := time.Now()
@@ -85,6 +86,8 @@ func formatUptime(uptime uint64) string {
 		if days > 1 {
 			s = "s"
 		}
+		// This will always succeed, so skip checking the error
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "%d day%s, ", days, s)
 	}
 
@@ -93,8 +96,12 @@ func formatUptime(uptime uint64) string {
 	hours %= 24
 	minutes %= 60
 
+	// This will always succeed, so skip checking the error
+	//nolint:errcheck,revive
 	fmt.Fprintf(w, "%2d:%02d", hours, minutes)
 
+	// This will always succeed, so skip checking the error
+	//nolint:errcheck,revive
 	w.Flush()
 	return buf.String()
 }

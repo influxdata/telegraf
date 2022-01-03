@@ -36,6 +36,7 @@
 syntax = "proto3";
 
 package telemetry;
+option go_package = ".;telemetry";
 
 // Interface exported by Agent
 service OpenConfigTelemetry {
@@ -44,7 +45,7 @@ service OpenConfigTelemetry {
     // connection as the subscription request.
     rpc telemetrySubscribe(SubscriptionRequest)                     returns (stream OpenConfigData) {}
 
-    // Terminates and removes an exisiting telemetry subscription
+    // Terminates and removes an existing telemetry subscription
     rpc cancelTelemetrySubscription(CancelSubscriptionRequest)      returns (CancelSubscriptionReply) {}
 
     // Get the list of current telemetry subscriptions from the

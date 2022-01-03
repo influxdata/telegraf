@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf/filter"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,13 +13,24 @@ import (
 
 func TestKubernetesStats(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, response)
+		if r.RequestURI == "/stats/summary" {
+			w.WriteHeader(http.StatusOK)
+			_, err := fmt.Fprintln(w, responseStatsSummery)
+			require.NoError(t, err)
+		}
+		if r.RequestURI == "/pods" {
+			w.WriteHeader(http.StatusOK)
+			_, err := fmt.Fprintln(w, responsePods)
+			require.NoError(t, err)
+		}
 	}))
 	defer ts.Close()
 
+	labelFilter, _ := filter.NewIncludeExcludeFilter([]string{"app", "superkey"}, nil)
+
 	k := &Kubernetes{
-		URL: ts.URL,
+		URL:         ts.URL,
+		labelFilter: labelFilter,
 	}
 
 	var acc testutil.Accumulator
@@ -89,6 +101,8 @@ func TestKubernetesStats(t *testing.T) {
 		"container_name": "foocontainer",
 		"namespace":      "foons",
 		"pod_name":       "foopod",
+		"app":            "foo",
+		"superkey":       "foobar",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_container", fields, tags)
 
@@ -112,6 +126,8 @@ func TestKubernetesStats(t *testing.T) {
 		"container_name": "stopped-container",
 		"namespace":      "foons",
 		"pod_name":       "stopped-pod",
+		"app":            "foo-stop",
+		"superkey":       "superfoo",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_container", fields, tags)
 
@@ -125,6 +141,8 @@ func TestKubernetesStats(t *testing.T) {
 		"volume_name": "volume1",
 		"namespace":   "foons",
 		"pod_name":    "foopod",
+		"app":         "foo",
+		"superkey":    "foobar",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_volume", fields, tags)
 
@@ -138,12 +156,45 @@ func TestKubernetesStats(t *testing.T) {
 		"node_name": "node1",
 		"namespace": "foons",
 		"pod_name":  "foopod",
+		"app":       "foo",
+		"superkey":  "foobar",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_network", fields, tags)
-
 }
 
-var response = `
+var responsePods = `
+{
+  "kind": "PodList",
+  "apiVersion": "v1",
+  "metadata": {},
+  "items": [
+    {
+      "metadata": {
+        "name": "foopod",
+        "namespace": "foons",
+        "labels": {
+          "superkey": "foobar",
+          "app": "foo",
+          "exclude": "exclude0"
+        }
+      }
+    },
+    {
+      "metadata": {
+        "name": "stopped-pod",
+        "namespace": "foons",
+        "labels": {
+          "superkey": "superfoo",
+          "app": "foo-stop",
+          "exclude": "exclude1"
+        }
+      }
+    }
+  ]
+}
+`
+
+var responseStatsSummery = `
 {
   "node": {
    "nodeName": "node1",

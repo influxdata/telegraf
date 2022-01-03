@@ -5,16 +5,14 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
-	"log"
-	"net"
+	"io"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/config"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -29,23 +27,23 @@ type PubSubPush struct {
 	ServiceAddress string
 	Token          string
 	Path           string
-	ReadTimeout    internal.Duration
-	WriteTimeout   internal.Duration
-	MaxBodySize    internal.Size
+	ReadTimeout    config.Duration
+	WriteTimeout   config.Duration
+	MaxBodySize    config.Size
 	AddMeta        bool
+	Log            telegraf.Logger
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
 	tlsint.ServerConfig
 	parsers.Parser
 
-	listener net.Listener
-	server   *http.Server
-	acc      telegraf.TrackingAccumulator
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       *sync.WaitGroup
-	mu       *sync.Mutex
+	server *http.Server
+	acc    telegraf.TrackingAccumulator
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     *sync.WaitGroup
+	mu     *sync.Mutex
 
 	undelivered map[telegraf.TrackingID]chan bool
 	sem         chan struct{}
@@ -131,15 +129,15 @@ func (p *PubSubPush) SetParser(parser parsers.Parser) {
 
 // Start starts the http listener service.
 func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
-	if p.MaxBodySize.Size == 0 {
-		p.MaxBodySize.Size = defaultMaxBodySize
+	if p.MaxBodySize == 0 {
+		p.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
-	if p.ReadTimeout.Duration < time.Second {
-		p.ReadTimeout.Duration = time.Second * 10
+	if p.ReadTimeout < config.Duration(time.Second) {
+		p.ReadTimeout = config.Duration(time.Second * 10)
 	}
-	if p.WriteTimeout.Duration < time.Second {
-		p.WriteTimeout.Duration = time.Second * 10
+	if p.WriteTimeout < config.Duration(time.Second) {
+		p.WriteTimeout = config.Duration(time.Second * 10)
 	}
 
 	tlsConf, err := p.ServerConfig.TLSConfig()
@@ -149,8 +147,8 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 
 	p.server = &http.Server{
 		Addr:        p.ServiceAddress,
-		Handler:     http.TimeoutHandler(p, p.WriteTimeout.Duration, "timed out processing metric"),
-		ReadTimeout: p.ReadTimeout.Duration,
+		Handler:     http.TimeoutHandler(p, time.Duration(p.WriteTimeout), "timed out processing metric"),
+		ReadTimeout: time.Duration(p.ReadTimeout),
 		TLSConfig:   tlsConf,
 	}
 
@@ -171,9 +169,13 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer p.wg.Done()
 		if tlsConf != nil {
-			p.server.ListenAndServeTLS("", "")
+			if err := p.server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+				p.Log.Errorf("listening and serving TLS failed: %v", err)
+			}
 		} else {
-			p.server.ListenAndServe()
+			if err := p.server.ListenAndServe(); err != nil {
+				p.Log.Errorf("listening and serving TLS failed: %v", err)
+			}
 		}
 	}()
 
@@ -183,6 +185,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 // Stop cleans up all resources
 func (p *PubSubPush) Stop() {
 	p.cancel()
+	//nolint:errcheck,revive // we cannot do anything if the shutdown fails
 	p.server.Shutdown(p.ctx)
 	p.wg.Wait()
 }
@@ -208,7 +211,7 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// Check that the content length is not too large for us to handle.
-	if req.ContentLength > p.MaxBodySize.Size {
+	if req.ContentLength > int64(p.MaxBodySize) {
 		res.WriteHeader(http.StatusRequestEntityTooLarge)
 		return
 	}
@@ -218,8 +221,8 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body := http.MaxBytesReader(res, req.Body, p.MaxBodySize.Size)
-	bytes, err := ioutil.ReadAll(body)
+	body := http.MaxBytesReader(res, req.Body, int64(p.MaxBodySize))
+	bytes, err := io.ReadAll(body)
 	if err != nil {
 		res.WriteHeader(http.StatusRequestEntityTooLarge)
 		return
@@ -227,21 +230,21 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 	var payload Payload
 	if err = json.Unmarshal(bytes, &payload); err != nil {
-		log.Printf("E! [inputs.cloud_pubsub_push] Error decoding payload %s", err.Error())
+		p.Log.Errorf("Error decoding payload %s", err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	sDec, err := base64.StdEncoding.DecodeString(payload.Msg.Data)
 	if err != nil {
-		log.Printf("E! [inputs.cloud_pubsub_push] Base64-Decode Failed %s", err.Error())
+		p.Log.Errorf("Base64-decode failed %s", err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	metrics, err := p.Parse(sDec)
 	if err != nil {
-		log.Println("D! [inputs.cloud_pubsub_push] " + err.Error())
+		p.Log.Debug(err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -295,7 +298,7 @@ func (p *PubSubPush) receiveDelivered() {
 				ch <- true
 			} else {
 				ch <- false
-				log.Println("D! [inputs.cloud_pubsub_push] Metric group failed to process")
+				p.Log.Debug("Metric group failed to process")
 			}
 		}
 	}

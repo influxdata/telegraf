@@ -1,7 +1,11 @@
-# Stackdriver Output Plugin
+# Stackdriver Google Cloud Monitoring Output Plugin
 
-This plugin writes to the [Google Cloud Stackdriver API](https://cloud.google.com/monitoring/api/v3/)
-and requires [authentication](https://cloud.google.com/docs/authentication/getting-started) with Google Cloud using either a service account or user credentials. See the [Stackdriver documentation](https://cloud.google.com/stackdriver/pricing#stackdriver_monitoring_services) for details on pricing.
+This plugin writes to the [Google Cloud Monitoring API][stackdriver] (formerly
+Stackdriver) and requires [authentication][] with Google Cloud using either a
+service account or user credentials
+
+This plugin accesses APIs which are [chargeable][pricing]; you might incur
+costs.
 
 Requires `project` to specify where Stackdriver metrics will be delivered to.
 
@@ -11,7 +15,7 @@ Metrics are grouped by the `namespace` variable and metric key - eg: `custom.goo
 
 Additional resource labels can be configured by `resource_labels`. By default the required `project_id` label is always set to the `project` variable.
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.stackdriver]]
@@ -24,14 +28,14 @@ Additional resource labels can be configured by `resource_labels`. By default th
   ## Custom resource type
   # resource_type = "generic_node"
 
-  ## Additonal resource labels
+  ## Additional resource labels
   # [outputs.stackdriver.resource_labels]
   #   node_id = "$HOSTNAME"
   #   namespace = "myapp"
   #   location = "eu-north0"
 ```
 
-### Restrictions
+## Restrictions
 
 Stackdriver does not support string values in custom metrics, any string
 fields will not be written.
@@ -46,4 +50,16 @@ Points collected with greater than 1 minute precision may need to be
 aggregated before then can be written.  Consider using the [basicstats][]
 aggregator to do this.
 
+Histogram / distribution and delta metrics are not yet supported. These will
+be dropped silently unless debugging is on.
+
+Note that the plugin keeps an in-memory cache of the start times and last
+observed values of all COUNTER metrics in order to comply with the
+requirements of the stackdriver API.  This cache is not GCed: if you remove
+a large number of counters from the input side, you may wish to restart
+telegraf to clear it.
+
 [basicstats]: /plugins/aggregators/basicstats/README.md
+[stackdriver]: https://cloud.google.com/monitoring/api/v3/
+[authentication]: https://cloud.google.com/docs/authentication/getting-started
+[pricing]: https://cloud.google.com/stackdriver/pricing#google-clouds-operations-suite-pricing

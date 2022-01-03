@@ -3,7 +3,7 @@
 The `csv` parser creates metrics from a document containing comma separated
 values.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.file]]
@@ -29,6 +29,7 @@ values.
 
   ## For assigning explicit data types to columns.
   ## Supported types: "int", "float", "bool", "string".
+  ## Specify types in order by column (e.g. `["string", "int", "float"]`)
   ## If this is not specified, type conversion will be done on the types above.
   csv_column_types = []
 
@@ -39,7 +40,7 @@ values.
   ## These columns will be skipped in the header as well.
   csv_skip_columns = 0
 
-  ## The seperator between csv fields
+  ## The separator between csv fields
   ## By default, the parser assumes a comma (",")
   csv_delimiter = ","
 
@@ -55,18 +56,34 @@ values.
   ## will be added as fields.
   csv_tag_columns = []
 
-  ## The column to extract the name of the metric from
+  ## The column to extract the name of the metric from. Will not be
+  ## included as field in metric.
   csv_measurement_column = ""
 
   ## The column to extract time information for the metric
-  ## `csv_timestamp_format` must be specified if this is used
+  ## `csv_timestamp_format` must be specified if this is used.
+  ## Will not be included as field in metric.
   csv_timestamp_column = ""
 
   ## The format of time data extracted from `csv_timestamp_column`
   ## this must be specified if `csv_timestamp_column` is specified
   csv_timestamp_format = ""
+
+  ## The timezone of time data extracted from `csv_timestamp_column`
+  ## in case of there is no timezone information.
+  ## It follows the  IANA Time Zone database.
+  csv_timezone = ""
+
+  ## Indicates values to skip, such as an empty string value "".
+  ## The field will be skipped entirely where it matches any values inserted here.
+  csv_skip_values = []
+
+  ## If set to true, the parser will skip csv lines that cannot be parsed.
+  ## By default, this is false
+  csv_skip_errors = false
   ```
-#### csv_timestamp_column, csv_timestamp_format
+
+### csv_timestamp_column, csv_timestamp_format
 
 By default the current time will be used for all created metrics, to set the
 time using the JSON document you can use the `csv_timestamp_column` and
@@ -81,15 +98,19 @@ or a format string in using the Go "reference time" which is defined to be the
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.
 
-### Metrics
+## Metrics
 
 One metric is created for each row with the columns added as fields.  The type
 of the field is automatically determined based on the contents of the value.
 
-### Examples
+In addition to the options above, you can use [metric filtering][] to skip over
+columns and rows.
+
+## Examples
 
 Config:
-```
+
+```toml
 [[inputs.file]]
   files = ["example"]
   data_format = "csv"
@@ -99,12 +120,16 @@ Config:
 ```
 
 Input:
-```
+
+```shell
 measurement,cpu,time_user,time_system,time_idle,time
 cpu,cpu0,42,42,42,2018-09-13T13:03:28Z
 ```
 
 Output:
-```
+
+```shell
 cpu cpu=cpu0,time_user=42,time_system=42,time_idle=42 1536869008000000000
 ```
+
+[metric filtering]: /docs/CONFIGURATION.md#metric-filtering

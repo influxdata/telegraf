@@ -3,8 +3,7 @@
 The GCP PubSub plugin publishes metrics to a [Google Cloud PubSub][pubsub] topic
 as one of the supported [output data formats][].
 
-
-### Configuration
+## Configuration
 
 This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage cloud_pubsub`.
@@ -24,9 +23,9 @@ generate it using `telegraf --usage cloud_pubsub`.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
-  ## Optional. Filepath for GCP credentials JSON file to authorize calls to 
-  ## PubSub APIs. If not set explicitly, Telegraf will attempt to use 
-  ## Application Default Credentials, which is preferred. 
+  ## Optional. Filepath for GCP credentials JSON file to authorize calls to
+  ## PubSub APIs. If not set explicitly, Telegraf will attempt to use
+  ## Application Default Credentials, which is preferred.
   # credentials_file = "path/to/my/creds.json"
 
   ## Optional. If true, will send all metrics per write in one PubSub message.
@@ -51,12 +50,12 @@ generate it using `telegraf --usage cloud_pubsub`.
 
   ## Optional. Specifies a timeout for requests to the PubSub API.
   # publish_timeout = "30s"
-  
+
   ## Optional. If true, published PubSub message data will be base64-encoded.
   # base64_data = false
-  
+
   ## Optional. PubSub attributes to add to metrics.
-  # [[inputs.pubsub.attributes]]
+  # [outputs.cloud_pubsub.attributes]
   #   my_attr = "tag_value"
 ```
 

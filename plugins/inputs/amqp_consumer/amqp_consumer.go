@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/streadway/amqp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/streadway/amqp"
 )
 
 const (
@@ -55,6 +55,7 @@ type AMQPConsumer struct {
 	tls.ClientConfig
 
 	ContentEncoding string `toml:"content_encoding"`
+	Log             telegraf.Logger
 
 	deliveries map[telegraf.TrackingID]amqp.Delivery
 
@@ -71,7 +72,7 @@ func (a *externalAuth) Mechanism() string {
 	return "EXTERNAL"
 }
 func (a *externalAuth) Response() string {
-	return fmt.Sprintf("\000")
+	return "\000"
 }
 
 const (
@@ -116,7 +117,7 @@ func (a *AMQPConsumer) SampleConfig() string {
 
   ## Additional exchange arguments.
   # exchange_arguments = { }
-  # exchange_arguments = {"hash_propery" = "timestamp"}
+  # exchange_arguments = {"hash_property" = "timestamp"}
 
   ## AMQP queue name.
   queue = "telegraf"
@@ -183,7 +184,7 @@ func (a *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
 
 func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	// make new tls config
-	tls, err := a.ClientConfig.TLSConfig()
+	tlsCfg, err := a.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +202,7 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	}
 
 	config := amqp.Config{
-		TLSClientConfig: tls,
+		TLSClientConfig: tlsCfg,
 		SASL:            auth, // if nil, it will be PLAIN
 	}
 	return &config, nil
@@ -241,11 +242,11 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 				break
 			}
 
-			log.Printf("I! [inputs.amqp_consumer] connection closed: %s; trying to reconnect", err)
+			a.Log.Infof("Connection closed: %s; trying to reconnect", err)
 			for {
 				msgs, err := a.connect(amqpConf)
 				if err != nil {
-					log.Printf("E! AMQP connection failed: %s", err)
+					a.Log.Errorf("AMQP connection failed: %s", err)
 					time.Sleep(10 * time.Second)
 					continue
 				}
@@ -272,14 +273,14 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	p := rand.Perm(len(brokers))
 	for _, n := range p {
 		broker := brokers[n]
-		log.Printf("D! [inputs.amqp_consumer] connecting to %q", broker)
+		a.Log.Debugf("Connecting to %q", broker)
 		conn, err := amqp.DialConfig(broker, *amqpConf)
 		if err == nil {
 			a.conn = conn
-			log.Printf("D! [inputs.amqp_consumer] connected to %q", broker)
+			a.Log.Debugf("Connected to %q", broker)
 			break
 		}
-		log.Printf("D! [inputs.amqp_consumer] error connecting to %q", broker)
+		a.Log.Debugf("Error connecting to %q", broker)
 	}
 
 	if a.conn == nil {
@@ -288,16 +289,13 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 
 	ch, err := a.conn.Channel()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to open a channel: %s", err)
+		return nil, fmt.Errorf("failed to open a channel: %s", err.Error())
 	}
 
 	if a.Exchange != "" {
-		var exchangeDurable = true
-		switch a.ExchangeDurability {
-		case "transient":
+		exchangeDurable := true
+		if a.ExchangeDurability == "transient" {
 			exchangeDurable = false
-		default:
-			exchangeDurable = true
 		}
 
 		exchangeArgs := make(amqp.Table, len(a.ExchangeArguments))
@@ -305,11 +303,8 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 			exchangeArgs[k] = v
 		}
 
-		err = declareExchange(
+		err = a.declareExchange(
 			ch,
-			a.Exchange,
-			a.ExchangeType,
-			a.ExchangePassive,
 			exchangeDurable,
 			exchangeArgs)
 		if err != nil {
@@ -317,11 +312,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		}
 	}
 
-	q, err := declareQueue(
-		ch,
-		a.Queue,
-		a.QueueDurability,
-		a.QueuePassive)
+	q, err := a.declareQueue(ch)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +326,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 			nil,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to bind a queue: %s", err)
+			return nil, fmt.Errorf("failed to bind a queue: %s", err)
 		}
 	}
 
@@ -345,7 +336,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		false, // global
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to set QoS: %s", err)
+		return nil, fmt.Errorf("failed to set QoS: %s", err)
 	}
 
 	msgs, err := ch.Consume(
@@ -358,25 +349,22 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		nil,    // arguments
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Failed establishing connection to queue: %s", err)
+		return nil, fmt.Errorf("failed establishing connection to queue: %s", err)
 	}
 
 	return msgs, err
 }
 
-func declareExchange(
+func (a *AMQPConsumer) declareExchange(
 	channel *amqp.Channel,
-	exchangeName string,
-	exchangeType string,
-	exchangePassive bool,
 	exchangeDurable bool,
 	exchangeArguments amqp.Table,
 ) error {
 	var err error
-	if exchangePassive {
+	if a.ExchangePassive {
 		err = channel.ExchangeDeclarePassive(
-			exchangeName,
-			exchangeType,
+			a.Exchange,
+			a.ExchangeType,
 			exchangeDurable,
 			false, // delete when unused
 			false, // internal
@@ -385,8 +373,8 @@ func declareExchange(
 		)
 	} else {
 		err = channel.ExchangeDeclare(
-			exchangeName,
-			exchangeType,
+			a.Exchange,
+			a.ExchangeType,
 			exchangeDurable,
 			false, // delete when unused
 			false, // internal
@@ -400,26 +388,18 @@ func declareExchange(
 	return nil
 }
 
-func declareQueue(
-	channel *amqp.Channel,
-	queueName string,
-	queueDurability string,
-	queuePassive bool,
-) (*amqp.Queue, error) {
+func (a *AMQPConsumer) declareQueue(channel *amqp.Channel) (*amqp.Queue, error) {
 	var queue amqp.Queue
 	var err error
 
-	var queueDurable = true
-	switch queueDurability {
-	case "transient":
+	queueDurable := true
+	if a.QueueDurability == "transient" {
 		queueDurable = false
-	default:
-		queueDurable = true
 	}
 
-	if queuePassive {
+	if a.QueuePassive {
 		queue, err = channel.QueueDeclarePassive(
-			queueName,    // queue
+			a.Queue,      // queue
 			queueDurable, // durable
 			false,        // delete when unused
 			false,        // exclusive
@@ -428,7 +408,7 @@ func declareQueue(
 		)
 	} else {
 		queue, err = channel.QueueDeclare(
-			queueName,    // queue
+			a.Queue,      // queue
 			queueDurable, // durable
 			false,        // delete when unused
 			false,        // exclusive
@@ -486,8 +466,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 		// this message.
 		rejErr := d.Ack(false)
 		if rejErr != nil {
-			log.Printf("E! [inputs.amqp_consumer] Unable to reject message: %d: %v",
-				d.DeliveryTag, rejErr)
+			a.Log.Errorf("Unable to reject message: %d: %v", d.DeliveryTag, rejErr)
 			a.conn.Close()
 		}
 	}
@@ -519,15 +498,13 @@ func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
 	if track.Delivered() {
 		err := delivery.Ack(false)
 		if err != nil {
-			log.Printf("E! [inputs.amqp_consumer] Unable to ack written delivery: %d: %v",
-				delivery.DeliveryTag, err)
+			a.Log.Errorf("Unable to ack written delivery: %d: %v", delivery.DeliveryTag, err)
 			a.conn.Close()
 		}
 	} else {
 		err := delivery.Reject(false)
 		if err != nil {
-			log.Printf("E! [inputs.amqp_consumer] Unable to reject failed delivery: %d: %v",
-				delivery.DeliveryTag, err)
+			a.Log.Errorf("Unable to reject failed delivery: %d: %v", delivery.DeliveryTag, err)
 			a.conn.Close()
 		}
 	}
@@ -541,7 +518,7 @@ func (a *AMQPConsumer) Stop() {
 	a.wg.Wait()
 	err := a.conn.Close()
 	if err != nil && err != amqp.ErrClosed {
-		log.Printf("E! [inputs.amqp_consumer] Error closing AMQP connection: %s", err)
+		a.Log.Errorf("Error closing AMQP connection: %s", err)
 		return
 	}
 }

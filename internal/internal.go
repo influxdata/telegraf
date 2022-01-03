@@ -2,61 +2,50 @@ package internal
 
 import (
 	"bufio"
-	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
 	"math"
-	"math/big"
+	"math/rand"
 	"os"
 	"os/exec"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode"
-
-	"github.com/alecthomas/units"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 var (
-	TimeoutErr = errors.New("Command timed out.")
-
-	NotImplementedError = errors.New("not implemented yet")
-
-	VersionAlreadySetError = errors.New("version has already been set")
+	ErrTimeout             = errors.New("command timed out")
+	ErrorNotImplemented    = errors.New("not implemented yet")
+	ErrorVersionAlreadySet = errors.New("version has already been set")
 )
 
 // Set via the main module
 var version string
 
-// Duration just wraps time.Duration
-type Duration struct {
-	Duration time.Duration
-}
-
-// Size just wraps an int64
-type Size struct {
-	Size int64
-}
-
-type Number struct {
-	Value float64
+type ReadWaitCloser struct {
+	pipeReader *io.PipeReader
+	wg         sync.WaitGroup
 }
 
 // SetVersion sets the telegraf agent version
 func SetVersion(v string) error {
 	if version != "" {
-		return VersionAlreadySetError
+		return ErrorVersionAlreadySet
 	}
 	version = v
+	if version == "" {
+		version = "unknown"
+	}
+
 	return nil
 }
 
@@ -69,72 +58,6 @@ func Version() string {
 func ProductToken() string {
 	return fmt.Sprintf("Telegraf/%s Go/%s",
 		Version(), strings.TrimPrefix(runtime.Version(), "go"))
-}
-
-// UnmarshalTOML parses the duration from the TOML config file
-func (d *Duration) UnmarshalTOML(b []byte) error {
-	var err error
-	b = bytes.Trim(b, `'`)
-
-	// see if we can directly convert it
-	d.Duration, err = time.ParseDuration(string(b))
-	if err == nil {
-		return nil
-	}
-
-	// Parse string duration, ie, "1s"
-	if uq, err := strconv.Unquote(string(b)); err == nil && len(uq) > 0 {
-		d.Duration, err = time.ParseDuration(uq)
-		if err == nil {
-			return nil
-		}
-	}
-
-	// First try parsing as integer seconds
-	sI, err := strconv.ParseInt(string(b), 10, 64)
-	if err == nil {
-		d.Duration = time.Second * time.Duration(sI)
-		return nil
-	}
-	// Second try parsing as float seconds
-	sF, err := strconv.ParseFloat(string(b), 64)
-	if err == nil {
-		d.Duration = time.Second * time.Duration(sF)
-		return nil
-	}
-
-	return nil
-}
-
-func (s *Size) UnmarshalTOML(b []byte) error {
-	var err error
-	b = bytes.Trim(b, `'`)
-
-	val, err := strconv.ParseInt(string(b), 10, 64)
-	if err == nil {
-		s.Size = val
-		return nil
-	}
-	uq, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	val, err = units.ParseStrictBytes(uq)
-	if err != nil {
-		return err
-	}
-	s.Size = val
-	return nil
-}
-
-func (n *Number) UnmarshalTOML(b []byte) error {
-	value, err := strconv.ParseFloat(string(b), 64)
-	if err != nil {
-		return err
-	}
-
-	n.Value = value
-	return nil
 }
 
 // ReadLines reads contents from a file and splits them by new lines.
@@ -206,12 +129,8 @@ func RandomSleep(max time.Duration, shutdown chan struct{}) {
 	if max == 0 {
 		return
 	}
-	maxSleep := big.NewInt(max.Nanoseconds())
 
-	var sleepns int64
-	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
-		sleepns = j.Int64()
-	}
+	sleepns := rand.Int63n(max.Nanoseconds())
 
 	t := time.NewTimer(time.Nanosecond * time.Duration(sleepns))
 	select {
@@ -229,11 +148,7 @@ func RandomDuration(max time.Duration) time.Duration {
 		return 0
 	}
 
-	var sleepns int64
-	maxSleep := big.NewInt(max.Nanoseconds())
-	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
-		sleepns = j.Int64()
-	}
+	sleepns := rand.Int63n(max.Nanoseconds())
 
 	return time.Duration(sleepns)
 }
@@ -282,14 +197,25 @@ func ExitStatus(err error) (int, bool) {
 	return 0, false
 }
 
+func (r *ReadWaitCloser) Close() error {
+	err := r.pipeReader.Close()
+	r.wg.Wait() // wait for the gzip goroutine finish
+	return err
+}
+
 // CompressWithGzip takes an io.Reader as input and pipes
 // it through a gzip.Writer returning an io.Reader containing
 // the gzipped data.
 // An error is returned if passing data to the gzip.Writer fails
-func CompressWithGzip(data io.Reader) (io.Reader, error) {
+func CompressWithGzip(data io.Reader) (io.ReadCloser, error) {
 	pipeReader, pipeWriter := io.Pipe()
 	gzipWriter := gzip.NewWriter(pipeWriter)
 
+	rc := &ReadWaitCloser{
+		pipeReader: pipeReader,
+	}
+
+	rc.wg.Add(1)
 	var err error
 	go func() {
 		_, err = io.Copy(gzipWriter, data)
@@ -297,67 +223,168 @@ func CompressWithGzip(data io.Reader) (io.Reader, error) {
 		// subsequent reads from the read half of the pipe will
 		// return no bytes and the error err, or EOF if err is nil.
 		pipeWriter.CloseWithError(err)
+		rc.wg.Done()
 	}()
 
 	return pipeReader, err
 }
 
-// ParseTimestamp with no location provided parses a timestamp value as UTC
-func ParseTimestamp(timestamp interface{}, format string) (time.Time, error) {
-	return ParseTimestampWithLocation(timestamp, format, "UTC")
+// ParseTimestamp parses a Time according to the standard Telegraf options.
+// These are generally displayed in the toml similar to:
+//   json_time_key= "timestamp"
+//   json_time_format = "2006-01-02T15:04:05Z07:00"
+//   json_timezone = "America/Los_Angeles"
+//
+// The format can be one of "unix", "unix_ms", "unix_us", "unix_ns", or a Go
+// time layout suitable for time.Parse.
+//
+// When using the "unix" format, a optional fractional component is allowed.
+// Specific unix time precisions cannot have a fractional component.
+//
+// Unix times may be an int64, float64, or string.  When using a Go format
+// string the timestamp must be a string.
+//
+// The location is a location string suitable for time.LoadLocation.  Unix
+// times do not use the location string, a unix time is always return in the
+// UTC location.
+func ParseTimestamp(format string, timestamp interface{}, location string) (time.Time, error) {
+	switch format {
+	case "unix", "unix_ms", "unix_us", "unix_ns":
+		return parseUnix(format, timestamp)
+	default:
+		if location == "" {
+			location = "UTC"
+		}
+		return parseTime(format, timestamp, location)
+	}
 }
 
-// ParseTimestamp parses a timestamp value as a unix epoch of various precision.
-//
-// format = "unix": epoch is assumed to be in seconds and can come as number or string. Can have a decimal part.
-// format = "unix_ms": epoch is assumed to be in milliseconds and can come as number or string. Cannot have a decimal part.
-// format = "unix_us": epoch is assumed to be in microseconds and can come as number or string. Cannot have a decimal part.
-// format = "unix_ns": epoch is assumed to be in nanoseconds and can come as number or string. Cannot have a decimal part.
-func ParseTimestampWithLocation(timestamp interface{}, format string, location string) (time.Time, error) {
-	timeInt, timeFractional := int64(0), int64(0)
-
-	switch ts := timestamp.(type) {
-	case string:
-		var err error
-		splitted := regexp.MustCompile("[.,]").Split(ts, 2)
-		timeInt, err = strconv.ParseInt(splitted[0], 10, 64)
-		if err != nil {
-			loc, err := time.LoadLocation(location)
-			if err != nil {
-				return time.Time{}, fmt.Errorf("location: %s could not be loaded as a location", location)
-			}
-			return time.ParseInLocation(format, ts, loc)
-		}
-
-		if len(splitted) == 2 {
-			if len(splitted[1]) > 9 {
-				splitted[1] = splitted[1][:9] //truncates decimal part to nanoseconds precision
-			}
-			nanosecStr := splitted[1] + strings.Repeat("0", 9-len(splitted[1])) //adds 0's to the right to obtain a valid number of nanoseconds
-
-			timeFractional, err = strconv.ParseInt(nanosecStr, 10, 64)
-			if err != nil {
-				return time.Time{}, err
-			}
-		}
-	case int64:
-		timeInt = ts
-	case float64:
-		intPart, frac := math.Modf(ts)
-		timeInt, timeFractional = int64(intPart), int64(frac*1e9)
-	default:
-		return time.Time{}, fmt.Errorf("time: %v could not be converted to string nor float64", timestamp)
+func parseUnix(format string, timestamp interface{}) (time.Time, error) {
+	integer, fractional, err := parseComponents(timestamp)
+	if err != nil {
+		return time.Unix(0, 0), err
 	}
 
-	if strings.EqualFold(format, "unix") {
-		return time.Unix(timeInt, timeFractional).UTC(), nil
-	} else if strings.EqualFold(format, "unix_ms") {
-		return time.Unix(timeInt/1000, (timeInt%1000)*1e6).UTC(), nil
-	} else if strings.EqualFold(format, "unix_us") {
-		return time.Unix(0, timeInt*1e3).UTC(), nil
-	} else if strings.EqualFold(format, "unix_ns") {
-		return time.Unix(0, timeInt).UTC(), nil
-	} else {
-		return time.Time{}, errors.New("Invalid unix format")
+	switch strings.ToLower(format) {
+	case "unix":
+		return time.Unix(integer, fractional).UTC(), nil
+	case "unix_ms":
+		return time.Unix(0, integer*1e6).UTC(), nil
+	case "unix_us":
+		return time.Unix(0, integer*1e3).UTC(), nil
+	case "unix_ns":
+		return time.Unix(0, integer).UTC(), nil
+	default:
+		return time.Unix(0, 0), errors.New("unsupported type")
+	}
+}
+
+// Returns the integers before and after an optional decimal point.  Both '.'
+// and ',' are supported for the decimal point.  The timestamp can be an int64,
+// float64, or string.
+//   ex: "42.5" -> (42, 5, nil)
+func parseComponents(timestamp interface{}) (int64, int64, error) {
+	switch ts := timestamp.(type) {
+	case string:
+		parts := strings.SplitN(ts, ".", 2)
+		if len(parts) == 2 {
+			return parseUnixTimeComponents(parts[0], parts[1])
+		}
+
+		parts = strings.SplitN(ts, ",", 2)
+		if len(parts) == 2 {
+			return parseUnixTimeComponents(parts[0], parts[1])
+		}
+
+		integer, err := strconv.ParseInt(ts, 10, 64)
+		if err != nil {
+			return 0, 0, err
+		}
+		return integer, 0, nil
+	case int8:
+		return int64(ts), 0, nil
+	case int16:
+		return int64(ts), 0, nil
+	case int32:
+		return int64(ts), 0, nil
+	case int64:
+		return ts, 0, nil
+	case uint8:
+		return int64(ts), 0, nil
+	case uint16:
+		return int64(ts), 0, nil
+	case uint32:
+		return int64(ts), 0, nil
+	case uint64:
+		return int64(ts), 0, nil
+	case float32:
+		integer, fractional := math.Modf(float64(ts))
+		return int64(integer), int64(fractional * 1e9), nil
+	case float64:
+		integer, fractional := math.Modf(ts)
+		return int64(integer), int64(fractional * 1e9), nil
+	default:
+		return 0, 0, errors.New("unsupported type")
+	}
+}
+
+func parseUnixTimeComponents(first, second string) (int64, int64, error) {
+	integer, err := strconv.ParseInt(first, 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// Convert to nanoseconds, dropping any greater precision.
+	buf := []byte("000000000")
+	copy(buf, second)
+
+	fractional, err := strconv.ParseInt(string(buf), 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	return integer, fractional, nil
+}
+
+// ParseTime parses a string timestamp according to the format string.
+func parseTime(format string, timestamp interface{}, location string) (time.Time, error) {
+	switch ts := timestamp.(type) {
+	case string:
+		loc, err := time.LoadLocation(location)
+		if err != nil {
+			return time.Unix(0, 0), err
+		}
+		switch strings.ToLower(format) {
+		case "ansic":
+			format = time.ANSIC
+		case "unixdate":
+			format = time.UnixDate
+		case "rubydate":
+			format = time.RubyDate
+		case "rfc822":
+			format = time.RFC822
+		case "rfc822z":
+			format = time.RFC822Z
+		case "rfc850":
+			format = time.RFC850
+		case "rfc1123":
+			format = time.RFC1123
+		case "rfc1123z":
+			format = time.RFC1123Z
+		case "rfc3339":
+			format = time.RFC3339
+		case "rfc3339nano":
+			format = time.RFC3339Nano
+		case "stamp":
+			format = time.Stamp
+		case "stampmilli":
+			format = time.StampMilli
+		case "stampmicro":
+			format = time.StampMicro
+		case "stampnano":
+			format = time.StampNano
+		}
+		return time.ParseInLocation(format, ts, loc)
+	default:
+		return time.Unix(0, 0), errors.New("unsupported type")
 	}
 }

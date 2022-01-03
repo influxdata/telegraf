@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,7 +37,7 @@ type Fibaro struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
-	Timeout internal.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 
 	client *http.Client
 }
@@ -69,11 +69,12 @@ type Devices struct {
 	Type       string `json:"type"`
 	Enabled    bool   `json:"enabled"`
 	Properties struct {
-		Dead   interface{} `json:"dead"`
-		Energy interface{} `json:"energy"`
-		Power  interface{} `json:"power"`
-		Value  interface{} `json:"value"`
-		Value2 interface{} `json:"value2"`
+		BatteryLevel *string     `json:"batteryLevel"`
+		Dead         string      `json:"dead"`
+		Energy       *string     `json:"energy"`
+		Power        *string     `json:"power"`
+		Value        interface{} `json:"value"`
+		Value2       *string     `json:"value2"`
 	} `json:"properties"`
 }
 
@@ -97,9 +98,10 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			requestURL,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
@@ -107,8 +109,6 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 			http.StatusText(http.StatusOK))
 		return err
 	}
-
-	defer resp.Body.Close()
 
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(&dataStruct)
@@ -121,13 +121,12 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 
 // Gather fetches all required information to output metrics
 func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
-
 	if f.client == nil {
 		f.client = &http.Client{
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 			},
-			Timeout: f.Timeout.Duration,
+			Timeout: time.Duration(f.Timeout),
 		}
 	}
 
@@ -160,7 +159,7 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 	for _, device := range devices {
 		// skip device in some cases
 		if device.RoomID == 0 ||
-			device.Enabled == false ||
+			!device.Enabled ||
 			device.Properties.Dead == "true" ||
 			device.Type == "com.fibaro.zwaveDevice" {
 			continue
@@ -175,14 +174,20 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 		}
 		fields := make(map[string]interface{})
 
+		if device.Properties.BatteryLevel != nil {
+			if fValue, err := strconv.ParseFloat(*device.Properties.BatteryLevel, 64); err == nil {
+				fields["batteryLevel"] = fValue
+			}
+		}
+
 		if device.Properties.Energy != nil {
-			if fValue, err := strconv.ParseFloat(device.Properties.Energy.(string), 64); err == nil {
+			if fValue, err := strconv.ParseFloat(*device.Properties.Energy, 64); err == nil {
 				fields["energy"] = fValue
 			}
 		}
 
 		if device.Properties.Power != nil {
-			if fValue, err := strconv.ParseFloat(device.Properties.Power.(string), 64); err == nil {
+			if fValue, err := strconv.ParseFloat(*device.Properties.Power, 64); err == nil {
 				fields["power"] = fValue
 			}
 		}
@@ -202,7 +207,7 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if device.Properties.Value2 != nil {
-			if fValue, err := strconv.ParseFloat(device.Properties.Value2.(string), 64); err == nil {
+			if fValue, err := strconv.ParseFloat(*device.Properties.Value2, 64); err == nil {
 				fields["value2"] = fValue
 			}
 		}
@@ -216,7 +221,7 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("fibaro", func() telegraf.Input {
 		return &Fibaro{
-			Timeout: internal.Duration{Duration: defaultTimeout},
+			Timeout: config.Duration(defaultTimeout),
 		}
 	})
 }

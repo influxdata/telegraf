@@ -2,8 +2,10 @@ package docker_log
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -13,11 +15,12 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/pkg/stdcopy"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/docker"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -49,6 +52,9 @@ var sampleConfig = `
   # docker_label_include = []
   # docker_label_exclude = []
 
+  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
+  source_tag = false
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -59,29 +65,25 @@ var sampleConfig = `
 
 const (
 	defaultEndpoint = "unix:///var/run/docker.sock"
-
-	// Maximum bytes of a log line before it will be split, size is mirroring
-	// docker code:
-	// https://github.com/moby/moby/blob/master/daemon/logger/copier.go#L21
-	maxLineBytes = 16 * 1024
 )
 
 var (
 	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
-	// ensure *DockerLogs implements telegaf.ServiceInput
+	// ensure *DockerLogs implements telegraf.ServiceInput
 	_ telegraf.ServiceInput = (*DockerLogs)(nil)
 )
 
 type DockerLogs struct {
-	Endpoint              string            `toml:"endpoint"`
-	FromBeginning         bool              `toml:"from_beginning"`
-	Timeout               internal.Duration `toml:"timeout"`
-	LabelInclude          []string          `toml:"docker_label_include"`
-	LabelExclude          []string          `toml:"docker_label_exclude"`
-	ContainerInclude      []string          `toml:"container_name_include"`
-	ContainerExclude      []string          `toml:"container_name_exclude"`
-	ContainerStateInclude []string          `toml:"container_state_include"`
-	ContainerStateExclude []string          `toml:"container_state_exclude"`
+	Endpoint              string          `toml:"endpoint"`
+	FromBeginning         bool            `toml:"from_beginning"`
+	Timeout               config.Duration `toml:"timeout"`
+	LabelInclude          []string        `toml:"docker_label_include"`
+	LabelExclude          []string        `toml:"docker_label_exclude"`
+	ContainerInclude      []string        `toml:"container_name_include"`
+	ContainerExclude      []string        `toml:"container_name_exclude"`
+	ContainerStateInclude []string        `toml:"container_state_include"`
+	ContainerStateExclude []string        `toml:"container_state_exclude"`
+	IncludeSourceTag      bool            `toml:"source_tag"`
 
 	tlsint.ClientConfig
 
@@ -154,18 +156,16 @@ func (d *DockerLogs) Init() error {
 	return nil
 }
 
-func (d *DockerLogs) addToContainerList(containerID string, cancel context.CancelFunc) error {
+func (d *DockerLogs) addToContainerList(containerID string, cancel context.CancelFunc) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.containerList[containerID] = cancel
-	return nil
 }
 
-func (d *DockerLogs) removeFromContainerList(containerID string) error {
+func (d *DockerLogs) removeFromContainerList(containerID string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	delete(d.containerList, containerID)
-	return nil
 }
 
 func (d *DockerLogs) containerInContainerList(containerID string) bool {
@@ -175,13 +175,12 @@ func (d *DockerLogs) containerInContainerList(containerID string) bool {
 	return ok
 }
 
-func (d *DockerLogs) cancelTails() error {
+func (d *DockerLogs) cancelTails() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	for _, cancel := range d.containerList {
 		cancel()
 	}
-	return nil
 }
 
 func (d *DockerLogs) matchedContainerName(names []string) string {
@@ -199,8 +198,9 @@ func (d *DockerLogs) matchedContainerName(names []string) string {
 
 func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
+	acc.SetPrecision(time.Nanosecond)
 
-	ctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
 	containers, err := d.client.ContainerList(ctx, d.opts)
 	if err != nil {
@@ -236,7 +236,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *DockerLogs) hasTTY(ctx context.Context, container types.Container) (bool, error) {
-	ctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
 	c, err := d.client.ContainerInspect(ctx, container.ID)
 	if err != nil {
@@ -256,6 +256,10 @@ func (d *DockerLogs) tailContainerLogs(
 		"container_name":    containerName,
 		"container_image":   imageName,
 		"container_version": imageVersion,
+	}
+
+	if d.IncludeSourceTag {
+		tags["source"] = hostnameFromID(container.ID)
 	}
 
 	// Add matching container labels as tags
@@ -278,7 +282,7 @@ func (d *DockerLogs) tailContainerLogs(
 	logOptions := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
-		Timestamps: false,
+		Timestamps: true,
 		Details:    false,
 		Follow:     true,
 		Tail:       tail,
@@ -297,9 +301,31 @@ func (d *DockerLogs) tailContainerLogs(
 	// multiplexed.
 	if hasTTY {
 		return tailStream(acc, tags, container.ID, logReader, "tty")
-	} else {
-		return tailMultiplexed(acc, tags, container.ID, logReader)
 	}
+	return tailMultiplexed(acc, tags, container.ID, logReader)
+}
+
+func parseLine(line []byte) (time.Time, string, error) {
+	parts := bytes.SplitN(line, []byte(" "), 2)
+
+	if len(parts) == 1 {
+		parts = append(parts, []byte(""))
+	}
+
+	tsString := string(parts[0])
+
+	// Keep any leading space, but remove whitespace from end of line.
+	// This preserves space in, for example, stacktraces, while removing
+	// annoying end of line characters and is similar to how other logging
+	// plugins such as syslog behave.
+	message := bytes.TrimRightFunc(parts[1], unicode.IsSpace)
+
+	ts, err := time.Parse(time.RFC3339Nano, tsString)
+	if err != nil {
+		return time.Time{}, "", fmt.Errorf("error parsing timestamp %q: %v", tsString, err)
+	}
+
+	return ts, string(message), nil
 }
 
 func tailStream(
@@ -319,22 +345,19 @@ func tailStream(
 
 	r := bufio.NewReaderSize(reader, 64*1024)
 
-	var err error
-	var message string
 	for {
-		message, err = r.ReadString('\n')
+		line, err := r.ReadBytes('\n')
 
-		// Keep any leading space, but remove whitespace from end of line.
-		// This preserves space in, for example, stacktraces, while removing
-		// annoying end of line characters and is similar to how other logging
-		// plugins such as syslog behave.
-		message = strings.TrimRightFunc(message, unicode.IsSpace)
-
-		if len(message) != 0 {
-			acc.AddFields("docker_log", map[string]interface{}{
-				"container_id": containerID,
-				"message":      message,
-			}, tags)
+		if len(line) != 0 {
+			ts, message, err := parseLine(line)
+			if err != nil {
+				acc.AddError(err)
+			} else {
+				acc.AddFields("docker_log", map[string]interface{}{
+					"container_id": containerID,
+					"message":      message,
+				}, tags, ts)
+			}
 		}
 
 		if err != nil {
@@ -375,8 +398,11 @@ func tailMultiplexed(
 	}()
 
 	_, err := stdcopy.StdCopy(outWriter, errWriter, src)
+	//nolint:errcheck,revive // we cannot do anything if the closing fails
 	outWriter.Close()
+	//nolint:errcheck,revive // we cannot do anything if the closing fails
 	errWriter.Close()
+	//nolint:errcheck,revive // we cannot do anything if the closing fails
 	src.Close()
 	wg.Wait()
 	return err
@@ -395,20 +421,20 @@ func (d *DockerLogs) Stop() {
 
 // Following few functions have been inherited from telegraf docker input plugin
 func (d *DockerLogs) createContainerFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
+	containerFilter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
 	if err != nil {
 		return err
 	}
-	d.containerFilter = filter
+	d.containerFilter = containerFilter
 	return nil
 }
 
 func (d *DockerLogs) createLabelFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
+	labelFilter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
 	if err != nil {
 		return err
 	}
-	d.labelFilter = filter
+	d.labelFilter = labelFilter
 	return nil
 }
 
@@ -416,22 +442,29 @@ func (d *DockerLogs) createContainerStateFilters() error {
 	if len(d.ContainerStateInclude) == 0 && len(d.ContainerStateExclude) == 0 {
 		d.ContainerStateInclude = []string{"running"}
 	}
-	filter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
+	stateFilter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
 	if err != nil {
 		return err
 	}
-	d.stateFilter = filter
+	d.stateFilter = stateFilter
 	return nil
 }
 
 func init() {
 	inputs.Add("docker_log", func() telegraf.Input {
 		return &DockerLogs{
-			Timeout:       internal.Duration{Duration: time.Second * 5},
+			Timeout:       config.Duration(time.Second * 5),
 			Endpoint:      defaultEndpoint,
 			newEnvClient:  NewEnvClient,
 			newClient:     NewClient,
 			containerList: make(map[string]context.CancelFunc),
 		}
 	})
+}
+
+func hostnameFromID(id string) string {
+	if len(id) > 12 {
+		return id[0:12]
+	}
+	return id
 }

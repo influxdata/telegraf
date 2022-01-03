@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package win_perf_counters
@@ -8,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type testCounter struct {
@@ -50,7 +51,7 @@ func (m *FakePerformanceQuery) Open() error {
 
 func (m *FakePerformanceQuery) Close() error {
 	if !m.openCalled {
-		return errors.New("CloSe: uninitialised query")
+		return errors.New("CloSe: uninitialized query")
 	}
 	m.openCalled = false
 	return nil
@@ -58,7 +59,7 @@ func (m *FakePerformanceQuery) Close() error {
 
 func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
 	if !m.openCalled {
-		return 0, errors.New("AddCounterToQuery: uninitialised query")
+		return 0, errors.New("AddCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
@@ -69,7 +70,7 @@ func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (PDH_HCOUNT
 
 func (m *FakePerformanceQuery) AddEnglishCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
 	if !m.openCalled {
-		return 0, errors.New("AddEnglishCounterToQuery: uninitialised query")
+		return 0, errors.New("AddEnglishCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
@@ -97,7 +98,7 @@ func (m *FakePerformanceQuery) ExpandWildCardPath(counterPath string) ([]string,
 
 func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle PDH_HCOUNTER) (float64, error) {
 	if !m.openCalled {
-		return 0, errors.New("GetFormattedCounterValueDouble: uninitialised query")
+		return 0, errors.New("GetFormattedCounterValueDouble: uninitialized query")
 	}
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
@@ -129,7 +130,7 @@ func (m *FakePerformanceQuery) findCounterByHandle(counterHandle PDH_HCOUNTER) *
 
 func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER) ([]CounterValue, error) {
 	if !m.openCalled {
-		return nil, errors.New("GetFormattedCounterArrayDouble: uninitialised query")
+		return nil, errors.New("GetFormattedCounterArrayDouble: uninitialized query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
@@ -157,14 +158,14 @@ func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUN
 
 func (m *FakePerformanceQuery) CollectData() error {
 	if !m.openCalled {
-		return errors.New("CollectData: uninitialised query")
+		return errors.New("CollectData: uninitialized query")
 	}
 	return nil
 }
 
 func (m *FakePerformanceQuery) CollectDataWithTime() (time.Time, error) {
 	if !m.openCalled {
-		return time.Now(), errors.New("CollectData: uninitialised query")
+		return time.Now(), errors.New("CollectData: uninitialized query")
 	}
 	return MetricTime, nil
 }
@@ -236,7 +237,7 @@ func TestCounterPathParsing(t *testing.T) {
 	for path, vals := range counterPathsAndRes {
 		o, i, c, err := extractCounterInfoFromCounterPath(path)
 		require.NoError(t, err)
-		require.True(t, assert.ObjectsAreEqual(vals, []string{o, i, c}), "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
+		require.Equalf(t, vals, []string{o, i, c}, "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
 	}
 	for _, path := range invalidCounterPaths {
 		_, _, _, err := extractCounterInfoFromCounterPath(path)
@@ -247,13 +248,17 @@ func TestCounterPathParsing(t *testing.T) {
 func TestAddItemSimple(t *testing.T) {
 	var err error
 	cps1 := []string{"\\O(I)\\C"}
-	m := Win_PerfCounters{PrintValid: false, Object: nil, query: &FakePerformanceQuery{
-		counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
-		expandPaths: map[string][]string{
-			cps1[0]: cps1,
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     nil,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
+			expandPaths: map[string][]string{
+				cps1[0]: cps1,
+			},
+			vistaAndNewer: true,
+		}}
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.AddItem(cps1[0], "O", "I", "c", "test", false)
@@ -265,13 +270,18 @@ func TestAddItemSimple(t *testing.T) {
 func TestAddItemInvalidCountPath(t *testing.T) {
 	var err error
 	cps1 := []string{"\\O\\C"}
-	m := Win_PerfCounters{PrintValid: false, Object: nil, UseWildcardsExpansion: true, query: &FakePerformanceQuery{
-		counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
-		expandPaths: map[string][]string{
-			cps1[0]: {"\\O/C"},
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:                   testutil.Logger{},
+		PrintValid:            false,
+		Object:                nil,
+		UseWildcardsExpansion: true,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
+			expandPaths: map[string][]string{
+				cps1[0]: {"\\O/C"},
+			},
+			vistaAndNewer: true,
+		}}
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.AddItem("\\O\\C", "O", "------", "C", "test", false)
@@ -284,21 +294,25 @@ func TestParseConfigBasic(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0}),
-		expandPaths: map[string][]string{
-			cps1[0]: {cps1[0]},
-			cps1[1]: {cps1[1]},
-			cps1[2]: {cps1[2]},
-			cps1[3]: {cps1[3]},
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0}),
+			expandPaths: map[string][]string{
+				cps1[0]: {cps1[0]},
+				cps1[1]: {cps1[1]},
+				cps1[2]: {cps1[2]},
+				cps1[3]: {cps1[3]},
+			},
+			vistaAndNewer: true,
+		}}
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	err = m.query.Close()
 	require.NoError(t, err)
 
@@ -309,7 +323,7 @@ func TestParseConfigBasic(t *testing.T) {
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	err = m.query.Close()
 	require.NoError(t, err)
 }
@@ -318,19 +332,24 @@ func TestParseConfigNoInstance(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"------"}, []string{"C1", "C2"}, false, false)
 	cps1 := []string{"\\O\\C1", "\\O\\C2"}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, UseWildcardsExpansion: false, query: &FakePerformanceQuery{
-		counters: createCounterMap(cps1, []float64{1.1, 1.2}, []uint32{0, 0}),
-		expandPaths: map[string][]string{
-			cps1[0]: {cps1[0]},
-			cps1[1]: {cps1[1]},
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:                   testutil.Logger{},
+		PrintValid:            false,
+		Object:                perfObjects,
+		UseWildcardsExpansion: false,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(cps1, []float64{1.1, 1.2}, []uint32{0, 0}),
+			expandPaths: map[string][]string{
+				cps1[0]: {cps1[0]},
+				cps1[1]: {cps1[1]},
+			},
+			vistaAndNewer: true,
+		}}
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
+	require.Len(t, m.counters, 2)
 	err = m.query.Close()
 	require.NoError(t, err)
 
@@ -341,7 +360,7 @@ func TestParseConfigNoInstance(t *testing.T) {
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
+	require.Len(t, m.counters, 2)
 	err = m.query.Close()
 	require.NoError(t, err)
 }
@@ -350,15 +369,19 @@ func TestParseConfigInvalidCounterError(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, true, false)
 	cps1 := []string{"\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
-		expandPaths: map[string][]string{
-			cps1[0]: {cps1[0]},
-			cps1[1]: {cps1[1]},
-			cps1[2]: {cps1[2]},
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
+			expandPaths: map[string][]string{
+				cps1[0]: {cps1[0]},
+				cps1[1]: {cps1[1]},
+				cps1[2]: {cps1[2]},
+			},
+			vistaAndNewer: true,
+		}}
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.ParseConfig()
@@ -381,15 +404,19 @@ func TestParseConfigInvalidCounterNoError(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false)
 	cps1 := []string{"\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
-		expandPaths: map[string][]string{
-			cps1[0]: {cps1[0]},
-			cps1[1]: {cps1[1]},
-			cps1[2]: {cps1[2]},
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
+			expandPaths: map[string][]string{
+				cps1[0]: {cps1[0]},
+				cps1[1]: {cps1[1]},
+				cps1[2]: {cps1[2]},
+			},
+			vistaAndNewer: true,
+		}}
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.ParseConfig()
@@ -413,35 +440,45 @@ func TestParseConfigTotalExpansion(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"*"}, []string{"*"}, true, true)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(_Total)\\C1", "\\O(_Total)\\C2"}
-	m := Win_PerfCounters{PrintValid: false, UseWildcardsExpansion: true, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
-		expandPaths: map[string][]string{
-			"\\O(*)\\*": cps1,
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:                   testutil.Logger{},
+		PrintValid:            false,
+		UseWildcardsExpansion: true,
+		Object:                perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
+			expandPaths: map[string][]string{
+				"\\O(*)\\*": cps1,
+			},
+			vistaAndNewer: true,
+		}}
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	err = m.query.Close()
 	require.NoError(t, err)
 
 	perfObjects[0].IncludeTotal = false
 
-	m = Win_PerfCounters{PrintValid: false, UseWildcardsExpansion: true, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
-		expandPaths: map[string][]string{
-			"\\O(*)\\*": cps1,
-		},
-		vistaAndNewer: true,
-	}}
+	m = Win_PerfCounters{
+		Log:                   testutil.Logger{},
+		PrintValid:            false,
+		UseWildcardsExpansion: true,
+		Object:                perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
+			expandPaths: map[string][]string{
+				"\\O(*)\\*": cps1,
+			},
+			vistaAndNewer: true,
+		}}
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
+	require.Len(t, m.counters, 2)
 	err = m.query.Close()
 	require.NoError(t, err)
 }
@@ -450,18 +487,23 @@ func TestParseConfigExpand(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"*"}, []string{"*"}, false, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	m := Win_PerfCounters{PrintValid: false, UseWildcardsExpansion: true, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
-		expandPaths: map[string][]string{
-			"\\O(*)\\*": cps1,
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:                   testutil.Logger{},
+		PrintValid:            false,
+		UseWildcardsExpansion: true,
+		Object:                perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
+			expandPaths: map[string][]string{
+				"\\O(*)\\*": cps1,
+			},
+			vistaAndNewer: true,
+		}}
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	err = m.query.Close()
 	require.NoError(t, err)
 }
@@ -474,13 +516,17 @@ func TestSimpleGather(t *testing.T) {
 	measurement := "test"
 	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false)
 	cp1 := "\\O(I)\\C"
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
-		expandPaths: map[string][]string{
-			cp1: {cp1},
-		},
-		vistaAndNewer: false,
-	}}
+	m := Win_PerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
+			expandPaths: map[string][]string{
+				cp1: {cp1},
+			},
+			vistaAndNewer: false,
+		}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
@@ -513,13 +559,17 @@ func TestSimpleGatherNoData(t *testing.T) {
 	measurement := "test"
 	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false)
 	cp1 := "\\O(I)\\C"
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{PDH_NO_DATA}),
-		expandPaths: map[string][]string{
-			cp1: {cp1},
-		},
-		vistaAndNewer: false,
-	}}
+	m := Win_PerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{PDH_NO_DATA}),
+			expandPaths: map[string][]string{
+				cp1: {cp1},
+			},
+			vistaAndNewer: false,
+		}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	// this "PDH_NO_DATA" error should not be returned to caller, but checked, and handled
@@ -555,13 +605,18 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 	measurement := "test"
 	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false)
 	cp1 := "\\O(I)\\C"
-	m := Win_PerfCounters{PrintValid: false, UsePerfCounterTime: true, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
-		expandPaths: map[string][]string{
-			cp1: {cp1},
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:                testutil.Logger{},
+		PrintValid:         false,
+		UsePerfCounterTime: true,
+		Object:             perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
+			expandPaths: map[string][]string{
+				cp1: {cp1},
+			},
+			vistaAndNewer: true,
+		}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
@@ -574,7 +629,7 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 		"objectname": "O",
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
-	assert.True(t, acc1.HasTimestamp(measurement, MetricTime))
+	require.True(t, acc1.HasTimestamp(measurement, MetricTime))
 }
 
 func TestGatherError(t *testing.T) {
@@ -586,13 +641,17 @@ func TestGatherError(t *testing.T) {
 	measurement := "test"
 	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false)
 	cp1 := "\\O(I)\\C"
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap([]string{cp1}, []float64{-2}, []uint32{PDH_PLA_VALIDATION_WARNING}),
-		expandPaths: map[string][]string{
-			cp1: {cp1},
-		},
-		vistaAndNewer: false,
-	}}
+	m := Win_PerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap([]string{cp1}, []float64{-2}, []uint32{PDH_PLA_VALIDATION_WARNING}),
+			expandPaths: map[string][]string{
+				cp1: {cp1},
+			},
+			vistaAndNewer: false,
+		}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.Error(t, err)
@@ -617,15 +676,19 @@ func TestGatherInvalidDataIgnore(t *testing.T) {
 	measurement := "test"
 	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C1", "C2", "C3"}, false, false)
 	cps1 := []string{"\\O(I)\\C1", "\\O(I)\\C2", "\\O(I)\\C3"}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap(cps1, []float64{1.2, 1, 0}, []uint32{0, PDH_INVALID_DATA, 0}),
-		expandPaths: map[string][]string{
-			cps1[0]: {cps1[0]},
-			cps1[1]: {cps1[1]},
-			cps1[2]: {cps1[2]},
-		},
-		vistaAndNewer: false,
-	}}
+	m := Win_PerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(cps1, []float64{1.2, 1, 0}, []uint32{0, PDH_INVALID_DATA, 0}),
+			expandPaths: map[string][]string{
+				cps1[0]: {cps1[0]},
+				cps1[1]: {cps1[1]},
+				cps1[2]: {cps1[2]},
+			},
+			vistaAndNewer: false,
+		}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
@@ -666,12 +729,19 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		},
 		vistaAndNewer: true,
 	}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, UseWildcardsExpansion: true, query: fpm, CountersRefreshInterval: internal.Duration{Duration: time.Second * 10}}
+	m := Win_PerfCounters{
+		Log:                     testutil.Logger{},
+		PrintValid:              false,
+		Object:                  perfObjects,
+		UseWildcardsExpansion:   true,
+		query:                   fpm,
+		CountersRefreshInterval: config.Duration(time.Second * 10),
+	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
-	assert.Len(t, m.counters, 4)
+	require.Len(t, m.counters, 4)
 	require.NoError(t, err)
-	assert.Len(t, acc1.Metrics, 2)
+	require.Len(t, acc1.Metrics, 2)
 
 	fields1 := map[string]interface{}{
 		"C1": float32(1.1),
@@ -716,18 +786,18 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	//test before elapsing CounterRefreshRate counters are not refreshed
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4)
-	assert.Len(t, acc2.Metrics, 2)
+	require.Len(t, m.counters, 4)
+	require.Len(t, acc2.Metrics, 2)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 	acc2.AssertDoesNotContainsTaggedFields(t, measurement, fields3, tags3)
-	time.Sleep(m.CountersRefreshInterval.Duration)
+	time.Sleep(time.Duration(m.CountersRefreshInterval))
 
 	var acc3 testutil.Accumulator
 	err = m.Gather(&acc3)
 	require.NoError(t, err)
-	assert.Len(t, acc3.Metrics, 3)
+	require.Len(t, acc3.Metrics, 3)
 
 	acc3.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc3.AssertContainsTaggedFields(t, measurement, fields2, tags2)
@@ -752,12 +822,18 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		},
 		vistaAndNewer: true,
 	}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, UseWildcardsExpansion: false, query: fpm, CountersRefreshInterval: internal.Duration{Duration: time.Second * 10}}
+	m := Win_PerfCounters{
+		Log:                     testutil.Logger{},
+		PrintValid:              false,
+		Object:                  perfObjects,
+		UseWildcardsExpansion:   false,
+		query:                   fpm,
+		CountersRefreshInterval: config.Duration(time.Second * 10)}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
-	assert.Len(t, m.counters, 2)
+	require.Len(t, m.counters, 2)
 	require.NoError(t, err)
-	assert.Len(t, acc1.Metrics, 2)
+	require.Len(t, acc1.Metrics, 2)
 
 	fields1 := map[string]interface{}{
 		"C1": float32(1.1),
@@ -804,8 +880,8 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	//test before elapsing CounterRefreshRate counters are not refreshed
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
-	assert.Len(t, acc2.Metrics, 3)
+	require.Len(t, m.counters, 2)
+	require.Len(t, acc2.Metrics, 3)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
@@ -827,12 +903,12 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 
 	fpm.Open()
 
-	time.Sleep(m.CountersRefreshInterval.Duration)
+	time.Sleep(time.Duration(m.CountersRefreshInterval))
 
 	var acc3 testutil.Accumulator
 	err = m.Gather(&acc3)
 	require.NoError(t, err)
-	assert.Len(t, acc3.Metrics, 2)
+	require.Len(t, acc3.Metrics, 2)
 	fields4 := map[string]interface{}{
 		"C1": float32(1.1),
 		"C2": float32(1.2),
@@ -862,19 +938,24 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 	measurement := "m"
 	perfObjects := createPerfObject(measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, true)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(_Total)\\C1", "\\O(_Total)\\C2"}
-	m := Win_PerfCounters{PrintValid: false, UseWildcardsExpansion: false, Object: perfObjects, query: &FakePerformanceQuery{
-		counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0, 0, 0}),
-		expandPaths: map[string][]string{
-			"\\O(*)\\C1": {cps1[0], cps1[2]},
-			"\\O(*)\\C2": {cps1[1], cps1[3]},
-		},
-		vistaAndNewer: true,
-	}}
+	m := Win_PerfCounters{
+		Log:                   testutil.Logger{},
+		PrintValid:            false,
+		UseWildcardsExpansion: false,
+		Object:                perfObjects,
+		query: &FakePerformanceQuery{
+			counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0, 0, 0}),
+			expandPaths: map[string][]string{
+				"\\O(*)\\C1": {cps1[0], cps1[2]},
+				"\\O(*)\\C2": {cps1[1], cps1[3]},
+			},
+			vistaAndNewer: true,
+		}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
-	assert.Len(t, acc1.Metrics, 2)
+	require.Len(t, m.counters, 2)
+	require.Len(t, acc1.Metrics, 2)
 	fields1 := map[string]interface{}{
 		"C1": float32(1.1),
 		"C2": float32(1.2),
@@ -903,8 +984,8 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 	var acc2 testutil.Accumulator
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
-	assert.Len(t, acc2.Metrics, 1)
+	require.Len(t, m.counters, 2)
+	require.Len(t, acc2.Metrics, 1)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
@@ -932,14 +1013,58 @@ var stringArraySingleItem = []string{
 
 func TestUTF16ToStringArray(t *testing.T) {
 	singleItem := UTF16ToStringArray(unicodeStringListSingleItem)
-	assert.True(t, assert.ObjectsAreEqual(singleItem, stringArraySingleItem), "Not equal single arrays")
+	require.Equal(t, singleItem, stringArraySingleItem, "Not equal single arrays")
 
 	noItem := UTF16ToStringArray(unicodeStringListNoItem)
-	assert.Nil(t, noItem)
+	require.Nil(t, noItem)
 
 	engStrings := UTF16ToStringArray(unicodeStringListWithEnglishChars)
-	assert.True(t, assert.ObjectsAreEqual(engStrings, stringArrayWithEnglishChars), "Not equal eng arrays")
+	require.Equal(t, engStrings, stringArrayWithEnglishChars, "Not equal eng arrays")
 
 	czechStrings := UTF16ToStringArray(unicodeStringListWithCzechChars)
-	assert.True(t, assert.ObjectsAreEqual(czechStrings, stringArrayWithCzechChars), "Not equal czech arrays")
+	require.Equal(t, czechStrings, stringArrayWithCzechChars, "Not equal czech arrays")
+}
+
+func TestNoWildcards(t *testing.T) {
+	m := Win_PerfCounters{
+		Object:                     createPerfObject("measurement", "object", []string{"instance"}, []string{"counter*"}, false, false),
+		UseWildcardsExpansion:      true,
+		LocalizeWildcardsExpansion: false,
+		Log:                        testutil.Logger{},
+	}
+	require.Error(t, m.Init())
+	m = Win_PerfCounters{
+		Object:                     createPerfObject("measurement", "object?", []string{"instance"}, []string{"counter"}, false, false),
+		UseWildcardsExpansion:      true,
+		LocalizeWildcardsExpansion: false,
+		Log:                        testutil.Logger{},
+	}
+	require.Error(t, m.Init())
+}
+
+func TestLocalizeWildcardsExpansion(t *testing.T) {
+	// this test is valid only on localized windows
+	if testing.Short() {
+		t.Skip("Skipping long taking test in short mode")
+	}
+
+	const counter = "% Processor Time"
+	m := Win_PerfCounters{
+		query:                   &PerformanceQueryImpl{},
+		CountersRefreshInterval: config.Duration(time.Second * 60),
+		Object: createPerfObject("measurement", "Processor Information",
+			[]string{"_Total"}, []string{counter}, false, false),
+		LocalizeWildcardsExpansion: false,
+		UseWildcardsExpansion:      true,
+		Log:                        testutil.Logger{},
+	}
+	require.NoError(t, m.Init())
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+	require.Len(t, acc.Metrics, 1)
+
+	//running on localized windows with UseWildcardsExpansion and
+	//with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
+	//be English.
+	require.Contains(t, acc.Metrics[0].Fields, sanitizedChars.Replace(counter))
 }

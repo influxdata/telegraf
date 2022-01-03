@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -34,9 +34,9 @@ func (e APIError) Error() string {
 }
 
 const (
-	defaultRequestTimeout = time.Second * 5
-	defaultMaxWait        = 10 // seconds
-	defaultDatabase       = "telegraf"
+	defaultRequestTimeout           = time.Second * 5
+	defaultMaxWaitSeconds           = 60
+	defaultMaxWaitRetryAfterSeconds = 10 * 60
 )
 
 type HTTPConfig struct {
@@ -54,6 +54,7 @@ type HTTPConfig struct {
 	TLSConfig        *tls.Config
 
 	Serializer *influx.Serializer
+	Log        telegraf.Logger
 }
 
 type httpClient struct {
@@ -69,6 +70,8 @@ type httpClient struct {
 	serializer *influx.Serializer
 	url        *url.URL
 	retryTime  time.Time
+	retryCount int
+	log        telegraf.Logger
 }
 
 func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
@@ -83,7 +86,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = "Telegraf/" + internal.Version()
+		userAgent = internal.ProductToken()
 	}
 
 	var headers = make(map[string]string, len(config.Headers)+2)
@@ -140,6 +143,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		Bucket:           config.Bucket,
 		BucketTag:        config.BucketTag,
 		ExcludeBucketTag: config.ExcludeBucketTag,
+		log:              config.Log,
 	}
 	return client, nil
 }
@@ -168,13 +172,19 @@ func (g genericRespError) Error() string {
 
 func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
 	if c.retryTime.After(time.Now()) {
-		return errors.New("Retry time has not elapsed")
+		return errors.New("retry time has not elapsed")
 	}
 
 	batches := make(map[string][]telegraf.Metric)
 	if c.BucketTag == "" {
 		err := c.writeBatch(ctx, c.Bucket, metrics)
 		if err != nil {
+			if err, ok := err.(*APIError); ok {
+				if err.StatusCode == http.StatusRequestEntityTooLarge {
+					return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
+				}
+			}
+
 			return err
 		}
 	} else {
@@ -189,6 +199,9 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			}
 
 			if c.ExcludeBucketTag {
+				// Avoid modifying the metric in case we need to retry the request.
+				metric = metric.Copy()
+				metric.Accept()
 				metric.RemoveTag(c.BucketTag)
 			}
 
@@ -198,6 +211,12 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		for bucket, batch := range batches {
 			err := c.writeBatch(ctx, bucket, batch)
 			if err != nil {
+				if err, ok := err.(*APIError); ok {
+					if err.StatusCode == http.StatusRequestEntityTooLarge {
+						return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
+					}
+				}
+
 				return err
 			}
 		}
@@ -205,25 +224,53 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	return nil
 }
 
+func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
+	c.log.Warnf("Retrying write after splitting metric payload in half to reduce batch size")
+	midpoint := len(metrics) / 2
+
+	if err := c.writeBatch(ctx, bucket, metrics[:midpoint]); err != nil {
+		return err
+	}
+
+	return c.writeBatch(ctx, bucket, metrics[midpoint:])
+}
+
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(*c.url, c.Organization, bucket)
+	loc, err := makeWriteURL(*c.url, c.Organization, bucket)
 	if err != nil {
 		return err
 	}
 
-	reader := influx.NewReader(metrics, c.serializer)
-	req, err := c.makeWriteRequest(url, reader)
+	reader, err := c.requestBodyReader(metrics)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
 		return err
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusNoContent {
+	switch resp.StatusCode {
+	case
+		// this is the expected response:
+		http.StatusNoContent,
+		// but if we get these we should still accept it as delivered:
+		http.StatusOK,
+		http.StatusCreated,
+		http.StatusAccepted,
+		http.StatusPartialContent,
+		http.StatusMultiStatus,
+		http.StatusAlreadyReported:
+		c.retryCount = 0
 		return nil
 	}
 
@@ -235,22 +282,43 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 
 	switch resp.StatusCode {
-	case http.StatusBadRequest, http.StatusRequestEntityTooLarge:
-		log.Printf("E! [outputs.influxdb_v2] Failed to write metric: %s\n", desc)
+	// request was too large, send back to try again
+	case http.StatusRequestEntityTooLarge:
+		c.log.Errorf("Failed to write metric, request was too large (413)")
+		return &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: desc,
+		}
+	case
+		// request was malformed:
+		http.StatusBadRequest,
+		// request was received but server refused to process it due to a semantic problem with the request.
+		// for example, submitting metrics outside the retention period.
+		// Clients should *not* repeat the request and the metrics should be dropped.
+		http.StatusUnprocessableEntity,
+		http.StatusNotAcceptable:
+		c.log.Errorf("Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
 		return nil
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return fmt.Errorf("failed to write metric: %s", desc)
-	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
-		retryAfter := resp.Header.Get("Retry-After")
-		retry, err := strconv.Atoi(retryAfter)
-		if err != nil {
-			retry = 0
-		}
-		if retry > defaultMaxWait {
-			retry = defaultMaxWait
-		}
-		c.retryTime = time.Now().Add(time.Duration(retry) * time.Second)
-		return fmt.Errorf("Waiting %ds for server before sending metric again", retry)
+		return fmt.Errorf("failed to write metric (%s): %s", resp.Status, desc)
+	case http.StatusTooManyRequests,
+		http.StatusServiceUnavailable,
+		http.StatusBadGateway,
+		http.StatusGatewayTimeout:
+		// ^ these handle the cases where the server is likely overloaded, and may not be able to say so.
+		c.retryCount++
+		retryDuration := c.getRetryDuration(resp.Header)
+		c.retryTime = time.Now().Add(retryDuration)
+		c.log.Warnf("Failed to write; will retry in %s. (%s)\n", retryDuration, resp.Status)
+		return fmt.Errorf("waiting %s for server before sending metric again", retryDuration)
+	}
+
+	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
+	// retrying will not make the request magically work.
+	if len(resp.Status) > 0 && resp.Status[0] == '4' {
+		c.log.Errorf("Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		return nil
 	}
 
 	// This is only until platform spec is fully implemented. As of the
@@ -266,16 +334,35 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 }
 
-func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
-	var err error
-	if c.ContentEncoding == "gzip" {
-		body, err = internal.CompressWithGzip(body)
-		if err != nil {
-			return nil, err
-		}
-	}
+// retryDuration takes the longer of the Retry-After header and our own back-off calculation
+func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
+	// basic exponential backoff (x^2)/40 (denominator to widen the slope)
+	// at 40 denominator, it'll take 49 retries to hit the max defaultMaxWait of 60s
+	backoff := math.Pow(float64(c.retryCount), 2) / 40
+	backoff = math.Min(backoff, defaultMaxWaitSeconds)
 
-	req, err := http.NewRequest("POST", url, body)
+	// get any value from the header, if available
+	retryAfterHeader := float64(0)
+	retryAfterHeaderString := headers.Get("Retry-After")
+	if len(retryAfterHeaderString) > 0 {
+		var err error
+		retryAfterHeader, err = strconv.ParseFloat(retryAfterHeaderString, 64)
+		if err != nil {
+			// there was a value but we couldn't parse it? guess minimum 10 sec
+			retryAfterHeader = 10
+		}
+		// protect against excessively large retry-after
+		retryAfterHeader = math.Min(retryAfterHeader, defaultMaxWaitRetryAfterSeconds)
+	}
+	// take the highest value of backoff and retry-after.
+	retry := math.Max(backoff, retryAfterHeader)
+	return time.Duration(retry*1000) * time.Millisecond
+}
+
+func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	req, err := http.NewRequest("POST", address, body)
 	if err != nil {
 		return nil, err
 	}
@@ -288,6 +375,23 @@ func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request
 	}
 
 	return req, nil
+}
+
+// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
+// side of the connection in case of error
+func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser, error) {
+	reader := influx.NewReader(metrics, c.serializer)
+
+	if c.ContentEncoding == "gzip" {
+		rc, err := internal.CompressWithGzip(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		return rc, nil
+	}
+
+	return io.NopCloser(reader), nil
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {
@@ -316,5 +420,5 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	internal.CloseIdleConnections(c.client)
+	c.client.CloseIdleConnections()
 }

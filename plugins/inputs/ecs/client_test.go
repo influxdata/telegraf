@@ -3,13 +3,14 @@ package ecs
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type pollMock struct {
@@ -26,7 +27,6 @@ func (p *pollMock) ContainerStats() (map[string]types.StatsJSON, error) {
 }
 
 func TestEcsClient_PollSync(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		mock    *pollMock
@@ -80,8 +80,8 @@ func TestEcsClient_PollSync(t *testing.T) {
 				t.Errorf("EcsClient.PollSync() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, tt.want, got, "EcsClient.PollSync() got = %v, want %v", got, tt.want)
-			assert.Equal(t, tt.want1, got1, "EcsClient.PollSync() got1 = %v, want %v", got1, tt.want1)
+			require.Equal(t, tt.want, got, "EcsClient.PollSync() got = %v, want %v", got, tt.want)
+			require.Equal(t, tt.want1, got1, "EcsClient.PollSync() got1 = %v, want %v", got1, tt.want1)
 		})
 	}
 }
@@ -107,7 +107,8 @@ func TestEcsClient_Task(t *testing.T) {
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(rc),
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(rc),
 					}, nil
 				},
 			},
@@ -123,11 +124,24 @@ func TestEcsClient_Task(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed resp",
+			name: "malformed 500 resp",
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						StatusCode: http.StatusInternalServerError,
+						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
+					}, nil
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "malformed 200 resp",
+			client: mockDo{
+				do: func(req *http.Request) (*http.Response, error) {
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
@@ -146,7 +160,7 @@ func TestEcsClient_Task(t *testing.T) {
 				t.Errorf("EcsClient.Task() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, tt.want, got, "EcsClient.Task() = %v, want %v", got, tt.want)
+			require.Equal(t, tt.want, got, "EcsClient.Task() = %v, want %v", got, tt.want)
 		})
 	}
 }
@@ -164,7 +178,8 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(rc),
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(rc),
 					}, nil
 				},
 			},
@@ -181,15 +196,29 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed resp",
+			name: "malformed 200 resp",
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
 			want:    map[string]types.StatsJSON{},
+			wantErr: true,
+		},
+		{
+			name: "malformed 500 resp",
+			client: mockDo{
+				do: func(req *http.Request) (*http.Response, error) {
+					return &http.Response{
+						StatusCode: http.StatusInternalServerError,
+						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
+					}, nil
+				},
+			},
+			want:    nil,
 			wantErr: true,
 		},
 	}
@@ -205,7 +234,81 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 				t.Errorf("EcsClient.ContainerStats() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, tt.want, got, "EcsClient.ContainerStats() = %v, want %v", got, tt.want)
+			require.Equal(t, tt.want, got, "EcsClient.ContainerStats() = %v, want %v", got, tt.want)
+		})
+	}
+}
+
+func TestResolveTaskURL(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		ver  int
+		exp  string
+	}{
+		{
+			name: "default v2 endpoint",
+			base: v2Endpoint,
+			ver:  2,
+			exp:  "http://169.254.170.2/v2/metadata",
+		},
+		{
+			name: "custom v2 endpoint",
+			base: "http://192.168.0.1",
+			ver:  2,
+			exp:  "http://192.168.0.1/v2/metadata",
+		},
+		{
+			name: "theoretical v3 endpoint",
+			base: "http://169.254.170.2/v3/metadata",
+			ver:  3,
+			exp:  "http://169.254.170.2/v3/metadata/task",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseURL, err := url.Parse(tt.base)
+			require.NoError(t, err)
+
+			act := resolveTaskURL(baseURL, tt.ver)
+			require.Equal(t, tt.exp, act)
+		})
+	}
+}
+
+func TestResolveStatsURL(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		ver  int
+		exp  string
+	}{
+		{
+			name: "default v2 endpoint",
+			base: v2Endpoint,
+			ver:  2,
+			exp:  "http://169.254.170.2/v2/stats",
+		},
+		{
+			name: "custom v2 endpoint",
+			base: "http://192.168.0.1",
+			ver:  2,
+			exp:  "http://192.168.0.1/v2/stats",
+		},
+		{
+			name: "theoretical v3 endpoint",
+			base: "http://169.254.170.2/v3/metadata",
+			ver:  3,
+			exp:  "http://169.254.170.2/v3/metadata/task/stats",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseURL, err := url.Parse(tt.base)
+			require.NoError(t, err)
+
+			act := resolveStatsURL(baseURL, tt.ver)
+			require.Equal(t, tt.exp, act)
 		})
 	}
 }

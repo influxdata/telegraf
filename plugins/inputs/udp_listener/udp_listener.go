@@ -2,7 +2,6 @@ package udp_listener
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -13,8 +12,8 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
-// UdpListener main struct for the collector
-type UdpListener struct {
+// UDPListener main struct for the collector
+type UDPListener struct {
 	ServiceAddress string
 
 	// UDPBufferSize should only be set if you want/need the telegraf UDP socket to
@@ -53,17 +52,19 @@ type UdpListener struct {
 
 	PacketsRecv selfstat.Stat
 	BytesRecv   selfstat.Stat
+
+	Log telegraf.Logger
 }
 
-// UDP_MAX_PACKET_SIZE is packet limit, see
+// UDPMaxPacketSize is packet limit, see
 // https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
-const UDP_MAX_PACKET_SIZE int = 64 * 1024
+const UDPMaxPacketSize int = 64 * 1024
 
-var dropwarn = "E! Error: udp_listener message queue full. " +
+var dropwarn = "udp_listener message queue full. " +
 	"We have dropped %d messages so far. " +
-	"You may want to increase allowed_pending_messages in the config\n"
+	"You may want to increase allowed_pending_messages in the config"
 
-var malformedwarn = "E! udp_listener has received %d malformed packets" +
+var malformedwarn = "udp_listener has received %d malformed packets" +
 	" thus far."
 
 const sampleConfig = `
@@ -72,29 +73,29 @@ const sampleConfig = `
   # see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener
 `
 
-func (u *UdpListener) SampleConfig() string {
+func (u *UDPListener) SampleConfig() string {
 	return sampleConfig
 }
 
-func (u *UdpListener) Description() string {
+func (u *UDPListener) Description() string {
 	return "Generic UDP listener"
 }
 
 // All the work is done in the Start() function, so this is just a dummy
 // function.
-func (u *UdpListener) Gather(_ telegraf.Accumulator) error {
+func (u *UDPListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (u *UdpListener) SetParser(parser parsers.Parser) {
+func (u *UDPListener) SetParser(parser parsers.Parser) {
 	u.parser = parser
 }
 
-func (u *UdpListener) Start(acc telegraf.Accumulator) error {
+func (u *UDPListener) Start(acc telegraf.Accumulator) error {
 	u.Lock()
 	defer u.Unlock()
 
-	log.Println("W! DEPRECATED: the UDP listener plugin has been deprecated " +
+	u.Log.Warn("DEPRECATED: the UDP listener plugin has been deprecated " +
 		"in favor of the socket_listener plugin " +
 		"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener)")
 
@@ -108,41 +109,45 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 	u.in = make(chan []byte, u.AllowedPendingMessages)
 	u.done = make(chan struct{})
 
-	u.udpListen()
+	if err := u.udpListen(); err != nil {
+		return err
+	}
 
 	u.wg.Add(1)
 	go u.udpParser()
 
-	log.Printf("I! Started UDP listener service on %s (ReadBuffer: %d)\n", u.ServiceAddress, u.UDPBufferSize)
+	u.Log.Infof("Started service on %q (ReadBuffer: %d)", u.ServiceAddress, u.UDPBufferSize)
 	return nil
 }
 
-func (u *UdpListener) Stop() {
+func (u *UDPListener) Stop() {
 	u.Lock()
 	defer u.Unlock()
 	close(u.done)
 	u.wg.Wait()
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	u.listener.Close()
 	close(u.in)
-	log.Println("I! Stopped UDP listener service on ", u.ServiceAddress)
+	u.Log.Infof("Stopped service on %q", u.ServiceAddress)
 }
 
-func (u *UdpListener) udpListen() error {
+func (u *UDPListener) udpListen() error {
 	var err error
 
 	address, _ := net.ResolveUDPAddr("udp", u.ServiceAddress)
 	u.listener, err = net.ListenUDP("udp", address)
 
 	if err != nil {
-		return fmt.Errorf("E! Error: ListenUDP - %s", err)
+		return err
 	}
 
-	log.Println("I! UDP server listening on: ", u.listener.LocalAddr().String())
+	u.Log.Infof("Server listening on %q", u.listener.LocalAddr().String())
 
 	if u.UDPBufferSize > 0 {
 		err = u.listener.SetReadBuffer(u.UDPBufferSize) // if we want to move away from OS default
 		if err != nil {
-			return fmt.Errorf("E! Failed to set UDP read buffer to %d: %s", u.UDPBufferSize, err)
+			return fmt.Errorf("failed to set UDP read buffer to %d: %s", u.UDPBufferSize, err)
 		}
 	}
 
@@ -151,22 +156,23 @@ func (u *UdpListener) udpListen() error {
 	return nil
 }
 
-func (u *UdpListener) udpListenLoop() {
+func (u *UDPListener) udpListenLoop() {
 	defer u.wg.Done()
 
-	buf := make([]byte, UDP_MAX_PACKET_SIZE)
+	buf := make([]byte, UDPMaxPacketSize)
 	for {
 		select {
 		case <-u.done:
 			return
 		default:
-			u.listener.SetReadDeadline(time.Now().Add(time.Second))
+			if err := u.listener.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+				u.Log.Error("setting read-deadline failed: " + err.Error())
+			}
 
 			n, _, err := u.listener.ReadFromUDP(buf)
 			if err != nil {
-				if err, ok := err.(net.Error); ok && err.Timeout() {
-				} else {
-					log.Printf("E! Error: %s\n", err.Error())
+				if err, ok := err.(net.Error); !ok || !err.Timeout() {
+					u.Log.Error(err.Error())
 				}
 				continue
 			}
@@ -180,14 +186,14 @@ func (u *UdpListener) udpListenLoop() {
 			default:
 				u.drops++
 				if u.drops == 1 || u.drops%u.AllowedPendingMessages == 0 {
-					log.Printf(dropwarn, u.drops)
+					u.Log.Errorf(dropwarn, u.drops)
 				}
 			}
 		}
 	}
 }
 
-func (u *UdpListener) udpParser() error {
+func (u *UDPListener) udpParser() {
 	defer u.wg.Done()
 
 	var packet []byte
@@ -197,7 +203,7 @@ func (u *UdpListener) udpParser() error {
 		select {
 		case <-u.done:
 			if len(u.in) == 0 {
-				return nil
+				return
 			}
 		case packet = <-u.in:
 			metrics, err = u.parser.Parse(packet)
@@ -208,7 +214,7 @@ func (u *UdpListener) udpParser() error {
 			} else {
 				u.malformed++
 				if u.malformed == 1 || u.malformed%1000 == 0 {
-					log.Printf(malformedwarn, u.malformed)
+					u.Log.Errorf(malformedwarn, u.malformed)
 				}
 			}
 		}
@@ -217,7 +223,7 @@ func (u *UdpListener) udpParser() error {
 
 func init() {
 	inputs.Add("udp_listener", func() telegraf.Input {
-		return &UdpListener{
+		return &UDPListener{
 			ServiceAddress:         ":8092",
 			AllowedPendingMessages: 10000,
 		}

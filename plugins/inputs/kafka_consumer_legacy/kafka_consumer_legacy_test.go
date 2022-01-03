@@ -4,11 +4,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Shopify/sarama"
+
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/Shopify/sarama"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -21,6 +22,7 @@ const (
 func newTestKafka() (*Kafka, chan *sarama.ConsumerMessage) {
 	in := make(chan *sarama.ConsumerMessage, 1000)
 	k := Kafka{
+		Log:             testutil.Logger{},
 		ConsumerGroup:   "test",
 		Topics:          []string{"telegraf"},
 		ZookeeperPeers:  []string{"localhost:2181"},
@@ -45,7 +47,7 @@ func TestRunParser(t *testing.T) {
 	in <- saramaMsg(testMsg)
 	acc.Wait(1)
 
-	assert.Equal(t, acc.NFields(), 1)
+	require.Equal(t, acc.NFields(), 1)
 }
 
 // Test that the parser ignores invalid messages
@@ -60,7 +62,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	in <- saramaMsg(invalidMsg)
 	acc.WaitError(1)
 
-	assert.Equal(t, acc.NFields(), 0)
+	require.Equal(t, acc.NFields(), 0)
 }
 
 // Test that overlong messages are dropped
@@ -77,7 +79,7 @@ func TestDropOverlongMsg(t *testing.T) {
 	in <- saramaMsg(overlongMsg)
 	acc.WaitError(1)
 
-	assert.Equal(t, acc.NFields(), 0)
+	require.Equal(t, acc.NFields(), 0)
 }
 
 // Test that the parser parses kafka messages into points
@@ -92,9 +94,9 @@ func TestRunParserAndGather(t *testing.T) {
 	in <- saramaMsg(testMsg)
 	acc.Wait(1)
 
-	acc.GatherError(k.Gather)
+	require.NoError(t, acc.GatherError(k.Gather))
 
-	assert.Equal(t, acc.NFields(), 1)
+	require.Equal(t, acc.NFields(), 1)
 	acc.AssertContainsFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(23422)})
 }
@@ -111,9 +113,9 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	in <- saramaMsg(testMsgGraphite)
 	acc.Wait(1)
 
-	acc.GatherError(k.Gather)
+	require.NoError(t, acc.GatherError(k.Gather))
 
-	assert.Equal(t, acc.NFields(), 1)
+	require.Equal(t, acc.NFields(), 1)
 	acc.AssertContainsFields(t, "cpu_load_short_graphite",
 		map[string]interface{}{"value": float64(23422)})
 }
@@ -133,9 +135,9 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	in <- saramaMsg(testMsgJSON)
 	acc.Wait(1)
 
-	acc.GatherError(k.Gather)
+	require.NoError(t, acc.GatherError(k.Gather))
 
-	assert.Equal(t, acc.NFields(), 2)
+	require.Equal(t, acc.NFields(), 2)
 	acc.AssertContainsFields(t, "kafka_json_test",
 		map[string]interface{}{
 			"a":   float64(5),
