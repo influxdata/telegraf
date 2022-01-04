@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	diskUtil "github.com/shirou/gopsutil/disk"
+	diskUtil "github.com/shirou/gopsutil/v3/disk"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -30,13 +30,13 @@ func TestDiskUsage(t *testing.T) {
 			Device:     "/dev/sda",
 			Mountpoint: "/",
 			Fstype:     "ext4",
-			Opts:       "ro,noatime,nodiratime",
+			Opts:       []string{"ro", "noatime", "nodiratime"},
 		},
 		{
 			Device:     "/dev/sdb",
 			Mountpoint: "/home",
 			Fstype:     "ext4",
-			Opts:       "rw,noatime,nodiratime,errors=remount-ro",
+			Opts:       []string{"rw", "noatime", "nodiratime", "errors=remount-ro"},
 		},
 	}
 	duAll := []diskUtil.UsageStat{
@@ -137,7 +137,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 					Device:     "/dev/sda",
 					Mountpoint: "/",
 					Fstype:     "ext4",
-					Opts:       "ro",
+					Opts:       []string{"ro"},
 				},
 			},
 			usageStats: []*diskUtil.UsageStat{
@@ -169,7 +169,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 					Device:     "/dev/sda",
 					Mountpoint: "/hostfs/var",
 					Fstype:     "ext4",
-					Opts:       "ro",
+					Opts:       []string{"ro"},
 				},
 			},
 			usageStats: []*diskUtil.UsageStat{
@@ -202,7 +202,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 					Device:     "/dev/sda",
 					Mountpoint: "/hostfs",
 					Fstype:     "ext4",
-					Opts:       "ro",
+					Opts:       []string{"ro"},
 				},
 			},
 			usageStats: []*diskUtil.UsageStat{
@@ -301,13 +301,13 @@ func TestDiskStats(t *testing.T) {
 			Device:     "/dev/sda",
 			Mountpoint: "/",
 			Fstype:     "ext4",
-			Opts:       "ro,noatime,nodiratime",
+			Opts:       []string{"ro", "noatime", "nodiratime"},
 		},
 		{
 			Device:     "/dev/sdb",
 			Mountpoint: "/home",
 			Fstype:     "ext4",
-			Opts:       "rw,noatime,nodiratime,errors=remount-ro",
+			Opts:       []string{"rw", "noatime", "nodiratime", "errors=remount-ro"},
 		},
 	}
 
@@ -316,7 +316,7 @@ func TestDiskStats(t *testing.T) {
 			Device:     "/dev/sda",
 			Mountpoint: "/",
 			Fstype:     "ext4",
-			Opts:       "ro,noatime,nodiratime",
+			Opts:       []string{"ro", "noatime", "nodiratime"},
 		},
 	}
 

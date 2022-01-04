@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
 )
 
 func MustMetric(name string, tags map[string]string, fields map[string]interface{}, metricTime time.Time) telegraf.Metric {
@@ -46,8 +47,8 @@ func TestUnderLimit(t *testing.T) {
 	m1 := MustMetric("foo", oneTags, nil, currentTime)
 	m2 := MustMetric("bar", tenTags, nil, currentTime)
 	limitApply := tagLimitConfig.Apply(m1, m2)
-	assert.Equal(t, oneTags, limitApply[0].Tags(), "one tag")
-	assert.Equal(t, tenTags, limitApply[1].Tags(), "ten tags")
+	require.Equal(t, oneTags, limitApply[0].Tags(), "one tag")
+	require.Equal(t, tenTags, limitApply[1].Tags(), "ten tags")
 }
 
 func TestTrim(t *testing.T) {
@@ -78,9 +79,9 @@ func TestTrim(t *testing.T) {
 	m1 := MustMetric("foo", threeTags, nil, currentTime)
 	m2 := MustMetric("bar", tenTags, nil, currentTime)
 	limitApply := tagLimitConfig.Apply(m1, m2)
-	assert.Equal(t, threeTags, limitApply[0].Tags(), "three tags")
+	require.Equal(t, threeTags, limitApply[0].Tags(), "three tags")
 	trimmedTags := limitApply[1].Tags()
-	assert.Equal(t, 3, len(trimmedTags), "ten tags")
-	assert.Equal(t, "foo", trimmedTags["a"], "preserved: a")
-	assert.Equal(t, "bar", trimmedTags["b"], "preserved: b")
+	require.Equal(t, 3, len(trimmedTags), "ten tags")
+	require.Equal(t, "foo", trimmedTags["a"], "preserved: a")
+	require.Equal(t, "bar", trimmedTags["b"], "preserved: b")
 }

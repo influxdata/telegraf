@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "timestamp": "2021-06-23T17:06:37",
+  "counters": {
+    "XXX.floatTest": {
+      "description": "floatTest",
+      "flag": "c",
+      "format": "d",
+      "value": 123.45
+    },
+    "XXX.stringTest": {
+      "description": "stringTest",
+      "flag": "c",
+      "format": "d",
+      "value": "abcdefg"
+    },
+    "XXX.intTest": {
+      "description": "intTest",
+      "flag": "c",
+      "format": "d",
+      "value": 12345
+    }
+  }
+}

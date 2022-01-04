@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fatih/color"
+
 	"github.com/influxdata/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
@@ -60,6 +62,8 @@ var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fDeprecationList = flag.Bool("deprecation-list", false,
+	"print all deprecated plugins or plugin options.")
 var fSectionFilters = flag.String("section-filter", "",
 	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
 var fInputFilters = flag.String("input-filter", "",
@@ -254,6 +258,29 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 
+	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
+	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
+	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
+	if !*fRunOnce && (*fTest || *fTestWait != 0) {
+		log.Print("W! " + color.RedString("Outputs are not used in testing mode!"))
+	} else {
+		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+	}
+	log.Printf("I! Tags enabled: %s", c.ListTags())
+
+	if count, found := c.Deprecations["inputs"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated inputs: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["aggregators"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated aggregators: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["processors"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated processors: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["outputs"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
+	}
+
 	if *fRunOnce {
 		wait := time.Duration(*fTestWait) * time.Second
 		return ag.Once(ctx, wait)
@@ -263,12 +290,6 @@ func runAgent(ctx context.Context,
 		wait := time.Duration(*fTestWait) * time.Second
 		return ag.Test(ctx, wait)
 	}
-
-	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
-	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
-	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
-	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-	log.Printf("I! Tags enabled: %s", c.ListTags())
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -348,6 +369,11 @@ func main() {
 
 	logger.SetupLogging(logger.LogConfig{})
 
+	// Configure version
+	if err := internal.SetVersion(version); err != nil {
+		log.Println("Telegraf version already configured to: " + internal.Version())
+	}
+
 	// Load external plugins, if requested.
 	if *fPlugins != "" {
 		log.Printf("I! Loading external plugins from: %s", *fPlugins)
@@ -392,6 +418,27 @@ func main() {
 
 	// switch for flags which just do something and exit immediately
 	switch {
+	case *fDeprecationList:
+		c := config.NewConfig()
+		infos := c.CollectDeprecationInfos(
+			inputFilters,
+			outputFilters,
+			aggregatorFilters,
+			processorFilters,
+		)
+		//nolint:revive // We will notice if Println fails
+		fmt.Println("Deprecated Input Plugins: ")
+		c.PrintDeprecationList(infos["inputs"])
+		//nolint:revive // We will notice if Println fails
+		fmt.Println("Deprecated Output Plugins: ")
+		c.PrintDeprecationList(infos["outputs"])
+		//nolint:revive // We will notice if Println fails
+		fmt.Println("Deprecated Processor Plugins: ")
+		c.PrintDeprecationList(infos["processors"])
+		//nolint:revive // We will notice if Println fails
+		fmt.Println("Deprecated Aggregator Plugins: ")
+		c.PrintDeprecationList(infos["aggregators"])
+		return
 	case *fOutputList:
 		fmt.Println("Available Output Plugins: ")
 		names := make([]string, 0, len(outputs.Outputs))
@@ -433,16 +480,6 @@ func main() {
 			log.Fatalf("E! %s and %s", err, err2)
 		}
 		return
-	}
-
-	shortVersion := version
-	if shortVersion == "" {
-		shortVersion = "unknown"
-	}
-
-	// Configure version
-	if err := internal.SetVersion(shortVersion); err != nil {
-		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
 	run(

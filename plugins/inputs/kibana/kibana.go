@@ -77,6 +77,7 @@ type memory struct {
 type heap struct {
 	TotalInBytes int64 `json:"total_in_bytes"`
 	UsedInBytes  int64 `json:"used_in_bytes"`
+	SizeLimit    int64 `json:"size_limit"`
 }
 
 const sampleConfig = `
@@ -222,6 +223,7 @@ func (k *Kibana) gatherKibanaStatus(baseURL string, acc telegraf.Accumulator) er
 		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.TotalInBytes
 		fields["heap_total_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.TotalInBytes
 		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.UsedInBytes
+		fields["heap_size_limit"] = kibanaStatus.Metrics.Process.Memory.Heap.SizeLimit
 	} else {
 		fields["uptime_ms"] = int64(kibanaStatus.Metrics.UptimeInMillis)
 		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes

@@ -2,7 +2,7 @@
 
 This plugin collects TCP connections state and UDP socket counts by using `lsof`.
 
-### Configuration:
+## Configuration
 
 ``` toml
 # Collect TCP connections state and UDP socket counts
@@ -10,7 +10,7 @@ This plugin collects TCP connections state and UDP socket counts by using `lsof`
   # no configuration
 ```
 
-# Measurements:
+## Measurements
 
 Supported TCP Connection states are follows.
 
@@ -27,12 +27,14 @@ Supported TCP Connection states are follows.
 - closing
 - none
 
-### TCP Connection State measurements:
+## TCP Connection State measurements
 
 Meta:
+
 - units: counts
 
 Measurement names:
+
 - tcp_established
 - tcp_syn_sent
 - tcp_syn_recv
@@ -48,10 +50,12 @@ Measurement names:
 
 If there are no connection on the state, the metric is not counted.
 
-### UDP socket counts measurements:
+## UDP socket counts measurements
 
 Meta:
+
 - units: counts
 
 Measurement names:
+
 - udp_socket

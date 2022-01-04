@@ -16,7 +16,6 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
 
 It collects latency, download speed and upload speed
 
-
 | Name           | filed name | type    | Unit |
 | -------------- | ---------- | ------- | ---- |
 | Download Speed | download   | float64 | Mbps |

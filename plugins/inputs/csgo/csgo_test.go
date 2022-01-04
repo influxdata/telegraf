@@ -1,10 +1,11 @@
 package csgo
 
 import (
-	"github.com/influxdata/telegraf/testutil"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const testInput = `CPU   NetIn   NetOut    Uptime  Maps   FPS   Players  Svms    +-ms   ~tick
@@ -28,17 +29,17 @@ func TestCPUStats(t *testing.T) {
 		t.Errorf("acc.HasMeasurement: expected csgo")
 	}
 
-	assert.Equal(t, "1.2.3.4:1234", acc.Metrics[0].Tags["host"])
-	assert.Equal(t, expectedOutput.CPU, acc.Metrics[0].Fields["cpu"])
-	assert.Equal(t, expectedOutput.NetIn, acc.Metrics[0].Fields["net_in"])
-	assert.Equal(t, expectedOutput.NetOut, acc.Metrics[0].Fields["net_out"])
-	assert.Equal(t, expectedOutput.UptimeMinutes, acc.Metrics[0].Fields["uptime_minutes"])
-	assert.Equal(t, expectedOutput.Maps, acc.Metrics[0].Fields["maps"])
-	assert.Equal(t, expectedOutput.FPS, acc.Metrics[0].Fields["fps"])
-	assert.Equal(t, expectedOutput.Players, acc.Metrics[0].Fields["players"])
-	assert.Equal(t, expectedOutput.Sim, acc.Metrics[0].Fields["sv_ms"])
-	assert.Equal(t, expectedOutput.Variance, acc.Metrics[0].Fields["variance_ms"])
-	assert.Equal(t, expectedOutput.Tick, acc.Metrics[0].Fields["tick_ms"])
+	require.Equal(t, "1.2.3.4:1234", acc.Metrics[0].Tags["host"])
+	require.Equal(t, expectedOutput.CPU, acc.Metrics[0].Fields["cpu"])
+	require.Equal(t, expectedOutput.NetIn, acc.Metrics[0].Fields["net_in"])
+	require.Equal(t, expectedOutput.NetOut, acc.Metrics[0].Fields["net_out"])
+	require.Equal(t, expectedOutput.UptimeMinutes, acc.Metrics[0].Fields["uptime_minutes"])
+	require.Equal(t, expectedOutput.Maps, acc.Metrics[0].Fields["maps"])
+	require.Equal(t, expectedOutput.FPS, acc.Metrics[0].Fields["fps"])
+	require.Equal(t, expectedOutput.Players, acc.Metrics[0].Fields["players"])
+	require.Equal(t, expectedOutput.Sim, acc.Metrics[0].Fields["sv_ms"])
+	require.Equal(t, expectedOutput.Variance, acc.Metrics[0].Fields["variance_ms"])
+	require.Equal(t, expectedOutput.Tick, acc.Metrics[0].Fields["tick_ms"])
 }
 
 func requestMock(_ string, _ string) (string, error) {

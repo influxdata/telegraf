@@ -9,7 +9,9 @@ See the [webhook doc](https://mandrill.zendesk.com/hc/en-us/articles/205583307-M
 All events for logs the original timestamp, the event name and the unique identifier of the message that generated the event.
 
 **Tags:**
+
 * 'event' = `event.event` string
 
 **Fields:**
+
 * 'id' = `event._id` string
