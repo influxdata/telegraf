@@ -2,7 +2,6 @@ package whatap
 
 import (
 	"fmt"
-	//"log"
 	"net"
 	"os"
 	"testing"
@@ -22,7 +21,7 @@ func newWhatap() *Whatap {
 	hostname, _ := os.Hostname()
 	return &Whatap{
 		Timeout: 60 * time.Second,
-		Session: TcpSession{},
+		Session: TCPSession{},
 		Oname:   hostname,
 		Oid:     whatap_hash.HashStr(hostname),
 	}
@@ -67,12 +66,15 @@ func TestWhatapWriteErr(t *testing.T) {
 
 	lconn, err := listener.Accept()
 	require.NoError(t, err)
-	lconn.(*net.TCPConn).SetWriteBuffer(256)
+	err = lconn.(*net.TCPConn).SetWriteBuffer(256)
+	require.NoError(t, err)
 
 	metrics := []telegraf.Metric{testutil.TestMetric(1, "testerr")}
 
 	// close the socket to generate an error
-	lconn.Close()
+	err = lconn.Close()
+	require.NoError(t, err)
+
 	w.Session.Client.Close()
 	err = w.Write(metrics)
 	require.Error(t, err)
