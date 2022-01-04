@@ -39,6 +39,7 @@ func ClearCache() {
 
 func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 	once.Do(gosmi.Init)
+	modules := []string{}
 
 	for _, mibPath := range paths {
 		folders := []string{}
@@ -79,15 +80,19 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 				if info.IsDir() {
 					appendPath(path)
 				} else if info.Mode()&os.ModeSymlink == 0 {
-					if err := loadModule(info.Name()); err != nil {
-						log.Warn(err)
-					}
+					modules = append(modules, info.Name())
 				}
 				return nil
 			})
 			if err != nil {
 				return fmt.Errorf("Filepath could not be walked: %v", err)
 			}
+		}
+	}
+	for _, module := range modules {
+		err := loadModule(module)
+		if err != nil {
+			log.Warnf("module %v could not be loaded", module)
 		}
 	}
 	return nil
@@ -169,7 +174,11 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			return oid, oid, oid, oid, out, err
 		}
 
-		oidNum = "." + out.RenderNumeric() + end
+		if oidNum = out.RenderNumeric(); oidNum == "" {
+			return oid, oid, oid, oid, out, fmt.Errorf("cannot make %v numeric, please ensure all imported mibs are in the path", oid)
+		}
+
+		oidNum = "." + oidNum + end
 	} else if strings.ContainsAny(oid, "abcdefghijklnmopqrstuvwxyz") {
 		//handle mixed oid ex. .iso.2.3
 		s := strings.Split(oid, ".")

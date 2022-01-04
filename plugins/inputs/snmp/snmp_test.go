@@ -287,6 +287,10 @@ func TestSnmpInit_noName_noOid(t *testing.T) {
 }
 
 func TestGetSNMPConnection_v2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	s := &Snmp{
 		Agents: []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
 		ClientConfig: snmp.ClientConfig{
@@ -356,6 +360,10 @@ func stubTCPServer(wg *sync.WaitGroup) {
 }
 
 func TestGetSNMPConnection_v3(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	s := &Snmp{
 		Agents: []string{"1.2.3.4"},
 		ClientConfig: snmp.ClientConfig{
@@ -396,6 +404,10 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 }
 
 func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testCases := []struct {
 		Name      string
 		Algorithm gosnmp.SnmpV3PrivProtocol
@@ -515,6 +527,10 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 }
 
 func TestGetSNMPConnection_caching(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	s := &Snmp{
 		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
 	}

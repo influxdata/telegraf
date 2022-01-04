@@ -219,6 +219,35 @@ func TestTags(t *testing.T) {
 	_, validSerialNumber := serialNumber.SetString(acc.TagValue("x509_cert", "serial_number"), 16)
 	require.Truef(t, validSerialNumber, "Expected a valid Hex serial number but got %s", acc.TagValue("x509_cert", "serial_number"))
 	require.Equal(t, big.NewInt(1), serialNumber)
+
+	// expect root/intermediate certs (more than one cert)
+	require.Greater(t, acc.NMetrics(), uint64(1))
+}
+
+func TestGatherExcludeRootCerts(t *testing.T) {
+	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
+
+	f, err := os.CreateTemp("", "x509_cert")
+	require.NoError(t, err)
+
+	_, err = f.Write([]byte(cert))
+	require.NoError(t, err)
+
+	require.NoError(t, f.Close())
+
+	defer os.Remove(f.Name())
+
+	sc := X509Cert{
+		Sources:          []string{f.Name()},
+		ExcludeRootCerts: true,
+	}
+	require.NoError(t, sc.Init())
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, sc.Gather(&acc))
+
+	require.True(t, acc.HasMeasurement("x509_cert"))
+	require.Equal(t, acc.NMetrics(), uint64(1))
 }
 
 func TestGatherChain(t *testing.T) {

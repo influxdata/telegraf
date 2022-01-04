@@ -28,7 +28,12 @@ The example below has two queries are specified, with the following parameters:
   # A list of databases to pull metrics about. If not specified, metrics for all
   # databases are gathered.
   # databases = ["app_production", "testing"]
-  #
+
+  ## Whether to use prepared statements when connecting to the database.
+  ## This should be set to false when connecting through a PgBouncer instance
+  ## with pool_mode set to transaction.
+  prepared_statements = true
+
   # Define the toml config where the sql queries are stored
   # New queries can be added, if the withdbname is set to true and there is no
   # databases defined in the 'databases field', the sql query is ended by a 'is
