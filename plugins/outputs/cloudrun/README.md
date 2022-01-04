@@ -1,12 +1,12 @@
-### Cloud Run Output Plugin
+# Cloud Run Output Plugin
 
- This plugin is used to send time series metrics into a proxy, located behind the Google Cloud Run service, with OAuth2 enabled.         
+This plugin is used to send time series metrics into a proxy, located behind the Google Cloud Run service, with OAuth2 enabled.
 
-There are two required fields, the URL where your Cloud Run application lives, and the JSON secret key file location, which is [generated](https://cloud.google.com/iam/docs/creating-managing-service-account-keys) by the user in their Google Cloud Run project. 
+There are two required fields, the URL where your Cloud Run application lives, and the JSON secret key file location, which is [generated](https://cloud.google.com/iam/docs/creating-managing-service-account-keys) by the user in their Google Cloud Run project.
 
 Below is an example of how to send metrics into a proxy located in Cloud Run:
 
-```
+```toml
   ## A plugin that can transmit metrics over OAuth2
   ## URL is the Cloud Run Wavefront proxy address to send metrics to
   # url = "http://127.0.0.1:8080/telegraf"
