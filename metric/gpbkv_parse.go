@@ -13,6 +13,7 @@ const (
 	GBPVALUE  = "ValueByType"
 	GBPFIELDS = "fields"
 	GBPNAME = "name"
+	GPB_XINQXION_EDIT_SUFFIX = ""
 )
 
 
