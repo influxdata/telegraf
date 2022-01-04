@@ -53,7 +53,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/timestream"
 	_ "github.com/influxdata/telegraf/plugins/outputs/warp10"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
-	_ "github.com/influxdata/telegraf/plugins/outputs/whatap"
 	_ "github.com/influxdata/telegraf/plugins/outputs/websocket"
+	_ "github.com/influxdata/telegraf/plugins/outputs/whatap"
 	_ "github.com/influxdata/telegraf/plugins/outputs/yandex_cloud_monitoring"
 )

@@ -4,22 +4,33 @@ import (
 	"fmt"
 	//"log"
 	"net"
+	"os"
 	"testing"
 
-	//"time"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+
+	whatap_hash "github.com/whatap/go-api/common/util/hash"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	License = "x2tggtnopk2t9-z39dt59pe1pmjc-xipbnkb0ph6bn"
-	Server  = "121.166.140.134"
-)
-
+func newWhatap() *Whatap {
+	hostname, _ := os.Hostname()
+	return &Whatap{
+		Timeout: 60 * time.Second,
+		Session: TcpSession{},
+		Oname:   hostname,
+		Oid:     whatap_hash.HashStr(hostname),
+	}
+}
 func TestWhatapConnect(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
@@ -38,6 +49,9 @@ func TestWhatapConnect(t *testing.T) {
 }
 
 func TestWhatapWriteErr(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
