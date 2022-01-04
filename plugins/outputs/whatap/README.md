@@ -1,6 +1,6 @@
 # WhaTap Output Plugin
 
-This plugin writes to the WhaTap(https://www.whatap.io) APM(via TCP).
+This plugin writes to the WhaTap(<https://www.whatap.io>) APM(via TCP).
 
 ```toml
   ## You can create a project on the WhaTap site(https://www.whatap.io) 
@@ -19,3 +19,4 @@ This plugin writes to the WhaTap(https://www.whatap.io) APM(via TCP).
   ## Connection timeout.
   # timeout = "60s"
 ```
+
