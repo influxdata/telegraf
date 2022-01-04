@@ -254,6 +254,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 			return err
 		}
 
+		sourceIp := conn.RemoteAddr().String()
 		maxMsgSize := tcpMaxMsgLen
 		if c.MaxMsgSize > 0 {
 			maxMsgSize = uint32(c.MaxMsgSize)
@@ -274,7 +275,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 			return fmt.Errorf("TCP dialout premature EOF")
 		}
 
-		c.handleTelemetry(payload.Bytes())
+		c.handleTelemetry(payload.Bytes(), sourceIp)
 	}
 }
 
@@ -285,6 +286,7 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 		c.Log.Debugf("Accepted Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
 	}
 
+	sourceIP := peerInCtx.Addr.String()
 	var chunkBuffer bytes.Buffer
 
 	for {
@@ -303,13 +305,13 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 
 		// Reassemble chunked telemetry data received from NX-OS
 		if packet.TotalSize == 0 {
-			c.handleTelemetry(packet.Data)
+			c.handleTelemetry(packet.Data, sourceIP)
 		} else if int(packet.TotalSize) <= c.MaxMsgSize {
 			if _, err := chunkBuffer.Write(packet.Data); err != nil {
 				c.acc.AddError(fmt.Errorf("writing packet %q failed: %v", packet.Data, err))
 			}
 			if chunkBuffer.Len() >= int(packet.TotalSize) {
-				c.handleTelemetry(chunkBuffer.Bytes())
+				c.handleTelemetry(chunkBuffer.Bytes(), sourceIP)
 				chunkBuffer.Reset()
 			}
 		} else {
@@ -325,7 +327,7 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 }
 
 // Handle telemetry packet from any transport, decode and add as measurement
-func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
+func (c *CiscoTelemetryMDT) handleTelemetry(data []byte, sourceIP string) {
 	msg := &telemetry.Telemetry{}
 	err := proto.Unmarshal(data, msg)
 	if err != nil {
@@ -333,50 +335,23 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		return
 	}
 
-	grouper := metric.NewSeriesGrouper()
-	for _, gpbkv := range msg.DataGpbkv {
-		// Produce metadata tags
-		var tags map[string]string
+	grouper := metric.NewSDNGrouper()
+	jsonGbpkv, err := json.Marshal(msg)
+	if err != nil {
+		c.Log.Errorf("Gpbkv Parse Failure")
+	}
 
-		// Top-level field may have measurement timestamp, if not use message timestamp
-		measured := gpbkv.Timestamp
-		if measured == 0 {
-			measured = msg.MsgTimestamp
-		}
+	sdn_metric := metric.GbpkvParse(jsonGbpkv, sourceIP)
+	timestamp := time.Unix(int64(msg.MsgTimestamp/1000), int64(msg.MsgTimestamp%1000)*1000000)
 
-		timestamp := time.Unix(int64(measured/1000), int64(measured%1000)*1000000)
-
-		// Find toplevel GPBKV fields "keys" and "content"
-		var keys, content *telemetry.TelemetryField = nil, nil
-		for _, field := range gpbkv.Fields {
-			if field.Name == "keys" {
-				keys = field
-			} else if field.Name == "content" {
-				content = field
-			}
-		}
-
-		if keys == nil || content == nil {
-			c.Log.Infof("Message from %s missing keys or content", msg.GetNodeIdStr())
-			continue
-		}
-
-		// Parse keys
-		tags = make(map[string]string, len(keys.Fields)+3)
-		tags["source"] = msg.GetNodeIdStr()
-		if msgID := msg.GetSubscriptionIdStr(); msgID != "" {
-			tags["subscription"] = msgID
-		}
-		tags["path"] = msg.GetEncodingPath()
-
-		for _, subfield := range keys.Fields {
-			c.parseKeyField(tags, subfield, "")
-		}
-
-		// Parse values
-		for _, subfield := range content.Fields {
-			c.parseContentField(grouper, subfield, "", msg.EncodingPath, tags, timestamp)
-		}
+	if err := grouper.Add(msg.EncodingPath, timestamp, "Telemetry", sdn_metric.Telemetry); err != nil {
+		c.Log.Errorf("adding field %q to group failed: Telemetry", err)
+	}
+	if err := grouper.Add(msg.EncodingPath, timestamp, "Rows", sdn_metric.Row); err != nil {
+		c.Log.Errorf("adding field %q to group failed: row", err)
+	}
+	if err := grouper.Add(msg.EncodingPath, timestamp, "Source", sdn_metric.Source); err != nil {
+		c.Log.Errorf("adding field %q to group failed: Source", err)
 	}
 
 	for _, groupedMetric := range grouper.Metrics() {

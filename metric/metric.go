@@ -273,6 +273,10 @@ func (m *metric) Drop() {
 // Convert field to a supported type or nil if unconvertible
 func convertField(v interface{}) interface{} {
 	switch v := v.(type) {
+	case map[string]interface{}:
+		return v
+	case []gbpRow:
+	    return v
 	case float64:
 		return v
 	case int64:
