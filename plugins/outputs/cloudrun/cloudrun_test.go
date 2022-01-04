@@ -1,6 +1,7 @@
 package cloudrun
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -58,7 +59,7 @@ func TestCloudRun_Write(t *testing.T) {
 			tt.plugin.SetSerializer(influx.NewSerializer())
 			if err := tt.plugin.Connect(); tt.wantErr {
 				if runtime.GOOS == "windows" {
-					require.Equal(t, "open ./testdata/missing.json: The system cannot find the file specified", err.Error())
+					require.Equal(t, "open ./testdata/missing.json: The system cannot find the file specified.", err.Error())
 				} else {
 					require.Equal(t, "open ./testdata/missing.json: no such file or directory", err.Error())
 				}
@@ -70,11 +71,12 @@ func TestCloudRun_Write(t *testing.T) {
 
 			if err := tt.plugin.Write(tt.metrics); tt.wantErr {
 				if runtime.GOOS == "windows" {
-					require.Equal(t, "open ./testdata/missing.json: The system cannot find the file specified", err.Error())
+					require.Equal(t, "open ./testdata/missing.json: The system cannot find the file specified.", err.Error())
 				} else {
 					require.Equal(t, "open ./testdata/missing.json: no such file or directory", err.Error())
 				}
 			} else {
+				fmt.Println("tt.name", tt.name)
 				require.NoError(t, err)
 			}
 
