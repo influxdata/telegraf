@@ -49,10 +49,10 @@ const sampleConfig = `
 `
 
 const (
-	defaultClientTimeout = 5 * time.Second
-	defaultContentType   = "application/octet-stream"
-	defaultAccept        = "application/json"
-	defaultMethod        = http.MethodPost
+// defaultClientTimeout = 5 * time.Second
+// defaultContentType   = "application/octet-stream"
+// defaultAccept        = "application/json"
+// defaultMethod = http.MethodPost
 )
 
 type CloudRun struct {
@@ -148,19 +148,20 @@ func (cr *CloudRun) Write(metrics []telegraf.Metric) error {
 func (cr *CloudRun) send(reqBody []byte) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 	var err error
-	req, err := http.NewRequest(defaultMethod, cr.URL, reqBodyBuffer)
+	req, err := http.NewRequest(http.MethodPost, cr.URL, reqBodyBuffer)
 	if err != nil {
 		return err
 	}
 
 	// Inspect jwt claims to view expiration time
 	claims := jwtGo.RegisteredClaims{}
-	jwtGo.ParseWithClaims(cr.accessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
+	_, err = jwtGo.ParseWithClaims(cr.accessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
+		fmt.Println("hello")
 		return nil, nil
 	})
 
 	// Request new token if expired
-	if !claims.VerifyExpiresAt(time.Now(), true) {
+	if err != nil || !claims.VerifyExpiresAt(time.Now(), true) {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(cr.Timeout))
 		defer cancel()
