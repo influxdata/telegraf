@@ -1,10 +1,10 @@
 package cloudrun
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 
 	"github.com/influxdata/telegraf"
@@ -34,7 +34,7 @@ func TestCloudRun_Write(t *testing.T) {
 		name    string
 		metrics []telegraf.Metric
 		plugin  *CloudRun
-		wantErr error
+		wantErr bool
 	}{
 		{
 			name:    "write success",
@@ -42,7 +42,7 @@ func TestCloudRun_Write(t *testing.T) {
 			plugin: &CloudRun{
 				CredentialsFile: "./testdata/test_key_file.json",
 			},
-			wantErr: nil,
+			wantErr: false,
 		},
 		{
 			name:    "no credentials file",
@@ -50,22 +50,30 @@ func TestCloudRun_Write(t *testing.T) {
 			plugin: &CloudRun{
 				CredentialsFile: "./testdata/missing.json",
 			},
-			wantErr: fmt.Errorf("open ./testdata/missing.json: no such file or directory"),
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.plugin.SetSerializer(influx.NewSerializer())
-			if err := tt.plugin.Connect(); tt.wantErr != nil {
-				require.EqualError(t, err, tt.wantErr.Error())
+			if err := tt.plugin.Connect(); tt.wantErr {
+				if runtime.GOOS == "windows" {
+					require.Equal(t, "open ./testdata/missing.json: The system cannot find the file specified", err.Error())
+				} else {
+					require.Equal(t, "open ./testdata/missing.json: no such file or directory", err.Error())
+				}
 			} else {
 				require.NoError(t, err)
 			}
 
 			tt.plugin.URL = fakeServer.URL
 
-			if err := tt.plugin.Write(tt.metrics); tt.wantErr != nil {
-				require.EqualError(t, err, tt.wantErr.Error())
+			if err := tt.plugin.Write(tt.metrics); tt.wantErr {
+				if runtime.GOOS == "windows" {
+					require.Equal(t, "open ./testdata/missing.json: The system cannot find the file specified", err.Error())
+				} else {
+					require.Equal(t, "open ./testdata/missing.json: no such file or directory", err.Error())
+				}
 			} else {
 				require.NoError(t, err)
 			}
