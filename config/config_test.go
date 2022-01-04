@@ -10,13 +10,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
@@ -140,12 +141,17 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedConfigs[0].Tags = make(map[string]string)
 
 	expectedPlugins[1] = inputs.Inputs["exec"]().(*MockupInputPlugin)
-	p, err := parsers.NewParser(&parsers.Config{
+	parserConfig := &parsers.Config{
 		MetricName: "exec",
 		DataFormat: "json",
 		JSONStrict: true,
-	})
+	}
+	p, err := parsers.NewParser(parserConfig)
 	require.NoError(t, err)
+
+	// Inject logger to have proper struct for comparison
+	models.SetLoggerOnPlugin(p, models.NewLogger("parsers", parserConfig.DataFormat, parserConfig.MetricName))
+
 	expectedPlugins[1].SetParser(p)
 	expectedPlugins[1].Command = "/usr/bin/myothercollector --foo=bar"
 	expectedConfigs[1] = &models.InputConfig{

@@ -1,6 +1,7 @@
 package template
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -26,4 +27,16 @@ func (m *TemplateMetric) Field(key string) interface{} {
 
 func (m *TemplateMetric) Time() time.Time {
 	return m.metric.Time()
+}
+
+func (m *TemplateMetric) String() string {
+	return fmt.Sprint(m.metric)
+}
+
+func (m *TemplateMetric) TagList() map[string]string {
+	return m.metric.Tags()
+}
+
+func (m *TemplateMetric) FieldList() map[string]interface{} {
+	return m.metric.Fields()
 }

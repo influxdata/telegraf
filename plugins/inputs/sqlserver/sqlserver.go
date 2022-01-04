@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
 	mssql "github.com/denisenkom/go-mssqldb"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -18,18 +18,20 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string `toml:"servers"`
-	AuthMethod   string   `toml:"auth_method"`
-	QueryVersion int      `toml:"query_version"`
-	AzureDB      bool     `toml:"azuredb"`
-	DatabaseType string   `toml:"database_type"`
-	IncludeQuery []string `toml:"include_query"`
-	ExcludeQuery []string `toml:"exclude_query"`
-	HealthMetric bool     `toml:"health_metric"`
-	pools        []*sql.DB
-	queries      MapQuery
-	adalToken    *adal.Token
-	muCacheLock  sync.RWMutex
+	Servers      []string        `toml:"servers"`
+	AuthMethod   string          `toml:"auth_method"`
+	QueryVersion int             `toml:"query_version"`
+	AzureDB      bool            `toml:"azuredb"`
+	DatabaseType string          `toml:"database_type"`
+	IncludeQuery []string        `toml:"include_query"`
+	ExcludeQuery []string        `toml:"exclude_query"`
+	HealthMetric bool            `toml:"health_metric"`
+	Log          telegraf.Logger `toml:"-"`
+
+	pools       []*sql.DB
+	queries     MapQuery
+	adalToken   *adal.Token
+	muCacheLock sync.RWMutex
 }
 
 // Query struct
@@ -142,10 +144,10 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func initQueries(s *SQLServer) error {
+func (s *SQLServer) initQueries() error {
 	s.queries = make(MapQuery)
 	queries := s.queries
-	log.Printf("I! [inputs.sqlserver] Config: database_type: %s , query_version:%d , azuredb: %t", s.DatabaseType, s.QueryVersion, s.AzureDB)
+	s.Log.Infof("Config: database_type: %s , query_version:%d , azuredb: %t", s.DatabaseType, s.QueryVersion, s.AzureDB)
 
 	// New config option database_type
 	// To prevent query definition conflicts
@@ -202,7 +204,7 @@ func initQueries(s *SQLServer) error {
 		}
 		// Decide if we want to run version 1 or version 2 queries
 		if s.QueryVersion == 2 {
-			log.Println("W! DEPRECATION NOTICE: query_version=2 is being deprecated in favor of database_type.")
+			s.Log.Warn("DEPRECATION NOTICE: query_version=2 is being deprecated in favor of database_type.")
 			queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCountersV2, ResultByRow: true}
 			queries["WaitStatsCategorized"] = Query{ScriptName: "WaitStatsCategorized", Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
 			queries["DatabaseIO"] = Query{ScriptName: "DatabaseIO", Script: sqlDatabaseIOV2, ResultByRow: false}
@@ -213,7 +215,7 @@ func initQueries(s *SQLServer) error {
 			queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: sqlServerVolumeSpaceV2, ResultByRow: false}
 			queries["Cpu"] = Query{ScriptName: "Cpu", Script: sqlServerCPUV2, ResultByRow: false}
 		} else {
-			log.Println("W! DEPRECATED: query_version=1 has been deprecated in favor of database_type.")
+			s.Log.Warn("DEPRECATED: query_version=1 has been deprecated in favor of database_type.")
 			queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCounters, ResultByRow: true}
 			queries["WaitStatsCategorized"] = Query{ScriptName: "WaitStatsCategorized", Script: sqlWaitStatsCategorized, ResultByRow: false}
 			queries["CPUHistory"] = Query{ScriptName: "CPUHistory", Script: sqlCPUHistory, ResultByRow: false}
@@ -242,7 +244,7 @@ func initQueries(s *SQLServer) error {
 	for query := range queries {
 		querylist = append(querylist, query)
 	}
-	log.Printf("I! [inputs.sqlserver] Config: Effective Queries: %#v\n", querylist)
+	s.Log.Infof("Config: Effective Queries: %#v\n", querylist)
 
 	return nil
 }
@@ -283,7 +285,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 
 // Start initialize a list of connection pools
 func (s *SQLServer) Start(acc telegraf.Accumulator) error {
-	if err := initQueries(s); err != nil {
+	if err := s.initQueries(); err != nil {
 		acc.AddError(err)
 		return err
 	}
@@ -355,11 +357,11 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumul
 
 		// Error msg based on the format in SSMS. SQLErrorClass() is another term for severity/level: http://msdn.microsoft.com/en-us/library/dd304156.aspx
 		if sqlerr, ok := err.(mssql.Error); ok {
-			return fmt.Errorf("Query %s failed for server: %s and database: %s with Msg %d, Level %d, State %d:, Line %d, Error: %w", query.ScriptName,
+			return fmt.Errorf("query %s failed for server: %s and database: %s with Msg %d, Level %d, State %d:, Line %d, Error: %w", query.ScriptName,
 				serverName, databaseName, sqlerr.SQLErrorNumber(), sqlerr.SQLErrorClass(), sqlerr.SQLErrorState(), sqlerr.SQLErrorLineNo(), err)
 		}
 
-		return fmt.Errorf("Query %s failed for server: %s and database: %s with Error: %w", query.ScriptName, serverName, databaseName, err)
+		return fmt.Errorf("query %s failed for server: %s and database: %s with Error: %w", query.ScriptName, serverName, databaseName, err)
 	}
 
 	defer rows.Close()
@@ -425,7 +427,7 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 		// values
 		for header, val := range columnMap {
 			if _, ok := (*val).(string); !ok {
-				fields[header] = (*val)
+				fields[header] = *val
 			}
 		}
 		// add fields to Accumulator
@@ -476,7 +478,7 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 
 func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
-		log.Println("W! Warning: Server list is empty.")
+		s.Log.Warn("Warning: Server list is empty.")
 	}
 
 	return nil

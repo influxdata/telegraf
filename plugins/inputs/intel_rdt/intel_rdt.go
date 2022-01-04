@@ -66,6 +66,12 @@ type processMeasurement struct {
 	measurement string
 }
 
+type splitCSVLine struct {
+	timeValue        string
+	metricsValues    []string
+	coreOrPIDsValues []string
+}
+
 // All gathering is done in the Start function
 func (r *IntelRDT) Gather(_ telegraf.Accumulator) error {
 	return nil
@@ -230,8 +236,8 @@ func (r *IntelRDT) associateProcessesWithPIDs(providedProcesses []string) (map[s
 	}
 	for _, availableProcess := range availableProcesses {
 		if choice.Contains(availableProcess.Name, providedProcesses) {
-			PID := availableProcess.PID
-			mapProcessPIDs[availableProcess.Name] = mapProcessPIDs[availableProcess.Name] + fmt.Sprintf("%d", PID) + ","
+			pid := availableProcess.PID
+			mapProcessPIDs[availableProcess.Name] = mapProcessPIDs[availableProcess.Name] + fmt.Sprintf("%d", pid) + ","
 		}
 	}
 	for key := range mapProcessPIDs {
@@ -258,7 +264,7 @@ func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAss
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	cmd := exec.Command(r.PqosPath, append(args)...)
+	cmd := exec.Command(r.PqosPath, args...)
 
 	if r.UseSudo {
 		// run pqos with `/bin/sh -c "sudo /path/to/pqos ..."`
@@ -327,13 +333,13 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 		if len(r.Processes) != 0 {
 			newMetric := processMeasurement{}
 
-			PIDs, err := findPIDsInMeasurement(out)
+			pids, err := findPIDsInMeasurement(out)
 			if err != nil {
 				r.errorChan <- err
 				break
 			}
 			for processName, PIDsProcess := range processesPIDsAssociation {
-				if PIDs == PIDsProcess {
+				if pids == PIDsProcess {
 					newMetric.name = processName
 					newMetric.measurement = out
 				}
@@ -482,29 +488,29 @@ func validateAndParseCores(coreStr string) ([]int, error) {
 func findPIDsInMeasurement(measurements string) (string, error) {
 	// to distinguish PIDs from Cores (PIDs should be in quotes)
 	var insideQuoteRegex = regexp.MustCompile(`"(.*?)"`)
-	PIDsMatch := insideQuoteRegex.FindStringSubmatch(measurements)
-	if len(PIDsMatch) < 2 {
+	pidsMatch := insideQuoteRegex.FindStringSubmatch(measurements)
+	if len(pidsMatch) < 2 {
 		return "", fmt.Errorf("cannot find PIDs in measurement line")
 	}
-	PIDs := PIDsMatch[1]
-	return PIDs, nil
+	pids := pidsMatch[1]
+	return pids, nil
 }
 
-func splitCSVLineIntoValues(line string) (timeValue string, metricsValues, coreOrPIDsValues []string, err error) {
+func splitCSVLineIntoValues(line string) (splitCSVLine, error) {
 	values, err := splitMeasurementLine(line)
 	if err != nil {
-		return "", nil, nil, err
+		return splitCSVLine{}, err
 	}
 
-	timeValue = values[0]
+	timeValue := values[0]
 	// Because pqos csv format is broken when many cores are involved in PID or
 	// group of PIDs, there is need to work around it. E.g.:
 	// Time,PID,Core,IPC,LLC Misses,LLC[KB],MBL[MB/s],MBR[MB/s],MBT[MB/s]
 	// 2020-08-12 13:34:36,"45417,29170,",37,44,0.00,0,0.0,0.0,0.0,0.0
-	metricsValues = values[len(values)-numberOfMetrics:]
-	coreOrPIDsValues = values[1 : len(values)-numberOfMetrics]
+	metricsValues := values[len(values)-numberOfMetrics:]
+	coreOrPIDsValues := values[1 : len(values)-numberOfMetrics]
 
-	return timeValue, metricsValues, coreOrPIDsValues, nil
+	return splitCSVLine{timeValue, metricsValues, coreOrPIDsValues}, nil
 }
 
 func validateInterval(interval int32) error {
@@ -523,7 +529,7 @@ func splitMeasurementLine(line string) ([]string, error) {
 }
 
 func parseTime(value string) (time.Time, error) {
-	timestamp, err := time.Parse(timestampFormat, value)
+	timestamp, err := time.ParseInLocation(timestampFormat, value, time.Local)
 	if err != nil {
 		return time.Time{}, err
 	}

@@ -3,15 +3,16 @@
 The `sqlserver` plugin provides metrics for your SQL Server instance. Recorded metrics are
 lightweight and use Dynamic Management Views supplied by SQL Server.
 
-### The SQL Server plugin supports the following editions/versions of SQL Server
+## The SQL Server plugin supports the following editions/versions of SQL Server
 
 - SQL Server
   - 2012 or newer (Plugin support aligned with the [official Microsoft SQL Server support](https://docs.microsoft.com/en-us/sql/sql-server/end-of-support/sql-server-end-of-life-overview?view=sql-server-ver15#lifecycle-dates))
   - End-of-life SQL Server versions are not guaranteed to be supported by Telegraf. Any issues with the SQL Server plugin for these EOL versions will need to be addressed by the community.
 - Azure SQL Database (Single)
 - Azure SQL Managed Instance
+- Azure SQL Elastic Pool
 
-### Additional Setup
+## Additional Setup
 
 You have to create a login on every SQL Server instance or Azure SQL Managed instance you want to monitor, with following script:
 
@@ -56,7 +57,7 @@ GO
 CREATE USER [telegraf] FOR LOGIN telegraf;
 ```
 
-### Configuration
+## Configuration
 
 ```toml
 [agent]
@@ -202,7 +203,7 @@ CREATE USER [telegraf] FOR LOGIN telegraf;
   ## - PerformanceMetrics
 ```
 
-### Support for Azure Active Directory (AAD) authentication using [Managed Identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
+## Support for Azure Active Directory (AAD) authentication using [Managed Identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
 
 Azure SQL Database supports 2 main methods of authentication: [SQL authentication and AAD authentication](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication). The recommended practice is to [use AAD authentication when possible](https://docs.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-overview).
 
@@ -210,7 +211,7 @@ AAD is a more modern authentication protocol, allows for easier credential/role 
 
 To enable support for AAD authentication, we leverage the existing AAD authentication support in the [SQL Server driver for Go](https://github.com/denisenkom/go-mssqldb#azure-active-directory-authentication---preview)
 
-#### How to use AAD Auth with MSI
+### How to use AAD Auth with MSI
 
 - Configure "system-assigned managed identity" for Azure resources on the Monitoring VM (the VM that'd connect to the SQL server/database) [using the Azure portal](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-portal-windows-vm).
 - On the database being monitored, create/update a USER with the name of the Monitoring VM as the principal using the below script. This might require allow-listing the client machine's IP address (from where the below SQL script is being run) on the SQL Server resource.
@@ -238,13 +239,13 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
 
 - Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
 
-### Metrics
+## Metrics
 
 To provide backwards compatibility, this plugin support two versions of metrics queries.
 
 **Note**: Version 2 queries are not backwards compatible with the old queries. Any dashboards or queries based on the old query format will not work with the new format. The version 2 queries only report raw metrics, no math has been done to calculate deltas. To graph this data you must calculate deltas in your dashboarding software.
 
-#### Version 1 (query_version=1): This is Deprecated in 1.6, all future development will be under configuration option database_type
+### Version 1 (query_version=1): This is Deprecated in 1.6, all future development will be under configuration option database_type
 
 The original metrics queries provide:
 
@@ -264,7 +265,7 @@ If you are using the original queries all stats have the following tags:
 - `servername`:  hostname:instance
 - `type`: type of stats to easily filter measurements
 
-#### Version 2 (query_version=2): Being deprecated, All future development will be under configuration option database_type
+### Version 2 (query_version=2): Being deprecated, All future development will be under configuration option database_type
 
 The new (version 2) metrics provide:
 
@@ -298,7 +299,7 @@ The new (version 2) metrics provide:
   - Resource governance stats from `sys.dm_user_db_resource_governance`
   - Stats from `sys.dm_db_resource_stats`
 
-#### database_type = "AzureSQLDB"
+### database_type = "AzureSQLDB"
 
 These are metrics for Azure SQL Database (single database) and are very similar to version 2 but split out for maintenance reasons, better ability to test,differences in DMVs:
 
@@ -312,7 +313,7 @@ These are metrics for Azure SQL Database (single database) and are very similar 
 - *AzureSQLDBRequests: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
 - *AzureSQLDBSchedulers* - This captures `sys.dm_os_schedulers` snapshots.
 
-#### database_type = "AzureSQLManagedInstance"
+### database_type = "AzureSQLManagedInstance"
 
 These are metrics for Azure SQL Managed instance, are very similar to version 2 but split out for maintenance reasons, better ability to test, differences in DMVs:
 
@@ -325,7 +326,7 @@ These are metrics for Azure SQL Managed instance, are very similar to version 2 
 - *AzureSQLMIRequests*: Requests which are blocked or have a wait type from `sys.dm_exec_sessions` and `sys.dm_exec_requests`
 - *AzureSQLMISchedulers*: This captures `sys.dm_os_schedulers` snapshots.
 
-#### database_type = "AzureSQLPool"
+### database_type = "AzureSQLPool"
 
 These are metrics for Azure SQL to monitor resources usage at Elastic Pool level. These metrics require additional permissions to be collected, please ensure to check additional setup section in this documentation.
 
@@ -337,7 +338,7 @@ These are metrics for Azure SQL to monitor resources usage at Elastic Pool level
 - *AzureSQLPoolPerformanceCounters*: A selected list of performance counters from `sys.dm_os_performance_counters`. Note: Performance counters where the cntr_type column value is 537003264 are already returned with a percentage format between 0 and 100. For other counters, please check [sys.dm_os_performance_counters](https://docs.microsoft.com/en-us/sql/relational-databases/system-dynamic-management-views/sys-dm-os-performance-counters-transact-sql?view=azuresqldb-current) documentation.
 - *AzureSQLPoolSchedulers*: This captures `sys.dm_os_schedulers` snapshots.
 
-#### database_type = "SQLServer"
+### database_type = "SQLServer"
 
 - *SQLServerDatabaseIO*: IO stats from `sys.dm_io_virtual_file_stats`
 - *SQLServerMemoryClerks*: Memory clerk breakdown from `sys.dm_os_memory_clerks`, most clerks have been given a friendly name.
@@ -358,7 +359,7 @@ These are metrics for Azure SQL to monitor resources usage at Elastic Pool level
 - SQLServerAvailabilityReplicaStates: Collects availability replica state information from `sys.dm_hadr_availability_replica_states` for a High Availability / Disaster Recovery (HADR) setup
 - SQLServerDatabaseReplicaStates: Collects database replica state information from `sys.dm_hadr_database_replica_states` for a High Availability / Disaster Recovery (HADR) setup
 
-#### Output Measures
+### Output Measures
 
 The guiding principal is that all data collected from the same primary DMV ends up in the same measure irrespective of database_type.
 
@@ -411,7 +412,7 @@ Version 2 queries have the following tags:
 - `sql_instance`: Physical host and instance name (hostname:instance)
 - `database_name`:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.
 
-#### Health Metric
+### Health Metric
 
 All collection versions (version 1, version 2, and database_type) support an optional plugin health metric called `sqlserver_telegraf_health`. This metric tracks if connections to SQL Server are succeeding or failing. Users can leverage this metric to detect if their SQL Server monitoring is not working as intended.
 

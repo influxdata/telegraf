@@ -65,7 +65,7 @@ through the convert settings.
 
 ## Configuration
 
-```
+```toml
 # Save metrics to an SQL Database
 [[outputs.sql]]
   ## Database driver

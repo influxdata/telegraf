@@ -7,11 +7,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Set config file variables to point to fake directory structure instead of /proc?
@@ -358,7 +358,7 @@ func TestLustre2CanParseConfiguration(t *testing.T) {
 
 	require.NoError(t, toml.UnmarshalTable(lustre2.([]*ast.Table)[0], &plugin))
 
-	assert.Equal(t, Lustre2{
+	require.Equal(t, Lustre2{
 		OstProcfiles: []string{
 			"/proc/fs/lustre/obdfilter/*/stats",
 			"/proc/fs/lustre/osd-ldiskfs/*/stats",

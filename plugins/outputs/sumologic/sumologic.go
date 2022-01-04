@@ -3,7 +3,6 @@ package sumologic
 import (
 	"bytes"
 	"compress/gzip"
-	"log"
 	"net/http"
 	"time"
 
@@ -198,19 +197,19 @@ func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
 		return s.writeRequestChunks(chunks)
 	}
 
-	return s.write(reqBody)
+	return s.writeRequestChunk(reqBody)
 }
 
 func (s *SumoLogic) writeRequestChunks(chunks [][]byte) error {
 	for _, reqChunk := range chunks {
-		if err := s.write(reqChunk); err != nil {
+		if err := s.writeRequestChunk(reqChunk); err != nil {
 			s.Log.Errorf("Error sending chunk: %v", err)
 		}
 	}
 	return nil
 }
 
-func (s *SumoLogic) write(reqBody []byte) error {
+func (s *SumoLogic) writeRequestChunk(reqBody []byte) error {
 	var (
 		err  error
 		buff bytes.Buffer
@@ -284,31 +283,31 @@ func (s *SumoLogic) splitIntoChunks(metrics []telegraf.Metric) ([][]byte, error)
 				if la+len(chunkBody) > int(s.MaxRequstBodySize) {
 					// ... and it's just the right size, without currently processed chunk.
 					break
-				} else {
-					// ... we can try appending more.
-					i++
-					toAppend = append(toAppend, chunkBody...)
-					continue
 				}
-			} else { // la == 0
+				// ... we can try appending more.
 				i++
-				toAppend = chunkBody
-
-				if len(chunkBody) > int(s.MaxRequstBodySize) {
-					log.Printf(
-						"W! [SumoLogic] max_request_body_size set to %d which is too small even for a single metric (len: %d), sending without split",
-						s.MaxRequstBodySize, len(chunkBody),
-					)
-
-					// The serialized metric is too big but we have no choice
-					// but to send it.
-					// max_request_body_size was set so small that it wouldn't
-					// even accomodate a single metric.
-					break
-				}
-
+				toAppend = append(toAppend, chunkBody...)
 				continue
 			}
+
+			// la == 0
+			i++
+			toAppend = chunkBody
+
+			if len(chunkBody) > int(s.MaxRequstBodySize) {
+				s.Log.Warnf(
+					"max_request_body_size set to %d which is too small even for a single metric (len: %d), sending without split",
+					s.MaxRequstBodySize, len(chunkBody),
+				)
+
+				// The serialized metric is too big, but we have no choice
+				// but to send it.
+				// max_request_body_size was set so small that it wouldn't
+				// even accommodate a single metric.
+				break
+			}
+
+			continue
 		}
 
 		if toAppend == nil {
