@@ -193,18 +193,25 @@ func (m *MQTTConsumer) Init() error {
 		}
 		m.TopicParsing[i].SplitTags = strings.Split(p.Tags, "/")
 		m.TopicParsing[i].SplitFields = strings.Split(p.Fields, "/")
-		m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
 
-		if len(splitMeasurement) != len(m.TopicParsing[i].SplitTopic) && len(splitMeasurement) != 1 {
-			return fmt.Errorf("config error topic parsing: measurement length does not equal topic length")
+		if strings.Contains(p.Topic, "#") {
+			for x := range m.Topics {
+				m.TopicParsing[i].SplitTopic = strings.Split(m.Topics[x], "/")
+			}
+		} else {
+			m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
 		}
 
-		if len(m.TopicParsing[i].SplitFields) != len(m.TopicParsing[i].SplitTopic) && p.Fields != "" {
-			return fmt.Errorf("config error topic parsing: fields length does not equal topic length")
+		if len(splitMeasurement) > len(m.TopicParsing[i].SplitTopic) && len(splitMeasurement) != 1 {
+			return fmt.Errorf("config error topic parsing: measurement length is longer than topic length")
 		}
 
-		if len(m.TopicParsing[i].SplitTags) != len(m.TopicParsing[i].SplitTopic) && p.Tags != "" {
-			return fmt.Errorf("config error topic parsing: tags length does not equal topic length")
+		if len(m.TopicParsing[i].SplitFields) > len(m.TopicParsing[i].SplitTopic) && p.Fields != "" {
+			return fmt.Errorf("config error topic parsing: fields length is longer than topic length")
+		}
+
+		if len(m.TopicParsing[i].SplitTags) > len(m.TopicParsing[i].SplitTopic) && p.Tags != "" {
+			return fmt.Errorf("config error topic parsing: tags length is longer than topic length")
 		}
 	}
 

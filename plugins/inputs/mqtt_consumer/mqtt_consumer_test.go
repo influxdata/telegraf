@@ -323,7 +323,7 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			expectedError: fmt.Errorf("config error topic parsing: fields length does not equal topic length"),
+			expectedError: fmt.Errorf("config error topic parsing: fields length is longer than topic length"),
 			topicParsing: []TopicParsingConfig{
 				{
 					Topic:       "telegraf/+/test/hello",
@@ -407,6 +407,30 @@ func TestTopicTag(t *testing.T) {
 						"testNumber": 123,
 						"testString": "hello",
 						"time_idle":  42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:  "topic parsing: topics implemented with #",
+			topic: "telegraf/123/test/hello/45/mqtt/broker",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "telegraf/+/#",
+					Measurement: "_/_/_/_/measurement/_/_",
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"45",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
 					},
 					time.Unix(0, 0),
 				),
