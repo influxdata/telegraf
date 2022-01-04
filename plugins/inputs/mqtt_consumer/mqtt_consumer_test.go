@@ -436,6 +436,31 @@ func TestTopicTag(t *testing.T) {
 				),
 			},
 		},
+		{
+			name:  "topic parsing: topics with # is shorter than measurement",
+			topic: "telegraf/123",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			expectedError: fmt.Errorf("config error topic parsing: measurement length is longer than topic length"),
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "telegraf/+/#",
+					Measurement: "_/_/_/_/measurement/_/_",
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"45",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
