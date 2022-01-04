@@ -156,7 +156,6 @@ func (cr *CloudRun) send(reqBody []byte) error {
 	// Inspect jwt claims to view expiration time
 	claims := jwtGo.RegisteredClaims{}
 	_, err = jwtGo.ParseWithClaims(cr.accessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
-		fmt.Println("hello")
 		return nil, nil
 	})
 

@@ -1,7 +1,6 @@
 package cloudrun
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -76,7 +75,6 @@ func TestCloudRun_Write(t *testing.T) {
 					require.Equal(t, "open ./testdata/missing.json: no such file or directory", err.Error())
 				}
 			} else {
-				fmt.Println("tt.name", tt.name)
 				require.NoError(t, err)
 			}
 
