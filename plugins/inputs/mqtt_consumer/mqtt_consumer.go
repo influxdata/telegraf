@@ -193,24 +193,17 @@ func (m *MQTTConsumer) Init() error {
 		}
 		m.TopicParsing[i].SplitTags = strings.Split(p.Tags, "/")
 		m.TopicParsing[i].SplitFields = strings.Split(p.Fields, "/")
+		m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
 
-		if strings.Contains(p.Topic, "#") {
-			for x := range m.Topics {
-				m.TopicParsing[i].SplitTopic = strings.Split(m.Topics[x], "/")
-			}
-		} else {
-			m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
-		}
-
-		if len(splitMeasurement) > len(m.TopicParsing[i].SplitTopic) && len(splitMeasurement) != 1 {
+		if len(splitMeasurement) > len(m.TopicParsing[i].SplitTopic) && len(splitMeasurement) != 1 && !strings.Contains(p.Topic, "#") {
 			return fmt.Errorf("config error topic parsing: measurement length is longer than topic length")
 		}
 
-		if len(m.TopicParsing[i].SplitFields) > len(m.TopicParsing[i].SplitTopic) && p.Fields != "" {
+		if len(m.TopicParsing[i].SplitFields) > len(m.TopicParsing[i].SplitTopic) && p.Fields != "" && !strings.Contains(p.Topic, "#") {
 			return fmt.Errorf("config error topic parsing: fields length is longer than topic length")
 		}
 
-		if len(m.TopicParsing[i].SplitTags) > len(m.TopicParsing[i].SplitTopic) && p.Tags != "" {
+		if len(m.TopicParsing[i].SplitTags) > len(m.TopicParsing[i].SplitTopic) && p.Tags != "" && !strings.Contains(p.Topic, "#") {
 			return fmt.Errorf("config error topic parsing: tags length is longer than topic length")
 		}
 	}
@@ -296,11 +289,16 @@ func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 // compareTopics is used to support the mqtt wild card `+` which allows for one topic of any value
 func compareTopics(expected []string, incoming []string) bool {
 	if len(expected) != len(incoming) {
+		for i := range expected {
+			if strings.Contains(expected[i], "#") {
+				return true
+			}
+		}
 		return false
 	}
 
 	for i, expected := range expected {
-		if incoming[i] != expected && expected != "+" {
+		if incoming[i] != expected && expected != "+" && expected != "#" {
 			return false
 		}
 	}
@@ -320,20 +318,32 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		}
 		for _, p := range m.TopicParsing {
 			values := strings.Split(msg.Topic(), "/")
+			if len(values) < len(p.SplitTopic) {
+				return fmt.Errorf("config error topic parsing: found topic is shorter than parse topic length")
+			}
 			if !compareTopics(p.SplitTopic, values) {
 				continue
 			}
 
 			if p.Measurement != "" {
+				if p.MeasurementIndex+1 > len(values) {
+					return fmt.Errorf("config error topic parsing: measurement length is longer than topic length")
+				}
 				metric.SetName(values[p.MeasurementIndex])
 			}
 			if p.Tags != "" {
+				if len(p.SplitTags) > len(values) {
+					return fmt.Errorf("config error topic parsing: tags length is longer than topic length")
+				}
 				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
 				if err != nil {
 					return err
 				}
 			}
 			if p.Fields != "" {
+				if len(p.SplitFields) > len(values) {
+					return fmt.Errorf("config error topic parsing: fields length is longer than topic length")
+				}
 				err := parseMetric(p.SplitFields, values, p.FieldTypes, false, metric)
 				if err != nil {
 					return err
