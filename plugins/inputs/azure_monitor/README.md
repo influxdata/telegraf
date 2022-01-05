@@ -2,12 +2,12 @@
 
 The `azure_monitor` plugin gathers metrics for each resource from Azure Monitor API.
 
-### Azure Credentials
+## Azure Credentials
 
 This plugin uses `client_id`, `client_secret` and `tenant_id` for authentication (access token),
 and `subscription_id` is for accessing Azure resources.
 
-### Property Locations
+## Property Locations
 
 `subscription_id` can be found under **Overview**->**Essentials** in the Azure portal for your application/service.
 
@@ -15,20 +15,20 @@ and `subscription_id` is for accessing Azure resources.
 
 `tenant_id` can be found under **Azure Active Directory**->**Properties**.
 
-resource target `resource_id` can be found under **Overview**->**Essentials**->**JSON View** (link) in the Azure 
+resource target `resource_id` can be found under **Overview**->**Essentials**->**JSON View** (link) in the Azure
 portal for your application/service.
 
-### More Information
+## More Information
 
 To see a table of resource types and their metrics, please use this link:
 <https://docs.microsoft.com/en-us/azure/azure-monitor/essentials/metrics-supported>
 
-### Rate Limits
+## Rate Limits
 
-Azure API read limit is 12000 requests per hour. 
+Azure API read limit is 12000 requests per hour.
 Please make sure the total number of metrics you are requesting is proportional to your time interval.
 
-### Usage
+## Usage
 
 Use `resource_targets` to collect metrics from specific resources using resource id.
 
@@ -36,7 +36,7 @@ Use `resource_group_targets` to collect metrics from resources under the resourc
 
 Use `subscription_targets` to collect metrics from resources under the subscription with resource type.
 
-### Configuration
+## Configuration
 
 ```toml
 # Gather Azure resources metrics from Azure Monitor API
@@ -110,20 +110,20 @@ Use `subscription_targets` to collect metrics from resources under the subscript
     aggregations = [ "<<AGGREGATION>>", "<<AGGREGATION>>" ]
 ```
 
-### Metrics
+## Metrics
 
 Each metric name will be as follows:
 
 azure_monitor_<<RESOURCE_NAMESPACE>>_<<METRIC_NAME>>
 
-#### Fields
+### Fields
 
 Each metric will have the following fields:
 
 - timeStamp: the time when the value was taken
 - total, count, average, minimum, maximum: aggregation types values (according the target `aggregation` value)
 
-#### Tags
+### Tags
 
 Each metric will have the following tags:
 
@@ -134,7 +134,7 @@ Each metric will have the following tags:
 - resource_region: the region of the resource.
 - unit: the field value unit.
 
-### Example Output
+## Example Output
 
 ```shell
 > azure_monitor_microsoft_storage_storageaccounts_used_capacity,host=Azure-MBP,namespace=Microsoft.Storage/storageAccounts,resource_group=azure-rg,resource_name=azuresa,resource_region=eastus,subscription_id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx,unit=Bytes average=9065573,maximum=9065573,minimum=9065573,timeStamp="2021-11-08T09:52:00Z",total=9065573 1636368744000000000
