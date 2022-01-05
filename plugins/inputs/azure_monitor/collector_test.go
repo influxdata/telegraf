@@ -65,7 +65,7 @@ func TestGetMetricFields_AllTimeSeriesWithData(t *testing.T) {
 		azureClient: newAzureClient(),
 	}
 
-	expectedMetricFields := make(map[string]interface{}, 0)
+	expectedMetricFields := make(map[string]interface{})
 	expectedMetricFields["timeStamp"] = "2021-11-05T10:59:00Z"
 	expectedMetricFields["total"] = 5.0
 	expectedMetricFields["maximum"] = 5.0
@@ -120,7 +120,7 @@ func TestGetMetricFields_LastTimeSeriesWithoutData(t *testing.T) {
 		azureClient: newAzureClient(),
 	}
 
-	expectedMetricFields := make(map[string]interface{}, 0)
+	expectedMetricFields := make(map[string]interface{})
 	expectedMetricFields["timeStamp"] = "2021-11-05T10:57:00Z"
 	expectedMetricFields["total"] = 4.0
 	expectedMetricFields["maximum"] = 9.0
@@ -223,7 +223,7 @@ func TestGetMetricTags_Success(t *testing.T) {
 		azureClient: newAzureClient(),
 	}
 
-	expectedMetricTags := make(map[string]string, 0)
+	expectedMetricTags := make(map[string]string)
 	expectedMetricTags["subscription_id"] = "subscriptionID"
 	expectedMetricTags["resource_group"] = "resourceGroup"
 	expectedMetricTags["namespace"] = "Microsoft/type1"

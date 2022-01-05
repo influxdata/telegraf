@@ -80,11 +80,7 @@ func (am *AzureMonitor) checkConfigValidation() error {
 		return err
 	}
 
-	if err := am.checkSubscriptionTargetValidation(); err != nil {
-		return err
-	}
-
-	return nil
+	return am.checkSubscriptionTargetValidation()
 }
 
 func (am *AzureMonitor) checkResourceTargetsValidation() error {
@@ -225,8 +221,8 @@ func (am *AzureMonitor) createResourceTargetFromResourceGroupTarget(target *Reso
 			return fmt.Errorf("resource group resources API response body bad format: id of value is missing")
 		}
 
-		ResourceIDParts := strings.Split(fullResourceID, "/")
-		resourceID := strings.Join(ResourceIDParts[3:], "/")
+		resourceIDParts := strings.Split(fullResourceID, "/")
+		resourceID := strings.Join(resourceIDParts[3:], "/")
 
 		resourceType, ok := value.(map[string]interface{})["type"].(string)
 		if !ok {
@@ -352,7 +348,7 @@ func (am *AzureMonitor) checkResourceTargetMetricsMinTimeGrain(target *ResourceT
 }
 
 func (am *AzureMonitor) createResourceTargetTimeGrainsMetricsMap(target *ResourceTarget, values []interface{}) (map[string][]string, error) {
-	timeGrainsMetrics := make(map[string][]string, 0)
+	timeGrainsMetrics := make(map[string][]string)
 
 	for _, metric := range target.Metrics {
 		for _, value := range values {
@@ -488,19 +484,12 @@ func (rgt *ResourceGroupTarget) getResourcesWithResourceType(resourceType string
 
 func areTargetAggregationsValid(aggregations []string) bool {
 	for _, aggregation := range aggregations {
-		if aggregation == totalAggregationName {
+		if aggregation == totalAggregationName || aggregation == countAggregationName || aggregation == averageAggregationName ||
+			aggregation == minAggregationName || aggregation == maxAggregationName {
 			continue
-		} else if aggregation == countAggregationName {
-			continue
-		} else if aggregation == averageAggregationName {
-			continue
-		} else if aggregation == minAggregationName {
-			continue
-		} else if aggregation == maxAggregationName {
-			continue
-		} else {
-			return false
 		}
+
+		return false
 	}
 
 	return true

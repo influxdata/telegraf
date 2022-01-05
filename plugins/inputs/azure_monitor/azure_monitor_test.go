@@ -1100,18 +1100,18 @@ func TestGather_Success(t *testing.T) {
 	}
 
 	expectedResource1Metric1Name := "azure_monitor_microsoft_type1_metric1"
-	expectedResource1Metric1MetricFields := make(map[string]interface{}, 0)
+	expectedResource1Metric1MetricFields := make(map[string]interface{})
 	expectedResource1Metric1MetricFields["timeStamp"] = "2021-11-05T10:59:00Z"
 	expectedResource1Metric1MetricFields["total"] = 5.0
 	expectedResource1Metric1MetricFields["maximum"] = 5.0
 
 	expectedResource1Metric2Name := "azure_monitor_microsoft_type1_metric2"
-	expectedResource1Metric2MetricFields := make(map[string]interface{}, 0)
+	expectedResource1Metric2MetricFields := make(map[string]interface{})
 	expectedResource1Metric2MetricFields["timeStamp"] = "2021-11-05T10:57:00Z"
 	expectedResource1Metric2MetricFields["total"] = 4.0
 	expectedResource1Metric2MetricFields["maximum"] = 9.0
 
-	expectedResource1MetricsTags := make(map[string]string, 0)
+	expectedResource1MetricsTags := make(map[string]string)
 	expectedResource1MetricsTags["subscription_id"] = "subscriptionID"
 	expectedResource1MetricsTags["resource_group"] = "resourceGroup"
 	expectedResource1MetricsTags["namespace"] = "Microsoft/type1"
@@ -1120,12 +1120,12 @@ func TestGather_Success(t *testing.T) {
 	expectedResource1MetricsTags["unit"] = "Count"
 
 	expectedResource2Metric1Name := "azure_monitor_microsoft_type2_metric1"
-	expectedResource2Metric1MetricFields := make(map[string]interface{}, 0)
+	expectedResource2Metric1MetricFields := make(map[string]interface{})
 	expectedResource2Metric1MetricFields["timeStamp"] = "2021-11-05T10:59:00Z"
 	expectedResource2Metric1MetricFields["total"] = 10.0
 	expectedResource2Metric1MetricFields["maximum"] = 10.0
 
-	expectedResource2MetricsTags := make(map[string]string, 0)
+	expectedResource2MetricsTags := make(map[string]string)
 	expectedResource2MetricsTags["subscription_id"] = "subscriptionID"
 	expectedResource2MetricsTags["resource_group"] = "resourceGroup"
 	expectedResource2MetricsTags["namespace"] = "Microsoft/type2"
