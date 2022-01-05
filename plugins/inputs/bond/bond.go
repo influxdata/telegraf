@@ -34,7 +34,7 @@ type sysFiles struct {
 	ADPortsFile string
 }
 
-var sampleConfig = `
+const sampleConfig = `
   ## Sets 'proc' directory path
   ## If not specified, then default is /proc
   # host_proc = "/proc"
@@ -194,9 +194,7 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 	var slaves []string
 	var adPortCount int
 
-	/*
-		To start with, we get the bond operating mode
-	*/
+	// To start with, we get the bond operating mode
 	mode := strings.TrimSpace(strings.Split(files.ModeFile, " ")[0])
 
 	tags := map[string]string{
@@ -204,9 +202,7 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 		"mode": mode,
 	}
 
-	/*
-		Next we collect the number of bond slaves the system expects
-	*/
+	// Next we collect the number of bond slaves the system expects
 	slavesTmp := strings.Split(files.SlaveFile, " ")
 	for _, slave := range slavesTmp {
 		if slave != "" {
