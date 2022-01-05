@@ -182,7 +182,7 @@ Also, consider polling OpenStack services at different intervals depending on yo
   * subnet_id  [string]
   * subnets  [integer]
   * updated_at  [string]
-* openstack_newtron_agent
+* openstack_neutron_agent
   * agent_host
   * agent_type
   * availability_zone
@@ -344,7 +344,7 @@ Also, consider polling OpenStack services at different intervals depending on yo
 ### Example Output
 
 ```text
-> openstack_newtron_agent,agent_host=vim2,agent_type=DHCP\ agent,availability_zone=nova,binary=neutron-dhcp-agent,host=telegraf_host,topic=dhcp_agent admin_state_up=true,alive=true,created_at="2021-01-07T03:40:53Z",heartbeat_timestamp="2021-10-14T07:46:40Z",id="17e1e446-d7da-4656-9e32-67d3690a306f",resources_synced=false,started_at="2021-07-02T21:47:42Z" 1634197616000000000
+> openstack_neutron_agent,agent_host=vim2,agent_type=DHCP\ agent,availability_zone=nova,binary=neutron-dhcp-agent,host=telegraf_host,topic=dhcp_agent admin_state_up=true,alive=true,created_at="2021-01-07T03:40:53Z",heartbeat_timestamp="2021-10-14T07:46:40Z",id="17e1e446-d7da-4656-9e32-67d3690a306f",resources_synced=false,started_at="2021-07-02T21:47:42Z" 1634197616000000000
 > openstack_aggregate,host=telegraf_host,name=non-dpdk aggregate_host="vim3",aggregate_hosts=2i,created_at="2021-02-01T18:28:00Z",deleted=false,deleted_at="0001-01-01T00:00:00Z",id=3i,updated_at="0001-01-01T00:00:00Z" 1634197617000000000
 > openstack_flavor,host=telegraf_host,is_public=true,name=hwflavor disk=20i,ephemeral=0i,id="f89785c0-6b9f-47f5-a02e-f0fcbb223163",ram=8192i,rxtx_factor=1,swap=0i,vcpus=8i 1634197617000000000
 > openstack_hypervisor,cpu_arch=x86_64,cpu_feature_3dnowprefetch=true,cpu_feature_abm=true,cpu_feature_acpi=true,cpu_feature_adx=true,cpu_feature_aes=true,cpu_feature_apic=true,cpu_feature_xtpr=true,cpu_model=C-Server,cpu_vendor=xyz,host=telegraf_host,hypervisor_hostname=vim3,hypervisor_type=QEMU,hypervisor_version=4002000,service_host=vim3,service_id=192,state=up,status=enabled cpu_topology_cores=28i,cpu_topology_sockets=1i,cpu_topology_threads=2i,current_workload=0i,disk_available_least=2596i,free_disk_gb=2744i,free_ram_mb=374092i,host_ip="xx:xx:xx:x::xxx",id="12",local_gb=3366i,local_gb_used=622i,memory_mb=515404i,memory_mb_used=141312i,running_vms=15i,vcpus=0i,vcpus_used=72i 1634197618000000000

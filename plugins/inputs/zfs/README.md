@@ -202,6 +202,16 @@ On Linux (reference: kstat accumulated time and queue length statistics):
   - wcnt (integer, count)
   - rcnt (integer, count)
 
+For ZFS >= 2.1.x the format has changed significantly:
+
+- zfs_pool
+  - writes (integer, count)
+  - nwritten (integer, bytes)
+  - reads (integer, count)
+  - nread (integer, bytes)
+  - nunlinks (integer, count)
+  - nunlinked (integer, count)
+
 On FreeBSD:
 
 - zfs_pool
@@ -229,6 +239,7 @@ On FreeBSD:
 - Pool metrics (`zfs_pool`) will have the following tag:
   - pool - with the name of the pool which the metrics are for.
   - health - the health status of the pool. (FreeBSD only)
+  - dataset - ZFS >= 2.1.x only. (Linux only)
 
 - Dataset metrics (`zfs_dataset`) will have the following tag:
   - dataset - with the name of the dataset which the metrics are for.

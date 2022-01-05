@@ -159,13 +159,13 @@ type ConsumerGroup interface {
 }
 
 type ConsumerGroupCreator interface {
-	Create(brokers []string, group string, config *sarama.Config) (ConsumerGroup, error)
+	Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error)
 }
 
 type SaramaCreator struct{}
 
-func (*SaramaCreator) Create(brokers []string, group string, config *sarama.Config) (ConsumerGroup, error) {
-	return sarama.NewConsumerGroup(brokers, group, config)
+func (*SaramaCreator) Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error) {
+	return sarama.NewConsumerGroup(brokers, group, cfg)
 }
 
 func (k *KafkaConsumer) SampleConfig() string {
@@ -191,31 +191,31 @@ func (k *KafkaConsumer) Init() error {
 		k.ConsumerGroup = defaultConsumerGroup
 	}
 
-	config := sarama.NewConfig()
+	cfg := sarama.NewConfig()
 
 	// Kafka version 0.10.2.0 is required for consumer groups.
-	config.Version = sarama.V0_10_2_0
+	cfg.Version = sarama.V0_10_2_0
 
-	if err := k.SetConfig(config); err != nil {
+	if err := k.SetConfig(cfg); err != nil {
 		return err
 	}
 
 	switch strings.ToLower(k.Offset) {
 	case "oldest", "":
-		config.Consumer.Offsets.Initial = sarama.OffsetOldest
+		cfg.Consumer.Offsets.Initial = sarama.OffsetOldest
 	case "newest":
-		config.Consumer.Offsets.Initial = sarama.OffsetNewest
+		cfg.Consumer.Offsets.Initial = sarama.OffsetNewest
 	default:
 		return fmt.Errorf("invalid offset %q", k.Offset)
 	}
 
 	switch strings.ToLower(k.BalanceStrategy) {
 	case "range", "":
-		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+		cfg.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
 	case "roundrobin":
-		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+		cfg.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
 	case "sticky":
-		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
+		cfg.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
 	default:
 		return fmt.Errorf("invalid balance strategy %q", k.BalanceStrategy)
 	}
@@ -224,9 +224,9 @@ func (k *KafkaConsumer) Init() error {
 		k.ConsumerCreator = &SaramaCreator{}
 	}
 
-	config.Consumer.MaxProcessingTime = time.Duration(k.MaxProcessingTime)
+	cfg.Consumer.MaxProcessingTime = time.Duration(k.MaxProcessingTime)
 
-	k.config = config
+	k.config = cfg
 	return nil
 }
 

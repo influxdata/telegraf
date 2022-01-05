@@ -91,8 +91,6 @@ Use `make docker-kill` to stop the containers.
 - [Logging][logging]
 - [Metric Format Changes][metricformat]
 - [Packaging][packaging]
-- [Logging][logging]
-- [Packaging][packaging]
 - [Profiling][profiling]
 - [Reviews][reviews]
 - [Sample Config][sample config]

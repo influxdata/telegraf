@@ -176,8 +176,8 @@ func (r *Redfish) Init() error {
 	return nil
 }
 
-func (r *Redfish) getData(url string, payload interface{}) error {
-	req, err := http.NewRequest("GET", url, nil)
+func (r *Redfish) getData(address string, payload interface{}) error {
+	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
 	}
