@@ -10,6 +10,7 @@ import (
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sort"
 	"strings"
 	"syscall"
@@ -122,7 +123,10 @@ func reloadLoop(
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
 		if *fWatchConfig != "" {
-			for _, fConfig := range fConfigs {
+			watchConfigs := make(sliceFlags, len(fConfigs))
+			copy(watchConfigs, fConfigs)
+			watchConfigs = append(watchConfigs, configDirFiles()...)
+			for _, fConfig := range watchConfigs {
 				if _, err := os.Stat(fConfig); err == nil {
 					go watchLocalConfig(signals, fConfig)
 				} else {
@@ -149,6 +153,40 @@ func reloadLoop(
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
+}
+
+// configDirFiles returns a slice made up of filepaths correspoding
+// to config files defined in any of the config directories.
+func configDirFiles() sliceFlags {
+	configs := make(sliceFlags, 0)
+	for _, dir := range fConfigDirs {
+		walkfn := func(thispath string, info os.FileInfo, _ error) error {
+			if info == nil {
+				log.Printf("W! Telegraf is not permitted to read %s", thispath)
+				return nil
+			}
+
+			if info.IsDir() {
+				// skip Kubernetes mounts, preventing loading the same config twice
+				if strings.HasPrefix(info.Name(), "..") {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+
+			name := info.Name()
+			if len(name) < 6 || name[len(name)-5:] != ".conf" {
+				return nil
+			}
+
+			relPath := filepath.Join(dir, name)
+			configs = append(configs, relPath)
+			return nil
+		}
+
+		filepath.Walk(dir, walkfn)
+	}
+	return configs
 }
 
 func watchLocalConfig(signals chan os.Signal, fConfig string) {

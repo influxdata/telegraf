@@ -696,7 +696,7 @@ func (c *Config) LoadDirectory(path string) error {
 
 		if info.IsDir() {
 			if strings.HasPrefix(info.Name(), "..") {
-				// skip Kubernetes mounts, prevening loading the same config twice
+				// skip Kubernetes mounts, preventing loading the same config twice
 				return filepath.SkipDir
 			}
 
