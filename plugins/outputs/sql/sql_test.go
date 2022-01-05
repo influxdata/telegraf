@@ -403,7 +403,7 @@ func TestClickHouseIntegration(t *testing.T) {
 
 	// dump the database
 	var rc int
-	for _, metric := range testMetrics {
+	for _, testMetric := range testMetrics {
 		rc, err = cont.Exec(ctx, []string{
 			"bash",
 			"-c",
@@ -412,8 +412,8 @@ func TestClickHouseIntegration(t *testing.T) {
 				" --database=" + dbname +
 				" --format=TabSeparatedRaw" +
 				" --multiquery --query=" +
-				"\"SELECT * FROM \\\"" + metric.Name() + "\\\";" +
-				"SHOW CREATE TABLE \\\"" + metric.Name() + "\\\"\"" +
+				"\"SELECT * FROM \\\"" + testMetric.Name() + "\\\";" +
+				"SHOW CREATE TABLE \\\"" + testMetric.Name() + "\\\"\"" +
 				" >> /out/dump 2>&1",
 		})
 		require.NoError(t, err)

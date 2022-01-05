@@ -263,16 +263,17 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			if err != nil {
 				return fmt.Errorf("Error during prepare: %v", err)
 			}
-			defer stmt.Close()
 
 			_, err = stmt.Exec(values...)
 			if err != nil {
 				return fmt.Errorf("Error during execution: %v", err)
 			}
+      stmt.Close()
 			err = tx.Commit()
 			if err != nil {
 				return fmt.Errorf("Error during commit: %v", err)
 			}
+      stmt.Close()
 		default:
 			_, err = p.db.Exec(sql, values...)
 			if err != nil {
