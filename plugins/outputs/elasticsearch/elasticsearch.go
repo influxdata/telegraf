@@ -3,6 +3,7 @@ package elasticsearch
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"math"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"text/template"
 	"time"
 
-	"crypto/sha256"
 	"gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
@@ -28,6 +28,7 @@ type Elasticsearch struct {
 	Username            string
 	Password            string
 	EnableSniffer       bool
+	OpenSearch          bool `toml:"opensearch"`
 	Timeout             config.Duration
 	HealthCheckInterval config.Duration
 	EnableGzip          bool
@@ -62,6 +63,8 @@ var sampleConfig = `
   ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"
+  ## Optional enable support for OpenSearch
+  # opensearch = true
 
   ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
@@ -238,21 +241,26 @@ func (a *Elasticsearch) Connect() error {
 	}
 
 	client, err := elastic.NewClient(clientOptions...)
-
 	if err != nil {
 		return err
 	}
 
 	// check for ES version on first node
 	esVersion, err := client.ElasticsearchVersion(a.URLs[0])
-
 	if err != nil {
 		return fmt.Errorf("elasticsearch version check failed: %s", err)
 	}
 
 	// quit if ES version is not supported
 	majorReleaseNumber, err := strconv.Atoi(strings.Split(esVersion, ".")[0])
-	if err != nil || majorReleaseNumber < 5 {
+	if err != nil {
+		return fmt.Errorf("unable to parse major release number from ES version: %s", err)
+	}
+
+	// OpenSearch is based on ES version 7.x but has its own versioning and reports 1.x
+	if a.OpenSearch {
+		majorReleaseNumber = 7
+	} else if majorReleaseNumber < 5 {
 		return fmt.Errorf("elasticsearch version not supported: %s", esVersion)
 	}
 
