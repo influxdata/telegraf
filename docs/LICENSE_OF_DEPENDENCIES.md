@@ -237,6 +237,7 @@ following works:
 - github.com/vjeantet/grok [Apache License 2.0](https://github.com/vjeantet/grok/blob/master/LICENSE)
 - github.com/vmware/govmomi [Apache License 2.0](https://github.com/vmware/govmomi/blob/master/LICENSE.txt)
 - github.com/wavefronthq/wavefront-sdk-go [Apache License 2.0](https://github.com/wavefrontHQ/wavefront-sdk-go/blob/master/LICENSE)
+- github.com/whatap/go-api [Apache License 2.0](https://github.com/whatap/go-api/blob/main/LICENSE)
 - github.com/wvanbergen/kafka [MIT License](https://github.com/wvanbergen/kafka/blob/master/LICENSE)
 - github.com/wvanbergen/kazoo-go [MIT License](https://github.com/wvanbergen/kazoo-go/blob/master/MIT-LICENSE)
 - github.com/xdg-go/pbkdf2 [Apache License 2.0](https://github.com/xdg-go/pbkdf2/blob/main/LICENSE)
