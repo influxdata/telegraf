@@ -1,5 +1,36 @@
 <!-- markdownlint-disable MD024 -->
 
+# Change Log
+
+## v1.21.2 [2022-01-05]
+
+### Release Notes
+
+Happy New Year!
+
+### Features
+
+- Added arm64 MacOS builds
+- Added riscv64 Linux builds
+- Numerous changes to CircleCI config to ensure more timely completion and more clear execution flow
+
+### Bugfixes
+
+- [#10318](https://github.com/influxdata/telegraf/pull/10318) `inputs.disk` Fix missing storage in containers
+- [#10324](https://github.com/influxdata/telegraf/pull/10324) `inputs.dpdk` Add note about dpdk and socket availability
+- [#10296](https://github.com/influxdata/telegraf/pull/10296) `inputs.logparser` Resolve panic in logparser due to missing Log
+- [#10322](https://github.com/influxdata/telegraf/pull/10322) `inputs.snmp` Ensure module load order to avoid snmp marshal error
+- [#10321](https://github.com/influxdata/telegraf/pull/10321) `inputs.snmp` Do not require networking during tests
+- [#10303](https://github.com/influxdata/telegraf/pull/10303) `inputs.snmp` Resolve SNMP panic due to no gosmi module
+- [#10295](https://github.com/influxdata/telegraf/pull/10295) `inputs.snmp` Grab MIB table columns more accurately
+- [#10299](https://github.com/influxdata/telegraf/pull/10299) `inputs.snmp` Check index before assignment when floating :: exists to avoid panic
+- [#10301](https://github.com/influxdata/telegraf/pull/10301) `inputs.snmp` Fix panic if no mibs folder is found
+- [#10373](https://github.com/influxdata/telegraf/pull/10373) `inputs.snmp_trap` Document deprecation of timeout parameter
+- [#10377](https://github.com/influxdata/telegraf/pull/10377) `parsers.csv` empty import tzdata for Windows binaries to correctly set timezone
+- [#10332](https://github.com/influxdata/telegraf/pull/10332) Update github.com/djherbis/times module from v1.2.0 to v1.5.0
+- [#10343](https://github.com/influxdata/telegraf/pull/10343) Update github.com/go-ldap/ldap/v3 module from v3.1.0 to v3.4.1
+- [#10255](https://github.com/influxdata/telegraf/pull/10255) Update github.com/gwos/tcg/sdk module from v0.0.0-20211130162655-32ad77586ccf to v0.0.0-20211223101342-35fbd1ae683c and improve logging
+
 ## v1.21.1 [2021-12-16]
 
 ### Bugfixes
