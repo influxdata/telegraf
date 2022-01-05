@@ -511,9 +511,8 @@ func (o *OpcUA) setupWorkarounds() error {
 			o.codes = append(o.codes, ua.StatusCode(uint32(val)))
 		}
 		return nil
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (o *OpcUA) checkStatusCode(code ua.StatusCode) bool {

@@ -273,7 +273,9 @@ func TestValidateOPCTags(t *testing.T) {
 func TestSetupWorkarounds(t *testing.T) {
 	var o OpcUA
 	o.Workarounds.ValidStatusCodes = []string{"0x00", "0xC0", "0x00AA0000"}
-	o.setupWorkarounds()
+
+	err := o.setupWorkarounds()
+	require.NoError(t, err)
 
 	require.Len(t, o.codes, 3)
 	require.Equal(t, o.codes[0], ua.StatusCode(0))
