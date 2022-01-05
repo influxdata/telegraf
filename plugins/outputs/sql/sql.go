@@ -143,6 +143,13 @@ var sampleConfig = `
   # init_sql = ""
 
   ## Metric type to SQL type conversion
+  ## The values on the left are the data types Telegraf has and the values on
+  ## the right are the data types Telegraf will use when sending to a database.
+  ##
+  ## The database values used must be data types the destination database
+  ## understands. It is up to the user to ensure that the selected data type is
+  ## available in the database they are using. Refer to your database
+  ## documentation for what data types are available and supported.
   #[outputs.sql.convert]
   #  integer              = "INT"
   #  real                 = "DOUBLE"
