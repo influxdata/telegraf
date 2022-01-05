@@ -80,8 +80,8 @@ func NewSerializer() *Serializer {
 	return serializer
 }
 
-func (s *Serializer) SetMaxLineBytes(bytes int) {
-	s.maxLineBytes = bytes
+func (s *Serializer) SetMaxLineBytes(maxLineBytes int) {
+	s.maxLineBytes = maxLineBytes
 }
 
 func (s *Serializer) SetFieldSortOrder(order FieldSortOrder) {
@@ -135,7 +135,7 @@ func (s *Serializer) writeString(w io.Writer, str string) error {
 	return err
 }
 
-func (s *Serializer) write(w io.Writer, b []byte) error {
+func (s *Serializer) writeBytes(w io.Writer, b []byte) error {
 	n, err := w.Write(b)
 	s.bytesWritten += n
 	return err
@@ -247,7 +247,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 				return s.newMetricError(NeedMoreSpace)
 			}
 
-			err = s.write(w, s.footer)
+			err = s.writeBytes(w, s.footer)
 			if err != nil {
 				return err
 			}
@@ -262,7 +262,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 		}
 
 		if firstField {
-			err = s.write(w, s.header)
+			err = s.writeBytes(w, s.header)
 			if err != nil {
 				return err
 			}
@@ -273,7 +273,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 			}
 		}
 
-		err = s.write(w, s.pair)
+		err = s.writeBytes(w, s.pair)
 		if err != nil {
 			return err
 		}
@@ -286,7 +286,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 		return s.newMetricError(NoFields)
 	}
 
-	return s.write(w, s.footer)
+	return s.writeBytes(w, s.footer)
 }
 
 func (s *Serializer) newMetricError(reason string) *MetricError {

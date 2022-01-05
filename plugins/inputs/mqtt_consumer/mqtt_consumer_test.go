@@ -1,6 +1,7 @@
 package mqtt_consumer
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -153,6 +154,7 @@ func TestPersistentClientIDFail(t *testing.T) {
 }
 
 type Message struct {
+	topic string
 }
 
 func (m *Message) Duplicate() bool {
@@ -168,7 +170,7 @@ func (m *Message) Retained() bool {
 }
 
 func (m *Message) Topic() string {
-	return "telegraf"
+	return m.topic
 }
 
 func (m *Message) MessageID() uint16 {
@@ -185,12 +187,16 @@ func (m *Message) Ack() {
 
 func TestTopicTag(t *testing.T) {
 	tests := []struct {
-		name     string
-		topicTag func() *string
-		expected []telegraf.Metric
+		name          string
+		topic         string
+		topicTag      func() *string
+		expectedError error
+		topicParsing  []TopicParsingConfig
+		expected      []telegraf.Metric
 	}{
 		{
-			name: "default topic when topic tag is unset for backwards compatibility",
+			name:  "default topic when topic tag is unset for backwards compatibility",
+			topic: "telegraf",
 			topicTag: func() *string {
 				return nil
 			},
@@ -208,7 +214,8 @@ func TestTopicTag(t *testing.T) {
 			},
 		},
 		{
-			name: "use topic tag when set",
+			name:  "use topic tag when set",
+			topic: "telegraf",
 			topicTag: func() *string {
 				tag := "topic_tag"
 				return &tag
@@ -227,7 +234,8 @@ func TestTopicTag(t *testing.T) {
 			},
 		},
 		{
-			name: "no topic tag is added when topic tag is set to the empty string",
+			name:  "no topic tag is added when topic tag is set to the empty string",
+			topic: "telegraf",
 			topicTag: func() *string {
 				tag := ""
 				return &tag
@@ -238,6 +246,167 @@ func TestTopicTag(t *testing.T) {
 					map[string]string{},
 					map[string]interface{}{
 						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:  "topic parsing configured",
+			topic: "telegraf/123/test",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "telegraf/123/test",
+					Measurement: "_/_/measurement",
+					Tags:        "testTag/_/_",
+					Fields:      "_/testNumber/_",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"testTag": "telegraf",
+					},
+					map[string]interface{}{
+						"testNumber": 123,
+						"time_idle":  42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:  "topic parsing configured with a mqtt wild card `+`",
+			topic: "telegraf/123/test/hello",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "telegraf/+/test/hello",
+					Measurement: "_/_/measurement/_",
+					Tags:        "testTag/_/_/_",
+					Fields:      "_/testNumber/_/testString",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"testTag": "telegraf",
+					},
+					map[string]interface{}{
+						"testNumber": 123,
+						"testString": "hello",
+						"time_idle":  42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:  "topic parsing configured incorrectly",
+			topic: "telegraf/123/test/hello",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			expectedError: fmt.Errorf("config error topic parsing: fields length does not equal topic length"),
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "telegraf/+/test/hello",
+					Measurement: "_/_/measurement/_",
+					Tags:        "testTag/_/_/_",
+					Fields:      "_/_/testNumber:int/_/testString:string",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"testTag": "telegraf",
+					},
+					map[string]interface{}{
+						"testNumber": 123,
+						"testString": "hello",
+						"time_idle":  42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:  "topic parsing configured without fields",
+			topic: "telegraf/123/test/hello",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "telegraf/+/test/hello",
+					Measurement: "_/_/measurement/_",
+					Tags:        "testTag/_/_/_",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"testTag": "telegraf",
+					},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:  "topic parsing configured without measurement",
+			topic: "telegraf/123/test/hello",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:  "telegraf/+/test/hello",
+					Tags:   "testTag/_/_/_",
+					Fields: "_/testNumber/_/testString",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"testTag": "telegraf",
+					},
+					map[string]interface{}{
+						"testNumber": 123,
+						"testString": "hello",
+						"time_idle":  42,
 					},
 					time.Unix(0, 0),
 				),
@@ -265,21 +434,28 @@ func TestTopicTag(t *testing.T) {
 				return client
 			})
 			plugin.Log = testutil.Logger{}
-			plugin.Topics = []string{"telegraf"}
+			plugin.Topics = []string{tt.topic}
 			plugin.TopicTag = tt.topicTag()
+			plugin.TopicParsing = tt.topicParsing
 
 			parser, err := parsers.NewInfluxParser()
 			require.NoError(t, err)
 			plugin.SetParser(parser)
 
 			err = plugin.Init()
-			require.NoError(t, err)
+			require.Equal(t, tt.expectedError, err)
+			if tt.expectedError != nil {
+				return
+			}
 
 			var acc testutil.Accumulator
 			err = plugin.Start(&acc)
 			require.NoError(t, err)
 
-			handler(nil, &Message{})
+			var m Message
+			m.topic = tt.topic
+
+			handler(nil, &m)
 
 			plugin.Stop()
 

@@ -20,7 +20,8 @@ func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesIn
 }
 
 func (ki *KubernetesInventory) gatherPod(p corev1.Pod, acc telegraf.Accumulator) {
-	if p.GetCreationTimestamp().Second() == 0 && p.GetCreationTimestamp().Nanosecond() == 0 {
+	creationTs := p.GetCreationTimestamp()
+	if creationTs.IsZero() {
 		return
 	}
 
@@ -34,11 +35,11 @@ func (ki *KubernetesInventory) gatherPod(p corev1.Pod, acc telegraf.Accumulator)
 		if !ok {
 			cs = &corev1.ContainerStatus{}
 		}
-		gatherPodContainer(ki, p, *cs, c, acc)
+		ki.gatherPodContainer(p, *cs, c, acc)
 	}
 }
 
-func gatherPodContainer(ki *KubernetesInventory, p corev1.Pod, cs corev1.ContainerStatus, c corev1.Container, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.ContainerStatus, c corev1.Container, acc telegraf.Accumulator) {
 	stateCode := 3
 	stateReason := ""
 	state := "unknown"
@@ -102,17 +103,17 @@ func gatherPodContainer(ki *KubernetesInventory, p corev1.Pod, cs corev1.Contain
 	for resourceName, val := range req {
 		switch resourceName {
 		case "cpu":
-			fields["resource_requests_millicpu_units"] = convertQuantity(val.String(), 1000)
+			fields["resource_requests_millicpu_units"] = ki.convertQuantity(val.String(), 1000)
 		case "memory":
-			fields["resource_requests_memory_bytes"] = convertQuantity(val.String(), 1)
+			fields["resource_requests_memory_bytes"] = ki.convertQuantity(val.String(), 1)
 		}
 	}
 	for resourceName, val := range lim {
 		switch resourceName {
 		case "cpu":
-			fields["resource_limits_millicpu_units"] = convertQuantity(val.String(), 1000)
+			fields["resource_limits_millicpu_units"] = ki.convertQuantity(val.String(), 1000)
 		case "memory":
-			fields["resource_limits_memory_bytes"] = convertQuantity(val.String(), 1)
+			fields["resource_limits_memory_bytes"] = ki.convertQuantity(val.String(), 1)
 		}
 	}
 

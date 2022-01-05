@@ -20,7 +20,7 @@ func TestPod(t *testing.T) {
 	selectExclude := []string{}
 	now := time.Now()
 	started := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-1, 1, 36, 0, now.Location())
-	created := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-2, 1, 36, 0, now.Location())
+	created := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-2, 1, 0, 0, now.Location())
 	cond1 := time.Date(now.Year(), 7, 5, 7, 53, 29, 0, now.Location())
 	cond2 := time.Date(now.Year(), 7, 5, 7, 53, 31, 0, now.Location())
 

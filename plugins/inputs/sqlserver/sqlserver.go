@@ -4,13 +4,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
 	mssql "github.com/denisenkom/go-mssqldb"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -18,18 +18,20 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string `toml:"servers"`
-	AuthMethod   string   `toml:"auth_method"`
-	QueryVersion int      `toml:"query_version"`
-	AzureDB      bool     `toml:"azuredb"`
-	DatabaseType string   `toml:"database_type"`
-	IncludeQuery []string `toml:"include_query"`
-	ExcludeQuery []string `toml:"exclude_query"`
-	HealthMetric bool     `toml:"health_metric"`
-	pools        []*sql.DB
-	queries      MapQuery
-	adalToken    *adal.Token
-	muCacheLock  sync.RWMutex
+	Servers      []string        `toml:"servers"`
+	AuthMethod   string          `toml:"auth_method"`
+	QueryVersion int             `toml:"query_version"`
+	AzureDB      bool            `toml:"azuredb"`
+	DatabaseType string          `toml:"database_type"`
+	IncludeQuery []string        `toml:"include_query"`
+	ExcludeQuery []string        `toml:"exclude_query"`
+	HealthMetric bool            `toml:"health_metric"`
+	Log          telegraf.Logger `toml:"-"`
+
+	pools       []*sql.DB
+	queries     MapQuery
+	adalToken   *adal.Token
+	muCacheLock sync.RWMutex
 }
 
 // Query struct
@@ -54,6 +56,7 @@ const defaultServer = "Server=.;app name=telegraf;log=1;"
 const (
 	typeAzureSQLDB              = "AzureSQLDB"
 	typeAzureSQLManagedInstance = "AzureSQLManagedInstance"
+	typeAzureSQLPool            = "AzureSQLPool"
 	typeSQLServer               = "SQLServer"
 )
 
@@ -87,42 +90,34 @@ servers = [
 
 ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
 ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
-## Possible values for database_type are - "AzureSQLDB" or "AzureSQLManagedInstance" or "SQLServer"
+## Possible values for database_type are - "SQLServer" or "AzureSQLDB" or "AzureSQLManagedInstance" or "AzureSQLPool"
+
+database_type = "SQLServer"
+
+## A list of queries to include. If not specified, all the below listed queries are used.
+include_query = []
+
+## A list of queries to explicitly ignore.
+exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
+
+## Queries enabled by default for database_type = "SQLServer" are - 
+## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
+## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates
 
 ## Queries enabled by default for database_type = "AzureSQLDB" are - 
 ## AzureSQLDBResourceStats, AzureSQLDBResourceGovernance, AzureSQLDBWaitStats, AzureSQLDBDatabaseIO, AzureSQLDBServerProperties, 
 ## AzureSQLDBOsWaitstats, AzureSQLDBMemoryClerks, AzureSQLDBPerformanceCounters, AzureSQLDBRequests, AzureSQLDBSchedulers
 
-# database_type = "AzureSQLDB"
-
-## A list of queries to include. If not specified, all the above listed queries are used.
-# include_query = []
-
-## A list of queries to explicitly ignore.
-# exclude_query = []
-
 ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
 ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
 ## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
 
-# database_type = "AzureSQLManagedInstance"
+## Queries enabled by default for database_type = "AzureSQLPool" are - 
+## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats, 
+## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
 
-# include_query = []
-
-# exclude_query = []
-
-## Queries enabled by default for database_type = "SQLServer" are - 
-## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
-## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu
-
-database_type = "SQLServer"
-
-include_query = []
-
-## SQLServerAvailabilityReplicaStates and SQLServerDatabaseReplicaStates are optional queries and hence excluded here as default
-exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
-
-## Following are old config settings, you may use them only if you are using the earlier flavor of queries, however it is recommended to use 
+## Following are old config settings
+## You may use them only if you are using the earlier flavor of queries, however it is recommended to use 
 ## the new mechanism of identifying the database_type there by use it's corresponding queries
 
 ## Optional parameter, setting this to 2 will use a new version
@@ -149,16 +144,17 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func initQueries(s *SQLServer) error {
+func (s *SQLServer) initQueries() error {
 	s.queries = make(MapQuery)
 	queries := s.queries
-	log.Printf("I! [inputs.sqlserver] Config: database_type: %s , query_version:%d , azuredb: %t", s.DatabaseType, s.QueryVersion, s.AzureDB)
+	s.Log.Infof("Config: database_type: %s , query_version:%d , azuredb: %t", s.DatabaseType, s.QueryVersion, s.AzureDB)
 
 	// New config option database_type
 	// To prevent query definition conflicts
-	// Constant defintiions for type "AzureSQLDB" start with sqlAzureDB
-	// Constant defintiions for type "AzureSQLManagedInstance" start with sqlAzureMI
-	// Constant defintiions for type "SQLServer" start with sqlServer
+	// Constant definitions for type "AzureSQLDB" start with sqlAzureDB
+	// Constant definitions for type "AzureSQLManagedInstance" start with sqlAzureMI
+	// Constant definitions for type "AzureSQLPool" start with sqlAzurePool
+	// Constant definitions for type "SQLServer" start with sqlServer
 	if s.DatabaseType == typeAzureSQLDB {
 		queries["AzureSQLDBResourceStats"] = Query{ScriptName: "AzureSQLDBResourceStats", Script: sqlAzureDBResourceStats, ResultByRow: false}
 		queries["AzureSQLDBResourceGovernance"] = Query{ScriptName: "AzureSQLDBResourceGovernance", Script: sqlAzureDBResourceGovernance, ResultByRow: false}
@@ -180,6 +176,14 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMIPerformanceCounters"] = Query{ScriptName: "AzureSQLMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
 		queries["AzureSQLMIRequests"] = Query{ScriptName: "AzureSQLMIRequests", Script: sqlAzureMIRequests, ResultByRow: false}
 		queries["AzureSQLMISchedulers"] = Query{ScriptName: "AzureSQLMISchedulers", Script: sqlAzureMISchedulers, ResultByRow: false}
+	} else if s.DatabaseType == typeAzureSQLPool {
+		queries["AzureSQLPoolResourceStats"] = Query{ScriptName: "AzureSQLPoolResourceStats", Script: sqlAzurePoolResourceStats, ResultByRow: false}
+		queries["AzureSQLPoolResourceGovernance"] = Query{ScriptName: "AzureSQLPoolResourceGovernance", Script: sqlAzurePoolResourceGovernance, ResultByRow: false}
+		queries["AzureSQLPoolDatabaseIO"] = Query{ScriptName: "AzureSQLPoolDatabaseIO", Script: sqlAzurePoolDatabaseIO, ResultByRow: false}
+		queries["AzureSQLPoolOsWaitStats"] = Query{ScriptName: "AzureSQLPoolOsWaitStats", Script: sqlAzurePoolOsWaitStats, ResultByRow: false}
+		queries["AzureSQLPoolMemoryClerks"] = Query{ScriptName: "AzureSQLPoolMemoryClerks", Script: sqlAzurePoolMemoryClerks, ResultByRow: false}
+		queries["AzureSQLPoolPerformanceCounters"] = Query{ScriptName: "AzureSQLPoolPerformanceCounters", Script: sqlAzurePoolPerformanceCounters, ResultByRow: false}
+		queries["AzureSQLPoolSchedulers"] = Query{ScriptName: "AzureSQLPoolSchedulers", Script: sqlAzurePoolSchedulers, ResultByRow: false}
 	} else if s.DatabaseType == typeSQLServer { //These are still V2 queries and have not been refactored yet.
 		queries["SQLServerPerformanceCounters"] = Query{ScriptName: "SQLServerPerformanceCounters", Script: sqlServerPerformanceCounters, ResultByRow: false}
 		queries["SQLServerWaitStatsCategorized"] = Query{ScriptName: "SQLServerWaitStatsCategorized", Script: sqlServerWaitStatsCategorized, ResultByRow: false}
@@ -200,7 +204,7 @@ func initQueries(s *SQLServer) error {
 		}
 		// Decide if we want to run version 1 or version 2 queries
 		if s.QueryVersion == 2 {
-			log.Println("W! DEPRECATION NOTICE: query_version=2 is being deprecated in favor of database_type.")
+			s.Log.Warn("DEPRECATION NOTICE: query_version=2 is being deprecated in favor of database_type.")
 			queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCountersV2, ResultByRow: true}
 			queries["WaitStatsCategorized"] = Query{ScriptName: "WaitStatsCategorized", Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
 			queries["DatabaseIO"] = Query{ScriptName: "DatabaseIO", Script: sqlDatabaseIOV2, ResultByRow: false}
@@ -211,7 +215,7 @@ func initQueries(s *SQLServer) error {
 			queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: sqlServerVolumeSpaceV2, ResultByRow: false}
 			queries["Cpu"] = Query{ScriptName: "Cpu", Script: sqlServerCPUV2, ResultByRow: false}
 		} else {
-			log.Println("W! DEPRECATED: query_version=1 has been deprecated in favor of database_type.")
+			s.Log.Warn("DEPRECATED: query_version=1 has been deprecated in favor of database_type.")
 			queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCounters, ResultByRow: true}
 			queries["WaitStatsCategorized"] = Query{ScriptName: "WaitStatsCategorized", Script: sqlWaitStatsCategorized, ResultByRow: false}
 			queries["CPUHistory"] = Query{ScriptName: "CPUHistory", Script: sqlCPUHistory, ResultByRow: false}
@@ -240,7 +244,7 @@ func initQueries(s *SQLServer) error {
 	for query := range queries {
 		querylist = append(querylist, query)
 	}
-	log.Printf("I! [inputs.sqlserver] Config: Effective Queries: %#v\n", querylist)
+	s.Log.Infof("Config: Effective Queries: %#v\n", querylist)
 
 	return nil
 }
@@ -281,7 +285,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 
 // Start initialize a list of connection pools
 func (s *SQLServer) Start(acc telegraf.Accumulator) error {
-	if err := initQueries(s); err != nil {
+	if err := s.initQueries(); err != nil {
 		acc.AddError(err)
 		return err
 	}
@@ -353,11 +357,11 @@ func (s *SQLServer) gatherServer(pool *sql.DB, query Query, acc telegraf.Accumul
 
 		// Error msg based on the format in SSMS. SQLErrorClass() is another term for severity/level: http://msdn.microsoft.com/en-us/library/dd304156.aspx
 		if sqlerr, ok := err.(mssql.Error); ok {
-			return fmt.Errorf("Query %s failed for server: %s and database: %s with Msg %d, Level %d, State %d:, Line %d, Error: %w", query.ScriptName,
+			return fmt.Errorf("query %s failed for server: %s and database: %s with Msg %d, Level %d, State %d:, Line %d, Error: %w", query.ScriptName,
 				serverName, databaseName, sqlerr.SQLErrorNumber(), sqlerr.SQLErrorClass(), sqlerr.SQLErrorState(), sqlerr.SQLErrorLineNo(), err)
 		}
 
-		return fmt.Errorf("Query %s failed for server: %s and database: %s with Error: %w", query.ScriptName, serverName, databaseName, err)
+		return fmt.Errorf("query %s failed for server: %s and database: %s with Error: %w", query.ScriptName, serverName, databaseName, err)
 	}
 
 	defer rows.Close()
@@ -423,7 +427,7 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 		// values
 		for header, val := range columnMap {
 			if _, ok := (*val).(string); !ok {
-				fields[header] = (*val)
+				fields[header] = *val
 			}
 		}
 		// add fields to Accumulator
@@ -474,7 +478,7 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 
 func (s *SQLServer) Init() error {
 	if len(s.Servers) == 0 {
-		log.Println("W! Warning: Server list is empty.")
+		s.Log.Warn("Warning: Server list is empty.")
 	}
 
 	return nil

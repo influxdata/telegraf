@@ -44,6 +44,8 @@ HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
 	LDFLAGS += -X main.version=$(version)
+else
+	LDFLAGS += -X main.version=$(version)-$(commit)
 endif
 
 # Go built-in race detector works only for 64 bits architectures.
@@ -140,24 +142,32 @@ vet:
 
 .PHONY: lint-install
 lint-install:
-
+	@echo "Installing golangci-lint"
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
+
+	@echo "Installing markdownlint"
+	npm install -g markdownlint-cli
 
 .PHONY: lint
 lint:
-ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please run: make lint-install)
-	exit 1
-endif
-
+	@which golangci-lint >/dev/null 2>&1 || { \
+		echo "golangci-lint not found, please run: make lint-install"; \
+		exit 1; \
+	}
 	golangci-lint run
+
+	@which markdownlint >/dev/null 2>&1 || { \
+		echo "markdownlint not found, please run: make lint-install"; \
+		exit 1; \
+	}
+	markdownlint .
 
 .PHONY: lint-branch
 lint-branch:
-ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please run: make lint-install)
-	exit 1
-endif
+	@which golangci-lint >/dev/null 2>&1 || { \
+		echo "golangci-lint not found, please run: make lint-install"; \
+		exit 1; \
+	}
 
 	golangci-lint run --new-from-rev master
 
@@ -201,8 +211,8 @@ plugin-%:
 
 .PHONY: ci-1.17
 ci-1.17:
-	docker build -t quay.io/influxdb/telegraf-ci:1.17.0 - < scripts/ci-1.17.docker
-	docker push quay.io/influxdb/telegraf-ci:1.17.0
+	docker build -t quay.io/influxdb/telegraf-ci:1.17.5 - < scripts/ci-1.17.docker
+	docker push quay.io/influxdb/telegraf-ci:1.17.5
 
 .PHONY: install
 install: $(buildbin)
@@ -259,6 +269,10 @@ armhf += linux_armhf.tar.gz freebsd_armv7.tar.gz armhf.deb armv6hl.rpm
 armhf:
 	@ echo $(armhf)
 s390x += linux_s390x.tar.gz s390x.deb s390x.rpm
+.PHONY: riscv64
+riscv64:
+	@ echo $(riscv64)
+riscv64 += linux_riscv64.tar.gz riscv64.rpm riscv64.deb
 .PHONY: s390x
 s390x:
 	@ echo $(s390x)
@@ -274,12 +288,17 @@ windows += windows_i386.zip windows_amd64.zip
 .PHONY: windows
 windows:
 	@ echo $(windows)
-darwin += darwin_amd64.tar.gz
-.PHONY: darwin
-darwin:
-	@ echo $(darwin)
+darwin-amd64 += darwin_amd64.tar.gz
+.PHONY: darwin-amd64
+darwin-amd64:
+	@ echo $(darwin-amd64)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin)
+darwin-arm64 += darwin_arm64.tar.gz
+.PHONY: darwin-arm64
+darwin-arm64:
+	@ echo $(darwin-arm64)
+
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
 package: $(include_packages)
@@ -307,6 +326,7 @@ $(include_packages):
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
 			--depends coreutils \
 			--depends shadow-utils \
+			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
 			--name telegraf \
 			--version $(version) \
@@ -368,6 +388,9 @@ mips.deb linux_mips.tar.gz: export GOARCH := mips
 mipsel.deb linux_mipsel.tar.gz: export GOOS := linux
 mipsel.deb linux_mipsel.tar.gz: export GOARCH := mipsle
 
+riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOOS := linux
+riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOARCH := riscv64
+
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOOS := linux
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOARCH := s390x
 
@@ -389,6 +412,9 @@ windows_amd64.zip: export GOARCH := amd64
 
 darwin_amd64.tar.gz: export GOOS := darwin
 darwin_amd64.tar.gz: export GOARCH := amd64
+
+darwin_arm64.tar.gz: export GOOS := darwin
+darwin_arm64.tar.gz: export GOARCH := arm64
 
 windows_i386.zip: export GOOS := windows
 windows_i386.zip: export GOARCH := 386

@@ -7,22 +7,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Test that each tag becomes one dimension
 func TestBuildDimensions(t *testing.T) {
-	const MaxDimensions = 10
-
-	assert := assert.New(t)
+	const maxDimensions = 10
 
 	testPoint := testutil.TestMetric(1)
 	dimensions := BuildDimensions(testPoint.Tags())
@@ -36,26 +32,24 @@ func TestBuildDimensions(t *testing.T) {
 
 	sort.Strings(tagKeys)
 
-	if len(testPoint.Tags()) >= MaxDimensions {
-		assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
+	if len(testPoint.Tags()) >= maxDimensions {
+		require.Equal(t, maxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
 	} else {
-		assert.Equal(len(testPoint.Tags()), len(dimensions), "Number of dimensions should be equal to number of tags")
+		require.Equal(t, len(testPoint.Tags()), len(dimensions), "Number of dimensions should be equal to number of tags")
 	}
 
 	for i, key := range tagKeys {
 		if i >= 10 {
 			break
 		}
-		assert.Equal(key, *dimensions[i].Name, "Key should be equal")
-		assert.Equal(testPoint.Tags()[key], *dimensions[i].Value, "Value should be equal")
+		require.Equal(t, key, *dimensions[i].Name, "Key should be equal")
+		require.Equal(t, testPoint.Tags()[key], *dimensions[i].Value, "Value should be equal")
 	}
 }
 
 // Test that metrics with valid values have a MetricDatum created where as non valid do not.
 // Skips "time.Time" type as something is converting the value to string.
 func TestBuildMetricDatums(t *testing.T) {
-	assert := assert.New(t)
-
 	zero := 0.0
 	validMetrics := []telegraf.Metric{
 		testutil.TestMetric(1),
@@ -76,11 +70,11 @@ func TestBuildMetricDatums(t *testing.T) {
 	}
 	for _, point := range validMetrics {
 		datums := BuildMetricDatum(false, false, point)
-		assert.Equal(1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", point))
+		require.Equal(t, 1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", point))
 	}
 	for _, point := range invalidMetrics {
 		datums := BuildMetricDatum(false, false, point)
-		assert.Equal(0, len(datums), fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
+		require.Equal(t, 0, len(datums), fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
 	}
 
 	statisticMetric := metric.New(
@@ -90,7 +84,7 @@ func TestBuildMetricDatums(t *testing.T) {
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	datums := BuildMetricDatum(true, false, statisticMetric)
-	assert.Equal(1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", statisticMetric))
+	require.Equal(t, 1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", statisticMetric))
 
 	multiFieldsMetric := metric.New(
 		"test1",
@@ -99,7 +93,7 @@ func TestBuildMetricDatums(t *testing.T) {
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	datums = BuildMetricDatum(true, false, multiFieldsMetric)
-	assert.Equal(4, len(datums), fmt.Sprintf("Each field should create a Datum {value: %v}", multiFieldsMetric))
+	require.Equal(t, 4, len(datums), fmt.Sprintf("Each field should create a Datum {value: %v}", multiFieldsMetric))
 
 	multiStatisticMetric := metric.New(
 		"test1",
@@ -113,24 +107,22 @@ func TestBuildMetricDatums(t *testing.T) {
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	datums = BuildMetricDatum(true, false, multiStatisticMetric)
-	assert.Equal(7, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", multiStatisticMetric))
+	require.Equal(t, 7, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", multiStatisticMetric))
 }
 
 func TestMetricDatumResolution(t *testing.T) {
-	const expectedStandardResolutionValue = int64(60)
-	const expectedHighResolutionValue = int64(1)
+	const expectedStandardResolutionValue = int32(60)
+	const expectedHighResolutionValue = int32(1)
 
-	assert := assert.New(t)
+	m := testutil.TestMetric(1)
 
-	metric := testutil.TestMetric(1)
-
-	standardResolutionDatum := BuildMetricDatum(false, false, metric)
+	standardResolutionDatum := BuildMetricDatum(false, false, m)
 	actualStandardResolutionValue := *standardResolutionDatum[0].StorageResolution
-	assert.Equal(expectedStandardResolutionValue, actualStandardResolutionValue)
+	require.Equal(t, expectedStandardResolutionValue, actualStandardResolutionValue)
 
-	highResolutionDatum := BuildMetricDatum(false, true, metric)
+	highResolutionDatum := BuildMetricDatum(false, true, m)
 	actualHighResolutionValue := *highResolutionDatum[0].StorageResolution
-	assert.Equal(expectedHighResolutionValue, actualHighResolutionValue)
+	require.Equal(t, expectedHighResolutionValue, actualHighResolutionValue)
 }
 
 func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
@@ -151,21 +143,19 @@ func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
 }
 
 func TestPartitionDatums(t *testing.T) {
-	assert := assert.New(t)
-
-	testDatum := cloudwatch.MetricDatum{
+	testDatum := types.MetricDatum{
 		MetricName: aws.String("Foo"),
 		Value:      aws.Float64(1),
 	}
 
-	zeroDatum := []*cloudwatch.MetricDatum{}
-	oneDatum := []*cloudwatch.MetricDatum{&testDatum}
-	twoDatum := []*cloudwatch.MetricDatum{&testDatum, &testDatum}
-	threeDatum := []*cloudwatch.MetricDatum{&testDatum, &testDatum, &testDatum}
+	zeroDatum := []types.MetricDatum{}
+	oneDatum := []types.MetricDatum{testDatum}
+	twoDatum := []types.MetricDatum{testDatum, testDatum}
+	threeDatum := []types.MetricDatum{testDatum, testDatum, testDatum}
 
-	assert.Equal([][]*cloudwatch.MetricDatum{}, PartitionDatums(2, zeroDatum))
-	assert.Equal([][]*cloudwatch.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
-	assert.Equal([][]*cloudwatch.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
-	assert.Equal([][]*cloudwatch.MetricDatum{twoDatum}, PartitionDatums(2, twoDatum))
-	assert.Equal([][]*cloudwatch.MetricDatum{twoDatum, oneDatum}, PartitionDatums(2, threeDatum))
+	require.Equal(t, [][]types.MetricDatum{}, PartitionDatums(2, zeroDatum))
+	require.Equal(t, [][]types.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
+	require.Equal(t, [][]types.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
+	require.Equal(t, [][]types.MetricDatum{twoDatum}, PartitionDatums(2, twoDatum))
+	require.Equal(t, [][]types.MetricDatum{twoDatum, oneDatum}, PartitionDatums(2, threeDatum))
 }

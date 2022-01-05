@@ -9,7 +9,9 @@ All pull requests should follow the style and best practices in the
 document.
 
 ## Process
+
 The review process is roughly structured as follows:
+
 1. Submit a pull request.
 Please check that you signed the [CLA](https://www.influxdata.com/legal/cla/) (and [Corporate CLA](https://www.influxdata.com/legal/ccla/) if you are contributing code on as an employee of your company). Provide a short description of your submission and reference issues that you potentially close. Make sure the CI tests are all green and there are no linter-issues.
 1. Get feedback from a first reviewer and a `ready for final review` tag.
@@ -21,6 +23,7 @@ It might take some time until your PR gets merged, depending on the release cycl
 your pull-request (bugfix, enhancement of existing code, new plugin, etc). Remember, it might be necessary to rebase your code before merge to resolve conflicts.
 
 Please read the review comments carefully, fix the related part of the code and/or respond in case there is anything unclear. If there is no activity in a pull-request or the contributor does not respond, we apply the following scheme:
+
 1. We send a first reminder after at least 2 weeks of inactivity.
 1. After at least another two weeks of inactivity we send a second reminder and are setting the `waiting for response` tag.
 1. Another two weeks later we will ask the community for help setting the `help wanted` reminder.
@@ -34,10 +37,13 @@ So in case you expect a longer period of inactivity or you want to abandon a pul
 - SampleConfig must match the readme, but not include the plugin name.
 - structs should include toml tags for fields that are expected to be editable from the config. eg `toml:"command"` (snake_case)
 - plugins that want to log should declare the Telegraf logger, not use the log package. eg:
+
 ```Go
   Log telegraf.Logger `toml:"-"`
 ```
+
 (in tests, you can do `myPlugin.Log = testutil.Logger{}`)
+
 - Initialization and config checking should be done on the `Init() error` function, not in the Connect, Gather, or Start functions.
 - `Init() error` should not contain connections to external services. If anything fails in Init, Telegraf will consider it a configuration error and refuse to start.
 - plugins should avoid synchronization code if they are not starting goroutines. Plugin functions are never called in parallel.
@@ -67,6 +73,9 @@ So in case you expect a longer period of inactivity or you want to abandon a pul
   - changing the default value of a field can be okay, but will affect users who have not specified the field and should be approached cautiously.
   - The general rule here is "don't surprise me": users should not be caught off-guard by unexpected or breaking changes.
 
+## Linting
+
+Each pull request will have the appriopriate linters checking the files for any common mistakes. The github action Super Linter is used: [super-pinter](https://github.com/github/super-linter). If it is failing you can click on the action and read the logs to figure out the issue. You can also run the github action locally by following these instructions: [run-linter-locally.md](https://github.com/github/super-linter/blob/main/docs/run-linter-locally.md). You can find more information on each of the linters in the super linter readme.
 
 ## Testing
 
@@ -82,6 +91,7 @@ used for assertions within the tests when possible, with preference towards
 github.com/stretchr/testify/require.
 
 Primarily use the require package to avoid cascading errors:
+
 ```go
 assert.Equal(t, lhs, rhs) # avoid
 require.Equal(t, lhs, rhs) # good
@@ -96,6 +106,7 @@ Ensure the [[SampleConfig]] and
 match with the current standards.
 
 READMEs should:
+
 - be spaces, not tabs
 - be indented consistently, matching other READMEs
 - have two `#` for comments
@@ -121,7 +132,8 @@ Metrics use `snake_case` naming style.
 
 Generally enumeration data should be encoded as a tag.  In some cases it may
 be desirable to also include the data as an integer field:
-```
+
+```shell
 net_response,result=success result_code=0i
 ```
 
@@ -129,7 +141,8 @@ net_response,result=success result_code=0i
 
 Use tags for each range with the `le` tag, and `+Inf` for the values out of
 range.  This format is inspired by the Prometheus project:
-```
+
+```shell
 cpu,le=0.0 usage_idle_bucket=0i 1486998330000000000
 cpu,le=50.0 usage_idle_bucket=2i 1486998330000000000
 cpu,le=100.0 usage_idle_bucket=2i 1486998330000000000
