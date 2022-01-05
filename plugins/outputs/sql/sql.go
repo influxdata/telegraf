@@ -217,6 +217,8 @@ func (p *SQL) tableExists(tableName string) bool {
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
+	var err error
+
 	for _, metric := range metrics {
 		tablename := metric.Name()
 
@@ -249,24 +251,36 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		}
 
 		sql := p.generateInsert(tablename, columns)
-		var (
-			tx, _   = p.db.Begin()
-			stmt, _ = tx.Prepare(sql)
-		)
-		defer stmt.Close()
 
-		_, err := stmt.Exec(values...)
-		if err != nil {
-			p.Log.Errorf("Error during prepare: %v, %v", err, sql)
-			return err
-		}
+		switch p.Driver {
+		case "clickhouse":
+			// ClickHouse needs to batch inserts with prepared statements
+			tx, err := p.db.Begin()
+			if err != nil {
+				return fmt.Errorf(": %v", err)
+			}
+			stmt, err := tx.Prepare(sql)
+			if err != nil {
+				return fmt.Errorf("Error during prepare: %v", err)
+			}
+			defer stmt.Close()
 
-		if err := tx.Commit(); err != nil {
-			p.Log.Errorf("Error during commit: %v, %v", err, sql)
-			return err
+			_, err = stmt.Exec(values...)
+			if err != nil {
+				return fmt.Errorf("Error during execution: %v", err)
+			}
+			err = tx.Commit()
+			if err != nil {
+				return fmt.Errorf("Error during commit: %v", err)
+			}
+		default:
+			_, err = p.db.Exec(sql, values...)
+			if err != nil {
+				return fmt.Errorf("Error during execution: %v", err)
+			}
 		}
 	}
-	return nil
+	return err
 }
 
 func init() {
