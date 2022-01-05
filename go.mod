@@ -84,7 +84,7 @@ require (
 	github.com/intel/iaevents v1.0.0
 	github.com/jackc/pgx/v4 v4.6.0
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
-  github.com/jarcoal/httpmock v1.0.8
+	github.com/jarcoal/httpmock v1.0.8
 	github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/kardianos/service v1.0.0
