@@ -3,6 +3,7 @@
 This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Elastic (<http://olivere.github.io/elastic/).>
 
 It supports Elasticsearch releases from 5.x up to 7.x.
+OpenSearch is also supported but as it has its own versioning schema it needs to be enabled by setting the configuration value `opensearch = true`.
 
 ## Elasticsearch indexes and templates
 
@@ -95,7 +96,6 @@ Example of an index template created by telegraf on Elasticsearch 5.x:
   },
   "aliases": {}
 }
-
 ```
 
 ### Example events
@@ -163,6 +163,8 @@ This plugin will format the events in the following way:
   ## HTTP basic authentication details.
   # username = "telegraf"
   # password = "mypassword"
+  ## Optional enable support for OpenSearch
+  # opensearch = true
 
   ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
@@ -214,8 +216,8 @@ This plugin will format the events in the following way:
 
 If you are using authentication within your Elasticsearch cluster, you need
 to create a account and create a role with at least the manage role in the
-Cluster Privileges category.  Overwise, your account will not be able to
-connect to your Elasticsearch cluster and send logs to your cluster.  After
+Cluster Privileges category. Otherwise, your account will not be able to
+connect to your Elasticsearch cluster and send logs to your cluster. After
 that, you need to add "create_indice" and "write" permission to your specific
 index pattern.
 
@@ -247,6 +249,7 @@ Additionally, you can specify dynamic index names by using tags with the notatio
 * `force_document_id`: Set to true will compute a unique hash from as sha256(concat(timestamp,measurement,series-hash)),enables resend or update data withoud ES duplicated documents.
 * `float_handling`: Specifies how to handle `NaN` and infinite field values. `"none"` (default) will do nothing, `"drop"` will drop the field and `replace` will replace the field value by the number in `float_replacement_value`
 * `float_replacement_value`: Value (defaulting to `0.0`) to replace `NaN`s and `inf`s if `float_handling` is set to `replace`. Negative `inf` will be replaced by the negative value in this number to respect the sign of the field's original value.
+* `opensearch`: Set to true if you want to connect to OpenSearch instances.
 
 ## Known issues
 

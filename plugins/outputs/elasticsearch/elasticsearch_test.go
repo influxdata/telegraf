@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConnectAndWriteIntegration(t *testing.T) {
@@ -476,6 +477,38 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 
 	err := e.Connect()
 	require.NoError(t, err)
+
+	err = e.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+}
+
+func TestVersionCheckOpenSearch(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		default:
+			_, err := w.Write([]byte(`{"version": {"number": "1.2.3"}}`))
+			require.NoError(t, err)
+			return
+		}
+	}))
+	defer ts.Close()
+
+	urls := []string{"http://" + ts.Listener.Addr().String()}
+
+	e := &Elasticsearch{
+		URLs:           urls,
+		IndexName:      "{{host}}-%Y.%m.%d",
+		Timeout:        config.Duration(time.Second * 5),
+		EnableGzip:     false,
+		ManageTemplate: false,
+		OpenSearch:     true,
+		Log:            testutil.Logger{},
+	}
+
+	err := e.Connect()
+	require.NoError(t, err)
+
+	require.Equal(t, 7, e.MajorReleaseNumber)
 
 	err = e.Write(testutil.MockMetrics())
 	require.NoError(t, err)
