@@ -3,8 +3,8 @@ package whatap
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -25,15 +25,11 @@ type Whatap struct {
 	Servers []string        `toml:"servers"`
 	Pcode   int64           `toml:"pcode"`
 	Timeout config.Duration `toml:"timeout"`
-	Oname   string
-	Oid     int32
-	Session TCPSession
 	Log     telegraf.Logger `toml:"-"`
-}
-
-type TCPSession struct {
-	Client net.Conn
-	Dest   int
+	oname   string
+	oid     int32
+	conn    net.Conn
+	dest    int
 }
 
 var sampleConfig = `
@@ -41,55 +37,53 @@ var sampleConfig = `
   ## to get license, project code and server IP information.
 
   ## WhaTap license. Required
-  #license = "xxxx-xxxx-xxxx"
+  license = "xxxx-xxxx-xxxx"
 
   ## WhaTap project code. Required
-  #pcode = 1111
+  pcode = 1111
 
   ## WhaTap server IP. Required
   ## Put multiple IPs. ["tcp://1.1.1.1:6600","tcp://2.2.2.2:6600"]
-  #servers = ["tcp://1.1.1.1:6600","tcp://2.2.2.2:6600"]
+  servers = ["tcp://1.1.1.1:6600","tcp://2.2.2.2:6600"]
 
   ## Connection timeout.
   # timeout = "60s"
 `
 
 func (w *Whatap) Connect() error {
-	w.Session.Dest++
-	if w.Session.Dest >= len(w.Servers) {
-		w.Session.Dest = 0
+	w.dest++
+	if w.dest >= len(w.Servers) {
+		w.dest = 0
 	}
 
-	addr := strings.SplitN(w.Servers[w.Session.Dest], "://", 2)
-	if len(addr) != 2 {
-		return fmt.Errorf("invalid address: %s", w.Servers[w.Session.Dest])
+	u, err := url.Parse(w.Servers[w.dest])
+	if err != nil {
+		return fmt.Errorf("invalid address: %s", w.Servers[w.dest])
 	}
-	if addr[0] != "tcp" {
-		return fmt.Errorf("only tcp is supported: %s", w.Servers[w.Session.Dest])
+	if u.Scheme != "tcp" {
+		return fmt.Errorf("only tcp is supported: %s", w.Servers[w.dest])
 	}
-
-	t := time.Duration(w.Timeout) * time.Millisecond
-	client, err := net.DialTimeout(addr[0], addr[1], t)
+	client, err := net.DialTimeout(u.Scheme, u.Host, time.Duration(w.Timeout))
 	if err != nil {
 		return err
 	}
 
-	w.Session.Client = client.(*net.TCPConn)
-	w.Log.Info("Connected tcp to ", addr)
+	w.conn = client.(*net.TCPConn)
+	w.Log.Info("Connected ", u.String())
 	return nil
 }
 
 func (w *Whatap) Close() error {
-	if w.Session.Client == nil {
+	if w.conn == nil {
 		return nil
 	}
-	err := w.Session.Client.Close()
-	w.Session.Client = nil
+	err := w.conn.Close()
+	w.conn = nil
 	return err
 }
 
 func (w *Whatap) Description() string {
-	return "Configuration for WhaTap"
+	return "Plugin to send metrics to a WhaTap server"
 }
 
 func (w *Whatap) SampleConfig() string {
@@ -100,7 +94,7 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	if w.Session.Client == nil {
+	if w.conn == nil {
 		if err := w.Connect(); err != nil {
 			_ = w.Close()
 			return err
@@ -110,7 +104,7 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		p := whatap_pack.NewTagCountPack()
 		p.Pcode = w.Pcode
-		p.Oid = w.Oid
+		p.Oid = w.oid
 		p.Category = fmt.Sprintf("%s%s", "telegraf_", m.Name())
 		for k, v := range m.Fields() {
 			p.Put(k, v)
@@ -118,7 +112,7 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 		for k, v := range m.Tags() {
 			p.PutTag(k, v)
 		}
-		p.PutTag("oname", w.Oname)
+		p.PutTag("oname", w.oname)
 
 		// Convert time to microseconds.
 		p.Time = m.Time().UnixNano() / int64(time.Millisecond)
@@ -127,33 +121,32 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 		dout.WriteShort(p.GetPackType())
 		p.Write(dout)
 
-		if err := w.send(0, dout.ToByteArray()); err != nil {
+		if err := w.send(dout.ToByteArray()); err != nil {
 			return err
 		}
 	}
 	return nil
 }
-func (w *Whatap) send(code byte, b []byte) (err error) {
+func (w *Whatap) send(b []byte) (err error) {
 	// Transmits data in compliance with whatap protocol.
 	dout := whatap_io.NewDataOutputX()
 	dout.WriteByte(NetSrcAgentOneway)
-	dout.WriteByte(code)
+	dout.WriteByte(0)
 	dout.WriteLong(w.Pcode)
 	dout.WriteLong(whatap_hash.Hash64Str(w.License))
 	dout.WriteIntBytes(b)
 	sendbuf := dout.ToByteArray()
 
 	nbyteleft := len(sendbuf)
-	pos := 0
+	var pos int
+	var nbytethistime int
 	for 0 < nbyteleft {
-		nbytethistime := 0
-		// Set Deadline
-		err = w.Session.Client.SetWriteDeadline(time.Now().Add(
-			time.Duration(w.Timeout) * time.Millisecond))
-		if err != nil {
-			w.Log.Warn("cannot set tcp write deadline:", err)
+		deadline := time.Now().Add(time.Duration(w.Timeout))
+		if err := w.conn.SetWriteDeadline(deadline); err != nil {
+			return fmt.Errorf("cannot set write deadline: %v", err)
 		}
-		nbytethistime, err = w.Session.Client.Write(sendbuf[pos : pos+nbyteleft])
+
+		nbytethistime, err = w.conn.Write(sendbuf[pos : pos+nbyteleft])
 		if err != nil {
 			_ = w.Close()
 			return err
@@ -168,9 +161,8 @@ func init() {
 	outputs.Add("whatap", func() telegraf.Output {
 		return &Whatap{
 			Timeout: config.Duration(60 * time.Second),
-			Session: TCPSession{},
-			Oname:   hostname,
-			Oid:     whatap_hash.HashStr(hostname),
+			oname:   hostname,
+			oid:     whatap_hash.HashStr(hostname),
 		}
 	})
 }

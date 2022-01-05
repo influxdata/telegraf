@@ -14,7 +14,6 @@ import (
 
 	whatap_hash "github.com/whatap/go-api/common/util/hash"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,10 +21,9 @@ func newWhatap() *Whatap {
 	hostname, _ := os.Hostname()
 	return &Whatap{
 		Timeout: config.Duration(60 * time.Second),
-		Session: TCPSession{},
-		Oname:   hostname,
-		Oid:     whatap_hash.HashStr(hostname),
 		Log:     testutil.Logger{},
+		oname:   hostname,
+		oid:     whatap_hash.HashStr(hostname),
 	}
 }
 func TestWhatapConnect(t *testing.T) {
@@ -76,8 +74,7 @@ func TestWhatapWriteErr(t *testing.T) {
 	err = lconn.Close()
 	require.NoError(t, err)
 
-	w.Session.Client.Close()
+	_ = w.Close()
 	err = w.Write(metrics)
-	require.Error(t, err)
-	assert.Nil(t, w.Session.Client)
+	require.NoError(t, err)
 }
