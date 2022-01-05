@@ -71,7 +71,6 @@ func TestWhatapWriteErr(t *testing.T) {
 
 	metrics := []telegraf.Metric{testutil.TestMetric(1, "testerr")}
 
-	// close the socket to generate an error
 	err = lconn.Close()
 	require.NoError(t, err)
 

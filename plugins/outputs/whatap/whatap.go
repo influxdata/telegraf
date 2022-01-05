@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
+
 	whatap_io "github.com/whatap/go-api/common/io"
 	whatap_pack "github.com/whatap/go-api/common/lang/pack"
 	whatap_hash "github.com/whatap/go-api/common/util/hash"
@@ -19,10 +21,10 @@ const (
 )
 
 type Whatap struct {
-	License string        `toml:"license"`
-	Servers []string      `toml:"servers"`
-	Pcode   int64         `toml:"pcode"`
-	Timeout time.Duration `toml:"timeout"`
+	License string          `toml:"license"`
+	Servers []string        `toml:"servers"`
+	Pcode   int64           `toml:"pcode"`
+	Timeout config.Duration `toml:"timeout"`
 	Oname   string
 	Oid     int32
 	Session TCPSession
@@ -104,6 +106,7 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 	}
+	// Transform telegraf metrics to whatap protocol.
 	for _, m := range metrics {
 		p := whatap_pack.NewTagCountPack()
 		p.Pcode = w.Pcode
@@ -115,12 +118,12 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 		for k, v := range m.Tags() {
 			p.PutTag(k, v)
 		}
-		// Add Oname
 		p.PutTag("oname", w.Oname)
+
+		// Convert time to microseconds.
 		p.Time = m.Time().UnixNano() / int64(time.Millisecond)
 
 		dout := whatap_io.NewDataOutputX()
-		// pack type
 		dout.WriteShort(p.GetPackType())
 		p.Write(dout)
 
@@ -131,14 +134,13 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 func (w *Whatap) send(code byte, b []byte) (err error) {
+	// Transmits data in compliance with whatap protocol.
 	dout := whatap_io.NewDataOutputX()
 	dout.WriteByte(NetSrcAgentOneway)
-	// ver
 	dout.WriteByte(code)
 	dout.WriteLong(w.Pcode)
 	dout.WriteLong(whatap_hash.Hash64Str(w.License))
 	dout.WriteIntBytes(b)
-	// pack data
 	sendbuf := dout.ToByteArray()
 
 	nbyteleft := len(sendbuf)
