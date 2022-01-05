@@ -1,8 +1,0 @@
-{
-  "Power": {
-    "@odata.id": "/redfish/v1/Chassis/1/Power"
-  },
-  "Thermal": {
-    "@odata.id": "/redfish/v1/Chassis/1/Thermal"
-  }
-}
