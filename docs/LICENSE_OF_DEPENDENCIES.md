@@ -66,6 +66,7 @@ following works:
 - github.com/cisco-ie/nx-telemetry-proto [Apache License 2.0](https://github.com/cisco-ie/nx-telemetry-proto/blob/master/LICENSE)
 - github.com/containerd/containerd [Apache License 2.0](https://github.com/containerd/containerd/blob/master/LICENSE)
 - github.com/coreos/go-semver [Apache License 2.0](https://github.com/coreos/go-semver/blob/main/LICENSE)
+- github.com/coreos/go-systemd [Apache License 2.0](https://github.com/coreos/go-systemd/blob/main/LICENSE)
 - github.com/couchbase/go-couchbase [MIT License](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT License](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
 - github.com/couchbase/goutils [Apache License 2.0](https://github.com/couchbase/goutils/blob/master/LICENSE.md)

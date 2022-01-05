@@ -42,6 +42,7 @@ require (
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
 	github.com/coreos/go-semver v0.3.0
+	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/couchbase/go-couchbase v0.1.0
 	github.com/denisenkom/go-mssqldb v0.10.0
 	github.com/dimchansky/utfbom v1.1.1
