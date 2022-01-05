@@ -68,7 +68,7 @@ func (w *Whatap) Connect() error {
 		return fmt.Errorf("only tcp is supported: %s", w.Servers[w.Session.Dest])
 	}
 
-	t := w.Timeout * time.Millisecond
+	t := time.Duration(w.Timeout) * time.Millisecond
 	client, err := net.DialTimeout(addr[0], addr[1], t)
 	if err != nil {
 		return err
@@ -149,7 +149,7 @@ func (w *Whatap) send(code byte, b []byte) (err error) {
 		nbytethistime := 0
 		// Set Deadline
 		err = w.Session.Client.SetWriteDeadline(time.Now().Add(
-			w.Timeout * time.Millisecond))
+			time.Duration(w.Timeout) * time.Millisecond))
 		if err != nil {
 			w.Log.Warn("cannot set tcp write deadline:", err)
 		}
@@ -167,7 +167,7 @@ func init() {
 	hostname, _ := os.Hostname()
 	outputs.Add("whatap", func() telegraf.Output {
 		return &Whatap{
-			Timeout: 60 * time.Second,
+			Timeout: config.Duration(60 * time.Second),
 			Session: TCPSession{},
 			Oname:   hostname,
 			Oid:     whatap_hash.HashStr(hostname),

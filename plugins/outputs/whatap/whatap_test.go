@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 
 	whatap_hash "github.com/whatap/go-api/common/util/hash"
@@ -20,10 +21,11 @@ import (
 func newWhatap() *Whatap {
 	hostname, _ := os.Hostname()
 	return &Whatap{
-		Timeout: 60 * time.Second,
+		Timeout: config.Duration(60 * time.Second),
 		Session: TCPSession{},
 		Oname:   hostname,
 		Oid:     whatap_hash.HashStr(hostname),
+		Log:     testutil.Logger{},
 	}
 }
 func TestWhatapConnect(t *testing.T) {
