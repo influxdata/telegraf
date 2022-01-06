@@ -187,12 +187,13 @@ func (m *Message) Ack() {
 
 func TestTopicTag(t *testing.T) {
 	tests := []struct {
-		name          string
-		topic         string
-		topicTag      func() *string
-		expectedError error
-		topicParsing  []TopicParsingConfig
-		expected      []telegraf.Metric
+		name                   string
+		topic                  string
+		topicTag               func() *string
+		expectedError          error
+		expectedErrorAfterInit error
+		topicParsing           []TopicParsingConfig
+		expected               []telegraf.Metric
 	}{
 		{
 			name:  "default topic when topic tag is unset for backwards compatibility",
@@ -436,30 +437,81 @@ func TestTopicTag(t *testing.T) {
 				),
 			},
 		},
-		// {
-		// 	name:  "topic parsing: topics with # shorter than measurement",
-		// 	topic: "telegraf/123/test/hello",
-		// 	topicTag: func() *string {
-		// 		tag := ""
-		// 		return &tag
-		// 	},
-		// 	topicParsing: []TopicParsingConfig{
-		// 		{
-		// 			Topic:       "telegraf/#",
-		// 			Measurement: "_/_/_/_/measurement/_/_",
-		// 		},
-		// 	},
-		// 	expected: []telegraf.Metric{
-		// 		testutil.MustMetric(
-		// 			"45",
-		// 			map[string]string{},
-		// 			map[string]interface{}{
-		// 				"time_idle": 42,
-		// 			},
-		// 			time.Unix(0, 0),
-		// 		),
-		// 	},
-		// },
+		{
+			name:  "topic parsing: topics with # shorter than measurement",
+			topic: "telegraf/123",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			expectedErrorAfterInit: fmt.Errorf("config error topic parsing: measurement length is longer than topic length"),
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "telegraf/#",
+					Measurement: "_/_/_/_/measurement/_/_",
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"45",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:  "topic parsing: topics with # shorter than tag",
+			topic: "telegraf/123",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			expectedErrorAfterInit: fmt.Errorf("config error topic parsing: tags length is longer than topic length"),
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic: "telegraf/#",
+					Tags:  "_/_/_/_/tag/_/_",
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"45",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:  "topic parsing: topics with # shorter than fields",
+			topic: "telegraf/123",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			expectedErrorAfterInit: fmt.Errorf("config error topic parsing: fields length is longer than topic length"),
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:  "telegraf/#",
+					Fields: "_/_/_/_/field/_/_",
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"45",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -506,6 +558,11 @@ func TestTopicTag(t *testing.T) {
 			handler(nil, &m)
 
 			plugin.Stop()
+
+			require.Equal(t, tt.expectedErrorAfterInit, acc.FirstError())
+			if tt.expectedErrorAfterInit != nil {
+				return
+			}
 
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
 				testutil.IgnoreTime())
