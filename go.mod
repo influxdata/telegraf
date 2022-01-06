@@ -70,7 +70,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/gosnmp/gosnmp v1.33.0
-	github.com/grid-x/modbus v0.0.0-20210224155242-c4a3d042e99b
+	github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9
 	github.com/gwos/tcg/sdk v0.0.0-20211223101342-35fbd1ae683c
 	github.com/harlow/kinesis-consumer v0.3.6-0.20210911031324-5a873d6e9fec
 	github.com/hashicorp/consul/api v1.9.1
@@ -230,7 +230,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
-	github.com/grid-x/serial v0.0.0-20191104121038-e24bc9bf6f08 // indirect
+	github.com/grid-x/serial v0.0.0-20211107191517-583c7356b3aa // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
@@ -334,7 +334,7 @@ require (
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/tools v0.1.8 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	golang.zx2c4.com/wireguard v0.0.20200121 // indirect
+	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
@@ -363,12 +363,6 @@ replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
 
 // replaced due to https//github.com/mdlayher/apcupsd/issues/10
 replace github.com/mdlayher/apcupsd => github.com/influxdata/apcupsd v0.0.0-20210427145308-694d5caead0e
-
-//proxy.golang.org has versions of golang.zx2c4.com/wireguard with leading v's, whereas the git repo has tags without leading v's: https://git.zx2c4.com/wireguard-go/refs/tags
-//So, fetching this module with version v0.0.20200121 (as done by the transitive dependency
-//https://github.com/WireGuard/wgctrl-go/blob/e35592f146e40ce8057113d14aafcc3da231fbac/go.mod#L12 ) was not working when using GOPROXY=direct.
-//Replacing with the pseudo-version works around this.
-//replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v0.0.0-20200121152719-05b03c675090
 
 // replaced due to open PR updating protobuf https://github.com/cisco-ie/nx-telemetry-proto/pull/1
 replace github.com/cisco-ie/nx-telemetry-proto => github.com/sbezverk/nx-telemetry-proto v0.0.0-20210629125746-3c19a51b1abc
