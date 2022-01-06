@@ -288,7 +288,7 @@ func TestNewPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 		"x-ourtime2-4", "x-ourtime4-8", "x-ourtime8-16"}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasInt64Field("powerdns_recursor", metric), metric)
+		require.True(t, acc.HasInt64Field("powerdns_recursor", metric), metric)
 	}
 }
 
