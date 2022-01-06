@@ -2,13 +2,13 @@ package sarama
 
 import "time"
 
-//AlterConfigsResponse is a reponse type for alter config
+//AlterConfigsResponse is a response type for alter config
 type AlterConfigsResponse struct {
 	ThrottleTime time.Duration
 	Resources    []*AlterConfigsResourceResponse
 }
 
-//AlterConfigsResourceResponse is a reponse type for alter config resource
+//AlterConfigsResourceResponse is a response type for alter config resource
 type AlterConfigsResourceResponse struct {
 	ErrorCode int16
 	ErrorMsg  string
@@ -89,6 +89,10 @@ func (a *AlterConfigsResponse) key() int16 {
 }
 
 func (a *AlterConfigsResponse) version() int16 {
+	return 0
+}
+
+func (a *AlterConfigsResponse) headerVersion() int16 {
 	return 0
 }
 

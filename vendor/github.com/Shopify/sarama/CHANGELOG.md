@@ -1,5 +1,157 @@
 # Changelog
 
+#### Unreleased
+
+#### Version 1.27.1 (2020-10-07)
+
+# Improvements
+
+#1775 - @d1egoaz - Adds a Producer Interceptor example
+#1781 - @justin-chen - Refresh brokers given list of seed brokers
+#1784 - @justin-chen - Add randomize seed broker method
+#1790 - @d1egoaz - remove example binary
+#1798 - @bai - Test against Go 1.15
+#1785 - @justin-chen - Add private method to Client interface to prevent implementation
+#1802 - @uvw - Support Go 1.13 error unwrapping
+
+# Fixes
+
+#1791 - @stanislavkozlovski - bump default version to 1.0.0
+
+#### Version 1.27.0 (2020-08-11)
+
+# Improvements
+
+#1466 - @rubenvp8510  - Expose kerberos fast negotiation configuration
+#1695 - @KJTsanaktsidis - Use docker-compose to run the functional tests
+#1699 - @wclaeys  - Consumer group support for manually comitting offsets
+#1714 - @bai - Bump Go to version 1.14.3, golangci-lint to 1.27.0
+#1726 - @d1egoaz - Include zstd on the functional tests
+#1730 - @d1egoaz - KIP-42 Add producer and consumer interceptors
+#1738 - @varun06 - fixed variable names that are named same as some std lib package names
+#1741 - @varun06 - updated zstd dependency to latest v1.10.10
+#1743 - @varun06 - Fixed declaration dependencies and other lint issues in code base
+#1763 - @alrs - remove deprecated tls options from test
+#1769 - @bai - Add support for Kafka 2.6.0
+
+# Fixes
+
+#1697 - @kvch - Use gofork for encoding/asn1 to fix ASN errors during Kerberos authentication
+#1744 - @alrs  - Fix isBalanced Function Signature
+
+#### Version 1.26.4 (2020-05-19)
+
+# Fixes
+
+- #1701 - @d1egoaz - Set server name only for the current broker
+- #1694 - @dnwe - testfix: set KAFKA_HEAP_OPTS for zk and kafka
+
+#### Version 1.26.3 (2020-05-07)
+
+# Fixes
+
+- #1692 - @d1egoaz - Set tls ServerName to fix issue: either ServerName or InsecureSkipVerify must be specified in the tls.Config
+
+#### Version 1.26.2 (2020-05-06)
+
+# ⚠️ Known Issues
+
+This release has been marked as not ready for production and may be unstable, please use v1.26.4.
+
+# Improvements
+
+- #1560 - @iyacontrol - add sync pool for gzip 1-9
+- #1605 - @dnwe - feat: protocol support for V11 fetch w/ rackID
+- #1617 - @sladkoff / @dwi-di / @random-dwi - Add support for alter/list partition reassignements APIs 
+- #1632 - @bai - Add support for Go 1.14
+- #1640 - @random-dwi - Feature/fix list partition reassignments
+- #1646 - @mimaison - Add DescribeLogDirs to admin client
+- #1667 - @bai - Add support for kafka 2.5.0
+
+# Fixes
+
+- #1594 - @sladkoff - Sets ConfigEntry.Default flag in addition to the ConfigEntry.Source for Kafka versions > V1_1_0_0
+- #1601 - @alrs - fix: remove use of testing.T.FailNow() inside goroutine
+- #1602 - @d1egoaz - adds a note about consumer groups Consume method
+- #1607 - @darklore - Fix memory leak when Broker.Open and Broker.Close called repeatedly
+- #1613 - @wblakecaldwell - Updated "retrying" log message when BackoffFunc implemented
+- #1614 - @alrs - produce_response.go: Remove Unused Functions
+- #1619 - @alrs - tools/kafka-producer-performance: prune unused flag variables
+- #1639 - @agriffaut - Handle errors with no message but error code
+- #1643 - @kzinglzy - fix `config.net.keepalive`
+- #1644 - @KJTsanaktsidis - Fix brokers continually allocating new Session IDs
+- #1645 - @Stephan14 - Remove broker(s) which no longer exist in metadata
+- #1650 - @lavoiesl - Return the response error in heartbeatLoop
+- #1661 - @KJTsanaktsidis - Fix "broker received out of order sequence" when brokers die
+- #1666 - @KevinJCross - Bugfix: Allow TLS connections to work over socks proxy.
+
+#### Version 1.26.1 (2020-02-04)
+
+Improvements:
+- Add requests-in-flight metric ([1539](https://github.com/Shopify/sarama/pull/1539))
+- Fix misleading example for cluster admin ([1595](https://github.com/Shopify/sarama/pull/1595))
+- Replace Travis with GitHub Actions, linters housekeeping ([1573](https://github.com/Shopify/sarama/pull/1573))
+- Allow BalanceStrategy to provide custom assignment data ([1592](https://github.com/Shopify/sarama/pull/1592))
+
+Bug Fixes:
+- Adds back Consumer.Offsets.CommitInterval to fix API ([1590](https://github.com/Shopify/sarama/pull/1590))
+- Fix error message s/CommitInterval/AutoCommit.Interval ([1589](https://github.com/Shopify/sarama/pull/1589))
+
+#### Version 1.26.0 (2020-01-24)
+
+New Features:
+- Enable zstd compression
+  ([1574](https://github.com/Shopify/sarama/pull/1574),
+  [1582](https://github.com/Shopify/sarama/pull/1582))
+- Support headers in tools kafka-console-producer
+  ([1549](https://github.com/Shopify/sarama/pull/1549))
+
+Improvements:
+- Add SASL AuthIdentity to SASL frames (authzid)
+  ([1585](https://github.com/Shopify/sarama/pull/1585)).
+
+Bug Fixes:
+- Sending messages with ZStd compression enabled fails in multiple ways
+  ([1252](https://github.com/Shopify/sarama/issues/1252)).
+- Use the broker for any admin on BrokerConfig
+  ([1571](https://github.com/Shopify/sarama/pull/1571)).
+- Set DescribeConfigRequest Version field
+  ([1576](https://github.com/Shopify/sarama/pull/1576)).
+- ConsumerGroup flooding logs with client/metadata update req
+  ([1578](https://github.com/Shopify/sarama/pull/1578)).
+- MetadataRequest version in DescribeCluster
+  ([1580](https://github.com/Shopify/sarama/pull/1580)).
+- Fix deadlock in consumer group handleError
+  ([1581](https://github.com/Shopify/sarama/pull/1581))
+- Fill in the Fetch{Request,Response} protocol
+  ([1582](https://github.com/Shopify/sarama/pull/1582)).
+- Retry topic request on ControllerNotAvailable
+  ([1586](https://github.com/Shopify/sarama/pull/1586)).
+
+#### Version 1.25.0 (2020-01-13)
+
+New Features:
+- Support TLS protocol in kafka-producer-performance
+  ([1538](https://github.com/Shopify/sarama/pull/1538)).
+- Add support for kafka 2.4.0
+  ([1552](https://github.com/Shopify/sarama/pull/1552)).
+
+Improvements:
+- Allow the Consumer to disable auto-commit offsets
+  ([1164](https://github.com/Shopify/sarama/pull/1164)).
+- Produce records with consistent timestamps
+  ([1455](https://github.com/Shopify/sarama/pull/1455)).
+
+Bug Fixes:
+- Fix incorrect SetTopicMetadata name mentions
+  ([1534](https://github.com/Shopify/sarama/pull/1534)).
+- Fix client.tryRefreshMetadata Println
+  ([1535](https://github.com/Shopify/sarama/pull/1535)).
+- Fix panic on calling updateMetadata on closed client
+  ([1531](https://github.com/Shopify/sarama/pull/1531)).
+- Fix possible faulty metrics in TestFuncProducing
+  ([1545](https://github.com/Shopify/sarama/pull/1545)).
+
 #### Version 1.24.1 (2019-10-31)
 
 New Features:

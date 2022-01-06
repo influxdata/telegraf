@@ -2,7 +2,7 @@ package sarama
 
 import "time"
 
-//CreateAclsResponse is a an acl reponse creation type
+//CreateAclsResponse is a an acl response creation type
 type CreateAclsResponse struct {
 	ThrottleTime         time.Duration
 	AclCreationResponses []*AclCreationResponse
@@ -52,6 +52,10 @@ func (c *CreateAclsResponse) key() int16 {
 }
 
 func (c *CreateAclsResponse) version() int16 {
+	return 0
+}
+
+func (c *CreateAclsResponse) headerVersion() int16 {
 	return 0
 }
 

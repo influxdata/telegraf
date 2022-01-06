@@ -48,6 +48,10 @@ func (d *DeleteAclsRequest) version() int16 {
 	return int16(d.Version)
 }
 
+func (c *DeleteAclsRequest) headerVersion() int16 {
+	return 1
+}
+
 func (d *DeleteAclsRequest) requiredVersion() KafkaVersion {
 	switch d.Version {
 	case 1:

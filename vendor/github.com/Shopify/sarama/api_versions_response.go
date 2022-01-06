@@ -1,6 +1,6 @@
 package sarama
 
-//ApiVersionsResponseBlock is an api version reponse block type
+//ApiVersionsResponseBlock is an api version response block type
 type ApiVersionsResponseBlock struct {
 	ApiKey     int16
 	MinVersion int16
@@ -81,6 +81,10 @@ func (r *ApiVersionsResponse) key() int16 {
 }
 
 func (r *ApiVersionsResponse) version() int16 {
+	return 0
+}
+
+func (a *ApiVersionsResponse) headerVersion() int16 {
 	return 0
 }
 

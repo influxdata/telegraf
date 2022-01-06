@@ -6,7 +6,7 @@ type offsetRequestBlock struct {
 }
 
 func (b *offsetRequestBlock) encode(pe packetEncoder, version int16) error {
-	pe.putInt64(int64(b.time))
+	pe.putInt64(b.time)
 	if version == 0 {
 		pe.putInt32(b.maxOffsets)
 	}
@@ -114,6 +114,10 @@ func (r *OffsetRequest) key() int16 {
 
 func (r *OffsetRequest) version() int16 {
 	return r.Version
+}
+
+func (r *OffsetRequest) headerVersion() int16 {
+	return 1
 }
 
 func (r *OffsetRequest) requiredVersion() KafkaVersion {

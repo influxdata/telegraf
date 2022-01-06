@@ -39,6 +39,10 @@ Broker related metrics:
 	| response-rate-for-broker-<broker-id>         | meter      | Responses/second received from a given broker                 |
 	| response-size                                | histogram  | Distribution of the response size in bytes for all brokers    |
 	| response-size-for-broker-<broker-id>         | histogram  | Distribution of the response size in bytes for a given broker |
+	| requests-in-flight                           | counter    | The current number of in-flight requests awaiting a response  |
+	|                                              |            | for all brokers                                               |
+	| requests-in-flight-for-broker-<broker-id>    | counter    | The current number of in-flight requests awaiting a response  |
+	|                                              |            | for a given broker                                            |
 	+----------------------------------------------+------------+---------------------------------------------------------------+
 
 Note that we do not gather specific metrics for seed brokers but they are part of the "all brokers" metrics.

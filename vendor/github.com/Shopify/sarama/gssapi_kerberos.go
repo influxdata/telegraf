@@ -1,13 +1,13 @@
 package sarama
 
 import (
-	"encoding/asn1"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
+	"github.com/jcmturner/gofork/encoding/asn1"
 	"gopkg.in/jcmturner/gokrb5.v7/asn1tools"
 	"gopkg.in/jcmturner/gokrb5.v7/gssapi"
 	"gopkg.in/jcmturner/gokrb5.v7/iana/chksumtype"
@@ -34,6 +34,7 @@ type GSSAPIConfig struct {
 	Username           string
 	Password           string
 	Realm              string
+	DisablePAFXFAST    bool
 }
 
 type GSSAPIKerberosAuth struct {
@@ -200,7 +201,6 @@ func (krbAuth *GSSAPIKerberosAuth) initSecContext(bytes []byte, kerberosClient K
 
 /* This does the handshake for authorization */
 func (krbAuth *GSSAPIKerberosAuth) Authorize(broker *Broker) error {
-
 	kerberosClient, err := krbAuth.NewKerberosClientFunc(krbAuth.Config)
 	if err != nil {
 		Logger.Printf("Kerberos client error: %s", err)
@@ -243,7 +243,7 @@ func (krbAuth *GSSAPIKerberosAuth) Authorize(broker *Broker) error {
 		}
 		broker.updateOutgoingCommunicationMetrics(bytesWritten)
 		if krbAuth.step == GSS_API_VERIFY {
-			var bytesRead = 0
+			bytesRead := 0
 			receivedBytes, bytesRead, err = krbAuth.readPackage(broker)
 			requestLatency := time.Since(requestTime)
 			broker.updateIncomingCommunicationMetrics(bytesRead, requestLatency)

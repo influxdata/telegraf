@@ -206,6 +206,10 @@ func (r *ProduceRequest) version() int16 {
 	return r.Version
 }
 
+func (r *ProduceRequest) headerVersion() int16 {
+	return 1
+}
+
 func (r *ProduceRequest) requiredVersion() KafkaVersion {
 	switch r.Version {
 	case 1:
@@ -214,6 +218,8 @@ func (r *ProduceRequest) requiredVersion() KafkaVersion {
 		return V0_10_0_0
 	case 3:
 		return V0_11_0_0
+	case 7:
+		return V2_1_0_0
 	default:
 		return MinVersion
 	}

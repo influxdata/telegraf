@@ -83,7 +83,7 @@ github.com/Microsoft/ApplicationInsights-Go/appinsights/contracts
 # github.com/Microsoft/go-winio v0.4.9
 ## explicit
 github.com/Microsoft/go-winio
-# github.com/Shopify/sarama v1.24.1
+# github.com/Shopify/sarama v1.27.1
 ## explicit
 github.com/Shopify/sarama
 # github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
@@ -252,7 +252,7 @@ github.com/docker/go-units
 # github.com/docker/libnetwork v0.8.0-dev.2.0.20181012153825-d7b61745d166
 ## explicit
 github.com/docker/libnetwork/ipvs
-# github.com/eapache/go-resiliency v1.1.0
+# github.com/eapache/go-resiliency v1.2.0
 github.com/eapache/go-resiliency/breaker
 # github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21
 github.com/eapache/go-xerial-snappy
@@ -351,7 +351,7 @@ github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
 # github.com/golang/snappy v0.0.1
 github.com/golang/snappy
-# github.com/google/go-cmp v0.4.0
+# github.com/google/go-cmp v0.5.2
 ## explicit
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/cmpopts
@@ -403,7 +403,7 @@ github.com/hashicorp/go-cleanhttp
 # github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90
 ## explicit
 github.com/hashicorp/go-rootcerts
-# github.com/hashicorp/go-uuid v1.0.1
+# github.com/hashicorp/go-uuid v1.0.2
 github.com/hashicorp/go-uuid
 # github.com/hashicorp/memberlist v0.1.5
 ## explicit
@@ -463,8 +463,7 @@ github.com/karrick/godirwalk
 # github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 ## explicit
 github.com/kballard/go-shellquote
-# github.com/klauspost/compress v1.9.2
-## explicit
+# github.com/klauspost/compress v1.11.0
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
 github.com/klauspost/compress/snappy
@@ -474,9 +473,9 @@ github.com/klauspost/compress/zstd/internal/xxhash
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515
 github.com/kr/logfmt
-# github.com/kr/pretty v0.1.0
+# github.com/kr/pretty v0.2.1
 github.com/kr/pretty
-# github.com/kr/text v0.1.0
+# github.com/kr/text v0.2.0
 github.com/kr/text
 # github.com/kubernetes/apimachinery v0.0.0-20190119020841-d41becfba9ee
 ## explicit
@@ -575,7 +574,7 @@ github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/scribe
 github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore
 github.com/openzipkin/zipkin-go-opentracing/types
 github.com/openzipkin/zipkin-go-opentracing/wire
-# github.com/pierrec/lz4 v2.2.6+incompatible
+# github.com/pierrec/lz4 v2.5.2+incompatible
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
 # github.com/pkg/errors v0.9.1
@@ -600,7 +599,7 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
+# github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
 github.com/rcrowley/go-metrics
 # github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 ## explicit
@@ -634,7 +633,7 @@ github.com/soniah/gosnmp
 github.com/streadway/amqp
 # github.com/stretchr/objx v0.1.1
 github.com/stretchr/objx
-# github.com/stretchr/testify v1.5.1
+# github.com/stretchr/testify v1.6.1
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
@@ -695,6 +694,11 @@ github.com/wvanbergen/kafka/consumergroup
 # github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a
 ## explicit
 github.com/wvanbergen/kazoo-go
+# github.com/xdg/scram v1.0.3
+## explicit
+github.com/xdg/scram
+# github.com/xdg/stringprep v1.0.0
+github.com/xdg/stringprep
 # github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4
 ## explicit
 github.com/yuin/gopher-lua
@@ -726,7 +730,7 @@ go.starlark.net/internal/spell
 go.starlark.net/resolve
 go.starlark.net/starlark
 go.starlark.net/syntax
-# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+# golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/curve25519
@@ -747,7 +751,7 @@ golang.org/x/lint/golint
 # golang.org/x/mod v0.2.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20200301022130-244492dfa37a
+# golang.org/x/net v0.0.0-20200904194848-62affa334b73
 ## explicit
 golang.org/x/net/bpf
 golang.org/x/net/context
@@ -839,7 +843,7 @@ golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/packagesinternal
-# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
+# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # golang.zx2c4.com/wireguard v0.0.20200121
@@ -967,8 +971,7 @@ gopkg.in/inf.v0
 gopkg.in/jcmturner/aescts.v1
 # gopkg.in/jcmturner/dnsutils.v1 v1.0.1
 gopkg.in/jcmturner/dnsutils.v1
-# gopkg.in/jcmturner/gokrb5.v7 v7.3.0
-## explicit
+# gopkg.in/jcmturner/gokrb5.v7 v7.5.0
 gopkg.in/jcmturner/gokrb5.v7/asn1tools
 gopkg.in/jcmturner/gokrb5.v7/client
 gopkg.in/jcmturner/gokrb5.v7/config
@@ -1022,6 +1025,8 @@ gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.2.5
 ## explicit
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+gopkg.in/yaml.v3
 # gotest.tools v2.2.0+incompatible
 ## explicit
 # honnef.co/go/tools v0.0.1-2020.1.3

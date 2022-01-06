@@ -51,6 +51,10 @@ func (f *FindCoordinatorRequest) version() int16 {
 	return f.Version
 }
 
+func (r *FindCoordinatorRequest) headerVersion() int16 {
+	return 1
+}
+
 func (f *FindCoordinatorRequest) requiredVersion() KafkaVersion {
 	switch f.Version {
 	case 1:

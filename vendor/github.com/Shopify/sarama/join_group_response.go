@@ -123,6 +123,10 @@ func (r *JoinGroupResponse) version() int16 {
 	return r.Version
 }
 
+func (r *JoinGroupResponse) headerVersion() int16 {
+	return 0
+}
+
 func (r *JoinGroupResponse) requiredVersion() KafkaVersion {
 	switch r.Version {
 	case 2:

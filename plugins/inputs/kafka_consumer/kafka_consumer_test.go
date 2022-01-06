@@ -218,6 +218,9 @@ func (s *FakeConsumerGroupSession) Context() context.Context {
 	return s.ctx
 }
 
+func (s *FakeConsumerGroupSession) Commit() {
+}
+
 type FakeConsumerGroupClaim struct {
 	messages chan *sarama.ConsumerMessage
 }

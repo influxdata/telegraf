@@ -3,6 +3,7 @@ package sarama
 import (
 	"encoding/binary"
 	"encoding/hex"
+
 	"gopkg.in/jcmturner/gokrb5.v7/credentials"
 	"gopkg.in/jcmturner/gokrb5.v7/gssapi"
 	"gopkg.in/jcmturner/gokrb5.v7/iana/keyusage"
@@ -55,7 +56,6 @@ func (h *KafkaGSSAPIHandler) MockKafkaGSSAPI(buffer []byte) []byte {
 }
 
 type MockKerberosClient struct {
-	asReqBytes  string
 	asRepBytes  string
 	ASRep       messages.ASRep
 	credentials *credentials.Credentials

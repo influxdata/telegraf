@@ -112,6 +112,10 @@ func (r *DescribeConfigsResponse) version() int16 {
 	return r.Version
 }
 
+func (r *DescribeConfigsResponse) headerVersion() int16 {
+	return 0
+}
+
 func (r *DescribeConfigsResponse) requiredVersion() KafkaVersion {
 	switch r.Version {
 	case 1:
@@ -249,12 +253,16 @@ func (r *ConfigEntry) decode(pd packetDecoder, version int16) (err error) {
 			return err
 		}
 		r.Default = defaultB
+		if defaultB {
+			r.Source = SourceDefault
+		}
 	} else {
 		source, err := pd.getInt8()
 		if err != nil {
 			return err
 		}
 		r.Source = ConfigSource(source)
+		r.Default = r.Source == SourceDefault
 	}
 
 	sensitive, err := pd.getBool()
@@ -277,7 +285,6 @@ func (r *ConfigEntry) decode(pd packetDecoder, version int16) (err error) {
 			}
 			r.Synonyms[i] = s
 		}
-
 	}
 	return nil
 }

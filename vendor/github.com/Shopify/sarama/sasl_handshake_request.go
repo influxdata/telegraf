@@ -29,6 +29,10 @@ func (r *SaslHandshakeRequest) version() int16 {
 	return r.Version
 }
 
+func (r *SaslHandshakeRequest) headerVersion() int16 {
+	return 1
+}
+
 func (r *SaslHandshakeRequest) requiredVersion() KafkaVersion {
 	return V0_10_0_0
 }

@@ -61,6 +61,10 @@ func (r *DescribeLogDirsResponse) version() int16 {
 	return r.Version
 }
 
+func (r *DescribeLogDirsResponse) headerVersion() int16 {
+	return 0
+}
+
 func (r *DescribeLogDirsResponse) requiredVersion() KafkaVersion {
 	return V1_0_0_0
 }
@@ -80,6 +84,9 @@ func (r *DescribeLogDirsResponseDirMetadata) encode(pe packetEncoder) error {
 		return err
 	}
 
+	if err := pe.putArrayLength(len(r.Topics)); err != nil {
+		return err
+	}
 	for _, topic := range r.Topics {
 		if err := topic.encode(pe); err != nil {
 			return err
@@ -133,6 +140,9 @@ func (r *DescribeLogDirsResponseTopic) encode(pe packetEncoder) error {
 		return err
 	}
 
+	if err := pe.putArrayLength(len(r.Partitions)); err != nil {
+		return err
+	}
 	for _, partition := range r.Partitions {
 		if err := partition.encode(pe); err != nil {
 			return err

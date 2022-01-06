@@ -80,6 +80,10 @@ func (d *DeleteRecordsResponse) version() int16 {
 	return 0
 }
 
+func (d *DeleteRecordsResponse) headerVersion() int16 {
+	return 0
+}
+
 func (d *DeleteRecordsResponse) requiredVersion() KafkaVersion {
 	return V0_11_0_0
 }

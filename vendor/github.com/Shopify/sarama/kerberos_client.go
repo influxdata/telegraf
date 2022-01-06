@@ -19,14 +19,9 @@ func (c *KerberosGoKrb5Client) CName() types.PrincipalName {
 	return c.Credentials.CName()
 }
 
-/*
-*
-* Create kerberos client used to obtain TGT and TGS tokens
-* used gokrb5 library, which is a pure go kerberos client with
-* some GSS-API capabilities, and SPNEGO support. Kafka does not use SPNEGO
-* it uses pure Kerberos 5 solution (RFC-4121 and RFC-4120).
-*
- */
+// NewKerberosClient creates kerberos client used to obtain TGT and TGS tokens.
+// It uses pure go Kerberos 5 solution (RFC-4121 and RFC-4120).
+// uses gokrb5 library underlying which is a pure go kerberos client with some GSS-API capabilities.
 func NewKerberosClient(config *GSSAPIConfig) (KerberosClient, error) {
 	cfg, err := krb5config.Load(config.KerberosConfigPath)
 	if err != nil {
@@ -42,10 +37,10 @@ func createClient(config *GSSAPIConfig, cfg *krb5config.Config) (KerberosClient,
 		if err != nil {
 			return nil, err
 		}
-		client = krb5client.NewClientWithKeytab(config.Username, config.Realm, kt, cfg)
+		client = krb5client.NewClientWithKeytab(config.Username, config.Realm, kt, cfg, krb5client.DisablePAFXFAST(config.DisablePAFXFAST))
 	} else {
 		client = krb5client.NewClientWithPassword(config.Username,
-			config.Realm, config.Password, cfg)
+			config.Realm, config.Password, cfg, krb5client.DisablePAFXFAST(config.DisablePAFXFAST))
 	}
 	return &KerberosGoKrb5Client{*client}, nil
 }

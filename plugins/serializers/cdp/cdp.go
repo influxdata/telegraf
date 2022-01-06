@@ -9,12 +9,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-/// The eventPayload format to wrap a usage event in.
-type eventPayload struct {
-	Type    string `json:"type"`
-	Message event  `json:"msg"`
-}
-
 /// The format of the system usage events defined in CDP.
 type event struct {
 	Timestamp     int       `json:"ts" validate:"required"`
@@ -24,7 +18,6 @@ type event struct {
 	ProjectID     string    `json:"projectId"`
 	EnvironmentID string    `json:"environmentId"`
 	PlayerID      string    `json:"playerId"`
-	Region        string    `json:"region"`
 	StartTime     int       `json:"startTime" validate:"required"`
 	EndTime       int       `json:"endTime" validate:"required"`
 	Type          string    `json:"type" validate:"required"`
@@ -38,6 +31,7 @@ type eventTags struct {
 	MultiplayMachineID string `json:"multiplayMachineId"`
 	MultiplayInfraType string `json:"multiplayInfraType"`
 	MultiplayProjectID string `json:"multiplayProjectId"`
+	MultiplayRegion    string `json:"multiplayRegion"`
 	AnalyticsEventType string `json:"analyticsEventType"`
 	AnalyticsEventName string `json:"analyticsEventName"`
 }
@@ -62,12 +56,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	p := eventPayload{
-		Type:    "unity.services.systemUsage.v1",
-		Message: *e,
-	}
-
-	serialized, err := json.Marshal(p)
+	serialized, err := json.Marshal(e)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -99,18 +88,17 @@ func (s *Serializer) createEvent(metric telegraf.Metric) (*event, error) {
 	// prepare identifying information for the system usage event
 	eventID := uuid.Must(uuid.NewV4()).String()
 	timestamp := toCdpTimestamp(time.Now())
-	fingerprint := fmt.Sprintf("%v", metric.HashID())
 	endTime := toCdpTimestamp(metric.Time())
 
 	// mapping of required tag/field names to a function which pulls their values from "metric"
 	requiredKeys := map[string]func(telegraf.Metric, string) (interface{}, error){
 		"billing_region_id":      getTag,
-		"bytes_sent_sum":         getFieldAsAmount,
 		"customer_id":            getTag,
 		"environment_id":         getTag,
 		"fleet_id":               getTag,
 		"metering_event_machine": getTag,
 		"project_id":             getTag,
+		"quantity":               getFieldAsAmount,
 		"service":                getTag,
 		"start_time":             getFieldAsStartTime,
 		"virtual_type":           getTag,
@@ -130,21 +118,21 @@ func (s *Serializer) createEvent(metric telegraf.Metric) (*event, error) {
 	return &event{
 		Timestamp:     timestamp,
 		EventID:       eventID,
-		Fingerprint:   fingerprint,
+		Fingerprint:   eventID, // the UUID is sufficient for distinguishing events
 		ServiceID:     values["service"].(string),
 		ProjectID:     values["project_id"].(string),
 		EnvironmentID: values["environment_id"].(string),
 		PlayerID:      "",
-		Region:        values["billing_region_id"].(string),
 		StartTime:     values["start_time"].(int),
 		EndTime:       endTime,
 		Type:          "egress",
-		Amount:        values["bytes_sent_sum"].(float64),
+		Amount:        values["quantity"].(float64),
 		Tags: eventTags{
 			MultiplayFleetID:   values["fleet_id"].(string),
 			MultiplayMachineID: values["metering_event_machine"].(string),
 			MultiplayInfraType: values["virtual_type"].(string),
 			MultiplayProjectID: values["customer_id"].(string),
+			MultiplayRegion:    values["billing_region_id"].(string),
 			AnalyticsEventType: "",
 			AnalyticsEventName: "",
 		},
@@ -178,26 +166,23 @@ func getFieldAsStartTime(metric telegraf.Metric, propertyName string) (interface
 
 // Given a field name, extracts it from "metric" and converts it into a value compatible with a CDP "amount".
 func getFieldAsAmount(metric telegraf.Metric, fieldName string) (interface{}, error) {
-
-	amount, ok := metric.GetField(fieldName)
-	if !ok {
-		return 0, fmt.Errorf("missing required field: %v", fieldName)
+	if amount, ok := metric.GetField(fieldName); ok {
+		switch i := amount.(type) {
+		case float64:
+			return i, nil
+		case float32:
+			return float64(i), nil
+		case int64:
+			return float64(i), nil
+		case int32:
+			return float64(i), nil
+		case int:
+			return float64(i), nil
+		default:
+			return 0.0, fmt.Errorf("unrecognized type %T (value: %v)", amount, amount)
+		}
 	}
-
-	switch i := amount.(type) {
-	case float64:
-		return i, nil
-	case float32:
-		return float64(i), nil
-	case int64:
-		return float64(i), nil
-	case int32:
-		return float64(i), nil
-	case int:
-		return float64(i), nil
-	default:
-		return 0, fmt.Errorf("unrecognized type %T (value: %v)", amount, amount)
-	}
+	return 0.0, nil
 }
 
 // Convenience method for converting 'time.Time' to the milliseconds required by CDP.

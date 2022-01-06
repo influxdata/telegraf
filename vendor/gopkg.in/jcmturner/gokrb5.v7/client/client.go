@@ -188,6 +188,18 @@ func (cl *Client) Login() error {
 	return nil
 }
 
+// AffirmLogin will only perform an AS exchange with the KDC if the client does not already have a TGT.
+func (cl *Client) AffirmLogin() error {
+	_, endTime, _, _, err := cl.sessionTimes(cl.Credentials.Domain())
+	if err != nil || time.Now().UTC().After(endTime) {
+		err := cl.Login()
+		if err != nil {
+			return fmt.Errorf("could not get valid TGT for client's realm: %v", err)
+		}
+	}
+	return nil
+}
+
 // realmLogin obtains or renews a TGT and establishes a session for the realm specified.
 func (cl *Client) realmLogin(realm string) error {
 	if realm == cl.Credentials.Domain() {

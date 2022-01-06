@@ -52,9 +52,10 @@ type (
 		EnableTLS *bool `toml:"enable_tls"`
 		tlsint.ClientConfig
 
-		SASLUsername string `toml:"sasl_username"`
-		SASLPassword string `toml:"sasl_password"`
-		SASLVersion  *int   `toml:"sasl_version"`
+		SASLUsername  string `toml:"sasl_username"`
+		SASLPassword  string `toml:"sasl_password"`
+		SASLVersion   *int   `toml:"sasl_version"`
+		SASLMechanism string `toml:"sasl_mechanism"`
 
 		Log telegraf.Logger `toml:"-"`
 
@@ -207,6 +208,10 @@ var sampleConfig = `
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  ## SASL handshake mechanism. Supported values include "plain" (default)
+  ## and "scram_sha512".
+  # sasl_mechanism = "plain"
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -324,6 +329,19 @@ func (k *Kafka) Connect() error {
 		config.Net.SASL.User = k.SASLUsername
 		config.Net.SASL.Password = k.SASLPassword
 		config.Net.SASL.Enable = true
+
+		if k.SASLMechanism != "" {
+			if k.SASLMechanism == "scram_sha512" {
+				k.Log.Infof("Using SCRAM-SHA512 SASL mechanism")
+				config.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
+				config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &SCRAMClient{HashGeneratorFcn: SHA512} }
+			} else if k.SASLMechanism == "plain" {
+				k.Log.Infof("Using plain SASL mechanism")
+				config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+			} else {
+				return fmt.Errorf("Unknown SASL mechanism: %v", k.SASLMechanism)
+			}
+		}
 
 		version, err := kafka.SASLVersion(config.Version, k.SASLVersion)
 		if err != nil {

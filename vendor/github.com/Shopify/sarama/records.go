@@ -8,7 +8,6 @@ const (
 	defaultRecords
 
 	magicOffset = 16
-	magicLength = 1
 )
 
 // Records implements a union type containing either a RecordBatch or a legacy MessageSet.

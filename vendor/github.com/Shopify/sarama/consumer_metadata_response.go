@@ -73,6 +73,10 @@ func (r *ConsumerMetadataResponse) version() int16 {
 	return 0
 }
 
+func (r *ConsumerMetadataResponse) headerVersion() int16 {
+	return 0
+}
+
 func (r *ConsumerMetadataResponse) requiredVersion() KafkaVersion {
 	return V0_8_2_0
 }

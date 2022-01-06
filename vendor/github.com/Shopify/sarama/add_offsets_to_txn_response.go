@@ -40,6 +40,10 @@ func (a *AddOffsetsToTxnResponse) version() int16 {
 	return 0
 }
 
+func (a *AddOffsetsToTxnResponse) headerVersion() int16 {
+	return 0
+}
+
 func (a *AddOffsetsToTxnResponse) requiredVersion() KafkaVersion {
 	return V0_11_0_0
 }

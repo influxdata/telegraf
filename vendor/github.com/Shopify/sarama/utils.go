@@ -26,9 +26,7 @@ func (slice int32Slice) Swap(i, j int) {
 
 func dupInt32Slice(input []int32) []int32 {
 	ret := make([]int32, 0, len(input))
-	for _, val := range input {
-		ret = append(ret, val)
-	}
+	ret = append(ret, input...)
 	return ret
 }
 
@@ -161,6 +159,9 @@ var (
 	V2_1_0_0  = newKafkaVersion(2, 1, 0, 0)
 	V2_2_0_0  = newKafkaVersion(2, 2, 0, 0)
 	V2_3_0_0  = newKafkaVersion(2, 3, 0, 0)
+	V2_4_0_0  = newKafkaVersion(2, 4, 0, 0)
+	V2_5_0_0  = newKafkaVersion(2, 5, 0, 0)
+	V2_6_0_0  = newKafkaVersion(2, 6, 0, 0)
 
 	SupportedVersions = []KafkaVersion{
 		V0_8_2_0,
@@ -185,15 +186,19 @@ var (
 		V2_1_0_0,
 		V2_2_0_0,
 		V2_3_0_0,
+		V2_4_0_0,
+		V2_5_0_0,
+		V2_6_0_0,
 	}
-	MinVersion = V0_8_2_0
-	MaxVersion = V2_3_0_0
+	MinVersion     = V0_8_2_0
+	MaxVersion     = V2_6_0_0
+	DefaultVersion = V1_0_0_0
 )
 
 //ParseKafkaVersion parses and returns kafka version or error from a string
 func ParseKafkaVersion(s string) (KafkaVersion, error) {
 	if len(s) < 5 {
-		return MinVersion, fmt.Errorf("invalid version `%s`", s)
+		return DefaultVersion, fmt.Errorf("invalid version `%s`", s)
 	}
 	var major, minor, veryMinor, patch uint
 	var err error
@@ -203,7 +208,7 @@ func ParseKafkaVersion(s string) (KafkaVersion, error) {
 		err = scanKafkaVersion(s, `^\d+\.\d+\.\d+$`, "%d.%d.%d", [3]*uint{&major, &minor, &veryMinor})
 	}
 	if err != nil {
-		return MinVersion, err
+		return DefaultVersion, err
 	}
 	return newKafkaVersion(major, minor, veryMinor, patch), nil
 }

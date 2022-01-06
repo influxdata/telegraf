@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/eapache/go-xerial-snappy"
+	snappy "github.com/eapache/go-xerial-snappy"
 	"github.com/pierrec/lz4"
 )
 

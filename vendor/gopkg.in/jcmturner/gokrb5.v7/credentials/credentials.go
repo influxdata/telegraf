@@ -288,6 +288,11 @@ func (c *Credentials) Expired() bool {
 	return false
 }
 
+// ValidUntil returns the credential's valid until date
+func (c *Credentials) ValidUntil() time.Time {
+	return c.validUntil
+}
+
 // Attributes returns the Credentials' attributes map.
 func (c *Credentials) Attributes() map[string]interface{} {
 	return c.attributes

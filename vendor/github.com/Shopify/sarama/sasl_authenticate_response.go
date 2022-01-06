@@ -39,6 +39,10 @@ func (r *SaslAuthenticateResponse) version() int16 {
 	return 0
 }
 
+func (r *SaslAuthenticateResponse) headerVersion() int16 {
+	return 0
+}
+
 func (r *SaslAuthenticateResponse) requiredVersion() KafkaVersion {
 	return V1_0_0_0
 }

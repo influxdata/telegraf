@@ -20,7 +20,7 @@ const (
 
 type GSSApiHandlerFunc func([]byte) []byte
 
-type requestHandlerFunc func(req *request) (res encoder)
+type requestHandlerFunc func(req *request) (res encoderWithHeader)
 
 // RequestNotifierFunc is invoked when a mock broker processes a request successfully
 // and will provides the number of bytes read and written.
@@ -55,7 +55,7 @@ type MockBroker struct {
 	port          int32
 	closing       chan none
 	stopper       chan none
-	expectations  chan encoder
+	expectations  chan encoderWithHeader
 	listener      net.Listener
 	t             TestReporter
 	latency       time.Duration
@@ -83,7 +83,7 @@ func (b *MockBroker) SetLatency(latency time.Duration) {
 // and uses the found MockResponse instance to generate an appropriate reply.
 // If the request type is not found in the map then nothing is sent.
 func (b *MockBroker) SetHandlerByMap(handlerMap map[string]MockResponse) {
-	b.setHandler(func(req *request) (res encoder) {
+	b.setHandler(func(req *request) (res encoderWithHeader) {
 		reqTypeName := reflect.TypeOf(req.body).Elem().Name()
 		mockResponse := handlerMap[reqTypeName]
 		if mockResponse == nil {
@@ -213,7 +213,7 @@ func (b *MockBroker) isGSSAPI(buffer []byte) bool {
 	return buffer[4] == 0x60 || bytes.Equal(buffer[4:6], []byte{0x05, 0x04})
 }
 
-func (b *MockBroker) handleRequests(conn net.Conn, idx int, wg *sync.WaitGroup) {
+func (b *MockBroker) handleRequests(conn io.ReadWriteCloser, idx int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer func() {
 		_ = conn.Close()
@@ -231,11 +231,9 @@ func (b *MockBroker) handleRequests(conn net.Conn, idx int, wg *sync.WaitGroup) 
 		}
 	}()
 
-	resHeader := make([]byte, 8)
 	var bytesWritten int
 	var bytesRead int
 	for {
-
 		buffer, err := b.readToBytes(conn)
 		if err != nil {
 			Logger.Printf("*** mockbroker/%d/%d: invalid request: err=%+v, %+v", b.brokerID, idx, err, spew.Sdump(buffer))
@@ -245,7 +243,6 @@ func (b *MockBroker) handleRequests(conn net.Conn, idx int, wg *sync.WaitGroup) 
 
 		bytesWritten = 0
 		if !b.isGSSAPI(buffer) {
-
 			req, br, err := decodeRequest(bytes.NewReader(buffer))
 			bytesRead = br
 			if err != nil {
@@ -283,8 +280,7 @@ func (b *MockBroker) handleRequests(conn net.Conn, idx int, wg *sync.WaitGroup) 
 				continue
 			}
 
-			binary.BigEndian.PutUint32(resHeader, uint32(len(encodedRes)+4))
-			binary.BigEndian.PutUint32(resHeader[4:], uint32(req.correlationID))
+			resHeader := b.encodeHeader(res.headerVersion(), req.correlationID, uint32(len(encodedRes)))
 			if _, err = conn.Write(resHeader); err != nil {
 				b.serverError(err)
 				break
@@ -294,7 +290,6 @@ func (b *MockBroker) handleRequests(conn net.Conn, idx int, wg *sync.WaitGroup) 
 				break
 			}
 			bytesWritten = len(resHeader) + len(encodedRes)
-
 		} else {
 			// GSSAPI is not part of kafka protocol, but is supported for authentication proposes.
 			// Don't support history for this kind of request as is only used for test GSSAPI authentication mechanism
@@ -317,12 +312,29 @@ func (b *MockBroker) handleRequests(conn net.Conn, idx int, wg *sync.WaitGroup) 
 			b.notifier(bytesRead, bytesWritten)
 		}
 		b.lock.Unlock()
-
 	}
 	Logger.Printf("*** mockbroker/%d/%d: connection closed, err=%v", b.BrokerID(), idx, err)
 }
 
-func (b *MockBroker) defaultRequestHandler(req *request) (res encoder) {
+func (b *MockBroker) encodeHeader(headerVersion int16, correlationId int32, payloadLength uint32) []byte {
+	headerLength := uint32(8)
+
+	if headerVersion >= 1 {
+		headerLength = 9
+	}
+
+	resHeader := make([]byte, headerLength)
+	binary.BigEndian.PutUint32(resHeader, payloadLength+headerLength-4)
+	binary.BigEndian.PutUint32(resHeader[4:], uint32(correlationId))
+
+	if headerVersion >= 1 {
+		binary.PutUvarint(resHeader[8:], 0)
+	}
+
+	return resHeader
+}
+
+func (b *MockBroker) defaultRequestHandler(req *request) (res encoderWithHeader) {
 	select {
 	case res, ok := <-b.expectations:
 		if !ok {
@@ -377,7 +389,7 @@ func NewMockBrokerListener(t TestReporter, brokerID int32, listener net.Listener
 		stopper:      make(chan none),
 		t:            t,
 		brokerID:     brokerID,
-		expectations: make(chan encoder, 512),
+		expectations: make(chan encoderWithHeader, 512),
 		listener:     listener,
 	}
 	broker.handler = broker.defaultRequestHandler
@@ -398,6 +410,6 @@ func NewMockBrokerListener(t TestReporter, brokerID int32, listener net.Listener
 	return broker
 }
 
-func (b *MockBroker) Returns(e encoder) {
+func (b *MockBroker) Returns(e encoderWithHeader) {
 	b.expectations <- e
 }

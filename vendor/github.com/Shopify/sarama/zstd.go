@@ -1,8 +1,9 @@
 package sarama
 
 import (
-	"github.com/klauspost/compress/zstd"
 	"sync"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 var (
