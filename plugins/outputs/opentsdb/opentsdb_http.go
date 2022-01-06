@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -163,7 +162,7 @@ func (o *openTSDBHttp) flush() error {
 		fmt.Printf("Received response\n%s\n\n", dump)
 	} else {
 		// Important so http client reuse connection for next request if need be.
-		io.Copy(ioutil.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, resp.Body)
 	}
 
 	if resp.StatusCode/100 != 2 {

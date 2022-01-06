@@ -5,8 +5,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const sampleAddr = "127.0.0.1:22222"
@@ -65,15 +66,12 @@ func mockTwemproxyServer() (net.Listener, error) {
 		return nil, err
 	}
 	go func(l net.Listener) {
-		for {
-			conn, _ := l.Accept()
-			if _, err := conn.Write([]byte(sampleStats)); err != nil {
-				return
-			}
-			if err := conn.Close(); err != nil {
-				return
-			}
-			break
+		conn, _ := l.Accept()
+		if _, err := conn.Write([]byte(sampleStats)); err != nil {
+			return
+		}
+		if err := conn.Close(); err != nil {
+			return
 		}
 	}(listener)
 

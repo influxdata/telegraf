@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestExternalProcessorWorks(t *testing.T) {
@@ -32,7 +32,6 @@ func TestExternalProcessorWorks(t *testing.T) {
 
 	now := time.Now()
 	orig := now
-	metrics := []telegraf.Metric{}
 	for i := 0; i < 10; i++ {
 		m := metric.New("test",
 			map[string]string{
@@ -43,17 +42,16 @@ func TestExternalProcessorWorks(t *testing.T) {
 				"count":      1,
 			},
 			now)
-		metrics = append(metrics, m)
 		now = now.Add(1)
 
-		e.Add(m, acc)
+		require.NoError(t, e.Add(m, acc))
 	}
 
 	acc.Wait(1)
 	require.NoError(t, e.Stop())
 	acc.Wait(9)
 
-	metrics = acc.GetTelegrafMetrics()
+	metrics := acc.GetTelegrafMetrics()
 	m := metrics[0]
 
 	expected := testutil.MustMetric("test",
@@ -105,7 +103,7 @@ func TestParseLinesWithNewLines(t *testing.T) {
 		},
 		now)
 
-	e.Add(m, acc)
+	require.NoError(t, e.Add(m, acc))
 
 	acc.Wait(1)
 	require.NoError(t, e.Stop())
@@ -144,40 +142,51 @@ func runCountMultiplierProgram() {
 	serializer, _ := serializers.NewInfluxSerializer()
 
 	for {
-		metric, err := parser.Next()
+		m, err := parser.Next()
 		if err != nil {
 			if err == influx.EOF {
 				return // stream ended
 			}
 			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+				//nolint:errcheck,revive // Test will fail anyway
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
+				//nolint:revive // os.Exit called intentionally
 				os.Exit(1)
 			}
+			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+			//nolint:revive // os.Exit called intentionally
 			os.Exit(1)
 		}
 
-		c, found := metric.GetField("count")
+		c, found := m.GetField("count")
 		if !found {
+			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "metric has no count field\n")
+			//nolint:revive // os.Exit called intentionally
 			os.Exit(1)
 		}
 		switch t := c.(type) {
 		case float64:
 			t *= 2
-			metric.AddField("count", t)
+			m.AddField("count", t)
 		case int64:
 			t *= 2
-			metric.AddField("count", t)
+			m.AddField("count", t)
 		default:
+			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "count is not an unknown type, it's a %T\n", c)
+			//nolint:revive // os.Exit called intentionally
 			os.Exit(1)
 		}
-		b, err := serializer.Serialize(metric)
+		b, err := serializer.Serialize(m)
 		if err != nil {
+			//nolint:errcheck,revive // Test will fail anyway
 			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+			//nolint:revive // os.Exit called intentionally
 			os.Exit(1)
 		}
+		//nolint:errcheck,revive // Test will fail anyway
 		fmt.Fprint(os.Stdout, string(b))
 	}
 }

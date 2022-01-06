@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 var m1 = metric.New("m1",
@@ -697,11 +698,11 @@ func TestBasicStatsWithDefaultStats(t *testing.T) {
 	acc := testutil.Accumulator{}
 	aggregator.Push(&acc)
 
-	assert.True(t, acc.HasField("m1", "a_count"))
-	assert.True(t, acc.HasField("m1", "a_min"))
-	assert.True(t, acc.HasField("m1", "a_max"))
-	assert.True(t, acc.HasField("m1", "a_mean"))
-	assert.True(t, acc.HasField("m1", "a_stdev"))
-	assert.True(t, acc.HasField("m1", "a_s2"))
-	assert.False(t, acc.HasField("m1", "a_sum"))
+	require.True(t, acc.HasField("m1", "a_count"))
+	require.True(t, acc.HasField("m1", "a_min"))
+	require.True(t, acc.HasField("m1", "a_max"))
+	require.True(t, acc.HasField("m1", "a_mean"))
+	require.True(t, acc.HasField("m1", "a_stdev"))
+	require.True(t, acc.HasField("m1", "a_s2"))
+	require.False(t, acc.HasField("m1", "a_sum"))
 }

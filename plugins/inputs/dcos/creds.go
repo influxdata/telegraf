@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -48,7 +48,7 @@ func (c *ServiceAccount) IsExpired() bool {
 }
 
 func (c *TokenCreds) Token(_ context.Context, _ Client) (string, error) {
-	octets, err := ioutil.ReadFile(c.Path)
+	octets, err := os.ReadFile(c.Path)
 	if err != nil {
 		return "", fmt.Errorf("error reading token file %q: %s", c.Path, err)
 	}

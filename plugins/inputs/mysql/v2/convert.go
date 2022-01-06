@@ -21,12 +21,24 @@ func ParseInt(value sql.RawBytes) (interface{}, error) {
 	return v, err
 }
 
+func ParseUint(value sql.RawBytes) (interface{}, error) {
+	return strconv.ParseUint(string(value), 10, 64)
+}
+
+func ParseFloat(value sql.RawBytes) (interface{}, error) {
+	return strconv.ParseFloat(string(value), 64)
+}
+
 func ParseBoolAsInteger(value sql.RawBytes) (interface{}, error) {
 	if bytes.EqualFold(value, []byte("YES")) || bytes.EqualFold(value, []byte("ON")) {
 		return int64(1), nil
 	}
 
 	return int64(0), nil
+}
+
+func ParseString(value sql.RawBytes) (interface{}, error) {
+	return string(value), nil
 }
 
 func ParseGTIDMode(value sql.RawBytes) (interface{}, error) {
@@ -58,6 +70,9 @@ func ParseValue(value sql.RawBytes) (interface{}, error) {
 	if val, err := strconv.ParseInt(string(value), 10, 64); err == nil {
 		return val, nil
 	}
+	if val, err := strconv.ParseUint(string(value), 10, 64); err == nil {
+		return val, nil
+	}
 	if val, err := strconv.ParseFloat(string(value), 64); err == nil {
 		return val, nil
 	}
@@ -70,12 +85,33 @@ func ParseValue(value sql.RawBytes) (interface{}, error) {
 }
 
 var GlobalStatusConversions = map[string]ConversionFunc{
-	"ssl_ctx_verify_depth": ParseInt,
-	"ssl_verify_depth":     ParseInt,
+	"innodb_available_undo_logs":    ParseUint,
+	"innodb_buffer_pool_pages_misc": ParseUint,
+	"innodb_data_pending_fsyncs":    ParseUint,
+	"ssl_ctx_verify_depth":          ParseUint,
+	"ssl_verify_depth":              ParseUint,
+
+	// see https://galeracluster.com/library/documentation/galera-status-variables.html
+	"wsrep_local_index":          ParseUint,
+	"wsrep_local_send_queue_avg": ParseFloat,
 }
 
 var GlobalVariableConversions = map[string]ConversionFunc{
-	"gtid_mode": ParseGTIDMode,
+	// see https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html
+	// see https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html
+	"delay_key_write":                  ParseString, // ON, OFF, ALL
+	"enforce_gtid_consistency":         ParseString, // ON, OFF, WARN
+	"event_scheduler":                  ParseString, // YES, NO, DISABLED
+	"gtid_mode":                        ParseGTIDMode,
+	"have_openssl":                     ParseBoolAsInteger, // alias for have_ssl
+	"have_ssl":                         ParseBoolAsInteger, // YES, DISABLED
+	"have_symlink":                     ParseBoolAsInteger, // YES, NO, DISABLED
+	"session_track_gtids":              ParseString,
+	"session_track_transaction_info":   ParseString,
+	"slave_skip_errors":                ParseString,
+	"ssl_fips_mode":                    ParseString,
+	"transaction_write_set_extraction": ParseString,
+	"use_secondary_engine":             ParseString,
 }
 
 func ConvertGlobalStatus(key string, value sql.RawBytes) (interface{}, error) {

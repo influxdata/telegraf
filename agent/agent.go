@@ -196,28 +196,28 @@ func (a *Agent) initPlugins() error {
 		err := processor.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.Config.Name, err)
+				processor.LogName(), err)
 		}
 	}
 	for _, aggregator := range a.Config.Aggregators {
 		err := aggregator.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize aggregator %s: %v",
-				aggregator.Config.Name, err)
+				aggregator.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.AggProcessors {
 		err := processor.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.Config.Name, err)
+				processor.LogName(), err)
 		}
 	}
 	for _, output := range a.Config.Outputs {
 		err := output.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize output %s: %v",
-				output.Config.Name, err)
+				output.LogName(), err)
 		}
 	}
 	return nil
@@ -775,7 +775,7 @@ func (a *Agent) runOutputs(
 func (a *Agent) flushLoop(
 	ctx context.Context,
 	output *models.RunningOutput,
-	ticker *RollingTicker,
+	ticker Ticker,
 ) {
 	logError := func(err error) {
 		if err != nil {
@@ -804,11 +804,15 @@ func (a *Agent) flushLoop(
 		case <-ticker.Elapsed():
 			logError(a.flushOnce(output, ticker, output.Write))
 		case <-flushRequested:
-			ticker.Reset()
 			logError(a.flushOnce(output, ticker, output.Write))
 		case <-output.BatchReady:
-			ticker.Reset()
-			logError(a.flushOnce(output, ticker, output.WriteBatch))
+			// Favor the ticker over batch ready
+			select {
+			case <-ticker.Elapsed():
+				logError(a.flushOnce(output, ticker, output.Write))
+			default:
+				logError(a.flushOnce(output, ticker, output.WriteBatch))
+			}
 		}
 	}
 }

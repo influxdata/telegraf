@@ -3,7 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/coreos/go-semver/semver"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -77,6 +79,9 @@ type Config struct {
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
+
+	Deprecations map[string][]int64
+	version      *semver.Version
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -102,7 +107,15 @@ func NewConfig() *Config {
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
+		Deprecations:  make(map[string][]int64),
 	}
+
+	// Handle unknown version
+	version := internal.Version()
+	if version == "" || version == "unknown" {
+		version = "0.0.0-unknown"
+	}
+	c.version = semver.New(version)
 
 	tomlCfg := &toml.Config{
 		NormFieldName: toml.DefaultConfig.NormFieldName,
@@ -165,7 +178,8 @@ type AgentConfig struct {
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatibility
-	UTC bool `toml:"utc"` // deprecated in 1.0.0; has no effect
+	// Deprecated: 1.0.0 after, has no effect
+	UTC bool `toml:"utc"`
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
@@ -560,7 +574,11 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 
 	// Print Inputs
 	for _, pname := range pnames {
+		// Skip inputs that are registered twice for backward compatibility
 		if pname == "cisco_telemetry_gnmi" {
+			continue
+		}
+		if pname == "KNXListener" {
 			continue
 		}
 		creator := inputs.Inputs[pname]
@@ -933,7 +951,7 @@ func loadConfig(config string) ([]byte, error) {
 	}
 
 	// If it isn't a https scheme, try it as a file
-	return ioutil.ReadFile(config)
+	return os.ReadFile(config)
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
@@ -964,7 +982,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 			return nil, fmt.Errorf("Retry %d of %d failed to retrieve remote config: %s", i, retries, resp.Status)
 		}
 		defer resp.Body.Close()
-		return ioutil.ReadAll(resp.Body)
+		return io.ReadAll(resp.Body)
 	}
 
 	return nil, nil
@@ -1004,6 +1022,11 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 func (c *Config) addAggregator(name string, table *ast.Table) error {
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := aggregators.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("aggregators", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
 		return fmt.Errorf("Undefined but requested aggregator: %s", name)
 	}
 	aggregator := creator()
@@ -1017,6 +1040,10 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
+	if err := c.printUserDeprecation("aggregators", name, aggregator); err != nil {
+		return err
+	}
+
 	c.Aggregators = append(c.Aggregators, models.NewRunningAggregator(aggregator, conf))
 	return nil
 }
@@ -1024,6 +1051,11 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 func (c *Config) addProcessor(name string, table *ast.Table) error {
 	creator, ok := processors.Processors[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := processors.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("processors", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
 
@@ -1065,6 +1097,10 @@ func (c *Config) newRunningProcessor(
 		}
 	}
 
+	if err := c.printUserDeprecation("processors", processorConfig.Name, processor); err != nil {
+		return nil, err
+	}
+
 	rf := models.NewRunningProcessor(processor, processorConfig)
 	return rf, nil
 }
@@ -1075,6 +1111,11 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	}
 	creator, ok := outputs.Outputs[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := outputs.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("outputs", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
 		return fmt.Errorf("Undefined but requested output: %s", name)
 	}
 	output := creator()
@@ -1099,6 +1140,10 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
+	if err := c.printUserDeprecation("outputs", name, output); err != nil {
+		return err
+	}
+
 	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
@@ -1108,13 +1153,23 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
 		return nil
 	}
+
 	// Legacy support renaming io input to diskio
 	if name == "io" {
+		if err := c.printUserDeprecation("inputs", name, nil); err != nil {
+			return err
+		}
 		name = "diskio"
 	}
 
 	creator, ok := inputs.Inputs[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := inputs.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("inputs", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
+
 		return fmt.Errorf("Undefined but requested input: %s", name)
 	}
 	input := creator()
@@ -1135,7 +1190,18 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return err
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
-			return parsers.NewParser(config)
+			parser, err := parsers.NewParser(config)
+			if err != nil {
+				return nil, err
+			}
+			logger := models.NewLogger("parsers", config.DataFormat, name)
+			models.SetLoggerOnPlugin(parser, logger)
+			if initializer, ok := parser.(telegraf.Initializer); ok {
+				if err := initializer.Init(); err != nil {
+					return nil, err
+				}
+			}
+			return parser, nil
 		})
 	}
 
@@ -1145,6 +1211,10 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 
 	if err := c.toml.UnmarshalTable(table, input); err != nil {
+		return err
+	}
+
+	if err := c.printUserDeprecation("inputs", name, input); err != nil {
 		return err
 	}
 
@@ -1367,6 +1437,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldInt(tbl, "csv_skip_columns", &pc.CSVSkipColumns)
 	c.getFieldBool(tbl, "csv_trim_space", &pc.CSVTrimSpace)
 	c.getFieldStringSlice(tbl, "csv_skip_values", &pc.CSVSkipValues)
+	c.getFieldBool(tbl, "csv_skip_errors", &pc.CSVSkipErrors)
 
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
 
@@ -1421,28 +1492,8 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 				c.getFieldString(metricConfig, "timestamp_format", &mc.TimestampFormat)
 				c.getFieldString(metricConfig, "timestamp_timezone", &mc.TimestampTimezone)
 
-				if fieldConfigs, ok := metricConfig.Fields["field"]; ok {
-					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
-						for _, fieldconfig := range fieldConfigs {
-							var f json_v2.DataSet
-							c.getFieldString(fieldconfig, "path", &f.Path)
-							c.getFieldString(fieldconfig, "rename", &f.Rename)
-							c.getFieldString(fieldconfig, "type", &f.Type)
-							mc.Fields = append(mc.Fields, f)
-						}
-					}
-				}
-				if fieldConfigs, ok := metricConfig.Fields["tag"]; ok {
-					if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
-						for _, fieldconfig := range fieldConfigs {
-							var t json_v2.DataSet
-							c.getFieldString(fieldconfig, "path", &t.Path)
-							c.getFieldString(fieldconfig, "rename", &t.Rename)
-							t.Type = "string"
-							mc.Tags = append(mc.Tags, t)
-						}
-					}
-				}
+				mc.Fields = getFieldSubtable(c, metricConfig)
+				mc.Tags = getTagSubtable(c, metricConfig)
 
 				if objectconfigs, ok := metricConfig.Fields["object"]; ok {
 					if objectconfigs, ok := objectconfigs.([]*ast.Table); ok {
@@ -1458,6 +1509,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 							c.getFieldStringSlice(objectConfig, "tags", &o.Tags)
 							c.getFieldStringMap(objectConfig, "renames", &o.Renames)
 							c.getFieldStringMap(objectConfig, "fields", &o.Fields)
+
+							o.FieldPaths = getFieldSubtable(c, objectConfig)
+							o.TagPaths = getTagSubtable(c, objectConfig)
+
 							mc.JSONObjects = append(mc.JSONObjects, o)
 						}
 					}
@@ -1475,6 +1530,42 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	}
 
 	return pc, nil
+}
+
+func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
+	var fields []json_v2.DataSet
+
+	if fieldConfigs, ok := metricConfig.Fields["field"]; ok {
+		if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+			for _, fieldconfig := range fieldConfigs {
+				var f json_v2.DataSet
+				c.getFieldString(fieldconfig, "path", &f.Path)
+				c.getFieldString(fieldconfig, "rename", &f.Rename)
+				c.getFieldString(fieldconfig, "type", &f.Type)
+				fields = append(fields, f)
+			}
+		}
+	}
+
+	return fields
+}
+
+func getTagSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
+	var tags []json_v2.DataSet
+
+	if fieldConfigs, ok := metricConfig.Fields["tag"]; ok {
+		if fieldConfigs, ok := fieldConfigs.([]*ast.Table); ok {
+			for _, fieldconfig := range fieldConfigs {
+				var t json_v2.DataSet
+				c.getFieldString(fieldconfig, "path", &t.Path)
+				c.getFieldString(fieldconfig, "rename", &t.Rename)
+				t.Type = "string"
+				tags = append(tags, t)
+			}
+		}
+	}
+
+	return tags
 }
 
 // buildSerializer grabs the necessary entries from the ast.Table for creating
@@ -1504,12 +1595,14 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldString(tbl, "graphite_separator", &sc.GraphiteSeparator)
 
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
+	c.getFieldString(tbl, "json_timestamp_format", &sc.TimestampFormat)
 
 	c.getFieldBool(tbl, "splunkmetric_hec_routing", &sc.HecRouting)
 	c.getFieldBool(tbl, "splunkmetric_multimetric", &sc.SplunkmetricMultiMetric)
 
 	c.getFieldStringSlice(tbl, "wavefront_source_override", &sc.WavefrontSourceOverride)
 	c.getFieldBool(tbl, "wavefront_use_strict", &sc.WavefrontUseStrict)
+	c.getFieldBool(tbl, "wavefront_disable_prefix_conversion", &sc.WavefrontDisablePrefixConversion)
 
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
@@ -1560,7 +1653,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
 		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
 		"csv_column_names", "csv_column_types", "csv_comment", "csv_delimiter", "csv_header_row_count",
-		"csv_measurement_column", "csv_skip_columns", "csv_skip_rows", "csv_tag_columns",
+		"csv_measurement_column", "csv_skip_columns", "csv_skip_rows", "csv_tag_columns", "csv_skip_errors",
 		"csv_timestamp_column", "csv_timestamp_format", "csv_timezone", "csv_trim_space", "csv_skip_values",
 		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
 		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
@@ -1569,10 +1662,10 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
 		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields",
 		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
-		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_units", "json_timezone", "json_v2",
-		"metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
+		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_format", "json_timestamp_units", "json_timezone", "json_v2",
+		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
 		"name_suffix", "namedrop", "namepass", "order", "pass", "period", "precision",
-		"prefix", "prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
+		"prefix", "prometheus_export_timestamp", "prometheus_ignore_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
 		"value_field_name", "wavefront_source_override", "wavefront_use_strict",

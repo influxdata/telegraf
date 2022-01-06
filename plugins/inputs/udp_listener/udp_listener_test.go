@@ -62,7 +62,7 @@ package udp_listener
 // // 	}
 // // 	listener.Stop()
 
-// // 	assert.Equal(t, uint64(100000), acc.NMetrics())
+// // 	require.Equal(t, uint64(100000), acc.NMetrics())
 // // }
 
 // func TestConnectUDP(t *testing.T) {
@@ -104,7 +104,7 @@ package udp_listener
 // }
 
 // func TestRunParser(t *testing.T) {
-// 	log.SetOutput(ioutil.Discard)
+// 	log.SetOutput(io.Discard)
 // 	var testmsg = []byte("cpu_load_short,host=server01 value=12.0 1422568543702900257\n")
 
 // 	listener, in := newTestUDPListener()
@@ -127,7 +127,7 @@ package udp_listener
 // }
 
 // func TestRunParserInvalidMsg(_ *testing.T) {
-// 	log.SetOutput(ioutil.Discard)
+// 	log.SetOutput(io.Discard)
 // 	var testmsg = []byte("cpu_load_short")
 
 // 	listener, in := newTestUDPListener()
@@ -153,7 +153,7 @@ package udp_listener
 // }
 
 // func TestRunParserGraphiteMsg(t *testing.T) {
-// 	log.SetOutput(ioutil.Discard)
+// 	log.SetOutput(io.Discard)
 // 	var testmsg = []byte("cpu.load.graphite 12 1454780029")
 
 // 	listener, in := newTestUDPListener()
@@ -174,7 +174,7 @@ package udp_listener
 // }
 
 // func TestRunParserJSONMsg(t *testing.T) {
-// 	log.SetOutput(ioutil.Discard)
+// 	log.SetOutput(io.Discard)
 // 	var testmsg = []byte("{\"a\": 5, \"b\": {\"c\": 6}}\n")
 
 // 	listener, in := newTestUDPListener()
