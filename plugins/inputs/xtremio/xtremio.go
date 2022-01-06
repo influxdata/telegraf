@@ -197,7 +197,7 @@ func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.Wa
 
 	tags := map[string]string{
 		"serial_number": data.Content.Serial,
-		"guid":          data.Content.Guid,
+		"guid":          data.Content.GUID,
 		"power_feed":    data.Content.PowerFeed,
 		"name":          data.Content.Name,
 		"model_name":    data.Content.ModelName,
@@ -206,8 +206,8 @@ func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		"bbus_power":                        data.Content.BBUPower,
 		"bbus_average_daily_temp":           data.Content.BBUDailyTemp,
 		"bbus_enabled":                      (data.Content.BBUEnabled == "enabled"),
-		"bbus_ups_need_battery_replacement": (data.Content.BBUNeedBat == true),
-		"bbus_ups_low_battery_no_input":     (data.Content.BBULowBat == true),
+		"bbus_ups_need_battery_replacement": data.Content.BBUNeedBat,
+		"bbus_ups_low_battery_no_input":     data.Content.BBULowBat,
 	}
 
 	acc.AddFields("xio", fields, tags)
@@ -230,8 +230,8 @@ func (xio *XtremIO) gatherClusters(acc telegraf.Accumulator, url string, wg *syn
 
 	tags := map[string]string{
 		"hardware_platform":      data.Content.HardwarePlatform,
-		"license_id":             data.Content.LicenseId,
-		"guid":                   data.Content.Guid,
+		"license_id":             data.Content.LicenseID,
+		"guid":                   data.Content.GUID,
 		"name":                   data.Content.Name,
 		"sys_psnt_serial_number": data.Content.SerialNumber,
 	}
@@ -268,7 +268,7 @@ func (xio *XtremIO) gatherSSDs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		"model_name":       data.Content.ModelName,
 		"firmware_version": data.Content.FirmwareVersion,
 		"ssd_uid":          data.Content.SSDuid,
-		"guid":             data.Content.Guid,
+		"guid":             data.Content.GUID,
 		"sys_name":         data.Content.SysName,
 		"serial_number":    data.Content.SerialNumber,
 	}
@@ -301,7 +301,7 @@ func (xio *XtremIO) gatherVolumes(acc telegraf.Accumulator, url string, wg *sync
 	}
 
 	tags := map[string]string{
-		"guid":     data.Content.Guid,
+		"guid":     data.Content.GUID,
 		"sys_name": data.Content.SysName,
 		"name":     data.Content.Name,
 	}
@@ -334,7 +334,7 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 	}
 
 	tags := map[string]string{
-		"guid":    data.Content.Guid,
+		"guid":    data.Content.GUID,
 		"name":    data.Content.Name,
 		"version": data.Content.Version,
 		"xms_ip":  data.Content.IP,
@@ -344,9 +344,9 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 		"xms_read_iops":                data.Content.ReadIops,
 		"xms_overall_efficiency_ratio": data.Content.EfficiencyRatio,
 		"xms_ssd_space_in_use":         data.Content.SpaceUsed,
-		"xms_ram_in_use":               data.Content.RamUsage,
-		"xms_ram_total":                data.Content.RamTotal,
-		"xms_cpu_usage_total":          data.Content.CpuUsage,
+		"xms_ram_in_use":               data.Content.RAMUsage,
+		"xms_ram_total":                data.Content.RAMTotal,
+		"xms_cpu_usage_total":          data.Content.CPUUsage,
 		"xms_write_latency":            data.Content.WriteLatency,
 		"xms_read_latency":             data.Content.ReadLatency,
 		"xms_user_accounts_count":      data.Content.NumAccounts,

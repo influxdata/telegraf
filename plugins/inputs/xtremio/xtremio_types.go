@@ -3,7 +3,7 @@ package xtremio
 type BBU struct {
 	Content struct {
 		Serial       string `json:"serial-number"`
-		Guid         string `json:"guid"`
+		GUID         string `json:"guid"`
 		PowerFeed    string `json:"power-feed"`
 		Name         string `json:"Name"`
 		ModelName    string `json:"model-name"`
@@ -18,8 +18,8 @@ type BBU struct {
 type Clusters struct {
 	Content struct {
 		HardwarePlatform   string  `json:"hardware-platform"`
-		LicenseId          string  `json:"license-id"`
-		Guid               string  `json:"guid"`
+		LicenseID          string  `json:"license-id"`
+		GUID               string  `json:"guid"`
 		Name               string  `json:"name"`
 		SerialNumber       string  `json:"sys-psnt-serial-number"`
 		CompressionFactor  float64 `json:"compression-factor"`
@@ -38,7 +38,7 @@ type SSD struct {
 		ModelName       string `json:"model-name"`
 		FirmwareVersion string `json:"fw-version"`
 		SSDuid          string `json:"ssd-uid"`
-		Guid            string `json:"guid"`
+		GUID            string `json:"guid"`
 		SysName         string `json:"sys-name"`
 		SerialNumber    string `json:"serial-number"`
 		Size            int    `json:"ssd-size,string"`
@@ -53,7 +53,7 @@ type SSD struct {
 
 type Volumes struct {
 	Content struct {
-		Guid               string  `json:"guid"`
+		GUID               string  `json:"guid"`
 		SysName            string  `json:"sys-name"`
 		Name               string  `json:"name"`
 		ReadIops           int     `json:"rd-iops,string"`
@@ -68,7 +68,7 @@ type Volumes struct {
 
 type XMS struct {
 	Content struct {
-		Guid            string  `json:"guid"`
+		GUID            string  `json:"guid"`
 		Name            string  `json:"name"`
 		Version         string  `json:"version"`
 		IP              string  `json:"xms-ip"`
@@ -76,9 +76,9 @@ type XMS struct {
 		ReadIops        int     `json:"rd-iops,string"`
 		EfficiencyRatio float64 `json:"overall-efficiency-ratio,string"`
 		SpaceUsed       int     `json:"ssd-space-in-use,string"`
-		RamUsage        int     `json:"ram-usage,string"`
-		RamTotal        int     `json:"ram-total,string"`
-		CpuUsage        float64 `json:"cpu"`
+		RAMUsage        int     `json:"ram-usage,string"`
+		RAMTotal        int     `json:"ram-total,string"`
+		CPUUsage        float64 `json:"cpu"`
 		WriteLatency    int     `json:"wr-latency,string"`
 		ReadLatency     int     `json:"rd-latency,string"`
 		NumAccounts     int     `json:"num-of-user-accounts"`
