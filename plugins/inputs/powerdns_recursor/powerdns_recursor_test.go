@@ -239,6 +239,7 @@ func TestNewPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 				// Ignore the returned error as we need to close the socket anyway
 				//nolint:errcheck,revive
 				socket.WriteToUnix([]byte{0, 0, 0, 0}, remote)
+				//nolint:errcheck,revive
 				socket.WriteToUnix([]byte(metrics), remote)
 				// Ignore the returned error as we cannot do anything about it anyway
 				//nolint:errcheck,revive
