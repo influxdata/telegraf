@@ -486,7 +486,6 @@ func TestVersionCheckOpenSearch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte(`{"version": {"number": "1.2.3"}}`))
 		require.NoError(t, err)
-		return
 	}))
 	defer ts.Close()
 
