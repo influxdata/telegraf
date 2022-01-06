@@ -30,6 +30,8 @@ const (
 	defaultTimeout         = 5 * time.Second
 )
 
+var defaultSpecFields = []string{"version", "host", "short_message", "full_message", "timestamp", "level", "facility", "line", "file"}
+
 type gelfConfig struct {
 	Endpoint        string
 	Connection      string
@@ -423,7 +425,13 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	}
 
 	for _, tag := range metric.TagList() {
-		if tag.Key != "host" {
+		if tag.Key == "host" {
+			continue
+		}
+
+		if fieldInSpec(tag.Key) {
+			m[tag.Key] = tag.Value
+		} else {
 			m["_"+tag.Key] = tag.Value
 		}
 	}
@@ -431,6 +439,8 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	for _, field := range metric.FieldList() {
 		if field.Key == g.ShortMessageField {
 			m["short_message"] = field.Value
+		} else if fieldInSpec(field.Key) {
+			m[field.Key] = field.Value
 		} else {
 			m["_"+field.Key] = field.Value
 		}
@@ -443,6 +453,16 @@ func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	out = append(out, string(serialized))
 
 	return out, nil
+}
+
+func fieldInSpec(field string) bool {
+	for _, specField := range defaultSpecFields {
+		if specField == field {
+			return true
+		}
+	}
+
+	return false
 }
 
 func init() {

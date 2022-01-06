@@ -5,8 +5,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/influxdata/telegraf/metric"
 	"go.starlark.net/starlark"
+
+	"github.com/influxdata/telegraf/metric"
 )
 
 func newMetric(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -210,11 +211,11 @@ func dictUpdate(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tupl
 					return nil, fmt.Errorf("dictionary update sequence element #%d is not iterable (%s)", i, pair.Type())
 				}
 				defer iter2.Done()
-				len := starlark.Len(pair)
-				if len < 0 {
+				length := starlark.Len(pair)
+				if length < 0 {
 					return nil, fmt.Errorf("dictionary update sequence element #%d has unknown length (%s)", i, pair.Type())
-				} else if len != 2 {
-					return nil, fmt.Errorf("dictionary update sequence element #%d has length %d, want 2", i, len)
+				} else if length != 2 {
+					return nil, fmt.Errorf("dictionary update sequence element #%d has length %d, want 2", i, length)
 				}
 				var k, v starlark.Value
 				iter2.Next(&k)

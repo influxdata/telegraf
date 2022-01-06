@@ -5,16 +5,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	tgConfig "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/stretchr/testify/require"
 )
 
 func TestLoadConfig(t *testing.T) {
-	os.Setenv("SECRET_TOKEN", "xxxxxxxxxx")
-	os.Setenv("SECRET_VALUE", `test"\test`)
+	err := os.Setenv("SECRET_TOKEN", "xxxxxxxxxx")
+	require.NoError(t, err)
+	err = os.Setenv("SECRET_VALUE", `test"\test`)
+	require.NoError(t, err)
 
 	inputs.Add("test", func() telegraf.Input {
 		return &serviceInput{}

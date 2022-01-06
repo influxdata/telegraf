@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/djherbis/times"
 	"golang.org/x/sync/semaphore"
-	"gopkg.in/djherbis/times.v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -56,8 +56,8 @@ const sampleConfig = `
   #	file_queue_size = 100000
   #
   ## Name a tag containing the name of the file the data was parsed from.  Leave empty
-  ## to disable. Cautious when file name variation is high, this can increase the cardinality 
-  ## significantly. Read more about cardinality here: 
+  ## to disable. Cautious when file name variation is high, this can increase the cardinality
+  ## significantly. Read more about cardinality here:
   ## https://docs.influxdata.com/influxdb/cloud/reference/glossary/#series-cardinality
   # file_tag = ""
   #

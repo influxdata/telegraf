@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/ldap.v3"
+	ldap "github.com/go-ldap/ldap/v3"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
