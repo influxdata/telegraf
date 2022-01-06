@@ -1,4 +1,3 @@
-
 package modbus
 
 import "fmt"
