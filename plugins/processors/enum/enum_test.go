@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func createTestMetric() telegraf.Metric {
@@ -19,7 +19,7 @@ func createTestMetric() telegraf.Metric {
 		map[string]interface{}{
 			"string_value":           "test",
 			"duplicate_string_value": "test",
-			"int_value":              int(200),
+			"int_value":              200,
 			"uint_value":             uint(500),
 			"float_value":            float64(3.14),
 			"true_value":             true,
@@ -29,26 +29,26 @@ func createTestMetric() telegraf.Metric {
 	return m
 }
 
-func calculateProcessedValues(mapper EnumMapper, metric telegraf.Metric) map[string]interface{} {
-	processed := mapper.Apply(metric)
+func calculateProcessedValues(mapper EnumMapper, m telegraf.Metric) map[string]interface{} {
+	processed := mapper.Apply(m)
 	return processed[0].Fields()
 }
 
-func calculateProcessedTags(mapper EnumMapper, metric telegraf.Metric) map[string]string {
-	processed := mapper.Apply(metric)
+func calculateProcessedTags(mapper EnumMapper, m telegraf.Metric) map[string]string {
+	processed := mapper.Apply(m)
 	return processed[0].Tags()
 }
 
 func assertFieldValue(t *testing.T, expected interface{}, field string, fields map[string]interface{}) {
 	value, present := fields[field]
-	assert.True(t, present, "value of field '"+field+"' was not present")
-	assert.EqualValues(t, expected, value)
+	require.True(t, present, "value of field '"+field+"' was not present")
+	require.EqualValues(t, expected, value)
 }
 
 func assertTagValue(t *testing.T, expected interface{}, tag string, tags map[string]string) {
 	value, present := tags[tag]
-	assert.True(t, present, "value of tag '"+tag+"' was not present")
-	assert.EqualValues(t, expected, value)
+	require.True(t, present, "value of tag '"+tag+"' was not present")
+	require.EqualValues(t, expected, value)
 }
 
 func TestRetainsMetric(t *testing.T) {
@@ -65,9 +65,9 @@ func TestRetainsMetric(t *testing.T) {
 	assertFieldValue(t, 500, "uint_value", fields)
 	assertFieldValue(t, float64(3.14), "float_value", fields)
 	assertFieldValue(t, true, "true_value", fields)
-	assert.Equal(t, "m1", target.Name())
-	assert.Equal(t, source.Tags(), target.Tags())
-	assert.Equal(t, source.Time(), target.Time())
+	require.Equal(t, "m1", target.Name())
+	require.Equal(t, source.Tags(), target.Tags())
+	require.Equal(t, source.Time(), target.Time())
 }
 
 func TestMapsSingleStringValueTag(t *testing.T) {
@@ -118,7 +118,7 @@ func TestMappings(t *testing.T) {
 		for index := range mapping["target_value"] {
 			mapper := EnumMapper{Mappings: []Mapping{{Field: fieldName, ValueMappings: map[string]interface{}{mapping["target_value"][index].(string): mapping["mapped_value"][index]}}}}
 			err := mapper.Init()
-			assert.Nil(t, err)
+			require.Nil(t, err)
 			fields := calculateProcessedValues(mapper, createTestMetric())
 			assertFieldValue(t, mapping["expected_value"][index], fieldName, fields)
 		}
@@ -171,7 +171,7 @@ func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 
 	assertFieldValue(t, "test", "string_value", fields)
 	_, present := fields[field]
-	assert.False(t, present, "value of field '"+field+"' was present")
+	require.False(t, present, "value of field '"+field+"' was present")
 }
 
 func TestFieldGlobMatching(t *testing.T) {

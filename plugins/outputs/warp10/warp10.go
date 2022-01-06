@@ -3,8 +3,7 @@ package warp10
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"log"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -33,6 +32,7 @@ type Warp10 struct {
 	MaxStringErrorSize int             `toml:"max_string_error_size"`
 	client             *http.Client
 	tls.ClientConfig
+	Log telegraf.Logger `toml:"-"`
 }
 
 var sampleConfig = `
@@ -114,7 +114,7 @@ func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric) string {
 
 			metricValue, err := buildValue(field.Value)
 			if err != nil {
-				log.Printf("E! [outputs.warp10] Could not encode value: %v", err)
+				w.Log.Errorf("Could not encode value: %v", err)
 				continue
 			}
 			metric.Value = metricValue
@@ -154,7 +154,7 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 
 	if resp.StatusCode != http.StatusOK {
 		if w.PrintErrorBody {
-			body, _ := ioutil.ReadAll(resp.Body)
+			body, _ := io.ReadAll(resp.Body)
 			return fmt.Errorf(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
 		}
 
@@ -199,7 +199,7 @@ func buildValue(v interface{}) (string, error) {
 			retv = strconv.FormatInt(math.MaxInt64, 10)
 		}
 	case float64:
-		retv = floatToString(float64(p))
+		retv = floatToString(p)
 	default:
 		return "", fmt.Errorf("unsupported type: %T", v)
 	}

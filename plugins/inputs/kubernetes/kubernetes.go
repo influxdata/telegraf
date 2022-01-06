@@ -3,8 +3,8 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -93,7 +93,7 @@ func (k *Kubernetes) Init() error {
 	}
 
 	if k.BearerToken != "" {
-		token, err := ioutil.ReadFile(k.BearerToken)
+		token, err := os.ReadFile(k.BearerToken)
 		if err != nil {
 			return err
 		}

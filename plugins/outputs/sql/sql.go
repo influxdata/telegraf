@@ -22,6 +22,7 @@ type ConvertStruct struct {
 	Timestamp    string
 	Defaultvalue string
 	Unsigned     string
+	Bool         string
 }
 
 type SQL struct {
@@ -103,6 +104,8 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 		datatype = p.Convert.Real
 	case string:
 		datatype = p.Convert.Text
+	case bool:
+		datatype = p.Convert.Bool
 	default:
 		datatype = p.Convert.Defaultvalue
 		p.Log.Errorf("Unknown datatype: '%T' %v", value, value)
@@ -140,6 +143,13 @@ var sampleConfig = `
   # init_sql = ""
 
   ## Metric type to SQL type conversion
+  ## The values on the left are the data types Telegraf has and the values on
+  ## the right are the data types Telegraf will use when sending to a database.
+  ##
+  ## The database values used must be data types the destination database
+  ## understands. It is up to the user to ensure that the selected data type is
+  ## available in the database they are using. Refer to your database
+  ## documentation for what data types are available and supported.
   #[outputs.sql.convert]
   #  integer              = "INT"
   #  real                 = "DOUBLE"
@@ -272,6 +282,7 @@ func newSQL() *SQL {
 			Timestamp:    "TIMESTAMP",
 			Defaultvalue: "TEXT",
 			Unsigned:     "UNSIGNED",
+			Bool:         "BOOL",
 		},
 	}
 }

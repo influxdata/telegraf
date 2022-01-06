@@ -1,3 +1,4 @@
+//go:build freebsd
 // +build freebsd
 
 package zfs
@@ -173,8 +174,11 @@ func run(command string, args ...string) ([]string, error) {
 	stdout := strings.TrimSpace(outbuf.String())
 	stderr := strings.TrimSpace(errbuf.String())
 
-	if _, ok := err.(*exec.ExitError); ok {
-		return nil, fmt.Errorf("%s error: %s", command, stderr)
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("%s error: %s", command, stderr)
+		}
+		return nil, fmt.Errorf("%s error: %s", command, err)
 	}
 	return strings.Split(stdout, "\n"), nil
 }

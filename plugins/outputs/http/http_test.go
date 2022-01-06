@@ -3,20 +3,25 @@ package http
 import (
 	"compress/gzip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
-	oauth "github.com/influxdata/telegraf/plugins/common/oauth"
+	"github.com/influxdata/telegraf/plugins/common/oauth"
+	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
-	"github.com/stretchr/testify/require"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func getMetric() telegraf.Metric {
@@ -29,6 +34,15 @@ func getMetric() telegraf.Metric {
 		time.Unix(0, 0),
 	)
 
+	return m
+}
+
+func getMetrics(n int) []telegraf.Metric {
+	m := make([]telegraf.Metric, n)
+	for n > 0 {
+		n--
+		m[n] = getMetric()
+	}
 	return m
 }
 
@@ -159,9 +173,20 @@ func TestStatusCode(t *testing.T) {
 			plugin: &HTTP{
 				URL: u.String(),
 			},
-			statusCode: http.StatusMultipleChoices,
+			statusCode: http.StatusBadRequest,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
+			},
+		},
+		{
+			name: "Do not retry on configured non-retryable statuscode",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				NonRetryableStatusCodes: []int{409},
+			},
+			statusCode: http.StatusConflict,
+			errFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
 			},
 		},
 	}
@@ -176,6 +201,8 @@ func TestStatusCode(t *testing.T) {
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
+
+			tt.plugin.Log = testutil.Logger{}
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			tt.errFunc(t, err)
@@ -272,7 +299,7 @@ func TestContentEncodingGzip(t *testing.T) {
 					require.NoError(t, err)
 				}
 
-				payload, err := ioutil.ReadAll(body)
+				payload, err := io.ReadAll(body)
 				require.NoError(t, err)
 				require.Contains(t, string(payload), "cpu value=42")
 
@@ -397,7 +424,8 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				values.Add("access_token", token)
 				values.Add("token_type", "bearer")
 				values.Add("expires_in", "3600")
-				w.Write([]byte(values.Encode()))
+				_, err = w.Write([]byte(values.Encode()))
+				require.NoError(t, err)
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
@@ -454,4 +482,102 @@ func TestDefaultUserAgent(t *testing.T) {
 		err = client.Write([]telegraf.Metric{getMetric()})
 		require.NoError(t, err)
 	})
+}
+
+func TestBatchedUnbatched(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	client := &HTTP{
+		URL:    u.String(),
+		Method: defaultMethod,
+	}
+
+	var s = map[string]serializers.Serializer{
+		"influx": influx.NewSerializer(),
+		"json": func(s serializers.Serializer, err error) serializers.Serializer {
+			require.NoError(t, err)
+			return s
+		}(json.NewSerializer(time.Second, "")),
+	}
+
+	for name, serializer := range s {
+		var requests int
+		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests++
+			w.WriteHeader(http.StatusOK)
+		})
+
+		t.Run(name, func(t *testing.T) {
+			for _, mode := range [...]bool{false, true} {
+				requests = 0
+				client.UseBatchFormat = mode
+				client.SetSerializer(serializer)
+
+				err = client.Connect()
+				require.NoError(t, err)
+				err = client.Write(getMetrics(3))
+				require.NoError(t, err)
+
+				if client.UseBatchFormat {
+					require.Equal(t, requests, 1, "batched")
+				} else {
+					require.Equal(t, requests, 3, "unbatched")
+				}
+			}
+		})
+	}
+}
+
+func TestAwsCredentials(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name         string
+		plugin       *HTTP
+		tokenHandler TestHandlerFunc
+		handler      TestHandlerFunc
+	}{
+		{
+			name: "simple credentials",
+			plugin: &HTTP{
+				URL:        u.String(),
+				AwsService: "aps",
+				CredentialConfig: internalaws.CredentialConfig{
+					Region:    "us-east-1",
+					AccessKey: "dummy",
+					SecretKey: "dummy",
+				},
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Contains(t, r.Header["Authorization"][0], "AWS4-HMAC-SHA256")
+				require.Contains(t, r.Header["Authorization"][0], "=dummy/")
+				require.Contains(t, r.Header["Authorization"][0], "/us-east-1/")
+				w.WriteHeader(http.StatusOK)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				tt.handler(t, w, r)
+			})
+
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
+
+			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+			require.NoError(t, err)
+		})
+	}
 }

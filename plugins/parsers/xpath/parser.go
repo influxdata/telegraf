@@ -35,14 +35,14 @@ type Parser struct {
 }
 
 type Config struct {
-	MetricName   string
-	MetricQuery  string            `toml:"metric_name"`
-	Selection    string            `toml:"metric_selection"`
-	Timestamp    string            `toml:"timestamp"`
-	TimestampFmt string            `toml:"timestamp_format"`
-	Tags         map[string]string `toml:"tags"`
-	Fields       map[string]string `toml:"fields"`
-	FieldsInt    map[string]string `toml:"fields_int"`
+	MetricDefaultName string            `toml:"-"`
+	MetricQuery       string            `toml:"metric_name"`
+	Selection         string            `toml:"metric_selection"`
+	Timestamp         string            `toml:"timestamp"`
+	TimestampFmt      string            `toml:"timestamp_format"`
+	Tags              map[string]string `toml:"tags"`
+	Fields            map[string]string `toml:"fields"`
+	FieldsInt         map[string]string `toml:"fields_int"`
 
 	FieldSelection  string `toml:"field_selection"`
 	FieldNameQuery  string `toml:"field_name"`
@@ -160,13 +160,19 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 
 	// Determine the metric name. If a query was specified, use the result of this query and the default metric name
 	// otherwise.
-	metricname = config.MetricName
+	metricname = config.MetricDefaultName
 	if len(config.MetricQuery) > 0 {
 		v, err := p.executeQuery(doc, selected, config.MetricQuery)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query metric name: %v", err)
 		}
-		metricname = v.(string)
+		var ok bool
+		if metricname, ok = v.(string); !ok {
+			if v == nil {
+				p.Log.Infof("Hint: Empty metric-name-node. If you wanted to set a constant please use `metric_name = \"'name'\"`.")
+			}
+			return nil, fmt.Errorf("failed to query metric name: query result is of type %T not 'string'", v)
+		}
 	}
 
 	// By default take the time the parser was invoked and override the value
@@ -309,26 +315,26 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				if err != nil {
 					return nil, fmt.Errorf("failed to query field value for '%s': %v", name, err)
 				}
-				path := name
+
 				if config.FieldNameExpand {
 					p := p.document.GetNodePath(selectedfield, selected, "_")
 					if len(p) > 0 {
-						path = p + "_" + name
+						name = p + "_" + name
 					}
 				}
 
 				// Check if field name already exists and if so, append an index number.
-				if _, ok := fields[path]; ok {
+				if _, ok := fields[name]; ok {
 					for i := 1; ; i++ {
-						p := path + "_" + strconv.Itoa(i)
+						p := name + "_" + strconv.Itoa(i)
 						if _, ok := fields[p]; !ok {
-							path = p
+							name = p
 							break
 						}
 					}
 				}
 
-				fields[path] = v
+				fields[name] = v
 			}
 		} else {
 			p.debugEmptyQuery("field selection", selected, config.FieldSelection)

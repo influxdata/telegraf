@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-ping/ping"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -80,6 +81,20 @@ type Ping struct {
 
 	// Packet size
 	Size *int
+}
+
+type roundTripTimeStats struct {
+	min    float64
+	avg    float64
+	max    float64
+	stddev float64
+}
+
+type stats struct {
+	trans int
+	recv  int
+	ttl   int
+	roundTripTimeStats
 }
 
 func (*Ping) Description() string {
@@ -262,7 +277,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 
 	sort.Sort(durationSlice(stats.Rtts))
 	for _, perc := range p.Percentiles {
-		var value = percentile(durationSlice(stats.Rtts), perc)
+		var value = percentile(stats.Rtts, perc)
 		var field = fmt.Sprintf("percentile%v_ms", perc)
 		fields[field] = float64(value.Nanoseconds()) / float64(time.Millisecond)
 	}
@@ -273,6 +288,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		fields["ttl"] = stats.ttl
 	}
 
+	//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
 	fields["percent_packet_loss"] = float64(stats.PacketLoss)
 	fields["minimum_response_ms"] = float64(stats.MinRtt) / float64(time.Millisecond)
 	fields["average_response_ms"] = float64(stats.AvgRtt) / float64(time.Millisecond)

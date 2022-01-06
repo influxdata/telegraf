@@ -3,7 +3,7 @@ package twemproxy
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net"
 	"time"
 
@@ -37,14 +37,14 @@ func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	body, err := ioutil.ReadAll(conn)
+	body, err := io.ReadAll(conn)
 	if err != nil {
 		return err
 	}
 
 	var stats map[string]interface{}
 	if err = json.Unmarshal(body, &stats); err != nil {
-		return errors.New("Error decoding JSON response")
+		return errors.New("error decoding JSON response")
 	}
 
 	tags := make(map[string]string)
@@ -124,11 +124,8 @@ func (t *Twemproxy) processServer(
 ) {
 	fields := make(map[string]interface{})
 	for key, value := range data {
-		switch key {
-		default:
-			if val, ok := value.(float64); ok {
-				fields[key] = val
-			}
+		if val, ok := value.(float64); ok {
+			fields[key] = val
 		}
 	}
 	acc.AddFields("twemproxy_pool_server", fields, tags)

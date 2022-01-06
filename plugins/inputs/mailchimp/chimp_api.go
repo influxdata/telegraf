@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
 )
 
 const (
@@ -23,11 +23,12 @@ var mailchimpDatacenter = regexp.MustCompile("[a-z]+[0-9]+$")
 
 type ChimpAPI struct {
 	Transport http.RoundTripper
-	Debug     bool
+	debug     bool
 
 	sync.Mutex
 
 	url *url.URL
+	log telegraf.Logger
 }
 
 type ReportsParams struct {
@@ -54,12 +55,12 @@ func (p *ReportsParams) String() string {
 	return v.Encode()
 }
 
-func NewChimpAPI(apiKey string) *ChimpAPI {
+func NewChimpAPI(apiKey string, log telegraf.Logger) *ChimpAPI {
 	u := &url.URL{}
 	u.Scheme = "https"
 	u.Host = fmt.Sprintf("%s.api.mailchimp.com", mailchimpDatacenter.FindString(apiKey))
 	u.User = url.UserPassword("", apiKey)
-	return &ChimpAPI{url: u}
+	return &ChimpAPI{url: u, log: log}
 }
 
 type APIError struct {
@@ -91,7 +92,7 @@ func (a *ChimpAPI) GetReports(params ReportsParams) (ReportsResponse, error) {
 	a.url.Path = reportsEndpoint
 
 	var response ReportsResponse
-	rawjson, err := runChimp(a, params)
+	rawjson, err := a.runChimp(params)
 	if err != nil {
 		return response, err
 	}
@@ -110,7 +111,7 @@ func (a *ChimpAPI) GetReport(campaignID string) (Report, error) {
 	a.url.Path = fmt.Sprintf(reportsEndpointCampaign, campaignID)
 
 	var response Report
-	rawjson, err := runChimp(a, ReportsParams{})
+	rawjson, err := a.runChimp(ReportsParams{})
 	if err != nil {
 		return response, err
 	}
@@ -123,21 +124,21 @@ func (a *ChimpAPI) GetReport(campaignID string) (Report, error) {
 	return response, nil
 }
 
-func runChimp(api *ChimpAPI, params ReportsParams) ([]byte, error) {
+func (a *ChimpAPI) runChimp(params ReportsParams) ([]byte, error) {
 	client := &http.Client{
-		Transport: api.Transport,
+		Transport: a.Transport,
 		Timeout:   4 * time.Second,
 	}
 
 	var b bytes.Buffer
-	req, err := http.NewRequest("GET", api.url.String(), &b)
+	req, err := http.NewRequest("GET", a.url.String(), &b)
 	if err != nil {
 		return nil, err
 	}
 	req.URL.RawQuery = params.String()
 	req.Header.Set("User-Agent", "Telegraf-MailChimp-Plugin")
-	if api.Debug {
-		log.Printf("D! [inputs.mailchimp] request URL: %s", req.URL.String())
+	if a.debug {
+		a.log.Debugf("request URL: %s", req.URL.String())
 	}
 
 	resp, err := client.Do(req)
@@ -148,16 +149,16 @@ func runChimp(api *ChimpAPI, params ReportsParams) ([]byte, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
-		body, _ := ioutil.ReadAll(io.LimitReader(resp.Body, 200))
-		return nil, fmt.Errorf("%s returned HTTP status %s: %q", api.url.String(), resp.Status, body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
+		return nil, fmt.Errorf("%s returned HTTP status %s: %q", a.url.String(), resp.Status, body)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	if api.Debug {
-		log.Printf("D! [inputs.mailchimp] response Body: %q", string(body))
+	if a.debug {
+		a.log.Debugf("response Body: %q", string(body))
 	}
 
 	if err = chimpErrorCheck(body); err != nil {

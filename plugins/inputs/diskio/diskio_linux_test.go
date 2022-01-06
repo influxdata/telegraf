@@ -1,9 +1,9 @@
+//go:build linux
 // +build linux
 
 package diskio
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -19,7 +19,7 @@ S:foo/bar/devlink1
 
 // setupNullDisk sets up fake udev info as if /dev/null were a disk.
 func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() {
-	td, err := ioutil.TempFile("", ".telegraf.DiskInfoTest")
+	td, err := os.CreateTemp("", ".telegraf.DiskInfoTest")
 	require.NoError(t, err)
 
 	if s.infoCache == nil {

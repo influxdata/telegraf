@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestWireguard_gatherDeviceMetrics(t *testing.T) {
@@ -36,7 +37,7 @@ func TestWireguard_gatherDeviceMetrics(t *testing.T) {
 
 	wg.gatherDeviceMetrics(&acc, device)
 
-	assert.Equal(t, 3, acc.NFields())
+	require.Equal(t, 3, acc.NFields())
 	acc.AssertDoesNotContainMeasurement(t, measurementPeer)
 	acc.AssertContainsTaggedFields(t, measurementDevice, expectFields, expectTags)
 	acc.AssertContainsTaggedFields(t, measurementDevice, expectGauges, expectTags)
@@ -77,7 +78,7 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 
 	wg.gatherDevicePeerMetrics(&acc, device, peer)
 
-	assert.Equal(t, 6, acc.NFields())
+	require.Equal(t, 6, acc.NFields())
 	acc.AssertDoesNotContainMeasurement(t, measurementDevice)
 	acc.AssertContainsTaggedFields(t, measurementPeer, expectFields, expectTags)
 	acc.AssertContainsTaggedFields(t, measurementPeer, expectGauges, expectTags)

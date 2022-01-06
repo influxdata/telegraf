@@ -2,9 +2,9 @@ package rabbitmq
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"time"
 
 	"testing"
@@ -37,7 +37,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 			return
 		}
 
-		data, err := ioutil.ReadFile(jsonFilePath)
+		data, err := os.ReadFile(jsonFilePath)
 		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
 
 		_, err = w.Write(data)
@@ -247,7 +247,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			return
 		}
 
-		data, err := ioutil.ReadFile(jsonFilePath)
+		data, err := os.ReadFile(jsonFilePath)
 		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
 
 		_, err = w.Write(data)

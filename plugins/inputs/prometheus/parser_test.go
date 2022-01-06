@@ -1,10 +1,12 @@
 package prometheus
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const validUniqueGauge = `# HELP cadvisor_version_info A metric with a constant '1' value labeled by kernel version, OS version, docker version, cadvisor version & cadvisor revision.
@@ -42,14 +44,14 @@ apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025
 
 func TestParseValidPrometheus(t *testing.T) {
 	// Gauge value
-	metrics, err := Parse([]byte(validUniqueGauge), http.Header{})
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "cadvisor_version_info", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	metrics, err := Parse([]byte(validUniqueGauge), http.Header{}, false)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "cadvisor_version_info", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"gauge": float64(1),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"osVersion":        "CentOS Linux 7 (Core)",
 		"cadvisorRevision": "",
 		"cadvisorVersion":  "",
@@ -58,36 +60,36 @@ func TestParseValidPrometheus(t *testing.T) {
 	}, metrics[0].Tags())
 
 	// Counter value
-	metrics, err = Parse([]byte(validUniqueCounter), http.Header{})
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "get_token_fail_count", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	metrics, err = Parse([]byte(validUniqueCounter), http.Header{}, false)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "get_token_fail_count", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"counter": float64(0),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
 	// Summary data
 	//SetDefaultTags(map[string]string{})
-	metrics, err = Parse([]byte(validUniqueSummary), http.Header{})
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "http_request_duration_microseconds", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	metrics, err = Parse([]byte(validUniqueSummary), http.Header{}, false)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "http_request_duration_microseconds", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"0.5":   552048.506,
 		"0.9":   5.876804288e+06,
 		"0.99":  5.876804288e+06,
 		"count": 9.0,
 		"sum":   1.8909097205e+07,
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"handler": "prometheus"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"handler": "prometheus"}, metrics[0].Tags())
 
 	// histogram data
-	metrics, err = Parse([]byte(validUniqueHistogram), http.Header{})
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "apiserver_request_latencies", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	metrics, err = Parse([]byte(validUniqueHistogram), http.Header{}, false)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "apiserver_request_latencies", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"500000": 2000.0,
 		"count":  2025.0,
 		"sum":    1.02726334e+08,
@@ -99,7 +101,42 @@ func TestParseValidPrometheus(t *testing.T) {
 		"125000": 1994.0,
 		"1e+06":  2005.0,
 	}, metrics[0].Fields())
-	assert.Equal(t,
+	require.Equal(t,
 		map[string]string{"verb": "POST", "resource": "bindings"},
 		metrics[0].Tags())
+}
+
+func TestMetricsWithTimestamp(t *testing.T) {
+	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
+	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
+	metricsWithTimestamps := fmt.Sprintf(`
+# TYPE test_counter counter
+test_counter{label="test"} 1 %d
+`, testTimeUnix)
+
+	// IgnoreTimestamp is false
+	metrics, err := Parse([]byte(metricsWithTimestamps), http.Header{}, false)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "test_counter", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"counter": float64(1),
+	}, metrics[0].Fields())
+	require.Equal(t, map[string]string{
+		"label": "test",
+	}, metrics[0].Tags())
+	require.Equal(t, testTime, metrics[0].Time().UTC())
+
+	// IgnoreTimestamp is true
+	metrics, err = Parse([]byte(metricsWithTimestamps), http.Header{}, true)
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "test_counter", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
+		"counter": float64(1),
+	}, metrics[0].Fields())
+	require.Equal(t, map[string]string{
+		"label": "test",
+	}, metrics[0].Tags())
+	require.WithinDuration(t, time.Now(), metrics[0].Time().UTC(), 5*time.Second)
 }
