@@ -484,12 +484,9 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 
 func TestVersionCheckOpenSearch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		default:
-			_, err := w.Write([]byte(`{"version": {"number": "1.2.3"}}`))
-			require.NoError(t, err)
-			return
-		}
+		_, err := w.Write([]byte(`{"version": {"number": "1.2.3"}}`))
+		require.NoError(t, err)
+		return
 	}))
 	defer ts.Close()
 
