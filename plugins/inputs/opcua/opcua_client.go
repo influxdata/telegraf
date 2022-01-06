@@ -597,7 +597,7 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for i, n := range o.nodes {
-		if o.nodeData[i].Quality == ua.StatusOK {
+		if o.checkStatusCode(o.nodeData[i].Quality) {
 			fields := make(map[string]interface{})
 			tags := map[string]string{
 				"id": n.idStr,
