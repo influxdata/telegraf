@@ -18,11 +18,11 @@ import (
 )
 
 type Datadog struct {
-	Apikey   string          `toml:"apikey"`
-	Timeout  config.Duration `toml:"timeout"`
-	URL      string          `toml:"url"`
-	Compress bool            `toml:"compress"`
-	Log      telegraf.Logger `toml:"-"`
+	Apikey      string          `toml:"apikey"`
+	Timeout     config.Duration `toml:"timeout"`
+	URL         string          `toml:"url"`
+	Compression string          `toml:"compression"`
+	Log         telegraf.Logger `toml:"-"`
 
 	client *http.Client
 	proxy.HTTPProxy
@@ -41,8 +41,9 @@ var sampleConfig = `
   ## Set http_proxy (telegraf uses the system wide proxy settings if it isn't set)
   # http_proxy_url = "http://localhost:8888"
 
-  ## Whether to compress the HTTP request body
-  # compress = true
+  ## Override the default (none) compression used to send data.
+  ## Supports: "zlib", "none"
+  # compression = "none"
 `
 
 type TimeSeries struct {
@@ -129,12 +130,14 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	var req *http.Request
-	if d.Compress {
-		z, err := internal.NewZlibEncoder()
+	c := strings.ToLower(d.Compression)
+	switch c {
+	case "zlib":
+		encoder, err := internal.NewContentEncoder(c)
 		if err != nil {
 			return err
 		}
-		buf, err := z.Encode(tsBytes)
+		buf, err := encoder.Encode(tsBytes)
 		if err != nil {
 			return err
 		}
@@ -143,7 +146,9 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 		req.Header.Set("Content-Encoding", "deflate")
-	} else {
+	case "none":
+		fallthrough
+	default:
 		req, err = http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(tsBytes))
 	}
 
@@ -243,7 +248,8 @@ func (d *Datadog) Close() error {
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
 		return &Datadog{
-			URL: datadogAPI,
+			URL:         datadogAPI,
+			Compression: "none",
 		}
 	})
 }
