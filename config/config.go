@@ -814,6 +814,9 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 
 		c.Tags["host"] = c.Agent.Hostname
+	} else {
+		// we may have already set the host tag in a previously loaded config, no-op if not
+		delete(c.Tags, "host")
 	}
 
 	if len(c.UnusedFields) > 0 {
