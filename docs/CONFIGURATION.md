@@ -290,6 +290,15 @@ Parameters that can be used with any input plugin:
 
 - **tags**: A map of tags to apply to a specific input's measurements.
 
+- **consecutive_name_prefix_limit**:
+  If a `name_prefix` is specified, this limit will prevent a prefix from
+  being applied if the metric name already begins with N occurrences
+  of the prefix. This can prevent a prefix loop.
+  Using the prefix `foo_` and a `consecutive_name_prefix_limit` of 2, a metric with
+  the initial name `foo_bar` would translate into `foo_foo_bar`, i.e. the prefix
+  would be applied. A metric with the initial name `foo_foo_bar` would remain
+  `foo_foo_bar`, i.e. the prefix would not be applied.
+
 The [metric filtering][] parameters can be used to limit what metrics are
 emitted from the input plugin.
 
@@ -363,6 +372,14 @@ Parameters that can be used with any output plugin:
 - **name_override**: Override the original name of the measurement.
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
+- **consecutive_name_prefix_limit**:
+  If a `name_prefix` is specified, this limit will prevent a prefix from
+  being applied if the metric name already begins with N occurrences
+  of the prefix. This can prevent a prefix loop.
+  Using the prefix `foo_` and a `consecutive_name_prefix_limit` of 2, a metric with
+  the initial name `foo_bar` would translate into `foo_foo_bar`, i.e. the prefix
+  would be applied. A metric with the initial name `foo_foo_bar` would remain
+  `foo_foo_bar`, i.e. the prefix would not be applied.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 emitted from the output plugin.
@@ -451,6 +468,14 @@ Parameters that can be used with any aggregator plugin:
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
 - **tags**: A map of tags to apply to the measurement - behavior varies based on aggregator.
+- **consecutive_name_prefix_limit**:
+  If a `name_prefix` is specified, this limit will prevent a prefix from
+  being applied if the metric name already begins with N occurrences
+  of the prefix. This can prevent a prefix loop.
+  Using the prefix `foo_` and a `consecutive_name_prefix_limit` of 2, a metric with
+  the initial name `foo_bar` would translate into `foo_foo_bar`, i.e. the prefix
+  would be applied. A metric with the initial name `foo_foo_bar` would remain
+  `foo_foo_bar`, i.e. the prefix would not be applied.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 handled by the aggregator.  Excluded metrics are passed downstream to the next

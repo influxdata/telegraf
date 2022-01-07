@@ -10,6 +10,7 @@ func makemetric(
 	metric telegraf.Metric,
 	nameOverride string,
 	namePrefix string,
+	consecutiveNamePrefixLimit int,
 	nameSuffix string,
 	tags map[string]string,
 	globalTags map[string]string,
@@ -19,7 +20,9 @@ func makemetric(
 	}
 
 	if len(namePrefix) != 0 {
-		metric.AddPrefix(namePrefix)
+		if shouldApplyPrefixToMetric(metric.Name(), namePrefix, consecutiveNamePrefixLimit) {
+			metric.AddPrefix(namePrefix)
+		}
 	}
 	if len(nameSuffix) != 0 {
 		metric.AddSuffix(nameSuffix)

@@ -31,6 +31,8 @@ type OutputConfig struct {
 	NameOverride string
 	NamePrefix   string
 	NameSuffix   string
+
+	ConsecutiveNamePrefixLimit int
 }
 
 // RunningOutput contains the output configuration
@@ -155,7 +157,9 @@ func (r *RunningOutput) AddMetric(metric telegraf.Metric) {
 	}
 
 	if len(r.Config.NamePrefix) > 0 {
-		metric.AddPrefix(r.Config.NamePrefix)
+		if shouldApplyPrefixToMetric(metric.Name(), r.Config.NamePrefix, r.Config.ConsecutiveNamePrefixLimit) {
+			metric.AddPrefix(r.Config.NamePrefix)
+		}
 	}
 
 	if len(r.Config.NameSuffix) > 0 {

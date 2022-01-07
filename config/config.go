@@ -696,7 +696,7 @@ func (c *Config) LoadDirectory(path string) error {
 
 		if info.IsDir() {
 			if strings.HasPrefix(info.Name(), "..") {
-				// skip Kubernetes mounts, prevening loading the same config twice
+				// skip Kubernetes mounts, preventing loading the same config twice
 				return filepath.SkipDir
 			}
 
@@ -1240,6 +1240,7 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 	c.getFieldDuration(tbl, "grace", &conf.Grace)
 	c.getFieldBool(tbl, "drop_original", &conf.DropOriginal)
 	c.getFieldString(tbl, "name_prefix", &conf.MeasurementPrefix)
+	c.getFieldInt(tbl, "consecutive_name_prefix_limit", &conf.ConsecutiveNamePrefixLimit)
 	c.getFieldString(tbl, "name_suffix", &conf.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &conf.NameOverride)
 	c.getFieldString(tbl, "alias", &conf.Alias)
@@ -1328,6 +1329,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	c.getFieldDuration(tbl, "precision", &cp.Precision)
 	c.getFieldDuration(tbl, "collection_jitter", &cp.CollectionJitter)
 	c.getFieldString(tbl, "name_prefix", &cp.MeasurementPrefix)
+	c.getFieldInt(tbl, "consecutive_name_prefix_limit", &cp.ConsecutiveNamePrefixLimit)
 	c.getFieldString(tbl, "name_suffix", &cp.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &cp.NameOverride)
 	c.getFieldString(tbl, "alias", &cp.Alias)
@@ -1640,6 +1642,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	c.getFieldString(tbl, "name_override", &oc.NameOverride)
 	c.getFieldString(tbl, "name_suffix", &oc.NameSuffix)
 	c.getFieldString(tbl, "name_prefix", &oc.NamePrefix)
+	c.getFieldInt(tbl, "consecutive_name_prefix_limit", &oc.ConsecutiveNamePrefixLimit)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1652,6 +1655,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
 	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
 		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
+		"consecutive_name_prefix_limit",
 		"csv_column_names", "csv_column_types", "csv_comment", "csv_delimiter", "csv_header_row_count",
 		"csv_measurement_column", "csv_skip_columns", "csv_skip_rows", "csv_tag_columns", "csv_skip_errors",
 		"csv_timestamp_column", "csv_timestamp_format", "csv_timezone", "csv_trim_space", "csv_skip_values",

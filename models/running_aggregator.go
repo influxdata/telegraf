@@ -78,6 +78,8 @@ type AggregatorConfig struct {
 	MeasurementSuffix string
 	Tags              map[string]string
 	Filter            Filter
+
+	ConsecutiveNamePrefixLimit int
 }
 
 func (r *RunningAggregator) LogName() string {
@@ -113,6 +115,7 @@ func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		metric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
+		r.Config.ConsecutiveNamePrefixLimit,
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
 		nil)

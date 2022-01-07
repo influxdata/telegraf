@@ -67,6 +67,8 @@ type InputConfig struct {
 	MeasurementSuffix string
 	Tags              map[string]string
 	Filter            Filter
+
+	ConsecutiveNamePrefixLimit int
 }
 
 func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
@@ -97,6 +99,7 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		metric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
+		r.Config.ConsecutiveNamePrefixLimit,
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
 		r.defaultTags)
