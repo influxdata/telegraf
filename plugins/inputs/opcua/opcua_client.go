@@ -190,8 +190,8 @@ const sampleConfig = `
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua.workarounds]
-  ## Set valid status codes
-  # valid_status_codes = ["0x0", "0xC0"]
+    ## Set valid status codes
+    # valid_status_codes = ["0x0"]
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -499,18 +499,13 @@ func (o *OpcUA) setupOptions() error {
 
 func (o *OpcUA) setupWorkarounds() error {
 	if len(o.Workarounds.ValidStatusCodes) != 0 {
-		o.codes = []ua.StatusCode{} // clear default codes
-
 		for _, c := range o.Workarounds.ValidStatusCodes {
 			val, err := strconv.ParseInt(c, 0, 32) // setting 32 bits to allow for safe conversion
-
 			if err != nil {
 				return err
 			}
-
 			o.codes = append(o.codes, ua.StatusCode(uint32(val)))
 		}
-		return nil
 	}
 	return nil
 }
