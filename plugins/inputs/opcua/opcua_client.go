@@ -21,6 +21,7 @@ import (
 
 type OpcuaWorkarounds struct {
 	AdditionalValidStatusCodes []string `toml:"additional_valid_status_codes"`
+	QualityAsTag               bool     `toml:"quality_as_tag"`
 }
 
 // OpcUA type
@@ -192,6 +193,9 @@ const sampleConfig = `
   # [inputs.opcua.workarounds]
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
     # additional_valid_status_codes = ["0xC0"]
+	#
+	## Quality as a tag instead of a field
+	# quality_as_tag = true
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -602,7 +606,13 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 			}
 
 			fields[o.nodeData[i].TagName] = o.nodeData[i].Value
-			fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
+
+			if o.Workarounds.QualityAsTag {
+				tags["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
+			} else {
+				fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
+			}
+
 			acc.AddFields(n.metricName, fields, tags)
 
 			switch o.Timestamp {

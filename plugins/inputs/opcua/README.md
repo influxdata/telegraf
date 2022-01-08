@@ -94,6 +94,9 @@ Plugin minimum tested version: 1.16
   # [inputs.opcua.workarounds]
     ## Set additional valid status codes, StatusOK (0x0) is always considered valid
     # additional_valid_status_codes = ["0xC0"]
+    #
+    ## Quality as a tag instead of a field
+    # quality_as_tag = true
 ```
 
 ## Node Configuration
