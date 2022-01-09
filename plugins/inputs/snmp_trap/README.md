@@ -6,6 +6,11 @@ notifications (traps and inform requests).
 Notifications are received on plain UDP. The port to listen is
 configurable.
 
+## Note about Paths
+
+Path is a global variable, separate snmp instances will append the specified
+path onto the global path variable
+
 ## Configuration
 
 ```toml
@@ -22,6 +27,7 @@ configurable.
   ## Path to mib files
   # path = ["/usr/share/snmp/mibs"]
   ##
+  ## Deprecated in 1.20.0; no longer running snmptranslate
   ## Timeout running snmptranslate command
   # timeout = "5s"
   ## Snmp version

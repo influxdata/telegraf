@@ -1,10 +1,58 @@
-//go:build !openbsd
-
 package modbus
 
 import (
 	"fmt"
 )
+
+const sampleConfigPartPerRegister = `
+  ## Per register definition
+  ##
+
+  ## Digital Variables, Discrete Inputs and Coils
+  ## measurement - the (optional) measurement name, defaults to "modbus"
+  ## name        - the variable name
+  ## address     - variable address
+
+  discrete_inputs = [
+    { name = "start",          address = [0]},
+    { name = "stop",           address = [1]},
+    { name = "reset",          address = [2]},
+    { name = "emergency_stop", address = [3]},
+  ]
+  coils = [
+    { name = "motor1_run",     address = [0]},
+    { name = "motor1_jog",     address = [1]},
+    { name = "motor1_stop",    address = [2]},
+  ]
+
+  ## Analog Variables, Input Registers and Holding Registers
+  ## measurement - the (optional) measurement name, defaults to "modbus"
+  ## name        - the variable name
+  ## byte_order  - the ordering of bytes
+  ##  |---AB, ABCD   - Big Endian
+  ##  |---BA, DCBA   - Little Endian
+  ##  |---BADC       - Mid-Big Endian
+  ##  |---CDAB       - Mid-Little Endian
+  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64,
+  ##              FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
+  ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
+  ## scale      - the final numeric variable representation
+  ## address    - variable address
+
+  holding_registers = [
+    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
+    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
+    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
+    { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
+    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
+    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
+  ]
+  input_registers = [
+    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
+    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
+    { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
+  ]
+`
 
 type fieldDefinition struct {
 	Measurement string   `toml:"measurement"`
@@ -23,35 +71,8 @@ type ConfigurationOriginal struct {
 	InputRegisters   []fieldDefinition `toml:"input_registers"`
 }
 
-func (c *ConfigurationOriginal) Process() (map[byte]requestSet, error) {
-	coil, err := c.initRequests(c.Coils, cCoils, maxQuantityCoils)
-	if err != nil {
-		return nil, err
-	}
-
-	discrete, err := c.initRequests(c.DiscreteInputs, cDiscreteInputs, maxQuantityDiscreteInput)
-	if err != nil {
-		return nil, err
-	}
-
-	holding, err := c.initRequests(c.HoldingRegisters, cHoldingRegisters, maxQuantityHoldingRegisters)
-	if err != nil {
-		return nil, err
-	}
-
-	input, err := c.initRequests(c.InputRegisters, cInputRegisters, maxQuantityInputRegisters)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[byte]requestSet{
-		c.SlaveID: {
-			coil:     coil,
-			discrete: discrete,
-			holding:  holding,
-			input:    input,
-		},
-	}, nil
+func (c *ConfigurationOriginal) SampleConfigPart() string {
+	return sampleConfigPartPerRegister
 }
 
 func (c *ConfigurationOriginal) Check() error {
@@ -70,12 +91,43 @@ func (c *ConfigurationOriginal) Check() error {
 	return c.validateFieldDefinitions(c.InputRegisters, cInputRegisters)
 }
 
-func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, registerType string, maxQuantity uint16) ([]request, error) {
+func (c *ConfigurationOriginal) Process() (map[byte]requestSet, error) {
+	coil, err := c.initRequests(c.Coils, maxQuantityCoils)
+	if err != nil {
+		return nil, err
+	}
+
+	discrete, err := c.initRequests(c.DiscreteInputs, maxQuantityDiscreteInput)
+	if err != nil {
+		return nil, err
+	}
+
+	holding, err := c.initRequests(c.HoldingRegisters, maxQuantityHoldingRegisters)
+	if err != nil {
+		return nil, err
+	}
+
+	input, err := c.initRequests(c.InputRegisters, maxQuantityInputRegisters)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[byte]requestSet{
+		c.SlaveID: {
+			coil:     coil,
+			discrete: discrete,
+			holding:  holding,
+			input:    input,
+		},
+	}, nil
+}
+
+func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQuantity uint16) ([]request, error) {
 	fields, err := c.initFields(fieldDefs)
 	if err != nil {
 		return nil, err
 	}
-	return newRequestsFromFields(fields, c.SlaveID, registerType, maxQuantity), nil
+	return groupFieldsToRequests(fields, nil, maxQuantity), nil
 }
 
 func (c *ConfigurationOriginal) initFields(fieldDefs []fieldDefinition) ([]field, error) {
@@ -106,7 +158,6 @@ func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition) (fie
 	f := field{
 		measurement: def.Measurement,
 		name:        def.Name,
-		scale:       def.Scale,
 		address:     def.Address[0],
 		length:      uint16(len(def.Address)),
 	}

@@ -1,5 +1,3 @@
-//go:build !openbsd
-
 package modbus
 
 import "fmt"

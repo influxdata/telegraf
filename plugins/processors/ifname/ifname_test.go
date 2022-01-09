@@ -20,7 +20,7 @@ func TestTable(t *testing.T) {
 	d := IfName{}
 	err := d.Init()
 	require.NoError(t, err)
-	tab, err := d.makeTable("IF-MIB::ifTable")
+	tab, err := d.makeTable("1.3.6.1.2.1.2.2.1.2")
 	require.NoError(t, err)
 
 	clientConfig := snmp.ClientConfig{
@@ -36,7 +36,7 @@ func TestTable(t *testing.T) {
 	require.NoError(t, err)
 
 	// Could use ifIndex but oid index is always the same
-	m, err := buildMap(gs, tab, "ifDescr")
+	m, err := buildMap(gs, tab)
 	require.NoError(t, err)
 	require.NotEmpty(t, m)
 }

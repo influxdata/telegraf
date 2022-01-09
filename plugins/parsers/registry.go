@@ -34,7 +34,7 @@ type ParserInput interface {
 // ParserFuncInput is an interface for input plugins that are able to parse
 // arbitrary data formats.
 type ParserFuncInput interface {
-	// GetParser returns a new parser.
+	// SetParserFunc returns a new parser.
 	SetParserFunc(fn ParserFunc)
 }
 
@@ -65,7 +65,7 @@ type Parser interface {
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
-	// Dataformat can be one of: json, influx, graphite, value, nagios
+	// DataFormat can be one of: json, influx, graphite, value, nagios
 	DataFormat string `toml:"data_format"`
 
 	// Separator only applied to Graphite data.
@@ -152,6 +152,7 @@ type Config struct {
 	CSVTimezone          string   `toml:"csv_timezone"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 	CSVSkipValues        []string `toml:"csv_skip_values"`
+	CSVSkipErrors        bool     `toml:"csv_skip_errors"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -250,6 +251,7 @@ func NewParser(config *Config) (Parser, error) {
 			Timezone:          config.CSVTimezone,
 			DefaultTags:       config.DefaultTags,
 			SkipValues:        config.CSVSkipValues,
+			SkipErrors:        config.CSVSkipErrors,
 		}
 
 		return csv.NewParser(config)

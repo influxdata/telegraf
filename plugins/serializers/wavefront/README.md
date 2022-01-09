@@ -20,6 +20,10 @@ The `wavefront` serializer translates the Telegraf metric format to the [Wavefro
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "wavefront"
+  ## Users who wish their prefix paths to not be converted may set the following:
+  ## default behavior (enabled prefix/path conversion):       prod.prefix.name.metric.name
+  ## configurable behavior (disabled prefix/path conversion): prod.prefix_name.metric_name
+  # wavefront_disable_prefix_conversion = true
 ```
 
 ## Metrics

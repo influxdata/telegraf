@@ -50,7 +50,16 @@ Points collected with greater than 1 minute precision may need to be
 aggregated before then can be written.  Consider using the [basicstats][]
 aggregator to do this.
 
+Histogram / distribution and delta metrics are not yet supported. These will
+be dropped silently unless debugging is on.
+
+Note that the plugin keeps an in-memory cache of the start times and last
+observed values of all COUNTER metrics in order to comply with the
+requirements of the stackdriver API.  This cache is not GCed: if you remove
+a large number of counters from the input side, you may wish to restart
+telegraf to clear it.
+
 [basicstats]: /plugins/aggregators/basicstats/README.md
 [stackdriver]: https://cloud.google.com/monitoring/api/v3/
 [authentication]: https://cloud.google.com/docs/authentication/getting-started
-[pricing]: https://cloud.google.com/stackdriver/pricing#stackdriver_monitoring_services
+[pricing]: https://cloud.google.com/stackdriver/pricing#google-clouds-operations-suite-pricing

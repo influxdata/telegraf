@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -34,11 +35,12 @@ type PSDiskDeps interface {
 }
 
 func NewSystemPS() *SystemPS {
-	return &SystemPS{&SystemPSDisk{}}
+	return &SystemPS{PSDiskDeps: &SystemPSDisk{}}
 }
 
 type SystemPS struct {
 	PSDiskDeps
+	Log telegraf.Logger `toml:"-"`
 }
 
 type SystemPSDisk struct{}
@@ -97,10 +99,17 @@ func (s *SystemPS) DiskUsage(
 	for i := range parts {
 		p := parts[i]
 
+		if s.Log != nil {
+			s.Log.Debugf("[SystemPS] partition %d: %v", i, p)
+		}
+
 		if len(mountPointFilter) > 0 {
 			// If the mount point is not a member of the filter set,
 			// don't gather info on it.
 			if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
+				if s.Log != nil {
+					s.Log.Debug("[SystemPS] => dropped by mount-point filter")
+				}
 				continue
 			}
 		}
@@ -108,20 +117,41 @@ func (s *SystemPS) DiskUsage(
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
 		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
+			if s.Log != nil {
+				s.Log.Debug("[SystemPS] => dropped by filesystem-type filter")
+			}
 			continue
 		}
 
-		// If there's a host mount prefix, exclude any paths which conflict
-		// with the prefix.
-		if len(hostMountPrefix) > 0 &&
-			!strings.HasPrefix(p.Mountpoint, hostMountPrefix) &&
-			paths[hostMountPrefix+p.Mountpoint] {
-			continue
+		// If there's a host mount prefix use it as newer gopsutil version check for
+		// the init's mountpoints usually pointing to the host-mountpoint but in the
+		// container. This won't work for checking the disk-usage as the disks are
+		// mounted at HOST_MOUNT_PREFIX...
+		mountpoint := p.Mountpoint
+		if hostMountPrefix != "" && !strings.HasPrefix(p.Mountpoint, hostMountPrefix) {
+			mountpoint = filepath.Join(hostMountPrefix, p.Mountpoint)
+			// Exclude conflicting paths
+			if paths[mountpoint] {
+				if s.Log != nil {
+					s.Log.Debug("[SystemPS] => dropped by mount prefix")
+				}
+				continue
+			}
+		}
+		if s.Log != nil {
+			s.Log.Debugf("[SystemPS] -> using mountpoint %q...", mountpoint)
 		}
 
-		du, err := s.PSDiskUsage(p.Mountpoint)
+		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
+			if s.Log != nil {
+				s.Log.Debugf("[SystemPS] => dropped by disk usage (%q): %v", mountpoint, err)
+			}
 			continue
+		}
+
+		if s.Log != nil {
+			s.Log.Debug("[SystemPS] => kept...")
 		}
 
 		du.Path = filepath.Join("/", strings.TrimPrefix(p.Mountpoint, hostMountPrefix))

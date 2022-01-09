@@ -94,7 +94,7 @@ type Service struct {
 	MaxOpen       int
 	MaxLifetime   config.Duration
 	DB            *sql.DB
-	IsPgBouncer   bool
+	IsPgBouncer   bool `toml:"-"`
 }
 
 var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)

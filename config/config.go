@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
@@ -77,6 +79,9 @@ type Config struct {
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors    models.RunningProcessors
 	AggProcessors models.RunningProcessors
+
+	Deprecations map[string][]int64
+	version      *semver.Version
 }
 
 // NewConfig creates a new struct to hold the Telegraf config.
@@ -102,7 +107,15 @@ func NewConfig() *Config {
 		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
+		Deprecations:  make(map[string][]int64),
 	}
+
+	// Handle unknown version
+	version := internal.Version()
+	if version == "" || version == "unknown" {
+		version = "0.0.0-unknown"
+	}
+	c.version = semver.New(version)
 
 	tomlCfg := &toml.Config{
 		NormFieldName: toml.DefaultConfig.NormFieldName,
@@ -1009,6 +1022,11 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 func (c *Config) addAggregator(name string, table *ast.Table) error {
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := aggregators.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("aggregators", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
 		return fmt.Errorf("Undefined but requested aggregator: %s", name)
 	}
 	aggregator := creator()
@@ -1022,6 +1040,10 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
+	if err := c.printUserDeprecation("aggregators", name, aggregator); err != nil {
+		return err
+	}
+
 	c.Aggregators = append(c.Aggregators, models.NewRunningAggregator(aggregator, conf))
 	return nil
 }
@@ -1029,6 +1051,11 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 func (c *Config) addProcessor(name string, table *ast.Table) error {
 	creator, ok := processors.Processors[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := processors.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("processors", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
 
@@ -1070,6 +1097,10 @@ func (c *Config) newRunningProcessor(
 		}
 	}
 
+	if err := c.printUserDeprecation("processors", processorConfig.Name, processor); err != nil {
+		return nil, err
+	}
+
 	rf := models.NewRunningProcessor(processor, processorConfig)
 	return rf, nil
 }
@@ -1080,6 +1111,11 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	}
 	creator, ok := outputs.Outputs[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := outputs.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("outputs", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
 		return fmt.Errorf("Undefined but requested output: %s", name)
 	}
 	output := creator()
@@ -1104,6 +1140,10 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
+	if err := c.printUserDeprecation("outputs", name, output); err != nil {
+		return err
+	}
+
 	ro := models.NewRunningOutput(output, outputConfig, c.Agent.MetricBatchSize, c.Agent.MetricBufferLimit)
 	c.Outputs = append(c.Outputs, ro)
 	return nil
@@ -1113,13 +1153,23 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
 		return nil
 	}
+
 	// Legacy support renaming io input to diskio
 	if name == "io" {
+		if err := c.printUserDeprecation("inputs", name, nil); err != nil {
+			return err
+		}
 		name = "diskio"
 	}
 
 	creator, ok := inputs.Inputs[name]
 	if !ok {
+		// Handle removed, deprecated plugins
+		if di, deprecated := inputs.Deprecations[name]; deprecated {
+			printHistoricPluginDeprecationNotice("inputs", name, di)
+			return fmt.Errorf("plugin deprecated")
+		}
+
 		return fmt.Errorf("Undefined but requested input: %s", name)
 	}
 	input := creator()
@@ -1140,7 +1190,18 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 			return err
 		}
 		t.SetParserFunc(func() (parsers.Parser, error) {
-			return parsers.NewParser(config)
+			parser, err := parsers.NewParser(config)
+			if err != nil {
+				return nil, err
+			}
+			logger := models.NewLogger("parsers", config.DataFormat, name)
+			models.SetLoggerOnPlugin(parser, logger)
+			if initializer, ok := parser.(telegraf.Initializer); ok {
+				if err := initializer.Init(); err != nil {
+					return nil, err
+				}
+			}
+			return parser, nil
 		})
 	}
 
@@ -1150,6 +1211,10 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 
 	if err := c.toml.UnmarshalTable(table, input); err != nil {
+		return err
+	}
+
+	if err := c.printUserDeprecation("inputs", name, input); err != nil {
 		return err
 	}
 
@@ -1372,6 +1437,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	c.getFieldInt(tbl, "csv_skip_columns", &pc.CSVSkipColumns)
 	c.getFieldBool(tbl, "csv_trim_space", &pc.CSVTrimSpace)
 	c.getFieldStringSlice(tbl, "csv_skip_values", &pc.CSVSkipValues)
+	c.getFieldBool(tbl, "csv_skip_errors", &pc.CSVSkipErrors)
 
 	c.getFieldStringSlice(tbl, "form_urlencoded_tag_keys", &pc.FormUrlencodedTagKeys)
 
@@ -1536,6 +1602,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 
 	c.getFieldStringSlice(tbl, "wavefront_source_override", &sc.WavefrontSourceOverride)
 	c.getFieldBool(tbl, "wavefront_use_strict", &sc.WavefrontUseStrict)
+	c.getFieldBool(tbl, "wavefront_disable_prefix_conversion", &sc.WavefrontDisablePrefixConversion)
 
 	c.getFieldBool(tbl, "prometheus_export_timestamp", &sc.PrometheusExportTimestamp)
 	c.getFieldBool(tbl, "prometheus_sort_metrics", &sc.PrometheusSortMetrics)
@@ -1586,7 +1653,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
 		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
 		"csv_column_names", "csv_column_types", "csv_comment", "csv_delimiter", "csv_header_row_count",
-		"csv_measurement_column", "csv_skip_columns", "csv_skip_rows", "csv_tag_columns",
+		"csv_measurement_column", "csv_skip_columns", "csv_skip_rows", "csv_tag_columns", "csv_skip_errors",
 		"csv_timestamp_column", "csv_timestamp_format", "csv_timezone", "csv_trim_space", "csv_skip_values",
 		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
 		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
