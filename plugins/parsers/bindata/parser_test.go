@@ -194,7 +194,7 @@ var binaryDataBigEndianTimeXs = []byte{
 
 func TestBigEndian(t *testing.T) {
 
-	var parser, err = NewBinDataParser(
+	parser, err := NewBinDataParser(
 		"big_endian",
 		"unix",
 		"be",
