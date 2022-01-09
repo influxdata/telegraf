@@ -20,7 +20,7 @@ The "BinData" parser translates binary records consisting of multiple fields int
   data_format = "bindata"
 
   ## Numeric fields endiannes, "be" or "le", default "be"
-  bindata_endiannes = "be"
+  # bindata_endiannes = "be"
 
   ## Timestamp format - "unix", "unix_ms", "unix_us", "unix_ns", default "unix"
   # bindata_time_format = "unix"
