@@ -203,7 +203,7 @@ func TestBigEndian(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
