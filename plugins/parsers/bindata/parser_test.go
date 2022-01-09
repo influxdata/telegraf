@@ -192,7 +192,6 @@ var binaryDataBigEndianTimeXs = []byte{
 }
 
 func TestBigEndian(t *testing.T) {
-
 	parser, err := NewBinDataParser(
 		"big_endian",
 		"unix",
@@ -213,7 +212,6 @@ func TestBigEndian(t *testing.T) {
 }
 
 func TestLittleEndian(t *testing.T) {
-
 	var parser, err = NewBinDataParser(
 		"little_endian",
 		"unix",
@@ -234,7 +232,6 @@ func TestLittleEndian(t *testing.T) {
 }
 
 func TestInvalidEndianness(t *testing.T) {
-
 	var parser, err = NewBinDataParser(
 		"invalid_endiannes",
 		"unix",
@@ -249,7 +246,6 @@ func TestInvalidEndianness(t *testing.T) {
 }
 
 func TestStringEncoding(t *testing.T) {
-
 	var parser, err = NewBinDataParser(
 		"default_string_encoding",
 		"unix",
@@ -267,7 +263,6 @@ func TestStringEncoding(t *testing.T) {
 }
 
 func TestInvalidStringEncoding(t *testing.T) {
-
 	var parser, err = NewBinDataParser(
 		"invalid_string_encoding",
 		"unix",
@@ -282,7 +277,6 @@ func TestInvalidStringEncoding(t *testing.T) {
 }
 
 func TestStringUTF8(t *testing.T) {
-
 	var parser, err = NewBinDataParser(
 		"string_utf8",
 		"unix",
@@ -303,7 +297,6 @@ func TestStringUTF8(t *testing.T) {
 }
 
 func TestPadding(t *testing.T) {
-
 	var parser, err = NewBinDataParser(
 		"padding",
 		"unix",
@@ -324,7 +317,6 @@ func TestPadding(t *testing.T) {
 }
 
 func TestTimeAddedByParser(t *testing.T) {
-
 	var parser, err = NewBinDataParser(
 		"no_time",
 		"unix",
@@ -349,7 +341,6 @@ func TestTimeAddedByParser(t *testing.T) {
 }
 
 func TestInvalidFieldType(t *testing.T) {
-
 	var parser, err = NewBinDataParser(
 		"no_time",
 		"unix",
@@ -365,7 +356,6 @@ func TestInvalidFieldType(t *testing.T) {
 }
 
 func TestTimeXs(t *testing.T) {
-
 	// Default, unix
 	var parser, err = NewBinDataParser(
 		"time_unix_default",
@@ -538,7 +528,6 @@ func TestTimeXs(t *testing.T) {
 }
 
 func TestDefaultTags(t *testing.T) {
-
 	parser, err := NewBinDataParser(
 		"default_tags",
 		"unix",
@@ -558,7 +547,6 @@ func TestDefaultTags(t *testing.T) {
 }
 
 func TestDuplicateNames(t *testing.T) {
-
 	var parser, err = NewBinDataParser(
 		"duplicate_names",
 		"unix",
