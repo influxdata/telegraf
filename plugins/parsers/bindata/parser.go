@@ -95,8 +95,8 @@ func NewBinDataParser(
 
 	// Field types, names and sizes
 	knownFields := make(map[string]bool)
-	for i := 0; i < len(fields); i++ {
-		fieldType, ok := fieldTypes[strings.ToLower(fields[i].Type)]
+	for i, field := range fields {
+		fieldType, ok := fieldTypes[strings.ToLower(field.Type)]
 		if !ok {
 			return nil, fmt.Errorf(`invalid field type %s`, fields[i].Type)
 		}
