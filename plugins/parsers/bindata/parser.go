@@ -81,7 +81,7 @@ func NewBinDataParser(
 	case "le":
 		byteOrder = binary.LittleEndian
 	default:
-		return nil, fmt.Errorf("invalid bindata_endiannes %s", endiannes)
+		return nil, fmt.Errorf("invalid endiannes %q", endiannes)
 	}
 
 	// String encoding
