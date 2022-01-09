@@ -192,29 +192,25 @@ func (binData *BinData) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 func (binData *BinData) getTime(fields map[string]interface{}) (time.Time, error) {
-	nilTime := new(time.Time)
-	metricTime := time.Now()
-	timeValue := fields[timeKey]
-	if timeValue != nil {
-		var err error
-		switch binData.timeFormat {
-		case "unix":
-			if _, ok := timeValue.(int32); !ok {
-				return *nilTime, fmt.Errorf("invalid time type, must be int32")
-			}
-			metricTime, err = internal.ParseTimestamp(binData.timeFormat, int64(timeValue.(int32)), timezone)
-		case "unix_ms", "unix_us", "unix_ns":
-			if _, ok := timeValue.(int64); !ok {
-				return *nilTime, fmt.Errorf("invalid time type, must be int64")
-			}
-			metricTime, err = internal.ParseTimestamp(binData.timeFormat, int64(timeValue.(int64)), timezone)
-		default:
-			return *nilTime, fmt.Errorf("invalid time format %s", binData.timeFormat)
-		}
-		if err != nil {
-			return *nilTime, err
-		}
-		delete(fields, timeKey)
+	t, found := fields[timeKey]
+	if !found {
+		return time.Now()
 	}
-	return metricTime, nil
+	delete(fields, timeKey)
+	
+	switch binData.timeFormat {
+	case "unix":
+		tval, ok := t.(int32)
+		if !ok {
+			return nil, fmt.Errorf("invalid time type %T, must be int32", t)
+		}
+		return internal.ParseTimestamp(binData.timeFormat, int64(tvalue), timezone)
+	case "unix_ms", "unix_us", "unix_ns":
+		tval, ok := t.(int64)
+		if !ok {
+			return nil, fmt.Errorf("invalid time type %T, must be int64", t)
+		}
+		return internal.ParseTimestamp(binData.timeFormat, int64(tval), timezone)
+	}
+	return nil, fmt.Errorf("invalid time format %q", binData.timeFormat)
 }
