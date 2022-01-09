@@ -126,7 +126,7 @@ func NewBinDataParser(
 				}
 			}
 		}
-		
+
 		// Overwrite non-string and non-padding field size
 		if field.Type != "string" {
 			fields[i].Size = uint(fieldType.Size())
@@ -151,7 +151,6 @@ func (binData *BinData) SetDefaultTags(tags map[string]string) {
 
 // Parse implements Parser.Parse()
 func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
-
 	fields := make(map[string]interface{})
 	var offset uint = 0
 
