@@ -151,9 +151,9 @@ func (binData *BinData) SetDefaultTags(tags map[string]string) {
 
 // Parse implements Parser.Parse()
 func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
+
 	fields := make(map[string]interface{})
 	var offset uint = 0
-
 	for _, field := range binData.fields {
 		if offset > uint(len(data)) || offset+field.Size > uint(len(data)) {
 			return nil, fmt.Errorf("invalid offset/size in field %s", field.Name)
