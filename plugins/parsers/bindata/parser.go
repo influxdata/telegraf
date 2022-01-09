@@ -101,30 +101,35 @@ func NewBinDataParser(
 			return nil, fmt.Errorf(`invalid field type %s`, fields[i].Type)
 		}
 
-		if fields[i].Type != "padding" {
-			// Check for duplicate field names
-			fieldName := fields[i].Name
-			if _, ok := knownFields[fieldName]; ok {
-				return nil, fmt.Errorf(`duplicate field name %s`, fieldName)
-			}
-			knownFields[fieldName] = true
+		if field.Type == "padding" {
+			// Ignore padding fields
+			continue
+		}
 
-			// Time field type check
-			if fieldName == "time" {
-				if timeFormat == "unix" &&
-					fieldType != reflect.TypeOf((*int32)(nil)).Elem() {
+		// Check for duplicate field names
+		fieldName := field.Name
+		if _, ok := knownFields[fieldName]; ok {
+			return nil, fmt.Errorf(`duplicate field name %s`, fieldName)
+		}
+		knownFields[fieldName] = true
+
+		// Time field type check
+		if fieldName == "time" {
+			switch timeFormat {
+			case "unix":
+				if field.Type != "int32" {
 					return nil, fmt.Errorf(`invalid time type, must be int32`)
 				}
-				if (timeFormat == "unix_ms" || timeFormat == "unix_us" || timeFormat == "unix_ns") &&
-					fieldType != reflect.TypeOf((*int64)(nil)).Elem() {
+			case "unix_ms", "unix_us", "unix_ns":
+				if field.Type != "int64" {
 					return nil, fmt.Errorf(`invalid time type, must be int64`)
 				}
 			}
-
-			// Overwrite non-string and non-padding field size
-			if fieldType.Name() != "string" {
-				fields[i].Size = uint(fieldType.Size())
-			}
+		}
+		
+		// Overwrite non-string and non-padding field size
+		if field.Type != "string" {
+			fields[i].Size = uint(fieldType.Size())
 		}
 	}
 
