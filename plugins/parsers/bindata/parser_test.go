@@ -3,7 +3,6 @@ package bindata
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -207,10 +206,10 @@ func TestBigEndian(t *testing.T) {
 
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
-	assert.Equal(t, expectedParseResult, metrics[0].Fields())
+	require.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
+	require.Equal(t, expectedParseResult, metrics[0].Fields())
 }
 
 func TestLittleEndian(t *testing.T) {
@@ -224,14 +223,14 @@ func TestLittleEndian(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err := parser.Parse(binaryDataLittleEndian)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
-	assert.Equal(t, expectedParseResult, metrics[0].Fields())
+	require.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
+	require.Equal(t, expectedParseResult, metrics[0].Fields())
 }
 
 func TestInvalidEndianness(t *testing.T) {
@@ -245,7 +244,7 @@ func TestInvalidEndianness(t *testing.T) {
 		nil,
 	)
 
-	assert.Nil(t, parser)
+	require.Nil(t, parser)
 	require.Error(t, err)
 }
 
@@ -260,11 +259,11 @@ func TestStringEncoding(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 }
 
 func TestInvalidStringEncoding(t *testing.T) {
@@ -278,7 +277,7 @@ func TestInvalidStringEncoding(t *testing.T) {
 		nil,
 	)
 
-	assert.Nil(t, parser)
+	require.Nil(t, parser)
 	require.Error(t, err)
 }
 
@@ -293,14 +292,14 @@ func TestStringUTF8(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err := parser.Parse(binaryDataStringUTF8)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
-	assert.Equal(t, expectedParseResultStringUTF8, metrics[0].Fields())
+	require.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
+	require.Equal(t, expectedParseResultStringUTF8, metrics[0].Fields())
 }
 
 func TestPadding(t *testing.T) {
@@ -314,14 +313,14 @@ func TestPadding(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
-	assert.Equal(t, expectedParseResultWithPadding, metrics[0].Fields())
+	require.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
+	require.Equal(t, expectedParseResultWithPadding, metrics[0].Fields())
 }
 
 func TestTimeAddedByParser(t *testing.T) {
@@ -337,14 +336,14 @@ func TestTimeAddedByParser(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.True(t, int64(0x5DA86C4C) < metrics[0].Time().Unix())
-	assert.Equal(t, map[string]interface{}{
+	require.True(t, int64(0x5DA86C4C) < metrics[0].Time().Unix())
+	require.Equal(t, map[string]interface{}{
 		"fieldBool0": false,
 	}, metrics[0].Fields())
 }
@@ -361,7 +360,7 @@ func TestInvalidFieldType(t *testing.T) {
 		},
 		nil,
 	)
-	assert.Nil(t, parser)
+	require.Nil(t, parser)
 	require.Error(t, err)
 }
 
@@ -379,13 +378,13 @@ func TestTimeXs(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err := parser.Parse(binaryDataBigEndianTimeS)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, int64(0x016DD9E7), metrics[0].Time().Unix())
+	require.Equal(t, int64(0x016DD9E7), metrics[0].Time().Unix())
 
 	// unix
 	parser, err = NewBinDataParser(
@@ -399,13 +398,13 @@ func TestTimeXs(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err = parser.Parse(binaryDataBigEndianTimeS)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, int64(0x016DD9E7), metrics[0].Time().Unix())
+	require.Equal(t, int64(0x016DD9E7), metrics[0].Time().Unix())
 
 	// unix, invalid time type
 	parser, err = NewBinDataParser(
@@ -419,7 +418,7 @@ func TestTimeXs(t *testing.T) {
 		nil,
 	)
 	require.Error(t, err)
-	assert.Nil(t, parser)
+	require.Nil(t, parser)
 
 	// unix_ms
 	parser, err = NewBinDataParser(
@@ -433,13 +432,13 @@ func TestTimeXs(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err = parser.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000000)
+	require.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000000)
 
 	// unix_ms, invalid time type
 	parser, err = NewBinDataParser(
@@ -453,7 +452,7 @@ func TestTimeXs(t *testing.T) {
 		nil,
 	)
 	require.Error(t, err)
-	assert.Nil(t, parser)
+	require.Nil(t, parser)
 
 	// unix_us
 	parser, err = NewBinDataParser(
@@ -467,13 +466,13 @@ func TestTimeXs(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err = parser.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000)
+	require.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000)
 
 	// unix_us, invalid time type
 	parser, err = NewBinDataParser(
@@ -487,7 +486,7 @@ func TestTimeXs(t *testing.T) {
 		nil,
 	)
 	require.Error(t, err)
-	assert.Nil(t, parser)
+	require.Nil(t, parser)
 
 	// unix_ns
 	parser, err = NewBinDataParser(
@@ -501,13 +500,13 @@ func TestTimeXs(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err = parser.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano())
+	require.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano())
 
 	// unix_ms, invalid time type
 	parser, err = NewBinDataParser(
@@ -521,7 +520,7 @@ func TestTimeXs(t *testing.T) {
 		nil,
 	)
 	require.Error(t, err)
-	assert.Nil(t, parser)
+	require.Nil(t, parser)
 
 	// invalid
 	parser, err = NewBinDataParser(
@@ -534,7 +533,7 @@ func TestTimeXs(t *testing.T) {
 		},
 		nil,
 	)
-	assert.Nil(t, parser)
+	require.Nil(t, parser)
 	require.Error(t, err)
 }
 
@@ -549,13 +548,13 @@ func TestDefaultTags(t *testing.T) {
 		defaultTags,
 	)
 	require.NoError(t, err)
-	assert.NotNil(t, parser)
+	require.NotNil(t, parser)
 
 	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
+	require.Len(t, metrics, 1)
 	require.Equal(t, parser.metricName, metrics[0].Name())
-	assert.Equal(t, defaultTags, metrics[0].Tags())
+	require.Equal(t, defaultTags, metrics[0].Tags())
 }
 
 func TestDuplicateNames(t *testing.T) {
@@ -569,6 +568,6 @@ func TestDuplicateNames(t *testing.T) {
 		nil,
 	)
 
-	assert.Nil(t, parser)
+	require.Nil(t, parser)
 	require.Error(t, err)
 }

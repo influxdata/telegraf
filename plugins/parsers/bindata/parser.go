@@ -194,23 +194,23 @@ func (binData *BinData) ParseLine(line string) (telegraf.Metric, error) {
 func (binData *BinData) getTime(fields map[string]interface{}) (time.Time, error) {
 	t, found := fields[timeKey]
 	if !found {
-		return time.Now()
+		return time.Now(), nil
 	}
 	delete(fields, timeKey)
-	
+
 	switch binData.timeFormat {
 	case "unix":
 		tval, ok := t.(int32)
 		if !ok {
-			return nil, fmt.Errorf("invalid time type %T, must be int32", t)
+			return time.Time{}, fmt.Errorf("invalid time type %T, must be int32", t)
 		}
-		return internal.ParseTimestamp(binData.timeFormat, int64(tvalue), timezone)
+		return internal.ParseTimestamp(binData.timeFormat, int64(tval), timezone)
 	case "unix_ms", "unix_us", "unix_ns":
 		tval, ok := t.(int64)
 		if !ok {
-			return nil, fmt.Errorf("invalid time type %T, must be int64", t)
+			return time.Time{}, fmt.Errorf("invalid time type %T, must be int64", t)
 		}
 		return internal.ParseTimestamp(binData.timeFormat, int64(tval), timezone)
 	}
-	return nil, fmt.Errorf("invalid time format %q", binData.timeFormat)
+	return time.Time{}, fmt.Errorf("invalid time format %q", binData.timeFormat)
 }
