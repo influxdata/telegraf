@@ -13,10 +13,10 @@ type Serializer struct {
 	TimestampFormat string
 }
 
-func NewSerializer(timestampUnits time.Duration, timestampformat string) (*Serializer, error) {
+func NewSerializer(timestampUnits time.Duration, timestampFormat string) (*Serializer, error) {
 	s := &Serializer{
 		TimestampUnits:  truncateDuration(timestampUnits),
-		TimestampFormat: timestampformat,
+		TimestampFormat: timestampFormat,
 	}
 	return s, nil
 }

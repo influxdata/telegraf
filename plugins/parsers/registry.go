@@ -34,7 +34,7 @@ type ParserInput interface {
 // ParserFuncInput is an interface for input plugins that are able to parse
 // arbitrary data formats.
 type ParserFuncInput interface {
-	// GetParser returns a new parser.
+	// SetParserFunc returns a new parser.
 	SetParserFunc(fn ParserFunc)
 }
 
@@ -65,7 +65,7 @@ type Parser interface {
 // Config is a struct that covers the data types needed for all parser types,
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
-	// Dataformat can be one of: json, influx, graphite, value, nagios
+	// DataFormat can be one of: json, influx, graphite, value, nagios
 	DataFormat string `toml:"data_format"`
 
 	// Separator only applied to Graphite data.
