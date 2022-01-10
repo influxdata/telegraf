@@ -55,11 +55,13 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 
 		appendPath(mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
-			if os.IsNotExist(err) {
-				log.Warnf("MIB path doesn't exist: %q", mibPath)
-			}
 			if info == nil {
 				log.Warnf("No mibs found")
+				if os.IsNotExist(err) {
+					log.Warnf("MIB path doesn't exist: %q", mibPath)
+				} else if err != nil {
+					return err
+				}
 				return nil
 			}
 			folders = append(folders, mibPath)
