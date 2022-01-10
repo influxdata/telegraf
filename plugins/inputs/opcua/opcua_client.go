@@ -20,7 +20,7 @@ import (
 )
 
 type OpcuaWorkarounds struct {
-	ValidStatusCodes []string `toml:"valid_status_codes"`
+	AdditionalValidStatusCodes []string `toml:"additional_valid_status_codes"`
 }
 
 // OpcUA type
@@ -190,8 +190,8 @@ const sampleConfig = `
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua.workarounds]
-    ## Set valid status codes
-    # valid_status_codes = ["0x0"]
+    ## Set additional valid status codes, StatusOK (0x0) is always considered valid
+    # additional_valid_status_codes = ["0xC0"]
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -498,8 +498,8 @@ func (o *OpcUA) setupOptions() error {
 }
 
 func (o *OpcUA) setupWorkarounds() error {
-	if len(o.Workarounds.ValidStatusCodes) != 0 {
-		for _, c := range o.Workarounds.ValidStatusCodes {
+	if len(o.Workarounds.AdditionalValidStatusCodes) != 0 {
+		for _, c := range o.Workarounds.AdditionalValidStatusCodes {
 			val, err := strconv.ParseInt(c, 0, 32) // setting 32 bits to allow for safe conversion
 			if err != nil {
 				return err

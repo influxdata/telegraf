@@ -92,8 +92,8 @@ Plugin minimum tested version: 1.16
   
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua.workarounds]
-    ## Set valid status codes
-    # valid_status_codes = ["0x0"]
+    ## Set additional valid status codes, StatusOK (0x0) is always considered valid
+    # additional_valid_status_codes = ["0xC0"]
 ```
 
 ## Node Configuration

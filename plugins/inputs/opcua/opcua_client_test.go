@@ -112,7 +112,7 @@ tags = [["tag1", "val1"], ["tag2", "val2"]]
 nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 
 [inputs.opcua.workarounds]
-valid_status_codes = ["0x00", "0xC0"]
+additional_valid_status_codes = ["0xC0"]
 `
 
 	c := config.NewConfig()
@@ -138,9 +138,8 @@ valid_status_codes = ["0x00", "0xC0"]
 	require.Len(t, o.nodes[2].metricTags, 3)
 	require.Len(t, o.nodes[3].metricTags, 2)
 
-	require.Len(t, o.Workarounds.ValidStatusCodes, 2)
-	require.Equal(t, o.Workarounds.ValidStatusCodes[0], "0x00")
-	require.Equal(t, o.Workarounds.ValidStatusCodes[1], "0xC0")
+	require.Len(t, o.Workarounds.AdditionalValidStatusCodes, 1)
+	require.Equal(t, o.Workarounds.AdditionalValidStatusCodes[0], "0xC0")
 }
 
 func TestTagsSliceToMap(t *testing.T) {
@@ -272,7 +271,9 @@ func TestValidateOPCTags(t *testing.T) {
 
 func TestSetupWorkarounds(t *testing.T) {
 	var o OpcUA
-	o.Workarounds.ValidStatusCodes = []string{"0x00", "0xC0", "0x00AA0000"}
+	o.codes = []ua.StatusCode{ua.StatusOK}
+
+	o.Workarounds.AdditionalValidStatusCodes = []string{"0xC0", "0x00AA0000"}
 
 	err := o.setupWorkarounds()
 	require.NoError(t, err)
