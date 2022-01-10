@@ -48,8 +48,8 @@ repo key and setup a new sources.list entry:
 
 ```shell
 wget -qO- https://repos.influxdata.com/influxdb.key | sudo tee /etc/apt/trusted.gpg.d/influxdb.asc >/dev/null
-source /etc/os-release
-echo "deb https://repos.influxdata.com/${ID} ${VERSION_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+export VERSION_ID=$(lsb_release -si); export VERSION_CODENAME=$(lsb_release -sc)
+echo "deb https://repos.influxdata.com/${VERSION_ID,,} ${VERSION_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
 sudo apt-get update && sudo apt-get install telegraf
 ```
 
