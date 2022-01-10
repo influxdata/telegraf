@@ -1,24 +1,27 @@
 package supervisor
 
 import (
+	"net/url"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/kolo/xmlrpc"
-	"net/url"
 )
 
 type Supervisor struct {
 	Log telegraf.Logger `toml:"-"`
 
-	Server         string `toml:"url"`
-	PidGather      bool   `toml:"gather_pid"`
-	ExitCodeGather bool   `toml:"gather_exit_code"`
-	UseIdentTag    bool   `toml:"use_identification_tag"`
+	Server         string   `toml:"url"`
+	PidGather      bool     `toml:"gather_pid"`
+	ExitCodeGather bool     `toml:"gather_exit_code"`
+	UseIdentTag    bool     `toml:"use_identification_tag"`
+	FieldsInc      []string `toml:"fields_includes"`
+	FieldsExc      []string `toml:"fields_excludes"`
 
-	Status SupervisorInfo
+	status supervisorInfo
 }
 
-type ProcessInfo struct {
+type processInfo struct {
 	Name          string `xmlrpc:"name"`
 	Group         string `xmlrpc:"group"`
 	Description   string `xmlrpc:"description"`
@@ -34,7 +37,7 @@ type ProcessInfo struct {
 	Pid           int32  `xmlrpc:"pid"`
 }
 
-type SupervisorInfo struct {
+type supervisorInfo struct {
 	StateCode int8   `xmlrpc:"statecode"`
 	StateName string `xmlrpc:"statename"`
 	Ident     string
@@ -61,33 +64,33 @@ func (s *Supervisor) SampleConfig() string {
 }
 
 func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
-	//Initializing XML-RPC client
+	// Initializing XML-RPC client
 	client, err := xmlrpc.NewClient(s.Server, nil)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	//API call to get information about all running processes
-	var rawProcessData []ProcessInfo
+	// API call to get information about all running processes
+	var rawProcessData []processInfo
 	err = client.Call("supervisor.getAllProcessInfo", nil, &rawProcessData)
 	if err != nil {
 		return err
 	}
 
-	//API call to get information about instance status
-	err = client.Call("supervisor.getState", nil, &s.Status)
+	// API call to get information about instance status
+	err = client.Call("supervisor.getState", nil, &s.status)
 	if err != nil {
 		return err
 	}
 
-	//API call to get identification string
-	err = client.Call("supervisor.getIdentification", nil, &s.Status.Ident)
+	// API call to get identification string
+	err = client.Call("supervisor.getIdentification", nil, &s.status.Ident)
 	if err != nil {
 		return err
 	}
 
-	//Iterating through array of structs with processes info and adding fields to accumulator
+	// Iterating through array of structs with processes info and adding fields to accumulator
 	for _, process := range rawProcessData {
 		processTags, processFields, err := s.parseProcessData(process)
 		if err != nil {
@@ -95,7 +98,7 @@ func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddFields("supervisor_processes", processFields, processTags)
 	}
-	// Adding instance info fields to accumulator
+	//  Adding instance info fields to accumulator
 	instanceTags, instanceFields, err := s.parseInstanceData()
 	if err != nil {
 		return err
@@ -104,8 +107,7 @@ func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Supervisor) parseProcessData(pInfo ProcessInfo) (map[string]string, map[string]interface{}, error) {
-	var err error
+func (s *Supervisor) parseProcessData(pInfo processInfo) (map[string]string, map[string]interface{}, error) {
 	tags := map[string]string{
 		"process": pInfo.Name,
 		"group":   pInfo.Group,
@@ -121,8 +123,9 @@ func (s *Supervisor) parseProcessData(pInfo ProcessInfo) (map[string]string, map
 		fields["exitCode"] = pInfo.ExitStatus
 	}
 	if s.UseIdentTag {
-		tags["server"] = s.Status.Ident
+		tags["server"] = s.status.Ident
 	} else {
+		var err error
 		tags["server"], err = beautifyServerString(s.Server)
 		if err != nil {
 			return map[string]string{}, map[string]interface{}{}, err
@@ -132,18 +135,16 @@ func (s *Supervisor) parseProcessData(pInfo ProcessInfo) (map[string]string, map
 }
 
 func (s *Supervisor) parseInstanceData() (map[string]string, map[string]interface{}, error) {
-	var err error
-	tags := make(map[string]string, 1)
-	fields := make(map[string]interface{}, 1)
-	if s.UseIdentTag {
-		tags["server"] = s.Status.Ident
-	} else {
-		tags["server"], err = beautifyServerString(s.Server)
+	server := s.status.Ident
+	if !s.UseIdentTag {
+		var err error
+		server, err = beautifyServerString(s.Server)
 		if err != nil {
-			return map[string]string{}, map[string]interface{}{}, err
+			return nil, nil, err
 		}
 	}
-	fields["state"] = s.Status.StateCode
+	tags := map[string]string{"server": server}
+	fields := map[string]interface{}{"state": s.status.StateCode}
 	return tags, fields, nil
 }
 
@@ -160,7 +161,7 @@ func init() {
 	})
 }
 
-//Function to get only address and port from URL
+// Function to get only address and port from URL
 func beautifyServerString(rawurl string) (string, error) {
 	parsedURL, err := url.Parse(rawurl)
 	if err != nil {

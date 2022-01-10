@@ -1,18 +1,18 @@
 package supervisor
 
 import (
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestShort_SampleData(t *testing.T) {
-	sampleProcessInfo := make([]ProcessInfo, 2)
+	sampleProcessInfo := make([]processInfo, 2)
 	expectedProcessFields := make([]map[string]interface{}, 2)
 	expectedProcessTags := make([]map[string]string, 2)
 
-	sampleProcessInfo[0] = ProcessInfo{
+	sampleProcessInfo[0] = processInfo{
 		Name:          "Process0",
 		Group:         "ProcessGroup0",
 		Description:   "pid 112 uptime 0:12:11",
@@ -28,7 +28,7 @@ func TestShort_SampleData(t *testing.T) {
 		Pid:           112,
 	}
 
-	sampleProcessInfo[1] = ProcessInfo{
+	sampleProcessInfo[1] = processInfo{
 		Name:          "Process1",
 		Group:         "ProcessGroup1",
 		Description:   "pid 113 uptime 0:12:11",
@@ -82,7 +82,7 @@ func TestShort_SampleData(t *testing.T) {
 		PidGather:      true,
 		ExitCodeGather: true,
 		UseIdentTag:    true,
-		Status: SupervisorInfo{
+		status: supervisorInfo{
 			StateCode: int8(1),
 			StateName: "RUNNING",
 			Ident:     "sampleInstance",
@@ -91,15 +91,15 @@ func TestShort_SampleData(t *testing.T) {
 
 	for key, process := range sampleProcessInfo {
 		tags, fields, err := s.parseProcessData(process)
-		assert.NoError(t, err)
-		assert.Equal(t, expectedProcessTags[key], tags)
-		assert.Equal(t, expectedProcessFields[key], fields)
+		require.NoError(t, err)
+		require.Equal(t, expectedProcessTags[key], tags)
+		require.Equal(t, expectedProcessFields[key], fields)
 	}
 
 	instanceTags, instanceFields, err := s.parseInstanceData()
-	assert.NoError(t, err)
-	assert.Equal(t, expectedInstanceTags, instanceTags)
-	assert.Equal(t, expectedInstanceFields, instanceFields)
+	require.NoError(t, err)
+	require.Equal(t, expectedInstanceTags, instanceTags)
+	require.Equal(t, expectedInstanceFields, instanceFields)
 }
 
 func TestIntegration_BasicGathering(t *testing.T) {
@@ -116,9 +116,9 @@ func TestIntegration_BasicGathering(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(s.Gather)
 	require.NoError(t, err)
-	assert.Equal(t, acc.HasField("supervisor_processes", "uptime"), true)
-	assert.Equal(t, acc.HasField("supervisor_processes", "state"), true)
-	assert.Equal(t, acc.HasField("supervisor_processes", "pid"), true)
-	assert.Equal(t, acc.HasField("supervisor_processes", "exitCode"), true)
-	assert.Equal(t, acc.HasField("supervisor_instance", "state"), true)
+	require.Equal(t, acc.HasField("supervisor_processes", "uptime"), true)
+	require.Equal(t, acc.HasField("supervisor_processes", "state"), true)
+	require.Equal(t, acc.HasField("supervisor_processes", "pid"), true)
+	require.Equal(t, acc.HasField("supervisor_processes", "exitCode"), true)
+	require.Equal(t, acc.HasField("supervisor_instance", "state"), true)
 }
