@@ -115,3 +115,48 @@ func TestTagAndFieldConcatenate(t *testing.T) {
 	expected := []telegraf.Metric{testutil.MustMetric("weather", map[string]string{"location": "us-midwest", "LocalTemp": "us-midwest is too warm"}, map[string]interface{}{"temperature": "too warm"}, now)}
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
+
+func TestFieldList(t *testing.T) {
+	// Prepare
+	plugin := TemplateProcessor{Tag: "fields", Template: "{{.FieldList}}"}
+	require.NoError(t, plugin.Init())
+
+	// Run
+	m := testutil.TestMetric(1.23)
+	actual := plugin.Apply(m)
+
+	// Verify
+	expected := m.Copy()
+	expected.AddTag("fields", "map[value:1.23]")
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
+}
+
+func TestTagList(t *testing.T) {
+	// Prepare
+	plugin := TemplateProcessor{Tag: "tags", Template: "{{.TagList}}"}
+	require.NoError(t, plugin.Init())
+
+	// Run
+	m := testutil.TestMetric(1.23)
+	actual := plugin.Apply(m)
+
+	// Verify
+	expected := m.Copy()
+	expected.AddTag("tags", "map[tag1:value1]")
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
+}
+
+func TestDot(t *testing.T) {
+	// Prepare
+	plugin := TemplateProcessor{Tag: "metric", Template: "{{.}}"}
+	require.NoError(t, plugin.Init())
+
+	// Run
+	m := testutil.TestMetric(1.23)
+	actual := plugin.Apply(m)
+
+	// Verify
+	expected := m.Copy()
+	expected.AddTag("metric", "test1 map[tag1:value1] map[value:1.23] 1257894000000000000")
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
+}

@@ -27,6 +27,9 @@ path onto the global path variable
   ## Path to mib files
   # path = ["/usr/share/snmp/mibs"]
   ##
+  ## Deprecated in 1.20.0; no longer running snmptranslate
+  ## Timeout running snmptranslate command
+  # timeout = "5s"
   ## Snmp version
   # version = "2c"
   ## SNMPv3 authentication and encryption options.

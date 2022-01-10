@@ -23,7 +23,7 @@ type Decoder struct {
 	transform.Transformer
 
 	// This forces external creators of Decoders to use names in struct
-	// initializers, allowing for future extendibility without having to break
+	// initializers, allowing for future extensibility without having to break
 	// code.
 	_ struct{}
 }
