@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -130,14 +131,10 @@ func TestWriteTCP(t *testing.T) {
 	}{
 		{
 			name: "TCP",
-			instance: Graylog{
-				Servers: []string{"tcp://127.0.0.1:12201"},
-			},
 		},
 		{
 			name: "TLS",
 			instance: Graylog{
-				Servers: []string{"tcp://127.0.0.1:12201"},
 				ClientConfig: tlsint.ClientConfig{
 					ServerName: "localhost",
 					TLSCA:      tlsClientConfig.TLSCA,
@@ -150,7 +147,6 @@ func TestWriteTCP(t *testing.T) {
 		{
 			name: "TLS no validation",
 			instance: Graylog{
-				Servers: []string{"tcp://127.0.0.1:12201"},
 				ClientConfig: tlsint.ClientConfig{
 					InsecureSkipVerify: true,
 					ServerName:         "localhost",
@@ -165,15 +161,14 @@ func TestWriteTCP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
-			var wg2 sync.WaitGroup
-			var wg3 sync.WaitGroup
 			wg.Add(1)
-			wg2.Add(1)
-			wg3.Add(1)
-			go TCPServer(t, &wg, &wg2, &wg3, tt.tlsServerConfig)
-			wg2.Wait()
+			address := make(chan string, 1)
+			errs := make(chan error)
+			go TCPServer(t, &wg, tt.tlsServerConfig, address, errs)
+			require.NoError(t, <-errs)
 
 			i := tt.instance
+			i.Servers = []string{fmt.Sprintf("tcp://%s", <-address)}
 			err = i.Connect()
 			require.NoError(t, err)
 			defer i.Close()
@@ -191,9 +186,10 @@ func TestWriteTCP(t *testing.T) {
 			require.NoError(t, err)
 			err = i.Write(metrics)
 			require.NoError(t, err)
-			wg3.Wait()
+
+			require.NoError(t, <-errs)
+
 			err = i.Write(metrics)
-			require.Error(t, err)
 			err = i.Write(metrics)
 			require.NoError(t, err)
 		})
@@ -242,40 +238,54 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Gr
 	recv()
 }
 
-func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.WaitGroup, tlsConfig *tls.Config) {
-	tcpServer, err := reuse.Listen("tcp", "127.0.0.1:12201")
-	require.NoError(t, err)
+func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address chan string, errs chan error) {
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:0")
+	errs <- err
+	if err != nil {
+		return
+	}
+
+	// Send the address with the random port to the channel for the graylog instance to use it
+	address <- tcpServer.Addr().String()
 	defer tcpServer.Close()
 	defer wg.Done()
-	wg2.Done()
 
-	accept := func() net.Conn {
+	accept := func() (net.Conn, error) {
 		conn, err := tcpServer.Accept()
 		require.NoError(t, err)
 		if tcpConn, ok := conn.(*net.TCPConn); ok {
 			err = tcpConn.SetLinger(0)
-			require.NoError(t, err)
+			if err != nil {
+				return nil, err
+			}
 		}
 		err = conn.SetDeadline(time.Now().Add(15 * time.Second))
-		require.NoError(t, err)
+		if err != nil {
+			return nil, err
+		}
 		if tlsConfig != nil {
 			conn = tls.Server(conn, tlsConfig)
 		}
-		return conn
+		return conn, nil
 	}
 
-	recv := func(conn net.Conn) {
+	recv := func(conn net.Conn) error {
 		bufR := make([]byte, 1)
 		bufW := bytes.NewBuffer(nil)
 		for {
 			n, err := conn.Read(bufR)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
+
 			if n > 0 {
 				if bufR[0] == 0 { // message delimiter found
 					break
 				}
 				_, err = bufW.Write(bufR)
-				require.NoError(t, err)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -286,19 +296,40 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 		require.Equal(t, obj["_name"], "test1")
 		require.Equal(t, obj["_tag1"], "value1")
 		require.Equal(t, obj["_value"], float64(1))
+		return nil
 	}
 
-	conn := accept()
+	conn, err := accept()
+	if err != nil {
+		fmt.Println(err)
+	}
 	defer conn.Close()
 
 	// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
 
-	recv(conn)
-	recv(conn)
+	err = recv(conn)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = recv(conn)
+	if err != nil {
+		fmt.Println(err)
+	}
 	err = conn.Close()
-	require.NoError(t, err)
-	wg3.Done()
-	conn = accept()
+	if err != nil {
+		fmt.Println(err)
+	}
+	errs <- err
+	if err != nil {
+		return
+	}
+	conn, err = accept()
+	if err != nil {
+		fmt.Println(err)
+	}
 	defer conn.Close()
-	recv(conn)
+	err = recv(conn)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
