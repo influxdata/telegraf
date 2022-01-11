@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	reuse "github.com/libp2p/go-reuseport"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/metric"
@@ -67,20 +66,13 @@ func TestWriteUDP(t *testing.T) {
 	}{
 		{
 			name: "default without scheme",
-			instance: Graylog{
-				Servers: []string{"127.0.0.1:12201"},
-			},
 		},
 		{
 			name: "UDP",
-			instance: Graylog{
-				Servers: []string{"udp://127.0.0.1:12201"},
-			},
 		},
 		{
 			name: "UDP non-standard name field",
 			instance: Graylog{
-				Servers:           []string{"udp://127.0.0.1:12201"},
 				NameFieldNoPrefix: true,
 			},
 		},
@@ -89,13 +81,14 @@ func TestWriteUDP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
-			var wg2 sync.WaitGroup
 			wg.Add(1)
-			wg2.Add(1)
-			go UDPServer(t, &wg, &wg2, &tt.instance)
-			wg2.Wait()
+			address := make(chan string, 1)
+			errs := make(chan error)
+			go UDPServer(t, &wg, &tt.instance, address, errs)
+			require.NoError(t, <-errs)
 
 			i := tt.instance
+			i.Servers = []string{fmt.Sprintf("udp://%s", <-address)}
 			err := i.Connect()
 			require.NoError(t, err)
 			defer i.Close()
@@ -198,12 +191,17 @@ func TestWriteTCP(t *testing.T) {
 
 type GelfObject map[string]interface{}
 
-func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Graylog) {
-	udpServer, err := reuse.ListenPacket("udp", "127.0.0.1:12201")
-	require.NoError(t, err)
+func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan string, errs chan error) {
+	udpServer, err := net.ListenPacket("udp", "127.0.0.1:0")
+	errs <- err
+	if err != nil {
+		return
+	}
+
+	// Send the address with the random port to the channel for the graylog instance to use it
+	address <- udpServer.LocalAddr().String()
 	defer udpServer.Close()
 	defer wg.Done()
-	wg2.Done()
 
 	recv := func() {
 		bufR := make([]byte, 1024)
