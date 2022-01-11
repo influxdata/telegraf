@@ -172,7 +172,9 @@ func (h *HTTP) gatherURL(
 	if err != nil {
 		return err
 	}
-	defer body.Close()
+	if body != nil {
+		defer body.Close()
+	}
 
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
@@ -246,6 +248,10 @@ func (h *HTTP) gatherURL(
 }
 
 func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) {
+	if body == "" {
+		return nil, nil
+	}
+
 	var reader io.Reader = strings.NewReader(body)
 	if contentEncoding == "gzip" {
 		rc, err := internal.CompressWithGzip(reader)
