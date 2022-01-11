@@ -40,6 +40,7 @@ following works:
 - github.com/aws/aws-sdk-go-v2/feature/ec2/imds [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/feature/ec2/imds/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/feature/s3/manager [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/feature/s3/manager/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/internal/configsources [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/internal/configsources/LICENSE.txt)
+- github.com/aws/aws-sdk-go-v2/internal/endpoints [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/internal/endpoints/v2/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/internal/ini [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/internal/ini/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/service/cloudwatch [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/cloudwatch/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/service/cloudwatchlogs/LICENSE.txt)
