@@ -10,8 +10,6 @@ type ClientConfig struct {
 	Retries int             `toml:"retries"`
 	// Values: 1, 2, 3
 	Version uint8 `toml:"version"`
-	// Path to mib files
-	Path []string `toml:"path"`
 
 	// Parameters for Version 1 & 2
 	Community string `toml:"community"`
