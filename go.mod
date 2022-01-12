@@ -145,6 +145,7 @@ require (
 	golang.org/x/sys v0.0.0-20211214234402-4825e8c3871d
 	golang.org/x/text v0.3.7
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
+	gonum.org/v1/gonum v0.9.3
 	google.golang.org/api v0.54.0
 	google.golang.org/genproto v0.0.0-20210827211047-25e5f791fe06
 	google.golang.org/grpc v1.41.0
@@ -330,6 +331,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e // indirect
+	golang.org/x/exp v0.0.0-20200513190911-00229845015e // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
@@ -357,6 +359,7 @@ require (
 	modernc.org/token v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
+
 )
 
 // replaced due to https://github.com/satori/go.uuid/issues/73
