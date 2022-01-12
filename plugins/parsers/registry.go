@@ -44,7 +44,7 @@ type ParserInput interface {
 // ParserFuncInput is an interface for input plugins that are able to parse
 // arbitrary data formats.
 type ParserFuncInput interface {
-	// GetParser returns a new parser.
+	// SetParserFunc returns a new parser.
 	SetParserFunc(fn ParserFunc)
 }
 
