@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/sleepinggenius2/gosmi"
+	"github.com/sleepinggenius2/gosmi/smi"
 	"github.com/sleepinggenius2/gosmi/types"
 )
 
@@ -119,7 +120,7 @@ func TrapLookup(oid string) (e MibEntry, err error) {
 		return e, err
 	}
 
-	e.OidText = node.RenderQualified()
+	e.OidText = smi.RenderOID(node.Oid, types.RenderQualified)
 
 	i := strings.Index(e.OidText, "::")
 	if i == -1 {
