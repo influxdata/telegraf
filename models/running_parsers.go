@@ -1,7 +1,6 @@
 package models
 
 import (
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -12,7 +11,6 @@ type RunningParser struct {
 	Parser telegraf.Parser
 	Config *ParserConfig
 	log    telegraf.Logger
-	once   sync.Once
 
 	MetricsParsed selfstat.Stat
 	ParseTime     selfstat.Stat
