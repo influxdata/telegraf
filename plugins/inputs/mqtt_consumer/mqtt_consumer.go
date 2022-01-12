@@ -96,7 +96,7 @@ var sampleConfig = `
     "telegraf/+/mem",
     "sensors/#",
   ]
-  # topic_fields = "_/_/_/temperature" 
+  # topic_fields = "_/_/_/temperature"
   ## The message topic will be stored in a tag specified by this value.  If set
   ## to the empty string no topic tag will be created.
   # topic_tag = "topic"
@@ -142,14 +142,14 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
   ## Enable extracting tag values from MQTT topics
-  ## _ denotes an ignored entry in the topic path 
+  ## _ denotes an ignored entry in the topic path
   ## [[inputs.mqtt_consumer.topic_parsing]]
   ##  topic = ""
   ##  measurement = ""
   ##  tags = ""
   ##  fields = ""
   ## [inputs.mqtt_consumer.topic_parsing.types]
-  ##    
+  ##
 `
 
 func (m *MQTTConsumer) SampleConfig() string {

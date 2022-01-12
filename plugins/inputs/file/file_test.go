@@ -183,7 +183,7 @@ func TestCharacterEncoding(t *testing.T) {
 	tests := []struct {
 		name   string
 		plugin *File
-		csv    *csv.Config
+		csv    *csv.Parser
 		file   string
 	}{
 		{
@@ -192,7 +192,7 @@ func TestCharacterEncoding(t *testing.T) {
 				Files:             []string{"testdata/mtr-utf-8.csv"},
 				CharacterEncoding: "",
 			},
-			csv: &csv.Config{
+			csv: &csv.Parser{
 				MetricName:  "file",
 				SkipRows:    1,
 				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
@@ -205,7 +205,7 @@ func TestCharacterEncoding(t *testing.T) {
 				Files:             []string{"testdata/mtr-utf-8.csv"},
 				CharacterEncoding: "utf-8",
 			},
-			csv: &csv.Config{
+			csv: &csv.Parser{
 				MetricName:  "file",
 				SkipRows:    1,
 				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
@@ -218,7 +218,7 @@ func TestCharacterEncoding(t *testing.T) {
 				Files:             []string{"testdata/mtr-utf-16le.csv"},
 				CharacterEncoding: "utf-16le",
 			},
-			csv: &csv.Config{
+			csv: &csv.Parser{
 				MetricName:  "file",
 				SkipRows:    1,
 				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
@@ -231,7 +231,7 @@ func TestCharacterEncoding(t *testing.T) {
 				Files:             []string{"testdata/mtr-utf-16be.csv"},
 				CharacterEncoding: "utf-16be",
 			},
-			csv: &csv.Config{
+			csv: &csv.Parser{
 				MetricName:  "file",
 				SkipRows:    1,
 				ColumnNames: []string{"", "", "status", "dest", "hop", "ip", "loss", "snt", "", "", "avg", "best", "worst", "stdev"},
@@ -244,8 +244,8 @@ func TestCharacterEncoding(t *testing.T) {
 			err := tt.plugin.Init()
 			require.NoError(t, err)
 
-			parser, err := csv.NewParser(tt.csv)
-			require.NoError(t, err)
+			parser := tt.csv
+			require.NoError(t, parser.Init())
 			tt.plugin.SetParser(parser)
 
 			var acc testutil.Accumulator
