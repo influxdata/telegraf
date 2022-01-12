@@ -54,17 +54,11 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 		}
 
 		appendPath(mibPath)
+		folders = append(folders, mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
 			if info == nil {
-				log.Warnf("No mibs found")
-				if os.IsNotExist(err) {
-					log.Warnf("MIB path doesn't exist: %q", mibPath)
-				} else if err != nil {
-					return err
-				}
-				return nil
+				return fmt.Errorf("no mibs found")
 			}
-			folders = append(folders, mibPath)
 			// symlinks are files so we need to double check if any of them are folders
 			// Will check file vs directory later on
 			if info.Mode()&os.ModeSymlink != 0 {
@@ -77,7 +71,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("Filepath %q could not be walked: %v", mibPath, err)
+			return fmt.Errorf("Filepath could not be walked: %v", err)
 		}
 
 		for _, folder := range folders {
