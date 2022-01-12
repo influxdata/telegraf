@@ -151,14 +151,11 @@ func SnmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	if strings.ContainsAny(oid, "::") {
 		// split given oid
 		// for example RFC1213-MIB::sysUpTime.0
-		s := strings.SplitN(oid, "::", 2)
+		s := strings.Split(oid, "::")
 		// node becomes sysUpTime.0
-		if s[1] == "" {
-			return "", oid, oid, oid, fmt.Errorf("cannot parse %v\n", oid)
-		}
 		node := s[1]
 		if strings.ContainsAny(node, ".") {
-			s = strings.SplitN(node, ".", 2)
+			s = strings.Split(node, ".")
 			// node becomes sysUpTime
 			node = s[0]
 			end = "." + s[1]
