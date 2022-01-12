@@ -15,11 +15,9 @@ import (
 	"github.com/gosnmp/gosnmp"
 )
 
-var defaultTimeout = config.Duration(time.Second * 5)
-
 type SnmpTrap struct {
 	ServiceAddress string          `toml:"service_address"`
-	Timeout        config.Duration `toml:"timeout"`
+	Timeout        config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
 	Version        string          `toml:"version"`
 	Path           []string        `toml:"path"`
 
@@ -58,9 +56,6 @@ var sampleConfig = `
   ## Path to mib files
   # path = ["/usr/share/snmp/mibs"]
   ##
-  ## Deprecated in 1.20.0; no longer running snmptranslate
-  ## Timeout running snmptranslate command
-  # timeout = "5s"
   ## Snmp version, defaults to 2c
   # version = "2c"
   ## SNMPv3 authentication and encryption options.
@@ -97,7 +92,6 @@ func init() {
 			timeFunc:       time.Now,
 			lookupFunc:     snmp.TrapLookup,
 			ServiceAddress: "udp://:162",
-			Timeout:        defaultTimeout,
 			Path:           []string{"/usr/share/snmp/mibs"},
 			Version:        "2c",
 		}
