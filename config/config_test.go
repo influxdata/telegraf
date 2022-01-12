@@ -402,7 +402,7 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
-			mask: []string{"TimeFunc"},
+			mask: []string{"TimeFunc", "Log"},
 		},
 		"json_v2": {
 			mask: []string{"Log"},
@@ -568,7 +568,7 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
-			mask: []string{"TimeFunc"},
+			mask: []string{"TimeFunc", "Log"},
 		},
 		"json_v2": {
 			mask: []string{"Log"},

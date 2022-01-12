@@ -796,17 +796,17 @@ func TestSkipSpecifiedStringValue(t *testing.T) {
 }
 
 func TestSkipErrorOnCorruptedCSVLine(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:  1,
-			TimestampColumn: "date",
-			TimestampFormat: "02/01/06 03:04:05 PM",
-			TimeFunc:        DefaultTime,
-			SkipErrors:      true,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:  1,
+		TimestampColumn: "date",
+		TimestampFormat: "02/01/06 03:04:05 PM",
+		TimeFunc:        DefaultTime,
+		SkipErrors:      true,
+		Log:						 testutil.Logger{},
+	}
+	err := p.Init()
 	require.NoError(t, err)
-	p.Log = testutil.Logger{}
+
 	testCSV := `date,a,b
 23/05/09 11:05:06 PM,1,2
 corrupted_line
