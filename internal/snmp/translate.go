@@ -139,7 +139,7 @@ func GetIndex(oidNum string, mibPrefix string) (col []string, tagOids map[string
 
 	// grabs all columns from the table
 	// mimmicks grabbing everything returned from snmptable -Ch -Cl -c public 127.0.0.1 oidFullName
-	_, col = node.GetColumns()
+	col = node.GetRow().AsTable().ColumnOrder
 
 	return col, tagOids, nil
 }
