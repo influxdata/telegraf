@@ -55,9 +55,6 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 		appendPath(mibPath)
 		folders = append(folders, mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
-			if info == nil {
-				return fmt.Errorf("no mibs found")
-			}
 			// symlinks are files so we need to double check if any of them are folders
 			// Will check file vs directory later on
 			if info.Mode()&os.ModeSymlink != 0 {
