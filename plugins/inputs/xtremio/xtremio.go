@@ -384,6 +384,7 @@ func (xio *XtremIO) authenticate() error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "sessid" {
 			xio.cookie = cookie
