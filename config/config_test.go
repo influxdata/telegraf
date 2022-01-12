@@ -492,7 +492,11 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 		// Get the parser set with 'SetParserFunc()'
 		g, err := input.ParserFunc()
 		require.NoError(t, err)
-		generated = append(generated, g)
+		if rp, ok := g.(*models.RunningParser); ok {
+			generated = append(generated, rp.Parser)
+		} else {
+			generated = append(generated, g)
+		}
 	}
 	require.Len(t, actual, len(formats))
 
@@ -658,7 +662,11 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 		// Get the parser set with 'SetParserFunc()'
 		g, err := input.ParserFunc()
 		require.NoError(t, err)
-		generated = append(generated, g)
+		if rp, ok := g.(*models.RunningParser); ok {
+			generated = append(generated, rp.Parser)
+		} else {
+			generated = append(generated, g)
+		}
 	}
 	require.Len(t, actual, len(formats))
 

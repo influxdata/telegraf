@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -93,30 +92,6 @@ func (r *RunningParser) ParseLine(line string) (telegraf.Metric, error) {
 
 func (r *RunningParser) SetDefaultTags(tags map[string]string) {
 	r.Parser.SetDefaultTags(tags)
-}
-
-func (r *RunningParser) GetParserFunc() telegraf.ParserFunc {
-	if p, ok := r.Parser.(telegraf.Initializer); ok {
-		defaultNewInstance := func() (telegraf.Parser, error) {
-			var err error
-			r.once.Do(func() { err = p.Init() })
-			return r.Parser, err
-		}
-		return defaultNewInstance
-	}
-	return func() (telegraf.Parser, error) { return r.Parser, nil }
-}
-
-func (r *RunningParser) GetParserFuncOld() parsers.ParserFunc {
-	if p, ok := r.Parser.(telegraf.Initializer); ok {
-		defaultNewInstance := func() (parsers.Parser, error) {
-			var err error
-			r.once.Do(func() { err = p.Init() })
-			return r.Parser, err
-		}
-		return defaultNewInstance
-	}
-	return func() (parsers.Parser, error) { return r.Parser, nil }
 }
 
 func (r *RunningParser) Log() telegraf.Logger {

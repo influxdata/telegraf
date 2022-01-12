@@ -1059,7 +1059,15 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) addParser(parentname string, table *ast.Table, track bool) (*models.RunningParser, error) {
+func (c *Config) probeParser(table *ast.Table) bool {
+	var dataformat string
+	c.getFieldString(table, "data_format", &dataformat)
+
+	_, ok := parsers.Parsers[dataformat]
+	return ok
+}
+
+func (c *Config) addParser(parentname string, table *ast.Table) (*models.RunningParser, error) {
 	var dataformat string
 	c.getFieldString(table, "data_format", &dataformat)
 
@@ -1079,11 +1087,7 @@ func (c *Config) addParser(parentname string, table *ast.Table, track bool) (*mo
 	}
 
 	running := models.NewRunningParser(parser, conf)
-	if track {
-		// We want to track the parser in case we directly assign it to the input
-		// plugin. Otherwise we skip it and add later.
-		c.Parsers = append(c.Parsers, running)
-	}
+	c.Parsers = append(c.Parsers, running)
 
 	return running, nil
 }
@@ -1229,7 +1233,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	// arbitrary data-formats, so build the requested parser and set it.
 	if t, ok := input.(telegraf.ParserInput); ok {
 		missThreshold = 1
-		if parser, err := c.addParser(name, table, true); err == nil {
+		if parser, err := c.addParser(name, table); err == nil {
 			t.SetParser(parser)
 		} else {
 			missThreshold = 0
@@ -1250,7 +1254,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	if t, ok := input.(parsers.ParserInput); ok {
 		// DEPRECATED: Please switch your plugin to telegraf.ParserInput.
 		missThreshold = 1
-		if parser, err := c.addParser(name, table, true); err == nil {
+		if parser, err := c.addParser(name, table); err == nil {
 			t.SetParser(parser)
 		} else {
 			missThreshold = 0
@@ -1269,8 +1273,15 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	if t, ok := input.(telegraf.ParserFuncInput); ok {
 		missThreshold = 1
-		if parser, err := c.addParser(name, table, false); err == nil {
-			t.SetParserFunc(parser.GetParserFunc())
+		if c.probeParser(table) {
+			t.SetParserFunc(func() (telegraf.Parser, error) {
+				parser, err := c.addParser(name, table)
+				if err != nil {
+					return nil, err
+				}
+				err = parser.Init()
+				return parser, err
+			})
 		} else {
 			missThreshold = 0
 			// Fallback to the old way
@@ -1287,8 +1298,15 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	if t, ok := input.(parsers.ParserFuncInput); ok {
 		// DEPRECATED: Please switch your plugin to telegraf.ParserFuncInput.
 		missThreshold = 1
-		if parser, err := c.addParser(name, table, false); err == nil {
-			t.SetParserFunc(parser.GetParserFuncOld())
+		if c.probeParser(table) {
+			t.SetParserFunc(func() (parsers.Parser, error) {
+				parser, err := c.addParser(name, table)
+				if err != nil {
+					return nil, err
+				}
+				err = parser.Init()
+				return parser, err
+			})
 		} else {
 			missThreshold = 0
 			// Fallback to the old way
