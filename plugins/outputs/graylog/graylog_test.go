@@ -203,21 +203,34 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan s
 	defer udpServer.Close()
 	defer wg.Done()
 
-	recv := func() {
+	recv := func() error {
 		bufR := make([]byte, 1024)
 		n, _, err := udpServer.ReadFrom(bufR)
-		require.NoError(t, err)
+		if err != nil {
+			return err
+		}
 
 		b := bytes.NewReader(bufR[0:n])
-		r, _ := zlib.NewReader(b)
+		r, err := zlib.NewReader(b)
+		if err != nil {
+			return err
+		}
 
 		bufW := bytes.NewBuffer(nil)
-		_, _ = io.Copy(bufW, r)
-		_ = r.Close()
+		_, err = io.Copy(bufW, r)
+		if err != nil {
+			return err
+		}
+		err = r.Close()
+		if err != nil {
+			return err
+		}
 
 		var obj GelfObject
-		_ = json.Unmarshal(bufW.Bytes(), &obj)
-		require.NoError(t, err)
+		err = json.Unmarshal(bufW.Bytes(), &obj)
+		if err != nil {
+			return err
+		}
 		require.Equal(t, obj["short_message"], "telegraf")
 		if config.NameFieldNoPrefix {
 			require.Equal(t, obj["name"], "test1")
@@ -226,14 +239,28 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan s
 		}
 		require.Equal(t, obj["_tag1"], "value1")
 		require.Equal(t, obj["_value"], float64(1))
+
+		return nil
 	}
 
 	// in UDP scenario all 4 messages are received
 
-	recv()
-	recv()
-	recv()
-	recv()
+	err = recv()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = recv()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = recv()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = recv()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address chan string, errs chan error) {
