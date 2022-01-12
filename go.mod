@@ -90,7 +90,6 @@ require (
 	github.com/kardianos/service v1.2.1
 	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/libp2p/go-reuseport v0.1.0
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 	github.com/mdlayher/apcupsd v0.0.0-20200608131503-2bf01da7bf1b
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
