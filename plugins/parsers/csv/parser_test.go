@@ -802,7 +802,7 @@ func TestSkipErrorOnCorruptedCSVLine(t *testing.T) {
 		TimestampFormat: "02/01/06 03:04:05 PM",
 		TimeFunc:        DefaultTime,
 		SkipErrors:      true,
-		Log:						 testutil.Logger{},
+		Log:             testutil.Logger{},
 	}
 	err := p.Init()
 	require.NoError(t, err)

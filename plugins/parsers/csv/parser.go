@@ -20,23 +20,23 @@ import (
 type TimeFunc func() time.Time
 
 type Parser struct {
-	ColumnNames       []string `toml:"csv_column_names"`
-	ColumnTypes       []string `toml:"csv_column_types"`
-	Comment           string   `toml:"csv_comment"`
-	Delimiter         string   `toml:"csv_delimiter"`
-	HeaderRowCount    int      `toml:"csv_header_row_count"`
-	MeasurementColumn string   `toml:"csv_measurement_column"`
-	MetricName        string   `toml:"metric_name"`
-	SkipColumns       int      `toml:"csv_skip_columns"`
-	SkipRows          int      `toml:"csv_skip_rows"`
-	TagColumns        []string `toml:"csv_tag_columns"`
-	TimestampColumn   string   `toml:"csv_timestamp_column"`
-	TimestampFormat   string   `toml:"csv_timestamp_format"`
-	Timezone          string   `toml:"csv_timezone"`
-	TrimSpace         bool     `toml:"csv_trim_space"`
-	SkipValues        []string `toml:"csv_skip_values"`
-	SkipErrors        bool     `toml:"csv_skip_errors"`
-	Log 							telegraf.Logger `toml:"-"`
+	ColumnNames       []string        `toml:"csv_column_names"`
+	ColumnTypes       []string        `toml:"csv_column_types"`
+	Comment           string          `toml:"csv_comment"`
+	Delimiter         string          `toml:"csv_delimiter"`
+	HeaderRowCount    int             `toml:"csv_header_row_count"`
+	MeasurementColumn string          `toml:"csv_measurement_column"`
+	MetricName        string          `toml:"metric_name"`
+	SkipColumns       int             `toml:"csv_skip_columns"`
+	SkipRows          int             `toml:"csv_skip_rows"`
+	TagColumns        []string        `toml:"csv_tag_columns"`
+	TimestampColumn   string          `toml:"csv_timestamp_column"`
+	TimestampFormat   string          `toml:"csv_timestamp_format"`
+	Timezone          string          `toml:"csv_timezone"`
+	TrimSpace         bool            `toml:"csv_trim_space"`
+	SkipValues        []string        `toml:"csv_skip_values"`
+	SkipErrors        bool            `toml:"csv_skip_errors"`
+	Log               telegraf.Logger `toml:"-"`
 
 	gotColumnNames bool
 
