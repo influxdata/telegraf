@@ -323,16 +323,6 @@ jobs:
       - package-build:
           type: mips
           nightly: << parameters.nightly >>
-  static-package:
-    parameters:
-      nightly:
-        type: boolean
-        default: false
-    executor: go-1_17
-    steps:
-      - package-build:
-          type: static
-          nightly: << parameters.nightly >>
   armhf-package:
     parameters:
       nightly:
@@ -514,12 +504,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'static-package':
-          requires:
-            - 'test-go-linux'
-          filters:
-            tags:
-              only: /.*/
       - 'mipsel-package':
           requires:
             - 'test-go-linux'
@@ -559,7 +543,6 @@ workflows:
             - 'darwin-amd64-package'
             - 'darwin-arm64-package'
             - 'windows-package'
-            - 'static-package'
             - 'arm64-package'
             - 'armhf-package'
           filters:
@@ -595,7 +578,6 @@ workflows:
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
-            - 'static-package'
             - 'arm64-package'
             - 'armhf-package'
             - 'riscv64-package'
@@ -668,11 +650,6 @@ workflows:
           nightly: true
           requires:
             - 'test-go-linux'
-      - 'static-package':
-          name: 'static-package-nightly'
-          nightly: true
-          requires:
-            - 'test-go-linux'
       - 'mipsel-package':
           name: 'mipsel-package-nightly'
           nightly: true
@@ -696,7 +673,6 @@ workflows:
             - 'darwin-amd64-package-nightly'
             - 'darwin-arm64-package-nightly'
             - 'windows-package-nightly'
-            - 'static-package-nightly'
             - 'arm64-package-nightly'
             - 'armhf-package-nightly'
     triggers:
