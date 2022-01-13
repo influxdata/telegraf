@@ -23,7 +23,7 @@ const (
 type Whatap struct {
 	License string          `toml:"license"`
 	Servers []string        `toml:"servers"`
-	Pcode   int64           `toml:"pcode"`
+	Pcode   int64           `toml:"project_code"`
 	Timeout config.Duration `toml:"timeout"`
 	Log     telegraf.Logger `toml:"-"`
 	oname   string
