@@ -32,7 +32,7 @@ type Whatap struct {
 	dest    int
 }
 
-var sampleConfig = `
+const sampleConfig = `
   ## You can create a project on the WhaTap site(https://www.whatap.io) 
   ## to get license, project code and server IP information.
 
