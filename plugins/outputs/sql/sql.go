@@ -257,30 +257,30 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			// ClickHouse needs to batch inserts with prepared statements
 			tx, err := p.db.Begin()
 			if err != nil {
-				return fmt.Errorf(": %v", err)
+				return fmt.Errorf("begin failed: %v", err)
 			}
 			stmt, err := tx.Prepare(sql)
 			if err != nil {
-				return fmt.Errorf("Error during prepare: %v", err)
+				return fmt.Errorf("prepare failed: %v", err)
 			}
-			defer stmt.Close() //nolint
+      defer stmt.Close() //nolint:revive // We cannot do anything about a failing close.
 
 			_, err = stmt.Exec(values...)
 			if err != nil {
-				return fmt.Errorf("Error during execution: %v", err)
+				return fmt.Errorf("execution failed: %v", err)
 			}
 			err = tx.Commit()
 			if err != nil {
-				return fmt.Errorf("Error during commit: %v", err)
+				return fmt.Errorf("commit failed: %v", err)
 			}
 		default:
 			_, err = p.db.Exec(sql, values...)
 			if err != nil {
-				return fmt.Errorf("Error during execution: %v", err)
+				return fmt.Errorf("execution failed: %v", err)
 			}
 		}
 	}
-	return err
+	return nil
 }
 
 func init() {
