@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/coreos/go-systemd/daemon"
 
 	"github.com/fatih/color"
@@ -33,6 +34,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	"github.com/influxdata/telegraf/ui/sampleconfig_ui"
 	"gopkg.in/tomb.v1"
 )
 
@@ -64,6 +66,8 @@ var fWatchConfig = flag.String("watch-config", "", "Monitoring config changes [n
 var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
+var fSampleConfigUI = flag.Bool("sample-config-ui", false,
+	"Interactive ui to create sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fDeprecationList = flag.Bool("deprecation-list", false,
 	"print all deprecated plugins or plugin options.")
@@ -481,6 +485,12 @@ func main() {
 			aggregatorFilters,
 			processorFilters,
 		)
+		return
+	case *fSampleConfigUI:
+		h := sampleconfig_ui.NewSampleConfigUI()
+		if err := tea.NewProgram(h).Start(); err != nil {
+			log.Fatalf("E! %s", err)
+		}
 		return
 	case *fUsage != "":
 		err := config.PrintInputConfig(*fUsage)
