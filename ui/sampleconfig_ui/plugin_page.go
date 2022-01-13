@@ -67,8 +67,10 @@ type pluginKeyMap struct {
 	Right     key.Binding
 	Help      key.Binding
 	Backspace key.Binding
+	Filter    key.Binding
 	Enter     key.Binding
 	Info      key.Binding
+	Save      key.Binding
 	Quit      key.Binding
 }
 
@@ -83,7 +85,7 @@ func (k pluginKeyMap) ShortHelp() []key.Binding {
 func (k pluginKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right},
-		{k.Enter},
+		{k.Filter, k.Enter, k.Info, k.Save},
 		{k.Help, k.Backspace, k.Quit},
 	}
 }
@@ -160,13 +162,21 @@ func NewPluginPage() PluginPage {
 			key.WithKeys("right", "l"),
 			key.WithHelp("→/l", "move to right tab"),
 		),
+		Filter: key.NewBinding(
+			key.WithKeys("filter"),
+			key.WithHelp("/", "filter the list"),
+		),
 		Enter: key.NewBinding(
 			key.WithKeys("enter"),
-			key.WithHelp("⏎/enter", "select plugin"),
+			key.WithHelp("⏎ enter", "select plugin"),
 		),
 		Info: key.NewBinding(
 			key.WithKeys("i"),
-			key.WithHelp("ⓘ info", "plugin details"),
+			key.WithHelp("i", "ⓘ plugin details"),
+		),
+		Save: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("s", "💾 save config"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),
