@@ -21,10 +21,10 @@ Below is an example of how to send metrics into a proxy located in Cloud Run:
   # credentials_file = "/etc/telegraf/example_secret.json"
 
   ## Data format to output.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  # data_format = "wavefront"
+  # data_format = "influx"
 
   ## NOTE: The default headers have already been set to the following by default:
   ## defaultContentType   = "application/octet-stream"

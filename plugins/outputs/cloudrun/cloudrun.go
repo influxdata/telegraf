@@ -23,8 +23,8 @@ import (
 )
 
 const sampleConfig = `
-  ## A plugin that can transmit metrics over OAuth2
-  ## URL is the Cloud Run Wavefront proxy address to send metrics to
+  ## A plugin that is capable of transmitting metrics over HTTPS to a metrics proxy hosted in Cloud Run while satisfying GCP OAUth2 requirements
+  ## URL is the Cloud Run metrics proxy address to send metrics to
   # url = "http://127.0.0.1:8080/telegraf"
 
   ## Timeout for Cloud Run message, suggested as 30s to account for handshaking
@@ -40,26 +40,13 @@ const sampleConfig = `
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  # data_format = "wavefront"
-
-  ## NOTE: The default headers have already been set to the following by default:
-  ## defaultContentType   = "application/octet-stream"
-  ## defaultAccept        = "application/json"
-  ## defaultMethod        = http.MethodPost
+  # data_format = "influx"
 `
 
-const (
-// defaultClientTimeout = 5 * time.Second
-// defaultContentType   = "application/octet-stream"
-// defaultAccept        = "application/json"
-// defaultMethod = http.MethodPost
-)
-
 type CloudRun struct {
-	URL                 string          `toml:"url"`
-	CredentialsFile     string          `toml:"credentials_file"`
-	DisableConvertPaths bool            `toml:"wavefront_disable_path_conversion"`
-	Log                 telegraf.Logger `toml:"-"`
+	URL             string          `toml:"url"`
+	CredentialsFile string          `toml:"credentials_file"`
+	Log             telegraf.Logger `toml:"-"`
 	httpconfig.HTTPClientConfig
 
 	client      *http.Client
@@ -73,28 +60,23 @@ func (cr *CloudRun) SetSerializer(serializer serializers.Serializer) {
 
 func (cr *CloudRun) Connect() error {
 	if cr.client == nil {
-		return cr.setUpDefaultClient()
+		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(cr.Timeout))
+		defer cancel()
+
+		err := cr.getAccessToken(ctx)
+		if err != nil {
+			return err
+		}
+
+		client, err := cr.HTTPClientConfig.CreateClient(ctx, cr.Log)
+		if err != nil {
+			return err
+		}
+
+		cr.client = client
 	}
 
-	return nil
-}
-
-func (cr *CloudRun) setUpDefaultClient() error {
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(cr.Timeout))
-	defer cancel()
-
-	err := cr.getAccessToken(ctx)
-	if err != nil {
-		return err
-	}
-
-	client, err := cr.HTTPClientConfig.CreateClient(ctx, cr.Log)
-	if err != nil {
-		return err
-	}
-
-	cr.client = client
 	return nil
 }
 
@@ -129,7 +111,7 @@ func (cr *CloudRun) Close() error {
 }
 
 func (cr *CloudRun) Description() string {
-	return "A plugin that is capable of transmitting metrics over HTTPS to a metrics proxy hosted in Cloud Run"
+	return "A plugin that is capable of transmitting metrics over HTTPS to a metrics proxy hosted in Cloud Run while satisfying GCP OAUth2 requirements"
 }
 
 func (cr *CloudRun) SampleConfig() string {
