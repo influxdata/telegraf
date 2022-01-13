@@ -90,6 +90,7 @@ var sampleConfig = `
   # cookie_auth_method = "POST"
   # cookie_auth_username = "username"
   # cookie_auth_password = "pa$$word"
+  # cookie_auth_headers = '{"Content-Type": "application/json", "X-MY-HEADER":"hello"}'
   # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
   ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
   # cookie_auth_renewal = "5m"
@@ -172,7 +173,9 @@ func (h *HTTP) gatherURL(
 	if err != nil {
 		return err
 	}
-	defer body.Close()
+	if body != nil {
+		defer body.Close()
+	}
 
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
@@ -246,6 +249,10 @@ func (h *HTTP) gatherURL(
 }
 
 func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) {
+	if body == "" {
+		return nil, nil
+	}
+
 	var reader io.Reader = strings.NewReader(body)
 	if contentEncoding == "gzip" {
 		rc, err := internal.CompressWithGzip(reader)

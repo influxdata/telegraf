@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/metric"
@@ -42,6 +43,31 @@ func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
 	s := newSyslog()
 	s.initializeSyslogMapper()
 	s.Framing = framing.NonTransparent
+
+	// Init metrics
+	m1 := metric.New(
+		"testmetric",
+		map[string]string{
+			"hostname": "testhost",
+		},
+		map[string]interface{}{},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
+	require.NoError(t, err)
+	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	require.NoError(t, err)
+
+	require.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\n", string(messageBytesWithFraming), "Incorrect Octect counting framing")
+}
+
+func TestGetSyslogMessageWithFramingNonTransparentNul(t *testing.T) {
+	// Init plugin
+	s := newSyslog()
+	s.initializeSyslogMapper()
+	s.Framing = framing.NonTransparent
+	s.Trailer = nontransparent.NUL
 
 	// Init metrics
 	m1 := metric.New(
