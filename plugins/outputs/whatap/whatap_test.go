@@ -1,9 +1,7 @@
 package whatap
 
 import (
-	"fmt"
 	"net"
-	"os"
 	"testing"
 
 	"time"
@@ -11,33 +9,25 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-
-	whatap_hash "github.com/whatap/go-api/common/util/hash"
-
 	"github.com/stretchr/testify/require"
 )
 
-func newWhatap() *Whatap {
-	hostname, _ := os.Hostname()
-	return &Whatap{
+func newWhatap(addr string) *Whatap {
+	servers := make([]string, 0)
+	servers = append(servers, "tcp://"+addr)
+	w := &Whatap{
 		Timeout: config.Duration(60 * time.Second),
 		Log:     testutil.Logger{},
-		oname:   hostname,
-		oid:     whatap_hash.HashStr(hostname),
+		Servers: servers,
 	}
+	return w
 }
 func TestWhatapConnect(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	w := newWhatap()
-	addr := listener.Addr().String()
-	fmt.Println(addr)
-
-	w.Servers = append(w.Servers, fmt.Sprintf("%s://%s", "tcp", addr))
+	w := newWhatap(listener.Addr().String())
+	err = w.Init()
 	require.NoError(t, err)
 
 	err = w.Connect()
@@ -48,17 +38,11 @@ func TestWhatapConnect(t *testing.T) {
 }
 
 func TestWhatapWriteErr(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	w := newWhatap()
-	addr := listener.Addr().String()
-	fmt.Println(addr)
-
-	w.Servers = append(w.Servers, fmt.Sprintf("%s://%s", "tcp", addr))
+	w := newWhatap(listener.Addr().String())
+	err = w.Init()
 	require.NoError(t, err)
 
 	err = w.Connect()

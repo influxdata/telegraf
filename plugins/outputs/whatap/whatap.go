@@ -11,13 +11,15 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 
-	whatap_io "github.com/whatap/go-api/common/io"
-	whatap_pack "github.com/whatap/go-api/common/lang/pack"
-	whatap_hash "github.com/whatap/go-api/common/util/hash"
+	wio "github.com/whatap/go-api/common/io"
+	wpack "github.com/whatap/go-api/common/lang/pack"
+	whash "github.com/whatap/go-api/common/util/hash"
 )
 
 const (
-	NetSrcAgentOneway = 10
+	NetSrcAgentOneway  = 10
+	NetSrcAgentVersion = 0
+	Scheme             = "tcp"
 )
 
 type Whatap struct {
@@ -30,6 +32,7 @@ type Whatap struct {
 	oid     int32
 	conn    net.Conn
 	dest    int
+	hosts   []string
 }
 
 const sampleConfig = `
@@ -40,7 +43,7 @@ const sampleConfig = `
   license = "xxxx-xxxx-xxxx"
 
   ## WhaTap project code. Required
-  pcode = 1111
+  project_code = 1111
 
   ## WhaTap server IP. Required
   ## Put multiple IPs. ["tcp://1.1.1.1:6600","tcp://2.2.2.2:6600"]
@@ -51,25 +54,14 @@ const sampleConfig = `
 `
 
 func (w *Whatap) Connect() error {
-	w.dest++
-	if w.dest >= len(w.Servers) {
-		w.dest = 0
-	}
-
-	u, err := url.Parse(w.Servers[w.dest])
-	if err != nil {
-		return fmt.Errorf("invalid address: %s", w.Servers[w.dest])
-	}
-	if u.Scheme != "tcp" {
-		return fmt.Errorf("only tcp is supported: %s", w.Servers[w.dest])
-	}
-	client, err := net.DialTimeout(u.Scheme, u.Host, time.Duration(w.Timeout))
+	// Change and connect multiple servers sequentially.
+	host := w.nextHost()
+	client, err := net.DialTimeout(Scheme, host, time.Duration(w.Timeout))
 	if err != nil {
 		return err
 	}
-
 	w.conn = client.(*net.TCPConn)
-	w.Log.Info("Connected ", u.String())
+	w.Log.Info("Connected ", host)
 	return nil
 }
 
@@ -96,13 +88,12 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 	}
 	if w.conn == nil {
 		if err := w.Connect(); err != nil {
-			_ = w.Close()
 			return err
 		}
 	}
-	// Transform telegraf metrics to whatap protocol.
+	// Transform telegraf metrics to whatap data.
 	for _, m := range metrics {
-		p := whatap_pack.NewTagCountPack()
+		p := wpack.NewTagCountPack()
 		p.Pcode = w.Pcode
 		p.Oid = w.oid
 		p.Category = "telegraf_" + m.Name()
@@ -117,23 +108,25 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 		// Convert time to microseconds.
 		p.Time = m.Time().UnixNano() / int64(time.Millisecond)
 
-		dout := whatap_io.NewDataOutputX()
+		dout := wio.NewDataOutputX()
 		dout.WriteShort(p.GetPackType())
 		p.Write(dout)
 
 		if err := w.send(dout.ToByteArray()); err != nil {
-			return err
+			w.Log.Warnf("cannot send data: %v", err)
+			_ = w.Close()
 		}
 	}
 	return nil
 }
 func (w *Whatap) send(b []byte) (err error) {
-	// Transmits data in compliance with whatap protocol.
-	dout := whatap_io.NewDataOutputX()
+	dout := wio.NewDataOutputX()
+	// Header : add the header before sending
 	dout.WriteByte(NetSrcAgentOneway)
-	dout.WriteByte(0)
+	dout.WriteByte(NetSrcAgentVersion)
 	dout.WriteLong(w.Pcode)
-	dout.WriteLong(whatap_hash.Hash64Str(w.License))
+	dout.WriteLong(whash.Hash64Str(w.License))
+	// Body : Set the converted whatap data(b []bytes) as the body
 	dout.WriteIntBytes(b)
 	sendbuf := dout.ToByteArray()
 
@@ -148,21 +141,43 @@ func (w *Whatap) send(b []byte) (err error) {
 
 		nbytethistime, err = w.conn.Write(sendbuf[pos : pos+nbyteleft])
 		if err != nil {
-			_ = w.Close()
 			return err
 		}
 		nbyteleft -= nbytethistime
 		pos += nbytethistime
 	}
-	return err
+	return nil
+}
+func (w *Whatap) nextHost() string {
+	w.dest++
+	if w.dest >= len(w.Servers) {
+		w.dest = 0
+	}
+	return w.hosts[w.dest]
+}
+func (w *Whatap) Init() error {
+	if len(w.Servers) == 0 {
+		return fmt.Errorf("WhaTap server IP is Required")
+	}
+	w.hosts = make([]string, 0)
+	for _, server := range w.Servers {
+		u, err := url.Parse(server)
+		if err != nil {
+			return fmt.Errorf("invalid address: %s", server)
+		}
+		if u.Scheme != "tcp" {
+			return fmt.Errorf("only tcp is supported: %s", server)
+		}
+		w.hosts = append(w.hosts, u.Host)
+	}
+	w.oname, _ = os.Hostname()
+	w.oid = whash.HashStr(w.oname)
+	return nil
 }
 func init() {
-	hostname, _ := os.Hostname()
 	outputs.Add("whatap", func() telegraf.Output {
 		return &Whatap{
 			Timeout: config.Duration(60 * time.Second),
-			oname:   hostname,
-			oid:     whatap_hash.HashStr(hostname),
 		}
 	})
 }
