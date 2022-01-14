@@ -1,6 +1,7 @@
 package sampleconfig_ui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -12,6 +13,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/processors"
+)
+
+const (
+	inputIndex = iota
+	outputIndex
+	aggregatorIndex
+	processorIndex
 )
 
 var (
@@ -48,47 +56,19 @@ var (
 		BorderRight(false)
 
 	docStyle = lipgloss.NewStyle().Padding(1, 2, 0, 2)
+
+	special = lipgloss.AdaptiveColor{Light: "#43BF6D", Dark: "#73F59F"}
+	checked = lipgloss.NewStyle().SetString("✓").Foreground(special).PaddingRight(1).String()
 )
 
 type Item struct {
-	ItemTitle, Desc string
+	DisplayTitle, RenderedTitle, ItemTitle string
+	Desc, SampleConfig                     string
 }
 
-func (i Item) Title() string       { return i.ItemTitle }
+func (i Item) Title() string       { return i.DisplayTitle }
 func (i Item) Description() string { return i.Desc }
 func (i Item) FilterValue() string { return i.ItemTitle }
-
-// pluginKeyMap defines a set of keybindings. To work for help it must satisfy
-// key.Map. It could also very easily be a map[string]key.Binding.
-type pluginKeyMap struct {
-	Up        key.Binding
-	Down      key.Binding
-	Left      key.Binding
-	Right     key.Binding
-	Help      key.Binding
-	Backspace key.Binding
-	Filter    key.Binding
-	Enter     key.Binding
-	Info      key.Binding
-	Save      key.Binding
-	Quit      key.Binding
-}
-
-// ShortHelp returns keybindings to be shown in the mini help view. It's part
-// of the key.Map interface.
-func (k pluginKeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Help, k.Backspace, k.Quit}
-}
-
-// FullHelp returns keybindings for the expanded help view. It's part of the
-// key.Map interface.
-func (k pluginKeyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{k.Up, k.Down, k.Left, k.Right},
-		{k.Filter, k.Enter, k.Info, k.Save},
-		{k.Help, k.Backspace, k.Quit},
-	}
-}
 
 type PluginPage struct {
 	Tabs         []string
@@ -97,16 +77,30 @@ type PluginPage struct {
 	TabContent   []list.Model
 	help         help.Model
 
+	inputPlugins       map[string]Item
+	outputPlugins      map[string]Item
+	aggregatorsPlugins map[string]Item
+	processorsPlugins  map[string]Item
+
 	width int
 
-	keys pluginKeyMap
+	keys *pluginKeyMap
 }
 
-func createPluginList(content []list.Item, width int, height int) list.Model {
-	pluginList := list.NewModel(content, list.NewDefaultDelegate(), width, height-1)
+func (p *PluginPage) createPluginList(content []list.Item, width int, height int) list.Model {
+	pluginList := list.NewModel(content, newItemDelegate(p.keys), 0, 0)
 	pluginList.SetShowStatusBar(false)
 	pluginList.SetShowTitle(false)
-	pluginList.SetShowHelp(false)
+	pluginList.KeyMap.PrevPage = key.NewBinding(
+		key.WithKeys("h", "pgup"),
+		key.WithHelp("h/pgup", "prev page"),
+	)
+	pluginList.KeyMap.NextPage = key.NewBinding(
+		key.WithKeys("l", "pgdown"),
+		key.WithHelp("l/pgdn", "next page"),
+	)
+
+	pluginList.SetSize(width, height-1)
 
 	return pluginList
 }
@@ -120,21 +114,45 @@ func NewPluginPage() PluginPage {
 	}
 
 	var inputContent, outputContent, aggregatorContent, processorContent []list.Item
-
+	titleColor := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
 	for name, creator := range inputs.Inputs {
-		inputContent = append(inputContent, Item{ItemTitle: name, Desc: creator().Description()})
+		inputContent = append(inputContent, Item{
+			DisplayTitle:  name,
+			ItemTitle:     name,
+			RenderedTitle: fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
+			Desc:          creator().Description(),
+			SampleConfig:  creator().SampleConfig(),
+		})
 	}
 
 	for name, creator := range outputs.Outputs {
-		outputContent = append(outputContent, Item{ItemTitle: name, Desc: creator().Description()})
+		outputContent = append(outputContent, Item{
+			DisplayTitle:  name,
+			ItemTitle:     name,
+			RenderedTitle: fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
+			Desc:          creator().Description(),
+			SampleConfig:  creator().SampleConfig(),
+		})
 	}
 
 	for name, creator := range aggregators.Aggregators {
-		aggregatorContent = append(aggregatorContent, Item{ItemTitle: name, Desc: creator().Description()})
+		aggregatorContent = append(aggregatorContent, Item{
+			DisplayTitle:  name,
+			ItemTitle:     name,
+			RenderedTitle: fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
+			Desc:          creator().Description(),
+			SampleConfig:  creator().SampleConfig(),
+		})
 	}
 
 	for name, creator := range processors.Processors {
-		processorContent = append(processorContent, Item{ItemTitle: name, Desc: creator().Description()})
+		processorContent = append(processorContent, Item{
+			DisplayTitle:  name,
+			ItemTitle:     name,
+			RenderedTitle: fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
+			Desc:          creator().Description(),
+			SampleConfig:  creator().SampleConfig(),
+		})
 	}
 
 	var t [][]list.Item
@@ -145,62 +163,23 @@ func NewPluginPage() PluginPage {
 
 	c := make([]list.Model, 4)
 
-	keys := pluginKeyMap{
-		Up: key.NewBinding(
-			key.WithKeys("up", "k"),
-			key.WithHelp("↑/k", "scroll list up"),
-		),
-		Down: key.NewBinding(
-			key.WithKeys("down", "j"),
-			key.WithHelp("↓/j", "scroll list down"),
-		),
-		Left: key.NewBinding(
-			key.WithKeys("left", "h"),
-			key.WithHelp("←/h", "move to left tab"),
-		),
-		Right: key.NewBinding(
-			key.WithKeys("right", "l"),
-			key.WithHelp("→/l", "move to right tab"),
-		),
-		Filter: key.NewBinding(
-			key.WithKeys("filter"),
-			key.WithHelp("/", "filter the list"),
-		),
-		Enter: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp("⏎ enter", "select plugin"),
-		),
-		Info: key.NewBinding(
-			key.WithKeys("i"),
-			key.WithHelp("i", "ⓘ plugin details"),
-		),
-		Save: key.NewBinding(
-			key.WithKeys("s"),
-			key.WithHelp("s", "💾 save config"),
-		),
-		Help: key.NewBinding(
-			key.WithKeys("?"),
-			key.WithHelp("?", "toggle help"),
-		),
-		Backspace: key.NewBinding(
-			key.WithKeys("backspace"),
-			key.WithHelp("backspace", "go back"),
-		),
-		Quit: key.NewBinding(
-			key.WithKeys("q", "esc", "ctrl+c"),
-			key.WithHelp("q", "quit"),
-		),
+	return PluginPage{
+		Tabs:               tabs,
+		PluginLists:        t,
+		TabContent:         c,
+		keys:               newPluginKeyMap(),
+		help:               help.NewModel(),
+		inputPlugins:       make(map[string]Item),
+		outputPlugins:      make(map[string]Item),
+		aggregatorsPlugins: make(map[string]Item),
+		processorsPlugins:  make(map[string]Item),
 	}
-
-	return PluginPage{Tabs: tabs, PluginLists: t, TabContent: c, keys: keys, help: help.NewModel()}
 }
 
 func (p *PluginPage) Init(width int, height int) {
-	p.help.Width = width
-	fullView := p.help.FullHelpView(p.keys.FullHelp())
-	verticalMargins := strings.Count(p.createTabs(width), "\n") + strings.Count(fullView, "\n") + 2
+	verticalMargins := strings.Count(p.renderTabs(width), "\n")
 	for i, l := range p.PluginLists {
-		p.TabContent[i] = createPluginList(l, width, height-verticalMargins)
+		p.TabContent[i] = p.createPluginList(l, width, height-verticalMargins)
 	}
 }
 
@@ -208,9 +187,6 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		// These keys should exit the program.
-		case key.Matches(msg, p.keys.Quit):
-			return m, tea.Quit
 		case key.Matches(msg, p.keys.Right):
 			if p.activatedTab < len(p.Tabs)-1 {
 				p.activatedTab++
@@ -226,8 +202,40 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				currentPage = welcomePage
 				return m, nil
 			}
-		case key.Matches(msg, p.keys.Help):
-			p.help.ShowAll = !p.help.ShowAll
+		case key.Matches(msg, p.keys.Enter):
+			selectedIndex := p.TabContent[p.activatedTab].Index()
+			i := p.TabContent[p.activatedTab].SelectedItem()
+
+			if plugin, ok := i.(Item); ok {
+				if strings.HasPrefix(plugin.DisplayTitle, checked) {
+					plugin.DisplayTitle = plugin.ItemTitle
+					switch p.activatedTab {
+					case inputIndex:
+						delete(p.inputPlugins, plugin.ItemTitle)
+					case outputIndex:
+						delete(p.outputPlugins, plugin.ItemTitle)
+					case aggregatorIndex:
+						delete(p.aggregatorsPlugins, plugin.ItemTitle)
+					case processorIndex:
+						delete(p.processorsPlugins, plugin.ItemTitle)
+					}
+				} else {
+					plugin.DisplayTitle = plugin.RenderedTitle
+					switch p.activatedTab {
+					case inputIndex:
+						p.inputPlugins[plugin.ItemTitle] = plugin
+					case outputIndex:
+						p.outputPlugins[plugin.ItemTitle] = plugin
+					case aggregatorIndex:
+						p.aggregatorsPlugins[plugin.ItemTitle] = plugin
+					case processorIndex:
+						p.processorsPlugins[plugin.ItemTitle] = plugin
+					}
+				}
+				p.TabContent[p.activatedTab].SetItem(selectedIndex, plugin)
+			}
+		case key.Matches(msg, p.keys.Save):
+
 		}
 	case tea.WindowSizeMsg:
 		p.help.Width = msg.Width
@@ -238,9 +246,8 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 		// quickly, though asynchronously, which is why we wait for them
 		// here.
 		p.width = msg.Width
-		fullView := p.help.FullHelpView(p.keys.FullHelp())
-		verticalMargins := strings.Count(p.createTabs(msg.Width), "\n") + strings.Count(fullView, "\n") + 2
-		p.TabContent[p.activatedTab] = createPluginList(p.PluginLists[p.activatedTab], msg.Width, msg.Height-verticalMargins)
+		verticalMargins := strings.Count(p.renderTabs(msg.Width), "\n")
+		p.TabContent[p.activatedTab].SetSize(msg.Width, msg.Height-verticalMargins-1)
 	}
 
 	var cmd tea.Cmd
@@ -248,7 +255,9 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (p *PluginPage) createTabs(width int) string {
+// renderTabs will create the view for the tabs
+// counting the new lines can help determine the height for other components
+func (p *PluginPage) renderTabs(width int) string {
 	var renderedTabs []string
 
 	for i, t := range p.Tabs {
@@ -271,21 +280,14 @@ func (p *PluginPage) View() string {
 	doc := strings.Builder{}
 
 	// Tabs
-	{
-		row := p.createTabs(p.width)
-		_, err := doc.WriteString(row)
-		if err != nil {
-			return err.Error()
-		}
-	}
-
-	//list
-	_, err := doc.WriteString(p.TabContent[p.activatedTab].View())
+	row := p.renderTabs(p.width)
+	_, err := doc.WriteString(row)
 	if err != nil {
 		return err.Error()
 	}
 
-	_, err = doc.WriteString("\n\n" + p.help.View(p.keys))
+	// List of plugins
+	_, err = doc.WriteString(p.TabContent[p.activatedTab].View())
 	if err != nil {
 		return err.Error()
 	}

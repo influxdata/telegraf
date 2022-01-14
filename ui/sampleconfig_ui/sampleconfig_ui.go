@@ -3,8 +3,8 @@ package sampleconfig_ui
 import tea "github.com/charmbracelet/bubbletea"
 
 const (
-	welcomePage     = 0
-	pluginSelection = 1
+	welcomePage = iota
+	pluginSelection
 )
 
 var currentPage = welcomePage
