@@ -2,6 +2,7 @@ package sampleconfig_ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -64,16 +65,17 @@ var (
 type Item struct {
 	DisplayTitle, RenderedTitle, ItemTitle string
 	Desc, SampleConfig                     string
+	Index                                  int
 }
 
 func (i Item) Title() string       { return i.DisplayTitle }
 func (i Item) Description() string { return i.Desc }
-func (i Item) FilterValue() string { return i.ItemTitle }
+func (i Item) FilterValue() string { return i.DisplayTitle }
 
 type PluginPage struct {
 	Tabs         []string
 	activatedTab int
-	PluginLists  [][]list.Item
+	PluginLists  [][]Item
 	TabContent   []list.Model
 	help         help.Model
 
@@ -87,8 +89,13 @@ type PluginPage struct {
 	keys *pluginKeyMap
 }
 
-func (p *PluginPage) createPluginList(content []list.Item, width int, height int) list.Model {
-	pluginList := list.NewModel(content, newItemDelegate(p.keys), 0, 0)
+func (p *PluginPage) createPluginList(content []Item, width int, height int) list.Model {
+	c := make([]list.Item, len(content))
+	for i, arg := range content {
+		c[i] = arg
+	}
+
+	pluginList := list.NewModel(c, newItemDelegate(p.keys), 0, 0)
 	pluginList.SetShowStatusBar(false)
 	pluginList.SetShowTitle(false)
 	pluginList.KeyMap.PrevPage = key.NewBinding(
@@ -113,7 +120,7 @@ func NewPluginPage() PluginPage {
 		"Processors",
 	}
 
-	var inputContent, outputContent, aggregatorContent, processorContent []list.Item
+	var inputContent, outputContent, aggregatorContent, processorContent []Item
 	titleColor := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
 	for name, creator := range inputs.Inputs {
 		inputContent = append(inputContent, Item{
@@ -123,6 +130,14 @@ func NewPluginPage() PluginPage {
 			Desc:          creator().Description(),
 			SampleConfig:  creator().SampleConfig(),
 		})
+	}
+
+	sort.Slice(inputContent, func(i, j int) bool {
+		return strings.ToLower(inputContent[i].ItemTitle) < strings.ToLower(inputContent[j].ItemTitle)
+	})
+
+	for i := range inputContent {
+		inputContent[i].Index = i
 	}
 
 	for name, creator := range outputs.Outputs {
@@ -135,6 +150,14 @@ func NewPluginPage() PluginPage {
 		})
 	}
 
+	sort.Slice(outputContent, func(i, j int) bool {
+		return strings.ToLower(outputContent[i].ItemTitle) < strings.ToLower(outputContent[j].ItemTitle)
+	})
+
+	for i := range outputContent {
+		outputContent[i].Index = i
+	}
+
 	for name, creator := range aggregators.Aggregators {
 		aggregatorContent = append(aggregatorContent, Item{
 			DisplayTitle:  name,
@@ -144,6 +167,14 @@ func NewPluginPage() PluginPage {
 			SampleConfig:  creator().SampleConfig(),
 		})
 	}
+
+	for i := range aggregatorContent {
+		aggregatorContent[i].Index = i
+	}
+
+	sort.Slice(aggregatorContent, func(i, j int) bool {
+		return strings.ToLower(aggregatorContent[i].ItemTitle) < strings.ToLower(aggregatorContent[j].ItemTitle)
+	})
 
 	for name, creator := range processors.Processors {
 		processorContent = append(processorContent, Item{
@@ -155,7 +186,15 @@ func NewPluginPage() PluginPage {
 		})
 	}
 
-	var t [][]list.Item
+	for i := range processorContent {
+		processorContent[i].Index = i
+	}
+
+	sort.Slice(processorContent, func(i, j int) bool {
+		return strings.ToLower(processorContent[i].ItemTitle) < strings.ToLower(processorContent[j].ItemTitle)
+	})
+
+	var t [][]Item
 	t = append(t, inputContent)
 	t = append(t, outputContent)
 	t = append(t, aggregatorContent)
@@ -203,9 +242,9 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case key.Matches(msg, p.keys.Enter):
-			selectedIndex := p.TabContent[p.activatedTab].Index()
 			i := p.TabContent[p.activatedTab].SelectedItem()
 
+			// Change the selected state of the plugin
 			if plugin, ok := i.(Item); ok {
 				if strings.HasPrefix(plugin.DisplayTitle, checked) {
 					plugin.DisplayTitle = plugin.ItemTitle
@@ -220,6 +259,7 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 						delete(p.processorsPlugins, plugin.ItemTitle)
 					}
 				} else {
+					// Add a checkmark next to the title
 					plugin.DisplayTitle = plugin.RenderedTitle
 					switch p.activatedTab {
 					case inputIndex:
@@ -232,7 +272,14 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 						p.processorsPlugins[plugin.ItemTitle] = plugin
 					}
 				}
-				p.TabContent[p.activatedTab].SetItem(selectedIndex, plugin)
+				// Update the items title
+				p.TabContent[p.activatedTab].SetItem(plugin.Index, plugin)
+
+				// If filtering, exit filter state and jump to the selected plugin
+				if p.TabContent[p.activatedTab].SettingFilter() {
+					p.TabContent[p.activatedTab].ResetFilter()
+					p.TabContent[p.activatedTab].Select(plugin.Index)
+				}
 			}
 		case key.Matches(msg, p.keys.Save):
 
