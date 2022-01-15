@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -61,12 +62,12 @@ var (
 // For an example of lists: https://github.com/charmbracelet/bubbletea/blob/master/examples/list-simple/main.go
 type Item struct {
 	DisplayTitle, RenderedTitle, ItemTitle string
-	Desc, SampleConfig                     string
+	pluginDescriber                        telegraf.PluginDescriber
 	Index                                  int
 }
 
 func (i Item) Title() string       { return i.DisplayTitle }
-func (i Item) Description() string { return i.Desc }
+func (i Item) Description() string { return i.pluginDescriber.Description() }
 func (i Item) FilterValue() string { return i.DisplayTitle }
 
 type PluginPage struct {
@@ -88,7 +89,9 @@ type PluginPage struct {
 	// These pages are sub-pages of the plugin page to allow passing info to them
 	// SampleconfigUI is only pass by value, so it can't pass info unless made global
 	infoPage       Pages
-	infoPaveActive bool
+	infoPageActive bool
+	savePage       Pages
+	savePageActive bool
 }
 
 // createPluginList will create a list.Model for the plugin lists
@@ -142,41 +145,37 @@ func NewPluginPage() PluginPage {
 	// Each input type has its own creator type, so have to duplicate the init code
 	for name, creator := range inputs.Inputs {
 		inputContent = append(inputContent, Item{
-			DisplayTitle:  name,
-			ItemTitle:     name,
-			RenderedTitle: fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
-			Desc:          creator().Description(),
-			SampleConfig:  creator().SampleConfig(),
+			DisplayTitle:    name,
+			ItemTitle:       name,
+			RenderedTitle:   fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
+			pluginDescriber: creator(),
 		})
 	}
 
 	for name, creator := range outputs.Outputs {
 		outputContent = append(outputContent, Item{
-			DisplayTitle:  name,
-			ItemTitle:     name,
-			RenderedTitle: fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
-			Desc:          creator().Description(),
-			SampleConfig:  creator().SampleConfig(),
+			DisplayTitle:    name,
+			ItemTitle:       name,
+			RenderedTitle:   fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
+			pluginDescriber: creator(),
 		})
 	}
 
 	for name, creator := range aggregators.Aggregators {
 		aggregatorContent = append(aggregatorContent, Item{
-			DisplayTitle:  name,
-			ItemTitle:     name,
-			RenderedTitle: fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
-			Desc:          creator().Description(),
-			SampleConfig:  creator().SampleConfig(),
+			DisplayTitle:    name,
+			ItemTitle:       name,
+			RenderedTitle:   fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
+			pluginDescriber: creator(),
 		})
 	}
 
 	for name, creator := range processors.Processors {
 		processorContent = append(processorContent, Item{
-			DisplayTitle:  name,
-			ItemTitle:     name,
-			RenderedTitle: fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
-			Desc:          creator().Description(),
-			SampleConfig:  creator().SampleConfig(),
+			DisplayTitle:    name,
+			ItemTitle:       name,
+			RenderedTitle:   fmt.Sprintf("%s%s", checked, titleColor.Render(name)),
+			pluginDescriber: creator(),
 		})
 	}
 
@@ -228,8 +227,11 @@ func (p *PluginPage) InfoPageIndex() int {
 }
 
 func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
-	if p.infoPaveActive {
+	if p.infoPageActive {
 		return p.infoPage.Update(m, msg)
+	}
+	if p.savePageActive {
+		return p.savePage.Update(m, msg)
 	}
 
 	switch msg := msg.(type) {
@@ -276,12 +278,17 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 			i := p.TabContent[p.activatedTab].SelectedItem()
 
 			if plugin, ok := i.(Item); ok {
-				p.infoPaveActive = true
+				p.infoPageActive = true
 				currentTab := p.Tabs[p.activatedTab]
 				infoPage := NewPluginInfo(p, currentTab.Name, plugin)
 				infoPage.Init(p.width, p.height)
 				p.infoPage = &infoPage
 			}
+		case key.Matches(msg, p.keys.Save):
+			savePage := NewSaveConfigPage(p, p.Tabs)
+			savePage.Init(p.width, p.height)
+			p.savePage = &savePage
+			p.savePageActive = true
 		}
 	case tea.WindowSizeMsg:
 		p.help.Width = msg.Width
@@ -325,8 +332,11 @@ func (p *PluginPage) renderTabs(width int) string {
 }
 
 func (p *PluginPage) View() string {
-	if p.infoPaveActive {
+	if p.infoPageActive {
 		return p.infoPage.View()
+	}
+	if p.savePageActive {
+		return p.savePage.View()
 	}
 
 	doc := strings.Builder{}

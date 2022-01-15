@@ -51,7 +51,7 @@ func NewPluginInfo(p *PluginPage, pluginType string, plugin Item) PluginInfo {
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "esc", "ctrl+c"),
-			key.WithHelp("q", "quit"),
+			key.WithHelp("q/esc/ctrl+c", "quit"),
 		),
 	}
 
@@ -62,20 +62,19 @@ func (i *PluginInfo) Init(width int, height int) {
 	i.help.Width = width
 	i.currentWidth = width
 	i.currentHeight = height
-	fullView := i.help.FullHelpView(i.keys.FullHelp())
-	verticalMargins := headerHeight + footerHeight + strings.Count(fullView, "\n") + 1
-
-	i.viewport = viewport.Model{Width: width, Height: height - verticalMargins}
-	i.viewport.SetContent(wordwrap.String("wtf", width))
 
 	titleStyle := lipgloss.NewStyle().Foreground(special)
 
 	title := fmt.Sprintf("%s %s", titleStyle.Render(i.pluginType+" Plugin:"), i.plugin.ItemTitle)
-	desc := fmt.Sprintf("%s \n%s", titleStyle.Render("Description:"), i.plugin.Desc)
-	config := fmt.Sprintf("%s \n%s", titleStyle.Render("Sample Config:"), i.plugin.SampleConfig)
+	desc := fmt.Sprintf("%s \n%s", titleStyle.Render("Description:"), i.plugin.pluginDescriber.Description())
+	config := fmt.Sprintf("%s \n%s", titleStyle.Render("Sample Config:"), i.plugin.pluginDescriber.SampleConfig())
 
 	i.content = fmt.Sprintf("%s\n\n%s\n\n%s", title, desc, config)
 
+	fullView := i.help.FullHelpView(i.keys.FullHelp())
+	verticalMargins := headerHeight + footerHeight + strings.Count(fullView, "\n") + 1
+
+	i.viewport = viewport.Model{Width: width, Height: height - verticalMargins}
 	i.viewport.SetContent(wordwrap.String(i.content, i.currentWidth))
 }
 
@@ -89,7 +88,7 @@ func (i *PluginInfo) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, i.keys.Quit):
 			return m, tea.Quit
 		case key.Matches(msg, i.keys.Backspace):
-			i.pluginPage.infoPaveActive = false
+			i.pluginPage.infoPageActive = false
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
