@@ -5,6 +5,8 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 )
 
+// newItemDelegate is used to provide the additional custom key bindings
+// this allows the custom keys to be shown in the same help model
 func newItemDelegate(keys *pluginKeyMap) list.DefaultDelegate {
 	d := list.NewDefaultDelegate()
 
@@ -13,8 +15,8 @@ func newItemDelegate(keys *pluginKeyMap) list.DefaultDelegate {
 	return d
 }
 
-// pluginKeyMap defines a set of keybindings. To work for help it must satisfy
-// key.Map. It could also very easily be a map[string]key.Binding.
+// pluginKeyMap defines a set of keybindings for the plugin selection page
+// These key bindings are an addition to the keys provided by the default list
 type pluginKeyMap struct {
 	Left      key.Binding
 	Right     key.Binding
@@ -24,14 +26,12 @@ type pluginKeyMap struct {
 	Save      key.Binding
 }
 
-// ShortHelp returns keybindings to be shown in the mini help view. It's part
-// of the key.Map interface.
+// ShortHelp returns keybindings to be shown in the mini help view
 func (k pluginKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Backspace}
 }
 
-// FullHelp returns keybindings for the expanded help view. It's part of the
-// key.Map interface.
+// FullHelp returns keybindings for the expanded help view
 func (k pluginKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Left, k.Right, k.Enter, k.Info, k.Save},
