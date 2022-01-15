@@ -41,7 +41,6 @@ func (k welcomeKeyMap) FullHelp() [][]key.Binding {
 }
 
 func NewWelcomePage() WelcomePage {
-
 	keys := welcomeKeyMap{
 		Enter: key.NewBinding(
 			key.WithKeys("enter"),
