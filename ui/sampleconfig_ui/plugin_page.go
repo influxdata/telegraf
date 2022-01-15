@@ -16,13 +16,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-const (
-	inputIndex = iota
-	outputIndex
-	aggregatorIndex
-	processorIndex
-)
-
+// Describes the styles for the plugins page
+// Could be re-used by other pages in the future to keep a consisten look
 var (
 	activeTabBorder = lipgloss.Border{
 		Top:         "─",
@@ -62,6 +57,8 @@ var (
 	checked = lipgloss.NewStyle().SetString("✓").Foreground(special).PaddingRight(1).String()
 )
 
+// Item describes a plugin item in the bubbles list
+// For an example of lists: https://github.com/charmbracelet/bubbletea/blob/master/examples/list-simple/main.go
 type Item struct {
 	DisplayTitle, RenderedTitle, ItemTitle string
 	Desc, SampleConfig                     string
@@ -73,22 +70,28 @@ func (i Item) Description() string { return i.Desc }
 func (i Item) FilterValue() string { return i.DisplayTitle }
 
 type PluginPage struct {
-	Tabs         []string
+	// Tabs for the plugin selection page, maps to the selected plugins
+	Tabs         map[int]PluginTab
 	activatedTab int
-	PluginLists  [][]Item
 	TabContent   []list.Model
-	help         help.Model
+	PluginLists  [][]Item
 
-	inputPlugins       map[string]Item
-	outputPlugins      map[string]Item
-	aggregatorsPlugins map[string]Item
-	processorsPlugins  map[string]Item
+	// Used to pass the current width,height between Update, view and subpages
+	width  int
+	height int
 
-	width int
-
+	// Holds possible keys for the page (additional to the ones that come with default list)
 	keys *pluginKeyMap
+	help help.Model
+
+	// PluginPage has two sub-pages, info for each plugin and a final save screen
+	// These pages are sub-pages of the plugin page to allow passing info to them
+	// SampleconfigUI is only pass by value, so it can't pass info unless made global
+	infoPage       Pages
+	infoPaveActive bool
 }
 
+// createPluginList will create a list.Model for the plugin lists
 func (p *PluginPage) createPluginList(content []Item, width int, height int) list.Model {
 	c := make([]list.Item, len(content))
 	for i, arg := range content {
@@ -98,6 +101,7 @@ func (p *PluginPage) createPluginList(content []Item, width int, height int) lis
 	pluginList := list.NewModel(c, newItemDelegate(p.keys), 0, 0)
 	pluginList.SetShowStatusBar(false)
 	pluginList.SetShowTitle(false)
+	// The default allows left/right arrow keys but we are using them to navigate tabs
 	pluginList.KeyMap.PrevPage = key.NewBinding(
 		key.WithKeys("h", "pgup"),
 		key.WithHelp("h/pgup", "prev page"),
@@ -112,16 +116,30 @@ func (p *PluginPage) createPluginList(content []Item, width int, height int) lis
 	return pluginList
 }
 
-func NewPluginPage() PluginPage {
-	tabs := []string{
-		"Inputs",
-		"Outputs",
-		"Aggregators",
-		"Processors",
+// processPlugin prepares a itemized plugin list for display
+func processPlugin(items []Item) []Item {
+	sort.Slice(items, func(i, j int) bool {
+		return strings.ToLower(items[i].ItemTitle) < strings.ToLower(items[j].ItemTitle)
+	})
+
+	for i := range items {
+		items[i].Index = i
 	}
 
+	return items
+}
+
+// PluginTab keeps track of the type of plugin with the selected
+type PluginTab struct {
+	Name     string
+	Selected map[string]Item
+}
+
+func NewPluginPage() PluginPage {
 	var inputContent, outputContent, aggregatorContent, processorContent []Item
 	titleColor := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#EE6FF8", Dark: "#EE6FF8"})
+
+	// Each input type has its own creator type, so have to duplicate the init code
 	for name, creator := range inputs.Inputs {
 		inputContent = append(inputContent, Item{
 			DisplayTitle:  name,
@@ -130,14 +148,6 @@ func NewPluginPage() PluginPage {
 			Desc:          creator().Description(),
 			SampleConfig:  creator().SampleConfig(),
 		})
-	}
-
-	sort.Slice(inputContent, func(i, j int) bool {
-		return strings.ToLower(inputContent[i].ItemTitle) < strings.ToLower(inputContent[j].ItemTitle)
-	})
-
-	for i := range inputContent {
-		inputContent[i].Index = i
 	}
 
 	for name, creator := range outputs.Outputs {
@@ -150,14 +160,6 @@ func NewPluginPage() PluginPage {
 		})
 	}
 
-	sort.Slice(outputContent, func(i, j int) bool {
-		return strings.ToLower(outputContent[i].ItemTitle) < strings.ToLower(outputContent[j].ItemTitle)
-	})
-
-	for i := range outputContent {
-		outputContent[i].Index = i
-	}
-
 	for name, creator := range aggregators.Aggregators {
 		aggregatorContent = append(aggregatorContent, Item{
 			DisplayTitle:  name,
@@ -167,14 +169,6 @@ func NewPluginPage() PluginPage {
 			SampleConfig:  creator().SampleConfig(),
 		})
 	}
-
-	for i := range aggregatorContent {
-		aggregatorContent[i].Index = i
-	}
-
-	sort.Slice(aggregatorContent, func(i, j int) bool {
-		return strings.ToLower(aggregatorContent[i].ItemTitle) < strings.ToLower(aggregatorContent[j].ItemTitle)
-	})
 
 	for name, creator := range processors.Processors {
 		processorContent = append(processorContent, Item{
@@ -186,32 +180,37 @@ func NewPluginPage() PluginPage {
 		})
 	}
 
-	for i := range processorContent {
-		processorContent[i].Index = i
+	var t [][]Item
+	t = append(t, processPlugin(inputContent))
+	t = append(t, processPlugin(outputContent))
+	t = append(t, processPlugin(aggregatorContent))
+	t = append(t, processPlugin(processorContent))
+
+	tabs := map[int]PluginTab{
+		0: {
+			Name:     "Input",
+			Selected: make(map[string]Item),
+		},
+		1: {
+			Name:     "Output",
+			Selected: make(map[string]Item),
+		},
+		2: {
+			Name:     "Aggregator",
+			Selected: make(map[string]Item),
+		},
+		3: {
+			Name:     "Processor",
+			Selected: make(map[string]Item),
+		},
 	}
 
-	sort.Slice(processorContent, func(i, j int) bool {
-		return strings.ToLower(processorContent[i].ItemTitle) < strings.ToLower(processorContent[j].ItemTitle)
-	})
-
-	var t [][]Item
-	t = append(t, inputContent)
-	t = append(t, outputContent)
-	t = append(t, aggregatorContent)
-	t = append(t, processorContent)
-
-	c := make([]list.Model, 4)
-
 	return PluginPage{
-		Tabs:               tabs,
-		PluginLists:        t,
-		TabContent:         c,
-		keys:               newPluginKeyMap(),
-		help:               help.NewModel(),
-		inputPlugins:       make(map[string]Item),
-		outputPlugins:      make(map[string]Item),
-		aggregatorsPlugins: make(map[string]Item),
-		processorsPlugins:  make(map[string]Item),
+		Tabs:        tabs,
+		PluginLists: t,
+		TabContent:  make([]list.Model, 4),
+		keys:        newPluginKeyMap(),
+		help:        help.NewModel(),
 	}
 }
 
@@ -220,9 +219,19 @@ func (p *PluginPage) Init(width int, height int) {
 	for i, l := range p.PluginLists {
 		p.TabContent[i] = p.createPluginList(l, width, height-verticalMargins)
 	}
+	p.width = width
+	p.height = height
+}
+
+func (p *PluginPage) InfoPageIndex() int {
+	return 1
 }
 
 func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
+	if p.infoPaveActive {
+		return p.infoPage.Update(m, msg)
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -248,29 +257,11 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 			if plugin, ok := i.(Item); ok {
 				if strings.HasPrefix(plugin.DisplayTitle, checked) {
 					plugin.DisplayTitle = plugin.ItemTitle
-					switch p.activatedTab {
-					case inputIndex:
-						delete(p.inputPlugins, plugin.ItemTitle)
-					case outputIndex:
-						delete(p.outputPlugins, plugin.ItemTitle)
-					case aggregatorIndex:
-						delete(p.aggregatorsPlugins, plugin.ItemTitle)
-					case processorIndex:
-						delete(p.processorsPlugins, plugin.ItemTitle)
-					}
+					delete(p.Tabs[p.activatedTab].Selected, plugin.ItemTitle)
 				} else {
 					// Add a checkmark next to the title
 					plugin.DisplayTitle = plugin.RenderedTitle
-					switch p.activatedTab {
-					case inputIndex:
-						p.inputPlugins[plugin.ItemTitle] = plugin
-					case outputIndex:
-						p.outputPlugins[plugin.ItemTitle] = plugin
-					case aggregatorIndex:
-						p.aggregatorsPlugins[plugin.ItemTitle] = plugin
-					case processorIndex:
-						p.processorsPlugins[plugin.ItemTitle] = plugin
-					}
+					p.Tabs[p.activatedTab].Selected[plugin.ItemTitle] = plugin
 				}
 				// Update the items title
 				p.TabContent[p.activatedTab].SetItem(plugin.Index, plugin)
@@ -281,18 +272,21 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 					p.TabContent[p.activatedTab].Select(plugin.Index)
 				}
 			}
-		case key.Matches(msg, p.keys.Save):
+		case key.Matches(msg, p.keys.Info):
+			i := p.TabContent[p.activatedTab].SelectedItem()
 
+			if plugin, ok := i.(Item); ok {
+				p.infoPaveActive = true
+				currentTab := p.Tabs[p.activatedTab]
+				infoPage := NewPluginInfo(p, currentTab.Name, plugin)
+				infoPage.Init(p.width, p.height)
+				p.infoPage = &infoPage
+			}
 		}
 	case tea.WindowSizeMsg:
 		p.help.Width = msg.Width
-
-		// Since this program is using the full size of the viewport we need
-		// to wait until we've received the window dimensions before we
-		// can initialize the viewport. The initial dimensions come in
-		// quickly, though asynchronously, which is why we wait for them
-		// here.
 		p.width = msg.Width
+		p.height = msg.Height
 		verticalMargins := strings.Count(p.renderTabs(msg.Width), "\n")
 		p.TabContent[p.activatedTab].SetSize(msg.Width, msg.Height-verticalMargins-1)
 	}
@@ -307,11 +301,18 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 func (p *PluginPage) renderTabs(width int) string {
 	var renderedTabs []string
 
-	for i, t := range p.Tabs {
-		if i == p.activatedTab {
-			renderedTabs = append(renderedTabs, activeTab.Render(t))
+	// Sort the keys to make sure tabs are in the same order everytime
+	// Using a map helps with organizing selected plugins with plugin type
+	keys := make([]int, 0, len(p.Tabs))
+	for k := range p.Tabs {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+	for _, k := range keys {
+		if k == p.activatedTab {
+			renderedTabs = append(renderedTabs, activeTab.Render(p.Tabs[k].Name))
 		} else {
-			renderedTabs = append(renderedTabs, tab.Render(t))
+			renderedTabs = append(renderedTabs, tab.Render(p.Tabs[k].Name))
 		}
 	}
 
@@ -324,6 +325,10 @@ func (p *PluginPage) renderTabs(width int) string {
 }
 
 func (p *PluginPage) View() string {
+	if p.infoPaveActive {
+		return p.infoPage.View()
+	}
+
 	doc := strings.Builder{}
 
 	// Tabs

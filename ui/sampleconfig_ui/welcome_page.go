@@ -22,28 +22,18 @@ type WelcomePage struct {
 	content string
 	keys    welcomeKeyMap
 
-	originalHeight int
-	originalWidth  int
-
 	viewport viewport.Model
 	help     help.Model
 }
 
-// keyMap defines a set of keybindings. To work for help it must satisfy
-// key.Map. It could also very easily be a map[string]key.Binding.
 type welcomeKeyMap struct {
 	Enter key.Binding
 	Quit  key.Binding
 }
 
-// ShortHelp returns keybindings to be shown in the mini help view. It's part
-// of the key.Map interface.
 func (k welcomeKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Enter, k.Quit}
 }
-
-// FullHelp returns keybindings for the expanded help view. It's part of the
-// key.Map interface.
 func (k welcomeKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Enter, k.Quit}, // first column
@@ -98,8 +88,6 @@ func (w *WelcomePage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 			currentPage = pluginSelection
 		}
 	case tea.WindowSizeMsg:
-		w.originalWidth = msg.Width
-		w.originalHeight = msg.Height
 		w.help.Width = msg.Width
 		fullView := w.help.FullHelpView(w.keys.FullHelp())
 		verticalMargins := headerHeight + footerHeight + strings.Count(fullView, "\n") + 1
@@ -134,11 +122,6 @@ func (w *WelcomePage) View() string {
 	footer = fmt.Sprintf("%s\n%s\n%s", footerTop, footerMid, footerBot)
 
 	helpView := w.help.View(w.keys)
-	// height := 8 - strings.Count(status, "\n") - strings.Count(helpView, "\n")
-	// status + strings.Repeat("\n", height) + helpView
-
-	// w.viewport.Height -= strings.Count(helpView, "\n")
-	//w.viewport.SetContent(wordwrap.String(w.content, w.viewport.Width))
 
 	return fmt.Sprintf("%s\n%s\n%s\n%s", header, w.viewport.View(), footer, helpView)
 }

@@ -7,6 +7,12 @@ const (
 	pluginSelection
 )
 
+var (
+	ready bool
+)
+
+// A global value because SampleConfigUI update and view are pass by value to adhere to tea.Model interface
+// This is to allow other page instances to change it
 var currentPage = welcomePage
 
 type Pages interface {
@@ -17,8 +23,6 @@ type Pages interface {
 
 type SampleConfigUI struct {
 	pages []Pages
-
-	ready bool
 }
 
 func NewSampleConfigUI() SampleConfigUI {
@@ -37,10 +41,10 @@ func (s SampleConfigUI) Init() tea.Cmd {
 }
 
 func (s SampleConfigUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+	switch msg := msg.(type) { //nolint:revive
 	case tea.WindowSizeMsg:
-		if !s.ready {
-			s.ready = true
+		if !ready {
+			ready = true
 			for _, p := range s.pages {
 				p.Init(msg.Width, msg.Height)
 			}
@@ -52,7 +56,7 @@ func (s SampleConfigUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (s SampleConfigUI) View() string {
-	if !s.ready {
+	if !ready {
 		return "\n  Initializing..."
 	}
 	return s.pages[currentPage].View()
