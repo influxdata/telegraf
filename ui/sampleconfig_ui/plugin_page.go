@@ -268,27 +268,28 @@ func (p *PluginPage) Update(m tea.Model, msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Update the items title
 				p.TabContent[p.activatedTab].SetItem(plugin.Index, plugin)
 
-				// If filtering, exit filter state and jump to the selected plugin
-				if p.TabContent[p.activatedTab].SettingFilter() {
-					p.TabContent[p.activatedTab].ResetFilter()
-					p.TabContent[p.activatedTab].Select(plugin.Index)
-				}
+				p.TabContent[p.activatedTab].ResetFilter()
+				p.TabContent[p.activatedTab].Select(plugin.Index)
 			}
 		case key.Matches(msg, p.keys.Info):
-			i := p.TabContent[p.activatedTab].SelectedItem()
+			if !p.TabContent[p.activatedTab].SettingFilter() {
+				i := p.TabContent[p.activatedTab].SelectedItem()
 
-			if plugin, ok := i.(Item); ok {
-				p.infoPageActive = true
-				currentTab := p.Tabs[p.activatedTab]
-				infoPage := NewPluginInfo(p, currentTab.Name, plugin)
-				infoPage.Init(p.width, p.height)
-				p.infoPage = &infoPage
+				if plugin, ok := i.(Item); ok {
+					p.infoPageActive = true
+					currentTab := p.Tabs[p.activatedTab]
+					infoPage := NewPluginInfo(p, currentTab.Name, plugin)
+					infoPage.Init(p.width, p.height)
+					p.infoPage = &infoPage
+				}
 			}
 		case key.Matches(msg, p.keys.Save):
-			savePage := NewSaveConfigPage(p, p.Tabs)
-			savePage.Init(p.width, p.height)
-			p.savePage = &savePage
-			p.savePageActive = true
+			if !p.TabContent[p.activatedTab].SettingFilter() {
+				savePage := NewSaveConfigPage(p, p.Tabs)
+				savePage.Init(p.width, p.height)
+				p.savePage = &savePage
+				p.savePageActive = true
+			}
 		}
 	case tea.WindowSizeMsg:
 		p.help.Width = msg.Width
