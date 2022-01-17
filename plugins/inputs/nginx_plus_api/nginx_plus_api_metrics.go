@@ -172,9 +172,9 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 				"nginx_plus_api_slabs_slots",
 				map[string]interface{}{
 					"used":  slot.Used,
-					"free":  slot.Used,
-					"reqs":  slot.Used,
-					"fails": slot.Used,
+					"free":  slot.Free,
+					"reqs":  slot.Reqs,
+					"fails": slot.Fails,
 				},
 				slotTags,
 			)
