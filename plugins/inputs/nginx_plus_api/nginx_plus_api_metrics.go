@@ -137,7 +137,7 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 		return err
 	}
 
-	var slabs = Slabs
+	var slabs Slabs
 
 	if err := json.Unmarshal(body, &slabs); err != nil {
 		return err
@@ -145,7 +145,7 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 
 	tags := getTags(addr)
 
-	for zoneName, slab := slabs {
+	for zoneName, slab := range slabs {
 		slabTags := map[string]string{}
 		for k, v := range tags {
 			slabTags[k] = v
@@ -161,9 +161,9 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 			slabTags,
 		)
 
-		slotTags := map[string]string{}
 		for slotId, slot := range slab.Slots {
-			for k, v in := range slabTags {
+			slotTags := map[string]string{}
+			for k, v := range slabTags {
 				slotTags[k] = v
 			}
 			slotTags["slot"] = slotId

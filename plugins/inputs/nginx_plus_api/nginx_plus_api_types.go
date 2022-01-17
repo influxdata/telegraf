@@ -13,14 +13,14 @@ type Connections struct {
 
 type Slabs map[string]struct {
 	Pages struct {
-		Used	int64	`json:"used"`
-		Free	int64	`json="free"`
+		Used int64 `json:"used"`
+		Free int64 `json:"free"`
 	} `json:"pages"`
 	Slots map[string]struct {
-		Used	int64	`json:"used"`
-		Free	int64	`json:"free"`
-		Reqs	int64	`json:"reqs"`
-		Fails	int64	`json:"fails"`
+		Used  int64 `json:"used"`
+		Free  int64 `json:"free"`
+		Reqs  int64 `json:"reqs"`
+		Fails int64 `json:"fails"`
 	} `json:"slots"`
 }
 
