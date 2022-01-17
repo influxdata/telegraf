@@ -19,6 +19,8 @@ type Supervisor struct {
 	FieldsExc      []string `toml:"fields_excludes"`
 
 	status supervisorInfo
+
+	rpcClient *xmlrpc.Client
 }
 
 type processInfo struct {
@@ -65,27 +67,30 @@ func (s *Supervisor) SampleConfig() string {
 
 func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 	// Initializing XML-RPC client
-	client, err := xmlrpc.NewClient(s.Server, nil)
-	if err != nil {
-		return err
+	if s.rpcClient == nil {
+		var err error
+		s.rpcClient, err = xmlrpc.NewClient(s.Server, nil)
+		if err != nil {
+			return err
+		}
 	}
-	defer client.Close()
 
 	// API call to get information about all running processes
+	var err error
 	var rawProcessData []processInfo
-	err = client.Call("supervisor.getAllProcessInfo", nil, &rawProcessData)
+	err = s.rpcClient.Call("supervisor.getAllProcessInfo", nil, &rawProcessData)
 	if err != nil {
 		return err
 	}
 
 	// API call to get information about instance status
-	err = client.Call("supervisor.getState", nil, &s.status)
+	err = s.rpcClient.Call("supervisor.getState", nil, &s.status)
 	if err != nil {
 		return err
 	}
 
 	// API call to get identification string
-	err = client.Call("supervisor.getIdentification", nil, &s.status.Ident)
+	err = s.rpcClient.Call("supervisor.getIdentification", nil, &s.status.Ident)
 	if err != nil {
 		return err
 	}
