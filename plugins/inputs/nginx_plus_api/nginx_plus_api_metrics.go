@@ -161,8 +161,8 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 			slabTags,
 		)
 
+		slotTags := map[string]string{}
 		for slotId, slot := range slab.Slots {
-			slotTags := map[string]string{}
 			for k, v in := range slabTags {
 				slotTags[k] = v
 			}
