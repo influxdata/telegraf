@@ -911,7 +911,7 @@ func TestParseMetadataRow(t *testing.T) {
 func TestParseCSVFileWithMetadata(t *testing.T) {
 	p := &Parser{
 		HeaderRowCount:     1,
-		SkipRows:           1,
+		SkipRows:           2,
 		MetadataRows:       4,
 		Comment:            "#",
 		TagColumns:         []string{"type"},
@@ -923,6 +923,7 @@ func TestParseCSVFileWithMetadata(t *testing.T) {
 	testCSV := `garbage nonsense that needs be skipped
 
 # version= 1.0
+
     invalid meta data that can be ignored.
 file created: 2021-10-08T12:34:18+10:00
 timestamp,type,name,status
@@ -966,7 +967,7 @@ timestamp,type,name,status
 
 	p = &Parser{
 		HeaderRowCount:     1,
-		SkipRows:           1,
+		SkipRows:           2,
 		MetadataRows:       4,
 		Comment:            "#",
 		TagColumns:         []string{"type", "version"},
@@ -979,6 +980,7 @@ timestamp,type,name,status
 		"garbage nonsense that needs be skipped",
 		"",
 		"# version= 1.0\r\n",
+		"",
 		"    invalid meta data that can be ignored.\r\n",
 		"file created: 2021-10-08T12:34:18+10:00",
 		"timestamp,type,name,status\n",
@@ -989,23 +991,27 @@ timestamp,type,name,status
 
 	// Set default Tags
 	p.SetDefaultTags(map[string]string{"test": "tag"})
-	for rowIndex := 0; rowIndex < 5; rowIndex++ {
+	rowIndex := 0
+	for ; rowIndex < 6; rowIndex++ {
 		m, err := p.ParseLine(testCSVRows[rowIndex])
 		require.Error(t, io.EOF, err)
 		require.Error(t, err)
 		require.Nil(t, m)
 	}
-	m, err := p.ParseLine(testCSVRows[5])
+	m, err := p.ParseLine(testCSVRows[rowIndex])
 	require.Nil(t, err)
 	require.Nil(t, m)
-	m, err = p.ParseLine(testCSVRows[6])
+	rowIndex++
+	m, err = p.ParseLine(testCSVRows[rowIndex])
 	require.NoError(t, err)
 	require.Equal(t, expectedFields[0], m.Fields())
 	require.Equal(t, expectedTags[0], m.Tags())
-	m, err = p.ParseLine(testCSVRows[7])
+	rowIndex++
+	m, err = p.ParseLine(testCSVRows[rowIndex])
 	require.NoError(t, err)
 	require.Nil(t, m)
-	m, err = p.ParseLine(testCSVRows[8])
+	rowIndex++
+	m, err = p.ParseLine(testCSVRows[rowIndex])
 	require.NoError(t, err)
 	require.Equal(t, expectedFields[1], m.Fields())
 	require.Equal(t, expectedTags[1], m.Tags())
