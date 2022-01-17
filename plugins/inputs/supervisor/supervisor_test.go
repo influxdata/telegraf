@@ -8,98 +8,110 @@ import (
 )
 
 func TestShort_SampleData(t *testing.T) {
-	sampleProcessInfo := make([]processInfo, 2)
-	expectedProcessFields := make([]map[string]interface{}, 2)
-	expectedProcessTags := make([]map[string]string, 2)
-
-	sampleProcessInfo[0] = processInfo{
-		Name:          "Process0",
-		Group:         "ProcessGroup0",
-		Description:   "pid 112 uptime 0:12:11",
-		Start:         1615632853,
-		Stop:          0,
-		Now:           1615632853 + 731,
-		State:         20,
-		Statename:     "RUNNING",
-		StdoutLogfile: "/var/log/supervisor/process0-stdout.log",
-		StderrLogfile: "/var/log/supervisor/process0-stdout.log",
-		SpawnErr:      "",
-		ExitStatus:    0,
-		Pid:           112,
-	}
-
-	sampleProcessInfo[1] = processInfo{
-		Name:          "Process1",
-		Group:         "ProcessGroup1",
-		Description:   "pid 113 uptime 0:12:11",
-		Start:         1615632853,
-		Stop:          0,
-		Now:           1615632853 + 731,
-		State:         20,
-		Statename:     "RUNNING",
-		StdoutLogfile: "/var/log/supervisor/process1-stdout.log",
-		StderrLogfile: "/var/log/supervisor/process1-stderr.log",
-		SpawnErr:      "",
-		ExitStatus:    0,
-		Pid:           113,
-	}
-
-	expectedProcessTags[0] = map[string]string{
-		"process": "Process0",
-		"group":   "ProcessGroup0",
-		"server":  "sampleInstance",
-	}
-
-	expectedProcessFields[0] = map[string]interface{}{
-		"uptime":   int32(731),
-		"state":    int16(20),
-		"pid":      int32(112),
-		"exitCode": int8(0),
-	}
-
-	expectedProcessTags[1] = map[string]string{
-		"process": "Process1",
-		"group":   "ProcessGroup1",
-		"server":  "sampleInstance",
-	}
-
-	expectedProcessFields[1] = map[string]interface{}{
-		"uptime":   int32(731),
-		"state":    int16(20),
-		"pid":      int32(113),
-		"exitCode": int8(0),
-	}
-
-	expectedInstanceTags := map[string]string{
-		"server": "sampleInstance",
-	}
-
-	expectedInstanceFields := map[string]interface{}{
-		"state": int8(1),
-	}
-
-	s := &Supervisor{
-		PidGather:      true,
-		ExitCodeGather: true,
-		UseIdentTag:    true,
-		status: supervisorInfo{
-			StateCode: int8(1),
-			StateName: "RUNNING",
-			Ident:     "sampleInstance",
+	testCases := []struct {
+		desc              string
+		supervisorData    supervisorInfo
+		sampleProcInfo    []processInfo
+		expProcessFields  []map[string]interface{}
+		expProcessTags    []map[string]string
+		expInstanceFields map[string]interface{}
+		expInstancesTags  map[string]string
+	}{
+		{
+			desc: "Case 1",
+			sampleProcInfo: []processInfo{
+				{
+					Name:          "Process0",
+					Group:         "ProcessGroup0",
+					Description:   "pid 112 uptime 0:12:11",
+					Start:         1615632853,
+					Stop:          0,
+					Now:           1615632853 + 731,
+					State:         20,
+					Statename:     "RUNNING",
+					StdoutLogfile: "/var/log/supervisor/process0-stdout.log",
+					StderrLogfile: "/var/log/supervisor/process0-stdout.log",
+					SpawnErr:      "",
+					ExitStatus:    0,
+					Pid:           112,
+				},
+				{
+					Name:          "Process1",
+					Group:         "ProcessGroup1",
+					Description:   "pid 113 uptime 0:12:11",
+					Start:         1615632853,
+					Stop:          0,
+					Now:           1615632853 + 731,
+					State:         20,
+					Statename:     "RUNNING",
+					StdoutLogfile: "/var/log/supervisor/process1-stdout.log",
+					StderrLogfile: "/var/log/supervisor/process1-stderr.log",
+					SpawnErr:      "",
+					ExitStatus:    0,
+					Pid:           113,
+				},
+			},
+			supervisorData: supervisorInfo{
+				StateCode: int8(1),
+			},
+			expProcessFields: []map[string]interface{}{
+				{
+					"uptime":   int32(731),
+					"state":    int16(20),
+					"pid":      int32(112),
+					"exitCode": int8(0),
+				},
+				{
+					"uptime":   int32(731),
+					"state":    int16(20),
+					"pid":      int32(113),
+					"exitCode": int8(0),
+				},
+			},
+			expProcessTags: []map[string]string{
+				{
+					"process": "Process0",
+					"group":   "ProcessGroup0",
+					"server":  "example.org:9001",
+				},
+				{
+					"process": "Process1",
+					"group":   "ProcessGroup1",
+					"server":  "example.org:9001",
+				},
+			},
+			expInstanceFields: map[string]interface{}{
+				"state": int8(1),
+			},
+			expInstancesTags: map[string]string{
+				"server": "example.org:9001",
+			},
 		},
 	}
-
-	for key, process := range sampleProcessInfo {
-		tags, fields, err := s.parseProcessData(process)
-		require.NoError(t, err)
-		require.Equal(t, expectedProcessTags[key], tags)
-		require.Equal(t, expectedProcessFields[key], fields)
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			s := &Supervisor{
+				Server:         "http://example.org:9001/RPC2",
+				PidGather:      true,
+				ExitCodeGather: true,
+				UseIdentTag:    false,
+				status: supervisorInfo{
+					StateCode: tC.supervisorData.StateCode,
+					StateName: tC.supervisorData.StateName,
+				},
+			}
+			for k, v := range tC.sampleProcInfo {
+				processTags, processFields, err := s.parseProcessData(v)
+				require.NoError(t, err)
+				require.Equal(t, tC.expProcessFields[k], processFields)
+				require.Equal(t, tC.expProcessTags[k], processTags)
+			}
+			instanceTags, instanceFields, err := s.parseInstanceData()
+			require.NoError(t, err)
+			require.Equal(t, tC.expInstancesTags, instanceTags)
+			require.Equal(t, tC.expInstanceFields, instanceFields)
+		})
 	}
-
-	instanceTags, instanceFields, err := s.parseInstanceData()
-	require.NoError(t, err)
-	require.Equal(t, expectedInstanceTags, instanceTags)
-	require.Equal(t, expectedInstanceFields, instanceFields)
 }
 
 func TestIntegration_BasicGathering(t *testing.T) {
