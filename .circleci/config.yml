@@ -155,6 +155,7 @@ jobs:
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
+      - run: 'GOARCH=386 make check'
       - run: 'make check-deps'
       - test-go
       - save_cache:
