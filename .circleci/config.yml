@@ -153,6 +153,7 @@ jobs:
           key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'make deps'
+      - run: 'GOARCH=386 make deps'
       - run: 'make tidy'
       - run: 'make check'
       - run: 'GOARCH=386 make check'
