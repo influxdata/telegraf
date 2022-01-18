@@ -287,6 +287,10 @@ func TestPhpFpmDefaultGetFromLocalhost(t *testing.T) {
 }
 
 func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	r := &phpfpm{
 		Urls: []string{"http://aninvalidone"},
 	}
