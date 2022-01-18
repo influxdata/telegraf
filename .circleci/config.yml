@@ -472,7 +472,6 @@ workflows:
               only: /.*/
       - 'i386-package':
           requires:
-            - 'test-go-linux'
             - 'test-go-linux-386'
           filters:
             tags:
@@ -480,70 +479,60 @@ workflows:
       - 'ppc64le-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
       - 'riscv64-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
       - 's390x-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
       - 'armel-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
       - 'amd64-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
       - 'arm64-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
       - 'armhf-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
       - 'static-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
       - 'mipsel-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
       - 'mips-package':
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
@@ -647,68 +636,57 @@ workflows:
           name: 'i386-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
             - 'test-go-linux-386'
       - 'ppc64le-package':
           name: 'ppc64le-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - 'riscv64-package':
           name: 'riscv64-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - 's390x-package':
           name: 's390x-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - 'armel-package':
           name: 'armel-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - 'amd64-package':
           name: 'amd64-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - 'arm64-package':
           name: 'arm64-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - 'armhf-package':
           name: 'armhf-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - 'static-package':
           name: 'static-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - 'mipsel-package':
           name: 'mipsel-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - 'mips-package':
           name: 'mips-package-nightly'
           nightly: true
           requires:
             - 'test-go-linux'
-            - 'test-go-linux-386'
       - nightly:
           requires:
             - 'i386-package-nightly'
