@@ -68,8 +68,8 @@ require (
 	github.com/gophercloud/gophercloud v0.16.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/gosnmp/gosnmp v1.33.0
-	github.com/grid-x/modbus v0.0.0-20210224155242-c4a3d042e99b
+	github.com/gosnmp/gosnmp v1.34.0
+	github.com/grid-x/modbus v0.0.0-20211113184042-7f2251c342c9
 	github.com/gwos/tcg/sdk v0.0.0-20211223101342-35fbd1ae683c
 	github.com/harlow/kinesis-consumer v0.3.6-0.20210911031324-5a873d6e9fec
 	github.com/hashicorp/consul/api v1.12.0
