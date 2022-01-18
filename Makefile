@@ -3,6 +3,7 @@ tag := $(shell git describe --exact-match --tags 2>git_describe_error.tmp; rm -f
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
 glibc_version := 2.17
+cmd := telegraf
 
 ifdef NIGHTLY
 	version := $(next_version)
@@ -102,6 +103,10 @@ deps:
 .PHONY: telegraf
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+
+.PHONY: telegraf_builder
+telegraf_builder:
+	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf_builder
 
 # Used by dockerfile builds
 .PHONY: go-install
@@ -236,7 +241,7 @@ install: $(buildbin)
 # directory.
 $(buildbin):
 	@mkdir -pv $(dir $@)
-	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/$(cmd)
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -441,6 +446,6 @@ windows_i386.zip windows_amd64.zip: export EXEEXT := .exe
 %.zip: export pkg := zip
 %.zip: export prefix := /
 
-%.deb %.rpm %.tar.gz %.zip: export DESTDIR = build/$(GOOS)-$(GOARCH)$(GOARM)$(cgo)-$(pkg)/telegraf-$(version)
-%.deb %.rpm %.tar.gz %.zip: export buildbin = build/$(GOOS)-$(GOARCH)$(GOARM)$(cgo)/telegraf$(EXEEXT)
+%.deb %.rpm %.tar.gz %.zip: export DESTDIR = build/$(GOOS)-$(GOARCH)$(GOARM)$(cgo)-$(pkg)/$(cmd)-$(version)
+%.deb %.rpm %.tar.gz %.zip: export buildbin = build/$(GOOS)-$(GOARCH)$(GOARM)$(cgo)/$(cmd)$(EXEEXT)
 %.deb %.rpm %.tar.gz %.zip: export LDFLAGS = -w -s

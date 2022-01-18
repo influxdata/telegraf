@@ -86,6 +86,18 @@ Telegraf requires Go version 1.17 or newer, the Makefile requires GNU make.
    make
    ```
 
+### Building a reduced size version with telegraf_builder
+
+#### Building from source
+
+To build telegraf_builder from source you can also use the Makefile:
+
+- `make telegraf-builder`
+
+To create a packaged artifact requires you to pass `cmd=telegraf_builder` e.g.:
+
+- `make package include_packages=linux_amd64.tar.gz cmd=telegraf_builder`
+
 ### Nightly Builds
 
 [Nightly](/docs/NIGHTLIES.md) builds are available, generated from the master branch.

@@ -3,6 +3,9 @@
 /telegraf
 /telegraf.exe
 /telegraf.gz
+/telegraf_builder
+/telegraf_builder.exe
+/telegraf_builder.gz
 /vendor
 .DS_Store
 process.yml
