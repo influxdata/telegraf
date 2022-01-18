@@ -19,7 +19,7 @@ following works:
 - github.com/Mellanox/rdmamap [Apache License 2.0](https://github.com/Mellanox/rdmamap/blob/master/LICENSE)
 - github.com/Microsoft/go-winio [MIT License](https://github.com/Microsoft/go-winio/blob/master/LICENSE)
 - github.com/Shopify/sarama [MIT License](https://github.com/Shopify/sarama/blob/master/LICENSE)
-- github.com/StackExchange/wmi [MIT License](https://github.com/StackExchange/wmi/blob/master/LICENSE)
+- github.com/yusufpapurcu/wmi [MIT License](https://github.com/yusufpapurcu/wmi/blob/master/LICENSE)
 - github.com/aerospike/aerospike-client-go [Apache License 2.0](https://github.com/aerospike/aerospike-client-go/blob/master/LICENSE)
 - github.com/alecthomas/participle [MIT License](https://github.com/alecthomas/participle/blob/master/COPYING)
 - github.com/alecthomas/units [MIT License](https://github.com/alecthomas/units/blob/master/COPYING)
