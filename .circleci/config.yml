@@ -144,9 +144,8 @@ commands:
           paths:
             - 'dist'
 jobs:
-  test-go-linux:
+  deps:
     executor: go-1_17
-    parallelism: 4
     steps:
       - checkout
       - restore_cache:
@@ -156,7 +155,6 @@ jobs:
       - run: 'make tidy'
       - run: 'make check'
       - run: 'make check-deps'
-      - test-go
       - save_cache:
           name: 'go module cache'
           key: go-mod-v1-{{ checksum "go.sum" }}
@@ -166,6 +164,16 @@ jobs:
           root: '/go'
           paths:
             - '*'
+  test-go-1_17:
+    executor: go-1_17
+    steps:
+      - test-go
+    parallelism: 4
+  test-go-1_17-386:
+    executor: go-1_17
+    steps:
+      - test-go
+    parallelism: 4
   test-go-mac:
     executor: mac
     steps:
@@ -411,7 +419,19 @@ workflows:
   version: 2
   check:
     jobs:
-      - 'test-go-linux':
+      - 'deps':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_17':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1_17-386':
+          requires:
+            - 'deps'
           filters:
             tags:
               only: /.*/
@@ -443,67 +463,78 @@ workflows:
               only: /.*/
       - 'i386-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'ppc64le-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'riscv64-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 's390x-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'armel-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'amd64-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'arm64-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'armhf-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'static-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'mipsel-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
       - 'mips-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
           filters:
             tags:
               only: /.*/
@@ -584,7 +615,13 @@ workflows:
 
   nightly:
     jobs:
-      - 'test-go-linux'
+      - 'deps'
+      - 'test-go-1_17':
+          requires:
+            - 'deps'
+      - 'test-go-1_17-386':
+          requires:
+            - 'deps'
       - 'test-go-mac'
       - 'test-go-windows'
       - 'windows-package':
@@ -606,57 +643,68 @@ workflows:
           name: 'i386-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'ppc64le-package':
           name: 'ppc64le-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'riscv64-package':
           name: 'riscv64-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 's390x-package':
           name: 's390x-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'armel-package':
           name: 'armel-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'amd64-package':
           name: 'amd64-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'arm64-package':
           name: 'arm64-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'armhf-package':
           name: 'armhf-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'static-package':
           name: 'static-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'mipsel-package':
           name: 'mipsel-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - 'mips-package':
           name: 'mips-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-1_17'
+            - 'test-go-1_17-386'
       - nightly:
           requires:
             - 'i386-package-nightly'
