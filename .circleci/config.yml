@@ -182,15 +182,6 @@ jobs:
       - run: 'GOARCH=386 make check'
       - test-go:
           arch: "386"
-      - save_cache:
-          name: 'go module cache'
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - '/go/pkg/mod'
-      - persist_to_workspace:
-          root: '/go'
-          paths:
-            - '*'
   test-go-mac:
     executor: mac
     steps:
