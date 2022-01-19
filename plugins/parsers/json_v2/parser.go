@@ -91,6 +91,8 @@ type MetricNode struct {
 	gjson.Result
 }
 
+const GJSONPathNUllErrorMSG = "GJSON Path returned null, either couldn't find value or path has null value"
+
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 	// Only valid JSON is supported
 	if !gjson.Valid(string(input)) {
@@ -114,7 +116,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		if c.TimestampPath != "" {
 			result := gjson.GetBytes(input, c.TimestampPath)
 			if result.Type == gjson.Null {
-				return nil, fmt.Errorf("GJSON Path returned null, either couldn't find value or path has null value")
+				return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
 			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
@@ -180,7 +182,7 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool) ([]telegr
 		}
 		result := gjson.GetBytes(input, c.Path)
 		if result.Type == gjson.Null {
-			return nil, fmt.Errorf("GJSON Path returned null, either couldn't find value or path has null value")
+			return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
 		}
 
 		if result.IsObject() {
@@ -412,10 +414,11 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject) ([]telegraf.
 		if result.Type == gjson.Null {
 			if c.OptionalPath {
 				// If path is marked as optional don't error if path doesn't return a result
+				p.Log.Debugf(GJSONPathNUllErrorMSG)
 				return nil, nil
 			}
 
-			return nil, fmt.Errorf("GJSON Path returned null, either couldn't find value or path has null value")
+			return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
 		}
 
 		scopedJSON := []byte(result.Raw)
@@ -423,7 +426,7 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject) ([]telegraf.
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
 			if r.result.Type == gjson.Null {
-				return nil, fmt.Errorf("GJSON Path returned null, either couldn't find value or path has null value")
+				return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
 			}
 			r.DataSet = f
 			p.subPathResults = append(p.subPathResults, r)
@@ -433,7 +436,7 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject) ([]telegraf.
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
 			if r.result.Type == gjson.Null {
-				return nil, fmt.Errorf("GJSON Path returned null, either couldn't find value or path has null value")
+				return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
 			}
 			r.DataSet = f
 			r.tag = true

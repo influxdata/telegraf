@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,7 @@ func TestMultipleConfigs(t *testing.T) {
 	}{
 		{
 			Name:  "wrong_path",
-			Error: fmt.Errorf("GJSON Path returned null, either couldn't find value or path has null value"),
+			Error: fmt.Errorf(json_v2.GJSONPathNUllErrorMSG),
 		},
 	}
 
