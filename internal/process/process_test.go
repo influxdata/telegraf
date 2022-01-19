@@ -20,6 +20,10 @@ import (
 
 // test that a restarting process resets pipes properly
 func TestRestartingRebindsPipes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long running test in short mode")
+	}
+
 	exe, err := os.Executable()
 	require.NoError(t, err)
 

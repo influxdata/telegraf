@@ -26,6 +26,10 @@ func TestFileWriter_NoRotation(t *testing.T) {
 }
 
 func TestFileWriter_TimeRotation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	tempDir, err := os.MkdirTemp("", "RotationTime")
 	require.NoError(t, err)
 	interval, _ := time.ParseDuration("1s")
@@ -43,6 +47,10 @@ func TestFileWriter_TimeRotation(t *testing.T) {
 }
 
 func TestFileWriter_ReopenTimeRotation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	tempDir, err := os.MkdirTemp("", "RotationTime")
 	require.NoError(t, err)
 	interval, _ := time.ParseDuration("1s")
@@ -92,6 +100,10 @@ func TestFileWriter_ReopenSizeRotation(t *testing.T) {
 }
 
 func TestFileWriter_DeleteArchives(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	tempDir, err := os.MkdirTemp("", "RotationDeleteArchives")
 	require.NoError(t, err)
 	maxSize := int64(5)

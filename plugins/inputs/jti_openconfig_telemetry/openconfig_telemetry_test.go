@@ -11,15 +11,17 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
+	telemetry "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
+var tenMillisecondsDuration = time.Millisecond * 50
+
 var cfg = &OpenConfigTelemetry{
 	Log:             testutil.Logger{},
 	Servers:         []string{"127.0.0.1:50051"},
-	SampleFrequency: config.Duration(time.Second * 2),
+	SampleFrequency: config.Duration(tenMillisecondsDuration),
 }
 
 var data = &telemetry.OpenConfigData{
@@ -109,7 +111,7 @@ func TestOpenConfigTelemetryData(t *testing.T) {
 	}
 
 	// Give sometime for gRPC channel to be established
-	time.Sleep(2 * time.Second)
+	time.Sleep(tenMillisecondsDuration)
 
 	acc.AssertContainsTaggedFields(t, "/sensor", fields, tags)
 }
@@ -135,7 +137,7 @@ func TestOpenConfigTelemetryDataWithPrefix(t *testing.T) {
 	}
 
 	// Give sometime for gRPC channel to be established
-	time.Sleep(2 * time.Second)
+	time.Sleep(tenMillisecondsDuration)
 
 	acc.AssertContainsTaggedFields(t, "/sensor_with_prefix", fields, tags)
 }
@@ -176,7 +178,7 @@ func TestOpenConfigTelemetryDataWithMultipleTags(t *testing.T) {
 	}
 
 	// Give sometime for gRPC channel to be established
-	time.Sleep(2 * time.Second)
+	time.Sleep(tenMillisecondsDuration)
 
 	acc.AssertContainsTaggedFields(t, "/sensor_with_multiple_tags", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "/sensor_with_multiple_tags", fields2, tags2)
@@ -204,7 +206,7 @@ func TestOpenConfigTelemetryDataWithStringValues(t *testing.T) {
 	}
 
 	// Give sometime for gRPC channel to be established
-	time.Sleep(2 * time.Second)
+	time.Sleep(tenMillisecondsDuration)
 
 	acc.AssertContainsTaggedFields(t, "/sensor_with_string_values", fields, tags)
 }

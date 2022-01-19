@@ -87,7 +87,7 @@ func TestStatusCode(t *testing.T) {
 			plugin: &Loki{
 				Domain: u.String(),
 			},
-			statusCode: 103,
+			statusCode: http.StatusEarlyHints,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
 			},
@@ -116,6 +116,10 @@ func TestStatusCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if testing.Short() && tt.statusCode == http.StatusEarlyHints {
+				t.Skip("Skipping long test in short mode")
+			}
+
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.statusCode)
 			})
