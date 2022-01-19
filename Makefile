@@ -333,11 +333,11 @@ $(include_packages):
 			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
-			--name telegraf \
+			--name $(cmd) \
 			--version $(version) \
 			--iteration $(rpm_iteration) \
 			--chdir $(DESTDIR) \
-			--package $(pkgdir)/telegraf-$(rpm_version).$@ ;\
+			--package $(pkgdir)/$(cmd)-$(rpm_version).$@ ;\
 	elif [ "$(suffix $@)" = ".deb" ]; then \
 		fpm --force \
 			--log info \
@@ -355,15 +355,15 @@ $(include_packages):
 			--after-remove scripts/deb/post-remove.sh \
 			--before-remove scripts/deb/pre-remove.sh \
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
-			--name telegraf \
+			--name $(cmd) \
 			--version $(version) \
 			--iteration $(deb_iteration) \
 			--chdir $(DESTDIR) \
-			--package $(pkgdir)/telegraf_$(deb_version)_$@	;\
+			--package $(pkgdir)/$(cmd)_$(deb_version)_$@	;\
 	elif [ "$(suffix $@)" = ".zip" ]; then \
-		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
+		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/$(cmd)-$(tar_version)_$@ ;\
 	elif [ "$(suffix $@)" = ".gz" ]; then \
-		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
+		tar --owner 0 --group 0 -czvf $(pkgdir)/$(cmd)-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
 	fi
 
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOOS := linux
