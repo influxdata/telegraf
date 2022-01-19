@@ -1633,6 +1633,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 						for _, objectConfig := range objectconfigs {
 							var o json_v2.JSONObject
 							c.getFieldString(objectConfig, "path", &o.Path)
+							c.getFieldBool(objectConfig, "optional_path", &o.OptionalPath)
 							c.getFieldString(objectConfig, "timestamp_key", &o.TimestampKey)
 							c.getFieldString(objectConfig, "timestamp_format", &o.TimestampFormat)
 							c.getFieldString(objectConfig, "timestamp_timezone", &o.TimestampTimezone)
