@@ -39,6 +39,7 @@ type Parser struct {
 	Log               telegraf.Logger `toml:"-"`
 
 	gotColumnNames bool
+	header         []string
 
 	TimeFunc    func() time.Time
 	DefaultTags map[string]string
@@ -133,11 +134,13 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 	// in cases where multiple files with different
 	// headers are read
 	headerRowCount := p.HeaderRowCount
-	for headerRowCount > 0 {
+	for len(p.header) == 0 && headerRowCount > 0 {
 		header, err := csvReader.Read()
 		if err != nil {
 			return nil, err
 		}
+		// the tail plugin expects header to be only read once, check the test TestCSVHeadersParsedOnce for the tail plugin
+		p.header = header
 		headerRowCount--
 		if p.gotColumnNames {
 			// Ignore header lines if columns are named
