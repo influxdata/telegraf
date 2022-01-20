@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
+	parser_testutil "github.com/influxdata/telegraf/plugins/parsers/testutil"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -45,7 +46,7 @@ func TestMultipleConfigs(t *testing.T) {
 			}
 
 			// Process expected metrics and compare with resulting metrics
-			expectedOutputs, err := testutil.ReadMetricFile(fmt.Sprintf("testdata/%s/expected.out", f.Name()))
+			expectedOutputs, err := parser_testutil.ReadMetricFile(fmt.Sprintf("testdata/%s/expected.out", f.Name()))
 			require.NoError(t, err)
 			resultingMetrics := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expectedOutputs, resultingMetrics, testutil.IgnoreTime())
