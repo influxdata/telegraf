@@ -2,7 +2,6 @@ package csv
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -395,41 +394,6 @@ trash,80,test_name`
 	require.Equal(t, map[string]interface{}{"col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
 }
 
-func TestMultiHeader(t *testing.T) {
-	p := &Parser{
-		HeaderRowCount: 2,
-		TimeFunc:       DefaultTime,
-	}
-	require.NoError(t, p.Init())
-	testCSV := `col,col
-1,2
-80,test_name`
-
-	metrics, err := p.Parse([]byte(testCSV))
-	require.NoError(t, err)
-	require.Equal(t, map[string]interface{}{"col1": int64(80), "col2": "test_name"}, metrics[0].Fields())
-
-	testCSVRows := []string{"col,col\r\n", "1,2\r\n", "80,test_name\r\n"}
-
-	p = &Parser{
-		HeaderRowCount: 2,
-		TimeFunc:       DefaultTime,
-	}
-	err = p.Init()
-	require.NoError(t, err)
-
-	metrics, err = p.Parse([]byte(testCSVRows[0]))
-	require.Error(t, io.EOF, err)
-	require.Error(t, err)
-	require.Nil(t, metrics)
-	m, err := p.ParseLine(testCSVRows[1])
-	require.NoError(t, err)
-	require.Nil(t, m)
-	m, err = p.ParseLine(testCSVRows[2])
-	require.NoError(t, err)
-	require.Equal(t, map[string]interface{}{"col1": int64(80), "col2": "test_name"}, m.Fields())
-}
-
 func TestParseStream(t *testing.T) {
 	p := &Parser{
 		MetricName:     "csv",
@@ -774,9 +738,6 @@ func TestMultipleConfigs(t *testing.T) {
 	require.Greater(t, len(folders), 0)
 
 	for _, f := range folders {
-		if f.Name() != "skip_rows" {
-			continue
-		}
 		t.Run(f.Name(), func(t *testing.T) {
 			// Process the telegraf config file for the test
 			buf, err := os.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", f.Name()))
