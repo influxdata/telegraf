@@ -14,6 +14,11 @@ Most options can be translated directly to the `tail` plugin:
 - The grok `measurement` option can be replaced using the standard plugin
   `name_override` option.
 
+This plugin also supports [metric filtering](CONFIGURATION.md#metric-filtering)
+and some [additional common options](CONFIGURATION.md#processor-plugins).
+
+## Example
+
 Migration Example:
 
 ```diff
