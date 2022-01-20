@@ -33,7 +33,7 @@ func TestGetExitCode(t *testing.T) {
 				return errors.New("I am not *exec.ExitError")
 			},
 			expCode: 0,
-			expErr:  errors.New("expected *exec.ExitError"),
+			expErr:  errors.New("I am not *exec.ExitError"),
 		},
 	}
 
@@ -177,7 +177,7 @@ func TestTryAddState(t *testing.T) {
 						n("nagios").
 						f("perfdata", 0).b(),
 				}
-				expErr := "exec: get exit code: expected *exec.ExitError"
+				expErr := "exec: get exit code: non parsable error"
 
 				assertEqual(t, exp, metrics)
 				require.Equal(t, expErr, err.Error())
