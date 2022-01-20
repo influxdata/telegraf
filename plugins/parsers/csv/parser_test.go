@@ -1,4 +1,4 @@
-package csv_test
+package csv
 
 import (
 	"fmt"
@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	parser_testutil "github.com/influxdata/telegraf/plugins/parsers/testutil"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -25,7 +24,7 @@ var DefaultTime = func() time.Time {
 }
 
 func TestBasicCSV(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		ColumnNames: []string{"first", "second", "third"},
 		TagColumns:  []string{"third"},
 		TimeFunc:    DefaultTime,
@@ -38,7 +37,7 @@ func TestBasicCSV(t *testing.T) {
 }
 
 func TestHeaderConcatenationCSV(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    2,
 		MeasurementColumn: "3",
 		TimeFunc:          DefaultTime,
@@ -55,7 +54,7 @@ func TestHeaderConcatenationCSV(t *testing.T) {
 }
 
 func TestHeaderOverride(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -76,7 +75,7 @@ func TestHeaderOverride(t *testing.T) {
 
 	testCSVRows := []string{"line1,line2,line3\r\n", "3.4,70,test_name\r\n"}
 
-	p = &csv.Parser{
+	p = &Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -94,7 +93,7 @@ func TestHeaderOverride(t *testing.T) {
 }
 
 func TestTimestamp(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -116,7 +115,7 @@ func TestTimestamp(t *testing.T) {
 }
 
 func TestTimestampYYYYMMDDHHmm(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -137,7 +136,7 @@ func TestTimestampYYYYMMDDHHmm(t *testing.T) {
 	require.Equal(t, metrics[1].Time().UnixNano(), int64(1247328300000000000))
 }
 func TestTimestampError(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -154,7 +153,7 @@ func TestTimestampError(t *testing.T) {
 }
 
 func TestTimestampUnixFormat(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -174,7 +173,7 @@ func TestTimestampUnixFormat(t *testing.T) {
 }
 
 func TestTimestampUnixMSFormat(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -194,7 +193,7 @@ func TestTimestampUnixMSFormat(t *testing.T) {
 }
 
 func TestQuotedCharacter(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -211,7 +210,7 @@ func TestQuotedCharacter(t *testing.T) {
 }
 
 func TestDelimiter(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		Delimiter:         "%",
 		ColumnNames:       []string{"first", "second", "third"},
@@ -229,7 +228,7 @@ func TestDelimiter(t *testing.T) {
 }
 
 func TestValueConversion(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount: 0,
 		Delimiter:      ",",
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
@@ -270,7 +269,7 @@ func TestValueConversion(t *testing.T) {
 }
 
 func TestSkipComment(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount: 0,
 		Comment:        "#",
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
@@ -295,7 +294,7 @@ func TestSkipComment(t *testing.T) {
 }
 
 func TestTrimSpace(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount: 0,
 		TrimSpace:      true,
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
@@ -317,7 +316,7 @@ func TestTrimSpace(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedFields, metrics[0].Fields())
 
-	p = &csv.Parser{
+	p = &Parser{
 		HeaderRowCount: 2,
 		TrimSpace:      true,
 		TimeFunc:       DefaultTime,
@@ -334,7 +333,7 @@ func TestTrimSpace(t *testing.T) {
 }
 
 func TestTrimSpaceDelimitedBySpace(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		Delimiter:      " ",
 		HeaderRowCount: 1,
 		TrimSpace:      true,
@@ -361,7 +360,7 @@ abcdefgh        0       2    false
 }
 
 func TestSkipRows(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		SkipRows:          1,
 		TagColumns:        []string{"line1"},
@@ -387,7 +386,7 @@ hello,80,test_name2`
 	require.Equal(t, expectedFields, metrics[0].Fields())
 	require.Equal(t, expectedTags, metrics[0].Tags())
 
-	p = &csv.Parser{
+	p = &Parser{
 		HeaderRowCount:    1,
 		SkipRows:          1,
 		TagColumns:        []string{"line1"},
@@ -413,7 +412,7 @@ hello,80,test_name2`
 }
 
 func TestSkipColumns(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		SkipColumns: 1,
 		ColumnNames: []string{"line1", "line2"},
 		TimeFunc:    DefaultTime,
@@ -432,7 +431,7 @@ func TestSkipColumns(t *testing.T) {
 }
 
 func TestSkipColumnsWithHeader(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		SkipColumns:    1,
 		HeaderRowCount: 2,
 		TimeFunc:       DefaultTime,
@@ -451,7 +450,7 @@ trash,80,test_name`
 }
 
 func TestMultiHeader(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount: 2,
 		TimeFunc:       DefaultTime,
 	}
@@ -466,7 +465,7 @@ func TestMultiHeader(t *testing.T) {
 
 	testCSVRows := []string{"col,col\r\n", "1,2\r\n", "80,test_name\r\n"}
 
-	p = &csv.Parser{
+	p = &Parser{
 		HeaderRowCount: 2,
 		TimeFunc:       DefaultTime,
 	}
@@ -486,7 +485,7 @@ func TestMultiHeader(t *testing.T) {
 }
 
 func TestParseStream(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:     "csv",
 		HeaderRowCount: 1,
 		TimeFunc:       DefaultTime,
@@ -516,7 +515,7 @@ func TestParseStream(t *testing.T) {
 }
 
 func TestParseLineMultiMetricErrorMessage(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:     "csv",
 		HeaderRowCount: 1,
 		TimeFunc:       DefaultTime,
@@ -552,7 +551,7 @@ func TestParseLineMultiMetricErrorMessage(t *testing.T) {
 }
 
 func TestTimestampUnixFloatPrecision(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:      "csv",
 		ColumnNames:     []string{"time", "value"},
 		TimestampColumn: "time",
@@ -581,7 +580,7 @@ func TestTimestampUnixFloatPrecision(t *testing.T) {
 }
 
 func TestSkipMeasurementColumn(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:      "csv",
 		HeaderRowCount:  1,
 		TimestampColumn: "timestamp",
@@ -613,7 +612,7 @@ func TestSkipMeasurementColumn(t *testing.T) {
 }
 
 func TestSkipTimestampColumn(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:      "csv",
 		HeaderRowCount:  1,
 		TimestampColumn: "timestamp",
@@ -645,7 +644,7 @@ func TestSkipTimestampColumn(t *testing.T) {
 }
 
 func TestTimestampTimezone(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -668,7 +667,7 @@ func TestTimestampTimezone(t *testing.T) {
 }
 
 func TestEmptyMeasurementName(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:        "csv",
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"", "b"},
@@ -695,7 +694,7 @@ func TestEmptyMeasurementName(t *testing.T) {
 }
 
 func TestNumericMeasurementName(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:        "csv",
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"a", "b"},
@@ -722,7 +721,7 @@ func TestNumericMeasurementName(t *testing.T) {
 }
 
 func TestStaticMeasurementName(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:     "csv",
 		HeaderRowCount: 1,
 		ColumnNames:    []string{"a", "b"},
@@ -749,7 +748,7 @@ func TestStaticMeasurementName(t *testing.T) {
 }
 
 func TestSkipEmptyStringValue(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:     "csv",
 		HeaderRowCount: 1,
 		ColumnNames:    []string{"a", "b"},
@@ -776,7 +775,7 @@ func TestSkipEmptyStringValue(t *testing.T) {
 }
 
 func TestSkipSpecifiedStringValue(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		MetricName:     "csv",
 		HeaderRowCount: 1,
 		ColumnNames:    []string{"a", "b"},
@@ -803,7 +802,7 @@ func TestSkipSpecifiedStringValue(t *testing.T) {
 }
 
 func TestSkipErrorOnCorruptedCSVLine(t *testing.T) {
-	p := &csv.Parser{
+	p := &Parser{
 		HeaderRowCount:  1,
 		TimestampColumn: "date",
 		TimestampFormat: "02/01/06 03:04:05 PM",
