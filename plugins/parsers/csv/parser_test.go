@@ -73,7 +73,7 @@ func TestHeaderOverride(t *testing.T) {
 	require.Equal(t, "test_name", metrics[0].Name())
 	require.Equal(t, expectedFields, metrics[0].Fields())
 
-	testCSVRows := []string{"line1,line2,line3\r\n", "3.4,70,test_name\r\n"}
+	testCSVRows := "line1,line2,line3\r\n3.4,70,test_name\r\n"
 
 	p = &Parser{
 		HeaderRowCount:    1,
@@ -83,13 +83,11 @@ func TestHeaderOverride(t *testing.T) {
 	}
 	err = p.Init()
 	require.NoError(t, err)
-	metrics, err = p.Parse([]byte(testCSVRows[0]))
+	metrics, err = p.Parse([]byte(testCSVRows))
 	require.NoError(t, err)
-	require.Equal(t, []telegraf.Metric{}, metrics)
-	m, err := p.ParseLine(testCSVRows[1])
 	require.NoError(t, err)
-	require.Equal(t, "test_name", m.Name())
-	require.Equal(t, expectedFields, m.Fields())
+	require.Equal(t, "test_name", metrics[0].Name())
+	require.Equal(t, expectedFields, metrics[0].Fields())
 }
 
 func TestTimestamp(t *testing.T) {
@@ -359,58 +357,6 @@ abcdefgh        0       2    false
 	require.Equal(t, expectedFields, metrics[1].Fields())
 }
 
-func TestSkipRows(t *testing.T) {
-	p := &Parser{
-		HeaderRowCount:    1,
-		SkipRows:          1,
-		TagColumns:        []string{"line1"},
-		MeasurementColumn: "line3",
-		TimeFunc:          DefaultTime,
-	}
-	err := p.Init()
-	require.NoError(t, err)
-
-	testCSV := `garbage nonsense
-line1,line2,line3
-hello,80,test_name2`
-
-	expectedFields := map[string]interface{}{
-		"line2": int64(80),
-	}
-	expectedTags := map[string]string{
-		"line1": "hello",
-	}
-	metrics, err := p.Parse([]byte(testCSV))
-	require.NoError(t, err)
-	require.Equal(t, "test_name2", metrics[0].Name())
-	require.Equal(t, expectedFields, metrics[0].Fields())
-	require.Equal(t, expectedTags, metrics[0].Tags())
-
-	p = &Parser{
-		HeaderRowCount:    1,
-		SkipRows:          1,
-		TagColumns:        []string{"line1"},
-		MeasurementColumn: "line3",
-		TimeFunc:          DefaultTime,
-	}
-	err = p.Init()
-	require.NoError(t, err)
-	testCSVRows := []string{"garbage nonsense\r\n", "line1,line2,line3\r\n", "hello,80,test_name2\r\n"}
-
-	metrics, err = p.Parse([]byte(testCSVRows[0]))
-	require.Error(t, io.EOF, err)
-	require.Error(t, err)
-	require.Nil(t, metrics)
-	m, err := p.ParseLine(testCSVRows[1])
-	require.NoError(t, err)
-	require.Nil(t, m)
-	m, err = p.ParseLine(testCSVRows[2])
-	require.NoError(t, err)
-	require.Equal(t, "test_name2", m.Name())
-	require.Equal(t, expectedFields, m.Fields())
-	require.Equal(t, expectedTags, m.Tags())
-}
-
 func TestSkipColumns(t *testing.T) {
 	p := &Parser{
 		SkipColumns: 1,
@@ -493,13 +439,10 @@ func TestParseStream(t *testing.T) {
 	err := p.Init()
 	require.NoError(t, err)
 
-	csvHeader := "a,b,c"
-	csvBody := "1,2,3"
+	csvHeader := "a,b,c\n1,2,3"
 
 	metrics, err := p.Parse([]byte(csvHeader))
 	require.NoError(t, err)
-	require.Len(t, metrics, 0)
-	m, err := p.ParseLine(csvBody)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		testutil.MustMetric(
@@ -511,7 +454,7 @@ func TestParseStream(t *testing.T) {
 				"c": int64(3),
 			},
 			DefaultTime(),
-		), m)
+		), metrics[0])
 }
 
 func TestParseLineMultiMetricErrorMessage(t *testing.T) {
@@ -522,14 +465,9 @@ func TestParseLineMultiMetricErrorMessage(t *testing.T) {
 	}
 	require.NoError(t, p.Init())
 
-	csvHeader := "a,b,c"
-	csvOneRow := "1,2,3"
-	csvTwoRows := "4,5,6\n7,8,9"
+	csvHeader := "a,b,c\n1,2,3\n4,5,6\n7,8,9"
 
 	metrics, err := p.Parse([]byte(csvHeader))
-	require.NoError(t, err)
-	require.Len(t, metrics, 0)
-	m, err := p.ParseLine(csvOneRow)
 	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		testutil.MustMetric(
@@ -541,13 +479,7 @@ func TestParseLineMultiMetricErrorMessage(t *testing.T) {
 				"c": int64(3),
 			},
 			DefaultTime(),
-		), m)
-	m, err = p.ParseLine(csvTwoRows)
-	require.Errorf(t, err, "expected 1 metric found 2")
-	require.Nil(t, m)
-	metrics, err = p.Parse([]byte(csvTwoRows))
-	require.NoError(t, err)
-	require.Len(t, metrics, 2)
+		), metrics[0])
 }
 
 func TestTimestampUnixFloatPrecision(t *testing.T) {
@@ -842,6 +774,9 @@ func TestMultipleConfigs(t *testing.T) {
 	require.Greater(t, len(folders), 0)
 
 	for _, f := range folders {
+		if f.Name() != "skip_rows" {
+			continue
+		}
 		t.Run(f.Name(), func(t *testing.T) {
 			// Process the telegraf config file for the test
 			buf, err := os.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", f.Name()))
@@ -852,6 +787,12 @@ func TestMultipleConfigs(t *testing.T) {
 			cfg := config.NewConfig()
 			err = cfg.LoadConfigData(buf)
 			require.NoError(t, err)
+
+			// This happens in agent.go
+			for _, parser := range cfg.Parsers {
+				err := parser.Init()
+				require.NoError(t, err)
+			}
 
 			// Gather the metrics from the input file configure
 			acc := testutil.Accumulator{}

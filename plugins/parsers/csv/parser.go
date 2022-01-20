@@ -119,12 +119,13 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 	csvReader := p.compile(r)
 	// skip first rows
-	for p.SkipRows > 0 {
+	skipRows := p.SkipRows
+	for skipRows > 0 {
 		_, err := csvReader.Read()
 		if err != nil {
 			return nil, err
 		}
-		p.SkipRows--
+		skipRows--
 	}
 	// if there is a header, and we did not get DataColumns
 	// set DataColumns to names extracted from the header

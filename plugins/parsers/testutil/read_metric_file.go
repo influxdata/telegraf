@@ -23,11 +23,12 @@ func ReadMetricFile(path string) ([]telegraf.Metric, error) {
 		line := scanner.Text()
 		if line != "" {
 			m, err := parser.ParseLine(line)
-			// The timezone needs to be UTC to match the timestamp test results
-			m.SetTime(m.Time().UTC())
 			if err != nil {
 				return nil, fmt.Errorf("unable to parse metric in %q failed: %v", line, err)
 			}
+			// The timezone needs to be UTC to match the timestamp test results
+			m.SetTime(m.Time().UTC())
+
 			metrics = append(metrics, m)
 		}
 	}
