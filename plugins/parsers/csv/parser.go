@@ -131,12 +131,13 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 	// we always reread the header to avoid side effects
 	// in cases where multiple files with different
 	// headers are read
-	for p.HeaderRowCount > 0 {
+	headerRowCount := p.HeaderRowCount
+	for headerRowCount > 0 {
 		header, err := csvReader.Read()
 		if err != nil {
 			return nil, err
 		}
-		p.HeaderRowCount--
+		headerRowCount--
 		if p.gotColumnNames {
 			// Ignore header lines if columns are named
 			continue

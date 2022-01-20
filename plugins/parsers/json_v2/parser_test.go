@@ -1,7 +1,6 @@
 package json_v2_test
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -47,7 +45,7 @@ func TestMultipleConfigs(t *testing.T) {
 			}
 
 			// Process expected metrics and compare with resulting metrics
-			expectedOutputs, err := readMetricFile(fmt.Sprintf("testdata/%s/expected.out", f.Name()))
+			expectedOutputs, err := testutil.ReadMetricFile(fmt.Sprintf("testdata/%s/expected.out", f.Name()))
 			require.NoError(t, err)
 			resultingMetrics := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expectedOutputs, resultingMetrics, testutil.IgnoreTime())
@@ -63,34 +61,4 @@ func TestMultipleConfigs(t *testing.T) {
 			}
 		})
 	}
-}
-
-func readMetricFile(path string) ([]telegraf.Metric, error) {
-	var metrics []telegraf.Metric
-	expectedFile, err := os.Open(path)
-	if err != nil {
-		return metrics, err
-	}
-	defer expectedFile.Close()
-
-	parser := influx.NewParser(influx.NewMetricHandler())
-	scanner := bufio.NewScanner(expectedFile)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line != "" {
-			m, err := parser.ParseLine(line)
-			// The timezone needs to be UTC to match the timestamp test results
-			m.SetTime(m.Time().UTC())
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse metric in %q failed: %v", line, err)
-			}
-			metrics = append(metrics, m)
-		}
-	}
-	err = expectedFile.Close()
-	if err != nil {
-		return metrics, err
-	}
-
-	return metrics, nil
 }

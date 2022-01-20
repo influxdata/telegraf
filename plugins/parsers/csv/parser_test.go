@@ -3,13 +3,18 @@ package csv
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -826,4 +831,45 @@ corrupted_line
 	require.NoError(t, err)
 	require.Equal(t, expectedFields0, metrics[0].Fields())
 	require.Equal(t, expectedFields1, metrics[1].Fields())
+}
+
+func TestMultipleConfigs(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := ioutil.ReadDir("testdata")
+	require.NoError(t, err)
+	// Make sure testdata contains data
+	require.Greater(t, len(folders), 0)
+
+	for _, f := range folders {
+		t.Run(f.Name(), func(t *testing.T) {
+			// Process the telegraf config file for the test
+			buf, err := os.ReadFile(fmt.Sprintf("testdata/%s/telegraf.conf", f.Name()))
+			require.NoError(t, err)
+			inputs.Add("file", func() telegraf.Input {
+				return &file.File{}
+			})
+			cfg := config.NewConfig()
+			err = cfg.LoadConfigData(buf)
+			require.NoError(t, err)
+
+			// Gather the metrics from the input file configure
+			acc := testutil.Accumulator{}
+			for _, i := range cfg.Inputs {
+				err = i.Init()
+				require.NoError(t, err)
+
+				// Gather twice to make sure it works multipl times
+				err = i.Gather(&acc)
+				require.NoError(t, err)
+				err = i.Gather(&acc)
+				require.NoError(t, err)
+			}
+
+			// Process expected metrics and compare with resulting metrics
+			expectedOutputs, err := testutil.ReadMetricFile(fmt.Sprintf("testdata/%s/expected.out", f.Name()))
+			require.NoError(t, err)
+			resultingMetrics := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expectedOutputs, resultingMetrics, testutil.IgnoreTime())
+		})
+	}
 }
