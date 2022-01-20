@@ -21,7 +21,7 @@ const (
 	machineID     = "metering-event-machine"
 	infraType     = "infra-type"
 	mpProjectID   = "customer-id"
-	metricType    = "egress"
+	metricType    = "network_usage_event"
 )
 
 func getValidTime() time.Time {

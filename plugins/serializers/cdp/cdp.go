@@ -125,7 +125,7 @@ func (s *Serializer) createEvent(metric telegraf.Metric) (*event, error) {
 		PlayerID:      "",
 		StartTime:     values["start_time"].(int),
 		EndTime:       endTime,
-		Type:          "egress",
+		Type:          "network_usage_event",
 		Amount:        values["quantity"].(float64),
 		Tags: eventTags{
 			MultiplayFleetID:   values["fleet_id"].(string),

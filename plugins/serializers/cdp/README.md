@@ -48,7 +48,7 @@ It also expects the following fields to be defined on the metric.
     "region": "some-billing-region-id",
     "startTime": 1636983540000,
     "endTime": 1636983541000,
-    "type": "egress",
+    "type": "network_usage_event",
     "amount": 1151801145,
     "tags":{
       "multiplayFleetId": "some-fleet-id",
