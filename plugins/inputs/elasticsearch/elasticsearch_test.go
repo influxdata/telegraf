@@ -258,6 +258,47 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	checkNodeStatsResult(t, &acc)
 }
 
+func TestGatherCCRStatsMaster(t *testing.T) {
+	// This needs multiple steps to replicate the multiple calls internally.
+	es := newElasticsearchWithClient()
+	es.CCRStats = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.serverInfo = make(map[string]serverInfo)
+	info := serverInfo{nodeID: "SDFsfSDFsdfFSDSDfSFDSDF", masterID: ""}
+
+	// first get catMaster
+	es.client.Transport = newTransportMock(IsMasterResult)
+	masterID, err := es.getCatMaster("junk")
+	require.NoError(t, err)
+	info.masterID = masterID
+	es.serverInfo["http://example.com:9200"] = info
+
+	isMasterResultTokens := strings.Split(IsMasterResult, " ")
+	require.Equal(t, masterID, isMasterResultTokens[0], "catmaster is incorrect")
+
+	// now get node status, which determines whether we're master
+	var acc testutil.Accumulator
+	es.Local = true
+	es.client.Transport = newTransportMock(nodeStatsResponse)
+	require.NoError(t, es.gatherNodeStats("junk", &acc))
+	require.True(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
+	checkNodeStatsResult(t, &acc)
+
+	tags := map[string]string{}
+
+	// now test the ccr leader method
+	es.client.Transport = newTransportMock(ccrLeaderResponse)
+	require.NoError(t, es.gatherCCRLeaderStats("junk", &acc))
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_ccr_stats_leader", ccrLeaderStatsExpected, tags)
+
+	// now test the ccr follower method
+	es.client.Transport = newTransportMock(ccrFollowerResponse)
+	require.NoError(t, es.gatherCCRFollowerStats("junk", &acc))
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_ccr_stats_follower", ccrFollowerStatsExpected, tags)
+}
+
 func TestGatherClusterIndicesStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.IndicesInclude = []string{"_all"}

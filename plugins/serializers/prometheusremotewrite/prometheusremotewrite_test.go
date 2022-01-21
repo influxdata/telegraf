@@ -441,7 +441,7 @@ cpu_time_idle 43
 				),
 			},
 			expected: []byte(`
-cpu::xyzzy_time_idle 42
+cpu__xyzzy_time_idle 42
 `),
 		},
 		{
@@ -457,19 +457,19 @@ cpu::xyzzy_time_idle 42
 				),
 			},
 			expected: []byte(`
-cpu_time:idle 42
+cpu_time_idle 42
 `),
 		},
 		{
 			name: "invalid label",
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
-					"cpu",
+					"cpu_time",
 					map[string]string{
 						"host-name": "example.org",
 					},
 					map[string]interface{}{
-						"time_idle": 42.0,
+						"idle": 42.0,
 					},
 					time.Unix(0, 0),
 				),

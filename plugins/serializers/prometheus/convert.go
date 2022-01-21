@@ -18,7 +18,6 @@ type Table struct {
 var MetricNameTable = Table{
 	First: &unicode.RangeTable{
 		R16: []unicode.Range16{
-			{0x003A, 0x003A, 1}, // :
 			{0x0041, 0x005A, 1}, // A-Z
 			{0x005F, 0x005F, 1}, // _
 			{0x0061, 0x007A, 1}, // a-z
@@ -27,7 +26,7 @@ var MetricNameTable = Table{
 	},
 	Rest: &unicode.RangeTable{
 		R16: []unicode.Range16{
-			{0x0030, 0x003A, 1}, // 0-:
+			{0x0030, 0x0039, 1}, // 0-9
 			{0x0041, 0x005A, 1}, // A-Z
 			{0x005F, 0x005F, 1}, // _
 			{0x0061, 0x007A, 1}, // a-z
