@@ -1,5 +1,3 @@
-export CGO_ENABLED := 0
-
 next_version :=  $(shell cat build_version.txt)
 tag := $(shell git describe --exact-match --tags 2>git_describe_error.tmp; rm -f git_describe_error.tmp)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
@@ -112,7 +110,11 @@ versioninfo:
 
 .PHONY: telegraf
 telegraf:
-	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	@if [ "$(GOOS)" == "linux" ]; then \
+		CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" ./cmd/telegraf; \
+	else \
+		go build -ldflags "$(LDFLAGS)" ./cmd/telegraf; \
+	fi
 
 # Used by dockerfile builds
 .PHONY: go-install
