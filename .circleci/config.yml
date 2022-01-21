@@ -135,6 +135,7 @@ commands:
             - run:
                 command:
                   echo 'export PATH=$GOPATH/bin:$PATH' >> $BASH_ENV
+                  source $BASH_ENV
                   NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"
       - unless:
           condition:
@@ -144,6 +145,7 @@ commands:
             - run:
                 command:
                   echo 'export PATH=$GOPATH/bin:$PATH' >> $BASH_ENV
+                  source $BASH_ENV
                   make package include_packages="$(make << parameters.type >>)"
       - store_artifacts:
           path: './build/dist'
