@@ -134,7 +134,7 @@ commands:
           steps:
             - run:
                 command:
-                  PATH=/go/bin:$PATH
+                  echo 'export PATH=$GOPATH/bin:$PATH' >> $BASH_ENV
                   NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"
       - unless:
           condition:
@@ -143,7 +143,7 @@ commands:
           steps:
             - run:
                 command:
-                  PATH=/go/bin:$PATH
+                  echo 'export PATH=$GOPATH/bin:$PATH' >> $BASH_ENV
                   make package include_packages="$(make << parameters.type >>)"
       - store_artifacts:
           path: './build/dist'
