@@ -129,22 +129,22 @@ commands:
       - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
-      - run: PATH=$PATH:$(GOPATH)/bin
-      - run: ls $(go env GOPATH)/bin
       - when:
           condition: << parameters.nightly >>
           steps:
             - run:
-                command: |
-                  echo $(GOPATH)
-                  PATH=$PATH:$(GOPATH)/bin
+                command:
+                  PATH=/go/bin:$PATH
                   NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"
       - unless:
           condition:
             or:
               - << parameters.nightly >>
           steps:
-            - run: 'make package include_packages="$(make << parameters.type >>)"'
+            - run:
+                command:
+                  PATH=/go/bin:$PATH
+                  make package include_packages="$(make << parameters.type >>)"
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
