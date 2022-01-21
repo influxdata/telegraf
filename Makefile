@@ -245,11 +245,7 @@ $(buildbin):
 		echo "wut"; \
 		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
 		go generate cmd/telegraf/telegraf_windows.go; \
-		echo $(GOPATH); \
-		echo $(GOBIN); \
 	fi
-	ls /usr/local/go/bin
-	ls $(HOME)/go/bin
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
