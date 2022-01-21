@@ -9,3 +9,4 @@ process.yml
 /.vscode
 /*.toml
 /*.conf
+*syso

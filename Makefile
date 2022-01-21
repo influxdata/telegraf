@@ -101,6 +101,10 @@ deps:
 
 .PHONY: telegraf
 telegraf:
+	@if [ $(GOOS) = "windows" ]; then \
+		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo; \
+		go generate cmd/telegraf/telegraf_windows.go; \
+	fi
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Used by dockerfile builds
@@ -236,6 +240,10 @@ install: $(buildbin)
 # directory.
 $(buildbin):
 	@mkdir -pv $(dir $@)
+	@if [ $(GOOS) = "windows" ]; then \
+		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo; \
+		go generate cmd/telegraf/telegraf_windows.go; \
+	fi
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
