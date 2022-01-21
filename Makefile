@@ -245,7 +245,7 @@ $(buildbin):
 		echo "wut"; \
 		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
 		go generate cmd/telegraf/telegraf_windows.go; \
-		ls $(GOPATH)/bin
+		ls $(GOPATH)/bin; \
 	fi
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
