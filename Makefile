@@ -243,8 +243,9 @@ $(buildbin):
 	@mkdir -pv $(dir $@)
 	if [ $(GOOS) = "windows" ]; then \
 		echo "wut"; \
-		go get -d github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
+		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
 		go generate cmd/telegraf/telegraf_windows.go; \
+		ls $(GOPATH)/bin
 	fi
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 

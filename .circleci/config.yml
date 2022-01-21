@@ -129,6 +129,8 @@ commands:
       - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
+      - run: PATH=$PATH:$(go env GOPATH)/bin
+      - run: ls $(go env GOPATH)/bin
       - when:
           condition: << parameters.nightly >>
           steps:
