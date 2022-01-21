@@ -239,8 +239,10 @@ install: $(buildbin)
 # the bin between deb/rpm/tar packages over building directly into the package
 # directory.
 $(buildbin):
+	echo $(GOOS)
 	@mkdir -pv $(dir $@)
-	@if [ $(GOOS) = "windows" ]; then \
+	if [ $(GOOS) = "windows" ]; then \
+		echo "wut"; \
 		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
 		go generate cmd/telegraf/telegraf_windows.go; \
 	fi
