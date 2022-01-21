@@ -1648,6 +1648,112 @@ const IsMasterResult = "SDFsfSDFsdfFSDSDfSFDSDF 10.206.124.66 10.206.124.66 test
 
 const IsNotMasterResult = "junk 10.206.124.66 10.206.124.66 test.junk.com "
 
+const ccrLeaderResponse = `
+{
+   "num_replicated_indices": 2,
+   "operations_read": 15,
+   "translog_size_bytes": 1355,
+   "operations_read_lucene": 0,
+   "operations_read_translog": 15,
+   "total_read_time_lucene_millis": 0,
+   "total_read_time_translog_millis": 659,
+   "bytes_read": 1000,
+   "index_stats":{
+      "leader-index-1":{
+         "operations_read": 7,
+         "translog_size_bytes": 639,
+         "operations_read_lucene": 0,
+         "operations_read_translog": 7,
+         "total_read_time_lucene_millis": 0,
+         "total_read_time_translog_millis": 353,
+         "bytes_read":466
+      },
+      "leader-index-2":{
+         "operations_read": 8,
+         "translog_size_bytes": 716,
+         "operations_read_lucene": 0,
+         "operations_read_translog": 8,
+         "total_read_time_lucene_millis": 0,
+         "total_read_time_translog_millis": 306,
+         "bytes_read": 534
+      }
+   }
+}
+`
+
+var ccrLeaderStatsExpected = map[string]interface{}{
+	"num_replicated_indices":          float64(2),
+	"translog_size_bytes":             float64(1355),
+	"operations_read":                 float64(15),
+	"operations_read_lucene":          float64(0),
+	"operations_read_translog":        float64(15),
+	"total_read_time_lucene_millis":   float64(0),
+	"total_read_time_translog_millis": float64(659),
+	"bytes_read":                      float64(1000),
+}
+
+const ccrFollowerResponse = `
+{
+   "num_syncing_indices": 2,
+   "num_bootstrapping_indices": 0,
+   "num_paused_indices": 0,
+   "num_failed_indices": 0,
+   "num_shard_tasks": 2,
+   "num_index_tasks": 2,
+   "operations_written": 3,
+   "operations_read": 3,
+   "failed_read_requests": 0,
+   "throttled_read_requests": 0,
+   "failed_write_requests": 0,
+   "throttled_write_requests": 0,
+   "follower_checkpoint": 1,
+   "leader_checkpoint": 1,
+   "total_write_time_millis": 2290,
+   "index_stats":{
+      "follower-index-1":{
+         "operations_written": 2,
+         "operations_read": 2,
+         "failed_read_requests": 0,
+         "throttled_read_requests": 0,
+         "failed_write_requests": 0,
+         "throttled_write_requests": 0,
+         "follower_checkpoint": 1,
+         "leader_checkpoint": 1,
+         "total_write_time_millis": 1355
+      },
+      "follower-index-2":{
+         "operations_written": 1,
+         "operations_read": 1,
+         "failed_read_requests": 0,
+         "throttled_read_requests": 0,
+         "failed_write_requests": 0,
+         "throttled_write_requests": 0,
+         "follower_checkpoint": 0,
+         "leader_checkpoint": 0,
+         "total_write_time_millis": 935
+      }
+   }
+}
+`
+
+var ccrFollowerStatsExpected = map[string]interface{}{
+	"num_syncing_indices":       float64(2),
+	"num_bootstrapping_indices": float64(0),
+	"num_paused_indices":        float64(0),
+	"num_failed_indices":        float64(0),
+	"num_shard_tasks":           float64(2),
+	"num_index_tasks":           float64(2),
+	"operations_written":        float64(3),
+	"operations_read":           float64(3),
+	"failed_read_requests":      float64(0),
+	"throttled_read_requests":   float64(0),
+	"failed_write_requests":     float64(0),
+	"throttled_write_requests":  float64(0),
+	"follower_checkpoint":       float64(1),
+	"leader_checkpoint":         float64(1),
+	"total_write_time_millis":   float64(2290),
+}
+
 const clusterIndicesResponse = `
 {
   "_shards": {

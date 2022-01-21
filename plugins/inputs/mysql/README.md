@@ -128,6 +128,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Aggregate table_io_waits
+  # aggregate_table_io_waits = true
 ```
 
 ### String Data

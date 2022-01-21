@@ -515,7 +515,7 @@ func (a *Agent) testRunInputs(
 			// Run plugins that require multiple gathers to calculate rate
 			// and delta metrics twice.
 			switch input.Config.Name {
-			case "cpu", "mongodb", "procstat":
+			case "cpu", "mongodb", "procstat", "aiven-procstat":
 				nulAcc := NewAccumulator(input, nul)
 				nulAcc.SetPrecision(getPrecision(precision, interval))
 				if err := input.Input.Gather(nulAcc); err != nil {

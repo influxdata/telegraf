@@ -67,6 +67,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Gather stats from the enrich API
   # enrich_stats = false
+  ## Set ccr_stats to true when you want to obtain cross cluster replication stats.
+  ccr_stats = false
+
+  ## Only gather ccr_stats from the master node. To work this require local = true
+  ccr_stats_only_from_master = true
 
   ## Indices to collect; can be one or more indices names or _all
   ## Use of wildcards is allowed. Use a wildcard at the end to retrieve index
