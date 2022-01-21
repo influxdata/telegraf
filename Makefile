@@ -102,7 +102,7 @@ deps:
 .PHONY: telegraf
 telegraf:
 	@if [ $(GOOS) = "windows" ]; then \
-		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo; \
+		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
 		go generate cmd/telegraf/telegraf_windows.go; \
 	fi
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
@@ -241,7 +241,7 @@ install: $(buildbin)
 $(buildbin):
 	@mkdir -pv $(dir $@)
 	@if [ $(GOOS) = "windows" ]; then \
-		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo; \
+		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
 		go generate cmd/telegraf/telegraf_windows.go; \
 	fi
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
