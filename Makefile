@@ -102,7 +102,7 @@ deps:
 .PHONY: telegraf
 telegraf:
 	@if [ $(GOOS) = "windows" ]; then \
-		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
+		go get -d github.com/josephspurrier/goversioninfo/cmd/goversioninfo; \
 		go generate cmd/telegraf/telegraf_windows.go; \
 	fi
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
