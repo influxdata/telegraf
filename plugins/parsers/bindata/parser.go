@@ -62,7 +62,6 @@ func NewBinDataParser(
 	fields []Field,
 	defaultTags map[string]string,
 ) (*BinData, error) {
-
 	// Time format
 	switch timeFormat {
 	case "":
@@ -151,9 +150,8 @@ func (binData *BinData) SetDefaultTags(tags map[string]string) {
 
 // Parse implements Parser.Parse()
 func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
-
 	fields := make(map[string]interface{})
-	var offset uint = 0
+	var offset uint
 	for _, field := range binData.fields {
 		if offset > uint(len(data)) || offset+field.Size > uint(len(data)) {
 			return nil, fmt.Errorf("invalid offset/size in field %s", field.Name)
@@ -203,13 +201,13 @@ func (binData *BinData) getTime(fields map[string]interface{}) (time.Time, error
 		if !ok {
 			return time.Time{}, fmt.Errorf("invalid time type %T, must be int32", t)
 		}
-		return internal.ParseTimestamp(binData.timeFormat, int64(tval), timezone)
+		return internal.ParseTimestamp(binData.timeFormat, tval, timezone)
 	case "unix_ms", "unix_us", "unix_ns":
 		tval, ok := t.(int64)
 		if !ok {
 			return time.Time{}, fmt.Errorf("invalid time type %T, must be int64", t)
 		}
-		return internal.ParseTimestamp(binData.timeFormat, int64(tval), timezone)
+		return internal.ParseTimestamp(binData.timeFormat, tval, timezone)
 	}
 	return time.Time{}, fmt.Errorf("invalid time format %q", binData.timeFormat)
 }
