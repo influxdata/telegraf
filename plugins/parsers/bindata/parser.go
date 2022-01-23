@@ -181,9 +181,8 @@ func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	metric := metric.New(binData.metricName, binData.DefaultTags, fields, metricTime)
-
-	return []telegraf.Metric{metric}, err
+	m := metric.New(binData.metricName, binData.DefaultTags, fields, metricTime)
+	return []telegraf.Metric{m}, err
 }
 
 // ParseLine implements Parser.ParseLine()
