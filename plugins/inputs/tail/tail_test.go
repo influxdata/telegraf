@@ -301,11 +301,13 @@ cpu,42
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		return csv.NewParser(&csv.Config{
+		parser := csv.Parser{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
-		})
+		}
+		err := parser.Init()
+		return &parser, err
 	})
 
 	err = plugin.Init()
@@ -360,13 +362,15 @@ skip2,mem,100
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		return csv.NewParser(&csv.Config{
+		parser := csv.Parser{
 			MeasurementColumn: "measurement1",
 			HeaderRowCount:    2,
 			SkipRows:          1,
 			SkipColumns:       1,
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
-		})
+		}
+		err := parser.Init()
+		return &parser, err
 	})
 
 	err = plugin.Init()

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"crypto/sha256"
+
 	"gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
@@ -27,6 +28,7 @@ type Elasticsearch struct {
 	TagKeys             []string
 	Username            string
 	Password            string
+	AuthBearerToken     string
 	EnableSniffer       bool
 	Timeout             config.Duration
 	HealthCheckInterval config.Duration
@@ -62,6 +64,8 @@ var sampleConfig = `
   ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"
+  ## HTTP bearer token authentication details
+  # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 
   ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
@@ -227,6 +231,14 @@ func (a *Elasticsearch) Connect() error {
 	if a.Username != "" && a.Password != "" {
 		clientOptions = append(clientOptions,
 			elastic.SetBasicAuth(a.Username, a.Password),
+		)
+	}
+
+	if a.AuthBearerToken != "" {
+		clientOptions = append(clientOptions,
+			elastic.SetHeaders(http.Header{
+				"Authorization": []string{fmt.Sprintf("Bearer %s", a.AuthBearerToken)},
+			}),
 		)
 	}
 

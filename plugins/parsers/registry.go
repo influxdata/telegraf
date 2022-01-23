@@ -5,7 +5,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
@@ -21,6 +20,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
+
+// Creator is the function to create a new parser
+type Creator func(defaultMetricName string) telegraf.Parser
+
+// Parsers contains the registry of all known parsers (following the new style)
+var Parsers = map[string]Creator{}
+
+// Add adds a parser to the registry. Usually this function is called in the plugin's init function
+func Add(name string, creator Creator) {
+	Parsers[name] = creator
+}
 
 type ParserFunc func() (Parser, error)
 
@@ -60,6 +70,12 @@ type Parser interface {
 	// to each parsed metric.
 	// NOTE: do _not_ modify the map after you've passed it here!!
 	SetDefaultTags(tags map[string]string)
+}
+
+// ParserCompatibility is an interface for backward-compatible initialization of new parsers
+type ParserCompatibility interface {
+	// InitFromConfig sets the parser internal variables from the old-style config
+	InitFromConfig(config *Config) error
 }
 
 // Config is a struct that covers the data types needed for all parser types,
@@ -152,7 +168,6 @@ type Config struct {
 	CSVTimezone          string   `toml:"csv_timezone"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 	CSVSkipValues        []string `toml:"csv_skip_values"`
-	CSVSkipErrors        bool     `toml:"csv_skip_errors"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -233,28 +248,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokCustomPatternFiles,
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
-	case "csv":
-		config := &csv.Config{
-			MetricName:        config.MetricName,
-			HeaderRowCount:    config.CSVHeaderRowCount,
-			SkipRows:          config.CSVSkipRows,
-			SkipColumns:       config.CSVSkipColumns,
-			Delimiter:         config.CSVDelimiter,
-			Comment:           config.CSVComment,
-			TrimSpace:         config.CSVTrimSpace,
-			ColumnNames:       config.CSVColumnNames,
-			ColumnTypes:       config.CSVColumnTypes,
-			TagColumns:        config.CSVTagColumns,
-			MeasurementColumn: config.CSVMeasurementColumn,
-			TimestampColumn:   config.CSVTimestampColumn,
-			TimestampFormat:   config.CSVTimestampFormat,
-			Timezone:          config.CSVTimezone,
-			DefaultTags:       config.DefaultTags,
-			SkipValues:        config.CSVSkipValues,
-			SkipErrors:        config.CSVSkipErrors,
-		}
-
-		return csv.NewParser(config)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
 	case "form_urlencoded":
@@ -282,7 +275,19 @@ func NewParser(config *Config) (Parser, error) {
 	case "json_v2":
 		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
-		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
+		creator, found := Parsers[config.DataFormat]
+		if !found {
+			return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
+		}
+
+		// Try to create new-style parsers the old way...
+		// DEPRECATED: Please instantiate the parser directly instead of using this function.
+		parser = creator(config.MetricName)
+		p, ok := parser.(ParserCompatibility)
+		if !ok {
+			return nil, fmt.Errorf("parser for %q cannot be created the old way", config.DataFormat)
+		}
+		err = p.InitFromConfig(config)
 	}
 	return parser, err
 }

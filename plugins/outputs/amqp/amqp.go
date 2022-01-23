@@ -260,6 +260,9 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 					return err
 				}
 			} else {
+				if err := q.client.Close(); err != nil {
+					q.Log.Errorf("Closing connection failed: %v", err)
+				}
 				q.client = nil
 				return err
 			}
