@@ -156,20 +156,20 @@ func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 		if offset > uint(len(data)) || offset+field.Size > uint(len(data)) {
 			return nil, fmt.Errorf("invalid offset/size in field %s", field.Name)
 		}
-		if field.Type != "padding" {
-			fieldBuffer := data[offset : offset+field.Size]
-			switch field.Type {
-			case "string":
-				fields[field.Name] = string(fieldBuffer)
-			default:
-				fieldValue := reflect.New(fieldTypes[field.Type])
-				byteReader := bytes.NewReader(fieldBuffer)
-				err := binary.Read(byteReader, binData.byteOrder, fieldValue.Interface())
-				if err != nil {
-					return nil, err
-				}
-				fields[field.Name] = fieldValue.Elem().Interface()
+		fieldBuffer := data[offset : offset+field.Size]
+		switch field.Type {
+		case "padding":
+			// do nothing
+		case "string":
+			fields[field.Name] = string(fieldBuffer)
+		default:
+			fieldValue := reflect.New(fieldTypes[field.Type])
+			byteReader := bytes.NewReader(fieldBuffer)
+			err := binary.Read(byteReader, binData.byteOrder, fieldValue.Interface())
+			if err != nil {
+				return nil, err
 			}
+			fields[field.Name] = fieldValue.Elem().Interface()
 		}
 		offset += field.Size
 	}
