@@ -62,15 +62,6 @@ func NewBinDataParser(
 	fields []Field,
 	defaultTags map[string]string,
 ) (*BinData, error) {
-	// Time format
-	switch timeFormat {
-	case "":
-		timeFormat = defaultTimeFormat
-	case "unix", "unix_ms", "unix_us", "unix_ns":
-	default:
-		return nil, fmt.Errorf("invalid time format %s", timeFormat)
-	}
-
 	// Endiannes
 	var byteOrder binary.ByteOrder
 	endiannes = strings.ToLower(endiannes)
@@ -112,9 +103,11 @@ func NewBinDataParser(
 		}
 		knownFields[fieldName] = true
 
-		// Time field type check
+		// Time format and field type check
 		if fieldName == "time" {
 			switch timeFormat {
+			case "":
+				timeFormat = defaultTimeFormat
 			case "unix":
 				if field.Type != "int32" {
 					return nil, fmt.Errorf(`invalid time type, must be int32`)
@@ -123,6 +116,8 @@ func NewBinDataParser(
 				if field.Type != "int64" {
 					return nil, fmt.Errorf(`invalid time type, must be int64`)
 				}
+			default:
+				return nil, fmt.Errorf("invalid time format %s", timeFormat)
 			}
 		}
 
@@ -185,7 +180,11 @@ func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 
 // ParseLine implements Parser.ParseLine()
 func (binData *BinData) ParseLine(line string) (telegraf.Metric, error) {
-	return nil, fmt.Errorf("BinData.ParseLine() not supported")
+	m, err := binData.Parse([]byte(line))
+	if len(m) > 0 {
+		return m[0], err
+	}
+	return nil, err
 }
 
 func (binData *BinData) getTime(fields map[string]interface{}) (time.Time, error) {
