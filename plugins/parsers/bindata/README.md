@@ -7,7 +7,7 @@ The "BinData" parser translates binary records consisting of multiple fields int
 - UTF-8 and ASCII-encoded strings
 - unix, unix_ms, unix_us and unix_ns timestamp
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.mqtt_consumer]]

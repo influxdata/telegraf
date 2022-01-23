@@ -166,7 +166,10 @@ func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 			default:
 				fieldValue := reflect.New(fieldTypes[field.Type])
 				byteReader := bytes.NewReader(fieldBuffer)
-				binary.Read(byteReader, binData.byteOrder, fieldValue.Interface())
+				err := binary.Read(byteReader, binData.byteOrder, fieldValue.Interface())
+				if err != nil {
+					return nil, err
+				}
 				fields[field.Name] = fieldValue.Elem().Interface()
 			}
 		}
