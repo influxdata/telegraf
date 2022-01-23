@@ -6,10 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
@@ -33,37 +32,36 @@ func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 			QueryVersion: 2,
 			IncludeQuery: test["IncludeQuery"].([]string),
 			ExcludeQuery: test["ExcludeQuery"].([]string),
+			Log:          testutil.Logger{},
 		}
-		initQueries(&s)
-		assert.Equal(t, len(s.queries), test["queriesTotal"].(int))
+		require.NoError(t, s.initQueries())
+		require.Equal(t, len(s.queries), test["queriesTotal"].(int))
 		for _, query := range test["queries"].([]string) {
-			assert.Contains(t, s.queries, query)
+			require.Contains(t, s.queries, query)
 		}
 	}
 }
 
 func TestSqlServer_ParseMetrics(t *testing.T) {
-
 	var acc testutil.Accumulator
 
 	queries := make(MapQuery)
-	queries["PerformanceCounters"] = Query{Script: mockPerformanceCounters, ResultByRow: true}
-	queries["WaitStatsCategorized"] = Query{Script: mockWaitStatsCategorized, ResultByRow: false}
-	queries["CPUHistory"] = Query{Script: mockCPUHistory, ResultByRow: false}
-	queries["DatabaseIO"] = Query{Script: mockDatabaseIO, ResultByRow: false}
-	queries["DatabaseSize"] = Query{Script: mockDatabaseSize, ResultByRow: false}
-	queries["DatabaseStats"] = Query{Script: mockDatabaseStats, ResultByRow: false}
-	queries["DatabaseProperties"] = Query{Script: mockDatabaseProperties, ResultByRow: false}
-	queries["VolumeSpace"] = Query{Script: mockVolumeSpace, ResultByRow: false}
-	queries["MemoryClerk"] = Query{Script: mockMemoryClerk, ResultByRow: false}
-	queries["PerformanceMetrics"] = Query{Script: mockPerformanceMetrics, ResultByRow: false}
+	queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: mockPerformanceCounters, ResultByRow: true}
+	queries["WaitStatsCategorized"] = Query{ScriptName: "WaitStatsCategorized", Script: mockWaitStatsCategorized, ResultByRow: false}
+	queries["CPUHistory"] = Query{ScriptName: "CPUHistory", Script: mockCPUHistory, ResultByRow: false}
+	queries["DatabaseIO"] = Query{ScriptName: "DatabaseIO", Script: mockDatabaseIO, ResultByRow: false}
+	queries["DatabaseSize"] = Query{ScriptName: "DatabaseSize", Script: mockDatabaseSize, ResultByRow: false}
+	queries["DatabaseStats"] = Query{ScriptName: "DatabaseStats", Script: mockDatabaseStats, ResultByRow: false}
+	queries["DatabaseProperties"] = Query{ScriptName: "DatabaseProperties", Script: mockDatabaseProperties, ResultByRow: false}
+	queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: mockVolumeSpace, ResultByRow: false}
+	queries["MemoryClerk"] = Query{ScriptName: "MemoryClerk", Script: mockMemoryClerk, ResultByRow: false}
+	queries["PerformanceMetrics"] = Query{ScriptName: "PerformanceMetrics", Script: mockPerformanceMetrics, ResultByRow: false}
 
 	var headers, mock, row []string
 	var tags = make(map[string]string)
 	var fields = make(map[string]interface{})
 
 	for _, query := range queries {
-
 		mock = strings.Split(query.Script, "\n")
 		idx := 0
 
@@ -78,7 +76,6 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 				tags[headers[2]] = row[2] // tag 'type'
 
 				if query.ResultByRow {
-
 					// set value by converting to float64
 					value, err := strconv.ParseFloat(row[3], 64)
 					// require
@@ -90,11 +87,9 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 						tags, time.Now())
 					// assert
 					acc.AssertContainsTaggedFields(t, measurement, map[string]interface{}{"value": value}, tags)
-
 				} else {
 					// set fields
 					for i := 3; i < len(row); i++ {
-
 						// set value by converting to float64
 						value, err := strconv.ParseFloat(row[i], 64)
 						// require
@@ -113,62 +108,319 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 	}
 }
 
-func TestSqlServer_MultipleInstance(t *testing.T) {
+func TestSqlServer_MultipleInstanceIntegration(t *testing.T) {
 	// Invoke Gather() from two separate configurations and
 	//  confirm they don't interfere with each other
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
+
 	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
 	s := &SQLServer{
 		Servers:      []string{testServer},
 		ExcludeQuery: []string{"MemoryClerk"},
+		Log:          testutil.Logger{},
 	}
 	s2 := &SQLServer{
 		Servers:      []string{testServer},
 		ExcludeQuery: []string{"DatabaseSize"},
+		Log:          testutil.Logger{},
 	}
 
 	var acc, acc2 testutil.Accumulator
+	require.NoError(t, s.Start(&acc))
 	err := s.Gather(&acc)
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, false)
 
+	require.NoError(t, s2.Start(&acc2))
 	err = s2.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, true)
 
 	// acc includes size metrics, and excludes memory metrics
-	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
-	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
+	require.False(t, acc.HasMeasurement("Memory breakdown (%)"))
+	require.True(t, acc.HasMeasurement("Log size (bytes)"))
 
 	// acc2 includes memory metrics, and excludes size metrics
-	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
-	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
+	require.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
+	require.False(t, acc2.HasMeasurement("Log size (bytes)"))
+}
+
+func TestSqlServer_MultipleInstanceWithHealthMetricIntegration(t *testing.T) {
+	// Invoke Gather() from two separate configurations and
+	// confirm they don't interfere with each other.
+	// This test is intentionally similar to TestSqlServer_MultipleInstanceIntegration.
+	// It is separated to ensure that the health metric code does not affect other metrics
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
+
+	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	s := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"MemoryClerk"},
+		Log:          testutil.Logger{},
+	}
+	s2 := &SQLServer{
+		Servers:      []string{testServer},
+		ExcludeQuery: []string{"DatabaseSize"},
+		HealthMetric: true,
+		Log:          testutil.Logger{},
+	}
+
+	var acc, acc2 testutil.Accumulator
+	require.NoError(t, s.Start(&acc))
+	err := s.Gather(&acc)
+	require.NoError(t, err)
+
+	require.NoError(t, s2.Start(&acc))
+	err = s2.Gather(&acc2)
+	require.NoError(t, err)
+
+	// acc includes size metrics, and excludes memory metrics and the health metric
+	require.False(t, acc.HasMeasurement(healthMetricName))
+	require.False(t, acc.HasMeasurement("Memory breakdown (%)"))
+	require.True(t, acc.HasMeasurement("Log size (bytes)"))
+
+	// acc2 includes memory metrics and the health metric, and excludes size metrics
+	require.True(t, acc2.HasMeasurement(healthMetricName))
+	require.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
+	require.False(t, acc2.HasMeasurement("Log size (bytes)"))
+
+	sqlInstance, database := getConnectionIdentifiers(testServer)
+	tags := map[string]string{healthMetricInstanceTag: sqlInstance, healthMetricDatabaseTag: database}
+	require.True(t, acc2.HasPoint(healthMetricName, tags, healthMetricAttemptedQueries, 9))
+	require.True(t, acc2.HasPoint(healthMetricName, tags, healthMetricSuccessfulQueries, 9))
+}
+
+func TestSqlServer_HealthMetric(t *testing.T) {
+	fakeServer1 := "localhost\\fakeinstance1;Database=fakedb1;Password=ABCabc01;"
+	fakeServer2 := "localhost\\fakeinstance2;Database=fakedb2;Password=ABCabc01;"
+
+	s1 := &SQLServer{
+		Servers:      []string{fakeServer1, fakeServer2},
+		IncludeQuery: []string{"DatabaseSize", "MemoryClerk"},
+		HealthMetric: true,
+		AuthMethod:   "connection_string",
+		Log:          testutil.Logger{},
+	}
+
+	s2 := &SQLServer{
+		Servers:      []string{fakeServer1},
+		IncludeQuery: []string{"DatabaseSize"},
+		AuthMethod:   "connection_string",
+		Log:          testutil.Logger{},
+	}
+
+	// acc1 should have the health metric because it is specified in the config
+	var acc1 testutil.Accumulator
+	require.NoError(t, s1.Start(&acc1))
+	require.NoError(t, s1.Gather(&acc1))
+	require.True(t, acc1.HasMeasurement(healthMetricName))
+
+	// There will be 2 attempted queries (because we specified 2 queries in IncludeQuery)
+	// Both queries should fail because the specified SQL instances do not exist
+	sqlInstance1, database1 := getConnectionIdentifiers(fakeServer1)
+	tags1 := map[string]string{healthMetricInstanceTag: sqlInstance1, healthMetricDatabaseTag: database1}
+	require.True(t, acc1.HasPoint(healthMetricName, tags1, healthMetricAttemptedQueries, 2))
+	require.True(t, acc1.HasPoint(healthMetricName, tags1, healthMetricSuccessfulQueries, 0))
+
+	sqlInstance2, database2 := getConnectionIdentifiers(fakeServer2)
+	tags2 := map[string]string{healthMetricInstanceTag: sqlInstance2, healthMetricDatabaseTag: database2}
+	require.True(t, acc1.HasPoint(healthMetricName, tags2, healthMetricAttemptedQueries, 2))
+	require.True(t, acc1.HasPoint(healthMetricName, tags2, healthMetricSuccessfulQueries, 0))
+
+	// acc2 should not have the health metric because it is not specified in the config
+	var acc2 testutil.Accumulator
+	require.NoError(t, s2.Gather(&acc2))
+	require.False(t, acc2.HasMeasurement(healthMetricName))
 }
 
 func TestSqlServer_MultipleInit(t *testing.T) {
-
-	s := &SQLServer{}
+	s := &SQLServer{Log: testutil.Logger{}}
 	s2 := &SQLServer{
 		ExcludeQuery: []string{"DatabaseSize"},
+		Log:          testutil.Logger{},
 	}
 
-	initQueries(s)
+	require.NoError(t, s.initQueries())
 	_, ok := s.queries["DatabaseSize"]
-	// acc includes size metrics
-	assert.True(t, ok)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, false)
+	require.True(t, ok)
 
-	initQueries(s2)
+	require.NoError(t, s.initQueries())
 	_, ok = s2.queries["DatabaseSize"]
-	// acc2 excludes size metrics
-	assert.False(t, ok)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, true)
+	require.False(t, ok)
+	s.Stop()
+	s2.Stop()
+}
+
+func TestSqlServer_ConnectionString(t *testing.T) {
+	// URL format
+	connectionString := "sqlserver://username:password@hostname.database.windows.net?database=databasename&connection+timeout=30"
+	sqlInstance, database := getConnectionIdentifiers(connectionString)
+	require.Equal(t, "hostname.database.windows.net", sqlInstance)
+	require.Equal(t, "databasename", database)
+
+	connectionString = "    sqlserver://hostname2.somethingelse.net:1433?database=databasename2"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "hostname2.somethingelse.net", sqlInstance)
+	require.Equal(t, "databasename2", database)
+
+	connectionString = "sqlserver://hostname3:1433/SqlInstanceName3?database=databasename3"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "hostname3\\SqlInstanceName3", sqlInstance)
+	require.Equal(t, "databasename3", database)
+
+	connectionString = " sqlserver://hostname4/SqlInstanceName4?database=databasename4&connection%20timeout=30"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "hostname4\\SqlInstanceName4", sqlInstance)
+	require.Equal(t, "databasename4", database)
+
+	connectionString = "	sqlserver://username:password@hostname5?connection%20timeout=30"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "hostname5", sqlInstance)
+	require.Equal(t, emptyDatabaseName, database)
+
+	// odbc format
+	connectionString = "odbc:server=hostname.database.windows.net;user id=sa;database=master;Trusted_Connection=Yes;Integrated Security=true;"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "hostname.database.windows.net", sqlInstance)
+	require.Equal(t, "master", database)
+
+	connectionString = "   odbc:server=192.168.0.1;user id=somethingelse;Integrated Security=true;Database=mydb   "
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "192.168.0.1", sqlInstance)
+	require.Equal(t, "mydb", database)
+
+	connectionString = " odbc:Server=servername\\instancename;Database=dbname;"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "servername\\instancename", sqlInstance)
+	require.Equal(t, "dbname", database)
+
+	connectionString = "server=hostname2.database.windows.net;user id=sa;Trusted_Connection=Yes;Integrated Security=true;"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "hostname2.database.windows.net", sqlInstance)
+	require.Equal(t, emptyDatabaseName, database)
+
+	connectionString = "invalid connection string"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, emptySQLInstance, sqlInstance)
+	require.Equal(t, emptyDatabaseName, database)
+
+	// Key/value format
+	connectionString = "  server=hostname.database.windows.net;user id=sa;database=master;Trusted_Connection=Yes;Integrated Security=true"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "hostname.database.windows.net", sqlInstance)
+	require.Equal(t, "master", database)
+
+	connectionString = " server=192.168.0.1;user id=somethingelse;Integrated Security=true;Database=mydb;"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "192.168.0.1", sqlInstance)
+	require.Equal(t, "mydb", database)
+
+	connectionString = "Server=servername\\instancename;Database=dbname;  "
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "servername\\instancename", sqlInstance)
+	require.Equal(t, "dbname", database)
+
+	connectionString = "server=hostname2.database.windows.net;user id=sa;Trusted_Connection=Yes;Integrated Security=true  "
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, "hostname2.database.windows.net", sqlInstance)
+	require.Equal(t, emptyDatabaseName, database)
+
+	connectionString = "invalid connection string"
+	sqlInstance, database = getConnectionIdentifiers(connectionString)
+	require.Equal(t, emptySQLInstance, sqlInstance)
+	require.Equal(t, emptyDatabaseName, database)
+}
+
+func TestSqlServer_AGQueriesApplicableForDatabaseTypeSQLServer(t *testing.T) {
+	// This test case checks where Availability Group (AG / HADR) queries return an output when included for processing for DatabaseType = SQLServer
+	// And they should not be processed when DatabaseType = AzureSQLDB
+
+	// Please change the connection string to connect to relevant database when executing the test case
+
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
+
+	testServer := "Server=127.0.0.1;Port=1433;Database=testdb1;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+
+	s := &SQLServer{
+		Servers:      []string{testServer},
+		DatabaseType: "SQLServer",
+		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+		Log:          testutil.Logger{},
+	}
+	s2 := &SQLServer{
+		Servers:      []string{testServer},
+		DatabaseType: "AzureSQLDB",
+		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+		Log:          testutil.Logger{},
+	}
+
+	var acc, acc2 testutil.Accumulator
+	require.NoError(t, s.Start(&acc))
+	err := s.Gather(&acc)
+	require.NoError(t, err)
+
+	err = s2.Gather(&acc2)
+	require.NoError(t, s2.Start(&acc))
+	require.NoError(t, err)
+
+	// acc includes size metrics, and excludes memory metrics
+	require.True(t, acc.HasMeasurement("sqlserver_hadr_replica_states"))
+	require.True(t, acc.HasMeasurement("sqlserver_hadr_dbreplica_states"))
+
+	// acc2 includes memory metrics, and excludes size metrics
+	require.False(t, acc2.HasMeasurement("sqlserver_hadr_replica_states"))
+	require.False(t, acc2.HasMeasurement("sqlserver_hadr_dbreplica_states"))
+	s.Stop()
+	s2.Stop()
+}
+
+func TestSqlServer_AGQueryFieldsOutputBasedOnSQLServerVersion(t *testing.T) {
+	// This test case checks where Availability Group (AG / HADR) queries return specific fields supported by corresponding SQL Server version database being connected to.
+
+	// Please change the connection strings to connect to relevant database when executing the test case
+
+	t.Skip("Skipping as unable to open tcp connection with host '127.0.0.1:1433")
+
+	testServer2019 := "Server=127.0.0.10;Port=1433;Database=testdb2019;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+	testServer2012 := "Server=127.0.0.20;Port=1433;Database=testdb2012;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
+
+	s2019 := &SQLServer{
+		Servers:      []string{testServer2019},
+		DatabaseType: "SQLServer",
+		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+		Log:          testutil.Logger{},
+	}
+	s2012 := &SQLServer{
+		Servers:      []string{testServer2012},
+		DatabaseType: "SQLServer",
+		IncludeQuery: []string{"SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"},
+		Log:          testutil.Logger{},
+	}
+
+	var acc2019, acc2012 testutil.Accumulator
+	require.NoError(t, s2019.Start(&acc2019))
+	err := s2019.Gather(&acc2019)
+	require.NoError(t, err)
+
+	err = s2012.Gather(&acc2012)
+	require.NoError(t, s2012.Start(&acc2012))
+	require.NoError(t, err)
+
+	// acc2019 includes new HADR query fields
+	require.True(t, acc2019.HasField("sqlserver_hadr_replica_states", "basic_features"))
+	require.True(t, acc2019.HasField("sqlserver_hadr_replica_states", "is_distributed"))
+	require.True(t, acc2019.HasField("sqlserver_hadr_replica_states", "seeding_mode"))
+	require.True(t, acc2019.HasTag("sqlserver_hadr_replica_states", "seeding_mode_desc"))
+	require.True(t, acc2019.HasField("sqlserver_hadr_dbreplica_states", "is_primary_replica"))
+	require.True(t, acc2019.HasField("sqlserver_hadr_dbreplica_states", "secondary_lag_seconds"))
+
+	// acc2012 does not include new HADR query fields
+	require.False(t, acc2012.HasField("sqlserver_hadr_replica_states", "basic_features"))
+	require.False(t, acc2012.HasField("sqlserver_hadr_replica_states", "is_distributed"))
+	require.False(t, acc2012.HasField("sqlserver_hadr_replica_states", "seeding_mode"))
+	require.False(t, acc2012.HasTag("sqlserver_hadr_replica_states", "seeding_mode_desc"))
+	require.False(t, acc2012.HasField("sqlserver_hadr_dbreplica_states", "is_primary_replica"))
+	require.False(t, acc2012.HasField("sqlserver_hadr_dbreplica_states", "secondary_lag_seconds"))
+	s2019.Stop()
+	s2012.Stop()
 }
 
 const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio

@@ -8,6 +8,7 @@ import (
 
 	"github.com/aristanetworks/goarista/lanz"
 	pb "github.com/aristanetworks/goarista/lanz/proto"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -43,23 +44,22 @@ func (l *Lanz) Description() string {
 	return "Read metrics off Arista LANZ, via socket"
 }
 
-func (l *Lanz) Gather(acc telegraf.Accumulator) error {
+func (l *Lanz) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
 func (l *Lanz) Start(acc telegraf.Accumulator) error {
-
 	if len(l.Servers) == 0 {
 		l.Servers = append(l.Servers, "tcp://127.0.0.1:50001")
 	}
 
 	for _, server := range l.Servers {
-		deviceUrl, err := url.Parse(server)
+		deviceURL, err := url.Parse(server)
 		if err != nil {
 			return err
 		}
 		client := lanz.New(
-			lanz.WithAddr(deviceUrl.Host),
+			lanz.WithAddr(deviceURL.Host),
 			lanz.WithBackoff(1*time.Second),
 			lanz.WithTimeout(10*time.Second),
 		)
@@ -72,7 +72,7 @@ func (l *Lanz) Start(acc telegraf.Accumulator) error {
 		l.wg.Add(1)
 		go func() {
 			l.wg.Done()
-			receive(acc, in, deviceUrl)
+			receive(acc, in, deviceURL)
 		}()
 	}
 	return nil
@@ -85,19 +85,20 @@ func (l *Lanz) Stop() {
 	l.wg.Wait()
 }
 
-func receive(acc telegraf.Accumulator, in <-chan *pb.LanzRecord, deviceUrl *url.URL) {
+func receive(acc telegraf.Accumulator, in <-chan *pb.LanzRecord, deviceURL *url.URL) {
+	//nolint:gosimple // for-select used on purpose
 	for {
 		select {
 		case msg, ok := <-in:
 			if !ok {
 				return
 			}
-			msgToAccumulator(acc, msg, deviceUrl)
+			msgToAccumulator(acc, msg, deviceURL)
 		}
 	}
 }
 
-func msgToAccumulator(acc telegraf.Accumulator, msg *pb.LanzRecord, deviceUrl *url.URL) {
+func msgToAccumulator(acc telegraf.Accumulator, msg *pb.LanzRecord, deviceURL *url.URL) {
 	cr := msg.GetCongestionRecord()
 	if cr != nil {
 		vals := map[string]interface{}{
@@ -114,8 +115,8 @@ func msgToAccumulator(acc telegraf.Accumulator, msg *pb.LanzRecord, deviceUrl *u
 			"entry_type":            strconv.FormatInt(int64(cr.GetEntryType()), 10),
 			"traffic_class":         strconv.FormatInt(int64(cr.GetTrafficClass()), 10),
 			"fabric_peer_intf_name": cr.GetFabricPeerIntfName(),
-			"source":                deviceUrl.Hostname(),
-			"port":                  deviceUrl.Port(),
+			"source":                deviceURL.Hostname(),
+			"port":                  deviceURL.Port(),
 		}
 		acc.AddFields("lanz_congestion_record", vals, tags)
 	}
@@ -129,8 +130,8 @@ func msgToAccumulator(acc telegraf.Accumulator, msg *pb.LanzRecord, deviceUrl *u
 		}
 		tags := map[string]string{
 			"entry_type": strconv.FormatInt(int64(gbur.GetEntryType()), 10),
-			"source":     deviceUrl.Hostname(),
-			"port":       deviceUrl.Port(),
+			"source":     deviceURL.Hostname(),
+			"port":       deviceURL.Port(),
 		}
 		acc.AddFields("lanz_global_buffer_usage_record", vals, tags)
 	}

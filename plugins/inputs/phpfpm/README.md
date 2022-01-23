@@ -2,7 +2,7 @@
 
 Get phpfpm stats using either HTTP status page or fpm socket.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Read metrics of phpfpm, via HTTP status page or socket
@@ -44,7 +44,7 @@ Get phpfpm stats using either HTTP status page or fpm socket.
 When using `unixsocket`, you have to ensure that telegraf runs on same
 host, and socket path is accessible to telegraf user.
 
-### Metrics:
+## Metrics
 
 - phpfpm
   - tags:
@@ -62,9 +62,9 @@ host, and socket path is accessible to telegraf user.
     - max_children_reached
     - slow_requests
 
-# Example Output
+## Example Output
 
-```
+```shell
 phpfpm,pool=www accepted_conn=13i,active_processes=2i,idle_processes=1i,listen_queue=0i,listen_queue_len=0i,max_active_processes=2i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,total_processes=3i 1453011293083331187
 phpfpm,pool=www2 accepted_conn=12i,active_processes=1i,idle_processes=2i,listen_queue=0i,listen_queue_len=0i,max_active_processes=2i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,total_processes=3i 1453011293083691422
 phpfpm,pool=www3 accepted_conn=11i,active_processes=1i,idle_processes=2i,listen_queue=0i,listen_queue_len=0i,max_active_processes=2i,max_children_reached=0i,max_listen_queue=0i,slow_requests=0i,total_processes=3i 1453011293083691658

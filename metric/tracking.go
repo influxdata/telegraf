@@ -18,7 +18,7 @@ func WithTracking(metric telegraf.Metric, fn NotifyFunc) (telegraf.Metric, teleg
 	return newTrackingMetric(metric, fn)
 }
 
-// WithBatchTracking adds tracking to the metrics and registers the notify
+// WithGroupTracking adds tracking to the metrics and registers the notify
 // function to be called when processing is complete.
 func WithGroupTracking(metric []telegraf.Metric, fn NotifyFunc) ([]telegraf.Metric, telegraf.TrackingID) {
 	return newTrackingMetricGroup(metric, fn)
@@ -117,7 +117,6 @@ func newTrackingMetricGroup(group []telegraf.Metric, fn NotifyFunc) ([]telegraf.
 			d:      d,
 		}
 		group[i] = dm
-
 	}
 	if finalizer != nil {
 		runtime.SetFinalizer(d, finalizer)

@@ -4,10 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPersistentVolume(t *testing.T) {
@@ -18,14 +20,14 @@ func TestPersistentVolume(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
 			name: "no pv",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumes/": &v1.PersistentVolumeList{},
+					"/persistentvolumes/": &corev1.PersistentVolumeList{},
 				},
 			},
 			hasError: false,
@@ -34,41 +36,41 @@ func TestPersistentVolume(t *testing.T) {
 			name: "collect pvs",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumes/": &v1.PersistentVolumeList{
-						Items: []*v1.PersistentVolume{
+					"/persistentvolumes/": &corev1.PersistentVolumeList{
+						Items: []corev1.PersistentVolume{
 							{
-								Status: &v1.PersistentVolumeStatus{
-									Phase: toStrPtr("pending"),
+								Status: corev1.PersistentVolumeStatus{
+									Phase: "pending",
 								},
-								Spec: &v1.PersistentVolumeSpec{
-									StorageClassName: toStrPtr("ebs-1"),
+								Spec: corev1.PersistentVolumeSpec{
+									StorageClassName: "ebs-1",
 								},
-								Metadata: &metav1.ObjectMeta{
-									Name: toStrPtr("pv1"),
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "pv1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Fields: map[string]interface{}{
-							"phase_type": 2,
-						},
-						Tags: map[string]string{
-							"pv_name":      "pv1",
-							"storageclass": "ebs-1",
-							"phase":        "pending",
-						},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_persistentvolume",
+					map[string]string{
+						"pv_name":      "pv1",
+						"storageclass": "ebs-1",
+						"phase":        "pending",
 					},
-				},
+					map[string]interface{}{
+						"phase_type": 2,
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -79,34 +81,20 @@ func TestPersistentVolume(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, pv := range ((v.handler.responseMap["/persistentvolumes/"]).(*v1.PersistentVolumeList)).Items {
-			err := ks.gatherPersistentVolume(*pv, acc)
-			if err != nil {
-				t.Errorf("Failed to gather pv - %s", err.Error())
-			}
+		for _, pv := range ((v.handler.responseMap["/persistentvolumes/"]).(*corev1.PersistentVolumeList)).Items {
+			ks.gatherPersistentVolume(pv, acc)
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", v.name, k, m, acc.Metrics[i].Tags[k])
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", v.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[i].Fields[k])
-					}
-				}
-			}
-		}
+
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }

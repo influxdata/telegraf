@@ -8,7 +8,7 @@ import (
 )
 
 type serverStatus struct {
-	Id      string `gorethink:"id"`
+	ID      string `gorethink:"id"`
 	Network struct {
 		Addresses  []Address `gorethink:"canonical_addresses"`
 		Hostname   string    `gorethink:"hostname"`
@@ -41,7 +41,7 @@ type Engine struct {
 }
 
 type tableStatus struct {
-	Id   string `gorethink:"id"`
+	ID   string `gorethink:"id"`
 	DB   string `gorethink:"db"`
 	Name string `gorethink:"name"`
 }

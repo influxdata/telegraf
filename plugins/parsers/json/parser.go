@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
+
+	"github.com/tidwall/gjson"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/tidwall/gjson"
 )
 
 var (
@@ -36,7 +36,7 @@ type Config struct {
 
 type Parser struct {
 	metricName   string
-	tagKeys      []string
+	tagKeys      filter.Filter
 	stringFields filter.Filter
 	nameKey      string
 	query        string
@@ -45,6 +45,8 @@ type Parser struct {
 	timezone     string
 	defaultTags  map[string]string
 	strict       bool
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 func New(config *Config) (*Parser, error) {
@@ -53,9 +55,14 @@ func New(config *Config) (*Parser, error) {
 		return nil, err
 	}
 
+	tagKeyFilter, err := filter.Compile(config.TagKeys)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Parser{
 		metricName:   config.MetricName,
-		tagKeys:      config.TagKeys,
+		tagKeys:      tagKeyFilter,
 		nameKey:      config.NameKey,
 		stringFields: stringFilter,
 		query:        config.Query,
@@ -83,7 +90,6 @@ func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf
 			results = append(results, metrics...)
 		default:
 			return nil, ErrWrongType
-
 		}
 	}
 
@@ -104,15 +110,14 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 
 	name := p.metricName
 
-	//checks if json_name_key is set
+	// checks if json_name_key is set
 	if p.nameKey != "" {
-		switch field := f.Fields[p.nameKey].(type) {
-		case string:
+		if field, ok := f.Fields[p.nameKey].(string); ok {
 			name = field
 		}
 	}
 
-	//if time key is specified, set timestamp to it
+	// if time key is specified, set timestamp to it
 	if p.timeKey != "" {
 		if p.timeFormat == "" {
 			err := fmt.Errorf("use of 'json_time_key' requires 'json_time_format'")
@@ -131,46 +136,48 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 
 		delete(f.Fields, p.timeKey)
 
-		//if the year is 0, set to current year
+		// if the year is 0, set to current year
 		if timestamp.Year() == 0 {
 			timestamp = timestamp.AddDate(time.Now().Year(), 0, 0)
 		}
 	}
 
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)
-	metric, err := metric.New(name, tags, nFields, timestamp)
-	if err != nil {
-		return nil, err
-	}
-	return []telegraf.Metric{metric}, nil
+	m := metric.New(name, tags, nFields, timestamp)
+
+	return []telegraf.Metric{m}, nil
 }
 
-//will take in field map with strings and bools,
-//search for TagKeys that match fieldnames and add them to tags
-//will delete any strings/bools that shouldn't be fields
-//assumes that any non-numeric values in TagKeys should be displayed as tags
+// will take in field map with strings and bools,
+// search for TagKeys that match fieldnames and add them to tags
+// will delete any strings/bools that shouldn't be fields
+// assumes that any non-numeric values in TagKeys should be displayed as tags
 func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
-	for _, name := range p.tagKeys {
-		//switch any fields in tagkeys into tags
-		if fields[name] == nil {
+	for name, value := range fields {
+		if p.tagKeys == nil {
 			continue
 		}
-		switch value := fields[name].(type) {
+		// skip switch statement if tagkey doesn't match fieldname
+		if !p.tagKeys.Match(name) {
+			continue
+		}
+		// switch any fields in tagkeys into tags
+		switch t := value.(type) {
 		case string:
-			tags[name] = value
+			tags[name] = t
 			delete(fields, name)
 		case bool:
-			tags[name] = strconv.FormatBool(value)
+			tags[name] = strconv.FormatBool(t)
 			delete(fields, name)
 		case float64:
-			tags[name] = strconv.FormatFloat(value, 'f', -1, 64)
+			tags[name] = strconv.FormatFloat(t, 'f', -1, 64)
 			delete(fields, name)
 		default:
-			log.Printf("E! [parsers.json] Unrecognized type %T", value)
+			p.Log.Errorf("Unrecognized type %T", value)
 		}
 	}
 
-	//remove any additional string/bool values from fields
+	// remove any additional string/bool values from fields
 	for fk := range fields {
 		switch fields[fk].(type) {
 		case string, bool:
@@ -187,9 +194,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if p.query != "" {
 		result := gjson.GetBytes(buf, p.query)
 		buf = []byte(result.Raw)
-		if !result.IsArray() && !result.IsObject() {
-			err := fmt.Errorf("E! Query path must lead to a JSON object or array of objects, but lead to: %v", result.Type)
+		if !result.IsArray() && !result.IsObject() && result.Type != gjson.Null {
+			err := fmt.Errorf("query path must lead to a JSON object, array of objects or null, but lead to: %v", result.Type)
 			return nil, err
+		}
+		if result.Type == gjson.Null {
+			return nil, nil
 		}
 	}
 
@@ -211,6 +221,8 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return p.parseObject(v, timestamp)
 	case []interface{}:
 		return p.parseArray(v, timestamp)
+	case nil:
+		return nil, nil
 	default:
 		return nil, ErrWrongType
 	}
@@ -281,23 +293,21 @@ func (f *JSONFlattener) FullFlattenJSON(
 			}
 			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
 			if err != nil {
-				return nil
+				return err
 			}
 		}
 	case float64:
 		f.Fields[fieldname] = t
 	case string:
-		if convertString {
-			f.Fields[fieldname] = v.(string)
-		} else {
+		if !convertString {
 			return nil
 		}
+		f.Fields[fieldname] = v.(string)
 	case bool:
-		if convertBool {
-			f.Fields[fieldname] = v.(bool)
-		} else {
+		if !convertBool {
 			return nil
 		}
+		f.Fields[fieldname] = v.(bool)
 	case nil:
 		return nil
 	default:

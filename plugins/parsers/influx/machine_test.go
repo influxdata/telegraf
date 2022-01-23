@@ -7,8 +7,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
 type TestingHandler struct {
@@ -169,35 +170,35 @@ func (h *TestingHandler) Results() []Result {
 type BenchmarkingHandler struct {
 }
 
-func (h *BenchmarkingHandler) SetMeasurement(name []byte) error {
+func (h *BenchmarkingHandler) SetMeasurement(_ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddTag(key []byte, value []byte) error {
+func (h *BenchmarkingHandler) AddTag(_ []byte, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddInt(key []byte, value []byte) error {
+func (h *BenchmarkingHandler) AddInt(_ []byte, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddUint(key []byte, value []byte) error {
+func (h *BenchmarkingHandler) AddUint(_ []byte, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddFloat(key []byte, value []byte) error {
+func (h *BenchmarkingHandler) AddFloat(_ []byte, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddString(key []byte, value []byte) error {
+func (h *BenchmarkingHandler) AddString(_ []byte, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddBool(key []byte, value []byte) error {
+func (h *BenchmarkingHandler) AddBool(_ []byte, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) SetTimestamp(tm []byte) error {
+func (h *BenchmarkingHandler) SetTimestamp(_ []byte) error {
 	return nil
 }
 
@@ -1832,7 +1833,7 @@ func BenchmarkMachine(b *testing.B) {
 	}
 }
 
-func TestMachineProcstat(t *testing.T) {
+func TestMachineProcstat(_ *testing.T) {
 	input := []byte("procstat,exe=bash,process_name=bash voluntary_context_switches=42i,memory_rss=5103616i,rlimit_memory_data_hard=2147483647i,cpu_time_user=0.02,rlimit_file_locks_soft=2147483647i,pid=29417i,cpu_time_nice=0,rlimit_memory_locked_soft=65536i,read_count=259i,rlimit_memory_vms_hard=2147483647i,memory_swap=0i,rlimit_num_fds_soft=1024i,rlimit_nice_priority_hard=0i,cpu_time_soft_irq=0,cpu_time=0i,rlimit_memory_locked_hard=65536i,realtime_priority=0i,signals_pending=0i,nice_priority=20i,cpu_time_idle=0,memory_stack=139264i,memory_locked=0i,rlimit_memory_stack_soft=8388608i,cpu_time_iowait=0,cpu_time_guest=0,cpu_time_guest_nice=0,rlimit_memory_data_soft=2147483647i,read_bytes=0i,rlimit_cpu_time_soft=2147483647i,involuntary_context_switches=2i,write_bytes=106496i,cpu_time_system=0,cpu_time_irq=0,cpu_usage=0,memory_vms=21659648i,memory_data=1576960i,rlimit_memory_stack_hard=2147483647i,num_threads=1i,rlimit_memory_rss_soft=2147483647i,rlimit_realtime_priority_soft=0i,num_fds=4i,write_count=35i,rlimit_signals_pending_soft=78994i,cpu_time_steal=0,rlimit_num_fds_hard=4096i,rlimit_file_locks_hard=2147483647i,rlimit_cpu_time_hard=2147483647i,rlimit_signals_pending_hard=78994i,rlimit_nice_priority_soft=0i,rlimit_memory_rss_hard=2147483647i,rlimit_memory_vms_soft=2147483647i,rlimit_realtime_priority_hard=0i 1517620624000000000")
 	handler := &TestingHandler{}
 	fsm := influx.NewMachine(handler)
@@ -1950,7 +1951,10 @@ type MockHandler struct {
 }
 
 func (h *MockHandler) SetMeasurement(name []byte) error {
-	h.TestingHandler.SetMeasurement(name)
+	err := h.TestingHandler.SetMeasurement(name)
+	if err != nil {
+		return err
+	}
 	return h.SetMeasurementF(name)
 }
 
@@ -1963,8 +1967,7 @@ func (h *MockHandler) AddInt(name, value []byte) error {
 	if err != nil {
 		return err
 	}
-	h.TestingHandler.AddInt(name, value)
-	return nil
+	return h.TestingHandler.AddInt(name, value)
 }
 
 func (h *MockHandler) AddUint(name, value []byte) error {
@@ -1972,8 +1975,7 @@ func (h *MockHandler) AddUint(name, value []byte) error {
 	if err != nil {
 		return err
 	}
-	h.TestingHandler.AddUint(name, value)
-	return nil
+	return h.TestingHandler.AddUint(name, value)
 }
 
 func (h *MockHandler) AddFloat(name, value []byte) error {
@@ -2152,7 +2154,7 @@ func TestStreamMachine(t *testing.T) {
 	for _, tt := range tests {
 		tc = append(tc, testcase{
 			name:    tt.name,
-			input:   bytes.NewBuffer([]byte(tt.input)),
+			input:   bytes.NewBuffer(tt.input),
 			results: tt.results,
 			err:     tt.err,
 		})
@@ -2191,7 +2193,7 @@ func TestStreamMachinePosition(t *testing.T) {
 	for _, tt := range positionTests {
 		tc = append(tc, testcase{
 			name:   tt.name,
-			input:  bytes.NewBuffer([]byte(tt.input)),
+			input:  bytes.NewBuffer(tt.input),
 			lineno: tt.lineno,
 			column: tt.column,
 		})

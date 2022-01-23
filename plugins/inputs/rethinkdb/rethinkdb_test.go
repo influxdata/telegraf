@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package rethinkdb
@@ -28,18 +29,18 @@ func init() {
 
 func testSetup(m *testing.M) {
 	var err error
-	server = &Server{Url: &url.URL{Host: connect_url}}
+	server = &Server{URL: &url.URL{Host: connect_url}}
 
 	if authKey {
 		server.session, _ = gorethink.Connect(gorethink.ConnectOpts{
-			Address:          server.Url.Host,
+			Address:          server.URL.Host,
 			AuthKey:          authKey,
 			HandshakeVersion: gorethink.HandshakeV0_4,
 			DiscoverHosts:    false,
 		})
 	} else {
 		server.session, _ = gorethink.Connect(gorethink.ConnectOpts{
-			Address:          server.Url.Host,
+			Address:          server.URL.Host,
 			Username:         username,
 			Password:         password,
 			HandshakeVersion: gorethink.HandshakeV1_0,

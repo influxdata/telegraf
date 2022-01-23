@@ -1,3 +1,4 @@
+//go:build !solaris
 // +build !solaris
 
 package logparser
@@ -10,6 +11,7 @@ import (
 	"github.com/influxdata/tail"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -143,7 +145,7 @@ func (l *LogParserPlugin) Init() error {
 }
 
 // Gather is the primary function to collect the metrics for the plugin
-func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
+func (l *LogParserPlugin) Gather(_ telegraf.Accumulator) error {
 	l.Lock()
 	defer l.Unlock()
 
@@ -183,6 +185,7 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+	models.SetLoggerOnPlugin(l.GrokParser, l.Log)
 
 	l.wg.Add(1)
 	go l.parser()
@@ -271,7 +274,6 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 
 	var line *tail.Line
 	for line = range tailer.Lines {
-
 		if line.Err != nil {
 			l.Log.Errorf("Error tailing file %s, Error: %s",
 				tailer.Filename, line.Err)
@@ -321,7 +323,6 @@ func (l *LogParserPlugin) parser() {
 		} else {
 			l.Log.Errorf("Error parsing log line: %s", err.Error())
 		}
-
 	}
 }
 

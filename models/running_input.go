@@ -35,7 +35,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		inputErrorsRegister.Incr(1)
 		GlobalGatherErrors.Incr(1)
 	})
-	setLogIfExist(input, logger)
+	SetLoggerOnPlugin(input, logger)
 
 	return &RunningInput{
 		Input:  input,
@@ -56,9 +56,11 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 
 // InputConfig is the common config for all inputs.
 type InputConfig struct {
-	Name     string
-	Alias    string
-	Interval time.Duration
+	Name             string
+	Alias            string
+	Interval         time.Duration
+	CollectionJitter time.Duration
+	Precision        time.Duration
 
 	NameOverride      string
 	MeasurementPrefix string

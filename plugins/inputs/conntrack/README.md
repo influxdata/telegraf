@@ -1,25 +1,24 @@
-# Conntrack Plugin
+# Conntrack Input Plugin
 
 Collects stats from Netfilter's conntrack-tools.
 
 The conntrack-tools provide a mechanism for tracking various aspects of
-network connections as they are processed by netfilter. At runtime, 
+network connections as they are processed by netfilter. At runtime,
 conntrack exposes many of those connection statistics within /proc/sys/net.
 Depending on your kernel version, these files can be found in either
 /proc/sys/net/ipv4/netfilter or /proc/sys/net/netfilter and will be
-prefixed with either ip_ or nf_.  This plugin reads the files specified 
+prefixed with either ip or nf.  This plugin reads the files specified
 in its configuration and publishes each one as a field, with the prefix
-normalized to ip_.  
+normalized to ip_.
 
 In order to simplify configuration in a heterogeneous environment, a superset
 of directory and filenames can be specified.  Any locations that don't exist
 will be ignored.
 
-For more information on conntrack-tools, see the 
+For more information on conntrack-tools, see the
 [Netfilter Documentation](http://conntrack-tools.netfilter.org/).
 
-
-### Configuration:
+## Configuration
 
 ```toml
  # Collects conntrack stats from the configured directories and files.
@@ -38,19 +37,19 @@ For more information on conntrack-tools, see the
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - conntrack
-    - ip_conntrack_count (int, count): the number of entries in the conntrack table 
-    - ip_conntrack_max (int, size): the max capacity of the conntrack table
+  - ip_conntrack_count (int, count): the number of entries in the conntrack table
+  - ip_conntrack_max (int, size): the max capacity of the conntrack table
 
-### Tags:
+## Tags
 
 This input does not use tags.
 
-### Example Output:
+## Example Output
 
-```
+```shell
 $ ./telegraf --config telegraf.conf --input-filter conntrack --test
 conntrack,host=myhost ip_conntrack_count=2,ip_conntrack_max=262144 1461620427667995735
 ```

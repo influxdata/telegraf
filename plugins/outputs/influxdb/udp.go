@@ -106,7 +106,7 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 			_, err = c.conn.Write(scanner.Bytes())
 		}
 		if err != nil {
-			c.conn.Close()
+			_ = c.conn.Close()
 			c.conn = nil
 			return err
 		}
@@ -115,7 +115,7 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 	return nil
 }
 
-func (c *udpClient) CreateDatabase(ctx context.Context, database string) error {
+func (c *udpClient) CreateDatabase(_ context.Context, _ string) error {
 	return nil
 }
 
@@ -134,7 +134,6 @@ func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if i := bytes.IndexByte(data, '\n'); i >= 0 {
 		// We have a full newline-terminated line.
 		return i + 1, data[0 : i+1], nil
-
 	}
 	return 0, nil, nil
 }

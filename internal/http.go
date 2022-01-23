@@ -37,8 +37,41 @@ func (h *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		if !ok ||
 			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.username)) != 1 ||
 			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.password)) != 1 {
-
 			rw.Header().Set("WWW-Authenticate", "Basic realm=\""+h.realm+"\"")
+			h.onError(rw)
+			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+	}
+
+	h.next.ServeHTTP(rw, req)
+}
+
+type GenericAuthErrorFunc func(rw http.ResponseWriter)
+
+// GenericAuthHandler returns a http handler that requires `Authorization: <credentials>`
+func GenericAuthHandler(credentials string, onError GenericAuthErrorFunc) func(h http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return &genericAuthHandler{
+			credentials: credentials,
+			onError:     onError,
+			next:        h,
+		}
+	}
+}
+
+// Generic auth scheme handler - exact match on `Authorization: <credentials>`
+type genericAuthHandler struct {
+	credentials string
+	onError     GenericAuthErrorFunc
+	next        http.Handler
+}
+
+func (h *genericAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if h.credentials != "" {
+		// Scheme checking
+		authorization := req.Header.Get("Authorization")
+		if subtle.ConstantTimeCompare([]byte(authorization), []byte(h.credentials)) != 1 {
 			h.onError(rw)
 			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return

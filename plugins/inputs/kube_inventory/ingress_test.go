@@ -4,10 +4,13 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/ericchiang/k8s/apis/core/v1"
-	v1beta1EXT "github.com/ericchiang/k8s/apis/extensions/v1beta1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
+	v1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIngress(t *testing.T) {
@@ -19,14 +22,14 @@ func TestIngress(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
 			name: "no ingress",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/ingress/": &v1beta1EXT.IngressList{},
+					"/ingress/": netv1.IngressList{},
 				},
 			},
 			hasError: false,
@@ -35,31 +38,35 @@ func TestIngress(t *testing.T) {
 			name: "collect ingress",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/ingress/": &v1beta1EXT.IngressList{
-						Items: []*v1beta1EXT.Ingress{
+					"/ingress/": netv1.IngressList{
+						Items: []netv1.Ingress{
 							{
-								Status: &v1beta1EXT.IngressStatus{
-									LoadBalancer: &v1.LoadBalancerStatus{
-										Ingress: []*v1.LoadBalancerIngress{
+								Status: netv1.IngressStatus{
+									LoadBalancer: v1.LoadBalancerStatus{
+										Ingress: []v1.LoadBalancerIngress{
 											{
-												Hostname: toStrPtr("chron-1"),
-												Ip:       toStrPtr("1.0.0.127"),
+												Hostname: "chron-1",
+												IP:       "1.0.0.127",
 											},
 										},
 									},
 								},
-								Spec: &v1beta1EXT.IngressSpec{
-									Rules: []*v1beta1EXT.IngressRule{
+								Spec: netv1.IngressSpec{
+									Rules: []netv1.IngressRule{
 										{
-											Host: toStrPtr("ui.internal"),
-											IngressRuleValue: &v1beta1EXT.IngressRuleValue{
-												Http: &v1beta1EXT.HTTPIngressRuleValue{
-													Paths: []*v1beta1EXT.HTTPIngressPath{
+											Host: "ui.internal",
+											IngressRuleValue: netv1.IngressRuleValue{
+												HTTP: &netv1.HTTPIngressRuleValue{
+													Paths: []netv1.HTTPIngressPath{
 														{
-															Path: toStrPtr("/"),
-															Backend: &v1beta1EXT.IngressBackend{
-																ServiceName: toStrPtr("chronografd"),
-																ServicePort: toIntStrPtrI(8080),
+															Path: "/",
+															Backend: netv1.IngressBackend{
+																Service: &netv1.IngressServiceBackend{
+																	Name: "chronografd",
+																	Port: netv1.ServiceBackendPort{
+																		Number: 8080,
+																	},
+																},
 															},
 														},
 													},
@@ -68,37 +75,145 @@ func TestIngress(t *testing.T) {
 										},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									Generation:        toInt64Ptr(12),
-									Namespace:         toStrPtr("ns1"),
-									Name:              toStrPtr("ui-lb"),
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        12,
+									Namespace:         "ns1",
+									Name:              "ui-lb",
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Fields: map[string]interface{}{
-							"tls":                  false,
-							"backend_service_port": int32(8080),
-							"generation":           int64(12),
-							"created":              now.UnixNano(),
-						},
-						Tags: map[string]string{
-							"ingress_name":         "ui-lb",
-							"namespace":            "ns1",
-							"ip":                   "1.0.0.127",
-							"hostname":             "chron-1",
-							"backend_service_name": "chronografd",
-							"host":                 "ui.internal",
-							"path":                 "/",
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_ingress",
+					map[string]string{
+						"ingress_name":         "ui-lb",
+						"namespace":            "ns1",
+						"ip":                   "1.0.0.127",
+						"hostname":             "chron-1",
+						"backend_service_name": "chronografd",
+						"host":                 "ui.internal",
+						"path":                 "/",
+					},
+					map[string]interface{}{
+						"tls":                  false,
+						"backend_service_port": int32(8080),
+						"generation":           int64(12),
+						"created":              now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
+			},
+			hasError: false,
+		},
+		{
+			name: "no HTTPIngressRuleValue",
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/ingress/": netv1.IngressList{
+						Items: []netv1.Ingress{
+							{
+								Status: netv1.IngressStatus{
+									LoadBalancer: v1.LoadBalancerStatus{
+										Ingress: []v1.LoadBalancerIngress{
+											{
+												Hostname: "chron-1",
+												IP:       "1.0.0.127",
+											},
+										},
+									},
+								},
+								Spec: netv1.IngressSpec{
+									Rules: []netv1.IngressRule{
+										{
+											Host: "ui.internal",
+											IngressRuleValue: netv1.IngressRuleValue{
+												HTTP: nil,
+											},
+										},
+									},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        12,
+									Namespace:         "ns1",
+									Name:              "ui-lb",
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
 						},
 					},
 				},
+			},
+			hasError: false,
+		},
+		{
+			name: "no IngressServiceBackend",
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/ingress/": netv1.IngressList{
+						Items: []netv1.Ingress{
+							{
+								Status: netv1.IngressStatus{
+									LoadBalancer: v1.LoadBalancerStatus{
+										Ingress: []v1.LoadBalancerIngress{
+											{
+												Hostname: "chron-1",
+												IP:       "1.0.0.127",
+											},
+										},
+									},
+								},
+								Spec: netv1.IngressSpec{
+									Rules: []netv1.IngressRule{
+										{
+											Host: "ui.internal",
+											IngressRuleValue: netv1.IngressRuleValue{
+												HTTP: &netv1.HTTPIngressRuleValue{
+													Paths: []netv1.HTTPIngressPath{
+														{
+															Path: "/",
+															Backend: netv1.IngressBackend{
+																Service: nil,
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        12,
+									Namespace:         "ns1",
+									Name:              "ui-lb",
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
+						},
+					},
+				},
+			},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_ingress",
+					map[string]string{
+						"ingress_name": "ui-lb",
+						"namespace":    "ns1",
+						"ip":           "1.0.0.127",
+						"hostname":     "chron-1",
+						"host":         "ui.internal",
+						"path":         "/",
+					},
+					map[string]interface{}{
+						"tls":        false,
+						"generation": int64(12),
+						"created":    now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -109,34 +224,20 @@ func TestIngress(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, ingress := range ((v.handler.responseMap["/ingress/"]).(*v1beta1EXT.IngressList)).Items {
-			err := ks.gatherIngress(*ingress, acc)
-			if err != nil {
-				t.Errorf("Failed to gather ingress - %s", err.Error())
-			}
+		for _, ingress := range ((v.handler.responseMap["/ingress/"]).(netv1.IngressList)).Items {
+			ks.gatherIngress(ingress, acc)
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got '%v'\n", v.name, k, m, acc.Metrics[i].Tags[k])
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", v.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[i].Fields[k])
-					}
-				}
-			}
-		}
+
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }

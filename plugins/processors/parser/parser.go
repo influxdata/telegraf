@@ -1,19 +1,19 @@
 package parser
 
 import (
-	"log"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type Parser struct {
 	parsers.Config
-	DropOriginal bool     `toml:"drop_original"`
-	Merge        string   `toml:"merge"`
-	ParseFields  []string `toml:"parse_fields"`
-	Parser       parsers.Parser
+	DropOriginal bool            `toml:"drop_original"`
+	Merge        string          `toml:"merge"`
+	ParseFields  []string        `toml:"parse_fields"`
+	Log          telegraf.Logger `toml:"-"`
+	parser       telegraf.Parser
 }
 
 var SampleConfig = `
@@ -43,13 +43,14 @@ func (p *Parser) Description() string {
 }
 
 func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	if p.Parser == nil {
+	if p.parser == nil {
 		var err error
-		p.Parser, err = parsers.NewParser(&p.Config)
+		p.parser, err = parsers.NewParser(&p.Config)
 		if err != nil {
-			log.Printf("E! [processors.parser] could not create parser: %v", err)
+			p.Log.Errorf("could not create parser: %v", err)
 			return metrics
 		}
+		models.SetLoggerOnPlugin(p.parser, p.Log)
 	}
 
 	results := []telegraf.Metric{}
@@ -67,7 +68,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 					case string:
 						fromFieldMetric, err := p.parseField(value)
 						if err != nil {
-							log.Printf("E! [processors.parser] could not parse field %s: %v", key, err)
+							p.Log.Errorf("could not parse field %s: %v", key, err)
 						}
 
 						for _, m := range fromFieldMetric {
@@ -81,7 +82,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 						// prior to returning.
 						newMetrics = append(newMetrics, fromFieldMetric...)
 					default:
-						log.Printf("E! [processors.parser] field '%s' not a string, skipping", key)
+						p.Log.Errorf("field '%s' not a string, skipping", key)
 					}
 				}
 			}
@@ -114,7 +115,7 @@ func merge(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
 }
 
 func (p *Parser) parseField(value string) ([]telegraf.Metric, error) {
-	return p.Parser.Parse([]byte(value))
+	return p.parser.Parse([]byte(value))
 }
 
 func init() {

@@ -2,7 +2,6 @@ package shim
 
 import (
 	"bufio"
-	"bytes"
 	"io"
 	"os"
 	"strings"
@@ -16,20 +15,16 @@ import (
 )
 
 func TestShimWorks(t *testing.T) {
-	stdoutBytes := bytes.NewBufferString("")
-	stdout = stdoutBytes
+	stdoutReader, stdoutWriter := io.Pipe()
 
-	stdin, _ = io.Pipe() // hold the stdin pipe open
+	stdin, _ := io.Pipe() // hold the stdin pipe open
 
-	metricProcessed, _ := runInputPlugin(t, 10*time.Millisecond)
+	metricProcessed, _ := runInputPlugin(t, 10*time.Millisecond, stdin, stdoutWriter, nil)
 
 	<-metricProcessed
-	for stdoutBytes.Len() == 0 {
-		t.Log("Waiting for bytes available in stdout")
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	out := string(stdoutBytes.Bytes())
+	r := bufio.NewReader(stdoutReader)
+	out, err := r.ReadString('\n')
+	require.NoError(t, err)
 	require.Contains(t, out, "\n")
 	metricLine := strings.Split(out, "\n")[0]
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
@@ -39,12 +34,10 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 
-	stdin = stdinReader
-	stdout = stdoutWriter
+	metricProcessed, exited := runInputPlugin(t, 40*time.Second, stdinReader, stdoutWriter, nil)
 
-	metricProcessed, exited := runInputPlugin(t, 40*time.Second)
-
-	stdinWriter.Write([]byte("\n"))
+	_, err := stdinWriter.Write([]byte("\n"))
+	require.NoError(t, err)
 
 	<-metricProcessed
 
@@ -53,7 +46,7 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
-	stdinWriter.Close()
+	require.NoError(t, stdinWriter.Close())
 
 	readUntilEmpty(r)
 
@@ -61,15 +54,25 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	<-exited
 }
 
-func runInputPlugin(t *testing.T, interval time.Duration) (metricProcessed chan bool, exited chan bool) {
-	metricProcessed = make(chan bool, 10)
+func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (metricProcessed chan bool, exited chan bool) {
+	metricProcessed = make(chan bool)
 	exited = make(chan bool)
 	inp := &testInput{
 		metricProcessed: metricProcessed,
 	}
 
 	shim := New()
-	shim.AddInput(inp)
+	if stdin != nil {
+		shim.stdin = stdin
+	}
+	if stdout != nil {
+		shim.stdout = stdout
+	}
+	if stderr != nil {
+		shim.stderr = stderr
+	}
+
+	require.NoError(t, shim.AddInput(inp))
 	go func() {
 		err := shim.Run(interval)
 		require.NoError(t, err)
@@ -102,7 +105,7 @@ func (i *testInput) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (i *testInput) Start(acc telegraf.Accumulator) error {
+func (i *testInput) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -110,18 +113,18 @@ func (i *testInput) Stop() {
 }
 
 func TestLoadConfig(t *testing.T) {
-	os.Setenv("SECRET_TOKEN", "xxxxxxxxxx")
-	os.Setenv("SECRET_VALUE", `test"\test`)
+	require.NoError(t, os.Setenv("SECRET_TOKEN", "xxxxxxxxxx"))
+	require.NoError(t, os.Setenv("SECRET_VALUE", `test"\test`))
 
 	inputs.Add("test", func() telegraf.Input {
 		return &serviceInput{}
 	})
 
 	c := "./testdata/plugin.conf"
-	inputs, err := LoadConfig(&c)
+	loadedInputs, err := LoadConfig(&c)
 	require.NoError(t, err)
 
-	inp := inputs[0].(*serviceInput)
+	inp := loadedInputs[0].(*serviceInput)
 
 	require.Equal(t, "awesome name", inp.ServiceName)
 	require.Equal(t, "xxxxxxxxxx", inp.SecretToken)
@@ -154,7 +157,7 @@ func (i *serviceInput) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (i *serviceInput) Start(acc telegraf.Accumulator) error {
+func (i *serviceInput) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 

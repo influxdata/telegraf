@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	eventhub "github.com/Azure/azure-event-hubs-go/v3"
+	eventhubClient "github.com/Azure/azure-event-hubs-go/v3"
 	"github.com/Azure/azure-event-hubs-go/v3/persist"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -54,7 +55,7 @@ type EventHub struct {
 	Log telegraf.Logger `toml:"-"`
 
 	// Azure
-	hub    *eventhub.Hub
+	hub    *eventhubClient.Hub
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
@@ -69,8 +70,6 @@ func (*EventHub) SampleConfig() string {
   ## This requires one of the following sets of environment variables to be set:
   ##
   ## 1) Expected Environment Variables:
-  ##    - "EVENTHUB_NAMESPACE"
-  ##    - "EVENTHUB_NAME"
   ##    - "EVENTHUB_CONNECTION_STRING"
   ##
   ## 2) Expected Environment Variables:
@@ -79,8 +78,17 @@ func (*EventHub) SampleConfig() string {
   ##    - "EVENTHUB_KEY_NAME"
   ##    - "EVENTHUB_KEY_VALUE"
 
+  ## 3) Expected Environment Variables:
+  ##    - "EVENTHUB_NAMESPACE"
+  ##    - "EVENTHUB_NAME"
+  ##    - "AZURE_TENANT_ID"
+  ##    - "AZURE_CLIENT_ID"
+  ##    - "AZURE_CLIENT_SECRET"
+
   ## Uncommenting the option below will create an Event Hub client based solely on the connection string.
   ## This can either be the associated environment variable or hard coded directly.
+  ## If this option is uncommented, environment variables will be ignored.
+  ## Connection string should contain EventHubName (EntityPath)
   # connection_string = ""
 
   ## Set persistence directory to a valid folder to use a file persister instead of an in-memory persister
@@ -165,7 +173,7 @@ func (e *EventHub) Init() (err error) {
 	}
 
 	// Set hub options
-	hubOpts := []eventhub.HubOption{}
+	hubOpts := []eventhubClient.HubOption{}
 
 	if e.PersistenceDir != "" {
 		persister, err := persist.NewFilePersister(e.PersistenceDir)
@@ -173,20 +181,20 @@ func (e *EventHub) Init() (err error) {
 			return err
 		}
 
-		hubOpts = append(hubOpts, eventhub.HubWithOffsetPersistence(persister))
+		hubOpts = append(hubOpts, eventhubClient.HubWithOffsetPersistence(persister))
 	}
 
 	if e.UserAgent != "" {
-		hubOpts = append(hubOpts, eventhub.HubWithUserAgent(e.UserAgent))
+		hubOpts = append(hubOpts, eventhubClient.HubWithUserAgent(e.UserAgent))
 	} else {
-		hubOpts = append(hubOpts, eventhub.HubWithUserAgent(internal.ProductToken()))
+		hubOpts = append(hubOpts, eventhubClient.HubWithUserAgent(internal.ProductToken()))
 	}
 
 	// Create event hub connection
 	if e.ConnectionString != "" {
-		e.hub, err = eventhub.NewHubFromConnectionString(e.ConnectionString, hubOpts...)
+		e.hub, err = eventhubClient.NewHubFromConnectionString(e.ConnectionString, hubOpts...)
 	} else {
-		e.hub, err = eventhub.NewHubFromEnvironment(hubOpts...)
+		e.hub, err = eventhubClient.NewHubFromEnvironment(hubOpts...)
 	}
 
 	return err
@@ -207,11 +215,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	}()
 
 	// Configure receiver options
-	receiveOpts, err := e.configureReceiver()
-	if err != nil {
-		return err
-	}
-
+	receiveOpts := e.configureReceiver()
 	partitions := e.PartitionIDs
 
 	if len(e.PartitionIDs) == 0 {
@@ -224,7 +228,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	}
 
 	for _, partitionID := range partitions {
-		_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
+		_, err := e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
 		if err != nil {
 			return fmt.Errorf("creating receiver for partition %q: %v", partitionID, err)
 		}
@@ -233,34 +237,34 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *EventHub) configureReceiver() ([]eventhub.ReceiveOption, error) {
-	receiveOpts := []eventhub.ReceiveOption{}
+func (e *EventHub) configureReceiver() []eventhubClient.ReceiveOption {
+	receiveOpts := []eventhubClient.ReceiveOption{}
 
 	if e.ConsumerGroup != "" {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithConsumerGroup(e.ConsumerGroup))
+		receiveOpts = append(receiveOpts, eventhubClient.ReceiveWithConsumerGroup(e.ConsumerGroup))
 	}
 
 	if !e.FromTimestamp.IsZero() {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveFromTimestamp(e.FromTimestamp))
+		receiveOpts = append(receiveOpts, eventhubClient.ReceiveFromTimestamp(e.FromTimestamp))
 	} else if e.Latest {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithLatestOffset())
+		receiveOpts = append(receiveOpts, eventhubClient.ReceiveWithLatestOffset())
 	}
 
 	if e.PrefetchCount != 0 {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithPrefetchCount(e.PrefetchCount))
+		receiveOpts = append(receiveOpts, eventhubClient.ReceiveWithPrefetchCount(e.PrefetchCount))
 	}
 
 	if e.Epoch != 0 {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithEpoch(e.Epoch))
+		receiveOpts = append(receiveOpts, eventhubClient.ReceiveWithEpoch(e.Epoch))
 	}
 
-	return receiveOpts, nil
+	return receiveOpts
 }
 
 // OnMessage handles an Event.  When this function returns without error the
 // Event is immediately accepted and the offset is updated.  If an error is
 // returned the Event is marked for redelivery.
-func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) error {
+func (e *EventHub) onMessage(ctx context.Context, event *eventhubClient.Event) error {
 	metrics, err := e.createMetrics(event)
 	if err != nil {
 		return err
@@ -342,7 +346,7 @@ func deepCopyMetrics(in []telegraf.Metric) []telegraf.Metric {
 }
 
 // CreateMetrics returns the Metrics from the Event.
-func (e *EventHub) createMetrics(event *eventhub.Event) ([]telegraf.Metric, error) {
+func (e *EventHub) createMetrics(event *eventhubClient.Event) ([]telegraf.Metric, error) {
 	metrics, err := e.parser.Parse(event.Data)
 	if err != nil {
 		return nil, err
@@ -376,7 +380,7 @@ func (e *EventHub) createMetrics(event *eventhub.Event) ([]telegraf.Metric, erro
 		}
 
 		if event.SystemProperties.PartitionID != nil && e.PartitionIDTag != "" {
-			metrics[i].AddTag(e.PartitionIDTag, string(*event.SystemProperties.PartitionID))
+			metrics[i].AddTag(e.PartitionIDTag, fmt.Sprintf("%d", *event.SystemProperties.PartitionID))
 		}
 		if event.SystemProperties.PartitionKey != nil && e.PartitionKeyTag != "" {
 			metrics[i].AddTag(e.PartitionKeyTag, *event.SystemProperties.PartitionKey)

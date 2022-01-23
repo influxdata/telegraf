@@ -1,10 +1,10 @@
-### Output Plugins
+# Output Plugins
 
 This section is for developers who want to create a new output sink. Outputs
 are created in a similar manner as collection plugins, and their interface has
 similar constructs.
 
-### Output Plugin Guidelines
+## Output Plugin Guidelines
 
 - An output must conform to the [telegraf.Output][] interface.
 - Outputs should call `outputs.Add` in their `init` function to register
@@ -13,11 +13,11 @@ similar constructs.
   `github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
 - The `SampleConfig` function should return valid toml that describes how the
   plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [SampleConfig][] page for the latest style guidelines.
+  consult the [Sample Config][] page for the latest style guidelines.
 - The `Description` function should say in one line what this output does.
-- Follow the recommended [CodeStyle][].
+- Follow the recommended [Code Style][].
 
-### Output Plugin Example
+## Output Plugin Example
 
 ```go
 package simpleoutput
@@ -30,7 +30,8 @@ import (
 )
 
 type Simple struct {
-    Ok bool `toml:"ok"`
+    Ok  bool            `toml:"ok"`
+    Log telegraf.Logger `toml:"-"`
 }
 
 func (s *Simple) Description() string {
@@ -43,20 +44,25 @@ func (s *Simple) SampleConfig() string {
 `
 }
 
+// Init is for setup, and validating config.
 func (s *Simple) Init() error {
-	return nil
+    return nil
 }
 
 func (s *Simple) Connect() error {
-    // Make a connection to the URL here
+    // Make any connection required here
     return nil
 }
 
 func (s *Simple) Close() error {
-    // Close connection to the URL here
+    // Close any connections here.
+    // Write will not be called once Close is called, so there is no need to synchronize.
     return nil
 }
 
+// Write should write immediately to the output, and not buffer writes
+// (Telegraf manages the buffer for you). Returning an error will fail this
+// batch of writes and the entire batch will be retried automatically.
 func (s *Simple) Write(metrics []telegraf.Metric) error {
     for _, metric := range metrics {
         // write `metric` to the output sink here
@@ -97,18 +103,19 @@ You should also add the following to your `SampleConfig()`:
 ## Flushing Metrics to Outputs
 
 Metrics are flushed to outputs when any of the following events happen:
+
 - `flush_interval + rand(flush_jitter)` has elapsed since start or the last flush interval
 - At least `metric_batch_size` count of metrics are waiting in the buffer
 - The telegraf process has received a SIGUSR1 signal
 
 Note that if the flush takes longer than the `agent.interval` to write the metrics
-to the output, you'll see a message saying the output `did not complete within its 
-flush interval`. This may mean your output is not keeping up with the flow of metrics, 
-and you may want to look into enabling compression, reducing the size of your metrics, 
+to the output, you'll see a message saying the output `did not complete within its
+flush interval`. This may mean your output is not keeping up with the flow of metrics,
+and you may want to look into enabling compression, reducing the size of your metrics,
 or investigate other reasons why the writes might be taking longer than expected.
 
 [file]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/file
 [output data formats]: https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-[SampleConfig]: https://github.com/influxdata/telegraf/wiki/SampleConfig
-[CodeStyle]: https://github.com/influxdata/telegraf/wiki/CodeStyle
+[Sample Config]: https://github.com/influxdata/telegraf/blob/master/docs/developers/SAMPLE_CONFIG.md
+[Code Style]: https://github.com/influxdata/telegraf/blob/master/docs/developers/CODE_STYLE.md
 [telegraf.Output]: https://godoc.org/github.com/influxdata/telegraf#Output

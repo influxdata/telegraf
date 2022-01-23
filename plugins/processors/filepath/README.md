@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD024 -->
+
 # Filepath Processor Plugin
 
 The `filepath` processor plugin maps certain go functions from [path/filepath](https://golang.org/pkg/path/filepath/)
@@ -21,6 +23,8 @@ Specify the `tag` and/or `field` that you want processed in each section and opt
 stored in a new tag or field.
 
 If you plan to apply multiple transformations to the same `tag`/`field`, bear in mind the processing order stated above.
+
+Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
@@ -88,7 +92,7 @@ The effects of this function are only noticeable on Windows platforms, because o
 ## Examples
 
 ### Basename
- 
+
 ```toml
 [[processors.filepath]]
   [[processors.filepath.basename]]
@@ -167,7 +171,7 @@ The effects of this function are only noticeable on Windows platforms, because o
 + my_metric,path="/var/log/batch/ajob.log" duration_seconds=134 1587920425000000000
 ```
 
-### Processing paths from tail plugin
+## Processing paths from tail plugin
 
 This plugin can be used together with the
 [tail input plugn](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/tail) to make modifications
@@ -179,9 +183,9 @@ Scenario:
 written to the log file following this format: `2020-04-05 11:45:21 total time execution: 70 seconds`
 * We want to generate a measurement that captures the duration of the script as a field and includes the `path` as a
 tag
-    * We are interested in the filename without its extensions, since it might be enough information for plotting our
+  * We are interested in the filename without its extensions, since it might be enough information for plotting our
     execution times in a dashboard
-    * Just in case, we don't want to override the original path (if for some reason we end up having duplicates we might
+  * Just in case, we don't want to override the original path (if for some reason we end up having duplicates we might
     want this information)
 
 For this purpose, we will use the `tail` input plugin, the `grok` parser plugin and the `filepath` processor.
@@ -197,7 +201,6 @@ For this purpose, we will use the `tail` input plugin, the `grok` parser plugin 
    [[processors.filepath.stem]]
      tag = "path"
      dest = "stempath"
-
 ```
 
 The resulting output for a job taking 70 seconds for the mentioned log file would look like:

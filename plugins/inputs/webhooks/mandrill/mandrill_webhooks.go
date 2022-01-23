@@ -2,36 +2,38 @@ package mandrill
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"log"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
+
+	"github.com/gorilla/mux"
 )
 
 type MandrillWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
+	log  telegraf.Logger
 }
 
-func (md *MandrillWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
+func (md *MandrillWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(md.Path, md.returnOK).Methods("HEAD")
 	router.HandleFunc(md.Path, md.eventHandler).Methods("POST")
 
-	log.Printf("I! Started the webhooks_mandrill on %s\n", md.Path)
+	md.log = log
+	md.log.Infof("Started the webhooks_mandrill on %s", md.Path)
 	md.acc = acc
 }
 
-func (md *MandrillWebhook) returnOK(w http.ResponseWriter, r *http.Request) {
+func (md *MandrillWebhook) returnOK(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
 func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

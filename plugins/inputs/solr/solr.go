@@ -11,16 +11,13 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const mbeansPath = "/admin/mbeans?stats=true&wt=json&cat=CORE&cat=QUERYHANDLER&cat=UPDATEHANDLER&cat=CACHE"
 const adminCoresPath = "/solr/admin/cores?action=STATUS&wt=json"
-
-type node struct {
-	Host string `json:"host"`
-}
 
 const sampleConfig = `
   ## specify a list of one or more Solr servers
@@ -40,7 +37,7 @@ type Solr struct {
 	Servers     []string
 	Username    string
 	Password    string
-	HTTPTimeout internal.Duration
+	HTTPTimeout config.Duration
 	Cores       []string
 	client      *http.Client
 }
@@ -125,7 +122,7 @@ type Cache struct {
 // NewSolr return a new instance of Solr
 func NewSolr() *Solr {
 	return &Solr{
-		HTTPTimeout: internal.Duration{Duration: time.Second * 5},
+		HTTPTimeout: config.Duration(time.Second * 5),
 	}
 }
 
@@ -205,7 +202,7 @@ func getCoresFromStatus(adminCoresStatus *AdminCoresStatus) []string {
 
 // Add core metrics from admin to accumulator
 // This is the only point where size_in_bytes is available (as far as I checked)
-func addAdminCoresStatusToAcc(acc telegraf.Accumulator, adminCoreStatus *AdminCoresStatus, time time.Time) {
+func addAdminCoresStatusToAcc(acc telegraf.Accumulator, adminCoreStatus *AdminCoresStatus, measurementTime time.Time) {
 	for core, metrics := range adminCoreStatus.Status {
 		coreFields := map[string]interface{}{
 			"deleted_docs":  metrics.Index.DeletedDocs,
@@ -217,13 +214,13 @@ func addAdminCoresStatusToAcc(acc telegraf.Accumulator, adminCoreStatus *AdminCo
 			"solr_admin",
 			coreFields,
 			map[string]string{"core": core},
-			time,
+			measurementTime,
 		)
 	}
 }
 
 // Add core metrics section to accumulator
-func addCoreMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
+func addCoreMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, measurementTime time.Time) error {
 	var coreMetrics map[string]Core
 	if len(mBeansData.SolrMbeans) < 2 {
 		return fmt.Errorf("no core metric data to unmarshal")
@@ -246,14 +243,14 @@ func addCoreMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBea
 			map[string]string{
 				"core":    core,
 				"handler": name},
-			time,
+			measurementTime,
 		)
 	}
 	return nil
 }
 
 // Add query metrics section to accumulator
-func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
+func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, measurementTime time.Time) error {
 	var queryMetrics map[string]QueryHandler
 
 	if len(mBeansData.SolrMbeans) < 4 {
@@ -287,9 +284,8 @@ func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansDa
 			map[string]string{
 				"core":    core,
 				"handler": name},
-			time,
+			measurementTime,
 		)
-
 	}
 	return nil
 }
@@ -328,7 +324,7 @@ func convertQueryHandlerMap(value map[string]interface{}) map[string]interface{}
 }
 
 // Add update metrics section to accumulator
-func addUpdateHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
+func addUpdateHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, measurementTime time.Time) error {
 	var updateMetrics map[string]UpdateHandler
 
 	if len(mBeansData.SolrMbeans) < 6 {
@@ -367,7 +363,7 @@ func addUpdateHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansD
 			map[string]string{
 				"core":    core,
 				"handler": name},
-			time,
+			measurementTime,
 		)
 	}
 	return nil
@@ -408,7 +404,7 @@ func getInt(unk interface{}) int64 {
 }
 
 // Add cache metrics section to accumulator
-func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
+func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, measurementTime time.Time) error {
 	if len(mBeansData.SolrMbeans) < 8 {
 		return fmt.Errorf("no cache metric data to unmarshal")
 	}
@@ -448,7 +444,7 @@ func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBe
 			map[string]string{
 				"core":    core,
 				"handler": name},
-			time,
+			measurementTime,
 		)
 	}
 	return nil
@@ -466,11 +462,11 @@ func (s *Solr) mbeansURL(server string, core string) string {
 
 func (s *Solr) createHTTPClient() *http.Client {
 	tr := &http.Transport{
-		ResponseHeaderTimeout: s.HTTPTimeout.Duration,
+		ResponseHeaderTimeout: time.Duration(s.HTTPTimeout),
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   s.HTTPTimeout.Duration,
+		Timeout:   time.Duration(s.HTTPTimeout),
 	}
 
 	return client
@@ -497,10 +493,8 @@ func (s *Solr) gatherData(url string, v interface{}) error {
 		return fmt.Errorf("solr: API responded with status-code %d, expected %d, url %s",
 			r.StatusCode, http.StatusOK, url)
 	}
-	if err = json.NewDecoder(r.Body).Decode(v); err != nil {
-		return err
-	}
-	return nil
+
+	return json.NewDecoder(r.Body).Decode(v)
 }
 
 func init() {

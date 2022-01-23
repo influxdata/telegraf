@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -29,6 +31,7 @@ func TestAggregate(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -52,6 +55,7 @@ func TestAggregate(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -75,6 +79,7 @@ func TestAggregate(t *testing.T) {
 				Region:              "test",
 				ResourceID:          "/test",
 				StringsAsDimensions: true,
+				Log:                 testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -116,6 +121,7 @@ func TestAggregate(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 				cache:      make(map[time.Time]map[uint64]*aggregate, 36),
 			},
 			metrics: []telegraf.Metric{
@@ -153,6 +159,7 @@ func TestAggregate(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 				cache:      make(map[time.Time]map[uint64]*aggregate, 36),
 			},
 			metrics: []telegraf.Metric{
@@ -204,7 +211,11 @@ func TestAggregate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.plugin.Connect()
+			msiEndpoint, err := adal.GetMSIVMEndpoint()
+			require.NoError(t, err)
+
+			os.Setenv("MSI_ENDPOINT", msiEndpoint)
+			err = tt.plugin.Connect()
 			require.NoError(t, err)
 
 			// Reset globals
@@ -262,6 +273,7 @@ func TestWrite(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -282,6 +294,7 @@ func TestWrite(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -308,6 +321,7 @@ func TestWrite(t *testing.T) {
 			plugin: &AzureMonitor{
 				Region:     "test",
 				ResourceID: "/test",
+				Log:        testutil.Logger{},
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -358,4 +372,16 @@ func TestWrite(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	// Set up a fake environment for adal.getMSIType()
+	// Root cause: https://github.com/Azure/go-autorest/commit/def88ef859fb980eff240c755a70597bc9b490d0
+	err := os.Setenv("MSI_ENDPOINT", "fake.endpoint")
+
+	if err != nil {
+		panic(err)
+	}
+
+	os.Exit(m.Run())
 }

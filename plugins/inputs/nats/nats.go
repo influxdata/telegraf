@@ -1,24 +1,26 @@
+//go:build !freebsd || (freebsd && cgo)
 // +build !freebsd freebsd,cgo
 
 package nats
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	gnatsd "github.com/nats-io/nats-server/v2/server"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Nats struct {
 	Server          string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 
 	client *http.Client
 }
@@ -40,28 +42,28 @@ func (n *Nats) Description() string {
 }
 
 func (n *Nats) Gather(acc telegraf.Accumulator) error {
-	url, err := url.Parse(n.Server)
+	address, err := url.Parse(n.Server)
 	if err != nil {
 		return err
 	}
-	url.Path = path.Join(url.Path, "varz")
+	address.Path = path.Join(address.Path, "varz")
 
 	if n.client == nil {
 		n.client = n.createHTTPClient()
 	}
-	resp, err := n.client.Get(url.String())
+	resp, err := n.client.Get(address.String())
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	bytes, err := ioutil.ReadAll(resp.Body)
+	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
 	stats := new(gnatsd.Varz)
-	err = json.Unmarshal([]byte(bytes), &stats)
+	err = json.Unmarshal(bytes, &stats)
 	if err != nil {
 		return err
 	}
@@ -93,7 +95,7 @@ func (n *Nats) createHTTPClient() *http.Client {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 	}
-	timeout := n.ResponseTimeout.Duration
+	timeout := time.Duration(n.ResponseTimeout)
 	if timeout == time.Duration(0) {
 		timeout = 5 * time.Second
 	}

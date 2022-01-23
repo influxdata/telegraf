@@ -3,12 +3,11 @@
 The GCP PubSub plugin ingests metrics from [Google Cloud PubSub][pubsub]
 and creates metrics using one of the supported [input data formats][].
 
-
-### Configuration
+## Configuration
 
 ```toml
-[[inputs.pubsub]]
-## Required. Name of Google Cloud Platform (GCP) Project that owns
+[[inputs.cloud_pubsub]]
+  ## Required. Name of Google Cloud Platform (GCP) Project that owns
   ## the given PubSub subscription.
   project = "my-project"
 
@@ -26,12 +25,12 @@ and creates metrics using one of the supported [input data formats][].
   ## Application Default Credentials, which is preferred.
   # credentials_file = "path/to/my/creds.json"
 
-  ## Optional. Number of seconds to wait before attempting to restart the 
-  ## PubSub subscription receiver after an unexpected error. 
+  ## Optional. Number of seconds to wait before attempting to restart the
+  ## PubSub subscription receiver after an unexpected error.
   ## If the streaming pull for a PubSub Subscription fails (receiver),
   ## the agent attempts to restart receiving messages after this many seconds.
   # retry_delay_seconds = 5
-  
+
   ## Optional. Maximum byte length of a message to consume.
   ## Larger messages are dropped with an error. If less than 0 or unspecified,
   ## treated as no limit.
@@ -75,8 +74,8 @@ and creates metrics using one of the supported [input data formats][].
   ## 1. Note this setting does not limit the number of messages that can be
   ## processed concurrently (use "max_outstanding_messages" instead).
   # max_receiver_go_routines = 0
-  
-  ## Optional. If true, Telegraf will attempt to base64 decode the 
+
+  ## Optional. If true, Telegraf will attempt to base64 decode the
   ## PubSub message data before parsing. Many GCP services that
   ## output JSON to Google PubSub base64-encode the JSON payload.
   # base64_data = false
@@ -90,8 +89,6 @@ PubSub topic. To learn how to do so, see [how to create a subscription][pubsub c
 Each plugin agent can listen to one subscription at a time, so you will
 need to run multiple instances of the plugin to pull messages from multiple
 subscriptions/topics.
-
-
 
 [pubsub]: https://cloud.google.com/pubsub
 [pubsub create sub]: https://cloud.google.com/pubsub/docs/admin#create_a_pull_subscription

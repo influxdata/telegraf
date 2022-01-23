@@ -2,10 +2,10 @@ package stackdriver
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
@@ -14,6 +14,7 @@ import (
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	"google.golang.org/genproto/googleapis/api/monitoredres"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Call struct {
@@ -27,6 +28,7 @@ type MockStackdriverClient struct {
 	CloseF                 func() error
 
 	calls []*Call
+	sync.Mutex
 }
 
 func (m *MockStackdriverClient) ListMetricDescriptors(
@@ -34,7 +36,9 @@ func (m *MockStackdriverClient) ListMetricDescriptors(
 	req *monitoringpb.ListMetricDescriptorsRequest,
 ) (<-chan *metricpb.MetricDescriptor, error) {
 	call := &Call{name: "ListMetricDescriptors", args: []interface{}{ctx, req}}
+	m.Lock()
 	m.calls = append(m.calls, call)
+	m.Unlock()
 	return m.ListMetricDescriptorsF(ctx, req)
 }
 
@@ -43,13 +47,17 @@ func (m *MockStackdriverClient) ListTimeSeries(
 	req *monitoringpb.ListTimeSeriesRequest,
 ) (<-chan *monitoringpb.TimeSeries, error) {
 	call := &Call{name: "ListTimeSeries", args: []interface{}{ctx, req}}
+	m.Lock()
 	m.calls = append(m.calls, call)
+	m.Unlock()
 	return m.ListTimeSeriesF(ctx, req)
 }
 
 func (m *MockStackdriverClient) Close() error {
 	call := &Call{name: "Close", args: []interface{}{}}
+	m.Lock()
 	m.calls = append(m.calls, call)
+	m.Unlock()
 	return m.CloseF()
 }
 
@@ -97,7 +105,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -130,7 +138,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -163,7 +171,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -196,7 +204,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -241,7 +249,7 @@ func TestGather(t *testing.T) {
 				Points: []*monitoringpb.Point{
 					{
 						Interval: &monitoringpb.TimeInterval{
-							EndTime: &timestamp.Timestamp{
+							EndTime: &timestamppb.Timestamp{
 								Seconds: now.Unix(),
 							},
 						},
@@ -275,7 +283,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -370,7 +378,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -465,7 +473,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -548,7 +556,7 @@ func TestGather(t *testing.T) {
 			timeseries: createTimeSeries(
 				&monitoringpb.Point{
 					Interval: &monitoringpb.TimeInterval{
-						EndTime: &timestamp.Timestamp{
+						EndTime: &timestamppb.Timestamp{
 							Seconds: now.Unix(),
 						},
 					},
@@ -694,7 +702,7 @@ func TestGatherAlign(t *testing.T) {
 				createTimeSeries(
 					&monitoringpb.Point{
 						Interval: &monitoringpb.TimeInterval{
-							EndTime: &timestamp.Timestamp{
+							EndTime: &timestamppb.Timestamp{
 								Seconds: now.Unix(),
 							},
 						},
@@ -709,7 +717,7 @@ func TestGatherAlign(t *testing.T) {
 				createTimeSeries(
 					&monitoringpb.Point{
 						Interval: &monitoringpb.TimeInterval{
-							EndTime: &timestamp.Timestamp{
+							EndTime: &timestamppb.Timestamp{
 								Seconds: now.Unix(),
 							},
 						},
@@ -724,7 +732,7 @@ func TestGatherAlign(t *testing.T) {
 				createTimeSeries(
 					&monitoringpb.Point{
 						Interval: &monitoringpb.TimeInterval{
-							EndTime: &timestamp.Timestamp{
+							EndTime: &timestamppb.Timestamp{
 								Seconds: now.Unix(),
 							},
 						},
@@ -752,9 +760,8 @@ func TestGatherAlign(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
+	for listCall, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			listCall := 0
 			var acc testutil.Accumulator
 			client := &MockStackdriverClient{
 				ListMetricDescriptorsF: func(ctx context.Context, req *monitoringpb.ListMetricDescriptorsRequest) (<-chan *metricpb.MetricDescriptor, error) {
@@ -766,7 +773,6 @@ func TestGatherAlign(t *testing.T) {
 				ListTimeSeriesF: func(ctx context.Context, req *monitoringpb.ListTimeSeriesRequest) (<-chan *monitoringpb.TimeSeries, error) {
 					ch := make(chan *monitoringpb.TimeSeries, 1)
 					ch <- tt.timeseries[listCall]
-					listCall++
 					close(ch)
 					return ch, nil
 				},
@@ -797,7 +803,6 @@ func TestGatherAlign(t *testing.T) {
 			}
 
 			testutil.RequireMetricsEqual(t, tt.expected, actual)
-
 		})
 	}
 }
@@ -1076,7 +1081,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 					ch <- createTimeSeries(
 						&monitoringpb.Point{
 							Interval: &monitoringpb.TimeInterval{
-								EndTime: &timestamp.Timestamp{
+								EndTime: &timestamppb.Timestamp{
 									Seconds: now.Unix(),
 								},
 							},
@@ -1120,8 +1125,8 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 	}
 }
 
-func TestNewListTimeSeriesFilter(t *testing.T) {
+func TestNewListTimeSeriesFilter(_ *testing.T) {
 }
 
-func TestTimeSeriesConfCacheIsValid(t *testing.T) {
+func TestTimeSeriesConfCacheIsValid(_ *testing.T) {
 }

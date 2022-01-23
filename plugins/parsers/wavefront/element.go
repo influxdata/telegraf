@@ -9,10 +9,9 @@ import (
 
 var (
 	ErrEOF              = errors.New("EOF")
-	ErrInvalidTimestamp = errors.New("Invalid timestamp")
+	ErrInvalidTimestamp = errors.New("invalid timestamp")
 )
 
-// Interface for parsing line elements.
 type ElementParser interface {
 	parse(p *PointParser, pt *Point) error
 }
@@ -29,9 +28,6 @@ type TagParser struct{}
 type LoopedParser struct {
 	wrappedParser ElementParser
 	wsParser      *WhiteSpaceParser
-}
-type LiteralParser struct {
-	literal string
 }
 
 func (ep *NameParser) parse(p *PointParser, pt *Point) error {
@@ -55,12 +51,12 @@ func (ep *ValueParser) parse(p *PointParser, pt *Point) error {
 	}
 
 	p.writeBuf.Reset()
-	if tok == MINUS_SIGN {
+	if tok == MinusSign {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
 	}
 
-	for tok != EOF && (tok == LETTER || tok == NUMBER || tok == DOT || tok == MINUS_SIGN) {
+	for tok != EOF && (tok == Letter || tok == Number || tok == Dot || tok == MinusSign) {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
 	}
@@ -84,7 +80,7 @@ func (ep *TimestampParser) parse(p *PointParser, pt *Point) error {
 		return fmt.Errorf("found %q, expected number", lit)
 	}
 
-	if tok != NUMBER {
+	if tok != Number {
 		if ep.optional {
 			p.unscanTokens(2)
 			return setTimestamp(pt, 0, 1)
@@ -93,7 +89,7 @@ func (ep *TimestampParser) parse(p *PointParser, pt *Point) error {
 	}
 
 	p.writeBuf.Reset()
-	for tok != EOF && tok == NUMBER {
+	for tok != EOF && tok == Number {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
 	}
@@ -108,7 +104,6 @@ func (ep *TimestampParser) parse(p *PointParser, pt *Point) error {
 }
 
 func setTimestamp(pt *Point, ts int64, numDigits int) error {
-
 	if numDigits == 19 {
 		// nanoseconds
 		ts = ts / 1e9
@@ -120,11 +115,10 @@ func setTimestamp(pt *Point, ts int64, numDigits int) error {
 		ts = ts / 1e3
 	} else if numDigits != 10 {
 		// must be in seconds, return error if not 0
-		if ts == 0 {
-			ts = getCurrentTime()
-		} else {
+		if ts != 0 {
 			return ErrInvalidTimestamp
 		}
+		ts = getCurrentTime()
 	}
 	pt.Timestamp = ts
 	return nil
@@ -154,7 +148,7 @@ func (ep *TagParser) parse(p *PointParser, pt *Point) error {
 	}
 
 	next, lit := p.scan()
-	if next != EQUALS {
+	if next != Equals {
 		return fmt.Errorf("found %q, expected equals", lit)
 	}
 
@@ -169,9 +163,9 @@ func (ep *TagParser) parse(p *PointParser, pt *Point) error {
 	return nil
 }
 
-func (ep *WhiteSpaceParser) parse(p *PointParser, pt *Point) error {
-	tok := WS
-	for tok != EOF && tok == WS {
+func (ep *WhiteSpaceParser) parse(p *PointParser, _ *Point) error {
+	tok := Ws
+	for tok != EOF && tok == Ws {
 		tok, _ = p.scan()
 	}
 
@@ -185,26 +179,14 @@ func (ep *WhiteSpaceParser) parse(p *PointParser, pt *Point) error {
 	return nil
 }
 
-func (ep *LiteralParser) parse(p *PointParser, pt *Point) error {
-	l, err := parseLiteral(p)
-	if err != nil {
-		return err
-	}
-
-	if l != ep.literal {
-		return fmt.Errorf("found %s, expected %s", l, ep.literal)
-	}
-	return nil
-}
-
 func parseQuotedLiteral(p *PointParser) (string, error) {
 	p.writeBuf.Reset()
 
 	escaped := false
 	tok, lit := p.scan()
-	for tok != EOF && (tok != QUOTES || (tok == QUOTES && escaped)) {
+	for tok != EOF && (tok != Quotes || (tok == Quotes && escaped)) {
 		// let everything through
-		escaped = tok == BACKSLASH
+		escaped = tok == Backslash
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
 	}
@@ -220,19 +202,19 @@ func parseLiteral(p *PointParser) (string, error) {
 		return "", fmt.Errorf("found %q, expected literal", lit)
 	}
 
-	if tok == QUOTES {
+	if tok == Quotes {
 		return parseQuotedLiteral(p)
 	}
 
 	p.writeBuf.Reset()
-	for tok != EOF && tok > literal_beg && tok < literal_end {
+	for tok != EOF && tok > literalBeg && tok < literalEnd {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
-		if tok == DELTA {
+		if tok == Delta {
 			return "", errors.New("found delta inside metric name")
 		}
 	}
-	if tok == QUOTES {
+	if tok == Quotes {
 		return "", errors.New("found quote inside unquoted literal")
 	}
 	p.unscan()

@@ -2,21 +2,22 @@ package prometheus
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	inputs "github.com/influxdata/telegraf/plugins/inputs/prometheus"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMetricVersion2(t *testing.T) {
-	Logger := testutil.Logger{Name: "outputs.prometheus_client"}
+	logger := testutil.Logger{Name: "outputs.prometheus_client"}
 	tests := []struct {
 		name     string
 		output   *PrometheusClient
@@ -30,7 +31,7 @@ func TestMetricVersion2(t *testing.T) {
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
-				Log:               Logger,
+				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -51,6 +52,34 @@ cpu_time_idle{host="example.org"} 42
 `),
 		},
 		{
+			name: "summary no quantiles",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     2,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"rpc_duration_seconds_sum":   1.7560473e+07,
+						"rpc_duration_seconds_count": 2693,
+					},
+					time.Unix(0, 0),
+					telegraf.Summary,
+				),
+			},
+			expected: []byte(`
+# HELP rpc_duration_seconds Telegraf collected metric
+# TYPE rpc_duration_seconds summary
+rpc_duration_seconds_sum 1.7560473e+07
+rpc_duration_seconds_count 2693
+`),
+		},
+		{
 			name: "when export timestamp is true timestamp is present in the metric",
 			output: &PrometheusClient{
 				Listen:            ":0",
@@ -58,7 +87,7 @@ cpu_time_idle{host="example.org"} 42
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
 				ExportTimestamp:   true,
-				Log:               Logger,
+				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -86,7 +115,7 @@ cpu_time_idle{host="example.org"} 42 0
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
 				StringAsLabel:     true,
-				Log:               Logger,
+				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -113,7 +142,7 @@ cpu_time_idle{host="example.org"} 42
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
 				StringAsLabel:     false,
-				Log:               Logger,
+				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -139,7 +168,7 @@ cpu_time_idle 42
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
-				Log:               Logger,
+				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -166,7 +195,7 @@ cpu_time_idle{host="example.org"} 42
 				MetricVersion:     2,
 				CollectorsExclude: []string{"gocollector", "process"},
 				Path:              "/metrics",
-				Log:               Logger,
+				Log:               logger,
 			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
@@ -241,6 +270,37 @@ cpu_usage_idle_sum{cpu="cpu1"} 2000
 cpu_usage_idle_count{cpu="cpu1"} 20
 `),
 		},
+		{
+			name: "histogram no buckets",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     2,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"cpu": "cpu1",
+					},
+					map[string]interface{}{
+						"usage_idle_sum":   2000.0,
+						"usage_idle_count": 20.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+			},
+			expected: []byte(`
+# HELP cpu_usage_idle Telegraf collected metric
+# TYPE cpu_usage_idle histogram
+cpu_usage_idle_bucket{cpu="cpu1",le="+Inf"} 20
+cpu_usage_idle_sum{cpu="cpu1"} 2000
+cpu_usage_idle_count{cpu="cpu1"} 20
+`),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -262,7 +322,7 @@ cpu_usage_idle_count{cpu="cpu1"} 20
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
 			require.Equal(t,
@@ -273,7 +333,7 @@ cpu_usage_idle_count{cpu="cpu1"} 20
 }
 
 func TestRoundTripMetricVersion2(t *testing.T) {
-	Logger := testutil.Logger{Name: "outputs.prometheus_client"}
+	logger := testutil.Logger{Name: "outputs.prometheus_client"}
 	tests := []struct {
 		name string
 		data []byte
@@ -355,7 +415,8 @@ rpc_duration_seconds_count 2693
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write(tt.data)
+				_, err := w.Write(tt.data)
+				require.NoError(t, err)
 			})
 
 			input := &inputs.Prometheus{
@@ -376,7 +437,7 @@ rpc_duration_seconds_count 2693
 				Listen:            "127.0.0.1:0",
 				Path:              defaultPath,
 				MetricVersion:     2,
-				Log:               Logger,
+				Log:               logger,
 				CollectorsExclude: []string{"gocollector", "process"},
 			}
 			err = output.Init()
@@ -392,8 +453,9 @@ rpc_duration_seconds_count 2693
 
 			resp, err := http.Get(output.URL())
 			require.NoError(t, err)
+			defer resp.Body.Close()
 
-			actual, err := ioutil.ReadAll(resp.Body)
+			actual, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
 			require.Equal(t,

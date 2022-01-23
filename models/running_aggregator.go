@@ -35,7 +35,7 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 		aggErrorsRegister.Incr(1)
 	})
 
-	setLogIfExist(aggregator, logger)
+	SetLoggerOnPlugin(aggregator, logger)
 
 	return &RunningAggregator{
 		Aggregator: aggregator,
@@ -116,10 +116,6 @@ func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
 		nil)
-
-	if m != nil {
-		m.SetAggregate(true)
-	}
 
 	r.MetricsPushed.Incr(1)
 

@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestMailChimpGatherReports(t *testing.T) {
@@ -17,7 +17,8 @@ func TestMailChimpGatherReports(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				fmt.Fprintln(w, sampleReports)
+				_, err := fmt.Fprintln(w, sampleReports)
+				require.NoError(t, err)
 			},
 		))
 	defer ts.Close()
@@ -27,7 +28,8 @@ func TestMailChimpGatherReports(t *testing.T) {
 
 	api := &ChimpAPI{
 		url:   u,
-		Debug: true,
+		debug: true,
+		log:   testutil.Logger{},
 	}
 	m := MailChimp{
 		api: api,
@@ -42,22 +44,22 @@ func TestMailChimpGatherReports(t *testing.T) {
 	tags["campaign_title"] = "Freddie's Jokes Vol. 1"
 
 	fields := map[string]interface{}{
-		"emails_sent":              int(200),
-		"abuse_reports":            int(0),
-		"unsubscribed":             int(2),
-		"hard_bounces":             int(0),
-		"soft_bounces":             int(2),
-		"syntax_errors":            int(0),
-		"forwards_count":           int(0),
-		"forwards_opens":           int(0),
-		"opens_total":              int(186),
-		"unique_opens":             int(100),
-		"clicks_total":             int(42),
-		"unique_clicks":            int(400),
-		"unique_subscriber_clicks": int(42),
-		"facebook_recipient_likes": int(5),
-		"facebook_unique_likes":    int(8),
-		"facebook_likes":           int(42),
+		"emails_sent":              200,
+		"abuse_reports":            0,
+		"unsubscribed":             2,
+		"hard_bounces":             0,
+		"soft_bounces":             2,
+		"syntax_errors":            0,
+		"forwards_count":           0,
+		"forwards_opens":           0,
+		"opens_total":              186,
+		"unique_opens":             100,
+		"clicks_total":             42,
+		"unique_clicks":            400,
+		"unique_subscriber_clicks": 42,
+		"facebook_recipient_likes": 5,
+		"facebook_unique_likes":    8,
+		"facebook_likes":           42,
 		"open_rate":                float64(42),
 		"click_rate":               float64(42),
 		"industry_open_rate":       float64(0.17076777144396),
@@ -80,7 +82,8 @@ func TestMailChimpGatherReport(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				fmt.Fprintln(w, sampleReport)
+				_, err := fmt.Fprintln(w, sampleReport)
+				require.NoError(t, err)
 			},
 		))
 	defer ts.Close()
@@ -90,11 +93,12 @@ func TestMailChimpGatherReport(t *testing.T) {
 
 	api := &ChimpAPI{
 		url:   u,
-		Debug: true,
+		debug: true,
+		log:   testutil.Logger{},
 	}
 	m := MailChimp{
 		api:        api,
-		CampaignId: "test",
+		CampaignID: "test",
 	}
 
 	var acc testutil.Accumulator
@@ -137,7 +141,6 @@ func TestMailChimpGatherReport(t *testing.T) {
 		"industry_type":            "Social Networks and Online Communities",
 	}
 	acc.AssertContainsTaggedFields(t, "mailchimp", fields, tags)
-
 }
 
 func TestMailChimpGatherError(t *testing.T) {
@@ -145,7 +148,8 @@ func TestMailChimpGatherError(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				fmt.Fprintln(w, sampleError)
+				_, err := fmt.Fprintln(w, sampleError)
+				require.NoError(t, err)
 			},
 		))
 	defer ts.Close()
@@ -155,11 +159,12 @@ func TestMailChimpGatherError(t *testing.T) {
 
 	api := &ChimpAPI{
 		url:   u,
-		Debug: true,
+		debug: true,
+		log:   testutil.Logger{},
 	}
 	m := MailChimp{
 		api:        api,
-		CampaignId: "test",
+		CampaignID: "test",
 	}
 
 	var acc testutil.Accumulator

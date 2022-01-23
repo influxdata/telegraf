@@ -1,4 +1,4 @@
-# PostgreSQL plugin
+# PostgreSQL Extensible Input Plugin
 
 This postgresql plugin provides metrics for your postgres database. It has been
 designed to parse SQL queries in the plugin section of your `telegraf.conf`.
@@ -11,7 +11,7 @@ The example below has two queries are specified, with the following parameters:
 * The name of the measurement
 * A list of the columns to be defined as tags
 
-```
+```toml
 [[inputs.postgresql_extensible]]
   # specify address via a url matching:
   # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...
@@ -28,7 +28,12 @@ The example below has two queries are specified, with the following parameters:
   # A list of databases to pull metrics about. If not specified, metrics for all
   # databases are gathered.
   # databases = ["app_production", "testing"]
-  #
+
+  ## Whether to use prepared statements when connecting to the database.
+  ## This should be set to false when connecting through a PgBouncer instance
+  ## with pool_mode set to transaction.
+  prepared_statements = true
+
   # Define the toml config where the sql queries are stored
   # New queries can be added, if the withdbname is set to true and there is no
   # databases defined in the 'databases field', the sql query is ended by a 'is
@@ -52,12 +57,17 @@ The example below has two queries are specified, with the following parameters:
   # defined tags. The values in these columns must be of a string-type,
   # a number-type or a blob-type.
   #
+  # The timestamp field is used to override the data points timestamp value. By
+  # default, all rows inserted with current time. By setting a timestamp column,
+  # the row will be inserted with that column's value. 
+  #
   # Structure :
   # [[inputs.postgresql_extensible.query]]
   #   sqlquery string
   #   version string
   #   withdbname boolean
   #   tagvalue string (coma separated)
+  #   timestamp string
   [[inputs.postgresql_extensible.query]]
     sqlquery="SELECT * FROM pg_stat_database where datname"
     version=901
@@ -73,10 +83,12 @@ The example below has two queries are specified, with the following parameters:
 The system can be easily extended using homemade metrics collection tools or
 using postgresql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
 
-# Sample Queries :
-- telegraf.conf postgresql_extensible queries (assuming that you have configured
+## Sample Queries
+
+* telegraf.conf postgresql_extensible queries (assuming that you have configured
  correctly your connection)
-```
+
+```toml
 [[inputs.postgresql_extensible.query]]
   sqlquery="SELECT * FROM pg_stat_database"
   version=901
@@ -127,27 +139,33 @@ using postgresql extensions ([pg_stat_statements](http://www.postgresql.org/docs
   tagvalue="type,enabled"
 ```
 
-# Postgresql Side
+## Postgresql Side
+
 postgresql.conf :
-```
+
+```sql
 shared_preload_libraries = 'pg_stat_statements,pg_stat_kcache'
 ```
 
 Please follow the requirements to setup those extensions.
 
 In the database (can be a specific monitoring db)
-```
+
+```sql
 create extension pg_stat_statements;
 create extension pg_stat_kcache;
 create extension pg_proctab;
 ```
+
 (assuming that the extension is installed on the OS Layer)
 
- - pg_stat_kcache is available on the postgresql.org yum repo
- - pg_proctab is available at : https://github.com/markwkm/pg_proctab
+* pg_stat_kcache is available on the postgresql.org yum repo
+* pg_proctab is available at : <https://github.com/markwkm/pg_proctab>
 
- ## Views
- - Blocking sessions
+## Views
+
+* Blocking sessions
+
 ```sql
 CREATE OR REPLACE VIEW public.blocking_procs AS
  SELECT a.datname AS db,
@@ -171,7 +189,9 @@ CREATE OR REPLACE VIEW public.blocking_procs AS
   WHERE kl.granted AND NOT bl.granted
   ORDER BY a.query_start;
 ```
-  - Sessions Statistics
+
+* Sessions Statistics
+
 ```sql
 CREATE OR REPLACE VIEW public.sessions AS
  WITH proctab AS (

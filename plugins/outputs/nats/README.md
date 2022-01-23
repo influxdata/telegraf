@@ -6,6 +6,10 @@ This plugin writes to a (list of) specified NATS instance(s).
 [[outputs.nats]]
   ## URLs of NATS servers
   servers = ["nats://localhost:4222"]
+
+  ## Optional client name
+  # name = ""
+
   ## Optional credentials
   # username = ""
   # password = ""

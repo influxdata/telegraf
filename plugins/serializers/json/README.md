@@ -2,7 +2,7 @@
 
 The `json` output data format converts metrics into JSON documents.
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.file]]
@@ -19,11 +19,19 @@ The `json` output data format converts metrics into JSON documents.
   ## such as "1ns", "1us", "1ms", "10ms", "1s".  Durations are truncated to
   ## the power of 10 less than the specified units.
   json_timestamp_units = "1s"
+
+  ## The default timestamp format is Unix epoch time, subject to the
+  # resolution configured in json_timestamp_units.
+  # Other timestamp layout can be configured using the Go language time
+  # layout specification from https://golang.org/pkg/time/#Time.Format
+  # e.g.: json_timestamp_format = "2006-01-02T15:04:05Z07:00"
+  #json_timestamp_format = ""
 ```
 
-### Examples:
+## Examples
 
 Standard form:
+
 ```json
 {
     "fields": {
@@ -43,6 +51,7 @@ Standard form:
 When an output plugin needs to emit multiple metrics at one time, it may use
 the batch format.  The use of batch format is determined by the plugin,
 reference the documentation for the specific plugin.
+
 ```json
 {
     "metrics": [

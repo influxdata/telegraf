@@ -5,6 +5,7 @@ The procstat_lookup metric displays the query information,
 specifically the number of PIDs returned on a search
 
 Processes can be selected for monitoring using one of several methods:
+
 - pidfile
 - exe
 - pattern
@@ -13,7 +14,7 @@ Processes can be selected for monitoring using one of several methods:
 - cgroup
 - win_service
 
-### Configuration:
+## Configuration
 
 ```toml
 # Monitor process cpu and memory usage
@@ -26,8 +27,9 @@ Processes can be selected for monitoring using one of several methods:
   # pattern = "nginx"
   ## user as argument for pgrep (ie, pgrep -u <user>)
   # user = "nginx"
-  ## Systemd unit name
+  ## Systemd unit name, supports globs when include_systemd_children is set to true
   # systemd_unit = "nginx.service"
+  # include_systemd_children = false
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
 
@@ -44,6 +46,9 @@ Processes can be selected for monitoring using one of several methods:
   ## When true add the full cmdline as a tag.
   # cmdline_tag = false
 
+  ## Mode to use when calculating CPU usage. Can be one of 'solaris' or 'irix'.
+  # mode = "irix"
+
   ## Add the PID as a tag instead of as a field.  When collecting multiple
   ## processes with otherwise matching tags this setting should be enabled to
   ## ensure each process has a unique identity.
@@ -59,21 +64,12 @@ Processes can be selected for monitoring using one of several methods:
   # pid_finder = "pgrep"
 ```
 
-#### Windows support
+### Windows support
 
 Preliminary support for Windows has been added, however you may prefer using
 the `win_perf_counters` input plugin as a more mature alternative.
 
-When using the `pid_finder = "native"` in Windows, the pattern lookup method is
-implemented as a WMI query.  The pattern allows fuzzy matching using only
-[WMI query patterns](https://msdn.microsoft.com/en-us/library/aa392263(v=vs.85).aspx):
-```toml
-[[inputs.procstat]]
-  pattern = "%influx%"
-  pid_finder = "native"
-```
-
-### Metrics:
+## Metrics
 
 - procstat
   - tags:
@@ -86,6 +82,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - user (when selected)
     - systemd_unit (when defined)
     - cgroup (when defined)
+    - cgroup_full (when cgroup or systemd_unit is used with glob)
     - win_service (when defined)
   - fields:
     - child_major_faults (int)
@@ -165,9 +162,9 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
 
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
-### Example Output:
+## Example Output
 
-```
+```shell
 procstat_lookup,host=prash-laptop,pattern=influxd,pid_finder=pgrep,result=success pid_count=1i,running=1i,result_code=0i 1582089700000000000
 procstat,host=prash-laptop,pattern=influxd,process_name=influxd,user=root involuntary_context_switches=151496i,child_minor_faults=1061i,child_major_faults=8i,cpu_time_user=2564.81,cpu_time_idle=0,cpu_time_irq=0,cpu_time_guest=0,pid=32025i,major_faults=8609i,created_at=1580107536000000000i,voluntary_context_switches=1058996i,cpu_time_system=616.98,cpu_time_steal=0,cpu_time_guest_nice=0,memory_swap=0i,memory_locked=0i,memory_usage=1.7797634601593018,num_threads=18i,cpu_time_nice=0,cpu_time_iowait=0,cpu_time_soft_irq=0,memory_rss=148643840i,memory_vms=1435688960i,memory_data=0i,memory_stack=0i,minor_faults=1856550i 1582089700000000000
 ```

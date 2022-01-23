@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -19,19 +19,19 @@ var (
 	errNotFound = errors.New("not found")
 )
 
-func (n *NginxPlusApi) gatherMetrics(addr *url.URL, acc telegraf.Accumulator) {
+func (n *NginxPlusAPI) gatherMetrics(addr *url.URL, acc telegraf.Accumulator) {
 	addError(acc, n.gatherProcessesMetrics(addr, acc))
 	addError(acc, n.gatherConnectionsMetrics(addr, acc))
 	addError(acc, n.gatherSslMetrics(addr, acc))
-	addError(acc, n.gatherHttpRequestsMetrics(addr, acc))
-	addError(acc, n.gatherHttpServerZonesMetrics(addr, acc))
-	addError(acc, n.gatherHttpUpstreamsMetrics(addr, acc))
-	addError(acc, n.gatherHttpCachesMetrics(addr, acc))
+	addError(acc, n.gatherHTTPRequestsMetrics(addr, acc))
+	addError(acc, n.gatherHTTPServerZonesMetrics(addr, acc))
+	addError(acc, n.gatherHTTPUpstreamsMetrics(addr, acc))
+	addError(acc, n.gatherHTTPCachesMetrics(addr, acc))
 	addError(acc, n.gatherStreamServerZonesMetrics(addr, acc))
 	addError(acc, n.gatherStreamUpstreamsMetrics(addr, acc))
 
-	if n.ApiVersion >= 5 {
-		addError(acc, n.gatherHttpLocationZonesMetrics(addr, acc))
+	if n.APIVersion >= 5 {
+		addError(acc, n.gatherHTTPLocationZonesMetrics(addr, acc))
 		addError(acc, n.gatherResolverZonesMetrics(addr, acc))
 	}
 }
@@ -48,12 +48,12 @@ func addError(acc telegraf.Accumulator, err error) {
 	}
 }
 
-func (n *NginxPlusApi) gatherUrl(addr *url.URL, path string) ([]byte, error) {
-	url := fmt.Sprintf("%s/%d/%s", addr.String(), n.ApiVersion, path)
-	resp, err := n.client.Get(url)
+func (n *NginxPlusAPI) gatherURL(addr *url.URL, path string) ([]byte, error) {
+	address := fmt.Sprintf("%s/%d/%s", addr.String(), n.APIVersion, path)
+	resp, err := n.client.Get(address)
 
 	if err != nil {
-		return nil, fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return nil, fmt.Errorf("error making HTTP request to %s: %s", address, err)
 	}
 	defer resp.Body.Close()
 
@@ -64,25 +64,25 @@ func (n *NginxPlusApi) gatherUrl(addr *url.URL, path string) ([]byte, error) {
 		// features are either optional, or only available in some versions
 		return nil, errNotFound
 	default:
-		return nil, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
+		return nil, fmt.Errorf("%s returned HTTP status %s", address, resp.Status)
 	}
 
 	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
 	switch contentType {
 	case "application/json":
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
 
 		return body, nil
 	default:
-		return nil, fmt.Errorf("%s returned unexpected content type %s", url, contentType)
+		return nil, fmt.Errorf("%s returned unexpected content type %s", address, contentType)
 	}
 }
 
-func (n *NginxPlusApi) gatherProcessesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, processesPath)
+func (n *NginxPlusAPI) gatherProcessesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, processesPath)
 	if err != nil {
 		return err
 	}
@@ -104,8 +104,8 @@ func (n *NginxPlusApi) gatherProcessesMetrics(addr *url.URL, acc telegraf.Accumu
 	return nil
 }
 
-func (n *NginxPlusApi) gatherConnectionsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, connectionsPath)
+func (n *NginxPlusAPI) gatherConnectionsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, connectionsPath)
 	if err != nil {
 		return err
 	}
@@ -130,8 +130,8 @@ func (n *NginxPlusApi) gatherConnectionsMetrics(addr *url.URL, acc telegraf.Accu
 	return nil
 }
 
-func (n *NginxPlusApi) gatherSslMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, sslPath)
+func (n *NginxPlusAPI) gatherSslMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, sslPath)
 	if err != nil {
 		return err
 	}
@@ -155,13 +155,13 @@ func (n *NginxPlusApi) gatherSslMetrics(addr *url.URL, acc telegraf.Accumulator)
 	return nil
 }
 
-func (n *NginxPlusApi) gatherHttpRequestsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, httpRequestsPath)
+func (n *NginxPlusAPI) gatherHTTPRequestsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, httpRequestsPath)
 	if err != nil {
 		return err
 	}
 
-	var httpRequests = &HttpRequests{}
+	var httpRequests = &HTTPRequests{}
 
 	if err := json.Unmarshal(body, httpRequests); err != nil {
 		return err
@@ -179,13 +179,13 @@ func (n *NginxPlusApi) gatherHttpRequestsMetrics(addr *url.URL, acc telegraf.Acc
 	return nil
 }
 
-func (n *NginxPlusApi) gatherHttpServerZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, httpServerZonesPath)
+func (n *NginxPlusAPI) gatherHTTPServerZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, httpServerZonesPath)
 	if err != nil {
 		return err
 	}
 
-	var httpServerZones HttpServerZones
+	var httpServerZones HTTPServerZones
 
 	if err := json.Unmarshal(body, &httpServerZones); err != nil {
 		return err
@@ -227,13 +227,13 @@ func (n *NginxPlusApi) gatherHttpServerZonesMetrics(addr *url.URL, acc telegraf.
 }
 
 // Added in 5 API version
-func (n *NginxPlusApi) gatherHttpLocationZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, httpLocationZonesPath)
+func (n *NginxPlusAPI) gatherHTTPLocationZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, httpLocationZonesPath)
 	if err != nil {
 		return err
 	}
 
-	var httpLocationZones HttpLocationZones
+	var httpLocationZones HTTPLocationZones
 
 	if err := json.Unmarshal(body, &httpLocationZones); err != nil {
 		return err
@@ -273,13 +273,13 @@ func (n *NginxPlusApi) gatherHttpLocationZonesMetrics(addr *url.URL, acc telegra
 	return nil
 }
 
-func (n *NginxPlusApi) gatherHttpUpstreamsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, httpUpstreamsPath)
+func (n *NginxPlusAPI) gatherHTTPUpstreamsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, httpUpstreamsPath)
 	if err != nil {
 		return err
 	}
 
-	var httpUpstreams HttpUpstreams
+	var httpUpstreams HTTPUpstreams
 
 	if err := json.Unmarshal(body, &httpUpstreams); err != nil {
 		return err
@@ -357,13 +357,13 @@ func (n *NginxPlusApi) gatherHttpUpstreamsMetrics(addr *url.URL, acc telegraf.Ac
 	return nil
 }
 
-func (n *NginxPlusApi) gatherHttpCachesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, httpCachesPath)
+func (n *NginxPlusAPI) gatherHTTPCachesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, httpCachesPath)
 	if err != nil {
 		return err
 	}
 
-	var httpCaches HttpCaches
+	var httpCaches HTTPCaches
 
 	if err := json.Unmarshal(body, &httpCaches); err != nil {
 		return err
@@ -411,8 +411,8 @@ func (n *NginxPlusApi) gatherHttpCachesMetrics(addr *url.URL, acc telegraf.Accum
 	return nil
 }
 
-func (n *NginxPlusApi) gatherStreamServerZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, streamServerZonesPath)
+func (n *NginxPlusAPI) gatherStreamServerZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, streamServerZonesPath)
 	if err != nil {
 		return err
 	}
@@ -447,8 +447,8 @@ func (n *NginxPlusApi) gatherStreamServerZonesMetrics(addr *url.URL, acc telegra
 }
 
 // Added in 5 API version
-func (n *NginxPlusApi) gatherResolverZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, resolverZonesPath)
+func (n *NginxPlusAPI) gatherResolverZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, resolverZonesPath)
 	if err != nil {
 		return err
 	}
@@ -490,8 +490,8 @@ func (n *NginxPlusApi) gatherResolverZonesMetrics(addr *url.URL, acc telegraf.Ac
 	return nil
 }
 
-func (n *NginxPlusApi) gatherStreamUpstreamsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
-	body, err := n.gatherUrl(addr, streamUpstreamsPath)
+func (n *NginxPlusAPI) gatherStreamUpstreamsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, streamUpstreamsPath)
 	if err != nil {
 		return err
 	}

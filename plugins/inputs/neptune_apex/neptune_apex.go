@@ -5,7 +5,7 @@ package neptuneapex
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -51,7 +51,7 @@ type outlet struct {
 // NeptuneApex implements telegraf.Input.
 type NeptuneApex struct {
 	Servers         []string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	httpClient      *http.Client
 }
 
@@ -245,7 +245,7 @@ func findProbe(probe string, probes []probe) int {
 // returns a time.Time struct.
 func parseTime(val string, tz float64) (time.Time, error) {
 	// Magic time constant from https://golang.org/pkg/time/#Parse
-	const TimeLayout = "01/02/2006 15:04:05 -0700"
+	const timeLayout = "01/02/2006 15:04:05 -0700"
 
 	// Timezone offset needs to be explicit
 	sign := '+'
@@ -256,7 +256,7 @@ func parseTime(val string, tz float64) (time.Time, error) {
 	// Build a time string with the timezone in a format Go can parse.
 	tzs := fmt.Sprintf("%c%04d", sign, int(math.Abs(tz))*100)
 	ts := fmt.Sprintf("%s %s", val, tzs)
-	t, err := time.Parse(TimeLayout, ts)
+	t, err := time.Parse(timeLayout, ts)
 	if err != nil {
 		return time.Now(), fmt.Errorf("unable to parse %q (%v)", ts, err)
 	}
@@ -276,7 +276,7 @@ func (n *NeptuneApex) sendRequest(server string) ([]byte, error) {
 			url, resp.StatusCode, http.StatusText(resp.StatusCode),
 			http.StatusOK, http.StatusText(http.StatusOK))
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read output from %q: %v", url, err)
 	}

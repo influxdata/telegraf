@@ -1,6 +1,6 @@
 package grok
 
-const DEFAULT_PATTERNS = `
+const DefaultPatterns = `
 # Example log file pattern, example log looks like this:
 #   [04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs
 # Breakdown of the DURATION pattern below:

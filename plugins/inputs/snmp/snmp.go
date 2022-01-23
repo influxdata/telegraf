@@ -1,31 +1,35 @@
 package snmp
 
 import (
-	"bufio"
-	"bytes"
+	"encoding/binary"
+	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
-	"net/url"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+	"github.com/sleepinggenius2/gosmi"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/wlog"
-	"github.com/soniah/gosnmp"
 )
 
 const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
   ## Agent addresses to retrieve values from.
+  ##   format:  agents = ["<scheme://><hostname>:<port>"]
+  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.
+  ##            default is udp
+  ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
   ##            agents = ["tcp://127.0.0.1:161"]
+  ##            agents = ["udp4://v4only-snmp-agent"]
   agents = ["udp://127.0.0.1:161"]
 
   ## Timeout for each request.
@@ -33,6 +37,12 @@ const sampleConfig = `
 
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
+
+  ## Path to mib files
+  # path = ["/usr/share/snmp/mibs"]
+
+  ## Agent host tag; the tag used to reference the source host
+  # agent_host_tag = "agent_host"
 
   ## SNMP community string.
   # community = "public"
@@ -47,7 +57,7 @@ const sampleConfig = `
   ##
   ## Security Name.
   # sec_name = "myuser"
-  ## Authentication protocol; one of "MD5", "SHA", or "".
+  ## Authentication protocol; one of "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512" or "".
   # auth_protocol = "MD5"
   ## Authentication password.
   # auth_password = "pass"
@@ -59,70 +69,22 @@ const sampleConfig = `
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
   # priv_password = ""
-
+  
   ## Add fields and tables defining the variables you wish to collect.  This
   ## example collects the system uptime and interface variables.  Reference the
   ## full plugin documentation for configuration details.
 `
-
-// execCommand is so tests can mock out exec.Command usage.
-var execCommand = exec.Command
-
-// execCmd executes the specified command, returning the STDOUT content.
-// If command exits with error status, the output is captured into the returned error.
-func execCmd(arg0 string, args ...string) ([]byte, error) {
-	if wlog.LogLevel() == wlog.DEBUG {
-		quoted := make([]string, 0, len(args))
-		for _, arg := range args {
-			quoted = append(quoted, fmt.Sprintf("%q", arg))
-		}
-		log.Printf("D! [inputs.snmp] executing %q %s", arg0, strings.Join(quoted, " "))
-	}
-
-	out, err := execCommand(arg0, args...).Output()
-	if err != nil {
-		if err, ok := err.(*exec.ExitError); ok {
-			return nil, NestedError{
-				Err:       err,
-				NestedErr: fmt.Errorf("%s", bytes.TrimRight(err.Stderr, "\r\n")),
-			}
-		}
-		return nil, err
-	}
-	return out, nil
-}
 
 // Snmp holds the configuration for the plugin.
 type Snmp struct {
 	// The SNMP agent to query. Format is [SCHEME://]ADDR[:PORT] (e.g.
 	// udp://1.2.3.4:161).  If the scheme is not specified then "udp" is used.
 	Agents []string `toml:"agents"`
-	// Timeout to wait for a response.
-	Timeout internal.Duration `toml:"timeout"`
-	Retries int               `toml:"retries"`
-	// Values: 1, 2, 3
-	Version uint8 `toml:"version"`
 
-	// Parameters for Version 1 & 2
-	Community string `toml:"community"`
+	// The tag used to name the agent host
+	AgentHostTag string `toml:"agent_host_tag"`
 
-	// Parameters for Version 2 & 3
-	MaxRepetitions uint8 `toml:"max_repetitions"`
-
-	// Parameters for Version 3
-	ContextName string `toml:"context_name"`
-	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
-	SecLevel string `toml:"sec_level"`
-	SecName  string `toml:"sec_name"`
-	// Values: "MD5", "SHA", "". Default: ""
-	AuthProtocol string `toml:"auth_protocol"`
-	AuthPassword string `toml:"auth_password"`
-	// Values: "DES", "AES", "". Default: ""
-	PrivProtocol string `toml:"priv_protocol"`
-	PrivPassword string `toml:"priv_password"`
-	EngineID     string `toml:"-"`
-	EngineBoots  uint32 `toml:"-"`
-	EngineTime   uint32 `toml:"-"`
+	snmp.ClientConfig
 
 	Tables []Table `toml:"table"`
 
@@ -133,29 +95,34 @@ type Snmp struct {
 	Fields []Field `toml:"field"`
 
 	connectionCache []snmpConnection
-	initialized     bool
+
+	Log telegraf.Logger `toml:"-"`
 }
 
-func (s *Snmp) init() error {
-	if s.initialized {
-		return nil
+func (s *Snmp) Init() error {
+	err := snmp.LoadMibsFromPath(s.Path, s.Log)
+	if err != nil {
+		return err
 	}
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
-		if err := s.Tables[i].init(); err != nil {
-			return Errorf(err, "initializing table %s", s.Tables[i].Name)
+		if err := s.Tables[i].Init(); err != nil {
+			return fmt.Errorf("initializing table %s: %w", s.Tables[i].Name, err)
 		}
 	}
 
 	for i := range s.Fields {
 		if err := s.Fields[i].init(); err != nil {
-			return Errorf(err, "initializing field %s", s.Fields[i].Name)
+			return fmt.Errorf("initializing field %s: %w", s.Fields[i].Name, err)
 		}
 	}
 
-	s.initialized = true
+	if len(s.AgentHostTag) == 0 {
+		s.AgentHostTag = "agent_host"
+	}
+
 	return nil
 }
 
@@ -181,8 +148,14 @@ type Table struct {
 	initialized bool
 }
 
-// init() builds & initializes the nested fields.
-func (t *Table) init() error {
+// Init() builds & initializes the nested fields.
+func (t *Table) Init() error {
+	//makes sure oid or name is set in config file
+	//otherwise snmp will produce metrics with an empty name
+	if t.Oid == "" && t.Name == "" {
+		return fmt.Errorf("SNMP table in config file is not named. One or both of the oid and name settings must be set")
+	}
+
 	if t.initialized {
 		return nil
 	}
@@ -191,10 +164,17 @@ func (t *Table) init() error {
 		return err
 	}
 
+	secondaryIndexTablePresent := false
 	// initialize all the nested fields
 	for i := range t.Fields {
 		if err := t.Fields[i].init(); err != nil {
-			return Errorf(err, "initializing field %s", t.Fields[i].Name)
+			return fmt.Errorf("initializing field %s: %w", t.Fields[i].Name, err)
+		}
+		if t.Fields[i].SecondaryIndexTable {
+			if secondaryIndexTablePresent {
+				return fmt.Errorf("only one field can be SecondaryIndexTable")
+			}
+			secondaryIndexTablePresent = true
 		}
 	}
 
@@ -254,6 +234,21 @@ type Field struct {
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	Conversion string
+	// Translate tells if the value of the field should be snmptranslated
+	Translate bool
+	// Secondary index table allows to merge data from two tables with different index
+	//  that this filed will be used to join them. There can be only one secondary index table.
+	SecondaryIndexTable bool
+	// This field is using secondary index, and will be later merged with primary index
+	//  using SecondaryIndexTable. SecondaryIndexTable and SecondaryIndexUse are exclusive.
+	SecondaryIndexUse bool
+	// Controls if entries from secondary table should be added or not if joining
+	//  index is present or not. I set to true, means that join is outer, and
+	//  index is prepended with "Secondary." for missing values to avoid overlaping
+	//  indexes from both tables.
+	// Can be set per field or globally with SecondaryIndexTable, global true overrides
+	//  per field false.
+	SecondaryOuterJoin bool
 
 	initialized bool
 }
@@ -264,19 +259,29 @@ func (f *Field) init() error {
 		return nil
 	}
 
-	_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
-	if err != nil {
-		return Errorf(err, "translating")
-	}
-	f.Oid = oidNum
-	if f.Name == "" {
-		f.Name = oidText
-	}
-	if f.Conversion == "" {
-		f.Conversion = conversion
+	// check if oid needs translation or name is not set
+	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
+		_, oidNum, oidText, conversion, _, err := SnmpTranslate(f.Oid)
+		if err != nil {
+			return fmt.Errorf("translating: %w", err)
+		}
+		f.Oid = oidNum
+		if f.Name == "" {
+			f.Name = oidText
+		}
+		if f.Conversion == "" {
+			f.Conversion = conversion
+		}
+		//TODO use textual convention conversion from the MIB
 	}
 
-	//TODO use textual convention conversion from the MIB
+	if f.SecondaryIndexTable && f.SecondaryIndexUse {
+		return fmt.Errorf("SecondaryIndexTable and UseSecondaryIndex are exclusive")
+	}
+
+	if !f.SecondaryIndexTable && !f.SecondaryIndexUse && f.SecondaryOuterJoin {
+		return fmt.Errorf("SecondaryOuterJoin set to true, but field is not being used in join")
+	}
 
 	f.initialized = true
 	return nil
@@ -301,36 +306,31 @@ type RTableRow struct {
 	Fields map[string]interface{}
 }
 
-// NestedError wraps an error returned from deeper in the code.
-type NestedError struct {
-	// Err is the error from where the NestedError was constructed.
-	Err error
-	// NestedError is the error that was passed back from the called function.
-	NestedErr error
+type walkError struct {
+	msg string
+	err error
 }
 
-// Error returns a concatenated string of all the nested errors.
-func (ne NestedError) Error() string {
-	return ne.Err.Error() + ": " + ne.NestedErr.Error()
+func (e *walkError) Error() string {
+	return e.msg
 }
 
-// Errorf is a convenience function for constructing a NestedError.
-func Errorf(err error, msg string, format ...interface{}) error {
-	return NestedError{
-		NestedErr: err,
-		Err:       fmt.Errorf(msg, format...),
-	}
+func (e *walkError) Unwrap() error {
+	return e.err
 }
 
 func init() {
 	inputs.Add("snmp", func() telegraf.Input {
 		return &Snmp{
-			Name:           "snmp",
-			Retries:        3,
-			MaxRepetitions: 10,
-			Timeout:        internal.Duration{Duration: 5 * time.Second},
-			Version:        2,
-			Community:      "public",
+			Name: "snmp",
+			ClientConfig: snmp.ClientConfig{
+				Retries:        3,
+				MaxRepetitions: 10,
+				Timeout:        config.Duration(5 * time.Second),
+				Version:        2,
+				Path:           []string{"/usr/share/snmp/mibs"},
+				Community:      "public",
+			},
 		}
 	})
 }
@@ -349,10 +349,6 @@ func (s *Snmp) Description() string {
 // Any error encountered does not halt the process. The errors are accumulated
 // and returned at the end.
 func (s *Snmp) Gather(acc telegraf.Accumulator) error {
-	if err := s.init(); err != nil {
-		return err
-	}
-
 	var wg sync.WaitGroup
 	for i, agent := range s.Agents {
 		wg.Add(1)
@@ -360,7 +356,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			gs, err := s.getConnection(i)
 			if err != nil {
-				acc.AddError(Errorf(err, "agent %s", agent))
+				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
 				return
 			}
 
@@ -371,13 +367,13 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			}
 			topTags := map[string]string{}
 			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
-				acc.AddError(Errorf(err, "agent %s", agent))
+				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
 			}
 
 			// Now is the real tables.
 			for _, t := range s.Tables {
 				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
-					acc.AddError(Errorf(err, "agent %s: gathering table %s", agent, t.Name))
+					acc.AddError(fmt.Errorf("agent %s: gathering table %s: %w", agent, t.Name, err))
 				}
 			}
 		}(i, agent)
@@ -407,8 +403,8 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 				}
 			}
 		}
-		if _, ok := tr.Tags["agent_host"]; !ok {
-			tr.Tags["agent_host"] = gs.Host()
+		if _, ok := tr.Tags[s.AgentHostTag]; !ok {
+			tr.Tags[s.AgentHostTag] = gs.Host()
 		}
 		acc.AddFields(rt.Name, tr.Fields, tr.Tags, rt.Time)
 	}
@@ -419,6 +415,19 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 // Build retrieves all the fields specified in the table and constructs the RTable.
 func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 	rows := map[string]RTableRow{}
+
+	//translation table for secondary index (when preforming join on two tables)
+	secIdxTab := make(map[string]string)
+	secGlobalOuterJoin := false
+	for i, f := range t.Fields {
+		if f.SecondaryIndexTable {
+			secGlobalOuterJoin = f.SecondaryOuterJoin
+			if i != 0 {
+				t.Fields[0], t.Fields[i] = t.Fields[i], t.Fields[0]
+			}
+			break
+		}
+	}
 
 	tagCount := 0
 	for _, f := range t.Fields {
@@ -447,19 +456,29 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			// empty string. This results in all the non-table fields sharing the same
 			// index, and being added on the same row.
 			if pkt, err := gs.Get([]string{oid}); err != nil {
-				return nil, Errorf(err, "performing get on field %s", f.Name)
+				if errors.Is(err, gosnmp.ErrUnknownSecurityLevel) {
+					return nil, fmt.Errorf("unknown security level (sec_level)")
+				} else if errors.Is(err, gosnmp.ErrUnknownUsername) {
+					return nil, fmt.Errorf("unknown username (sec_name)")
+				} else if errors.Is(err, gosnmp.ErrWrongDigest) {
+					return nil, fmt.Errorf("wrong digest (auth_protocol, auth_password)")
+				} else if errors.Is(err, gosnmp.ErrDecryption) {
+					return nil, fmt.Errorf("decryption error (priv_protocol, priv_password)")
+				} else {
+					return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
+				}
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
-					return nil, Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
+					return nil, fmt.Errorf("converting %q (OID %s) for field %s: %w", ent.Value, ent.Name, f.Name, err)
 				}
 				ifv[""] = fv
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
 				if len(ent.Name) <= len(oid) || ent.Name[:len(oid)+1] != oid+"." {
-					return NestedError{} // break the walk
+					return &walkError{} // break the walk
 				}
 
 				idx := ent.Name[len(oid):]
@@ -474,7 +493,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					i := f.OidIndexLength + 1 // leading separator
 					idx = strings.Map(func(r rune) rune {
 						if r == '.' {
-							i -= 1
+							i--
 						}
 						if i < 1 {
 							return -1
@@ -483,21 +502,48 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					}, idx)
 				}
 
+				// snmptranslate table field value here
+				if f.Translate {
+					if entOid, ok := ent.Value.(string); ok {
+						_, _, oidText, _, _, err := SnmpTranslate(entOid)
+						if err == nil {
+							// If no error translating, the original value for ent.Value should be replaced
+							ent.Value = oidText
+						}
+					}
+				}
+
 				fv, err := fieldConvert(f.Conversion, ent.Value)
 				if err != nil {
-					return Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
+					return &walkError{
+						msg: fmt.Sprintf("converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name),
+						err: err,
+					}
 				}
 				ifv[idx] = fv
 				return nil
 			})
 			if err != nil {
-				if _, ok := err.(NestedError); !ok {
-					return nil, Errorf(err, "performing bulk walk for field %s", f.Name)
+				// Our callback always wraps errors in a walkError.
+				// If this error isn't a walkError, we know it's not
+				// from the callback
+				if _, ok := err.(*walkError); !ok {
+					return nil, fmt.Errorf("performing bulk walk for field %s: %w", f.Name, err)
 				}
 			}
 		}
 
 		for idx, v := range ifv {
+			if f.SecondaryIndexUse {
+				if newidx, ok := secIdxTab[idx]; ok {
+					idx = newidx
+				} else {
+					if !secGlobalOuterJoin && !f.SecondaryOuterJoin {
+						continue
+					}
+					idx = ".Secondary" + idx
+				}
+			}
 			rtr, ok := rows[idx]
 			if !ok {
 				rtr = RTableRow{}
@@ -521,6 +567,20 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					}
 				} else {
 					rtr.Fields[f.Name] = v
+				}
+				if f.SecondaryIndexTable {
+					//indexes are stored here with prepending "." so we need to add them if needed
+					var vss string
+					if ok {
+						vss = "." + vs
+					} else {
+						vss = fmt.Sprintf(".%v", v)
+					}
+					if idx[0] == '.' {
+						secIdxTab[vss] = idx
+					} else {
+						secIdxTab[vss] = "." + idx
+					}
 				}
 			}
 		}
@@ -546,56 +606,6 @@ type snmpConnection interface {
 	Get(oids []string) (*gosnmp.SnmpPacket, error)
 }
 
-// gosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.
-type gosnmpWrapper struct {
-	*gosnmp.GoSNMP
-}
-
-// Host returns the value of GoSNMP.Target.
-func (gsw gosnmpWrapper) Host() string {
-	return gsw.Target
-}
-
-// Walk wraps GoSNMP.Walk() or GoSNMP.BulkWalk(), depending on whether the
-// connection is using SNMPv1 or newer.
-// Also, if any error is encountered, it will just once reconnect and try again.
-func (gsw gosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
-	var err error
-	// On error, retry once.
-	// Unfortunately we can't distinguish between an error returned by gosnmp, and one returned by the walk function.
-	for i := 0; i < 2; i++ {
-		if gsw.Version == gosnmp.Version1 {
-			err = gsw.GoSNMP.Walk(oid, fn)
-		} else {
-			err = gsw.GoSNMP.BulkWalk(oid, fn)
-		}
-		if err == nil {
-			return nil
-		}
-		if err := gsw.GoSNMP.Connect(); err != nil {
-			return Errorf(err, "reconnecting")
-		}
-	}
-	return err
-}
-
-// Get wraps GoSNMP.GET().
-// If any error is encountered, it will just once reconnect and try again.
-func (gsw gosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
-	var err error
-	var pkt *gosnmp.SnmpPacket
-	for i := 0; i < 2; i++ {
-		pkt, err = gsw.GoSNMP.Get(oids)
-		if err == nil {
-			return pkt, nil
-		}
-		if err := gsw.GoSNMP.Connect(); err != nil {
-			return nil, Errorf(err, "reconnecting")
-		}
-	}
-	return nil, err
-}
-
 // getConnection creates a snmpConnection (*gosnmp.GoSNMP) object and caches the
 // result using `agentIndex` as the cache key.  This is done to allow multiple
 // connections to a single address.  It is an error to use a connection in
@@ -607,131 +617,28 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 
 	agent := s.Agents[idx]
 
-	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
-	s.connectionCache[idx] = gs
-
-	if !strings.Contains(agent, "://") {
-		agent = "udp://" + agent
-	}
-
-	u, err := url.Parse(agent)
+	var err error
+	var gs snmp.GosnmpWrapper
+	gs, err = snmp.NewWrapper(s.ClientConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	switch u.Scheme {
-	case "tcp":
-		gs.Transport = "tcp"
-	case "", "udp":
-		gs.Transport = "udp"
-	default:
-		return nil, fmt.Errorf("unsupported scheme: %v", u.Scheme)
-	}
-
-	gs.Target = u.Hostname()
-
-	portStr := u.Port()
-	if portStr == "" {
-		portStr = "161"
-	}
-	port, err := strconv.ParseUint(portStr, 10, 16)
+	err = gs.SetAgent(agent)
 	if err != nil {
-		return nil, Errorf(err, "parsing port")
-	}
-	gs.Port = uint16(port)
-
-	gs.Timeout = s.Timeout.Duration
-
-	gs.Retries = s.Retries
-
-	switch s.Version {
-	case 3:
-		gs.Version = gosnmp.Version3
-	case 2, 0:
-		gs.Version = gosnmp.Version2c
-	case 1:
-		gs.Version = gosnmp.Version1
-	default:
-		return nil, fmt.Errorf("invalid version")
+		return nil, err
 	}
 
-	if s.Version < 3 {
-		if s.Community == "" {
-			gs.Community = "public"
-		} else {
-			gs.Community = s.Community
-		}
-	}
-
-	gs.MaxRepetitions = s.MaxRepetitions
-
-	if s.Version == 3 {
-		gs.ContextName = s.ContextName
-
-		sp := &gosnmp.UsmSecurityParameters{}
-		gs.SecurityParameters = sp
-		gs.SecurityModel = gosnmp.UserSecurityModel
-
-		switch strings.ToLower(s.SecLevel) {
-		case "noauthnopriv", "":
-			gs.MsgFlags = gosnmp.NoAuthNoPriv
-		case "authnopriv":
-			gs.MsgFlags = gosnmp.AuthNoPriv
-		case "authpriv":
-			gs.MsgFlags = gosnmp.AuthPriv
-		default:
-			return nil, fmt.Errorf("invalid secLevel")
-		}
-
-		sp.UserName = s.SecName
-
-		switch strings.ToLower(s.AuthProtocol) {
-		case "md5":
-			sp.AuthenticationProtocol = gosnmp.MD5
-		case "sha":
-			sp.AuthenticationProtocol = gosnmp.SHA
-		case "":
-			sp.AuthenticationProtocol = gosnmp.NoAuth
-		default:
-			return nil, fmt.Errorf("invalid authProtocol")
-		}
-
-		sp.AuthenticationPassphrase = s.AuthPassword
-
-		switch strings.ToLower(s.PrivProtocol) {
-		case "des":
-			sp.PrivacyProtocol = gosnmp.DES
-		case "aes":
-			sp.PrivacyProtocol = gosnmp.AES
-		case "":
-			sp.PrivacyProtocol = gosnmp.NoPriv
-		default:
-			return nil, fmt.Errorf("invalid privProtocol")
-		}
-
-		sp.PrivacyPassphrase = s.PrivPassword
-
-		sp.AuthoritativeEngineID = s.EngineID
-
-		sp.AuthoritativeEngineBoots = s.EngineBoots
-
-		sp.AuthoritativeEngineTime = s.EngineTime
-	}
+	s.connectionCache[idx] = gs
 
 	if err := gs.Connect(); err != nil {
-		return nil, Errorf(err, "setting up connection")
+		return nil, fmt.Errorf("setting up connection: %w", err)
 	}
 
 	return gs, nil
 }
 
 // fieldConvert converts from any type according to the conv specification
-//  "float"/"float(0)" will convert the value into a float.
-//  "float(X)" will convert the value into a float, and then move the decimal before Xth right-most digit.
-//  "int" will convert the value into an integer.
-//  "hwaddr" will convert the value into a MAC address.
-//  "ipaddr" will convert the value into into an IP address.
-//  "" will convert a byte slice into a string.
 func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	if conv == "" {
 		if bs, ok := v.([]byte); ok {
@@ -746,7 +653,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case float32:
 			v = float64(vt) / math.Pow10(d)
 		case float64:
-			v = float64(vt) / math.Pow10(d)
+			v = vt / math.Pow10(d)
 		case int:
 			v = float64(vt) / math.Pow10(d)
 		case int8:
@@ -792,7 +699,7 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case int32:
 			v = int64(vt)
 		case int64:
-			v = int64(vt)
+			v = vt
 		case uint:
 			v = int64(vt)
 		case uint8:
@@ -820,6 +727,46 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		default:
 			return nil, fmt.Errorf("invalid type (%T) for hwaddr conversion", v)
 		}
+		return v, nil
+	}
+
+	split := strings.Split(conv, ":")
+	if split[0] == "hextoint" && len(split) == 3 {
+		endian := split[1]
+		bit := split[2]
+
+		bv, ok := v.([]byte)
+		if !ok {
+			return v, nil
+		}
+
+		switch endian {
+		case "LittleEndian":
+			switch bit {
+			case "uint64":
+				v = binary.LittleEndian.Uint64(bv)
+			case "uint32":
+				v = binary.LittleEndian.Uint32(bv)
+			case "uint16":
+				v = binary.LittleEndian.Uint16(bv)
+			default:
+				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
+			}
+		case "BigEndian":
+			switch bit {
+			case "uint64":
+				v = binary.BigEndian.Uint64(bv)
+			case "uint32":
+				v = binary.BigEndian.Uint32(bv)
+			case "uint16":
+				v = binary.BigEndian.Uint16(bv)
+			default:
+				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
+			}
+		default:
+			return nil, fmt.Errorf("invalid Endian value (%s) for hex to int conversion", endian)
+		}
+
 		return v, nil
 	}
 
@@ -861,6 +808,7 @@ var snmpTableCachesLock sync.Mutex
 
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
+//nolint:revive //Too many return variable but necessary
 func snmpTable(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
 	snmpTableCachesLock.Lock()
 	if snmpTableCaches == nil {
@@ -878,60 +826,20 @@ func snmpTable(oid string) (mibName string, oidNum string, oidText string, field
 	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
 }
 
+//nolint:revive //Too many return variable but necessary
 func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	mibName, oidNum, oidText, _, err = SnmpTranslate(oid)
+	mibName, oidNum, oidText, _, node, err := SnmpTranslate(oid)
 	if err != nil {
-		return "", "", "", nil, Errorf(err, "translating")
+		return "", "", "", nil, fmt.Errorf("translating: %w", err)
 	}
 
 	mibPrefix := mibName + "::"
-	oidFullName := mibPrefix + oidText
 
-	// first attempt to get the table's tags
-	tagOids := map[string]struct{}{}
-	// We have to guess that the "entry" oid is `oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
-	if out, err := execCmd("snmptranslate", "-Td", oidFullName+".1"); err == nil {
-		scanner := bufio.NewScanner(bytes.NewBuffer(out))
-		for scanner.Scan() {
-			line := scanner.Text()
+	col, tagOids, err := snmp.GetIndex(oidNum, mibPrefix, node)
 
-			if !strings.HasPrefix(line, "  INDEX") {
-				continue
-			}
-
-			i := strings.Index(line, "{ ")
-			if i == -1 { // parse error
-				continue
-			}
-			line = line[i+2:]
-			i = strings.Index(line, " }")
-			if i == -1 { // parse error
-				continue
-			}
-			line = line[:i]
-			for _, col := range strings.Split(line, ", ") {
-				tagOids[mibPrefix+col] = struct{}{}
-			}
-		}
-	}
-
-	// this won't actually try to run a query. The `-Ch` will just cause it to dump headers.
-	out, err := execCmd("snmptable", "-Ch", "-Cl", "-c", "public", "127.0.0.1", oidFullName)
-	if err != nil {
-		return "", "", "", nil, Errorf(err, "getting table columns")
-	}
-	scanner := bufio.NewScanner(bytes.NewBuffer(out))
-	scanner.Scan()
-	cols := scanner.Text()
-	if len(cols) == 0 {
-		return "", "", "", nil, fmt.Errorf("could not find any columns in table")
-	}
-	for _, col := range strings.Split(cols, " ") {
-		if len(col) == 0 {
-			continue
-		}
-		_, isTag := tagOids[mibPrefix+col]
-		fields = append(fields, Field{Name: col, Oid: mibPrefix + col, IsTag: isTag})
+	for _, c := range col {
+		_, isTag := tagOids[mibPrefix+c]
+		fields = append(fields, Field{Name: c, Oid: mibPrefix + c, IsTag: isTag})
 	}
 
 	return mibName, oidNum, oidText, fields, err
@@ -942,6 +850,7 @@ type snmpTranslateCache struct {
 	oidNum     string
 	oidText    string
 	conversion string
+	node       gosmi.SmiNode
 	err        error
 }
 
@@ -949,7 +858,8 @@ var snmpTranslateCachesLock sync.Mutex
 var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
-func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+//nolint:revive //Too many return variable but necessary
+func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, node gosmi.SmiNode, err error) {
 	snmpTranslateCachesLock.Lock()
 	if snmpTranslateCaches == nil {
 		snmpTranslateCaches = map[string]snmpTranslateCache{}
@@ -966,103 +876,11 @@ func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 		// is worth it. Especially when it would slam the system pretty hard if lots
 		// of lookups are being performed.
 
-		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = snmpTranslateCall(oid)
+		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.node, stc.err = snmp.SnmpTranslateCall(oid)
 		snmpTranslateCaches[oid] = stc
 	}
 
 	snmpTranslateCachesLock.Unlock()
 
-	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
-}
-
-func SnmpTranslateForce(oid string, mibName string, oidNum string, oidText string, conversion string) {
-	snmpTranslateCachesLock.Lock()
-	defer snmpTranslateCachesLock.Unlock()
-	if snmpTranslateCaches == nil {
-		snmpTranslateCaches = map[string]snmpTranslateCache{}
-	}
-
-	var stc snmpTranslateCache
-	stc.mibName = mibName
-	stc.oidNum = oidNum
-	stc.oidText = oidText
-	stc.conversion = conversion
-	stc.err = nil
-	snmpTranslateCaches[oid] = stc
-}
-
-func SnmpTranslateClear() {
-	snmpTranslateCachesLock.Lock()
-	defer snmpTranslateCachesLock.Unlock()
-	snmpTranslateCaches = map[string]snmpTranslateCache{}
-}
-
-func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
-	var out []byte
-	if strings.ContainsAny(oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-		out, err = execCmd("snmptranslate", "-Td", "-Ob", oid)
-	} else {
-		out, err = execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
-		if err, ok := err.(*exec.Error); ok && err.Err == exec.ErrNotFound {
-			// Silently discard error if snmptranslate not found and we have a numeric OID.
-			// Meaning we can get by without the lookup.
-			return "", oid, oid, "", nil
-		}
-	}
-	if err != nil {
-		return "", "", "", "", err
-	}
-
-	scanner := bufio.NewScanner(bytes.NewBuffer(out))
-	ok := scanner.Scan()
-	if !ok && scanner.Err() != nil {
-		return "", "", "", "", Errorf(scanner.Err(), "getting OID text")
-	}
-
-	oidText = scanner.Text()
-
-	i := strings.Index(oidText, "::")
-	if i == -1 {
-		// was not found in MIB.
-		if bytes.Contains(out, []byte("[TRUNCATED]")) {
-			return "", oid, oid, "", nil
-		}
-		// not truncated, but not fully found. We still need to parse out numeric OID, so keep going
-		oidText = oid
-	} else {
-		mibName = oidText[:i]
-		oidText = oidText[i+2:]
-	}
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if strings.HasPrefix(line, "  -- TEXTUAL CONVENTION ") {
-			tc := strings.TrimPrefix(line, "  -- TEXTUAL CONVENTION ")
-			switch tc {
-			case "MacAddress", "PhysAddress":
-				conversion = "hwaddr"
-			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
-				conversion = "ipaddr"
-			}
-		} else if strings.HasPrefix(line, "::= { ") {
-			objs := strings.TrimPrefix(line, "::= { ")
-			objs = strings.TrimSuffix(objs, " }")
-
-			for _, obj := range strings.Split(objs, " ") {
-				if len(obj) == 0 {
-					continue
-				}
-				if i := strings.Index(obj, "("); i != -1 {
-					obj = obj[i+1:]
-					oidNum += "." + obj[:strings.Index(obj, ")")]
-				} else {
-					oidNum += "." + obj
-				}
-			}
-			break
-		}
-	}
-
-	return mibName, oidNum, oidText, conversion, nil
+	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.node, stc.err
 }

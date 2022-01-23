@@ -7,8 +7,11 @@ There are three cases where this processor will insert a configured default fiel
 1. The field is nil on the incoming metric
 1. The field is not nil, but its value is an empty string.
 1. The field is not nil, but its value is a string of one or more empty spaces.
-    
-### Configuration
+
+Telegraf minimum version: Telegraf 1.15.0
+
+## Configuration
+
 ```toml
 ## Set default fields on your metric(s) when they are nil or empty
 [[processors.defaults]]
@@ -20,8 +23,9 @@ There are three cases where this processor will insert a configured default fiel
     is_error = true
 ```
 
-### Example
-Ensure a _status\_code_ field with _N/A_ is inserted in the metric when one it's not set in the metric be default:
+## Example
+
+Ensure a _status\_code_ field with _N/A_ is inserted in the metric when one is not set in the metric by default:
 
 ```toml
 [[processors.defaults]]

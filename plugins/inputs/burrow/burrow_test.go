@@ -2,15 +2,15 @@ package burrow
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // remap uri to json file, eg: /v3/kafka -> ./testdata/v3_kafka.json
@@ -27,7 +27,7 @@ func getResponseJSON(requestURI string) ([]byte, int) {
 	}
 
 	// respond with file
-	b, _ := ioutil.ReadFile(jsonFile)
+	b, _ := os.ReadFile(jsonFile)
 	return b, code
 }
 
@@ -37,6 +37,8 @@ func getHTTPServer() *httptest.Server {
 		body, code := getResponseJSON(r.RequestURI)
 		w.WriteHeader(code)
 		w.Header().Set("Content-Type", "application/json")
+		// Ignore the returned error as the test will fail anyway
+		//nolint:errcheck,revive
 		w.Write(body)
 	}))
 }
@@ -47,7 +49,7 @@ func getHTTPServerBasicAuth() *httptest.Server {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
 		username, password, authOK := r.BasicAuth()
-		if authOK == false {
+		if !authOK {
 			http.Error(w, "Not authorized", 401)
 			return
 		}
@@ -61,6 +63,8 @@ func getHTTPServerBasicAuth() *httptest.Server {
 		body, code := getResponseJSON(r.RequestURI)
 		w.WriteHeader(code)
 		w.Header().Set("Content-Type", "application/json")
+		// Ignore the returned error as the test will fail anyway
+		//nolint:errcheck,revive
 		w.Write(body)
 	}))
 }
@@ -72,7 +76,7 @@ func TestBurrowTopic(t *testing.T) {
 
 	plugin := &burrow{Servers: []string{s.URL}}
 	acc := &testutil.Accumulator{}
-	plugin.Gather(acc)
+	require.NoError(t, plugin.Gather(acc))
 
 	fields := []map[string]interface{}{
 		// topicA
@@ -103,7 +107,7 @@ func TestBurrowPartition(t *testing.T) {
 		Servers: []string{s.URL},
 	}
 	acc := &testutil.Accumulator{}
-	plugin.Gather(acc)
+	require.NoError(t, plugin.Gather(acc))
 
 	fields := []map[string]interface{}{
 		{
@@ -151,7 +155,7 @@ func TestBurrowGroup(t *testing.T) {
 		Servers: []string{s.URL},
 	}
 	acc := &testutil.Accumulator{}
-	plugin.Gather(acc)
+	require.NoError(t, plugin.Gather(acc))
 
 	fields := []map[string]interface{}{
 		{
@@ -189,7 +193,7 @@ func TestMultipleServers(t *testing.T) {
 		Servers: []string{s1.URL, s2.URL},
 	}
 	acc := &testutil.Accumulator{}
-	plugin.Gather(acc)
+	require.NoError(t, plugin.Gather(acc))
 
 	require.Exactly(t, 14, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
@@ -205,7 +209,7 @@ func TestMultipleRuns(t *testing.T) {
 	}
 	for i := 0; i < 4; i++ {
 		acc := &testutil.Accumulator{}
-		plugin.Gather(acc)
+		require.NoError(t, plugin.Gather(acc))
 
 		require.Exactly(t, 7, len(acc.Metrics))
 		require.Empty(t, acc.Errors)
@@ -224,7 +228,7 @@ func TestBasicAuthConfig(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	plugin.Gather(acc)
+	require.NoError(t, plugin.Gather(acc))
 
 	require.Exactly(t, 7, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
@@ -241,7 +245,7 @@ func TestFilterClusters(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	plugin.Gather(acc)
+	require.NoError(t, plugin.Gather(acc))
 
 	// no match by cluster
 	require.Exactly(t, 0, len(acc.Metrics))
@@ -260,7 +264,7 @@ func TestFilterGroups(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	plugin.Gather(acc)
+	require.NoError(t, plugin.Gather(acc))
 
 	require.Exactly(t, 1, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
@@ -278,7 +282,7 @@ func TestFilterTopics(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
-	plugin.Gather(acc)
+	require.NoError(t, plugin.Gather(acc))
 
 	require.Exactly(t, 3, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
