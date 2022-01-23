@@ -29,6 +29,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/bindata"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -1611,33 +1612,15 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	}
 
 	// For bindata parser
-	if node, ok := tbl.Fields["bindata_endiannes"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				c.BinDataEndiannes = str.Value
-			}
-		}
-	}
-
-	if node, ok := tbl.Fields["bindata_time_format"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				c.BinDataTimeFormat = str.Value
-			}
-		}
-	}
-
-	if node, ok := tbl.Fields["bindata_string_encoding"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				c.BinDataStringEncoding = str.Value
-			}
-		}
-	}
+	c.getFieldString(tbl, "bindata_endiannes", &pc.BinDataEndiannes)
+	c.getFieldString(tbl, "bindata_time_format", &pc.BinDataTimeFormat)
+	c.getFieldString(tbl, "bindata_string_encoding", &pc.BinDataTimeFormat)
+	c.getFieldString(tbl, "bindata_string_encoding", &pc.BinDataTimeFormat)
 
 	if node, ok := tbl.Fields["bindata_fields"]; ok {
 		if bindataFields, ok := node.([]*ast.Table); ok {
-			for _, bindataField := range bindataFields {
+			pc.BinDataFields = make([]bindata.Field, len(bindataFields))
+			for i, bindataField := range bindataFields {
 				var field bindata.Field
 				for _, prop := range bindataField.Fields {
 					if kv, ok := prop.(*ast.KeyValue); ok {
@@ -1661,9 +1644,11 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 						}
 					}
 				}
-				c.BinDataFields = append(c.BinDataFields, field)
+				pc.BinDataFields[i] = field
 			}
 		}
+	}
+
 	//for JSONPath parser
 	if node, ok := tbl.Fields["json_v2"]; ok {
 		if metricConfigs, ok := node.([]*ast.Table); ok {
