@@ -613,8 +613,6 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 				fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
 			}
 
-			acc.AddFields(n.metricName, fields, tags)
-
 			switch o.Timestamp {
 			case "server":
 				acc.AddFields(n.metricName, fields, tags, o.nodeData[i].ServerTime)
