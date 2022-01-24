@@ -510,10 +510,9 @@ func (a *Elasticsearch) GetPipelineName(pipelineInput string, tagKeys []string, 
 			if a.DefaultPipeline == "" {
 				a.Log.Debugf("Tag '%s' not found, default pipeline is not set. not using a pipeline\n", key)
 				return ""
-			} else {
-				a.Log.Debugf("Tag '%s' not found, using '%s' ad default pipeline instead\n", key, a.DefaultPipeline)
-				return a.DefaultPipeline
 			}
+			a.Log.Debugf("Tag '%s' not found, using '%s' ad default pipeline instead\n", key, a.DefaultPipeline)
+			return a.DefaultPipeline
 		}
 	}
 
