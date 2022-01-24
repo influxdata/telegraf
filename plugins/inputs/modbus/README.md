@@ -245,7 +245,7 @@ These types are used for integer input values. Select the one that matches your 
 ##### Floating Point: `FLOAT32-IEEE`, `FLOAT64-IEEE`
 
 Use these types if your modbus registers contain a value that is encoded in this format. These types
-always include the sign, therefore there no variant exists.
+always include the sign, therefore no variant exists.
 
 ##### Fixed Point: `FIXED`, `UFIXED` (`FLOAT32`)
 
@@ -271,7 +271,7 @@ This sytle can be used to specify the modbus requests directly. It enables speci
 
 #### Slave device
 
-You can use the `slave_id` setting to specify the ID of the slave device to query. It should be specified for each request. otherwise it defaults to zero. Please note, only one `slave_id` can be specified per request.
+You can use the `slave_id` setting to specify the ID of the slave device to query. It should be specified for each request, otherwise it defaults to zero. Please note, only one `slave_id` can be specified per request.
 
 #### Byte order of the register
 
@@ -357,7 +357,7 @@ If nothing helps, please post your configuration, error message and/or the outpu
 
 ### Workarounds
 
-Some Modbus devices need special read characteristics when reading data and will fail otherwise. For example, there are serial devices that need a certain pause between register read requests. Others might only support a limited number of simultaneously connected devices, like serial devices or some ModbusTCP devices. In case you need to access those devices in parallel you might want to disconnect immediately after the plugin finishes reading.
+Some Modbus devices need special read characteristics when reading data and will fail otherwise. For example, some serial devices need a pause between register read requests. Others might only support a limited number of simultaneously connected devices, like serial devices or some ModbusTCP devices. In case you need to access those devices in parallel you might want to disconnect immediately after the plugin finishes reading.
 
 To enable this plugin to also handle those "special" devices, there is the `workarounds` configuration option. In case your documentation states certain read requirements or you get read timeouts or other read errors, you might want to try one or more workaround options.
 If you find that other/more workarounds are required for your device, please let us know.
