@@ -26,10 +26,15 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
 
   ## The name of the tag that contains the hostname.
   # resource_tag = "host"
+
+  ## The name of the tag that contains the host group name.
+  # group_tag = "group"
 ```
 
 ## List of tags used by the plugin
 
+* group    - to define the name of the group you want to monitor, can be changed with config.
+* host     - to define the name of the host you want to monitor, can be changed with config.
 * service  - to define the name of the service you want to monitor.
 * status   - to define the status of the service. Supported statuses: "SERVICE_OK", "SERVICE_WARNING", "SERVICE_UNSCHEDULED_CRITICAL", "SERVICE_PENDING", "SERVICE_SCHEDULED_CRITICAL", "SERVICE_UNKNOWN".
 * message  - to provide any message you want.
