@@ -73,13 +73,13 @@ generate it using `telegraf --usage <plugin-name>`.
 
     ## Column names containing fields (explicit types)
     ## Convert the given columns to the corresponding type. Explicit type conversions take precedence over
-  ## the automatic (driver-based) conversion below.
-  ## NOTE: Columns should not be specified for multiple types or the resulting type is undefined.
+    ## the automatic (driver-based) conversion below.
+    ## NOTE: Columns should not be specified for multiple types or the resulting type is undefined.
     # field_columns_float = []
     # field_columns_int = []
-  # field_columns_uint = []
-  # field_columns_bool = []
-  # field_columns_string = []
+    # field_columns_uint = []
+    # field_columns_bool = []
+    # field_columns_string = []
 
     ## Column names containing fields (automatic types)
     ## An empty include list is equivalent to '[*]' and all returned columns will be accepted. An empty
