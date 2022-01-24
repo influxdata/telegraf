@@ -363,8 +363,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		if a.UsePipeline != "" {
-			pipelineName := a.GetPipelineName(a.PipelineName, a.PipelineTagKeys, metric.Tags())
-			if pipelineName != "" {
+			if pipelineName := a.GetPipelineName(a.PipelineName, a.PipelineTagKeys, metric.Tags()); pipelineName != "" {
 				br.Pipeline(pipelineName)
 			}
 		}
@@ -501,22 +500,25 @@ func (a *Elasticsearch) GetPipelineName(pipelineInput string, tagKeys []string, 
 		return pipelineInput
 	}
 
-	var tagValues []interface{}
+	var (
+		tagValues          []interface{}
+		useDefaultPipeline bool
+	)
 
 	for _, key := range tagKeys {
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)
 		} else {
-			if a.DefaultPipeline == "" {
-				a.Log.Debugf("Tag '%s' not found, default pipeline is not set. not using a pipeline\n", key)
-				return ""
-			}
-			a.Log.Debugf("Tag '%s' not found, using '%s' ad default pipeline instead\n", key, a.DefaultPipeline)
-			return a.DefaultPipeline
+			a.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
+			useDefaultPipeline = true
 		}
 	}
 
-	return fmt.Sprintf(pipelineInput, tagValues...)
+	if len(tagValues) > 0 && !useDefaultPipeline {
+		return fmt.Sprintf(pipelineInput, tagValues...)
+	}
+
+	return a.DefaultPipeline
 }
 
 func getISOWeek(eventTime time.Time) string {
