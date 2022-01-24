@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/olivere/elastic"
 	"math"
 	"net/http"
 	"strconv"
@@ -12,8 +13,6 @@ import (
 	"time"
 
 	"crypto/sha256"
-
-	"gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -38,8 +37,12 @@ type Elasticsearch struct {
 	OverwriteTemplate   bool
 	ForceDocumentID     bool `toml:"force_document_id"`
 	MajorReleaseNumber  int
-	FloatHandling       string          `toml:"float_handling"`
-	FloatReplacement    float64         `toml:"float_replacement_value"`
+	FloatHandling       string  `toml:"float_handling"`
+	FloatReplacement    float64 `toml:"float_replacement_value"`
+	UsePipeline         string  `toml:"use_pipeline"`
+	DefaultPipeline     string  `toml:"default_pipeline"`
+	PipelineTagKeys     []string
+	PipelineName        string
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
@@ -111,6 +114,16 @@ var sampleConfig = `
   ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
   # float_handling = "none"
   # float_replacement_value = 0.0
+
+  ## Pipeline Config
+  ## To use a ingest pipeline, set this to the name of the pipeline you want to use.
+  # use_pipeline = "my_pipeline"
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the pipeline name. If the tag does not exist,
+  ## the default pipeline will be used as the pipeline. If a default pipeline is not
+  ## set, then no pipeline will be used,
+  # use_pipeline = "{{es_pipeline}}"
+  # default_pipeline = "my_pipeline"
 `
 
 const telegrafTemplate = `
@@ -281,6 +294,7 @@ func (a *Elasticsearch) Connect() error {
 	}
 
 	a.IndexName, a.TagKeys = a.GetTagKeys(a.IndexName)
+	a.PipelineName, a.PipelineTagKeys = a.GetTagKeys(a.UsePipeline)
 
 	return nil
 }
@@ -346,6 +360,13 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		if a.MajorReleaseNumber <= 6 {
 			br.Type("metrics")
+		}
+
+		if a.UsePipeline != "" {
+			pipelineName := a.GetPipelineName(a.PipelineName, a.PipelineTagKeys, metric.Tags())
+			if pipelineName != "" {
+				br.Pipeline(pipelineName)
+			}
 		}
 
 		bulkRequest.Add(br)
@@ -473,6 +494,30 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 	}
 
 	return fmt.Sprintf(indexName, tagValues...)
+}
+
+func (a *Elasticsearch) GetPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
+	if !strings.Contains(pipelineInput, "%") {
+		return pipelineInput
+	}
+
+	var tagValues []interface{}
+
+	for _, key := range tagKeys {
+		if value, ok := metricTags[key]; ok {
+			tagValues = append(tagValues, value)
+		} else {
+			if a.DefaultPipeline == "" {
+				a.Log.Debugf("Tag '%s' not found, default pipeline is not set. not using a pipeline\n", key)
+				return ""
+			} else {
+				a.Log.Debugf("Tag '%s' not found, using '%s' ad default pipeline instead\n", key, a.DefaultPipeline)
+				return a.DefaultPipeline
+			}
+		}
+	}
+
+	return fmt.Sprintf(pipelineInput, tagValues...)
 }
 
 func getISOWeek(eventTime time.Time) string {

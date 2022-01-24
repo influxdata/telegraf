@@ -412,6 +412,65 @@ func TestGetIndexName(t *testing.T) {
 	}
 }
 
+func TestGetPipelineName(t *testing.T) {
+	e := &Elasticsearch{
+		UsePipeline:     "{{es-pipeline}}",
+		DefaultPipeline: "myDefaultPipeline",
+		Log:             testutil.Logger{},
+	}
+	e.PipelineName, e.PipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+
+	tests := []struct {
+		EventTime       time.Time
+		Tags            map[string]string
+		PipelineTagKeys []string
+		Expected        string
+	}{
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
+			[]string{},
+			"myDefaultPipeline",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
+			[]string{},
+			"myDefaultPipeline",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
+			[]string{},
+			"myOtherPipeline",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			[]string{},
+			"pipeline2",
+		},
+	}
+	for _, test := range tests {
+		pipelineName := e.GetPipelineName(e.PipelineName, e.PipelineTagKeys, test.Tags)
+		if pipelineName != test.Expected {
+			t.Errorf("Expected pipeline %s, got %s\n", test.Expected, pipelineName)
+		}
+	}
+
+	// Setup testing for testing no pipeline set. All the tests in this case should return "".
+	e.UsePipeline = ""
+	e.DefaultPipeline = ""
+	e.PipelineName, e.PipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+
+	for _, test := range tests {
+		pipelineName := e.GetPipelineName(e.PipelineName, e.PipelineTagKeys, test.Tags)
+		if pipelineName != "" {
+			t.Errorf("Expected pipeline %s, got %s\n", "", pipelineName)
+		}
+	}
+}
+
 func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
