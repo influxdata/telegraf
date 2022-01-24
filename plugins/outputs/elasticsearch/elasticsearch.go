@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/olivere/elastic"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
 
 	"crypto/sha256"
-
-	"gopkg.in/olivere/elastic.v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -220,9 +220,15 @@ func (a *Elasticsearch) Connect() error {
 		Timeout:   time.Duration(a.Timeout),
 	}
 
+	elasticUrl, err := url.Parse(a.URLs[0])
+	if err != nil {
+		return err
+	}
+
 	clientOptions = append(clientOptions,
 		elastic.SetHttpClient(httpclient),
 		elastic.SetSniff(a.EnableSniffer),
+		elastic.SetScheme(elasticUrl.Scheme),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
 		elastic.SetGzip(a.EnableGzip),
