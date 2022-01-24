@@ -151,8 +151,8 @@ configuration
   [[inputs.sql.query]]
     query="SELECT * FROM guests"
     measurement = "nation"
-    tag_cols_include = ["name"]
-    field_cols_exclude = ["name"]
+    tag_columns_include = ["name"]
+    field_columns_exclude = ["name"]
 ```
 
 Telegraf will output the following metrics
