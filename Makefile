@@ -106,7 +106,7 @@ version:
 .PHONY: telegraf
 telegraf:
 	@if [ $(GOOS) = "windows" ]; then \
-		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
+		./scripts/generate_versioninfo/install_dependencies.sh; \
 		GOOS=linux GOARCH=amd64 go run scripts/generate_versioninfo/main.go; \
 		go generate cmd/telegraf/telegraf_windows.go; \
 	fi
@@ -247,7 +247,7 @@ $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
 	if [ $(GOOS) = "windows" ]; then \
-		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
+		./scripts/generate_versioninfo/install_dependencies.sh; \
 		GOOS=linux GOARCH=amd64 go run scripts/generate_versioninfo/main.go; \
 		go generate cmd/telegraf/telegraf_windows.go; \
 	fi

@@ -136,7 +136,7 @@ commands:
                 command:
                   # Not sure, but this install needs to happen outside of the makefile to work in CI
                   # Locally the go install works fine from the makefile
-                  go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0;
+                  ./scripts/generate_versioninfo/install_dependencies.sh;
                   NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"
       - unless:
           condition:
@@ -147,7 +147,7 @@ commands:
                 command:
                   # Not sure, but this install needs to happen outside of the makefile to work in CI
                   # Locally the go install works fine from the makefile
-                  go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0;
+                  ./scripts/generate_versioninfo/install_dependencies.sh;
                   make package include_packages="$(make << parameters.type >>)";
       - store_artifacts:
           path: './build/dist'
