@@ -220,7 +220,7 @@ func (a *Elasticsearch) Connect() error {
 		Timeout:   time.Duration(a.Timeout),
 	}
 
-	elasticUrl, err := url.Parse(a.URLs[0])
+	elasticURL, err := url.Parse(a.URLs[0])
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func (a *Elasticsearch) Connect() error {
 	clientOptions = append(clientOptions,
 		elastic.SetHttpClient(httpclient),
 		elastic.SetSniff(a.EnableSniffer),
-		elastic.SetScheme(elasticUrl.Scheme),
+		elastic.SetScheme(elasticURL.Scheme),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
 		elastic.SetGzip(a.EnableGzip),
