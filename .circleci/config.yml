@@ -130,25 +130,20 @@ commands:
       - attach_workspace:
           at: '/go'
       - when:
+          condition:
+            equal: [ windows, << parameters.type >> ]
+          steps:
+            - run: make versioninfo
+      - when:
           condition: << parameters.nightly >>
           steps:
-            - run:
-                command:
-                  # Not sure, but this install needs to happen outside of the makefile to work in CI
-                  # Locally the go install works fine from the makefile
-                  ./scripts/generate_versioninfo/install_dependencies.sh;
-                  NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"
+            - run: NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"
       - unless:
           condition:
             or:
               - << parameters.nightly >>
           steps:
-            - run:
-                command:
-                  # Not sure, but this install needs to happen outside of the makefile to work in CI
-                  # Locally the go install works fine from the makefile
-                  ./scripts/generate_versioninfo/install_dependencies.sh;
-                  make package include_packages="$(make << parameters.type >>)";
+            - run: make package include_packages="$(make << parameters.type >>)";
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
