@@ -9,4 +9,5 @@ process.yml
 /.vscode
 /*.toml
 /*.conf
-*syso
+resource.syso
+versioninfo.json

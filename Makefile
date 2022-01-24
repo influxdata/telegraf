@@ -99,10 +99,15 @@ help:
 deps:
 	go mod download -x
 
+.PHONY: version
+version:
+	@echo $(version)-$(commit)
+
 .PHONY: telegraf
 telegraf:
 	@if [ $(GOOS) = "windows" ]; then \
 		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
+		go run scripts/generate_versioninfo/main.go; \
 		go generate cmd/telegraf/telegraf_windows.go; \
 	fi
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
@@ -243,6 +248,7 @@ $(buildbin):
 	@mkdir -pv $(dir $@)
 	if [ $(GOOS) = "windows" ]; then \
 		go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
+		go run scripts/generate_versioninfo/main.go; \
 		go generate cmd/telegraf/telegraf_windows.go; \
 	fi
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
