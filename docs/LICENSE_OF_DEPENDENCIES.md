@@ -278,6 +278,7 @@ following works:
 - gopkg.in/gorethink/gorethink.v3 [Apache License 2.0](https://github.com/rethinkdb/rethinkdb-go/blob/v3.0.5/LICENSE)
 - gopkg.in/inf.v0 [BSD 3-Clause "New" or "Revised" License](https://github.com/go-inf/inf/blob/v0.9.1/LICENSE)
 - gopkg.in/ini.v1 [Apache License 2.0](https://github.com/go-ini/ini/blob/master/LICENSE)
+- gopkg.in/olivere/elastic [MIT License](https://github.com/olivere/elastic/blob/release-branch.v7/LICENSE)
 - gopkg.in/olivere/elastic.v5 [MIT License](https://github.com/olivere/elastic/blob/v5.0.76/LICENSE)
 - gopkg.in/tomb.v1 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v1/LICENSE)
 - gopkg.in/tomb.v2 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v2/LICENSE)
