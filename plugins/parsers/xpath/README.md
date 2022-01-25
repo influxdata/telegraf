@@ -8,12 +8,13 @@ For supported XPath functions check [the underlying XPath library][xpath lib].
 
 ## Supported data formats
 
-| name                                    | `data_format` setting |
-| --------------------------------------- | --------------------- |
-| [Extensible Markup Language (XML)][xml] | `"xml"`               |
-| [JSON][json]                            | `"xpath_json"`        |
-| [MessagePack][msgpack]                  | `"xpath_msgpack"`     |
-| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    |
+
+| name                                    | `data_format` setting | comment |
+| --------------------------------------- | --------------------- | ------- |
+| [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
+| [JSON][json]                            | `"xpath_json"`        |         |
+| [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
+| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](protocol-buffers-additional-settings)|
 
 ### Protocol buffers additional settings
 
