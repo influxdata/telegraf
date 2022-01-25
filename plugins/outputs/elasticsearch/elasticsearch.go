@@ -121,8 +121,8 @@ var sampleConfig = `
   # use_pipeline = "my_pipeline"
   ## Additionally, you can specify a tag name using the notation {{tag_name}}
   ## which will be used as part of the pipeline name. If the tag does not exist,
-  ## the default pipeline will be used as the pipeline. If a default pipeline is not
-  ## set, then no pipeline will be used,
+  ## the default pipeline will be used as the pipeline. If no default pipeline is set,
+  ## no pipeline is used for the metric.
   # use_pipeline = "{{es_pipeline}}"
   # default_pipeline = "my_pipeline"
 `
@@ -364,7 +364,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		if a.UsePipeline != "" {
-			if pipelineName := a.GetPipelineName(a.PipelineName, a.PipelineTagKeys, metric.Tags()); pipelineName != "" {
+			if pipelineName := a.getPipelineName(a.PipelineName, a.PipelineTagKeys, metric.Tags()); pipelineName != "" {
 				br.Pipeline(pipelineName)
 			}
 		}
@@ -496,7 +496,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 	return fmt.Sprintf(indexName, tagValues...)
 }
 
-func (a *Elasticsearch) GetPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
+func (a *Elasticsearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
 	if !strings.Contains(pipelineInput, "%") {
 		return pipelineInput
 	}

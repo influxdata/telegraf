@@ -452,22 +452,19 @@ func TestGetPipelineName(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		pipelineName := e.GetPipelineName(e.PipelineName, e.PipelineTagKeys, test.Tags)
-		if pipelineName != test.Expected {
-			t.Errorf("Expected pipeline %s, got %s\n", test.Expected, pipelineName)
-		}
+		pipelineName := e.getPipelineName(e.PipelineName, e.PipelineTagKeys, test.Tags)
+		require.Equal(t, test.Expected, pipelineName)
 	}
 
 	// Setup testing for testing no pipeline set. All the tests in this case should return "".
-	e.UsePipeline = ""
-	e.DefaultPipeline = ""
+	e = &Elasticsearch{
+		Log: testutil.Logger{},
+	}
 	e.PipelineName, e.PipelineTagKeys = e.GetTagKeys(e.UsePipeline)
 
 	for _, test := range tests {
-		pipelineName := e.GetPipelineName(e.PipelineName, e.PipelineTagKeys, test.Tags)
-		if pipelineName != "" {
-			t.Errorf("Expected pipeline %s, got %s\n", "", pipelineName)
-		}
+		pipelineName := e.getPipelineName(e.PipelineName, e.PipelineTagKeys, test.Tags)
+		require.Equal(t, "", pipelineName)
 	}
 }
 
