@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/olivere/elastic"
 	"math"
 	"net/http"
 	"net/url"
@@ -14,6 +13,8 @@ import (
 	"time"
 
 	"crypto/sha256"
+
+	"github.com/olivere/elastic"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
