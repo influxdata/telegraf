@@ -13,7 +13,7 @@ For supported XPath functions check [the underlying XPath library][xpath lib].
 | [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
 | [JSON][json]                            | `"xpath_json"`        |         |
 | [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
-| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](protocol-buffers-additional-settings)|
+| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
 
 ### Protocol buffers additional settings
 
