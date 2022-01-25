@@ -216,8 +216,8 @@ This plugin will format the events in the following way:
   # use_pipeline = "my_pipeline"
   ## Additionally, you can specify a tag name using the notation {{tag_name}}
   ## which will be used as part of the pipeline name. If the tag does not exist,
-  ## the default pipeline will be used as the pipeline. If a default pipeline is not
-  ## set, then no pipeline will be used,
+  ## the default pipeline will be used as the pipeline. If no default pipeline is set,
+  ## no pipeline is used for the metric.
   # use_pipeline = "{{es_pipeline}}"
   # default_pipeline = "my_pipeline"
 ```
