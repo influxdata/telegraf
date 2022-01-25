@@ -23,20 +23,20 @@ import (
 
 type Elasticsearch struct {
 	URLs                []string `toml:"urls"`
-	IndexName           string
-	DefaultTagValue     string
+	IndexName           string   `toml:"index_name"`
+	DefaultTagValue     string   `toml:"default_tag_value"`
 	TagKeys             []string
-	Username            string
-	Password            string
-	AuthBearerToken     string
-	EnableSniffer       bool
-	Timeout             config.Duration
-	HealthCheckInterval config.Duration
-	EnableGzip          bool
-	ManageTemplate      bool
-	TemplateName        string
-	OverwriteTemplate   bool
-	ForceDocumentID     bool `toml:"force_document_id"`
+	Username            string          `toml:"username"`
+	Password            string          `toml:"password"`
+	AuthBearerToken     string          `toml:"auth_bearer_token"`
+	EnableSniffer       bool            `toml:"enable_sniffer"`
+	Timeout             config.Duration `toml:"timeout"`
+	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	EnableGzip          bool            `toml:"enable_gzip"`
+	ManageTemplate      bool            `toml:"manage_template"`
+	TemplateName        string          `toml:"template_name"`
+	OverwriteTemplate   bool            `toml:"overwrite_template"`
+	ForceDocumentID     bool            `toml:"force_document_id"`
 	MajorReleaseNumber  int
 	FloatHandling       string  `toml:"float_handling"`
 	FloatReplacement    float64 `toml:"float_replacement_value"`
