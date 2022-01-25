@@ -8,7 +8,6 @@ For supported XPath functions check [the underlying XPath library][xpath lib].
 
 ## Supported data formats
 
-
 | name                                    | `data_format` setting | comment |
 | --------------------------------------- | --------------------- | ------- |
 | [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
