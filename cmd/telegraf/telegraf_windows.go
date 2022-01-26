@@ -1,6 +1,8 @@
 //go:build windows
 // +build windows
 
+//go:generate goversioninfo -icon=../../assets/tiger.ico
+
 package main
 
 import (
