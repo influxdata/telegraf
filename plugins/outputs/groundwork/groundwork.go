@@ -36,6 +36,9 @@ const sampleConfig = `
 
   ## The name of the tag that contains the hostname.
   # resource_tag = "host"
+
+  ## The name of the tag that contains the host group name.
+  # group_tag = "group"
 `
 
 type metricMeta struct {
