@@ -99,6 +99,16 @@ help:
 deps:
 	go mod download -x
 
+.PHONY: version
+version:
+	@echo $(version)-$(commit)
+
+.PHONY: versioninfo
+versioninfo:
+	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
+	go run scripts/generate_versioninfo/main.go; \
+	go generate cmd/telegraf/telegraf_windows.go; \
+
 .PHONY: telegraf
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
@@ -235,6 +245,7 @@ install: $(buildbin)
 # the bin between deb/rpm/tar packages over building directly into the package
 # directory.
 $(buildbin):
+	echo $(GOOS)
 	@mkdir -pv $(dir $@)
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
