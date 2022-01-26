@@ -6,9 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	"runtime"
-	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -105,30 +102,9 @@ func (adx *AzureDataExplorer) Connect() error {
 		return err
 	}
 	adx.client = client
+	adx.client = client
 	adx.ingesters = make(map[string]localIngestor)
 	adx.createIngestor = createRealIngestor
-
-	ticker := time.NewTicker(60 * time.Second)
-	quit := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				f, err := os.Create("profile.new")
-				if err != nil {
-					adx.Log.Error("could not create memory profile: ", err)
-				}
-				defer f.Close() // error handling omitted for example
-				runtime.GC()    // get up-to-date statistics
-				if err := pprof.WriteHeapProfile(f); err != nil {
-					adx.Log.Error("could not write memory profile: ", err)
-				}
-			case <-quit:
-				ticker.Stop()
-				return
-			}
-		}
-	}()
 
 	return nil
 }
