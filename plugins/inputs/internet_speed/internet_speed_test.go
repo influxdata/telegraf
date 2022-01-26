@@ -13,6 +13,7 @@ func TestGathering(t *testing.T) {
 	}
 	internetSpeed := &InternetSpeed{
 		EnableFileDownload: false,
+		Offset:             "2s",
 		Log:                testutil.Logger{},
 	}
 

@@ -12,13 +12,18 @@ import (
 // InternetSpeed is used to store configuration values.
 type InternetSpeed struct {
 	EnableFileDownload bool            `toml:"enable_file_download"`
+	Offset             string          `toml:"offset"`
 	Log                telegraf.Logger `toml:"-"`
 }
 
 const sampleConfig = `
   ## Sets if runs file download test
-  ## Default: false  
-  enable_file_download = false
+  ## Default: false
+  enable_file_download = true
+
+  ## Time to sleep before running the speed test
+  ## Default: ""
+  offset = "1m"
 `
 
 // Description returns information about the plugin.
@@ -34,6 +39,16 @@ func (is *InternetSpeed) SampleConfig() string {
 const measurement = "internet_speed"
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
+
+	// Sleep for offset duration
+	if is.Offset != "" {
+		d, err := time.ParseDuration(is.Offset)
+		if err != nil {
+			return fmt.Errorf("parsing offset failed: %v", err)
+		}
+		time.Sleep(d)
+	}
+
 	user, err := speedtest.FetchUserInfo()
 	if err != nil {
 		return fmt.Errorf("fetching user info failed: %v", err)
@@ -76,6 +91,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	acc.AddFields(measurement, fields, tags)
 	return nil
 }
+
 func init() {
 	inputs.Add("internet_speed", func() telegraf.Input {
 		return &InternetSpeed{}

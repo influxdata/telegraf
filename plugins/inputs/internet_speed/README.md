@@ -9,7 +9,11 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
 [[inputs.internet_speed]]
   ## Sets if runs file download test
   ## Default: false
-  enable_file_download = false
+  enable_file_download = true
+
+  ## Time to sleep before running the speed test
+  ## Default: ""
+  offset = "1m"
 ```
 
 ## Metrics
