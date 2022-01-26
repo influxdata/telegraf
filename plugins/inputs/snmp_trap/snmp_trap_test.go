@@ -1357,14 +1357,14 @@ func TestGosmiSingleMib(t *testing.T) {
 			"snmp_trap", // name
 			map[string]string{ // tags
 				"oid":       ".1.3.6.1.6.3.1.1.5.1",
-				"name":      "coldStart.1.1.5.1",
+				"name":      "coldStart",
 				"mib":       "SNMPv2-MIB",
 				"version":   "2c",
 				"source":    "127.0.0.1",
 				"community": "public",
 			},
 			map[string]interface{}{ // fields
-				"sysUpTimeInstance.1.3.0": now,
+				"sysUpTimeInstance": now,
 			},
 			fakeTime,
 		),
