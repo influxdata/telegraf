@@ -17,7 +17,7 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
 
   ## Caches the closest server location
   ## Default: false
-  cache true
+  cache = true
 ```
 
 ## Metrics
