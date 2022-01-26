@@ -7,7 +7,12 @@ internet       OBJECT IDENTIFIER ::= { dod 1 }
 directory      OBJECT IDENTIFIER ::= { internet 1 }
 
 mgmt           OBJECT IDENTIFIER ::= { internet 2 }
-sysUpTimeInstance          OBJECT IDENTIFIER ::= { mgmt 1 }
+
+mibs            OBJECT IDENTIFIER ::= { mgmt 1 }
+system          OBJECT IDENTIFIER ::= { mibs 1 }
+systeUpTime     OBJECT IDENTIFIER ::= { system 3 }
+
+sysUpTimeInstance          OBJECT IDENTIFIER ::= { systeUpTime 0 }
 transmission   OBJECT IDENTIFIER ::= { sysUpTimeInstance 10 }
 
 experimental   OBJECT IDENTIFIER ::= { internet 3 }
@@ -26,7 +31,11 @@ snmpDomains    OBJECT IDENTIFIER ::= { snmpV2 1 }
 snmpProxys     OBJECT IDENTIFIER ::= { snmpV2 2 }
 
 -- module identities
-coldStart    OBJECT IDENTIFIER ::= { snmpV2 3 }
+snmpModules      OBJECT IDENTIFIER ::= { snmpV2 3 }
+snmpMIB          OBJECT IDENTIFIER ::= { snmpModules 1 }
+snmpMIBObjects   OBJECT IDENTIFIER ::= { snmpMIB 1 }
+snmpTraps        OBJECT IDENTIFIER ::= { snmpMIBObjects 5 }
+coldStart        OBJECT IDENTIFIER ::= { snmpTraps 1 }
 
 NOTIFICATION-TYPE MACRO ::=
 BEGIN
