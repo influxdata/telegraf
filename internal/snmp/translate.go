@@ -111,42 +111,29 @@ type MibEntry struct {
 }
 
 func TrapLookup(oid string) (e MibEntry, err error) {
-	var node gosmi.SmiNode
-	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+	var givenOid types.Oid
+	if givenOid, err = types.OidFromString(oid); err != nil {
+		return e, fmt.Errorf("Could not convert OID %s: %w", oid, err)
+	}
 
-	// ensure modules are loaded or node will be empty (might not error)
-	if err != nil {
+	// Get node name
+	var node gosmi.SmiNode
+	if node, err = gosmi.GetNodeByOID(givenOid); err != nil {
 		return e, err
 	}
+	e.OidText = node.Name
 
-	givenOid := strings.Split(oid, ".")
-	if givenOid[0] == "" {
-		givenOid = givenOid[1:]
+	// Add not found OID part
+	if !givenOid.Equals(node.Oid) {
+		e.OidText += "." + givenOid[len(node.Oid):].String()
 	}
 
-	foundOid := strings.Split(node.Oid.String(), ".")
-
-	e.OidText = node.RenderQualified()
-
-	i := strings.Index(e.OidText, "::")
-	if i == -1 {
-		return e, fmt.Errorf("not found")
+	// Get module name
+	module := node.GetModule()
+	if len(module.Name) == 0 {
+		return e, fmt.Errorf("No module found for OID %s", oid)
 	}
-	e.MibName = e.OidText[:i]
-	e.OidText = e.OidText[i+2:]
-
-	var s int
-	if len(foundOid) < len(givenOid) {
-		for i := range foundOid {
-			if foundOid[i] == givenOid[i] {
-				s = s + 1
-			}
-		}
-	}
-
-	givenOid = givenOid[s:]
-
-	e.OidText = e.OidText + "." + strings.Join(givenOid, ".")
+	e.MibName = module.Name
 
 	return e, nil
 }
