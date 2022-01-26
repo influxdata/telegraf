@@ -102,7 +102,6 @@ func (adx *AzureDataExplorer) Connect() error {
 		return err
 	}
 	adx.client = client
-	adx.client = client
 	adx.ingesters = make(map[string]localIngestor)
 	adx.createIngestor = createRealIngestor
 
