@@ -379,7 +379,13 @@ func TestMain(m *testing.M) {
 	// This used to fake an MSI environment, but since https://github.com/Azure/go-autorest/pull/670/files it's no longer possible,
 	// So we fake a user/password authentication
 	err := os.Setenv("AZURE_CLIENT_ID", "fake")
+	if err != nil {
+		panic(err)
+	}
 	err = os.Setenv("AZURE_USERNAME", "fake")
+	if err != nil {
+		panic(err)
+	}
 	err = os.Setenv("AZURE_PASSWORD", "fake")
 	if err != nil {
 		panic(err)
