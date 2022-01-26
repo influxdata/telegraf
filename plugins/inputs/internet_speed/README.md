@@ -14,6 +14,10 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
   ## Time to sleep before running the speed test
   ## Default: ""
   offset = "1m"
+
+  ## Caches the closest server location
+  ## Default: false
+  cache true
 ```
 
 ## Metrics

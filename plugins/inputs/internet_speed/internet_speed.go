@@ -13,6 +13,7 @@ import (
 type InternetSpeed struct {
 	EnableFileDownload bool            `toml:"enable_file_download"`
 	Offset             string          `toml:"offset"`
+	Cache              bool            `toml:"cache"`
 	Log                telegraf.Logger `toml:"-"`
 }
 
@@ -24,6 +25,10 @@ const sampleConfig = `
   ## Time to sleep before running the speed test
   ## Default: ""
   offset = "1m"
+
+  ## Caches the closest server location
+  ## Default: false
+  cache true
 `
 
 // Description returns information about the plugin.
@@ -38,6 +43,8 @@ func (is *InternetSpeed) SampleConfig() string {
 
 const measurement = "internet_speed"
 
+var serverCache *speedtest.Server
+
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 
 	// Sleep for offset duration
@@ -49,22 +56,34 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		time.Sleep(d)
 	}
 
-	user, err := speedtest.FetchUserInfo()
-	if err != nil {
-		return fmt.Errorf("fetching user info failed: %v", err)
-	}
-	serverList, err := speedtest.FetchServerList(user)
-	if err != nil {
-		return fmt.Errorf("fetching server list failed: %v", err)
+	// Get closest server
+	var s *speedtest.Server
+	if serverCache != nil {
+		is.Log.Debug("Using cached server")
+		s = serverCache
+	} else {
+		user, err := speedtest.FetchUserInfo()
+		if err != nil {
+			return fmt.Errorf("fetching user info failed: %v", err)
+		}
+		serverList, err := speedtest.FetchServerList(user)
+		if err != nil {
+			return fmt.Errorf("fetching server list failed: %v", err)
+		}
+		if len(serverList.Servers) < 1 {
+			return fmt.Errorf("no servers found")
+		}
+		s = serverList.Servers[0]
+		is.Log.Debug("Found server: ", s.String())
+		if is.Cache {
+			serverCache = s
+		}
 	}
 
-	if len(serverList.Servers) < 1 {
-		return fmt.Errorf("no servers found")
-	}
-	s := serverList.Servers[0]
+	// Run the tests
 	is.Log.Debug("Starting Speed Test")
 	is.Log.Debug("Running Ping...")
-	err = s.PingTest()
+	err := s.PingTest()
 	if err != nil {
 		return fmt.Errorf("ping test failed: %v", err)
 	}
