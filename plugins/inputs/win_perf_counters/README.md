@@ -109,7 +109,7 @@ Example:
 
 IgnoredErrors accepts a list of PDH error codes which are defined in pdh.go, if this error is encountered it will be ignored.
 For example, you can provide "PDH_NO_DATA" to ignore performance counters with no instances, but by default no errors are ignored.
-You can find the list of possible errors here: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_perf_counters/pdh.g
+You can find the list of possible errors here: [PDH errors](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_perf_counters/pdh.go)
 
 Example:
 `IgnoredErrors=["PDH_NO_DATA"]`
