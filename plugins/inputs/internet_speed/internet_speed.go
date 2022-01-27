@@ -45,13 +45,7 @@ var serverCache *speedtest.Server
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 
 	// Sleep for offset duration
-	if is.Offset != "" {
-		d, err := time.ParseDuration(is.Offset)
-		if err != nil {
-			return fmt.Errorf("parsing offset failed: %v", err)
-		}
-		time.Sleep(d)
-	}
+	time.Sleep(time.Duration(is.Offset))
 
 	// Get closest server
 	var s *speedtest.Server
