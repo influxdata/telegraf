@@ -130,10 +130,9 @@ func TrapLookup(oid string) (e MibEntry, err error) {
 
 	// Get module name
 	module := node.GetModule()
-	if len(module.Name) == 0 {
-		return e, fmt.Errorf("no module found for OID %s", oid)
+	if module.Name != "<well-known>" {
+		e.MibName = module.Name
 	}
-	e.MibName = module.Name
 
 	return e, nil
 }
