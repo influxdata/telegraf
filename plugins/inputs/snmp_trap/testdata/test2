@@ -8,12 +8,13 @@ directory      OBJECT IDENTIFIER ::= { internet 1 }
 
 mgmt           OBJECT IDENTIFIER ::= { internet 2 }
 
-mibs            OBJECT IDENTIFIER ::= { mgmt 1 }
-system          OBJECT IDENTIFIER ::= { mibs 1 }
-systeUpTime     OBJECT IDENTIFIER ::= { system 3 }
+mibs           OBJECT IDENTIFIER ::= { mgmt 1 }
 
-sysUpTimeInstance          OBJECT IDENTIFIER ::= { systeUpTime 0 }
-transmission   OBJECT IDENTIFIER ::= { sysUpTimeInstance 10 }
+system         OBJECT IDENTIFIER ::= { mibs 1 }
+systemUpTime   OBJECT IDENTIFIER ::= { system 3 }
+sysUpTimeInstance OBJECT IDENTIFIER ::= { systemUpTime 0 }
+
+transmission   OBJECT IDENTIFIER ::= { mibs 10 }
 
 experimental   OBJECT IDENTIFIER ::= { internet 3 }
 
