@@ -48,11 +48,8 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	time.Sleep(time.Duration(is.Offset))
 
 	// Get closest server
-	var s *speedtest.Server
-	if serverCache != nil {
-		is.Log.Debug("Using cached server")
-		s = serverCache
-	} else {
+	s := serverCache
+	if s == nil {
 		user, err := speedtest.FetchUserInfo()
 		if err != nil {
 			return fmt.Errorf("fetching user info failed: %v", err)
@@ -65,7 +62,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 			return fmt.Errorf("no servers found")
 		}
 		s = serverList.Servers[0]
-		is.Log.Debug("Found server: ", s.String())
+		is.Log.Debugf("Found server: %v", s)
 		if is.Cache {
 			serverCache = s
 		}
