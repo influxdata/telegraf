@@ -19,16 +19,13 @@ type InternetSpeed struct {
 
 const sampleConfig = `
   ## Sets if runs file download test
-  ## Default: false
-  enable_file_download = true
+  # enable_file_download = false
 
   ## Time to sleep before running the speed test
-  ## Default: ""
-  offset = "1m"
+  # offset = "0s"
 
   ## Caches the closest server location
-  ## Default: false
-  cache true
+  # cache = false
 `
 
 // Description returns information about the plugin.
