@@ -12,7 +12,7 @@ import (
 // InternetSpeed is used to store configuration values.
 type InternetSpeed struct {
 	EnableFileDownload bool            `toml:"enable_file_download"`
-	Offset             string          `toml:"offset"`
+	Offset             config.Duration          `toml:"offset"`
 	Cache              bool            `toml:"cache"`
 	Log                telegraf.Logger `toml:"-"`
 }
