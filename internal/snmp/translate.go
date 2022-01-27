@@ -113,7 +113,7 @@ type MibEntry struct {
 func TrapLookup(oid string) (e MibEntry, err error) {
 	var givenOid types.Oid
 	if givenOid, err = types.OidFromString(oid); err != nil {
-		return e, fmt.Errorf("Could not convert OID %s: %w", oid, err)
+		return e, fmt.Errorf("could not convert OID %s: %w", oid, err)
 	}
 
 	// Get node name
@@ -131,7 +131,7 @@ func TrapLookup(oid string) (e MibEntry, err error) {
 	// Get module name
 	module := node.GetModule()
 	if len(module.Name) == 0 {
-		return e, fmt.Errorf("No module found for OID %s", oid)
+		return e, fmt.Errorf("no module found for OID %s", oid)
 	}
 	e.MibName = module.Name
 
