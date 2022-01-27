@@ -124,7 +124,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.11.1
-	github.com/tidwall/gjson v1.10.2
+	github.com/tidwall/gjson v1.13.0
 	github.com/tinylib/msgp v1.1.6
 	github.com/vapourismo/knx-go v0.0.0-20211128234507-8198fa17db36
 	github.com/vjeantet/grok v1.0.1
