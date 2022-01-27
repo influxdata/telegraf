@@ -16,7 +16,7 @@ type InternetSpeed struct {
 	Offset             config.Duration   `toml:"offset"`
 	Cache              bool              `toml:"cache"`
 	Log                telegraf.Logger   `toml:"-"`
-	serverCache        *speedtest.Server `toml:"-"`
+	serverCache        *speedtest.Server
 }
 
 const sampleConfig = `
