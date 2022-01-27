@@ -18,7 +18,7 @@ func TestTrapLookup(t *testing.T) {
 			name: "Known trap OID",
 			oid:  ".1.3.6.1.6.3.1.1.5.1",
 			expected: MibEntry{
-				MibName: "SNMPv2-MIB",
+				MibName: "TGTEST-MIB",
 				OidText: "coldStart",
 			},
 		},
@@ -26,15 +26,15 @@ func TestTrapLookup(t *testing.T) {
 			name: "Known trap value OID",
 			oid:  ".1.3.6.1.2.1.1.3.0",
 			expected: MibEntry{
-				MibName: "SNMPv2-MIB",
-				OidText: "sysUpTime.0",
+				MibName: "TGTEST-MIB",
+				OidText: "sysUpTimeInstance",
 			},
 		},
 		{
 			name: "Unknown enterprise sub-OID",
 			oid:  ".1.3.6.1.4.1.0.1.2.3",
 			expected: MibEntry{
-				MibName: "SNMPv2-SMI",
+				MibName: "TGTEST-MIB",
 				OidText: "enterprises.0.1.2.3",
 			},
 		},
