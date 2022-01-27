@@ -5,16 +5,18 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/showwin/speedtest-go/speedtest"
 )
 
 // InternetSpeed is used to store configuration values.
 type InternetSpeed struct {
-	EnableFileDownload bool            `toml:"enable_file_download"`
-	Offset             config.Duration          `toml:"offset"`
-	Cache              bool            `toml:"cache"`
-	Log                telegraf.Logger `toml:"-"`
+	EnableFileDownload bool              `toml:"enable_file_download"`
+	Offset             config.Duration   `toml:"offset"`
+	Cache              bool              `toml:"cache"`
+	Log                telegraf.Logger   `toml:"-"`
+	serverCache        *speedtest.Server `toml:"-"`
 }
 
 const sampleConfig = `
@@ -40,15 +42,13 @@ func (is *InternetSpeed) SampleConfig() string {
 
 const measurement = "internet_speed"
 
-var serverCache *speedtest.Server
-
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 
 	// Sleep for offset duration
 	time.Sleep(time.Duration(is.Offset))
 
 	// Get closest server
-	s := serverCache
+	s := is.serverCache
 	if s == nil {
 		user, err := speedtest.FetchUserInfo()
 		if err != nil {
@@ -64,7 +64,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		s = serverList.Servers[0]
 		is.Log.Debugf("Found server: %v", s)
 		if is.Cache {
-			serverCache = s
+			is.serverCache = s
 		}
 	}
 
