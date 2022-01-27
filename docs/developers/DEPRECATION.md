@@ -38,6 +38,7 @@ Also add the deprecation warning to the plugin's README:
 ```
 
 Telegraf will automatically check if a deprecated plugin is configured and print a warning
+
 ```text
 2022-01-26T20:08:15Z W! DeprecationWarning: Plugin "inputs.logparser" deprecated since version 1.15.0 and will be removed in 2.0.0: use 'inputs.tail' with 'grok' data format instead
 ```
