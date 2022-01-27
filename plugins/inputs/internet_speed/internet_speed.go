@@ -68,7 +68,6 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	// Run the tests
 	is.Log.Debug("Starting Speed Test")
 	is.Log.Debug("Running Ping...")
 	err := s.PingTest()
