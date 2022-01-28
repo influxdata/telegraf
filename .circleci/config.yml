@@ -130,6 +130,11 @@ commands:
       - attach_workspace:
           at: '/go'
       - when:
+          condition:
+            equal: [ windows, << parameters.type >> ]
+          steps:
+            - run: make versioninfo
+      - when:
           condition: << parameters.nightly >>
           steps:
             - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'

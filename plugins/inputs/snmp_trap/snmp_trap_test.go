@@ -3,7 +3,6 @@ package snmp_trap
 import (
 	"fmt"
 	"net"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -1311,97 +1310,4 @@ func TestReceiveTrap(t *testing.T) {
 				testutil.SortMetrics())
 		})
 	}
-}
-
-func TestGosmiSingleMib(t *testing.T) {
-	// We would prefer to specify port 0 and let the network
-	// stack choose an unused port for us but TrapListener
-	// doesn't have a way to return the autoselected port.
-	// Instead, we'll use an unusual port and hope it's
-	// unused.
-	const port = 12399
-
-	// Hook into the trap handler so the test knows when the
-	// trap has been received
-	received := make(chan int)
-	wrap := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
-		return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
-			f(p, a)
-			received <- 0
-		}
-	}
-
-	fakeTime := time.Unix(456456456, 456)
-	now := uint32(123123123)
-
-	testDataPath, err := filepath.Abs("./testdata")
-	require.NoError(t, err)
-
-	trap := gosnmp.SnmpTrap{
-		Variables: []gosnmp.SnmpPDU{
-			{
-				Name:  ".1.3.6.1.2.1.1.3.0",
-				Type:  gosnmp.TimeTicks,
-				Value: now,
-			},
-			{
-				Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
-				Type:  gosnmp.ObjectIdentifier,
-				Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
-			},
-		},
-	}
-
-	metrics := []telegraf.Metric{
-		testutil.MustMetric(
-			"snmp_trap", // name
-			map[string]string{ // tags
-				"oid":       ".1.3.6.1.6.3.1.1.5.1",
-				"name":      "coldStart",
-				"mib":       "SNMPv2-MIB",
-				"version":   "2c",
-				"source":    "127.0.0.1",
-				"community": "public",
-			},
-			map[string]interface{}{ // fields
-				"sysUpTimeInstance": now,
-			},
-			fakeTime,
-		),
-	}
-
-	// Set up the service input plugin
-	s := &SnmpTrap{
-		ServiceAddress:     "udp://:" + strconv.Itoa(port),
-		makeHandlerWrapper: wrap,
-		timeFunc: func() time.Time {
-			return fakeTime
-		},
-		lookupFunc: snmp.TrapLookup,
-		Log:        testutil.Logger{},
-		Version:    "2c",
-		Path:       []string{testDataPath},
-	}
-	require.NoError(t, s.Init())
-
-	var acc testutil.Accumulator
-	require.Nil(t, s.Start(&acc))
-	defer s.Stop()
-
-	goSNMP := newGoSNMP(gosnmp.Version2c, port)
-
-	// Send the trap
-	sendTrap(t, goSNMP, trap)
-
-	// Wait for trap to be received
-	select {
-	case <-received:
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for trap to be received")
-	}
-
-	// Verify plugin output
-	testutil.RequireMetricsEqual(t,
-		metrics, acc.GetTelegrafMetrics(),
-		testutil.SortMetrics())
 }

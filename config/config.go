@@ -547,7 +547,7 @@ func printFilteredProcessors(processorFilters []string, commented bool) {
 	for _, pname := range pnames {
 		creator := processors.Processors[pname]
 		output := creator()
-		printConfig(pname, output, "processors", commented)
+		printConfig(pname, output, "processors", commented, processors.Deprecations[pname])
 	}
 }
 
@@ -565,7 +565,7 @@ func printFilteredAggregators(aggregatorFilters []string, commented bool) {
 	for _, aname := range anames {
 		creator := aggregators.Aggregators[aname]
 		output := creator()
-		printConfig(aname, output, "aggregators", commented)
+		printConfig(aname, output, "aggregators", commented, aggregators.Deprecations[aname])
 	}
 }
 
@@ -603,7 +603,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 			continue
 		}
 
-		printConfig(pname, input, "inputs", commented)
+		printConfig(pname, input, "inputs", commented, inputs.Deprecations[pname])
 	}
 
 	// Print Service Inputs
@@ -614,7 +614,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 
 	fmt.Printf(serviceInputHeader)
 	for _, name := range servInputNames {
-		printConfig(name, servInputs[name], "inputs", commented)
+		printConfig(name, servInputs[name], "inputs", commented, inputs.Deprecations[name])
 	}
 }
 
@@ -632,7 +632,7 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 	for _, oname := range onames {
 		creator := outputs.Outputs[oname]
 		output := creator()
-		printConfig(oname, output, "outputs", commented)
+		printConfig(oname, output, "outputs", commented, outputs.Deprecations[oname])
 	}
 }
 
@@ -646,13 +646,20 @@ func printFilteredGlobalSections(sectionFilters []string) {
 	}
 }
 
-func printConfig(name string, p telegraf.PluginDescriber, op string, commented bool) {
+func printConfig(name string, p telegraf.PluginDescriber, op string, commented bool, di telegraf.DeprecationInfo) {
 	comment := ""
 	if commented {
 		comment = "# "
 	}
-	fmt.Printf("\n%s# %s\n%s[[%s.%s]]", comment, p.Description(), comment,
-		op, name)
+	fmt.Printf("\n%s# %s\n%s[[%s.%s]]", comment, p.Description(), comment, op, name)
+
+	if di.Since != "" {
+		removalNote := ""
+		if di.RemovalIn != "" {
+			removalNote = " and will be removed in " + di.RemovalIn
+		}
+		fmt.Printf("\n%s  ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)
+	}
 
 	config := p.SampleConfig()
 	if config == "" {
@@ -681,7 +688,7 @@ func sliceContains(name string, list []string) bool {
 // PrintInputConfig prints the config usage of a single input.
 func PrintInputConfig(name string) error {
 	if creator, ok := inputs.Inputs[name]; ok {
-		printConfig(name, creator(), "inputs", false)
+		printConfig(name, creator(), "inputs", false, inputs.Deprecations[name])
 	} else {
 		return fmt.Errorf("Input %s not found", name)
 	}
@@ -691,7 +698,7 @@ func PrintInputConfig(name string) error {
 // PrintOutputConfig prints the config usage of a single output.
 func PrintOutputConfig(name string) error {
 	if creator, ok := outputs.Outputs[name]; ok {
-		printConfig(name, creator(), "outputs", false)
+		printConfig(name, creator(), "outputs", false, outputs.Deprecations[name])
 	} else {
 		return fmt.Errorf("Output %s not found", name)
 	}
