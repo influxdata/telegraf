@@ -114,10 +114,8 @@ func TestAlignedTickerOffset(t *testing.T) {
 
 	clk.Add(10*time.Second + offset)
 	for !clk.Now().After(until) {
-		select {
-		case tm := <-ticker.Elapsed():
-			actual = append(actual, tm.UTC())
-		}
+		tm := <-ticker.Elapsed()
+		actual = append(actual, tm.UTC())
 		clk.Add(10 * time.Second)
 	}
 
