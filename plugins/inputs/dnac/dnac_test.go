@@ -11,7 +11,6 @@ import (
 )
 
 func Test_Gather(t *testing.T) {
-
 	var err error
 
 	plugin := dnac.NewDnac()

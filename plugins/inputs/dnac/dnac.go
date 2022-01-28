@@ -51,12 +51,12 @@ func (d *Dnac) Init() error {
 }
 
 func (d *Dnac) InitClient() error {
-	var Client, err = dnac_sdk.NewClientWithOptionsNoAuth(d.DnacBaseURL, d.Username, d.Password, d.Debug, d.SSLVerify)
+	var client, err = dnac_sdk.NewClientWithOptionsNoAuth(d.DnacBaseURL, d.Username, d.Password, d.Debug, d.SSLVerify)
 	if err != nil {
 		d.Log.Errorf("Connection or login to DNAC failed")
 		return err
 	}
-	d.Client = Client
+	d.Client = client
 	return nil
 }
 
@@ -65,7 +65,6 @@ func NewDnac() *Dnac {
 }
 
 func (d *Dnac) Gather(acc telegraf.Accumulator) error {
-
 	var err error
 
 	var dnacURL, urlErr = url.Parse(d.DnacBaseURL)
@@ -87,7 +86,6 @@ func (d *Dnac) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if d.ClientHealth {
-
 		getOverallClientHealthQueryParams := &dnac_sdk.GetOverallClientHealthQueryParams{}
 		clientHealth, _, err := d.Client.Clients.GetOverallClientHealth(getOverallClientHealthQueryParams)
 		if err != nil {
@@ -141,7 +139,6 @@ func (d *Dnac) Gather(acc telegraf.Accumulator) error {
 		networkHealthFields := make(map[string]interface{})
 
 		for _, response := range *networkHealth.Response {
-
 			networkHealthFields[internal.SnakeCase("overall_health_score")] = response.HealthScore
 			networkHealthFields[internal.SnakeCase("overall_total_count")] = response.TotalCount
 			networkHealthFields[internal.SnakeCase("overall_no_health_count")] = response.UnmonCount
