@@ -223,7 +223,7 @@ func (a *Elasticsearch) Connect() error {
 
 	elasticURL, err := url.Parse(a.URLs[0])
 	if err != nil {
-		return err
+		return fmt.Errorf("parsing URL failed: %v", err)
 	}
 
 	clientOptions = append(clientOptions,
