@@ -31,21 +31,23 @@ type Ticker interface {
 type AlignedTicker struct {
 	interval    time.Duration
 	jitter      time.Duration
+	offset      time.Duration
 	minInterval time.Duration
 	ch          chan time.Time
 	cancel      context.CancelFunc
 	wg          sync.WaitGroup
 }
 
-func NewAlignedTicker(now time.Time, interval, jitter time.Duration) *AlignedTicker {
-	return newAlignedTicker(now, interval, jitter, clock.New())
+func NewAlignedTicker(now time.Time, interval, jitter, offset time.Duration) *AlignedTicker {
+	return newAlignedTicker(now, interval, jitter, offset, clock.New())
 }
 
-func newAlignedTicker(now time.Time, interval, jitter time.Duration, clock clock.Clock) *AlignedTicker {
+func newAlignedTicker(now time.Time, interval, jitter, offset time.Duration, clock clock.Clock) *AlignedTicker {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &AlignedTicker{
 		interval:    interval,
 		jitter:      jitter,
+		offset:      offset,
 		minInterval: interval / 100,
 		ch:          make(chan time.Time, 1),
 		cancel:      cancel,
@@ -75,6 +77,7 @@ func (t *AlignedTicker) next(now time.Time) time.Duration {
 		d = t.interval
 	}
 	d += internal.RandomDuration(t.jitter)
+	d += t.offset
 	return d
 }
 
@@ -118,23 +121,28 @@ func (t *AlignedTicker) Stop() {
 type UnalignedTicker struct {
 	interval time.Duration
 	jitter   time.Duration
+	offset   time.Duration
 	ch       chan time.Time
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
 }
 
-func NewUnalignedTicker(interval, jitter time.Duration) *UnalignedTicker {
-	return newUnalignedTicker(interval, jitter, clock.New())
+func NewUnalignedTicker(interval, jitter, offset time.Duration) *UnalignedTicker {
+	return newUnalignedTicker(interval, jitter, offset, clock.New())
 }
 
-func newUnalignedTicker(interval, jitter time.Duration, clock clock.Clock) *UnalignedTicker {
+func newUnalignedTicker(interval, jitter, offset time.Duration, clock clock.Clock) *UnalignedTicker {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &UnalignedTicker{
 		interval: interval,
 		jitter:   jitter,
+		offset:   offset,
 		ch:       make(chan time.Time, 1),
 		cancel:   cancel,
 	}
+
+	// Initially wait for the given offset to phase-shift the period
+	_ = sleep(ctx, t.offset, clock)
 
 	ticker := clock.Ticker(t.interval)
 	t.ch <- clock.Now()
