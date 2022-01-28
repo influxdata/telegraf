@@ -39,30 +39,30 @@ type AlignedTicker struct {
 }
 
 func NewAlignedTicker(now time.Time, interval, jitter, offset time.Duration) *AlignedTicker {
-	return newAlignedTicker(now, interval, jitter, offset, clock.New())
-}
-
-func newAlignedTicker(now time.Time, interval, jitter, offset time.Duration, clock clock.Clock) *AlignedTicker {
-	ctx, cancel := context.WithCancel(context.Background())
 	t := &AlignedTicker{
 		interval:    interval,
 		jitter:      jitter,
 		offset:      offset,
 		minInterval: interval / 100,
-		ch:          make(chan time.Time, 1),
-		cancel:      cancel,
 	}
+	t.start(now, clock.New())
+	return t
+}
+
+func (t *AlignedTicker) start(now time.Time, clk clock.Clock) {
+	t.ch = make(chan time.Time, 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.cancel = cancel
 
 	d := t.next(now)
-	timer := clock.Timer(d)
+	timer := clk.Timer(d)
 
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
 		t.run(ctx, timer)
 	}()
-
-	return t
 }
 
 func (t *AlignedTicker) next(now time.Time) time.Duration {
@@ -131,7 +131,7 @@ func NewUnalignedTicker(interval, jitter, offset time.Duration) *UnalignedTicker
 	return newUnalignedTicker(interval, jitter, offset, clock.New())
 }
 
-func newUnalignedTicker(interval, jitter, offset time.Duration, clock clock.Clock) *UnalignedTicker {
+func newUnalignedTicker(interval, jitter, offset time.Duration, clk clock.Clock) *UnalignedTicker {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &UnalignedTicker{
 		interval: interval,
@@ -141,27 +141,27 @@ func newUnalignedTicker(interval, jitter, offset time.Duration, clock clock.Cloc
 		cancel:   cancel,
 	}
 
-	ticker := clock.Ticker(t.interval)
+	ticker := clk.Ticker(t.interval)
 	if t.offset == 0 {
 		// Perform initial trigger to stay backward compatible
-		t.ch <- clock.Now()
+		t.ch <- clk.Now()
 	}
 
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
-		t.run(ctx, ticker, clock)
+		t.run(ctx, ticker, clk)
 	}()
 
 	return t
 }
 
-func sleep(ctx context.Context, duration time.Duration, clock clock.Clock) error {
+func sleep(ctx context.Context, duration time.Duration, clk clock.Clock) error {
 	if duration == 0 {
 		return nil
 	}
 
-	t := clock.Timer(duration)
+	t := clk.Timer(duration)
 	select {
 	case <-t.C:
 		return nil
@@ -171,7 +171,7 @@ func sleep(ctx context.Context, duration time.Duration, clock clock.Clock) error
 	}
 }
 
-func (t *UnalignedTicker) run(ctx context.Context, ticker *clock.Ticker, clock clock.Clock) {
+func (t *UnalignedTicker) run(ctx context.Context, ticker *clock.Ticker, clk clock.Clock) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -179,13 +179,13 @@ func (t *UnalignedTicker) run(ctx context.Context, ticker *clock.Ticker, clock c
 			return
 		case <-ticker.C:
 			jitter := internal.RandomDuration(t.jitter)
-			err := sleep(ctx, jitter+t.offset, clock)
+			err := sleep(ctx, jitter+t.offset, clk)
 			if err != nil {
 				ticker.Stop()
 				return
 			}
 			select {
-			case t.ch <- clock.Now():
+			case t.ch <- clk.Now():
 			default:
 			}
 		}
@@ -228,7 +228,7 @@ func NewRollingTicker(interval, jitter time.Duration) *RollingTicker {
 	return newRollingTicker(interval, jitter, clock.New())
 }
 
-func newRollingTicker(interval, jitter time.Duration, clock clock.Clock) *RollingTicker {
+func newRollingTicker(interval, jitter time.Duration, clk clock.Clock) *RollingTicker {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &RollingTicker{
 		interval: interval,
@@ -238,7 +238,7 @@ func newRollingTicker(interval, jitter time.Duration, clock clock.Clock) *Rollin
 	}
 
 	d := t.next()
-	timer := clock.Timer(d)
+	timer := clk.Timer(d)
 
 	t.wg.Add(1)
 	go func() {
