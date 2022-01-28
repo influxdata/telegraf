@@ -22,6 +22,7 @@ func Test_Gather(t *testing.T) {
 	plugin.SSLVerify = "false"
 	plugin.ClientHealth = true
 	plugin.NetworkHealth = true
+	plugin.Log = testutil.Logger{}
 
 	require.NoError(t, plugin.InitClient())
 
