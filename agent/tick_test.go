@@ -347,7 +347,11 @@ func TestRollingTickerDistribution(t *testing.T) {
 
 	clk := clock.NewMock()
 
-	ticker := newRollingTicker(interval, jitter, clk)
+	ticker := &RollingTicker{
+		interval: interval,
+		jitter:   jitter,
+	}
+	ticker.start(clk)
 	defer ticker.Stop()
 	dist := simulatedDist(ticker, clk)
 	printDist(dist)

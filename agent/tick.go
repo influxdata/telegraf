@@ -226,17 +226,19 @@ type RollingTicker struct {
 }
 
 func NewRollingTicker(interval, jitter time.Duration) *RollingTicker {
-	return newRollingTicker(interval, jitter, clock.New())
-}
-
-func newRollingTicker(interval, jitter time.Duration, clk clock.Clock) *RollingTicker {
-	ctx, cancel := context.WithCancel(context.Background())
 	t := &RollingTicker{
 		interval: interval,
 		jitter:   jitter,
-		ch:       make(chan time.Time, 1),
-		cancel:   cancel,
 	}
+	t.start(clock.New())
+	return t
+}
+
+func (t *RollingTicker) start(clk clock.Clock) *RollingTicker {
+	t.ch = make(chan time.Time, 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.cancel = cancel
 
 	d := t.next()
 	timer := clk.Timer(d)
