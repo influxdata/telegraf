@@ -159,7 +159,12 @@ func TestUnalignedTicker(t *testing.T) {
 	since := clk.Now()
 	until := since.Add(60 * time.Second)
 
-	ticker := newUnalignedTicker(interval, jitter, offset, clk)
+	ticker := &UnalignedTicker{
+		interval: interval,
+		jitter:   jitter,
+		offset:   offset,
+	}
+	ticker.start(clk)
 	defer ticker.Stop()
 
 	expected := []time.Time{
@@ -195,7 +200,12 @@ func TestRollingTicker(t *testing.T) {
 	since := clk.Now()
 	until := since.Add(60 * time.Second)
 
-	ticker := newUnalignedTicker(interval, jitter, offset, clk)
+	ticker := &UnalignedTicker{
+		interval: interval,
+		jitter:   jitter,
+		offset:   offset,
+	}
+	ticker.start(clk)
 	defer ticker.Stop()
 
 	expected := []time.Time{
@@ -288,7 +298,12 @@ func TestUnalignedTickerDistribution(t *testing.T) {
 
 	clk := clock.NewMock()
 
-	ticker := newUnalignedTicker(interval, jitter, offset, clk)
+	ticker := &UnalignedTicker{
+		interval: interval,
+		jitter:   jitter,
+		offset:   offset,
+	}
+	ticker.start(clk)
 	defer ticker.Stop()
 	dist := simulatedDist(ticker, clk)
 	printDist(dist)
@@ -307,7 +322,12 @@ func TestUnalignedTickerDistributionWithOffset(t *testing.T) {
 
 	clk := clock.NewMock()
 
-	ticker := newUnalignedTicker(interval, jitter, offset, clk)
+	ticker := &UnalignedTicker{
+		interval: interval,
+		jitter:   jitter,
+		offset:   offset,
+	}
+	ticker.start(clk)
 	defer ticker.Stop()
 	dist := simulatedDist(ticker, clk)
 	printDist(dist)

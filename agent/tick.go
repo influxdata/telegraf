@@ -128,18 +128,19 @@ type UnalignedTicker struct {
 }
 
 func NewUnalignedTicker(interval, jitter, offset time.Duration) *UnalignedTicker {
-	return newUnalignedTicker(interval, jitter, offset, clock.New())
-}
-
-func newUnalignedTicker(interval, jitter, offset time.Duration, clk clock.Clock) *UnalignedTicker {
-	ctx, cancel := context.WithCancel(context.Background())
 	t := &UnalignedTicker{
 		interval: interval,
 		jitter:   jitter,
 		offset:   offset,
-		ch:       make(chan time.Time, 1),
-		cancel:   cancel,
 	}
+	t.start(clock.New())
+	return t
+}
+
+func (t *UnalignedTicker) start(clk clock.Clock) *UnalignedTicker {
+	t.ch = make(chan time.Time, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.cancel = cancel
 
 	ticker := clk.Ticker(t.interval)
 	if t.offset == 0 {
