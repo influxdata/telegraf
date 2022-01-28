@@ -142,7 +142,10 @@ func newUnalignedTicker(interval, jitter, offset time.Duration, clock clock.Cloc
 	}
 
 	ticker := clock.Ticker(t.interval)
-	t.ch <- clock.Now()
+	if t.offset == 0 {
+		// Perform initial trigger to stay backward compatible
+		t.ch <- clock.Now()
+	}
 
 	t.wg.Add(1)
 	go func() {
