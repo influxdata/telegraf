@@ -141,9 +141,6 @@ func newUnalignedTicker(interval, jitter, offset time.Duration, clock clock.Cloc
 		cancel:   cancel,
 	}
 
-	// Initially wait for the given offset to phase-shift the period
-	_ = sleep(ctx, t.offset, clock)
-
 	ticker := clock.Ticker(t.interval)
 	t.ch <- clock.Now()
 
@@ -179,7 +176,7 @@ func (t *UnalignedTicker) run(ctx context.Context, ticker *clock.Ticker, clock c
 			return
 		case <-ticker.C:
 			jitter := internal.RandomDuration(t.jitter)
-			err := sleep(ctx, jitter, clock)
+			err := sleep(ctx, jitter+t.offset, clock)
 			if err != nil {
 				ticker.Stop()
 				return
