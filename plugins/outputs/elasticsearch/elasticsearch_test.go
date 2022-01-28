@@ -418,7 +418,7 @@ func TestGetPipelineName(t *testing.T) {
 		DefaultPipeline: "myDefaultPipeline",
 		Log:             testutil.Logger{},
 	}
-	e.PipelineName, e.PipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+	e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
 
 	tests := []struct {
 		EventTime       time.Time
@@ -452,7 +452,7 @@ func TestGetPipelineName(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		pipelineName := e.getPipelineName(e.PipelineName, e.PipelineTagKeys, test.Tags)
+		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
 		require.Equal(t, test.Expected, pipelineName)
 	}
 
@@ -460,11 +460,98 @@ func TestGetPipelineName(t *testing.T) {
 	e = &Elasticsearch{
 		Log: testutil.Logger{},
 	}
-	e.PipelineName, e.PipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+	e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
 
 	for _, test := range tests {
-		pipelineName := e.getPipelineName(e.PipelineName, e.PipelineTagKeys, test.Tags)
+		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
 		require.Equal(t, "", pipelineName)
+	}
+}
+
+func TestPipelineConfigs(t *testing.T) {
+	tests := []struct {
+		EventTime       time.Time
+		Tags            map[string]string
+		PipelineTagKeys []string
+		Expected        string
+		Elastic         *Elasticsearch
+	}{
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
+			[]string{},
+			"",
+			&Elasticsearch{
+				Log: testutil.Logger{},
+			},
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
+			[]string{},
+			"",
+			&Elasticsearch{
+				DefaultPipeline: "myDefaultPipeline",
+				Log:             testutil.Logger{},
+			},
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
+			[]string{},
+			"myDefaultPipeline",
+			&Elasticsearch{
+				UsePipeline: "myDefaultPipeline",
+				Log:         testutil.Logger{},
+			},
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			[]string{},
+			"",
+			&Elasticsearch{
+				DefaultPipeline: "myDefaultPipeline",
+				Log:             testutil.Logger{},
+			},
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			[]string{},
+			"pipeline2",
+			&Elasticsearch{
+				UsePipeline: "{{es-pipeline}}",
+				Log:         testutil.Logger{},
+			},
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			[]string{},
+			"value1-pipeline2",
+			&Elasticsearch{
+				UsePipeline: "{{tag1}}-{{es-pipeline}}",
+				Log:         testutil.Logger{},
+			},
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1"},
+			[]string{},
+			"",
+			&Elasticsearch{
+				UsePipeline: "{{es-pipeline}}",
+				Log:         testutil.Logger{},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		e := test.Elastic
+		e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
+		require.Equal(t, test.Expected, pipelineName)
 	}
 }
 

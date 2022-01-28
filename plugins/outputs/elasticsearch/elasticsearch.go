@@ -25,7 +25,7 @@ type Elasticsearch struct {
 	URLs                []string `toml:"urls"`
 	IndexName           string   `toml:"index_name"`
 	DefaultTagValue     string   `toml:"default_tag_value"`
-	TagKeys             []string
+	tagKeys             []string
 	Username            string          `toml:"username"`
 	Password            string          `toml:"password"`
 	AuthBearerToken     string          `toml:"auth_bearer_token"`
@@ -37,13 +37,13 @@ type Elasticsearch struct {
 	TemplateName        string          `toml:"template_name"`
 	OverwriteTemplate   bool            `toml:"overwrite_template"`
 	ForceDocumentID     bool            `toml:"force_document_id"`
-	MajorReleaseNumber  int
+	majorReleaseNumber  int
 	FloatHandling       string  `toml:"float_handling"`
 	FloatReplacement    float64 `toml:"float_replacement_value"`
 	UsePipeline         string  `toml:"use_pipeline"`
 	DefaultPipeline     string  `toml:"default_pipeline"`
-	PipelineTagKeys     []string
-	PipelineName        string
+	pipelineTagKeys     []string
+	pipelineName        string
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
@@ -285,7 +285,7 @@ func (a *Elasticsearch) Connect() error {
 	a.Log.Infof("Elasticsearch version: %q", esVersion)
 
 	a.Client = client
-	a.MajorReleaseNumber = majorReleaseNumber
+	a.majorReleaseNumber = majorReleaseNumber
 
 	if a.ManageTemplate {
 		err := a.manageTemplate(ctx)
@@ -294,8 +294,8 @@ func (a *Elasticsearch) Connect() error {
 		}
 	}
 
-	a.IndexName, a.TagKeys = a.GetTagKeys(a.IndexName)
-	a.PipelineName, a.PipelineTagKeys = a.GetTagKeys(a.UsePipeline)
+	a.IndexName, a.tagKeys = a.GetTagKeys(a.IndexName)
+	a.pipelineName, a.pipelineTagKeys = a.GetTagKeys(a.UsePipeline)
 
 	return nil
 }
@@ -324,7 +324,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
+		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.tagKeys, metric.Tags())
 
 		// Handle NaN and inf field-values
 		fields := make(map[string]interface{})
@@ -359,12 +359,12 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 			br.Id(id)
 		}
 
-		if a.MajorReleaseNumber <= 6 {
+		if a.majorReleaseNumber <= 6 {
 			br.Type("metrics")
 		}
 
 		if a.UsePipeline != "" {
-			if pipelineName := a.getPipelineName(a.PipelineName, a.PipelineTagKeys, metric.Tags()); pipelineName != "" {
+			if pipelineName := a.getPipelineName(a.pipelineName, a.pipelineTagKeys, metric.Tags()); pipelineName != "" {
 				br.Pipeline(pipelineName)
 			}
 		}
@@ -420,7 +420,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
 		tp := templatePart{
 			TemplatePattern: templatePattern + "*",
-			Version:         a.MajorReleaseNumber,
+			Version:         a.majorReleaseNumber,
 		}
 
 		t := template.Must(template.New("template").Parse(telegrafTemplate))
@@ -497,29 +497,21 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 }
 
 func (a *Elasticsearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
-	if !strings.Contains(pipelineInput, "%") {
+	if !strings.Contains(pipelineInput, "%") || len(tagKeys) == 0 {
 		return pipelineInput
 	}
 
-	var (
-		tagValues          []interface{}
-		useDefaultPipeline bool
-	)
+	var tagValues []interface{}
 
 	for _, key := range tagKeys {
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)
-		} else {
-			a.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
-			useDefaultPipeline = true
+			continue
 		}
+		a.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
+		return a.DefaultPipeline
 	}
-
-	if len(tagValues) > 0 && !useDefaultPipeline {
-		return fmt.Sprintf(pipelineInput, tagValues...)
-	}
-
-	return a.DefaultPipeline
+	return fmt.Sprintf(pipelineInput, tagValues...)
 }
 
 func getISOWeek(eventTime time.Time) string {
