@@ -195,7 +195,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			// sample then we can skip over it.
 			m, ok := entries[metrickey]
 			if ok {
-				if metric.Time().Before(time.Unix(m.Samples[0].Timestamp, 0)) {
+				if metric.Time().Before(time.Unix(0, m.Samples[0].Timestamp*1_000_000)) {
 					continue
 				}
 			}
