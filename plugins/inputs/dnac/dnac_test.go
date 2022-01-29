@@ -1,6 +1,7 @@
 package dnac_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
@@ -36,7 +37,10 @@ func Test_Gather(t *testing.T) {
 	authURL := "https://192.168.196.2/dna/system/api/v1/auth/token"
 	httpmock.RegisterResponder("POST", authURL, authResponder)
 
-	require.NoError(t, json.Unmarshal([]byte(clientHealthString), &clientHealthFixture))
+	// Used json Decoder instead of Unmarshall to preserve 64-bit integers on 32-bit machines
+	clientHealthDecoder := json.NewDecoder(bytes.NewBuffer([]byte(clientHealthString)))
+	clientHealthDecoder.UseNumber()
+	require.NoError(t, clientHealthDecoder.Decode(&clientHealthFixture))
 	clientHealthResponder, err := httpmock.NewJsonResponder(200, clientHealthFixture)
 	if err != nil {
 		t.Log("invalid clientHealth fixture")
@@ -45,7 +49,10 @@ func Test_Gather(t *testing.T) {
 	clientHealthURL := "https://192.168.196.2/dna/intent/api/v1/client-health"
 	httpmock.RegisterResponder("GET", clientHealthURL, clientHealthResponder)
 
-	require.NoError(t, json.Unmarshal([]byte(networkHealthString), &networkHealthFixture))
+	// Used json Decoder instead of Unmarshall to preserve 64-bit integers on 32-bit machines
+	networkHealthDecoder := json.NewDecoder(bytes.NewBuffer([]byte(networkHealthString)))
+	networkHealthDecoder.UseNumber()
+	require.NoError(t, networkHealthDecoder.Decode(&networkHealthFixture))
 	networkHealthResponder, err := httpmock.NewJsonResponder(200, networkHealthFixture)
 	if err != nil {
 		t.Log("invalid networkHealthFixture")
