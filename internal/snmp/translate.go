@@ -111,22 +111,29 @@ type MibEntry struct {
 }
 
 func TrapLookup(oid string) (e MibEntry, err error) {
-	var node gosmi.SmiNode
-	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+	var givenOid types.Oid
+	if givenOid, err = types.OidFromString(oid); err != nil {
+		return e, fmt.Errorf("could not convert OID %s: %w", oid, err)
+	}
 
-	// ensure modules are loaded or node will be empty (might not error)
-	if err != nil {
+	// Get node name
+	var node gosmi.SmiNode
+	if node, err = gosmi.GetNodeByOID(givenOid); err != nil {
 		return e, err
 	}
+	e.OidText = node.Name
 
-	e.OidText = node.RenderQualified()
-
-	i := strings.Index(e.OidText, "::")
-	if i == -1 {
-		return e, fmt.Errorf("not found")
+	// Add not found OID part
+	if !givenOid.Equals(node.Oid) {
+		e.OidText += "." + givenOid[len(node.Oid):].String()
 	}
-	e.MibName = e.OidText[:i]
-	e.OidText = e.OidText[i+2:]
+
+	// Get module name
+	module := node.GetModule()
+	if module.Name != "<well-known>" {
+		e.MibName = module.Name
+	}
+
 	return e, nil
 }
 

@@ -6,10 +6,11 @@ import (
 	"strings"
 
 	//Register sql drivers
-	_ "github.com/denisenkom/go-mssqldb"   // mssql (sql server)
-	_ "github.com/go-sql-driver/mysql"     // mysql
-	_ "github.com/jackc/pgx/v4/stdlib"     // pgx (postgres)
-	_ "github.com/snowflakedb/gosnowflake" // snowflake
+	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
+	_ "github.com/denisenkom/go-mssqldb"    // mssql (sql server)
+	_ "github.com/go-sql-driver/mysql"      // mysql
+	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)
+	_ "github.com/snowflakedb/gosnowflake"  // snowflake
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -116,7 +117,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 var sampleConfig = `
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com)
+  ##  sqlite (SQLite3), snowflake (snowflake.com) clickhouse (ClickHouse)
   # driver = ""
 
   ## Data source name
@@ -223,6 +224,8 @@ func (p *SQL) tableExists(tableName string) bool {
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
+	var err error
+
 	for _, metric := range metrics {
 		tablename := metric.Name()
 
@@ -255,12 +258,33 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		}
 
 		sql := p.generateInsert(tablename, columns)
-		_, err := p.db.Exec(sql, values...)
 
-		if err != nil {
-			// check if insert error was caused by column mismatch
-			p.Log.Errorf("Error during insert: %v, %v", err, sql)
-			return err
+		switch p.Driver {
+		case "clickhouse":
+			// ClickHouse needs to batch inserts with prepared statements
+			tx, err := p.db.Begin()
+			if err != nil {
+				return fmt.Errorf("begin failed: %v", err)
+			}
+			stmt, err := tx.Prepare(sql)
+			if err != nil {
+				return fmt.Errorf("prepare failed: %v", err)
+			}
+			defer stmt.Close() //nolint:revive // We cannot do anything about a failing close.
+
+			_, err = stmt.Exec(values...)
+			if err != nil {
+				return fmt.Errorf("execution failed: %v", err)
+			}
+			err = tx.Commit()
+			if err != nil {
+				return fmt.Errorf("commit failed: %v", err)
+			}
+		default:
+			_, err = p.db.Exec(sql, values...)
+			if err != nil {
+				return fmt.Errorf("execution failed: %v", err)
+			}
 		}
 	}
 	return nil
