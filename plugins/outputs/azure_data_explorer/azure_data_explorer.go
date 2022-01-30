@@ -38,8 +38,7 @@ const (
 	tablePerMetric = "tablepermetric"
 	singleTable    = "singletable"
 	// These control the amount of memory we use when ingesting blobs
-	_1MiB      = 1 << 20
-	bufferSize = 1 * _1MiB
+	bufferSize = 1 << 20  // 1 MiB
 	maxBuffers = 5
 )
 
