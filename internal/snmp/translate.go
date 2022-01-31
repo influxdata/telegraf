@@ -78,7 +78,6 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 				return nil
 			}
 			folders = append(folders, mibPath)
-
 			// symlinks are files so we need to double check if any of them are folders
 			// Will check file vs directory later on
 			if info.Mode()&os.ModeSymlink != 0 {
