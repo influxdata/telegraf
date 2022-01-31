@@ -95,7 +95,6 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 			return fmt.Errorf("Filepath %q could not be walked: %v", mibPath, err)
 		}
 
-		fmt.Printf("final: %v\n", folders)
 		for _, folder := range folders {
 			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 				// checks if file or directory
