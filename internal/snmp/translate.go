@@ -33,14 +33,17 @@ func loadModule(path string) error {
 	return err
 }
 
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
+func unique(s []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+
+	for _, entry := range s {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
 		}
 	}
-
-	return false
+	return list
 }
 
 func ClearCache() {
@@ -74,9 +77,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 				}
 				return nil
 			}
-			if !contains(folders, mibPath) {
-				folders = append(folders, mibPath)
-			}
+			folders = append(folders, mibPath)
 
 			// symlinks are files so we need to double check if any of them are folders
 			// Will check file vs directory later on
@@ -85,9 +86,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 				if err != nil {
 					log.Warnf("Bad symbolic link %v", link)
 				}
-				if !contains(folders, link) {
-					folders = append(folders, link)
-				}
+				folders = append(folders, link)
 			}
 			return nil
 		})
@@ -95,12 +94,13 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 			return fmt.Errorf("Filepath %q could not be walked: %v", mibPath, err)
 		}
 
+		folders = unique(folders)
 		for _, folder := range folders {
 			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 				// checks if file or directory
 				if info.IsDir() {
 					appendPath(path)
-				} else if info.Mode()&os.ModeSymlink == 0 && !contains(modules, info.Name()) {
+				} else if info.Mode()&os.ModeSymlink == 0 {
 					modules = append(modules, info.Name())
 				}
 				return nil
@@ -110,6 +110,8 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 			}
 		}
 	}
+
+	modules = unique(modules)
 	for _, module := range modules {
 		err := loadModule(module)
 		if err != nil {
