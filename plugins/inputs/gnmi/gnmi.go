@@ -47,7 +47,7 @@ type GNMI struct {
 	Password string
 
 	// Web auth token for devices that support it.
-	WebAuthToken string `toml:"webauthtoken"`
+	webauthtoken string `toml:"webauthtoken"`
 
 	// Redial
 	Redial config.Duration
@@ -102,7 +102,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-	if c.WebAuthToken != "" {
+	if c.webauthtoken != "" {
 		tlscfg = &tls.Config{
 			Renegotiation:      tls.RenegotiateNever,
 			InsecureSkipVerify: true,
@@ -218,9 +218,9 @@ func (c *GNMI) newSubscribeRequest() (*gnmiLib.SubscribeRequest, error) {
 func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
 	// Create a slice of grpc options for multiple different options.
 	var options []grpc.DialOption
-	if len(c.WebAuthToken) > 0 {
+	if len(c.webauthtoken) > 0 {
 		options = append(options, grpc.WithPerRPCCredentials((oauth.NewOauthAccess(&oauth2.Token{
-			AccessToken: c.WebAuthToken,
+			AccessToken: c.webauthtoken,
 		}))))
 	}
 	if tlscfg != nil {
