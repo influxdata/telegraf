@@ -400,6 +400,9 @@ jobs:
     steps:
       - attach_workspace:
           at: '.'
+      - run:
+          command: |
+            cd dist && find . -type f -name '._*' -delete
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
