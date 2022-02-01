@@ -94,7 +94,7 @@ require (
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/miekg/dns v1.1.43
 	github.com/moby/ipvs v1.0.1
-	github.com/multiplay/go-ts3 v1.0.0
+	github.com/multiplay/go-ts3 v1.0.1
 	github.com/nats-io/nats-server/v2 v2.6.5
 	github.com/nats-io/nats.go v1.13.1-0.20211018182449-f2416a8b1483
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.5.1
