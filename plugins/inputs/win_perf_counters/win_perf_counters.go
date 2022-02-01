@@ -35,6 +35,12 @@ var sampleConfig = `
   #LocalizeWildcardsExpansion = true
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
+  ## Accepts a list of PDH error codes which are defined in pdh.go, if this error is encountered it will be ignored
+  ## For example, you can provide "PDH_NO_DATA" to ignore performance counters with no instances
+  ## By default no errors are ignored
+  ## You can find the list here: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_perf_counters/pdh.go
+  ## e.g.: IgnoredErrors = ["PDH_NO_DATA"]
+  # IgnoredErrors = []
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
@@ -152,6 +158,7 @@ type Win_PerfCounters struct {
 	CountersRefreshInterval    config.Duration
 	UseWildcardsExpansion      bool
 	LocalizeWildcardsExpansion bool
+	IgnoredErrors              []string `toml:"IgnoredErrors"`
 
 	Log telegraf.Logger
 
@@ -389,6 +396,19 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 }
 
+func (m *Win_PerfCounters) checkError(err error) error {
+	if pdhErr, ok := err.(*PdhError); ok {
+		for _, ignoredErrors := range m.IgnoredErrors {
+			if PDHErrors[pdhErr.ErrorCode] == ignoredErrors {
+				return nil
+			}
+		}
+
+		return err
+	}
+	return err
+}
+
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
@@ -407,7 +427,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 		//some counters need two data samples before computing a value
 		if err = m.query.CollectData(); err != nil {
-			return err
+			return m.checkError(err)
 		}
 		m.lastRefreshed = time.Now()
 
