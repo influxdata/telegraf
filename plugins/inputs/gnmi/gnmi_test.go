@@ -159,7 +159,7 @@ func TestUsernamePassword(t *testing.T) {
 		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = success"))
 }
 
-func TestWebAuthToken(t *testing.T) {
+func Testwebauthtoken(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
@@ -171,8 +171,8 @@ func TestWebAuthToken(t *testing.T) {
 				return errors.New("failed to get metadata")
 			}
 
-			WebAuthToken := metadata.Get("WebAuthToken")
-			if len(WebAuthToken) != 1 || WebAuthToken[0] != "token123" {
+			webauthtoken := metadata.Get("webauthtoken")
+			if len(webauthtoken) != 1 || webauthtoken[0] != "token123" {
 				return errors.New("wrong token")
 			}
 
