@@ -10,9 +10,6 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
   ## Sets if runs file download test
   # enable_file_download = false
 
-  ## Time to sleep before running the speed test
-  # offset = "0s"
-
   ## Caches the closest server location
   # cache = false
 ```
