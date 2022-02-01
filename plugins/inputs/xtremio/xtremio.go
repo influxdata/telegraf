@@ -380,7 +380,7 @@ func (xio *XtremIO) authenticate() error {
 	if err != nil {
 		return err
 	}
-	req.SetBasicAuth(xio.Username,xio.Password)
+	req.SetBasicAuth(xio.Username, xio.Password)
 	resp, err := xio.client.Do(req)
 	if err != nil {
 		return err
