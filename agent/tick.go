@@ -76,8 +76,8 @@ func (t *AlignedTicker) next(now time.Time) time.Duration {
 	if d == 0 {
 		d = t.interval
 	}
-	d += internal.RandomDuration(t.jitter)
 	d += t.offset
+	d += internal.RandomDuration(t.jitter)
 	return d
 }
 
@@ -180,7 +180,7 @@ func (t *UnalignedTicker) run(ctx context.Context, ticker *clock.Ticker, clk clo
 			return
 		case <-ticker.C:
 			jitter := internal.RandomDuration(t.jitter)
-			err := sleep(ctx, jitter+t.offset, clk)
+			err := sleep(ctx, t.offset+jitter, clk)
 			if err != nil {
 				ticker.Stop()
 				return
