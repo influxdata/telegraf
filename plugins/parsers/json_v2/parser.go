@@ -60,8 +60,8 @@ type DataSet struct {
 }
 
 type JSONObject struct {
-	Path               string            `toml:"path"`          // REQUIRED
-	OptionalPath       bool              `toml:"optional_path"` // Will suppress errors if there isn't a match with Path
+	Path               string            `toml:"path"`     // REQUIRED
+	OptionalPath       bool              `toml:"optional"` // Will suppress errors if there isn't a match with Path
 	TimestampKey       string            `toml:"timestamp_key"`
 	TimestampFormat    string            `toml:"timestamp_format"`   // OPTIONAL, but REQUIRED when timestamp_path is defined
 	TimestampTimezone  string            `toml:"timestamp_timezone"` // OPTIONAL, but REQUIRES timestamp_path
