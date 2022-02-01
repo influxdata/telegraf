@@ -1071,7 +1071,7 @@ FROM (
 		,r.[wait_time] AS [wait_time_ms]
 		,r.[wait_type]
 		,r.[wait_resource]
-		,r.[blocking_session_id]
+		,NULLIF(r.[blocking_session_id],0) AS [blocking_session_id]
 		,s.[program_name]
 		,s.[host_name]
 		,s.[nt_user_name]
