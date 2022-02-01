@@ -94,6 +94,10 @@ func runAsWindowsService(inputFilters, outputFilters []string) {
 		//set servicename to service cmd line, to have a custom name after relaunch as a service
 		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", *fServiceName)
 
+		if *fServiceAutoRestart {
+			svcConfig.Option = service.KeyValue{"OnFailure": "restart", "OnFailureDelayDuration": *fServiceRestartDelay}
+		}
+
 		err := service.Control(s, *fService)
 		if err != nil {
 			log.Fatal("E! " + err.Error())
