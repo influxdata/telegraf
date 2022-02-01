@@ -594,17 +594,17 @@ const sampleConfig = `
   ## If suppression is enabled, send updates at least every X seconds anyway
   # heartbeat_interval = "60s"
 
-  # [[inputs.gnmi.subscription]]
-  #   name = "tag"  # tag name will be name + "_" + shortPath ie "tag_description"
-  #   origin = "openconfig-interfaces"
-  #   path = "/interfaces/interface/state/description"
-  #   subscription_mode = "on_change"
+  #[[inputs.gnmi.subscription]]
+    # name = "descr"
+    # origin = "openconfig-interfaces"
+    # path = "/interfaces/interface/state/description"
+    # subscription_mode = "on_change"
 
-  #   ## If tag_only is set, the subscription in question will be utilized to maintain a map of
-  #   ## tags to apply to other measurements emitted by the plugin, by matching path keys
-  #   ## All fields from the tag-only subscription will be applied as tags to other readings,
-  #   ## in the format <name>_<fieldBase>.
-  #   tag_only = true
+    ## If tag_only is set, the subscription in question will be utilized to maintain a map of
+    ## tags to apply to other measurements emitted by the plugin, by matching path keys
+    ## All fields from the tag-only subscription will be applied as tags to other readings,
+    ## in the format <name>_<fieldBase>.
+    # tag_only = true
 `
 
 // SampleConfig of plugin
