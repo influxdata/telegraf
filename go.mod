@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	cloud.google.com/go/bigquery v1.8.0
-	cloud.google.com/go/monitoring v0.2.0
+	cloud.google.com/go/monitoring v1.2.0
 	cloud.google.com/go/pubsub v1.17.1
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.17
@@ -134,7 +134,7 @@ require (
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/xdg/scram v1.0.3
 	go.mongodb.org/mongo-driver v1.7.3
-	go.opentelemetry.io/collector/model v0.39.0
+	go.opentelemetry.io/collector/model v0.43.2
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.24.0
 	go.opentelemetry.io/otel/metric v0.24.0
 	go.opentelemetry.io/otel/sdk/metric v0.24.0
