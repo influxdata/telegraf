@@ -61,7 +61,7 @@ type DataSet struct {
 
 type JSONObject struct {
 	Path               string            `toml:"path"`     // REQUIRED
-	OptionalPath       bool              `toml:"optional"` // Will suppress errors if there isn't a match with Path
+	Optional           bool              `toml:"optional"` // Will suppress errors if there isn't a match with Path
 	TimestampKey       string            `toml:"timestamp_key"`
 	TimestampFormat    string            `toml:"timestamp_format"`   // OPTIONAL, but REQUIRED when timestamp_path is defined
 	TimestampTimezone  string            `toml:"timestamp_timezone"` // OPTIONAL, but REQUIRES timestamp_path
@@ -412,7 +412,7 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject) ([]telegraf.
 
 		result := gjson.GetBytes(input, c.Path)
 		if result.Type == gjson.Null {
-			if c.OptionalPath {
+			if c.Optional {
 				// If path is marked as optional don't error if path doesn't return a result
 				p.Log.Debugf(GJSONPathNUllErrorMSG)
 				return nil, nil
