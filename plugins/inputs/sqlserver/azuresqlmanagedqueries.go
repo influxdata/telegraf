@@ -449,67 +449,83 @@ IF SERVERPROPERTY('EngineEdition') <> 8 BEGIN /*not Azure Managed Instance*/
 	RETURN
 END
 
-SELECT [blocking_session_id] INTO #blockingSessions FROM sys.dm_exec_requests WHERE [blocking_session_id] != 0
-CREATE INDEX ix_blockingSessions_1 on #blockingSessions ([blocking_session_id])
 
-SELECT	
-	 'sqlserver_requests' AS [measurement]
-	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,DB_NAME() as [database_name]
-	,s.[session_id]
-	,ISNULL(r.[request_id], 0) as [request_id]	
-	,COALESCE(r.[status], s.[status]) AS [status]
-	,COALESCE(r.[cpu_time], s.[cpu_time]) AS [cpu_time_ms]
-	,COALESCE(r.[total_elapsed_time], s.[total_elapsed_time]) AS [total_elapsed_time_ms]
-	,COALESCE(r.[logical_reads], s.[logical_reads]) AS [logical_reads]
-	,COALESCE(r.[writes], s.[writes]) AS [writes]
-	,r.[command]
-	,r.[wait_time] as [wait_time_ms]
-	,r.[wait_type]
-	,r.[wait_resource]
-	,r.[blocking_session_id]
-	,s.[program_name]
-	,s.[host_name]
-	,s.[nt_user_name]
-	,s.[login_name]
-	,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]
-	,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
-		WHEN 0 THEN '0-Read Committed' 
-		WHEN 1 THEN '1-Read Uncommitted (NOLOCK)' 
-		WHEN 2 THEN '2-Read Committed' 
-		WHEN 3 THEN '3-Repeatable Read' 
-		WHEN 4 THEN '4-Serializable' 
-		WHEN 5 THEN '5-Snapshot' 
-		ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + '-UNKNOWN' 
-	END, 30) AS [transaction_isolation_level]
-	,r.[granted_query_memory] as [granted_query_memory_pages]
-	,r.[percent_complete]
-	,SUBSTRING(
-		qt.[text], 
-		r.[statement_start_offset] / 2 + 1,
-		(CASE WHEN r.[statement_end_offset] = -1
-			THEN DATALENGTH(qt.text)
-			ELSE r.[statement_end_offset]
-		END - r.[statement_start_offset]) / 2 + 1
-	) AS [statement_text]
-	,qt.[objectid]
-	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.[objectid], qt.[dbid])) + '.' +  QUOTENAME(OBJECT_NAME(qt.[objectid], qt.[dbid])) as [stmt_object_name]
-	,DB_NAME(qt.[dbid]) [stmt_db_name]
-	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
-	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
-	,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
-	,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
-FROM sys.dm_exec_sessions AS s
-LEFT OUTER JOIN sys.dm_exec_requests AS r 
-	ON s.[session_id] = r.[session_id]
-OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt
+
+SELECT
+	 [measurement],[sql_instance],[database_name],[session_id]
+	,ISNULL([request_id],0) AS [request_id]
+	,[blocking_session_id],[status],[cpu_time_ms]
+	,[total_elapsed_time_ms],[logical_reads],[writes]
+	,[command],[wait_time_ms],[wait_type]
+	,[wait_resource],[program_name]
+	,[host_name],[nt_user_name],[login_name]
+	,[transaction_isolation_level],[granted_query_memory_pages],[percent_complete]
+	,[statement_text],[objectid],[stmt_object_name]
+	,[stmt_db_name],[query_hash],[query_plan_hash]
+	,replica_updateability
+	,[session_db_name],[open_transaction]
+FROM (
+	SELECT	
+		'sqlserver_requests' AS [measurement]
+		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+		,DB_NAME() as [database_name]
+		,s.[session_id]
+		,ISNULL(r.[request_id], 0) as [request_id]	
+		,DB_NAME(COALESCE(r.[database_id], s.[database_id])) AS [session_db_name]
+		,COALESCE(r.[status], s.[status]) AS [status]
+		,COALESCE(r.[cpu_time], s.[cpu_time]) AS [cpu_time_ms]
+		,COALESCE(r.[total_elapsed_time], s.[total_elapsed_time]) AS [total_elapsed_time_ms]
+		,COALESCE(r.[logical_reads], s.[logical_reads]) AS [logical_reads]
+		,COALESCE(r.[writes], s.[writes]) AS [writes]
+		,r.[command]
+		,r.[wait_time] AS [wait_time_ms]
+		,r.[wait_type]
+		,r.[wait_resource]
+		,NULLIF(r.[blocking_session_id],0) AS [blocking_session_id]
+		,s.[program_name]
+		,s.[host_name]
+		,s.[nt_user_name]
+		,s.[login_name]
+		,COALESCE(r.[open_transaction_count], s.[open_transaction_count]) AS [open_transaction]
+		,LEFT (CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
+			WHEN 0 THEN '0-Read Committed' 
+			WHEN 1 THEN '1-Read Uncommitted (NOLOCK)' 
+			WHEN 2 THEN '2-Read Committed' 
+			WHEN 3 THEN '3-Repeatable Read' 
+			WHEN 4 THEN '4-Serializable' 
+			WHEN 5 THEN '5-Snapshot' 
+			ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + '-UNKNOWN' 
+		END, 30) AS [transaction_isolation_level]
+		,r.[granted_query_memory] AS [granted_query_memory_pages]
+		,r.[percent_complete]
+		,SUBSTRING(
+			qt.[text], 
+			r.[statement_start_offset] / 2 + 1,
+			(CASE WHEN r.[statement_end_offset] = -1
+				THEN DATALENGTH(qt.[text])
+				ELSE r.[statement_end_offset]
+			END - r.[statement_start_offset]) / 2 + 1
+		) AS [statement_text]
+		,qt.[objectid]
+		,QUOTENAME(OBJECT_SCHEMA_NAME(qt.[objectid], qt.[dbid])) + '.' +  QUOTENAME(OBJECT_NAME(qt.[objectid], qt.[dbid])) as [stmt_object_name]
+		,DB_NAME(qt.[dbid]) AS [stmt_db_name]
+		,CONVERT(varchar(20),r.[query_hash],1) AS [query_hash]
+		,CONVERT(varchar(20),r.[query_plan_hash],1) AS [query_plan_hash]
+		,DATABASEPROPERTYEX(DB_NAME(), 'Updateability') as replica_updateability
+		,s.[is_user_process]
+		,[blocking_or_blocked] = COUNT(*) OVER(PARTITION BY ISNULL(NULLIF(r.[blocking_session_id], 0),s.[session_id]))
+	FROM sys.dm_exec_sessions AS s
+	LEFT OUTER JOIN sys.dm_exec_requests AS r 
+		ON s.[session_id] = r.[session_id]
+	OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
+) AS data
 WHERE
-	(s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
+	[blocking_or_blocked] > 1	--Always include blocking or blocked sessions/requests
 	OR (
-		r.session_id IS NOT NULL 
-		AND (
-			s.is_user_process = 1 
-			OR r.status COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
+		[request_id] IS NOT NULL	--A request must exists
+		AND (	--Always fetch user process (in any state), fetch system process only if active
+			[is_user_process] = 1
+			OR [status] COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
 		)
 	)  
 OPTION(MAXDOP 1);
