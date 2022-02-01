@@ -552,7 +552,6 @@ const sampleConfig = `
  ## Set a gRPC based token for outgoing connections.
  # webauthtoken = ""
 
-
  ## Define additional aliases to map telemetry encoding paths to simple measurement names
  #[inputs.gnmi.aliases]
  #  ifcounters = "openconfig:/interfaces/interface/state/counters"
