@@ -376,10 +376,11 @@ func (xio *XtremIO) call(endpoint string) (string, error) {
 }
 
 func (xio *XtremIO) authenticate() error {
-	req, err := http.NewRequest("GET", xio.URL+"/api/json/v3/commands/login?password="+xio.Password+"&user="+xio.Username, nil)
+	req, err := http.NewRequest("GET", xio.URL+"/api/json/v3/commands/login", nil)
 	if err != nil {
 		return err
 	}
+	req.SetBasicAuth(xio.Username,xio.Password)
 	resp, err := xio.client.Do(req)
 	if err != nil {
 		return err
