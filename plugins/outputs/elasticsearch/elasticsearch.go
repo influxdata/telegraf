@@ -22,29 +22,29 @@ import (
 )
 
 type Elasticsearch struct {
-	URLs                []string `toml:"urls"`
-	IndexName           string   `toml:"index_name"`
-	DefaultTagValue     string   `toml:"default_tag_value"`
-	tagKeys             []string
-	Username            string          `toml:"username"`
-	Password            string          `toml:"password"`
 	AuthBearerToken     string          `toml:"auth_bearer_token"`
-	EnableSniffer       bool            `toml:"enable_sniffer"`
-	Timeout             config.Duration `toml:"timeout"`
-	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	DefaultPipeline     string          `toml:"default_pipeline"`
+	DefaultTagValue     string          `toml:"default_tag_value"`
 	EnableGzip          bool            `toml:"enable_gzip"`
-	ManageTemplate      bool            `toml:"manage_template"`
-	TemplateName        string          `toml:"template_name"`
-	OverwriteTemplate   bool            `toml:"overwrite_template"`
+	EnableSniffer       bool            `toml:"enable_sniffer"`
+	FloatHandling       string          `toml:"float_handling"`
+	FloatReplacement    float64         `toml:"float_replacement_value"`
 	ForceDocumentID     bool            `toml:"force_document_id"`
-	majorReleaseNumber  int
-	FloatHandling       string  `toml:"float_handling"`
-	FloatReplacement    float64 `toml:"float_replacement_value"`
-	UsePipeline         string  `toml:"use_pipeline"`
-	DefaultPipeline     string  `toml:"default_pipeline"`
-	pipelineTagKeys     []string
-	pipelineName        string
+	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	IndexName           string          `toml:"index_name"`
+	ManageTemplate      bool            `toml:"manage_template"`
+	OverwriteTemplate   bool            `toml:"overwrite_template"`
+	Password            string          `toml:"password"`
+	TemplateName        string          `toml:"template_name"`
+	Timeout             config.Duration `toml:"timeout"`
+	URLs                []string        `toml:"urls"`
+	UsePipeline         string          `toml:"use_pipeline"`
+	Username            string          `toml:"username"`
 	Log                 telegraf.Logger `toml:"-"`
+	majorReleaseNumber  int
+	pipelineName        string
+	pipelineTagKeys     []string
+	tagKeys             []string
 	tls.ClientConfig
 
 	Client *elastic.Client
