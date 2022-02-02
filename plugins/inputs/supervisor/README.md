@@ -13,7 +13,7 @@ This plugin needs TCP HTTP server to be enabled for collecting information. Here
 [inet_http_server]
 port=127.0.0.1:9001
 ```
-
+It is also recommended to setup basic authentication to http server as described [here](http://supervisord.org/configuration.html#inet-http-server-section-values).
 
 
 ### Plugin configuration
@@ -25,16 +25,17 @@ port=127.0.0.1:9001
   # url="http://localhost:9001/RPC2"
   ## Use supervisor identification string as server tag
   use_identification_tag = false
-  ## Gather PID of running processes
-  gather_pid = false
-  ## Gather exit codes of processes
-  gather_exit_code = false
+  ## With settings below you can manage gathering additional information about processes
+  ## If both of them empty, then all additional information will be collected.
+  ## Currently supported supported additional metrics are: pid, rc
+  metrics_include = []
+  metrics_exclude = ["pid", "rc"]
 ```
 
 #### Optional metrics
 
-By default this plugin doesn't collect any information about processes pids and exit codes, you can enable it by setting
-`gather_pid` and `gather_exit_code` options in configuration file. 
+You can control gathering of some supervisor's metrics (processes PIDs and exit codes) by setting metrics_include 
+and metrics_exclude parameters in configuration file.
 
 #### Server tag
 Server tag is used to identify metrics source server. You have an option to use host:port pair of supervisor's http

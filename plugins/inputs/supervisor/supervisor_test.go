@@ -91,15 +91,16 @@ func TestShort_SampleData(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
 			s := &Supervisor{
-				Server:         "http://example.org:9001/RPC2",
-				PidGather:      true,
-				ExitCodeGather: true,
-				UseIdentTag:    false,
+				Server:      "http://example.org:9001/RPC2",
+				UseIdentTag: false,
+				MetricsInc:  []string{},
+				MetricsExc:  []string{},
 				status: supervisorInfo{
 					StateCode: tC.supervisorData.StateCode,
 					StateName: tC.supervisorData.StateName,
 				},
 			}
+			s.Init()
 			for k, v := range tC.sampleProcInfo {
 				processTags, processFields, err := s.parseProcessData(v)
 				require.NoError(t, err)
@@ -119,11 +120,12 @@ func TestIntegration_BasicGathering(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	s := &Supervisor{
-		Server:         "http://" + testutil.GetLocalHost() + ":9001/RPC2",
-		PidGather:      true,
-		ExitCodeGather: true,
-		UseIdentTag:    true,
+		Server:      "http://login:pass@" + testutil.GetLocalHost() + ":9001/RPC2",
+		UseIdentTag: true,
+		MetricsInc:  []string{},
+		MetricsExc:  []string{},
 	}
+	s.Init()
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(s.Gather)

@@ -3,7 +3,10 @@ package supervisor
 import (
 	"net/url"
 
+	"fmt"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/kolo/xmlrpc"
 )
@@ -11,16 +14,15 @@ import (
 type Supervisor struct {
 	Log telegraf.Logger `toml:"-"`
 
-	Server         string   `toml:"url"`
-	PidGather      bool     `toml:"gather_pid"`
-	ExitCodeGather bool     `toml:"gather_exit_code"`
-	UseIdentTag    bool     `toml:"use_identification_tag"`
-	FieldsInc      []string `toml:"fields_includes"`
-	FieldsExc      []string `toml:"fields_excludes"`
+	Server      string   `toml:"url"`
+	UseIdentTag bool     `toml:"use_identification_tag"`
+	MetricsInc  []string `toml:"metrics_include"`
+	MetricsExc  []string `toml:"metrics_exclude"`
 
 	status supervisorInfo
 
-	rpcClient *xmlrpc.Client
+	rpcClient   *xmlrpc.Client
+	fieldFilter filter.Filter
 }
 
 type processInfo struct {
@@ -51,10 +53,11 @@ const sampleConfig = `
   # url="http://localhost:9001/RPC2"
   ## Use supervisor identification string as server tag
   use_identification_tag = false
-  ## Gather PID of running processes
-  gather_pid = false
-  ## Gather exit codes of processes
-  gather_exit_code = false
+  ## With settings below you can manage gathering additional information about processes
+  ## If both of them empty, then all additional information will be collected.
+  ## Currently supported supported additional metrics are: pid, rc
+  metrics_include = []
+  metrics_exclude = ["pid", "rc"]
 `
 
 func (s *Supervisor) Description() string {
@@ -66,47 +69,39 @@ func (s *Supervisor) SampleConfig() string {
 }
 
 func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
-	// Initializing XML-RPC client
-	if s.rpcClient == nil {
-		var err error
-		s.rpcClient, err = xmlrpc.NewClient(s.Server, nil)
-		if err != nil {
-			return err
-		}
-	}
 
 	// API call to get information about all running processes
 	var err error
 	var rawProcessData []processInfo
 	err = s.rpcClient.Call("supervisor.getAllProcessInfo", nil, &rawProcessData)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get processes info: %v", err)
 	}
 
 	// API call to get information about instance status
 	err = s.rpcClient.Call("supervisor.getState", nil, &s.status)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get processes info: %v", err)
 	}
 
 	// API call to get identification string
 	err = s.rpcClient.Call("supervisor.getIdentification", nil, &s.status.Ident)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get instance identification: %v", err)
 	}
 
 	// Iterating through array of structs with processes info and adding fields to accumulator
 	for _, process := range rawProcessData {
 		processTags, processFields, err := s.parseProcessData(process)
 		if err != nil {
-			return err
+			acc.AddError(err)
 		}
 		acc.AddFields("supervisor_processes", processFields, processTags)
 	}
 	//  Adding instance info fields to accumulator
 	instanceTags, instanceFields, err := s.parseInstanceData()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse instance data: %v", err)
 	}
 	acc.AddFields("supervisor_instance", instanceFields, instanceTags)
 	return nil
@@ -121,10 +116,10 @@ func (s *Supervisor) parseProcessData(pInfo processInfo) (map[string]string, map
 		"uptime": pInfo.Now - pInfo.Start,
 		"state":  pInfo.State,
 	}
-	if s.PidGather {
+	if s.fieldFilter.Match("pid") {
 		fields["pid"] = pInfo.Pid
 	}
-	if s.ExitCodeGather {
+	if s.fieldFilter.Match("rc") {
 		fields["exitCode"] = pInfo.ExitStatus
 	}
 	if s.UseIdentTag {
@@ -139,13 +134,15 @@ func (s *Supervisor) parseProcessData(pInfo processInfo) (map[string]string, map
 	return tags, fields, nil
 }
 
+// Parsing of supervisor instance data
 func (s *Supervisor) parseInstanceData() (map[string]string, map[string]interface{}, error) {
 	server := s.status.Ident
+	// Using server URL for server tag instead of instance identification, if plugin configured accordingly
 	if !s.UseIdentTag {
 		var err error
 		server, err = beautifyServerString(s.Server)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decorate server string: %v", err)
 		}
 	}
 	tags := map[string]string{"server": server}
@@ -154,8 +151,20 @@ func (s *Supervisor) parseInstanceData() (map[string]string, map[string]interfac
 }
 
 func (s *Supervisor) Init() error {
+	// Using default server URL if none was specified in config
 	if s.Server == "" {
 		s.Server = "http://localhost:9001/RPC2"
+	}
+	var err error
+	// Initializing XML-RPC client
+	s.rpcClient, err = xmlrpc.NewClient(s.Server, nil)
+	if err != nil {
+		return fmt.Errorf("XML-RPC client initialization failed: %v", err)
+	}
+	// Setting filter for additional metrics
+	s.fieldFilter, err = filter.NewIncludeExcludeFilter(s.MetricsInc, s.MetricsExc)
+	if err != nil {
+		return fmt.Errorf("metrics filter setup failed: %v", err)
 	}
 	return nil
 }
