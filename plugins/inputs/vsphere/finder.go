@@ -246,6 +246,7 @@ func matchName(f property.Filter, props []types.DynamicProperty) bool {
 func init() {
 	childTypes = map[string][]string{
 		"HostSystem":             {"VirtualMachine"},
+		"ResourcePool":           {"VirtualMachine"},
 		"ComputeResource":        {"HostSystem", "ResourcePool", "VirtualApp"},
 		"ClusterComputeResource": {"HostSystem", "ResourcePool", "VirtualApp"},
 		"Datacenter":             {"Folder"},
@@ -260,9 +261,10 @@ func init() {
 	}
 
 	addFields = map[string][]string{
-		"HostSystem": {"parent", "summary.customValue", "customValue"},
+		"HostSystem":   {"parent", "summary.customValue", "customValue"},
+		"ResourcePool": {"parent", "customValue"},
 		"VirtualMachine": {"runtime.host", "config.guestId", "config.uuid", "runtime.powerState",
-			"summary.customValue", "guest.net", "guest.hostName", "customValue"},
+			"summary.customValue", "guest.net", "guest.hostName", "resourcePool", "customValue"},
 		"Datastore":              {"parent", "info", "customValue"},
 		"ClusterComputeResource": {"parent", "customValue"},
 		"Datacenter":             {"parent", "customValue"},

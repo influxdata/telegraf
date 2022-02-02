@@ -15,40 +15,45 @@ import (
 // VSphere is the top level type for the vSphere input plugin. It contains all the configuration
 // and a list of connected vSphere endpoints
 type VSphere struct {
-	Vcenters                []string
-	Username                string
-	Password                string
-	DatacenterInstances     bool
-	DatacenterMetricInclude []string
-	DatacenterMetricExclude []string
-	DatacenterInclude       []string
-	DatacenterExclude       []string
-	ClusterInstances        bool
-	ClusterMetricInclude    []string
-	ClusterMetricExclude    []string
-	ClusterInclude          []string
-	ClusterExclude          []string
-	HostInstances           bool
-	HostMetricInclude       []string
-	HostMetricExclude       []string
-	HostInclude             []string
-	HostExclude             []string
-	VMInstances             bool     `toml:"vm_instances"`
-	VMMetricInclude         []string `toml:"vm_metric_include"`
-	VMMetricExclude         []string `toml:"vm_metric_exclude"`
-	VMInclude               []string `toml:"vm_include"`
-	VMExclude               []string `toml:"vm_exclude"`
-	DatastoreInstances      bool
-	DatastoreMetricInclude  []string
-	DatastoreMetricExclude  []string
-	DatastoreInclude        []string
-	DatastoreExclude        []string
-	Separator               string
-	CustomAttributeInclude  []string
-	CustomAttributeExclude  []string
-	UseIntSamples           bool
-	IPAddresses             []string
-	MetricLookback          int
+	Vcenters                  []string
+	Username                  string
+	Password                  string
+	DatacenterInstances       bool
+	DatacenterMetricInclude   []string
+	DatacenterMetricExclude   []string
+	DatacenterInclude         []string
+	DatacenterExclude         []string
+	ClusterInstances          bool
+	ClusterMetricInclude      []string
+	ClusterMetricExclude      []string
+	ClusterInclude            []string
+	ClusterExclude            []string
+	ResourcePoolInstances     bool
+	ResourcePoolMetricInclude []string
+	ResourcePoolMetricExclude []string
+	ResourcePoolInclude       []string
+	ResourcePoolExclude       []string
+	HostInstances             bool
+	HostMetricInclude         []string
+	HostMetricExclude         []string
+	HostInclude               []string
+	HostExclude               []string
+	VMInstances               bool     `toml:"vm_instances"`
+	VMMetricInclude           []string `toml:"vm_metric_include"`
+	VMMetricExclude           []string `toml:"vm_metric_exclude"`
+	VMInclude                 []string `toml:"vm_include"`
+	VMExclude                 []string `toml:"vm_exclude"`
+	DatastoreInstances        bool
+	DatastoreMetricInclude    []string
+	DatastoreMetricExclude    []string
+	DatastoreInclude          []string
+	DatastoreExclude          []string
+	Separator                 string
+	CustomAttributeInclude    []string
+	CustomAttributeExclude    []string
+	UseIntSamples             bool
+	IPAddresses               []string
+	MetricLookback            int
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
