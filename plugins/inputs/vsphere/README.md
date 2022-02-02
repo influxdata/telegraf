@@ -4,6 +4,7 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 
 * Clusters
 * Hosts
+* Resource Pools
 * VMs
 * Datastores
 
@@ -140,7 +141,14 @@ vm_metric_exclude = [ "*" ]
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default
 
-  ## Datastores
+  ## Resource Pools
+  # datastore_include = [ "/*/host/**"] # Inventory path to datastores to collect (by default all are collected)
+  # datastore_exclude = [] # Inventory paths to exclude
+  # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
+  # datastore_metric_exclude = [] ## Nothing excluded by default
+  # datastore_instances = false ## false by default
+
+    ## Datastores
   # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
   # datastore_exclude = [] # Inventory paths to exclude
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
@@ -252,10 +260,13 @@ to a file system. A vSphere inventory has a structure similar to this:
    | | | +-VM1
    | | | +-VM2
    | | | +-hadoop1
-   | +-Host2 # Dummy cluster created for non-clustered host
-   | | +-Host2
+   | | +-ResourcePool1
    | | | +-VM3
    | | | +-VM4
+   | +-Host2 # Dummy cluster created for non-clustered host
+   | | +-Host2
+   | | | +-VM5
+   | | | +-VM6
    +-vm # VM folder (created by system)
    | +-VM1
    | +-VM2
@@ -289,7 +300,7 @@ We can extend this to looking at a cluster level: ```/DC0/host/Cluster1/*/hadoop
 vCenter keeps two different kinds of metrics, known as realtime and historical metrics.
 
 * Realtime metrics: Available at a 20 second granularity. These metrics are stored in memory and are very fast and cheap to query. Our tests have shown that a complete set of realtime metrics for 7000 virtual machines can be obtained in less than 20 seconds. Realtime metrics are only available on **ESXi hosts** and **virtual machine** resources. Realtime metrics are only stored for 1 hour in vCenter.
-* Historical metrics: Available at a (default) 5 minute, 30 minutes, 2 hours and 24 hours rollup levels. The vSphere Telegraf plugin only uses the most granular rollup which defaults to 5 minutes but can be changed in vCenter to other interval durations. These metrics are stored in the vCenter database and can be expensive and slow to query. Historical metrics are the only type of metrics available for **clusters**, **datastores** and **datacenters**.
+* Historical metrics: Available at a (default) 5 minute, 30 minutes, 2 hours and 24 hours rollup levels. The vSphere Telegraf plugin only uses the most granular rollup which defaults to 5 minutes but can be changed in vCenter to other interval durations. These metrics are stored in the vCenter database and can be expensive and slow to query. Historical metrics are the only type of metrics available for **clusters**, **datastores**, **resource pools** and **datacenters**.
 
 For more information, refer to the vSphere documentation here: <https://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.wssdk.pg.doc_50%2FPG_Ch16_Performance.18.2.html>
 
@@ -314,6 +325,7 @@ This will disrupt the metric collection and can result in missed samples. The be
   datastore_metric_exclude = ["*"]
   cluster_metric_exclude = ["*"]
   datacenter_metric_exclude = ["*"]
+  resourcepool_metric_exclude = ["*"]
 
   collect_concurrency = 5
   discover_concurrency = 5
@@ -400,6 +412,12 @@ When the vSphere plugin queries vCenter for historical statistics it queries for
   * Res CPU: active, max, running
   * System: operating system uptime, uptime
   * Virtual Disk: seeks, # reads/writes, latency, load
+* Resource Pools stats:
+  * Memory: total, usage, active, latency, swap, shared, vmmemctl
+  * CPU: capacity, usage, corecount
+  * Disk: throughput
+  * Network: throughput
+  * Power: energy, usage
 * Datastore stats:
   * Disk: Capacity, provisioned, used
 
@@ -415,6 +433,7 @@ For a detailed list of commonly available metrics, please refer to [METRICS.md](
   * cluster (vcenter cluster)
   * esxhost (name of ESXi host)
   * guest (guest operating system id)
+  * resource pool (name of resource pool)
 * cpu stats for Host and VM
   * cpu (cpu core - not all CPU fields will have this tag)
 * datastore stats for Host and VM
