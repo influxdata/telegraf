@@ -113,7 +113,7 @@ servers = [
 
 ## Queries enabled by default for database_type = "SQLServer" are - 
 ## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
-## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu
+## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerRecentBackups
 
 database_type = "SQLServer"
 
@@ -192,6 +192,7 @@ func initQueries(s *SQLServer) error {
 		queries["SQLServerCpu"] = Query{ScriptName: "SQLServerCpu", Script: sqlServerRingBufferCPU, ResultByRow: false}
 		queries["SQLServerAvailabilityReplicaStates"] = Query{ScriptName: "SQLServerAvailabilityReplicaStates", Script: sqlServerAvailabilityReplicaStates, ResultByRow: false}
 		queries["SQLServerDatabaseReplicaStates"] = Query{ScriptName: "SQLServerDatabaseReplicaStates", Script: sqlServerDatabaseReplicaStates, ResultByRow: false}
+		queries["SQLServerRecentBackups"] = Query{ScriptName: "SQLServerRecentBackups", Script: sqlServerRecentBackups, ResultByRow: false}
 	} else {
 		// If this is an AzureDB instance, grab some extra metrics
 		if s.AzureDB {
