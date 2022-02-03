@@ -100,6 +100,7 @@ func TestShort_SampleData(t *testing.T) {
 				StateCode: tC.supervisorData.StateCode,
 				StateName: tC.supervisorData.StateName,
 			}
+			s.Init()
 			for k, v := range tC.sampleProcInfo {
 				processTags, processFields, err := s.parseProcessData(v, status)
 				require.NoError(t, err)
