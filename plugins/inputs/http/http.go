@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type HTTP struct {
@@ -33,13 +32,12 @@ type HTTP struct {
 
 	SuccessStatusCodes []int `toml:"success_status_codes"`
 
-	client *http.Client
-	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
-	// The parser will automatically be set by Telegraf core code because
-	// this plugin implements the ParserInput interface (i.e. the SetParser method)
-	parser parsers.Parser
+	httpconfig.HTTPClientConfig
+
+	client     *http.Client
+	parserFunc telegraf.ParserFunc
 }
 
 var sampleConfig = `
@@ -153,9 +151,9 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// SetParser takes the data_format from the config and finds the right parser for that format
-func (h *HTTP) SetParser(parser parsers.Parser) {
-	h.parser = parser
+// SetParserFunc takes the data_format from the config and finds the right parser for that format
+func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
+	h.parserFunc = fn
 }
 
 // Gathers data from a particular URL
@@ -230,12 +228,17 @@ func (h *HTTP) gatherURL(
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading body failed: %v", err)
 	}
 
-	metrics, err := h.parser.Parse(b)
+	// Instantiate a new parser for the new data to avoid trouble with stateful parsers
+	parser, err := h.parserFunc()
 	if err != nil {
-		return err
+		return fmt.Errorf("instantiating parser failed: %v", err)
+	}
+	metrics, err := parser.Parse(b)
+	if err != nil {
+		return fmt.Errorf("parsing metrics failed: %v", err)
 	}
 
 	for _, metric := range metrics {
