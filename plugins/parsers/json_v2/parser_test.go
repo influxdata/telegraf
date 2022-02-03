@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -24,6 +25,16 @@ func TestMultipleConfigs(t *testing.T) {
 	require.NoError(t, err)
 	// Make sure testdata contains data
 	require.Greater(t, len(folders), 0)
+
+	expectedErrors := []struct {
+		Name  string
+		Error error
+	}{
+		{
+			Name:  "wrong_path",
+			Error: fmt.Errorf(json_v2.GJSONPathNUllErrorMSG),
+		},
+	}
 
 	for _, f := range folders {
 		t.Run(f.Name(), func(t *testing.T) {
@@ -39,11 +50,22 @@ func TestMultipleConfigs(t *testing.T) {
 
 			// Gather the metrics from the input file configure
 			acc := testutil.Accumulator{}
-			for _, i := range cfg.Inputs {
-				err = i.Init()
+			for _, input := range cfg.Inputs {
+				err = input.Init()
 				require.NoError(t, err)
-				err = i.Gather(&acc)
-				require.NoError(t, err)
+				err = input.Gather(&acc)
+				// If the test has an expected error then require one was received
+				var expectedError bool
+				for _, e := range expectedErrors {
+					if e.Name == f.Name() {
+						require.Equal(t, e.Error, err)
+						expectedError = true
+						break
+					}
+				}
+				if !expectedError {
+					require.NoError(t, err)
+				}
 			}
 
 			// Process expected metrics and compare with resulting metrics
