@@ -673,9 +673,9 @@ func getClusters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilte
 }
 
 //noinspection GoUnusedParameter
-func getResourcePools(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
+func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
 	var resources []mo.ResourcePool
-	err := filter.FindAll(ctx, &resources)
+	err := resourceFilter.FindAll(ctx, &resources)
 	if err != nil {
 		return nil, err
 	}
