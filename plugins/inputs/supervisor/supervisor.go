@@ -67,7 +67,6 @@ func (s *Supervisor) SampleConfig() string {
 }
 
 func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
-
 	// API call to get information about all running processes
 	var err error
 	var rawProcessData []processInfo
@@ -97,7 +96,7 @@ func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddFields("supervisor_processes", processFields, processTags)
 	}
-	//  Adding instance info fields to accumulator
+	// Adding instance info fields to accumulator
 	instanceTags, instanceFields, err := s.parseInstanceData(status)
 	if err != nil {
 		return fmt.Errorf("failed to parse instance data: %v", err)
