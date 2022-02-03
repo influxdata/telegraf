@@ -4,19 +4,18 @@ This plugin gather information about processes that running under supervisor usi
 
 Plugin minimum tested version: 3.3.2
 
-### Supervisor configuration
+## Supervisor configuration
 
 This plugin needs TCP HTTP server to be enabled for collecting information. Here is example of
 `inet_http_server` section in supervisor config that will work with default plugin configuration.
 
-```
+```ini
 [inet_http_server]
 port=127.0.0.1:9001
 ```
 It is also recommended to setup basic authentication to http server as described [here](http://supervisord.org/configuration.html#inet-http-server-section-values).
 
-
-### Plugin configuration
+## Plugin configuration
 
 ```toml
 [inputs.supervisor]
@@ -32,35 +31,36 @@ It is also recommended to setup basic authentication to http server as described
   metrics_exclude = ["pid", "rc"]
 ```
 
-#### Optional metrics
+### Optional metrics
 
-You can control gathering of some supervisor's metrics (processes PIDs and exit codes) by setting metrics_include 
+You can control gathering of some supervisor's metrics (processes PIDs and exit codes) by setting metrics_include
 and metrics_exclude parameters in configuration file.
 
-#### Server tag
-Server tag is used to identify metrics source server. You have an option to use host:port pair of supervisor's http
-endpoint by default or you can use supervisor's identification string, which is set in supervisor's configuration file. 
+### Server tag
 
-### Metrics
+Server tag is used to identify metrics source server. You have an option to use host:port pair of supervisor's http
+endpoint by default or you can use supervisor's identification string, which is set in supervisor's configuration file.
+
+## Metrics
 
 - supervisor_processes
-    - Tags:
-        - server (Supervisor address or identification string)
-        - name (Process name)
-        - group (Process group)
-    - Fields:
-        - state (int, see reference)
-        - uptime (int, seconds)
-        - pid (int, optional)
-        - exitCode (int, optional)
-    
-+ supervisor_instance
-    - Tags:
-        - server (Supervisor address or identification string)
-    - Fields:
-        - state (int, see reference) 
+  - Tags:
+    - server (Supervisor address or identification string)
+    - name (Process name)
+    - group (Process group)
+  - Fields:
+    - state (int, see reference)
+    - uptime (int, seconds)
+    - pid (int, optional)
+    - exitCode (int, optional)
 
-#### Supervisor process state field reference table
+- supervisor_instance
+  - Tags:
+    - server (Supervisor address or identification string)
+  - Fields:
+    - state (int, see reference)
+
+### Supervisor process state field reference table
 
 |Statecode|Statename|                                            Description                                                 |
 |--------|----------|--------------------------------------------------------------------------------------------------------|
@@ -73,7 +73,7 @@ endpoint by default or you can use supervisor's identification string, which is 
 |   200  |   FATAL  |                            The process could not be started successfully.                              |
 |  1000  |  UNKNOWN |                  The process is in an unknown state (supervisord programming error).                   |
 
-#### Supervisor instance state field reference
+### Supervisor instance state field reference
 
 |Statecode| Statename  |                  Description                 |
 |---------|------------|----------------------------------------------|
@@ -81,9 +81,10 @@ endpoint by default or you can use supervisor's identification string, which is 
 |    1    |   RUNNING  |         Supervisor is working normally.      |
 |    0    | RESTARTING |  Supervisor is in the process of restarting. |
 |   -1    |  SHUTDOWN  |Supervisor is in the process of shutting down.|
-### Example Output
 
-```
+## Example Output
+
+```shell
 supervisor_processes,host=localhost,group=ExampleGroup,process=ExampleProcess,server=localhost:9001 exitCode=0i,pid=12345i,state=20i,uptime=4812i
 supervisor_instance,host=localhost,server=localhost:9001 state=1
 ```
