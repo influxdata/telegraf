@@ -13,6 +13,7 @@ This plugin needs TCP HTTP server to be enabled for collecting information. Here
 [inet_http_server]
 port=127.0.0.1:9001
 ```
+
 It is also recommended to setup basic authentication to http server as described [here](http://supervisord.org/configuration.html#inet-http-server-section-values).
 
 ## Plugin configuration
@@ -23,12 +24,12 @@ It is also recommended to setup basic authentication to http server as described
   ## than you have to add credentials to url (ex. http://login:pass@localhost:9001/RPC2)
   # url="http://localhost:9001/RPC2"
   ## Use supervisor identification string as server tag
-  use_identification_tag = false
+  # use_identification_tag = false
   ## With settings below you can manage gathering additional information about processes
   ## If both of them empty, then all additional information will be collected.
   ## Currently supported supported additional metrics are: pid, rc
-  metrics_include = []
-  metrics_exclude = ["pid", "rc"]
+  # metrics_include = []
+  # metrics_exclude = ["pid", "rc"]
 ```
 
 ### Optional metrics

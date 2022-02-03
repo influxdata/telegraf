@@ -1,23 +1,22 @@
 package supervisor
 
 import (
+	"fmt"
 	"net/url"
 
-	"fmt"
+	"github.com/kolo/xmlrpc"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/kolo/xmlrpc"
 )
 
 type Supervisor struct {
-	Log telegraf.Logger `toml:"-"`
-
-	Server      string   `toml:"url"`
-	UseIdentTag bool     `toml:"use_identification_tag"`
-	MetricsInc  []string `toml:"metrics_include"`
-	MetricsExc  []string `toml:"metrics_exclude"`
+	Server      string          `toml:"url"`
+	UseIdentTag bool            `toml:"use_identification_tag"`
+	MetricsInc  []string        `toml:"metrics_include"`
+	MetricsExc  []string        `toml:"metrics_exclude"`
+	Log         telegraf.Logger `toml:"-"`
 
 	rpcClient   *xmlrpc.Client
 	fieldFilter filter.Filter
@@ -50,12 +49,12 @@ const sampleConfig = `
   ## than you have to add credentials to url (ex. http://login:pass@localhost:9001/RPC2)
   # url="http://localhost:9001/RPC2"
   ## Use supervisor identification string as server tag
-  use_identification_tag = false
+  # use_identification_tag = false
   ## With settings below you can manage gathering additional information about processes
   ## If both of them empty, then all additional information will be collected.
   ## Currently supported supported additional metrics are: pid, rc
-  metrics_include = []
-  metrics_exclude = ["pid", "rc"]
+  # metrics_include = []
+  # metrics_exclude = ["pid", "rc"]
 `
 
 func (s *Supervisor) Description() string {
@@ -68,9 +67,8 @@ func (s *Supervisor) SampleConfig() string {
 
 func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 	// API call to get information about all running processes
-	var err error
 	var rawProcessData []processInfo
-	err = s.rpcClient.Call("supervisor.getAllProcessInfo", nil, &rawProcessData)
+	err := s.rpcClient.Call("supervisor.getAllProcessInfo", nil, &rawProcessData)
 	if err != nil {
 		return fmt.Errorf("failed to get processes info: %v", err)
 	}
@@ -93,6 +91,7 @@ func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 		processTags, processFields, err := s.parseProcessData(process, status)
 		if err != nil {
 			acc.AddError(err)
+			continue
 		}
 		acc.AddFields("supervisor_processes", processFields, processTags)
 	}
