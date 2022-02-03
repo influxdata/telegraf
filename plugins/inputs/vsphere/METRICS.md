@@ -194,7 +194,12 @@ vmop.numXVMotion.latest
 ```
 
 ## Resource Pool Metrics
+
+<<<<<<< HEAD
+```metrics
+=======
 ```
+>>>>>>> 696e8df5... Correct Markdown of metrics.md
 cpu.usagemhz.average
 cpu.cpuentitlement.latest
 cpu.usagemhz.minimum
