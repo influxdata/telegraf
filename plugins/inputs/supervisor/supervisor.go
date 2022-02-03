@@ -19,8 +19,6 @@ type Supervisor struct {
 	MetricsInc  []string `toml:"metrics_include"`
 	MetricsExc  []string `toml:"metrics_exclude"`
 
-	status supervisorInfo
-
 	rpcClient   *xmlrpc.Client
 	fieldFilter filter.Filter
 }
@@ -79,27 +77,28 @@ func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// API call to get information about instance status
-	err = s.rpcClient.Call("supervisor.getState", nil, &s.status)
+	var status supervisorInfo
+	err = s.rpcClient.Call("supervisor.getState", nil, &status)
 	if err != nil {
 		return fmt.Errorf("failed to get processes info: %v", err)
 	}
 
 	// API call to get identification string
-	err = s.rpcClient.Call("supervisor.getIdentification", nil, &s.status.Ident)
+	err = s.rpcClient.Call("supervisor.getIdentification", nil, &status.Ident)
 	if err != nil {
 		return fmt.Errorf("failed to get instance identification: %v", err)
 	}
 
 	// Iterating through array of structs with processes info and adding fields to accumulator
 	for _, process := range rawProcessData {
-		processTags, processFields, err := s.parseProcessData(process)
+		processTags, processFields, err := s.parseProcessData(process, status)
 		if err != nil {
 			acc.AddError(err)
 		}
 		acc.AddFields("supervisor_processes", processFields, processTags)
 	}
 	//  Adding instance info fields to accumulator
-	instanceTags, instanceFields, err := s.parseInstanceData()
+	instanceTags, instanceFields, err := s.parseInstanceData(status)
 	if err != nil {
 		return fmt.Errorf("failed to parse instance data: %v", err)
 	}
@@ -107,7 +106,7 @@ func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Supervisor) parseProcessData(pInfo processInfo) (map[string]string, map[string]interface{}, error) {
+func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) (map[string]string, map[string]interface{}, error) {
 	tags := map[string]string{
 		"process": pInfo.Name,
 		"group":   pInfo.Group,
@@ -123,7 +122,7 @@ func (s *Supervisor) parseProcessData(pInfo processInfo) (map[string]string, map
 		fields["exitCode"] = pInfo.ExitStatus
 	}
 	if s.UseIdentTag {
-		tags["server"] = s.status.Ident
+		tags["server"] = status.Ident
 	} else {
 		var err error
 		tags["server"], err = beautifyServerString(s.Server)
@@ -135,8 +134,8 @@ func (s *Supervisor) parseProcessData(pInfo processInfo) (map[string]string, map
 }
 
 // Parsing of supervisor instance data
-func (s *Supervisor) parseInstanceData() (map[string]string, map[string]interface{}, error) {
-	server := s.status.Ident
+func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string, map[string]interface{}, error) {
+	server := status.Ident
 	// Using server URL for server tag instead of instance identification, if plugin configured accordingly
 	if !s.UseIdentTag {
 		var err error
@@ -146,7 +145,7 @@ func (s *Supervisor) parseInstanceData() (map[string]string, map[string]interfac
 		}
 	}
 	tags := map[string]string{"server": server}
-	fields := map[string]interface{}{"state": s.status.StateCode}
+	fields := map[string]interface{}{"state": status.StateCode}
 	return tags, fields, nil
 }
 

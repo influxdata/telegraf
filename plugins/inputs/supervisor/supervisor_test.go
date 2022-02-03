@@ -95,19 +95,18 @@ func TestShort_SampleData(t *testing.T) {
 				UseIdentTag: false,
 				MetricsInc:  []string{},
 				MetricsExc:  []string{},
-				status: supervisorInfo{
-					StateCode: tC.supervisorData.StateCode,
-					StateName: tC.supervisorData.StateName,
-				},
 			}
-			s.Init()
+			status := supervisorInfo{
+				StateCode: tC.supervisorData.StateCode,
+				StateName: tC.supervisorData.StateName,
+			}
 			for k, v := range tC.sampleProcInfo {
-				processTags, processFields, err := s.parseProcessData(v)
+				processTags, processFields, err := s.parseProcessData(v, status)
 				require.NoError(t, err)
 				require.Equal(t, tC.expProcessFields[k], processFields)
 				require.Equal(t, tC.expProcessTags[k], processTags)
 			}
-			instanceTags, instanceFields, err := s.parseInstanceData()
+			instanceTags, instanceFields, err := s.parseInstanceData(status)
 			require.NoError(t, err)
 			require.Equal(t, tC.expInstancesTags, instanceTags)
 			require.Equal(t, tC.expInstanceFields, instanceFields)
