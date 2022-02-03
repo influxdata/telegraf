@@ -97,6 +97,14 @@ var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Col
 	"service display name (windows only)")
 
 //nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceAutoRestart = flag.Bool("service-auto-restart", false,
+	"auto restart service on failure (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceRestartDelay = flag.String("service-restart-delay", "5m",
+	"delay before service auto restart, default is 5m (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fRunAsConsole = flag.Bool("console", false,
 	"run as console application (windows only)")
 var fPlugins = flag.String("plugin-directory", "",
