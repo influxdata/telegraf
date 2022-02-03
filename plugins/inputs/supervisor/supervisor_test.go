@@ -100,7 +100,10 @@ func TestShort_SampleData(t *testing.T) {
 				StateCode: tC.supervisorData.StateCode,
 				StateName: tC.supervisorData.StateName,
 			}
-			s.Init()
+			err := s.Init()
+			if err != nil {
+				t.Errorf("failed to run Init function: %v", err)
+			}
 			for k, v := range tC.sampleProcInfo {
 				processTags, processFields, err := s.parseProcessData(v, status)
 				require.NoError(t, err)
@@ -125,10 +128,12 @@ func TestIntegration_BasicGathering(t *testing.T) {
 		MetricsInc:  []string{},
 		MetricsExc:  []string{},
 	}
-	s.Init()
-
+	err := s.Init()
+	if err != nil {
+		t.Errorf("failed to run Init function: %v", err)
+	}
 	var acc testutil.Accumulator
-	err := acc.GatherError(s.Gather)
+	err = acc.GatherError(s.Gather)
 	require.NoError(t, err)
 	require.Equal(t, acc.HasField("supervisor_processes", "uptime"), true)
 	require.Equal(t, acc.HasField("supervisor_processes", "state"), true)
