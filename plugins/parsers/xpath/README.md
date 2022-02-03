@@ -6,19 +6,23 @@ For supported XPath functions check [the underlying XPath library][xpath lib].
 
 **NOTE:** The type of fields are specified using [XPath functions][xpath lib]. The only exception are *integer* fields that need to be specified in a `fields_int` section.
 
-### Supported data formats
+## Supported data formats
+
 | name                                    | `data_format` setting | comment |
 | --------------------------------------- | --------------------- | ------- |
 | [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
 | [JSON][json]                            | `"xpath_json"`        |         |
 | [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
-| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](protocol-buffers-additiona-settings)|
+| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
 
-#### Protocol buffers additional settings
+### Protocol buffers additional settings
+
 For using the protocol-buffer format you need to specify a protocol buffer definition file (`.proto`) in `xpath_protobuf_file`, Furthermore, you need to specify which message type you want to use via `xpath_protobuf_type`.
 
-### Configuration (explicit)
+## Configuration (explicit)
+
 In this configuration mode, you explicitly specify the field and tags you want to scrape out of your data.
+
 ```toml
 [[inputs.file]]
   files = ["example.xml"]
@@ -82,6 +86,7 @@ your query.
 Alternatively to the configuration above, fields can also be specified in a batch way. So contrary to specify the fields
 in a section, you can define a `name` and a `value` selector used to determine the name and value of the fields in the
 metric.
+
 ```toml
 [[inputs.file]]
   files = ["example.xml"]
@@ -137,11 +142,12 @@ metric.
       device = "string('the ultimate sensor')"
 
 ```
+
 *Please note*: The resulting fields are _always_ of type string!
 
 It is also possible to specify a mixture of the two alternative ways of specifying fields.
 
-#### metric_selection (optional)
+### metric_selection (optional)
 
 You can specify a [XPath][xpath] query to select a subset of nodes from the XML document, each used to generate a new
 metrics with the specified fields, tags etc.
@@ -150,11 +156,11 @@ For relative queries in subsequent queries they are relative to the `metric_sele
 
 Specifying `metric_selection` is optional. If not specified all relative queries are relative to the root node of the XML document.
 
-#### metric_name (optional)
+### metric_name (optional)
 
 By specifying `metric_name` you can override the metric/measurement name with the result of the given [XPath][xpath] query. If not specified, the default metric name is used.
 
-#### timestamp, timestamp_format (optional)
+### timestamp, timestamp_format (optional)
 
 By default the current time will be used for all created metrics. To set the time from values in the XML document you can specify a [XPath][xpath] query in `timestamp` and set the format in `timestamp_format`.
 
@@ -162,19 +168,19 @@ The `timestamp_format` can be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
 an accepted [Go "reference time"][time const]. Consult the Go [time][time parse] package for details and additional examples on how to set the time format.
 If `timestamp_format` is omitted `unix` format is assumed as result of the `timestamp` query.
 
-#### tags sub-section
+### tags sub-section
 
 [XPath][xpath] queries in the `tag name = query` format to add tags to the metrics. The specified path can be absolute (starting with `/`) or relative. Relative paths use the currently selected node as reference.
 
 **NOTE:** Results of tag-queries will always be converted to strings.
 
-#### fields_int sub-section
+### fields_int sub-section
 
 [XPath][xpath] queries in the `field name = query` format to add integer typed fields to the metrics. The specified path can be absolute (starting with `/`) or relative. Relative paths use the currently selected node as reference.
 
 **NOTE:** Results of field_int-queries will always be converted to **int64**. The conversion will fail in case the query result is not convertible!
 
-#### fields sub-section
+### fields sub-section
 
 [XPath][xpath] queries in the `field name = query` format to add non-integer fields to the metrics. The specified path can be absolute (starting with `/`) or relative. Relative paths use the currently selected node as reference.
 
@@ -183,8 +189,7 @@ If no conversion is performed in the query the field will be of type string.
 
 **NOTE: Path conversion functions will always succeed even if you convert a text to float!**
 
-
-#### field_selection, field_name, field_value (optional)
+### field_selection, field_name, field_value (optional)
 
 You can specify a [XPath][xpath] query to select a set of nodes forming the fields of the metric. The specified path can be absolute (starting with `/`) or relative to the currently selected node. Each node selected by `field_selection` forms a new field within the metric.
 
@@ -195,15 +200,16 @@ Specifying `field_selection` is optional. This is an alternative way to specify 
 
 **NOTE: Path conversion functions will always succeed even if you convert a text to float!**
 
-#### field_name_expansion (optional)
+### field_name_expansion (optional)
 
 When *true*, field names selected with `field_selection` are expanded to a *path* relative to the *selected node*. This
 is necessary if we e.g. select all leaf nodes as fields and those leaf nodes do not have unique names. That is in case
 you have duplicate names in the fields you select you should set this to `true`.
 
-### Examples
+## Examples
 
 This `example.xml` file is used in the configuration examples below:
+
 ```xml
 <?xml version="1.0"?>
 <Gateway>
@@ -238,11 +244,12 @@ This `example.xml` file is used in the configuration examples below:
 </Bus>
 ```
 
-#### Basic Parsing
+### Basic Parsing
 
 This example shows the basic usage of the xml parser.
 
 Config:
+
 ```toml
 [[inputs.file]]
   files = ["example.xml"]
@@ -260,18 +267,20 @@ Config:
 ```
 
 Output:
-```
+
+```text
 file,gateway=Main,host=Hugin seqnr=12i,ok=true 1598610830000000000
 ```
 
 In the *tags* definition the XPath function `substring-before()` is used to only extract the sub-string before the space. To get the integer value of `/Gateway/Sequence` we have to use the *fields_int* section as there is no XPath expression to convert node values to integers (only float).
 The `ok` field is filled with a boolean by specifying a query comparing the query result of `/Gateway/Status` with the string *ok*. Use the type conversions available in the XPath syntax to specify field types.
 
-#### Time and metric names
+### Time and metric names
 
 This is an example for using time and name of the metric from the XML document itself.
 
 Config:
+
 ```toml
 [[inputs.file]]
   files = ["example.xml"]
@@ -291,16 +300,19 @@ Config:
 ```
 
 Output:
-```
+
+```text
 Status,gateway=Main,host=Hugin ok=true 1596294243000000000
 ```
+
 Additionally to the basic parsing example, the metric name is defined as the name of the `/Gateway/Status` node and the timestamp is derived from the XML document instead of using the execution time.
 
-#### Multi-node selection
+### Multi-node selection
 
 For XML documents containing metrics for e.g. multiple devices (like `Sensor`s in the *example.xml*), multiple metrics can be generated using node selection. This example shows how to generate a metric for each *Sensor* in the example.
 
 Config:
+
 ```toml
 [[inputs.file]]
   files = ["example.xml"]
@@ -329,7 +341,8 @@ Config:
 ```
 
 Output:
-```
+
+```text
 sensors,host=Hugin,name=Facility\ A consumers=3i,frequency=49.78,ok=true,power=123.4,temperature=20 1596294243000000000
 sensors,host=Hugin,name=Facility\ B consumers=1i,frequency=49.78,ok=true,power=14.3,temperature=23.1 1596294243000000000
 sensors,host=Hugin,name=Facility\ C consumers=0i,frequency=49.78,ok=false,power=0.02,temperature=19.7 1596294243000000000
@@ -337,11 +350,12 @@ sensors,host=Hugin,name=Facility\ C consumers=0i,frequency=49.78,ok=false,power=
 
 Using the `metric_selection` option we select all `Sensor` nodes in the XML document. Please note that all field and tag definitions are relative to these selected nodes. An exception is the timestamp definition which is relative to the root node of the XML document.
 
-#### Batch field processing with multi-node selection
+### Batch field processing with multi-node selection
 
 For XML documents containing metrics with a large number of fields or where the fields are not known before (e.g. an unknown set of `Variable` nodes in the *example.xml*), field selectors can be used. This example shows how to generate a metric for each *Sensor* in the example with fields derived from the *Variable* nodes.
 
 Config:
+
 ```toml
 [[inputs.file]]
   files = ["example.xml"]
@@ -363,7 +377,8 @@ Config:
 ```
 
 Output:
-```
+
+```text
 sensors,host=Hugin,name=Facility\ A consumers=3,frequency=49.78,power=123.4,temperature=20 1596294243000000000
 sensors,host=Hugin,name=Facility\ B consumers=1,frequency=49.78,power=14.3,temperature=23.1 1596294243000000000
 sensors,host=Hugin,name=Facility\ C consumers=0,frequency=49.78,power=0.02,temperature=19.7 1596294243000000000

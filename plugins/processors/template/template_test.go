@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestName(t *testing.T) {
@@ -90,7 +90,7 @@ func TestMetricMissingTagsIsNotLost(t *testing.T) {
 
 	// assert
 	// make sure no metrics are lost when a template process fails
-	assert.Equal(t, 2, len(actual), "Number of metrics input should equal number of metrics output")
+	require.Equal(t, 2, len(actual), "Number of metrics input should equal number of metrics output")
 }
 
 func TestTagAndFieldConcatenate(t *testing.T) {
@@ -114,4 +114,49 @@ func TestTagAndFieldConcatenate(t *testing.T) {
 	// assert
 	expected := []telegraf.Metric{testutil.MustMetric("weather", map[string]string{"location": "us-midwest", "LocalTemp": "us-midwest is too warm"}, map[string]interface{}{"temperature": "too warm"}, now)}
 	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
+func TestFieldList(t *testing.T) {
+	// Prepare
+	plugin := TemplateProcessor{Tag: "fields", Template: "{{.FieldList}}"}
+	require.NoError(t, plugin.Init())
+
+	// Run
+	m := testutil.TestMetric(1.23)
+	actual := plugin.Apply(m)
+
+	// Verify
+	expected := m.Copy()
+	expected.AddTag("fields", "map[value:1.23]")
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
+}
+
+func TestTagList(t *testing.T) {
+	// Prepare
+	plugin := TemplateProcessor{Tag: "tags", Template: "{{.TagList}}"}
+	require.NoError(t, plugin.Init())
+
+	// Run
+	m := testutil.TestMetric(1.23)
+	actual := plugin.Apply(m)
+
+	// Verify
+	expected := m.Copy()
+	expected.AddTag("tags", "map[tag1:value1]")
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
+}
+
+func TestDot(t *testing.T) {
+	// Prepare
+	plugin := TemplateProcessor{Tag: "metric", Template: "{{.}}"}
+	require.NoError(t, plugin.Init())
+
+	// Run
+	m := testutil.TestMetric(1.23)
+	actual := plugin.Apply(m)
+
+	// Verify
+	expected := m.Copy()
+	expected.AddTag("metric", "test1 map[tag1:value1] map[value:1.23] 1257894000000000000")
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{expected}, actual)
 }

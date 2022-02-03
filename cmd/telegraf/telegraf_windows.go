@@ -1,6 +1,8 @@
 //go:build windows
 // +build windows
 
+//go:generate goversioninfo -icon=../../assets/tiger.ico
+
 package main
 
 import (
@@ -45,9 +47,12 @@ func (p *program) run() {
 		p.inputFilters,
 		p.outputFilters,
 	)
+	close(stop)
 }
 func (p *program) Stop(s service.Service) error {
-	close(stop)
+	var empty struct{}
+	stop <- empty // signal reloadLoop to finish (context cancel)
+	<-stop        // wait for reloadLoop to finish and close channel
 	return nil
 }
 
@@ -88,6 +93,10 @@ func runAsWindowsService(inputFilters, outputFilters []string) {
 
 		//set servicename to service cmd line, to have a custom name after relaunch as a service
 		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", *fServiceName)
+
+		if *fServiceAutoRestart {
+			svcConfig.Option = service.KeyValue{"OnFailure": "restart", "OnFailureDelayDuration": *fServiceRestartDelay}
+		}
 
 		err := service.Control(s, *fService)
 		if err != nil {

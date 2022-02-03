@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net/http"
 	"net/url"
@@ -297,10 +296,10 @@ func (s *Sensu) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	return s.write(reqBody)
+	return s.writeMetrics(reqBody)
 }
 
-func (s *Sensu) write(reqBody []byte) error {
+func (s *Sensu) writeMetrics(reqBody []byte) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 	method := http.MethodPost
 
@@ -336,7 +335,7 @@ func (s *Sensu) write(reqBody []byte) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		bodyData, err := ioutil.ReadAll(resp.Body)
+		bodyData, err := io.ReadAll(resp.Body)
 		if err != nil {
 			s.Log.Debugf("Couldn't read response body: %v", err)
 		}

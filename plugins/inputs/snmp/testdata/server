@@ -1,0 +1,57 @@
+TEST DEFINITIONS ::= BEGIN
+
+IMPORTS
+        MODULE-IDENTITY, OBJECT-TYPE, Integer32  FROM fooImports;
+
+TestMIB MODULE-IDENTITY
+    LAST-UPDATED "2021090800Z"
+    ORGANIZATION "influx"
+    CONTACT-INFO
+        "EMail:  influx@email.com"
+    DESCRIPTION
+        "MIB module for testing snmp plugin
+        for telegraf
+        "
+    ::= { iso 1 }
+
+testingObjects OBJECT IDENTIFIER ::= { iso 0 }
+testObjects OBJECT IDENTIFIER ::= { testingObjects 0 }
+hostnameone OBJECT IDENTIFIER ::= {testObjects 1 }
+hostname OBJECT IDENTIFIER ::= { hostnameone 1 }
+testTable OBJECT IDENTIFIER ::= { testObjects 0 }
+testMIBObjects OBJECT IDENTIFIER ::= { testTable 1 }
+
+
+server OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "server mib for testing"
+            ::= { testMIBObjects 1 }
+
+connections OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "server mib for testing"
+            ::= { testMIBObjects 2 }
+
+latency OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "server mib for testing"
+            ::= { testMIBObjects 3 }
+
+description OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "server mib for testing"
+            ::= { testMIBObjects 4 }   
+
+END

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
@@ -19,6 +18,8 @@ import (
 type CookieAuthConfig struct {
 	URL    string `toml:"cookie_auth_url"`
 	Method string `toml:"cookie_auth_method"`
+
+	Headers map[string]string `toml:"cookie_auth_headers"`
 
 	// HTTP Basic Auth Credentials
 	Username string `toml:"cookie_auth_username"`
@@ -78,7 +79,7 @@ func (c *CookieAuthConfig) authRenewal(ctx context.Context, ticker *clockutil.Ti
 func (c *CookieAuthConfig) auth() error {
 	var body io.ReadCloser
 	if c.Body != "" {
-		body = ioutil.NopCloser(strings.NewReader(c.Body))
+		body = io.NopCloser(strings.NewReader(c.Body))
 		defer body.Close()
 	}
 
@@ -91,13 +92,21 @@ func (c *CookieAuthConfig) auth() error {
 		req.SetBasicAuth(c.Username, c.Password)
 	}
 
+	for k, v := range c.Headers {
+		if strings.ToLower(k) == "host" {
+			req.Host = v
+		} else {
+			req.Header.Add(k, v)
+		}
+	}
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	if _, err = io.Copy(ioutil.Discard, resp.Body); err != nil {
+	if _, err = io.Copy(io.Discard, resp.Body); err != nil {
 		return err
 	}
 

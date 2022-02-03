@@ -20,7 +20,7 @@ func (rp RunningProcessors) Len() int           { return len(rp) }
 func (rp RunningProcessors) Swap(i, j int)      { rp[i], rp[j] = rp[j], rp[i] }
 func (rp RunningProcessors) Less(i, j int) bool { return rp[i].Config.Order < rp[j].Config.Order }
 
-// FilterConfig containing a name and filter
+// ProcessorConfig containing a name and filter
 type ProcessorConfig struct {
 	Name   string
 	Alias  string

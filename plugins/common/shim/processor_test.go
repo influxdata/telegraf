@@ -3,17 +3,17 @@ package shim
 import (
 	"bufio"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/stretchr/testify/require"
 )
 
 func TestProcessorShim(t *testing.T) {
@@ -84,7 +84,9 @@ func testSendAndRecieve(t *testing.T, fieldKey string, fieldValue string) {
 	val2, ok := mOut.Fields()[fieldKey]
 	require.True(t, ok)
 	require.Equal(t, fieldValue, val2)
-	go ioutil.ReadAll(r)
+	go func() {
+		_, _ = io.ReadAll(r)
+	}()
 	wg.Wait()
 }
 
@@ -94,8 +96,8 @@ type testProcessor struct {
 }
 
 func (p *testProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	for _, metric := range in {
-		metric.AddTag(p.tagName, p.tagValue)
+	for _, m := range in {
+		m.AddTag(p.tagName, p.tagValue)
 	}
 	return in
 }
