@@ -87,7 +87,7 @@ Example:
 
 #### PreVistaSupport
 
-(Deprecated. Necessary features on Windows Vista and newer are checked dynamically)
+(Deprecated in 1.7; Necessary features on Windows Vista and newer are checked dynamically)
 
 Bool, if set to `true`, the plugin will use the localized PerfCounter interface that has been present since before Vista for backwards compatibility.
 
