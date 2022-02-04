@@ -691,7 +691,7 @@ func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *Resource
 	return m, nil
 }
 
-func getResourcePoolName(ctx context.Context, e *Endpoint, rp types.ManagedObjectReference, rps objectMap) string {
+func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string {
 	//Loop through the Resource Pools objectmap to find the corresponding one
 	for _, r := range rps {
 		if r.ref == rp {
