@@ -691,14 +691,14 @@ func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *Resource
 	return m, nil
 }
 
-func getResourcePoolName(ctx context.Context, e *Endpoint, rp types.ManagedObjectReference, rps objectMap) string {
+func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string {
 	//Loop through the Resource Pools objectmap to find the corresponding one
 	for _, r := range rps {
 		if r.ref == rp {
 			return r.name
 		}
 	}
-	return "Resources"
+	return "Resources" //Default value
 }
 
 //noinspection GoUnusedParameter
@@ -751,7 +751,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 		uuid := ""
 		lookup := make(map[string]string)
 		// Get the name of the VM resource pool
-		rpname := getResourcePoolName(ctx, e, *r.ResourcePool, resourcePools)
+		rpname := getResourcePoolName(*r.ResourcePool, resourcePools)
 
 		// Extract host name
 		if r.Guest != nil && r.Guest.HostName != "" {
