@@ -1,0 +1,12 @@
+{
+  "measurement": "measurementName",
+  "timestamp": "2022-02-02T00:00:00Z",
+  "tags": {
+    "source": "sourceValue",
+    "machine": "machineValue"
+  },
+  "fields": {
+    "field1": 1.0,
+    "field2": 2.0
+  }
+}
