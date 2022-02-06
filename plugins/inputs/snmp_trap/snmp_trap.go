@@ -99,7 +99,7 @@ func init() {
 }
 
 func (s *SnmpTrap) Init() error {
-	err := snmp.LoadMibsFromPath(s.Path, s.Log)
+	err := snmp.LoadMibsFromPath(s.Path, s.Log, &snmp.GosmiMibLoader{})
 	if err != nil {
 		s.Log.Errorf("Could not get path %v", err)
 	}

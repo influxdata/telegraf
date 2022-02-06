@@ -129,6 +129,7 @@ func TestFieldInit(t *testing.T) {
 		ClientConfig: snmp.ClientConfig{
 			Path: []string{testDataPath},
 		},
+		Log: &testutil.Logger{},
 	}
 
 	err = s.Init()
@@ -1313,7 +1314,7 @@ func BenchmarkMibLoading(b *testing.B) {
 	log := testutil.Logger{}
 	path := []string{"testdata"}
 	for i := 0; i < b.N; i++ {
-		err := snmp.LoadMibsFromPath(path, log)
+		err := snmp.LoadMibsFromPath(path, log, &snmp.GosmiMibLoader{})
 		require.NoError(b, err)
 	}
 }
@@ -1332,6 +1333,6 @@ func TestCanNotParse(t *testing.T) {
 func TestMissingMibPath(t *testing.T) {
 	log := testutil.Logger{}
 	path := []string{"non-existing-directory"}
-	err := snmp.LoadMibsFromPath(path, log)
+	err := snmp.LoadMibsFromPath(path, log, &snmp.GosmiMibLoader{})
 	require.NoError(t, err)
 }

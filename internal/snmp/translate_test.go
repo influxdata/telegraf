@@ -46,7 +46,7 @@ func TestTrapLookup(t *testing.T) {
 	}
 
 	// Load the MIBs
-	require.NoError(t, LoadMibsFromPath([]string{"testdata/mibs"}, testutil.Logger{}))
+	require.NoError(t, LoadMibsFromPath([]string{"testdata/mibs"}, testutil.Logger{}, &GosmiMibLoader{}))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -77,13 +77,51 @@ func TestTrapLookupFail(t *testing.T) {
 	}
 
 	// Load the MIBs
-	require.NoError(t, LoadMibsFromPath([]string{"testdata/mibs"}, testutil.Logger{}))
+	require.NoError(t, LoadMibsFromPath([]string{"testdata/mibs"}, testutil.Logger{}, &GosmiMibLoader{}))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Run the actual test
 			_, err := TrapLookup(tt.oid)
 			require.EqualError(t, err, tt.expected)
+		})
+	}
+}
+
+type TestingMibLoader struct {
+	folders []string
+	files   []string
+}
+
+func (t *TestingMibLoader) appendPath(path string) {
+	t.folders = append(t.folders, path)
+}
+
+func (t *TestingMibLoader) loadModule(path string) error {
+	t.files = append(t.files, path)
+	return nil
+}
+func TestFolderLookup(t *testing.T) {
+	tests := []struct {
+		name    string
+		folders []string
+		files   []string
+	}{
+		{
+			name:    "loading folders",
+			folders: []string{"testdata", "testdata/loadMibsFromPath", "testdata/loadMibsFromPath/linkTarget", "testdata/loadMibsFromPath/root", "testdata/mibs"},
+			files:   []string{"testmib"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			loader := TestingMibLoader{}
+
+			err := LoadMibsFromPath([]string{"testdata"}, testutil.Logger{}, &loader)
+			require.NoError(t, err)
+			require.Equal(t, tt.folders, loader.folders)
+			require.Equal(t, tt.files, loader.files)
 		})
 	}
 }
