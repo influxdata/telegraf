@@ -3,11 +3,14 @@ package x509_cert
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -15,6 +18,7 @@ import (
 	"time"
 
 	"github.com/pion/dtls/v2"
+	"golang.org/x/crypto/ocsp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -40,6 +44,9 @@ const sampleConfig = `
   ## Don't include root or intermediate certificates in output
   # exclude_root_certs = false
 
+  ## Skip OCSP revocation check
+  # skip_ocsp_check = false
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -53,6 +60,7 @@ type X509Cert struct {
 	Timeout          config.Duration `toml:"timeout"`
 	ServerName       string          `toml:"server_name"`
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
+	SkipOCSPCheck    bool            `toml:"skip_ocsp_check"`
 	tlsCfg           *tls.Config
 	_tls.ClientConfig
 	locations []*url.URL
@@ -328,13 +336,20 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			}
 
 			_, err = cert.Verify(opts)
-			if err == nil {
-				tags["verification"] = "valid"
-				fields["verification_code"] = 0
-			} else {
+			if err != nil {
 				tags["verification"] = "invalid"
 				fields["verification_code"] = 1
 				fields["verification_error"] = err.Error()
+			} else {
+				err = c.checkOCSP(cert)
+				if err == nil {
+					tags["verification"] = "valid"
+					fields["verification_code"] = 0
+				} else {
+					tags["verification"] = "invalid"
+					fields["verification_code"] = 2
+					fields["verification_error"] = err.Error()
+				}
 			}
 
 			acc.AddFields("x509_cert", fields, tags)
@@ -372,6 +387,68 @@ func (c *X509Cert) Init() error {
 	c.tlsCfg = tlsCfg
 
 	return nil
+}
+
+// Check whether the certificate has been revoked using OCSP.
+func (c *X509Cert) checkOCSP(cert *x509.Certificate) error {
+	if c.SkipOCSPCheck {
+		return nil
+	}
+
+	issuerCertURLs := cert.IssuingCertificateURL
+	ocspURLs := cert.OCSPServer
+	if len(issuerCertURLs) == 0 || len(ocspURLs) == 0 {
+		return nil
+	}
+
+	resp, err := http.Get(issuerCertURLs[0])
+	if err != nil {
+		return fmt.Errorf("error fetching issuer certificate: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading issuer certificate: %w", err)
+	}
+
+	issuerCert, err := x509.ParseCertificate(body)
+	if err != nil {
+		return fmt.Errorf("error parsing issuer certificate: %w", err)
+	}
+
+	b, err := ocsp.CreateRequest(cert, issuerCert, &ocsp.RequestOptions{
+		Hash: crypto.SHA1,
+	})
+	if err != nil {
+		return fmt.Errorf("error creating OCSP request: %w", err)
+	}
+
+	resp, err = http.Post(ocspURLs[0], "application/ocsp-request", bytes.NewBuffer(b))
+	if err != nil {
+		return fmt.Errorf("error making OCSP request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	output, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading OCSP response: %w", err)
+	}
+
+	ocspResp, err := ocsp.ParseResponse(output, issuerCert)
+	if err != nil {
+		return fmt.Errorf("error parsing OCSP response: %w", err)
+	}
+
+	switch ocspResp.Status {
+	case ocsp.Good:
+		return nil
+	case ocsp.Revoked:
+		return fmt.Errorf("ocsp: certificate has been revoked")
+	default:
+		// The OCSP responder doesn't know about our cert
+		return nil
+	}
 }
 
 func init() {

@@ -343,6 +343,24 @@ func TestStrings(t *testing.T) {
 	}
 }
 
+func TestCheckOCSPRevocation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	m := &X509Cert{
+		Sources: []string{"https://revoked.badssl.com:443"},
+	}
+	require.NoError(t, m.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, m.Gather(&acc))
+	require.True(t, acc.HasMeasurement("x509_cert"))
+
+	status, found := acc.IntField("x509_cert", "verification_code")
+	require.True(t, found)
+	require.Equal(t, 2, status)
+}
+
 func TestGatherCertIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

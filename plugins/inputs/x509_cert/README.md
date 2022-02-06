@@ -1,6 +1,6 @@
-# x509 Certificate Input Plugin
+# X.509 Certificate Input Plugin
 
-This plugin provides information about X509 certificate accessible via local
+This plugin provides information about X.509 certificate accessible via local
 file or network connection.
 
 When using a UDP address as a certificate source, the server must support [DTLS](https://en.wikipedia.org/wiki/Datagram_Transport_Layer_Security).
@@ -24,6 +24,12 @@ When using a UDP address as a certificate source, the server must support [DTLS]
   ## options may be specified at one time.
   ##   example: server_name = "myhost.example.org"
   # server_name = "myhost.example.org"
+
+  ## Don't include root or intermediate certificates in output
+  # exclude_root_certs = false
+
+  ## Skip OCSP revocation check
+  # skip_ocsp_check = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
