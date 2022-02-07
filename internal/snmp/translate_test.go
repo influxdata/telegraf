@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -102,15 +103,21 @@ func (t *TestingMibLoader) loadModule(path string) error {
 	return nil
 }
 func TestFolderLookup(t *testing.T) {
+	paths := [][]string{
+		{"testdata"},
+		{"testdata", "loadMibsFromPath"},
+		{"testdata", "loadMibsFromPath", "linkTarget"},
+		{"testdata", "loadMibsFromPath", "root"},
+		{"testdata", "mibs"},
+	}
 	tests := []struct {
 		name    string
 		folders []string
 		files   []string
 	}{
 		{
-			name:    "loading folders",
-			folders: []string{"testdata", "testdata/loadMibsFromPath", "testdata/loadMibsFromPath/linkTarget", "testdata/loadMibsFromPath/root", "testdata/mibs"},
-			files:   []string{"emptyFile", "testmib"},
+			name:  "loading folders",
+			files: []string{"emptyFile", "testmib"},
 		},
 	}
 
@@ -120,6 +127,10 @@ func TestFolderLookup(t *testing.T) {
 
 			err := LoadMibsFromPath([]string{"testdata"}, testutil.Logger{}, &loader)
 			require.NoError(t, err)
+			for _, pathSlice := range paths {
+				path := filepath.Join(pathSlice...)
+				tt.folders = append(tt.folders, path)
+			}
 			require.Equal(t, tt.folders, loader.folders)
 			require.Equal(t, tt.files, loader.files)
 		})
