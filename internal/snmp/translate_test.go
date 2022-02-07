@@ -110,7 +110,7 @@ func TestFolderLookup(t *testing.T) {
 		{
 			name:    "loading folders",
 			folders: []string{"testdata", "testdata/loadMibsFromPath", "testdata/loadMibsFromPath/linkTarget", "testdata/loadMibsFromPath/root", "testdata/mibs"},
-			files:   []string{"testmib"},
+			files:   []string{"emptyFile", "testmib"},
 		},
 	}
 
