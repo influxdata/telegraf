@@ -8,11 +8,11 @@ require (
 	cloud.google.com/go/pubsub v1.17.1
 	collectd.org v0.5.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.3.17
-	github.com/Azure/azure-kusto-go v0.4.0
+	github.com/Azure/azure-kusto-go v0.5.2
 	github.com/Azure/azure-storage-queue-go v0.0.0-20191125232315-636801874cdd
-	github.com/Azure/go-autorest/autorest v0.11.18
-	github.com/Azure/go-autorest/autorest/adal v0.9.16
-	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8
+	github.com/Azure/go-autorest/autorest v0.11.24
+	github.com/Azure/go-autorest/autorest/adal v0.9.18
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
 	github.com/BurntSushi/toml v0.4.1
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Shopify/sarama v1.29.1
@@ -58,8 +58,8 @@ require (
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gobwas/glob v0.2.3
-	github.com/gofrs/uuid v4.0.0+incompatible
-	github.com/golang-jwt/jwt/v4 v4.1.0
+	github.com/gofrs/uuid v4.2.0+incompatible
+	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-cmp v0.5.7
@@ -165,12 +165,12 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	github.com/Azure/azure-amqp-common-go/v3 v3.2.3 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
-	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible // indirect
+	github.com/Azure/azure-sdk-for-go v61.2.0+incompatible // indirect
 	github.com/Azure/azure-storage-blob-go v0.14.0 // indirect
 	github.com/Azure/go-amqp v0.17.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
-	github.com/Azure/go-autorest/autorest/azure/cli v0.4.2 // indirect
+	github.com/Azure/go-autorest/autorest/azure/cli v0.4.5 // indirect
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
@@ -300,7 +300,6 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e // indirect
-	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.2 // indirect
 	github.com/signalfx/gohistogram v0.0.0-20160107210732-1ccfd2ff5083 // indirect
 	github.com/signalfx/sapm-proto v0.7.2 // indirect
@@ -330,7 +329,7 @@ require (
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e // indirect
+	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
