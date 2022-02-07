@@ -3,7 +3,7 @@ package aerospike
 import (
 	"testing"
 
-	as "github.com/aerospike/aerospike-client-go"
+	as "github.com/aerospike/aerospike-client-go/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"

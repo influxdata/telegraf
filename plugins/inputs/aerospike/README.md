@@ -27,6 +27,7 @@ All metrics are attempted to be cast to integers, then booleans, then strings.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+  # tls_name = "tlsname"
   ## If false, skip chain & host verification
   # insecure_skip_verify = true
 
