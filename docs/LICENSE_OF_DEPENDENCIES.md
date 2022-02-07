@@ -33,6 +33,7 @@ following works:
 - github.com/aristanetworks/goarista [Apache License 2.0](https://github.com/aristanetworks/goarista/blob/master/COPYING)
 - github.com/armon/go-metrics [MIT License](https://github.com/armon/go-metrics/blob/master/LICENSE)
 - github.com/aws/aws-sdk-go-v2 [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/LICENSE.txt)
+- github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/aws/protocol/eventstream/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/config [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/config/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/credentials [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/credentials/LICENSE.txt)
 - github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue [Apache License 2.0](https://github.com/aws/aws-sdk-go-v2/blob/main/feature/dynamodb/attributevalue/LICENSE.txt)
