@@ -2,6 +2,7 @@ package snmp
 
 import (
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -132,6 +133,9 @@ func TestFolderLookup(t *testing.T) {
 				tt.folders = append(tt.folders, path)
 			}
 			require.Equal(t, tt.folders, loader.folders)
+			if runtime.GOOS == "windows" {
+				tt.files = []string{"emptyFile", "symlink", "testmib"}
+			}
 			require.Equal(t, tt.files, loader.files)
 		})
 	}
