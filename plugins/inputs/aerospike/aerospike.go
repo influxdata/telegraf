@@ -160,7 +160,7 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 
 	nodes := c.GetNodes()
 	for _, n := range nodes {
-		nodeHost := fmt.Sprintf("%s", n.GetHost())
+		nodeHost := n.GetHost().String()
 		stats, err := a.getNodeInfo(n, asInfoPolicy)
 		if err != nil {
 			return err
