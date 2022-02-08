@@ -156,6 +156,9 @@ func (s *MongoDB) Init() error {
 			q.Set("tlsCAFile", s.TLSCA)
 		}
 		q.Set("sslClientCertificateKeyFile", s.TLSKey)
+		if s.TLSKeyPwd != "" {
+			q.Set("sslClientCertificateKeyPassword", s.TLSKeyPwd)
+		}
 		if s.TLSKeyPassword != "" {
 			q.Set("sslClientCertificateKeyPassword", s.TLSKeyPassword)
 		}
