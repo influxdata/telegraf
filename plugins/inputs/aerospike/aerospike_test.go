@@ -156,8 +156,8 @@ func TestQuerySetsIntegration(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err = acc.GatherError(a.Gather)
-	require.NoError(t, err)
+	errAs := acc.GatherError(a.Gather)
+	require.NoError(t, errAs)
 
 	require.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/foo"))
 	require.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/bar"))
@@ -206,8 +206,8 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err = acc.GatherError(a.Gather)
-	require.NoError(t, err)
+	errAs := acc.GatherError(a.Gather)
+	require.NoError(t, errAs)
 
 	require.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/foo"))
 	require.False(t, FindTagValue(&acc, "aerospike_set", "set", "test/bar"))
