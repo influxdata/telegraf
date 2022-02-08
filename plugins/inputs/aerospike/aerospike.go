@@ -22,8 +22,8 @@ type Aerospike struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
-	EnableTLS bool `toml:"enable_tls"`
-	TLSName string `toml:"tls_name"`
+	EnableTLS bool   `toml:"enable_tls"`
+	TLSName   string `toml:"tls_name"`
 	tlsint.ClientConfig
 
 	initialized bool
@@ -160,7 +160,7 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 
 	nodes := c.GetNodes()
 	for _, n := range nodes {
-		nodeHost := fmt.Sprintf("%s",n.GetHost())
+		nodeHost := fmt.Sprintf("%s", n.GetHost())
 		stats, err := a.getNodeInfo(n, asInfoPolicy)
 		if err != nil {
 			return err
@@ -466,8 +466,8 @@ func parseAerospikeValue(key string, v string) interface{} {
 	} else if parsed, err := strconv.ParseBool(v); err == nil {
 		return parsed
 	} else if parsed, err := strconv.ParseFloat(v, 32); err == nil {
-                return parsed
-        } else {
+		return parsed
+	} else {
 		// leave as string
 		return v
 	}
