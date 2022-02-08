@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
 
 	"crypto/sha256"
-	"gopkg.in/olivere/elastic.v5"
+
+	"github.com/olivere/elastic"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -27,6 +29,7 @@ type Elasticsearch struct {
 	TagKeys             []string
 	Username            string
 	Password            string
+	AuthBearerToken     string
 	EnableSniffer       bool
 	Timeout             config.Duration
 	HealthCheckInterval config.Duration
@@ -62,6 +65,8 @@ var sampleConfig = `
   ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"
+  ## HTTP bearer token authentication details
+  # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 
   ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
@@ -216,9 +221,15 @@ func (a *Elasticsearch) Connect() error {
 		Timeout:   time.Duration(a.Timeout),
 	}
 
+	elasticURL, err := url.Parse(a.URLs[0])
+	if err != nil {
+		return fmt.Errorf("parsing URL failed: %v", err)
+	}
+
 	clientOptions = append(clientOptions,
 		elastic.SetHttpClient(httpclient),
 		elastic.SetSniff(a.EnableSniffer),
+		elastic.SetScheme(elasticURL.Scheme),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
 		elastic.SetGzip(a.EnableGzip),
@@ -227,6 +238,14 @@ func (a *Elasticsearch) Connect() error {
 	if a.Username != "" && a.Password != "" {
 		clientOptions = append(clientOptions,
 			elastic.SetBasicAuth(a.Username, a.Password),
+		)
+	}
+
+	if a.AuthBearerToken != "" {
+		clientOptions = append(clientOptions,
+			elastic.SetHeaders(http.Header{
+				"Authorization": []string{fmt.Sprintf("Bearer %s", a.AuthBearerToken)},
+			}),
 		)
 	}
 

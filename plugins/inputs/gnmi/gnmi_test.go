@@ -371,6 +371,126 @@ func TestNotification(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "tagged update pair",
+			plugin: &GNMI{
+				Log:      testutil.Logger{},
+				Encoding: "proto",
+				Redial:   config.Duration(1 * time.Second),
+				Subscriptions: []Subscription{
+					{
+						Name:             "oc-intf-desc",
+						Origin:           "openconfig-interfaces",
+						Path:             "/interfaces/interface/state/description",
+						SubscriptionMode: "on_change",
+						TagOnly:          true,
+					},
+					{
+						Name:             "oc-intf-counters",
+						Origin:           "openconfig-interfaces",
+						Path:             "/interfaces/interface/state/counters",
+						SubscriptionMode: "sample",
+					},
+				},
+			},
+			server: &MockServer{
+				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+					tagResponse := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
+								Timestamp: 1543236571000000000,
+								Prefix:    &gnmiLib.Path{},
+								Update: []*gnmiLib.Update{
+									{
+										Path: &gnmiLib.Path{
+											Origin: "",
+											Elem: []*gnmiLib.PathElem{
+												{
+													Name: "interfaces",
+												},
+												{
+													Name: "interface",
+													Key:  map[string]string{"name": "Ethernet1"},
+												},
+												{
+													Name: "state",
+												},
+												{
+													Name: "description",
+												},
+											},
+											Target: "",
+										},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"},
+										},
+									},
+								},
+							},
+						},
+					}
+					if err := server.Send(tagResponse); err != nil {
+						return err
+					}
+					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+						return err
+					}
+					taggedResponse := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
+								Timestamp: 1543236572000000000,
+								Prefix:    &gnmiLib.Path{},
+								Update: []*gnmiLib.Update{
+									{
+										Path: &gnmiLib.Path{
+											Origin: "",
+											Elem: []*gnmiLib.PathElem{
+												{
+													Name: "interfaces",
+												},
+												{
+													Name: "interface",
+													Key:  map[string]string{"name": "Ethernet1"},
+												},
+												{
+													Name: "state",
+												},
+												{
+													Name: "counters",
+												},
+												{
+													Name: "in-broadcast-pkts",
+												},
+											},
+											Target: "",
+										},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_IntVal{IntVal: 42},
+										},
+									},
+								},
+							},
+						},
+					}
+					return server.Send(taggedResponse)
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"oc-intf-counters",
+					map[string]string{
+						"path":                     "",
+						"source":                   "127.0.0.1",
+						"name":                     "Ethernet1",
+						"oc-intf-desc/description": "foo",
+					},
+					map[string]interface{}{
+						"in_broadcast_pkts": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -87,7 +87,7 @@ Example:
 
 #### PreVistaSupport
 
-(Deprecated. Necessary features on Windows Vista and newer are checked dynamically)
+(Deprecated in 1.7; Necessary features on Windows Vista and newer are checked dynamically)
 
 Bool, if set to `true`, the plugin will use the localized PerfCounter interface that has been present since before Vista for backwards compatibility.
 
@@ -104,6 +104,15 @@ If se to `false`, current time will be used.
 Supported on Windows Vista/Windows Server 2008 and newer
 Example:
 `UsePerfCounterTime=true`
+
+#### IgnoredErrors
+
+IgnoredErrors accepts a list of PDH error codes which are defined in pdh.go, if this error is encountered it will be ignored.
+For example, you can provide "PDH_NO_DATA" to ignore performance counters with no instances, but by default no errors are ignored.
+You can find the list of possible errors here: [PDH errors](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_perf_counters/pdh.go)
+
+Example:
+`IgnoredErrors=["PDH_NO_DATA"]`
 
 ### Object
 

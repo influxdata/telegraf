@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	NetSrcAgentOneway  = 10
-	NetSrcAgentVersion = 0
-	Scheme             = "tcp"
+	netSrcAgentOneway  = 10
+	netSrcAgentVersion = 0
+	netScheme          = "tcp"
 )
 
 type Whatap struct {
@@ -55,14 +55,17 @@ const sampleConfig = `
 
 func (w *Whatap) Connect() error {
 	// Change and connect multiple servers sequentially.
-	host := w.nextHost()
-	client, err := net.DialTimeout(Scheme, host, time.Duration(w.Timeout))
-	if err != nil {
-		return err
+	for _, host := range w.hosts {
+		client, err := net.DialTimeout(netScheme, host, time.Duration(w.Timeout))
+		if err != nil {
+			w.Log.Errorf("connecting to %q failed: %v", host, err)
+			continue
+		}
+		w.conn = client.(*net.TCPConn)
+		w.Log.Info("Connected ", host)
+		return nil
 	}
-	w.conn = client.(*net.TCPConn)
-	w.Log.Info("Connected ", host)
-	return nil
+	return fmt.Errorf("could not connect to any server")
 }
 
 func (w *Whatap) Close() error {
@@ -111,6 +114,8 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 		dout := wio.NewDataOutputX()
 		dout.WriteShort(p.GetPackType())
 		p.Write(dout)
+		dout.WriteHeader(netSrcAgentOneway, netSrcAgentVersion, w.Pcode,
+			whash.Hash64Str(w.License))
 
 		if err := w.send(dout.ToByteArray()); err != nil {
 			w.Log.Warnf("cannot send data: %v", err)
@@ -119,17 +124,7 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 	}
 	return nil
 }
-func (w *Whatap) send(b []byte) (err error) {
-	dout := wio.NewDataOutputX()
-	// Header : add the header before sending
-	dout.WriteByte(NetSrcAgentOneway)
-	dout.WriteByte(NetSrcAgentVersion)
-	dout.WriteLong(w.Pcode)
-	dout.WriteLong(whash.Hash64Str(w.License))
-	// Body : Set the converted whatap data(b []bytes) as the body
-	dout.WriteIntBytes(b)
-	sendbuf := dout.ToByteArray()
-
+func (w *Whatap) send(sendbuf []byte) (err error) {
 	nbyteleft := len(sendbuf)
 	var pos int
 	var nbytethistime int
@@ -148,29 +143,28 @@ func (w *Whatap) send(b []byte) (err error) {
 	}
 	return nil
 }
-func (w *Whatap) nextHost() string {
-	w.dest++
-	if w.dest >= len(w.Servers) {
-		w.dest = 0
-	}
-	return w.hosts[w.dest]
-}
 func (w *Whatap) Init() error {
-	if len(w.Servers) == 0 {
-		return fmt.Errorf("WhaTap server IP is Required")
-	}
 	w.hosts = make([]string, 0)
 	for _, server := range w.Servers {
 		u, err := url.Parse(server)
 		if err != nil {
-			return fmt.Errorf("invalid address: %s", server)
+			w.Log.Errorf("invalid address: %s", server)
+			continue
 		}
 		if u.Scheme != "tcp" {
-			return fmt.Errorf("only tcp is supported: %s", server)
+			w.Log.Errorf("only tcp is supported: %s", server)
+			continue
 		}
 		w.hosts = append(w.hosts, u.Host)
 	}
-	w.oname, _ = os.Hostname()
+	if len(w.hosts) == 0 {
+		return fmt.Errorf("no WhaTap server IP configured")
+	}
+	if hn, err := os.Hostname(); err != nil {
+		w.oname = "unknown_host"
+	} else {
+		w.oname = hn
+	}
 	w.oid = whash.HashStr(w.oname)
 	return nil
 }
