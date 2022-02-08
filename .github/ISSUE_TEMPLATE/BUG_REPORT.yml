@@ -5,14 +5,21 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking time to fill out this bug report! We reserve Telegraf issues for bugs for reproducible problems.  
+        Thanks for taking time to fill out this bug report! We reserve Telegraf issues for bugs for reproducible problems.
         Please redirect any questions about Telegraf usage to our [Community Slack](https://influxdata.com/slack) or [Community Page](https://community.influxdata.com/) we have a lot of talented community members there who could help answer your question more quickly.
   - type: textarea
     id: config
     attributes:
-      label: Relevent telegraf.conf
+      label: Relevant telegraf.conf
       description: Place config in the toml code section. This will be automatically formatted into toml, so no need for backticks.
       render: toml
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs from Telegraf
+      description: Please include the Telegraf logs, ideally with `--debug` used.
     validations:
       required: true
   - type: input
@@ -63,4 +70,4 @@ body:
       description: Include gist of relevant config, logs, etc.
     validations:
       required: false
-  
+

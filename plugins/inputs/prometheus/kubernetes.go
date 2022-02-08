@@ -110,10 +110,10 @@ func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset)
 		LabelSelector: p.KubernetesLabelSelector,
 		FieldSelector: p.KubernetesFieldSelector,
 	})
-	defer watcher.Stop()
 	if err != nil {
 		return err
 	}
+	defer watcher.Stop()
 
 	for {
 		select {

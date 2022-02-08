@@ -19,9 +19,10 @@ At present this plugin requires the following APIs:
 * orchestration  v1
 
 ## Configuration and Recommendations
+
 ### Recommendations
 
-Due to the large number of unique tags that this plugin generates, in order to keep the cardinality down it is **highly recommended** to use [modifiers](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#modifiers) like `tagexclude` to discard unwanted tags. 
+Due to the large number of unique tags that this plugin generates, in order to keep the cardinality down it is **highly recommended** to use [modifiers](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#modifiers) like `tagexclude` to discard unwanted tags.
 
 For deployments with only a small number of VMs and hosts, a small polling interval (e.g. seconds-minutes) is acceptable. For larger deployments, polling a large number of systems will impact performance. Use the `interval` option to change how often the plugin is run:
 
@@ -29,7 +30,7 @@ For deployments with only a small number of VMs and hosts, a small polling inter
 
 Also, consider polling OpenStack services at different intervals depending on your requirements. This will help with load and cardinality as well.
 
-```
+```toml
 [[inputs.openstack]]
   interval = 5m
   ....
@@ -47,10 +48,9 @@ Also, consider polling OpenStack services at different intervals depending on yo
   ....
 ```
 
-
 ### Configuration
 
-```
+```toml
   ## The recommended interval to poll is '30m'
 
   ## The identity endpoint to authenticate against and get the service catalog from.
@@ -105,246 +105,246 @@ Also, consider polling OpenStack services at different intervals depending on yo
 ### Measurements, Tags & Fields
 
 * openstack_aggregate
-    * name
-    * aggregate_host  [string]
-    * aggregate_hosts  [integer]
-    * created_at  [string]
-    * deleted  [boolean]
-    * deleted_at  [string]
-    * id  [integer]
-    * updated_at  [string]
+  * name
+  * aggregate_host  [string]
+  * aggregate_hosts  [integer]
+  * created_at  [string]
+  * deleted  [boolean]
+  * deleted_at  [string]
+  * id  [integer]
+  * updated_at  [string]
 * openstack_flavor
-    * is_public
-    * name
-    * disk  [integer]
-    * ephemeral  [integer]
-    * id  [string]
-    * ram  [integer]
-    * rxtx_factor  [float]
-    * swap  [integer]
-    * vcpus  [integer]
+  * is_public
+  * name
+  * disk  [integer]
+  * ephemeral  [integer]
+  * id  [string]
+  * ram  [integer]
+  * rxtx_factor  [float]
+  * swap  [integer]
+  * vcpus  [integer]
 * openstack_hypervisor
-    * cpu_arch
-    * cpu_feature_tsc
-    * cpu_feature_tsc-deadline
-    * cpu_feature_tsc_adjust
-    * cpu_feature_tsx-ctrl
-    * cpu_feature_vme
-    * cpu_feature_vmx
-    * cpu_feature_x2apic
-    * cpu_feature_xgetbv1
-    * cpu_feature_xsave
-    * cpu_model
-    * cpu_vendor
-    * hypervisor_hostname
-    * hypervisor_type
-    * hypervisor_version
-    * service_host
-    * service_id
-    * state
-    * status
-    * cpu_topology_cores  [integer]
-    * cpu_topology_sockets  [integer]
-    * cpu_topology_threads  [integer]
-    * current_workload  [integer]
-    * disk_available_least  [integer]
-    * free_disk_gb  [integer]
-    * free_ram_mb  [integer]
-    * host_ip  [string]
-    * id  [string]
-    * local_gb  [integer]
-    * local_gb_used  [integer]
-    * memory_mb  [integer]
-    * memory_mb_used  [integer]
-    * running_vms  [integer]
-    * vcpus  [integer]
-    * vcpus_used  [integer]
+  * cpu_arch
+  * cpu_feature_tsc
+  * cpu_feature_tsc-deadline
+  * cpu_feature_tsc_adjust
+  * cpu_feature_tsx-ctrl
+  * cpu_feature_vme
+  * cpu_feature_vmx
+  * cpu_feature_x2apic
+  * cpu_feature_xgetbv1
+  * cpu_feature_xsave
+  * cpu_model
+  * cpu_vendor
+  * hypervisor_hostname
+  * hypervisor_type
+  * hypervisor_version
+  * service_host
+  * service_id
+  * state
+  * status
+  * cpu_topology_cores  [integer]
+  * cpu_topology_sockets  [integer]
+  * cpu_topology_threads  [integer]
+  * current_workload  [integer]
+  * disk_available_least  [integer]
+  * free_disk_gb  [integer]
+  * free_ram_mb  [integer]
+  * host_ip  [string]
+  * id  [string]
+  * local_gb  [integer]
+  * local_gb_used  [integer]
+  * memory_mb  [integer]
+  * memory_mb_used  [integer]
+  * running_vms  [integer]
+  * vcpus  [integer]
+  * vcpus_used  [integer]
 * openstack_identity
-    * description
-    * domain_id
-    * name
-    * parent_id
-    * enabled   boolean
-    * id        string
-    * is_domain boolean
-    * projects  integer
+  * description
+  * domain_id
+  * name
+  * parent_id
+  * enabled   boolean
+  * id        string
+  * is_domain boolean
+  * projects  integer
 * openstack_network
-    * name
-    * openstack_tags_xyz
-    * project_id
-    * status
-    * tenant_id
-    * admin_state_up  [boolean]
-    * availability_zone_hints  [string]
-    * created_at  [string]
-    * id  [string]
-    * shared  [boolean]
-    * subnet_id  [string]
-    * subnets  [integer]
-    * updated_at  [string]
-* openstack_newtron_agent
-    * agent_host
-    * agent_type
-    * availability_zone
-    * binary
-    * topic
-    * admin_state_up  [boolean]
-    * alive  [boolean]
-    * created_at  [string]
-    * heartbeat_timestamp  [string]
-    * id  [string]
-    * resources_synced  [boolean]
-    * started_at  [string]
+  * name
+  * openstack_tags_xyz
+  * project_id
+  * status
+  * tenant_id
+  * admin_state_up  [boolean]
+  * availability_zone_hints  [string]
+  * created_at  [string]
+  * id  [string]
+  * shared  [boolean]
+  * subnet_id  [string]
+  * subnets  [integer]
+  * updated_at  [string]
+* openstack_neutron_agent
+  * agent_host
+  * agent_type
+  * availability_zone
+  * binary
+  * topic
+  * admin_state_up  [boolean]
+  * alive  [boolean]
+  * created_at  [string]
+  * heartbeat_timestamp  [string]
+  * id  [string]
+  * resources_synced  [boolean]
+  * started_at  [string]
 * openstack_nova_service
-    * host_machine
-    * name
-    * state
-    * status
-    * zone
-    * disabled_reason  [string]
-    * forced_down  [boolean]
-    * id  [string]
-    * updated_at  [string]
+  * host_machine
+  * name
+  * state
+  * status
+  * zone
+  * disabled_reason  [string]
+  * forced_down  [boolean]
+  * id  [string]
+  * updated_at  [string]
 * openstack_port
-    * device_id
-    * device_owner
-    * name
-    * network_id
-    * project_id
-    * status
-    * tenant_id
-    * admin_state_up  [boolean]
-    * allowed_address_pairs  [integer]
-    * fixed_ips  [integer]
-    * id  [string]
-    * ip_address  [string]
-    * mac_address  [string]
-    * security_groups  [string]
-    * subnet_id  [string]
+  * device_id
+  * device_owner
+  * name
+  * network_id
+  * project_id
+  * status
+  * tenant_id
+  * admin_state_up  [boolean]
+  * allowed_address_pairs  [integer]
+  * fixed_ips  [integer]
+  * id  [string]
+  * ip_address  [string]
+  * mac_address  [string]
+  * security_groups  [string]
+  * subnet_id  [string]
 * openstack_request_duration
-    * agents  [integer]
-    * aggregates  [integer]
-    * flavors  [integer]
-    * hypervisors  [integer]
-    * networks  [integer]
-    * nova_services  [integer]
-    * ports  [integer]
-    * projects  [integer]
-    * servers  [integer]
-    * stacks  [integer]
-    * storage_pools  [integer]
-    * subnets  [integer]
-    * volumes  [integer]
+  * agents  [integer]
+  * aggregates  [integer]
+  * flavors  [integer]
+  * hypervisors  [integer]
+  * networks  [integer]
+  * nova_services  [integer]
+  * ports  [integer]
+  * projects  [integer]
+  * servers  [integer]
+  * stacks  [integer]
+  * storage_pools  [integer]
+  * subnets  [integer]
+  * volumes  [integer]
 * openstack_server
-    * flavor
-    * host_id
-    * host_name
-    * image
-    * key_name
-    * name
-    * project
-    * status
-    * tenant_id
-    * user_id
-    * accessIPv4  [string]
-    * accessIPv6  [string]
-    * addresses  [integer]
-    * adminPass  [string]
-    * created  [string]
-    * disk_gb  [integer]
-    * fault_code  [integer]
-    * fault_created  [string]
-    * fault_details  [string]
-    * fault_message  [string]
-    * id  [string]
-    * progress  [integer]
-    * ram_mb  [integer]
-    * security_groups  [integer]
-    * updated  [string]
-    * vcpus  [integer]
-    * volume_id  [string]
-    * volumes_attached  [integer]
+  * flavor
+  * host_id
+  * host_name
+  * image
+  * key_name
+  * name
+  * project
+  * status
+  * tenant_id
+  * user_id
+  * accessIPv4  [string]
+  * accessIPv6  [string]
+  * addresses  [integer]
+  * adminPass  [string]
+  * created  [string]
+  * disk_gb  [integer]
+  * fault_code  [integer]
+  * fault_created  [string]
+  * fault_details  [string]
+  * fault_message  [string]
+  * id  [string]
+  * progress  [integer]
+  * ram_mb  [integer]
+  * security_groups  [integer]
+  * updated  [string]
+  * vcpus  [integer]
+  * volume_id  [string]
+  * volumes_attached  [integer]
 * openstack_server_diagnostics
-    * disk_name
-    * no_of_disks
-    * no_of_ports
-    * port_name
-    * server_id
-    * cpu0_time  [float]
-    * cpu1_time  [float]
-    * cpu2_time  [float]
-    * cpu3_time  [float]
-    * cpu4_time  [float]
-    * cpu5_time  [float]
-    * cpu6_time  [float]
-    * cpu7_time  [float]
-    * disk_errors  [float]
-    * disk_read  [float]
-    * disk_read_req  [float]
-    * disk_write  [float]
-    * disk_write_req  [float]
-    * memory  [float]
-    * memory-actual  [float]
-    * memory-rss  [float]
-    * memory-swap_in  [float]
-    * port_rx  [float]
-    * port_rx_drop  [float]
-    * port_rx_errors  [float]
-    * port_rx_packets  [float]
-    * port_tx  [float]
-    * port_tx_drop  [float]
-    * port_tx_errors  [float]
-    * port_tx_packets  [float]
+  * disk_name
+  * no_of_disks
+  * no_of_ports
+  * port_name
+  * server_id
+  * cpu0_time  [float]
+  * cpu1_time  [float]
+  * cpu2_time  [float]
+  * cpu3_time  [float]
+  * cpu4_time  [float]
+  * cpu5_time  [float]
+  * cpu6_time  [float]
+  * cpu7_time  [float]
+  * disk_errors  [float]
+  * disk_read  [float]
+  * disk_read_req  [float]
+  * disk_write  [float]
+  * disk_write_req  [float]
+  * memory  [float]
+  * memory-actual  [float]
+  * memory-rss  [float]
+  * memory-swap_in  [float]
+  * port_rx  [float]
+  * port_rx_drop  [float]
+  * port_rx_errors  [float]
+  * port_rx_packets  [float]
+  * port_tx  [float]
+  * port_tx_drop  [float]
+  * port_tx_errors  [float]
+  * port_tx_packets  [float]
 * openstack_service
-    * name
-    * service_enabled  [boolean]
-    * service_id  [string]
+  * name
+  * service_enabled  [boolean]
+  * service_id  [string]
 * openstack_storage_pool
-    * driver_version
-    * name
-    * storage_protocol
-    * vendor_name
-    * volume_backend_name
-    * free_capacity_gb  [float]
-    * total_capacity_gb  [float]
+  * driver_version
+  * name
+  * storage_protocol
+  * vendor_name
+  * volume_backend_name
+  * free_capacity_gb  [float]
+  * total_capacity_gb  [float]
 * openstack_subnet
-    * cidr
-    * gateway_ip
-    * ip_version
-    * name
-    * network_id
-    * openstack_tags_subnet_type_PRV
-    * project_id
-    * tenant_id
-    * allocation_pools  [string]
-    * dhcp_enabled  [boolean]
-    * dns_nameservers  [string]
-    * id  [string]
+  * cidr
+  * gateway_ip
+  * ip_version
+  * name
+  * network_id
+  * openstack_tags_subnet_type_PRV
+  * project_id
+  * tenant_id
+  * allocation_pools  [string]
+  * dhcp_enabled  [boolean]
+  * dns_nameservers  [string]
+  * id  [string]
 * openstack_volume
-    * attachment_attachment_id
-    * attachment_device
-    * attachment_host_name
-    * availability_zone
-    * bootable
-    * description
-    * name
-    * status
-    * user_id
-    * volume_type
-    * attachment_attached_at  [string]
-    * attachment_server_id  [string]
-    * created_at  [string]
-    * encrypted  [boolean]
-    * id  [string]
-    * multiattach  [boolean]
-    * size  [integer]
-    * total_attachments  [integer]
-    * updated_at  [string]
+  * attachment_attachment_id
+  * attachment_device
+  * attachment_host_name
+  * availability_zone
+  * bootable
+  * description
+  * name
+  * status
+  * user_id
+  * volume_type
+  * attachment_attached_at  [string]
+  * attachment_server_id  [string]
+  * created_at  [string]
+  * encrypted  [boolean]
+  * id  [string]
+  * multiattach  [boolean]
+  * size  [integer]
+  * total_attachments  [integer]
+  * updated_at  [string]
 
 ### Example Output
 
-```
-> openstack_newtron_agent,agent_host=vim2,agent_type=DHCP\ agent,availability_zone=nova,binary=neutron-dhcp-agent,host=telegraf_host,topic=dhcp_agent admin_state_up=true,alive=true,created_at="2021-01-07T03:40:53Z",heartbeat_timestamp="2021-10-14T07:46:40Z",id="17e1e446-d7da-4656-9e32-67d3690a306f",resources_synced=false,started_at="2021-07-02T21:47:42Z" 1634197616000000000
+```text
+> openstack_neutron_agent,agent_host=vim2,agent_type=DHCP\ agent,availability_zone=nova,binary=neutron-dhcp-agent,host=telegraf_host,topic=dhcp_agent admin_state_up=true,alive=true,created_at="2021-01-07T03:40:53Z",heartbeat_timestamp="2021-10-14T07:46:40Z",id="17e1e446-d7da-4656-9e32-67d3690a306f",resources_synced=false,started_at="2021-07-02T21:47:42Z" 1634197616000000000
 > openstack_aggregate,host=telegraf_host,name=non-dpdk aggregate_host="vim3",aggregate_hosts=2i,created_at="2021-02-01T18:28:00Z",deleted=false,deleted_at="0001-01-01T00:00:00Z",id=3i,updated_at="0001-01-01T00:00:00Z" 1634197617000000000
 > openstack_flavor,host=telegraf_host,is_public=true,name=hwflavor disk=20i,ephemeral=0i,id="f89785c0-6b9f-47f5-a02e-f0fcbb223163",ram=8192i,rxtx_factor=1,swap=0i,vcpus=8i 1634197617000000000
 > openstack_hypervisor,cpu_arch=x86_64,cpu_feature_3dnowprefetch=true,cpu_feature_abm=true,cpu_feature_acpi=true,cpu_feature_adx=true,cpu_feature_aes=true,cpu_feature_apic=true,cpu_feature_xtpr=true,cpu_model=C-Server,cpu_vendor=xyz,host=telegraf_host,hypervisor_hostname=vim3,hypervisor_type=QEMU,hypervisor_version=4002000,service_host=vim3,service_id=192,state=up,status=enabled cpu_topology_cores=28i,cpu_topology_sockets=1i,cpu_topology_threads=2i,current_workload=0i,disk_available_least=2596i,free_disk_gb=2744i,free_ram_mb=374092i,host_ip="xx:xx:xx:x::xxx",id="12",local_gb=3366i,local_gb_used=622i,memory_mb=515404i,memory_mb_used=141312i,running_vms=15i,vcpus=0i,vcpus_used=72i 1634197618000000000

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -310,8 +310,8 @@ func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 
 	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 2)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 2)
 
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
 	expectedTagsEth1 := map[string]string{
@@ -334,8 +334,8 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 	command.InterfaceInclude = append(command.InterfaceInclude, "eth1")
 
 	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 1)
 
 	// Should contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
@@ -361,8 +361,8 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 	command.InterfaceExclude = append(command.InterfaceExclude, "eth1")
 
 	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 1)
 
 	// Should not contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
@@ -489,8 +489,8 @@ func TestNormalizedKeys(t *testing.T) {
 		var acc testutil.Accumulator
 		err := command.Gather(&acc)
 
-		assert.NoError(t, err)
-		assert.Len(t, acc.Metrics, 1)
+		require.NoError(t, err)
+		require.Len(t, acc.Metrics, 1)
 
 		acc.AssertContainsFields(t, pluginName, toStringMapInterface(c.expectedFields))
 		acc.AssertContainsTaggedFields(t, pluginName, toStringMapInterface(c.expectedFields), expectedTags)

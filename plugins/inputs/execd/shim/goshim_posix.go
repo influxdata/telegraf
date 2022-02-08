@@ -15,10 +15,7 @@ func listenForCollectMetricsSignals(ctx context.Context, collectMetricsPrompt ch
 	signal.Notify(collectMetricsPrompt, syscall.SIGHUP, syscall.SIGUSR1, syscall.SIGUSR2)
 
 	go func() {
-		select {
-		case <-ctx.Done():
-			// context done. stop to signals to avoid pushing messages to a closed channel
-			signal.Stop(collectMetricsPrompt)
-		}
+		<-ctx.Done()
+		signal.Stop(collectMetricsPrompt)
 	}()
 }

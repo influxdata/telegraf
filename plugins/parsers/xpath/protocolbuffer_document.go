@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -54,6 +55,13 @@ func (d *protobufDocument) Init() error {
 		fileDesc, err := protodesc.NewFile(fileDescProto, nil)
 		if err != nil {
 			return fmt.Errorf("creating file descriptor from proto failed: %v", err)
+		}
+		if _, err := protoregistry.GlobalFiles.FindFileByPath(fileDesc.Path()); !errors.Is(err, protoregistry.NotFound) {
+			if err != nil {
+				return fmt.Errorf("searching for file %q in registry failed: %v", fileDesc.Path(), err)
+			}
+			d.Log.Warnf("Protocol buffer with path %q already registered. Skipping...", fileDesc.Path())
+			continue
 		}
 		if err := protoregistry.GlobalFiles.RegisterFile(fileDesc); err != nil {
 			return fmt.Errorf("registering file descriptor %q failed: %v", fileDesc.Package(), err)

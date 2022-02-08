@@ -77,6 +77,7 @@ func assertMetricPassed(t *testing.T, target []telegraf.Metric, source telegraf.
 	tValue, present := target[0].GetField("value")
 	require.True(t, present)
 	sValue, present := source.GetField("value")
+	require.True(t, present)
 	require.Equal(t, tValue, sValue)
 	// target metric has proper timestamp
 	require.Equal(t, target[0].Time(), source.Time())
@@ -100,9 +101,9 @@ func TestSuppressRepeatedValue(t *testing.T) {
 	deduplicate := createDedup(time.Now())
 	// Create metric in the past
 	source := createMetric(1, time.Now().Add(-1*time.Second))
-	target := deduplicate.Apply(source)
+	_ = deduplicate.Apply(source)
 	source = createMetric(1, time.Now())
-	target = deduplicate.Apply(source)
+	target := deduplicate.Apply(source)
 
 	assertCacheHit(t, &deduplicate, source)
 	assertMetricSuppressed(t, target)
@@ -113,9 +114,10 @@ func TestPassUpdatedValue(t *testing.T) {
 	// Create metric in the past
 	source := createMetric(1, time.Now().Add(-1*time.Second))
 	target := deduplicate.Apply(source)
+	assertMetricPassed(t, target, source)
+
 	source = createMetric(2, time.Now())
 	target = deduplicate.Apply(source)
-
 	assertCacheRefresh(t, &deduplicate, source)
 	assertMetricPassed(t, target, source)
 }
@@ -125,9 +127,10 @@ func TestPassAfterCacheExpire(t *testing.T) {
 	// Create metric in the past
 	source := createMetric(1, time.Now().Add(-1*time.Hour))
 	target := deduplicate.Apply(source)
+	assertMetricPassed(t, target, source)
+
 	source = createMetric(1, time.Now())
 	target = deduplicate.Apply(source)
-
 	assertCacheRefresh(t, &deduplicate, source)
 	assertMetricPassed(t, target, source)
 }

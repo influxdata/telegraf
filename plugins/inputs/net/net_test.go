@@ -6,7 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/shirou/gopsutil/net"
+	"github.com/shirou/gopsutil/v3/net"
 	"github.com/stretchr/testify/require"
 )
 

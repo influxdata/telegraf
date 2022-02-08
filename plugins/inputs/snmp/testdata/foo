@@ -1,0 +1,30 @@
+FOOTEST-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+        MODULE-IDENTITY, OBJECT-TYPE, Integer32  FROM fooImports;
+
+fooTestMIB MODULE-IDENTITY
+    LAST-UPDATED "2021090800Z"
+    ORGANIZATION "influx"
+    CONTACT-INFO
+        "EMail:  influx@email.com"
+    DESCRIPTION
+        "MIB module for testing snmp plugin
+        for telegraf
+        "
+    ::= { iso 1 }
+
+fooMIBObjects OBJECT IDENTIFIER ::= { iso 2 }
+fooOne OBJECT IDENTIFIER ::= { iso 1 }
+six OBJECT IDENTIFIER ::= { fooOne 1 }
+three OBJECT IDENTIFIER ::= { six 3 }
+
+foo OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "foo mib for testing"
+            ::= { fooMIBObjects 3 }
+
+END

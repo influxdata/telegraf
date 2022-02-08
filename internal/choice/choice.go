@@ -14,7 +14,7 @@ func Contains(choice string, choices []string) bool {
 	return false
 }
 
-// CheckSContains returns an error if a choice is not one of
+// Check returns an error if a choice is not one of
 // the available choices.
 func Check(choice string, available []string) error {
 	if !Contains(choice, available) {
@@ -23,7 +23,7 @@ func Check(choice string, available []string) error {
 	return nil
 }
 
-// CheckSliceContains returns an error if the choices is not a subset of
+// CheckSlice returns an error if the choices is not a subset of
 // available.
 func CheckSlice(choices, available []string) error {
 	for _, choice := range choices {

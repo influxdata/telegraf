@@ -104,10 +104,7 @@ func (d *ReverseDNSCache) Lookup(ip string) ([]string, error) {
 	if len(ip) == 0 {
 		return nil, nil
 	}
-	return d.lookup(ip)
-}
 
-func (d *ReverseDNSCache) lookup(ip string) ([]string, error) {
 	// check if the value is cached
 	d.rwLock.RLock()
 	result, found := d.lockedGetFromCache(ip)
@@ -296,12 +293,6 @@ func (d *ReverseDNSCache) cleanup() {
 	for _, ip := range ipsToDelete {
 		delete(d.cache, ip)
 	}
-}
-
-// blockAllWorkers is a test function that eats up all the worker pool space to
-// make sure workers are done running and there's no room to acquire a new worker.
-func (d *ReverseDNSCache) blockAllWorkers() {
-	d.sem.Acquire(context.Background(), int64(d.maxWorkers))
 }
 
 func (d *ReverseDNSCache) Stats() RDNSCacheStats {
