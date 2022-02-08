@@ -104,21 +104,19 @@ func (t *TestingMibLoader) loadModule(path string) error {
 	return nil
 }
 func TestFolderLookup(t *testing.T) {
-	paths := [][]string{
-		{"testdata"},
-		{"testdata", "loadMibsFromPath"},
-		{"testdata", "loadMibsFromPath", "linkTarget"},
-		{"testdata", "loadMibsFromPath", "root"},
-		{"testdata", "mibs"},
-	}
+	var folders []string
+
 	tests := []struct {
-		name    string
-		folders []string
-		files   []string
+		name         string
+		paths        [][]string
+		files        []string
+		windowsFiles []string
 	}{
 		{
-			name:  "loading folders",
-			files: []string{"emptyFile", "testmib"},
+			name:         "loading folders",
+			paths:        [][]string{{"testdata", "loadMibsFromPath"}, {"testdata", "loadMibsFromPath", "linkTarget"}, {"testdata", "loadMibsFromPath", "root"}},
+			files:        []string{"emptyFile"},
+			windowsFiles: []string{"emptyFile", "symlink"},
 		},
 	}
 
@@ -126,17 +124,19 @@ func TestFolderLookup(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			loader := TestingMibLoader{}
 
-			err := LoadMibsFromPath([]string{"testdata"}, testutil.Logger{}, &loader)
+			err := LoadMibsFromPath([]string{"testdata/loadMibsFromPath"}, testutil.Logger{}, &loader)
 			require.NoError(t, err)
-			for _, pathSlice := range paths {
+			for _, pathSlice := range tt.paths {
 				path := filepath.Join(pathSlice...)
-				tt.folders = append(tt.folders, path)
+				folders = append(folders, path)
 			}
-			require.Equal(t, tt.folders, loader.folders)
+			require.Equal(t, folders, loader.folders)
+
 			if runtime.GOOS == "windows" {
-				tt.files = []string{"emptyFile", "symlink", "testmib"}
+				require.Equal(t, tt.windowsFiles, loader.files)
+			} else {
+				require.Equal(t, tt.files, loader.files)
 			}
-			require.Equal(t, tt.files, loader.files)
 		})
 	}
 }
