@@ -31,7 +31,6 @@ type Whatap struct {
 	oname   string
 	oid     int32
 	conn    net.Conn
-	dest    int
 	hosts   []string
 }
 
