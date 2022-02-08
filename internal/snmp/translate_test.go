@@ -108,12 +108,14 @@ func TestFolderLookup(t *testing.T) {
 
 	tests := []struct {
 		name         string
+		mibPath      []string
 		paths        [][]string
 		files        []string
 		windowsFiles []string
 	}{
 		{
 			name:         "loading folders",
+			mibPath:      []string{"testdata/loadMibsFromPath"},
 			paths:        [][]string{{"testdata", "loadMibsFromPath"}, {"testdata", "loadMibsFromPath", "linkTarget"}, {"testdata", "loadMibsFromPath", "root"}},
 			files:        []string{"emptyFile"},
 			windowsFiles: []string{"emptyFile", "symlink"},
@@ -124,7 +126,7 @@ func TestFolderLookup(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			loader := TestingMibLoader{}
 
-			err := LoadMibsFromPath([]string{"testdata/loadMibsFromPath"}, testutil.Logger{}, &loader)
+			err := LoadMibsFromPath(tt.mibPath, testutil.Logger{}, &loader)
 			require.NoError(t, err)
 			for _, pathSlice := range tt.paths {
 				path := filepath.Join(pathSlice...)
