@@ -9,7 +9,7 @@ if [ "$ARCH" = 'arm64' ]; then
     GO_VERSION_SHA="dc54f3f4099e2be9e9c33bf926a7dc3ad64f34717142f7abcaff9ae44bc03d0c" # from https://golang.org/dl
 elif [ "$ARCH" = 'x86_64' ]; then
     GO_ARCH="darwin-amd64"
-    GO_VERSION_SHA="231654bbf2dab3d86c1619ce799e77b03d96f9b50770297c8f4dff8836fc8ca2" # from https://golang.org/dl
+    GO_VERSION_SHA="874bc6f95e07697380069a394a21e05576a18d60f4ba178646e1ebed8f8b1f89" # from https://golang.org/dl
 fi
 
 # This path is cachable. (Saving in /usr/local/ would cause issues restoring the cache.)
