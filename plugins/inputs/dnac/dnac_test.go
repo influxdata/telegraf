@@ -19,10 +19,8 @@ func Test_Gather(t *testing.T) {
 	plugin.DnacBaseURL = "https://192.168.196.2"
 	plugin.Username = "test"
 	plugin.Password = "test123"
-	plugin.Debug = "false"
 	plugin.SSLVerify = "false"
-	plugin.ClientHealth = true
-	plugin.NetworkHealth = true
+	plugin.Report = []string{"client", "network"}
 	plugin.Log = testutil.Logger{}
 
 	require.NoError(t, plugin.InitClient())
