@@ -12,13 +12,13 @@ import (
 )
 
 type Dnac struct {
-	DnacBaseURL string
 	Username    string
 	Password    string
 	SSLVerify   string
 	Report      []string
 	Log         telegraf.Logger
 	Client      *dnac_sdk.Client
+	DnacBaseURL string
 }
 
 func (d *Dnac) Description() string {
