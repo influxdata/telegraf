@@ -28,7 +28,7 @@ import (
 // Docker object
 type Docker struct {
 	Endpoint       string
-	ContainerNames []string // deprecated in 1.4; use container_name_include
+	ContainerNames []string `toml:"container_names" deprecated:"1.4.0;use 'container_name_include' instead"`
 
 	GatherServices bool `toml:"gather_services"`
 
@@ -99,9 +99,6 @@ var sampleConfig = `
 
   ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
   gather_services = false
-
-  ## Only collect metrics for these containers, collect all if empty
-  container_names = []
 
   ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
   source_tag = false

@@ -65,10 +65,6 @@ func (h *HTTPResponse) Description() string {
 }
 
 var sampleConfig = `
-  ## Deprecated in 1.12, use 'urls'
-  ## Server address (default http://localhost)
-  # address = "http://localhost"
-
   ## List of urls to query.
   # urls = ["http://localhost"]
 
@@ -425,7 +421,6 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		if h.Address == "" {
 			h.URLs = []string{"http://localhost"}
 		} else {
-			h.Log.Warn("'address' deprecated in telegraf 1.12, please use 'urls'")
 			h.URLs = []string{h.Address}
 		}
 	}

@@ -15,10 +15,10 @@ import (
 type Openldap struct {
 	Host               string
 	Port               int
-	SSL                string `toml:"ssl"` // Deprecated in 1.7; use TLS
+	SSL                string `toml:"ssl" deprecated:"1.7.0;use 'tls' instead"`
 	TLS                string `toml:"tls"`
 	InsecureSkipVerify bool
-	SSLCA              string `toml:"ssl_ca"` // Deprecated in 1.7; use TLSCA
+	SSLCA              string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
 	TLSCA              string `toml:"tls_ca"`
 	BindDn             string
 	BindPassword       string

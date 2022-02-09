@@ -33,7 +33,7 @@ type InfluxDBListener struct {
 	ReadTimeout        config.Duration `toml:"read_timeout"`
 	WriteTimeout       config.Duration `toml:"write_timeout"`
 	MaxBodySize        config.Size     `toml:"max_body_size"`
-	MaxLineSize        config.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
+	MaxLineSize        config.Size     `toml:"max_line_size" deprecated:"1.14.0;parser now handles lines of unlimited length and option is ignored"`
 	BasicUsername      string          `toml:"basic_username"`
 	BasicPassword      string          `toml:"basic_password"`
 	DatabaseTag        string          `toml:"database_tag"`
@@ -140,10 +140,6 @@ func (h *InfluxDBListener) Init() error {
 
 	if h.MaxBodySize == 0 {
 		h.MaxBodySize = config.Size(defaultMaxBodySize)
-	}
-
-	if h.MaxLineSize != 0 {
-		h.Log.Warnf("Use of deprecated configuration: 'max_line_size'; parser now handles lines of unlimited length and option is ignored")
 	}
 
 	if h.ReadTimeout < config.Duration(time.Second) {

@@ -18,8 +18,8 @@ import (
 )
 
 type ActiveMQ struct {
-	Server          string          `toml:"server"`
-	Port            int             `toml:"port"`
+	Server          string          `toml:"server" deprecated:"1.11.0;use 'url' instead"`
+	Port            int             `toml:"port" deprecated:"1.11.0;use 'url' instead"`
 	URL             string          `toml:"url"`
 	Username        string          `toml:"username"`
 	Password        string          `toml:"password"`
@@ -85,11 +85,6 @@ type Stats struct {
 var sampleConfig = `
   ## ActiveMQ WebConsole URL
   url = "http://127.0.0.1:8161"
-
-  ## Required ActiveMQ Endpoint
-  ##   deprecated in 1.11; use the url option
-  # server = "127.0.0.1"
-  # port = 8161
 
   ## Credentials for basic HTTP authentication
   # username = "admin"

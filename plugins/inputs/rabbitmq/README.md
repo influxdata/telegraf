@@ -42,6 +42,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
 
   ## A list of queues to gather as the rabbitmq_queue measurement. If not
   ## specified, metrics for all queues are gathered.
+  ## Deprecated in 1.6: Use queue_name_include instead.
   # queues = ["telegraf"]
 
   ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
