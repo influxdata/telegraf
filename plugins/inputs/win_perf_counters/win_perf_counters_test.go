@@ -1068,3 +1068,43 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 	//be English.
 	require.Contains(t, acc.Metrics[0].Fields, sanitizedChars.Replace(counter))
 }
+
+func TestCheckError(t *testing.T) {
+	tests := []struct {
+		Name          string
+		Err           error
+		IgnoredErrors []string
+		ExpectedErr   error
+	}{
+		{
+			Name: "Ignore PDH_NO_DATA",
+			Err: &PdhError{
+				ErrorCode: uint32(PDH_NO_DATA),
+			},
+			IgnoredErrors: []string{
+				"PDH_NO_DATA",
+			},
+			ExpectedErr: nil,
+		},
+		{
+			Name: "Don't ignore PDH_NO_DATA",
+			Err: &PdhError{
+				ErrorCode: uint32(PDH_NO_DATA),
+			},
+			ExpectedErr: &PdhError{
+				ErrorCode: uint32(PDH_NO_DATA),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.Name, func(t *testing.T) {
+			m := Win_PerfCounters{
+				IgnoredErrors: tc.IgnoredErrors,
+			}
+
+			err := m.checkError(tc.Err)
+			require.Equal(t, tc.ExpectedErr, err)
+		})
+	}
+}

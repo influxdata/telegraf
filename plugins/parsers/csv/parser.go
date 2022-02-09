@@ -9,30 +9,34 @@ import (
 	"strings"
 	"time"
 
+	_ "time/tzdata" // needed to bundle timezone info into the binary for Windows
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type TimeFunc func() time.Time
 
-type Config struct {
-	ColumnNames       []string `toml:"csv_column_names"`
-	ColumnTypes       []string `toml:"csv_column_types"`
-	Comment           string   `toml:"csv_comment"`
-	Delimiter         string   `toml:"csv_delimiter"`
-	HeaderRowCount    int      `toml:"csv_header_row_count"`
-	MeasurementColumn string   `toml:"csv_measurement_column"`
-	MetricName        string   `toml:"metric_name"`
-	SkipColumns       int      `toml:"csv_skip_columns"`
-	SkipRows          int      `toml:"csv_skip_rows"`
-	TagColumns        []string `toml:"csv_tag_columns"`
-	TimestampColumn   string   `toml:"csv_timestamp_column"`
-	TimestampFormat   string   `toml:"csv_timestamp_format"`
-	Timezone          string   `toml:"csv_timezone"`
-	TrimSpace         bool     `toml:"csv_trim_space"`
-	SkipValues        []string `toml:"csv_skip_values"`
-	SkipErrors        bool     `toml:"csv_skip_errors"`
+type Parser struct {
+	ColumnNames       []string        `toml:"csv_column_names"`
+	ColumnTypes       []string        `toml:"csv_column_types"`
+	Comment           string          `toml:"csv_comment"`
+	Delimiter         string          `toml:"csv_delimiter"`
+	HeaderRowCount    int             `toml:"csv_header_row_count"`
+	MeasurementColumn string          `toml:"csv_measurement_column"`
+	MetricName        string          `toml:"metric_name"`
+	SkipColumns       int             `toml:"csv_skip_columns"`
+	SkipRows          int             `toml:"csv_skip_rows"`
+	TagColumns        []string        `toml:"csv_tag_columns"`
+	TimestampColumn   string          `toml:"csv_timestamp_column"`
+	TimestampFormat   string          `toml:"csv_timestamp_format"`
+	Timezone          string          `toml:"csv_timezone"`
+	TrimSpace         bool            `toml:"csv_trim_space"`
+	SkipValues        []string        `toml:"csv_skip_values"`
+	SkipErrors        bool            `toml:"csv_skip_errors"`
+	Log               telegraf.Logger `toml:"-"`
 
 	gotColumnNames bool
 
@@ -40,42 +44,36 @@ type Config struct {
 	DefaultTags map[string]string
 }
 
-// Parser is a CSV parser, you should use NewParser to create a new instance.
-type Parser struct {
-	*Config
-	Log telegraf.Logger
-}
-
-func NewParser(c *Config) (*Parser, error) {
-	if c.HeaderRowCount == 0 && len(c.ColumnNames) == 0 {
-		return nil, fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
+func (p *Parser) Init() error {
+	if p.HeaderRowCount == 0 && len(p.ColumnNames) == 0 {
+		return fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
 	}
 
-	if c.Delimiter != "" {
-		runeStr := []rune(c.Delimiter)
+	if p.Delimiter != "" {
+		runeStr := []rune(p.Delimiter)
 		if len(runeStr) > 1 {
-			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", c.Delimiter)
+			return fmt.Errorf("csv_delimiter must be a single character, got: %s", p.Delimiter)
 		}
 	}
 
-	if c.Comment != "" {
-		runeStr := []rune(c.Comment)
+	if p.Comment != "" {
+		runeStr := []rune(p.Comment)
 		if len(runeStr) > 1 {
-			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", c.Comment)
+			return fmt.Errorf("csv_delimiter must be a single character, got: %s", p.Comment)
 		}
 	}
 
-	if len(c.ColumnNames) > 0 && len(c.ColumnTypes) > 0 && len(c.ColumnNames) != len(c.ColumnTypes) {
-		return nil, fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
+	if len(p.ColumnNames) > 0 && len(p.ColumnTypes) > 0 && len(p.ColumnNames) != len(p.ColumnTypes) {
+		return fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
 	}
 
-	c.gotColumnNames = len(c.ColumnNames) > 0
+	p.gotColumnNames = len(p.ColumnNames) > 0
 
-	if c.TimeFunc == nil {
-		c.TimeFunc = time.Now
+	if p.TimeFunc == nil {
+		p.TimeFunc = time.Now
 	}
 
-	return &Parser{Config: c}, nil
+	return nil
 }
 
 func (p *Parser) SetTimeFunc(fn TimeFunc) {
@@ -319,4 +317,31 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 // SetDefaultTags set the DefaultTags
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
+}
+
+func init() {
+	parsers.Add("csv",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{MetricName: defaultMetricName}
+		})
+}
+
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.HeaderRowCount = config.CSVHeaderRowCount
+	p.SkipRows = config.CSVSkipRows
+	p.SkipColumns = config.CSVSkipColumns
+	p.Delimiter = config.CSVDelimiter
+	p.Comment = config.CSVComment
+	p.TrimSpace = config.CSVTrimSpace
+	p.ColumnNames = config.CSVColumnNames
+	p.ColumnTypes = config.CSVColumnTypes
+	p.TagColumns = config.CSVTagColumns
+	p.MeasurementColumn = config.CSVMeasurementColumn
+	p.TimestampColumn = config.CSVTimestampColumn
+	p.TimestampFormat = config.CSVTimestampFormat
+	p.Timezone = config.CSVTimezone
+	p.DefaultTags = config.DefaultTags
+	p.SkipValues = config.CSVSkipValues
+
+	return p.Init()
 }

@@ -57,6 +57,35 @@ GO
 CREATE USER [telegraf] FOR LOGIN telegraf;
 ```
 
+For Service SID authentication to SQL Server (Windows service installations only).
+[More information about using service SIDs to grant permissions in SQL Server](https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server)
+
+In an administrative command prompt configure the telegraf service for use with a service SID
+
+```Batchfile
+sc.exe sidtype "telegraf" unrestricted
+```
+
+To create the login for the telegraf service run the following script:
+
+```sql
+USE master;
+GO
+CREATE LOGIN [NT SERVICE\telegraf];
+GO
+GRANT VIEW SERVER STATE TO [NT SERVICE\telegraf];
+GO
+GRANT VIEW ANY DEFINITION TO [NT SERVICE\telegraf];
+GO
+```
+
+Remove User Id and Password keywords from the connection string in your config file to use windows authentication.
+
+```toml
+[[inputs.sqlserver]]
+  servers = ["Server=192.168.1.10;Port=1433;app name=telegraf;log=1;",]
+```
+
 ## Configuration
 
 ```toml
@@ -213,6 +242,8 @@ To enable support for AAD authentication, we leverage the existing AAD authentic
 
 ### How to use AAD Auth with MSI
 
+- Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
+
 - Configure "system-assigned managed identity" for Azure resources on the Monitoring VM (the VM that'd connect to the SQL server/database) [using the Azure portal](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-portal-windows-vm).
 - On the database being monitored, create/update a USER with the name of the Monitoring VM as the principal using the below script. This might require allow-listing the client machine's IP address (from where the below SQL script is being run) on the SQL Server resource.
 
@@ -226,8 +257,6 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
 ```
 
 - On the SQL Server resource of the database(s) being monitored, go to "Firewalls and Virtual Networks" tab and allowlist the monitoring VM IP address.
-- On the Monitoring VM, update the telegraf config file with the database connection string in the following format. Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
-- On the Monitoring VM, update the telegraf config file with the database connection string in the following format.
 - On the Monitoring VM, update the telegraf config file with the database connection string in the following format. The connection string only provides the server and database name, but no password (since the VM's system-assigned managed identity would be used for authentication). The auth method must be set to "AAD"
 
 ```toml
@@ -236,8 +265,6 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
   ]
   auth_method = "AAD"
 ```
-
-- Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
 
 ## Metrics
 
