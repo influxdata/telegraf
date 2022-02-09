@@ -13,16 +13,19 @@ decided based on the impact.
 
 ## Deprecate plugins
 
-Add a comment to the plugin's sample config, include the deprecation version
-and any replacement.
+Add an entry to the plugins deprecation list (e.g. in `plugins/inputs/deprecations.go`). Include the deprecation version
+and any replacement, e.g.
 
-```toml
-[[inputs.logparser]]
-  ## DEPRECATED: The 'logparser' plugin is deprecated in 1.10.  Please use the
-  ## 'tail' plugin with the grok data_format as a replacement.
+```golang
+  "logparser": {
+    Since:  "1.15.0",
+    Notice: "use 'inputs.tail' with 'grok' data format instead",
+  },
 ```
 
-Add the deprecation warning to the plugin's README:
+The entry can contain an optional `RemovalIn` field specifying the planned version for removal of the plugin.
+
+Also add the deprecation warning to the plugin's README:
 
 ```markdown
 # Logparser Input Plugin
@@ -34,13 +37,10 @@ Add the deprecation warning to the plugin's README:
 [data formats]: /docs/DATA_FORMATS_INPUT.md
 ```
 
-Log a warning message if the plugin is used.  If the plugin is a
-ServiceInput, place this in the `Start()` function, for regular Input's log it only the first
-time the `Gather` function is called.
+Telegraf will automatically check if a deprecated plugin is configured and print a warning
 
-```go
-log.Println("W! [inputs.logparser] The logparser plugin is deprecated in 1.10. " +
-    "Please use the tail plugin with the grok data_format as a replacement.")
+```text
+2022-01-26T20:08:15Z W! DeprecationWarning: Plugin "inputs.logparser" deprecated since version 1.15.0 and will be removed in 2.0.0: use 'inputs.tail' with 'grok' data format instead
 ```
 
 ## Deprecate options
@@ -54,24 +54,18 @@ version and any replacement.
   # url = "amqp://localhost:5672/influxdb"
 ```
 
-In the plugins configuration struct, mention that the option is deprecated:
+In the plugins configuration struct, add a `deprecated` tag to the option:
 
 ```go
 type AMQPConsumer struct {
-    URL string `toml:"url"` // deprecated in 1.7; use brokers
+    URL string `toml:"url" deprecated:"1.7.0;use brokers"`
 }
 ```
 
-Finally, use the plugin's `Init() error` method to display a log message at warn level.  The message should include the offending configuration option and any suggested replacement:
+The `deprecated` tag has the format `<since version>[;removal version];<notice>` where the `removal version` is optional. The specified deprecation info will automatically displayed by Telegraf if the option is used in the config
 
-```go
-func (a *AMQPConsumer) Init() error {
-    if p.URL != "" {
-        p.Log.Warnf("Use of deprecated configuration: 'url'; please use the 'brokers' option")
-    }
-
-    return nil
-}
+```text
+2022-01-26T20:08:15Z W! DeprecationWarning: Option "url" of plugin "inputs.amqp_consumer" deprecated since version 1.7.0 and will be removed in 2.0.0: use brokers
 ```
 
 ## Deprecate metrics

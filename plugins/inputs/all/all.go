@@ -211,6 +211,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/wireguard"
 	_ "github.com/influxdata/telegraf/plugins/inputs/wireless"
 	_ "github.com/influxdata/telegraf/plugins/inputs/x509_cert"
+	_ "github.com/influxdata/telegraf/plugins/inputs/xtremio"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zipkin"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"

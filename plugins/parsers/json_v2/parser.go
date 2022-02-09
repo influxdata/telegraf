@@ -54,24 +54,25 @@ type Config struct {
 }
 
 type DataSet struct {
-	Path   string `toml:"path"`   // REQUIRED
-	Type   string `toml:"type"`   // OPTIONAL, can't be set for tags they will always be a string
-	Rename string `toml:"rename"` // OPTIONAL
+	Path   string `toml:"path"` // REQUIRED
+	Type   string `toml:"type"` // OPTIONAL, can't be set for tags they will always be a string
+	Rename string `toml:"rename"`
 }
 
 type JSONObject struct {
-	Path               string            `toml:"path"`                 // REQUIRED
-	TimestampKey       string            `toml:"timestamp_key"`        // OPTIONAL
-	TimestampFormat    string            `toml:"timestamp_format"`     // OPTIONAL, but REQUIRED when timestamp_path is defined
-	TimestampTimezone  string            `toml:"timestamp_timezone"`   // OPTIONAL, but REQUIRES timestamp_path
-	Renames            map[string]string `toml:"renames"`              // OPTIONAL
-	Fields             map[string]string `toml:"fields"`               // OPTIONAL
-	Tags               []string          `toml:"tags"`                 // OPTIONAL
-	IncludedKeys       []string          `toml:"included_keys"`        // OPTIONAL
-	ExcludedKeys       []string          `toml:"excluded_keys"`        // OPTIONAL
-	DisablePrependKeys bool              `toml:"disable_prepend_keys"` // OPTIONAL
-	FieldPaths         []DataSet         // OPTIONAL
-	TagPaths           []DataSet         // OPTIONAL
+	Path               string            `toml:"path"`     // REQUIRED
+	Optional           bool              `toml:"optional"` // Will suppress errors if there isn't a match with Path
+	TimestampKey       string            `toml:"timestamp_key"`
+	TimestampFormat    string            `toml:"timestamp_format"`   // OPTIONAL, but REQUIRED when timestamp_path is defined
+	TimestampTimezone  string            `toml:"timestamp_timezone"` // OPTIONAL, but REQUIRES timestamp_path
+	Renames            map[string]string `toml:"renames"`
+	Fields             map[string]string `toml:"fields"`
+	Tags               []string          `toml:"tags"`
+	IncludedKeys       []string          `toml:"included_keys"`
+	ExcludedKeys       []string          `toml:"excluded_keys"`
+	DisablePrependKeys bool              `toml:"disable_prepend_keys"`
+	FieldPaths         []DataSet
+	TagPaths           []DataSet
 }
 
 type MetricNode struct {
@@ -89,6 +90,8 @@ type MetricNode struct {
 	Metric telegraf.Metric
 	gjson.Result
 }
+
+const GJSONPathNUllErrorMSG = "GJSON Path returned null, either couldn't find value or path has null value"
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 	// Only valid JSON is supported
@@ -112,6 +115,9 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		p.timestamp = time.Now()
 		if c.TimestampPath != "" {
 			result := gjson.GetBytes(input, c.TimestampPath)
+			if result.Type == gjson.Null {
+				return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
 					err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
@@ -175,6 +181,9 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool) ([]telegr
 			return nil, fmt.Errorf("GJSON path is required")
 		}
 		result := gjson.GetBytes(input, c.Path)
+		if result.Type == gjson.Null {
+			return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+		}
 
 		if result.IsObject() {
 			p.Log.Debugf("Found object in the path: %s, ignoring it please use 'object' to gather metrics from objects", c.Path)
@@ -313,7 +322,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 	} else {
-		if result.SetName == p.objectConfig.TimestampKey {
+		if p.objectConfig.TimestampKey != "" && result.SetName == p.objectConfig.TimestampKey {
 			if p.objectConfig.TimestampFormat == "" {
 				err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
 				return nil, err
@@ -400,12 +409,25 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject) ([]telegraf.
 		if c.Path == "" {
 			return nil, fmt.Errorf("GJSON path is required")
 		}
+
 		result := gjson.GetBytes(input, c.Path)
+		if result.Type == gjson.Null {
+			if c.Optional {
+				// If path is marked as optional don't error if path doesn't return a result
+				p.Log.Debugf(GJSONPathNUllErrorMSG)
+				return nil, nil
+			}
+
+			return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+		}
 
 		scopedJSON := []byte(result.Raw)
 		for _, f := range c.FieldPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
+			if r.result.Type == gjson.Null {
+				return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+			}
 			r.DataSet = f
 			p.subPathResults = append(p.subPathResults, r)
 		}
@@ -413,6 +435,9 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject) ([]telegraf.
 		for _, f := range c.TagPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
+			if r.result.Type == gjson.Null {
+				return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+			}
 			r.DataSet = f
 			r.tag = true
 			p.subPathResults = append(p.subPathResults, r)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"text/template"
@@ -234,9 +235,15 @@ func (a *Elasticsearch) Connect() error {
 		Timeout:   time.Duration(a.Timeout),
 	}
 
+	elasticURL, err := url.Parse(a.URLs[0])
+	if err != nil {
+		return fmt.Errorf("parsing URL failed: %v", err)
+	}
+
 	clientOptions = append(clientOptions,
 		elastic.SetHttpClient(httpclient),
 		elastic.SetSniff(a.EnableSniffer),
+		elastic.SetScheme(elasticURL.Scheme),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
 		elastic.SetGzip(a.EnableGzip),

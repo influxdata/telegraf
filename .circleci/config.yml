@@ -130,6 +130,11 @@ commands:
       - attach_workspace:
           at: '/go'
       - when:
+          condition:
+            equal: [ windows, << parameters.type >> ]
+          steps:
+            - run: make versioninfo
+      - when:
           condition: << parameters.nightly >>
           steps:
             - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
@@ -395,6 +400,9 @@ jobs:
     steps:
       - attach_workspace:
           at: '.'
+      - run:
+          command: |
+            cd dist && find . -type f -name '._*' -delete
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'

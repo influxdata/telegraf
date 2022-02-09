@@ -28,6 +28,12 @@ You configure this parser by describing the line protocol you want by defining t
         [[inputs.file.json_v2.object]]
             path = "" # A string with valid GJSON path syntax, can include array's and object's
 
+            ## WARNING: Setting optional to true will suppress errors if the configured Path doesn't match the JSON
+            ## This should be used with caution because it removes the safety net of verifying the provided path
+            ## This was introduced to support situations when parsing multiple incoming JSON payloads with wildcards
+            ## More context: https://github.com/influxdata/telegraf/issues/10072
+            optional = false
+
             ## Configuration to define what JSON keys should be used as timestamps ##
             timestamp_key = "" # A JSON key (for a nested key, prepend the parent keys with underscores) to a valid timestamp
             timestamp_format = "" # A string with a valid timestamp format (see below for possible values)
