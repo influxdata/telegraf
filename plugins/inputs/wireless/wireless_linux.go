@@ -5,7 +5,6 @@ package wireless
 
 import (
 	"bytes"
-	"log"
 	"os"
 	"path"
 	"strconv"
@@ -51,7 +50,7 @@ func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	interfaces, err := loadWirelessTable(table)
+	interfaces, err := w.loadWirelessTable(table)
 	if err != nil {
 		return err
 	}
@@ -80,8 +79,8 @@ func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
-	var w []*wirelessInterface
+func (w *Wireless) loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
+	var wi []*wirelessInterface
 	lines := bytes.Split(table, newLineByte)
 
 	// iterate over interfaces
@@ -99,10 +98,10 @@ func loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
 			values = append(values, v)
 		}
 		if len(values) != interfaceFieldLength {
-			log.Printf("E! [input.wireless] invalid length of interface values")
+			w.Log.Error("invalid length of interface values")
 			continue
 		}
-		w = append(w, &wirelessInterface{
+		wi = append(wi, &wirelessInterface{
 			Interface: strings.Trim(fields[0], ":"),
 			Status:    values[0],
 			Link:      values[1],
@@ -116,7 +115,7 @@ func loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
 			Beacon:    values[9],
 		})
 	}
-	return w, nil
+	return wi, nil
 }
 
 // loadPath can be used to read path firstly from config
@@ -128,13 +127,13 @@ func (w *Wireless) loadPath() {
 }
 
 // proc can be used to read file paths from env
-func proc(env, path string) string {
+func proc(env, defaultPath string) string {
 	// try to read full file path
 	if p := os.Getenv(env); p != "" {
 		return p
 	}
 	// return default path
-	return path
+	return defaultPath
 }
 
 func init() {

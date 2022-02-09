@@ -2,7 +2,8 @@
 
 The `cpu` plugin gather metrics on the system CPUs.
 
-#### Configuration
+## Configuration
+
 ```toml
 # Read metrics about cpu usage
 [[inputs.cpu]]
@@ -16,7 +17,7 @@ The `cpu` plugin gather metrics on the system CPUs.
   report_active = false
 ```
 
-### Metrics
+## Metrics
 
 On Linux, consult `man proc` for details on the meanings of these values.
 
@@ -47,14 +48,14 @@ On Linux, consult `man proc` for details on the meanings of these values.
     - usage_guest (float, percent)
     - usage_guest_nice (float, percent)
 
-### Troubleshooting
+## Troubleshooting
 
 On Linux systems the `/proc/stat` file is used to gather CPU times.
 Percentages are based on the last 2 samples.
 
-### Example Output
+## Example Output
 
-```
+```shell
 cpu,cpu=cpu0,host=loaner time_active=202224.15999999992,time_guest=30250.35,time_guest_nice=0,time_idle=1527035.04,time_iowait=1352,time_irq=0,time_nice=169.28,time_softirq=6281.4,time_steal=0,time_system=40097.14,time_user=154324.34 1568760922000000000
 cpu,cpu=cpu0,host=loaner usage_active=31.249999981810106,usage_guest=2.083333333080696,usage_guest_nice=0,usage_idle=68.7500000181899,usage_iowait=0,usage_irq=0,usage_nice=0,usage_softirq=0,usage_steal=0,usage_system=4.166666666161392,usage_user=25.000000002273737 1568760922000000000
 cpu,cpu=cpu1,host=loaner time_active=201890.02000000002,time_guest=30508.41,time_guest_nice=0,time_idle=264641.18,time_iowait=210.44,time_irq=0,time_nice=181.75,time_softirq=4537.88,time_steal=0,time_system=39480.7,time_user=157479.25 1568760922000000000

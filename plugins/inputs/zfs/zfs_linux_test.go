@@ -119,6 +119,16 @@ const poolIoContents = `11 3 0x00 1 80 2225326830828 32953476980628
 nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt
 1884160  6450688  22       978      272187126 2850519036 2263669418655 424226814 2850519036 2263669871823 0        0
 `
+const objsetContents = `36 1 0x01 7 2160 5214787391 74985931356512
+name                            type data
+dataset_name                    7    HOME
+writes                          4    978
+nwritten                        4    6450688
+reads                           4    22
+nread                           4    1884160
+nunlinks                        4    14148
+nunlinked                       4    14147
+`
 const zilContents = `7 1 0x01 14 672 34118481334 437444452158445
 name                            type data
 zil_commit_count                4    77
@@ -217,6 +227,19 @@ func TestZfsPoolMetrics(t *testing.T) {
 		"pool": "HOME",
 	}
 
+	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
+
+	err = os.WriteFile(testKstatPath+"/HOME/objset-0x20a", []byte(objsetContents), 0644)
+	require.NoError(t, err)
+
+	acc.Metrics = nil
+
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	tags["dataset"] = "HOME"
+
+	poolMetrics = getPoolMetricsNewFormat()
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
@@ -475,5 +498,16 @@ func getPoolMetrics() map[string]interface{} {
 		"rupdate":  int64(2263669871823),
 		"wcnt":     int64(0),
 		"rcnt":     int64(0),
+	}
+}
+
+func getPoolMetricsNewFormat() map[string]interface{} {
+	return map[string]interface{}{
+		"nread":     int64(1884160),
+		"nunlinked": int64(14147),
+		"nunlinks":  int64(14148),
+		"nwritten":  int64(6450688),
+		"reads":     int64(22),
+		"writes":    int64(978),
 	}
 }

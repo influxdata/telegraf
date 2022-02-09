@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
@@ -31,6 +32,15 @@ func TestClientConfig(t *testing.T) {
 				TLSCA:   pki.CACertPath(),
 				TLSCert: pki.ClientCertPath(),
 				TLSKey:  pki.ClientKeyPath(),
+			},
+		},
+		{
+			name: "success with tls key password set",
+			client: tls.ClientConfig{
+				TLSCA:     pki.CACertPath(),
+				TLSCert:   pki.ClientCertPath(),
+				TLSKey:    pki.ClientKeyPath(),
+				TLSKeyPwd: "",
 			},
 		},
 		{
@@ -135,6 +145,18 @@ func TestServerConfig(t *testing.T) {
 				TLSAllowedDNSNames: []string{"localhost", "127.0.0.1"},
 				TLSMinVersion:      pki.TLSMinVersion(),
 				TLSMaxVersion:      pki.TLSMaxVersion(),
+			},
+		},
+		{
+			name: "success with tls key password set",
+			server: tls.ServerConfig{
+				TLSCert:           pki.ServerCertPath(),
+				TLSKey:            pki.ServerKeyPath(),
+				TLSKeyPwd:         "",
+				TLSAllowedCACerts: []string{pki.CACertPath()},
+				TLSCipherSuites:   []string{pki.CipherSuite()},
+				TLSMinVersion:     pki.TLSMinVersion(),
+				TLSMaxVersion:     pki.TLSMaxVersion(),
 			},
 		},
 		{
@@ -323,6 +345,8 @@ func TestConnect(t *testing.T) {
 
 	resp, err := client.Get(ts.URL)
 	require.NoError(t, err)
+
+	defer resp.Body.Close()
 	require.Equal(t, 200, resp.StatusCode)
 }
 

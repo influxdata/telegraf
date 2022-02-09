@@ -5,10 +5,12 @@ This plugin writes to a AMQP 0-9-1 Exchange, a prominent implementation of this 
 This plugin does not bind the exchange to a queue.
 
 For an introduction to AMQP see:
-- https://www.rabbitmq.com/tutorials/amqp-concepts.html
-- https://www.rabbitmq.com/getstarted.html
 
-### Configuration:
+- [amqp: concepts](https://www.rabbitmq.com/tutorials/amqp-concepts.html)
+- [rabbitmq: getting started](https://www.rabbitmq.com/getstarted.html)
+
+## Configuration
+
 ```toml
 # Publishes metrics to an AMQP broker
 [[outputs.amqp]]
@@ -107,7 +109,7 @@ For an introduction to AMQP see:
   # data_format = "influx"
 ```
 
-#### Routing
+### Routing
 
 If `routing_tag` is set, and the tag is defined on the metric, the value of
 the tag is used as the routing key.  Otherwise the value of `routing_key` is
