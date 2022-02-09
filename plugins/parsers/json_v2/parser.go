@@ -124,8 +124,16 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 					return nil, err
 				}
 
+				// If the input was a string, pass the actual string value.
+				// If result.Raw is used, it will include the quotes surrounding the string,
+				// and the underlying call to time.Parse will fail.
+				s := result.Raw
+				if result.Type == gjson.String {
+					s = result.Str
+				}
+
 				var err error
-				p.timestamp, err = internal.ParseTimestamp(c.TimestampFormat, result.Raw, c.TimestampTimezone)
+				p.timestamp, err = internal.ParseTimestamp(c.TimestampFormat, s, c.TimestampTimezone)
 				if err != nil {
 					return nil, err
 				}
