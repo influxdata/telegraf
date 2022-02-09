@@ -1,5 +1,75 @@
 <!-- markdownlint-disable MD024 -->
 
+# Changelog
+
+## v1.21.3 [2022-01-27]
+
+### Bugfixes
+
+  - [#10430](https://github.com/influxdata/telegraf/pull/10430) `inputs.snmp_trap` Fix translation of partially resolved OIDs
+  - [#10529](https://github.com/influxdata/telegraf/pull/10529) Update deprecation notices
+  - [#10525](https://github.com/influxdata/telegraf/pull/10525) Update grpc module to v1.44.0
+  - [#10434](https://github.com/influxdata/telegraf/pull/10434) Update google.golang.org/api module from 0.54.0 to 0.65.0
+  - [#10507](https://github.com/influxdata/telegraf/pull/10507) Update antchfx/xmlquery module from 1.3.6 to 1.3.9
+  - [#10521](https://github.com/influxdata/telegraf/pull/10521) Update nsqio/go-nsq module from 1.0.8 to 1.1.0
+  - [#10506](https://github.com/influxdata/telegraf/pull/10506) Update prometheus/common module from 0.31.1 to 0.32.1
+  - [#10474](https://github.com/influxdata/telegraf/pull/10474) `inputs.ipset` Fix panic when command not found
+  - [#10504](https://github.com/influxdata/telegraf/pull/10504) Update cloud.google.com/go/pubsub module from 1.17.0 to 1.17.1
+  - [#10432](https://github.com/influxdata/telegraf/pull/10432) Update influxdata/influxdb-observability/influx2otel module from 0.2.8 to 0.2.10
+  - [#10478](https://github.com/influxdata/telegraf/pull/10478) `inputs.opcua` Remove duplicate fields
+  - [#10473](https://github.com/influxdata/telegraf/pull/10473) `parsers.nagios` Log correct errors when executing commands
+  - [#10463](https://github.com/influxdata/telegraf/pull/10463) `inputs.execd` Add newline in execd for prometheus parsing
+  - [#10451](https://github.com/influxdata/telegraf/pull/10451) Update shirou/gopsutil/v3 module from 3.21.10 to 3.21.12
+  - [#10453](https://github.com/influxdata/telegraf/pull/10453) Update jackc/pgx/v4 module from 4.6.0 to 4.14.1
+  - [#10449](https://github.com/influxdata/telegraf/pull/10449) Update Azure/azure-event-hubs-go/v3 module from 3.3.13 to 3.3.17
+  - [#10450](https://github.com/influxdata/telegraf/pull/10450) Update gosnmp/gosnmp module from 1.33.0 to 1.34.0
+  - [#10442](https://github.com/influxdata/telegraf/pull/10442) `parsers.wavefront` Add missing setting wavefront_disable_prefix_conversion
+  - [#10435](https://github.com/influxdata/telegraf/pull/10435) Update hashicorp/consul/api module from 1.9.1 to 1.12.0
+  - [#10436](https://github.com/influxdata/telegraf/pull/10436) Update antchfx/xpath module from 1.1.11 to 1.2.0
+  - [#10433](https://github.com/influxdata/telegraf/pull/10433) Update antchfx/jsonquery module from 1.1.4 to 1.1.5
+  - [#10414](https://github.com/influxdata/telegraf/pull/10414) Update prometheus/procfs module from 0.6.0 to 0.7.3
+  - [#10354](https://github.com/influxdata/telegraf/pull/10354) `inputs.snmp` Fix panic when mibs folder doesn't exist (#10346)
+  - [#10393](https://github.com/influxdata/telegraf/pull/10393) `outputs.syslog` Correctly set ASCII trailer for syslog output
+  - [#10415](https://github.com/influxdata/telegraf/pull/10415) Update aws/aws-sdk-go-v2/service/cloudwatchlogs module from 1.5.2 to 1.12.0
+  - [#10416](https://github.com/influxdata/telegraf/pull/10416) Update kardianos/service module from 1.0.0 to 1.2.1
+  - [#10396](https://github.com/influxdata/telegraf/pull/10396) `inputs.http` Allow empty http body
+  - [#10417](https://github.com/influxdata/telegraf/pull/10417) Update couchbase/go-couchbase module from 0.1.0 to 0.1.1
+  - [#10413](https://github.com/influxdata/telegraf/pull/10413) `parsers.json_v2` Fix timestamp precision when using unix_ns format
+  - [#10418](https://github.com/influxdata/telegraf/pull/10418) Update pion/dtls/v2 module from 2.0.9 to 2.0.13
+  - [#10402](https://github.com/influxdata/telegraf/pull/10402) Update containerd/containerd module to 1.5.9
+  - [#8947](https://github.com/influxdata/telegraf/pull/8947) `outputs.timestream` Fix batching logic with write records and introduce concurrent requests
+  - [#10360](https://github.com/influxdata/telegraf/pull/10360) `outputs.amqp` Avoid connection leak when writing error
+  - [#10097](https://github.com/influxdata/telegraf/pull/10097) `outputs.stackdriver` Send correct interval start times for counters
+
+## v1.21.2 [2022-01-05]
+
+### Release Notes
+
+Happy New Year!
+
+### Features
+
+- Added arm64 MacOS builds
+- Added riscv64 Linux builds
+- Numerous changes to CircleCI config to ensure more timely completion and more clear execution flow
+
+### Bugfixes
+
+- [#10318](https://github.com/influxdata/telegraf/pull/10318) `inputs.disk` Fix missing storage in containers
+- [#10324](https://github.com/influxdata/telegraf/pull/10324) `inputs.dpdk` Add note about dpdk and socket availability
+- [#10296](https://github.com/influxdata/telegraf/pull/10296) `inputs.logparser` Resolve panic in logparser due to missing Log
+- [#10322](https://github.com/influxdata/telegraf/pull/10322) `inputs.snmp` Ensure module load order to avoid snmp marshal error
+- [#10321](https://github.com/influxdata/telegraf/pull/10321) `inputs.snmp` Do not require networking during tests
+- [#10303](https://github.com/influxdata/telegraf/pull/10303) `inputs.snmp` Resolve SNMP panic due to no gosmi module
+- [#10295](https://github.com/influxdata/telegraf/pull/10295) `inputs.snmp` Grab MIB table columns more accurately
+- [#10299](https://github.com/influxdata/telegraf/pull/10299) `inputs.snmp` Check index before assignment when floating :: exists to avoid panic
+- [#10301](https://github.com/influxdata/telegraf/pull/10301) `inputs.snmp` Fix panic if no mibs folder is found
+- [#10373](https://github.com/influxdata/telegraf/pull/10373) `inputs.snmp_trap` Document deprecation of timeout parameter
+- [#10377](https://github.com/influxdata/telegraf/pull/10377) `parsers.csv` empty import tzdata for Windows binaries to correctly set timezone
+- [#10332](https://github.com/influxdata/telegraf/pull/10332) Update github.com/djherbis/times module from v1.2.0 to v1.5.0
+- [#10343](https://github.com/influxdata/telegraf/pull/10343) Update github.com/go-ldap/ldap/v3 module from v3.1.0 to v3.4.1
+- [#10255](https://github.com/influxdata/telegraf/pull/10255) Update github.com/gwos/tcg/sdk module from v0.0.0-20211130162655-32ad77586ccf to v0.0.0-20211223101342-35fbd1ae683c and improve logging
+
 ## v1.21.1 [2021-12-16]
 
 ### Bugfixes

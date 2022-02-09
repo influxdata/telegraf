@@ -1,0 +1,22 @@
+TGTEST-MIB DEFINITIONS ::= BEGIN
+
+org            OBJECT IDENTIFIER ::= { iso 3 }  --  "iso" = 1
+dod            OBJECT IDENTIFIER ::= { org 6 }
+internet       OBJECT IDENTIFIER ::= { dod 1 }
+mgmt           OBJECT IDENTIFIER ::= { internet 2 }
+mibs           OBJECT IDENTIFIER ::= { mgmt 1 }
+system         OBJECT IDENTIFIER ::= { mibs 1 }
+systemUpTime   OBJECT IDENTIFIER ::= { system 3 }
+sysUpTimeInstance OBJECT IDENTIFIER ::= { systemUpTime 0 }
+
+private        OBJECT IDENTIFIER ::= { internet 4 }
+enterprises    OBJECT IDENTIFIER ::= { private 1 }
+
+snmpV2         OBJECT IDENTIFIER ::= { internet 6 }
+snmpModules      OBJECT IDENTIFIER ::= { snmpV2 3 }
+snmpMIB          OBJECT IDENTIFIER ::= { snmpModules 1 }
+snmpMIBObjects   OBJECT IDENTIFIER ::= { snmpMIB 1 }
+snmpTraps        OBJECT IDENTIFIER ::= { snmpMIBObjects 5 }
+coldStart        OBJECT IDENTIFIER ::= { snmpTraps 1 }
+
+END

@@ -27,7 +27,7 @@ type semaphore chan empty
 
 // AMQPConsumer is the top level struct for this plugin
 type AMQPConsumer struct {
-	URL                    string            `toml:"url"` // deprecated in 1.7; use brokers
+	URL                    string            `toml:"url" deprecated:"1.7.0;use brokers"`
 	Brokers                []string          `toml:"brokers"`
 	Username               string            `toml:"username"`
 	Password               string            `toml:"password"`

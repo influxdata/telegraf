@@ -376,7 +376,7 @@ func TestNotification(t *testing.T) {
 			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
-				Redial:   internal.Duration{Duration: 1 * time.Second},
+				Redial:   config.Duration(1 * time.Second),
 				Subscriptions: []Subscription{
 					{
 						Name:             "oc-intf-desc",
@@ -394,17 +394,17 @@ func TestNotification(t *testing.T) {
 				},
 			},
 			server: &MockServer{
-				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
-					tagResponse := &gnmi.SubscribeResponse{
-						Response: &gnmi.SubscribeResponse_Update{
-							Update: &gnmi.Notification{
+				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+					tagResponse := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
 								Timestamp: 1543236571000000000,
-								Prefix:    &gnmi.Path{},
-								Update: []*gnmi.Update{
+								Prefix:    &gnmiLib.Path{},
+								Update: []*gnmiLib.Update{
 									{
-										Path: &gnmi.Path{
+										Path: &gnmiLib.Path{
 											Origin: "",
-											Elem: []*gnmi.PathElem{
+											Elem: []*gnmiLib.PathElem{
 												{
 													Name: "interfaces",
 												},
@@ -421,8 +421,8 @@ func TestNotification(t *testing.T) {
 											},
 											Target: "",
 										},
-										Val: &gnmi.TypedValue{
-											Value: &gnmi.TypedValue_StringVal{StringVal: "foo"},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"},
 										},
 									},
 								},
@@ -432,19 +432,19 @@ func TestNotification(t *testing.T) {
 					if err := server.Send(tagResponse); err != nil {
 						return err
 					}
-					if err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
 						return err
 					}
-					taggedResponse := &gnmi.SubscribeResponse{
-						Response: &gnmi.SubscribeResponse_Update{
-							Update: &gnmi.Notification{
+					taggedResponse := &gnmiLib.SubscribeResponse{
+						Response: &gnmiLib.SubscribeResponse_Update{
+							Update: &gnmiLib.Notification{
 								Timestamp: 1543236572000000000,
-								Prefix:    &gnmi.Path{},
-								Update: []*gnmi.Update{
+								Prefix:    &gnmiLib.Path{},
+								Update: []*gnmiLib.Update{
 									{
-										Path: &gnmi.Path{
+										Path: &gnmiLib.Path{
 											Origin: "",
-											Elem: []*gnmi.PathElem{
+											Elem: []*gnmiLib.PathElem{
 												{
 													Name: "interfaces",
 												},
@@ -464,8 +464,8 @@ func TestNotification(t *testing.T) {
 											},
 											Target: "",
 										},
-										Val: &gnmi.TypedValue{
-											Value: &gnmi.TypedValue_IntVal{IntVal: 42},
+										Val: &gnmiLib.TypedValue{
+											Value: &gnmiLib.TypedValue_IntVal{IntVal: 42},
 										},
 									},
 								},
@@ -482,7 +482,7 @@ func TestNotification(t *testing.T) {
 						"path":                     "",
 						"source":                   "127.0.0.1",
 						"name":                     "Ethernet1",
-						"oc-intf-desc_description": "foo",
+						"oc-intf-desc/description": "foo",
 					},
 					map[string]interface{}{
 						"in_broadcast_pkts": 42,
