@@ -41,6 +41,14 @@ func (d *Dnac) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (d *Dnac) Init() error {
+	err := d.InitClient()
+	if err != nil {
+		return err
+	}
+	err = d.Client.AuthClient()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -94,14 +102,12 @@ func (d *Dnac) Gather(acc telegraf.Accumulator) error {
 				d.Log.Errorf("Client health request failed")
 				return err
 			}
-
 			for _, response := range *clientHealth.Response {
 				tags := map[string]string{
 					"host":    dnacURL.Host,
 					"site_id": response.SiteID,
 				}
 				fields := make(map[string]interface{})
-
 				for _, clientType := range *response.ScoreDetail {
 					l1Prefix := clientType.ScoreCategory.ScoreCategory + "_" + clientType.ScoreCategory.Value
 					fields[internal.SnakeCase(l1Prefix+"_client_count")] = clientType.ClientCount
@@ -123,7 +129,6 @@ func (d *Dnac) Gather(acc telegraf.Accumulator) error {
 				}
 				acc.AddFields("dnac_client_health", fields, tags)
 			}
-
 		} else if d.Report[healthType] == "network" {
 			getOverallNetworkHeathQueryParams := &dnac_sdk.GetOverallNetworkHealthQueryParams{}
 
@@ -160,9 +165,7 @@ func (d *Dnac) Gather(acc telegraf.Accumulator) error {
 				networkHealthFields[internal.SnakeCase(healthDist.Category+"_no_health_count")] = healthDist.UnmonCount
 				networkHealthFields[internal.SnakeCase(healthDist.Category+"_no_health_percentage")] = healthDist.UnmonPercentage
 			}
-
 			acc.AddFields("dnac_network_health", networkHealthFields, networkHealthTags)
-
 		}
 	}
 	return nil
