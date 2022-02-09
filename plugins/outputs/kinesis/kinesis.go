@@ -20,8 +20,8 @@ const maxRecordsPerRequest uint32 = 500
 type (
 	KinesisOutput struct {
 		StreamName         string     `toml:"streamname"`
-		PartitionKey       string     `toml:"partitionkey"`
-		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
+		PartitionKey       string     `toml:"partitionkey" deprecated:"1.5.0;use 'partition.key' instead"`
+		RandomPartitionKey bool       `toml:"use_random_partitionkey" deprecated:"1.5.0;use 'partition.method' instead"`
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
 
@@ -73,12 +73,7 @@ var sampleConfig = `
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
-  ## DEPRECATED: PartitionKey as used for sharding data.
-  partitionkey = "PartitionKey"
-  ## DEPRECATED: If set the partitionKey will be a random UUID on every put.
-  ## This allows for scaling across multiple shards in a stream.
-  ## This will cause issues with ordering.
-  use_random_partitionkey = false
+
   ## The partition key can be calculated using one of several methods:
   ##
   ## Use a static value for all writes:

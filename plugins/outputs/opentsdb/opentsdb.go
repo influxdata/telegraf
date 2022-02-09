@@ -32,7 +32,7 @@ type OpenTSDB struct {
 	Host string `toml:"host"`
 	Port int    `toml:"port"`
 
-	HTTPBatchSize int    `toml:"http_batch_size"` // deprecated httpBatchSize form in 1.8
+	HTTPBatchSize int    `toml:"http_batch_size"`
 	HTTPPath      string `toml:"http_path"`
 
 	Debug bool `toml:"debug"`
