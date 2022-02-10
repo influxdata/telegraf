@@ -8,9 +8,12 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -411,25 +414,14 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
-			mask: []string{"TimeFunc", "Log"},
-		},
-		"json_v2": {
-			mask: []string{"Log"},
+			mask: []string{"TimeFunc"},
 		},
 		"logfmt": {
 			mask: []string{"Now"},
 		},
-		"xml": {
-			mask: []string{"Log"},
-		},
-		"xpath_json": {
-			mask: []string{"Log"},
-		},
-		"xpath_msgpack": {
-			mask: []string{"Log"},
-		},
 		"xpath_protobuf": {
 			cfg: &parsers.Config{
+				MetricName:        "parser_test_new",
 				XPathProtobufFile: "testdata/addressbook.proto",
 				XPathProtobufType: "addressbook.AddressBook",
 			},
@@ -437,7 +429,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
 				"ProtobufMessageType": "addressbook.AddressBook",
 			},
-			mask: []string{"Log"},
 		},
 	}
 
@@ -510,33 +501,24 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	require.Len(t, actual, len(formats))
 
 	for i, format := range formats {
+		// Determine the underlying type of the parser
+		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreTypes(sync.Mutex{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
+		}
 		if settings, found := override[format]; found {
-			a := reflect.Indirect(reflect.ValueOf(actual[i]))
-			e := reflect.Indirect(reflect.ValueOf(expected[i]))
-			g := reflect.Indirect(reflect.ValueOf(generated[i]))
-			for _, key := range settings.mask {
-				af := a.FieldByName(key)
-				ef := e.FieldByName(key)
-				gf := g.FieldByName(key)
-
-				v := reflect.Zero(ef.Type())
-				af.Set(v)
-				ef.Set(v)
-				gf.Set(v)
-			}
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
 		}
 
-		// We need special handling for same parsers as they internally contain pointers
-		// to other structs that inherently differ between instances
-		switch format {
-		case "dropwizard", "grok", "influx", "wavefront":
-			// At least check if we have the same type
-			require.IsType(t, expected[i], actual[i])
-			require.IsType(t, expected[i], generated[i])
-			continue
-		}
-		require.EqualValuesf(t, expected[i], actual[i], "in SetParser() for %q", format)
-		require.EqualValuesf(t, expected[i], generated[i], "in SetParserFunc() for %q", format)
+		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected[i], actual[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
+		diff = cmp.Diff(expected[i], generated[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParserFunc() for %q", format)
 	}
 }
 
@@ -581,25 +563,14 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 			param: map[string]interface{}{
 				"HeaderRowCount": cfg.CSVHeaderRowCount,
 			},
-			mask: []string{"TimeFunc", "Log"},
-		},
-		"json_v2": {
-			mask: []string{"Log"},
+			mask: []string{"TimeFunc"},
 		},
 		"logfmt": {
 			mask: []string{"Now"},
 		},
-		"xml": {
-			mask: []string{"Log"},
-		},
-		"xpath_json": {
-			mask: []string{"Log"},
-		},
-		"xpath_msgpack": {
-			mask: []string{"Log"},
-		},
 		"xpath_protobuf": {
 			cfg: &parsers.Config{
+				MetricName:        "parser_test_new",
 				XPathProtobufFile: "testdata/addressbook.proto",
 				XPathProtobufType: "addressbook.AddressBook",
 			},
@@ -607,7 +578,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
 				"ProtobufMessageType": "addressbook.AddressBook",
 			},
-			mask: []string{"Log"},
 		},
 	}
 
@@ -680,33 +650,24 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	require.Len(t, actual, len(formats))
 
 	for i, format := range formats {
+		// Determine the underlying type of the parser
+		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreTypes(sync.Mutex{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
+		}
 		if settings, found := override[format]; found {
-			a := reflect.Indirect(reflect.ValueOf(actual[i]))
-			e := reflect.Indirect(reflect.ValueOf(expected[i]))
-			g := reflect.Indirect(reflect.ValueOf(generated[i]))
-			for _, key := range settings.mask {
-				af := a.FieldByName(key)
-				ef := e.FieldByName(key)
-				gf := g.FieldByName(key)
-
-				v := reflect.Zero(ef.Type())
-				af.Set(v)
-				ef.Set(v)
-				gf.Set(v)
-			}
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
 		}
 
-		// We need special handling for same parsers as they internally contain pointers
-		// to other structs that inherently differ between instances
-		switch format {
-		case "dropwizard", "grok", "influx", "wavefront":
-			// At least check if we have the same type
-			require.IsType(t, expected[i], actual[i])
-			require.IsType(t, expected[i], generated[i])
-			continue
-		}
-		require.EqualValuesf(t, expected[i], actual[i], "in SetParser() for %q", format)
-		require.EqualValuesf(t, expected[i], generated[i], "in SetParserFunc() for %q", format)
+		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected[i], actual[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
+		diff = cmp.Diff(expected[i], generated[i], options...)
+		require.Emptyf(t, diff, "Difference in SetParserFunc() for %q", format)
 	}
 }
 
