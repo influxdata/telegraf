@@ -7,11 +7,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"time"
 )
 
 const sampleResponse = `
@@ -41,7 +41,7 @@ func TestRaindropsTags(t *testing.T) {
 	for _, url1 := range urls {
 		addr, _ = url.Parse(url1)
 		tagMap := r.getTags(addr)
-		assert.Contains(t, tagMap["server"], "localhost")
+		require.Contains(t, tagMap["server"], "localhost")
 	}
 }
 

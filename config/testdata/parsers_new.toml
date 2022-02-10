@@ -1,0 +1,60 @@
+[[inputs.parser_test_new]]
+  data_format = "collectd"
+
+[[inputs.parser_test_new]]
+  data_format = "csv"
+  csv_header_row_count = 42
+
+[[inputs.parser_test_new]]
+  data_format = "dropwizard"
+
+[[inputs.parser_test_new]]
+  data_format = "form_urlencoded"
+
+[[inputs.parser_test_new]]
+  data_format = "graphite"
+
+[[inputs.parser_test_new]]
+  data_format = "grok"
+  grok_patterns = ["%{COMBINED_LOG_FORMAT}"]
+
+[[inputs.parser_test_new]]
+  data_format = "influx"
+
+[[inputs.parser_test_new]]
+  data_format = "json"
+
+[[inputs.parser_test_new]]
+  data_format = "json_v2"
+
+[[inputs.parser_test_new]]
+  data_format = "logfmt"
+
+[[inputs.parser_test_new]]
+  data_format = "nagios"
+
+[[inputs.parser_test_new]]
+  data_format = "prometheus"
+
+[[inputs.parser_test_new]]
+  data_format = "prometheusremotewrite"
+
+[[inputs.parser_test_new]]
+  data_format = "value"
+
+[[inputs.parser_test_new]]
+  data_format = "wavefront"
+
+[[inputs.parser_test_new]]
+  data_format = "xml"
+
+[[inputs.parser_test_new]]
+  data_format = "xpath_json"
+
+[[inputs.parser_test_new]]
+  data_format = "xpath_msgpack"
+
+[[inputs.parser_test_new]]
+  data_format = "xpath_protobuf"
+  xpath_protobuf_file = "testdata/addressbook.proto"
+  xpath_protobuf_type = "addressbook.AddressBook"

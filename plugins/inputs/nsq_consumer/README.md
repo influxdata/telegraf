@@ -3,7 +3,7 @@
 The [NSQ][nsq] consumer plugin reads from NSQD and creates metrics using one
 of the supported [input data formats][].
 
-### Configuration:
+## Configuration
 
 ```toml
 # Read metrics from NSQD topic(s)

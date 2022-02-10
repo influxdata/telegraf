@@ -2,7 +2,7 @@ package file
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -11,17 +11,16 @@ import (
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type File struct {
 	Files             []string `toml:"files"`
 	FileTag           string   `toml:"file_tag"`
 	CharacterEncoding string   `toml:"character_encoding"`
-	parser            parsers.Parser
 
-	filenames []string
-	decoder   *encoding.Decoder
+	parserFunc telegraf.ParserFunc
+	filenames  []string
+	decoder    *encoding.Decoder
 }
 
 const sampleConfig = `
@@ -29,9 +28,13 @@ const sampleConfig = `
   ## as well as ** to match recursive files and directories.
   files = ["/tmp/metrics.out"]
 
+
   ## Name a tag containing the name of the file the data was parsed from.  Leave empty
-  ## to disable.
+  ## to disable. Cautious when file name variation is high, this can increase the cardinality
+  ## significantly. Read more about cardinality here:
+  ## https://docs.influxdata.com/influxdb/cloud/reference/glossary/#series-cardinality
   # file_tag = ""
+  #
 
   ## Character encoding to use when interpreting the file contents.  Invalid
   ## characters are replaced using the unicode replacement character.  When set
@@ -85,8 +88,8 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (f *File) SetParser(p parsers.Parser) {
-	f.parser = p
+func (f *File) SetParserFunc(fn telegraf.ParserFunc) {
+	f.parserFunc = fn
 }
 
 func (f *File) refreshFilePaths() error {
@@ -115,11 +118,15 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	defer file.Close()
 
 	r, _ := utfbom.Skip(f.decoder.Reader(file))
-	fileContents, err := ioutil.ReadAll(r)
+	fileContents, err := io.ReadAll(r)
 	if err != nil {
-		return nil, fmt.Errorf("E! Error file: %v could not be read, %s", filename, err)
+		return nil, fmt.Errorf("could not read %q: %s", filename, err)
 	}
-	return f.parser.Parse(fileContents)
+	parser, err := f.parserFunc()
+	if err != nil {
+		return nil, fmt.Errorf("could not instantiate parser: %s", err)
+	}
+	return parser.Parse(fileContents)
 }
 
 func init() {

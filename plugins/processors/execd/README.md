@@ -9,7 +9,7 @@ Program output on standard error is mirrored to the telegraf log.
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Caveats
+## Caveats
 
 - Metrics with tracking will be considered "delivered" as soon as they are passed
   to the external process. There is currently no way to match up which metric
@@ -20,7 +20,7 @@ Telegraf minimum version: Telegraf 1.15.0
   the requirement that it is serialize-parse symmetrical and does not lose any
   critical type data.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[processors.execd]]
@@ -33,9 +33,9 @@ Telegraf minimum version: Telegraf 1.15.0
   # restart_delay = "10s"
 ```
 
-### Example
+## Example
 
-#### Go daemon example
+### Go daemon example
 
 This go daemon reads a metric from stdin, multiplies the "count" field by 2,
 and writes the metric back out.
@@ -44,55 +44,55 @@ and writes the metric back out.
 package main
 
 import (
-	"fmt"
-	"os"
+    "fmt"
+    "os"
 
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers"
+    "github.com/influxdata/telegraf/metric"
+    "github.com/influxdata/telegraf/plugins/parsers/influx"
+    "github.com/influxdata/telegraf/plugins/serializers"
 )
 
 func main() {
-	parser := influx.NewStreamParser(os.Stdin)
-	serializer, _ := serializers.NewInfluxSerializer()
+    parser := influx.NewStreamParser(os.Stdin)
+    serializer, _ := serializers.NewInfluxSerializer()
 
-	for {
-		metric, err := parser.Next()
-		if err != nil {
-			if err == influx.EOF {
-				return // stream ended
-			}
-			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
-				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
-				os.Exit(1)
-			}
-			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
-			os.Exit(1)
-		}
+    for {
+        metric, err := parser.Next()
+        if err != nil {
+            if err == influx.EOF {
+                return // stream ended
+            }
+            if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+                fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
+                os.Exit(1)
+            }
+            fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+            os.Exit(1)
+        }
 
-		c, found := metric.GetField("count")
-		if !found {
-			fmt.Fprintf(os.Stderr, "metric has no count field\n")
-			os.Exit(1)
-		}
-		switch t := c.(type) {
-		case float64:
-			t *= 2
-			metric.AddField("count", t)
-		case int64:
-			t *= 2
-			metric.AddField("count", t)
-		default:
-			fmt.Fprintf(os.Stderr, "count is not an unknown type, it's a %T\n", c)
-			os.Exit(1)
-		}
-		b, err := serializer.Serialize(metric)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Fprint(os.Stdout, string(b))
-	}
+        c, found := metric.GetField("count")
+        if !found {
+            fmt.Fprintf(os.Stderr, "metric has no count field\n")
+            os.Exit(1)
+        }
+        switch t := c.(type) {
+        case float64:
+            t *= 2
+            metric.AddField("count", t)
+        case int64:
+            t *= 2
+            metric.AddField("count", t)
+        default:
+            fmt.Fprintf(os.Stderr, "count is not an unknown type, it's a %T\n", c)
+            os.Exit(1)
+        }
+        b, err := serializer.Serialize(metric)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+            os.Exit(1)
+        }
+        fmt.Fprint(os.Stdout, string(b))
+    }
 }
 ```
 
@@ -103,7 +103,7 @@ to run it, you'd build the binary using go, eg `go build -o multiplier.exe main.
   command = ["multiplier.exe"]
 ```
 
-#### Ruby daemon
+### Ruby daemon
 
 - See [Ruby daemon](./examples/multiplier_line_protocol/multiplier_line_protocol.rb)
 

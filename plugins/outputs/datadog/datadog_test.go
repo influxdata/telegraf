@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -36,6 +36,7 @@ func fakeDatadog() *Datadog {
 func TestUriOverride(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		//nolint:errcheck,revive // Ignore the returned error as the test will fail anyway
 		json.NewEncoder(w).Encode(`{"status":"ok"}`)
 	}))
 	defer ts.Close()
@@ -48,9 +49,27 @@ func TestUriOverride(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCompressionOverride(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		//nolint:errcheck,revive // Ignore the returned error as the test will fail anyway
+		json.NewEncoder(w).Encode(`{"status":"ok"}`)
+	}))
+	defer ts.Close()
+
+	d := NewDatadog(ts.URL)
+	d.Apikey = "123456"
+	d.Compression = "zlib"
+	err := d.Connect()
+	require.NoError(t, err)
+	err = d.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+}
+
 func TestBadStatusCode(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
+		//nolint:errcheck,revive // Ignore the returned error as the test will fail anyway
 		json.NewEncoder(w).Encode(`{ 'errors': [
     	'Something bad happened to the server.',
     	'Your query made the server very sad.'
@@ -75,7 +94,7 @@ func TestAuthenticatedUrl(t *testing.T) {
 	d := fakeDatadog()
 
 	authURL := d.authenticatedURL()
-	assert.EqualValues(t, fmt.Sprintf("%s?api_key=%s", fakeURL, fakeAPIKey), authURL)
+	require.EqualValues(t, fmt.Sprintf("%s?api_key=%s", fakeURL, fakeAPIKey), authURL)
 }
 
 func TestBuildTags(t *testing.T) {
@@ -173,7 +192,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(bool(true), "test7"),
+			testutil.TestMetric(true, "test7"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				1.0,
@@ -181,7 +200,7 @@ func TestBuildPoint(t *testing.T) {
 			nil,
 		},
 		{
-			testutil.TestMetric(bool(false), "test8"),
+			testutil.TestMetric(false, "test8"),
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				0.0,

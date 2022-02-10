@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -29,7 +28,7 @@ func getExitCode(err error) (int, error) {
 		// If it is not an *exec.ExitError, then it must be
 		// an io error, but docs do not say anything about the
 		// exit code in this case.
-		return 0, errors.New("expected *exec.ExitError")
+		return 0, err
 	}
 
 	ws, ok := ee.Sys().(syscall.WaitStatus)
@@ -74,6 +73,7 @@ func TryAddState(runErr error, metrics []telegraf.Metric) ([]telegraf.Metric, er
 type NagiosParser struct {
 	MetricName  string
 	DefaultTags map[string]string
+	Log         telegraf.Logger `toml:"-"`
 }
 
 // Got from Alignak
@@ -111,12 +111,12 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	case 2:
 		ms, err := parsePerfData(string(parts[1]), ts)
 		if err != nil {
-			log.Printf("E! [parser.nagios] failed to parse performance data: %s\n", err.Error())
+			p.Log.Errorf("Failed to parse performance data: %s\n", err.Error())
 		}
 		metrics = append(metrics, ms...)
 		fallthrough
 	case 1:
-		msg.Write(bytes.TrimSpace(parts[0]))
+		msg.Write(bytes.TrimSpace(parts[0])) //nolint:revive // from buffer.go: "err is always nil"
 	default:
 		return nil, errors.New("illegal output format")
 	}
@@ -126,34 +126,34 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if bytes.Contains(s.Bytes(), []byte{'|'}) {
 			parts := bytes.Split(s.Bytes(), []byte{'|'})
 			if longmsg.Len() != 0 {
-				longmsg.WriteByte('\n')
+				longmsg.WriteByte('\n') //nolint:revive // from buffer.go: "err is always nil"
 			}
-			longmsg.Write(bytes.TrimSpace(parts[0]))
+			longmsg.Write(bytes.TrimSpace(parts[0])) //nolint:revive // from buffer.go: "err is always nil"
 
 			ms, err := parsePerfData(string(parts[1]), ts)
 			if err != nil {
-				log.Printf("E! [parser.nagios] failed to parse performance data: %s\n", err.Error())
+				p.Log.Errorf("Failed to parse performance data: %s\n", err.Error())
 			}
 			metrics = append(metrics, ms...)
 			break
 		}
 		if longmsg.Len() != 0 {
-			longmsg.WriteByte('\n')
+			longmsg.WriteByte('\n') //nolint:revive // from buffer.go: "err is always nil"
 		}
-		longmsg.Write(bytes.TrimSpace((s.Bytes())))
+		longmsg.Write(bytes.TrimSpace(s.Bytes())) //nolint:revive // from buffer.go: "err is always nil"
 	}
 
 	// Parse extra performance data.
 	for s.Scan() {
 		ms, err := parsePerfData(s.Text(), ts)
 		if err != nil {
-			log.Printf("E! [parser.nagios] failed to parse performance data: %s\n", err.Error())
+			p.Log.Errorf("Failed to parse performance data: %s\n", err.Error())
 		}
 		metrics = append(metrics, ms...)
 	}
 
 	if s.Err() != nil {
-		log.Printf("D! [parser.nagios] unexpected io error: %s\n", s.Err())
+		p.Log.Debugf("Unexpected io error: %s\n", s.Err())
 	}
 
 	// Create nagios state.
@@ -291,5 +291,5 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 		return 0, 0, ErrBadThresholdFormat
 	}
 
-	return
+	return min, max, err
 }

@@ -15,21 +15,31 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+type ModbusWorkarounds struct {
+	PollPause        config.Duration `toml:"pause_between_requests"`
+	CloseAfterGather bool            `toml:"close_connection_after_gather"`
+}
+
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Name             string          `toml:"name"`
-	Controller       string          `toml:"controller"`
-	TransmissionMode string          `toml:"transmission_mode"`
-	BaudRate         int             `toml:"baud_rate"`
-	DataBits         int             `toml:"data_bits"`
-	Parity           string          `toml:"parity"`
-	StopBits         int             `toml:"stop_bits"`
-	Timeout          config.Duration `toml:"timeout"`
-	Retries          int             `toml:"busy_retries"`
-	RetriesWaitTime  config.Duration `toml:"busy_retries_wait"`
-	Log              telegraf.Logger `toml:"-"`
+	Name             string            `toml:"name"`
+	Controller       string            `toml:"controller"`
+	TransmissionMode string            `toml:"transmission_mode"`
+	BaudRate         int               `toml:"baud_rate"`
+	DataBits         int               `toml:"data_bits"`
+	Parity           string            `toml:"parity"`
+	StopBits         int               `toml:"stop_bits"`
+	Timeout          config.Duration   `toml:"timeout"`
+	Retries          int               `toml:"busy_retries"`
+	RetriesWaitTime  config.Duration   `toml:"busy_retries_wait"`
+	DebugConnection  bool              `toml:"debug_connection"`
+	Workarounds      ModbusWorkarounds `toml:"workarounds"`
+	Log              telegraf.Logger   `toml:"-"`
 	// Register configuration
+	ConfigurationType string `toml:"configuration_type"`
 	ConfigurationOriginal
+	ConfigurationPerRequest
+
 	// Connection handling
 	client      mb.Client
 	handler     mb.ClientHandler
@@ -50,9 +60,9 @@ type requestSet struct {
 type field struct {
 	measurement string
 	name        string
-	scale       float64
 	address     uint16
 	length      uint16
+	omit        bool
 	converter   fieldConverterFunc
 	value       interface{}
 }
@@ -65,7 +75,7 @@ const (
 )
 
 const description = `Retrieve data from MODBUS slave devices`
-const sampleConfig = `
+const sampleConfigStart = `
   ## Connection Configuration
   ##
   ## The plugin supports connections to PLCs via MODBUS/TCP, RTU over TCP, ASCII over TCP or
@@ -88,7 +98,7 @@ const sampleConfig = `
 
   # TCP - connect via Modbus/TCP
   controller = "tcp://localhost:502"
- 
+
   ## Serial (RS485; RS232)
   # controller = "file:///dev/ttyUSB0"
   # baud_rate = 9600
@@ -96,63 +106,45 @@ const sampleConfig = `
   # parity = "N"
   # stop_bits = 1
 
+  ## Trace the connection to the modbus device as debug messages
+  ## Note: You have to enable telegraf's debug mode to see those messages!
+  # debug_connection = false
+
   ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and "ASCIIoverTCP"
   ## default behaviour is "TCP" if the controller is TCP
   ## For Serial you can choose between "RTU" and "ASCII"
   # transmission_mode = "RTU"
- 
-  ## Measurements
-  ##
 
-  ## Digital Variables, Discrete Inputs and Coils
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## address     - variable address
-
-  discrete_inputs = [
-    { name = "start",          address = [0]},
-    { name = "stop",           address = [1]},
-    { name = "reset",          address = [2]},
-    { name = "emergency_stop", address = [3]},
-  ]
-  coils = [
-    { name = "motor1_run",     address = [0]},
-    { name = "motor1_jog",     address = [1]},
-    { name = "motor1_stop",    address = [2]},
-  ]
-
-  ## Analog Variables, Input Registers and Holding Registers
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## byte_order  - the ordering of bytes
-  ##  |---AB, ABCD   - Big Endian
-  ##  |---BA, DCBA   - Little Endian
-  ##  |---BADC       - Mid-Big Endian
-  ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64,
-  ##              FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
-  ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
-  ## scale      - the final numeric variable representation
-  ## address    - variable address
-
-  holding_registers = [
-    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
-    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
-    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
-    { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
-    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
-    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
-  ]
-  input_registers = [
-    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
-    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
-    { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
-  ]
+	## Define the configuration schema
+  ##  |---register -- define fields per register type in the original style (only supports one slave ID)
+  ##  |---request  -- define fields on a requests base
+  configuration_type = "register"
+`
+const sampleConfigEnd = `
+  ## Enable workarounds required by some devices to work correctly
+  # [inputs.modbus.workarounds]
+    ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
+    # pause_between_requests = "0ms"
+    ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
+    ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
+    ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
+    # close_connection_after_gather = false
 `
 
 // SampleConfig returns a basic configuration for the plugin
 func (m *Modbus) SampleConfig() string {
-	return sampleConfig
+	configs := []Configuration{}
+	cfgOriginal := m.ConfigurationOriginal
+	cfgPerRequest := m.ConfigurationPerRequest
+	configs = append(configs, &cfgOriginal, &cfgPerRequest)
+
+	totalConfig := sampleConfigStart
+	for _, c := range configs {
+		totalConfig += c.SampleConfigPart() + "\n"
+	}
+	totalConfig += "\n"
+	totalConfig += sampleConfigEnd
+	return totalConfig
 }
 
 // Description returns a short description of what the plugin does
@@ -170,14 +162,25 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("retries cannot be negative")
 	}
 
-	// Check and process the configuration
-	if err := m.ConfigurationOriginal.Check(); err != nil {
-		return fmt.Errorf("original configuraton invalid: %v", err)
+	// Determine the configuration style
+	var cfg Configuration
+	switch m.ConfigurationType {
+	case "", "register":
+		cfg = &m.ConfigurationOriginal
+	case "request":
+		cfg = &m.ConfigurationPerRequest
+	default:
+		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
 	}
 
-	r, err := m.ConfigurationOriginal.Process()
+	// Check and process the configuration
+	if err := cfg.Check(); err != nil {
+		return fmt.Errorf("configuraton invalid: %v", err)
+	}
+
+	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process original configuraton: %v", err)
+		return fmt.Errorf("cannot process configuraton: %v", err)
 	}
 	m.requests = r
 
@@ -234,6 +237,11 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		m.collectFields(acc, timestamp, tags, requests.input)
 	}
 
+	// Disconnect after read if configured
+	if m.Workarounds.CloseAfterGather {
+		return m.disconnect()
+	}
+
 	return nil
 }
 
@@ -253,14 +261,23 @@ func (m *Modbus) initClient() error {
 		case "RTUoverTCP":
 			handler := mb.NewRTUOverTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
+			if m.DebugConnection {
+				handler.Logger = m
+			}
 			m.handler = handler
 		case "ASCIIoverTCP":
 			handler := mb.NewASCIIOverTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
+			if m.DebugConnection {
+				handler.Logger = m
+			}
 			m.handler = handler
 		default:
 			handler := mb.NewTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
+			if m.DebugConnection {
+				handler.Logger = m
+			}
 			m.handler = handler
 		}
 	case "file":
@@ -272,6 +289,9 @@ func (m *Modbus) initClient() error {
 			handler.DataBits = m.DataBits
 			handler.Parity = m.Parity
 			handler.StopBits = m.StopBits
+			if m.DebugConnection {
+				handler.Logger = m
+			}
 			m.handler = handler
 		case "ASCII":
 			handler := mb.NewASCIIClientHandler(u.Path)
@@ -280,6 +300,9 @@ func (m *Modbus) initClient() error {
 			handler.DataBits = m.DataBits
 			handler.Parity = m.Parity
 			handler.StopBits = m.StopBits
+			if m.DebugConnection {
+				handler.Logger = m
+			}
 			m.handler = handler
 		default:
 			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
@@ -288,7 +311,6 @@ func (m *Modbus) initClient() error {
 		return fmt.Errorf("invalid controller %q", m.Controller)
 	}
 
-	m.handler.SetSlave(m.SlaveID)
 	m.client = mb.NewClient(m.handler)
 	m.isConnected = false
 
@@ -309,7 +331,8 @@ func (m *Modbus) disconnect() error {
 }
 
 func (m *Modbus) gatherFields() error {
-	for _, requests := range m.requests {
+	for slaveID, requests := range m.requests {
+		m.handler.SetSlave(slaveID)
 		if err := m.gatherRequestsCoil(requests.coil); err != nil {
 			return err
 		}
@@ -334,6 +357,7 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 		if err != nil {
 			return err
 		}
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
 		m.Log.Debugf("got coil@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Bit value handling
@@ -345,6 +369,9 @@ func (m *Modbus) gatherRequestsCoil(requests []request) error {
 			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
 			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
 		}
+
+		// Some (serial) devices require a pause between requests...
+		time.Sleep(time.Until(nextRequest))
 	}
 	return nil
 }
@@ -356,6 +383,7 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 		if err != nil {
 			return err
 		}
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
 		m.Log.Debugf("got discrete@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Bit value handling
@@ -367,6 +395,9 @@ func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
 			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
 			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
 		}
+
+		// Some (serial) devices require a pause between requests...
+		time.Sleep(time.Until(nextRequest))
 	}
 	return nil
 }
@@ -378,6 +409,7 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 		if err != nil {
 			return err
 		}
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
 		m.Log.Debugf("got holding@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Non-bit value handling
@@ -390,6 +422,9 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
 			m.Log.Debugf("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
 		}
+
+		// Some (serial) devices require a pause between requests...
+		time.Sleep(time.Until(nextRequest))
 	}
 	return nil
 }
@@ -401,6 +436,7 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 		if err != nil {
 			return err
 		}
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
 		m.Log.Debugf("got input@%v[%v]: %v", request.address, request.length, bytes)
 
 		// Non-bit value handling
@@ -413,6 +449,9 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
 			m.Log.Debugf("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
 		}
+
+		// Some (serial) devices require a pause between requests...
+		time.Sleep(time.Until(nextRequest))
 	}
 	return nil
 }
@@ -420,6 +459,15 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, tags map[string]string, requests []request) {
 	grouper := metric.NewSeriesGrouper()
 	for _, request := range requests {
+		// Collect tags from global and per-request
+		rtags := map[string]string{}
+		for k, v := range tags {
+			rtags[k] = v
+		}
+		for k, v := range request.tags {
+			rtags[k] = v
+		}
+
 		for _, field := range request.fields {
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
@@ -428,7 +476,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			if err := grouper.Add(measurement, tags, timestamp, field.name, field.value); err != nil {
+			if err := grouper.Add(measurement, rtags, timestamp, field.name, field.value); err != nil {
 				acc.AddError(fmt.Errorf("cannot add field %q for measurement %q: %v", field.name, measurement, err))
 				continue
 			}
@@ -439,6 +487,11 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 	for _, x := range grouper.Metrics() {
 		acc.AddMetric(x)
 	}
+}
+
+// Implement the logger interface of the modbus client
+func (m *Modbus) Printf(format string, v ...interface{}) {
+	m.Log.Debugf(format, v...)
 }
 
 // Add this plugin to telegraf
