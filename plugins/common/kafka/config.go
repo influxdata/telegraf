@@ -51,8 +51,7 @@ type Config struct {
 	ClientID         string `toml:"client_id"`
 	CompressionCodec int    `toml:"compression_codec"`
 
-	// EnableTLS deprecated
-	EnableTLS *bool `toml:"enable_tls" deprecated:"1.17.0;ignored"`
+	EnableTLS *bool `toml:"enable_tls" deprecated:"1.17.0;option is ignored"`
 
 	// Disable full metadata fetching
 	MetadataFull *bool `toml:"metadata_full"`

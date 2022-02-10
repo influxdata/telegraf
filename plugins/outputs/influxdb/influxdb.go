@@ -53,7 +53,7 @@ type InfluxDB struct {
 	InfluxUintSupport         bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
-	Precision string `toml:"precision" deprecated:"1.0.0;ignored"`
+	Precision string `toml:"precision" deprecated:"1.0.0;option is ignored"`
 
 	clients []Client
 

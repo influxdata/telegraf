@@ -181,7 +181,7 @@ type AgentConfig struct {
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatibility
-	UTC bool `toml:"utc" deprecated:"1.0.0;ignored"`
+	UTC bool `toml:"utc" deprecated:"1.0.0;option is ignored"`
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`

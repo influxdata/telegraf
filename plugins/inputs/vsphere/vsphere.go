@@ -54,7 +54,7 @@ type VSphere struct {
 	MaxQueryMetrics         int
 	CollectConcurrency      int
 	DiscoverConcurrency     int
-	ForceDiscoverOnInit     bool `toml:"force_discover_on_init" deprecated:"1.14.0;ignored"`
+	ForceDiscoverOnInit     bool `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
 	ObjectDiscoveryInterval config.Duration
 	Timeout                 config.Duration
 	HistoricalInterval      config.Duration

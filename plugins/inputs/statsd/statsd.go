@@ -94,7 +94,7 @@ type Statsd struct {
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
 	// see https://github.com/influxdata/telegraf/pull/992
-	UDPPacketSize int `toml:"udp_packet_size" deprecated:"0.12.1;ignored"`
+	UDPPacketSize int `toml:"udp_packet_size" deprecated:"0.12.1;option is ignored"`
 
 	ReadBufferSize int `toml:"read_buffer_size"`
 

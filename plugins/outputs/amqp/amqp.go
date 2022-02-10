@@ -50,7 +50,7 @@ type AMQP struct {
 	DeliveryMode       string            `toml:"delivery_mode"`
 	Database           string            `toml:"database" deprecated:"1.7.0;use 'headers' instead"`
 	RetentionPolicy    string            `toml:"retention_policy" deprecated:"1.7.0;use 'headers' instead"`
-	Precision          string            `toml:"precision" deprecated:"1.2.0;ignored"`
+	Precision          string            `toml:"precision" deprecated:"1.2.0;option is ignored"`
 	Headers            map[string]string `toml:"headers"`
 	Timeout            config.Duration   `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
