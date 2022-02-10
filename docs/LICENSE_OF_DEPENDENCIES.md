@@ -286,11 +286,13 @@ following works:
 - k8s.io/apimachinery [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - k8s.io/client-go [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - k8s.io/klog [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
+- k8s.io/kube-openapi [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - k8s.io/utils [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - modernc.org/libc [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/libc/-/blob/master/LICENSE)
 - modernc.org/mathutil [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/mathutil/-/blob/master/LICENSE)
 - modernc.org/memory [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/memory/-/blob/master/LICENSE)
 - modernc.org/sqlite [BSD 3-Clause "New" or "Revised" License](https://gitlab.com/cznic/sqlite/-/blob/master/LICENSE)
+- sigs.k8s.io/json [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/structured-merge-diff [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/yaml [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 
