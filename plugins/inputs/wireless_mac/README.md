@@ -1,8 +1,9 @@
 # Wireless Input Plugin for macOS
 
-The wireless_mac plugin gathers metrics about wireless link quality file. This plugin currently supports macOS only.
+The wireless_mac plugin gathers metrics about wireless link quality file.
+This plugin currently supports macOS only.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Monitor wifi signal strength and quality
@@ -12,7 +13,7 @@ The wireless_mac plugin gathers metrics about wireless link quality file. This p
   # host_proc = "/proc"
 ```
 
-### Metrics:
+## Metrics
 
 - metric
   - tags:
@@ -35,10 +36,10 @@ The wireless_mac plugin gathers metrics about wireless link quality file. This p
     - MCS
     - NSS
 
-### Example Output:
+## Example Output
 
 This section shows example output in Line Protocol format.
 
-```
+```bash
 wireless_mac,host=example.localdomain,interface=airport,state=running,op_mode=station,802.11_auth=open,link_auth=wpa2-psk,SSID=network_name,channel=153,80 MCS=8,NSS=3,agrCtlRSSI=-256i,agrCtlNoise=-256i,maxRate=450i,lastTxRate=100i,guardInterval=400 1519843022000000000
 ```
