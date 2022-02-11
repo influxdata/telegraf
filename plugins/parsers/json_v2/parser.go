@@ -124,16 +124,8 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 					return nil, err
 				}
 
-				// If the input was a string, pass the actual string value.
-				// If result.Raw is used, it will include the quotes surrounding the string,
-				// and the underlying call to time.Parse will fail.
-				s := result.Raw
-				if result.Type == gjson.String {
-					s = result.Str
-				}
-
 				var err error
-				p.timestamp, err = internal.ParseTimestamp(c.TimestampFormat, s, c.TimestampTimezone)
+				p.timestamp, err = internal.ParseTimestamp(c.TimestampFormat, result.String(), c.TimestampTimezone)
 				if err != nil {
 					return nil, err
 				}
@@ -335,7 +327,7 @@ func (p *Parser) expandArray(result MetricNode) ([]telegraf.Metric, error) {
 				err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
 				return nil, err
 			}
-			timestamp, err := internal.ParseTimestamp(p.objectConfig.TimestampFormat, result.Raw, p.objectConfig.TimestampTimezone)
+			timestamp, err := internal.ParseTimestamp(p.objectConfig.TimestampFormat, result.String(), p.objectConfig.TimestampTimezone)
 			if err != nil {
 				return nil, err
 			}
