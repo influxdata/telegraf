@@ -377,7 +377,7 @@ func TestHTTPWithCSVFormat(t *testing.T) {
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := &csv.Parser{
 			MetricName:  "metricName",
-			SkipRows:    2,
+			SkipRows:    3,
 			ColumnNames: []string{"a", "b", "c"},
 			TagColumns:  []string{"c"},
 		}
