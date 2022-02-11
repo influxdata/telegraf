@@ -23,6 +23,7 @@ type Aerospike struct {
 	Password string `toml:"password"`
 
 	EnableTLS bool   `toml:"enable_tls"`
+	EnableSSL bool   `toml:"enable_ssl"` // deprecated in 1.7; use enable_tls
 	TLSName   string `toml:"tls_name"`
 	tlsint.ClientConfig
 
@@ -105,7 +106,7 @@ func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		if tlsConfig == nil && a.EnableTLS {
+		if tlsConfig == nil && (a.EnableTLS || a.EnableSSL) {
 			tlsConfig = &tls.Config{}
 		}
 		a.tlsConfig = tlsConfig
@@ -146,7 +147,7 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 	if err != nil {
 		return err
 	}
-	if a.TLSName != "" && a.EnableTLS {
+	if a.TLSName != "" && (a.EnableTLS || a.EnableSSL) {
 		for _, asHost := range asHosts {
 			asHost.TLSName = a.TLSName
 		}
