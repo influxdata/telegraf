@@ -49,7 +49,7 @@ type natsConsumer struct {
 	PendingBytesLimit   int `toml:"pending_bytes_limit"`
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
-	MetricBuffer           int `toml:"metric_buffer" deprecated:"0.10.3;option is ignored"`
+	MetricBuffer           int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 
 	conn *nats.Conn
 	subs []*nats.Subscription
