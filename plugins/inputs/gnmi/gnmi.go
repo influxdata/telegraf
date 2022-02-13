@@ -56,6 +56,8 @@ type GNMI struct {
 	acc             telegraf.Accumulator
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
+	// Lookup/device+name/key/value
+	lookup map[string]map[string]map[string]interface{}
 
 	Log telegraf.Logger
 }
@@ -73,6 +75,9 @@ type Subscription struct {
 	// Duplicate suppression
 	SuppressRedundant bool            `toml:"suppress_redundant"`
 	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
+
+	// Mark this subscription as a tag-only lookup source, not emitting any metric
+	TagOnly bool `toml:"tag_only"`
 }
 
 // Start the http listener service
@@ -83,6 +88,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	var request *gnmiLib.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
+	c.lookup = make(map[string]map[string]map[string]interface{})
 
 	// Validate configuration
 	if request, err = c.newSubscribeRequest(); err != nil {
@@ -132,6 +138,11 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 		if len(name) > 0 {
 			c.internalAliases[longPath] = name
 			c.internalAliases[shortPath] = name
+		}
+
+		if subscription.TagOnly {
+			// Create the top-level lookup for this tag
+			c.lookup[name] = make(map[string]map[string]interface{})
 		}
 	}
 	for alias, encodingPath := range c.Aliases {
@@ -294,6 +305,29 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 				name = alias
 			} else {
 				c.Log.Debugf("No measurement alias for gNMI path: %s", name)
+			}
+		}
+
+		// Update tag lookups and discard rest of update
+		subscriptionKey := tags["source"] + "/" + tags["name"]
+		if _, ok := c.lookup[name]; ok {
+			// We are subscribed to this, so add the fields to the lookup-table
+			if _, ok := c.lookup[name][subscriptionKey]; !ok {
+				c.lookup[name][subscriptionKey] = make(map[string]interface{})
+			}
+			for k, v := range fields {
+				c.lookup[name][subscriptionKey][path.Base(k)] = v
+			}
+			// Do not process the data further as we only subscribed here for the lookup table
+			continue
+		}
+
+		// Apply lookups if present
+		for subscriptionName, values := range c.lookup {
+			if annotations, ok := values[subscriptionKey]; ok {
+				for k, v := range annotations {
+					tags[subscriptionName+"/"+k] = v.(string)
+				}
 			}
 		}
 
@@ -559,6 +593,18 @@ const sampleConfig = `
 
   ## If suppression is enabled, send updates at least every X seconds anyway
   # heartbeat_interval = "60s"
+
+  #[[inputs.gnmi.subscription]]
+    # name = "descr"
+    # origin = "openconfig-interfaces"
+    # path = "/interfaces/interface/state/description"
+    # subscription_mode = "on_change"
+
+    ## If tag_only is set, the subscription in question will be utilized to maintain a map of
+    ## tags to apply to other measurements emitted by the plugin, by matching path keys
+    ## All fields from the tag-only subscription will be applied as tags to other readings,
+    ## in the format <name>_<fieldBase>.
+    # tag_only = true
 `
 
 // SampleConfig of plugin

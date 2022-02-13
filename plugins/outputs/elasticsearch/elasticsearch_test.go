@@ -482,6 +482,41 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/_bulk":
+			require.Equal(t, "Bearer 0123456789abcdef", r.Header.Get("Authorization"))
+			_, err := w.Write([]byte("{}"))
+			require.NoError(t, err)
+			return
+		default:
+			_, err := w.Write([]byte(`{"version": {"number": "7.8"}}`))
+			require.NoError(t, err)
+			return
+		}
+	}))
+	defer ts.Close()
+
+	urls := []string{"http://" + ts.Listener.Addr().String()}
+
+	e := &Elasticsearch{
+		URLs:            urls,
+		IndexName:       "{{host}}-%Y.%m.%d",
+		Timeout:         config.Duration(time.Second * 5),
+		EnableGzip:      false,
+		ManageTemplate:  false,
+		Log:             testutil.Logger{},
+		AuthBearerToken: "0123456789abcdef",
+	}
+
+	err := e.Connect()
+	require.NoError(t, err)
+
+	err = e.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+}
+
 func TestVersionCheckOpenSearch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte(`{"version": {"number": "1.2.3"}}`))

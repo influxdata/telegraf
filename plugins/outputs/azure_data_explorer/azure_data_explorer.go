@@ -37,6 +37,9 @@ type AzureDataExplorer struct {
 const (
 	tablePerMetric = "tablepermetric"
 	singleTable    = "singletable"
+	// These control the amount of memory we use when ingesting blobs
+	bufferSize = 1 << 20 // 1 MiB
+	maxBuffers = 5
 )
 
 type localIngestor interface {
@@ -256,7 +259,7 @@ func init() {
 }
 
 func createRealIngestor(client localClient, database string, tableName string) (localIngestor, error) {
-	ingestor, err := ingest.New(client.(*kusto.Client), database, tableName)
+	ingestor, err := ingest.New(client.(*kusto.Client), database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
 	if ingestor != nil {
 		return ingestor, nil
 	}

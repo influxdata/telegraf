@@ -3,16 +3,18 @@ package elasticsearch
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
 
-	"gopkg.in/olivere/elastic.v5"
+	"crypto/sha256"
+
+	"github.com/olivere/elastic"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -27,6 +29,7 @@ type Elasticsearch struct {
 	TagKeys             []string
 	Username            string
 	Password            string
+	AuthBearerToken     string
 	EnableSniffer       bool
 	OpenSearch          bool `toml:"opensearch"`
 	Timeout             config.Duration
@@ -63,6 +66,8 @@ var sampleConfig = `
   ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"
+  ## HTTP bearer token authentication details
+  # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
   ## Optional enable support for OpenSearch
   # opensearch = true
 
@@ -219,9 +224,15 @@ func (a *Elasticsearch) Connect() error {
 		Timeout:   time.Duration(a.Timeout),
 	}
 
+	elasticURL, err := url.Parse(a.URLs[0])
+	if err != nil {
+		return fmt.Errorf("parsing URL failed: %v", err)
+	}
+
 	clientOptions = append(clientOptions,
 		elastic.SetHttpClient(httpclient),
 		elastic.SetSniff(a.EnableSniffer),
+		elastic.SetScheme(elasticURL.Scheme),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
 		elastic.SetGzip(a.EnableGzip),
@@ -233,6 +244,14 @@ func (a *Elasticsearch) Connect() error {
 		)
 	}
 
+	if a.AuthBearerToken != "" {
+		clientOptions = append(clientOptions,
+			elastic.SetHeaders(http.Header{
+				"Authorization": []string{fmt.Sprintf("Bearer %s", a.AuthBearerToken)},
+			}),
+		)
+	}
+
 	if time.Duration(a.HealthCheckInterval) == 0 {
 		clientOptions = append(clientOptions,
 			elastic.SetHealthcheck(false),
@@ -241,12 +260,14 @@ func (a *Elasticsearch) Connect() error {
 	}
 
 	client, err := elastic.NewClient(clientOptions...)
+
 	if err != nil {
 		return err
 	}
 
 	// check for ES version on first node
 	esVersion, err := client.ElasticsearchVersion(a.URLs[0])
+
 	if err != nil {
 		return fmt.Errorf("elasticsearch version check failed: %s", err)
 	}

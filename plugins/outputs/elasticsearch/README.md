@@ -165,6 +165,8 @@ This plugin will format the events in the following way:
   # password = "mypassword"
   ## Optional enable support for OpenSearch
   # opensearch = true
+  ## HTTP bearer token authentication details
+  # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 
   ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).

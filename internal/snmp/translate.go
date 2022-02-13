@@ -54,11 +54,17 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 		}
 
 		appendPath(mibPath)
-		folders = append(folders, mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
 			if info == nil {
-				return fmt.Errorf("no mibs found")
+				log.Warnf("No mibs found")
+				if os.IsNotExist(err) {
+					log.Warnf("MIB path doesn't exist: %q", mibPath)
+				} else if err != nil {
+					return err
+				}
+				return nil
 			}
+			folders = append(folders, mibPath)
 			// symlinks are files so we need to double check if any of them are folders
 			// Will check file vs directory later on
 			if info.Mode()&os.ModeSymlink != 0 {
@@ -71,7 +77,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("Filepath could not be walked: %v", err)
+			return fmt.Errorf("Filepath %q could not be walked: %v", mibPath, err)
 		}
 
 		for _, folder := range folders {
@@ -105,22 +111,29 @@ type MibEntry struct {
 }
 
 func TrapLookup(oid string) (e MibEntry, err error) {
-	var node gosmi.SmiNode
-	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+	var givenOid types.Oid
+	if givenOid, err = types.OidFromString(oid); err != nil {
+		return e, fmt.Errorf("could not convert OID %s: %w", oid, err)
+	}
 
-	// ensure modules are loaded or node will be empty (might not error)
-	if err != nil {
+	// Get node name
+	var node gosmi.SmiNode
+	if node, err = gosmi.GetNodeByOID(givenOid); err != nil {
 		return e, err
 	}
+	e.OidText = node.Name
 
-	e.OidText = node.RenderQualified()
-
-	i := strings.Index(e.OidText, "::")
-	if i == -1 {
-		return e, fmt.Errorf("not found")
+	// Add not found OID part
+	if !givenOid.Equals(node.Oid) {
+		e.OidText += "." + givenOid[len(node.Oid):].String()
 	}
-	e.MibName = e.OidText[:i]
-	e.OidText = e.OidText[i+2:]
+
+	// Get module name
+	module := node.GetModule()
+	if module.Name != "<well-known>" {
+		e.MibName = module.Name
+	}
+
 	return e, nil
 }
 
