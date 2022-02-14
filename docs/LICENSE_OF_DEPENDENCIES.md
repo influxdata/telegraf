@@ -102,6 +102,7 @@ following works:
 - github.com/gogo/protobuf [BSD 3-Clause Clear License](https://github.com/gogo/protobuf/blob/master/LICENSE)
 - github.com/golang-jwt/jwt [MIT License](https://github.com/golang-jwt/jwt/blob/main/LICENSE)
 - github.com/golang-sql/civil [Apache License 2.0](https://github.com/golang-sql/civil/blob/master/LICENSE)
+- github.com/golang-sql/sqlexp [BSD 3-Clause "New" or "Revised" License](https://github.com/golang-sql/sqlexp/blob/master/LICENSE)
 - github.com/golang/geo [Apache License 2.0](https://github.com/golang/geo/blob/master/LICENSE)
 - github.com/golang/groupcache [Apache License 2.0](https://github.com/golang/groupcache/blob/master/LICENSE)
 - github.com/golang/protobuf [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/protobuf/blob/master/LICENSE)
