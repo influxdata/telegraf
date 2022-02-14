@@ -1,8 +1,9 @@
 package all
 
 import (
-	//Blank imports for plugins to register themselves
+	// Blank imports for plugins to register themselves
 	_ "github.com/influxdata/telegraf/plugins/processors/aws/ec2"
+	_ "github.com/influxdata/telegraf/plugins/processors/aws/tags"
 	_ "github.com/influxdata/telegraf/plugins/processors/clone"
 	_ "github.com/influxdata/telegraf/plugins/processors/converter"
 	_ "github.com/influxdata/telegraf/plugins/processors/date"
