@@ -13,10 +13,6 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		RemovalIn: "2.0.0",
 		Notice:    "use 'inputs.diskio' instead",
 	},
-	"http_listener_v2": {
-		Since:  "1.9.0",
-		Notice: "has been renamed to 'influxdb_listener', use 'inputs.influxdb_listener' or 'inputs.influxdb_listener_v2' instead",
-	},
 	"httpjson": {
 		Since:  "1.6.0",
 		Notice: "use 'inputs.http' instead",
