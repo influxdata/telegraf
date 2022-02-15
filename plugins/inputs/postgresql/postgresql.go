@@ -134,8 +134,116 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
+    
+	// total_table_count
+	query = `SELECT count(*) as total_table_count from information_schema.tables where table_schema not in ('sc_toolkit','information_schema','pg_catalog');`
 
-	return bgWriterRow.Err()
+	totalTableCountRow, err := p.DB.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer totalTableCountRow.Close()
+	if columns, err = totalTableCountRow.Columns(); err != nil {
+		return err
+	}
+
+	for totalTableCountRow.Next() {
+		err = p.accRow(totalTableCountRow, acc, columns)
+		if err != nil {
+			return err
+		}
+	}
+
+	// total_connect
+	query = `select count(*) total_connect, 
+	count(*) filter(where state='idle') idle_connect, 
+	count(*) filter(where state<>'idle') active_connect,
+	count(*) filter(where state='active') running_connect,
+	count(*) filter(where state like 'wait%') waiting_connect
+	from pg_stat_activity where pid <> pg_backend_pid();`
+	totalConnectRow, err := p.DB.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer totalConnectRow.Close()
+	if columns, err = totalConnectRow.Columns(); err != nil {
+		return err
+	}
+
+	for totalConnectRow.Next() {
+		err = p.accRow(totalConnectRow, acc, columns)
+		if err != nil {
+			return err
+		}
+	}
+  
+	// connect_by_name sql
+	query = `select usename, 
+	count(*) total, 
+	count(*) filter(where query='<IDLE>') idle, 
+	count(*) filter(where query<>'<IDLE>') active 
+	from pg_stat_activity group by 1;`
+	connectByNameRow, err := p.DB.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer connectByNameRow.Close()
+	if columns, err = connectByNameRow.Columns(); err != nil {
+		return err
+	}
+
+	for connectByNameRow.Next() {
+		err = p.accRow(connectByNameRow, acc, columns)
+		if err != nil {
+			return err
+		}
+	}
+
+	// connect_by_client sql
+	query = `select client_addr,
+             count(*) total,
+             count(*) filter(where query='<IDLE>') idle,
+             count(*) filter(where query<>'<IDLE>') active
+             from pg_stat_activity where pid <> pg_backend_pid() group by 1;`
+	connectByClientRow, err := p.DB.Query(query)
+	if err != nil {
+		return err
+	}
+
+	defer connectByClientRow.Close()
+	if columns, err = connectByClientRow.Columns(); err != nil {
+		return err
+	}
+
+	for connectByClientRow.Next() {
+		err = p.accRow(connectByClientRow, acc, columns)
+		if err != nil {
+			return err
+		}
+	}
+
+	// up_day sql
+	query = `select extract(day FROM(age(now()::date, pg_start_time()::date))) as up_day`;
+	upDaytRow, err := p.DB.Query(query)
+	if err != nil {
+	return err
+	}
+
+	defer upDaytRow.Close()
+	if columns, err = upDaytRow.Columns(); err != nil {
+	return err
+	}
+
+	for upDaytRow.Next() {
+	err = p.accRow(upDaytRow, acc, columns)
+	if err != nil {
+		return err
+	}
+	}
+	return upDaytRow.Err()
 }
 
 type scanner interface {
