@@ -31,13 +31,13 @@ type Metric struct {
 }
 
 type GrayLog struct {
-	Servers  []string
-	Metrics  []string
-	Username string
-	Password string
-	Timeout  config.Duration
-	tls.ClientConfig
+	Servers  []string        `json:"servers"`
+	Metrics  []string        `json:"metrics"`
+	Username string          `json:"username"`
+	Password string          `json:"password"`
+	Timeout  config.Duration `json:"timeout"`
 
+	tls.ClientConfig
 	client HTTPClient
 }
 
