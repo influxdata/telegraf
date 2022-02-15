@@ -351,7 +351,7 @@ var networkHealthString = `{
 	  "fairCount" : 29,
 	  "badCount" : 0,
 	  "entity" : null,
-	  "timeinMillis" : 1641837000000
+	  "timeinMillis" : 1641837000
 	} ],
 	"measuredBy" : "global",
 	"latestMeasuredByEntity" : null,
