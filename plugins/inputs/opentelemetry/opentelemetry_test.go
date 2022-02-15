@@ -43,7 +43,7 @@ func TestOpenTelemetry(t *testing.T) {
 
 	pusher := controller.New(
 		processor.NewFactory(
-			simple.NewWithExactDistribution(),
+			simple.NewWithHistogramDistribution(),
 			metricExporter,
 		),
 		controller.WithExporter(metricExporter),
