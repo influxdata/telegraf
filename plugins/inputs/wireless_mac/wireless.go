@@ -1,4 +1,4 @@
-package wireless
+package wireless_mac
 
 import (
 	"github.com/influxdata/telegraf"
@@ -9,31 +9,27 @@ import (
 type Wireless struct {
 	HostProc string          `toml:"host_proc"`
 	Log      telegraf.Logger `toml:"-"`
-	DumpZeros bool `toml:"dump_zeros"`
 }
 
 var sampleConfig = `
-[wireless]
-   ## Sets 'proc' directory path
-   ## If not specified, then default is /proc
-   # host_proc = "/proc"
-	 ## dump metrics with 0 values too
-	 # dump_zeros = true
- `
+  [[inputs.wireless_mac]]
+  ## dump metrics with 0 values too
+  dump_zeros       = true
+`
 
 
 // Description returns information about the plugin.
-func (w *Wireless) Description() string {
+func (w *Wireless_Mac) Description() string {
 	return "Monitor wifi signal strength and quality on macOS"
 }
 
 // SampleConfig displays configuration instructions.
-func (w *Wireless) SampleConfig() string {
+func (w *Wireless_Mac) SampleConfig() string {
 	return sampleConfig
 }
 
 func init() {
-	inputs.Add("wireless", func() telegraf.Input {
-		return &Wireless{}
+	inputs.Add("wireless_mac", func() telegraf.Input {
+		return &Wireless_Mac{}
 	})
 }
