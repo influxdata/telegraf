@@ -272,6 +272,8 @@ var (
 	pdh_ValidatePathW             *syscall.Proc
 	pdh_ExpandWildCardPathW       *syscall.Proc
 	pdh_GetCounterInfoW           *syscall.Proc
+	pdh_GetRawCounterValue        *syscall.Proc
+	pdh_GetRawCounterArrayW       *syscall.Proc
 )
 
 func init() {
@@ -290,6 +292,8 @@ func init() {
 	pdh_ValidatePathW = libpdhDll.MustFindProc("PdhValidatePathW")
 	pdh_ExpandWildCardPathW = libpdhDll.MustFindProc("PdhExpandWildCardPathW")
 	pdh_GetCounterInfoW = libpdhDll.MustFindProc("PdhGetCounterInfoW")
+	pdh_GetRawCounterValue = libpdhDll.MustFindProc("PdhGetRawCounterValue")
+	pdh_GetRawCounterArrayW = libpdhDll.MustFindProc("PdhGetRawCounterArrayW")
 }
 
 // PdhAddCounter adds the specified counter to the query. This is the internationalized version. Preferably, use the
@@ -589,5 +593,52 @@ func PdhGetCounterInfo(hCounter PDH_HCOUNTER, bRetrieveExplainText int, pdwBuffe
 		uintptr(unsafe.Pointer(pdwBufferSize)),
 		uintptr(unsafe.Pointer(lpBuffer)))
 
+	return uint32(ret)
+}
+
+// Returns the current raw value of the counter.
+// If the specified counter instance does not exist, this function will return ERROR_SUCCESS
+// and the CStatus member of the PDH_RAW_COUNTER structure will contain PDH_CSTATUS_NO_INSTANCE.
+//
+// hCounter [in]
+// Handle of the counter from which to retrieve the current raw value. The PdhAddCounter function returns this handle.
+//
+// lpdwType [out]
+// Receives the counter type. For a list of counter types, see the Counter Types section of the Windows Server 2003 Deployment Kit.
+// This parameter is optional.
+//
+// pValue [out]
+// A PDH_RAW_COUNTER structure that receives the counter value.
+func PdhGetRawCounterValue(hCounter PDH_HCOUNTER, lpdwType *uint32, pValue *PDH_RAW_COUNTER) uint32 {
+	ret, _, _ := pdh_GetRawCounterValue.Call(
+		uintptr(hCounter),
+		uintptr(unsafe.Pointer(lpdwType)),
+		uintptr(unsafe.Pointer(pValue)))
+
+	return uint32(ret)
+}
+
+// Returns an array of raw values from the specified counter. Use this function when you want to retrieve the raw counter values
+// of a counter that contains a wildcard character for the instance name.
+// hCounter
+// Handle of the counter for whose current raw instance values you want to retrieve. The PdhAddCounter function returns this handle.
+//
+// lpdwBufferSize
+// Size of the ItemBuffer buffer, in bytes. If zero on input, the function returns PDH_MORE_DATA and sets this parameter to the required buffer size.
+// If the buffer is larger than the required size, the function sets this parameter to the actual size of the buffer that was used.
+// If the specified size on input is greater than zero but less than the required size, you should not rely on the returned size to reallocate the buffer.
+//
+// lpdwItemCount
+// Number of raw counter values in the ItemBuffer buffer.
+//
+// ItemBuffer
+// Caller-allocated buffer that receives the array of PDH_RAW_COUNTER_ITEM structures; the structures contain the raw instance counter values.
+// Set to NULL if lpdwBufferSize is zero.
+func PdhGetRawCounterArray(hCounter PDH_HCOUNTER, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
+	ret, _, _ := pdh_GetRawCounterArrayW.Call(
+		uintptr(hCounter),
+		uintptr(unsafe.Pointer(lpdwBufferSize)),
+		uintptr(unsafe.Pointer(lpdwBufferCount)),
+		uintptr(unsafe.Pointer(itemBuffer)))
 	return uint32(ret)
 }
