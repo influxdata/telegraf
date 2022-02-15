@@ -38,8 +38,9 @@ import (
 	"syscall"
 	"unsafe"
 
-	"golang.org/x/sys/windows"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 // Error codes
@@ -55,6 +56,7 @@ type (
 )
 
 // PDH error codes, which can be returned by all Pdh* functions. Taken from mingw-w64 pdhmsg.h
+
 const (
 	PDH_CSTATUS_VALID_DATA                     = 0x00000000 // The returned data is valid.
 	PDH_CSTATUS_NEW_DATA                       = 0x00000001 // The return data value is valid and different from the last sample.
@@ -144,6 +146,95 @@ const (
 	PDH_QUERY_PERF_DATA_TIMEOUT                = 0xC0000BFE
 )
 
+var PDHErrors = map[uint32]string{
+	PDH_CSTATUS_VALID_DATA:                     "PDH_CSTATUS_VALID_DATA",
+	PDH_CSTATUS_NEW_DATA:                       "PDH_CSTATUS_NEW_DATA",
+	PDH_CSTATUS_NO_MACHINE:                     "PDH_CSTATUS_NO_MACHINE",
+	PDH_CSTATUS_NO_INSTANCE:                    "PDH_CSTATUS_NO_INSTANCE",
+	PDH_MORE_DATA:                              "PDH_MORE_DATA",
+	PDH_CSTATUS_ITEM_NOT_VALIDATED:             "PDH_CSTATUS_ITEM_NOT_VALIDATED",
+	PDH_RETRY:                                  "PDH_RETRY",
+	PDH_NO_DATA:                                "PDH_NO_DATA",
+	PDH_CALC_NEGATIVE_DENOMINATOR:              "PDH_CALC_NEGATIVE_DENOMINATOR",
+	PDH_CALC_NEGATIVE_TIMEBASE:                 "PDH_CALC_NEGATIVE_TIMEBASE",
+	PDH_CALC_NEGATIVE_VALUE:                    "PDH_CALC_NEGATIVE_VALUE",
+	PDH_DIALOG_CANCELLED:                       "PDH_DIALOG_CANCELLED",
+	PDH_END_OF_LOG_FILE:                        "PDH_END_OF_LOG_FILE",
+	PDH_ASYNC_QUERY_TIMEOUT:                    "PDH_ASYNC_QUERY_TIMEOUT",
+	PDH_CANNOT_SET_DEFAULT_REALTIME_DATASOURCE: "PDH_CANNOT_SET_DEFAULT_REALTIME_DATASOURCE",
+	PDH_CSTATUS_NO_OBJECT:                      "PDH_CSTATUS_NO_OBJECT",
+	PDH_CSTATUS_NO_COUNTER:                     "PDH_CSTATUS_NO_COUNTER",
+	PDH_CSTATUS_INVALID_DATA:                   "PDH_CSTATUS_INVALID_DATA",
+	PDH_MEMORY_ALLOCATION_FAILURE:              "PDH_MEMORY_ALLOCATION_FAILURE",
+	PDH_INVALID_HANDLE:                         "PDH_INVALID_HANDLE",
+	PDH_INVALID_ARGUMENT:                       "PDH_INVALID_ARGUMENT",
+	PDH_FUNCTION_NOT_FOUND:                     "PDH_FUNCTION_NOT_FOUND",
+	PDH_CSTATUS_NO_COUNTERNAME:                 "PDH_CSTATUS_NO_COUNTERNAME",
+	PDH_CSTATUS_BAD_COUNTERNAME:                "PDH_CSTATUS_BAD_COUNTERNAME",
+	PDH_INVALID_BUFFER:                         "PDH_INVALID_BUFFER",
+	PDH_INSUFFICIENT_BUFFER:                    "PDH_INSUFFICIENT_BUFFER",
+	PDH_CANNOT_CONNECT_MACHINE:                 "PDH_CANNOT_CONNECT_MACHINE",
+	PDH_INVALID_PATH:                           "PDH_INVALID_PATH",
+	PDH_INVALID_INSTANCE:                       "PDH_INVALID_INSTANCE",
+	PDH_INVALID_DATA:                           "PDH_INVALID_DATA",
+	PDH_NO_DIALOG_DATA:                         "PDH_NO_DIALOG_DATA",
+	PDH_CANNOT_READ_NAME_STRINGS:               "PDH_CANNOT_READ_NAME_STRINGS",
+	PDH_LOG_FILE_CREATE_ERROR:                  "PDH_LOG_FILE_CREATE_ERROR",
+	PDH_LOG_FILE_OPEN_ERROR:                    "PDH_LOG_FILE_OPEN_ERROR",
+	PDH_LOG_TYPE_NOT_FOUND:                     "PDH_LOG_TYPE_NOT_FOUND",
+	PDH_NO_MORE_DATA:                           "PDH_NO_MORE_DATA",
+	PDH_ENTRY_NOT_IN_LOG_FILE:                  "PDH_ENTRY_NOT_IN_LOG_FILE",
+	PDH_DATA_SOURCE_IS_LOG_FILE:                "PDH_DATA_SOURCE_IS_LOG_FILE",
+	PDH_DATA_SOURCE_IS_REAL_TIME:               "PDH_DATA_SOURCE_IS_REAL_TIME",
+	PDH_UNABLE_READ_LOG_HEADER:                 "PDH_UNABLE_READ_LOG_HEADER",
+	PDH_FILE_NOT_FOUND:                         "PDH_FILE_NOT_FOUND",
+	PDH_FILE_ALREADY_EXISTS:                    "PDH_FILE_ALREADY_EXISTS",
+	PDH_NOT_IMPLEMENTED:                        "PDH_NOT_IMPLEMENTED",
+	PDH_STRING_NOT_FOUND:                       "PDH_STRING_NOT_FOUND",
+	PDH_UNABLE_MAP_NAME_FILES:                  "PDH_UNABLE_MAP_NAME_FILES",
+	PDH_UNKNOWN_LOG_FORMAT:                     "PDH_UNKNOWN_LOG_FORMAT",
+	PDH_UNKNOWN_LOGSVC_COMMAND:                 "PDH_UNKNOWN_LOGSVC_COMMAND",
+	PDH_LOGSVC_QUERY_NOT_FOUND:                 "PDH_LOGSVC_QUERY_NOT_FOUND",
+	PDH_LOGSVC_NOT_OPENED:                      "PDH_LOGSVC_NOT_OPENED",
+	PDH_WBEM_ERROR:                             "PDH_WBEM_ERROR",
+	PDH_ACCESS_DENIED:                          "PDH_ACCESS_DENIED",
+	PDH_LOG_FILE_TOO_SMALL:                     "PDH_LOG_FILE_TOO_SMALL",
+	PDH_INVALID_DATASOURCE:                     "PDH_INVALID_DATASOURCE",
+	PDH_INVALID_SQLDB:                          "PDH_INVALID_SQLDB",
+	PDH_NO_COUNTERS:                            "PDH_NO_COUNTERS",
+	PDH_SQL_ALLOC_FAILED:                       "PDH_SQL_ALLOC_FAILED",
+	PDH_SQL_ALLOCCON_FAILED:                    "PDH_SQL_ALLOCCON_FAILED",
+	PDH_SQL_EXEC_DIRECT_FAILED:                 "PDH_SQL_EXEC_DIRECT_FAILED",
+	PDH_SQL_FETCH_FAILED:                       "PDH_SQL_FETCH_FAILED",
+	PDH_SQL_ROWCOUNT_FAILED:                    "PDH_SQL_ROWCOUNT_FAILED",
+	PDH_SQL_MORE_RESULTS_FAILED:                "PDH_SQL_MORE_RESULTS_FAILED",
+	PDH_SQL_CONNECT_FAILED:                     "PDH_SQL_CONNECT_FAILED",
+	PDH_SQL_BIND_FAILED:                        "PDH_SQL_BIND_FAILED",
+	PDH_CANNOT_CONNECT_WMI_SERVER:              "PDH_CANNOT_CONNECT_WMI_SERVER",
+	PDH_PLA_COLLECTION_ALREADY_RUNNING:         "PDH_PLA_COLLECTION_ALREADY_RUNNING",
+	PDH_PLA_ERROR_SCHEDULE_OVERLAP:             "PDH_PLA_ERROR_SCHEDULE_OVERLAP",
+	PDH_PLA_COLLECTION_NOT_FOUND:               "PDH_PLA_COLLECTION_NOT_FOUND",
+	PDH_PLA_ERROR_SCHEDULE_ELAPSED:             "PDH_PLA_ERROR_SCHEDULE_ELAPSED",
+	PDH_PLA_ERROR_NOSTART:                      "PDH_PLA_ERROR_NOSTART",
+	PDH_PLA_ERROR_ALREADY_EXISTS:               "PDH_PLA_ERROR_ALREADY_EXISTS",
+	PDH_PLA_ERROR_TYPE_MISMATCH:                "PDH_PLA_ERROR_TYPE_MISMATCH",
+	PDH_PLA_ERROR_FILEPATH:                     "PDH_PLA_ERROR_FILEPATH",
+	PDH_PLA_SERVICE_ERROR:                      "PDH_PLA_SERVICE_ERROR",
+	PDH_PLA_VALIDATION_ERROR:                   "PDH_PLA_VALIDATION_ERROR",
+	PDH_PLA_VALIDATION_WARNING:                 "PDH_PLA_VALIDATION_WARNING",
+	PDH_PLA_ERROR_NAME_TOO_LONG:                "PDH_PLA_ERROR_NAME_TOO_LONG",
+	PDH_INVALID_SQL_LOG_FORMAT:                 "PDH_INVALID_SQL_LOG_FORMAT",
+	PDH_COUNTER_ALREADY_IN_QUERY:               "PDH_COUNTER_ALREADY_IN_QUERY",
+	PDH_BINARY_LOG_CORRUPT:                     "PDH_BINARY_LOG_CORRUPT",
+	PDH_LOG_SAMPLE_TOO_SMALL:                   "PDH_LOG_SAMPLE_TOO_SMALL",
+	PDH_OS_LATER_VERSION:                       "PDH_OS_LATER_VERSION",
+	PDH_OS_EARLIER_VERSION:                     "PDH_OS_EARLIER_VERSION",
+	PDH_INCORRECT_APPEND_TIME:                  "PDH_INCORRECT_APPEND_TIME",
+	PDH_UNMATCHED_APPEND_COUNTER:               "PDH_UNMATCHED_APPEND_COUNTER",
+	PDH_SQL_ALTER_DETAIL_FAILED:                "PDH_SQL_ALTER_DETAIL_FAILED",
+	PDH_QUERY_PERF_DATA_TIMEOUT:                "PDH_QUERY_PERF_DATA_TIMEOUT",
+}
+
 // Formatting options for GetFormattedCounterValue().
 const (
 	PDH_FMT_RAW          = 0x00000010
@@ -181,6 +272,8 @@ var (
 	pdh_ValidatePathW             *syscall.Proc
 	pdh_ExpandWildCardPathW       *syscall.Proc
 	pdh_GetCounterInfoW           *syscall.Proc
+	pdh_GetRawCounterValue        *syscall.Proc
+	pdh_GetRawCounterArrayW       *syscall.Proc
 )
 
 func init() {
@@ -199,6 +292,8 @@ func init() {
 	pdh_ValidatePathW = libpdhDll.MustFindProc("PdhValidatePathW")
 	pdh_ExpandWildCardPathW = libpdhDll.MustFindProc("PdhExpandWildCardPathW")
 	pdh_GetCounterInfoW = libpdhDll.MustFindProc("PdhGetCounterInfoW")
+	pdh_GetRawCounterValue = libpdhDll.MustFindProc("PdhGetRawCounterValue")
+	pdh_GetRawCounterArrayW = libpdhDll.MustFindProc("PdhGetRawCounterArrayW")
 }
 
 // PdhAddCounter adds the specified counter to the query. This is the internationalized version. Preferably, use the
@@ -498,5 +593,52 @@ func PdhGetCounterInfo(hCounter PDH_HCOUNTER, bRetrieveExplainText int, pdwBuffe
 		uintptr(unsafe.Pointer(pdwBufferSize)),
 		uintptr(unsafe.Pointer(lpBuffer)))
 
+	return uint32(ret)
+}
+
+// Returns the current raw value of the counter.
+// If the specified counter instance does not exist, this function will return ERROR_SUCCESS
+// and the CStatus member of the PDH_RAW_COUNTER structure will contain PDH_CSTATUS_NO_INSTANCE.
+//
+// hCounter [in]
+// Handle of the counter from which to retrieve the current raw value. The PdhAddCounter function returns this handle.
+//
+// lpdwType [out]
+// Receives the counter type. For a list of counter types, see the Counter Types section of the Windows Server 2003 Deployment Kit.
+// This parameter is optional.
+//
+// pValue [out]
+// A PDH_RAW_COUNTER structure that receives the counter value.
+func PdhGetRawCounterValue(hCounter PDH_HCOUNTER, lpdwType *uint32, pValue *PDH_RAW_COUNTER) uint32 {
+	ret, _, _ := pdh_GetRawCounterValue.Call(
+		uintptr(hCounter),
+		uintptr(unsafe.Pointer(lpdwType)),
+		uintptr(unsafe.Pointer(pValue)))
+
+	return uint32(ret)
+}
+
+// Returns an array of raw values from the specified counter. Use this function when you want to retrieve the raw counter values
+// of a counter that contains a wildcard character for the instance name.
+// hCounter
+// Handle of the counter for whose current raw instance values you want to retrieve. The PdhAddCounter function returns this handle.
+//
+// lpdwBufferSize
+// Size of the ItemBuffer buffer, in bytes. If zero on input, the function returns PDH_MORE_DATA and sets this parameter to the required buffer size.
+// If the buffer is larger than the required size, the function sets this parameter to the actual size of the buffer that was used.
+// If the specified size on input is greater than zero but less than the required size, you should not rely on the returned size to reallocate the buffer.
+//
+// lpdwItemCount
+// Number of raw counter values in the ItemBuffer buffer.
+//
+// ItemBuffer
+// Caller-allocated buffer that receives the array of PDH_RAW_COUNTER_ITEM structures; the structures contain the raw instance counter values.
+// Set to NULL if lpdwBufferSize is zero.
+func PdhGetRawCounterArray(hCounter PDH_HCOUNTER, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
+	ret, _, _ := pdh_GetRawCounterArrayW.Call(
+		uintptr(hCounter),
+		uintptr(unsafe.Pointer(lpdwBufferSize)),
+		uintptr(unsafe.Pointer(lpdwBufferCount)),
+		uintptr(unsafe.Pointer(itemBuffer)))
 	return uint32(ret)
 }

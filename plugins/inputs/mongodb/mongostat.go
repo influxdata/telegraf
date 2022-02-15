@@ -96,6 +96,8 @@ type DbStatsData struct {
 	IndexSize   int64       `bson:"indexSize"`
 	Ok          int64       `bson:"ok"`
 	GleStats    interface{} `bson:"gleStats"`
+	FsUsedSize  int64       `bson:"fsUsedSize"`
+	FsTotalSize int64       `bson:"fsTotalSize"`
 }
 
 type ColStats struct {
@@ -837,6 +839,8 @@ type DbStatLine struct {
 	Indexes     int64
 	IndexSize   int64
 	Ok          int64
+	FsUsedSize  int64
+	FsTotalSize int64
 }
 type ColStatLine struct {
 	Name           string
@@ -1361,6 +1365,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				Indexes:     dbStatsData.Indexes,
 				IndexSize:   dbStatsData.IndexSize,
 				Ok:          dbStatsData.Ok,
+				FsTotalSize: dbStatsData.FsTotalSize,
+				FsUsedSize:  dbStatsData.FsUsedSize,
 			}
 			returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
 		}
