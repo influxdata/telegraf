@@ -4,7 +4,6 @@
 package wireless
 
 import (
-	"fmt"
 	"runtime"
 	"testing"
 )
@@ -59,18 +58,10 @@ lastAssocStatus: 0
 		if err != nil {
 			t.Fatal(err)
 		}
-		fmt.Printf("Got Points: %+v\n", gotPoints)
-		fmt.Printf("Got Tags: %+v\n", gotTags)
 		if len(gotPoints) == 0 {
 			t.Fatalf("want %+v, got %+v", macParsed, gotPoints)
-		} else {
-			for k, v := range gotPoints {
-				fmt.Printf("%s: %+v\n", k, v)
-			}
 		}
 		for key := range macParsed {
-			fmt.Printf("HUH? %s: %+v : %d\n", key, macParsed[key], macParsed[key].(int64))
-			fmt.Printf("WUT? %s: %+v : %d\n", key, gotPoints[key], gotPoints[key].(int64))
 			if macParsed[key].(int64) != gotPoints[key].(int64) {
 				t.Fatalf("want %+v, got %+v", macParsed[key], gotPoints[key])
 			}

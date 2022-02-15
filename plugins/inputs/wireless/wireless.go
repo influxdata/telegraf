@@ -7,9 +7,9 @@ import (
 
 // Wireless is used to store configuration values.
 type Wireless struct {
-	HostProc string          `toml:"host_proc"`
-	Log      telegraf.Logger `toml:"-"`
-	DumpZeros bool `toml:"dump_zeros"`
+	HostProc  string          `toml:"host_proc"`
+	Log       telegraf.Logger `toml:"-"`
+	DumpZeros bool            `toml:"dump_zeros"`
 }
 
 var sampleConfig = `
@@ -20,7 +20,6 @@ var sampleConfig = `
 	 ## dump metrics with 0 values too
 	 # dump_zeros = true
  `
-
 
 // Description returns information about the plugin.
 func (w *Wireless) Description() string {
