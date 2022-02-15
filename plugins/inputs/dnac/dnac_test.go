@@ -83,8 +83,8 @@ var clientHealthString = `{
 		"scoreValue" : 97,
 		"clientCount" : 1165,
 		"clientUniqueCount" : 1165,
-		"starttime" : 1641830700000,
-		"endtime" : 1641831000000
+		"starttime" : 1641830700,
+		"endtime" : 1641831000
 	  }, {
 		"scoreCategory" : {
 		  "scoreCategory" : "CLIENT_TYPE",
@@ -93,8 +93,8 @@ var clientHealthString = `{
 		"scoreValue" : 99,
 		"clientCount" : 1047,
 		"clientUniqueCount" : 1047,
-		"starttime" : 1641830700000,
-		"endtime" : 1641831000000,
+		"starttime" : 1641830700,
+		"endtime" : 1641831000,
 		"scoreList" : [ {
 		  "scoreCategory" : {
 			"scoreCategory" : "SCORE_TYPE",
@@ -103,8 +103,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 14,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000,
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000,
 		  "scoreList" : [ {
 			"scoreCategory" : {
 			  "scoreCategory" : "deviceType",
@@ -113,8 +113,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 14,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  }, {
 			"scoreCategory" : {
 			  "scoreCategory" : "rootCause",
@@ -123,8 +123,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 14,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  } ]
 		}, {
 		  "scoreCategory" : {
@@ -134,8 +134,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 0,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000
 		}, {
 		  "scoreCategory" : {
 			"scoreCategory" : "SCORE_TYPE",
@@ -144,8 +144,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 1033,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000,
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000,
 		  "scoreList" : [ {
 			"scoreCategory" : {
 			  "scoreCategory" : "deviceType",
@@ -154,8 +154,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 1033,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  } ]
 		}, {
 		  "scoreCategory" : {
@@ -165,8 +165,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 0,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000
 		}, {
 		  "scoreCategory" : {
 			"scoreCategory" : "SCORE_TYPE",
@@ -175,8 +175,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 0,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000
 		}, {
 		  "scoreCategory" : {
 			"scoreCategory" : "SCORE_TYPE",
@@ -185,8 +185,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 0,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000
 		} ]
 	  }, {
 		"scoreCategory" : {
@@ -196,8 +196,8 @@ var clientHealthString = `{
 		"scoreValue" : 79,
 		"clientCount" : 118,
 		"clientUniqueCount" : 118,
-		"starttime" : 1641830700000,
-		"endtime" : 1641831000000,
+		"starttime" : 1641830700,
+		"endtime" : 1641831000,
 		"scoreList" : [ {
 		  "scoreCategory" : {
 			"scoreCategory" : "SCORE_TYPE",
@@ -206,8 +206,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 9,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000,
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000,
 		  "scoreList" : [ {
 			"scoreCategory" : {
 			  "scoreCategory" : "deviceType",
@@ -216,8 +216,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 9,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  }, {
 			"scoreCategory" : {
 			  "scoreCategory" : "rootCause",
@@ -226,8 +226,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 7,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  }, {
 			"scoreCategory" : {
 			  "scoreCategory" : "rootCause",
@@ -236,8 +236,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 2,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  } ]
 		}, {
 		  "scoreCategory" : {
@@ -247,8 +247,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 15,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000,
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000,
 		  "scoreList" : [ {
 			"scoreCategory" : {
 			  "scoreCategory" : "deviceType",
@@ -257,8 +257,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 15,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  } ]
 		}, {
 		  "scoreCategory" : {
@@ -268,8 +268,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 92,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000,
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000,
 		  "scoreList" : [ {
 			"scoreCategory" : {
 			  "scoreCategory" : "deviceType",
@@ -278,8 +278,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 92,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  } ]
 		}, {
 		  "scoreCategory" : {
@@ -289,8 +289,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 2,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000,
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000,
 		  "scoreList" : [ {
 			"scoreCategory" : {
 			  "scoreCategory" : "deviceType",
@@ -299,8 +299,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 2,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  } ]
 		}, {
 		  "scoreCategory" : {
@@ -310,8 +310,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 0,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000
 		}, {
 		  "scoreCategory" : {
 			"scoreCategory" : "SCORE_TYPE",
@@ -320,8 +320,8 @@ var clientHealthString = `{
 		  "scoreValue" : -1,
 		  "clientCount" : 1,
 		  "clientUniqueCount" : 0,
-		  "starttime" : 1641830700000,
-		  "endtime" : 1641831000000,
+		  "starttime" : 1641830700,
+		  "endtime" : 1641831000,
 		  "scoreList" : [ {
 			"scoreCategory" : {
 			  "scoreCategory" : "deviceType",
@@ -330,8 +330,8 @@ var clientHealthString = `{
 			"scoreValue" : -1,
 			"clientCount" : 1,
 			"clientUniqueCount" : null,
-			"starttime" : 1641830700000,
-			"endtime" : 1641831000000
+			"starttime" : 1641830700,
+			"endtime" : 1641831000
 		  } ]
 		} ]
 	  } ]
