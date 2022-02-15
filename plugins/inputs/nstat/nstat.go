@@ -2,7 +2,6 @@ package nstat
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -62,7 +61,7 @@ func (ns *Nstat) Gather(acc telegraf.Accumulator) error {
 	// load paths, get from env if config values are empty
 	ns.loadPaths()
 
-	netstat, err := ioutil.ReadFile(ns.ProcNetNetstat)
+	netstat, err := os.ReadFile(ns.ProcNetNetstat)
 	if err != nil {
 		return err
 	}
@@ -71,14 +70,14 @@ func (ns *Nstat) Gather(acc telegraf.Accumulator) error {
 	ns.gatherNetstat(netstat, acc)
 
 	// collect SNMP data
-	snmp, err := ioutil.ReadFile(ns.ProcNetSNMP)
+	snmp, err := os.ReadFile(ns.ProcNetSNMP)
 	if err != nil {
 		return err
 	}
 	ns.gatherSNMP(snmp, acc)
 
 	// collect SNMP6 data, if SNMP6 directory exists (IPv6 enabled)
-	snmp6, err := ioutil.ReadFile(ns.ProcNetSNMP6)
+	snmp6, err := os.ReadFile(ns.ProcNetSNMP6)
 	if err == nil {
 		ns.gatherSNMP6(snmp6, acc)
 	} else if !os.IsNotExist(err) {
@@ -139,10 +138,10 @@ func (ns *Nstat) loadGoodTable(table []byte) map[string]interface{} {
 		if bytes.Equal(fields[i+1], zeroByte) {
 			if !ns.DumpZeros {
 				continue
-			} else {
-				entries[string(fields[i])] = int64(0)
-				continue
 			}
+
+			entries[string(fields[i])] = int64(0)
+			continue
 		}
 		// the counter is not zero, so parse it.
 		value, err = strconv.ParseInt(string(fields[i+1]), 10, 64)
@@ -177,10 +176,10 @@ func (ns *Nstat) loadUglyTable(table []byte) map[string]interface{} {
 			if bytes.Equal(metrics[j], zeroByte) {
 				if !ns.DumpZeros {
 					continue
-				} else {
-					entries[string(append(prefix, headers[j]...))] = int64(0)
-					continue
 				}
+
+				entries[string(append(prefix, headers[j]...))] = int64(0)
+				continue
 			}
 			// the counter is not zero, so parse it.
 			value, err = strconv.ParseInt(string(metrics[j]), 10, 64)

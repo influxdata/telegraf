@@ -4,12 +4,12 @@
 package mdstat
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestFullMdstatProcFile(t *testing.T) {
@@ -20,7 +20,7 @@ func TestFullMdstatProcFile(t *testing.T) {
 	}
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fields := map[string]interface{}{
 		"BlocksSynced":           int64(10620027200),
@@ -47,7 +47,7 @@ func TestFailedDiskMdStatProcFile1(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fields := map[string]interface{}{
 		"BlocksSynced":           int64(5860144128),
@@ -74,7 +74,7 @@ func TestEmptyMdStatProcFile1(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestInvalidMdStatProcFile1(t *testing.T) {
@@ -87,7 +87,7 @@ func TestInvalidMdStatProcFile1(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 const mdStatFileFull = `
@@ -134,7 +134,7 @@ unused devices: <none>
 `
 
 func makeFakeMDStatFile(content []byte) (filename string) {
-	fileobj, err := ioutil.TempFile("", "mdstat")
+	fileobj, err := os.CreateTemp("", "mdstat")
 	if err != nil {
 		panic(err)
 	}

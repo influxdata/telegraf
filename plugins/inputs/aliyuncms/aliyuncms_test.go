@@ -2,7 +2,7 @@ package aliyuncms
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -132,7 +132,7 @@ func TestPluginInitialize(t *testing.T) {
 
 	httpResp := &http.Response{
 		StatusCode: 200,
-		Body: ioutil.NopCloser(bytes.NewBufferString(
+		Body: io.NopCloser(bytes.NewBufferString(
 			`{
 						"LoadBalancers":
 						 {
@@ -359,7 +359,7 @@ func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 			region:  "cn-hongkong",
 			httpResp: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(`{}`)),
+				Body:       io.NopCloser(bytes.NewBufferString(`{}`)),
 			},
 			totalCount:          0,
 			pageSize:            0,
@@ -372,7 +372,7 @@ func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 			region:  "cn-hongkong",
 			httpResp: &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(
+				Body: io.NopCloser(bytes.NewBufferString(
 					`{
 						"LoadBalancers":
 						 {

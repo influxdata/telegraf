@@ -129,7 +129,7 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				//variable initialization
 				x := fv
 				mean := tmp.mean
-				M2 := tmp.M2
+				m2 := tmp.M2
 				//counter compute
 				n := tmp.count + 1
 				tmp.count = n
@@ -138,8 +138,8 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				mean = mean + delta/n
 				tmp.mean = mean
 				//variance/stdev compute
-				M2 = M2 + delta*(x-mean)
-				tmp.M2 = M2
+				m2 = m2 + delta*(x-mean)
+				tmp.M2 = m2
 				//max/min compute
 				if fv < tmp.min {
 					tmp.min = fv

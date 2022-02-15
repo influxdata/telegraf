@@ -7,3 +7,7 @@
 .DS_Store
 process.yml
 /.vscode
+/*.toml
+/*.conf
+resource.syso
+versioninfo.json

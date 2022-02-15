@@ -4,7 +4,7 @@ This plugin gathers stats from
 [NSD](https://www.nlnetlabs.nl/projects/nsd/about) - an authoritative DNS name
 server.
 
-### Configuration:
+## Configuration
 
 ```toml
 # A plugin to collect stats from the NSD DNS resolver
@@ -26,7 +26,7 @@ server.
   # timeout = "1s"
 ```
 
-#### Permissions:
+### Permissions
 
 It's important to note that this plugin references nsd-control, which may
 require additional permissions to execute successfully.  Depending on the
@@ -34,6 +34,7 @@ user/group permissions of the telegraf user executing this plugin, you may
 need to alter the group membership, set facls, or use sudo.
 
 **Group membership (Recommended)**:
+
 ```bash
 $ groups telegraf
 telegraf : telegraf
@@ -46,12 +47,14 @@ telegraf : telegraf nsd
 
 **Sudo privileges**:
 If you use this method, you will need the following in your telegraf config:
+
 ```toml
 [[inputs.nsd]]
   use_sudo = true
 ```
 
 You will also need to update your sudoers file:
+
 ```bash
 $ visudo
 # Add the following line:
@@ -62,11 +65,11 @@ Defaults!NSDCONTROLCTL !logfile, !syslog, !pam_session
 
 Please use the solution you see as most appropriate.
 
-### Metrics:
+## Metrics
 
 This is the full list of stats provided by nsd-control. In the output, the
 dots in the nsd-control stat name are replaced by underscores (see
-https://www.nlnetlabs.nl/documentation/nsd/nsd-control/ for details).
+<https://www.nlnetlabs.nl/documentation/nsd/nsd-control/> for details).
 
 - nsd
   - fields:

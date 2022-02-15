@@ -10,8 +10,9 @@ import (
 	"path"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var s = Sysstat{
@@ -310,5 +311,6 @@ dell-xps	5	2016-03-25 16:18:10 UTC	sdb	%util	0.30
 	default:
 	}
 	// some code here to check arguments perhaps?
+	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
 }

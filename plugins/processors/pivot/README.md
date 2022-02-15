@@ -8,7 +8,7 @@ formats.
 
 To perform the reverse operation use the [unpivot] processor.
 
-### Configuration
+## Configuration
 
 ```toml
 [[processors.pivot]]
@@ -18,7 +18,7 @@ To perform the reverse operation use the [unpivot] processor.
   value_key = "value"
 ```
 
-### Example
+## Example
 
 ```diff
 - cpu,cpu=cpu0,name=time_idle value=42i

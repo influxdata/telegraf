@@ -65,12 +65,12 @@ through the convert settings.
 
 ## Configuration
 
-```
+```toml
 # Save metrics to an SQL Database
 [[outputs.sql]]
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com)
+  ##  sqlite (SQLite3), snowflake (snowflake.com) clickhouse (ClickHouse)
   # driver = ""
 
   ## Data source name
@@ -97,6 +97,13 @@ through the convert settings.
   # init_sql = ""
 
   ## Metric type to SQL type conversion
+  ## The values on the left are the data types Telegraf has and the values on
+  ## the right are the data types Telegraf will use when sending to a database.
+  ##
+  ## The database values used must be data types the destination database
+  ## understands. It is up to the user to ensure that the selected data type is
+  ## available in the database they are using. Refer to your database
+  ## documentation for what data types are available and supported.
   #[outputs.sql.convert]
   #  integer              = "INT"
   #  real                 = "DOUBLE"
@@ -139,6 +146,22 @@ FreeBSD, and other Linux and Darwin platforms.
 
 The DSN is a filename or url with scheme "file:". See the [driver
 docs](https://modernc.org/sqlite) for details.
+
+### clickhouse
+
+Use this metric type to SQL type conversion:
+
+```toml
+  [outputs.sql.convert]
+    integer              = "Int64"
+    text                 = "String"
+    timestamp            = "DateTime"
+    defaultvalue         = "String"
+    unsigned             = "UInt64"
+    bool                 = "Uint8"
+```
+
+See [ClickHouse data types](https://clickhouse.com/docs/en/sql-reference/data-types/) for more info.
 
 ### denisenkom/go-mssqldb
 

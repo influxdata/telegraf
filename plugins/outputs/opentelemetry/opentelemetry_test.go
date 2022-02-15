@@ -133,8 +133,8 @@ func (m *mockOtelService) Address() string {
 	return m.listener.Addr().String()
 }
 
-func (m *mockOtelService) Export(ctx context.Context, request pdata.Metrics) (otlpgrpc.MetricsResponse, error) {
-	m.metrics = request.Clone()
+func (m *mockOtelService) Export(ctx context.Context, request otlpgrpc.MetricsRequest) (otlpgrpc.MetricsResponse, error) {
+	m.metrics = request.Metrics().Clone()
 	ctxMetadata, ok := metadata.FromIncomingContext(ctx)
 	assert.Equal(m.t, []string{"header1"}, ctxMetadata.Get("test"))
 	assert.True(m.t, ok)

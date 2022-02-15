@@ -50,7 +50,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	// Due to problems with a parsing, we have to use regexp expression in order
 	// to remove string that starts from '(' and ends with space
 	// see: https://github.com/influxdata/telegraf/issues/2386
-	reg, err := regexp.Compile("\\s+\\([\\S]*")
+	reg, err := regexp.Compile(`\s+\([\S]*`)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,8 @@ You might need to adjust your fluentd configuration, in order to reduce series c
 According to [fluentd documentation](https://docs.fluentd.org/configuration/config-file#common-plugin-parameter), you are able to add `@id`  parameter for each plugin to avoid this behaviour and define custom `plugin_id`.
 
 example configuration with `@id` parameter for http plugin:
-```
+
+```text
 <source>
   @type http
   @id http
@@ -15,7 +16,7 @@ example configuration with `@id` parameter for http plugin:
 </source>
 ```
 
-### Configuration:
+## Configuration
 
 ```toml
 # Read metrics exposed by fluentd in_monitor plugin
@@ -29,30 +30,30 @@ example configuration with `@id` parameter for http plugin:
 
   ## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
   exclude = [
-	  "monitor_agent",
-	  "dummy",
+    "monitor_agent",
+    "dummy",
   ]
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 Fields may vary depending on the plugin type
 
 - fluentd
-    - retry_count            (float, unit)
-    - buffer_queue_length     (float, unit)
-    - buffer_total_queued_size (float, unit)
+  - retry_count            (float, unit)
+  - buffer_queue_length     (float, unit)
+  - buffer_total_queued_size (float, unit)
 
-### Tags:
+## Tags
 
 - All measurements have the following tags:
-	- plugin_id        (unique plugin id)
-	- plugin_type      (type of the plugin e.g. s3)
+  - plugin_id        (unique plugin id)
+  - plugin_type      (type of the plugin e.g. s3)
     - plugin_category  (plugin category e.g. output)
 
-### Example Output:
+## Example Output
 
-```
+```shell
 $ telegraf --config fluentd.conf --input-filter fluentd --test
 * Plugin: inputs.fluentd, Collection 1
 > fluentd,host=T440s,plugin_id=object:9f748c,plugin_category=input,plugin_type=dummy buffer_total_queued_size=0,buffer_queue_length=0,retry_count=0 1492006105000000000

@@ -7,13 +7,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/event"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/signalfx/golib/v3/datapoint"
-	"github.com/signalfx/golib/v3/event"
-	"github.com/stretchr/testify/require"
 )
 
 type sink struct {
@@ -436,7 +437,9 @@ func TestSignalFx_SignalFx(t *testing.T) {
 				measurements = append(measurements, m)
 			}
 
-			s.Write(measurements)
+			err := s.Write(measurements)
+			require.NoError(t, err)
+
 			require.Eventually(t, func() bool { return len(s.client.(*sink).dps) == len(tt.want.datapoints) }, 5*time.Second, 100*time.Millisecond)
 			require.Eventually(t, func() bool { return len(s.client.(*sink).evs) == len(tt.want.events) }, 5*time.Second, 100*time.Millisecond)
 
@@ -596,7 +599,8 @@ func TestSignalFx_Errors(t *testing.T) {
 					measurement.name, measurement.tags, measurement.fields, measurement.time, measurement.tp,
 				)
 
-				s.Write([]telegraf.Metric{m})
+				err := s.Write([]telegraf.Metric{m})
+				require.Error(t, err)
 			}
 			for !(len(s.client.(*errorsink).dps) == len(tt.want.datapoints) && len(s.client.(*errorsink).evs) == len(tt.want.events)) {
 				time.Sleep(1 * time.Second)

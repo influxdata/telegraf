@@ -6,7 +6,6 @@ This plugin writes to [CrateDB](https://crate.io/) via its [PostgreSQL protocol]
 
 The plugin requires a table with the following schema.
 
-
 ```sql
 CREATE TABLE my_metrics (
   "hash_id" LONG INDEX OFF,

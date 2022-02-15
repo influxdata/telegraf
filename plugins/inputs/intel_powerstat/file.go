@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -107,7 +106,7 @@ func (fs *fileServiceImpl) getStringsMatchingPatternOnPath(path string) ([]strin
 
 // readFile reads file on path and return string content.
 func (fs *fileServiceImpl) readFile(path string) ([]byte, error) {
-	out, err := ioutil.ReadFile(path)
+	out, err := os.ReadFile(path)
 	if err != nil {
 		return make([]byte, 0), err
 	}
@@ -116,7 +115,7 @@ func (fs *fileServiceImpl) readFile(path string) ([]byte, error) {
 
 // readFileToFloat64 reads file on path and tries to parse content to float64.
 func (fs *fileServiceImpl) readFileToFloat64(reader io.Reader) (float64, int64, error) {
-	read, err := ioutil.ReadAll(reader)
+	read, err := io.ReadAll(reader)
 	if err != nil {
 		return 0, 0, err
 	}

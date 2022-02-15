@@ -2,11 +2,11 @@ package puppetagent
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -102,7 +102,7 @@ func (pa *PuppetAgent) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("%s", err)
 	}
 
-	fh, err := ioutil.ReadFile(pa.Location)
+	fh, err := os.ReadFile(pa.Location)
 	if err != nil {
 		return fmt.Errorf("%s", err)
 	}

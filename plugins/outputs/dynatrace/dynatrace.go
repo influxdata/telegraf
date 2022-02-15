@@ -3,7 +3,7 @@ package dynatrace
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -209,7 +209,7 @@ func (d *Dynatrace) send(msg string) error {
 	}
 
 	// print metric line results as info log
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		d.Log.Errorf("Dynatrace error reading response")
 	}

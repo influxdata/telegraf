@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,7 +28,7 @@ const (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address         string   // deprecated in 1.12
+	Address         string   `toml:"address" deprecated:"1.12.0;use 'urls' instead"`
 	URLs            []string `toml:"urls"`
 	HTTPProxy       string   `toml:"http_proxy"`
 	Body            string
@@ -277,7 +277,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	}
 
 	if h.BearerToken != "" {
-		token, err := ioutil.ReadFile(h.BearerToken)
+		token, err := os.ReadFile(h.BearerToken)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -339,7 +339,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	if h.ResponseBodyMaxSize == 0 {
 		h.ResponseBodyMaxSize = config.Size(defaultResponseBodyMaxSize)
 	}
-	bodyBytes, err := ioutil.ReadAll(io.LimitReader(resp.Body, int64(h.ResponseBodyMaxSize)+1))
+	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, int64(h.ResponseBodyMaxSize)+1))
 	// Check first if the response body size exceeds the limit.
 	if err == nil && int64(len(bodyBytes)) > int64(h.ResponseBodyMaxSize) {
 		h.setBodyReadError("The body of the HTTP Response is too large", bodyBytes, fields, tags)

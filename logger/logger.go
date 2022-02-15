@@ -78,14 +78,15 @@ func (t *telegrafLog) Write(b []byte) (n int, err error) {
 func (t *telegrafLog) Close() error {
 	stdErrWriter := os.Stderr
 	// avoid closing stderr
-	if t.internalWriter != stdErrWriter {
-		closer, isCloser := t.internalWriter.(io.Closer)
-		if !isCloser {
-			return errors.New("the underlying writer cannot be closed")
-		}
-		return closer.Close()
+	if t.internalWriter == stdErrWriter {
+		return nil
 	}
-	return nil
+
+	closer, isCloser := t.internalWriter.(io.Closer)
+	if !isCloser {
+		return errors.New("the underlying writer cannot be closed")
+	}
+	return closer.Close()
 }
 
 // newTelegrafWriter returns a logging-wrapped writer.

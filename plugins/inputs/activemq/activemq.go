@@ -3,7 +3,7 @@ package activemq
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -184,7 +184,7 @@ func (a *ActiveMQ) GetMetrics(u string) ([]byte, error) {
 		return nil, fmt.Errorf("GET %s returned status %q", u, resp.Status)
 	}
 
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
 }
 
 func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues Queues) {

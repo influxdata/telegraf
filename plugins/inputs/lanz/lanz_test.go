@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	pb "github.com/aristanetworks/goarista/lanz/proto"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/influxdata/telegraf/testutil"
 )
 

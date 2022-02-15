@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	version        = "1.21" // 1.24 is when server first started returning its version
+	version        = "1.24" // https://docs.docker.com/engine/api/
 	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 )
 

@@ -315,26 +315,26 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				if err != nil {
 					return nil, fmt.Errorf("failed to query field value for '%s': %v", name, err)
 				}
-				path := name
+
 				if config.FieldNameExpand {
 					p := p.document.GetNodePath(selectedfield, selected, "_")
 					if len(p) > 0 {
-						path = p + "_" + name
+						name = p + "_" + name
 					}
 				}
 
 				// Check if field name already exists and if so, append an index number.
-				if _, ok := fields[path]; ok {
+				if _, ok := fields[name]; ok {
 					for i := 1; ; i++ {
-						p := path + "_" + strconv.Itoa(i)
+						p := name + "_" + strconv.Itoa(i)
 						if _, ok := fields[p]; !ok {
-							path = p
+							name = p
 							break
 						}
 					}
 				}
 
-				fields[path] = v
+				fields[name] = v
 			}
 		} else {
 			p.debugEmptyQuery("field selection", selected, config.FieldSelection)

@@ -14,7 +14,7 @@ metric is written as the Azure Monitor metric name. All field values are
 written as a summarized set that includes: min, max, sum, count. Tags are
 written as a dimension on each Azure Monitor metric.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[outputs.azure_monitor]]
@@ -47,12 +47,12 @@ written as a dimension on each Azure Monitor metric.
   # endpoint_url = "https://monitoring.core.usgovcloudapi.net"
 ```
 
-### Setup
+## Setup
 
 1. [Register the `microsoft.insights` resource provider in your Azure subscription][resource provider].
-2. If using Managed Service Identities to authenticate an Azure VM,
+1. If using Managed Service Identities to authenticate an Azure VM,
    [enable system-assigned managed identity][enable msi].
-2. Use a region that supports Azure Monitor Custom Metrics,
+1. Use a region that supports Azure Monitor Custom Metrics,
    For regions with Custom Metrics support, an endpoint will be available with
    the format `https://<region>.monitoring.azure.com`.
 
@@ -75,17 +75,18 @@ This plugin uses one of several different types of authenticate methods. The
 preferred authentication methods are different from the *order* in which each
 authentication is checked. Here are the preferred authentication methods:
 
-1. Managed Service Identity (MSI) token
-    - This is the preferred authentication method. Telegraf will automatically
-      authenticate using this method when running on Azure VMs.
+1. Managed Service Identity (MSI) token: This is the preferred authentication method. Telegraf will automatically authenticate using this method when running on Azure VMs.
 2. AAD Application Tokens (Service Principals)
-    - Primarily useful if Telegraf is writing metrics for other resources.
+
+    * Primarily useful if Telegraf is writing metrics for other resources.
       [More information][principal].
-    - A Service Principal or User Principal needs to be assigned the `Monitoring
+    * A Service Principal or User Principal needs to be assigned the `Monitoring
       Metrics Publisher` role on the resource(s) metrics will be emitted
       against.
+
 3. AAD User Tokens (User Principals)
-    - Allows Telegraf to authenticate like a user. It is best to use this method
+
+    * Allows Telegraf to authenticate like a user. It is best to use this method
       for development.
 
 [principal]: https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-application-objects
@@ -93,30 +94,28 @@ authentication is checked. Here are the preferred authentication methods:
 The plugin will authenticate using the first available of the
 following configurations:
 
-1. **Client Credentials**: Azure AD Application ID and Secret.
+1. **Client Credentials**: Azure AD Application ID and Secret. Set the following environment variables:
 
-    Set the following environment variables:
+    * `AZURE_TENANT_ID`: Specifies the Tenant to which to authenticate.
+    * `AZURE_CLIENT_ID`: Specifies the app client ID to use.
+    * `AZURE_CLIENT_SECRET`: Specifies the app secret to use.
 
-    - `AZURE_TENANT_ID`: Specifies the Tenant to which to authenticate.
-    - `AZURE_CLIENT_ID`: Specifies the app client ID to use.
-    - `AZURE_CLIENT_SECRET`: Specifies the app secret to use.
+1. **Client Certificate**: Azure AD Application ID and X.509 Certificate.
 
-2. **Client Certificate**: Azure AD Application ID and X.509 Certificate.
+    * `AZURE_TENANT_ID`: Specifies the Tenant to which to authenticate.
+    * `AZURE_CLIENT_ID`: Specifies the app client ID to use.
+    * `AZURE_CERTIFICATE_PATH`: Specifies the certificate Path to use.
+    * `AZURE_CERTIFICATE_PASSWORD`: Specifies the certificate password to use.
 
-    - `AZURE_TENANT_ID`: Specifies the Tenant to which to authenticate.
-    - `AZURE_CLIENT_ID`: Specifies the app client ID to use.
-    - `AZURE_CERTIFICATE_PATH`: Specifies the certificate Path to use.
-    - `AZURE_CERTIFICATE_PASSWORD`: Specifies the certificate password to use.
-
-3. **Resource Owner Password**: Azure AD User and Password. This grant type is
+1. **Resource Owner Password**: Azure AD User and Password. This grant type is
    *not recommended*, use device login instead if you need interactive login.
 
-    - `AZURE_TENANT_ID`: Specifies the Tenant to which to authenticate.
-    - `AZURE_CLIENT_ID`: Specifies the app client ID to use.
-    - `AZURE_USERNAME`: Specifies the username to use.
-    - `AZURE_PASSWORD`: Specifies the password to use.
+    * `AZURE_TENANT_ID`: Specifies the Tenant to which to authenticate.
+    * `AZURE_CLIENT_ID`: Specifies the app client ID to use.
+    * `AZURE_USERNAME`: Specifies the username to use.
+    * `AZURE_PASSWORD`: Specifies the password to use.
 
-4. **Azure Managed Service Identity**: Delegate credential management to the
+1. **Azure Managed Service Identity**: Delegate credential management to the
    platform. Requires that code is running in Azure, e.g. on a VM. All
    configuration is handled by Azure. See [Azure Managed Service Identity][msi]
    for more details. Only available when using the [Azure Resource Manager][arm].
@@ -127,7 +126,7 @@ following configurations:
 **Note: As shown above, the last option (#4) is the preferred way to
 authenticate when running Telegraf on Azure VMs.
 
-### Dimensions
+## Dimensions
 
 Azure Monitor only accepts values with a numeric type. The plugin will drop
 fields with a string type by default. The plugin can set all string type fields

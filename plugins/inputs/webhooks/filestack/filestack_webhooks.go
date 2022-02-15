@@ -2,30 +2,32 @@ package filestack
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"log"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
 )
 
 type FilestackWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
+	log  telegraf.Logger
 }
 
-func (fs *FilestackWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
+func (fs *FilestackWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(fs.Path, fs.eventHandler).Methods("POST")
 
-	log.Printf("I! Started the webhooks_filestack on %s\n", fs.Path)
+	fs.log = log
+	fs.log.Infof("Started the webhooks_filestack on %s", fs.Path)
 	fs.acc = acc
 }
 
 func (fs *FilestackWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"math"
 	"net"
 	"net/http"
@@ -56,6 +54,7 @@ type HTTPConfig struct {
 	TLSConfig        *tls.Config
 
 	Serializer *influx.Serializer
+	Log        telegraf.Logger
 }
 
 type httpClient struct {
@@ -72,6 +71,7 @@ type httpClient struct {
 	url        *url.URL
 	retryTime  time.Time
 	retryCount int
+	log        telegraf.Logger
 }
 
 func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
@@ -143,6 +143,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		Bucket:           config.Bucket,
 		BucketTag:        config.BucketTag,
 		ExcludeBucketTag: config.ExcludeBucketTag,
+		log:              config.Log,
 	}
 	return client, nil
 }
@@ -178,6 +179,12 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	if c.BucketTag == "" {
 		err := c.writeBatch(ctx, c.Bucket, metrics)
 		if err != nil {
+			if err, ok := err.(*APIError); ok {
+				if err.StatusCode == http.StatusRequestEntityTooLarge {
+					return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
+				}
+			}
+
 			return err
 		}
 	} else {
@@ -204,11 +211,28 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		for bucket, batch := range batches {
 			err := c.writeBatch(ctx, bucket, batch)
 			if err != nil {
+				if err, ok := err.(*APIError); ok {
+					if err.StatusCode == http.StatusRequestEntityTooLarge {
+						return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
+					}
+				}
+
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
+	c.log.Warnf("Retrying write after splitting metric payload in half to reduce batch size")
+	midpoint := len(metrics) / 2
+
+	if err := c.writeBatch(ctx, bucket, metrics[:midpoint]); err != nil {
+		return err
+	}
+
+	return c.writeBatch(ctx, bucket, metrics[midpoint:])
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
@@ -258,17 +282,23 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 
 	switch resp.StatusCode {
+	// request was too large, send back to try again
+	case http.StatusRequestEntityTooLarge:
+		c.log.Errorf("Failed to write metric, request was too large (413)")
+		return &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: desc,
+		}
 	case
 		// request was malformed:
 		http.StatusBadRequest,
-		// request was too large:
-		http.StatusRequestEntityTooLarge,
 		// request was received but server refused to process it due to a semantic problem with the request.
 		// for example, submitting metrics outside the retention period.
 		// Clients should *not* repeat the request and the metrics should be dropped.
 		http.StatusUnprocessableEntity,
 		http.StatusNotAcceptable:
-		log.Printf("E! [outputs.influxdb_v2] Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		c.log.Errorf("Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
 		return nil
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return fmt.Errorf("failed to write metric (%s): %s", resp.Status, desc)
@@ -280,14 +310,14 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		c.retryCount++
 		retryDuration := c.getRetryDuration(resp.Header)
 		c.retryTime = time.Now().Add(retryDuration)
-		log.Printf("W! [outputs.influxdb_v2] Failed to write; will retry in %s. (%s)\n", retryDuration, resp.Status)
+		c.log.Warnf("Failed to write; will retry in %s. (%s)\n", retryDuration, resp.Status)
 		return fmt.Errorf("waiting %s for server before sending metric again", retryDuration)
 	}
 
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
-		log.Printf("E! [outputs.influxdb_v2] Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		c.log.Errorf("Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
 		return nil
 	}
 
@@ -329,10 +359,10 @@ func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 	return time.Duration(retry*1000) * time.Millisecond
 }
 
-func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
+func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
 	var err error
 
-	req, err := http.NewRequest("POST", url, body)
+	req, err := http.NewRequest("POST", address, body)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +391,7 @@ func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser
 		return rc, nil
 	}
 
-	return ioutil.NopCloser(reader), nil
+	return io.NopCloser(reader), nil
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {

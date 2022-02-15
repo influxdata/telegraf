@@ -20,7 +20,8 @@ func collectEndpoints(ctx context.Context, acc telegraf.Accumulator, ki *Kuberne
 }
 
 func (ki *KubernetesInventory) gatherEndpoint(e corev1.Endpoints, acc telegraf.Accumulator) {
-	if e.GetCreationTimestamp().Second() == 0 && e.GetCreationTimestamp().Nanosecond() == 0 {
+	creationTs := e.GetCreationTimestamp()
+	if creationTs.IsZero() {
 		return
 	}
 

@@ -9,7 +9,7 @@ a Unix Domain socket,
 Syslog messages should be formatted according to
 [RFC 5424](https://tools.ietf.org/html/rfc5424).
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.syslog]]
@@ -68,20 +68,20 @@ Syslog messages should be formatted according to
   # sdparam_separator = "_"
 ```
 
-#### Message transport
+### Message transport
 
 The `framing` option only applies to streams. It governs the way we expect to receive messages within the stream.
 Namely, with the [`"octet counting"`](https://tools.ietf.org/html/rfc5425#section-4.3) technique (default) or with the [`"non-transparent"`](https://tools.ietf.org/html/rfc6587#section-3.4.2) framing.
 
 The `trailer` option only applies when `framing` option is `"non-transparent"`. It must have one of the following values: `"LF"` (default), or `"NUL"`.
 
-#### Best effort
+### Best effort
 
 The [`best_effort`](https://github.com/influxdata/go-syslog#best-effort-mode)
 option instructs the parser to extract partial but valid info from syslog
 messages. If unset only full messages will be collected.
 
-#### Rsyslog Integration
+### Rsyslog Integration
 
 Rsyslog can be configured to forward logging messages to Telegraf by configuring
 [remote logging](https://www.rsyslog.com/doc/v8-stable/configuration/actions.html#remote-machine).
@@ -93,7 +93,8 @@ config file.
 
 Add the following lines to `/etc/rsyslog.d/50-telegraf.conf` making
 adjustments to the target address as needed:
-```
+
+```shell
 $ActionQueueType LinkedList # use asynchronous processing
 $ActionQueueFileName srvrfwd # set file name, also enables disk mode
 $ActionResumeRetryCount -1 # infinite retries on insert failure
@@ -107,7 +108,8 @@ $ActionQueueSaveOnShutdown on # save in-memory data if rsyslog shuts down
 ```
 
 You can alternately use `advanced` format (aka RainerScript):
-```
+
+```bash
 # forward over tcp with octet framing according to RFC 5425
 action(type="omfwd" Protocol="tcp" TCP_Framing="octet-counted" Target="127.0.0.1" Port="6514" Template="RSYSLOG_SyslogProtocol23Format")
 
@@ -117,7 +119,7 @@ action(type="omfwd" Protocol="tcp" TCP_Framing="octet-counted" Target="127.0.0.1
 
 To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html).
 
-### Metrics
+## Metrics
 
 - syslog
   - tags
@@ -136,17 +138,19 @@ To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc
     - *Structured Data* (string)
   - timestamp: the time the messages was received
 
-#### Structured Data
+### Structured Data
 
 Structured data produces field keys by combining the `SD_ID` with the `PARAM_NAME` combined using the `sdparam_separator` as in the following example:
-```
+
+```shell
 170 <165>1 2018-10-01:14:15.000Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"] An application event log entry...
 ```
-```
+
+```shell
 syslog,appname=evntslog,facility=local4,hostname=mymachine.example.com,severity=notice exampleSDID@32473_eventID="1011",exampleSDID@32473_eventSource="Application",exampleSDID@32473_iut="3",facility_code=20i,message="An application event log entry...",msgid="ID47",severity_code=5i,timestamp=1065910455003000000i,version=1i 1538421339749472344
 ```
 
-### Troubleshooting
+## Troubleshooting
 
 You can send debugging messages directly to the input plugin using netcat:
 
@@ -158,14 +162,29 @@ echo "57 <13>1 2018-10-01T12:00:00.0Z example.org root - - - test" | nc 127.0.0.
 echo "<13>1 2018-10-01T12:00:00.0Z example.org root - - - test" | nc -u 127.0.0.1 6514
 ```
 
-#### RFC3164
+### RFC3164
 
 RFC3164 encoded messages are supported for UDP only, but not all vendors output valid RFC3164 messages by default
 
 - E.g. Cisco IOS
 
 If you see the following error, it is due to a message encoded in this format:
- ```
+
+ ```shell
  E! Error in plugin [inputs.syslog]: expecting a version value in the range 1-999 [col 5]
  ```
- You can use rsyslog to translate RFC3164 syslog messages into RFC5424 format.
+
+Users can use rsyslog to translate RFC3164 syslog messages into RFC5424 format.
+Add the following lines to the rsyslog configuration file
+(e.g. `/etc/rsyslog.d/50-telegraf.conf`):
+
+```s
+# This makes rsyslog listen on 127.0.0.1:514 to receive RFC3164 udp
+# messages which can them be forwared to telegraf as RFC5424
+$ModLoad imudp #loads the udp module
+$UDPServerAddress 127.0.0.1
+$UDPServerRun 514
+```
+
+Make adjustments to the target address as needed and sent your RFC3164 messages
+to port 514.

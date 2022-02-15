@@ -2,13 +2,15 @@ package csv
 
 import (
 	"fmt"
+	"io"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var DefaultTime = func() time.Time {
@@ -16,13 +18,12 @@ var DefaultTime = func() time.Time {
 }
 
 func TestBasicCSV(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			ColumnNames: []string{"first", "second", "third"},
-			TagColumns:  []string{"third"},
-			TimeFunc:    DefaultTime,
-		},
-	)
+	p := &Parser{
+		ColumnNames: []string{"first", "second", "third"},
+		TagColumns:  []string{"third"},
+		TimeFunc:    DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 
 	_, err = p.ParseLine("1.4,true,hi")
@@ -30,13 +31,12 @@ func TestBasicCSV(t *testing.T) {
 }
 
 func TestHeaderConcatenationCSV(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    2,
-			MeasurementColumn: "3",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    2,
+		MeasurementColumn: "3",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 	testCSV := `first,second
 1,2,3
@@ -48,33 +48,56 @@ func TestHeaderConcatenationCSV(t *testing.T) {
 }
 
 func TestHeaderOverride(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 	testCSV := `line1,line2,line3
 3.4,70,test_name`
+	expectedFields := map[string]interface{}{
+		"first":  3.4,
+		"second": int64(70),
+	}
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 	require.Equal(t, "test_name", metrics[0].Name())
+	require.Equal(t, expectedFields, metrics[0].Fields())
+
+	testCSVRows := []string{"line1,line2,line3\r\n", "3.4,70,test_name\r\n"}
+
+	p = &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimeFunc:          DefaultTime,
+	}
+	err = p.Init()
+	require.NoError(t, err)
+	metrics, err = p.Parse([]byte(testCSVRows[0]))
+	require.NoError(t, err)
+	require.Equal(t, []telegraf.Metric{}, metrics)
+	m, err := p.ParseLine(testCSVRows[1])
+	require.NoError(t, err)
+	require.Equal(t, "test_name", m.Name())
+	require.Equal(t, expectedFields, m.Fields())
 }
 
 func TestTimestamp(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimestampColumn:   "first",
-			TimestampFormat:   "02/01/06 03:04:05 PM",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "02/01/06 03:04:05 PM",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
 	testCSV := `line1,line2,line3
 23/05/09 04:05:06 PM,70,test_name
 07/11/09 04:05:06 PM,80,test_name2`
@@ -86,16 +109,17 @@ func TestTimestamp(t *testing.T) {
 }
 
 func TestTimestampYYYYMMDDHHmm(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimestampColumn:   "first",
-			TimestampFormat:   "200601021504",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "200601021504",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
 	testCSV := `line1,line2,line3
 200905231605,70,test_name
 200907111605,80,test_name2`
@@ -106,15 +130,14 @@ func TestTimestampYYYYMMDDHHmm(t *testing.T) {
 	require.Equal(t, metrics[1].Time().UnixNano(), int64(1247328300000000000))
 }
 func TestTimestampError(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimestampColumn:   "first",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 	testCSV := `line1,line2,line3
 23/05/09 04:05:06 PM,70,test_name
@@ -124,16 +147,15 @@ func TestTimestampError(t *testing.T) {
 }
 
 func TestTimestampUnixFormat(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimestampColumn:   "first",
-			TimestampFormat:   "unix",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "unix",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 	testCSV := `line1,line2,line3
 1243094706,70,test_name
@@ -145,16 +167,15 @@ func TestTimestampUnixFormat(t *testing.T) {
 }
 
 func TestTimestampUnixMSFormat(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimestampColumn:   "first",
-			TimestampFormat:   "unix_ms",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "unix_ms",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 	testCSV := `line1,line2,line3
 1243094706123,70,test_name
@@ -166,14 +187,13 @@ func TestTimestampUnixMSFormat(t *testing.T) {
 }
 
 func TestQuotedCharacter(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 
 	testCSV := `line1,line2,line3
@@ -184,15 +204,14 @@ func TestQuotedCharacter(t *testing.T) {
 }
 
 func TestDelimiter(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			Delimiter:         "%",
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		Delimiter:         "%",
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 
 	testCSV := `line1%line2%line3
@@ -203,15 +222,14 @@ func TestDelimiter(t *testing.T) {
 }
 
 func TestValueConversion(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount: 0,
-			Delimiter:      ",",
-			ColumnNames:    []string{"first", "second", "third", "fourth"},
-			MetricName:     "test_value",
-			TimeFunc:       DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount: 0,
+		Delimiter:      ",",
+		ColumnNames:    []string{"first", "second", "third", "fourth"},
+		MetricName:     "test_value",
+		TimeFunc:       DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 	testCSV := `3.3,4,true,hello`
 
@@ -245,15 +263,14 @@ func TestValueConversion(t *testing.T) {
 }
 
 func TestSkipComment(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount: 0,
-			Comment:        "#",
-			ColumnNames:    []string{"first", "second", "third", "fourth"},
-			MetricName:     "test_value",
-			TimeFunc:       DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount: 0,
+		Comment:        "#",
+		ColumnNames:    []string{"first", "second", "third", "fourth"},
+		MetricName:     "test_value",
+		TimeFunc:       DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 	testCSV := `#3.3,4,true,hello
 4,9.9,true,name_this`
@@ -271,15 +288,14 @@ func TestSkipComment(t *testing.T) {
 }
 
 func TestTrimSpace(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount: 0,
-			TrimSpace:      true,
-			ColumnNames:    []string{"first", "second", "third", "fourth"},
-			MetricName:     "test_value",
-			TimeFunc:       DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount: 0,
+		TrimSpace:      true,
+		ColumnNames:    []string{"first", "second", "third", "fourth"},
+		MetricName:     "test_value",
+		TimeFunc:       DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 	testCSV := ` 3.3, 4,    true,hello`
 
@@ -293,18 +309,33 @@ func TestTrimSpace(t *testing.T) {
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 	require.Equal(t, expectedFields, metrics[0].Fields())
+
+	p = &Parser{
+		HeaderRowCount: 2,
+		TrimSpace:      true,
+		TimeFunc:       DefaultTime,
+	}
+	err = p.Init()
+	require.NoError(t, err)
+	testCSV = "   col  ,  col  ,col\n" +
+		"  1  ,  2  ,3\n" +
+		"  test  space  ,  80  ,test_name"
+
+	metrics, err = p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, map[string]interface{}{"col1": "test  space", "col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
 }
 
 func TestTrimSpaceDelimitedBySpace(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			Delimiter:      " ",
-			HeaderRowCount: 1,
-			TrimSpace:      true,
-			TimeFunc:       DefaultTime,
-		},
-	)
+	p := &Parser{
+		Delimiter:      " ",
+		HeaderRowCount: 1,
+		TrimSpace:      true,
+		TimeFunc:       DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	testCSV := `   first   second   third   fourth
 abcdefgh        0       2    false
   abcdef      3.3       4     true
@@ -323,15 +354,16 @@ abcdefgh        0       2    false
 }
 
 func TestSkipRows(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			SkipRows:          1,
-			TagColumns:        []string{"line1"},
-			MeasurementColumn: "line3",
-			TimeFunc:          DefaultTime,
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		SkipRows:          1,
+		TagColumns:        []string{"line1"},
+		MeasurementColumn: "line3",
+		TimeFunc:          DefaultTime,
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
 	testCSV := `garbage nonsense
 line1,line2,line3
 hello,80,test_name2`
@@ -339,20 +371,47 @@ hello,80,test_name2`
 	expectedFields := map[string]interface{}{
 		"line2": int64(80),
 	}
+	expectedTags := map[string]string{
+		"line1": "hello",
+	}
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 	require.Equal(t, "test_name2", metrics[0].Name())
 	require.Equal(t, expectedFields, metrics[0].Fields())
+	require.Equal(t, expectedTags, metrics[0].Tags())
+
+	p = &Parser{
+		HeaderRowCount:    1,
+		SkipRows:          1,
+		TagColumns:        []string{"line1"},
+		MeasurementColumn: "line3",
+		TimeFunc:          DefaultTime,
+	}
+	err = p.Init()
+	require.NoError(t, err)
+	testCSVRows := []string{"garbage nonsense\r\n", "line1,line2,line3\r\n", "hello,80,test_name2\r\n"}
+
+	metrics, err = p.Parse([]byte(testCSVRows[0]))
+	require.Error(t, io.EOF, err)
+	require.Error(t, err)
+	require.Nil(t, metrics)
+	m, err := p.ParseLine(testCSVRows[1])
+	require.NoError(t, err)
+	require.Nil(t, m)
+	m, err = p.ParseLine(testCSVRows[2])
+	require.NoError(t, err)
+	require.Equal(t, "test_name2", m.Name())
+	require.Equal(t, expectedFields, m.Fields())
+	require.Equal(t, expectedTags, m.Tags())
 }
 
 func TestSkipColumns(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			SkipColumns: 1,
-			ColumnNames: []string{"line1", "line2"},
-			TimeFunc:    DefaultTime,
-		},
-	)
+	p := &Parser{
+		SkipColumns: 1,
+		ColumnNames: []string{"line1", "line2"},
+		TimeFunc:    DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 	testCSV := `hello,80,test_name`
 
@@ -366,17 +425,17 @@ func TestSkipColumns(t *testing.T) {
 }
 
 func TestSkipColumnsWithHeader(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			SkipColumns:    1,
-			HeaderRowCount: 2,
-			TimeFunc:       DefaultTime,
-		},
-	)
+	p := &Parser{
+		SkipColumns:    1,
+		HeaderRowCount: 2,
+		TimeFunc:       DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	testCSV := `col,col,col
-	1,2,3
-	trash,80,test_name`
+1,2,3
+trash,80,test_name`
 
 	// we should expect an error if we try to get col1
 	metrics, err := p.Parse([]byte(testCSV))
@@ -384,14 +443,48 @@ func TestSkipColumnsWithHeader(t *testing.T) {
 	require.Equal(t, map[string]interface{}{"col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
 }
 
+func TestMultiHeader(t *testing.T) {
+	p := &Parser{
+		HeaderRowCount: 2,
+		TimeFunc:       DefaultTime,
+	}
+	require.NoError(t, p.Init())
+	testCSV := `col,col
+1,2
+80,test_name`
+
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, map[string]interface{}{"col1": int64(80), "col2": "test_name"}, metrics[0].Fields())
+
+	testCSVRows := []string{"col,col\r\n", "1,2\r\n", "80,test_name\r\n"}
+
+	p = &Parser{
+		HeaderRowCount: 2,
+		TimeFunc:       DefaultTime,
+	}
+	err = p.Init()
+	require.NoError(t, err)
+
+	metrics, err = p.Parse([]byte(testCSVRows[0]))
+	require.Error(t, io.EOF, err)
+	require.Error(t, err)
+	require.Nil(t, metrics)
+	m, err := p.ParseLine(testCSVRows[1])
+	require.NoError(t, err)
+	require.Nil(t, m)
+	m, err = p.ParseLine(testCSVRows[2])
+	require.NoError(t, err)
+	require.Equal(t, map[string]interface{}{"col1": int64(80), "col2": "test_name"}, m.Fields())
+}
+
 func TestParseStream(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:     "csv",
-			HeaderRowCount: 1,
-			TimeFunc:       DefaultTime,
-		},
-	)
+	p := &Parser{
+		MetricName:     "csv",
+		HeaderRowCount: 1,
+		TimeFunc:       DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
 
 	csvHeader := "a,b,c"
@@ -400,7 +493,8 @@ func TestParseStream(t *testing.T) {
 	metrics, err := p.Parse([]byte(csvHeader))
 	require.NoError(t, err)
 	require.Len(t, metrics, 0)
-	metric, err := p.ParseLine(csvBody)
+	m, err := p.ParseLine(csvBody)
+	require.NoError(t, err)
 	testutil.RequireMetricEqual(t,
 		testutil.MustMetric(
 			"csv",
@@ -411,20 +505,56 @@ func TestParseStream(t *testing.T) {
 				"c": int64(3),
 			},
 			DefaultTime(),
-		), metric)
+		), m)
+}
+
+func TestParseLineMultiMetricErrorMessage(t *testing.T) {
+	p := &Parser{
+		MetricName:     "csv",
+		HeaderRowCount: 1,
+		TimeFunc:       DefaultTime,
+	}
+	require.NoError(t, p.Init())
+
+	csvHeader := "a,b,c"
+	csvOneRow := "1,2,3"
+	csvTwoRows := "4,5,6\n7,8,9"
+
+	metrics, err := p.Parse([]byte(csvHeader))
+	require.NoError(t, err)
+	require.Len(t, metrics, 0)
+	m, err := p.ParseLine(csvOneRow)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		testutil.MustMetric(
+			"csv",
+			map[string]string{},
+			map[string]interface{}{
+				"a": int64(1),
+				"b": int64(2),
+				"c": int64(3),
+			},
+			DefaultTime(),
+		), m)
+	m, err = p.ParseLine(csvTwoRows)
+	require.Errorf(t, err, "expected 1 metric found 2")
+	require.Nil(t, m)
+	metrics, err = p.Parse([]byte(csvTwoRows))
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
 }
 
 func TestTimestampUnixFloatPrecision(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:      "csv",
-			ColumnNames:     []string{"time", "value"},
-			TimestampColumn: "time",
-			TimestampFormat: "unix",
-			TimeFunc:        DefaultTime,
-		},
-	)
+	p := &Parser{
+		MetricName:      "csv",
+		ColumnNames:     []string{"time", "value"},
+		TimestampColumn: "time",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	data := `1551129661.95456123352050781250,42`
 
 	expected := []telegraf.Metric{
@@ -444,17 +574,17 @@ func TestTimestampUnixFloatPrecision(t *testing.T) {
 }
 
 func TestSkipMeasurementColumn(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:      "csv",
-			HeaderRowCount:  1,
-			TimestampColumn: "timestamp",
-			TimestampFormat: "unix",
-			TimeFunc:        DefaultTime,
-			TrimSpace:       true,
-		},
-	)
+	p := &Parser{
+		MetricName:      "csv",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+		TrimSpace:       true,
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	data := `id,value,timestamp
 		1,5,1551129661.954561233`
 
@@ -476,17 +606,17 @@ func TestSkipMeasurementColumn(t *testing.T) {
 }
 
 func TestSkipTimestampColumn(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:      "csv",
-			HeaderRowCount:  1,
-			TimestampColumn: "timestamp",
-			TimestampFormat: "unix",
-			TimeFunc:        DefaultTime,
-			TrimSpace:       true,
-		},
-	)
+	p := &Parser{
+		MetricName:      "csv",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+		TrimSpace:       true,
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	data := `id,value,timestamp
 		1,5,1551129661.954561233`
 
@@ -508,18 +638,18 @@ func TestSkipTimestampColumn(t *testing.T) {
 }
 
 func TestTimestampTimezone(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"first", "second", "third"},
-			MeasurementColumn: "third",
-			TimestampColumn:   "first",
-			TimestampFormat:   "02/01/06 03:04:05 PM",
-			TimeFunc:          DefaultTime,
-			Timezone:          "Asia/Jakarta",
-		},
-	)
+	p := &Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "02/01/06 03:04:05 PM",
+		TimeFunc:          DefaultTime,
+		Timezone:          "Asia/Jakarta",
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	testCSV := `line1,line2,line3
 23/05/09 11:05:06 PM,70,test_name
 07/11/09 11:05:06 PM,80,test_name2`
@@ -531,15 +661,15 @@ func TestTimestampTimezone(t *testing.T) {
 }
 
 func TestEmptyMeasurementName(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:        "csv",
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"", "b"},
-			MeasurementColumn: "",
-		},
-	)
+	p := &Parser{
+		MetricName:        "csv",
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"", "b"},
+		MeasurementColumn: "",
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	testCSV := `,b
 1,2`
 	metrics, err := p.Parse([]byte(testCSV))
@@ -558,15 +688,15 @@ func TestEmptyMeasurementName(t *testing.T) {
 }
 
 func TestNumericMeasurementName(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:        "csv",
-			HeaderRowCount:    1,
-			ColumnNames:       []string{"a", "b"},
-			MeasurementColumn: "a",
-		},
-	)
+	p := &Parser{
+		MetricName:        "csv",
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"a", "b"},
+		MeasurementColumn: "a",
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	testCSV := `a,b
 1,2`
 	metrics, err := p.Parse([]byte(testCSV))
@@ -585,14 +715,14 @@ func TestNumericMeasurementName(t *testing.T) {
 }
 
 func TestStaticMeasurementName(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:     "csv",
-			HeaderRowCount: 1,
-			ColumnNames:    []string{"a", "b"},
-		},
-	)
+	p := &Parser{
+		MetricName:     "csv",
+		HeaderRowCount: 1,
+		ColumnNames:    []string{"a", "b"},
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	testCSV := `a,b
 1,2`
 	metrics, err := p.Parse([]byte(testCSV))
@@ -612,15 +742,15 @@ func TestStaticMeasurementName(t *testing.T) {
 }
 
 func TestSkipEmptyStringValue(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:     "csv",
-			HeaderRowCount: 1,
-			ColumnNames:    []string{"a", "b"},
-			SkipValues:     []string{""},
-		},
-	)
+	p := &Parser{
+		MetricName:     "csv",
+		HeaderRowCount: 1,
+		ColumnNames:    []string{"a", "b"},
+		SkipValues:     []string{""},
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	testCSV := `a,b
 1,""`
 	metrics, err := p.Parse([]byte(testCSV))
@@ -639,15 +769,15 @@ func TestSkipEmptyStringValue(t *testing.T) {
 }
 
 func TestSkipSpecifiedStringValue(t *testing.T) {
-	p, err := NewParser(
-		&Config{
-			MetricName:     "csv",
-			HeaderRowCount: 1,
-			ColumnNames:    []string{"a", "b"},
-			SkipValues:     []string{"MM"},
-		},
-	)
+	p := &Parser{
+		MetricName:     "csv",
+		HeaderRowCount: 1,
+		ColumnNames:    []string{"a", "b"},
+		SkipValues:     []string{"MM"},
+	}
+	err := p.Init()
 	require.NoError(t, err)
+
 	testCSV := `a,b
 1,MM`
 	metrics, err := p.Parse([]byte(testCSV))
@@ -663,4 +793,37 @@ func TestSkipSpecifiedStringValue(t *testing.T) {
 		),
 	}
 	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
+}
+
+func TestSkipErrorOnCorruptedCSVLine(t *testing.T) {
+	p := &Parser{
+		HeaderRowCount:  1,
+		TimestampColumn: "date",
+		TimestampFormat: "02/01/06 03:04:05 PM",
+		TimeFunc:        DefaultTime,
+		SkipErrors:      true,
+		Log:             testutil.Logger{},
+	}
+	err := p.Init()
+	require.NoError(t, err)
+
+	testCSV := `date,a,b
+23/05/09 11:05:06 PM,1,2
+corrupted_line
+07/11/09 04:06:07 PM,3,4`
+
+	expectedFields0 := map[string]interface{}{
+		"a": int64(1),
+		"b": int64(2),
+	}
+
+	expectedFields1 := map[string]interface{}{
+		"a": int64(3),
+		"b": int64(4),
+	}
+
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, expectedFields0, metrics[0].Fields())
+	require.Equal(t, expectedFields1, metrics[1].Fields())
 }

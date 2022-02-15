@@ -55,6 +55,9 @@ type Config struct {
 
 	// EnableTLS deprecated
 	EnableTLS *bool `toml:"enable_tls"`
+
+	// Disable full metadata fetching
+	MetadataFull *bool `toml:"metadata_full"`
 }
 
 // SetConfig on the sarama.Config object from the Config struct.
@@ -87,6 +90,11 @@ func (k *Config) SetConfig(config *sarama.Config) error {
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
 		config.Net.TLS.Enable = true
+	}
+
+	if k.MetadataFull != nil {
+		// Defaults to true in Sarama
+		config.Metadata.Full = *k.MetadataFull
 	}
 
 	return k.SetSASLConfig(config)

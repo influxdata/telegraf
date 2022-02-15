@@ -12,6 +12,7 @@ In addition, the following optional queries are only made by the master node:
  [Shard Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html)
 
 Specific Elasticsearch endpoints that are queried:
+
 - Node: either /_nodes/stats or /_nodes/_local/stats depending on 'local' configuration setting
 - Cluster Heath:  /_cluster/health?level=indices
 - Cluster Stats:  /_cluster/stats
@@ -20,7 +21,7 @@ Specific Elasticsearch endpoints that are queried:
 
 Note that specific statistics information can change between Elasticsearch versions. In general, this plugin attempts to stay as version-generic as possible by tagging high-level categories only and using a generic json parser to make unique field names of whatever statistics names are provided at the mid-low level.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.elasticsearch]]
@@ -81,7 +82,7 @@ Note that specific statistics information can change between Elasticsearch versi
   # num_most_recent_indices = 0
 ```
 
-### Metrics
+## Metrics
 
 Emitted when `cluster_health = true`:
 
@@ -169,7 +170,7 @@ Emitted when `cluster_stats = true`:
     - shards_total (float)
     - store_size_in_bytes (float)
 
-+ elasticsearch_clusterstats_nodes
+- elasticsearch_clusterstats_nodes
   - tags:
     - cluster_name
     - node_name
@@ -230,7 +231,7 @@ Emitted when the appropriate `node_stats` options are set.
     - tx_count (float)
     - tx_size_in_bytes (float)
 
-+ elasticsearch_breakers
+- elasticsearch_breakers
   - tags:
     - cluster_name
     - node_attribute_ml.enabled
@@ -291,7 +292,7 @@ Emitted when the appropriate `node_stats` options are set.
     - total_free_in_bytes (float)
     - total_total_in_bytes (float)
 
-+ elasticsearch_http
+- elasticsearch_http
   - tags:
     - cluster_name
     - node_attribute_ml.enabled
@@ -402,7 +403,7 @@ Emitted when the appropriate `node_stats` options are set.
     - warmer_total (float)
     - warmer_total_time_in_millis (float)
 
-+ elasticsearch_jvm
+- elasticsearch_jvm
   - tags:
     - cluster_name
     - node_attribute_ml.enabled
@@ -480,7 +481,7 @@ Emitted when the appropriate `node_stats` options are set.
     - swap_used_in_bytes (float)
     - timestamp (float)
 
-+ elasticsearch_process
+- elasticsearch_process
   - tags:
     - cluster_name
     - node_attribute_ml.enabled

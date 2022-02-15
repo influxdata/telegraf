@@ -8,14 +8,15 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
 # Monitors internet speed in the network
 [[inputs.internet_speed]]
   ## Sets if runs file download test
-  ## Default: false
-  enable_file_download = false
+  # enable_file_download = false
+
+  ## Caches the closest server location
+  # cache = false
 ```
 
 ## Metrics
 
 It collects latency, download speed and upload speed
-
 
 | Name           | filed name | type    | Unit |
 | -------------- | ---------- | ------- | ---- |

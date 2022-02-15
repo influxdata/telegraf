@@ -80,7 +80,7 @@ func (g *Gatherer) generatePoints(metric Metric, responses []ReadResponse) ([]po
 	for _, response := range responses {
 		switch response.Status {
 		case 200:
-			break
+			// Correct response status - do nothing.
 		case 404:
 			continue
 		default:

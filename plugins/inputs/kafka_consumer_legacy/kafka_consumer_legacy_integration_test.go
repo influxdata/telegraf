@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestReadsMetricsFromKafka(t *testing.T) {
@@ -51,7 +50,7 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 	var acc testutil.Accumulator
 
 	// Sanity check
-	assert.Equal(t, 0, len(acc.Metrics), "There should not be any points")
+	require.Equal(t, 0, len(acc.Metrics), "There should not be any points")
 	if err := k.Start(&acc); err != nil {
 		t.Fatal(err.Error())
 	} else {
@@ -65,14 +64,14 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 	require.NoError(t, err)
 	if len(acc.Metrics) == 1 {
 		point := acc.Metrics[0]
-		assert.Equal(t, "cpu_load_short", point.Measurement)
-		assert.Equal(t, map[string]interface{}{"value": 23422.0}, point.Fields)
-		assert.Equal(t, map[string]string{
+		require.Equal(t, "cpu_load_short", point.Measurement)
+		require.Equal(t, map[string]interface{}{"value": 23422.0}, point.Fields)
+		require.Equal(t, map[string]string{
 			"host":      "server01",
 			"direction": "in",
 			"region":    "us-west",
 		}, point.Tags)
-		assert.Equal(t, time.Unix(0, 1422568543702900257).Unix(), point.Time.Unix())
+		require.Equal(t, time.Unix(0, 1422568543702900257).Unix(), point.Time.Unix())
 	} else {
 		t.Errorf("No points found in accumulator, expected 1")
 	}
@@ -84,6 +83,7 @@ func waitForPoint(acc *testutil.Accumulator, t *testing.T) {
 	// Give the kafka container up to 2 seconds to get the point to the consumer
 	ticker := time.NewTicker(5 * time.Millisecond)
 	counter := 0
+	//nolint:gosimple // for-select used on purpose
 	for {
 		select {
 		case <-ticker.C:

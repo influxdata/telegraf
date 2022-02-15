@@ -7,13 +7,14 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/pion/dtls/v2"
-	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pion/dtls/v2"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -36,6 +37,9 @@ const sampleConfig = `
   ##   example: server_name = "myhost.example.org"
   # server_name = ""
 
+  ## Don't include root or intermediate certificates in output
+  # exclude_root_certs = false
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -45,10 +49,11 @@ const description = "Reads metrics from a SSL certificate"
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Sources    []string        `toml:"sources"`
-	Timeout    config.Duration `toml:"timeout"`
-	ServerName string          `toml:"server_name"`
-	tlsCfg     *tls.Config
+	Sources          []string        `toml:"sources"`
+	Timeout          config.Duration `toml:"timeout"`
+	ServerName       string          `toml:"server_name"`
+	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
+	tlsCfg           *tls.Config
 	_tls.ClientConfig
 	locations []*url.URL
 	globpaths []*globpath.GlobPath
@@ -176,7 +181,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, nil
 	case "file":
-		content, err := ioutil.ReadFile(u.Path)
+		content, err := os.ReadFile(u.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -333,6 +338,9 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			}
 
 			acc.AddFields("x509_cert", fields, tags)
+			if c.ExcludeRootCerts {
+				break
+			}
 		}
 	}
 

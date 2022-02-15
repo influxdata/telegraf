@@ -34,13 +34,13 @@ Note: The name and identifier of the host running Telegraf will be added as a di
 
 If you run the Telegraf agent on a host or VM without a OneAgent you will need to configure the environment API endpoint to send the metrics to and an API token for security.
 
-You will also need to configure an API token for secure access. Find out how to create a token in the [Dynatrace documentation](https://www.dynatrace.com/support/help/dynatrace-api/basics/dynatrace-api-authentication/) or simply navigate to **Settings > Integration > Dynatrace API** in your Dynatrace environment and create a token with Dynatrace API and create a new token with 
+You will also need to configure an API token for secure access. Find out how to create a token in the [Dynatrace documentation](https://www.dynatrace.com/support/help/dynatrace-api/basics/dynatrace-api-authentication/) or simply navigate to **Settings > Integration > Dynatrace API** in your Dynatrace environment and create a token with Dynatrace API and create a new token with
 'Ingest metrics' (`metrics.ingest`) scope enabled. It is recommended to limit Token scope to only this permission.
 
-The endpoint for the Dynatrace Metrics API v2 is 
+The endpoint for the Dynatrace Metrics API v2 is
 
-* on Dynatrace Managed: `https://{your-domain}/e/{your-environment-id}/api/v2/metrics/ingest`
-* on Dynatrace SaaS: `https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest`
+- on Dynatrace Managed: `https://{your-domain}/e/{your-environment-id}/api/v2/metrics/ingest`
+- on Dynatrace SaaS: `https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest`
 
 ```toml
 [[outputs.dynatrace]]

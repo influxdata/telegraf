@@ -1,7 +1,7 @@
 package amd_rocm_smi
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -78,7 +78,7 @@ func TestGatherValidJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			octets, err := ioutil.ReadFile(filepath.Join("testdata", tt.filename))
+			octets, err := os.ReadFile(filepath.Join("testdata", tt.filename))
 			require.NoError(t, err)
 
 			err = gatherROCmSMI(octets, &acc)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	cpuUtil "github.com/shirou/gopsutil/cpu"
+	cpuUtil "github.com/shirou/gopsutil/v3/cpu"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"

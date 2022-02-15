@@ -1,0 +1,2 @@
+31 1 8:1 / / rw,relatime shared:1 - ext4 /dev/sda1 rw,discard,errors=remount-ro
+126 31 8:16 / /mnt/storage rw,relatime shared:67 - ext4 /dev/sdb rw,discard

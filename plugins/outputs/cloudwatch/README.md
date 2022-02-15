@@ -1,4 +1,4 @@
-## Amazon CloudWatch Output for Telegraf
+# Amazon CloudWatch Output for Telegraf
 
 This plugin will send metrics to Amazon CloudWatch.
 
@@ -6,13 +6,14 @@ This plugin will send metrics to Amazon CloudWatch.
 
 This plugin uses a credential chain for Authentication with the CloudWatch
 API endpoint. In the following order the plugin will attempt to authenticate.
+
 1. Web identity provider credentials via STS if `role_arn` and `web_identity_token_file` are specified
-2. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
-3. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
-4. Shared profile from `profile` attribute
-5. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
-6. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
-7. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
+1. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
+1. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
+1. Shared profile from `profile` attribute
+1. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
+1. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
+1. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
 If you are using credentials from a web identity provider, you can specify the session name using `role_session_name`. If
 left empty, the current timestamp will be used.
@@ -31,6 +32,7 @@ must be configured.
 
 The region is the Amazon region that you wish to connect to.
 Examples include but are not limited to:
+
 * us-west-1
 * us-west-2
 * us-east-1
@@ -43,13 +45,14 @@ The namespace used for AWS CloudWatch metrics.
 
 ### write_statistics
 
-If you have a large amount of metrics, you should consider to send statistic 
-values instead of raw metrics which could not only improve performance but 
-also save AWS API cost. If enable this flag, this plugin would parse the required 
-[CloudWatch statistic fields](https://docs.aws.amazon.com/sdk-for-go/api/service/cloudwatch/#StatisticSet) 
-(count, min, max, and sum) and send them to CloudWatch. You could use `basicstats` 
-aggregator to calculate those fields. If not all statistic fields are available, 
+If you have a large amount of metrics, you should consider to send statistic
+values instead of raw metrics which could not only improve performance but
+also save AWS API cost. If enable this flag, this plugin would parse the required
+[CloudWatch statistic fields](https://docs.aws.amazon.com/sdk-for-go/api/service/cloudwatch/#StatisticSet)
+(count, min, max, and sum) and send them to CloudWatch. You could use `basicstats`
+aggregator to calculate those fields. If not all statistic fields are available,
 all fields would still be sent as raw metrics.
 
 ### high_resolution_metrics
+
 Enable high resolution metrics (1 second precision) instead of standard ones (60 seconds precision)

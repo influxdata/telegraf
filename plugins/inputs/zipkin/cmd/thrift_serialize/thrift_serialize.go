@@ -29,8 +29,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift/gen-go/zipkincore"
@@ -52,7 +52,7 @@ func init() {
 
 func main() {
 	flag.Parse()
-	contents, err := ioutil.ReadFile(filename)
+	contents, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("Error reading file: %v\n", err)
 	}
@@ -63,7 +63,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
-		if err := ioutil.WriteFile(outFileName, raw, 0644); err != nil {
+		if err := os.WriteFile(outFileName, raw, 0644); err != nil {
 			log.Fatalf("%v", err)
 		}
 	case "thrift":
@@ -71,7 +71,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
-		if err := ioutil.WriteFile(outFileName, raw, 0644); err != nil {
+		if err := os.WriteFile(outFileName, raw, 0644); err != nil {
 			log.Fatalf("%v", err)
 		}
 	default:

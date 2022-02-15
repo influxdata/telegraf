@@ -8,6 +8,7 @@ If you're using the HTTP output, this serializer knows how to batch the metrics 
 [splunk-format]: http://dev.splunk.com/view/event-collector/SP-CAAAFDN#json
 
 An example event looks like:
+
 ```javascript
 {
   "time": 1529708430,
@@ -22,7 +23,9 @@ An example event looks like:
   }
 }
 ```
+
 In the above snippet, the following keys are dimensions:
+
 * cpu
 * dc
 * user
@@ -53,6 +56,7 @@ you can send all of your CPU stats in one JSON struct, an example event looks li
   }
 }
 ```
+
 In order to enable this mode, there's a new option `splunkmetric_multimetric` that you set in the appropriate output module you plan on using.
 
 ## Using with the HTTP output
@@ -100,15 +104,18 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
 ```
 
 ## Overrides
+
 You can override the default values for the HEC token you are using by adding additional tags to the config file.
 
 The following aspects of the token can be overridden with tags:
+
 * index
 * source
 
 You can either use `[global_tags]` or using a more advanced configuration as documented [here](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md).
 
 Such as this example which overrides the index just on the cpu metric:
+
 ```toml
 [[inputs.cpu]]
   percpu = false
@@ -122,6 +129,7 @@ Such as this example which overrides the index just on the cpu metric:
 You can use the file output when running telegraf on a machine with a Splunk forwarder.
 
 A sample event when `hec_routing` is false (or unset) looks like:
+
 ```javascript
 {
     "_value": 0.6,
@@ -132,6 +140,7 @@ A sample event when `hec_routing` is false (or unset) looks like:
     "time": 1529708430
 }
 ```
+
 Data formatted in this manner can be ingested with a simple `props.conf` file that
 looks like this:
 
@@ -183,4 +192,3 @@ Splunk supports only numeric field values, so serializer would silently drop met
     unhealthy = 2
     none = 3
 ```
-

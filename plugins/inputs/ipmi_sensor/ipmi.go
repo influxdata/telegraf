@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,6 +38,8 @@ type Ipmi struct {
 	UseSudo       bool
 	UseCache      bool
 	CachePath     string
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 var sampleConfig = `
@@ -150,7 +151,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 			cmd := execCommand(name, dumpOpts...)
 			out, err := internal.CombinedOutputTimeout(cmd, time.Duration(m.Timeout))
 			if err != nil {
-				return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+				return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(sanitizeIPMICmd(cmd.Args), " "), err, string(out))
 			}
 		}
 		opts = append(opts, "-S")
@@ -169,20 +170,20 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	out, err := internal.CombinedOutputTimeout(cmd, time.Duration(m.Timeout))
 	timestamp := time.Now()
 	if err != nil {
-		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(sanitizeIPMICmd(cmd.Args), " "), err, string(out))
 	}
 	if m.MetricVersion == 2 {
-		return parseV2(acc, hostname, out, timestamp)
+		return m.parseV2(acc, hostname, out, timestamp)
 	}
-	return parseV1(acc, hostname, out, timestamp)
+	return m.parseV1(acc, hostname, out, timestamp)
 }
 
-func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time) error {
+func (m *Ipmi) parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time) error {
 	// each line will look something like
 	// Planar VBAT      | 3.05 Volts        | ok
 	scanner := bufio.NewScanner(bytes.NewReader(cmdOut))
 	for scanner.Scan() {
-		ipmiFields := extractFieldsFromRegex(reV1ParseLine, scanner.Text())
+		ipmiFields := m.extractFieldsFromRegex(reV1ParseLine, scanner.Text())
 		if len(ipmiFields) != 3 {
 			continue
 		}
@@ -234,14 +235,14 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredA
 	return scanner.Err()
 }
 
-func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time) error {
+func (m *Ipmi) parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredAt time.Time) error {
 	// each line will look something like
 	// CMOS Battery     | 65h | ok  |  7.1 |
 	// Temp             | 0Eh | ok  |  3.1 | 55 degrees C
 	// Drive 0          | A0h | ok  |  7.1 | Drive Present
 	scanner := bufio.NewScanner(bytes.NewReader(cmdOut))
 	for scanner.Scan() {
-		ipmiFields := extractFieldsFromRegex(reV2ParseLine, scanner.Text())
+		ipmiFields := m.extractFieldsFromRegex(reV2ParseLine, scanner.Text())
 		if len(ipmiFields) < 3 || len(ipmiFields) > 4 {
 			continue
 		}
@@ -257,7 +258,7 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredA
 		tags["entity_id"] = transform(ipmiFields["entity_id"])
 		tags["status_code"] = trim(ipmiFields["status_code"])
 		fields := make(map[string]interface{})
-		descriptionResults := extractFieldsFromRegex(reV2ParseDescription, trim(ipmiFields["description"]))
+		descriptionResults := m.extractFieldsFromRegex(reV2ParseDescription, trim(ipmiFields["description"]))
 		// This is an analog value with a unit
 		if descriptionResults["analogValue"] != "" && len(descriptionResults["analogUnit"]) >= 1 {
 			var err error
@@ -266,7 +267,7 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredA
 				continue
 			}
 			// Some implementations add an extra status to their analog units
-			unitResults := extractFieldsFromRegex(reV2ParseUnit, descriptionResults["analogUnit"])
+			unitResults := m.extractFieldsFromRegex(reV2ParseUnit, descriptionResults["analogUnit"])
 			tags["unit"] = transform(unitResults["realAnalogUnit"])
 			if unitResults["statusDesc"] != "" {
 				tags["status_desc"] = transform(unitResults["statusDesc"])
@@ -289,12 +290,12 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measuredA
 }
 
 // extractFieldsFromRegex consumes a regex with named capture groups and returns a kvp map of strings with the results
-func extractFieldsFromRegex(re *regexp.Regexp, input string) map[string]string {
+func (m *Ipmi) extractFieldsFromRegex(re *regexp.Regexp, input string) map[string]string {
 	submatches := re.FindStringSubmatch(input)
 	results := make(map[string]string)
 	subexpNames := re.SubexpNames()
 	if len(subexpNames) > len(submatches) {
-		log.Printf("D! No matches found in '%s'", input)
+		m.Log.Debugf("No matches found in '%s'", input)
 		return results
 	}
 	for i, name := range subexpNames {
@@ -312,6 +313,16 @@ func aToFloat(val string) (float64, error) {
 		return 0.0, err
 	}
 	return f, nil
+}
+
+func sanitizeIPMICmd(args []string) []string {
+	for i, v := range args {
+		if v == "-P" {
+			args[i+1] = "REDACTED"
+		}
+	}
+
+	return args
 }
 
 func trim(s string) string {

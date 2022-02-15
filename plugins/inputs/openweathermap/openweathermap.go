@@ -23,10 +23,10 @@ const (
 	// The limit of locations is 20.
 	owmRequestSeveralCityID int = 20
 
-	defaultBaseURL                       = "https://api.openweathermap.org/"
-	defaultResponseTimeout time.Duration = time.Second * 5
-	defaultUnits           string        = "metric"
-	defaultLang            string        = "en"
+	defaultBaseURL         = "https://api.openweathermap.org/"
+	defaultResponseTimeout = time.Second * 5
+	defaultUnits           = "metric"
+	defaultLang            = "en"
 )
 
 type OpenWeatherMap struct {
@@ -38,8 +38,8 @@ type OpenWeatherMap struct {
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Units           string          `toml:"units"`
 
-	client  *http.Client
-	baseURL *url.URL
+	client        *http.Client
+	baseParsedURL *url.URL
 }
 
 var sampleConfig = `
@@ -309,7 +309,7 @@ func init() {
 
 func (n *OpenWeatherMap) Init() error {
 	var err error
-	n.baseURL, err = url.Parse(n.BaseURL)
+	n.baseParsedURL, err = url.Parse(n.BaseURL)
 	if err != nil {
 		return err
 	}
@@ -353,5 +353,5 @@ func (n *OpenWeatherMap) formatURL(path string, city string) string {
 		RawQuery: v.Encode(),
 	}
 
-	return n.baseURL.ResolveReference(relative).String()
+	return n.baseParsedURL.ResolveReference(relative).String()
 }

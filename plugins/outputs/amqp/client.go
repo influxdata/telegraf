@@ -4,12 +4,13 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"time"
 
 	"github.com/streadway/amqp"
+
+	"github.com/influxdata/telegraf"
 )
 
 type ClientConfig struct {
@@ -25,6 +26,7 @@ type ClientConfig struct {
 	tlsConfig         *tls.Config
 	timeout           time.Duration
 	auth              []amqp.Authentication
+	log               telegraf.Logger
 }
 
 type client struct {
@@ -42,7 +44,7 @@ func Connect(config *ClientConfig) (*client, error) {
 	p := rand.Perm(len(config.brokers))
 	for _, n := range p {
 		broker := config.brokers[n]
-		log.Printf("D! Output [amqp] connecting to %q", broker)
+		config.log.Debugf("Connecting to %q", broker)
 		conn, err := amqp.DialConfig(
 			broker, amqp.Config{
 				TLSClientConfig: config.tlsConfig,
@@ -53,10 +55,10 @@ func Connect(config *ClientConfig) (*client, error) {
 			})
 		if err == nil {
 			client.conn = conn
-			log.Printf("D! Output [amqp] connected to %q", broker)
+			config.log.Debugf("Connected to %q", broker)
 			break
 		}
-		log.Printf("D! Output [amqp] error connecting to %q - %s", broker, err.Error())
+		config.log.Debugf("Error connecting to %q - %v", broker, err.Error())
 	}
 
 	if client.conn == nil {

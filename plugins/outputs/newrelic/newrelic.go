@@ -8,11 +8,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
+	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
-	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
 )
 
 // NewRelic nr structure
@@ -27,7 +28,7 @@ type NewRelic struct {
 	dc          *cumulative.DeltaCalculator
 	savedErrors map[int]interface{}
 	errorCount  int
-	client      http.Client `toml:"-"`
+	client      http.Client
 }
 
 // Description returns a one-sentence description on the Output

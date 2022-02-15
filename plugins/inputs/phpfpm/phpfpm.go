@@ -276,12 +276,12 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
 
 func expandUrls(urls []string) ([]string, error) {
 	addrs := make([]string, 0, len(urls))
-	for _, url := range urls {
-		if isNetworkURL(url) {
-			addrs = append(addrs, url)
+	for _, address := range urls {
+		if isNetworkURL(address) {
+			addrs = append(addrs, address)
 			continue
 		}
-		paths, err := globUnixSocket(url)
+		paths, err := globUnixSocket(address)
 		if err != nil {
 			return nil, err
 		}
@@ -290,8 +290,8 @@ func expandUrls(urls []string) ([]string, error) {
 	return addrs, nil
 }
 
-func globUnixSocket(url string) ([]string, error) {
-	pattern, status := unixSocketPaths(url)
+func globUnixSocket(address string) ([]string, error) {
+	pattern, status := unixSocketPaths(address)
 	glob, err := globpath.Compile(pattern)
 	if err != nil {
 		return nil, fmt.Errorf("could not compile glob %q: %v", pattern, err)
@@ -312,9 +312,7 @@ func globUnixSocket(url string) ([]string, error) {
 	return addresses, nil
 }
 
-func unixSocketPaths(addr string) (string, string) {
-	var socketPath, statusPath string
-
+func unixSocketPaths(addr string) (socketPath string, statusPath string) {
 	socketAddr := strings.Split(addr, ":")
 	if len(socketAddr) >= 2 {
 		socketPath = socketAddr[0]

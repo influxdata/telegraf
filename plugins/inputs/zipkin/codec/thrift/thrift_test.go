@@ -1,7 +1,7 @@
 package thrift
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -193,7 +193,7 @@ func TestUnmarshalThrift(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dat, err := ioutil.ReadFile(tt.filename)
+			dat, err := os.ReadFile(tt.filename)
 			if err != nil {
 				t.Fatalf("Could not find file %s\n", tt.filename)
 			}

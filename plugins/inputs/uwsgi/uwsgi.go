@@ -78,20 +78,20 @@ func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
+func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, address *url.URL) error {
 	var err error
 	var r io.ReadCloser
 	var s StatsServer
 
-	switch url.Scheme {
+	switch address.Scheme {
 	case "tcp":
-		r, err = net.DialTimeout(url.Scheme, url.Host, time.Duration(u.Timeout))
+		r, err = net.DialTimeout(address.Scheme, address.Host, time.Duration(u.Timeout))
 		if err != nil {
 			return err
 		}
-		s.source = url.Host
+		s.source = address.Host
 	case "unix":
-		r, err = net.DialTimeout(url.Scheme, url.Path, time.Duration(u.Timeout))
+		r, err = net.DialTimeout(address.Scheme, address.Path, time.Duration(u.Timeout))
 		if err != nil {
 			return err
 		}
@@ -100,20 +100,20 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 			s.source = ""
 		}
 	case "http":
-		resp, err := u.client.Get(url.String())
+		resp, err := u.client.Get(address.String()) //nolint:bodyclose // response body is closed after switch
 		if err != nil {
 			return err
 		}
 		r = resp.Body
-		s.source = url.Host
+		s.source = address.Host
 	default:
-		return fmt.Errorf("'%s' is not a supported scheme", url.Scheme)
+		return fmt.Errorf("'%s' is not a supported scheme", address.Scheme)
 	}
 
 	defer r.Close()
 
 	if err := json.NewDecoder(r).Decode(&s); err != nil {
-		return fmt.Errorf("failed to decode json payload from '%s': %s", url.String(), err.Error())
+		return fmt.Errorf("failed to decode json payload from '%s': %s", address.String(), err.Error())
 	}
 
 	u.gatherStatServer(acc, &s)

@@ -2,6 +2,7 @@ package couchbase
 
 import (
 	"encoding/json"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,8 +27,12 @@ func TestGatherServer(t *testing.T) {
 		}
 	}))
 
-	var cb Couchbase
-	cb.BucketStatsIncluded = []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"}
+	cb := Couchbase{
+		BucketStatsIncluded: []string{"quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"},
+		ClientConfig: tls.ClientConfig{
+			InsecureSkipVerify: true,
+		},
+	}
 	err := cb.Init()
 	require.NoError(t, err)
 
@@ -105,6 +110,9 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 			var err error
 			var cb Couchbase
 			cb.BucketStatsIncluded = []string{"couch_total_disk_size"}
+			cb.ClientConfig = tls.ClientConfig{
+				InsecureSkipVerify: true,
+			}
 			err = cb.Init()
 			require.NoError(t, err)
 			var acc testutil.Accumulator
