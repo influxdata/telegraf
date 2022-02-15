@@ -328,7 +328,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 				err := fmt.Errorf("use of 'timestamp_query' requires 'timestamp_format'")
 				return nil, err
 			}
-			timestamp, err := internal.ParseTimestamp(p.objectConfig.TimestampFormat, result.Raw, p.objectConfig.TimestampTimezone)
+			timestamp, err := internal.ParseTimestamp(p.objectConfig.TimestampFormat, result.String(), p.objectConfig.TimestampTimezone)
 			if err != nil {
 				return nil, err
 			}
