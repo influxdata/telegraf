@@ -24,7 +24,7 @@ require (
 	github.com/antchfx/jsonquery v1.1.5
 	github.com/antchfx/xmlquery v1.3.9
 	github.com/antchfx/xpath v1.2.0
-	github.com/apache/thrift v0.15.0
+	github.com/apache/thrift v0.16.0
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/aws/aws-sdk-go-v2 v1.13.0
 	github.com/aws/aws-sdk-go-v2/config v1.8.3
@@ -33,7 +33,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.7.0
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.12.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.5.0
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.29.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.13.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.7.2
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.3.2
@@ -55,7 +55,7 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-ldap/ldap/v3 v3.4.1
-	github.com/go-logfmt/logfmt v0.5.0
+	github.com/go-logfmt/logfmt v0.5.1
 	github.com/go-ping/ping v0.0.0-20210201095549-52eed920f98c
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-sql-driver/mysql v1.6.0
@@ -99,7 +99,7 @@ require (
 	github.com/multiplay/go-ts3 v1.0.1
 	github.com/nats-io/nats-server/v2 v2.7.2
 	github.com/nats-io/nats.go v1.13.1-0.20220121202836-972a071d373d
-	github.com/newrelic/newrelic-telemetry-sdk-go v0.5.1
+	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
@@ -115,7 +115,7 @@ require (
 	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
 	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
-	github.com/sensu/sensu-go/api/core/v2 v2.12.0
+	github.com/sensu/sensu-go/api/core/v2 v2.13.0
 	github.com/shirou/gopsutil/v3 v3.21.12
 	github.com/showwin/speedtest-go v1.1.4
 	github.com/signalfx/golib/v3 v3.3.43
@@ -130,7 +130,7 @@ require (
 	github.com/tinylib/msgp v1.1.6
 	github.com/vapourismo/knx-go v0.0.0-20211128234507-8198fa17db36
 	github.com/vjeantet/grok v1.0.1
-	github.com/vmware/govmomi v0.27.3
+	github.com/vmware/govmomi v0.27.4
 	github.com/wavefronthq/wavefront-sdk-go v0.9.9
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/xdg/scram v1.0.3
@@ -158,7 +158,7 @@ require (
 	k8s.io/api v0.23.3
 	k8s.io/apimachinery v0.23.3
 	k8s.io/client-go v0.23.3
-	modernc.org/sqlite v1.10.8
+	modernc.org/sqlite v1.14.6
 )
 
 require (
@@ -195,7 +195,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.3.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.1.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.3.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.7.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.16.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.4.2 // indirect
@@ -356,13 +356,14 @@ require (
 	k8s.io/klog/v2 v2.30.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65 // indirect
 	k8s.io/utils v0.0.0-20211116205334-6203023598ed // indirect
-	modernc.org/cc/v3 v3.33.5 // indirect
-	modernc.org/ccgo/v3 v3.9.4 // indirect
-	modernc.org/libc v1.9.5 // indirect
-	modernc.org/mathutil v1.2.2 // indirect
-	modernc.org/memory v1.0.4 // indirect
+	lukechampine.com/uint128 v1.1.1 // indirect
+	modernc.org/cc/v3 v3.35.22 // indirect
+	modernc.org/ccgo/v3 v3.15.13 // indirect
+	modernc.org/libc v1.14.5 // indirect
+	modernc.org/mathutil v1.4.1 // indirect
+	modernc.org/memory v1.0.5 // indirect
 	modernc.org/opt v0.1.1 // indirect
-	modernc.org/strutil v1.1.0 // indirect
+	modernc.org/strutil v1.1.1 // indirect
 	modernc.org/token v1.0.0 // indirect
 	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
