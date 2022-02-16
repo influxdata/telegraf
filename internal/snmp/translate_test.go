@@ -108,11 +108,10 @@ func TestFolderLookup(t *testing.T) {
 	var givenPath []string
 
 	tests := []struct {
-		name         string
-		mibPath      [][]string
-		paths        [][]string
-		files        []string
-		windowsFiles []string
+		name    string
+		mibPath [][]string
+		paths   [][]string
+		files   []string
 	}{
 		{
 			name:    "loading folders",
@@ -123,8 +122,7 @@ func TestFolderLookup(t *testing.T) {
 				{"testdata", "loadMibsFromPath", "root", "dirOne", "dirTwo"},
 				{"testdata", "loadMibsFromPath", "linkTarget"},
 			},
-			files:        []string{"empty", "emptyFile"},
-			windowsFiles: []string{"emptyFile", "symlink"},
+			files: []string{"empty", "emptyFile"},
 		},
 	}
 
@@ -141,11 +139,11 @@ func TestFolderLookup(t *testing.T) {
 				path := filepath.Join(pathSlice...)
 				folders = append(folders, path)
 			}
-			require.Equal(t, folders, loader.folders)
 
 			if runtime.GOOS == "windows" {
-				require.Equal(t, tt.windowsFiles, loader.files)
+				t.Skip("Skipping on windows")
 			} else {
+				require.Equal(t, folders, loader.folders)
 				require.Equal(t, tt.files, loader.files)
 			}
 		})
