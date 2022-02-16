@@ -4,35 +4,26 @@
 package wireless
 
 import (
-	"runtime"
+	"io/ioutil"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
+const (
+	field_len = 11
+	tag_len = 5
+)
+
+
 func TestLoadWirelessTable(t *testing.T) {
-	goOS := runtime.GOOS
-	ns := Wireless{}
-	ns.DumpZeros = true
-	if goOS == "darwin" {
+	w := Wireless{}
 		// line of input
-		macInput := `agrCtlRSSI: -42
-     agrExtRSSI: 0
-    agrCtlNoise: -92
-    agrExtNoise: 0
-          state: running
-        op mode: station
-     lastTxRate: 300
-        maxRate: 450
-lastAssocStatus: 0
-    802.11 auth: open
-      link auth: wpa2-psk
-          BSSID:
-           SSID: Foo Bar
-            MCS: 15
-        channel: 157,1`
-		// the headers we expect from that line of input
+		macInput, err := ioutil.ReadFile("testdata/wireless_mac_test.txt")
+		require.NoError(t, err)
 
 		// the map of data we expect.
-		macParsed := map[string]interface{}{
+		macFields := map[string]interface{}{
 			"agrCtlRSSI":      int64(-42),
 			"agrExtRSSI":      int64(0),
 			"agrCtlNoise":     int64(-92),
@@ -41,6 +32,9 @@ lastAssocStatus: 0
 			"maxRate":         int64(450),
 			"lastAssocStatus": int64(0),
 			"MCS":             int64(15),
+			"BSSID":       		"",
+			"SSID":        		"Foo_Bar",
+			"channel": 				"157,1",
 		}
 		// the tags we expect
 		macTags := map[string]string{
@@ -48,31 +42,14 @@ lastAssocStatus: 0
 			"op_mode":     "station",
 			"802.11_auth": "open",
 			"link_auth":   "wpa2-psk",
-			"BSSID":       "",
-			"SSID":        "Foo_Bar",
 			"interface":   "airport",
 		}
 
 		// load the table from the input.
-		gotPoints, gotTags, err := ns.loadMacWirelessTable([]byte(macInput), true)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(gotPoints) == 0 {
-			t.Fatalf("want %+v, got %+v", macParsed, gotPoints)
-		}
-		for key := range macParsed {
-			if macParsed[key].(int64) != gotPoints[key].(int64) {
-				t.Fatalf("want %+v, got %+v", macParsed[key], gotPoints[key])
-			}
-		}
-		for key := range macTags {
-			if macTags[key] != gotTags[key] {
-				t.Fatalf("want %+v, got %+v", macTags[key], gotTags[key])
-			}
-
-		}
-	} else {
-		t.Fatalf("unsupported OS %s", goOS)
-	}
+		gotFields, gotTags, err := w.loadMacWirelessTable([]byte(macInput))
+		require.NoError(t, err)
+		require.Equal(t, len(gotFields), field_len, "got %d fields, expected %d", len(gotFields), field_len)
+		require.Equal(t, gotFields, macFields, "want %+v, got %+v", macFields, gotFields)
+		require.Equal(t, len(gotTags), tag_len, "got %d tags, expected %d", len(gotTags), tag_len)
+		require.Equal(t, gotTags, macTags, "want %+v, got %+v", macTags, gotTags)
 }

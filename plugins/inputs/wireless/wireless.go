@@ -9,21 +9,18 @@ import (
 type Wireless struct {
 	HostProc  string          `toml:"host_proc"`
 	Log       telegraf.Logger `toml:"-"`
-	DumpZeros bool            `toml:"dump_zeros"`
 }
 
 var sampleConfig = `
-[wireless]
-   ## Sets 'proc' directory path
-   ## If not specified, then default is /proc
-   # host_proc = "/proc"
-	 ## dump metrics with 0 values too
-	 # dump_zeros = true
+  ## Sets 'proc' directory path
+  ## If not specified, then default is /proc
+	## Ignored on macOS/darwin
+  # host_proc = "/proc"
  `
 
 // Description returns information about the plugin.
 func (w *Wireless) Description() string {
-	return "Monitor wifi signal strength and quality on macOS"
+	return "Monitor wifi signal strength and quality"
 }
 
 // SampleConfig displays configuration instructions.
