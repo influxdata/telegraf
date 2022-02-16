@@ -144,6 +144,43 @@ This plugin will format the events in the following way:
 }
 ```
 
+## OpenSearch Support
+
+OpenSearch is a fork of Elasticsearch hosted by AWS. The OpenSearch server will
+report itself to clients with an AWS specific-version (e.g. v1.0). In reality,
+the actual underlying Elasticsearch version is v7.1. This breaks Telegraf and
+other Elasticsearch clients that need to know what major version they are
+interfacing with.
+
+Amazon has created a [compatibility mode](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/rename.html#rename-upgrade)
+to allow existing Elasticsearch clients to properly work when the version needs
+to be checked. To enable compatibility mode users need to set the
+`override_main_response_version` to `true`.
+
+On existing clusters run:
+
+```json
+PUT /_cluster/settings
+{
+  "persistent" : {
+    "compatibility.override_main_response_version" : true
+  }
+}
+```
+
+And on new clusters set the option to true under advanced options:
+
+```json
+POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
+{
+  "DomainName": "domain-name",
+  "TargetVersion": "OpenSearch_1.0",
+  "AdvancedOptions": {
+    "override_main_response_version": "true"
+   }
+}
+```
+
 ## Configuration
 
 ```toml
