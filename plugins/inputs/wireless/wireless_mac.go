@@ -72,7 +72,7 @@ func (w *Wireless) loadMacWirelessTable(table []byte, dumpZeros bool) (map[strin
 }
 
 func init() {
-	inputs.Add("wireless_mac", func() telegraf.Input {
+	inputs.Add("wireless", func() telegraf.Input {
 		return &Wireless{}
 	})
 }
