@@ -16,7 +16,7 @@ type ClientConfig struct {
 	TLSCert            string `toml:"tls_cert"`
 	TLSKey             string `toml:"tls_key"`
 	TLSCertAndKey      string `toml:"tls_cert_key"`
-	TLSKeyPwd          string `toml:"tls_key_pwd" deprecated:"1.21.3;use tls_key_password"`
+	TLSKeyPwd          string `toml:"tls_key_pwd" deprecated:"1.22.0;use 'tls_key_password' instead"`
 	TLSKeyPassword     string `toml:"tls_key_password"`
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
 	ServerName         string `toml:"tls_server_name"`
@@ -32,7 +32,7 @@ type ServerConfig struct {
 	TLSCert            string   `toml:"tls_cert"`
 	TLSKey             string   `toml:"tls_key"`
 	TLSCertAndKey      string   `toml:"tls_cert_key"`
-	TLSKeyPwd          string   `toml:"tls_key_pwd" deprecated:"1.21.3;use tls_key_password"`
+	TLSKeyPwd          string   `toml:"tls_key_pwd" deprecated:"1.22.0;use 'tls_key_password' instead"`
 	TLSKeyPassword     string   `toml:"tls_key_password"`
 	TLSAllowedCACerts  []string `toml:"tls_allowed_cacerts"`
 	TLSCipherSuites    []string `toml:"tls_cipher_suites"`
