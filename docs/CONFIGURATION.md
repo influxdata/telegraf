@@ -188,6 +188,11 @@ The agent table configures Telegraf and the defaults used across all plugins.
   This can be used to avoid many plugins querying things like sysfs at the
   same time, which can have a measurable effect on the system.
 
+- **collection_offset**:
+  Collection offset is used to shift the collection by the given [interval][].
+  This can be be used to avoid many plugins querying constraint devices
+  at the same time by manually scheduling them in time.
+
 - **flush_interval**:
   Default flushing [interval][] for all outputs. Maximum flush_interval will be
   flush_interval + flush_jitter.
@@ -279,6 +284,11 @@ Parameters that can be used with any input plugin:
 - **collection_jitter**:
   Overrides the `collection_jitter` setting of the [agent][Agent] for the
   plugin.  Collection jitter is used to jitter the collection by a random
+  [interval][].
+
+- **collection_offset**:
+  Overrides the `collection_offset` setting of the [agent][Agent] for the
+  plugin. Collection offset is used to shift the collection by the given
   [interval][].
 
 - **name_override**: Override the base name of the measurement.  (Default is
