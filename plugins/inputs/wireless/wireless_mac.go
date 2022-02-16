@@ -4,71 +4,61 @@
 package wireless
 
 import (
-	"errors"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
-	"sync"
+	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// default executable path
+// default executable path & flags
 const (
-	OSXCMD = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I"
+	OSXCMD = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
+	FLAG = "-I"
 )
 
-func (w *Wireless) exe_cmd(cmd string, wg *sync.WaitGroup) ([]byte, error) {
-	parts := strings.Fields(cmd)
-	head := parts[0]
-	parts = parts[1:]
-	out, err := exec.Command(head, parts...).Output()
-	wg.Done() // Need to signal to waitgroup that this goroutine is done
-	return out, err
-}
 
 func (w *Wireless) Gather(acc telegraf.Accumulator) error {
-	if runtime.GOOS == "darwin" {
-		// collect MAC OS wireless data
-		wg := new(sync.WaitGroup)
-		wg.Add(3)
-		wireless, err := w.exe_cmd(OSXCMD, wg)
-		if err != nil {
-			return err
-		}
-		metrics, tags, err := w.loadMacWirelessTable(wireless, w.DumpZeros)
-		if err != nil {
-			return err
-		}
-		acc.AddGauge("wireless", metrics, tags)
-		return nil
+	cmd := exec.Command(OSXCMD, FLAG)
+	wireless, err := internal.StdOutputTimeout(cmd, 2*time.Second)// cmd.Output()
+	if err != nil {
+		return err
 	}
-	return errors.New("OS Not Supported")
+	metrics, tags, err := w.loadMacWirelessTable(wireless)
+	if err != nil {
+		return err
+	}
+	acc.AddFields("wireless", metrics, tags)
+	return nil
 }
 
-func (w *Wireless) loadMacWirelessTable(table []byte, dumpZeros bool) (map[string]interface{}, map[string]string, error) {
-	metrics := strings.Split(string(string(table)), "\n")
+func (w *Wireless) loadMacWirelessTable(table []byte) (map[string]interface{}, map[string]string, error) {
+	lines := strings.Split(string(table), "\n")
 	tags := make(map[string]string)
-	points := make(map[string]interface{})
-	for x := 0; x < len(metrics); x++ {
-		fm := strings.Split(strings.TrimSpace(metrics[x]), ":")
-		if len(fm) > 1 {
-			name := strings.Replace(strings.Trim(strings.TrimSpace(fm[0]), ":"), " ", "_", -1)
-			v := strings.TrimSpace(fm[1])
-			val, err := strconv.Atoi(v)
-			if err == nil { // it's a number
-				if !dumpZeros && val == 0 {
-					continue
-				}
-				points[name] = int64(val)
-			} else { // it's a string
-				tags[name] = strings.Replace(v, " ", "_", -1)
+	fields := make(map[string]interface{})
+	for _, line := range lines {
+		fm := strings.Split(strings.TrimSpace(line), ":")
+		if len(fm) < 2 {
+			continue
+		}
+		name := strings.Replace(strings.Trim(strings.TrimSpace(fm[0]), ":"), " ", "_", -1)
+		v := strings.TrimSpace(fm[1])
+		val, err := strconv.Atoi(v)
+		if err == nil { // it's a number
+				fields[name] = int64(val)
+		} else { // it's a string
+		if name == "channel" || name == "BSSID" || name == "SSID" {
+				fields[name] = strings.Replace(v, " ", "_", -1)
+			} else {
+			tags[name] = strings.Replace(v, " ", "_", -1)
 			}
 		}
 	}
 	tags["interface"] = "airport"
-	return points, tags, nil
+	return fields, tags, nil
 }
 
 func init() {
