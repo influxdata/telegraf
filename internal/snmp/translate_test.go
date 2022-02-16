@@ -115,10 +115,15 @@ func TestFolderLookup(t *testing.T) {
 		windowsFiles []string
 	}{
 		{
-			name:         "loading folders",
-			mibPath:      [][]string{{"testdata", "loadMibsFromPath"}},
-			paths:        [][]string{{"testdata", "loadMibsFromPath"}, {"testdata", "loadMibsFromPath", "linkTarget"}, {"testdata", "loadMibsFromPath", "root"}},
-			files:        []string{"emptyFile"},
+			name:    "loading folders",
+			mibPath: [][]string{{"testdata", "loadMibsFromPath", "root"}},
+			paths: [][]string{
+				{"testdata", "loadMibsFromPath", "root"},
+				{"testdata", "loadMibsFromPath", "root", "dirOne"},
+				{"testdata", "loadMibsFromPath", "root", "dirOne", "dirTwo"},
+				{"testdata", "loadMibsFromPath", "linkTarget"},
+			},
+			files:        []string{"empty", "emptyFile"},
 			windowsFiles: []string{"emptyFile", "symlink"},
 		},
 	}

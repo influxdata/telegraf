@@ -60,7 +60,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 
 		for _, info := range modules {
 			if info.Mode()&os.ModeSymlink != 0 {
-				target, err := os.Readlink(filepath.Join(path, info.Name()))
+				target, err := filepath.EvalSymlinks(path)
 				if err != nil {
 					log.Warnf("Bad symbolic link %v", target)
 					continue
@@ -111,13 +111,13 @@ func walkPaths(paths []string, log telegraf.Logger) ([]string, error) {
 			}
 
 			if info.Mode()&os.ModeSymlink != 0 {
-				target, err := os.Readlink(path)
+				target, err := filepath.EvalSymlinks(path)
 				if err != nil {
-					log.Warnf("Bad symbolic link %v", target)
+					log.Warnf("Could not evaluate link %v", target)
 				}
-				info, err = os.Lstat(path)
+				info, err = os.Lstat(target)
 				if err != nil {
-					log.Warnf("Couldn't stat target %v", target)
+					log.Warnf("Couldn't stat target %v", path)
 				}
 				path = target
 			}
