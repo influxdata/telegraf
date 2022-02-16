@@ -17,13 +17,12 @@ import (
 // default executable path & flags
 const (
 	OSXCMD = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
-	FLAG = "-I"
+	FLAG   = "-I"
 )
-
 
 func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 	cmd := exec.Command(OSXCMD, FLAG)
-	wireless, err := internal.StdOutputTimeout(cmd, 2*time.Second)// cmd.Output()
+	wireless, err := internal.StdOutputTimeout(cmd, 2*time.Second) // cmd.Output()
 	if err != nil {
 		return err
 	}
@@ -48,12 +47,12 @@ func (w *Wireless) loadMacWirelessTable(table []byte) (map[string]interface{}, m
 		v := strings.TrimSpace(fm[1])
 		val, err := strconv.Atoi(v)
 		if err == nil { // it's a number
-				fields[name] = int64(val)
+			fields[name] = int64(val)
 		} else { // it's a string
-		if name == "channel" || name == "BSSID" || name == "SSID" {
+			if name == "channel" || name == "BSSID" || name == "SSID" {
 				fields[name] = strings.Replace(v, " ", "_", -1)
 			} else {
-			tags[name] = strings.Replace(v, " ", "_", -1)
+				tags[name] = strings.Replace(v, " ", "_", -1)
 			}
 		}
 	}
