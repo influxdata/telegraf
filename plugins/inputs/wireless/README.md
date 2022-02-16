@@ -7,10 +7,10 @@ The wireless plugin gathers metrics about wireless link quality by reading the `
 ```toml
 # Monitor wifi signal strength and quality
 [wireless]
-   ## Sets 'proc' directory path
-   ## If not specified, then default is /proc
-	 ## Ignored on macOS/darwin
-   # host_proc = "/proc"
+  ## Sets 'proc' directory path
+  ## If not specified, then default is /proc
+  ## Ignored on macOS/darwin
+  # host_proc = "/proc"
 ```
 
 The `host_proc` option is ignored on macOS.
