@@ -104,6 +104,9 @@ func (t *TestingMibLoader) loadModule(path string) error {
 	return nil
 }
 func TestFolderLookup(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on windows")
+	}
 	var folders []string
 	var givenPath []string
 
@@ -139,13 +142,8 @@ func TestFolderLookup(t *testing.T) {
 				path := filepath.Join(pathSlice...)
 				folders = append(folders, path)
 			}
-
-			if runtime.GOOS == "windows" {
-				t.Skip("Skipping on windows")
-			} else {
-				require.Equal(t, folders, loader.folders)
-				require.Equal(t, tt.files, loader.files)
-			}
+			require.Equal(t, folders, loader.folders)
+			require.Equal(t, tt.files, loader.files)
 		})
 	}
 }
