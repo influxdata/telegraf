@@ -168,7 +168,7 @@ func (s *Supervisor) Init() error {
 
 func init() {
 	inputs.Add("supervisor", func() telegraf.Input {
-		return &Supervisor{}
+		return &Supervisor{MetricsExc: []string{"pid", "rc"}}
 	})
 }
 
