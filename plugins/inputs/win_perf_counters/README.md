@@ -179,7 +179,19 @@ So for ordering your data in a good manner,
 this is a good key to set with a value when you want your IIS and Disk results stored
 separately from Processor results.
 
-Example: `Measurement = "win_disk"``
+Example: `Measurement = "win_disk"`
+
+#### UseRawValues
+
+(Optional)
+
+This key is optional. It is a simple bool.
+If set to `true`, counter values will be provided in the raw, integer, form. This is in contrast with the default behavior, where values are returned in a formatted, displayable, form
+as seen in the Windows Performance Monitor.  
+A field representing raw counter value has the `_Raw` suffix. Raw values should be further used in a calculation, e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
+Note: Time based counters (i.e. _% Processor Time_) are reported in hundredths of nanoseconds.
+
+Example: `UseRawValues = true`
 
 #### IncludeTotal
 

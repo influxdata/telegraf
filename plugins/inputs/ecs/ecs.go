@@ -172,7 +172,7 @@ func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumul
 		"limit_mem":      task.Limits["Memory"],
 	}
 
-	acc.AddFields("ecs_task", taskFields, tags, task.PullStoppedAt)
+	acc.AddFields("ecs_task", taskFields, tags)
 }
 
 func (ecs *Ecs) accContainers(task *Task, taskTags map[string]string, acc telegraf.Accumulator) {
