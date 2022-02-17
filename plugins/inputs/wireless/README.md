@@ -57,6 +57,7 @@ The `host_proc` option is ignored on macOS.
     - guardInterval (int64, guard, metric) - The guard interval
     - NSS (int64, NSS, metric) - The number of spatial streams
     - channel (channel information)
+  
 ## Example Output
 
 This section shows example output in Line Protocol format.
