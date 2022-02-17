@@ -153,6 +153,11 @@ type AgentConfig struct {
 	// same time, which can have a measurable effect on the system.
 	CollectionJitter Duration
 
+	// CollectionOffset is used to shift the collection by the given amount.
+	// This can be be used to avoid many plugins querying constraint devices
+	// at the same time by manually scheduling them in time.
+	CollectionOffset Duration
+
 	// FlushInterval is the Interval at which to flush data
 	FlushInterval Duration
 
@@ -322,6 +327,7 @@ var globalTagsConfig = `
   # user = "$USER"
 
 `
+
 var agentConfig = `
 # Configuration for telegraf agent
 [agent]
@@ -346,6 +352,11 @@ var agentConfig = `
   ## This can be used to avoid many plugins querying things like sysfs at the
   ## same time, which can have a measurable effect on the system.
   collection_jitter = "0s"
+
+  ## Collection offset is used to shift the collection by the given amount.
+  ## This can be be used to avoid many plugins querying constraint devices
+  ## at the same time by manually scheduling them in time.
+  # collection_offset = "0s"
 
   ## Default flushing interval for all outputs. Maximum flush_interval will be
   ## flush_interval + flush_jitter
@@ -1488,6 +1499,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	c.getFieldDuration(tbl, "interval", &cp.Interval)
 	c.getFieldDuration(tbl, "precision", &cp.Precision)
 	c.getFieldDuration(tbl, "collection_jitter", &cp.CollectionJitter)
+	c.getFieldDuration(tbl, "collection_offset", &cp.CollectionOffset)
 	c.getFieldString(tbl, "name_prefix", &cp.MeasurementPrefix)
 	c.getFieldString(tbl, "name_suffix", &cp.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &cp.NameOverride)
@@ -1640,6 +1652,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 						for _, objectConfig := range objectconfigs {
 							var o json_v2.JSONObject
 							c.getFieldString(objectConfig, "path", &o.Path)
+							c.getFieldBool(objectConfig, "optional", &o.Optional)
 							c.getFieldString(objectConfig, "timestamp_key", &o.TimestampKey)
 							c.getFieldString(objectConfig, "timestamp_format", &o.TimestampFormat)
 							c.getFieldString(objectConfig, "timestamp_timezone", &o.TimestampTimezone)
@@ -1792,6 +1805,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
 	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
 		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
+		"collection_offset",
 		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
 		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
 		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	telegrafConfig "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -17,10 +18,15 @@ type tags map[string]string
 
 // NewTestHistogram creates new test histogram aggregation with specified config
 func NewTestHistogram(cfg []config, reset bool, cumulative bool) telegraf.Aggregator {
+	return NewTestHistogramWithExpirationInterval(cfg, reset, cumulative, 0)
+}
+
+func NewTestHistogramWithExpirationInterval(cfg []config, reset bool, cumulative bool, expirationInterval telegrafConfig.Duration) telegraf.Aggregator {
 	htm := NewHistogramAggregator()
 	htm.Configs = cfg
 	htm.ResetBuckets = reset
 	htm.Cumulative = cumulative
+	htm.ExpirationInterval = expirationInterval
 
 	return htm
 }
@@ -242,6 +248,37 @@ func TestWrongBucketsOrder(t *testing.T) {
 	cfg = append(cfg, config{Metric: "first_metric_name", Buckets: []float64{0.0, 90.0, 20.0, 30.0, 40.0}})
 	histogram := NewTestHistogram(cfg, false, true)
 	histogram.Add(firstMetric2)
+}
+
+// TestHistogram tests two metrics getting added and metric expiration
+func TestHistogramMetricExpiration(t *testing.T) {
+	currentTime := time.Unix(10, 0)
+	timeNow = func() time.Time {
+		return currentTime
+	}
+	defer func() {
+		timeNow = time.Now
+	}()
+
+	var cfg []config
+	cfg = append(cfg, config{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
+	cfg = append(cfg, config{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}})
+	histogram := NewTestHistogramWithExpirationInterval(cfg, false, true, telegrafConfig.Duration(30))
+
+	acc := &testutil.Accumulator{}
+
+	histogram.Add(firstMetric1)
+	currentTime = time.Unix(41, 0)
+	histogram.Add(secondMetric)
+	histogram.Push(acc)
+
+	require.Len(t, acc.Metrics, 6, "Incorrect number of metrics")
+	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "0"})
+	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "4"})
+	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "10"})
+	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "23"})
+	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(0), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: "30"})
+	assertContainsTaggedField(t, acc, "second_metric_name", fields{"a_bucket": int64(1), "ignoreme_bucket": int64(0), "andme_bucket": int64(0)}, tags{bucketRightTag: bucketPosInf})
 }
 
 // assertContainsTaggedField is help functions to test histogram data

@@ -113,6 +113,12 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SOCKS5 proxy to use when connecting to brokers
+  # socks5_enabled = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
+
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
