@@ -28,6 +28,9 @@ type (
 		SingleTableName                                    string `toml:"single_table_name"`
 		SingleTableDimensionNameForTelegrafMeasurementName string `toml:"single_table_dimension_name_for_telegraf_measurement_name"`
 
+		UseMultiMeasureRecords            bool   `toml:"use_multi_measure_records"`
+		MeasureNameForMultiMeasureRecords string `toml:"measure_name_for_multi_measure_records"`
+
 		CreateTableIfNotExists                        bool              `toml:"create_table_if_not_exists"`
 		CreateTableMagneticStoreRetentionPeriodInDays int64             `toml:"create_table_magnetic_store_retention_period_in_days"`
 		CreateTableMemoryStoreRetentionPeriodInHours  int64             `toml:"create_table_memory_store_retention_period_in_hours"`
@@ -64,7 +67,7 @@ const MaxWriteRoutinesDefault = 1
 var sampleConfig = `
   ## Amazon Region
   region = "us-east-1"
-
+  
   ## Amazon Credentials
   ## Credentials are loaded in the following order:
   ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
@@ -82,7 +85,7 @@ var sampleConfig = `
   #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
-
+  
   ## Endpoint to make request against, the correct endpoint is automatically
   ## determined and this option should only be set if you wish to override the
   ## default.
@@ -95,88 +98,133 @@ var sampleConfig = `
 
   ## Specifies if the plugin should describe the Timestream database upon starting
   ## to validate if it has access necessary permissions, connection, etc., as a safety check.
-  ## If the describe operation fails, the plugin will not start
+  ## If the describe operation fails, the plugin will not start 
   ## and therefore the Telegraf agent will not start.
   describe_database_on_start = false
 
-  ## The mapping mode specifies how Telegraf records are represented in Timestream.
+  ## Specifies how the data is organized in Timestream. 
   ## Valid values are: single-table, multi-table.
-  ## For example, consider the following data in line protocol format:
+  ## When mapping_mode is set to single-table, all of the data is stored in a single table. 
+  ## When mapping_mode is set to multi-table, the data is organized and stored in multiple tables.
+  ## The default is multi-table. 
+  mapping_mode = "multi-table"
+
+  ## Specifies if the plugin should create the table, if the table does not exist.
+  create_table_if_not_exists = true
+
+  ## Specifies the Timestream table magnetic store retention period in days.
+  ## Check Timestream documentation for more details.
+  ## NOTE: This property is valid when create_table_if_not_exists = true.
+  create_table_magnetic_store_retention_period_in_days = 365
+
+  ## Specifies the Timestream table memory store retention period in hours.
+  ## Check Timestream documentation for more details.
+  ## NOTE: This property is valid when create_table_if_not_exists = true.
+  create_table_memory_store_retention_period_in_hours = 24
+
+  ## Specifies how the data is written into Timestream.
+  ## Valid values are: true, false
+  ## When use_multi_measure_records is set to true, all of the tags and fields are stored 
+  ## as a single row in a Timestream table.
+  ## When use_multi_measure_record is set to false, Timestream stores each field in a 
+  ## separate table row, thereby storing the tags multiple times (once for each field).
+  ## The default is true.
+  use_multi_measure_records = "true"
+
+  ## Specifies the measure_name to use when sending multi-measure records.
+  ## NOTE: This property is valid when use_multi_measure_records=true and mapping_mode=multi-table
+  measure_name_for_multi_measure_records = "telegraf_measure"
+
+  ## Specifies the name of the table to write data into
+  ## NOTE: This property is valid when mapping_mode=single-table.
+  # single_table_name = ""
+  
+  ## Specifies the name of dimension when all of the data is being stored in a single table
+  ## and the measurement name is transformed into the dimension value 
+  ## (see Mapping data from Influx to Timestream for details)
+  ## NOTE: This property is valid when mapping_mode=single-table.
+  # single_table_dimension_name_for_telegraf_measurement_name = "namespace"
+  
+  ## Only valid and optional if create_table_if_not_exists = true
+  ## Specifies the Timestream table tags.
+  ## Check Timestream documentation for more details
+  # create_table_tags = { "foo" = "bar", "environment" = "dev"}
+
+  ## Specify the maximum number of parallel go routines to ingest/write data
+  ## If not specified, defaulted to 1 go routines
+  max_write_go_routines = 25
+
+  ## Mapping data from Influx to Timestream
+  ## ---------------------------------------
+  ## When writing data from Influx to Timestream, the data is written by default as follows:
+  ## 1. The timestamp is written as the time field.
+  ## 2. Tags are written as dimensions. 
+  ## 3. Fields are written as measures.
+  ## 4. Measurements are written as table names. 
+  ##
+  ## Example
+  ## Consider the following data in line protocol format:
   ## weather,location=us-midwest,season=summer temperature=82,humidity=71 1465839830100400200
   ## airquality,location=us-west no2=5,pm25=16 1465839830100400200
-  ## where weather and airquality are the measurement names, location and season are tags,
-  ## and temperature, humidity, no2, pm25 are fields.
-  ## In multi-table mode:
-  ##  - first line will be ingested to table named weather
-  ##  - second line will be ingested to table named airquality
-  ##  - the tags will be represented as dimensions
-  ##  - first table (weather) will have two records:
-  ##      one with measurement name equals to temperature,
-  ##      another with measurement name equals to humidity
-  ##  - second table (airquality) will have two records:
-  ##      one with measurement name equals to no2,
-  ##      another with measurement name equals to pm25
-  ##  - the Timestream tables from the example will look like this:
-  ##      TABLE "weather":
+  ## where:
+  ##    weather and airquality are the measurement names, 
+  ##    location and season are tags, 
+  ##    temperature, humidity, no2, pm25 are fields.
+  ##
+  ## When you choose to create a separate table for each measurement and store
+  ## multiple fields in a single table row, the data will be written into Timestream as:
+  ##  1. The plugin will create 2 tables, namely, weather and airquality (mapping_mode=multi-table).
+  ##  2. The tables may contain multiple fields in a single table row (use_multi_measure_records=true).
+  ##  3. The table weather will contain the following columns and data:
+  ##     time | location | season | measure_name | temperature | humidity
+  ##     2016-06-13 17:43:50 | us-midwest | summer | <measure_name_for_multi_measure_records> | 82 | 71
+  ##  4. The table airquality will contain the following columns and data:
+  ##     time | location | measure_name | no2 | pm25
+  ##     2016-06-13 17:43:50 | us-west | <measure_name_for_multi_measure_records> | 5 | 16
+  ##  NOTE
+  ##  <measure_name_for_multi_measure_records> represents the actual value of that property.
+  ## 
+  ## You can also choose to create a separate table per measurement and store
+  ## each field in a separate row per table. In that case:
+  ##  1. The plugin will create 2 tables, namely, weather and airquality (mapping_mode=multi-table).
+  ##  2. Each table row will contain a single field only (use_multi_measure_records=false).
+  ##  3. The table weather will contain the following columns and data:
   ##        time | location | season | measure_name | measure_value::bigint
   ##        2016-06-13 17:43:50 | us-midwest | summer | temperature | 82
   ##        2016-06-13 17:43:50 | us-midwest | summer | humidity | 71
-  ##      TABLE "airquality":
+  ##  4. The table airquality will contain the following columns and data:
   ##        time | location | measure_name | measure_value::bigint
   ##        2016-06-13 17:43:50 | us-west | no2 | 5
   ##        2016-06-13 17:43:50 | us-west | pm25 | 16
-  ## In single-table mode:
-  ##  - the data will be ingested to a single table, which name will be valueOf(single_table_name)
-  ##  - measurement name will stored in dimension named valueOf(single_table_dimension_name_for_telegraf_measurement_name)
-  ##  - location and season will be represented as dimensions
-  ##  - temperature, humidity, no2, pm25 will be represented as measurement name
-  ##  - the Timestream table from the example will look like this:
-  ##      Assuming:
-  ##        - single_table_name = "my_readings"
-  ##        - single_table_dimension_name_for_telegraf_measurement_name = "namespace"
-  ##      TABLE "my_readings":
+  ## 
+  ## You can also choose to store all the measurements in a single table and
+  ## store all fields in a single table row. In that case:
+  ## 1. This plugin will create a table with name <single_table_name> (mapping_mode=single-table).
+  ## 2. The table may contain multiple fields in a single table row (use_multi_measure_records=true).
+  ## 3. The table will contain the following column and data:
+  ##    time | location | season | <single_table_dimension_name_for_telegraf_measurement_name> | measure_name | temperature | humidity | no2 | pm25
+  ##    2016-06-13 17:43:50 | us-midwest | summer | weather | <measure_name_for_multi_measure_records> | 82 | 71 | null | null
+  ##    2016-06-13 17:43:50 | us-west | null | airquality | <measure_name_for_multi_measure_records> | null | null | 5 | 16
+  ##  NOTE
+  ##  <single_table_name> represents the actual value of that property.
+  ##  <single_table_dimension_name_for_telegraf_measurement_name> represents the actual value of that property.
+  ##  <measure_name_for_multi_measure_records> represents the actual value of that property. 
+  ##   
+  ## Furthermore, you can choose to store all the measurements in a single table and
+  ## store each field in a separate table row. In that case:
+  ## 1. Timestream will create a table with name <single_table_name> (mapping_mode=single-table).
+  ## 2. Each table row will contain a single field only (use_multi_measure_records=false).
+  ## 2. The table will contain the following column and data:
   ##        time | location | season | namespace | measure_name | measure_value::bigint
   ##        2016-06-13 17:43:50 | us-midwest | summer | weather | temperature | 82
   ##        2016-06-13 17:43:50 | us-midwest | summer | weather | humidity | 71
   ##        2016-06-13 17:43:50 | us-west | NULL | airquality | no2 | 5
   ##        2016-06-13 17:43:50 | us-west | NULL | airquality | pm25 | 16
-  ## In most cases, using multi-table mapping mode is recommended.
-  ## However, you can consider using single-table in situations when you have thousands of measurement names.
-  mapping_mode = "multi-table"
-
-  ## Only valid and required for mapping_mode = "single-table"
-  ## Specifies the Timestream table where the metrics will be uploaded.
-  # single_table_name = "yourTableNameHere"
-
-  ## Only valid and required for mapping_mode = "single-table"
-  ## Describes what will be the Timestream dimension name for the Telegraf
-  ## measurement name.
-  # single_table_dimension_name_for_telegraf_measurement_name = "namespace"
-
-  ## Specifies if the plugin should create the table, if the table do not exist.
-  ## The plugin writes the data without prior checking if the table exists.
-  ## When the table does not exist, the error returned from Timestream will cause
-  ## the plugin to create the table, if this parameter is set to true.
-  create_table_if_not_exists = true
-
-  ## Only valid and required if create_table_if_not_exists = true
-  ## Specifies the Timestream table magnetic store retention period in days.
-  ## Check Timestream documentation for more details.
-  create_table_magnetic_store_retention_period_in_days = 365
-
-  ## Only valid and required if create_table_if_not_exists = true
-  ## Specifies the Timestream table memory store retention period in hours.
-  ## Check Timestream documentation for more details.
-  create_table_memory_store_retention_period_in_hours = 24
-
-  ## Only valid and optional if create_table_if_not_exists = true
-  ## Specifies the Timestream table tags.
-  ## Check Timestream documentation for more details
-  # create_table_tags = { "foo" = "bar", "environment" = "dev"}
-  
-  ## Specify the maximum number of parallel go routines to ingest/write data
-  ## If not specified, defaulted to 1 go routines
-  max_write_go_routines = 25
+  ##  NOTE
+  ##  <single_table_name> represents the actual value of that property.
+  ##  <single_table_dimension_name_for_telegraf_measurement_name> represents the actual value of that property.
+  ##  <measure_name_for_multi_measure_records> represents the actual value of that property. 
+  ##
 `
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
@@ -207,9 +255,13 @@ func (t *Timestream) Connect() error {
 			return fmt.Errorf("in '%s' mapping mode, SingleTableName key is required", MappingModeSingleTable)
 		}
 
-		if t.SingleTableDimensionNameForTelegrafMeasurementName == "" {
+		if t.SingleTableDimensionNameForTelegrafMeasurementName == "" && !t.UseMultiMeasureRecords {
 			return fmt.Errorf("in '%s' mapping mode, SingleTableDimensionNameForTelegrafMeasurementName key is required",
 				MappingModeSingleTable)
+		}
+
+		if t.UseMultiMeasureRecords && t.MeasureNameForMultiMeasureRecords != "" {
+			return fmt.Errorf("in '%s' mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is invalid", MappingModeMultiTable)
 		}
 	}
 
@@ -220,6 +272,10 @@ func (t *Timestream) Connect() error {
 
 		if t.SingleTableDimensionNameForTelegrafMeasurementName != "" {
 			return fmt.Errorf("in '%s' mapping mode, do not specify SingleTableDimensionNameForTelegrafMeasurementName key", MappingModeMultiTable)
+		}
+
+		if t.UseMultiMeasureRecords && t.MeasureNameForMultiMeasureRecords == "" {
+			return fmt.Errorf("in '%s' mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is required", MappingModeMultiTable)
 		}
 	}
 
@@ -335,7 +391,6 @@ func (t *Timestream) Write(metrics []telegraf.Metric) error {
 }
 
 func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteRecordsInput, resourceNotFoundRetry bool) error {
-	t.Log.Debugf("Writing to Timestream: '%v' with ResourceNotFoundRetry: '%t'", writeRecordsInput, resourceNotFoundRetry)
 
 	_, err := t.svc.WriteRecords(context.Background(), writeRecordsInput)
 	if err != nil {
@@ -349,6 +404,10 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 				return t.createTableAndRetry(writeRecordsInput)
 			}
 			t.logWriteToTimestreamError(notFound, writeRecordsInput.TableName)
+			// log error and return error to telegraf to retry in next flush interval
+			// We need this is to avoid data drop when there are no tables present in the database
+			return fmt.Errorf("Failed to write to Timestream database '%s' table '%s'. Skipping metric! Error: '%s'",
+				t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
 
 		var rejected *types.RejectedRecordsException
@@ -495,7 +554,7 @@ func (t *Timestream) buildDimensions(point telegraf.Metric) []types.Dimension {
 		}
 		dimensions = append(dimensions, dimension)
 	}
-	if t.MappingMode == MappingModeSingleTable {
+	if t.MappingMode == MappingModeSingleTable && !t.UseMultiMeasureRecords {
 		dimension := types.Dimension{
 			Name:  aws.String(t.SingleTableDimensionNameForTelegrafMeasurementName),
 			Value: aws.String(point.Name()),
@@ -510,6 +569,14 @@ func (t *Timestream) buildDimensions(point telegraf.Metric) []types.Dimension {
 // Records with unsupported Metric Field type are skipped.
 // It returns an array of Timestream write records.
 func (t *Timestream) buildWriteRecords(point telegraf.Metric) []types.Record {
+	if t.UseMultiMeasureRecords {
+		return t.buildMultiMeasureWriteRecords(point)
+	} else {
+		return t.buildSingleWriteRecords(point)
+	}
+}
+
+func (t *Timestream) buildSingleWriteRecords(point telegraf.Metric) []types.Record {
 	var records []types.Record
 
 	dimensions := t.buildDimensions(point)
@@ -535,6 +602,53 @@ func (t *Timestream) buildWriteRecords(point telegraf.Metric) []types.Record {
 		}
 		records = append(records, record)
 	}
+	return records
+}
+
+func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []types.Record {
+	var records []types.Record
+	dimensions := t.buildDimensions(point)
+
+	var multiMeasureName = ""
+
+	if t.MappingMode == MappingModeSingleTable {
+		multiMeasureName = point.Name()
+	} else {
+		multiMeasureName = t.MeasureNameForMultiMeasureRecords
+	}
+
+	//list of Multi measure value.
+
+	var multiMeasures []types.MeasureValue
+
+	for fieldName, fieldValue := range point.Fields() {
+		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
+		if !ok {
+			t.Log.Errorf("Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
+				"Supported values are: [int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool]",
+				fieldName, reflect.TypeOf(fieldValue))
+			continue
+		}
+		multiMeasures = append(multiMeasures, types.MeasureValue{
+			Name:  aws.String(fieldName),
+			Type:  stringFieldValueType,
+			Value: aws.String(stringFieldValue),
+		})
+	}
+
+	timeUnit, timeValue := getTimestreamTime(point.Time())
+
+	record := types.Record{
+		MeasureName:      aws.String(multiMeasureName),
+		MeasureValueType: "MULTI",
+		MeasureValues:    multiMeasures,
+		Dimensions:       dimensions,
+		Time:             aws.String(timeValue),
+		TimeUnit:         timeUnit,
+	}
+
+	records = append(records, record)
+
 	return records
 }
 
