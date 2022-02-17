@@ -68,6 +68,10 @@ type set struct {
 	m map[string]struct{}
 }
 
+func (s *set) empty() bool {
+	return len(s.m) == 0
+}
+
 func (s *set) add(key string) {
 	s.m[key] = struct{}{}
 }
@@ -117,9 +121,9 @@ func (s *SystemPS) DiskUsage(
 	hostMountPrefix := s.OSGetenv("HOST_MOUNT_PREFIX")
 
 	for _, p := range parts {
-		// If the mount point is not a member of the filter set,
-		// don't gather info on it.
-		if !mountPointFilterSet.has(p.Mountpoint) {
+		// If there is a filter set and if the mount point is not a
+		// member of the filter set, don't gather info on it.
+		if !mountPointFilterSet.empty() && !mountPointFilterSet.has(p.Mountpoint) {
 			continue
 		}
 
