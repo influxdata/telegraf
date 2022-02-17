@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // default executable path & flags
@@ -26,21 +25,18 @@ func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	metrics, tags, err := w.loadMacWirelessTable(wireless)
-	if err != nil {
-		return err
-	}
+	metrics, tags := w.loadMacWirelessTable(wireless)
 	acc.AddFields("wireless", metrics, tags)
 	return nil
 }
 
-func (w *Wireless) loadMacWirelessTable(table []byte) (map[string]interface{}, map[string]string, error) {
+func (w *Wireless) loadMacWirelessTable(table []byte) (map[string]interface{}, map[string]string) {
 	lines := strings.Split(string(table), "\n")
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
 	for _, line := range lines {
-		fm := strings.Split(strings.TrimSpace(line), ":")
-		if len(fm) < 2 {
+		fm := strings.SplitN(strings.TrimSpace(line), ":", 2)
+		if len(fm) < 2 || fm[1] == "" {
 			continue
 		}
 		name := strings.Replace(strings.Trim(strings.TrimSpace(fm[0]), ":"), " ", "_", -1)
@@ -56,12 +52,5 @@ func (w *Wireless) loadMacWirelessTable(table []byte) (map[string]interface{}, m
 			}
 		}
 	}
-	tags["interface"] = "airport"
-	return fields, tags, nil
-}
-
-func init() {
-	inputs.Add("wireless", func() telegraf.Input {
-		return &Wireless{}
-	})
+	return fields, tags
 }

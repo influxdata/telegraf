@@ -5,7 +5,6 @@ package wireless
 
 import (
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 func (w *Wireless) Init() error {
@@ -15,10 +14,4 @@ func (w *Wireless) Init() error {
 
 func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 	return nil
-}
-
-func init() {
-	inputs.Add("wireless", func() telegraf.Input {
-		return &Wireless{}
-	})
 }

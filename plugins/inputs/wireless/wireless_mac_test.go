@@ -10,11 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	field_len = 11
-	tag_len   = 5
-)
-
 func TestLoadWirelessTable(t *testing.T) {
 	w := Wireless{}
 	// line of input
@@ -31,7 +26,7 @@ func TestLoadWirelessTable(t *testing.T) {
 		"maxRate":         int64(450),
 		"lastAssocStatus": int64(0),
 		"MCS":             int64(15),
-		"BSSID":           "",
+		"BSSID":           "12:34:56:78:9a:bc",
 		"SSID":            "Foo_Bar",
 		"channel":         "157,1",
 	}
@@ -41,14 +36,11 @@ func TestLoadWirelessTable(t *testing.T) {
 		"op_mode":     "station",
 		"802.11_auth": "open",
 		"link_auth":   "wpa2-psk",
-		"interface":   "airport",
 	}
 
 	// load the table from the input.
-	gotFields, gotTags, err := w.loadMacWirelessTable([]byte(macInput))
+	gotFields, gotTags := w.loadMacWirelessTable([]byte(macInput))
 	require.NoError(t, err)
-	require.Equal(t, len(gotFields), field_len, "got %d fields, expected %d", len(gotFields), field_len)
-	require.Equal(t, gotFields, macFields, "want %+v, got %+v", macFields, gotFields)
-	require.Equal(t, len(gotTags), tag_len, "got %d tags, expected %d", len(gotTags), tag_len)
-	require.Equal(t, gotTags, macTags, "want %+v, got %+v", macTags, gotTags)
+	require.Equal(t, gotFields, macFields)
+	require.Equal(t, gotTags, macTags)
 }
