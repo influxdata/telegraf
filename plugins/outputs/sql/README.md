@@ -112,6 +112,13 @@ through the convert settings.
   #  defaultvalue         = "TEXT"
   #  unsigned             = "UNSIGNED"
   #  bool                 = "BOOL"
+
+  ## This setting controls the behavior of the unsigned value. By default the
+  ## setting will take the integer value and append "unsigned" to it. The other
+  ## option is "literal", which will use the actual value the user provides to
+  ## the unsigned option. This is useful for a database like ClickHouse where
+  ## the unsigned value should use a value like "uint64".
+  # conversion_style = "unsigned_suffix"
 ```
 
 ## Driver-specific information
@@ -158,7 +165,7 @@ Use this metric type to SQL type conversion:
     timestamp            = "DateTime"
     defaultvalue         = "String"
     unsigned             = "UInt64"
-    bool                 = "Uint8"
+    bool                 = "UInt8"
 ```
 
 See [ClickHouse data types](https://clickhouse.com/docs/en/sql-reference/data-types/) for more info.

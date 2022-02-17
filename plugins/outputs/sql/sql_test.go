@@ -107,6 +107,14 @@ var (
 					Key:   "bool_two",
 					Value: false,
 				},
+				{
+					Key:   "uint64_one",
+					Value: uint64(1000000000),
+				},
+				{
+					Key:   "float64_one",
+					Value: float64(3.1415),
+				},
 			},
 			ts,
 		),
@@ -295,6 +303,8 @@ func TestPostgresIntegration(t *testing.T) {
 	p.Log = testutil.Logger{}
 	p.Driver = "pgx"
 	p.DataSourceName = address
+	p.Convert.Real = "double precision"
+	p.Convert.Unsigned = "bigint"
 
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(
