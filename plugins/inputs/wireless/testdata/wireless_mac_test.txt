@@ -9,7 +9,7 @@
 lastAssocStatus: 0
     802.11 auth: open
       link auth: wpa2-psk
-          BSSID:
+          BSSID: 12:34:56:78:9a:bc
            SSID: Foo Bar
             MCS: 15
         channel: 157,1
