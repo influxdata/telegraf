@@ -17,7 +17,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
-	. "github.com/influxdata/telegraf/plugins/outputs/timestream"
 	"github.com/influxdata/telegraf/testutil"
 )
 
