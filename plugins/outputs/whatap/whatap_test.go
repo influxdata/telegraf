@@ -13,12 +13,10 @@ import (
 )
 
 func newWhatap(addr string) *Whatap {
-	servers := make([]string, 0)
-	servers = append(servers, "tcp://"+addr)
 	w := &Whatap{
 		Timeout: config.Duration(60 * time.Second),
 		Log:     testutil.Logger{},
-		Servers: servers,
+		Servers: []string{"tcp://" + addr},
 	}
 	return w
 }
