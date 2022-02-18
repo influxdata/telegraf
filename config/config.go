@@ -1025,6 +1025,7 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	contents = trimBOM(contents)
 
 	parameters := envVarRe.FindAllSubmatch(contents, -1)
+	var missingEnvVars []string
 	for _, parameter := range parameters {
 		if len(parameter) != 3 {
 			continue
@@ -1043,7 +1044,19 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 		if ok {
 			envVal = escapeEnv(envVal)
 			contents = bytes.Replace(contents, parameter[0], []byte(envVal), 1)
+		} else {
+			missingEnvVars = append(missingEnvVars, string(envVar))
 		}
+	}
+
+	// Report all missing environment variables to the user
+	if len(missingEnvVars) > 0 {
+		errorMsg := "failed to find the configured environment variables:"
+		for _, e := range missingEnvVars {
+			errorMsg += e + " "
+		}
+
+		return nil, fmt.Errorf(errorMsg)
 	}
 
 	return toml.Parse(contents)
