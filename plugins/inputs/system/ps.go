@@ -120,7 +120,9 @@ func (s *SystemPS) DiskUsage(
 	var partitions []*disk.PartitionStat
 	hostMountPrefix := s.OSGetenv("HOST_MOUNT_PREFIX")
 
-	for _, p := range parts {
+	for i := range parts {
+		p := parts[i]
+
 		// If there is a filter set and if the mount point is not a
 		// member of the filter set, don't gather info on it.
 		if !mountPointFilterSet.empty() && !mountPointFilterSet.has(p.Mountpoint) {
