@@ -34,6 +34,7 @@ import (
 	inputFile "github.com/influxdata/telegraf/plugins/inputs/file"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	outputFile "github.com/influxdata/telegraf/plugins/outputs/file"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
@@ -334,7 +335,7 @@ func runAgent(ctx context.Context,
 }
 
 func usageExit(rc int) {
-	fmt.Println(internal.Usage)
+	fmt.Print(internal.Usage)
 	os.Exit(rc)
 }
 
@@ -411,7 +412,9 @@ func isolatedPlugin(name string, configPath string, ID int) {
 			fmt.Printf("Issue with new agent: %v \n", err)
 			return
 		}
-		fileInputPlugin.SetParser(parser)
+		fileInputPlugin.SetParserFunc(func() (telegraf.Parser, error) {
+			return parser, nil
+		})
 		i = fileInputPlugin
 		var inputConfig models.InputConfig
 		inputConfig.Name = "file"

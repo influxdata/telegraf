@@ -90,7 +90,11 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 	if f.Stdin {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			metrics, err := f.parser.Parse(scanner.Bytes())
+			parser, err := f.parserFunc()
+			if err != nil {
+				return fmt.Errorf("could not instantiate parser: %s", err)
+			}
+			metrics, err := parser.Parse(scanner.Bytes())
 			if err != nil {
 				return err
 			}
