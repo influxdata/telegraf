@@ -119,25 +119,21 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 		if err := w.send(dout.ToByteArray()); err != nil {
 			w.Log.Warnf("cannot send data: %v", err)
 			_ = w.Close()
+			return err
 		}
 	}
 	return nil
 }
 func (w *Whatap) send(sendbuf []byte) (err error) {
-	nbyteleft := len(sendbuf)
-	var pos int
-	var nbytethistime int
-	for 0 < nbyteleft {
+	for pos := 0; pos < len(sendbuf); {
 		deadline := time.Now().Add(time.Duration(w.Timeout))
 		if err := w.conn.SetWriteDeadline(deadline); err != nil {
 			return fmt.Errorf("cannot set write deadline: %v", err)
 		}
-
-		nbytethistime, err = w.conn.Write(sendbuf[pos : pos+nbyteleft])
+		nbytethistime, err := w.conn.Write(sendbuf[pos:])
 		if err != nil {
 			return err
 		}
-		nbyteleft -= nbytethistime
 		pos += nbytethistime
 	}
 	return nil
@@ -159,11 +155,12 @@ func (w *Whatap) Init() error {
 	if len(w.hosts) == 0 {
 		return fmt.Errorf("no WhaTap server IP configured")
 	}
-	if hn, err := os.Hostname(); err != nil {
-		w.oname = "unknown_host"
-	} else {
-		w.oname = hn
+
+	hn, err := os.Hostname()
+	if err != nil {
+		return fmt.Errorf("failed to get hostname: %v", err)
 	}
+	w.oname = hn
 	w.oid = whash.HashStr(w.oname)
 	return nil
 }

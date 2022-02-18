@@ -58,7 +58,9 @@ func TestWhatapWriteErr(t *testing.T) {
 	err = lconn.Close()
 	require.NoError(t, err)
 
-	_ = w.Close()
+	err = w.Close()
+	require.NoError(t, err)
+
 	err = w.Write(metrics)
 	require.NoError(t, err)
 }
