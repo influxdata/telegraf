@@ -112,6 +112,9 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			idx++
 			continue
 		}
+
+		// In any other case remove metric from the output
+		metric.Drop()
 	}
 	metrics = metrics[:idx]
 	d.cleanup()
