@@ -284,7 +284,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	switch resp.StatusCode {
 	// request was too large, send back to try again
 	case http.StatusRequestEntityTooLarge:
-		c.log.Errorf("Failed to write metric, request was too large (413)")
+		c.log.Errorf("Failed to write metric to %s, request was too large (413)", bucket)
 		return &APIError{
 			StatusCode:  resp.StatusCode,
 			Title:       resp.Status,
@@ -298,10 +298,10 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		// Clients should *not* repeat the request and the metrics should be dropped.
 		http.StatusUnprocessableEntity,
 		http.StatusNotAcceptable:
-		c.log.Errorf("Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		c.log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
 		return nil
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return fmt.Errorf("failed to write metric (%s): %s", resp.Status, desc)
+		return fmt.Errorf("failed to write metric to %s (%s): %s", bucket, resp.Status, desc)
 	case http.StatusTooManyRequests,
 		http.StatusServiceUnavailable,
 		http.StatusBadGateway,
@@ -310,14 +310,14 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		c.retryCount++
 		retryDuration := c.getRetryDuration(resp.Header)
 		c.retryTime = time.Now().Add(retryDuration)
-		c.log.Warnf("Failed to write; will retry in %s. (%s)\n", retryDuration, resp.Status)
-		return fmt.Errorf("waiting %s for server before sending metric again", retryDuration)
+		c.log.Warnf("Failed to write to %s; will retry in %s. (%s)\n", bucket, retryDuration, resp.Status)
+		return fmt.Errorf("waiting %s for server (%s) before sending metric again", retryDuration, bucket)
 	}
 
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
-		c.log.Errorf("Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		c.log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
 		return nil
 	}
 
