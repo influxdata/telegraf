@@ -23,9 +23,9 @@ type Agent struct {
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(config *config.Config) (*Agent, error) {
+func NewAgent(cfg *config.Config) (*Agent, error) {
 	a := &Agent{
-		Config: config,
+		Config: cfg,
 	}
 	return a, nil
 }
