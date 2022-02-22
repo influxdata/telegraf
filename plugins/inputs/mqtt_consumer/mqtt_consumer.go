@@ -215,6 +215,10 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.acc = acc.WithTracking(m.MaxUndeliveredMessages)
 	m.sem = make(semaphore, m.MaxUndeliveredMessages)
 	m.ctx, m.cancel = context.WithCancel(context.Background())
+	return m.connect()
+}
+func (m *MQTTConsumer) connect() error {
+	m.state = Connecting
 	m.client = m.clientFactory(m.opts)
 	// AddRoute sets up the function for handling messages.  These need to be
 	// added in case we find a persistent session containing subscriptions so we
@@ -223,10 +227,6 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	for _, topic := range m.Topics {
 		m.client.AddRoute(topic, m.recvMessage)
 	}
-	m.state = Connecting
-	return m.connect()
-}
-func (m *MQTTConsumer) connect() error {
 	token := m.client.Connect()
 	if token.Wait() && token.Error() != nil {
 		err := token.Error()
@@ -257,6 +257,8 @@ func (m *MQTTConsumer) connect() error {
 	return nil
 }
 func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
+	// Should already be disconnected, but make doubly sure
+	m.client.Disconnect(5)
 	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
 	m.Log.Debugf("Disconnected %v", m.Servers)
 	m.state = Disconnected
@@ -351,7 +353,6 @@ func (m *MQTTConsumer) Stop() {
 }
 func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
 	if m.state == Disconnected {
-		m.state = Connecting
 		m.Log.Debugf("Connecting %v", m.Servers)
 		return m.connect()
 	}
