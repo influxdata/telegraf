@@ -36,7 +36,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.5.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.13.0
-	github.com/aws/aws-sdk-go-v2/service/sts v1.7.2
+	github.com/aws/aws-sdk-go-v2/service/sts v1.14.0
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.3.2
 	github.com/aws/smithy-go v1.10.0
 	github.com/benbjohnson/clock v1.3.0
@@ -85,7 +85,7 @@ require (
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/intel/iaevents v1.0.0
-	github.com/jackc/pgx/v4 v4.14.1
+	github.com/jackc/pgx/v4 v4.15.0
 	github.com/james4k/rcon v0.0.0-20120923215419-8fbb8268b60a
 	github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca
 	github.com/jmespath/go-jmespath v0.4.0
@@ -116,7 +116,7 @@ require (
 	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
 	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
-	github.com/sensu/sensu-go/api/core/v2 v2.12.0
+	github.com/sensu/sensu-go/api/core/v2 v2.13.0
 	github.com/shirou/gopsutil/v3 v3.21.12
 	github.com/showwin/speedtest-go v1.1.4
 	github.com/signalfx/golib/v3 v3.3.43
@@ -196,7 +196,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.3.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.1.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.3.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.7.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.16.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.4.2 // indirect
@@ -250,12 +250,12 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/serf v0.9.6 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
-	github.com/jackc/pgconn v1.10.1 // indirect
+	github.com/jackc/pgconn v1.11.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgproto3/v2 v2.2.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
-	github.com/jackc/pgtype v1.9.1 // indirect
+	github.com/jackc/pgtype v1.10.0 // indirect
 	github.com/jaegertracing/jaeger v1.26.0 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
