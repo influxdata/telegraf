@@ -116,7 +116,7 @@ require (
 	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
 	github.com/riemann/riemann-go-client v0.5.0
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
-	github.com/sensu/sensu-go/api/core/v2 v2.12.0
+	github.com/sensu/sensu-go/api/core/v2 v2.13.0
 	github.com/shirou/gopsutil/v3 v3.21.12
 	github.com/showwin/speedtest-go v1.1.4
 	github.com/signalfx/golib/v3 v3.3.43
