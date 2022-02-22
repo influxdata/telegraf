@@ -17,7 +17,7 @@ require (
 	github.com/ClickHouse/clickhouse-go v1.5.1
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Shopify/sarama v1.29.1
-	github.com/aerospike/aerospike-client-go v1.27.0
+	github.com/aerospike/aerospike-client-go/v5 v5.7.0
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
@@ -324,7 +324,7 @@ require (
 	github.com/xdg-go/stringprep v1.0.2 // indirect
 	github.com/xdg/stringprep v1.0.3 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
-	github.com/yuin/gopher-lua v0.0.0-20200603152657-dc2b0ca8b37e // indirect
+	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
