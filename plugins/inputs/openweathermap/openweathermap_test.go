@@ -687,7 +687,7 @@ func TestRainMetrics(t *testing.T) {
 				"humidity":              int64(87),
 				"pressure":              1007.0,
 				"temperature":           9.25,
-				"feels_like":            8.25
+				"feels_like":            8.25,
 				"rain":                  0.0,
 				"sunrise":               int64(1544167818000000000),
 				"sunset":                int64(1544198047000000000),
