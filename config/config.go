@@ -1051,7 +1051,7 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 
 	// Report all missing environment variables to the user
 	if len(missingEnvVars) > 0 {
-		errorMsg := "failed to find the configured environment variables:"
+		errorMsg := "environment variable(s) not set:"
 		for _, e := range missingEnvVars {
 			errorMsg += e + " "
 		}
