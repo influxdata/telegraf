@@ -264,13 +264,15 @@ func TestConfig_WrongFieldType(t *testing.T) {
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
 	c := NewConfig()
+	require.NoError(t, os.Setenv("TOKEN", "test"))
 	require.NoError(t, c.LoadConfig("./testdata/inline_table.toml"))
 	require.Len(t, c.Outputs, 2)
 
 	output, ok := c.Outputs[1].Output.(*MockupOuputPlugin)
 	require.True(t, ok)
-	require.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, output.Headers)
+	require.Equal(t, map[string]string{"Authorization": "Token test", "Content-Type": "application/json"}, output.Headers)
 	require.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
+	require.NoError(t, os.Unsetenv("TOKEN"))
 }
 
 func TestConfig_SliceComment(t *testing.T) {
