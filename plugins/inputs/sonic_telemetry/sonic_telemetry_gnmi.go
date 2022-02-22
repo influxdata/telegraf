@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"encoding/binary"
+	"encoding/base64"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -79,6 +81,24 @@ type Subscription struct {
 
 	// Tag-only identification
 	TagOnly bool `toml:"tag_only"`
+}
+
+func Float32ValfromBytes(bytes []byte) float32 {
+        bits := binary.BigEndian.Uint32(bytes)
+        float32Val := math.Float32frombits(bits)
+        return float32Val
+}
+
+func IsBase64(s string) (float32, bool)  {
+    if len(s) != 8  && len(s) != 12 {
+        return 0, false
+    }
+    retStr, err := base64.StdEncoding.DecodeString(s)
+    if err != nil {
+        fmt.Println("Error during base64 decode. Err: %s", err.Error())
+        return 0, err == nil
+    }
+    return Float32ValfromBytes(retStr), err == nil
 }
 
 // Start the http listener service
@@ -327,16 +347,13 @@ func (c *SONiCTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 				key = parts[len(parts)-1]
 
 				key = strings.Replace(key, "-", "_", -1)
-				//fmt.Printf("key:%s\r\n", key)
 			} else {
 				// Otherwise use the last path element as the field key.
 				key = path.Base(key)
-				//key1 := path.Base(key)
 				parts := strings.Split(key, ":")
 				key = parts[len(parts)-1]
 
 				key = strings.Replace(key, "-", "_", -1)
-				//fmt.Printf("%s\t\t\t%s\n", key, key1)
 				// If there are no elements skip the item; this would be an
 				// invalid message.
 				key = strings.TrimLeft(key, "/.")
@@ -417,17 +434,22 @@ func (c *SONiCTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[
 		} else {
 			flattener := jsonparser.JSONFlattener{Fields: fields}
 			flattener.FullFlattenJSON(name, value, true, true)
-			//fmt.Printf("name:%s\t\t\tvalue:%v\n\n\n", name, value)
 
 			for k1, v1 := range fields {
-				//fmt.Printf("k1:%s\t\t\tv1:%s\r\n", k1,v1)
-				if reflect.TypeOf(v1).Kind() != reflect.String {
-					continue
-				}
-				i64, err := strconv.ParseInt(v1.(string), 10, 64)
-				if err == nil {
-					fields[k1] = i64
-				}
+                                if reflect.TypeOf(v1).Kind() != reflect.String {
+                                        continue
+                                }
+                                if (strings.Contains(k1, "transceiver_dom")) {
+                                    if fVal, retVal := IsBase64(v1.(string)); retVal {
+                                        fields[k1] = fVal
+                                    }
+                                } else {
+                                        if i64, err := strconv.ParseInt(v1.(string), 10, 64); err == nil {
+                                                fields[k1] = i64
+                                        } else if f64, err := strconv.ParseFloat(v1.(string), 64); err == nil {
+                                                fields[k1] = f64
+                                        }
+                                }
 			}
 		}
 	}
