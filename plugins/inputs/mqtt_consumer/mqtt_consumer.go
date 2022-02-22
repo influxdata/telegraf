@@ -265,18 +265,19 @@ func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
 }
 func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 	for {
+		// Drain anything that's been delivered
 		select {
 		case track := <-m.acc.Delivered():
-			<-m.sem
-			m.messagesMutex.Lock()
-			_, ok := m.messages[track.ID()]
-			if !ok {
-				// Added by a previous connection
-				continue
-			}
-			// No ack, MQTT does not support durable handling
-			delete(m.messages, track.ID())
-			m.messagesMutex.Unlock()
+			m.onDelivered(track)
+			continue
+		default:
+		}
+
+		// Wait for room to accumulate metric, but make delivery progress if possible
+		// (Note that select will randomly pick a case if both are available)
+		select {
+		case track := <-m.acc.Delivered():
+			m.onDelivered(track)
 		case m.sem <- empty{}:
 			err := m.onMessage(m.acc, msg)
 			if err != nil {
@@ -301,6 +302,17 @@ func compareTopics(expected []string, incoming []string) bool {
 	}
 
 	return true
+}
+
+func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
+	<-m.sem
+	m.messagesMutex.Lock()
+	_, ok := m.messages[track.ID()]
+	if ok {
+		// No ack, MQTT does not support durable handling
+		delete(m.messages, track.ID())
+	}
+	m.messagesMutex.Unlock()
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
