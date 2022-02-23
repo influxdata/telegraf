@@ -49,8 +49,7 @@ var (
 	outputDefaults = []string{"influxdb"}
 
 	// envVarRe is a regex to find environment variables in the config file
-	envVarLineRe = regexp.MustCompile(`^#.*(\$\{(\w+)\}|\$(\w+)).*$`)
-	envVarRe     = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
+	envVarRe = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
 
 	envVarEscaper = strings.NewReplacer(
 		`"`, `\"`,
