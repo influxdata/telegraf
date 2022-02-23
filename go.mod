@@ -14,7 +14,7 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.9.18
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
 	github.com/BurntSushi/toml v0.4.1
-	github.com/ClickHouse/clickhouse-go v1.5.1
+	github.com/ClickHouse/clickhouse-go v1.5.4
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Shopify/sarama v1.29.1
 	github.com/aerospike/aerospike-client-go/v5 v5.7.0
