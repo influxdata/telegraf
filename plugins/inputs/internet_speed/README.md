@@ -7,8 +7,8 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
 ```toml
 # Monitors internet speed in the network
 [[inputs.internet_speed]]
-  ## Sets if runs file download test
-  # enable_file_download = false
+  ## allows execution of download and upload speed test
+  # enable_file_download = true
 
   ## Caches the closest server location
   # cache = false

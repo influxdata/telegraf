@@ -19,7 +19,7 @@ type InternetSpeed struct {
 
 const sampleConfig = `
   ## Sets if runs file download test
-  # enable_file_download = false
+  # enable_file_download = true
 
   ## Caches the closest server location
   # cache = false
