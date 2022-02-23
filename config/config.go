@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"fmt"
@@ -48,7 +49,8 @@ var (
 	outputDefaults = []string{"influxdb"}
 
 	// envVarRe is a regex to find environment variables in the config file
-	envVarRe = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
+	envVarLineRe = regexp.MustCompile(`^#.*(\$\{(\w+)\}|\$(\w+)).*$`)
+	envVarRe     = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
 
 	envVarEscaper = strings.NewReplacer(
 		`"`, `\"`,
@@ -1025,28 +1027,36 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 func parseConfig(contents []byte) (*ast.Table, error) {
 	contents = trimBOM(contents)
 
-	parameters := envVarRe.FindAllSubmatch(contents, -1)
 	var missingEnvVars []string
-	for _, parameter := range parameters {
-		if len(parameter) != 3 {
+	scanner := bufio.NewScanner(bytes.NewReader(contents))
+	for scanner.Scan() {
+		// Get Bytes and display the byte.
+		b := scanner.Bytes()
+		if strings.HasPrefix(string(b), "#") {
 			continue
 		}
+		parameters := envVarRe.FindAllSubmatch(b, -1)
+		for _, parameter := range parameters {
+			if len(parameter) != 3 {
+				continue
+			}
 
-		var envVar []byte
-		if parameter[1] != nil {
-			envVar = parameter[1]
-		} else if parameter[2] != nil {
-			envVar = parameter[2]
-		} else {
-			continue
-		}
+			var envVar []byte
+			if parameter[1] != nil {
+				envVar = parameter[1]
+			} else if parameter[2] != nil {
+				envVar = parameter[2]
+			} else {
+				continue
+			}
 
-		envVal, ok := os.LookupEnv(strings.TrimPrefix(string(envVar), "$"))
-		if ok {
-			envVal = escapeEnv(envVal)
-			contents = bytes.Replace(contents, parameter[0], []byte(envVal), 1)
-		} else {
-			missingEnvVars = append(missingEnvVars, string(envVar))
+			envVal, ok := os.LookupEnv(strings.TrimPrefix(string(envVar), "$"))
+			if ok {
+				envVal = escapeEnv(envVal)
+				contents = bytes.Replace(contents, parameter[0], []byte(envVal), 1)
+			} else {
+				missingEnvVars = append(missingEnvVars, string(envVar))
+			}
 		}
 	}
 
