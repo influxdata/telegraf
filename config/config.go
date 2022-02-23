@@ -1032,7 +1032,7 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	for scanner.Scan() {
 		// Get Bytes and display the byte.
 		b := scanner.Bytes()
-		if strings.HasPrefix(string(b), "#") {
+		if strings.HasPrefix(strings.TrimLeft(string(b), " "), "#") {
 			continue
 		}
 		parameters := envVarRe.FindAllSubmatch(b, -1)
