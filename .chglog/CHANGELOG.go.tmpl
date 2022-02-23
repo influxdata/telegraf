@@ -18,7 +18,9 @@
 {{ range .CommitGroups -}}
 ### {{ .Title }}
 {{ range .Commits -}}
+{{ if not (regexMatch "^update etc/telegraf.conf and etc/telegraf_windows.conf" .Subject)  -}}
 - {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ .Subject }}
+{{ end -}}
 {{ end }}
 {{ end -}}
 

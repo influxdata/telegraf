@@ -1,5 +1,5 @@
 style: github
-template: CHANGELOG.tpl.md
+template: CHANGELOG.go.tmpl
 info:
   title: CHANGELOG
   repository_url: https://github.com/influxdata/telegraf
