@@ -13,16 +13,35 @@
 {{ end -}}
 
 {{ range .Versions }}
+{{/* A list of author names to thank for contribution */}}
+{{ $authorNames := list }}
 <a name="{{ .Tag.Name }}"></a>
 ## {{ if .Tag.Previous }}[{{ .Tag.Name }}]{{ else }}{{ .Tag.Name }}{{ end }} - {{ datetime "2006-01-02" .Tag.Date }}
-{{ range .CommitGroups -}}
-### {{ .Title }}
-{{ range .Commits -}}
-{{ if not (regexMatch "^update etc/telegraf.conf and etc/telegraf_windows.conf" .Subject)  -}}
-- {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ .Subject }}
-{{ end -}}
-{{ end }}
-{{ end -}}
+{{ range .CommitGroups }}
+### {{ println .Title }}
+{{ range $commit := .Commits -}}
+
+{{/* A list of regex to ignore commits, e.g. ignore all bot commits */}}
+{{- $commitIgnoreList := list
+"^update etc/telegraf.conf and etc/telegraf_windows.conf"
+"^update configs" -}}
+{{- $print := true -}}
+{{- range $regex := $commitIgnoreList -}}
+    {{- if regexMatch $regex $commit.Subject -}}
+        {{- $print = false -}}
+    {{- end -}}
+{{- end -}}
+{{- if $print -}}
+{{- $authorNames = append $authorNames $commit.Author.Name -}}
+- {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ println (trim $commit.Subject) }}
+{{- end -}}
+{{- end }}
+{{ println "Thank you for your contributions!" }}
+{{ $authorNames = ($authorNames | uniq) }}
+{{ range $name := $authorNames }}
+{{ cat $name "," }}
+{{- end }}
+{{- end -}}
 
 {{- if .RevertCommits -}}
 ### Reverts
