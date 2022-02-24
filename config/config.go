@@ -1623,6 +1623,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 					c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
 					c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
 					c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
+					c.getFieldString(subtbl, "tag_selection", &subcfg.TagSelection)
+					c.getFieldBool(subtbl, "tag_name_expansion", &subcfg.TagNameExpand)
+					c.getFieldString(subtbl, "tag_name", &subcfg.TagNameQuery)
+					c.getFieldString(subtbl, "tag_value", &subcfg.TagValueQuery)
 					pc.XPathConfig[i] = subcfg
 				}
 			}
