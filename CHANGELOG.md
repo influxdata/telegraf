@@ -5,7 +5,7 @@
 
 
 <a name="1.22.0"></a>
-## [1.22.0] - 2022-02-23
+## [1.22.0] - 2022-02-24
 
 ### Bug Fixes
 
@@ -101,6 +101,7 @@
 - flush wavefront output sender on error to clean up broken connections ([#10225](https://github.com/influxdata/telegraf/issues/10225))
 - grab table columns more accurately ([#10295](https://github.com/influxdata/telegraf/issues/10295))
 - graylog readme to use graylog 3 URLs ([#10481](https://github.com/influxdata/telegraf/issues/10481))
+- improve ignore list and list of author names
 - include influxdb bucket name in error messages ([#10706](https://github.com/influxdata/telegraf/issues/10706))
 - incorrect handling of json_v2 timestamp_path ([#10618](https://github.com/influxdata/telegraf/issues/10618))
 - inputs.snmp to respect number of retries configured ([#10268](https://github.com/influxdata/telegraf/issues/10268))
@@ -144,38 +145,6 @@
 - wavefront_disable_prefix_conversion case missing from missingTomlField func ([#10442](https://github.com/influxdata/telegraf/issues/10442))
 - windows service - graceful shutdown of telegraf ([#9616](https://github.com/influxdata/telegraf/issues/9616))
 
-Thank you for your contributions!
-
-
-
-R290 ,
-Nirmesh ,
-Sven Rebhan ,
-Paweł Żak ,
-Ted M Lin ,
-reimda ,
-Thomas Casteleyn ,
-Sergey Vilgelm ,
-Joshua Powers ,
-Sebastian Spaink ,
-dependabot[bot] ,
-AsafMah ,
-Mya ,
-Nathan J Mehl ,
-Patryk Małek ,
-Mikołaj Przybysz ,
-Mark Rushakoff ,
-Sakerdotes ,
-Alan Pope ,
-Aaron Wood ,
-hulucc ,
-Martin Reindl ,
-Laurent Sesquès ,
-Grimsby ,
-Vladislav ,
-Jason Heard ,
-zachmares ,
-JC ,
 ### Features
 
 - add compression to Datadog Output ([#9963](https://github.com/influxdata/telegraf/issues/9963))
@@ -438,17 +407,6 @@ zachmares ,
 - update go-ldap to v3.4.1 ([#10343](https://github.com/influxdata/telegraf/issues/10343))
 - warning output when running with --test ([#10329](https://github.com/influxdata/telegraf/issues/10329))
 
-Thank you for your contributions!
-
-
-
-Sven Rebhan ,
-Sergey Vilgelm ,
-Mya ,
-Joshua Powers ,
-Sebastian Spaink ,
-Laurent Sesquès ,
-Vladislav ,
 ### Features
 
 - Add SMART plugin concurrency configuration option, nvme-cli v1.14+ support and lint fixes. ([#10150](https://github.com/influxdata/telegraf/issues/10150))
@@ -479,14 +437,6 @@ Kuba Trojan ,
 - mark TestGatherUDPCert as an integration test ([#10279](https://github.com/influxdata/telegraf/issues/10279))
 - typo in openstack neutron input plugin (newtron) ([#10284](https://github.com/influxdata/telegraf/issues/10284))
 
-Thank you for your contributions!
-
-
-
-Sven Rebhan ,
-Sergey Vilgelm ,
-Sebastian Spaink ,
-Laurent Sesquès ,
 ### Features
 
 - Add SMART plugin concurrency configuration option, nvme-cli v1.14+ support and lint fixes. ([#10150](https://github.com/influxdata/telegraf/issues/10150))
@@ -644,51 +594,6 @@ Mya ,
 - use sha256 for RPM digest ([#10272](https://github.com/influxdata/telegraf/issues/10272))
 - windows service - graceful shutdown of telegraf ([#9616](https://github.com/influxdata/telegraf/issues/9616))
 
-Thank you for your contributions!
-
-
-
-Goutham Veeramachaneni ,
-AlphaAr ,
-reimda ,
-Alan Pope ,
-atetevoortwis ,
-Sven Rebhan ,
-Sebastian Spaink ,
-Alexander Krantz ,
-alespour ,
-Paweł Żak ,
-Joshua Powers ,
-Fan Zhang ,
-R290 ,
-John Seekins ,
-Helen Weller ,
-dependabot[bot] ,
-trojanku ,
-Ehsan ,
-Thomas Casteleyn ,
-Jacob Marble ,
-Mya ,
-Patryk Małek ,
-Mikołaj Przybysz ,
-Felix Edelmann ,
-rentiansheng ,
-Sanyam Arya ,
-Guo Qiao (Joe) ,
-Patrick Hemmer ,
-Howard Yoo ,
-alrex ,
-Doron-Bargo ,
-xavpaice ,
-Aaron Wood ,
-Robert Thein ,
-n2N8Z ,
-Aleksandr Venger ,
-alon ,
-David B ,
-Scott Anderson ,
-Pierre Fersing ,
-JC ,
 ### Features
 
 - Add json_timestamp_layout option ([#8229](https://github.com/influxdata/telegraf/issues/8229))
@@ -866,21 +771,6 @@ Scott Anderson ,
 - update golanci-lint to v1.42.1 ([#9932](https://github.com/influxdata/telegraf/issues/9932))
 - update readme to align with other docs ([#10005](https://github.com/influxdata/telegraf/issues/10005))
 
-Thank you for your contributions!
-
-
-
-Alan Pope ,
-Sven Rebhan ,
-Sebastian Spaink ,
-Joshua Powers ,
-dependabot[bot] ,
-Alexander Krantz ,
-Felix Edelmann ,
-Sanyam Arya ,
-xavpaice ,
-Aleksandr Venger ,
-alon ,
 ### Features
 
 - more fields for papertrail event webhook ([#9940](https://github.com/influxdata/telegraf/issues/9940))
@@ -950,19 +840,6 @@ Patrick Hemmer ,
 - update golang-ci package ([#9817](https://github.com/influxdata/telegraf/issues/9817))
 - update toml tag to match sample config / readme ([#9848](https://github.com/influxdata/telegraf/issues/9848))
 
-Thank you for your contributions!
-
-
-
-Alexander Krantz ,
-Sven Rebhan ,
-Joshua Powers ,
-Helen Weller ,
-dependabot[bot] ,
-Jacob Marble ,
-Guo Qiao (Joe) ,
-Howard Yoo ,
-Sebastian Spaink ,
 ### Features
 
 - add custom time/date format field for elasticsearch_query ([#9838](https://github.com/influxdata/telegraf/issues/9838))
@@ -1033,27 +910,6 @@ Sebastian Spaink ,
 - upgraded sensu/go to v2.9.0 ([#9577](https://github.com/influxdata/telegraf/issues/9577))
 - wireguard unknown revision when using direct ([#9620](https://github.com/influxdata/telegraf/issues/9620))
 
-Thank you for your contributions!
-
-
-
-Goutham Veeramachaneni ,
-dependabot[bot] ,
-Alexander Krantz ,
-Sven Rebhan ,
-varunjain0606 ,
-Sebastian Spaink ,
-pierwill ,
-John Seekins ,
-reimda ,
-Marcus Ilgner ,
-Eugene Klimov ,
-Grace Wehner ,
-alrex ,
-Doron-Bargo ,
-Daniel Dyla ,
-JC ,
-Helen Weller ,
 ### Features
 
 - Add rocm_smi input to monitor AMD GPUs ([#9602](https://github.com/influxdata/telegraf/issues/9602))
@@ -1138,10 +994,18 @@ Helen Weller ,
 <a name="v1.19.2"></a>
 ## [v1.19.2] - 2021-07-28
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.19.1"></a>
 ## [v1.19.1] - 2021-07-07
+
+Thank you for your contributions!
+
+
 
 
 
@@ -1153,12 +1017,6 @@ Helen Weller ,
 - Beat readme title ([#8938](https://github.com/influxdata/telegraf/issues/8938))
 - Verify checksum of Go download in mac script ([#9335](https://github.com/influxdata/telegraf/issues/9335))
 
-Thank you for your contributions!
-
-
-
-Russ Savage ,
-pierwill ,
 ### Features
 
 - Add external Big blue button plugin ([#9090](https://github.com/influxdata/telegraf/issues/9090))
@@ -1176,15 +1034,27 @@ LEDUNOIS Simon ,
 <a name="v1.18.3"></a>
 ## [v1.18.3] - 2021-05-21
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.18.2"></a>
 ## [v1.18.2] - 2021-04-30
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.18.1"></a>
 ## [v1.18.1] - 2021-04-07
+
+Thank you for your contributions!
+
+
 
 
 
@@ -1197,13 +1067,6 @@ LEDUNOIS Simon ,
 - reading multiple holding registers in modbus input plugin ([#8628](https://github.com/influxdata/telegraf/issues/8628))
 - remove ambiguity on '\v' from line-protocol parser ([#8720](https://github.com/influxdata/telegraf/issues/8720))
 
-Thank you for your contributions!
-
-
-
-Russ Savage ,
-Antonio Garcia ,
-Adrian Thurston ,
 ### Features
 
 - Adding Plex Webhooks external plugin ([#8898](https://github.com/influxdata/telegraf/issues/8898))
@@ -1224,15 +1087,27 @@ Adrian Thurston ,### Reverts
 <a name="v1.17.3"></a>
 ## [v1.17.3] - 2021-02-17
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.17.2"></a>
 ## [v1.17.2] - 2021-01-28
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.17.1"></a>
 ## [v1.17.1] - 2021-01-27
+
+Thank you for your contributions!
+
+
 
 
 
@@ -1244,11 +1119,6 @@ Adrian Thurston ,### Reverts
 - **exec:** fix typo in exec readme ([#8265](https://github.com/influxdata/telegraf/issues/8265))
 - **ras:** update readme title ([#8266](https://github.com/influxdata/telegraf/issues/8266))
 
-Thank you for your contributions!
-
-
-
-Russ Savage ,
 ### Features
 
 - add build number field to jenkins_job measurement ([#8038](https://github.com/influxdata/telegraf/issues/8038))
@@ -1269,15 +1139,27 @@ alespour ,### Reverts
 <a name="v1.16.3"></a>
 ## [v1.16.3] - 2020-12-01
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.16.2"></a>
 ## [v1.16.2] - 2020-11-13
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.16.1"></a>
 ## [v1.16.1] - 2020-10-28
+
+Thank you for your contributions!
+
+
 
 
 
@@ -1295,12 +1177,6 @@ alespour ,### Reverts
 - **ipmi:** update link in readme ([#7975](https://github.com/influxdata/telegraf/issues/7975))
 - **readmes:** updates to internal and proxmox readmes ([#7982](https://github.com/influxdata/telegraf/issues/7982))
 
-Thank you for your contributions!
-
-
-
-Russ Savage ,
-Roger Peppe ,
 ### Features
 
 - add functionality to get values from redis commands ([#8196](https://github.com/influxdata/telegraf/issues/8196))
@@ -1319,6 +1195,10 @@ Yoofi Quansah ,### Reverts
 
 <a name="v1.15.4"></a>
 ## [v1.15.4] - 2020-10-21
+
+Thank you for your contributions!
+
+
 
 
 
@@ -1344,40 +1224,72 @@ Russ Savage ,### Reverts
 <a name="v1.15.2"></a>
 ## [v1.15.2] - 2020-07-31
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.15.1"></a>
 ## [v1.15.1] - 2020-07-22
+
+Thank you for your contributions!
+
+
 
 
 
 <a name="v1.15.0"></a>
 ## [v1.15.0] - 2020-07-22
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.14.5"></a>
 ## [v1.14.5] - 2020-06-30
+
+Thank you for your contributions!
+
+
 
 
 
 <a name="v1.14.4"></a>
 ## [v1.14.4] - 2020-06-09
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.14.3"></a>
 ## [v1.14.3] - 2020-05-19
+
+Thank you for your contributions!
+
+
 
 
 
 <a name="v1.14.2"></a>
 ## [v1.14.2] - 2020-04-28
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v1.14.1"></a>
 ## [v1.14.1] - 2020-04-14
+
+Thank you for your contributions!
+
+
 
 
 
@@ -1397,12 +1309,6 @@ Russ Savage ,### Reverts
 - **vet:** Range var used by goroutine
 - **mesos:** TOML annotation
 
-Thank you for your contributions!
-
-
-
-Jonathan Chauncey ,
-Sergio Jimenez ,
 ### Features
 
 - **nsq_consumer:** Add input plugin
@@ -1456,6 +1362,10 @@ Sergio Jimenez ,### Reverts
 
 <a name="v0.10.1"></a>
 ## [v0.10.1] - 2016-01-27
+
+Thank you for your contributions!
+
+
 ### Pull Requests
 - Merge pull request [#533](https://github.com/influxdata/telegraf/issues/533) from influxdata/fix-interval-option-v0.10
 
@@ -1464,6 +1374,10 @@ Sergio Jimenez ,### Reverts
 
 <a name="v0.10.0"></a>
 ## [v0.10.0] - 2016-01-11
+
+Thank you for your contributions!
+
+
 ### Pull Requests
 - Merge pull request [#497](https://github.com/influxdata/telegraf/issues/497) from influxdata/rm-package-updates
 
@@ -1473,20 +1387,36 @@ Sergio Jimenez ,### Reverts
 <a name="v0.2.4"></a>
 ## [v0.2.4] - 2015-12-08
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v0.2.3"></a>
 ## [v0.2.3] - 2015-11-30
+
+Thank you for your contributions!
+
+
 
 
 
 <a name="v0.2.2"></a>
 ## [v0.2.2] - 2015-11-18
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v0.2.1"></a>
 ## [v0.2.1] - 2015-11-16
+
+Thank you for your contributions!
+
+
 ### Reverts
 - redis: support IPv6 addresses with no port
 
@@ -1495,6 +1425,10 @@ Sergio Jimenez ,### Reverts
 
 <a name="v0.2.0"></a>
 ## [v0.2.0] - 2015-10-27
+
+Thank you for your contributions!
+
+
 ### Pull Requests
 - Merge pull request [#252](https://github.com/influxdata/telegraf/issues/252) from aristanetworks/master
 
@@ -1503,6 +1437,10 @@ Sergio Jimenez ,### Reverts
 
 <a name="v0.1.9"></a>
 ## [v0.1.9] - 2015-09-22
+
+Thank you for your contributions!
+
+
 ### Pull Requests
 - Merge pull request [#198](https://github.com/influxdata/telegraf/issues/198) from mced/fix_mem_used_perc
 
@@ -1512,15 +1450,27 @@ Sergio Jimenez ,### Reverts
 <a name="v0.1.8"></a>
 ## [v0.1.8] - 2015-09-04
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v0.1.7"></a>
 ## [v0.1.7] - 2015-08-28
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v0.1.6"></a>
 ## [v0.1.6] - 2015-08-24
+
+Thank you for your contributions!
+
+
 ### Pull Requests
 - Merge pull request [#118](https://github.com/influxdata/telegraf/issues/118) from srfraser/diskusage_windows_fix
 
@@ -1529,6 +1479,10 @@ Sergio Jimenez ,### Reverts
 
 <a name="v0.1.4"></a>
 ## [v0.1.4] - 2015-08-18
+
+Thank you for your contributions!
+
+
 ### Reverts
 - PR [#59](https://github.com/influxdata/telegraf/issues/59), implementation of multiple outputs
 - Add log rotation to /etc/logrotate.d for deb and rpm packages
@@ -1561,6 +1515,10 @@ Sergio Jimenez ,### Reverts
 
 <a name="v0.1.3"></a>
 ## [v0.1.3] - 2015-07-05
+
+Thank you for your contributions!
+
+
 ### Pull Requests
 - Merge pull request [#45](https://github.com/influxdata/telegraf/issues/45) from jhofeditz/patch-1
 - Merge pull request [#28](https://github.com/influxdata/telegraf/issues/28) from brian-brazil/prometheus-plugin-only
@@ -1575,6 +1533,10 @@ Sergio Jimenez ,### Reverts
 
 <a name="v0.1.2"></a>
 ## [v0.1.2] - 2015-06-23
+
+Thank you for your contributions!
+
+
 ### Pull Requests
 - Merge pull request [#21](https://github.com/influxdata/telegraf/issues/21) from fromYukki/memcached
 - Merge pull request [#16](https://github.com/influxdata/telegraf/issues/16) from jipperinbham/redis_auth
@@ -1590,10 +1552,18 @@ Sergio Jimenez ,### Reverts
 <a name="v0.1.1"></a>
 ## [v0.1.1] - 2015-06-18
 
+Thank you for your contributions!
+
+
+
 
 
 <a name="v0.1.0"></a>
 ## v0.1.0 - 2015-06-17
+
+Thank you for your contributions!
+
+
 ### Pull Requests
 - Merge pull request [#9](https://github.com/influxdata/telegraf/issues/9) from influxdb/sample-config
 - Merge pull request [#11](https://github.com/influxdata/telegraf/issues/11) from influxdb/fix-measurement

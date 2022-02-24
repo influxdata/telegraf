@@ -36,11 +36,11 @@
 - {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ println (trim $commit.Subject) }}
 {{- end -}}
 {{- end }}
+{{- end }}
 {{ println "Thank you for your contributions!" }}
 {{ $authorNames = ($authorNames | uniq) }}
 {{ range $name := $authorNames }}
 {{ cat $name "," }}
-{{- end }}
 {{- end -}}
 
 {{- if .RevertCommits -}}
