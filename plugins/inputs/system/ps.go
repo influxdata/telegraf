@@ -64,6 +64,31 @@ func (s *SystemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	return cpuTimes, nil
 }
 
+type set struct {
+	m map[string]struct{}
+}
+
+func (s *set) empty() bool {
+	return len(s.m) == 0
+}
+
+func (s *set) add(key string) {
+	s.m[key] = struct{}{}
+}
+
+func (s *set) has(key string) bool {
+	var ok bool
+	_, ok = s.m[key]
+	return ok
+}
+
+func newSet() *set {
+	s := &set{
+		m: make(map[string]struct{}),
+	}
+	return s
+}
+
 func (s *SystemPS) DiskUsage(
 	mountPointFilter []string,
 	fstypeExclude []string,
@@ -73,24 +98,23 @@ func (s *SystemPS) DiskUsage(
 		return nil, nil, err
 	}
 
-	// Make a "set" out of the filter slice
-	mountPointFilterSet := make(map[string]bool)
+	mountPointFilterSet := newSet()
 	for _, filter := range mountPointFilter {
-		mountPointFilterSet[filter] = true
+		mountPointFilterSet.add(filter)
 	}
-	fstypeExcludeSet := make(map[string]bool)
+	fstypeExcludeSet := newSet()
 	for _, filter := range fstypeExclude {
-		fstypeExcludeSet[filter] = true
+		fstypeExcludeSet.add(filter)
 	}
-	paths := make(map[string]bool)
+	paths := newSet()
 	for _, part := range parts {
-		paths[part.Mountpoint] = true
+		paths.add(part.Mountpoint)
 	}
 
 	// Autofs mounts indicate a potential mount, the partition will also be
 	// listed with the actual filesystem when mounted.  Ignore the autofs
 	// partition to avoid triggering a mount.
-	fstypeExcludeSet["autofs"] = true
+	fstypeExcludeSet.add("autofs")
 
 	var usage []*disk.UsageStat
 	var partitions []*disk.PartitionStat
@@ -99,27 +123,15 @@ func (s *SystemPS) DiskUsage(
 	for i := range parts {
 		p := parts[i]
 
-		if s.Log != nil {
-			s.Log.Debugf("[SystemPS] partition %d: %v", i, p)
-		}
-
-		if len(mountPointFilter) > 0 {
-			// If the mount point is not a member of the filter set,
-			// don't gather info on it.
-			if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
-				if s.Log != nil {
-					s.Log.Debug("[SystemPS] => dropped by mount-point filter")
-				}
-				continue
-			}
+		// If there is a filter set and if the mount point is not a
+		// member of the filter set, don't gather info on it.
+		if !mountPointFilterSet.empty() && !mountPointFilterSet.has(p.Mountpoint) {
+			continue
 		}
 
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
-		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
-			if s.Log != nil {
-				s.Log.Debug("[SystemPS] => dropped by filesystem-type filter")
-			}
+		if fstypeExcludeSet.has(p.Fstype) {
 			continue
 		}
 
@@ -131,27 +143,20 @@ func (s *SystemPS) DiskUsage(
 		if hostMountPrefix != "" && !strings.HasPrefix(p.Mountpoint, hostMountPrefix) {
 			mountpoint = filepath.Join(hostMountPrefix, p.Mountpoint)
 			// Exclude conflicting paths
-			if paths[mountpoint] {
+			if paths.has(mountpoint) {
 				if s.Log != nil {
-					s.Log.Debug("[SystemPS] => dropped by mount prefix")
+					s.Log.Debugf("[SystemPS] => dropped by mount prefix (%q): %q", mountpoint, hostMountPrefix)
 				}
 				continue
 			}
-		}
-		if s.Log != nil {
-			s.Log.Debugf("[SystemPS] -> using mountpoint %q...", mountpoint)
 		}
 
 		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
 			if s.Log != nil {
-				s.Log.Debugf("[SystemPS] => dropped by disk usage (%q): %v", mountpoint, err)
+				s.Log.Errorf("[SystemPS] => error getting disk usage (%q): %v", mountpoint, err)
 			}
 			continue
-		}
-
-		if s.Log != nil {
-			s.Log.Debug("[SystemPS] => kept...")
 		}
 
 		du.Path = filepath.Join("/", strings.TrimPrefix(p.Mountpoint, hostMountPrefix))
