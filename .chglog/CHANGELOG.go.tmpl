@@ -17,6 +17,7 @@
 {{ $authorNames := list }}
 <a name="{{ .Tag.Name }}"></a>
 ## {{ if .Tag.Previous }}[{{ .Tag.Name }}]{{ else }}{{ .Tag.Name }}{{ end }} - {{ datetime "2006-01-02" .Tag.Date }}
+{{ if .CommitGroups -}}
 {{ range .CommitGroups }}
 ### {{ println .Title }}
 {{ range $commit := .Commits -}}
@@ -37,6 +38,11 @@
 {{- end -}}
 {{- end }}
 {{- end }}
+{{ else }}
+{{ range .Commits -}}
+- {{ .Header }}
+{{ end }}
+{{ end }}
 {{ println "Thank you for your contributions!" }}
 {{ $authorNames = ($authorNames | uniq) }}
 {{ range $name := $authorNames }}
