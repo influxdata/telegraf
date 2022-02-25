@@ -305,6 +305,7 @@ func TestPostgresIntegration(t *testing.T) {
 	p.DataSourceName = address
 	p.Convert.Real = "double precision"
 	p.Convert.Unsigned = "bigint"
+	p.Convert.ConversionStyle = "literal"
 
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(
@@ -406,6 +407,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	p.Convert.Defaultvalue = "String"
 	p.Convert.Unsigned = "UInt64"
 	p.Convert.Bool = "UInt8"
+	p.Convert.ConversionStyle = "literal"
 
 	require.NoError(t, p.Connect())
 

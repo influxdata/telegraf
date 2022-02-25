@@ -320,7 +320,7 @@ func newSQL() *SQL {
 			Text:            "TEXT",
 			Timestamp:       "TIMESTAMP",
 			Defaultvalue:    "TEXT",
-			Unsigned:        "INT UNSIGNED",
+			Unsigned:        "UNSIGNED",
 			Bool:            "BOOL",
 			ConversionStyle: "unsigned_suffix",
 		},
