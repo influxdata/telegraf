@@ -23,9 +23,9 @@ type Agent struct {
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(config *config.Config) (*Agent, error) {
+func NewAgent(cfg *config.Config) (*Agent, error) {
 	a := &Agent{
-		Config: config,
+		Config: cfg,
 	}
 	return a, nil
 }
@@ -298,11 +298,17 @@ func (a *Agent) runInputs(
 			jitter = input.Config.CollectionJitter
 		}
 
+		// Overwrite agent collection_offset if this plugin has its own.
+		offset := time.Duration(a.Config.Agent.CollectionOffset)
+		if input.Config.CollectionOffset != 0 {
+			offset = input.Config.CollectionOffset
+		}
+
 		var ticker Ticker
 		if a.Config.Agent.RoundInterval {
-			ticker = NewAlignedTicker(startTime, interval, jitter)
+			ticker = NewAlignedTicker(startTime, interval, jitter, offset)
 		} else {
-			ticker = NewUnalignedTicker(interval, jitter)
+			ticker = NewUnalignedTicker(interval, jitter, offset)
 		}
 		defer ticker.Stop()
 

@@ -827,3 +827,222 @@ corrupted_line
 	require.Equal(t, expectedFields0, metrics[0].Fields())
 	require.Equal(t, expectedFields1, metrics[1].Fields())
 }
+
+func TestParseMetadataSeparators(t *testing.T) {
+	p := &Parser{
+		ColumnNames:        []string{"a", "b"},
+		MetadataRows:       0,
+		MetadataSeparators: []string{},
+	}
+	err := p.Init()
+	require.NoError(t, err)
+	p = &Parser{
+		ColumnNames:        []string{"a", "b"},
+		MetadataRows:       1,
+		MetadataSeparators: []string{},
+	}
+	err = p.Init()
+	require.Error(t, err)
+	require.Equal(t, err.Error(), "initializing separators failed: "+
+		"csv_metadata_separator required when specifying csv_metadata_rows")
+	p = &Parser{
+		ColumnNames:        []string{"a", "b"},
+		MetadataRows:       1,
+		MetadataSeparators: []string{",", "=", ",", ":", "=", ":="},
+	}
+	err = p.Init()
+	require.NoError(t, err)
+	require.Len(t, p.metadataSeparatorList, 4)
+	require.Len(t, p.MetadataTrimSet, 0)
+	require.Equal(t, p.metadataSeparatorList, metadataPattern{":=", ",", "=", ":"})
+	p = &Parser{
+		ColumnNames:        []string{"a", "b"},
+		MetadataRows:       1,
+		MetadataSeparators: []string{",", ":", "=", ":="},
+		MetadataTrimSet:    " #'",
+	}
+	err = p.Init()
+	require.NoError(t, err)
+	require.Len(t, p.metadataSeparatorList, 4)
+	require.Len(t, p.MetadataTrimSet, 3)
+	require.Equal(t, p.metadataSeparatorList, metadataPattern{":=", ",", ":", "="})
+}
+
+func TestParseMetadataRow(t *testing.T) {
+	p := &Parser{
+		ColumnNames:        []string{"a", "b"},
+		MetadataRows:       5,
+		MetadataSeparators: []string{":=", ",", ":", "="},
+	}
+	err := p.Init()
+	require.NoError(t, err)
+	require.Empty(t, p.metadataTags)
+	m := p.parseMetadataRow("# this is a not matching string")
+	require.Nil(t, m)
+	m = p.parseMetadataRow("# key1 : value1 \r\n")
+	require.Equal(t, m, map[string]string{"# key1 ": " value1 "})
+	m = p.parseMetadataRow("key2=1234\n")
+	require.Equal(t, m, map[string]string{"key2": "1234"})
+	m = p.parseMetadataRow(" file created : 2021-10-08T12:34:18+10:00 \r\n")
+	require.Equal(t, m, map[string]string{" file created ": " 2021-10-08T12:34:18+10:00 "})
+	m = p.parseMetadataRow("file created: 2021-10-08T12:34:18\t\r\r\n")
+	require.Equal(t, m, map[string]string{"file created": " 2021-10-08T12:34:18\t"})
+	p = &Parser{
+		ColumnNames:        []string{"a", "b"},
+		MetadataRows:       5,
+		MetadataSeparators: []string{":=", ",", ":", "="},
+		MetadataTrimSet:    " #'",
+	}
+	err = p.Init()
+	require.NoError(t, err)
+	require.Empty(t, p.metadataTags)
+	m = p.parseMetadataRow("# this is a not matching string")
+	require.Nil(t, m)
+	m = p.parseMetadataRow("# key1 : value1 \r\n")
+	require.Equal(t, m, map[string]string{"key1": "value1"})
+	m = p.parseMetadataRow("key2=1234\n")
+	require.Equal(t, m, map[string]string{"key2": "1234"})
+	m = p.parseMetadataRow(" file created : 2021-10-08T12:34:18+10:00 \r\n")
+	require.Equal(t, m, map[string]string{"file created": "2021-10-08T12:34:18+10:00"})
+	m = p.parseMetadataRow("file created: '2021-10-08T12:34:18'\r\n")
+	require.Equal(t, m, map[string]string{"file created": "2021-10-08T12:34:18"})
+}
+
+func TestParseCSVFileWithMetadata(t *testing.T) {
+	p := &Parser{
+		HeaderRowCount:     1,
+		SkipRows:           2,
+		MetadataRows:       4,
+		Comment:            "#",
+		TagColumns:         []string{"type"},
+		MetadataSeparators: []string{":", "="},
+		MetadataTrimSet:    " #",
+	}
+	err := p.Init()
+	require.NoError(t, err)
+	testCSV := `garbage nonsense that needs be skipped
+
+# version= 1.0
+
+    invalid meta data that can be ignored.
+file created: 2021-10-08T12:34:18+10:00
+timestamp,type,name,status
+2020-11-23T08:19:27+10:00,Reader,R002,1
+#2020-11-04T13:23:04+10:00,Reader,R031,0
+2020-11-04T13:29:47+10:00,Coordinator,C001,0`
+	expectedFields := []map[string]interface{}{
+		{
+			"name":      "R002",
+			"status":    int64(1),
+			"timestamp": "2020-11-23T08:19:27+10:00",
+		},
+		{
+			"name":      "C001",
+			"status":    int64(0),
+			"timestamp": "2020-11-04T13:29:47+10:00",
+		},
+	}
+	expectedTags := []map[string]string{
+		{
+			"file created": "2021-10-08T12:34:18+10:00",
+			"test":         "tag",
+			"type":         "Reader",
+			"version":      "1.0",
+		},
+		{
+			"file created": "2021-10-08T12:34:18+10:00",
+			"test":         "tag",
+			"type":         "Coordinator",
+			"version":      "1.0",
+		},
+	}
+	// Set default Tags
+	p.SetDefaultTags(map[string]string{"test": "tag"})
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	for i, m := range metrics {
+		require.Equal(t, expectedFields[i], m.Fields())
+		require.Equal(t, expectedTags[i], m.Tags())
+	}
+
+	p = &Parser{
+		HeaderRowCount:     1,
+		SkipRows:           2,
+		MetadataRows:       4,
+		Comment:            "#",
+		TagColumns:         []string{"type", "version"},
+		MetadataSeparators: []string{":", "="},
+		MetadataTrimSet:    " #",
+	}
+	err = p.Init()
+	require.NoError(t, err)
+	testCSVRows := []string{
+		"garbage nonsense that needs be skipped",
+		"",
+		"# version= 1.0\r\n",
+		"",
+		"    invalid meta data that can be ignored.\r\n",
+		"file created: 2021-10-08T12:34:18+10:00",
+		"timestamp,type,name,status\n",
+		"2020-11-23T08:19:27+10:00,Reader,R002,1\r\n",
+		"#2020-11-04T13:23:04+10:00,Reader,R031,0\n",
+		"2020-11-04T13:29:47+10:00,Coordinator,C001,0",
+	}
+
+	// Set default Tags
+	p.SetDefaultTags(map[string]string{"test": "tag"})
+	rowIndex := 0
+	for ; rowIndex < 6; rowIndex++ {
+		m, err := p.ParseLine(testCSVRows[rowIndex])
+		require.Error(t, io.EOF, err)
+		require.Error(t, err)
+		require.Nil(t, m)
+	}
+	m, err := p.ParseLine(testCSVRows[rowIndex])
+	require.Nil(t, err)
+	require.Nil(t, m)
+	rowIndex++
+	m, err = p.ParseLine(testCSVRows[rowIndex])
+	require.NoError(t, err)
+	require.Equal(t, expectedFields[0], m.Fields())
+	require.Equal(t, expectedTags[0], m.Tags())
+	rowIndex++
+	m, err = p.ParseLine(testCSVRows[rowIndex])
+	require.NoError(t, err)
+	require.Nil(t, m)
+	rowIndex++
+	m, err = p.ParseLine(testCSVRows[rowIndex])
+	require.NoError(t, err)
+	require.Equal(t, expectedFields[1], m.Fields())
+	require.Equal(t, expectedTags[1], m.Tags())
+}
+
+func TestOverwriteDefaultTagsAndMetaDataTags(t *testing.T) {
+	// This tests makes sure that the default tags and metadata tags don't overwrite record data
+	// This test also covers the scenario where the metadata overwrites the default tag
+	p := &Parser{
+		ColumnNames:        []string{"first", "second", "third"},
+		TagColumns:         []string{"second", "third"},
+		TimeFunc:           DefaultTime,
+		MetadataRows:       2,
+		MetadataSeparators: []string{"="},
+	}
+	err := p.Init()
+	require.NoError(t, err)
+	p.SetDefaultTags(map[string]string{"third": "bye", "fourth": "car"})
+	m, err := p.ParseLine("second=orange")
+	require.Error(t, io.EOF, err)
+	require.Error(t, err)
+	require.Nil(t, m)
+	m, err = p.ParseLine("fourth=plain")
+	require.NoError(t, err)
+	require.Nil(t, m)
+	expectedFields := []map[string]interface{}{{"first": 1.4}}
+	expectedTags := []map[string]string{{"second": "orange", "third": "bye", "fourth": "car"}}
+
+	m, err = p.ParseLine("1.4,apple,hi")
+	require.NoError(t, err)
+
+	require.Equal(t, expectedFields[0], m.Fields())
+	require.Equal(t, expectedTags[0], m.Tags())
+}
