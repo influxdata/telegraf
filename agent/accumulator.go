@@ -9,7 +9,7 @@ import (
 
 type MetricMaker interface {
 	LogName() string
-	MakeMetric(metric telegraf.Metric) telegraf.Metric
+	MakeMetric(m telegraf.Metric) telegraf.Metric
 	Log() telegraf.Logger
 }
 

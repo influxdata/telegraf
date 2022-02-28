@@ -36,6 +36,12 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SOCKS5 proxy to use
+  # socks5_enabled = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
+
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
@@ -63,6 +69,7 @@ type WebSocket struct {
 	UseTextFrames  bool              `toml:"use_text_frames"`
 	Log            telegraf.Logger   `toml:"-"`
 	proxy.HTTPProxy
+	proxy.Socks5ProxyConfig
 	tls.ClientConfig
 
 	conn       *ws.Conn
@@ -110,6 +117,14 @@ func (w *WebSocket) Connect() error {
 		Proxy:            dialProxy,
 		HandshakeTimeout: time.Duration(w.ConnectTimeout),
 		TLSClientConfig:  tlsCfg,
+	}
+
+	if w.Socks5ProxyEnabled {
+		netDialer, err := w.Socks5ProxyConfig.GetDialer()
+		if err != nil {
+			return fmt.Errorf("error connecting to socks5 proxy: %v", err)
+		}
+		dialer.NetDial = netDialer.Dial
 	}
 
 	headers := http.Header{}

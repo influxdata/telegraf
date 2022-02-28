@@ -128,7 +128,7 @@ var sampleConfig = `
   username = "admin"
   password = "password"
 
-  ## Available services are: 
+  ## Available services are:
   ## "agents", "aggregates", "flavors", "hypervisors", "networks", "nova_services",
   ## "ports", "projects", "servers", "services", "stacks", "storage_pools", "subnets", "volumes"
   # enabled_services = ["services", "projects", "hypervisors", "flavors", "networks", "volumes"]
@@ -152,7 +152,7 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Options for tags received from Openstack 
+  ## Options for tags received from Openstack
   # tag_prefix = "openstack_tag_"
   # tag_value = "true"
 
@@ -161,7 +161,7 @@ var sampleConfig = `
   # human_readable_timestamps = false
 
   ## Measure Openstack call duration
-  # measure_openstack_requests = false 
+  # measure_openstack_requests = false
 `
 
 // SampleConfig return a sample configuration file for auto-generation and
@@ -612,7 +612,7 @@ func (o *OpenStack) gatherProjects(acc telegraf.Accumulator) error {
 
 // gatherHypervisors collects and accumulates hypervisors data from the OpenStack API.
 func (o *OpenStack) gatherHypervisors(acc telegraf.Accumulator) error {
-	page, err := hypervisors.List(o.compute).AllPages()
+	page, err := hypervisors.List(o.compute, hypervisors.ListOpts{}).AllPages()
 	if err != nil {
 		return fmt.Errorf("unable to list hypervisors %v", err)
 	}

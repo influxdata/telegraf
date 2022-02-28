@@ -12,6 +12,14 @@ This plugin gathers statistics data from a Memcached server.
   servers = ["localhost:11211"]
   # An array of unix memcached sockets to gather stats about.
   # unix_sockets = ["/var/run/memcached.sock"]
+
+  ## Optional TLS Config
+  # enable_tls = true
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## If false, skip chain & host verification
+  # insecure_skip_verify = true
 ```
 
 ## Measurements & Fields
