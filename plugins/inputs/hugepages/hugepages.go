@@ -2,6 +2,7 @@ package system
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
@@ -19,6 +20,10 @@ const (
 	defaultNumaNodePath = "/sys/devices/system/node"
 	// default path to the meminfo file which is produced by kernel
 	defaultMeminfoPath = "/proc/meminfo"
+
+	globalHugepages  = "global"
+	perNodeHugepages = "per_node"
+	meminfoHugepages = "meminfo"
 )
 
 var (
@@ -61,12 +66,20 @@ var hugepagesSampleConfig = `
   # numa_node_path = "/sys/devices/system/node"
   ## Path to meminfo file
   # meminfo_path = "/proc/meminfo"
+  ## Hugepages types to gather
+  ## Supported options: "global", "per_node", "meminfo"
+  # hugepages_types = ["global", "meminfo"]
 `
 
 type Hugepages struct {
-	GlobalHugepagePath string `toml:"global_hugepage_path"`
-	NUMANodePath       string `toml:"numa_node_path"`
-	MeminfoPath        string `toml:"meminfo_path"`
+	GlobalHugepagePath string   `toml:"global_hugepage_path"`
+	NUMANodePath       string   `toml:"numa_node_path"`
+	MeminfoPath        string   `toml:"meminfo_path"`
+	HugepagesTypes     []string `toml:"hugepages_types"`
+
+	gatherGlobal  bool
+	gatherPerNode bool
+	gatherMeminfo bool
 }
 
 func (h *Hugepages) Description() string {
@@ -78,6 +91,11 @@ func (h *Hugepages) SampleConfig() string {
 }
 
 func (h *Hugepages) Init() error {
+	err := h.parseHugepagesConfig()
+	if err != nil {
+		return err
+	}
+
 	if h.GlobalHugepagePath == "" {
 		h.GlobalHugepagePath = defaultGlobalHugepagePath
 	}
@@ -92,23 +110,36 @@ func (h *Hugepages) Init() error {
 }
 
 func (h *Hugepages) Gather(acc telegraf.Accumulator) error {
-	err := h.gatherGlobalStats(acc)
-	if err != nil {
-		return err
+	var err error
+
+	if h.gatherGlobal {
+		err = h.gatherGlobalStats(acc)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = h.gatherStatsPerNode(acc)
-	if err != nil {
-		return err
+	if h.gatherPerNode {
+		err = h.gatherStatsPerNode(acc)
+		if err != nil {
+			return err
+		}
 	}
 
-	return h.gatherStatsFromMeminfo(acc)
+	if h.gatherMeminfo {
+		err = h.gatherStatsFromMeminfo(acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // gatherStatsPerNode collects global hugepages statistics
 func (h *Hugepages) gatherGlobalStats(acc telegraf.Accumulator) error {
 	globalTags := map[string]string{
-		"name": "global",
+		"name": globalHugepages,
 	}
 	return h.gatherFromHugepagePath(h.GlobalHugepagePath, hugepagesMetricsGlobal, globalTags, acc)
 }
@@ -127,7 +158,7 @@ func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
 		}
 
 		perNodeTags := map[string]string{
-			"name": "per_node",
+			"name": perNodeHugepages,
 			"node": nodeDir.Name(),
 		}
 		hugepagesPath := filepath.Join(h.NUMANodePath, nodeDir.Name(), "hugepages")
@@ -219,9 +250,38 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 	}
 
 	tags := map[string]string{
-		"name": "meminfo",
+		"name": meminfoHugepages,
 	}
 	acc.AddFields("hugepages", metrics, tags)
+	return nil
+}
+
+func (h *Hugepages) parseHugepagesConfig() error {
+	// default
+	if h.HugepagesTypes == nil {
+		h.gatherGlobal = true
+		h.gatherMeminfo = true
+		return nil
+	}
+
+	// empty array
+	if len(h.HugepagesTypes) == 0 {
+		return fmt.Errorf("plugin was configured with nothing to read")
+	}
+
+	for _, hugepagesType := range h.HugepagesTypes {
+		switch hugepagesType {
+		case globalHugepages:
+			h.gatherGlobal = true
+		case perNodeHugepages:
+			h.gatherPerNode = true
+		case meminfoHugepages:
+			h.gatherMeminfo = true
+		default:
+			return fmt.Errorf("provided hugepages type `%s` is not valid", hugepagesType)
+		}
+	}
+
 	return nil
 }
 
