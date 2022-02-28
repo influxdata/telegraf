@@ -31,8 +31,8 @@
 {{ "Thank you for your contributions!" }}
 
 {{ $authorNames = ($authorNames | uniq) -}}
-{{ range $name := $authorNames -}}
-{{ cat $name ", " -}}
+{{ range $i, $name := $authorNames -}}
+{{if $i}},{{end}}{{$name}}
 {{- end -}}
 
 {{- if .NoteGroups -}}

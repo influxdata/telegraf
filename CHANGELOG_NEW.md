@@ -2,7 +2,7 @@
 
 # Changelog
 
-## v1.22.0 [2022-02-24]
+## v1.22.0 [2022-02-28]
 
 ### Bug Fixes
 
@@ -166,6 +166,7 @@
 - **mongodb:** Add FsTotalSize and FsUsedSize informations ([#10625](https://github.com/influxdata/telegraf/issues/10625))
 - Add Redis Sentinel input plugin ([#10042](https://github.com/influxdata/telegraf/issues/10042))
 - Add Vault input plugin ([#10198](https://github.com/influxdata/telegraf/issues/10198))
+- Add `make changelog`
 - Add bearer token support to elasticsearch output ([#10399](https://github.com/influxdata/telegraf/issues/10399))
 - Add builds for riscv64 ([#10262](https://github.com/influxdata/telegraf/issues/10262))
 - Add commits that don't have feat,fix
@@ -201,7 +202,7 @@
 
 Thank you for your contributions!
 
-R290 , Nirmesh , Sven Rebhan , Paweł Żak , Ted M Lin , reimda , Thomas Casteleyn , Sergey Vilgelm , Joshua Powers , Sebastian Spaink , dependabot[bot] , AsafMah , Mya , Nathan J Mehl , Patryk Małek , Mikołaj Przybysz , Mark Rushakoff , Sakerdotes , Alan Pope , Aaron Wood , hulucc , Martin Reindl , Laurent Sesquès , Grimsby , Vladislav , Jason Heard , zachmares , JC , Jeremy Yang , Anatoly Laskaris , Kuba Trojan , John Seekins , Jim Eagle , Christian , crflanigan , Arati Kulkarni , Vlasta Hajek , cthiel42 , Bastien Dronneau , Petar Obradović , Francesco Bartolini , Todd Persen , bewing , Jarno Huuskonen , Irina Vasileva , Alexander Krantz , Alberto Fernandez , Alexander Olekhnovich , Josef Johansson , Sebastian Thörn , Nico Vinzens , Eugene Komarov , sspaink , LINKIWI , Pavlo Sumkin , Robert Hajek , Michael Hoffmann , Arthur Gautier , Conor Evans , 
+R290,Nirmesh,Sven Rebhan,Paweł Żak,Ted M Lin,reimda,Thomas Casteleyn,Sergey Vilgelm,Joshua Powers,Sebastian Spaink,dependabot[bot],AsafMah,Mya,Nathan J Mehl,Patryk Małek,Mikołaj Przybysz,Mark Rushakoff,Sakerdotes,Alan Pope,Aaron Wood,hulucc,Martin Reindl,Laurent Sesquès,Grimsby,Vladislav,Jason Heard,zachmares,JC,Jeremy Yang,Anatoly Laskaris,Kuba Trojan,John Seekins,Jim Eagle,Christian,crflanigan,Arati Kulkarni,Vlasta Hajek,cthiel42,Bastien Dronneau,Petar Obradović,Francesco Bartolini,Todd Persen,bewing,Jarno Huuskonen,Irina Vasileva,Alexander Krantz,Alberto Fernandez,Alexander Olekhnovich,Josef Johansson,Sebastian Thörn,Nico Vinzens,Eugene Komarov,sspaink,LINKIWI,Pavlo Sumkin,Robert Hajek,Michael Hoffmann,Arthur Gautier,Conor Evans
 
 ## v1.21.4 [2022-02-16]
 
