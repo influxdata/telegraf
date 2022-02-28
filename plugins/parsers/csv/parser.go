@@ -351,9 +351,16 @@ outer:
 		}
 	}
 
-	// add metadata fields
+	// add metadata fields and tags
+outerMetadata:
 	for k, v := range p.metadataTags {
-		tags[k] = v
+		for _, tagName := range p.TagColumns {
+			if k == tagName {
+				tags[k] = v
+				continue outerMetadata
+			}
+		}
+		recordFields[k] = v
 	}
 
 	// add default tags
