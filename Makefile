@@ -181,6 +181,15 @@ lint-branch:
 
 	golangci-lint run --new-from-rev master
 
+.PHONY: changelog
+changelog:
+	@which git-chglog >/dev/null 2>&1 || { \
+		echo "git-chglog not found, please run: go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest"; \
+		exit 1; \
+	}
+
+	go run scripts/generate_changelog/main.go
+
 .PHONY: tidy
 tidy:
 	go mod verify

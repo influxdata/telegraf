@@ -1,25 +1,10 @@
-{{ if .Versions -}}
-<a name="unreleased"></a>
-## [Unreleased]
-
-{{ if .Unreleased.CommitGroups -}}
-{{ range .Unreleased.CommitGroups -}}
-### {{ .Title }}
-{{ range .Commits -}}
-- {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ .Subject }}
-{{ end }}
-{{ end -}}
-{{ end -}}
-{{ end -}}
-
 {{ range .Versions }}
-{{/* A list of author names to thank for contribution */}}
-{{ $authorNames := list }}
-<a name="{{ .Tag.Name }}"></a>
-## {{ if .Tag.Previous }}[{{ .Tag.Name }}]{{ else }}{{ .Tag.Name }}{{ end }} - {{ datetime "2006-01-02" .Tag.Date }}
-{{ if .CommitGroups -}}
+## {{ .Tag.Name }} [{{ datetime "2006-01-02" .Tag.Date }}]
+{{ $authorNames := list -}}
+{{- if .CommitGroups -}}
 {{ range .CommitGroups }}
-### {{ println .Title }}
+### {{ .Title }}
+
 {{ range $commit := .Commits -}}
 
 {{/* A list of regex to ignore commits, e.g. ignore all bot commits */}}
@@ -34,7 +19,7 @@
 {{- end -}}
 {{- if $print -}}
 {{- $authorNames = append $authorNames $commit.Author.Name -}}
-- {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ println (trim $commit.Subject) }}
+- {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ println (upperFirst (trim $commit.Subject)) }}
 {{- end -}}
 {{- end }}
 {{- end }}
@@ -42,26 +27,13 @@
 {{ range .Commits -}}
 - {{ .Header }}
 {{ end }}
-{{ end }}
-{{ println "Thank you for your contributions!" }}
-{{ $authorNames = ($authorNames | uniq) }}
-{{ range $name := $authorNames }}
-{{ cat $name "," }}
+{{ end -}}
+{{ "Thank you for your contributions!" }}
+
+{{ $authorNames = ($authorNames | uniq) -}}
+{{ range $name := $authorNames -}}
+{{ cat $name ", " -}}
 {{- end -}}
-
-{{- if .RevertCommits -}}
-### Reverts
-{{ range .RevertCommits -}}
-- {{ .Revert.Header }}
-{{ end }}
-{{ end -}}
-
-{{- if .MergeCommits -}}
-### Pull Requests
-{{ range .MergeCommits -}}
-- {{ .Header }}
-{{ end }}
-{{ end -}}
 
 {{- if .NoteGroups -}}
 {{ range .NoteGroups -}}
@@ -71,13 +43,4 @@
 {{ end }}
 {{ end -}}
 {{ end -}}
-{{ end -}}
-
-{{- if .Versions }}
-[Unreleased]: {{ .Info.RepositoryURL }}/compare/{{ $latest := index .Versions 0 }}{{ $latest.Tag.Name }}...HEAD
-{{ range .Versions -}}
-{{ if .Tag.Previous -}}
-[{{ .Tag.Name }}]: {{ $.Info.RepositoryURL }}/compare/{{ .Tag.Previous.Name }}...{{ .Tag.Name }}
-{{ end -}}
-{{ end -}}
-{{ end -}}
+{{ end }}
