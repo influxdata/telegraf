@@ -81,6 +81,7 @@ require (
 	github.com/influxdata/influxdb-observability/common v0.2.10
 	github.com/influxdata/influxdb-observability/influx2otel v0.2.10
 	github.com/influxdata/influxdb-observability/otel2influx v0.2.10
+	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8

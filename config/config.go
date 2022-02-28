@@ -1594,6 +1594,9 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
 
+	// for influx parser
+	c.getFieldString(tbl, "influx_parser_type", &pc.InfluxParserType)
+
 	//for XPath parser family
 	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
@@ -1814,7 +1817,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
 		"grace", "graphite_separator", "graphite_tag_sanitize_mode", "graphite_tag_support",
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
-		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields",
+		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_parser_type", "influx_sort_fields",
 		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
 		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_format", "json_timestamp_units", "json_timezone", "json_v2",
 		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
