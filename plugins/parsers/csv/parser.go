@@ -39,8 +39,8 @@ type Parser struct {
 	SkipValues         []string        `toml:"csv_skip_values"`
 	SkipErrors         bool            `toml:"csv_skip_errors"`
 	MetadataRows       int             `toml:"csv_metadata_rows"`
-	MetadataSeparators []string        `toml:"cvs_metadata_separators"`
-	MetadataTrimSet    string          `toml:"cvs_metadata_trim_set"`
+	MetadataSeparators []string        `toml:"csv_metadata_separators"`
+	MetadataTrimSet    string          `toml:"csv_metadata_trim_set"`
 	Log                telegraf.Logger `toml:"-"`
 
 	metadataSeparatorList metadataPattern
@@ -75,7 +75,7 @@ func (p *Parser) initializeMetadataSeparators() error {
 	}
 
 	if len(p.MetadataSeparators) == 0 {
-		return fmt.Errorf("csv_metadata_separator required when specifying csv_metadata_rows")
+		return fmt.Errorf("csv_metadata_separators required when specifying csv_metadata_rows")
 	}
 
 	p.metadataSeparatorList = metadataPattern{}
