@@ -300,7 +300,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - spec_replicas
     - observed_generation
 
-* kubernetes_resourcequota
+- kubernetes_resourcequota
   - tags:
     - resource
     - namespace
