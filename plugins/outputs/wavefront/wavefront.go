@@ -28,7 +28,7 @@ type Wavefront struct {
 	TruncateTags    bool                            `toml:"truncate_tags"`
 	ImmediateFlush  bool                            `toml:"immediate_flush"`
 	SourceOverride  []string                        `toml:"source_override"`
-	StringToNumber  map[string][]map[string]float64 `toml:"string_to_number"`
+	StringToNumber  map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
 
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
@@ -108,13 +108,6 @@ var sampleConfig = `
   ## of metrics will block for a longer time, but this will be handled gracefully by the internal buffering in
   ## Telegraf.
   #immediate_flush = true
-
-  ## Define a mapping, namespaced by metric prefix, from string values to numeric values
-  ##   deprecated in 1.9; use the enum processor plugin
-  #[[outputs.wavefront.string_to_number.elasticsearch]]
-  #  green = 1.0
-  #  yellow = 0.5
-  #  red = 0.0
 `
 
 type MetricPoint struct {
@@ -126,10 +119,6 @@ type MetricPoint struct {
 }
 
 func (w *Wavefront) Connect() error {
-	if len(w.StringToNumber) > 0 {
-		w.Log.Warn("The string_to_number option is deprecated; please use the enum processor instead")
-	}
-
 	flushSeconds := 5
 	if w.ImmediateFlush {
 		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
