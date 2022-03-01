@@ -114,7 +114,7 @@ through the convert settings.
   #  bool                 = "BOOL"
 
   ## This setting controls the behavior of the unsigned value. By default the
-  ## setting will take the integer value and append "unsigned" to it. The other
+  ## setting will take the integer value and append the unsigned value to it. The other
   ## option is "literal", which will use the actual value the user provides to
   ## the unsigned option. This is useful for a database like ClickHouse where
   ## the unsigned value should use a value like "uint64".
