@@ -775,6 +775,7 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 
 	name = bucketparts[0]
 	switch s.SanitizeNamesMethod {
+	case "":
 	case "upstream":
 		whitespace := regexp.MustCompile(`\s+`)
 		name = whitespace.ReplaceAllString(name, "_")
