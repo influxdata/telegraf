@@ -29,9 +29,9 @@ func (ki *KubernetesInventory) gatherResourceQuota(r corev1.ResourceQuota, acc t
 	for resourceName, val := range r.Status.Hard {
 		switch resourceName {
 		case "cpu":
-			fields["hard_cpu_cores_limit"] = convertQuantity(val.String(), 1)
+			fields["hard_cpu_cores_limit"] = ki.convertQuantity(val.String(), 1)
 		case "memory":
-			fields["hard_memory_bytes_limit"] = convertQuantity(val.String(), 1)
+			fields["hard_memory_bytes_limit"] = ki.convertQuantity(val.String(), 1)
 		case "pods":
 			fields["hard_pods_limit"] = atoi(val.String())
 		}
@@ -40,9 +40,9 @@ func (ki *KubernetesInventory) gatherResourceQuota(r corev1.ResourceQuota, acc t
 	for resourceName, val := range r.Status.Used {
 		switch resourceName {
 		case "cpu":
-			fields["used_cpu_cores"] = convertQuantity(val.String(), 1)
+			fields["used_cpu_cores"] = ki.convertQuantity(val.String(), 1)
 		case "memory":
-			fields["used_memory_bytes"] = convertQuantity(val.String(), 1)
+			fields["used_memory_bytes"] = ki.convertQuantity(val.String(), 1)
 		case "pods":
 			fields["used_pods"] = atoi(val.String())
 		}
