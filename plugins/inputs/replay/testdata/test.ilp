@@ -1,0 +1,6 @@
+test_metric,tag1=value1,tag2=value2 value=1 1646139062000000000
+test_metric,tag1=value1,tag2=value2 value=2 1646139063222000000
+test_metric,tag1=value1,tag2=value2 value=3 1646139064321000000
+test_metric,tag1=value1,tag2=value2 value=4 1646139065999000000
+test_metric,tag1=value1,tag2=value2 value=5 1646139066002000000
+
