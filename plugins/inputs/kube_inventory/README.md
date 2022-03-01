@@ -330,6 +330,7 @@ tls_key = "/run/telegraf-kubernetes-key"
 
 ### pv `phase_type`
 * kubernetes_resourcequota
+- kubernetes_resourcequota
   - tags:
     - resource
     - namespace
