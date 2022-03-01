@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -97,6 +98,8 @@ type Statsd struct {
 	UDPPacketSize int `toml:"udp_packet_size"`
 
 	ReadBufferSize int `toml:"read_buffer_size"`
+
+	SanitizeNamesMethod string `toml:"sanitize_name_method"`
 
 	sync.Mutex
 	// Lock for preventing a data race during resource cleanup
@@ -284,6 +287,14 @@ const sampleConfig = `
 
   ## Max duration (TTL) for each metric to stay cached/reported without being updated.
   #max_ttl = "1000h"
+
+  ## Sanitize name method
+  ## By default, telegraf will pass names directly as they are received.
+  ## However, upstream statsd now does sanitization of names which can be
+  ## enabled by using the "upstream" method option. This option will a) replace
+  ## white space with '_', replace '/' with '-', and remove charachters not
+  ## matching 'a-zA-Z_\-0-9\.;='.
+  #sanitize_name_method = ""
 `
 
 func (s *Statsd) SampleConfig() string {
@@ -763,6 +774,17 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 	}
 
 	name = bucketparts[0]
+	switch s.SanitizeNamesMethod {
+	case "":
+	case "upstream":
+		whitespace := regexp.MustCompile(`\s+`)
+		name = whitespace.ReplaceAllString(name, "_")
+		name = strings.ReplaceAll(name, "/", "-")
+		allowedChars := regexp.MustCompile(`[^a-zA-Z_\-0-9\.;=]`)
+		name = allowedChars.ReplaceAllString(name, "")
+	default:
+		s.Log.Errorf("Unknown sanitizae name method: %s", s.SanitizeNamesMethod)
+	}
 
 	p := s.graphiteParser
 	var err error
@@ -1089,6 +1111,7 @@ func init() {
 			DeleteGauges:           true,
 			DeleteSets:             true,
 			DeleteTimings:          true,
+			SanitizeNamesMethod:    "",
 		}
 	})
 }
