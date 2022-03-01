@@ -4,8 +4,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
+
+	"github.com/influxdata/telegraf/internal/choice"
 )
 
 // ClientConfig represents the standard client TLS config.
@@ -13,6 +15,7 @@ type ClientConfig struct {
 	TLSCA              string `toml:"tls_ca"`
 	TLSCert            string `toml:"tls_cert"`
 	TLSKey             string `toml:"tls_key"`
+	TLSKeyPwd          string `toml:"tls_key_pwd"`
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
 	ServerName         string `toml:"tls_server_name"`
 
@@ -24,12 +27,14 @@ type ClientConfig struct {
 
 // ServerConfig represents the standard server TLS config.
 type ServerConfig struct {
-	TLSCert           string   `toml:"tls_cert"`
-	TLSKey            string   `toml:"tls_key"`
-	TLSAllowedCACerts []string `toml:"tls_allowed_cacerts"`
-	TLSCipherSuites   []string `toml:"tls_cipher_suites"`
-	TLSMinVersion     string   `toml:"tls_min_version"`
-	TLSMaxVersion     string   `toml:"tls_max_version"`
+	TLSCert            string   `toml:"tls_cert"`
+	TLSKey             string   `toml:"tls_key"`
+	TLSKeyPwd          string   `toml:"tls_key_pwd"`
+	TLSAllowedCACerts  []string `toml:"tls_allowed_cacerts"`
+	TLSCipherSuites    []string `toml:"tls_cipher_suites"`
+	TLSMinVersion      string   `toml:"tls_min_version"`
+	TLSMaxVersion      string   `toml:"tls_max_version"`
+	TLSAllowedDNSNames []string `toml:"tls_allowed_dns_names"`
 }
 
 // TLSConfig returns a tls.Config, may be nil without error if TLS is not
@@ -141,19 +146,24 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 			"tls min version %q can't be greater than tls max version %q", tlsConfig.MinVersion, tlsConfig.MaxVersion)
 	}
 
+	// Since clientAuth is tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+	// there must be certs to validate.
+	if len(c.TLSAllowedCACerts) > 0 && len(c.TLSAllowedDNSNames) > 0 {
+		tlsConfig.VerifyPeerCertificate = c.verifyPeerCertificate
+	}
+
 	return tlsConfig, nil
 }
 
 func makeCertPool(certFiles []string) (*x509.CertPool, error) {
 	pool := x509.NewCertPool()
 	for _, certFile := range certFiles {
-		pem, err := ioutil.ReadFile(certFile)
+		pem, err := os.ReadFile(certFile)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"could not read certificate %q: %v", certFile, err)
 		}
-		ok := pool.AppendCertsFromPEM(pem)
-		if !ok {
+		if !pool.AppendCertsFromPEM(pem) {
 			return nil, fmt.Errorf(
 				"could not parse any PEM certificates %q: %v", certFile, err)
 		}
@@ -171,4 +181,21 @@ func loadCertificate(config *tls.Config, certFile, keyFile string) error {
 	config.Certificates = []tls.Certificate{cert}
 	config.BuildNameToCertificate()
 	return nil
+}
+
+func (c *ServerConfig) verifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+	// The certificate chain is client + intermediate + root.
+	// Let's review the client certificate.
+	cert, err := x509.ParseCertificate(rawCerts[0])
+	if err != nil {
+		return fmt.Errorf("could not validate peer certificate: %v", err)
+	}
+
+	for _, name := range cert.DNSNames {
+		if choice.Contains(name, c.TLSAllowedDNSNames) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("peer certificate not in allowed DNS Name list: %v", cert.DNSNames)
 }

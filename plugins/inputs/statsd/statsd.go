@@ -11,13 +11,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/selfstat"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -745,10 +746,10 @@ func (s *Statsd) parseStatsdLine(line string) error {
 // config file. If there is a match, it will parse the name of the metric and
 // map of tags.
 // Return values are (<name>, <field>, <tags>)
-func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
+func (s *Statsd) parseName(bucket string) (name string, field string, tags map[string]string) {
 	s.Lock()
 	defer s.Unlock()
-	tags := make(map[string]string)
+	tags = make(map[string]string)
 
 	bucketparts := strings.Split(bucket, ",")
 	// Parse out any tags in the bucket
@@ -761,8 +762,7 @@ func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
 		}
 	}
 
-	var field string
-	name := bucketparts[0]
+	name = bucketparts[0]
 
 	p := s.graphiteParser
 	var err error
@@ -789,16 +789,20 @@ func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
 }
 
 // Parse the key,value out of a string that looks like "key=value"
-func parseKeyValue(keyvalue string) (string, string) {
-	var key, val string
-
-	split := strings.Split(keyvalue, "=")
+func parseKeyValue(keyValue string) (key string, val string) {
+	split := strings.Split(keyValue, "=")
 	// Must be exactly 2 to get anything meaningful out of them
 	if len(split) == 2 {
 		key = split[0]
 		val = split[1]
 	} else if len(split) == 1 {
 		val = split[0]
+	} else if len(split) > 2 {
+		// fix: https://github.com/influxdata/telegraf/issues/10113
+		// fix: value has "=" parse error
+		// uri=/service/endpoint?sampleParam={paramValue} parse value key="uri", val="/service/endpoint?sampleParam\={paramValue}"
+		key = split[0]
+		val = strings.Join(split[1:], "=")
 	}
 
 	return key, val

@@ -6,14 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"github.com/vapourismo/knx-go/knx"
 	"github.com/vapourismo/knx-go/knx/cemi"
 	"github.com/vapourismo/knx-go/knx/dpt"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const epsilon = 1e-3
@@ -127,17 +125,17 @@ func TestRegularReceives_DPT(t *testing.T) {
 	// Check if we got what we expected
 	require.Len(t, acc.Metrics, len(testcases))
 	for i, m := range acc.Metrics {
-		assert.Equal(t, "test", m.Measurement)
-		assert.Equal(t, testcases[i].address, m.Tags["groupaddress"])
-		assert.Len(t, m.Fields, 1)
+		require.Equal(t, "test", m.Measurement)
+		require.Equal(t, testcases[i].address, m.Tags["groupaddress"])
+		require.Len(t, m.Fields, 1)
 		switch v := testcases[i].value.(type) {
 		case bool, int64, uint64:
-			assert.Equal(t, v, m.Fields["value"])
+			require.Equal(t, v, m.Fields["value"])
 		case float64:
-			assert.InDelta(t, v, m.Fields["value"], epsilon)
+			require.InDelta(t, v, m.Fields["value"], epsilon)
 		}
-		assert.True(t, !tstop.Before(m.Time))
-		assert.True(t, !tstart.After(m.Time))
+		require.True(t, !tstop.Before(m.Time))
+		require.True(t, !tstart.After(m.Time))
 	}
 }
 
@@ -178,13 +176,13 @@ func TestRegularReceives_MultipleMessages(t *testing.T) {
 	// Check if we got what we expected
 	require.Len(t, acc.Metrics, 2)
 
-	assert.Equal(t, "temperature", acc.Metrics[0].Measurement)
-	assert.Equal(t, "1/1/1", acc.Metrics[0].Tags["groupaddress"])
-	assert.Len(t, acc.Metrics[0].Fields, 1)
-	assert.Equal(t, true, acc.Metrics[0].Fields["value"])
+	require.Equal(t, "temperature", acc.Metrics[0].Measurement)
+	require.Equal(t, "1/1/1", acc.Metrics[0].Tags["groupaddress"])
+	require.Len(t, acc.Metrics[0].Fields, 1)
+	require.Equal(t, true, acc.Metrics[0].Fields["value"])
 
-	assert.Equal(t, "temperature", acc.Metrics[1].Measurement)
-	assert.Equal(t, "1/1/1", acc.Metrics[1].Tags["groupaddress"])
-	assert.Len(t, acc.Metrics[1].Fields, 1)
-	assert.Equal(t, false, acc.Metrics[1].Fields["value"])
+	require.Equal(t, "temperature", acc.Metrics[1].Measurement)
+	require.Equal(t, "1/1/1", acc.Metrics[1].Tags["groupaddress"])
+	require.Len(t, acc.Metrics[1].Fields, 1)
+	require.Equal(t, false, acc.Metrics[1].Fields["value"])
 }

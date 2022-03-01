@@ -79,16 +79,16 @@ func (ms *MemStats) Gather(acc telegraf.Accumulator) error {
 		fields["page_tables"] = vm.PageTables
 		fields["shared"] = vm.Shared
 		fields["slab"] = vm.Slab
-		fields["sreclaimable"] = vm.SReclaimable
-		fields["sunreclaim"] = vm.SUnreclaim
+		fields["sreclaimable"] = vm.Sreclaimable
+		fields["sunreclaim"] = vm.Sunreclaim
 		fields["swap_cached"] = vm.SwapCached
 		fields["swap_free"] = vm.SwapFree
 		fields["swap_total"] = vm.SwapTotal
-		fields["vmalloc_chunk"] = vm.VMallocChunk
-		fields["vmalloc_total"] = vm.VMallocTotal
-		fields["vmalloc_used"] = vm.VMallocUsed
-		fields["write_back_tmp"] = vm.WritebackTmp
-		fields["write_back"] = vm.Writeback
+		fields["vmalloc_chunk"] = vm.VmallocChunk
+		fields["vmalloc_total"] = vm.VmallocTotal
+		fields["vmalloc_used"] = vm.VmallocUsed
+		fields["write_back_tmp"] = vm.WriteBackTmp
+		fields["write_back"] = vm.WriteBack
 	}
 
 	acc.AddGauge("mem", fields, nil)

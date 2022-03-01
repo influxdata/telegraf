@@ -7,15 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sync"
 	"time"
 
+	"github.com/djherbis/times"
 	"golang.org/x/sync/semaphore"
-	"gopkg.in/djherbis/times.v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -56,6 +55,12 @@ const sampleConfig = `
   ## Lowering this value will result in *slightly* less memory use, with a potential sacrifice in speed efficiency, if absolutely necessary.
   #	file_queue_size = 100000
   #
+  ## Name a tag containing the name of the file the data was parsed from.  Leave empty
+  ## to disable. Cautious when file name variation is high, this can increase the cardinality
+  ## significantly. Read more about cardinality here:
+  ## https://docs.influxdata.com/influxdb/cloud/reference/glossary/#series-cardinality
+  # file_tag = ""
+  #
   ## The dataformat to be read from the files.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -76,6 +81,7 @@ type DirectoryMonitor struct {
 	Directory         string `toml:"directory"`
 	FinishedDirectory string `toml:"finished_directory"`
 	ErrorDirectory    string `toml:"error_directory"`
+	FileTag           string `toml:"file_tag"`
 
 	FilesToMonitor             []string        `toml:"files_to_monitor"`
 	FilesToIgnore              []string        `toml:"files_to_ignore"`
@@ -108,7 +114,7 @@ func (monitor *DirectoryMonitor) Description() string {
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 	// Get all files sitting in the directory.
-	files, err := ioutil.ReadDir(monitor.Directory)
+	files, err := os.ReadDir(monitor.Directory)
 	if err != nil {
 		return fmt.Errorf("unable to monitor the targeted directory: %w", err)
 	}
@@ -183,7 +189,7 @@ func (monitor *DirectoryMonitor) Monitor() {
 	}
 }
 
-func (monitor *DirectoryMonitor) processFile(file os.FileInfo) {
+func (monitor *DirectoryMonitor) processFile(file os.DirEntry) {
 	if file.IsDir() {
 		return
 	}
@@ -251,19 +257,22 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 		reader = file
 	}
 
-	return monitor.parseFile(parser, reader)
+	return monitor.parseFile(parser, reader, file.Name())
 }
 
-func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader) error {
-	// Read the file line-by-line and parse with the configured parse method.
-	firstLine := true
+func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		metrics, err := monitor.parseLine(parser, scanner.Bytes(), firstLine)
+		metrics, err := monitor.parseLine(parser, scanner.Bytes())
 		if err != nil {
 			return err
 		}
-		firstLine = false
+
+		if monitor.FileTag != "" {
+			for _, m := range metrics {
+				m.AddTag(monitor.FileTag, filepath.Base(fileName))
+			}
+		}
 
 		if err := monitor.sendMetrics(metrics); err != nil {
 			return err
@@ -273,24 +282,17 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 	return nil
 }
 
-func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte, firstLine bool) ([]telegraf.Metric, error) {
+func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte) ([]telegraf.Metric, error) {
 	switch parser.(type) {
 	case *csv.Parser:
-		// The CSV parser parses headers in Parse and skips them in ParseLine.
-		if firstLine {
-			return parser.Parse(line)
-		}
-
-		m, err := parser.ParseLine(string(line))
+		m, err := parser.Parse(line)
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, nil
+			}
 			return nil, err
 		}
-
-		if m != nil {
-			return []telegraf.Metric{m}, nil
-		}
-
-		return []telegraf.Metric{}, nil
+		return m, err
 	default:
 		return parser.Parse(line)
 	}

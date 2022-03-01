@@ -1,11 +1,12 @@
-// +build linux,freebsd
+//go:build linux && freebsd && (!mips || !mips64)
+// +build linux
+// +build freebsd
 // +build !mips !mips64
 
 package sql
 
 import (
 	gosql "database/sql"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestSqlite(t *testing.T) {
-	outDir, err := ioutil.TempDir("", "tg-sqlite-*")
+	outDir, err := os.MkdirTemp("", "tg-sqlite-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(outDir)
 

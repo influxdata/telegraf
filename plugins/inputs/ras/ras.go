@@ -1,3 +1,4 @@
+//go:build linux && (386 || amd64 || arm || arm64)
 // +build linux
 // +build 386 amd64 arm arm64
 
@@ -22,11 +23,11 @@ type Ras struct {
 	DBPath string `toml:"db_path"`
 
 	Log telegraf.Logger `toml:"-"`
-	db  *sql.DB         `toml:"-"`
 
-	latestTimestamp   time.Time              `toml:"-"`
-	cpuSocketCounters map[int]metricCounters `toml:"-"`
-	serverCounters    metricCounters         `toml:"-"`
+	db                *sql.DB
+	latestTimestamp   time.Time
+	cpuSocketCounters map[int]metricCounters
+	serverCounters    metricCounters
 }
 
 type machineCheckError struct {

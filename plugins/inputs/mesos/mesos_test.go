@@ -10,8 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var masterMetrics map[string]interface{}
@@ -340,7 +341,7 @@ func TestMasterFilter(t *testing.T) {
 
 	// Assert expected metrics are present.
 	for _, v := range m.MasterCols {
-		for _, x := range getMetrics(MASTER, v) {
+		for _, x := range m.getMetrics(MASTER, v) {
 			_, ok := masterMetrics[x]
 			require.Truef(t, ok, "Didn't find key %s, it should present.", x)
 		}
@@ -357,7 +358,7 @@ func TestMasterFilter(t *testing.T) {
 
 	// Assert unexpected metrics are not present.
 	for _, v := range b {
-		for _, x := range getMetrics(MASTER, v) {
+		for _, x := range m.getMetrics(MASTER, v) {
 			_, ok := masterMetrics[x]
 			require.Falsef(t, ok, "Found key %s, it should be gone.", x)
 		}
@@ -402,13 +403,13 @@ func TestSlaveFilter(t *testing.T) {
 	m.filterMetrics(SLAVE, &slaveMetrics)
 
 	for _, v := range b {
-		for _, x := range getMetrics(SLAVE, v) {
+		for _, x := range m.getMetrics(SLAVE, v) {
 			_, ok := slaveMetrics[x]
 			require.Falsef(t, ok, "Found key %s, it should be gone.", x)
 		}
 	}
 	for _, v := range m.MasterCols {
-		for _, x := range getMetrics(SLAVE, v) {
+		for _, x := range m.getMetrics(SLAVE, v) {
 			_, ok := slaveMetrics[x]
 			require.Truef(t, ok, "Didn't find key %s, it should present.", x)
 		}

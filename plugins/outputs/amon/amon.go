@@ -142,7 +142,7 @@ func (p *Point) setValue(v interface{}) error {
 	case float32:
 		p[1] = float64(d)
 	case float64:
-		p[1] = float64(d)
+		p[1] = d
 	default:
 		return fmt.Errorf("undeterminable type")
 	}

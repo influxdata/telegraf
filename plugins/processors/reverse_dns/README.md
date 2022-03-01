@@ -5,7 +5,7 @@ IPs in them.
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Configuration:
+## Configuration
 
 ```toml
 [[processors.reverse_dns]]
@@ -55,9 +55,7 @@ Telegraf minimum version: Telegraf 1.15.0
     ## processors.converter after this one, specifying the order attribute.
 ```
 
-
-
-### Example processing:
+## Example
 
 example config:
 

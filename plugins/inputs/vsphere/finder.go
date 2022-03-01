@@ -35,14 +35,14 @@ type ResourceFilter struct {
 func (f *Finder) FindAll(ctx context.Context, resType string, paths, excludePaths []string, dst interface{}) error {
 	objs := make(map[string]types.ObjectContent)
 	for _, p := range paths {
-		if err := f.find(ctx, resType, p, objs); err != nil {
+		if err := f.findResources(ctx, resType, p, objs); err != nil {
 			return err
 		}
 	}
 	if len(excludePaths) > 0 {
 		excludes := make(map[string]types.ObjectContent)
 		for _, p := range excludePaths {
-			if err := f.find(ctx, resType, p, excludes); err != nil {
+			if err := f.findResources(ctx, resType, p, excludes); err != nil {
 				return err
 			}
 		}
@@ -56,14 +56,14 @@ func (f *Finder) FindAll(ctx context.Context, resType string, paths, excludePath
 // Find returns the resources matching the specified path.
 func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}) error {
 	objs := make(map[string]types.ObjectContent)
-	err := f.find(ctx, resType, path, objs)
+	err := f.findResources(ctx, resType, path, objs)
 	if err != nil {
 		return err
 	}
 	return objectContentToTypedArray(objs, dst)
 }
 
-func (f *Finder) find(ctx context.Context, resType, path string, objs map[string]types.ObjectContent) error {
+func (f *Finder) findResources(ctx context.Context, resType, path string, objs map[string]types.ObjectContent) error {
 	p := strings.Split(path, "/")
 	flt := make([]property.Filter, len(p)-1)
 	for i := 1; i < len(p); i++ {
@@ -107,7 +107,7 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 	fields := []string{"name"}
 	recurse := tokens[pos]["name"] == "**"
 
-	types := ct
+	objectTypes := ct
 	if isLeaf {
 		if af, ok := addFields[resType]; ok {
 			fields = append(fields, af...)
@@ -131,9 +131,9 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			}
 			return nil
 		}
-		types = []string{resType} // Only load wanted object type at leaf level
+		objectTypes = []string{resType} // Only load wanted object type at leaf level
 	}
-	err = v.Retrieve(ctx, types, fields, &content)
+	err = v.Retrieve(ctx, objectTypes, fields, &content)
 	if err != nil {
 		return err
 	}

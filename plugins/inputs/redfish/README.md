@@ -4,7 +4,7 @@ The `redfish` plugin gathers metrics and status information about CPU temperatur
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.redfish]]
@@ -29,7 +29,7 @@ Telegraf minimum version: Telegraf 1.15.0
   # insecure_skip_verify = false
 ```
 
-### Metrics
+## Metrics
 
 - redfish_thermal_temperatures
   - tags:
@@ -50,8 +50,7 @@ Telegraf minimum version: Telegraf 1.15.0
     - lower_threshold_critical
     - lower_threshold_fatal
 
-
-+ redfish_thermal_fans
+- redfish_thermal_fans
   - tags:
     - source
     - member_id
@@ -69,7 +68,6 @@ Telegraf minimum version: Telegraf 1.15.0
     - upper_threshold_fatal
     - lower_threshold_critical
     - lower_threshold_fatal
-
 
 - redfish_power_powersupplies
   - tags:
@@ -90,7 +88,6 @@ Telegraf minimum version: Telegraf 1.15.0
     - power_input_watts
     - power_output_watts
 
-
 - redfish_power_voltages (available only if voltage data is found)
   - tags:
     - source
@@ -110,10 +107,9 @@ Telegraf minimum version: Telegraf 1.15.0
     - lower_threshold_critical
     - lower_threshold_fatal
 
+## Example Output
 
-### Example Output
-
-```
+```text
 redfish_thermal_temperatures,source=test-hostname,name=CPU1,address=http://190.0.0.1,member_id="0"datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled" reading_celsius=41,upper_threshold_critical=59,upper_threshold_fatal=64 1582114112000000000
 redfish_thermal_temperatures,source=test-hostname,name=CPU2,address=http://190.0.0.1,member_id="1"datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled" reading_celsius=51,upper_threshold_critical=59,upper_threshold_fatal=64 1582114112000000000
 redfish_thermal_temperatures,source=test-hostname,name=SystemBoardInlet,address=http://190.0.0.1,member_id="2"datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled" reading_celsius=23,upper_threshold_critical=59,upper_threshold_fatal=64 1582114112000000000

@@ -18,7 +18,7 @@ receive a 200 OK response with message body `{"results":[]}` but they are not
 relayed. The output configuration of the Telegraf instance which ultimately
 submits data to InfluxDB determines the destination database.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[inputs.influxdb_listener]]
@@ -64,14 +64,15 @@ submits data to InfluxDB determines the destination database.
   # basic_password = "barfoo"
 ```
 
-### Metrics:
+## Metrics
 
 Metrics are created from InfluxDB Line Protocol in the request body.
 
-### Troubleshooting:
+## Troubleshooting
 
 **Example Query:**
-```
+
+```sh
 curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 ```
 

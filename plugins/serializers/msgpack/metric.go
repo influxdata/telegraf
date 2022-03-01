@@ -42,9 +42,9 @@ func (*MessagePackTime) ExtensionType() int8 {
 // 32bits: [1970-01-01 00:00:00 UTC, 2106-02-07 06:28:16 UTC) range. If the nanoseconds part is 0
 // 64bits: [1970-01-01 00:00:00.000000000 UTC, 2514-05-30 01:53:04.000000000 UTC) range.
 // 96bits: [-584554047284-02-23 16:59:44 UTC, 584554051223-11-09 07:00:16.000000000 UTC) range.
-func (t *MessagePackTime) Len() int {
-	sec := t.time.Unix()
-	nsec := t.time.Nanosecond()
+func (z *MessagePackTime) Len() int {
+	sec := z.time.Unix()
+	nsec := z.time.Nanosecond()
 
 	if sec < 0 || sec >= (1<<34) { // 96 bits encoding
 		return 12
@@ -56,21 +56,21 @@ func (t *MessagePackTime) Len() int {
 }
 
 // MarshalBinaryTo implements the Extension interface
-func (t *MessagePackTime) MarshalBinaryTo(buf []byte) error {
-	len := t.Len()
+func (z *MessagePackTime) MarshalBinaryTo(buf []byte) error {
+	length := z.Len()
 
-	if len == 4 {
-		sec := t.time.Unix()
+	if length == 4 {
+		sec := z.time.Unix()
 		binary.BigEndian.PutUint32(buf, uint32(sec))
-	} else if len == 8 {
-		sec := t.time.Unix()
-		nsec := t.time.Nanosecond()
+	} else if length == 8 {
+		sec := z.time.Unix()
+		nsec := z.time.Nanosecond()
 
 		data := uint64(nsec)<<34 | (uint64(sec) & 0x03_ffff_ffff)
 		binary.BigEndian.PutUint64(buf, data)
-	} else if len == 12 {
-		sec := t.time.Unix()
-		nsec := t.time.Nanosecond()
+	} else if length == 12 {
+		sec := z.time.Unix()
+		nsec := z.time.Nanosecond()
 
 		binary.BigEndian.PutUint32(buf, uint32(nsec))
 		binary.BigEndian.PutUint64(buf[4:], uint64(sec))
@@ -80,24 +80,24 @@ func (t *MessagePackTime) MarshalBinaryTo(buf []byte) error {
 }
 
 // UnmarshalBinary implements the Extension interface
-func (t *MessagePackTime) UnmarshalBinary(buf []byte) error {
-	len := len(buf)
+func (z *MessagePackTime) UnmarshalBinary(buf []byte) error {
+	length := len(buf)
 
-	if len == 4 {
+	if length == 4 {
 		sec := binary.BigEndian.Uint32(buf)
-		t.time = time.Unix(int64(sec), 0)
-	} else if len == 8 {
+		z.time = time.Unix(int64(sec), 0)
+	} else if length == 8 {
 		data := binary.BigEndian.Uint64(buf)
 
 		nsec := (data & 0xfffffffc_00000000) >> 34
-		sec := (data & 0x00000003_ffffffff)
+		sec := data & 0x00000003_ffffffff
 
-		t.time = time.Unix(int64(sec), int64(nsec))
-	} else if len == 12 {
+		z.time = time.Unix(int64(sec), int64(nsec))
+	} else if length == 12 {
 		nsec := binary.BigEndian.Uint32(buf)
 		sec := binary.BigEndian.Uint64(buf[4:])
 
-		t.time = time.Unix(int64(sec), int64(nsec))
+		z.time = time.Unix(int64(sec), int64(nsec))
 	}
 
 	return nil

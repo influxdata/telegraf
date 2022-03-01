@@ -2,7 +2,7 @@
 
 This plugin gathers statistics data from a Memcached server.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Read metrics from one or many memcached servers.
@@ -12,9 +12,17 @@ This plugin gathers statistics data from a Memcached server.
   servers = ["localhost:11211"]
   # An array of unix memcached sockets to gather stats about.
   # unix_sockets = ["/var/run/memcached.sock"]
+
+  ## Optional TLS Config
+  # enable_tls = true
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## If false, skip chain & host verification
+  # insecure_skip_verify = true
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 The fields from this plugin are gathered in the *memcached* measurement.
 
@@ -41,9 +49,12 @@ Fields:
 * decr_misses - Number of decr reqs against missing keys
 * delete_hits - Number of deletion reqs resulting in an item being removed
 * delete_misses - umber of deletions reqs for missing keys
+* evicted_active - Items evicted from LRU that had been hit recently but did not jump to top of LRU
 * evicted_unfetched - Items evicted from LRU that were never touched by get/incr/append/etc
 * evictions - Number of valid items removed from cache to free memory for new items
 * expired_unfetched - Items pulled from LRU that were never touched by get/incr/append/etc before expiring
+* get_expired - Number of items that have been requested but had already expired
+* get_flushed - Number of items that have been requested but have been flushed via flush_all
 * get_hits - Number of keys that have been requested and found present
 * get_misses - Number of items that have been requested and not found
 * hash_bytes - Bytes currently used by hash tables
@@ -53,7 +64,11 @@ Fields:
 * incr_misses - Number of incr reqs against missing keys
 * limit_maxbytes - Number of bytes this server is allowed to use for storage
 * listen_disabled_num - Number of times server has stopped accepting new connections (maxconns)
+* max_connections - Max number of simultaneous connections
 * reclaimed - Number of times an entry was stored using memory from an expired entry
+* rejected_connections - Conns rejected in maxconns_fast mode
+* store_no_memory - Number of rejected storage requests caused by exhaustion of the memory limit when evictions are disabled
+* store_too_large - Number of rejected storage requests caused by attempting to write a value larger than the item size limit
 * threads - Number of worker threads requested
 * total_connections - Total number of connections opened since the server started running
 * total_items - Total number of items stored since the server started
@@ -63,22 +78,22 @@ Fields:
 
 Description of gathered fields taken from [here](https://github.com/memcached/memcached/blob/master/doc/protocol.txt).
 
-### Tags:
+## Tags
 
 * Memcached measurements have the following tags:
-    - server (the host name from which metrics are gathered)
+  * server (the host name from which metrics are gathered)
 
-### Sample Queries:
+## Sample Queries
 
 You can use the following query to get the average get hit and miss ratio, as well as the total average size of cached items, number of cached items and average connection counts per server.
 
-```
+```sql
 SELECT mean(get_hits) / mean(cmd_get) as get_ratio, mean(get_misses) / mean(cmd_get) as get_misses_ratio, mean(bytes), mean(curr_items), mean(curr_connections) FROM memcached WHERE time > now() - 1h GROUP BY server
 ```
 
-### Example Output:
+## Example Output
 
-```
+```shell
 $ ./telegraf --config telegraf.conf --input-filter memcached --test
-memcached,server=localhost:11211 get_hits=1,get_misses=2,evictions=0,limit_maxbytes=0,bytes=10,uptime=3600,curr_items=2,total_items=2,curr_connections=1,total_connections=2,connection_structures=1,cmd_get=2,cmd_set=1,delete_hits=0,delete_misses=0,incr_hits=0,incr_misses=0,decr_hits=0,decr_misses=0,cas_hits=0,cas_misses=0,bytes_read=10,bytes_written=10,threads=1,conn_yields=0 1453831884664956455
+memcached,server=localhost:11211 accepting_conns=1i,auth_cmds=0i,auth_errors=0i,bytes=0i,bytes_read=7i,bytes_written=0i,cas_badval=0i,cas_hits=0i,cas_misses=0i,cmd_flush=0i,cmd_get=0i,cmd_set=0i,cmd_touch=0i,conn_yields=0i,connection_structures=3i,curr_connections=2i,curr_items=0i,decr_hits=0i,decr_misses=0i,delete_hits=0i,delete_misses=0i,evicted_active=0i,evicted_unfetched=0i,evictions=0i,expired_unfetched=0i,get_expired=0i,get_flushed=0i,get_hits=0i,get_misses=0i,hash_bytes=524288i,hash_is_expanding=0i,hash_power_level=16i,incr_hits=0i,incr_misses=0i,limit_maxbytes=67108864i,listen_disabled_num=0i,max_connections=1024i,reclaimed=0i,rejected_connections=0i,store_no_memory=0i,store_too_large=0i,threads=4i,total_connections=3i,total_items=0i,touch_hits=0i,touch_misses=0i,uptime=3i 1644771989000000000
 ```

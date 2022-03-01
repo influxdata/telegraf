@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,14 +13,15 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	parser_v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
+	parserV2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
@@ -57,6 +58,8 @@ type Prometheus struct {
 	MetricVersion int `toml:"metric_version"`
 
 	URLTag string `toml:"url_tag"`
+
+	IgnoreTimestamp bool `toml:"ignore_timestamp"`
 
 	tls.ClientConfig
 
@@ -100,6 +103,10 @@ var sampleConfig = `
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "url"
+
+  ## Whether the timestamp of the scraped metrics will be ignored.
+  ## If set to true, the gather time will be used.
+  # ignore_timestamp = false
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -176,8 +183,7 @@ func (p *Prometheus) Description() string {
 }
 
 func (p *Prometheus) Init() error {
-
-	// Config proccessing for node scrape scope for monitor_kubernetes_pods
+	// Config processing for node scrape scope for monitor_kubernetes_pods
 	p.isNodeScrapeScope = strings.EqualFold(p.PodScrapeScope, "node")
 	if p.isNodeScrapeScope {
 		// Need node IP to make cAdvisor call for pod list. Check if set in config and valid IP address
@@ -216,8 +222,6 @@ func (p *Prometheus) Init() error {
 	return nil
 }
 
-var ErrProtocolError = errors.New("prometheus protocol error")
-
 func (p *Prometheus) AddressToURL(u *url.URL, address string) *url.URL {
 	host := address
 	if u.Port() != "" {
@@ -247,12 +251,12 @@ type URLAndAddress struct {
 func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 	allURLs := make(map[string]URLAndAddress)
 	for _, u := range p.URLs {
-		URL, err := url.Parse(u)
+		address, err := url.Parse(u)
 		if err != nil {
 			p.Log.Errorf("Could not parse %q, skipping it. Error: %s", u, err.Error())
 			continue
 		}
-		allURLs[URL.String()] = URLAndAddress{URL: URL, OriginalURL: URL}
+		allURLs[address.String()] = URLAndAddress{URL: address, OriginalURL: address}
 	}
 
 	p.lock.Lock()
@@ -267,22 +271,22 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 	}
 
 	for _, service := range p.KubernetesServices {
-		URL, err := url.Parse(service)
+		address, err := url.Parse(service)
 		if err != nil {
 			return nil, err
 		}
 
-		resolvedAddresses, err := net.LookupHost(URL.Hostname())
+		resolvedAddresses, err := net.LookupHost(address.Hostname())
 		if err != nil {
-			p.Log.Errorf("Could not resolve %q, skipping it. Error: %s", URL.Host, err.Error())
+			p.Log.Errorf("Could not resolve %q, skipping it. Error: %s", address.Host, err.Error())
 			continue
 		}
 		for _, resolved := range resolvedAddresses {
-			serviceURL := p.AddressToURL(URL, resolved)
+			serviceURL := p.AddressToURL(address, resolved)
 			allURLs[serviceURL.String()] = URLAndAddress{
 				URL:         serviceURL,
 				Address:     resolved,
-				OriginalURL: URL,
+				OriginalURL: address,
 			}
 		}
 	}
@@ -382,7 +386,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	p.addHeaders(req)
 
 	if p.BearerToken != "" {
-		token, err := ioutil.ReadFile(p.BearerToken)
+		token, err := os.ReadFile(p.BearerToken)
 		if err != nil {
 			return err
 		}
@@ -395,8 +399,10 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 	var resp *http.Response
 	if u.URL.Scheme != "unix" {
+		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		resp, err = p.client.Do(req)
 	} else {
+		//nolint:bodyclose // False positive (because of if-else) - body will be closed in `defer`
 		resp, err = uClient.Do(req)
 	}
 	if err != nil {
@@ -408,16 +414,19 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("%s returned HTTP status %s", u.URL, resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading body: %s", err)
 	}
 
 	if p.MetricVersion == 2 {
-		parser := parser_v2.Parser{Header: resp.Header}
+		parser := parserV2.Parser{
+			Header:          resp.Header,
+			IgnoreTimestamp: p.IgnoreTimestamp,
+		}
 		metrics, err = parser.Parse(body)
 	} else {
-		metrics, err = Parse(body, resp.Header)
+		metrics, err = Parse(body, resp.Header, p.IgnoreTimestamp)
 	}
 
 	if err != nil {

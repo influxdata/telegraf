@@ -14,11 +14,11 @@ type proxyFunc func(req *http.Request) (*url.URL, error)
 
 func (p *HTTPProxy) Proxy() (proxyFunc, error) {
 	if len(p.HTTPProxyURL) > 0 {
-		url, err := url.Parse(p.HTTPProxyURL)
+		address, err := url.Parse(p.HTTPProxyURL)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing proxy url %q: %w", p.HTTPProxyURL, err)
 		}
-		return http.ProxyURL(url), nil
+		return http.ProxyURL(address), nil
 	}
 	return http.ProxyFromEnvironment, nil
 }

@@ -3,7 +3,7 @@
 The prometheus input plugin gathers metrics from HTTP servers exposing metrics
 in Prometheus format.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Read metrics from one or many prometheus clients
@@ -22,6 +22,10 @@ in Prometheus format.
   
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "url"
+  
+  ## Whether the timestamp of the scraped metrics will be ignored.
+  ## If set to true, the gather time will be used.
+  # ignore_timestamp = false
   
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -45,7 +49,7 @@ in Prometheus format.
   ## Only for node scrape scope: node IP of the node that telegraf is running on.
   ## Either this config or the environment variable NODE_IP must be set.
   # node_ip = "10.180.1.1"
-	
+ 
   ## Only for node scrape scope: interval in seconds for how often to get updated pod list for scraping.
   ## Default is 60 seconds.
   # pod_scrape_interval = 60
@@ -96,7 +100,7 @@ in Prometheus format.
 
 `urls` can contain a unix socket as well. If a different path is required (default is `/metrics` for both http[s] and unix) for a unix socket, add `path` as a query parameter as follows: `unix:///var/run/prometheus.sock?path=/custom/metrics`
 
-#### Kubernetes Service Discovery
+### Kubernetes Service Discovery
 
 URLs listed in the `kubernetes_services` parameter will be expanded
 by looking up all A records assigned to the hostname as described in
@@ -105,7 +109,7 @@ by looking up all A records assigned to the hostname as described in
 This method can be used to locate all
 [Kubernetes headless services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services).
 
-#### Kubernetes scraping
+### Kubernetes scraping
 
 Enabling this option will allow the plugin to scrape for prometheus annotation on Kubernetes
 pods. Currently, you can run this plugin in your kubernetes cluster, or we use the kubeconfig
@@ -120,7 +124,8 @@ Currently the following annotation are supported:
 Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
 
 Using `pod_scrape_scope = "node"` allows more scalable scraping for pods which will scrape pods only in the node that telegraf is running. It will fetch the pod list locally from the node's kubelet. This will require running Telegraf in every node of the cluster. Note that either `node_ip` must be specified in the config or the environment variable `NODE_IP` must be set to the host IP. ThisThe latter can be done in the yaml of the pod running telegraf:
-```
+
+```sh
 env:
   - name: NODE_IP
     valueFrom:
@@ -130,7 +135,47 @@ env:
 
 If using node level scrape scope, `pod_scrape_interval` specifies how often (in seconds) the pod list for scraping should updated. If not specified, the default is 60 seconds.
 
-#### Consul Service Discovery
+The pod running telegraf will need to have the proper rbac configuration in order to be allowed to call the k8s api to discover and watch pods in the cluster.
+A typical configuration will create a service account, a cluster role with the appropriate rules and a cluster role binding to tie the cluster role to the service account.
+Example of configuration for cluster level discovery:
+
+```yaml
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: telegraf-k8s-role-{{.Release.Name}}
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+---
+# Rolebinding for namespace to cluster-admin
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: telegraf-k8s-role-{{.Release.Name}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: telegraf-k8s-role-{{.Release.Name}}
+subjects:
+- kind: ServiceAccount
+  name: telegraf-k8s-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: telegraf-k8s-{{ .Release.Name }}
+```
+
+### Consul Service Discovery
 
 Enabling this option and configuring consul `agent` url will allow the plugin to query
 consul catalog for available services. Using `query_interval` the plugin will periodically
@@ -139,6 +184,7 @@ It can use the information from the catalog to build the scraped url and additio
 
 Multiple consul queries can be configured, each for different service.
 The following example fields can be used in url or tag templates:
+
 * Node
 * Address
 * NodeMeta
@@ -148,33 +194,33 @@ The following example fields can be used in url or tag templates:
 * ServiceMeta
 
 For full list of available fields and their type see struct CatalogService in
-https://github.com/hashicorp/consul/blob/master/api/catalog.go
+<https://github.com/hashicorp/consul/blob/master/api/catalog.go>
 
-#### Bearer Token
+### Bearer Token
 
 If set, the file specified by the `bearer_token` parameter will be read on
 each interval and its contents will be appended to the Bearer string in the
 Authorization header.
 
-### Usage for Caddy HTTP server
+## Usage for Caddy HTTP server
 
-If you want to monitor Caddy, you need to use Caddy with its Prometheus plugin:
+Steps to monitor Caddy with Telegraf's Prometheus input plugin:
 
-* Download Caddy+Prometheus plugin [here](https://caddyserver.com/download/linux/amd64?plugins=http.prometheus)
-* Add the `prometheus` directive in your `CaddyFile`
+* Download [Caddy](https://caddyserver.com/download)
+* Download Prometheus and set up [monitoring Caddy with Prometheus metrics](https://caddyserver.com/docs/metrics#monitoring-caddy-with-prometheus-metrics)
 * Restart Caddy
 * Configure Telegraf to fetch metrics on it:
 
 ```toml
 [[inputs.prometheus]]
 #   ## An array of urls to scrape metrics from.
-  urls = ["http://localhost:9180/metrics"]
+  urls = ["http://localhost:2019/metrics"]
 ```
 
-> This is the default URL where Caddy Prometheus plugin will send data.
+> This is the default URL where Caddy will send data.
 > For more details, please read the [Caddy Prometheus documentation](https://github.com/miekg/caddy-prometheus/blob/master/README.md).
 
-### Metrics:
+## Metrics
 
 Measurement names are based on the Metric Family and tags are created for each
 label.  The value is added to a field named based on the metric type.
@@ -183,10 +229,11 @@ All metrics receive the `url` tag indicating the related URL specified in the
 Telegraf configuration. If using Kubernetes service discovery the `address`
 tag is also added indicating the discovered ip address.
 
-### Example Output:
+## Example Output
 
-**Source**
-```
+### Source
+
+```shell
 # HELP go_gc_duration_seconds A summary of the GC invocation durations.
 # TYPE go_gc_duration_seconds summary
 go_gc_duration_seconds{quantile="0"} 7.4545e-05
@@ -207,8 +254,9 @@ cpu_usage_user{cpu="cpu2"} 2.0161290322588776
 cpu_usage_user{cpu="cpu3"} 1.5045135406226022
 ```
 
-**Output**
-```
+### Output
+
+```shell
 go_gc_duration_seconds,url=http://example.org:9273/metrics 1=0.001336611,count=14,sum=0.004527551,0=0.000057965,0.25=0.000083812,0.5=0.000286537,0.75=0.000365303 1505776733000000000
 go_goroutines,url=http://example.org:9273/metrics gauge=21 1505776695000000000
 cpu_usage_user,cpu=cpu0,url=http://example.org:9273/metrics gauge=1.513622603430151 1505776751000000000
@@ -217,8 +265,9 @@ cpu_usage_user,cpu=cpu2,url=http://example.org:9273/metrics gauge=2.119071644805
 cpu_usage_user,cpu=cpu3,url=http://example.org:9273/metrics gauge=1.5228426395944945 1505776751000000000
 ```
 
-**Output (when metric_version = 2)**
-```
+### Output (when metric_version = 2)
+
+```shell
 prometheus,quantile=1,url=http://example.org:9273/metrics go_gc_duration_seconds=0.005574303 1556075100000000000
 prometheus,quantile=0.75,url=http://example.org:9273/metrics go_gc_duration_seconds=0.0001046 1556075100000000000
 prometheus,quantile=0.5,url=http://example.org:9273/metrics go_gc_duration_seconds=0.0000719 1556075100000000000

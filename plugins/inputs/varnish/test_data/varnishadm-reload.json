@@ -1,0 +1,51 @@
+[ 2, ["vcl.list", "-j"], 1631029773.809,
+  {
+    "status": "available",
+    "state": "cold",
+    "temperature": "cold",
+    "busy": 0,
+    "name": "boot"
+  },
+  {
+    "status": "available",
+    "state": "cold",
+    "temperature": "cold",
+    "busy": 0,
+    "name": "reload_20210719_143559_60674"
+  },
+  {
+    "status": "available",
+    "state": "cold",
+    "temperature": "cold",
+    "busy": 0,
+    "name": "test"
+  },
+  {
+    "status": "available",
+    "state": "cold",
+    "temperature": "cold",
+    "busy": 0,
+    "name": "test2"
+  },
+  {
+    "status": "available",
+    "state": "cold",
+    "temperature": "cold",
+    "busy": 0,
+    "name": "test3"
+  },
+  {
+    "status": "available",
+    "state": "cold",
+    "temperature": "cold",
+    "busy": 0,
+    "name": "reload_20210722_162225_1979744"
+  },
+  {
+    "status": "active",
+    "state": "auto",
+    "temperature": "warm",
+    "busy": 0,
+    "name": "reload_20210723_091821_2056185"
+  }
+]

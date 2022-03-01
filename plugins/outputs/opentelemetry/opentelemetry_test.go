@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/collector/model/otlpgrpc"
 	"go.opentelemetry.io/collector/model/pdata"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func TestOpenTelemetry(t *testing.T) {
@@ -25,15 +26,16 @@ func TestOpenTelemetry(t *testing.T) {
 	{
 		rm := expect.ResourceMetrics().AppendEmpty()
 		rm.Resource().Attributes().InsertString("host.name", "potato")
+		rm.Resource().Attributes().InsertString("attr-key", "attr-val")
 		ilm := rm.InstrumentationLibraryMetrics().AppendEmpty()
 		ilm.InstrumentationLibrary().SetName("My Library Name")
 		m := ilm.Metrics().AppendEmpty()
 		m.SetName("cpu_temp")
 		m.SetDataType(pdata.MetricDataTypeGauge)
 		dp := m.Gauge().DataPoints().AppendEmpty()
-		dp.LabelsMap().Insert("foo", "bar")
+		dp.Attributes().InsertString("foo", "bar")
 		dp.SetTimestamp(pdata.Timestamp(1622848686000000000))
-		dp.SetValue(87.332)
+		dp.SetDoubleVal(87.332)
 	}
 	m := newMockOtelService(t)
 	t.Cleanup(m.Cleanup)
@@ -43,6 +45,8 @@ func TestOpenTelemetry(t *testing.T) {
 	plugin := &OpenTelemetry{
 		ServiceAddress:       m.Address(),
 		Timeout:              config.Duration(time.Second),
+		Headers:              map[string]string{"test": "header1"},
+		Attributes:           map[string]string{"attr-key": "attr-val"},
 		metricsConverter:     metricsConverter,
 		grpcClientConn:       m.GrpcClient(),
 		metricsServiceClient: otlpgrpc.NewMetricsClient(m.GrpcClient()),
@@ -129,7 +133,10 @@ func (m *mockOtelService) Address() string {
 	return m.listener.Addr().String()
 }
 
-func (m *mockOtelService) Export(ctx context.Context, request pdata.Metrics) (otlpgrpc.MetricsResponse, error) {
-	m.metrics = request.Clone()
+func (m *mockOtelService) Export(ctx context.Context, request otlpgrpc.MetricsRequest) (otlpgrpc.MetricsResponse, error) {
+	m.metrics = request.Metrics().Clone()
+	ctxMetadata, ok := metadata.FromIncomingContext(ctx)
+	assert.Equal(m.t, []string{"header1"}, ctxMetadata.Get("test"))
+	assert.True(m.t, ok)
 	return otlpgrpc.MetricsResponse{}, nil
 }

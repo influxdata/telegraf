@@ -3,8 +3,7 @@ package kube_inventory
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,6 +35,8 @@ type KubernetesInventory struct {
 
 	SelectorInclude []string `toml:"selector_include"`
 	SelectorExclude []string `toml:"selector_exclude"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
 	client *client
@@ -80,6 +81,7 @@ var sampleConfig = `
   # tls_ca = "/path/to/cafile"
   # tls_cert = "/path/to/certfile"
   # tls_key = "/path/to/keyfile"
+  # tls_server_name = "kubernetes.example.com"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
@@ -101,7 +103,7 @@ func (ki *KubernetesInventory) Init() error {
 	}
 
 	if ki.BearerToken != "" {
-		token, err := ioutil.ReadFile(ki.BearerToken)
+		token, err := os.ReadFile(ki.BearerToken)
 		if err != nil {
 			return err
 		}
@@ -170,15 +172,15 @@ func atoi(s string) int64 {
 	return i
 }
 
-func convertQuantity(s string, m float64) int64 {
+func (ki *KubernetesInventory) convertQuantity(s string, m float64) int64 {
 	q, err := resource.ParseQuantity(s)
 	if err != nil {
-		log.Printf("D! [inputs.kube_inventory] failed to parse quantity: %s", err.Error())
+		ki.Log.Debugf("failed to parse quantity: %s", err.Error())
 		return 0
 	}
 	f, err := strconv.ParseFloat(fmt.Sprint(q.AsDec()), 64)
 	if err != nil {
-		log.Printf("D! [inputs.kube_inventory] failed to parse float: %s", err.Error())
+		ki.Log.Debugf("failed to parse float: %s", err.Error())
 		return 0
 	}
 	if m < 1 {
@@ -188,11 +190,11 @@ func convertQuantity(s string, m float64) int64 {
 }
 
 func (ki *KubernetesInventory) createSelectorFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(ki.SelectorInclude, ki.SelectorExclude)
+	selectorFilter, err := filter.NewIncludeExcludeFilter(ki.SelectorInclude, ki.SelectorExclude)
 	if err != nil {
 		return err
 	}
-	ki.selectorFilter = filter
+	ki.selectorFilter = selectorFilter
 	return nil
 }
 

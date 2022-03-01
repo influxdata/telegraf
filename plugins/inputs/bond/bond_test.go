@@ -7,35 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var sampleTest802 = `
-Ethernet Channel Bonding Driver: v3.5.0 (November 4, 2008)
-
-Bonding Mode: IEEE 802.3ad Dynamic link aggregation
-Transmit Hash Policy: layer2 (0)
-MII Status: up
-MII Polling Interval (ms): 100
-Up Delay (ms): 0
-Down Delay (ms): 0
-
-802.3ad info
-LACP rate: fast
-Aggregator selection policy (ad_select): stable
-bond bond0 has no active aggregator
-
-Slave Interface: eth1
-MII Status: up
-Link Failure Count: 0
-Permanent HW addr: 00:0c:29:f5:b7:11
-Aggregator ID: N/A
-
-Slave Interface: eth2
-MII Status: up
-Link Failure Count: 3
-Permanent HW addr: 00:0c:29:f5:b7:1b
-Aggregator ID: N/A
-`
-
-var sampleTestAB = `
+const sampleTestAB = `
 Ethernet Channel Bonding Driver: v3.6.0 (September 26, 2009)
 
 Bonding Mode: fault-tolerance (active-backup)
@@ -62,17 +34,68 @@ Link Failure Count: 0
 Permanent HW addr:
 `
 
+const sampleTestLACP = `
+Ethernet Channel Bonding Driver: v3.7.1 (April 27, 2011)
+
+Bonding Mode: IEEE 802.3ad Dynamic link aggregation
+Transmit Hash Policy: layer2 (0)
+MII Status: up
+MII Polling Interval (ms): 100
+Up Delay (ms): 0
+Down Delay (ms): 0
+
+802.3ad info
+LACP rate: fast
+Min links: 0
+Aggregator selection policy (ad_select): stable
+
+Slave Interface: eth0
+MII Status: up
+Speed: 10000 Mbps
+Duplex: full
+Link Failure Count: 2
+Permanent HW addr: 3c:ec:ef:5e:71:58
+Slave queue ID: 0
+Aggregator ID: 2
+Actor Churn State: none
+Partner Churn State: none
+Actor Churned Count: 2
+Partner Churned Count: 0
+
+Slave Interface: eth1
+MII Status: up
+Speed: 10000 Mbps
+Duplex: full
+Link Failure Count: 1
+Permanent HW addr: 3c:ec:ef:5e:71:59
+Slave queue ID: 0
+Aggregator ID: 2
+Actor Churn State: none
+Partner Churn State: none
+Actor Churned Count: 0
+Partner Churned Count: 0
+`
+
+const sampleSysMode = "802.3ad 5"
+const sampleSysSlaves = "eth0 eth1 "
+const sampleSysAdPorts = " 2 "
+
 func TestGatherBondInterface(t *testing.T) {
 	var acc testutil.Accumulator
 	bond := &Bond{}
-
-	require.NoError(t, bond.gatherBondInterface("bond802", sampleTest802, &acc))
-	acc.AssertContainsTaggedFields(t, "bond", map[string]interface{}{"status": 1}, map[string]string{"bond": "bond802"})
-	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 0, "status": 1}, map[string]string{"bond": "bond802", "interface": "eth1"})
-	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 3, "status": 1}, map[string]string{"bond": "bond802", "interface": "eth2"})
 
 	require.NoError(t, bond.gatherBondInterface("bondAB", sampleTestAB, &acc))
 	acc.AssertContainsTaggedFields(t, "bond", map[string]interface{}{"active_slave": "eth2", "status": 1}, map[string]string{"bond": "bondAB"})
 	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 2, "status": 0}, map[string]string{"bond": "bondAB", "interface": "eth3"})
 	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 0, "status": 1}, map[string]string{"bond": "bondAB", "interface": "eth2"})
+	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"count": 2}, map[string]string{"bond": "bondAB"})
+
+	acc = testutil.Accumulator{}
+	require.NoError(t, bond.gatherBondInterface("bondLACP", sampleTestLACP, &acc))
+	bond.gatherSysDetails("bondLACP", sysFiles{ModeFile: sampleSysMode, SlaveFile: sampleSysSlaves, ADPortsFile: sampleSysAdPorts}, &acc)
+	acc.AssertContainsTaggedFields(t, "bond", map[string]interface{}{"status": 1}, map[string]string{"bond": "bondLACP"})
+	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 2, "status": 1, "actor_churned": 2, "partner_churned": 0, "total_churned": 2}, map[string]string{"bond": "bondLACP", "interface": "eth0"})
+	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"failures": 1, "status": 1, "actor_churned": 0, "partner_churned": 0, "total_churned": 0}, map[string]string{"bond": "bondLACP", "interface": "eth1"})
+	acc.AssertContainsTaggedFields(t, "bond_slave", map[string]interface{}{"count": 2}, map[string]string{"bond": "bondLACP"})
+	acc.AssertContainsTaggedFields(t, "bond_sys", map[string]interface{}{"slave_count": 2, "ad_port_count": 2}, map[string]string{"bond": "bondLACP", "mode": "802.3ad"})
 }

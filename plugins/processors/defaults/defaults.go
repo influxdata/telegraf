@@ -1,9 +1,10 @@
 package defaults
 
 import (
+	"strings"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"strings"
 )
 
 const sampleConfig = `
@@ -58,10 +59,10 @@ func (def *Defaults) Apply(inputMetrics ...telegraf.Metric) []telegraf.Metric {
 }
 
 func maybeTrimmedString(v interface{}) (string, bool) {
-	switch value := v.(type) {
-	case string:
+	if value, ok := v.(string); ok {
 		return strings.TrimSpace(value), true
 	}
+
 	return "", false
 }
 

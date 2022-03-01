@@ -4,7 +4,8 @@ Template patterns are a mini language that describes how a dot delimited
 string should be mapped to and from [metrics][].
 
 A template has the form:
-```
+
+```text
 "host.mytag.mytag.measurement.measurement.field*"
 ```
 
@@ -25,9 +26,9 @@ can also be specified multiple times.
 **NOTE:** `measurement` must be specified in your template.
 **NOTE:** `field*` cannot be used in conjunction with `measurement*`.
 
-### Examples
+## Examples
 
-#### Measurement & Tag Templates
+### Measurement & Tag Templates
 
 The most basic template is to specify a single transformation to apply to all
 incoming metrics. So the following template:
@@ -40,7 +41,7 @@ templates = [
 
 would result in the following Graphite -> Telegraf transformation.
 
-```
+```text
 us.west.cpu.load 100
 => cpu.load,region=us.west value=100
 ```
@@ -55,7 +56,7 @@ templates = [
 ]
 ```
 
-#### Field Templates
+### Field Templates
 
 The field keyword tells Telegraf to give the metric that field name.
 So the following template:
@@ -69,7 +70,7 @@ templates = [
 
 would result in the following Graphite -> Telegraf transformation.
 
-```
+```text
 cpu.usage.idle.percent.eu-east 100
 => cpu_usage,region=eu-east idle_percent=100
 ```
@@ -86,12 +87,12 @@ templates = [
 
 which would result in the following Graphite -> Telegraf transformation.
 
-```
+```text
 cpu.usage.eu-east.idle.percentage 100
 => cpu_usage,region=eu-east idle_percentage=100
 ```
 
-#### Filter Templates
+### Filter Templates
 
 Users can also filter the template(s) to use based on the name of the bucket,
 using glob matching, like so:
@@ -105,7 +106,7 @@ templates = [
 
 which would result in the following transformation:
 
-```
+```text
 cpu.load.eu-east 100
 => cpu_load,region=eu-east value=100
 
@@ -113,7 +114,7 @@ mem.cached.localhost 256
 => mem_cached,host=localhost value=256
 ```
 
-#### Adding Tags
+### Adding Tags
 
 Additional tags can be added to a metric that don't exist on the received metric.
 You can add additional tags by specifying them after the pattern.
@@ -128,7 +129,7 @@ templates = [
 
 would result in the following Graphite -> Telegraf transformation.
 
-```
+```text
 cpu.usage.idle.eu-east 100
 => cpu_usage,region=eu-east,datacenter=1a idle=100
 ```

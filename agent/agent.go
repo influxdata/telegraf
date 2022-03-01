@@ -23,9 +23,9 @@ type Agent struct {
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(config *config.Config) (*Agent, error) {
+func NewAgent(cfg *config.Config) (*Agent, error) {
 	a := &Agent{
-		Config: config,
+		Config: cfg,
 	}
 	return a, nil
 }
@@ -192,32 +192,39 @@ func (a *Agent) initPlugins() error {
 				input.LogName(), err)
 		}
 	}
+	for _, parser := range a.Config.Parsers {
+		err := parser.Init()
+		if err != nil {
+			return fmt.Errorf("could not initialize parser %s::%s: %v",
+				parser.Config.DataFormat, parser.Config.Parent, err)
+		}
+	}
 	for _, processor := range a.Config.Processors {
 		err := processor.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.Config.Name, err)
+				processor.LogName(), err)
 		}
 	}
 	for _, aggregator := range a.Config.Aggregators {
 		err := aggregator.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize aggregator %s: %v",
-				aggregator.Config.Name, err)
+				aggregator.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.AggProcessors {
 		err := processor.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.Config.Name, err)
+				processor.LogName(), err)
 		}
 	}
 	for _, output := range a.Config.Outputs {
 		err := output.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize output %s: %v",
-				output.Config.Name, err)
+				output.LogName(), err)
 		}
 	}
 	return nil
@@ -291,11 +298,17 @@ func (a *Agent) runInputs(
 			jitter = input.Config.CollectionJitter
 		}
 
+		// Overwrite agent collection_offset if this plugin has its own.
+		offset := time.Duration(a.Config.Agent.CollectionOffset)
+		if input.Config.CollectionOffset != 0 {
+			offset = input.Config.CollectionOffset
+		}
+
 		var ticker Ticker
 		if a.Config.Agent.RoundInterval {
-			ticker = NewAlignedTicker(startTime, interval, jitter)
+			ticker = NewAlignedTicker(startTime, interval, jitter, offset)
 		} else {
-			ticker = NewUnalignedTicker(interval, jitter)
+			ticker = NewUnalignedTicker(interval, jitter, offset)
 		}
 		defer ticker.Stop()
 
@@ -775,7 +788,7 @@ func (a *Agent) runOutputs(
 func (a *Agent) flushLoop(
 	ctx context.Context,
 	output *models.RunningOutput,
-	ticker *RollingTicker,
+	ticker Ticker,
 ) {
 	logError := func(err error) {
 		if err != nil {
@@ -804,11 +817,15 @@ func (a *Agent) flushLoop(
 		case <-ticker.Elapsed():
 			logError(a.flushOnce(output, ticker, output.Write))
 		case <-flushRequested:
-			ticker.Reset()
 			logError(a.flushOnce(output, ticker, output.Write))
 		case <-output.BatchReady:
-			ticker.Reset()
-			logError(a.flushOnce(output, ticker, output.WriteBatch))
+			// Favor the ticker over batch ready
+			select {
+			case <-ticker.Elapsed():
+				logError(a.flushOnce(output, ticker, output.Write))
+			default:
+				logError(a.flushOnce(output, ticker, output.WriteBatch))
+			}
 		}
 	}
 }

@@ -1,9 +1,10 @@
 package cisco_telemetry_mdt
 
 import (
-	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"strconv"
 	"strings"
+
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 )
 
 //xform Field to string

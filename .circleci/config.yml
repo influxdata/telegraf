@@ -1,84 +1,155 @@
 version: 2.1
 orbs:
-  win: circleci/windows@2.4.0  
+  win: circleci/windows@2.4.0
   aws-cli: circleci/aws-cli@1.4.0
 
 executors:
-  go-1_15:
+  go-1_17:
     working_directory: '/go/src/github.com/influxdata/telegraf'
+    resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.15.8'
+      - image: 'quay.io/influxdb/telegraf-ci:1.17.7'
     environment:
-      GOFLAGS: -p=8
-  go-1_16:
-    working_directory: '/go/src/github.com/influxdata/telegraf'
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.16.6'
-    environment:
-      GOFLAGS: -p=8
+      GOFLAGS: -p=4
   mac:
-    macos:
-      xcode: 12.4.0
     working_directory: '~/go/src/github.com/influxdata/telegraf'
+    resource_class: medium
+    macos:
+      xcode: 13.2.0
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
-      GOFLAGS: -p=8
+      GOFLAGS: -p=4
 
 commands:
+  generate-config:
+    parameters:
+      os:
+        type: string
+        default: "linux"
+    steps:
+      - checkout
+      - attach_workspace:
+          at: '/build'
+      - run: ./scripts/generate_config.sh << parameters.os >>
+      - store_artifacts:
+          path: './new-config'
+          destination: 'new-config'
   check-changed-files-or-halt:
-      steps:
-        - run: ./scripts/check-file-changes.sh
-  check-changed-files-or-halt-windows:
-      steps:
-        - run: 
-            command: ./scripts/check-file-changes.sh
-            shell: bash.exe
+    steps:
+      - run: ./scripts/check-file-changes.sh
   test-go:
     parameters:
-      goarch:
+      os:
+        type: string
+        default: "linux"
+      arch:
         type: string
         default: "amd64"
+      gotestsum:
+        type: string
+        default: "gotestsum"
+      cache_version:
+        type: string
+        default: "v3"
     steps:
       - checkout
       - check-changed-files-or-halt
-      - attach_workspace:
-          at: '/go'
-      - run: 'GOARCH=<< parameters.goarch >> make'
-      - run: 'GOARCH=<< parameters.goarch >> make check'
-      - run: 'GOARCH=<< parameters.goarch >> make check-deps'
-      - run: 'GOARCH=<< parameters.goarch >> make test'
+      - when:
+          condition:
+            equal: [ linux, << parameters.os >> ]
+          steps:
+            - restore_cache:
+                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+            - attach_workspace:
+                at: '/go'
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - restore_cache:
+                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+            - run: 'sh ./scripts/installgo_mac.sh'
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - run: rm -rf /c/Go
+            - restore_cache:
+                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+            - run: 'sh ./scripts/installgo_windows.sh'
+            - run: choco install mingw
+      - run: mkdir -p test-results
+      - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
+      - unless:
+          condition:
+            equal: [ "386", << parameters.arch >> ]
+          steps:
+            - run: echo 'export RACE="-race"' >> $BASH_ENV
+      - run: |
+          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- ${RACE} -short $PACKAGE_NAMES
+      - store_test_results:
+          path: test-results
+      - when:
+          condition:
+            equal: [ linux, << parameters.os >> ]
+          steps:
+            - save_cache:
+                name: 'Saving cache'
+                key: linux-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                paths:
+                  - '~/go/src/github.com/influxdata/telegraf/gotestsum'
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - save_cache:
+                name: 'Saving cache'
+                key: darwin-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                paths:
+                  - '/go/src/github.com/influxdata/telegraf/gotestsum'
+                  - '/usr/local/Cellar/go'
+                  - '/usr/local/bin/go'
+                  - '/usr/local/bin/gofmt'
+      - when:
+          condition:
+            equal: [ windows, << parameters.os >> ]
+          steps:
+            - save_cache:
+                name: 'Saving cache'
+                key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
+                paths:
+                  - 'C:\Go'
+                  - 'C:\Users\circleci\project\gotestsum.exe'
+
   package-build:
     parameters:
-      release:
-        type: boolean
-        default: false
-      nightly:
-        type: boolean
-        default: false
       type:
         type: string
         default: ""
+      nightly:
+        type: boolean
+        default: false
     steps:
       - checkout
       - check-changed-files-or-halt
       - attach_workspace:
           at: '/go'
       - when:
-          condition: << parameters.release >>
-          steps: 
-            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 make package'
+          condition:
+            equal: [ windows, << parameters.type >> ]
+          steps:
+            - run: make versioninfo
       - when:
           condition: << parameters.nightly >>
-          steps: 
-            - run: 'mips=1 mipsel=1 arm64=1 amd64=1 static=1 armel=1 armhf=1 s390x=1 ppc641e=1 i386=1 windows=1 darwin=1 NIGHTLY=1 make package'
-            - run: 'make upload-nightly'
+          steps:
+            - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
       - unless:
           condition:
             or:
               - << parameters.nightly >>
-              - << parameters.release >>
           steps:
-            - run: '<< parameters.type >>=1 make package'
+            - run: 'make package include_packages="$(make << parameters.type >>)"'
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -87,8 +158,9 @@ commands:
           paths:
             - 'dist'
 jobs:
-  deps:
-    executor: go-1_16
+  test-go-linux:
+    executor: go-1_17
+    parallelism: 4
     steps:
       - checkout
       - restore_cache:
@@ -96,6 +168,9 @@ jobs:
       - check-changed-files-or-halt
       - run: 'make deps'
       - run: 'make tidy'
+      - run: 'make check'
+      - run: 'make check-deps'
+      - test-go
       - save_cache:
           name: 'go module cache'
           key: go-mod-v1-{{ checksum "go.sum" }}
@@ -105,137 +180,189 @@ jobs:
           root: '/go'
           paths:
             - '*'
-  test-go-1_15:
-    executor: go-1_15
-    steps:
-      - test-go
-  test-go-1_15-386:
-    executor: go-1_15
-    steps:
-      - test-go:
-          goarch: "386"
-  test-go-1_16:
-    executor: go-1_16
-    steps:
-      - test-go
-  test-go-1_16-386:
-    executor: go-1_16
-    steps:
-      - test-go:
-          goarch: "386"
-  test-go-mac:
-    executor: mac
+  test-go-linux-386:
+    executor: go-1_17
+    parallelism: 4
     steps:
       - checkout
       - restore_cache:
-          key: mac-go-mod-v0-{{ checksum "go.sum" }}
+          key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
-      - run: 'sh ./scripts/mac_installgo.sh'
-      - save_cache:
-          name: 'Saving cache'
-          key: mac-go-mod-v0-{{ checksum "go.sum" }}
-          paths:
-            - '/usr/local/Cellar/go'
-            - '/usr/local/bin/go'
-            - '/usr/local/bin/gofmt'
-      - run: 'make deps'
-      - run: 'make tidy'
-      - run: 'make'
-      - run: 'make check'
-      - run: 'make test'
+      - run: 'GOARCH=386 make deps'
+      - run: 'GOARCH=386 make tidy'
+      - run: 'GOARCH=386 make check'
+      - test-go:
+          arch: "386"
+  test-go-mac:
+    executor: mac
+    steps:
+      - test-go:
+          os: darwin
+    parallelism: 4
   test-go-windows:
     executor:
         name: win/default
-        shell: powershell.exe
+        shell: bash.exe
     steps:
-      - checkout
-      - check-changed-files-or-halt-windows
-      - run: choco upgrade golang --version=1.16.6
-      - run: choco install make
-      - run: git config --system core.longpaths true
-      - run: make test-windows
+      - test-go:
+          os: windows
+          gotestsum: "gotestsum.exe"
+    parallelism: 4
 
   windows-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: windows
-  darwin-package:
-    executor: go-1_16
+          nightly: << parameters.nightly >>
+  darwin-amd64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
-          type: darwin
+          type: darwin-amd64
+          nightly: << parameters.nightly >>
+  darwin-arm64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
+    steps:
+      - package-build:
+          type: darwin-arm64
+          nightly: << parameters.nightly >>
   i386-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: i386
-  ppc641e-package:
-    executor: go-1_16
+          nightly: << parameters.nightly >>
+  ppc64le-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
-          type: ppc641e
+          type: ppc64le
+          nightly: << parameters.nightly >>
+  riscv64-package:
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
+    steps:
+      - package-build:
+          type: riscv64
+          nightly: << parameters.nightly >>
   s390x-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: s390x
+          nightly: << parameters.nightly >>
   armel-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: armel
+          nightly: << parameters.nightly >>
   amd64-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: amd64
+          nightly: << parameters.nightly >>
   arm64-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: arm64
+          nightly: << parameters.nightly >>
   mipsel-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: mipsel
+          nightly: << parameters.nightly >>
   mips-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: mips
+          nightly: << parameters.nightly >>
   static-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: static
+          nightly: << parameters.nightly >>
   armhf-package:
-    executor: go-1_16
+    parameters:
+      nightly:
+        type: boolean
+        default: false
+    executor: go-1_17
     steps:
       - package-build:
           type: armhf
-
-  release:
-    executor: go-1_16
-    steps:
-      - package-build:
-          release: true
+          nightly: << parameters.nightly >>
   nightly:
-    executor: go-1_16
-    steps:
-      - package-build:
-          nightly: true
-  package-consolidate:
-    executor:
-        name: win/default
-        shell: powershell.exe
+    executor: go-1_17
     steps:
       - attach_workspace:
           at: '/build'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
+      - run:
+          command: |
+            aws s3 sync /build/dist s3://dl.influxdata.com/telegraf/nightlies/ \
+              --exclude "*" \
+              --include "*.tar.gz" \
+              --include "*.deb" \
+              --include "*.rpm" \
+              --include "*.zip" \
+              --acl public-read
   package-sign-windows:
     executor:
         name: win/default
@@ -254,12 +381,8 @@ jobs:
           root: './build'
           paths:
             - 'dist'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
   package-sign-mac:
-    macos:
-      xcode: "11.3"
+    executor: mac
     working_directory: /Users/distiller/project
     environment:
       FL_OUTPUT_DIR: output
@@ -273,53 +396,56 @@ jobs:
       - run:
           command: |
             sh ./scripts/mac-signing.sh
+      - persist_to_workspace:
+          root: './build'
+          paths:
+            - 'dist'
+  package-consolidate:
+    docker:
+     - image: alpine
+    steps:
+      - attach_workspace:
+          at: '.'
+      - run:
+          command: |
+            cd dist && find . -type f -name '._*' -delete
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
-  test-awaiter:
-    executor: go-1_16
-    steps:
       - run:
           command: |
-            echo "Go tests complete."
+            echo "This job contains all the final artifacts."
   share-artifacts:
-    executor: aws-cli/default  
+    executor: aws-cli/default
     steps:
+      - checkout
+      - check-changed-files-or-halt
       - run:
           command: |
             PR=${CIRCLE_PULL_REQUEST##*/}
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
-            curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"   
-                      
+            curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
+  generate-config:
+    executor: go-1_17
+    steps:
+      - generate-config
+  generate-config-win:
+    executor:
+        name: win/default
+        shell: bash.exe
+    steps:
+      - generate-config:
+          os: windows
+
 workflows:
   version: 2
   check:
     jobs:
-      - 'deps':
+      - 'test-go-linux':
           filters:
             tags:
               only: /.*/
-      - 'test-go-1_15':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_15-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1_16-386':
-          requires:
-            - 'deps'
+      - 'test-go-linux-386':
           filters:
             tags:
               only: /.*/
@@ -331,58 +457,116 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-awaiter': 
-          requires:
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
       - 'windows-package':
-          requires: 
+          requires:
             - 'test-go-windows'
-      - 'darwin-package':
-          requires: 
+          filters:
+            tags:
+              only: /.*/
+      - 'darwin-amd64-package':
+          requires:
             - 'test-go-mac'
+          filters:
+            tags:
+              only: /.*/
+      - 'darwin-arm64-package':
+          requires:
+            - 'test-go-mac'
+          filters:
+            tags:
+              only: /.*/
       - 'i386-package':
-          requires: 
-            - 'test-awaiter'
-      - 'ppc641e-package':
-          requires: 
-            - 'test-awaiter'
+          requires:
+            - 'test-go-linux-386'
+          filters:
+            tags:
+              only: /.*/
+      - 'ppc64le-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
+      - 'riscv64-package':
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
       - 's390x-package':
-          requires: 
-            - 'test-awaiter'
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
       - 'armel-package':
-          requires: 
-            - 'test-awaiter'
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
       - 'amd64-package':
-          requires: 
-            - 'test-awaiter'
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
       - 'arm64-package':
-          requires: 
-            - 'test-awaiter'
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
       - 'armhf-package':
-          requires: 
-            - 'test-awaiter'
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
       - 'static-package':
           requires:
-            - 'test-awaiter'
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
       - 'mipsel-package':
-          requires: 
-            - 'test-awaiter'
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
       - 'mips-package':
-          requires: 
-            - 'test-awaiter'
+          requires:
+            - 'test-go-linux'
+          filters:
+            tags:
+              only: /.*/
+      - 'generate-config':
+          requires:
+            - 'amd64-package'
+          filters:
+            branches:
+              only:
+                - master
+      - 'generate-config-win':
+          requires:
+            - 'windows-package'
+          filters:
+            branches:
+              only:
+                - master
       - 'share-artifacts':
           requires:
             - 'i386-package'
-            - 'ppc641e-package'
+            - 'ppc64le-package'
+            - 'riscv64-package'
             - 's390x-package'
             - 'armel-package'
             - 'amd64-package'
             - 'mipsel-package'
             - 'mips-package'
-            - 'darwin-package'
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
             - 'windows-package'
             - 'static-package'
             - 'arm64-package'
@@ -391,57 +575,139 @@ workflows:
             branches:
               ignore:
                 - master
-      - 'release':
+                - release.*
+            tags:
+              ignore: /.*/
+      - 'package-sign-windows':
           requires:
-            - 'test-go-windows'
-            - 'test-go-mac'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
+            - 'windows-package'
           filters:
+              tags:
+                only: /.*/
+              branches:
+                ignore: /.*/
+      - 'package-sign-mac':
+           requires:
+            - 'darwin-amd64-package'
+            - 'darwin-arm64-package'
+           filters:
+              tags:
+                only: /.*/
+              branches:
+                ignore: /.*/
+      - 'package-consolidate':
+           requires:
+            - 'i386-package'
+            - 'ppc64le-package'
+            - 's390x-package'
+            - 'armel-package'
+            - 'amd64-package'
+            - 'mipsel-package'
+            - 'mips-package'
+            - 'static-package'
+            - 'arm64-package'
+            - 'armhf-package'
+            - 'riscv64-package'
+            - 'package-sign-mac'
+            - 'package-sign-windows'
+           filters:
             tags:
               only: /.*/
             branches:
               ignore: /.*/
-      - 'package-sign-windows':
-          requires:
-            - 'release'
-          filters:
-              tags:
-                only: /.*/
-      - 'package-sign-mac':
-           requires:
-             - 'package-sign-windows' 
-           filters:
-              tags:
-                only: /.*/
 
   nightly:
     jobs:
-      - 'deps'
-      - 'test-go-1_15':
-          requires:
-            - 'deps'
-      - 'test-go-1_15-386':
-          requires:
-            - 'deps'
-      - 'test-go-1_16':
-          requires:
-            - 'deps'
-      - 'test-go-1_16-386':
-          requires:
-            - 'deps'
+      - 'test-go-linux'
+      - 'test-go-linux-386'
       - 'test-go-mac'
       - 'test-go-windows'
-      - 'nightly':
+      - 'windows-package':
+          name: 'windows-package-nightly'
+          nightly: true
           requires:
             - 'test-go-windows'
+      - 'darwin-amd64-package':
+          name: 'darwin-amd64-package-nightly'
+          nightly: true
+          requires:
             - 'test-go-mac'
-            - 'test-go-1_15'
-            - 'test-go-1_15-386'
-            - 'test-go-1_16'
-            - 'test-go-1_16-386'
+      - 'darwin-arm64-package':
+          name: 'darwin-arm64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-mac'
+      - 'i386-package':
+          name: 'i386-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux-386'
+      - 'ppc64le-package':
+          name: 'ppc64le-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'riscv64-package':
+          name: 'riscv64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 's390x-package':
+          name: 's390x-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'armel-package':
+          name: 'armel-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'amd64-package':
+          name: 'amd64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'arm64-package':
+          name: 'arm64-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'armhf-package':
+          name: 'armhf-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'static-package':
+          name: 'static-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'mipsel-package':
+          name: 'mipsel-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - 'mips-package':
+          name: 'mips-package-nightly'
+          nightly: true
+          requires:
+            - 'test-go-linux'
+      - nightly:
+          requires:
+            - 'i386-package-nightly'
+            - 'ppc64le-package-nightly'
+            - 'riscv64-package-nightly'
+            - 's390x-package-nightly'
+            - 'armel-package-nightly'
+            - 'amd64-package-nightly'
+            - 'mipsel-package-nightly'
+            - 'mips-package-nightly'
+            - 'darwin-amd64-package-nightly'
+            - 'darwin-arm64-package-nightly'
+            - 'windows-package-nightly'
+            - 'static-package-nightly'
+            - 'arm64-package-nightly'
+            - 'armhf-package-nightly'
     triggers:
       - schedule:
           cron: "0 7 * * *"

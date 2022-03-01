@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -122,7 +121,7 @@ func (check *NginxUpstreamCheck) createHTTPClient() (*http.Client, error) {
 }
 
 // gatherJSONData query the data source and parse the response JSON
-func (check *NginxUpstreamCheck) gatherJSONData(url string, value interface{}) error {
+func (check *NginxUpstreamCheck) gatherJSONData(address string, value interface{}) error {
 	var method string
 	if check.Method != "" {
 		method = check.Method
@@ -130,7 +129,7 @@ func (check *NginxUpstreamCheck) gatherJSONData(url string, value interface{}) e
 		method = "GET"
 	}
 
-	request, err := http.NewRequest(method, url, nil)
+	request, err := http.NewRequest(method, address, nil)
 	if err != nil {
 		return err
 	}
@@ -153,8 +152,8 @@ func (check *NginxUpstreamCheck) gatherJSONData(url string, value interface{}) e
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
-		body, _ := ioutil.ReadAll(io.LimitReader(response.Body, 200))
-		return fmt.Errorf("%s returned HTTP status %s: %q", url, response.Status, body)
+		body, _ := io.ReadAll(io.LimitReader(response.Body, 200))
+		return fmt.Errorf("%s returned HTTP status %s: %q", address, response.Status, body)
 	}
 
 	err = json.NewDecoder(response.Body).Decode(value)
@@ -188,10 +187,10 @@ func (check *NginxUpstreamCheck) Gather(accumulator telegraf.Accumulator) error 
 	return nil
 }
 
-func (check *NginxUpstreamCheck) gatherStatusData(url string, accumulator telegraf.Accumulator) error {
+func (check *NginxUpstreamCheck) gatherStatusData(address string, accumulator telegraf.Accumulator) error {
 	checkData := &NginxUpstreamCheckData{}
 
-	err := check.gatherJSONData(url, checkData)
+	err := check.gatherJSONData(address, checkData)
 	if err != nil {
 		return err
 	}
@@ -202,7 +201,7 @@ func (check *NginxUpstreamCheck) gatherStatusData(url string, accumulator telegr
 			"type":     server.Type,
 			"name":     server.Name,
 			"port":     strconv.Itoa(int(server.Port)),
-			"url":      url,
+			"url":      address,
 		}
 
 		fields := map[string]interface{}{

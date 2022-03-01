@@ -2,7 +2,7 @@
 
 This plugin sends metrics to [OpenTelemetry](https://opentelemetry.io) servers and agents via gRPC.
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.opentelemetry]]
@@ -39,11 +39,11 @@ This plugin sends metrics to [OpenTelemetry](https://opentelemetry.io) servers a
   # key1 = "value1"
 ```
 
-#### Schema
+### Schema
 
 The InfluxDB->OpenTelemetry conversion [schema](https://github.com/influxdata/influxdb-observability/blob/main/docs/index.md)
 and [implementation](https://github.com/influxdata/influxdb-observability/tree/main/influx2otel)
-are hosted at https://github.com/influxdata/influxdb-observability .
+are hosted on [GitHub](https://github.com/influxdata/influxdb-observability).
 
 For metrics, two input schemata exist.
 Line protocol with measurement name `prometheus` is assumed to have a schema
@@ -51,6 +51,7 @@ matching [Prometheus input plugin](../../inputs/prometheus/README.md) when `metr
 Line protocol with other measurement names is assumed to have schema
 matching [Prometheus input plugin](../../inputs/prometheus/README.md) when `metric_version = 1`.
 If both schema assumptions fail, then the line protocol data is interpreted as:
+
 - Metric type = gauge (or counter, if indicated by the input plugin)
 - Metric name = `[measurement]_[field key]`
 - Metric value = line protocol field value, cast to float

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"time"
@@ -118,53 +118,61 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 	// make sur we send a batch of maximum 300
 	sizeBatch := 300
 	for start := 0; start < metricCounter; start += sizeBatch {
-		lmetrics := LMetrics{}
-		end := start + sizeBatch
-		if end > metricCounter {
-			end = metricCounter
-			sizeBatch = end - start
-		}
-		lmetrics.Gauges = make([]*Gauge, sizeBatch)
-		copy(lmetrics.Gauges, tempGauges[start:end])
-		metricsBytes, err := json.Marshal(lmetrics)
+		err := l.writeBatch(start, sizeBatch, metricCounter, tempGauges)
 		if err != nil {
-			return fmt.Errorf("unable to marshal Metrics, %s", err.Error())
-		}
-
-		l.Log.Debugf("Librato request: %v", string(metricsBytes))
-
-		req, err := http.NewRequest(
-			"POST",
-			l.APIUrl,
-			bytes.NewBuffer(metricsBytes))
-		if err != nil {
-			return fmt.Errorf("unable to create http.Request, %s", err.Error())
-		}
-		req.Header.Add("Content-Type", "application/json")
-		req.SetBasicAuth(l.APIUser, l.APIToken)
-
-		resp, err := l.client.Do(req)
-		if err != nil {
-			l.Log.Debugf("Error POSTing metrics: %v", err.Error())
-			return fmt.Errorf("error POSTing metrics, %s", err.Error())
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != 200 || l.Debug {
-			htmlData, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				l.Log.Debugf("Couldn't get response! (%v)", err)
-			}
-			if resp.StatusCode != 200 {
-				return fmt.Errorf(
-					"received bad status code, %d\n %s",
-					resp.StatusCode,
-					string(htmlData))
-			}
-			l.Log.Debugf("Librato response: %v", string(htmlData))
+			return err
 		}
 	}
 
+	return nil
+}
+
+func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGauges []*Gauge) error {
+	lmetrics := LMetrics{}
+	end := start + sizeBatch
+	if end > metricCounter {
+		end = metricCounter
+		sizeBatch = end - start
+	}
+	lmetrics.Gauges = make([]*Gauge, sizeBatch)
+	copy(lmetrics.Gauges, tempGauges[start:end])
+	metricsBytes, err := json.Marshal(lmetrics)
+	if err != nil {
+		return fmt.Errorf("unable to marshal Metrics, %s", err.Error())
+	}
+
+	l.Log.Debugf("Librato request: %v", string(metricsBytes))
+
+	req, err := http.NewRequest(
+		"POST",
+		l.APIUrl,
+		bytes.NewBuffer(metricsBytes))
+	if err != nil {
+		return fmt.Errorf("unable to create http.Request, %s", err.Error())
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(l.APIUser, l.APIToken)
+
+	resp, err := l.client.Do(req)
+	if err != nil {
+		l.Log.Debugf("Error POSTing metrics: %v", err.Error())
+		return fmt.Errorf("error POSTing metrics, %s", err.Error())
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 || l.Debug {
+		htmlData, err := io.ReadAll(resp.Body)
+		if err != nil {
+			l.Log.Debugf("Couldn't get response! (%v)", err)
+		}
+		if resp.StatusCode != 200 {
+			return fmt.Errorf(
+				"received bad status code, %d\n %s",
+				resp.StatusCode,
+				string(htmlData))
+		}
+		l.Log.Debugf("Librato response: %v", string(htmlData))
+	}
 	return nil
 }
 
@@ -219,8 +227,9 @@ func verifyValue(v interface{}) bool {
 	switch v.(type) {
 	case string:
 		return false
+	default:
+		return true
 	}
-	return true
 }
 
 func (g *Gauge) setValue(v interface{}) error {
@@ -230,7 +239,7 @@ func (g *Gauge) setValue(v interface{}) error {
 	case uint64:
 		g.Value = float64(d)
 	case float64:
-		g.Value = float64(d)
+		g.Value = d
 	case bool:
 		if d {
 			g.Value = float64(1.0)

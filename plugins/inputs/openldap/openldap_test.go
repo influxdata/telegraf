@@ -4,10 +4,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/go-ldap/ldap/v3"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/ldap.v3"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestOpenldapMockResult(t *testing.T) {
@@ -45,9 +45,9 @@ func TestOpenldapNoConnectionIntegration(t *testing.T) {
 
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
-	require.NoError(t, err)        // test that we didn't return an error
-	assert.Zero(t, acc.NFields())  // test that we didn't return any fields
-	assert.NotEmpty(t, acc.Errors) // test that we set an error
+	require.NoError(t, err)         // test that we didn't return an error
+	require.Zero(t, acc.NFields())  // test that we didn't return any fields
+	require.NotEmpty(t, acc.Errors) // test that we set an error
 }
 
 func TestOpenldapGeneratesMetricsIntegration(t *testing.T) {
@@ -108,9 +108,9 @@ func TestOpenldapInvalidSSLIntegration(t *testing.T) {
 
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
-	require.NoError(t, err)        // test that we didn't return an error
-	assert.Zero(t, acc.NFields())  // test that we didn't return any fields
-	assert.NotEmpty(t, acc.Errors) // test that we set an error
+	require.NoError(t, err)         // test that we didn't return an error
+	require.Zero(t, acc.NFields())  // test that we didn't return any fields
+	require.NotEmpty(t, acc.Errors) // test that we set an error
 }
 
 func TestOpenldapBindIntegration(t *testing.T) {
@@ -132,11 +132,11 @@ func TestOpenldapBindIntegration(t *testing.T) {
 }
 
 func commonTests(t *testing.T, o *Openldap, acc *testutil.Accumulator) {
-	assert.Empty(t, acc.Errors, "accumulator had no errors")
-	assert.True(t, acc.HasMeasurement("openldap"), "Has a measurement called 'openldap'")
-	assert.Equal(t, o.Host, acc.TagValue("openldap", "server"), "Has a tag value of server=o.Host")
-	assert.Equal(t, strconv.Itoa(o.Port), acc.TagValue("openldap", "port"), "Has a tag value of port=o.Port")
-	assert.True(t, acc.HasInt64Field("openldap", "total_connections"), "Has an integer field called total_connections")
+	require.Empty(t, acc.Errors, "accumulator had no errors")
+	require.True(t, acc.HasMeasurement("openldap"), "Has a measurement called 'openldap'")
+	require.Equal(t, o.Host, acc.TagValue("openldap", "server"), "Has a tag value of server=o.Host")
+	require.Equal(t, strconv.Itoa(o.Port), acc.TagValue("openldap", "port"), "Has a tag value of port=o.Port")
+	require.True(t, acc.HasInt64Field("openldap", "total_connections"), "Has an integer field called total_connections")
 }
 
 func TestOpenldapReverseMetricsIntegration(t *testing.T) {
@@ -155,5 +155,5 @@ func TestOpenldapReverseMetricsIntegration(t *testing.T) {
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
 	require.NoError(t, err)
-	assert.True(t, acc.HasInt64Field("openldap", "connections_total"), "Has an integer field called connections_total")
+	require.True(t, acc.HasInt64Field("openldap", "connections_total"), "Has an integer field called connections_total")
 }

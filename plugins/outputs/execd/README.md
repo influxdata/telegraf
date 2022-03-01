@@ -4,7 +4,7 @@ The `execd` plugin runs an external program as a daemon.
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Configuration:
+## Configuration
 
 ```toml
 [[outputs.execd]]
@@ -22,7 +22,7 @@ Telegraf minimum version: Telegraf 1.15.0
   data_format = "influx"
 ```
 
-### Example
+## Example
 
 see [examples][]
 

@@ -1,30 +1,34 @@
-package cookie_test
+package cookie
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	clockutil "github.com/benbjohnson/clock"
 	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/cookie"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	reqUser   = "testUser"
-	reqPasswd = "testPassword"
-	reqBody   = "a body"
+	reqUser      = "testUser"
+	reqPasswd    = "testPassword"
+	reqBody      = "a body"
+	reqHeaderKey = "hello"
+	reqHeaderVal = "world"
 
 	authEndpointNoCreds                   = "/auth"
 	authEndpointWithBasicAuth             = "/authWithCreds"
 	authEndpointWithBasicAuthOnlyUsername = "/authWithCredsUser"
 	authEndpointWithBody                  = "/authWithBody"
+	authEndpointWithHeader                = "/authWithHeader"
 )
 
 var fakeCookie = &http.Cookie{
@@ -48,8 +52,14 @@ func newFakeServer(t *testing.T) fakeServer {
 			switch r.URL.Path {
 			case authEndpointNoCreds:
 				authed()
+			case authEndpointWithHeader:
+				if !cmp.Equal(r.Header.Get(reqHeaderKey), reqHeaderVal) {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				authed()
 			case authEndpointWithBody:
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				if !cmp.Equal([]byte(reqBody), body) {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -111,51 +121,46 @@ func TestAuthConfig_Start(t *testing.T) {
 		Username string
 		Password string
 		Body     string
+		Headers  map[string]string
 	}
 	type args struct {
 		renewal  time.Duration
 		endpoint string
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr error
-		assert  func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer)
+		name              string
+		fields            fields
+		args              args
+		wantErr           error
+		firstAuthCount    int32
+		lastAuthCount     int32
+		firstHTTPResponse int
+		lastHTTPResponse  int
 	}{
-		{
-			name: "zero renewal does not renew",
-			args: args{
-				renewal:  0,
-				endpoint: authEndpointNoCreds,
-			},
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
-				// should have Cookie Authed once
-				srv.checkAuthCount(t, 1)
-				srv.checkResp(t, http.StatusOK)
-				time.Sleep(renewalCheck)
-				// should have never Cookie Authed again
-				srv.checkAuthCount(t, 1)
-				srv.checkResp(t, http.StatusOK)
-			},
-		},
 		{
 			name: "success no creds, no body, default method",
 			args: args{
 				renewal:  renewal,
 				endpoint: authEndpointNoCreds,
 			},
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
-				// should have Cookie Authed once
-				srv.checkAuthCount(t, 1)
-				// default method set
-				require.Equal(t, http.MethodPost, c.Method)
-				srv.checkResp(t, http.StatusOK)
-				time.Sleep(renewalCheck)
-				// should have Cookie Authed at least twice more
-				srv.checkAuthCount(t, 3)
-				srv.checkResp(t, http.StatusOK)
+			firstAuthCount:    1,
+			lastAuthCount:     3,
+			firstHTTPResponse: http.StatusOK,
+			lastHTTPResponse:  http.StatusOK,
+		},
+		{
+			name: "success no creds, no body, default method, header set",
+			args: args{
+				renewal:  renewal,
+				endpoint: authEndpointWithHeader,
 			},
+			fields: fields{
+				Headers: map[string]string{reqHeaderKey: reqHeaderVal},
+			},
+			firstAuthCount:    1,
+			lastAuthCount:     3,
+			firstHTTPResponse: http.StatusOK,
+			lastHTTPResponse:  http.StatusOK,
 		},
 		{
 			name: "success with creds, no body",
@@ -168,15 +173,10 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBasicAuth,
 			},
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
-				// should have Cookie Authed once
-				srv.checkAuthCount(t, 1)
-				srv.checkResp(t, http.StatusOK)
-				time.Sleep(renewalCheck)
-				// should have Cookie Authed at least twice more
-				srv.checkAuthCount(t, 3)
-				srv.checkResp(t, http.StatusOK)
-			},
+			firstAuthCount:    1,
+			lastAuthCount:     3,
+			firstHTTPResponse: http.StatusOK,
+			lastHTTPResponse:  http.StatusOK,
 		},
 		{
 			name: "failure with bad creds",
@@ -189,16 +189,11 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBasicAuth,
 			},
-			wantErr: fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized)"),
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
-				// should have never Cookie Authed
-				srv.checkAuthCount(t, 0)
-				srv.checkResp(t, http.StatusForbidden)
-				time.Sleep(renewalCheck)
-				// should have still never Cookie Authed
-				srv.checkAuthCount(t, 0)
-				srv.checkResp(t, http.StatusForbidden)
-			},
+			wantErr:           fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized)"),
+			firstAuthCount:    0,
+			lastAuthCount:     0,
+			firstHTTPResponse: http.StatusForbidden,
+			lastHTTPResponse:  http.StatusForbidden,
 		},
 		{
 			name: "success with no creds, with good body",
@@ -210,15 +205,10 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBody,
 			},
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
-				// should have Cookie Authed once
-				srv.checkAuthCount(t, 1)
-				srv.checkResp(t, http.StatusOK)
-				time.Sleep(renewalCheck)
-				// should have Cookie Authed at least twice more
-				srv.checkAuthCount(t, 3)
-				srv.checkResp(t, http.StatusOK)
-			},
+			firstAuthCount:    1,
+			lastAuthCount:     3,
+			firstHTTPResponse: http.StatusOK,
+			lastHTTPResponse:  http.StatusOK,
 		},
 		{
 			name: "failure with bad body",
@@ -230,40 +220,52 @@ func TestAuthConfig_Start(t *testing.T) {
 				renewal:  renewal,
 				endpoint: authEndpointWithBody,
 			},
-			wantErr: fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized)"),
-			assert: func(t *testing.T, c *cookie.CookieAuthConfig, srv fakeServer) {
-				// should have never Cookie Authed
-				srv.checkAuthCount(t, 0)
-				srv.checkResp(t, http.StatusForbidden)
-				time.Sleep(renewalCheck)
-				// should have still never Cookie Authed
-				srv.checkAuthCount(t, 0)
-				srv.checkResp(t, http.StatusForbidden)
-			},
+			wantErr:           fmt.Errorf("cookie auth renewal received status code: 401 (Unauthorized)"),
+			firstAuthCount:    0,
+			lastAuthCount:     0,
+			firstHTTPResponse: http.StatusForbidden,
+			lastHTTPResponse:  http.StatusForbidden,
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			srv := newFakeServer(t)
-			c := &cookie.CookieAuthConfig{
+			c := &CookieAuthConfig{
 				URL:      srv.URL + tt.args.endpoint,
 				Method:   tt.fields.Method,
 				Username: tt.fields.Username,
 				Password: tt.fields.Password,
 				Body:     tt.fields.Body,
+				Headers:  tt.fields.Headers,
 				Renewal:  config.Duration(tt.args.renewal),
 			}
-
-			if err := c.Start(srv.Client(), testutil.Logger{Name: "cookie_auth"}); tt.wantErr != nil {
+			if err := c.initializeClient(srv.Client()); tt.wantErr != nil {
 				require.EqualError(t, err, tt.wantErr.Error())
 			} else {
 				require.NoError(t, err)
 			}
+			mock := clockutil.NewMock()
+			ticker := mock.Ticker(time.Duration(c.Renewal))
+			defer ticker.Stop()
 
-			if tt.assert != nil {
-				tt.assert(t, c, srv)
-			}
+			c.wg.Add(1)
+			ctx, cancel := context.WithCancel(context.Background())
+			go c.authRenewal(ctx, ticker, testutil.Logger{Name: "cookie_auth"})
+
+			srv.checkAuthCount(t, tt.firstAuthCount)
+			srv.checkResp(t, tt.firstHTTPResponse)
+			mock.Add(renewalCheck)
+
+			// Ensure that the auth renewal goroutine has completed
+			require.Eventually(t, func() bool { return atomic.LoadInt32(srv.int32) >= tt.lastAuthCount }, time.Second, 10*time.Millisecond)
+
+			cancel()
+			c.wg.Wait()
+			srv.checkAuthCount(t, tt.lastAuthCount)
+			srv.checkResp(t, tt.lastHTTPResponse)
+
+			srv.Close()
 		})
 	}
 }

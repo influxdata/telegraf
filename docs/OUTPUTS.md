@@ -1,10 +1,10 @@
-### Output Plugins
+# Output Plugins
 
 This section is for developers who want to create a new output sink. Outputs
 are created in a similar manner as collection plugins, and their interface has
 similar constructs.
 
-### Output Plugin Guidelines
+## Output Plugin Guidelines
 
 - An output must conform to the [telegraf.Output][] interface.
 - Outputs should call `outputs.Add` in their `init` function to register
@@ -17,7 +17,7 @@ similar constructs.
 - The `Description` function should say in one line what this output does.
 - Follow the recommended [Code Style][].
 
-### Output Plugin Example
+## Output Plugin Example
 
 ```go
 package simpleoutput
@@ -46,7 +46,7 @@ func (s *Simple) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (s *Simple) Init() error {
-	return nil
+    return nil
 }
 
 func (s *Simple) Connect() error {
@@ -103,6 +103,7 @@ You should also add the following to your `SampleConfig()`:
 ## Flushing Metrics to Outputs
 
 Metrics are flushed to outputs when any of the following events happen:
+
 - `flush_interval + rand(flush_jitter)` has elapsed since start or the last flush interval
 - At least `metric_batch_size` count of metrics are waiting in the buffer
 - The telegraf process has received a SIGUSR1 signal

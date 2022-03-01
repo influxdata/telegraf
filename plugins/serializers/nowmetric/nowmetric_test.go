@@ -6,18 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func MustMetric(v telegraf.Metric, err error) telegraf.Metric {
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
 
 func TestSerializeMetricFloat(t *testing.T) {
 	now := time.Now()
@@ -32,9 +25,9 @@ func TestSerializeMetricFloat(t *testing.T) {
 	s, _ := NewSerializer()
 	var buf []byte
 	buf, err := s.Serialize(m)
-	assert.NoError(t, err)
-	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":91.5,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"}]`, (now.UnixNano() / int64(time.Millisecond))))
-	assert.Equal(t, string(expS), string(buf))
+	require.NoError(t, err)
+	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":91.5,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"}]`, now.UnixNano()/int64(time.Millisecond)))
+	require.Equal(t, string(expS), string(buf))
 }
 
 func TestSerialize_TimestampUnits(t *testing.T) {
@@ -95,10 +88,10 @@ func TestSerializeMetricInt(t *testing.T) {
 	s, _ := NewSerializer()
 	var buf []byte
 	buf, err := s.Serialize(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"}]`, (now.UnixNano() / int64(time.Millisecond))))
-	assert.Equal(t, string(expS), string(buf))
+	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"}]`, now.UnixNano()/int64(time.Millisecond)))
+	require.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeMetricString(t *testing.T) {
@@ -114,9 +107,9 @@ func TestSerializeMetricString(t *testing.T) {
 	s, _ := NewSerializer()
 	var buf []byte
 	buf, err := s.Serialize(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Equal(t, "null", string(buf))
+	require.Equal(t, "null", string(buf))
 }
 
 func TestSerializeMultiFields(t *testing.T) {
@@ -138,10 +131,10 @@ func TestSerializeMultiFields(t *testing.T) {
 	s, _ := NewSerializer()
 	var buf []byte
 	buf, err := s.Serialize(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"},{"metric_type":"usage_total","resource":"","node":"","value":8559615,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"}]`, (now.UnixNano() / int64(time.Millisecond)), (now.UnixNano() / int64(time.Millisecond))))
-	assert.Equal(t, string(expS), string(buf))
+	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"},{"metric_type":"usage_total","resource":"","node":"","value":8559615,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"}]`, now.UnixNano()/int64(time.Millisecond), now.UnixNano()/int64(time.Millisecond)))
+	require.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeMetricWithEscapes(t *testing.T) {
@@ -156,10 +149,10 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 
 	s, _ := NewSerializer()
 	buf, err := s.Serialize(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`[{"metric_type":"U,age=Idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"}]`, (now.UnixNano() / int64(time.Millisecond))))
-	assert.Equal(t, string(expS), string(buf))
+	expS := []byte(fmt.Sprintf(`[{"metric_type":"U,age=Idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":null,"source":"Telegraf"}]`, now.UnixNano()/int64(time.Millisecond)))
+	require.Equal(t, string(expS), string(buf))
 }
 
 func TestSerializeBatch(t *testing.T) {

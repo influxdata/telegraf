@@ -8,8 +8,10 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/gofrs/uuid"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -30,6 +32,8 @@ type Kafka struct {
 	TopicSuffix     TopicSuffix `toml:"topic_suffix"`
 	RoutingTag      string      `toml:"routing_tag"`
 	RoutingKey      string      `toml:"routing_key"`
+
+	proxy.Socks5ProxyConfig
 
 	// Legacy TLS config options
 	// TLS client certificate
@@ -188,6 +192,12 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SOCKS5 proxy to use when connecting to brokers
+  # socks5_enabled = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
+
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
@@ -212,6 +222,9 @@ var sampleConfig = `
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -225,7 +238,7 @@ func ValidateTopicSuffixMethod(method string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Unknown topic suffix method provided: %s", method)
+	return fmt.Errorf("unknown topic suffix method provided: %s", method)
 }
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
@@ -286,6 +299,16 @@ func (k *Kafka) Init() error {
 		k.TLSCert = k.Certificate
 		k.TLSCA = k.CA
 		k.TLSKey = k.Key
+	}
+
+	if k.Socks5ProxyEnabled {
+		config.Net.Proxy.Enable = true
+
+		dialer, err := k.Socks5ProxyConfig.GetDialer()
+		if err != nil {
+			return fmt.Errorf("connecting to proxy server failed: %s", err)
+		}
+		config.Net.Proxy.Dialer = dialer
 	}
 
 	return nil
@@ -376,7 +399,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
 					return nil
 				}
-				return prodErr
+				return prodErr //nolint:staticcheck // Return first error encountered
 			}
 		}
 		return err

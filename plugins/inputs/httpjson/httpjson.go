@@ -3,7 +3,7 @@ package httpjson
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -263,7 +263,7 @@ func (h *HTTPJSON) sendRequest(serverURL string) (string, float64, error) {
 	defer resp.Body.Close()
 	responseTime := time.Since(start).Seconds()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return string(body), responseTime, err
 	}

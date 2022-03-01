@@ -7,7 +7,8 @@ When the plugin is healthy it will return a 200 response; when unhealthy it
 will return a 503 response.  The default state is healthy, one or more checks
 must fail in order for the resource to enter the failed state.
 
-### Configuration
+## Configuration
+
 ```toml
 [[outputs.health]]
   ## Address and port to listen on.
@@ -48,7 +49,7 @@ must fail in order for the resource to enter the failed state.
   ##   field = "buffer_size"
 ```
 
-#### compares
+### compares
 
 The `compares` check is used to assert basic mathematical relationships.  Use
 it by choosing a field key and one or more comparisons that must hold true.  If
@@ -56,7 +57,7 @@ the field is not found on a metric no comparison will be made.
 
 Comparisons must be hold true on all metrics for the check to pass.
 
-#### contains
+### contains
 
 The `contains` check can be used to require a field key to exist on at least
 one metric.

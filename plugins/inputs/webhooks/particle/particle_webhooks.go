@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
 )
 
@@ -38,10 +39,13 @@ func (e *event) Time() (time.Time, error) {
 type ParticleWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
+	log  telegraf.Logger
 }
 
-func (rb *ParticleWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
+func (rb *ParticleWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
+	rb.log = log
+	rb.log.Infof("Started the webhooks_particle on %s", rb.Path)
 	rb.acc = acc
 }
 

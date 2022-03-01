@@ -55,6 +55,13 @@ const sampleConfig = `
     ## The date/time field in the Elasticsearch index (mandatory).
     date_field = "@timestamp"
 
+    ## If the field used for the date/time field in Elasticsearch is also using
+    ## a custom date/time format it may be required to provide the format to
+    ## correctly parse the field.
+    ##
+    ## If using one of the built in elasticsearch formats this is not required.
+    # date_field_custom_format = ""
+
     ## Time window to query (eg. "1m" to query documents from last minute).
     ## Normally should be set to same as collection interval
     query_period = "1m"
@@ -104,6 +111,7 @@ type esAggregation struct {
 	Index                string          `toml:"index"`
 	MeasurementName      string          `toml:"measurement_name"`
 	DateField            string          `toml:"date_field"`
+	DateFieldFormat      string          `toml:"date_field_custom_format"`
 	QueryPeriod          config.Duration `toml:"query_period"`
 	FilterQuery          string          `toml:"filter_query"`
 	MetricFields         []string        `toml:"metric_fields"`

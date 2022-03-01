@@ -20,6 +20,9 @@ type Ethtool struct {
 	// This is the list of interface names to ignore
 	InterfaceExclude []string `toml:"interface_exclude"`
 
+	// Normalization on the key names
+	NormalizeKeys []string `toml:"normalize_keys"`
+
 	Log telegraf.Logger `toml:"-"`
 
 	// the ethtool command
@@ -38,6 +41,15 @@ const (
 
   ## List of interfaces to ignore when pulling metrics.
   # interface_exclude = ["eth1"]
+
+  ## Some drivers declare statistics with extra whitespace, different spacing,
+  ## and mix cases. This list, when enabled, can be used to clean the keys.
+  ## Here are the current possible normalizations:
+  ##  * snakecase: converts fooBarBaz to foo_bar_baz
+  ##  * trim: removes leading and trailing whitespace
+  ##  * lower: changes all capitalized letters to lowercase
+  ##  * underscore: replaces spaces with underscores
+  # normalize_keys = ["snakecase", "trim", "lower", "underscore"]
 `
 )
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os/exec"
 	"runtime"
 	"time"
@@ -22,6 +21,7 @@ const maxStderrBytes = 512
 type Exec struct {
 	Command []string        `toml:"command"`
 	Timeout config.Duration `toml:"timeout"`
+	Log     telegraf.Logger `toml:"-"`
 
 	runner     Runner
 	serializer serializers.Serializer
@@ -42,6 +42,8 @@ var sampleConfig = `
 `
 
 func (e *Exec) Init() error {
+	e.runner = &CommandRunner{log: e.Log}
+
 	return nil
 }
 
@@ -77,7 +79,7 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return err
 	}
-	buffer.Write(serializedMetrics)
+	buffer.Write(serializedMetrics) //nolint:revive // from buffer.go: "err is always nil"
 
 	if buffer.Len() <= 0 {
 		return nil
@@ -94,6 +96,7 @@ type Runner interface {
 // CommandRunner runs a command with the ability to kill the process before the timeout.
 type CommandRunner struct {
 	cmd *exec.Cmd
+	log telegraf.Logger
 }
 
 // Run runs the command.
@@ -114,9 +117,9 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 		s = removeWindowsCarriageReturns(s)
 		if s.Len() > 0 {
 			if !telegraf.Debug {
-				log.Printf("E! [outputs.exec] Command error: %q", c.truncate(s))
+				c.log.Errorf("Command error: %q", c.truncate(s))
 			} else {
-				log.Printf("D! [outputs.exec] Command error: %q", s)
+				c.log.Debugf("Command error: %q", s)
 			}
 		}
 
@@ -147,7 +150,7 @@ func (c *CommandRunner) truncate(buf bytes.Buffer) string {
 		buf.Truncate(i)
 	}
 	if didTruncate {
-		buf.WriteString("...")
+		buf.WriteString("...") //nolint:revive // from buffer.go: "err is always nil"
 	}
 	return buf.String()
 }
@@ -155,7 +158,6 @@ func (c *CommandRunner) truncate(buf bytes.Buffer) string {
 func init() {
 	outputs.Add("exec", func() telegraf.Output {
 		return &Exec{
-			runner:  &CommandRunner{},
 			Timeout: config.Duration(time.Second * 5),
 		}
 	})
