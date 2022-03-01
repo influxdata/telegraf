@@ -27,7 +27,7 @@ name of the plugin.
   name_override = "entropy_available"
 
   ## override the field name of "value"
-  value_field_name = "value"
+  # value_field_name = "value"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
