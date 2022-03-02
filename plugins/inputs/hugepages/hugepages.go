@@ -14,14 +14,14 @@ import (
 )
 
 const (
-	// default path where global hugepages statistics are kept
-	defaultGlobalHugepagePath = "/sys/kernel/mm/hugepages"
-	// default path where per NUMA node statistics are kept
-	defaultNumaNodePath = "/sys/devices/system/node"
-	// default path to the meminfo file which is produced by kernel
-	defaultMeminfoPath = "/proc/meminfo"
+	// path to root huge page control directory
+	rootHugepagePath = "/sys/kernel/mm/hugepages"
+	// path where per NUMA node statistics are kept
+	numaNodePath = "/sys/devices/system/node"
+	// path to the meminfo file
+	meminfoPath = "/proc/meminfo"
 
-	globalHugepages  = "global"
+	rootHugepages    = "root"
 	perNodeHugepages = "per_node"
 	meminfoHugepages = "meminfo"
 )
@@ -31,7 +31,7 @@ var (
 	colonByte       = []byte(":")
 	kbPrecisionByte = []byte("kB")
 
-	hugepagesMetricsGlobal = []string{
+	hugepagesMetricsRoot = []string{
 		"free_hugepages",
 		"nr_hugepages",
 		"nr_hugepages_mempolicy",
@@ -60,30 +60,27 @@ var (
 )
 
 var hugepagesSampleConfig = `
-  ## Path to global hugepages
-  # global_hugepage_path = "/sys/kernel/mm/hugepages"
-  ## Path to NUMA nodes
-  # numa_node_path = "/sys/devices/system/node"
-  ## Path to meminfo file
-  # meminfo_path = "/proc/meminfo"
-  ## Hugepages types to gather
-  ## Supported options: "global", "per_node", "meminfo"
-  # hugepages_types = ["global", "meminfo"]
+  ## Supported huge page types:
+  ##   - "root" - based on root huge page control directory: /sys/kernel/mm/hugepages
+  ##   - "per_node" - based on per NUMA node directories: /sys/devices/system/node/node[0-9]*/hugepages
+  ##   - "meminfo" - based on /proc/meminfo file
+  # hugepages_types = ["root", "per_node"]
 `
 
 type Hugepages struct {
-	GlobalHugepagePath string   `toml:"global_hugepage_path"`
-	NUMANodePath       string   `toml:"numa_node_path"`
-	MeminfoPath        string   `toml:"meminfo_path"`
-	HugepagesTypes     []string `toml:"hugepages_types"`
+	HugepagesTypes []string `toml:"hugepages_types"`
 
-	gatherGlobal  bool
+	gatherRoot    bool
 	gatherPerNode bool
 	gatherMeminfo bool
+
+	rootHugepagePath string
+	numaNodePath     string
+	meminfoPath      string
 }
 
 func (h *Hugepages) Description() string {
-	return "Collects hugepages metrics."
+	return "Gathers huge pages measurements."
 }
 
 func (h *Hugepages) SampleConfig() string {
@@ -96,15 +93,9 @@ func (h *Hugepages) Init() error {
 		return err
 	}
 
-	if h.GlobalHugepagePath == "" {
-		h.GlobalHugepagePath = defaultGlobalHugepagePath
-	}
-	if h.NUMANodePath == "" {
-		h.NUMANodePath = defaultNumaNodePath
-	}
-	if h.MeminfoPath == "" {
-		h.MeminfoPath = defaultMeminfoPath
-	}
+	h.rootHugepagePath = rootHugepagePath
+	h.numaNodePath = numaNodePath
+	h.meminfoPath = meminfoPath
 
 	return nil
 }
@@ -112,8 +103,8 @@ func (h *Hugepages) Init() error {
 func (h *Hugepages) Gather(acc telegraf.Accumulator) error {
 	var err error
 
-	if h.gatherGlobal {
-		err = h.gatherGlobalStats(acc)
+	if h.gatherRoot {
+		err = h.gatherRootStats(acc)
 		if err != nil {
 			return err
 		}
@@ -136,17 +127,14 @@ func (h *Hugepages) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherStatsPerNode collects global hugepages statistics
-func (h *Hugepages) gatherGlobalStats(acc telegraf.Accumulator) error {
-	globalTags := map[string]string{
-		"name": globalHugepages,
-	}
-	return h.gatherFromHugepagePath(h.GlobalHugepagePath, hugepagesMetricsGlobal, globalTags, acc)
+// gatherStatsPerNode collects root hugepages statistics
+func (h *Hugepages) gatherRootStats(acc telegraf.Accumulator) error {
+	return h.gatherFromHugepagePath(h.rootHugepagePath, hugepagesMetricsRoot, "hugepages_"+rootHugepages, nil, acc)
 }
 
 // gatherStatsPerNode collects hugepages statistics per NUMA node
 func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
-	nodeDirs, err := ioutil.ReadDir(h.NUMANodePath)
+	nodeDirs, err := ioutil.ReadDir(h.numaNodePath)
 	if err != nil {
 		return err
 	}
@@ -157,12 +145,17 @@ func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		perNodeTags := map[string]string{
-			"name": perNodeHugepages,
-			"node": nodeDir.Name(),
+		nodeNumber := strings.TrimPrefix(nodeDir.Name(), "node")
+		_, err := strconv.Atoi(nodeNumber)
+		if err != nil {
+			continue
 		}
-		hugepagesPath := filepath.Join(h.NUMANodePath, nodeDir.Name(), "hugepages")
-		err = h.gatherFromHugepagePath(hugepagesPath, hugepagesMetricsPerNUMANode, perNodeTags, acc)
+
+		perNodeTags := map[string]string{
+			"node": nodeNumber,
+		}
+		hugepagesPath := filepath.Join(h.numaNodePath, nodeDir.Name(), "hugepages")
+		err = h.gatherFromHugepagePath(hugepagesPath, hugepagesMetricsPerNUMANode, "hugepages_"+perNodeHugepages, perNodeTags, acc)
 		if err != nil {
 			return err
 		}
@@ -170,7 +163,8 @@ func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *Hugepages) gatherFromHugepagePath(hugepagesPath string, possibleMetrics []string, tagsToUse map[string]string, acc telegraf.Accumulator) error {
+func (h *Hugepages) gatherFromHugepagePath(hugepagesPath string, possibleMetrics []string, measurementName string,
+	tagsToUse map[string]string, acc telegraf.Accumulator) error {
 	// read metrics from: hugepages/hugepages-*/*
 	hugepagesDirs, err := ioutil.ReadDir(hugepagesPath)
 	if err != nil {
@@ -181,7 +175,12 @@ func (h *Hugepages) gatherFromHugepagePath(hugepagesPath string, possibleMetrics
 		if !hugepagesDir.IsDir() || !strings.HasPrefix(hugepagesDir.Name(), "hugepages-") {
 			continue
 		}
-		hugepagesSize := strings.TrimPrefix(hugepagesDir.Name(), "hugepages-")
+
+		hugepagesSize := strings.TrimPrefix(strings.TrimSuffix(hugepagesDir.Name(), "kB"), "hugepages-")
+		_, err := strconv.Atoi(hugepagesSize)
+		if err != nil {
+			continue
+		}
 
 		metricsPath := filepath.Join(hugepagesPath, hugepagesDir.Name())
 		metricFiles, err := ioutil.ReadDir(metricsPath)
@@ -213,9 +212,9 @@ func (h *Hugepages) gatherFromHugepagePath(hugepagesPath string, possibleMetrics
 			for key, value := range tagsToUse {
 				tags[key] = value
 			}
-			tags["hugepages_size"] = hugepagesSize
+			tags["hugepages_size_kb"] = hugepagesSize
 
-			acc.AddFields("hugepages", metrics, tags)
+			acc.AddFields(measurementName, metrics, tags)
 		}
 	}
 	return nil
@@ -223,7 +222,7 @@ func (h *Hugepages) gatherFromHugepagePath(hugepagesPath string, possibleMetrics
 
 // gatherStatsFromMeminfo collects hugepages statistics from meminfo file
 func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
-	meminfo, err := ioutil.ReadFile(h.MeminfoPath)
+	meminfo, err := ioutil.ReadFile(h.meminfoPath)
 	if err != nil {
 		return err
 	}
@@ -243,23 +242,20 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 			}
 
 			if bytes.Contains(line, kbPrecisionByte) {
-				fieldName = fieldName + "_kB"
+				fieldName = fieldName + "_kb"
 			}
 			metrics[fieldName] = fieldValue
 		}
 	}
 
-	tags := map[string]string{
-		"name": meminfoHugepages,
-	}
-	acc.AddFields("hugepages", metrics, tags)
+	acc.AddFields("hugepages_"+meminfoHugepages, metrics, map[string]string{})
 	return nil
 }
 
 func (h *Hugepages) parseHugepagesConfig() error {
 	// default
 	if h.HugepagesTypes == nil {
-		h.gatherGlobal = true
+		h.gatherRoot = true
 		h.gatherMeminfo = true
 		return nil
 	}
@@ -271,8 +267,8 @@ func (h *Hugepages) parseHugepagesConfig() error {
 
 	for _, hugepagesType := range h.HugepagesTypes {
 		switch hugepagesType {
-		case globalHugepages:
-			h.gatherGlobal = true
+		case rootHugepages:
+			h.gatherRoot = true
 		case perNodeHugepages:
 			h.gatherPerNode = true
 		case meminfoHugepages:

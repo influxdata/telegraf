@@ -1,35 +1,63 @@
 # Hugepages Input Plugin
 
-The hugepages plugin gathers hugepages metrics including per NUMA node
+Transparent Huge Pages (THP) is a Linux memory management system that reduces the overhead of
+Translation Lookaside Buffer (TLB) lookups on machines with large amounts of memory by using larger
+memory pages.
+
+Consult https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html for more details.
 
 ## Configuration
-
 ```toml
-# Collects hugepages metrics from kernel and per NUMA node
+# Gathers huge pages measurements.
 [[inputs.hugepages]]
-  ## Path to a NUMA nodes
-  # numa_node_path = "/sys/devices/system/node"
-  ## Path to a meminfo file
-  # meminfo_path = "/proc/meminfo"
+  ## Supported huge page types:
+  ##   - "root" - based on root huge page control directory: /sys/kernel/mm/hugepages
+  ##   - "per_node" - based on per NUMA node directories: /sys/devices/system/node/node[0-9]*/hugepages
+  ##   - "meminfo" - based on /proc/meminfo file
+  # hugepages_types = ["root", "per_node"]
 ```
 
-## Measurements & Fields
-
-- hugepages
-  - free (int, kB)
-  - nr (int, kB)
-  - HugePages_Total (int, kB)
-  - HugePages_Free (int, kB)
-
-## Tags
-
-- hugepages has the following tags:
-  - node
+## Measurements
+**The following measurements are supported by Hugepages plugin:**
+- hugepages_root (gathered from root huge page control directory: `/sys/kernel/mm/hugepages`)
+  - tags:
+    - hugepages_size_kb (integer, kB)
+  - fields:
+    - free_hugepages (integer)
+    - nr_hugepages (integer)
+    - nr_hugepages_mempolicy (integer)
+    - nr_overcommit_hugepages (integer)
+    - resv_hugepages (integer)
+    - surplus_hugepages (integer)
+- hugepages_per_node (gathered from per NUMA node directories: `/sys/devices/system/node/node[0-9]*/hugepages`)
+  - tags:
+    - hugepages_size_kb (integer, kB)
+    - node (integer)
+  - fields:
+    - free_hugepages (integer)
+    - nr_hugepages (integer)
+    - surplus_hugepages (integer)
+- meminfo (gathered from `/proc/meminfo` file)
+  - fields:
+    - AnonHugePages_kB (integer, kB)
+    - ShmemHugePages_kB (integer, kB)
+    - FileHugePages_kB (integer, kB)
+    - HugePages_Total (integer)
+    - HugePages_Rsvd (integer)
+    - HugePages_Surp (integer)
+    - HugePages_Free (integer)
+    - Hugepagesize_kB (integer, kB)
+    - Hugetlb_kB (integer, kB)
 
 ## Example Output
-
 ```text
 $ ./telegraf -config telegraf.conf -input-filter hugepages -test
-> hugepages,host=maxpc,node=node0 free=0i,nr=0i 1467618621000000000
-> hugepages,host=maxpc,name=meminfo HugePages_Free=0i,HugePages_Total=0i 1467618621000000000
+> hugepages_root,host=ubuntu,hugepages_size_kb=1048576 free_hugepages=0i,nr_hugepages=8i,nr_hugepages_mempolicy=8i,nr_overcommit_hugepages=0i,resv_hugepages=0i,surplus_hugepages=0i 1646258020000000000
+> hugepages_root,host=ubuntu,hugepages_size_kb=2048 free_hugepages=883i,nr_hugepages=2048i,nr_hugepages_mempolicy=2048i,nr_overcommit_hugepages=0i,resv_hugepages=0i,surplus_hugepages=0i 1646258020000000000
+> hugepages_per_node,host=ubuntu,hugepages_size_kb=1048576,node=0 free_hugepages=0i,nr_hugepages=4i,surplus_hugepages=0i 1646258020000000000
+> hugepages_per_node,host=ubuntu,hugepages_size_kb=2048,node=0 free_hugepages=434i,nr_hugepages=1024i,surplus_hugepages=0i 1646258020000000000
+> hugepages_per_node,host=ubuntu,hugepages_size_kb=1048576,node=1 free_hugepages=0i,nr_hugepages=4i,surplus_hugepages=0i 1646258020000000000
+> hugepages_per_node,host=ubuntu,hugepages_size_kb=2048,node=1 free_hugepages=449i,nr_hugepages=1024i,surplus_hugepages=0i 1646258020000000000
+> hugepages_meminfo,host=ubuntu AnonHugePages_kb=0i,FileHugePages_kb=0i,HugePages_Free=883i,HugePages_Rsvd=0i,HugePages_Surp=0i,HugePages_Total=2048i,Hugepagesize_kb=2048i,Hugetlb_kb=12582912i,ShmemHugePages_kb=0i 1646258020000000000
+
 ```
