@@ -1,4 +1,7 @@
-package system
+//go:build linux
+// +build linux
+
+package hugepages
 
 import (
 	"bytes"
