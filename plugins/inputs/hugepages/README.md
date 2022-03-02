@@ -4,9 +4,10 @@ Transparent Huge Pages (THP) is a Linux memory management system that reduces th
 Translation Lookaside Buffer (TLB) lookups on machines with large amounts of memory by using larger
 memory pages.
 
-Consult https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html for more details.
+Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html> for more details.
 
 ## Configuration
+
 ```toml
 # Gathers huge pages measurements.
 [[inputs.hugepages]]
@@ -18,7 +19,9 @@ Consult https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html f
 ```
 
 ## Measurements
+
 **The following measurements are supported by Hugepages plugin:**
+
 - hugepages_root (gathered from root huge page control directory: `/sys/kernel/mm/hugepages`)
   - tags:
     - hugepages_size_kb (integer, kB)
@@ -50,6 +53,7 @@ Consult https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html f
     - Hugetlb_kB (integer, kB)
 
 ## Example Output
+
 ```text
 $ ./telegraf -config telegraf.conf -input-filter hugepages -test
 > hugepages_root,host=ubuntu,hugepages_size_kb=1048576 free_hugepages=0i,nr_hugepages=8i,nr_hugepages_mempolicy=8i,nr_overcommit_hugepages=0i,resv_hugepages=0i,surplus_hugepages=0i 1646258020000000000
