@@ -54,7 +54,7 @@ type VSphere struct {
 	MaxQueryMetrics         int
 	CollectConcurrency      int
 	DiscoverConcurrency     int
-	ForceDiscoverOnInit     bool
+	ForceDiscoverOnInit     bool `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
 	ObjectDiscoveryInterval config.Duration
 	Timeout                 config.Duration
 	HistoricalInterval      config.Duration
@@ -274,11 +274,6 @@ func (v *VSphere) Start(_ telegraf.Accumulator) error {
 	v.Log.Info("Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
-
-	// Check for deprecated settings
-	if !v.ForceDiscoverOnInit {
-		v.Log.Warn("The 'force_discover_on_init' configuration parameter has been deprecated. Setting it to 'false' has no effect")
-	}
 
 	// Create endpoints, one for each vCenter we're monitoring
 	v.endpoints = make([]*Endpoint, len(v.Vcenters))

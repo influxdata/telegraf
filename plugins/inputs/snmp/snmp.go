@@ -91,7 +91,7 @@ type Snmp struct {
 	// Name & Fields are the elements of a Table.
 	// Telegraf chokes if we try to embed a Table. So instead we have to embed the
 	// fields of a Table, and construct a Table during runtime.
-	Name   string  // deprecated in 1.14; use name_override
+	Name   string  `toml:"name"`
 	Fields []Field `toml:"field"`
 
 	connectionCache []snmpConnection

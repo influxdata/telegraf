@@ -64,11 +64,13 @@ type MQTTConsumer struct {
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	parser                 parsers.Parser
-	// Legacy metric buffer support; deprecated in v0.10.3
-	MetricBuffer      int
+
+	MetricBuffer      int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 	PersistentSession bool
 	ClientID          string `toml:"client_id"`
+
 	tls.ClientConfig
+
 	Log           telegraf.Logger
 	clientFactory ClientFactory
 	client        Client
