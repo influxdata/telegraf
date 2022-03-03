@@ -216,17 +216,21 @@ func TestWriteNoNewline(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
 
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01"},
-	)
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+
+		acc.Wait(1)
+		acc.AssertContainsTaggedFields(t, "cpu_load_short",
+			map[string]interface{}{"value": float64(12)},
+			map[string]string{"host": "server01"},
+		)
+	}
 }
 
 func TestAllOrNothing(t *testing.T) {
@@ -237,11 +241,14 @@ func TestAllOrNothing(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(testPartial)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 400, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(testPartial)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 400, resp.StatusCode)
+	}
 }
 
 func TestWriteMaxLineSizeIncrease(t *testing.T) {
@@ -256,11 +263,15 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// Post a gigantic metric to the listener and verify that it writes OK this time:
-	resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// Post a gigantic metric to the listener and verify that it writes OK this time:
+		resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(hugeMetric)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+	}
 }
 
 func TestWriteVerySmallMaxBody(t *testing.T) {
@@ -276,10 +287,14 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 413, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(hugeMetric)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 413, resp.StatusCode)
+	}
 }
 
 func TestWriteLargeLine(t *testing.T) {
@@ -437,11 +452,15 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/foobar", ""), "", bytes.NewBuffer([]byte(testMsg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 404, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/foobar", ""), "", bytes.NewBuffer([]byte(testMsg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 404, resp.StatusCode)
+	}
 }
 
 func TestWriteInvalid(t *testing.T) {
@@ -452,11 +471,15 @@ func TestWriteInvalid(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(badMsg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 400, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(badMsg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 400, resp.StatusCode)
+	}
 }
 
 func TestWriteEmpty(t *testing.T) {
@@ -467,11 +490,15 @@ func TestWriteEmpty(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(emptyMsg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(emptyMsg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+	}
 }
 
 func TestReady(t *testing.T) {
@@ -504,17 +531,20 @@ func TestWriteWithPrecision(t *testing.T) {
 	defer listener.Stop()
 
 	msg := "xyzzy value=42 1422568543\n"
-	resp, err := http.Post(
-		createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s"), "", bytes.NewBuffer([]byte(msg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
 
-	acc.Wait(1)
-	require.Equal(t, 1, len(acc.Metrics))
-	// When timestamp is provided, the precision parameter is
-	// overloaded to specify the timestamp's unit
-	require.Equal(t, time.Unix(0, 1422568543000000000), acc.Metrics[0].Time)
+		resp, err := http.Post(
+			createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s"), "", bytes.NewBuffer([]byte(msg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+
+		acc.Wait(1)
+		// When timestamp is provided, the precision parameter is
+		// overloaded to specify the timestamp's unit
+		require.Equal(t, time.Unix(0, 1422568543000000000), acc.Metrics[0].Time)
+	}
 }
 
 func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
