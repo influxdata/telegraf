@@ -11,7 +11,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
 ```toml
 [[inputs.ravendb]]
   ## Node URL and port that RavenDB is listening on
-  url = "https://localhost:8080"
+  url = "http://localhost:8080"
 
   ## RavenDB X509 client certificate setup
   tls_cert = "/etc/telegraf/raven.crt"

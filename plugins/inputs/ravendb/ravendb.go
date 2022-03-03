@@ -48,7 +48,7 @@ type RavenDB struct {
 
 var sampleConfig = `
   ## Node URL and port that RavenDB is listening on
-  url = "https://localhost:8080"
+  url = "http://localhost:8080"
 
   ## RavenDB X509 client certificate setup
   # tls_cert = "/etc/telegraf/raven.crt"
