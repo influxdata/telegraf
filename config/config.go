@@ -139,10 +139,15 @@ type AgentConfig struct {
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
+	// Collected metrics are rounded to the precision specified. Precision is
+	// specified as an interval with an integer + unit (e.g. 0s, 10ms, 2us, 4s).
+	// Valid time units are "ns", "us" (or "µs"), "ms", "s".
+	//
 	// By default or when set to "0s", precision will be set to the same
-	// timestamp order as the collection interval, with the maximum being 1s.
+	// timestamp order as the collection interval, with the maximum being 1s:
 	//   ie, when interval = "10s", precision will be "1s"
 	//       when interval = "250ms", precision will be "1ms"
+	//
 	// Precision will NOT be used for service inputs. It is up to each individual
 	// service input to set the timestamp at the appropriate precision.
 	Precision Duration
@@ -365,13 +370,17 @@ var agentConfig = `
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
+  ## Collected metrics are rounded to the precision specified. Precision is
+  ## specified as an interval with an integer + unit (e.g. 0s, 10ms, 2us, 4s).
+  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
+  ##
   ## By default or when set to "0s", precision will be set to the same
-  ## timestamp order as the collection interval, with the maximum being 1s.
+  ## timestamp order as the collection interval, with the maximum being 1s:
   ##   ie, when interval = "10s", precision will be "1s"
   ##       when interval = "250ms", precision will be "1ms"
+  ##
   ## Precision will NOT be used for service inputs. It is up to each individual
   ## service input to set the timestamp at the appropriate precision.
-  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
 
   ## Log at debug level.
