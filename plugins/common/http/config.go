@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/benbjohnson/clock"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/cookie"
@@ -52,13 +51,23 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		Timeout:   time.Duration(timeout),
 	}
 
-	client = h.OAuth2Config.CreateOauth2Client(ctx, client)
-
-	if h.CookieAuthConfig.URL != "" {
-		if err := h.CookieAuthConfig.Start(client, log, clock.New()); err != nil {
-			return nil, err
-		}
+	// TODO: review this...
+	// Using token URL leads to needing to comment out cookie auth config
+	h.OAuth2Config.TokenURL = h.URL
+	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
+	if err != nil {
+		return nil, err
 	}
+
+	h.AccessToken = h.OAuth2Config.AccessToken
+
+	// TODO: temporarily commented this out
+	// if h.CookieAuthConfig.URL != "" {
+	// 	fmt.Println("I guess h.CookieAuthConfig.URL is not empty string...", h.CookieAuthConfig.URL)
+	// 	if err := h.CookieAuthConfig.Start(client, log, clock.New()); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	return client, nil
 }

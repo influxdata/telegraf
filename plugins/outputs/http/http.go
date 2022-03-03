@@ -12,7 +12,8 @@ import (
 	"time"
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	jwtGo "github.com/golang-jwt/jwt/v4"
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/internal"
@@ -45,6 +46,9 @@ var sampleConfig = `
   # client_secret = "secret"
   # token_url = "https://indentityprovider/oauth2/v1/token"
   # scopes = ["urn:opc:idm:__myscopes__"]
+
+  # OAuth2 Authorization Code Grant
+  # credentials_file = "/etc/telegraf/keyfile.json"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -126,6 +130,10 @@ type HTTP struct {
 	UseBatchFormat          bool              `toml:"use_batch_format"`
 	AwsService              string            `toml:"aws_service"`
 	NonRetryableStatusCodes []int             `toml:"non_retryable_statuscodes"`
+	// TODO: What struct should AccessToken live in? Does it live in a client?
+	// It might get picked up in in oauth/config.go similar to credentials_file
+	// AccessToken string
+
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
@@ -157,6 +165,8 @@ func (h *HTTP) Connect() error {
 	}
 
 	ctx := context.Background()
+	// TODO: review setting h.URL in this fashion...
+	h.HTTPClientConfig.URL = h.URL
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
@@ -258,6 +268,36 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	if h.Username != "" || h.Password != "" {
 		req.SetBasicAuth(h.Username, h.Password)
+	}
+
+	// Authorization Code Grant
+	if h.CredentialsFile != "" {
+		claims := jwtGo.RegisteredClaims{}
+		_, err = jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
+			return nil, nil
+		})
+		if err != nil {
+			// TODO: What to do with this err
+			fmt.Println("err parsing with claims: ", err)
+		}
+
+		// Request new token if expired
+		if !claims.VerifyExpiresAt(time.Now(), true) {
+			// token is expired
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, time.Duration(h.Timeout))
+			defer cancel()
+
+			err = h.OAuth2Config.GetAccessToken(ctx, h.URL)
+			if err != nil {
+				return err
+			}
+		}
+
+		bearerToken := "Bearer " + h.HTTPClientConfig.AccessToken
+		req.Header.Set("Authorization", bearerToken)
+		req.Header.Set("User-Agent", internal.ProductToken())
+		req.Header.Set("Accept", "application/json")
 	}
 
 	req.Header.Set("User-Agent", internal.ProductToken())
