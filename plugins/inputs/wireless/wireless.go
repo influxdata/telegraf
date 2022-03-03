@@ -16,7 +16,7 @@ var sampleConfig = `
   ## If not specified, then default is /proc
   ## Ignored on macOS/darwin
   # host_proc = "/proc"
-  `
+`
 
 // Description returns information about the plugin.
 func (w *Wireless) Description() string {
