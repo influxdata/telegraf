@@ -2,10 +2,13 @@ package oauth
 
 import (
 	"context"
+	"io/ioutil"
 	"net/http"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
+	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/jwt"
 )
 
 type OAuth2Config struct {
@@ -14,9 +17,13 @@ type OAuth2Config struct {
 	ClientSecret string   `toml:"client_secret"`
 	TokenURL     string   `toml:"token_url"`
 	Scopes       []string `toml:"scopes"`
+
+	CredentialsFile string `toml:"credentials_file"`
+	// TODO: Could maybe add access token to this struct?
+	AccessToken string
 }
 
-func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) *http.Client {
+func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) (*http.Client, error) {
 	if o.ClientID != "" && o.ClientSecret != "" && o.TokenURL != "" {
 		oauthConfig := clientcredentials.Config{
 			ClientID:     o.ClientID,
@@ -28,5 +35,39 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 		client = oauthConfig.Client(ctx)
 	}
 
-	return client
+	// Not using Client Credentials grant, instead using Authorization Code Grant
+	if o.CredentialsFile != "" {
+		err := o.GetAccessToken(ctx, o.TokenURL)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return client, nil
+}
+
+func (o *OAuth2Config) GetAccessToken(ctx context.Context, audience string) error {
+	data, err := ioutil.ReadFile(o.CredentialsFile)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Should Audience instead be scope?
+	conf, err := google.JWTConfigFromJSON(data, audience)
+	if err != nil {
+		return err
+	}
+
+	jwtConfig := &jwt.Config{
+		Email:         conf.Email,
+		TokenURL:      conf.TokenURL,
+		PrivateKey:    conf.PrivateKey,
+		PrivateClaims: map[string]interface{}{"target_audience": audience},
+	}
+	token, err := jwtConfig.TokenSource(ctx).Token()
+	if err != nil {
+		return err
+	}
+	o.AccessToken = token.Extra("id_token").(string)
+	return nil
 }
