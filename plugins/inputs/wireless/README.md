@@ -34,7 +34,6 @@ The `host_proc` option is ignored on macOS.
     - misc (int64, packets, counter) - dropped for un-specified reason
     - missed_beacon (int64, packets, counter) - missed beacon packets
 
-
 ### macOS metrics
 
 - metric
@@ -57,7 +56,6 @@ The `host_proc` option is ignored on macOS.
     - MCS (int64, MCS, metric) - The last MCS
     - guardInterval (int64, guard, metric) - The guard interval
     - NSS (int64, NSS, metric) - The number of spatial streams
-
 
 ## Example Output
 
