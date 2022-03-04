@@ -837,6 +837,15 @@ func (c *Config) LoadConfigData(data []byte) error {
 		if !ok {
 			return fmt.Errorf("invalid configuration, error parsing agent table")
 		}
+
+		// Parse the durations first
+		c.getFieldConfigDuration(subTable, "interval", &c.Agent.Interval)
+		c.getFieldConfigDuration(subTable, "collection_jitter", &c.Agent.CollectionJitter)
+		c.getFieldConfigDuration(subTable, "collection_offset", &c.Agent.CollectionOffset)
+		c.getFieldConfigDuration(subTable, "flush_interval", &c.Agent.FlushInterval)
+		c.getFieldConfigDuration(subTable, "flush_jitter", &c.Agent.FlushJitter)
+		c.getFieldConfigDuration(subTable, "precision", &c.Agent.Precision)
+
 		if err = c.toml.UnmarshalTable(subTable, c.Agent); err != nil {
 			return fmt.Errorf("error parsing [agent]: %w", err)
 		}
@@ -1879,6 +1888,23 @@ func (c *Config) getFieldDuration(tbl *ast.Table, fieldName string, target inter
 				}
 				targetVal := reflect.ValueOf(target).Elem()
 				targetVal.Set(reflect.ValueOf(d))
+			}
+		}
+	}
+}
+
+func (c *Config) getFieldConfigDuration(tbl *ast.Table, fieldName string, target interface{}) {
+	if node, ok := tbl.Fields[fieldName]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				d, err := time.ParseDuration(str.Value)
+				if err != nil {
+					c.addError(tbl, fmt.Errorf("error parsing duration: %w", err))
+					return
+				}
+				dur := Duration(d)
+				targetVal := reflect.ValueOf(target).Elem()
+				targetVal.Set(reflect.ValueOf(dur))
 			}
 		}
 	}
