@@ -25,8 +25,8 @@ func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	metrics, tags := w.loadMacWirelessTable(wireless)
-	acc.AddFields("wireless", metrics, tags)
+	fields, tags := w.loadMacWirelessTable(wireless)
+	acc.AddFields("wireless", fields, tags)
 	return nil
 }
 
@@ -43,14 +43,14 @@ func (w *Wireless) loadMacWirelessTable(table []byte) (map[string]interface{}, m
 		v := strings.TrimSpace(fm[1])
 		switch name {
 		case "channel", "BSSID", "SSID":
-			fields[name] = strings.Replace(v, " ", "_", -1)
+			tags[name] = "\"" + strings.Replace(v, " ", "_", -1) + "\""
 		default:
 			if val, err := strconv.Atoi(v); err == nil {
 				// it's a number
 				fields[name] = int64(val)
 			} else {
 				// it's a string
-				tags[name] = strings.Replace(v, " ", "_", -1)
+				tags[name] = "\"" + strings.Replace(v, " ", "_", -1) + "\""
 			}
 		}
 	}

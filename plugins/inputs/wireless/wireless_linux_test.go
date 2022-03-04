@@ -4,19 +4,16 @@
 package wireless
 
 import (
+	"io/ioutil"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
-var testInput = []byte(`Inter-| sta-|   Quality        |   Discarded packets               | Missed | WE
- face | tus | link level noise |  nwid  crypt   frag  retry   misc | beacon | 22
- wlan0: 0000   60.  -50.  -256        0      0      0   1525      0        0
- wlan1: 0000   70.  -39.  -256        0      0      0  12096 191188        0`)
-
 func TestLoadWirelessTable(t *testing.T) {
+	testInput, err := ioutil.ReadFile("testdata/wireless_linux_test.txt")
+	require.NoError(t, err)
 	expectedMetrics := []*wirelessInterface{
 		{
 			Interface: "wlan0",

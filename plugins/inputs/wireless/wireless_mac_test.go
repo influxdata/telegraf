@@ -26,9 +26,6 @@ func TestLoadWirelessTable(t *testing.T) {
 		"maxRate":         int64(450),
 		"lastAssocStatus": int64(0),
 		"MCS":             int64(15),
-		"BSSID":           "12:34:56:78:9a:bc",
-		"SSID":            "Foo_Bar",
-		"channel":         "157,1",
 	}
 	// the tags we expect
 	macTags := map[string]string{
@@ -36,6 +33,9 @@ func TestLoadWirelessTable(t *testing.T) {
 		"op_mode":     "station",
 		"802.11_auth": "open",
 		"link_auth":   "wpa2-psk",
+		"BSSID":       "12:34:56:78:9a:bc",
+		"SSID":        "Foo_Bar",
+		"channel":     "157,1",
 	}
 
 	// load the table from the input.

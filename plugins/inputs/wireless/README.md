@@ -23,16 +23,16 @@ The `host_proc` option is ignored on macOS.
   - tags:
     - interface (wireless interface)
   - fields:
-    - status (int64, metric) - Its current state. This is a device dependent information
-    - link (int64, percentage, metric) - general quality of the reception
-    - level (int64, dBm, metric) - signal strength at the receiver
-    - noise (int64, dBm, metric) - silence level (no packet) at the receiver
-    - nwid (int64, packets, metric) - number of discarded packets due to invalid network id
-    - crypt (int64, packets, metric) - number of packet unable to decrypt
-    - frag (int64, packets, metric) - fragmented packets
-    - retry (int64, packets, metric) - cumulative retry counts
-    - misc (int64, packets, metric) - dropped for un-specified reason
-    - missed_beacon (int64, packets, metric) - missed beacon packets
+    - status (int64, gauge) - Its current state. This is a device dependent information
+    - link (int64, percentage, gauge) - general quality of the reception
+    - level (int64, dBm, gauge) - signal strength at the receiver
+    - noise (int64, dBm, gauge) - silence level (no packet) at the receiver
+    - nwid (int64, packets, counter) - number of discarded packets due to invalid network id
+    - crypt (int64, packets, counter) - number of packet unable to decrypt
+    - frag (int64, packets, counter) - fragmented packets
+    - retry (int64, packets, counter) - cumulative retry counts
+    - misc (int64, packets, counter) - dropped for un-specified reason
+    - missed_beacon (int64, packets, counter) - missed beacon packets
 
 
 ### macOS metrics
@@ -43,32 +43,10 @@ The `host_proc` option is ignored on macOS.
     - op_mode (operating mode: station, ad_hoc or ap)
     - 802.11_auth (open or hidden)
     - link_auth (authorization scheme)
-
-  - fields:
     - BSSID (string, mac address, _only_ reported if run as `root`)
     - SSID (string, The SSID of the network)
-    - agrCtlRSSI (int64, dBm, metric) - The current aggregate RSSI of the link
-    - agrExtRSSI (int64, dBm, metric) - The current aggregate external RSSI of the link
-    - agrCtlNoise (int64, dBm, metric) - The current aggregate noise of the link
-    - agrExtNoise (int64, dBm, metric) - The current aggregate external noise of the link
-    - lastTxRate (int64, Mbps, metric) - The last transmit rate
-    - maxRate (int64, Mbps, metric) - The maximum transmit rate
-    - lastAssocStatus (int64, metric) - The last association status
-    - MCS (int64, MCS, metric) - The last MCS
-    - guardInterval (int64, guard, metric) - The guard interval
-    - NSS (int64, NSS, metric) - The number of spatial streams
-    - channel (channel information)
-    - Interface (wireless interface, set to `airport`)
-    - State (running or not)
-    - Op mode (operating mode: station, ad_hoc or ap)
-    - 802.11 auth (open or hidden)
-    - link auth (authorization scheme)
-    - BSSID (mac address, _only_ reported if run as `root`)
-    - SSID (The SSID of the network)
     - channel (channel number)
   - fields:
-    - BSSID (string, mac address, _only_ reported if run as `root`)
-    - SSID (string, The SSID of the network)
     - agrCtlRSSI (int64, dBm, metric) - The current aggregate RSSI of the link
     - agrExtRSSI (int64, dBm, metric) - The current aggregate external RSSI of the link
     - agrCtlNoise (int64, dBm, metric) - The current aggregate noise of the link
@@ -79,8 +57,8 @@ The `host_proc` option is ignored on macOS.
     - MCS (int64, MCS, metric) - The last MCS
     - guardInterval (int64, guard, metric) - The guard interval
     - NSS (int64, NSS, metric) - The number of spatial streams
-    - channel (channel information)
-  
+
+
 ## Example Output
 
 This section shows example output in Line Protocol format.
@@ -96,5 +74,5 @@ wireless,host=example.localdomain,interface=wlan0 misc=0i,frag=0i,link=60i,level
 **Note:** The `BSSID` field is only reported if the user is root.
 
 ```text
-wireless,802.11_auth=open,host=mac.local,link_auth=wpa2-psk,op_mode=station,state=running BSSID="12:34:56:78:9a:bc",MCS=7i,NSS=3i,SSID="local_ssid",agrCtlNoise=-88i,agrCtlRSSI=-44i,agrExtNoise=0i,agrExtRSSI=0i,channel="153,80",guardInterval=800i,lastAssocStatus=0i,lastTxRate=975i,maxRate=217i 1645112457000000000
+wireless,802.11_auth=open,BSSID="12:34:56:78:9a:bc",SSID="local_ssid",channel="153,80",host=mac.local,link_auth=wpa2-psk,op_mode=station,state=running MCS=7i,NSS=3i,agrCtlNoise=-89i,agrCtlRSSI=-45i,agrExtNoise=0i,agrExtRSSI=0i,guardInterval=400i,lastAssocStatus=0i,lastTxRate=975i,maxRate=217i 1646347664000000000
 ```
