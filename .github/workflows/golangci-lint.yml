@@ -24,6 +24,7 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.42.1
+          args: --timeout=30m
           only-new-issues: true
   golangci-master:
     if: github.ref == 'refs/heads/master'
