@@ -276,6 +276,7 @@ func (j *Jenkins) gatherJobs(acc telegraf.Accumulator) {
 	}
 	var wg sync.WaitGroup
 	for _, job := range js.Jobs {
+		j.Log.Debugf("job: %s\n", job.Name)
 		wg.Add(1)
 		go func(name string, wg *sync.WaitGroup, acc telegraf.Accumulator) {
 			defer wg.Done()
@@ -298,6 +299,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 
 	// filter out excluded or not included jobs
 	if !j.jobFilter.Match(jr.hierarchyName()) {
+		j.Log.Debugf("dropping job: %s\n", jr.hierarchyName())
 		return nil
 	}
 
