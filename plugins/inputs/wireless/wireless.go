@@ -2,7 +2,6 @@ package wireless
 
 import (
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Wireless is used to store configuration values.
@@ -28,8 +27,4 @@ func (w *Wireless) SampleConfig() string {
 	return sampleConfig
 }
 
-func init() {
-	inputs.Add("wireless", func() telegraf.Input {
-		return &Wireless{}
-	})
-}
+

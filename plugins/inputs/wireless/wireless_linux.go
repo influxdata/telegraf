@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // default host proc path
@@ -133,4 +134,10 @@ func proc(env, defaultPath string) string {
 	}
 	// return default path
 	return defaultPath
+}
+
+func init() {
+	inputs.Add("wireless", func() telegraf.Input {
+		return &Wireless{}
+	})
 }

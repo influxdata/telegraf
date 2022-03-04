@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // default executable path & flags
@@ -55,4 +56,10 @@ func (w *Wireless) loadMacWirelessTable(table []byte) (map[string]interface{}, m
 		}
 	}
 	return fields, tags
+}
+
+func init() {
+	inputs.Add("wireless", func() telegraf.Input {
+		return &Wireless{}
+	})
 }
