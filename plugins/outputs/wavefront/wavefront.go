@@ -59,8 +59,7 @@ var tagValueReplacer = strings.NewReplacer("*", "-")
 var pathReplacer = strings.NewReplacer("_", "_")
 
 var sampleConfig = `
-  ## Url for Wavefront Direct Ingestion or using HTTP with Wavefront Proxy
-  ## If using Wavefront Proxy, also specify port. example: http://proxyserver:2878
+  ## Url for Wavefront Direct Ingestion.
   url = "https://metrics.wavefront.com"
 
   ## Authentication Token for Wavefront. Only required if using Direct Ingestion
