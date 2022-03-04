@@ -2,19 +2,21 @@ package filestack
 
 import (
 	"encoding/json"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
 type FilestackWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
 	log  telegraf.Logger
+	auth.BasicAuth
 }
 
 func (fs *FilestackWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
@@ -27,7 +29,13 @@ func (fs *FilestackWebhook) Register(router *mux.Router, acc telegraf.Accumulato
 
 func (fs *FilestackWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
+
+	if !fs.Verify(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
