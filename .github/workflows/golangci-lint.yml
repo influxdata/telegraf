@@ -12,6 +12,10 @@ on:
 jobs:
   golangci-pr:
     if: github.ref != 'refs/heads/master'
+    strategy:
+      matrix:
+        go-version: [1.17.7]
+        os: [macos-latest, windows-latest]
     name: lint-pr-changes
     runs-on: ubuntu-latest
     steps:
