@@ -167,44 +167,48 @@ func TestWriteKeepDatabase(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
 
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01", "database": "mydb"},
-	)
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
 
-	// post single message to listener with a database tag in it already. It should be clobbered.
-	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgWithDB)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
-
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01", "database": "mydb"},
-	)
-
-	// post multiple message to listener
-	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
-
-	acc.Wait(2)
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	for _, hostTag := range hostTags {
+		acc.Wait(1)
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},
-			map[string]string{"host": hostTag, "database": "mydb"},
+			map[string]string{"host": "server01", "database": "mydb"},
 		)
+
+		// post single message to listener with a database tag in it already. It should be clobbered.
+		resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgWithDB)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+
+		acc.Wait(1)
+		acc.AssertContainsTaggedFields(t, "cpu_load_short",
+			map[string]interface{}{"value": float64(12)},
+			map[string]string{"host": "server01", "database": "mydb"},
+		)
+
+		// post multiple message to listener
+		resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+
+		acc.Wait(2)
+		hostTags := []string{"server02", "server03",
+			"server04", "server05", "server06"}
+		for _, hostTag := range hostTags {
+			acc.AssertContainsTaggedFields(t, "cpu_load_short",
+				map[string]interface{}{"value": float64(12)},
+				map[string]string{"host": hostTag, "database": "mydb"},
+			)
+		}
 	}
 }
 
@@ -248,17 +252,21 @@ func TestWriteNoNewline(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
 
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01"},
-	)
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+
+		acc.Wait(1)
+		acc.AssertContainsTaggedFields(t, "cpu_load_short",
+			map[string]interface{}{"value": float64(12)},
+			map[string]string{"host": "server01"},
+		)
+	}
 }
 
 func TestPartialWrite(t *testing.T) {
@@ -269,21 +277,25 @@ func TestPartialWrite(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testPartial)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 400, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
 
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu",
-		map[string]interface{}{"value1": float64(1)},
-		map[string]string{"host": "a"},
-	)
-	acc.AssertContainsTaggedFields(t, "cpu",
-		map[string]interface{}{"value1": float64(1)},
-		map[string]string{"host": "c"},
-	)
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testPartial)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 400, resp.StatusCode)
+
+		acc.Wait(1)
+		acc.AssertContainsTaggedFields(t, "cpu",
+			map[string]interface{}{"value1": float64(1)},
+			map[string]string{"host": "a"},
+		)
+		acc.AssertContainsTaggedFields(t, "cpu",
+			map[string]interface{}{"value1": float64(1)},
+			map[string]string{"host": "c"},
+		)
+	}
 }
 
 func TestWriteMaxLineSizeIncrease(t *testing.T) {
@@ -298,11 +310,15 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// Post a gigantic metric to the listener and verify that it writes OK this time:
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// Post a gigantic metric to the listener and verify that it writes OK this time:
+		resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+	}
 }
 
 func TestWriteVerySmallMaxBody(t *testing.T) {
@@ -318,10 +334,14 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 413, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 413, resp.StatusCode)
+	}
 }
 
 func TestWriteLargeLine(t *testing.T) {
@@ -338,63 +358,67 @@ func TestWriteLargeLine(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric+testMsgs)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	//todo: with the new parser, long lines aren't a problem.  Do we need to skip them?
-	//require.EqualValues(t, 400, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
 
-	expected := testutil.MustMetric(
-		"super_long_metric",
-		map[string]string{"foo": "bar"},
-		map[string]interface{}{
-			"clients":                     42,
-			"connected_followers":         43,
-			"evicted_keys":                44,
-			"expired_keys":                45,
-			"instantaneous_ops_per_sec":   46,
-			"keyspace_hitrate":            47.0,
-			"keyspace_hits":               48,
-			"keyspace_misses":             49,
-			"latest_fork_usec":            50,
-			"master_repl_offset":          51,
-			"mem_fragmentation_ratio":     52.58,
-			"pubsub_channels":             53,
-			"pubsub_patterns":             54,
-			"rdb_changes_since_last_save": 55,
-			"repl_backlog_active":         56,
-			"repl_backlog_histlen":        57,
-			"repl_backlog_size":           58,
-			"sync_full":                   59,
-			"sync_partial_err":            60,
-			"sync_partial_ok":             61,
-			"total_commands_processed":    62,
-			"total_connections_received":  63,
-			"uptime":                      64,
-			"used_cpu_sys":                65.07,
-			"used_cpu_sys_children":       66.0,
-			"used_cpu_user":               67.1,
-			"used_cpu_user_children":      68.0,
-			"used_memory":                 692048,
-			"used_memory_lua":             70792,
-			"used_memory_peak":            711128,
-			"used_memory_rss":             7298144,
-		},
-		time.Unix(123456789, 0),
-	)
+		resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric+testMsgs)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		//todo: with the new parser, long lines aren't a problem.  Do we need to skip them?
+		//require.EqualValues(t, 400, resp.StatusCode)
 
-	m, ok := acc.Get("super_long_metric")
-	require.True(t, ok)
-	testutil.RequireMetricEqual(t, expected, testutil.FromTestMetric(m))
-
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	acc.Wait(len(hostTags))
-	for _, hostTag := range hostTags {
-		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
-			map[string]string{"host": hostTag},
+		expected := testutil.MustMetric(
+			"super_long_metric",
+			map[string]string{"foo": "bar"},
+			map[string]interface{}{
+				"clients":                     42,
+				"connected_followers":         43,
+				"evicted_keys":                44,
+				"expired_keys":                45,
+				"instantaneous_ops_per_sec":   46,
+				"keyspace_hitrate":            47.0,
+				"keyspace_hits":               48,
+				"keyspace_misses":             49,
+				"latest_fork_usec":            50,
+				"master_repl_offset":          51,
+				"mem_fragmentation_ratio":     52.58,
+				"pubsub_channels":             53,
+				"pubsub_patterns":             54,
+				"rdb_changes_since_last_save": 55,
+				"repl_backlog_active":         56,
+				"repl_backlog_histlen":        57,
+				"repl_backlog_size":           58,
+				"sync_full":                   59,
+				"sync_partial_err":            60,
+				"sync_partial_ok":             61,
+				"total_commands_processed":    62,
+				"total_connections_received":  63,
+				"uptime":                      64,
+				"used_cpu_sys":                65.07,
+				"used_cpu_sys_children":       66.0,
+				"used_cpu_user":               67.1,
+				"used_cpu_user_children":      68.0,
+				"used_memory":                 692048,
+				"used_memory_lua":             70792,
+				"used_memory_peak":            711128,
+				"used_memory_rss":             7298144,
+			},
+			time.Unix(123456789, 0),
 		)
+
+		m, ok := acc.Get("super_long_metric")
+		require.True(t, ok)
+		testutil.RequireMetricEqual(t, expected, testutil.FromTestMetric(m))
+
+		hostTags := []string{"server02", "server03",
+			"server04", "server05", "server06"}
+		acc.Wait(len(hostTags))
+		for _, hostTag := range hostTags {
+			acc.AssertContainsTaggedFields(t, "cpu_load_short",
+				map[string]interface{}{"value": float64(12)},
+				map[string]string{"host": hostTag},
+			)
+		}
 	}
 }
 
@@ -410,24 +434,28 @@ func TestWriteGzippedData(t *testing.T) {
 	data, err := os.ReadFile("./testdata/testmsgs.gz")
 	require.NoError(t, err)
 
-	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(data))
-	require.NoError(t, err)
-	req.Header.Set("Content-Encoding", "gzip")
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+		req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(data))
+		require.NoError(t, err)
+		req.Header.Set("Content-Encoding", "gzip")
 
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	acc.Wait(len(hostTags))
-	for _, hostTag := range hostTags {
-		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
-			map[string]string{"host": hostTag},
-		)
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+
+		hostTags := []string{"server02", "server03",
+			"server04", "server05", "server06"}
+		acc.Wait(len(hostTags))
+		for _, hostTag := range hostTags {
+			acc.AssertContainsTaggedFields(t, "cpu_load_short",
+				map[string]interface{}{"value": float64(12)},
+				map[string]string{"host": hostTag},
+			)
+		}
 	}
 }
 
@@ -479,11 +507,15 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/foobar", ""), "", bytes.NewBuffer([]byte(testMsg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 404, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/foobar", ""), "", bytes.NewBuffer([]byte(testMsg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 404, resp.StatusCode)
+	}
 }
 
 func TestWriteInvalid(t *testing.T) {
@@ -494,11 +526,15 @@ func TestWriteInvalid(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(badMsg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 400, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(badMsg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 400, resp.StatusCode)
+	}
 }
 
 func TestWriteEmpty(t *testing.T) {
@@ -509,11 +545,15 @@ func TestWriteEmpty(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(emptyMsg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// post single message to listener
+		resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(emptyMsg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+	}
 }
 
 func TestQuery(t *testing.T) {
@@ -524,12 +564,16 @@ func TestQuery(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post query to listener
-	resp, err := http.Post(
-		createURL(listener, "http", "/query", "db=&q=CREATE+DATABASE+IF+NOT+EXISTS+%22mydb%22"), "", nil)
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 200, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// post query to listener
+		resp, err := http.Post(
+			createURL(listener, "http", "/query", "db=&q=CREATE+DATABASE+IF+NOT+EXISTS+%22mydb%22"), "", nil)
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 200, resp.StatusCode)
+	}
 }
 
 func TestPing(t *testing.T) {
@@ -539,13 +583,17 @@ func TestPing(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post ping to listener
-	resp, err := http.Post(createURL(listener, "http", "/ping", ""), "", nil)
-	require.NoError(t, err)
-	require.Equal(t, "1.0", resp.Header["X-Influxdb-Version"][0])
-	require.Len(t, resp.Header["Content-Type"], 0)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// post ping to listener
+		resp, err := http.Post(createURL(listener, "http", "/ping", ""), "", nil)
+		require.NoError(t, err)
+		require.Equal(t, "1.0", resp.Header["X-Influxdb-Version"][0])
+		require.Len(t, resp.Header["Content-Type"], 0)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+	}
 }
 
 func TestPingVerbose(t *testing.T) {
@@ -555,13 +603,17 @@ func TestPingVerbose(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post ping to listener
-	resp, err := http.Post(createURL(listener, "http", "/ping", "verbose=1"), "", nil)
-	require.NoError(t, err)
-	require.Equal(t, "1.0", resp.Header["X-Influxdb-Version"][0])
-	require.Equal(t, "application/json", resp.Header["Content-Type"][0])
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 200, resp.StatusCode)
+	for _, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
+
+		// post ping to listener
+		resp, err := http.Post(createURL(listener, "http", "/ping", "verbose=1"), "", nil)
+		require.NoError(t, err)
+		require.Equal(t, "1.0", resp.Header["X-Influxdb-Version"][0])
+		require.Equal(t, "application/json", resp.Header["Content-Type"][0])
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 200, resp.StatusCode)
+	}
 }
 
 func TestWriteWithPrecision(t *testing.T) {
@@ -572,18 +624,22 @@ func TestWriteWithPrecision(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	msg := "xyzzy value=42 1422568543\n"
-	resp, err := http.Post(
-		createURL(listener, "http", "/write", "precision=s"), "", bytes.NewBuffer([]byte(msg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for index, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
 
-	acc.Wait(1)
-	require.Equal(t, 1, len(acc.Metrics))
-	// When timestamp is provided, the precision parameter is
-	// overloaded to specify the timestamp's unit
-	require.Equal(t, time.Unix(0, 1422568543000000000), acc.Metrics[0].Time)
+		msg := "xyzzy value=42 1422568543\n"
+		resp, err := http.Post(
+			createURL(listener, "http", "/write", "precision=s"), "", bytes.NewBuffer([]byte(msg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+
+		acc.Wait(1)
+		require.Equal(t, index+1, len(acc.Metrics))
+		// When timestamp is provided, the precision parameter is
+		// overloaded to specify the timestamp's unit
+		require.Equal(t, time.Unix(0, 1422568543000000000), acc.Metrics[0].Time)
+	}
 }
 
 func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
@@ -597,19 +653,66 @@ func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	msg := "xyzzy value=42\n"
-	resp, err := http.Post(
-		createURL(listener, "http", "/write", "precision=s"), "", bytes.NewBuffer([]byte(msg)))
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-	require.EqualValues(t, 204, resp.StatusCode)
+	for index, parser := range []string{"internal", "upstream"} {
+		listener.ParserType = parser
 
-	acc.Wait(1)
-	require.Equal(t, 1, len(acc.Metrics))
-	// When timestamp is omitted, the precision parameter actually
-	// specifies the precision.  The timestamp is set to the greatest
-	// integer unit less than the provided timestamp (floor).
-	require.Equal(t, time.Unix(42, 0), acc.Metrics[0].Time)
+		msg := "xyzzy value=42\n"
+		resp, err := http.Post(
+			createURL(listener, "http", "/write", "precision=s"), "", bytes.NewBuffer([]byte(msg)))
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		require.EqualValues(t, 204, resp.StatusCode)
+
+		acc.Wait(1)
+		require.Equal(t, index+1, len(acc.Metrics))
+		// When timestamp is omitted, the precision parameter actually
+		// specifies the precision.  The timestamp is set to the greatest
+		// integer unit less than the provided timestamp (floor).
+		require.Equal(t, time.Unix(42, 0), acc.Metrics[0].Time)
+	}
+}
+
+func TestWriteUpstreamParseErrors(t *testing.T) {
+	var tests = []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "one parse error",
+			input:    "foo value=1.0\nfoo value=2asdf2.0\nfoo value=3.0\nfoo value=4.0",
+			expected: `metric parse error: cannot parse value for field key "value": invalid float value syntax at 2:11`,
+		},
+		{
+			name:     "two parse errors",
+			input:    "foo value=1asdf2.0\nfoo value=2.0\nfoo value=3asdf2.0\nfoo value=4.0",
+			expected: `metric parse error: cannot parse value for field key "value": invalid float value syntax at 1:11 (and 1 other parse error)`,
+		},
+		{
+			name:     "three or more parse errors",
+			input:    "foo value=1asdf2.0\nfoo value=2.0\nfoo value=3asdf2.0\nfoo value=4asdf2.0",
+			expected: `metric parse error: cannot parse value for field key "value": invalid float value syntax at 1:11 (and 2 other parse errors)`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			listener := newTestListener()
+			listener.ParserType = "upstream"
+
+			acc := &testutil.NopAccumulator{}
+			require.NoError(t, listener.Init())
+			require.NoError(t, listener.Start(acc))
+			defer listener.Stop()
+
+			// post single message to listener
+			resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(tt.input)))
+			require.NoError(t, err)
+			require.NoError(t, resp.Body.Close())
+			require.EqualValues(t, 400, resp.StatusCode)
+			require.Equal(t, tt.expected, resp.Header["X-Influxdb-Error"][0])
+		})
+	}
 }
 
 func TestWriteParseErrors(t *testing.T) {
