@@ -15,9 +15,9 @@ jobs:
     strategy:
       matrix:
         go-version: [1.17.7]
-        os: [macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     name: lint-pr-changes
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
       - name: golangci-lint
