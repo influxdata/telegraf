@@ -27,6 +27,14 @@ const (
 	rootHugepages    = "root"
 	perNodeHugepages = "per_node"
 	meminfoHugepages = "meminfo"
+
+	hugepagesSampleConfig = `
+  ## Supported huge page types:
+  ##   - "root" - based on root huge page control directory: /sys/kernel/mm/hugepages
+  ##   - "per_node" - based on per NUMA node directories: /sys/devices/system/node/node[0-9]*/hugepages
+  ##   - "meminfo" - based on /proc/meminfo file
+  # types = ["root", "per_node"]
+`
 )
 
 var (
@@ -62,16 +70,8 @@ var (
 	}
 )
 
-var hugepagesSampleConfig = `
-  ## Supported huge page types:
-  ##   - "root" - based on root huge page control directory: /sys/kernel/mm/hugepages
-  ##   - "per_node" - based on per NUMA node directories: /sys/devices/system/node/node[0-9]*/hugepages
-  ##   - "meminfo" - based on /proc/meminfo file
-  # hugepages_types = ["root", "per_node"]
-`
-
 type Hugepages struct {
-	HugepagesTypes []string `toml:"hugepages_types"`
+	Types []string `toml:"types"`
 
 	gatherRoot    bool
 	gatherPerNode bool
@@ -109,21 +109,21 @@ func (h *Hugepages) Gather(acc telegraf.Accumulator) error {
 	if h.gatherRoot {
 		err = h.gatherRootStats(acc)
 		if err != nil {
-			return err
+			return fmt.Errorf("gathering root stats failed: %v", err)
 		}
 	}
 
 	if h.gatherPerNode {
 		err = h.gatherStatsPerNode(acc)
 		if err != nil {
-			return err
+			return fmt.Errorf("gathering per node stats failed: %v", err)
 		}
 	}
 
 	if h.gatherMeminfo {
 		err = h.gatherStatsFromMeminfo(acc)
 		if err != nil {
-			return err
+			return fmt.Errorf("gathering meminfo stats failed: %v", err)
 		}
 	}
 
@@ -132,7 +132,7 @@ func (h *Hugepages) Gather(acc telegraf.Accumulator) error {
 
 // gatherStatsPerNode collects root hugepages statistics
 func (h *Hugepages) gatherRootStats(acc telegraf.Accumulator) error {
-	return h.gatherFromHugepagePath(h.rootHugepagePath, hugepagesMetricsRoot, "hugepages_"+rootHugepages, nil, acc)
+	return h.gatherFromHugepagePath(acc, "hugepages_"+rootHugepages, h.rootHugepagePath, hugepagesMetricsRoot, nil)
 }
 
 // gatherStatsPerNode collects hugepages statistics per NUMA node
@@ -158,7 +158,7 @@ func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
 			"node": nodeNumber,
 		}
 		hugepagesPath := filepath.Join(h.numaNodePath, nodeDir.Name(), "hugepages")
-		err = h.gatherFromHugepagePath(hugepagesPath, hugepagesMetricsPerNUMANode, "hugepages_"+perNodeHugepages, perNodeTags, acc)
+		err = h.gatherFromHugepagePath(acc, "hugepages_"+perNodeHugepages, hugepagesPath, hugepagesMetricsPerNUMANode, perNodeTags)
 		if err != nil {
 			return err
 		}
@@ -166,10 +166,9 @@ func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *Hugepages) gatherFromHugepagePath(hugepagesPath string, possibleMetrics []string, measurementName string,
-	tagsToUse map[string]string, acc telegraf.Accumulator) error {
+func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, fileFilter []string, defaultTags map[string]string) error {
 	// read metrics from: hugepages/hugepages-*/*
-	hugepagesDirs, err := ioutil.ReadDir(hugepagesPath)
+	hugepagesDirs, err := ioutil.ReadDir(path)
 	if err != nil {
 		return err
 	}
@@ -185,7 +184,7 @@ func (h *Hugepages) gatherFromHugepagePath(hugepagesPath string, possibleMetrics
 			continue
 		}
 
-		metricsPath := filepath.Join(hugepagesPath, hugepagesDir.Name())
+		metricsPath := filepath.Join(path, hugepagesDir.Name())
 		metricFiles, err := ioutil.ReadDir(metricsPath)
 		if err != nil {
 			return err
@@ -193,32 +192,35 @@ func (h *Hugepages) gatherFromHugepagePath(hugepagesPath string, possibleMetrics
 
 		metrics := make(map[string]interface{})
 		for _, metricFile := range metricFiles {
-			if mode := metricFile.Mode(); !mode.IsRegular() || !choice.Contains(metricFile.Name(), possibleMetrics) {
+			if mode := metricFile.Mode(); !mode.IsRegular() || !choice.Contains(metricFile.Name(), fileFilter) {
 				continue
 			}
 
-			metricBytes, err := ioutil.ReadFile(filepath.Join(metricsPath, metricFile.Name()))
+			metricFullPath := filepath.Join(metricsPath, metricFile.Name())
+			metricBytes, err := ioutil.ReadFile(metricFullPath)
 			if err != nil {
 				return err
 			}
 
 			metricValue, err := strconv.Atoi(string(bytes.TrimSuffix(metricBytes, newlineByte)))
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to convert content of '%s': %v", metricFullPath, err)
 			}
 
 			metrics[metricFile.Name()] = metricValue
 		}
 
-		if len(metrics) > 0 {
-			tags := make(map[string]string)
-			for key, value := range tagsToUse {
-				tags[key] = value
-			}
-			tags["hugepages_size_kb"] = hugepagesSize
-
-			acc.AddFields(measurementName, metrics, tags)
+		if len(metrics) == 0 {
+			continue
 		}
+
+		tags := make(map[string]string)
+		for key, value := range defaultTags {
+			tags[key] = value
+		}
+		tags["hugepages_size_kb"] = hugepagesSize
+
+		acc.AddFields(measurement, metrics, tags)
 	}
 	return nil
 }
@@ -238,17 +240,19 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 			continue
 		}
 		fieldName := string(bytes.TrimSuffix(fields[0], colonByte))
-		if choice.Contains(fieldName, hugepagesMetricsFromMeminfo) {
-			fieldValue, err := strconv.Atoi(string(fields[1]))
-			if err != nil {
-				return err
-			}
-
-			if bytes.Contains(line, kbPrecisionByte) {
-				fieldName = fieldName + "_kb"
-			}
-			metrics[fieldName] = fieldValue
+		if !choice.Contains(fieldName, hugepagesMetricsFromMeminfo) {
+			continue
 		}
+
+		fieldValue, err := strconv.Atoi(string(fields[1]))
+		if err != nil {
+			return fmt.Errorf("failed to convert content of '%s': %v", fieldName, err)
+		}
+
+		if bytes.Contains(line, kbPrecisionByte) {
+			fieldName = fieldName + "_kb"
+		}
+		metrics[fieldName] = fieldValue
 	}
 
 	acc.AddFields("hugepages_"+meminfoHugepages, metrics, map[string]string{})
@@ -257,18 +261,18 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 
 func (h *Hugepages) parseHugepagesConfig() error {
 	// default
-	if h.HugepagesTypes == nil {
+	if h.Types == nil {
 		h.gatherRoot = true
 		h.gatherMeminfo = true
 		return nil
 	}
 
 	// empty array
-	if len(h.HugepagesTypes) == 0 {
+	if len(h.Types) == 0 {
 		return fmt.Errorf("plugin was configured with nothing to read")
 	}
 
-	for _, hugepagesType := range h.HugepagesTypes {
+	for _, hugepagesType := range h.Types {
 		switch hugepagesType {
 		case rootHugepages:
 			h.gatherRoot = true

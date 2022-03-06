@@ -15,7 +15,7 @@ Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html>
   ##   - "root" - based on root huge page control directory: /sys/kernel/mm/hugepages
   ##   - "per_node" - based on per NUMA node directories: /sys/devices/system/node/node[0-9]*/hugepages
   ##   - "meminfo" - based on /proc/meminfo file
-  # hugepages_types = ["root", "per_node"]
+  # types = ["root", "per_node"]
 ```
 
 ## Measurements
