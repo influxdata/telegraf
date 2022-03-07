@@ -1853,15 +1853,13 @@ var clusterStatusDump = `
     ]
   },
   "osdmap": {
-    "osdmap": {
-      "epoch": 21734,
-      "num_osds": 24,
-      "num_up_osds": 24,
-      "num_in_osds": 24,
-      "full": false,
-      "nearfull": false,
-      "num_remapped_pgs": 0
-    }
+    "epoch": 21734,
+    "num_osds": 24,
+    "num_up_osds": 24,
+    "num_in_osds": 24,
+    "full": false,
+    "nearfull": false,
+    "num_remapped_pgs": 0
   },
   "pgmap": {
     "pgs_by_state": [

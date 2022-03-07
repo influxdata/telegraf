@@ -359,15 +359,13 @@ type CephStatus struct {
 		OverallStatus string `json:"overall_status"`
 	} `json:"health"`
 	OSDMap struct {
-		OSDMap struct {
-			Epoch          float64 `json:"epoch"`
-			NumOSDs        float64 `json:"num_osds"`
-			NumUpOSDs      float64 `json:"num_up_osds"`
-			NumInOSDs      float64 `json:"num_in_osds"`
-			Full           bool    `json:"full"`
-			NearFull       bool    `json:"nearfull"`
-			NumRemappedPGs float64 `json:"num_remapped_pgs"`
-		} `json:"osdmap"`
+		Epoch          float64 `json:"epoch"`
+		NumOSDs        float64 `json:"num_osds"`
+		NumUpOSDs      float64 `json:"num_up_osds"`
+		NumInOSDs      float64 `json:"num_in_osds"`
+		Full           bool    `json:"full"`
+		NearFull       bool    `json:"nearfull"`
+		NumRemappedPGs float64 `json:"num_remapped_pgs"`
 	} `json:"osdmap"`
 	PGMap struct {
 		PGsByState []struct {
