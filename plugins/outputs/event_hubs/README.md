@@ -21,8 +21,15 @@ JSON is probably the easiest to integrate with downstream components.
   ## The full connection string to the Event Hub (required)
   ## The shared access key must have "Send" permissions on the target Event Hub.
   connection_string = "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=superSecret1234=;EntityPath=hubName"
+
   ## Client timeout (defaults to 30s)
   # timeout = "30s"
+
+  ## Partition key field
+  ## Metric field name to use for the event partition key. The value of this
+  ## field is set as the key for events if it exists.
+  # partition_key_field = ""
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
