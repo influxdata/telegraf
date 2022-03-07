@@ -17,6 +17,11 @@ connection_string = "Endpoint=sb://namespace.servicebus.windows.net/;SharedAcces
 ## Client timeout (defaults to 30s)
 # timeout = "30s"
 
+## Optional partition key field
+## Metric field name to use for the event partition key. The value of this
+## field is set as the key for events if it exists.
+# partition_key_field = ""`
+
 ## Data format to output.
 ## Each data format has its own unique set of configuration options, read
 ## more about them here:

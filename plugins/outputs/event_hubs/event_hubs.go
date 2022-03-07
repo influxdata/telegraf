@@ -48,9 +48,10 @@ func (eh *eventHub) SendBatch(ctx context.Context, iterator eventhub.BatchIterat
 /* End wrapper interface */
 
 type EventHubs struct {
-	Log              telegraf.Logger `toml:"-"`
-	ConnectionString string          `toml:"connection_string"`
-	Timeout          config.Duration
+	Log               telegraf.Logger `toml:"-"`
+	ConnectionString  string          `toml:"connection_string"`
+	Timeout           config.Duration `toml:"timeout"`
+	PartitionKeyField string          `toml:"partition_key_field"`
 
 	Hub        EventHubInterface
 	serializer serializers.Serializer
@@ -69,10 +70,15 @@ func (e *EventHubs) SampleConfig() string {
   ## The full connection string to the Event Hub (required)
   ## The shared access key must have "Send" permissions on the target Event Hub.
   connection_string = "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=superSecret1234=;EntityPath=hubName"
-  
+
   ## Client timeout (defaults to 30s)
   # timeout = "30s"
-  
+
+  ## Optional partition key field
+  ## Metric field name to use for the event partition key. The value of this
+  ## field is set as the key for events if it exists.
+  # partition_key_field = ""
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -123,7 +129,15 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 			continue
 		}
 
-		events = append(events, eventhub.NewEvent(payload))
+		event := eventhub.NewEvent(payload)
+		if e.PartitionKeyField != "" {
+			if key, ok := metric.GetField(e.PartitionKeyField); ok {
+				if strKey, ok := key.(string); ok {
+					event.PartitionKey = &strKey
+				}
+			}
+		}
+		events = append(events, event)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
