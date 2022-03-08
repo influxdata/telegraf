@@ -168,10 +168,20 @@ All admin measurements will have the following tags:
 
 ## Cluster
 
+- ceph_fsmap
+  - fields:
+    - up (float)
+    - in (float)
+    - max (float)
+    - up_standby (float)
+
 - ceph_health
   - fields:
     - status
-    - overall_status
+
+- ceph_monmap
+  - fields:
+    - num_mons (float)
 
 - ceph_osdmap
   - fields:
@@ -179,21 +189,20 @@ All admin measurements will have the following tags:
     - num_osds (float)
     - num_up_osds (float)
     - num_in_osds (float)
-    - full (bool)
-    - nearfull (bool)
     - num_remapped_pgs (float)
 
 - ceph_pgmap
   - fields:
     - version (float)
     - num_pgs (float)
+    - num_pools (float)
+    - num_objects (float)
     - data_bytes (float)
     - bytes_used (float)
     - bytes_avail (float)
     - bytes_total (float)
     - read_bytes_sec (float)
     - write_bytes_sec (float)
-    - op_per_sec (float, exists only in ceph <10)
     - read_op_per_sec (float)
     - write_op_per_sec (float)
 
@@ -208,9 +217,21 @@ All admin measurements will have the following tags:
     - total_bytes (float)
     - total_used_bytes (float)
     - total_avail_bytes (float)
-    - total_space (float, exists only in ceph <0.84)
-    - total_used (float, exists only in ceph <0.84)
-    - total_avail (float, exists only in ceph <0.84)
+    - total_used_raw_bytes (float)
+    - total_used_raw_ratio (float)
+    - num_osd (float)
+    - num_per_pool_osds (float)
+    - num_per_pool_omap_osds (float)
+
+- ceph_deviceclass_usage
+  - tags:
+    - class
+  - fields:
+    - total_bytes (float)
+    - total_avail_bytes (float)
+    - total_used_bytes (float)
+    - total_used_raw_bytes (float)
+    - total_used_raw_ratio (float)
 
 - ceph_pool_usage
   - tags:
@@ -221,6 +242,7 @@ All admin measurements will have the following tags:
     - objects (float)
     - percent_used (float)
     - max_avail (float)
+    - stored (float)
 
 - ceph_pool_stats
   - tags:
@@ -228,7 +250,6 @@ All admin measurements will have the following tags:
   - fields:
     - read_bytes_sec (float)
     - write_bytes_sec (float)
-    - op_per_sec (float, exists only in ceph <10)
     - read_op_per_sec (float)
     - write_op_per_sec (float)
     - recovering_objects_per_sec (float)
@@ -241,7 +262,7 @@ Below is an example of a custer stats:
 
 ```shell
 ceph_health,host=stefanmon1 overall_status="",status="HEALTH_WARN" 1587118504000000000
-ceph_osdmap,host=stefanmon1 epoch=203,full=false,nearfull=false,num_in_osds=8,num_osds=9,num_remapped_pgs=0,num_up_osds=8 1587118504000000000
+ceph_osdmap,host=stefanmon1 epoch=203,num_in_osds=8,num_osds=9,num_remapped_pgs=0,num_up_osds=8 1587118504000000000
 ceph_pgmap,host=stefanmon1 bytes_avail=849879302144,bytes_total=858959904768,bytes_used=9080602624,data_bytes=5055,num_pgs=504,read_bytes_sec=0,read_op_per_sec=0,version=0,write_bytes_sec=0,write_op_per_sec=0 1587118504000000000
 ceph_pgmap_state,host=stefanmon1,state=active+clean count=504 1587118504000000000
 ceph_usage,host=stefanmon1 total_avail_bytes=849879302144,total_bytes=858959904768,total_used_bytes=196018176 1587118505000000000
