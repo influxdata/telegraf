@@ -1104,7 +1104,7 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 		"docker_swarm",
 		map[string]interface{}{
 			"tasks_running": int(1),
-			"tasks_desired": int(1),
+			"tasks_desired": uint64(1),
 		},
 		map[string]string{
 			"service_id":   "qolkls9g5iasdiuihcyz9rn3",
