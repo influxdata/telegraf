@@ -416,7 +416,7 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject, timestamp ti
 			if c.Optional {
 				// If path is marked as optional don't error if path doesn't return a result
 				p.Log.Debugf(GJSONPathNUllErrorMSG)
-				return nil, nil
+				continue
 			}
 
 			return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
