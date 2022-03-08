@@ -354,10 +354,19 @@ func (c *Ceph) execute(command string) (string, error) {
 
 // CephStatus is used to unmarshal "ceph -s" output
 type CephStatus struct {
+	FSMap struct {
+		NumUp        float64 `json:"up"`
+		NumIn        float64 `json:"in"`
+		NumMax       float64 `json:"max"`
+		NumUpStandby float64 `json:"up:standby"`
+	} `json:"fsmap"`
 	Health struct {
 		Status        string `json:"status"`
 		OverallStatus string `json:"overall_status"`
 	} `json:"health"`
+	MonMap struct {
+		NumMons		   float64 `json:"num_mons"`
+	} `json:"monmap"`
 	OSDMap struct {
 		Epoch          float64 `json:"epoch"`
 		NumOSDs        float64 `json:"num_osds"`
@@ -372,6 +381,8 @@ type CephStatus struct {
 		} `json:"pgs_by_state"`
 		Version       float64  `json:"version"`
 		NumPGs        float64  `json:"num_pgs"`
+		NumPools      float64  `json:"num_pools"`
+		NumObjects    float64  `json:"num_objects"`
 		DataBytes     float64  `json:"data_bytes"`
 		BytesUsed     float64  `json:"bytes_used"`
 		BytesAvail    float64  `json:"bytes_avail"`
@@ -391,7 +402,9 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 	}
 
 	decoders := []func(telegraf.Accumulator, *CephStatus) error{
+		decodeStatusFsmap,
 		decodeStatusHealth,
+		decodeStatusMonmap,
 		decodeStatusOsdmap,
 		decodeStatusPgmap,
 		decodeStatusPgmapState,
@@ -406,6 +419,17 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 	return nil
 }
 
+// decodeStatusFsmap decodes the FS map portion of the output of 'ceph -s'
+func decodeStatusFsmap(acc telegraf.Accumulator, data *CephStatus) error {
+	fields := map[string]interface{}{
+		"up":        data.FSMap.NumUp,
+		"in":        data.FSMap.NumIn,
+		"max":       data.FSMap.NumMax,
+		"up_standby" data.FSMap.NumUpStandby,
+	}
+	acc.AddFields("ceph_fsmap", fields, map[string]string{})
+	return nil
+}
 // decodeStatusHealth decodes the health portion of the output of 'ceph status'
 func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
 	fields := map[string]interface{}{
@@ -416,14 +440,23 @@ func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
 	return nil
 }
 
+// decodeStatusMonmap decodes the Mon map portion of the output of 'ceph -s'
+func decodeStatusMonmap(acc telegraf.Accumulator, data *CephStatus) error {
+	fields := map[string]interface{}{
+		"num_mons": data.MonMap.NumMons,
+	}
+	acc.AddFields("ceph_monmap", fields, map[string]string{})
+	return nil
+}
+
 // decodeStatusOsdmap decodes the OSD map portion of the output of 'ceph -s'
 func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
 	fields := map[string]interface{}{
-		"epoch":            data.OSDMap.OSDMap.Epoch,
-		"num_osds":         data.OSDMap.OSDMap.NumOSDs,
-		"num_up_osds":      data.OSDMap.OSDMap.NumUpOSDs,
-		"num_in_osds":      data.OSDMap.OSDMap.NumInOSDs,
-		"num_remapped_pgs": data.OSDMap.OSDMap.NumRemappedPGs,
+		"epoch":            data.OSDMap.Epoch,
+		"num_osds":         data.OSDMap.NumOSDs,
+		"num_up_osds":      data.OSDMap.NumUpOSDs,
+		"num_in_osds":      data.OSDMap.NumInOSDs,
+		"num_remapped_pgs": data.OSDMap.NumRemappedPGs,
 	}
 	acc.AddFields("ceph_osdmap", fields, map[string]string{})
 	return nil
@@ -434,6 +467,8 @@ func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
 	fields := map[string]interface{}{
 		"version":          data.PGMap.Version,
 		"num_pgs":          data.PGMap.NumPGs,
+		"num_pools":        data.PGMap.NumPools,
+		"num_objects":      data.PGMap.NumObjects,
 		"data_bytes":       data.PGMap.DataBytes,
 		"bytes_used":       data.PGMap.BytesUsed,
 		"bytes_avail":      data.PGMap.BytesAvail,
