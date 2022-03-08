@@ -288,7 +288,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 		}
 
 		running := map[string]int{}
-		tasksNoShutdown := map[string]int{}
+		tasksNoShutdown := map[string]uint64{}
 
 		activeNodes := make(map[string]struct{})
 		for _, n := range nodes {
