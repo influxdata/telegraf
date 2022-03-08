@@ -177,7 +177,8 @@ All admin measurements will have the following tags:
 
 - ceph_health
   - fields:
-    - status
+    - status (string)
+    - status_code (int)
 
 - ceph_monmap
   - fields:

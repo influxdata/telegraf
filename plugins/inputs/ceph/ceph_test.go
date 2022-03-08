@@ -1886,7 +1886,8 @@ var cephStatusResults = []expectedResult{
 	{
 		metric: "ceph_health",
 		fields: map[string]interface{}{
-			"status": "HEALTH_OK",
+			"status":      "HEALTH_OK",
+			"status_code": float64(2),
 		},
 		tags: map[string]string{},
 	},
