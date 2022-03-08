@@ -361,8 +361,7 @@ type CephStatus struct {
 		NumUpStandby float64 `json:"up:standby"`
 	} `json:"fsmap"`
 	Health struct {
-		Status        string `json:"status"`
-		OverallStatus string `json:"overall_status"`
+		Status string `json:"status"`
 	} `json:"health"`
 	MonMap struct {
 		NumMons float64 `json:"num_mons"`
