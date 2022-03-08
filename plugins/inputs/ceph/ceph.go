@@ -508,8 +508,13 @@ type CephDf struct {
 		TotalUsedRawBytes  float64 `json:"total_used_raw_bytes"`
 		TotalUsedRawRatio  float64 `json:"total_used_raw_ratio"`
 	} `json:"stats"`
+<<<<<<< HEAD
 	StatsbyClass map[string]interface{} `json:"stats_by_class"`
 	Pools        []struct {
+=======
+	StatsbyClass map[string]map[string]float64 `json:"stats_by_class"`
+	Pools []struct {
+>>>>>>> f2fbc4bd18c3e1e455f46d388bf54bd8d52d7c71
 		Name  string `json:"name"`
 		Stats struct {
 			BytesUsed   float64 `json:"bytes_used"`
@@ -547,9 +552,9 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 		tags := map[string]string{
 			"class": class,
 		}
-		fields := map[string]interface{}
-		for _, s := range stats {
-			fields[s] = stats[s]
+		fields := map[string]interface{}{}
+		for key, value := range stats {
+			fields[key] = value
 		}
 		acc.AddFields("ceph_deviceclass_usage", fields, tags)
 	}
