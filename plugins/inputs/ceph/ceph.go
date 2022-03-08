@@ -379,18 +379,28 @@ type CephStatus struct {
 			StateName string  `json:"state_name"`
 			Count     float64 `json:"count"`
 		} `json:"pgs_by_state"`
-		Version       float64 `json:"version"`
-		NumPGs        float64 `json:"num_pgs"`
-		NumPools      float64 `json:"num_pools"`
-		NumObjects    float64 `json:"num_objects"`
-		DataBytes     float64 `json:"data_bytes"`
-		BytesUsed     float64 `json:"bytes_used"`
-		BytesAvail    float64 `json:"bytes_avail"`
-		BytesTotal    float64 `json:"bytes_total"`
-		ReadBytesSec  float64 `json:"read_bytes_sec"`
-		WriteBytesSec float64 `json:"write_bytes_sec"`
-		ReadOpPerSec  float64 `json:"read_op_per_sec"`
-		WriteOpPerSec float64 `json:"write_op_per_sec"`
+		Version                 float64 `json:"version"`
+		NumPGs                  float64 `json:"num_pgs"`
+		NumPools                float64 `json:"num_pools"`
+		NumObjects              float64 `json:"num_objects"`
+		DataBytes               float64 `json:"data_bytes"`
+		BytesUsed               float64 `json:"bytes_used"`
+		BytesAvail              float64 `json:"bytes_avail"`
+		BytesTotal              float64 `json:"bytes_total"`
+		ReadBytesSec            float64 `json:"read_bytes_sec"`
+		WriteBytesSec           float64 `json:"write_bytes_sec"`
+		ReadOpPerSec            float64 `json:"read_op_per_sec"`
+		WriteOpPerSec           float64 `json:"write_op_per_sec"`
+		InactivePGsRatio        float64 `json:"inactive_pgs_ratio"`
+		DegradedObjects         float64 `json:"degraded_objects"`
+		DegraedTotal            float64 `json:"degraded_total"`
+		DegradedRatio           float64 `json:"degraded_ratio"`
+		RecoveringObjectsPerSec float64 `json:"recovering_objects_per_sec"`
+		RecoveringBytesPerSec   float64 `json:"recovering_bytes_per_sec"`
+		RecoveringKeysPerSec    float64 `json:"recovering_keys_per_sec"`
+		NumOjbectRecovered      float64 `json:"num_objects_recovered"`
+		NumBytesRecovered       float64 `json:"num_bytes_recovered"`
+		NumKeysRecovered        float64 `json:"num_keys_recovered"`
 	} `json:"pgmap"`
 }
 
@@ -465,18 +475,28 @@ func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
 // decodeStatusPgmap decodes the PG map portion of the output of 'ceph -s'
 func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
 	fields := map[string]interface{}{
-		"version":          data.PGMap.Version,
-		"num_pgs":          data.PGMap.NumPGs,
-		"num_pools":        data.PGMap.NumPools,
-		"num_objects":      data.PGMap.NumObjects,
-		"data_bytes":       data.PGMap.DataBytes,
-		"bytes_used":       data.PGMap.BytesUsed,
-		"bytes_avail":      data.PGMap.BytesAvail,
-		"bytes_total":      data.PGMap.BytesTotal,
-		"read_bytes_sec":   data.PGMap.ReadBytesSec,
-		"write_bytes_sec":  data.PGMap.WriteBytesSec,
-		"read_op_per_sec":  data.PGMap.ReadOpPerSec,
-		"write_op_per_sec": data.PGMap.WriteOpPerSec,
+		"version":                    data.PGMap.Version,
+		"num_pgs":                    data.PGMap.NumPGs,
+		"num_pools":                  data.PGMap.NumPools,
+		"num_objects":                data.PGMap.NumObjects,
+		"data_bytes":                 data.PGMap.DataBytes,
+		"bytes_used":                 data.PGMap.BytesUsed,
+		"bytes_avail":                data.PGMap.BytesAvail,
+		"bytes_total":                data.PGMap.BytesTotal,
+		"read_bytes_sec":             data.PGMap.ReadBytesSec,
+		"write_bytes_sec":            data.PGMap.WriteBytesSec,
+		"read_op_per_sec":            data.PGMap.ReadOpPerSec,
+		"write_op_per_sec":           data.PGMap.WriteOpPerSec,
+		"inactive_pgs_ratio":         data.PGMap.InactivePGsRatio,
+		"degraded_objects":           data.PGMap.DegradedObjects,
+		"degraded_total":             data.PGMap.DegraedTotal,
+		"degraded_ratio":             data.PGMap.DegradedRatio,
+		"recovering_objects_per_sec": data.PGMap.RecoveringObjectsPerSec,
+		"recovering_bytes_per_sec":   data.PGMap.RecoveringBytesPerSec,
+		"recovering_keys_per_sec":    data.PGMap.RecoveringKeysPerSec,
+		"num_objects_recovered":      data.PGMap.NumOjbectRecovered,
+		"num_bytes_recovered":        data.PGMap.NumBytesRecovered,
+		"num_keys_recovered":         data.PGMap.NumKeysRecovered,
 	}
 	acc.AddFields("ceph_pgmap", fields, map[string]string{})
 	return nil
@@ -586,7 +606,15 @@ type CephOSDPoolStats []struct {
 		RecoveringObjectsPerSec float64 `json:"recovering_objects_per_sec"`
 		RecoveringBytesPerSec   float64 `json:"recovering_bytes_per_sec"`
 		RecoveringKeysPerSec    float64 `json:"recovering_keys_per_sec"`
+		NumObjectRecovered      float64 `json:"num_objects_recovered"`
+		NumBytesRecovered       float64 `json:"num_bytes_recovered"`
+		NumKeysRecovered        float64 `json:"num_keys_recovered"`
 	} `json:"recovery_rate"`
+	Recovery struct {
+		DegradedObjects float64 `json:"degraded_objects"`
+		DegradedTotal   float64 `json:"degraded_total"`
+		DegradedRatio   float64 `json:"degraded_ratio"`
+	} `json:"recovery"`
 }
 
 // decodeOsdPoolStats decodes the output of 'ceph osd pool stats'
@@ -609,6 +637,12 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 			"recovering_objects_per_sec": pool.RecoveryRate.RecoveringObjectsPerSec,
 			"recovering_bytes_per_sec":   pool.RecoveryRate.RecoveringBytesPerSec,
 			"recovering_keys_per_sec":    pool.RecoveryRate.RecoveringKeysPerSec,
+			"num_objects_recovered":      pool.RecoveryRate.NumObjectRecovered,
+			"num_bytes_recovered":        pool.RecoveryRate.NumBytesRecovered,
+			"num_keys_recovered":         pool.RecoveryRate.NumKeysRecovered,
+			"degraded_objects":           pool.Recovery.DegradedObjects,
+			"degraded_total":             pool.Recovery.DegradedTotal,
+			"degraded_ratio":             pool.Recovery.DegradedRatio,
 		}
 		acc.AddFields("ceph_pool_stats", fields, tags)
 	}
