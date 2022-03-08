@@ -442,14 +442,14 @@ func decodeStatusFsmap(acc telegraf.Accumulator, data *CephStatus) error {
 
 // decodeStatusHealth decodes the health portion of the output of 'ceph status'
 func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
-	status_codes := map[string]float64{
+	statusCodes := map[string]float64{
 		"HEALTH_ERR":  0,
 		"HEALTH_WARN": 1,
 		"HEALTH_OK":   2,
 	}
 	fields := map[string]interface{}{
 		"status":      data.Health.Status,
-		"status_code": status_codes[data.Health.Status],
+		"status_code": statusCodes[data.Health.Status],
 	}
 	acc.AddFields("ceph_health", fields, map[string]string{})
 	return nil
