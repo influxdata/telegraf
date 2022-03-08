@@ -508,7 +508,7 @@ type CephDf struct {
 		NumPerPoolOSDs		*float64 `json:"num_per_pool_osds"`
     	NumPerPoolOmapOSDs	*float64 `json:"num_per_pool_omap_osds"`
 	} `json:"stats"`
-	StatsbyClass map[string]interface{} `json:"stats_by_class"`
+	StatsbyClass map[string]map[string]float64 `json:"stats_by_class"`
 	Pools []struct {
 		Name  string `json:"name"`
 		Stats struct {
@@ -547,7 +547,11 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 		tags := map[string]string{
 			"class": class,
 		}
-		acc.AddFields("ceph_deviceclass_usage", stats, tags)
+		fields := map[string]interface{}{}
+		for key, value := range stats {
+			fields[key] = value
+		}
+		acc.AddFields("ceph_deviceclass_usage", fields, tags)
 	}
 
 	// ceph.pool.usage: records per pool utilization and number of objects
