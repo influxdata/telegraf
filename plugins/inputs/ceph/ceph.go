@@ -508,13 +508,8 @@ type CephDf struct {
 		TotalUsedRawBytes  float64 `json:"total_used_raw_bytes"`
 		TotalUsedRawRatio  float64 `json:"total_used_raw_ratio"`
 	} `json:"stats"`
-<<<<<<< HEAD
-	StatsbyClass map[string]interface{} `json:"stats_by_class"`
-	Pools        []struct {
-=======
 	StatsbyClass map[string]map[string]float64 `json:"stats_by_class"`
-	Pools []struct {
->>>>>>> f2fbc4bd18c3e1e455f46d388bf54bd8d52d7c71
+	Pools        []struct {
 		Name  string `json:"name"`
 		Stats struct {
 			BytesUsed   float64 `json:"bytes_used"`
