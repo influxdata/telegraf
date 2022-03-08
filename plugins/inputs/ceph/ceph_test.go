@@ -774,6 +774,7 @@ var osdPerfDump = `
       "wait": { "avgcount": 0,
           "sum": 0.000000000}}}
 `
+
 var mdsPerfDump = `
 {
     "AsyncMessenger::Worker-0": {
@@ -1767,98 +1768,26 @@ var rgwPerfDump = `
 var clusterStatusDump = `
 {
   "health": {
-    "health": {
-      "health_services": [
-        {
-          "mons": [
-            {
-              "name": "a",
-              "kb_total": 114289256,
-              "kb_used": 26995516,
-              "kb_avail": 81465132,
-              "avail_percent": 71,
-              "last_updated": "2017-01-03 17:20:57.595004",
-              "store_stats": {
-                "bytes_total": 942117141,
-                "bytes_sst": 0,
-                "bytes_log": 4345406,
-                "bytes_misc": 937771735,
-                "last_updated": "0.000000"
-              },
-              "health": "HEALTH_OK"
-            },
-            {
-              "name": "b",
-              "kb_total": 114289256,
-              "kb_used": 27871624,
-              "kb_avail": 80589024,
-              "avail_percent": 70,
-              "last_updated": "2017-01-03 17:20:47.784331",
-              "store_stats": {
-                "bytes_total": 454853104,
-                "bytes_sst": 0,
-                "bytes_log": 5788320,
-                "bytes_misc": 449064784,
-                "last_updated": "0.000000"
-              },
-              "health": "HEALTH_OK"
-            },
-            {
-              "name": "c",
-              "kb_total": 130258508,
-              "kb_used": 38076996,
-              "kb_avail": 85541692,
-              "avail_percent": 65,
-              "last_updated": "2017-01-03 17:21:03.311123",
-              "store_stats": {
-                "bytes_total": 455555199,
-                "bytes_sst": 0,
-                "bytes_log": 6950876,
-                "bytes_misc": 448604323,
-                "last_updated": "0.000000"
-              },
-              "health": "HEALTH_OK"
-            }
-          ]
-        }
-      ]
-    },
-    "timechecks": {
-      "epoch": 504,
-      "round": 34642,
-      "round_status": "finished",
-      "mons": [
-        { "name": "a", "skew": 0, "latency": 0, "health": "HEALTH_OK" },
-        { "name": "b", "skew": -0, "latency": 0.000951, "health": "HEALTH_OK" },
-        { "name": "c", "skew": -0, "latency": 0.000946, "health": "HEALTH_OK" }
-      ]
-    },
-    "summary": [],
-    "overall_status": "HEALTH_OK",
-    "detail": []
+    "status": "HEALTH_OK",
+    "checks": {},
+    "mutes": []
   },
   "fsid": "01234567-abcd-9876-0123-ffeeddccbbaa",
   "election_epoch": 504,
   "quorum": [ 0, 1, 2 ],
   "quorum_names": [ "a", "b", "c" ],
   "monmap": {
-    "epoch": 17,
-    "fsid": "01234567-abcd-9876-0123-ffeeddccbbaa",
-    "modified": "2016-04-11 14:01:52.600198",
-    "created": "0.000000",
-    "mons": [
-      { "rank": 0, "name": "a", "addr": "192.168.0.1:6789/0" },
-      { "rank": 1, "name": "b", "addr": "192.168.0.2:6789/0" },
-      { "rank": 2, "name": "c", "addr": "192.168.0.3:6789/0" }
-    ]
+    "epoch": 27,
+    "min_mon_release_name": "pacific",
+    "num_mons": 3
   },
   "osdmap": {
     "epoch": 21734,
     "num_osds": 24,
     "num_up_osds": 24,
+    "osd_up_since": 1646008974,
     "num_in_osds": 24,
-    "full": false,
-    "nearfull": false,
+    "osd_in_since": 1637261831,
     "num_remapped_pgs": 0
   },
   "pgmap": {
@@ -1869,13 +1798,14 @@ var clusterStatusDump = `
     ],
     "version": 52314277,
     "num_pgs": 2560,
+    "num_pools": 4,
+    "num_objects": 974827,
     "data_bytes": 2700031960713,
     "bytes_used": 7478347665408,
     "bytes_avail": 9857462382592,
     "bytes_total": 17335810048000,
     "read_bytes_sec": 0,
     "write_bytes_sec": 367217,
-    "op_per_sec": 98,
     "read_op_per_sec": 322,
     "write_op_per_sec": 1022
   },
@@ -1885,7 +1815,43 @@ var clusterStatusDump = `
     "in": 0,
     "max": 0,
     "by_rank": []
-  }
+  },
+  "fsmap": {
+    "epoch": 24756,
+    "id": 4,
+    "up": 1,
+    "in": 1,
+    "max": 1,
+    "by_rank": [
+      {
+        "filesystem_id": 4,
+        "rank": 0,
+        "name": "a",
+        "status": "up:active",
+        "gid": 83585495
+      }
+    ],
+    "up:standby": 2
+  },
+  "mgrmap": {
+    "available": true,
+    "num_standbys": 2,
+    "modules": [
+      "dashboard",
+      "iostat",
+      "restful",
+      "stats"
+    ],
+    "services": {
+      "dashboard": "https://192.168.0.1:8443/"
+    }
+  },
+  "servicemap": {
+    "epoch": 219919,
+    "modified": "2022-03-07T13:52:42.430153-0500",
+    "services": {}
+  },
+  "progress_events": {}
 }
 `
 
@@ -1897,8 +1863,6 @@ var cephStatusResults = []expectedResult{
 			"num_osds":         float64(24),
 			"num_up_osds":      float64(24),
 			"num_in_osds":      float64(24),
-			"full":             false,
-			"nearfull":         false,
 			"num_remapped_pgs": float64(0),
 		},
 		tags: map[string]string{},
@@ -1908,13 +1872,14 @@ var cephStatusResults = []expectedResult{
 		fields: map[string]interface{}{
 			"version":          float64(52314277),
 			"num_pgs":          float64(2560),
+			"num_pools":        float64(4),
+			"num_objects":      float64(974827),
 			"data_bytes":       float64(2700031960713),
 			"bytes_used":       float64(7478347665408),
 			"bytes_avail":      float64(9857462382592),
 			"bytes_total":      float64(17335810048000),
 			"read_bytes_sec":   float64(0),
 			"write_bytes_sec":  float64(367217),
-			"op_per_sec":       pf(98),
 			"read_op_per_sec":  float64(322),
 			"write_op_per_sec": float64(1022),
 		},
@@ -1950,44 +1915,98 @@ var cephStatusResults = []expectedResult{
 }
 
 var cephDFDump = `
-{ "stats": { "total_space": 472345880,
-      "total_used": 71058504,
-      "total_avail": 377286864,
-      "total_bytes": 472345880,
-      "total_used_bytes": 71058504,
-      "total_avail_bytes": 377286864},
-  "pools": [
-        { "name": "data",
-          "id": 0,
-          "stats": { "kb_used": 0,
-              "bytes_used": 0,
-              "objects": 0}},
-        { "name": "metadata",
-          "id": 1,
-          "stats": { "kb_used": 25,
-              "bytes_used": 25052,
-              "objects": 53}},
-        { "name": "rbd",
-          "id": 2,
-          "stats": { "kb_used": 0,
-              "bytes_used": 0,
-              "objects": 0}},
-        { "name": "test",
-          "id": 3,
-          "stats": { "kb_used": 55476,
-              "bytes_used": 56806602,
-              "objects": 1}}]}`
+{
+    "stats": {
+      "total_bytes": 14882929901568,
+      "total_avail_bytes": 7866135064576,
+      "total_used_bytes": 7016794836992,
+      "total_used_raw_bytes": 7016794836992,
+      "total_used_raw_ratio": 0.47146594524383545,
+      "num_osds": 6,
+      "num_per_pool_osds": 6,
+      "num_per_pool_omap_osds": 6
+    },
+    "stats_by_class": {
+      "hdd": {
+        "total_bytes": 12002349023232,
+        "total_avail_bytes": 6080040206336,
+        "total_used_bytes": 5922308816896,
+        "total_used_raw_bytes": 5922308816896,
+        "total_used_raw_ratio": 0.49342915415763855
+      },
+      "ssd": {
+        "total_bytes": 2880580878336,
+        "total_avail_bytes": 1786094858240,
+        "total_used_bytes": 1094486020096,
+        "total_used_raw_bytes": 1094486020096,
+        "total_used_raw_ratio": 0.37995323538780212
+      }
+    },
+    "pools": [
+      {
+        "name": "foo",
+        "id": 4,
+        "stats": {
+          "stored": 672914410122,
+          "objects": 161029,
+          "kb_used": 1972149256,
+          "bytes_used": 2019480838046,
+          "percent_used": 0.26929000020027161,
+          "max_avail": 1826599337984
+        }
+      },
+      {
+        "name": "bar_metadata",
+        "id": 12,
+        "stats": {
+          "stored": 1486436928,
+          "objects": 88452,
+          "kb_used": 4354883,
+          "bytes_used": 4459399953,
+          "percent_used": 0.0027088995557278395,
+          "max_avail": 547248046080
+        }
+      },
+      {
+        "name": "bar_data",
+        "id": 13,
+        "stats": {
+          "stored": 1291824398336,
+          "objects": 522694,
+          "kb_used": 3800912960,
+          "bytes_used": 3892134871040,
+          "percent_used": 0.41529691219329834,
+          "max_avail": 1826599337984
+        }
+      },
+      {
+        "name": "device_health_metrics",
+        "id": 17,
+        "stats": {
+          "stored": 42634584,
+          "objects": 9,
+          "kb_used": 83271,
+          "bytes_used": 85269164,
+          "percent_used": 0.000012548729500849731,
+          "max_avail": 3397479301120
+        }
+      }
+    ]
+  }
+`
 
 var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_usage",
 		fields: map[string]interface{}{
-			"total_space":       pf(472345880),
-			"total_used":        pf(71058504),
-			"total_avail":       pf(377286864),
-			"total_bytes":       pf(472345880),
-			"total_used_bytes":  pf(71058504),
-			"total_avail_bytes": pf(377286864),
+			"total_bytes":            float64(14882929901568),
+			"total_avail_bytes":      float64(7866135064576),
+			"total_used_bytes":       float64(7016794836992),
+			"total_used_raw_bytes":   float64(7016794836992),
+			"total_used_raw_ratio":   float64(0.47146594524383545),
+			"num_osds":               float64(6),
+			"num_per_pool_osds":      float64(6),
+			"num_per_pool_omap_osds": float64(6),
 		},
 		tags: map[string]string{},
 	},
