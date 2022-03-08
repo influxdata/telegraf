@@ -39,8 +39,11 @@ func (nr *NewRelic) Description() string {
 // SampleConfig : return  default configuration of the Output
 func (nr *NewRelic) SampleConfig() string {
 	return `
-  ## New Relic Insights API key
-  insights_key = "insights api key"
+  ## The 'insights_key' parameter requires a NR license key.
+  ## New Relic recommends you create one
+  ## with a convenient name such as TELEGRAF_INSERT_KEY.
+  ## reference: https://docs.newrelic.com/docs/apis/intro-apis/new-relic-api-keys/#ingest-license-key
+  # insights_key = "New Relic License Key Here"
 
   ## Prefix to add to add to metric name for easy identification.
   # metric_prefix = ""
