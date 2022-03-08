@@ -44,7 +44,13 @@ cpu,host=c value1=1`
 )
 
 var (
-	pki = testutil.NewPKI("../../../testutil/pki")
+	pki             = testutil.NewPKI("../../../testutil/pki")
+	parserTestCases = []struct {
+		parser string
+	}{
+		{"upstream"},
+		{"internal"},
+	}
 )
 
 func newTestListener() *InfluxDBV2Listener {
@@ -209,13 +215,7 @@ func TestWriteKeepBucket(t *testing.T) {
 
 // http listener should add a newline at the end of the buffer if it's not there
 func TestWriteNoNewline(t *testing.T) {
-	testCases := []struct {
-		parser string
-	}{
-		{"upstream"},
-		{"internal"},
-	}
-	for _, tc := range testCases {
+	for _, tc := range parserTestCases {
 		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
@@ -241,13 +241,7 @@ func TestWriteNoNewline(t *testing.T) {
 }
 
 func TestAllOrNothing(t *testing.T) {
-	testCases := []struct {
-		parser string
-	}{
-		{"upstream"},
-		{"internal"},
-	}
-	for _, tc := range testCases {
+	for _, tc := range parserTestCases {
 		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
@@ -266,13 +260,7 @@ func TestAllOrNothing(t *testing.T) {
 }
 
 func TestWriteMaxLineSizeIncrease(t *testing.T) {
-	testCases := []struct {
-		parser string
-	}{
-		{"upstream"},
-		{"internal"},
-	}
-	for _, tc := range testCases {
+	for _, tc := range parserTestCases {
 		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
 			listener := &InfluxDBV2Listener{
 				Log:            testutil.Logger{},
@@ -296,13 +284,7 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 }
 
 func TestWriteVerySmallMaxBody(t *testing.T) {
-	testCases := []struct {
-		parser string
-	}{
-		{"upstream"},
-		{"internal"},
-	}
-	for _, tc := range testCases {
+	for _, tc := range parserTestCases {
 		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
 			listener := &InfluxDBV2Listener{
 				Log:            testutil.Logger{},
@@ -473,13 +455,7 @@ func TestWriteHighTraffic(t *testing.T) {
 }
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
-	testCases := []struct {
-		parser string
-	}{
-		{"upstream"},
-		{"internal"},
-	}
-	for _, tc := range testCases {
+	for _, tc := range parserTestCases {
 		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
@@ -499,13 +475,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 }
 
 func TestWriteInvalid(t *testing.T) {
-	testCases := []struct {
-		parser string
-	}{
-		{"upstream"},
-		{"internal"},
-	}
-	for _, tc := range testCases {
+	for _, tc := range parserTestCases {
 		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
@@ -525,13 +495,7 @@ func TestWriteInvalid(t *testing.T) {
 }
 
 func TestWriteEmpty(t *testing.T) {
-	testCases := []struct {
-		parser string
-	}{
-		{"upstream"},
-		{"internal"},
-	}
-	for _, tc := range testCases {
+	for _, tc := range parserTestCases {
 		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
@@ -572,13 +536,7 @@ func TestReady(t *testing.T) {
 }
 
 func TestWriteWithPrecision(t *testing.T) {
-	testCases := []struct {
-		parser string
-	}{
-		{"upstream"},
-		{"internal"},
-	}
-	for _, tc := range testCases {
+	for _, tc := range parserTestCases {
 		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser

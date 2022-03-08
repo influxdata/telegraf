@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -26,6 +27,8 @@ const (
 	// if the request body is over this size, we will return an HTTP 413 error.
 	defaultMaxBodySize = 32 * 1024 * 1024
 )
+
+var ErrEOF = errors.New("EOF")
 
 // The BadRequestCode constants keep standard error messages
 // see: https://v2.docs.influxdata.com/v2.0/api/#operation/PostWrite
@@ -299,7 +302,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			metrics, err = parser.Parse(bytes)
 		}
 
-		if err != influx.EOF && err != influx_upstream.ErrEOF && err != nil {
+		if err != ErrEOF && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, Invalid, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)

@@ -16,9 +16,8 @@ Parses metrics using the [Influx Line Protocol][].
   ##   https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
-  ## Influx parser type to use. Users can choose between 'internal' and
-  ## 'upstream'. The internal parser is what Telegraf has historically used.
-  ## While the upstream parser involved a large re-write to make it more
-  ## memory efficient and performant.
+  ## Influx line protocol parser
+  ## 'internal' is the default. 'upstream' is a newer parser that is faster
+  ## and more memory efficient.
   ## influx_parser_version = "internal"
 ```
