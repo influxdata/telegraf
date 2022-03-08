@@ -1767,91 +1767,118 @@ var rgwPerfDump = `
 
 var clusterStatusDump = `
 {
-  "health": {
-    "status": "HEALTH_OK",
-    "checks": {},
-    "mutes": []
-  },
-  "fsid": "01234567-abcd-9876-0123-ffeeddccbbaa",
-  "election_epoch": 504,
-  "quorum": [ 0, 1, 2 ],
-  "quorum_names": [ "a", "b", "c" ],
-  "monmap": {
-    "epoch": 27,
-    "min_mon_release_name": "pacific",
-    "num_mons": 3
-  },
-  "osdmap": {
-    "epoch": 21734,
-    "num_osds": 24,
-    "num_up_osds": 24,
-    "osd_up_since": 1646008974,
-    "num_in_osds": 24,
-    "osd_in_since": 1637261831,
-    "num_remapped_pgs": 0
-  },
-  "pgmap": {
-    "pgs_by_state": [
-      { "state_name": "active+clean", "count": 2560 },
-      { "state_name": "active+scrubbing", "count": 10 },
-      { "state_name": "active+backfilling", "count": 5 }
+    "health": {
+        "status": "HEALTH_OK",
+        "checks": {},
+        "mutes": []
+    },
+    "fsid": "01234567-abcd-9876-0123-ffeeddccbbaa",
+    "election_epoch": 504,
+    "quorum": [
+        0,
+        1,
+        2
     ],
-    "version": 52314277,
-    "num_pgs": 2560,
-    "num_pools": 4,
-    "num_objects": 974827,
-    "data_bytes": 2700031960713,
-    "bytes_used": 7478347665408,
-    "bytes_avail": 9857462382592,
-    "bytes_total": 17335810048000,
-    "read_bytes_sec": 0,
-    "write_bytes_sec": 367217,
-    "read_op_per_sec": 322,
-    "write_op_per_sec": 1022
-  },
-  "mdsmap": {
-    "epoch": 1,
-    "up": 0,
-    "in": 0,
-    "max": 0,
-    "by_rank": []
-  },
-  "fsmap": {
-    "epoch": 24756,
-    "id": 4,
-    "up": 1,
-    "in": 1,
-    "max": 1,
-    "by_rank": [
-      {
-        "filesystem_id": 4,
-        "rank": 0,
-        "name": "a",
-        "status": "up:active",
-        "gid": 83585495
-      }
+    "quorum_names": [
+        "a",
+        "b",
+        "c"
     ],
-    "up:standby": 2
-  },
-  "mgrmap": {
-    "available": true,
-    "num_standbys": 2,
-    "modules": [
-      "dashboard",
-      "iostat",
-      "restful",
-      "stats"
-    ],
-    "services": {
-      "dashboard": "https://192.168.0.1:8443/"
-    }
-  },
-  "servicemap": {
-    "epoch": 219919,
-    "modified": "2022-03-07T13:52:42.430153-0500",
-    "services": {}
-  },
-  "progress_events": {}
+    "monmap": {
+        "epoch": 27,
+        "min_mon_release_name": "pacific",
+        "num_mons": 3
+    },
+    "osdmap": {
+        "epoch": 21734,
+        "num_osds": 24,
+        "num_up_osds": 24,
+        "osd_up_since": 1646008974,
+        "num_in_osds": 24,
+        "osd_in_since": 1637261831,
+        "num_remapped_pgs": 0
+    },
+    "pgmap": {
+        "pgs_by_state": [
+            {
+                "state_name": "active+clean",
+                "count": 2560
+            },
+            {
+                "state_name": "active+scrubbing",
+                "count": 10
+            },
+            {
+                "state_name": "active+backfilling",
+                "count": 5
+            }
+        ],
+        "version": 52314277,
+        "num_pgs": 2560,
+        "num_pools": 4,
+        "num_objects": 974827,
+        "data_bytes": 2700031960713,
+        "bytes_used": 7478347665408,
+        "bytes_avail": 9857462382592,
+        "bytes_total": 17335810048000,
+        "inactive_pgs_ratio": 0.19742488861083984,
+        "degraded_objects": 25919,
+        "degraded_total": 2920050,
+        "degraded_ratio": 0.008876217872981627,
+        "recovering_objects_per_sec": 6,
+        "recovering_bytes_per_sec": 223303,
+        "recovering_keys_per_sec": 10,
+        "num_objects_recovered": 40,
+        "num_bytes_recovered": 1335808,
+        "num_keys_recovered": 64,
+        "read_bytes_sec": 0,
+        "write_bytes_sec": 367217,
+        "read_op_per_sec": 322,
+        "write_op_per_sec": 1022
+    },
+    "mdsmap": {
+        "epoch": 1,
+        "up": 0,
+        "in": 0,
+        "max": 0,
+        "by_rank": []
+    },
+    "fsmap": {
+        "epoch": 24756,
+        "id": 4,
+        "up": 1,
+        "in": 1,
+        "max": 1,
+        "by_rank": [
+            {
+                "filesystem_id": 4,
+                "rank": 0,
+                "name": "a",
+                "status": "up:active",
+                "gid": 83585495
+            }
+        ],
+        "up:standby": 2
+    },
+    "mgrmap": {
+        "available": true,
+        "num_standbys": 2,
+        "modules": [
+            "dashboard",
+            "iostat",
+            "restful",
+            "stats"
+        ],
+        "services": {
+            "dashboard": "https://192.168.0.1:8443/"
+        }
+    },
+    "servicemap": {
+        "epoch": 219919,
+        "modified": "2022-03-07T13:52:42.430153-0500",
+        "services": {}
+    },
+    "progress_events": {}
 }
 `
 
@@ -1870,18 +1897,28 @@ var cephStatusResults = []expectedResult{
 	{
 		metric: "ceph_pgmap",
 		fields: map[string]interface{}{
-			"version":          float64(52314277),
-			"num_pgs":          float64(2560),
-			"num_pools":        float64(4),
-			"num_objects":      float64(974827),
-			"data_bytes":       float64(2700031960713),
-			"bytes_used":       float64(7478347665408),
-			"bytes_avail":      float64(9857462382592),
-			"bytes_total":      float64(17335810048000),
-			"read_bytes_sec":   float64(0),
-			"write_bytes_sec":  float64(367217),
-			"read_op_per_sec":  float64(322),
-			"write_op_per_sec": float64(1022),
+			"version":                    float64(52314277),
+			"num_pgs":                    float64(2560),
+			"num_pools":                  float64(4),
+			"num_objects":                float64(974827),
+			"data_bytes":                 float64(2700031960713),
+			"bytes_used":                 float64(7478347665408),
+			"bytes_avail":                float64(9857462382592),
+			"bytes_total":                float64(17335810048000),
+			"inactive_pgs_ratio":         float64(0.19742488861083984),
+			"degraded_objects":           float64(25919),
+			"degraded_total":             float64(2920050),
+			"degraded_ratio":             float64(0.0088762178729816267),
+			"recovering_objects_per_sec": float64(6),
+			"recovering_bytes_per_sec":   float64(223303),
+			"recovering_keys_per_sec":    float64(10),
+			"num_objects_recovered":      float64(40),
+			"num_bytes_recovered":        float64(1335808),
+			"num_keys_recovered":         float64(64),
+			"read_bytes_sec":             float64(0),
+			"write_bytes_sec":            float64(367217),
+			"read_op_per_sec":            float64(322),
+			"write_op_per_sec":           float64(1022),
 		},
 		tags: map[string]string{},
 	},
@@ -1917,82 +1954,82 @@ var cephStatusResults = []expectedResult{
 var cephDFDump = `
 {
     "stats": {
-      "total_bytes": 14882929901568,
-      "total_avail_bytes": 7866135064576,
-      "total_used_bytes": 7016794836992,
-      "total_used_raw_bytes": 7016794836992,
-      "total_used_raw_ratio": 0.47146594524383545,
-      "num_osds": 6,
-      "num_per_pool_osds": 6,
-      "num_per_pool_omap_osds": 6
+        "total_bytes": 14882929901568,
+        "total_avail_bytes": 7866135064576,
+        "total_used_bytes": 7016794836992,
+        "total_used_raw_bytes": 7016794836992,
+        "total_used_raw_ratio": 0.47146594524383545,
+        "num_osds": 6,
+        "num_per_pool_osds": 6,
+        "num_per_pool_omap_osds": 6
     },
     "stats_by_class": {
-      "hdd": {
-        "total_bytes": 12002349023232,
-        "total_avail_bytes": 6080040206336,
-        "total_used_bytes": 5922308816896,
-        "total_used_raw_bytes": 5922308816896,
-        "total_used_raw_ratio": 0.49342915415763855
-      },
-      "ssd": {
-        "total_bytes": 2880580878336,
-        "total_avail_bytes": 1786094858240,
-        "total_used_bytes": 1094486020096,
-        "total_used_raw_bytes": 1094486020096,
-        "total_used_raw_ratio": 0.37995323538780212
-      }
+        "hdd": {
+            "total_bytes": 12002349023232,
+            "total_avail_bytes": 6080040206336,
+            "total_used_bytes": 5922308816896,
+            "total_used_raw_bytes": 5922308816896,
+            "total_used_raw_ratio": 0.49342915415763855
+        },
+        "ssd": {
+            "total_bytes": 2880580878336,
+            "total_avail_bytes": 1786094858240,
+            "total_used_bytes": 1094486020096,
+            "total_used_raw_bytes": 1094486020096,
+            "total_used_raw_ratio": 0.3799532353878021
+        }
     },
     "pools": [
-      {
-        "name": "foo",
-        "id": 4,
-        "stats": {
-          "stored": 672914410122,
-          "objects": 161029,
-          "kb_used": 1972149256,
-          "bytes_used": 2019480838046,
-          "percent_used": 0.26929000020027161,
-          "max_avail": 1826599337984
+        {
+            "name": "foo",
+            "id": 4,
+            "stats": {
+                "stored": 672914410122,
+                "objects": 161029,
+                "kb_used": 1972149256,
+                "bytes_used": 2019480838046,
+                "percent_used": 0.2692900002002716,
+                "max_avail": 1826599337984
+            }
+        },
+        {
+            "name": "bar_metadata",
+            "id": 12,
+            "stats": {
+                "stored": 1486436928,
+                "objects": 88452,
+                "kb_used": 4354883,
+                "bytes_used": 4459399953,
+                "percent_used": 0.0027088995557278395,
+                "max_avail": 547248046080
+            }
+        },
+        {
+            "name": "bar_data",
+            "id": 13,
+            "stats": {
+                "stored": 1291824398336,
+                "objects": 522694,
+                "kb_used": 3800912960,
+                "bytes_used": 3892134871040,
+                "percent_used": 0.41529691219329834,
+                "max_avail": 1826599337984
+            }
+        },
+        {
+            "name": "device_health_metrics",
+            "id": 17,
+            "stats": {
+                "stored": 42634584,
+                "objects": 9,
+                "kb_used": 83271,
+                "bytes_used": 85269164,
+                "percent_used": 0.000012548729500849731,
+                "max_avail": 3397479301120
+            }
         }
-      },
-      {
-        "name": "bar_metadata",
-        "id": 12,
-        "stats": {
-          "stored": 1486436928,
-          "objects": 88452,
-          "kb_used": 4354883,
-          "bytes_used": 4459399953,
-          "percent_used": 0.0027088995557278395,
-          "max_avail": 547248046080
-        }
-      },
-      {
-        "name": "bar_data",
-        "id": 13,
-        "stats": {
-          "stored": 1291824398336,
-          "objects": 522694,
-          "kb_used": 3800912960,
-          "bytes_used": 3892134871040,
-          "percent_used": 0.41529691219329834,
-          "max_avail": 1826599337984
-        }
-      },
-      {
-        "name": "device_health_metrics",
-        "id": 17,
-        "stats": {
-          "stored": 42634584,
-          "objects": 9,
-          "kb_used": 83271,
-          "bytes_used": 85269164,
-          "percent_used": 0.000012548729500849731,
-          "max_avail": 3397479301120
-        }
-      }
     ]
-  }
+}
 `
 
 var cephDfResults = []expectedResult{
@@ -2013,87 +2050,135 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"kb_used":      float64(0),
-			"bytes_used":   float64(0),
-			"objects":      float64(0),
-			"percent_used": (*float64)(nil),
-			"max_avail":    (*float64)(nil),
+			"stored":       float64(672914410122),
+			"objects":      float64(161029),
+			"kb_used":      float64(1972149256),
+			"bytes_used":   float64(2019480838046),
+			"percent_used": float64(0.26929000020027161),
+			"max_avail":    float64(1826599337984),
 		},
 		tags: map[string]string{
-			"name": "data",
+			"name": "foo",
 		},
 	},
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"kb_used":      float64(25),
-			"bytes_used":   float64(25052),
-			"objects":      float64(53),
-			"percent_used": (*float64)(nil),
-			"max_avail":    (*float64)(nil),
+			"stored":       float64(1486436928),
+			"objects":      float64(88452),
+			"kb_used":      float64(4354883),
+			"bytes_used":   float64(4459399953),
+			"percent_used": float64(0.0027088995557278395),
+			"max_avail":    float64(547248046080),
 		},
 		tags: map[string]string{
-			"name": "metadata",
+			"name": "bar_metadata",
 		},
 	},
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"kb_used":      float64(0),
-			"bytes_used":   float64(0),
-			"objects":      float64(0),
-			"percent_used": (*float64)(nil),
-			"max_avail":    (*float64)(nil),
+			"stored":       float64(1291824398336),
+			"objects":      float64(522694),
+			"kb_used":      float64(3800912960),
+			"bytes_used":   float64(3892134871040),
+			"percent_used": float64(0.41529691219329834),
+			"max_avail":    float64(1826599337984),
 		},
 		tags: map[string]string{
-			"name": "rbd",
+			"name": "bar_data",
 		},
 	},
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"kb_used":      float64(55476),
-			"bytes_used":   float64(56806602),
-			"objects":      float64(1),
-			"percent_used": (*float64)(nil),
-			"max_avail":    (*float64)(nil),
+			"stored":       float64(42634584),
+			"objects":      float64(9),
+			"kb_used":      float64(83271),
+			"bytes_used":   float64(85269164),
+			"percent_used": float64(0.000012548729500849731),
+			"max_avail":    float64(3397479301120),
 		},
 		tags: map[string]string{
-			"name": "test",
+			"name": "device_health_metrics",
+		},
+	},
+	{
+		metric: "ceph_deviceclass_usage",
+		fields: map[string]interface{}{
+			"total_bytes":          float64(12002349023232),
+			"total_avail_bytes":    float64(6080040206336),
+			"total_used_bytes":     float64(5922308816896),
+			"total_used_raw_bytes": float64(5922308816896),
+			"total_used_raw_ratio": float64(0.49342915415763855),
+		},
+		tags: map[string]string{
+			"class": "hdd",
+		},
+	},
+	{
+		metric: "ceph_deviceclass_usage",
+		fields: map[string]interface{}{
+			"total_bytes":          float64(2880580878336),
+			"total_avail_bytes":    float64(1786094858240),
+			"total_used_bytes":     float64(1094486020096),
+			"total_used_raw_bytes": float64(1094486020096),
+			"total_used_raw_ratio": float64(0.3799532353878021),
+		},
+		tags: map[string]string{
+			"class": "ssd",
 		},
 	},
 }
 
 var cephODSPoolStatsDump = `
 [
-    { "pool_name": "data",
-      "pool_id": 0,
-      "recovery": {},
-      "recovery_rate": {},
-      "client_io_rate": {}},
-    { "pool_name": "metadata",
-      "pool_id": 1,
-      "recovery": {},
-      "recovery_rate": {},
-      "client_io_rate": {}},
-    { "pool_name": "rbd",
-      "pool_id": 2,
-      "recovery": {},
-      "recovery_rate": {},
-      "client_io_rate": {}},
-    { "pool_name": "pbench",
-      "pool_id": 3,
-      "recovery": { "degraded_objects": 18446744073709551562,
-          "degraded_total": 412,
-          "degrated_ratio": "-13.107"},
-      "recovery_rate": { "recovering_objects_per_sec": 279,
-          "recovering_bytes_per_sec": 176401059,
-          "recovering_keys_per_sec": 0},
-      "client_io_rate": { "read_bytes_sec": 10566067,
-          "write_bytes_sec": 15165220376,
-          "op_per_sec": 9828,
-          "read_op_per_sec": 182,
-          "write_op_per_sec": 473}}]`
+    {
+        "pool_name": "data",
+        "pool_id": 0,
+        "recovery": {
+            "degraded_objects": 12,
+            "degraded_total": 483087,
+            "degraded_ratio": 0.000024840246166839513
+        },
+        "recovery_rate": {},
+        "client_io_rate": {}
+    },
+    {
+        "pool_name": "metadata",
+        "pool_id": 1,
+        "recovery": {},
+        "recovery_rate": {},
+        "client_io_rate": {}
+    },
+    {
+        "pool_name": "rbd",
+        "pool_id": 2,
+        "recovery": {},
+        "recovery_rate": {},
+        "client_io_rate": {}
+    },
+    {
+        "pool_name": "pbench",
+        "pool_id": 3,
+        "recovery": {},
+        "recovery_rate": {
+            "recovering_objects_per_sec": 16,
+            "recovering_bytes_per_sec": 0,
+            "recovering_keys_per_sec": 0,
+            "num_objects_recovered": 200,
+            "num_bytes_recovered": 0,
+            "num_keys_recovered": 0
+        },
+        "client_io_rate": {
+            "read_bytes_sec": 10566067,
+            "write_bytes_sec": 15165220376,
+            "read_op_per_sec": 182,
+            "write_op_per_sec": 473
+        }
+    }
+]
+`
 
 var cephOSDPoolStatsResults = []expectedResult{
 	{
@@ -2101,12 +2186,17 @@ var cephOSDPoolStatsResults = []expectedResult{
 		fields: map[string]interface{}{
 			"read_bytes_sec":             float64(0),
 			"write_bytes_sec":            float64(0),
-			"op_per_sec":                 (*float64)(nil),
 			"read_op_per_sec":            float64(0),
 			"write_op_per_sec":           float64(0),
 			"recovering_objects_per_sec": float64(0),
 			"recovering_bytes_per_sec":   float64(0),
 			"recovering_keys_per_sec":    float64(0),
+			"degraded_objects":           float64(12),
+			"degraded_total":             float64(483087),
+			"degraded_ratio":             float64(0.000024840246166839513),
+			"num_objects_recovered":      float64(0),
+			"num_bytes_recovered":        float64(0),
+			"num_keys_recovered":         float64(0),
 		},
 		tags: map[string]string{
 			"name": "data",
@@ -2115,21 +2205,43 @@ var cephOSDPoolStatsResults = []expectedResult{
 	{
 		metric: "ceph_pool_stats",
 		fields: map[string]interface{}{
+			"read_bytes_sec":             float64(0),
+			"write_bytes_sec":            float64(0),
+			"read_op_per_sec":            float64(0),
+			"write_op_per_sec":           float64(0),
+			"recovering_objects_per_sec": float64(0),
+			"recovering_bytes_per_sec":   float64(0),
+			"recovering_keys_per_sec":    float64(0),
+			"degraded_objects":           float64(0),
+			"degraded_total":             float64(0),
+			"degraded_ratio":             float64(0),
+			"num_objects_recovered":      float64(0),
+			"num_bytes_recovered":        float64(0),
+			"num_keys_recovered":         float64(0),
+		},
+		tags: map[string]string{
+			"name": "metadata",
+		},
+	},
+	{
+		metric: "ceph_pool_stats",
+		fields: map[string]interface{}{
 			"read_bytes_sec":             float64(10566067),
 			"write_bytes_sec":            float64(15165220376),
-			"op_per_sec":                 pf(9828),
 			"read_op_per_sec":            float64(182),
 			"write_op_per_sec":           float64(473),
-			"recovering_objects_per_sec": float64(279),
-			"recovering_bytes_per_sec":   float64(176401059),
+			"recovering_objects_per_sec": float64(16),
+			"recovering_bytes_per_sec":   float64(0),
 			"recovering_keys_per_sec":    float64(0),
+			"degraded_objects":           float64(0),
+			"degraded_total":             float64(0),
+			"degraded_ratio":             float64(0),
+			"num_objects_recovered":      float64(200),
+			"num_bytes_recovered":        float64(0),
+			"num_keys_recovered":         float64(0),
 		},
 		tags: map[string]string{
 			"name": "pbench",
 		},
 	},
-}
-
-func pf(i float64) *float64 {
-	return &i
 }
