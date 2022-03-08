@@ -1884,6 +1884,30 @@ var clusterStatusDump = `
 
 var cephStatusResults = []expectedResult{
 	{
+		metric: "ceph_health",
+		fields: map[string]interface{}{
+			"status": "HEALTH_OK",
+		},
+		tags: map[string]string{},
+	},
+	{
+		metric: "ceph_monmap",
+		fields: map[string]interface{}{
+			"num_mons": float64(3),
+		},
+		tags: map[string]string{},
+	},
+	{
+		metric: "ceph_fsmap",
+		fields: map[string]interface{}{
+			"up":         float64(1),
+			"in":         float64(1),
+			"max":        float64(1),
+			"up_standby": float64(2),
+		},
+		tags: map[string]string{},
+	},
+	{
 		metric: "ceph_osdmap",
 		fields: map[string]interface{}{
 			"epoch":            float64(21734),
