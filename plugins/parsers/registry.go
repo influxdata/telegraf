@@ -183,10 +183,11 @@ type Config struct {
 	ValueFieldName string `toml:"value_field_name"`
 
 	// XPath configuration
-	XPathPrintDocument bool   `toml:"xpath_print_document"`
-	XPathProtobufFile  string `toml:"xpath_protobuf_file"`
-	XPathProtobufType  string `toml:"xpath_protobuf_type"`
-	XPathConfig        []XPathConfig
+	XPathPrintDocument       bool     `toml:"xpath_print_document"`
+	XPathProtobufFile        string   `toml:"xpath_protobuf_file"`
+	XPathProtobufType        string   `toml:"xpath_protobuf_type"`
+	XPathProtobufImportPaths []string `toml:"xpath_protobuf_import_paths"`
+	XPathConfig              []XPathConfig
 
 	// JSONPath configuration
 	JSONV2Config []JSONV2Config `toml:"json_v2"`
@@ -272,6 +273,7 @@ func NewParser(config *Config) (Parser, error) {
 			Format:              config.DataFormat,
 			ProtobufMessageDef:  config.XPathProtobufFile,
 			ProtobufMessageType: config.XPathProtobufType,
+			ProtobufImportPaths: config.XPathProtobufImportPaths,
 			PrintDocument:       config.XPathPrintDocument,
 			DefaultTags:         config.DefaultTags,
 			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
