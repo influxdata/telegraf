@@ -100,7 +100,7 @@ Using this field configuration you can gather a non-array/non-object values. Not
 * **path (REQUIRED)**: A string with valid GJSON path syntax to a non-array/non-object value
 * **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
 * **type (OPTIONAL)**: You can define a string value to set the desired type (float, int, uint, string, bool). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float, or string).
-* **opitional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. This was introduced to support situations when parsing multiple incoming JSON payloads with wildcards. ([More context](https://github.com/influxdata/telegraf/issues/10072))
+* **optional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. This was introduced to support situations when parsing multiple incoming JSON payloads with wildcards. ([More context](https://github.com/influxdata/telegraf/issues/10072))
 
 #### **tag**
 
@@ -108,7 +108,7 @@ Using this tag configuration you can gather a non-array/non-object values. Note 
 
 * **path (REQUIRED)**: A string with valid GJSON path syntax to a non-array/non-object value
 * **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
-* **opitional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. This was introduced to support situations when parsing multiple incoming JSON payloads with wildcards. ([More context](https://github.com/influxdata/telegraf/issues/10072))
+* **optional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. This was introduced to support situations when parsing multiple incoming JSON payloads with wildcards. ([More context](https://github.com/influxdata/telegraf/issues/10072))
 
 For good examples in using `field` and `tag` you can reference the following example configs:
 
@@ -121,7 +121,7 @@ With the configuration section `object`, you can gather values from [JSON object
 #### The following keys can be set for `object`
 
 * **path (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
-* **opitional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. This was introduced to support situations when parsing multiple incoming JSON payloads with wildcards. ([More context](https://github.com/influxdata/telegraf/issues/10072))
+* **optional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. This was introduced to support situations when parsing multiple incoming JSON payloads with wildcards. ([More context](https://github.com/influxdata/telegraf/issues/10072))
 
 *Keys to define what JSON keys should be used as timestamps:*
 
