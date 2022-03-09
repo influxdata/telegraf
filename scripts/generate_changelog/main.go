@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt" //nolint:revive
+	"fmt"
 	"html/template"
-	"log"
+	"log" //nolint:revive
 	"os"
 	"os/exec"
 	"regexp"
