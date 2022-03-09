@@ -230,7 +230,15 @@ func CreateCommitGroups(commits []*Commit) []CommitGroup {
 	sortCommits(fixGroup.Commits)
 	sortCommits(featGroup.Commits)
 
-	commitGroups = append(commitGroups, fixGroup, featGroup, updateGroup)
+	if len(fixGroup.Commits) > 0 {
+		commitGroups = append(commitGroups, fixGroup)
+	}
+	if len(featGroup.Commits) > 0 {
+		commitGroups = append(commitGroups, featGroup)
+	}
+	if len(updateGroup.Commits) > 0 {
+		commitGroups = append(commitGroups, updateGroup)
+	}
 
 	return commitGroups
 }
