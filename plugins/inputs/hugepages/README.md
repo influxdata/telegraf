@@ -24,44 +24,43 @@ Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html>
 
 - hugepages_root (gathered from root huge page control directory: `/sys/kernel/mm/hugepages`)
   - tags:
-    - hugepages_size_kb (integer, kB)
+    - size_kb (integer, kB)
   - fields:
-    - free_hugepages (integer)
-    - nr_hugepages (integer)
-    - nr_hugepages_mempolicy (integer)
-    - nr_overcommit_hugepages (integer)
-    - resv_hugepages (integer)
-    - surplus_hugepages (integer)
+    - free (integer)
+    - mempolicy (integer)
+    - overcommit (integer)
+    - reserved (integer)
+    - surplus (integer)
+    - total (integer)
 - hugepages_per_node (gathered from per NUMA node directories: `/sys/devices/system/node/node[0-9]*/hugepages`)
   - tags:
-    - hugepages_size_kb (integer, kB)
+    - size_kb (integer, kB)
     - node (integer)
   - fields:
-    - free_hugepages (integer)
-    - nr_hugepages (integer)
-    - surplus_hugepages (integer)
+    - free (integer)
+    - surplus (integer)
+    - total (integer)
 - meminfo (gathered from `/proc/meminfo` file)
   - fields:
-    - AnonHugePages_kB (integer, kB)
-    - ShmemHugePages_kB (integer, kB)
-    - FileHugePages_kB (integer, kB)
-    - HugePages_Total (integer)
-    - HugePages_Rsvd (integer)
-    - HugePages_Surp (integer)
-    - HugePages_Free (integer)
-    - Hugepagesize_kB (integer, kB)
-    - Hugetlb_kB (integer, kB)
+    - anonymous_kb (integer, kB)
+    - default_size_kb (integer, kB)
+    - file_kb (integer, kB)
+    - free_of_default_size (integer)
+    - reserved_of_default_size (integer)
+    - shared_memory_kb (integer, kB)
+    - surplus_of_default_size (integer)
+    - total_consumed_by_all_sizes_kb (integer, kB)
+    - total_of_default_size (integer)
 
 ## Example Output
 
 ```text
 $ ./telegraf -config telegraf.conf -input-filter hugepages -test
-> hugepages_root,host=ubuntu,hugepages_size_kb=1048576 free_hugepages=0i,nr_hugepages=8i,nr_hugepages_mempolicy=8i,nr_overcommit_hugepages=0i,resv_hugepages=0i,surplus_hugepages=0i 1646258020000000000
-> hugepages_root,host=ubuntu,hugepages_size_kb=2048 free_hugepages=883i,nr_hugepages=2048i,nr_hugepages_mempolicy=2048i,nr_overcommit_hugepages=0i,resv_hugepages=0i,surplus_hugepages=0i 1646258020000000000
-> hugepages_per_node,host=ubuntu,hugepages_size_kb=1048576,node=0 free_hugepages=0i,nr_hugepages=4i,surplus_hugepages=0i 1646258020000000000
-> hugepages_per_node,host=ubuntu,hugepages_size_kb=2048,node=0 free_hugepages=434i,nr_hugepages=1024i,surplus_hugepages=0i 1646258020000000000
-> hugepages_per_node,host=ubuntu,hugepages_size_kb=1048576,node=1 free_hugepages=0i,nr_hugepages=4i,surplus_hugepages=0i 1646258020000000000
-> hugepages_per_node,host=ubuntu,hugepages_size_kb=2048,node=1 free_hugepages=449i,nr_hugepages=1024i,surplus_hugepages=0i 1646258020000000000
-> hugepages_meminfo,host=ubuntu AnonHugePages_kb=0i,FileHugePages_kb=0i,HugePages_Free=883i,HugePages_Rsvd=0i,HugePages_Surp=0i,HugePages_Total=2048i,Hugepagesize_kb=2048i,Hugetlb_kb=12582912i,ShmemHugePages_kb=0i 1646258020000000000
-
+> hugepages_root,host=ubuntu,size_kb=1048576 free=0i,mempolicy=8i,overcommit=0i,reserved=0i,surplus=0i,total=8i 1646258020000000000
+> hugepages_root,host=ubuntu,size_kb=2048 free=883i,mempolicy=2048i,overcommit=0i,reserved=0i,surplus=0i,total=2048i 1646258020000000000
+> hugepages_per_node,host=ubuntu,size_kb=1048576,node=0 free=0i,surplus=0i,total=4i 1646258020000000000
+> hugepages_per_node,host=ubuntu,size_kb=2048,node=0 free=434i,surplus=0i,total=1024i 1646258020000000000
+> hugepages_per_node,host=ubuntu,size_kb=1048576,node=1 free=0i,surplus=0i,total=4i 1646258020000000000
+> hugepages_per_node,host=ubuntu,size_kb=2048,node=1 free=449i,surplus=0i,total=1024i 1646258020000000000
+> hugepages_meminfo,host=ubuntu anonymous_kb=0i,default_size_kb=2048i,file_kb=0i,free_of_default_size=883i,reserved_of_default_size=0i,shared_memory_kb=0i,surplus_of_default_size=0i,total_consumed_by_all_sizes_kb=12582912i,total_of_default_size=2048i 1646258020000000000
 ```

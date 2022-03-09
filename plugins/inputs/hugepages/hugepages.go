@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -38,35 +37,34 @@ const (
 )
 
 var (
-	newlineByte     = []byte("\n")
-	colonByte       = []byte(":")
-	kbPrecisionByte = []byte("kB")
+	newlineByte = []byte("\n")
+	colonByte   = []byte(":")
 
-	hugepagesMetricsRoot = []string{
-		"free_hugepages",
-		"nr_hugepages",
-		"nr_hugepages_mempolicy",
-		"nr_overcommit_hugepages",
-		"resv_hugepages",
-		"surplus_hugepages",
+	hugepagesMetricsRoot = map[string]string{
+		"free_hugepages":          "free",
+		"nr_hugepages":            "total",
+		"nr_hugepages_mempolicy":  "mempolicy",
+		"nr_overcommit_hugepages": "overcommit",
+		"resv_hugepages":          "reserved",
+		"surplus_hugepages":       "surplus",
 	}
 
-	hugepagesMetricsPerNUMANode = []string{
-		"free_hugepages",
-		"nr_hugepages",
-		"surplus_hugepages",
+	hugepagesMetricsPerNUMANode = map[string]string{
+		"free_hugepages":    "free",
+		"nr_hugepages":      "total",
+		"surplus_hugepages": "surplus",
 	}
 
-	hugepagesMetricsFromMeminfo = []string{
-		"HugePages_Total",
-		"HugePages_Free",
-		"HugePages_Rsvd",
-		"HugePages_Surp",
-		"Hugepagesize",
-		"Hugetlb",
-		"AnonHugePages",
-		"ShmemHugePages",
-		"FileHugePages",
+	hugepagesMetricsFromMeminfo = map[string]string{
+		"HugePages_Total": "total_of_default_size",
+		"HugePages_Free":  "free_of_default_size",
+		"HugePages_Rsvd":  "reserved_of_default_size",
+		"HugePages_Surp":  "surplus_of_default_size",
+		"Hugepagesize":    "default_size_kb",
+		"Hugetlb":         "total_consumed_by_all_sizes_kb",
+		"AnonHugePages":   "anonymous_kb",
+		"ShmemHugePages":  "shared_memory_kb",
+		"FileHugePages":   "file_kb",
 	}
 )
 
@@ -166,7 +164,7 @@ func (h *Hugepages) gatherStatsPerNode(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, fileFilter []string, defaultTags map[string]string) error {
+func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement, path string, fileFilter map[string]string, defaultTags map[string]string) error {
 	// read metrics from: hugepages/hugepages-*/*
 	hugepagesDirs, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -192,7 +190,8 @@ func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement
 
 		metrics := make(map[string]interface{})
 		for _, metricFile := range metricFiles {
-			if mode := metricFile.Mode(); !mode.IsRegular() || !choice.Contains(metricFile.Name(), fileFilter) {
+			metricName, ok := fileFilter[metricFile.Name()]
+			if mode := metricFile.Mode(); !mode.IsRegular() || !ok {
 				continue
 			}
 
@@ -207,7 +206,7 @@ func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement
 				return fmt.Errorf("failed to convert content of '%s': %v", metricFullPath, err)
 			}
 
-			metrics[metricFile.Name()] = metricValue
+			metrics[metricName] = metricValue
 		}
 
 		if len(metrics) == 0 {
@@ -218,7 +217,7 @@ func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement
 		for key, value := range defaultTags {
 			tags[key] = value
 		}
-		tags["hugepages_size_kb"] = hugepagesSize
+		tags["size_kb"] = hugepagesSize
 
 		acc.AddFields(measurement, metrics, tags)
 	}
@@ -240,7 +239,8 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 			continue
 		}
 		fieldName := string(bytes.TrimSuffix(fields[0], colonByte))
-		if !choice.Contains(fieldName, hugepagesMetricsFromMeminfo) {
+		metricName, ok := hugepagesMetricsFromMeminfo[fieldName]
+		if !ok {
 			continue
 		}
 
@@ -249,10 +249,7 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 			return fmt.Errorf("failed to convert content of '%s': %v", fieldName, err)
 		}
 
-		if bytes.Contains(line, kbPrecisionByte) {
-			fieldName = fieldName + "_kb"
-		}
-		metrics[fieldName] = fieldValue
+		metrics[metricName] = fieldValue
 	}
 
 	acc.AddFields("hugepages_"+meminfoHugepages, metrics, map[string]string{})

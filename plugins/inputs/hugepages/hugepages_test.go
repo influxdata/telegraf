@@ -63,24 +63,24 @@ func TestGather(t *testing.T) {
 		require.NoError(t, h.Gather(acc))
 
 		expectedFields := map[string]interface{}{
-			"free_hugepages":          883,
-			"resv_hugepages":          0,
-			"surplus_hugepages":       0,
-			"nr_hugepages_mempolicy":  2048,
-			"nr_hugepages":            2048,
-			"nr_overcommit_hugepages": 0,
+			"free":       883,
+			"reserved":   0,
+			"surplus":    0,
+			"mempolicy":  2048,
+			"total":      2048,
+			"overcommit": 0,
 		}
-		acc.AssertContainsTaggedFields(t, "hugepages_root", expectedFields, map[string]string{"hugepages_size_kb": "2048"})
+		acc.AssertContainsTaggedFields(t, "hugepages_root", expectedFields, map[string]string{"size_kb": "2048"})
 
 		expectedFields = map[string]interface{}{
-			"free_hugepages":          0,
-			"resv_hugepages":          0,
-			"surplus_hugepages":       0,
-			"nr_hugepages_mempolicy":  8,
-			"nr_hugepages":            8,
-			"nr_overcommit_hugepages": 0,
+			"free":       0,
+			"reserved":   0,
+			"surplus":    0,
+			"mempolicy":  8,
+			"total":      8,
+			"overcommit": 0,
 		}
-		acc.AssertContainsTaggedFields(t, "hugepages_root", expectedFields, map[string]string{"hugepages_size_kb": "1048576"})
+		acc.AssertContainsTaggedFields(t, "hugepages_root", expectedFields, map[string]string{"size_kb": "1048576"})
 	})
 
 	t.Run("when per node hugepages type is enabled then gather all per node metrics successfully", func(t *testing.T) {
@@ -93,32 +93,32 @@ func TestGather(t *testing.T) {
 		require.NoError(t, h.Gather(acc))
 
 		expectedFields := map[string]interface{}{
-			"free_hugepages":    434,
-			"surplus_hugepages": 0,
-			"nr_hugepages":      1024,
+			"free":    434,
+			"surplus": 0,
+			"total":   1024,
 		}
-		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"hugepages_size_kb": "2048", "node": "0"})
+		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"size_kb": "2048", "node": "0"})
 
 		expectedFields = map[string]interface{}{
-			"free_hugepages":    449,
-			"surplus_hugepages": 0,
-			"nr_hugepages":      1024,
+			"free":    449,
+			"surplus": 0,
+			"total":   1024,
 		}
-		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"hugepages_size_kb": "2048", "node": "1"})
+		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"size_kb": "2048", "node": "1"})
 
 		expectedFields = map[string]interface{}{
-			"free_hugepages":    0,
-			"surplus_hugepages": 0,
-			"nr_hugepages":      4,
+			"free":    0,
+			"surplus": 0,
+			"total":   4,
 		}
-		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"hugepages_size_kb": "1048576", "node": "0"})
+		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"size_kb": "1048576", "node": "0"})
 
 		expectedFields = map[string]interface{}{
-			"free_hugepages":    0,
-			"surplus_hugepages": 0,
-			"nr_hugepages":      4,
+			"free":    0,
+			"surplus": 0,
+			"total":   4,
 		}
-		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"hugepages_size_kb": "1048576", "node": "1"})
+		acc.AssertContainsTaggedFields(t, "hugepages_per_node", expectedFields, map[string]string{"size_kb": "1048576", "node": "1"})
 	})
 
 	t.Run("when meminfo hugepages type is enabled then gather all meminfo metrics successfully", func(t *testing.T) {
@@ -131,15 +131,15 @@ func TestGather(t *testing.T) {
 		require.NoError(t, h.Gather(acc))
 
 		expectedFields := map[string]interface{}{
-			"AnonHugePages_kb":  0,
-			"ShmemHugePages_kb": 0,
-			"FileHugePages_kb":  0,
-			"HugePages_Total":   2048,
-			"HugePages_Free":    883,
-			"HugePages_Rsvd":    0,
-			"HugePages_Surp":    0,
-			"Hugepagesize_kb":   2048,
-			"Hugetlb_kb":        12582912,
+			"anonymous_kb":                   0,
+			"shared_memory_kb":               0,
+			"file_kb":                        0,
+			"total_of_default_size":          2048,
+			"free_of_default_size":           883,
+			"reserved_of_default_size":       0,
+			"surplus_of_default_size":        0,
+			"default_size_kb":                2048,
+			"total_consumed_by_all_sizes_kb": 12582912,
 		}
 		acc.AssertContainsFields(t, "hugepages_meminfo", expectedFields)
 	})
