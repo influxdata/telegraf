@@ -771,6 +771,7 @@ message Able {
     string lpr_frames_loaded = 8;
     string model_data_loaded = 9;
     string route_loaded = 10;
+    string homography_loaded = 11;
   }
 
   message Tags {
