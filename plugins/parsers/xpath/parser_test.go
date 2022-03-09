@@ -1273,8 +1273,9 @@ func TestProtobufImporting(t *testing.T) {
 	// Setup the parser and run it.
 	parser := &Parser{
 		Format:              "xpath_protobuf",
-		ProtobufMessageDef:  "testcases/protos/person.proto",
+		ProtobufMessageDef:  "person.proto",
 		ProtobufMessageType: "importtest.Person",
+		ProtobufImportPaths: []string{"testcases/protos"},
 		Configs:             []Config{},
 		Log:                 testutil.Logger{Name: "parsers.protobuf"},
 	}
