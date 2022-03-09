@@ -1,0 +1,7 @@
+## {{ .Version }} [{{ .Date }}]
+{{ range .CommitGroups }}
+### {{ println .Title }}
+{{ range .Commits -}}
+- {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ println .Subject }}
+{{- end -}}
+{{ end }}
