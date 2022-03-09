@@ -2,6 +2,6 @@
 {{ range .CommitGroups }}
 ### {{ println .Title }}
 {{ range .Commits -}}
-- {{ if .Scope }}**{{ .Scope }}:** {{ end }}{{ println .Subject }}
+- {{.PullRequestLink}} {{ if .Scope }}`{{ .Scope }}` {{ end }}{{ println .Subject }}
 {{- end -}}
-{{ end }}
+{{ end -}}

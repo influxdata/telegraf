@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -26,17 +27,22 @@ var (
 		`update etc/telegraf.conf and etc/telegraf_windows.conf`,
 		`update configs`,
 	}
+
+	featureGroupTitle = "Features"
+	fixGroupTitle     = "Bugfixes"
+	updateGroupTitle  = "Dependency Updates"
 )
 
 type Commit struct {
-	Hash       string
-	AuthorName string
-	Type       string // (e.g. `feat`)
-	Scope      string // (e.g. `core`)
-	Subject    string // (e.g. `Add new feature`)
+	Hash            string
+	AuthorName      string
+	Type            string // (e.g. `feat`)
+	Scope           string // (e.g. `core`)
+	Subject         string // (e.g. `Add new feature`)
+	PullRequestLink string
 }
 
-func ParseCommits() ([]Commit, error) {
+func ParseCommits() ([]*Commit, error) {
 	latestTagHash, err := exec.Command("git", "rev-list", "--tags", "--max-count=1").Output()
 	if err != nil {
 		return nil, err
@@ -59,14 +65,14 @@ func ParseCommits() ([]Commit, error) {
 		bodyFormat,
 	}, delimiter)
 
-	logs, err := exec.Command("git", "log", fmt.Sprintf("--pretty=%s", logFormat), fmt.Sprintf("%s...", latestTag)).Output()
+	logs, err := exec.Command("git", "log", fmt.Sprintf("--pretty=%s", logFormat), fmt.Sprintf("%s..", latestTag)).Output()
 	if err != nil {
 		return nil, err
 	}
 	lines := strings.Split(string(logs), separator)
 	lines = lines[1:]
 
-	commits := make([]Commit, len(lines))
+	commits := make([]*Commit, len(lines))
 
 	for i, line := range lines {
 		commit, err := parseCommit(line, delimiter)
@@ -75,6 +81,7 @@ func ParseCommits() ([]Commit, error) {
 		}
 
 		var ignore bool
+
 		for _, substring := range ignoreList {
 			if strings.Contains(commit.Subject, substring) {
 				ignore = true
@@ -86,7 +93,19 @@ func ParseCommits() ([]Commit, error) {
 			continue
 		}
 
-		commits[i] = commit
+		// skip lines that don't end in a PR, as they're probably small edits
+		// committed directly to master, like changelog edits.
+		parts := strings.Split(commit.Subject, " ")
+		prSection := parts[len(parts)-1]
+		if !strings.HasPrefix(prSection, "(#") {
+			continue
+		}
+
+		pr := strings.Trim(prSection, "(#)")
+		commit.PullRequestLink = fmt.Sprintf("[#%s](https://github.com/influxdata/telegraf/pull/%s)", pr, pr)
+		commit.Subject = strings.Join(parts[0:len(parts)-1], " ")
+
+		commits[i] = &commit
 	}
 
 	return commits, nil
@@ -110,9 +129,9 @@ func parseCommit(input string, delimiter string) (Commit, error) {
 			reHeader := regexp.MustCompile(`^(\w*)(?:\(([\w\$\.\-\*\s]*)\))?\:\s(.*)$`)
 			res := reHeader.FindAllStringSubmatch(value, -1)
 			if len(res) > 0 && len(res[0]) == 4 {
-				commit.Type = res[0][1]
-				commit.Scope = res[0][2]
-				commit.Subject = res[0][3]
+				commit.Type = strings.ToLower(res[0][1])
+				commit.Scope = strings.ToLower(res[0][2])
+				commit.Subject = strings.ToLower(res[0][3])
 			}
 		}
 	}
@@ -160,30 +179,58 @@ type NewChanges struct {
 
 type CommitGroup struct {
 	Title   string
-	Commits []Commit
+	Commits []*Commit
 }
 
-func CreateCommitGroups(commits []Commit) []CommitGroup {
+func sortCommits(c []*Commit) {
+	sort.Slice(c, func(i, j int) bool {
+		a := c[i].Scope + c[i].Subject
+		b := c[j].Scope + c[j].Subject
+		switch strings.Compare(a, b) {
+		case -1:
+			return true
+		case 1:
+			return false
+		}
+		return a > b
+	})
+}
+
+func CreateCommitGroups(commits []*Commit) []CommitGroup {
 	var commitGroups []CommitGroup
 
 	featGroup := CommitGroup{
-		Title: "Features",
+		Title: featureGroupTitle,
 	}
 
-	bugGroup := CommitGroup{
-		Title: "Bugfixes",
+	fixGroup := CommitGroup{
+		Title: fixGroupTitle,
+	}
+
+	updateGroup := CommitGroup{
+		Title: updateGroupTitle,
 	}
 
 	for _, c := range commits {
+		if c == nil {
+			continue
+		}
 		switch c.Type {
 		case "fix":
-			bugGroup.Commits = append(bugGroup.Commits, c)
+			if c.AuthorName == "dependabot[bot]" {
+				updateGroup.Commits = append(updateGroup.Commits, c)
+			} else {
+				fixGroup.Commits = append(fixGroup.Commits, c)
+			}
 		case "feat":
 			featGroup.Commits = append(featGroup.Commits, c)
 		}
 	}
 
-	commitGroups = append(commitGroups, bugGroup, featGroup)
+	sortCommits(fixGroup.Commits)
+	sortCommits(featGroup.Commits)
+
+	commitGroups = append(commitGroups, fixGroup, featGroup, updateGroup)
 
 	return commitGroups
 }

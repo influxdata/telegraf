@@ -1,46 +1,47 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"html/template"
-	"log"
-	"os"
-	"strings"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
-func TestParseCommits(t *testing.T) {
-	ver, err := os.ReadFile("../../build_version.txt")
-	if err != nil {
-		log.Fatal(err)
+func TestCreateCommitGroups(t *testing.T) {
+	fixCommit1 := Commit{
+		Type:    "fix",
+		Subject: "new change",
+	}
+	fixCommit2 := Commit{
+		Type:    "fix",
+		Subject: "another change",
+	}
+	featCommit := Commit{
+		Type: "feat",
 	}
 
-	version := fmt.Sprintf("v%s", strings.TrimSuffix(string(ver), "\n"))
-
-	commits, err := ParseCommits()
-	if err != nil {
-		log.Fatal(err)
+	commits := []*Commit{
+		&fixCommit1,
+		&featCommit,
+		&fixCommit2,
 	}
 
 	commitGroups := CreateCommitGroups(commits)
 
-	newChanges := NewChanges{
-		Version:      version,
-		Date:         time.Now().Format("2006-01-02"),
-		CommitGroups: commitGroups,
+	expectedCommitGroups := []CommitGroup{
+		{
+			Title: fixGroupTitle,
+			Commits: []*Commit{
+				&fixCommit2,
+				&fixCommit1,
+			},
+		},
+		{
+			Title: featureGroupTitle,
+			Commits: []*Commit{
+				&featCommit,
+			},
+		},
 	}
 
-	temp := template.Must(template.ParseFiles("scripts/generate_changelog/CHANGELOG.go.tmpl"))
-	var out bytes.Buffer
-	err = temp.Execute(&out, newChanges)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = AppendToChangelog(out.Bytes())
-	if err != nil {
-		log.Fatal(err)
-	}
+	require.Equal(t, commitGroups, expectedCommitGroups)
 }
