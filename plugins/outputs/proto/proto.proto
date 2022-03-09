@@ -661,6 +661,7 @@ message GPS {
   message Fields {
     double lat = 1;
     double lon = 2;
+    double heading = 3;
   }
 
   message Tags {
