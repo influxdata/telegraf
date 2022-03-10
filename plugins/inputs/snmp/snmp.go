@@ -355,9 +355,9 @@ func init() {
 				MaxRepetitions: 10,
 				Timeout:        config.Duration(5 * time.Second),
 				Version:        2,
-				Community:      "public",
 				Path:           []string{"/usr/share/snmp/mibs"},
 				Translator:     "netsnmp",
+				Community:      "public",
 			},
 		}
 	})

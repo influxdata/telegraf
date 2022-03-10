@@ -16,9 +16,8 @@ func newGosmiTranslator(paths []string, log telegraf.Logger) (*gosmiTranslator, 
 	err := snmp.LoadMibsFromPath(paths, log, &snmp.GosmiMibLoader{})
 	if err == nil {
 		return &gosmiTranslator{}, nil
-	} else {
-		return nil, err
 	}
+	return nil, err
 }
 
 type gosmiSnmpTranslateCache struct {
@@ -33,13 +32,13 @@ type gosmiSnmpTranslateCache struct {
 var gosmiSnmpTranslateCachesLock sync.Mutex
 var gosmiSnmpTranslateCaches map[string]gosmiSnmpTranslateCache
 
+//nolint:revive
 func (g *gosmiTranslator) SnmpTranslate(oid string) (string, string, string, string, error) {
 	a, b, c, d, _, e := g.SnmpTranslateFull(oid)
 	return a, b, c, d, e
 }
 
 func (g *gosmiTranslator) SnmpTranslateFull(oid string) (string, string, string, string, gosmi.SmiNode, error) {
-
 	gosmiSnmpTranslateCachesLock.Lock()
 	if gosmiSnmpTranslateCaches == nil {
 		gosmiSnmpTranslateCaches = map[string]gosmiSnmpTranslateCache{}

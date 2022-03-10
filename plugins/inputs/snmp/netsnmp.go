@@ -58,6 +58,7 @@ var snmpTableCachesLock sync.Mutex
 
 // snmpTable resolves the given OID as a table, providing information about the
 // table and fields within.
+//nolint:revive
 func (n *netsnmpTranslator) SnmpTable(oid string) (
 	mibName string, oidNum string, oidText string,
 	fields []Field,
@@ -78,6 +79,7 @@ func (n *netsnmpTranslator) SnmpTable(oid string) (
 	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
 }
 
+//nolint:revive
 func (n *netsnmpTranslator) snmpTableCall(oid string) (
 	mibName string, oidNum string, oidText string,
 	fields []Field,
@@ -152,6 +154,7 @@ var snmpTranslateCachesLock sync.Mutex
 var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
+//nolint:revive
 func (n *netsnmpTranslator) SnmpTranslate(oid string) (
 	mibName string, oidNum string, oidText string,
 	conversion string,
@@ -181,6 +184,7 @@ func (n *netsnmpTranslator) SnmpTranslate(oid string) (
 	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
 }
 
+//nolint:revive
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	var out []byte
 	if strings.ContainsAny(oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
