@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
@@ -190,6 +191,9 @@ type Config struct {
 
 	// JSONPath configuration
 	JSONV2Config []JSONV2Config `toml:"json_v2"`
+
+	// Influx configuration
+	InfluxParserType string `toml:"influx_parser_type"`
 }
 
 type XPathConfig xpath.Config
@@ -222,7 +226,11 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.ValueFieldName, config.DefaultTags)
 	case "influx":
-		parser, err = NewInfluxParser()
+		if config.InfluxParserType == "upstream" {
+			parser, err = NewInfluxUpstreamParser()
+		} else {
+			parser, err = NewInfluxParser()
+		}
 	case "nagios":
 		parser, err = NewNagiosParser()
 	case "graphite":
@@ -321,6 +329,10 @@ func NewNagiosParser() (Parser, error) {
 func NewInfluxParser() (Parser, error) {
 	handler := influx.NewMetricHandler()
 	return influx.NewParser(handler), nil
+}
+
+func NewInfluxUpstreamParser() (Parser, error) {
+	return influx_upstream.NewParser(), nil
 }
 
 func NewGraphiteParser(
