@@ -63,7 +63,7 @@ If `fullstat` is set, a great deal of additional metrics are collected, detailed
   - retrans (integer, count) - The number of times an operation had to be retried (retrans = OP_trans - OP_ops.  See nfs_ops below)
   - exe (integer, miliseconds) - The number of miliseconds it took to process the operations.
   - rtt (integer, miliseconds) - The total round-trip time for all operations.
-  - rtt_per_op (float, miliseconds) - The round-trip time per operation.
+  - rtt_per_op (float, miliseconds) - The average round-trip time per operation.
 
 In addition enabling `fullstat` will make many more metrics available.
 
