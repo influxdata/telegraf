@@ -181,14 +181,8 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 			return nil, fmt.Errorf("GJSON path is required")
 		}
 		result := gjson.GetBytes(input, c.Path)
-		if !result.Exists() {
-			if c.Optional {
-				// If path is marked as optional don't error if path doesn't return a result
-				p.Log.Debugf("the path %s doesn't exist", c.Path)
-				continue
-			}
-
-			return nil, fmt.Errorf("the path %s doesn't exist", c.Path)
+		if err := p.checkResult(result, c.Path, c.Optional); err != nil {
+			return nil, err
 		}
 
 		if result.IsObject() {
@@ -421,27 +415,16 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject, timestamp ti
 		}
 
 		result := gjson.GetBytes(input, c.Path)
-		if !result.Exists() {
-			if c.Optional {
-				// If path is marked as optional don't error if path doesn't return a result
-				p.Log.Debugf("the path %s doesn't exist", c.Path)
-				continue
-			}
-
-			return nil, fmt.Errorf("the path %s doesn't exist", c.Path)
+		if err := p.checkResult(result, c.Path, c.Optional); err != nil {
+			return nil, err
 		}
 
 		scopedJSON := []byte(result.Raw)
 		for _, f := range c.FieldPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
-			if !r.result.Exists() {
-				if c.Optional {
-					// If path is marked as optional don't error if path doesn't return a result
-					p.Log.Debugf("the path %s doesn't exist", c.Path)
-					continue
-				}
-				return nil, fmt.Errorf("the path %s doesn't exist", f.Path)
+			if err := p.checkResult(r.result, f.Path, f.Optional); err != nil {
+				return nil, err
 			}
 			r.DataSet = f
 			p.subPathResults = append(p.subPathResults, r)
@@ -450,13 +433,8 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject, timestamp ti
 		for _, f := range c.TagPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
-			if !r.result.Exists() {
-				if c.Optional {
-					// If path is marked as optional don't error if path doesn't return a result
-					p.Log.Debugf("the path %s doesn't exist", c.Path)
-					continue
-				}
-				return nil, fmt.Errorf("the path %s doesn't exist", f.Path)
+			if err := p.checkResult(r.result, f.Path, f.Optional); err != nil {
+				return nil, err
 			}
 			r.DataSet = f
 			r.tag = true
@@ -667,4 +645,18 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 	}
 
 	return input.Value(), nil
+}
+
+func (p *Parser) checkResult(result gjson.Result, path string, optional bool) error {
+	if !result.Exists() {
+		if optional {
+			// If path is marked as optional don't error if path doesn't return a result
+			p.Log.Debugf("the path %s doesn't exist", path)
+			return nil
+		}
+
+		return fmt.Errorf("the path %s doesn't exist", path)
+	}
+
+	return nil
 }
