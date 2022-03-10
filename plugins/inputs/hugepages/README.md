@@ -40,7 +40,7 @@ Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html>
     - free (integer)
     - surplus (integer)
     - total (integer)
-- meminfo (gathered from `/proc/meminfo` file)
+- hugepages_meminfo (gathered from `/proc/meminfo` file)
   - fields:
     - anonymous_kb (integer, kB)
     - default_size_kb (integer, kB)
