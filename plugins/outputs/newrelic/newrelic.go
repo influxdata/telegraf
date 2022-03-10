@@ -46,6 +46,7 @@ func (nr *NewRelic) SampleConfig() string {
   # insights_key = "New Relic License Key Here"
 
   ## Prefix to add to add to metric name for easy identification.
+  ## This is very useful if your metric names are ambiguous.
   # metric_prefix = ""
 
   ## Timeout for writes to the New Relic API.
