@@ -138,7 +138,7 @@ func TestFieldInit(t *testing.T) {
 		{"TCP-MIB::tcpConnectionLocalAddress.1", "", "", ".1.3.6.1.2.1.6.19.1.2.1", "tcpConnectionLocalAddress.1", "ipaddr"},
 	}
 
-	tr := newNetsnmpTranslator()
+	tr := NewNetsnmpTranslator()
 	for _, txl := range translations {
 		f := Field{Oid: txl.inputOid, Name: txl.inputName, Conversion: txl.inputConversion}
 		err := f.init(tr)
@@ -158,7 +158,7 @@ func TestTableInit(t *testing.T) {
 			{Oid: "TEST::description", Name: "description", IsTag: true},
 		},
 	}
-	err := tbl.Init(newNetsnmpTranslator())
+	err := tbl.Init(NewNetsnmpTranslator())
 	require.NoError(t, err)
 
 	assert.Equal(t, "testTable", tbl.Name)
@@ -659,7 +659,7 @@ func TestTableBuild_walk(t *testing.T) {
 		},
 	}
 
-	tb, err := tbl.Build(tsc, true, newNetsnmpTranslator())
+	tb, err := tbl.Build(tsc, true, NewNetsnmpTranslator())
 	require.NoError(t, err)
 
 	assert.Equal(t, tb.Name, "mytable")
@@ -742,7 +742,7 @@ func TestTableBuild_noWalk(t *testing.T) {
 		},
 	}
 
-	tb, err := tbl.Build(tsc, false, newNetsnmpTranslator())
+	tb, err := tbl.Build(tsc, false, NewNetsnmpTranslator())
 	require.NoError(t, err)
 
 	rtr := RTableRow{
@@ -910,7 +910,7 @@ func TestFieldConvert(t *testing.T) {
 func TestSnmpTranslateCache_miss(t *testing.T) {
 	snmpTranslateCaches = nil
 	oid := "IF-MIB::ifPhysAddress.1"
-	mibName, oidNum, oidText, conversion, err := newNetsnmpTranslator().SnmpTranslate(oid)
+	mibName, oidNum, oidText, conversion, err := NewNetsnmpTranslator().SnmpTranslate(oid)
 	assert.Len(t, snmpTranslateCaches, 1)
 	stc := snmpTranslateCaches[oid]
 	require.NotNil(t, stc)
@@ -931,7 +931,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 			err:        fmt.Errorf("e"),
 		},
 	}
-	mibName, oidNum, oidText, conversion, err := newNetsnmpTranslator().SnmpTranslate("foo")
+	mibName, oidNum, oidText, conversion, err := NewNetsnmpTranslator().SnmpTranslate("foo")
 	assert.Equal(t, "a", mibName)
 	assert.Equal(t, "b", oidNum)
 	assert.Equal(t, "c", oidText)
@@ -943,7 +943,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 func TestSnmpTableCache_miss(t *testing.T) {
 	snmpTableCaches = nil
 	oid := ".1.0.0.0"
-	mibName, oidNum, oidText, fields, err := newNetsnmpTranslator().SnmpTable(oid)
+	mibName, oidNum, oidText, fields, err := NewNetsnmpTranslator().SnmpTable(oid)
 	assert.Len(t, snmpTableCaches, 1)
 	stc := snmpTableCaches[oid]
 	require.NotNil(t, stc)
@@ -964,7 +964,7 @@ func TestSnmpTableCache_hit(t *testing.T) {
 			err:     fmt.Errorf("e"),
 		},
 	}
-	mibName, oidNum, oidText, fields, err := newNetsnmpTranslator().SnmpTable("foo")
+	mibName, oidNum, oidText, fields, err := NewNetsnmpTranslator().SnmpTable("foo")
 	assert.Equal(t, "a", mibName)
 	assert.Equal(t, "b", oidNum)
 	assert.Equal(t, "c", oidText)
@@ -1005,7 +1005,7 @@ func TestTableJoin_walk(t *testing.T) {
 		},
 	}
 
-	tb, err := tbl.Build(tsc, true, newNetsnmpTranslator())
+	tb, err := tbl.Build(tsc, true, NewNetsnmpTranslator())
 	require.NoError(t, err)
 
 	assert.Equal(t, tb.Name, "mytable")
@@ -1082,7 +1082,7 @@ func TestTableOuterJoin_walk(t *testing.T) {
 		},
 	}
 
-	tb, err := tbl.Build(tsc, true, newNetsnmpTranslator())
+	tb, err := tbl.Build(tsc, true, NewNetsnmpTranslator())
 	require.NoError(t, err)
 
 	assert.Equal(t, tb.Name, "mytable")
@@ -1168,7 +1168,7 @@ func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
 		},
 	}
 
-	tb, err := tbl.Build(tsc, true, newNetsnmpTranslator())
+	tb, err := tbl.Build(tsc, true, NewNetsnmpTranslator())
 	require.NoError(t, err)
 
 	assert.Equal(t, tb.Name, "mytable")

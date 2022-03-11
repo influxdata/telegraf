@@ -29,6 +29,11 @@ path onto the global path variable
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
 
+  ## Translator for OIDs
+  ## Valid values are "netsnmp" which calls snmptranslate and snmptable,
+  ## and "gosmi" which uses the gosmi library
+  # translator = "netsnmp"
+
   ## Path to mib files
   # path = ["/usr/share/snmp/mibs"]
 

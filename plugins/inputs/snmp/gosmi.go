@@ -12,7 +12,7 @@ import (
 type gosmiTranslator struct {
 }
 
-func newGosmiTranslator(paths []string, log telegraf.Logger) (*gosmiTranslator, error) {
+func NewGosmiTranslator(paths []string, log telegraf.Logger) (*gosmiTranslator, error) {
 	err := snmp.LoadMibsFromPath(paths, log, &snmp.GosmiMibLoader{})
 	if err == nil {
 		return &gosmiTranslator{}, nil
@@ -38,7 +38,11 @@ func (g *gosmiTranslator) SnmpTranslate(oid string) (string, string, string, str
 	return a, b, c, d, e
 }
 
-func (g *gosmiTranslator) SnmpTranslateFull(oid string) (string, string, string, string, gosmi.SmiNode, error) {
+func (g *gosmiTranslator) SnmpTranslateFull(oid string) (
+	mibName string, oidNum string, oidText string,
+	conversion string,
+	node gosmi.SmiNode,
+	err error) {
 	gosmiSnmpTranslateCachesLock.Lock()
 	if gosmiSnmpTranslateCaches == nil {
 		gosmiSnmpTranslateCaches = map[string]gosmiSnmpTranslateCache{}

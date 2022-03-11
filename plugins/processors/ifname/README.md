@@ -23,6 +23,11 @@ Telegraf minimum version: Telegraf 1.15.0
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
 
+  ## Translator for OIDs
+  ## Valid values are "netsnmp" which calls snmptranslate and snmptable,
+  ## and "gosmi" which uses the gosmi library
+  # translator = "netsnmp"
+
   ## SNMP community string.
   # community = "public"
 

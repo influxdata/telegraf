@@ -17,7 +17,7 @@ import (
 type netsnmpTranslator struct {
 }
 
-func newNetsnmpTranslator() *netsnmpTranslator {
+func NewNetsnmpTranslator() *netsnmpTranslator {
 	return &netsnmpTranslator{}
 }
 

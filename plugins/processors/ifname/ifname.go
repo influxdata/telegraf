@@ -31,6 +31,11 @@ var sampleConfig = `
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
 
+  ## Translator for OIDs
+  ## Valid values are "netsnmp" which calls snmptranslate and snmptable,
+  ## and "gosmi" which uses the gosmi library
+  # translator = "netsnmp"
+
   ## SNMP community string.
   # community = "public"
 
@@ -107,6 +112,8 @@ type IfName struct {
 
 	getMapRemote mapFunc
 	makeTable    makeTableFunc
+
+	translator si.Translator
 }
 
 const minRetry = 5 * time.Minute
@@ -121,7 +128,7 @@ func (d *IfName) Description() string {
 
 func (d *IfName) Init() error {
 	d.getMapRemote = d.getMapRemoteNoMock
-	d.makeTable = makeTableNoMock
+	d.makeTable = d.makeTableNoMock
 
 	c := NewTTLCache(time.Duration(d.CacheTTL), d.CacheSize)
 	d.cache = &c
@@ -130,6 +137,16 @@ func (d *IfName) Init() error {
 
 	if _, err := snmp.NewWrapper(d.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
+	}
+
+	if d.Translator == "gosmi" {
+		var err error
+		d.translator, err = si.NewGosmiTranslator(d.Path, d.Log)
+		if err != nil {
+			return err
+		}
+	} else {
+		d.translator = si.NewNetsnmpTranslator()
 	}
 
 	return nil
@@ -309,11 +326,11 @@ func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
 	//try ifXtable and ifName first.  if that fails, fall back to
 	//ifTable and ifDescr
 	var m nameMap
-	if m, err = buildMap(gs, d.ifXTable); err == nil {
+	if m, err = d.buildMap(gs, d.ifXTable); err == nil {
 		return m, nil
 	}
 
-	if m, err = buildMap(gs, d.ifTable); err == nil {
+	if m, err = d.buildMap(gs, d.ifTable); err == nil {
 		return m, nil
 	}
 
@@ -340,7 +357,7 @@ func init() {
 	})
 }
 
-func makeTableNoMock(oid string) (*si.Table, error) {
+func (d *IfName) makeTableNoMock(oid string) (*si.Table, error) {
 	var err error
 	tab := si.Table{
 		Name:       "ifTable",
@@ -350,7 +367,7 @@ func makeTableNoMock(oid string) (*si.Table, error) {
 		},
 	}
 
-	err = tab.Init()
+	err = tab.Init(d.translator)
 	if err != nil {
 		//Init already wraps
 		return nil, err
@@ -359,10 +376,10 @@ func makeTableNoMock(oid string) (*si.Table, error) {
 	return &tab, nil
 }
 
-func buildMap(gs snmp.GosnmpWrapper, tab *si.Table) (nameMap, error) {
+func (d *IfName) buildMap(gs snmp.GosnmpWrapper, tab *si.Table) (nameMap, error) {
 	var err error
 
-	rtab, err := tab.Build(gs, true)
+	rtab, err := tab.Build(gs, true, d.translator)
 	if err != nil {
 		//Build already wraps
 		return nil, err

@@ -80,7 +80,7 @@ const sampleConfig = `
   ## full plugin documentation for configuration details.
 `
 
-type translator interface {
+type Translator interface {
 	SnmpTranslate(oid string) (
 		mibName string, oidNum string, oidText string,
 		conversion string,
@@ -117,19 +117,19 @@ type Snmp struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	translator translator
+	translator Translator
 }
 
 func (s *Snmp) Init() error {
 	var err error
 
 	if s.Translator == "gosmi" {
-		s.translator, err = newGosmiTranslator(s.Path, s.Log)
+		s.translator, err = NewGosmiTranslator(s.Path, s.Log)
 		if err != nil {
 			return err
 		}
 	} else {
-		s.translator = newNetsnmpTranslator()
+		s.translator = NewNetsnmpTranslator()
 	}
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
@@ -176,7 +176,7 @@ type Table struct {
 }
 
 // Init() builds & initializes the nested fields.
-func (t *Table) Init(tr translator) error {
+func (t *Table) Init(tr Translator) error {
 	//makes sure oid or name is set in config file
 	//otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
@@ -212,7 +212,7 @@ func (t *Table) Init(tr translator) error {
 // initBuild initializes the table if it has an OID configured. If so, the
 // net-snmp tools will be used to look up the OID and auto-populate the table's
 // fields.
-func (t *Table) initBuild(tr translator) error {
+func (t *Table) initBuild(tr Translator) error {
 	if t.Oid == "" {
 		return nil
 	}
@@ -281,7 +281,7 @@ type Field struct {
 }
 
 // init() converts OID names to numbers, and sets the .Name attribute if unset.
-func (f *Field) init(tr translator) error {
+func (f *Field) init(tr Translator) error {
 	if f.initialized {
 		return nil
 	}
@@ -441,7 +441,7 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 }
 
 // Build retrieves all the fields specified in the table and constructs the RTable.
-func (t Table) Build(gs snmpConnection, walk bool, tr translator) (*RTable, error) {
+func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, error) {
 	rows := map[string]RTableRow{}
 
 	//translation table for secondary index (when preforming join on two tables)

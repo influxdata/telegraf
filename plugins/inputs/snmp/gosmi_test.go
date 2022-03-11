@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func getGosmiTr(t *testing.T) translator {
+func getGosmiTr(t *testing.T) Translator {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
@@ -23,7 +23,7 @@ func getGosmiTr(t *testing.T) translator {
 }
 
 func TestGosmiTranslator(t *testing.T) {
-	var tr translator
+	var tr Translator
 	var err error
 
 	tr, err = newGosmiTranslator([]string{"testdata"}, testutil.Logger{})
