@@ -1710,6 +1710,7 @@ func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 				c.getFieldString(fieldconfig, "path", &f.Path)
 				c.getFieldString(fieldconfig, "rename", &f.Rename)
 				c.getFieldString(fieldconfig, "type", &f.Type)
+				c.getFieldBool(fieldconfig, "optional", &f.Optional)
 				fields = append(fields, f)
 			}
 		}
@@ -1729,6 +1730,7 @@ func getTagSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 				c.getFieldString(fieldconfig, "rename", &t.Rename)
 				t.Type = "string"
 				tags = append(tags, t)
+				c.getFieldBool(fieldconfig, "optional", &t.Optional)
 			}
 		}
 	}
