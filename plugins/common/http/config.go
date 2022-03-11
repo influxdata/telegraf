@@ -2,6 +2,7 @@ package httpconfig
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -57,6 +58,7 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 
 	// TODO: review this...
 	// Using token URL leads to needing to comment out cookie auth config
+	fmt.Println("h.URL (common/http/config.go):", h.URL)
 	h.OAuth2Config.TokenURL = h.URL
 	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
 	if err != nil {

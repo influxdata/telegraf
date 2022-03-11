@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -36,6 +37,7 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 	}
 
 	// Not using Client Credentials grant, instead using Authorization Code Grant
+	fmt.Println("o.TokenURL (common/oauth/config.go): ", o.TokenURL)
 	if o.CredentialsFile != "" {
 		err := o.GetAccessToken(ctx, o.TokenURL)
 		if err != nil {
