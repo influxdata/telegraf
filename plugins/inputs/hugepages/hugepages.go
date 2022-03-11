@@ -102,25 +102,20 @@ func (h *Hugepages) Init() error {
 }
 
 func (h *Hugepages) Gather(acc telegraf.Accumulator) error {
-	var err error
-
 	if h.gatherRoot {
-		err = h.gatherRootStats(acc)
-		if err != nil {
+		if err := h.gatherRootStats(acc); err != nil {
 			return fmt.Errorf("gathering root stats failed: %v", err)
 		}
 	}
 
 	if h.gatherPerNode {
-		err = h.gatherStatsPerNode(acc)
-		if err != nil {
+		if err := h.gatherStatsPerNode(acc); err != nil {
 			return fmt.Errorf("gathering per node stats failed: %v", err)
 		}
 	}
 
 	if h.gatherMeminfo {
-		err = h.gatherStatsFromMeminfo(acc)
-		if err != nil {
+		if err := h.gatherStatsFromMeminfo(acc); err != nil {
 			return fmt.Errorf("gathering meminfo stats failed: %v", err)
 		}
 	}
@@ -168,7 +163,7 @@ func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement
 	// read metrics from: hugepages/hugepages-*/*
 	hugepagesDirs, err := ioutil.ReadDir(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading root dir failed: %v", err)
 	}
 
 	for _, hugepagesDir := range hugepagesDirs {
@@ -185,7 +180,7 @@ func (h *Hugepages) gatherFromHugepagePath(acc telegraf.Accumulator, measurement
 		metricsPath := filepath.Join(path, hugepagesDir.Name())
 		metricFiles, err := ioutil.ReadDir(metricsPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("reading metric dir failed: %v", err)
 		}
 
 		metrics := make(map[string]interface{})
