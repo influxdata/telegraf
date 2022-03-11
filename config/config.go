@@ -139,10 +139,15 @@ type AgentConfig struct {
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
+	// Collected metrics are rounded to the precision specified. Precision is
+	// specified as an interval with an integer + unit (e.g. 0s, 10ms, 2us, 4s).
+	// Valid time units are "ns", "us" (or "µs"), "ms", "s".
+	//
 	// By default or when set to "0s", precision will be set to the same
-	// timestamp order as the collection interval, with the maximum being 1s.
+	// timestamp order as the collection interval, with the maximum being 1s:
 	//   ie, when interval = "10s", precision will be "1s"
 	//       when interval = "250ms", precision will be "1ms"
+	//
 	// Precision will NOT be used for service inputs. It is up to each individual
 	// service input to set the timestamp at the appropriate precision.
 	Precision Duration
@@ -181,13 +186,12 @@ type AgentConfig struct {
 	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
 	// it fills up, regardless of FlushInterval. Setting this option to true
 	// does _not_ deactivate FlushInterval.
-	FlushBufferWhenFull bool // deprecated in 0.13; has no effect
+	FlushBufferWhenFull bool `toml:"flush_buffer_when_full" deprecated:"0.13.0;2.0.0;option is ignored"`
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatibility
-	// Deprecated: 1.0.0 after, has no effect
-	UTC bool `toml:"utc"`
+	UTC bool `toml:"utc" deprecated:"1.0.0;option is ignored"`
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
@@ -366,13 +370,17 @@ var agentConfig = `
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
+  ## Collected metrics are rounded to the precision specified. Precision is
+  ## specified as an interval with an integer + unit (e.g. 0s, 10ms, 2us, 4s).
+  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
+  ##
   ## By default or when set to "0s", precision will be set to the same
-  ## timestamp order as the collection interval, with the maximum being 1s.
+  ## timestamp order as the collection interval, with the maximum being 1s:
   ##   ie, when interval = "10s", precision will be "1s"
   ##       when interval = "250ms", precision will be "1ms"
+  ##
   ## Precision will NOT be used for service inputs. It is up to each individual
   ## service input to set the timestamp at the appropriate precision.
-  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
 
   ## Log at debug level.
@@ -456,7 +464,7 @@ func PrintSampleConfig(
 	processorFilters []string,
 ) {
 	// print headers
-	fmt.Printf(header)
+	fmt.Print(header)
 
 	if len(sectionFilters) == 0 {
 		sectionFilters = sectionDefaults
@@ -467,11 +475,11 @@ func PrintSampleConfig(
 	if sliceContains("outputs", sectionFilters) {
 		if len(outputFilters) != 0 {
 			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
-				fmt.Printf(outputHeader)
+				fmt.Print(outputHeader)
 			}
 			printFilteredOutputs(outputFilters, false)
 		} else {
-			fmt.Printf(outputHeader)
+			fmt.Print(outputHeader)
 			printFilteredOutputs(outputDefaults, false)
 			// Print non-default outputs, commented
 			var pnames []string
@@ -489,11 +497,11 @@ func PrintSampleConfig(
 	if sliceContains("processors", sectionFilters) {
 		if len(processorFilters) != 0 {
 			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
-				fmt.Printf(processorHeader)
+				fmt.Print(processorHeader)
 			}
 			printFilteredProcessors(processorFilters, false)
 		} else {
-			fmt.Printf(processorHeader)
+			fmt.Print(processorHeader)
 			pnames := []string{}
 			for pname := range processors.Processors {
 				pnames = append(pnames, pname)
@@ -507,11 +515,11 @@ func PrintSampleConfig(
 	if sliceContains("aggregators", sectionFilters) {
 		if len(aggregatorFilters) != 0 {
 			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
-				fmt.Printf(aggregatorHeader)
+				fmt.Print(aggregatorHeader)
 			}
 			printFilteredAggregators(aggregatorFilters, false)
 		} else {
-			fmt.Printf(aggregatorHeader)
+			fmt.Print(aggregatorHeader)
 			pnames := []string{}
 			for pname := range aggregators.Aggregators {
 				pnames = append(pnames, pname)
@@ -525,11 +533,11 @@ func PrintSampleConfig(
 	if sliceContains("inputs", sectionFilters) {
 		if len(inputFilters) != 0 {
 			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
-				fmt.Printf(inputHeader)
+				fmt.Print(inputHeader)
 			}
 			printFilteredInputs(inputFilters, false)
 		} else {
-			fmt.Printf(inputHeader)
+			fmt.Print(inputHeader)
 			printFilteredInputs(inputDefaults, false)
 			// Print non-default inputs, commented
 			var pnames []string
@@ -607,8 +615,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 		creator := inputs.Inputs[pname]
 		input := creator()
 
-		switch p := input.(type) {
-		case telegraf.ServiceInput:
+		if p, ok := input.(telegraf.ServiceInput); ok {
 			servInputs[pname] = p
 			servInputNames = append(servInputNames, pname)
 			continue
@@ -623,7 +630,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	}
 	sort.Strings(servInputNames)
 
-	fmt.Printf(serviceInputHeader)
+	fmt.Print(serviceInputHeader)
 	for _, name := range servInputNames {
 		printConfig(name, servInputs[name], "inputs", commented, inputs.Deprecations[name])
 	}
@@ -649,11 +656,11 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 
 func printFilteredGlobalSections(sectionFilters []string) {
 	if sliceContains("global_tags", sectionFilters) {
-		fmt.Printf(globalTagsConfig)
+		fmt.Print(globalTagsConfig)
 	}
 
 	if sliceContains("agent", sectionFilters) {
-		fmt.Printf(agentConfig)
+		fmt.Print(agentConfig)
 	}
 }
 
@@ -698,21 +705,23 @@ func sliceContains(name string, list []string) bool {
 
 // PrintInputConfig prints the config usage of a single input.
 func PrintInputConfig(name string) error {
-	if creator, ok := inputs.Inputs[name]; ok {
-		printConfig(name, creator(), "inputs", false, inputs.Deprecations[name])
-	} else {
-		return fmt.Errorf("Input %s not found", name)
+	creator, ok := inputs.Inputs[name]
+	if !ok {
+		return fmt.Errorf("input %s not found", name)
 	}
+
+	printConfig(name, creator(), "inputs", false, inputs.Deprecations[name])
 	return nil
 }
 
 // PrintOutputConfig prints the config usage of a single output.
 func PrintOutputConfig(name string) error {
-	if creator, ok := outputs.Outputs[name]; ok {
-		printConfig(name, creator(), "outputs", false, outputs.Deprecations[name])
-	} else {
-		return fmt.Errorf("Output %s not found", name)
+	creator, ok := outputs.Outputs[name]
+	if !ok {
+		return fmt.Errorf("output %s not found", name)
 	}
+
+	printConfig(name, creator(), "outputs", false, outputs.Deprecations[name])
 	return nil
 }
 
@@ -1179,14 +1188,13 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 			printHistoricPluginDeprecationNotice("outputs", name, di)
 			return fmt.Errorf("plugin deprecated")
 		}
-		return fmt.Errorf("Undefined but requested output: %s", name)
+		return fmt.Errorf("undefined but requested output: %s", name)
 	}
 	output := creator()
 
 	// If the output has a SetSerializer function, then this means it can write
 	// arbitrary types of output, so build the serializer and set it.
-	switch t := output.(type) {
-	case serializers.SerializerOutput:
+	if t, ok := output.(serializers.SerializerOutput); ok {
 		serializer, err := c.buildSerializer(table)
 		if err != nil {
 			return err
@@ -1595,6 +1603,9 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
 
+	// for influx parser
+	c.getFieldString(tbl, "influx_parser_type", &pc.InfluxParserType)
+
 	//for XPath parser family
 	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
@@ -1623,6 +1634,10 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 					c.getFieldBool(subtbl, "field_name_expansion", &subcfg.FieldNameExpand)
 					c.getFieldString(subtbl, "field_name", &subcfg.FieldNameQuery)
 					c.getFieldString(subtbl, "field_value", &subcfg.FieldValueQuery)
+					c.getFieldString(subtbl, "tag_selection", &subcfg.TagSelection)
+					c.getFieldBool(subtbl, "tag_name_expansion", &subcfg.TagNameExpand)
+					c.getFieldString(subtbl, "tag_name", &subcfg.TagNameQuery)
+					c.getFieldString(subtbl, "tag_value", &subcfg.TagValueQuery)
 					pc.XPathConfig[i] = subcfg
 				}
 			}
@@ -1811,7 +1826,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
 		"grace", "graphite_separator", "graphite_tag_sanitize_mode", "graphite_tag_support",
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
-		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields",
+		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_parser_type", "influx_sort_fields",
 		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
 		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_format", "json_timestamp_units", "json_timezone", "json_v2",
 		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
@@ -1930,15 +1945,15 @@ func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) 
 func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[]string) {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			if ary, ok := kv.Value.(*ast.Array); ok {
-				for _, elem := range ary.Value {
-					if str, ok := elem.(*ast.String); ok {
-						*target = append(*target, str.Value)
-					}
-				}
-			} else {
+			ary, ok := kv.Value.(*ast.Array)
+			if !ok {
 				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format", fieldName))
 				return
+			}
+			for _, elem := range ary.Value {
+				if str, ok := elem.(*ast.String); ok {
+					*target = append(*target, str.Value)
+				}
 			}
 		}
 	}
@@ -1949,18 +1964,19 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 		if subtbl, ok := node.(*ast.Table); ok {
 			for name, val := range subtbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
-					tagfilter := models.TagFilter{Name: name}
-					if ary, ok := kv.Value.(*ast.Array); ok {
-						for _, elem := range ary.Value {
-							if str, ok := elem.(*ast.String); ok {
-								tagfilter.Filter = append(tagfilter.Filter, str.Value)
-							}
-						}
-					} else {
+					ary, ok := kv.Value.(*ast.Array)
+					if !ok {
 						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
 						return
 					}
-					*target = append(*target, tagfilter)
+
+					tagFilter := models.TagFilter{Name: name}
+					for _, elem := range ary.Value {
+						if str, ok := elem.(*ast.String); ok {
+							tagFilter.Filter = append(tagFilter.Filter, str.Value)
+						}
+					}
+					*target = append(*target, tagFilter)
 				}
 			}
 		}

@@ -40,6 +40,11 @@ Telegraf minimum version: Telegraf 1.16.0
   ## Optional token to accept for HTTP authentication.
   ## You probably want to make sure you have TLS configured above for this.
   # token = "some-long-shared-secret-token"
+
+  ## Influx line protocol parser
+  ## 'internal' is the default. 'upstream' is a newer parser that is faster
+  ## and more memory efficient.
+  # parser_type = "internal"
 ```
 
 ## Metrics

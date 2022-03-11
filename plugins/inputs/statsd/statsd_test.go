@@ -1701,3 +1701,67 @@ func TestParse_KeyValue(t *testing.T) {
 		}
 	}
 }
+
+func TestParseSanitize(t *testing.T) {
+	s := NewTestStatsd()
+	s.SanitizeNamesMethod = "upstream"
+
+	tests := []struct {
+		inName  string
+		outName string
+	}{
+		{
+			"regex.ARP flood stats",
+			"regex_ARP_flood_stats",
+		},
+		{
+			"regex./dev/null",
+			"regex_-dev-null",
+		},
+		{
+			"regex.wow!!!",
+			"regex_wow",
+		},
+		{
+			"regex.all*things",
+			"regex_allthings",
+		},
+	}
+
+	for _, test := range tests {
+		name, _, _ := s.parseName(test.inName)
+		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
+	}
+}
+
+func TestParseNoSanitize(t *testing.T) {
+	s := NewTestStatsd()
+	s.SanitizeNamesMethod = ""
+
+	tests := []struct {
+		inName  string
+		outName string
+	}{
+		{
+			"regex.ARP flood stats",
+			"regex_ARP",
+		},
+		{
+			"regex./dev/null",
+			"regex_/dev/null",
+		},
+		{
+			"regex.wow!!!",
+			"regex_wow!!!",
+		},
+		{
+			"regex.all*things",
+			"regex_all*things",
+		},
+	}
+
+	for _, test := range tests {
+		name, _, _ := s.parseName(test.inName)
+		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
+	}
+}

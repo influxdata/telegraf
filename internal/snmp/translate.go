@@ -62,12 +62,12 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 			if info.Mode()&os.ModeSymlink != 0 {
 				target, err := filepath.EvalSymlinks(path)
 				if err != nil {
-					log.Warnf("Bad symbolic link %v", target)
+					log.Warnf("Couldn't evaluate symbolic links for %v: %v", target, err)
 					continue
 				}
 				info, err = os.Lstat(filepath.Join(path, target))
 				if err != nil {
-					log.Warnf("Couldn't stat target %v", target)
+					log.Warnf("Couldn't stat target %v: %v", target, err)
 					continue
 				}
 				path = target
@@ -75,7 +75,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 			if info.Mode().IsRegular() {
 				err := loader.loadModule(info.Name())
 				if err != nil {
-					log.Warnf("module %v could not be loaded", info.Name())
+					log.Warnf("Couldn't load module %v: %v", info.Name(), err)
 					continue
 				}
 			}
@@ -113,11 +113,11 @@ func walkPaths(paths []string, log telegraf.Logger) ([]string, error) {
 			if info.Mode()&os.ModeSymlink != 0 {
 				target, err := filepath.EvalSymlinks(path)
 				if err != nil {
-					log.Warnf("Could not evaluate link %v", target)
+					log.Warnf("Couldn't evaluate symbolic links for %v: %v", target, err)
 				}
 				info, err = os.Lstat(target)
 				if err != nil {
-					log.Warnf("Couldn't stat target %v", path)
+					log.Warnf("Couldn't stat target %v: %v", target, err)
 				}
 				path = target
 			}
@@ -128,7 +128,7 @@ func walkPaths(paths []string, log telegraf.Logger) ([]string, error) {
 			return nil
 		})
 		if err != nil {
-			return folders, fmt.Errorf("Filepath %q could not be walked: %v", mibPath, err)
+			return folders, fmt.Errorf("Couldn't walk path %q: %v", mibPath, err)
 		}
 	}
 	return folders, nil

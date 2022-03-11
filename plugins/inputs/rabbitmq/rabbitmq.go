@@ -36,7 +36,7 @@ const DefaultClientTimeout = 4
 // see the sample config for further details
 type RabbitMQ struct {
 	URL      string `toml:"url"`
-	Name     string `toml:"name"`
+	Name     string `toml:"name" deprecated:"1.3.0;use 'tags' instead"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
@@ -45,7 +45,7 @@ type RabbitMQ struct {
 	ClientTimeout         config.Duration `toml:"client_timeout"`
 
 	Nodes     []string `toml:"nodes"`
-	Queues    []string `toml:"queues"`
+	Queues    []string `toml:"queues" deprecated:"1.6.0;use 'queue_name_include' instead"`
 	Exchanges []string `toml:"exchanges"`
 
 	MetricInclude             []string `toml:"metric_include"`
@@ -272,8 +272,6 @@ var gatherFunctions = map[string]gatherFunc{
 var sampleConfig = `
   ## Management Plugin url. (default: http://localhost:15672)
   # url = "http://localhost:15672"
-  ## Tag added to rabbitmq_overview series; deprecated: use tags
-  # name = "rmq-server-1"
   ## Credentials
   # username = "guest"
   # password = "guest"
@@ -298,10 +296,6 @@ var sampleConfig = `
   ## A list of nodes to gather as the rabbitmq_node measurement. If not
   ## specified, metrics for all nodes are gathered.
   # nodes = ["rabbit@node1", "rabbit@node2"]
-
-  ## A list of queues to gather as the rabbitmq_queue measurement. If not
-  ## specified, metrics for all queues are gathered.
-  # queues = ["telegraf"]
 
   ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
   ## specified, metrics for all exchanges are gathered.

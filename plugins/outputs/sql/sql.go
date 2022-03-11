@@ -17,13 +17,14 @@ import (
 )
 
 type ConvertStruct struct {
-	Integer      string
-	Real         string
-	Text         string
-	Timestamp    string
-	Defaultvalue string
-	Unsigned     string
-	Bool         string
+	Integer         string
+	Real            string
+	Text            string
+	Timestamp       string
+	Defaultvalue    string
+	Unsigned        string
+	Bool            string
+	ConversionStyle string
 }
 
 type SQL struct {
@@ -100,7 +101,13 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 	case int64:
 		datatype = p.Convert.Integer
 	case uint64:
-		datatype = fmt.Sprintf("%s %s", p.Convert.Integer, p.Convert.Unsigned)
+		if p.Convert.ConversionStyle == "unsigned_suffix" {
+			datatype = fmt.Sprintf("%s %s", p.Convert.Integer, p.Convert.Unsigned)
+		} else if p.Convert.ConversionStyle == "literal" {
+			datatype = p.Convert.Unsigned
+		} else {
+			p.Log.Errorf("unknown converstaion style: %s", p.Convert.ConversionStyle)
+		}
 	case float64:
 		datatype = p.Convert.Real
 	case string:
@@ -158,6 +165,14 @@ var sampleConfig = `
   #  timestamp            = "TIMESTAMP"
   #  defaultvalue         = "TEXT"
   #  unsigned             = "UNSIGNED"
+  #  bool                 = "BOOL"
+
+  ## This setting controls the behavior of the unsigned value. By default the
+  ## setting will take the integer value and append the unsigned value to it. The other
+  ## option is "literal", which will use the actual value the user provides to
+  ## the unsigned option. This is useful for a database like ClickHouse where
+  ## the unsigned value should use a value like "uint64".
+  # conversion_style = "unsigned_suffix"
 `
 
 func (p *SQL) SampleConfig() string { return sampleConfig }
@@ -300,13 +315,14 @@ func newSQL() *SQL {
 		TableExistsTemplate: "SELECT 1 FROM {TABLE} LIMIT 1",
 		TimestampColumn:     "timestamp",
 		Convert: ConvertStruct{
-			Integer:      "INT",
-			Real:         "DOUBLE",
-			Text:         "TEXT",
-			Timestamp:    "TIMESTAMP",
-			Defaultvalue: "TEXT",
-			Unsigned:     "UNSIGNED",
-			Bool:         "BOOL",
+			Integer:         "INT",
+			Real:            "DOUBLE",
+			Text:            "TEXT",
+			Timestamp:       "TIMESTAMP",
+			Defaultvalue:    "TEXT",
+			Unsigned:        "UNSIGNED",
+			Bool:            "BOOL",
+			ConversionStyle: "unsigned_suffix",
 		},
 	}
 }
