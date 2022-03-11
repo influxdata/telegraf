@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -206,7 +206,7 @@ var perfDump = func(binary string, socket *socket) (string, error) {
 }
 
 var findSockets = func(c *Ceph) ([]*socket, error) {
-	listing, err := ioutil.ReadDir(c.SocketDir)
+	listing, err := os.ReadDir(c.SocketDir)
 	if err != nil {
 		return []*socket{}, fmt.Errorf("Failed to read socket directory '%s': %v", c.SocketDir, err)
 	}

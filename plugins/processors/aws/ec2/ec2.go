@@ -26,13 +26,13 @@ type AwsEc2Processor struct {
 	Timeout          config.Duration `toml:"timeout"`
 	Ordered          bool            `toml:"ordered"`
 	MaxParallelCalls int             `toml:"max_parallel_calls"`
+	Log              telegraf.Logger `toml:"-"`
 
-	Log        telegraf.Logger     `toml:"-"`
-	imdsClient *imds.Client        `toml:"-"`
-	imdsTags   map[string]struct{} `toml:"-"`
-	ec2Client  *ec2.Client         `toml:"-"`
-	parallel   parallel.Parallel   `toml:"-"`
-	instanceID string              `toml:"-"`
+	imdsClient  *imds.Client
+	imdsTagsMap map[string]struct{}
+	ec2Client   *ec2.Client
+	parallel    parallel.Parallel
+	instanceID  string
 }
 
 const sampleConfig = `
@@ -124,6 +124,20 @@ func (r *AwsEc2Processor) Init() error {
 		return errors.New("no tags specified in configuration")
 	}
 
+	for _, tag := range r.ImdsTags {
+		if len(tag) == 0 || !isImdsTagAllowed(tag) {
+			return fmt.Errorf("not allowed metadata tag specified in configuration: %s", tag)
+		}
+		r.imdsTagsMap[tag] = struct{}{}
+	}
+	if len(r.imdsTagsMap) == 0 && len(r.EC2Tags) == 0 {
+		return errors.New("no allowed metadata tags specified in configuration")
+	}
+
+	return nil
+}
+
+func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -161,21 +175,6 @@ func (r *AwsEc2Processor) Init() error {
 		}
 	}
 
-	for _, tag := range r.ImdsTags {
-		if len(tag) > 0 && isImdsTagAllowed(tag) {
-			r.imdsTags[tag] = struct{}{}
-		} else {
-			return fmt.Errorf("not allowed metadata tag specified in configuration: %s", tag)
-		}
-	}
-	if len(r.imdsTags) == 0 && len(r.EC2Tags) == 0 {
-		return errors.New("no allowed metadata tags specified in configuration")
-	}
-
-	return nil
-}
-
-func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 	if r.Ordered {
 		r.parallel = parallel.NewOrdered(acc, r.asyncAdd, DefaultMaxOrderedQueueSize, r.MaxParallelCalls)
 	} else {
@@ -187,7 +186,7 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 
 func (r *AwsEc2Processor) Stop() error {
 	if r.parallel == nil {
-		return errors.New("Trying to stop unstarted AWS EC2 Processor")
+		return errors.New("trying to stop unstarted AWS EC2 Processor")
 	}
 	r.parallel.Stop()
 	return nil
@@ -198,7 +197,7 @@ func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
 	defer cancel()
 
 	// Add IMDS Instance Identity Document tags.
-	if len(r.imdsTags) > 0 {
+	if len(r.imdsTagsMap) > 0 {
 		iido, err := r.imdsClient.GetInstanceIdentityDocument(
 			ctx,
 			&imds.GetInstanceIdentityDocumentInput{},
@@ -208,7 +207,7 @@ func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
 			return []telegraf.Metric{metric}
 		}
 
-		for tag := range r.imdsTags {
+		for tag := range r.imdsTagsMap {
 			if v := getTagFromInstanceIdentityDocument(iido, tag); v != "" {
 				metric.AddTag(tag, v)
 			}
@@ -245,7 +244,7 @@ func newAwsEc2Processor() *AwsEc2Processor {
 	return &AwsEc2Processor{
 		MaxParallelCalls: DefaultMaxParallelCalls,
 		Timeout:          config.Duration(DefaultTimeout),
-		imdsTags:         make(map[string]struct{}),
+		imdsTagsMap:      make(map[string]struct{}),
 	}
 }
 

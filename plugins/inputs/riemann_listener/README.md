@@ -3,8 +3,7 @@
 The Riemann Listener is a simple input plugin that listens for messages from
 client that use riemann clients using riemann-protobuff format.
 
-
-### Configuration:
+## Configuration
 
 This is a sample configuration for the plugin.
 
@@ -36,6 +35,7 @@ This is a sample configuration for the plugin.
   ## Defaults to the OS configuration.
   #  keep_alive_period = "5m"
 ```
+
 Just like Riemann the default port is 5555. This can be configured, refer configuration above.
 
 Riemann `Service` is mapped as `measurement`. `metric` and `TTL` are converted into field values.

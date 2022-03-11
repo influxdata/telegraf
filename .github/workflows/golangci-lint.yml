@@ -19,7 +19,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.38
+          version: v1.42.1
           only-new-issues: true
   golangci-master:
     if: github.ref == 'refs/heads/master'
@@ -30,6 +30,6 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.38
+          version: v1.42.1
           only-new-issues: true
           args: --issues-exit-code=0

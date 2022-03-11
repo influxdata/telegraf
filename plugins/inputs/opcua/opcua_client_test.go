@@ -1,15 +1,19 @@
 package opcua_client
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type OPCTags struct {
@@ -18,6 +22,71 @@ type OPCTags struct {
 	IdentifierType string
 	Identifier     string
 	Want           interface{}
+}
+
+func TestGetDataBadNodeContainerIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Spin-up the container
+	ctx := context.Background()
+	req := testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "open62541/open62541:1.0",
+			ExposedPorts: []string{"4840/tcp"},
+			WaitingFor:   wait.ForListeningPort("4840/tcp"),
+		},
+		Started: true,
+	}
+	container, err := testcontainers.GenericContainer(ctx, req)
+	require.NoError(t, err, "starting container failed")
+	defer func() {
+		require.NoError(t, container.Terminate(ctx), "terminating container failed")
+	}()
+
+	// Get the connection details from the container
+	addr, err := container.Host(ctx)
+	require.NoError(t, err, "getting container host address failed")
+	p, err := container.MappedPort(ctx, "4840/tcp")
+	require.NoError(t, err, "getting container host port failed")
+	port := p.Port()
+
+	var testopctags = []OPCTags{
+		{"ProductName", "1", "i", "2261", "open62541 OPC UA Server"},
+		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+		{"ManufacturerName", "0", "i", "2263", "open62541"},
+	}
+
+	var o OpcUA
+	o.MetricName = "testing"
+	o.Endpoint = fmt.Sprintf("opc.tcp://%s:%s", addr, port)
+	fmt.Println(o.Endpoint)
+	o.AuthMethod = "Anonymous"
+	o.ConnectTimeout = config.Duration(10 * time.Second)
+	o.RequestTimeout = config.Duration(1 * time.Second)
+	o.SecurityPolicy = "None"
+	o.SecurityMode = "None"
+	o.codes = []ua.StatusCode{ua.StatusOK}
+	logger := &testutil.CaptureLogger{}
+	o.Log = logger
+
+	g := GroupSettings{
+		MetricName: "anodic_current",
+		TagsSlice: [][]string{
+			{"pot", "2002"},
+		},
+	}
+
+	for _, tags := range testopctags {
+		g.Nodes = append(g.Nodes, MapOPCTag(tags))
+	}
+	o.Groups = append(o.Groups, g)
+	err = o.Init()
+	require.NoError(t, err)
+	err = Connect(&o)
+	require.NoError(t, err)
+	require.Contains(t, logger.LastError, "E! [] status not OK for node 'ProductName'(metric name 'anodic_current', tags 'pot=2002')")
 }
 
 func TestClient1Integration(t *testing.T) {
@@ -43,8 +112,8 @@ func TestClient1Integration(t *testing.T) {
 	o.RequestTimeout = config.Duration(1 * time.Second)
 	o.SecurityPolicy = "None"
 	o.SecurityMode = "None"
+	o.codes = []ua.StatusCode{ua.StatusOK}
 	o.Log = testutil.Logger{}
-
 	for _, tags := range testopctags {
 		o.RootNodes = append(o.RootNodes, MapOPCTag(tags))
 	}
@@ -109,6 +178,9 @@ namespace = "0"
 identifier_type = "i"
 tags = [["tag1", "val1"], ["tag2", "val2"]]
 nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
+
+[inputs.opcua.workarounds]
+additional_valid_status_codes = ["0xC0"]
 `
 
 	c := config.NewConfig()
@@ -133,34 +205,37 @@ nodes = [{name="name4", identifier="4000", tags=[["tag1", "override"]]}]
 	require.Len(t, o.nodes, 4)
 	require.Len(t, o.nodes[2].metricTags, 3)
 	require.Len(t, o.nodes[3].metricTags, 2)
+
+	require.Len(t, o.Workarounds.AdditionalValidStatusCodes, 1)
+	require.Equal(t, o.Workarounds.AdditionalValidStatusCodes[0], "0xC0")
 }
 
 func TestTagsSliceToMap(t *testing.T) {
 	m, err := tagsSliceToMap([][]string{{"foo", "bar"}, {"baz", "bat"}})
-	assert.NoError(t, err)
-	assert.Len(t, m, 2)
-	assert.Equal(t, m["foo"], "bar")
-	assert.Equal(t, m["baz"], "bat")
+	require.NoError(t, err)
+	require.Len(t, m, 2)
+	require.Equal(t, m["foo"], "bar")
+	require.Equal(t, m["baz"], "bat")
 }
 
 func TestTagsSliceToMap_twoStrings(t *testing.T) {
 	var err error
 	_, err = tagsSliceToMap([][]string{{"foo", "bar", "baz"}})
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = tagsSliceToMap([][]string{{"foo"}})
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestTagsSliceToMap_dupeKey(t *testing.T) {
 	_, err := tagsSliceToMap([][]string{{"foo", "bar"}, {"foo", "bat"}})
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestTagsSliceToMap_empty(t *testing.T) {
 	_, err := tagsSliceToMap([][]string{{"foo", ""}})
-	assert.Equal(t, fmt.Errorf("tag 1 has empty value"), err)
+	require.Equal(t, fmt.Errorf("tag 1 has empty value"), err)
 	_, err = tagsSliceToMap([][]string{{"", "bar"}})
-	assert.Equal(t, fmt.Errorf("tag 1 has empty name"), err)
+	require.Equal(t, fmt.Errorf("tag 1 has empty name"), err)
 }
 
 func TestValidateOPCTags(t *testing.T) {
@@ -260,4 +335,25 @@ func TestValidateOPCTags(t *testing.T) {
 			require.Equal(t, tt.err, o.validateOPCTags())
 		})
 	}
+}
+
+func TestSetupWorkarounds(t *testing.T) {
+	var o OpcUA
+	o.codes = []ua.StatusCode{ua.StatusOK}
+
+	o.Workarounds.AdditionalValidStatusCodes = []string{"0xC0", "0x00AA0000"}
+
+	err := o.setupWorkarounds()
+	require.NoError(t, err)
+
+	require.Len(t, o.codes, 3)
+	require.Equal(t, o.codes[0], ua.StatusCode(0))
+	require.Equal(t, o.codes[1], ua.StatusCode(192))
+	require.Equal(t, o.codes[2], ua.StatusCode(11141120))
+}
+
+func TestCheckStatusCode(t *testing.T) {
+	var o OpcUA
+	o.codes = []ua.StatusCode{ua.StatusCode(0), ua.StatusCode(192), ua.StatusCode(11141120)}
+	require.Equal(t, o.checkStatusCode(ua.StatusCode(192)), true)
 }

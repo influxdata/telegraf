@@ -8,17 +8,18 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/status"
 )
 
 type OpenConfigTelemetry struct {
@@ -42,7 +43,7 @@ type OpenConfigTelemetry struct {
 
 var (
 	// Regex to match and extract data points from path value in received key
-	keyPathRegex = regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
+	keyPathRegex = regexp.MustCompile(`/([^/]*)\[([A-Za-z0-9\-/]*=[^\[]*)]`)
 	sampleConfig = `
   ## List of device addresses to collect telemetry from
   servers = ["localhost:1883"]

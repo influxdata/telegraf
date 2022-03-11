@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
@@ -208,7 +209,7 @@ func (a *AzureMonitor) Connect() error {
 }
 
 // vmMetadata retrieves metadata about the current Azure VM
-func vmInstanceMetadata(c *http.Client) (string, string, error) {
+func vmInstanceMetadata(c *http.Client) (region string, resourceID string, err error) {
 	req, err := http.NewRequest("GET", vmInstanceMetadataURL, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("error creating request: %v", err)
@@ -221,7 +222,7 @@ func vmInstanceMetadata(c *http.Client) (string, string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", "", err
 	}
@@ -235,8 +236,8 @@ func vmInstanceMetadata(c *http.Client) (string, string, error) {
 		return "", "", err
 	}
 
-	region := metadata.Compute.Location
-	resourceID := metadata.ResourceID()
+	region = metadata.Compute.Location
+	resourceID = metadata.ResourceID()
 
 	return region, resourceID, nil
 }
@@ -356,7 +357,7 @@ func (a *AzureMonitor) send(body []byte) error {
 	}
 	defer resp.Body.Close()
 
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}
@@ -366,20 +367,20 @@ func (a *AzureMonitor) send(body []byte) error {
 
 func hashIDWithTagKeysOnly(m telegraf.Metric) uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(m.Name()))
-	h.Write([]byte("\n"))
+	h.Write([]byte(m.Name())) //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte("\n"))     //nolint:revive // from hash.go: "It never returns an error"
 	for _, tag := range m.TagList() {
 		if tag.Key == "" || tag.Value == "" {
 			continue
 		}
 
-		h.Write([]byte(tag.Key))
-		h.Write([]byte("\n"))
+		h.Write([]byte(tag.Key)) //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte("\n"))    //nolint:revive // from hash.go: "It never returns an error"
 	}
 	b := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(b, uint64(m.Time().UnixNano()))
-	h.Write(b[:n])
-	h.Write([]byte("\n"))
+	h.Write(b[:n])        //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte("\n")) //nolint:revive // from hash.go: "It never returns an error"
 	return h.Sum64()
 }
 
@@ -573,10 +574,10 @@ func hashIDWithField(id uint64, fk string) uint64 {
 	h := fnv.New64a()
 	b := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(b, id)
-	h.Write(b[:n])
-	h.Write([]byte("\n"))
-	h.Write([]byte(fk))
-	h.Write([]byte("\n"))
+	h.Write(b[:n])        //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte("\n")) //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte(fk))   //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte("\n")) //nolint:revive // from hash.go: "It never returns an error"
 	return h.Sum64()
 }
 

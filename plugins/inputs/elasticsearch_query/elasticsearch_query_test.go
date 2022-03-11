@@ -484,6 +484,23 @@ var testEsAggregationData = []esAggregationQueryTest{
 		false,
 		false,
 	},
+	{
+		"query 14 - non-existing custom date/time format",
+		esAggregation{
+			Index:           testindex,
+			MeasurementName: "measurement14",
+			DateField:       "@timestamp",
+			DateFieldFormat: "yyyy",
+			QueryPeriod:     queryPeriod,
+			Tags:            []string{},
+			mapMetricFields: map[string]string{},
+		},
+		nil,
+		nil,
+		false,
+		false,
+		true,
+	},
 }
 
 func setupIntegrationTest() error {

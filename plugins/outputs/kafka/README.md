@@ -2,7 +2,8 @@
 
 This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
 
-### Configuration:
+## Configuration
+
 ```toml
 [[outputs.kafka]]
   ## URLs of kafka brokers
@@ -80,7 +81,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##  3 : LZ4
   ##  4 : ZSTD
    # compression_codec = 0
-   
+
   ## Idempotent Writes
   ## If enabled, exactly one copy of each message is written.
   # idempotent_writes = false
@@ -112,6 +113,12 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SOCKS5 proxy to use when connecting to brokers
+  # socks5_enabled = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
+
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
@@ -136,6 +143,9 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -143,7 +153,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   # data_format = "influx"
 ```
 
-#### `max_retry`
+### `max_retry`
 
 This option controls the number of retries before a failure notification is
 displayed for each message when no acknowledgement is received from the

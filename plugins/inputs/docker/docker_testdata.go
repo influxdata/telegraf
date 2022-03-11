@@ -2,7 +2,7 @@ package docker
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
@@ -344,7 +344,7 @@ func containerStats(s string) types.ContainerStats {
     },
     "read": "2016-02-24T11:42:27.472459608-05:00"
 }`, name)
-	stat.Body = ioutil.NopCloser(strings.NewReader(jsonStat))
+	stat.Body = io.NopCloser(strings.NewReader(jsonStat))
 	return stat
 }
 
@@ -488,7 +488,7 @@ func containerStatsWindows() types.ContainerStats {
 	},
 	"name":"/gt_test_iis",
 }`
-	stat.Body = ioutil.NopCloser(strings.NewReader(jsonStat))
+	stat.Body = io.NopCloser(strings.NewReader(jsonStat))
 	return stat
 }
 

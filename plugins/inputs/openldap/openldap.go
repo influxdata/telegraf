@@ -5,19 +5,20 @@ import (
 	"strconv"
 	"strings"
 
+	ldap "github.com/go-ldap/ldap/v3"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"gopkg.in/ldap.v3"
 )
 
 type Openldap struct {
 	Host               string
 	Port               int
-	SSL                string `toml:"ssl"` // Deprecated in 1.7; use TLS
+	SSL                string `toml:"ssl" deprecated:"1.7.0;use 'tls' instead"`
 	TLS                string `toml:"tls"`
 	InsecureSkipVerify bool
-	SSLCA              string `toml:"ssl_ca"` // Deprecated in 1.7; use TLSCA
+	SSLCA              string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
 	TLSCA              string `toml:"tls_ca"`
 	BindDn             string
 	BindPassword       string
@@ -110,13 +111,15 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(err)
 			return nil
 		}
-		if o.TLS == "ldaps" {
+
+		switch o.TLS {
+		case "ldaps":
 			l, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port), tlsConfig)
 			if err != nil {
 				acc.AddError(err)
 				return nil
 			}
-		} else if o.TLS == "starttls" {
+		case "starttls":
 			l, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
 			if err != nil {
 				acc.AddError(err)
@@ -127,7 +130,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return nil
 			}
-		} else {
+		default:
 			acc.AddError(fmt.Errorf("invalid setting for ssl: %s", o.TLS))
 			return nil
 		}

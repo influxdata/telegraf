@@ -170,14 +170,14 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	return err
 }
 
-func (i *InfluxDB) getHTTPClient(url *url.URL, proxy *url.URL) (Client, error) {
+func (i *InfluxDB) getHTTPClient(address *url.URL, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	config := &HTTPConfig{
-		URL:              url,
+	httpConfig := &HTTPConfig{
+		URL:              address,
 		Token:            i.Token,
 		Organization:     i.Organization,
 		Bucket:           i.Bucket,
@@ -190,11 +190,12 @@ func (i *InfluxDB) getHTTPClient(url *url.URL, proxy *url.URL) (Client, error) {
 		ContentEncoding:  i.ContentEncoding,
 		TLSConfig:        tlsConfig,
 		Serializer:       i.newSerializer(),
+		Log:              i.Log,
 	}
 
-	c, err := NewHTTPClient(config)
+	c, err := NewHTTPClient(httpConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", url, err)
+		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", address, err)
 	}
 
 	return c, nil

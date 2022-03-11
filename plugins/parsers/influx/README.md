@@ -1,11 +1,10 @@
-# InfluxDB Line Protocol
+# Influx Line Protocol
 
-There are no additional configuration options for InfluxDB [line protocol][]. The
-metrics are parsed directly into Telegraf metrics.
+Parses metrics using the [Influx Line Protocol][].
 
-[line protocol]: https://docs.influxdata.com/influxdb/latest/reference/syntax/line-protocol/
+[Influx Line Protocol]: https://docs.influxdata.com/influxdb/latest/reference/syntax/line-protocol/
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.file]]
@@ -16,5 +15,9 @@ metrics are parsed directly into Telegraf metrics.
   ## more about them here:
   ##   https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
-```
 
+  ## Influx line protocol parser
+  ## 'internal' is the default. 'upstream' is a newer parser that is faster
+  ## and more memory efficient.
+  ## influx_parser_version = "internal"
+```

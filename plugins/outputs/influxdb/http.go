@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -457,10 +456,10 @@ func (c *httpClient) makeQueryRequest(query string) (*http.Request, error) {
 	return req, nil
 }
 
-func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
+func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
 	var err error
 
-	req, err := http.NewRequest("POST", url, body)
+	req, err := http.NewRequest("POST", address, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating new request: %s", err.Error())
 	}
@@ -489,7 +488,7 @@ func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser
 		return rc, nil
 	}
 
-	return ioutil.NopCloser(reader), nil
+	return io.NopCloser(reader), nil
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {
@@ -503,13 +502,13 @@ func (c *httpClient) addHeaders(req *http.Request) {
 }
 
 func (c *httpClient) validateResponse(response io.ReadCloser) (io.ReadCloser, error) {
-	bodyBytes, err := ioutil.ReadAll(response)
+	bodyBytes, err := io.ReadAll(response)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Close()
 
-	originalResponse := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	originalResponse := io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	// Empty response is valid.
 	if response == http.NoBody || len(bodyBytes) == 0 || bodyBytes == nil {

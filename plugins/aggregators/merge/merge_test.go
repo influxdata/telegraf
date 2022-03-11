@@ -229,7 +229,8 @@ var m2 = metric.New(
 
 func BenchmarkMergeOne(b *testing.B) {
 	var merger Merge
-	merger.Init()
+	err := merger.Init()
+	require.NoError(b, err)
 	var acc testutil.NopAccumulator
 
 	for n := 0; n < b.N; n++ {
@@ -241,7 +242,8 @@ func BenchmarkMergeOne(b *testing.B) {
 
 func BenchmarkMergeTwo(b *testing.B) {
 	var merger Merge
-	merger.Init()
+	err := merger.Init()
+	require.NoError(b, err)
 	var acc testutil.NopAccumulator
 
 	for n := 0; n < b.N; n++ {

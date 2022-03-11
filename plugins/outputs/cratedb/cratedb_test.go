@@ -2,7 +2,6 @@ package cratedb
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -49,9 +48,9 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	// the rows using their primary keys in order to take advantage of
 	// read-after-write consistency in CrateDB.
 	for _, m := range metrics {
-		hashIDVal, err := escapeValue(hashID(m))
+		hashIDVal, err := escapeValue(hashID(m), "_")
 		require.NoError(t, err)
-		timestamp, err := escapeValue(m.Time())
+		timestamp, err := escapeValue(m.Time(), "_")
 		require.NoError(t, err)
 
 		var id int64
@@ -85,7 +84,7 @@ VALUES
 	}
 
 	for _, test := range tests {
-		if got, err := insertSQL("my_table", test.Metrics); err != nil {
+		if got, err := insertSQL("my_table", "_", test.Metrics); err != nil {
 			t.Error(err)
 		} else if got != test.Want {
 			t.Errorf("got:\n%s\n\nwant:\n%s", got, test.Want)
@@ -93,17 +92,13 @@ VALUES
 	}
 }
 
-func Test_escapeValueIntegration(t *testing.T) {
-	t.Skip("Skipping due to trust authentication failure")
+type escapeValueTest struct {
+	Value interface{}
+	Want  string
+}
 
-	if os.Getenv("CIRCLE_PROJECT_REPONAME") != "" {
-		t.Skip("Skipping test on CircleCI due to docker failures")
-	}
-
-	tests := []struct {
-		Val  interface{}
-		Want string
-	}{
+func escapeValueTests() []escapeValueTest {
+	return []escapeValueTest{
 		// string
 		{`foo`, `'foo'`},
 		{`foo'bar 'yeah`, `'foo''bar ''yeah'`},
@@ -122,6 +117,7 @@ func Test_escapeValueIntegration(t *testing.T) {
 		{map[string]string(nil), `{}`},
 		{map[string]string{"foo": "bar"}, `{"foo" = 'bar'}`},
 		{map[string]string{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
+		{map[string]string{"f.oo": "bar", "o.n.e": "more"}, `{"f_oo" = 'bar', "o_n_e" = 'more'}`},
 		// map[string]interface{}
 		{map[string]interface{}{}, `{}`},
 		{map[string]interface{}(nil), `{}`},
@@ -130,27 +126,45 @@ func Test_escapeValueIntegration(t *testing.T) {
 		{map[string]interface{}{"foo": map[string]interface{}{"one": "more"}}, `{"foo" = {"one" = 'more'}}`},
 		{map[string]interface{}{`fo"o`: `b'ar`, `ab'c`: `xy"z`, `on"""e`: `mo'''re`}, `{"ab'c" = 'xy"z', "fo""o" = 'b''ar', "on""""""e" = 'mo''''''re'}`},
 	}
+}
 
-	url := testURL()
-	fmt.Println("url", url)
-	db, err := sql.Open("pgx", url)
+func Test_escapeValueIntegration(t *testing.T) {
+	t.Skip("Skipping due to trust authentication failure")
+
+	if os.Getenv("CIRCLE_PROJECT_REPONAME") != "" {
+		t.Skip("Skipping test on CircleCI due to docker failures")
+	}
+
+	db, err := sql.Open("pgx", testURL())
 	require.NoError(t, err)
 	defer db.Close()
 
+	tests := escapeValueTests()
 	for _, test := range tests {
-		got, err := escapeValue(test.Val)
-		if err != nil {
-			t.Errorf("val: %#v: %s", test.Val, err)
-		} else if got != test.Want {
-			t.Errorf("got:\n%s\n\nwant:\n%s", got, test.Want)
-		}
+		got, err := escapeValue(test.Value, "_")
+		require.NoError(t, err, "value: %#v", test.Value)
 
 		// This is a smoke test that will blow up if our escaping causing a SQL
-		// syntax error, which may allow for an attack.
+		// syntax error, which may allow for an attack.=
 		var reply interface{}
 		row := db.QueryRow("SELECT " + got)
 		require.NoError(t, row.Scan(&reply))
 	}
+}
+
+func Test_escapeValue(t *testing.T) {
+	tests := escapeValueTests()
+	for _, test := range tests {
+		got, err := escapeValue(test.Value, "_")
+		require.NoError(t, err, "value: %#v", test.Value)
+		require.Equal(t, got, test.Want)
+	}
+}
+
+func Test_circumeventingStringEscape(t *testing.T) {
+	value, err := escapeObject(map[string]interface{}{"a.b": "c"}, `_"`)
+	require.NoError(t, err)
+	require.Equal(t, value, `{"a_""b" = 'c'}`)
 }
 
 func Test_hashID(t *testing.T) {

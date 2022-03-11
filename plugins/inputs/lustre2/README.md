@@ -5,7 +5,7 @@ many requirements of leadership class HPC simulation environments.
 
 This plugin monitors the Lustre file system using its entries in the proc filesystem.
 
-### Configuration
+## Configuration
 
 ```toml
 # Read metrics from local Lustre service on OST, MDS
@@ -24,7 +24,7 @@ This plugin monitors the Lustre file system using its entries in the proc filesy
   # ]
 ```
 
-### Metrics
+## Metrics
 
 From `/proc/fs/lustre/obdfilter/*/stats` and `/proc/fs/lustre/osd-ldiskfs/*/stats`:
 
@@ -113,17 +113,16 @@ From `/proc/fs/lustre/mdt/*/job_stats`:
     - jobstats_sync
     - jobstats_unlink
 
-
-### Troubleshooting
+## Troubleshooting
 
 Check for the default or custom procfiles in the proc filesystem, and reference
 the [Lustre Monitoring and Statistics Guide][guide].  This plugin does not
 report all information from these files, only a limited set of items
 corresponding to the above metric fields.
 
-### Example Output
+## Example Output
 
-```
+```shell
 lustre2,host=oss2,jobid=42990218,name=wrk-OST0041 jobstats_ost_setattr=0i,jobstats_ost_sync=0i,jobstats_punch=0i,jobstats_read_bytes=4096i,jobstats_read_calls=1i,jobstats_read_max_size=4096i,jobstats_read_min_size=4096i,jobstats_write_bytes=310206488i,jobstats_write_calls=7423i,jobstats_write_max_size=53048i,jobstats_write_min_size=8820i 1556525847000000000
 lustre2,host=mds1,jobid=42992017,name=wrk-MDT0000 jobstats_close=31798i,jobstats_crossdir_rename=0i,jobstats_getattr=34146i,jobstats_getxattr=15i,jobstats_link=0i,jobstats_mkdir=658i,jobstats_mknod=0i,jobstats_open=31797i,jobstats_rename=0i,jobstats_rmdir=0i,jobstats_samedir_rename=0i,jobstats_setattr=1788i,jobstats_setxattr=0i,jobstats_statfs=0i,jobstats_sync=0i,jobstats_unlink=0i 1556525828000000000
 

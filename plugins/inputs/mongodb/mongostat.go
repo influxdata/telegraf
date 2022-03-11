@@ -96,6 +96,8 @@ type DbStatsData struct {
 	IndexSize   int64       `bson:"indexSize"`
 	Ok          int64       `bson:"ok"`
 	GleStats    interface{} `bson:"gleStats"`
+	FsUsedSize  int64       `bson:"fsUsedSize"`
+	FsTotalSize int64       `bson:"fsTotalSize"`
 }
 
 type ColStats struct {
@@ -248,14 +250,15 @@ type TransactionStats struct {
 
 // ReplStatus stores data related to replica sets.
 type ReplStatus struct {
-	SetName      string      `bson:"setName"`
-	IsMaster     interface{} `bson:"ismaster"`
-	Secondary    interface{} `bson:"secondary"`
-	IsReplicaSet interface{} `bson:"isreplicaset"`
-	ArbiterOnly  interface{} `bson:"arbiterOnly"`
-	Hosts        []string    `bson:"hosts"`
-	Passives     []string    `bson:"passives"`
-	Me           string      `bson:"me"`
+	SetName           string      `bson:"setName"`
+	IsWritablePrimary interface{} `bson:"isWritablePrimary"` // mongodb 5.x
+	IsMaster          interface{} `bson:"ismaster"`
+	Secondary         interface{} `bson:"secondary"`
+	IsReplicaSet      interface{} `bson:"isreplicaset"`
+	ArbiterOnly       interface{} `bson:"arbiterOnly"`
+	Hosts             []string    `bson:"hosts"`
+	Passives          []string    `bson:"passives"`
+	Me                string      `bson:"me"`
 }
 
 // DBRecordStats stores data related to memory operations across databases.
@@ -836,6 +839,8 @@ type DbStatLine struct {
 	Indexes     int64
 	IndexSize   int64
 	Ok          int64
+	FsUsedSize  int64
+	FsTotalSize int64
 }
 type ColStatLine struct {
 	Name           string
@@ -902,7 +907,7 @@ func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
 	return lockUsages
 }
 
-func diff(newVal, oldVal, sampleTime int64) (int64, int64) {
+func diff(newVal, oldVal, sampleTime int64) (avg int64, newValue int64) {
 	d := newVal - oldVal
 	if d < 0 {
 		d = newVal
@@ -1086,8 +1091,10 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			}
 			if newStat.Metrics.Repl.Network != nil {
 				returnVal.ReplNetworkBytes = newStat.Metrics.Repl.Network.Bytes
-				returnVal.ReplNetworkGetmoresNum = newStat.Metrics.Repl.Network.GetMores.Num
-				returnVal.ReplNetworkGetmoresTotalMillis = newStat.Metrics.Repl.Network.GetMores.TotalMillis
+				if newStat.Metrics.Repl.Network.GetMores != nil {
+					returnVal.ReplNetworkGetmoresNum = newStat.Metrics.Repl.Network.GetMores.Num
+					returnVal.ReplNetworkGetmoresTotalMillis = newStat.Metrics.Repl.Network.GetMores.TotalMillis
+				}
 				returnVal.ReplNetworkOps = newStat.Metrics.Repl.Network.Ops
 			}
 		}
@@ -1163,11 +1170,13 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	if newStat.Repl != nil {
 		returnVal.ReplSetName = newStat.Repl.SetName
 		// BEGIN code modification
-		if newStat.Repl.IsMaster.(bool) {
+		if val, ok := newStat.Repl.IsMaster.(bool); ok && val {
 			returnVal.NodeType = "PRI"
-		} else if newStat.Repl.Secondary != nil && newStat.Repl.Secondary.(bool) {
+		} else if val, ok := newStat.Repl.IsWritablePrimary.(bool); ok && val {
+			returnVal.NodeType = "PRI"
+		} else if val, ok := newStat.Repl.Secondary.(bool); ok && val {
 			returnVal.NodeType = "SEC"
-		} else if newStat.Repl.ArbiterOnly != nil && newStat.Repl.ArbiterOnly.(bool) {
+		} else if val, ok := newStat.Repl.ArbiterOnly.(bool); ok && val {
 			returnVal.NodeType = "ARB"
 		} else {
 			returnVal.NodeType = "UNK"
@@ -1306,10 +1315,10 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 						// I'm the master
 						returnVal.ReplLag = 0
 						break
-					} else {
-						// I'm secondary
-						me = member
 					}
+
+					// I'm secondary
+					me = member
 				} else if member.State == 1 {
 					// Master found
 					master = member
@@ -1356,6 +1365,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				Indexes:     dbStatsData.Indexes,
 				IndexSize:   dbStatsData.IndexSize,
 				Ok:          dbStatsData.Ok,
+				FsTotalSize: dbStatsData.FsTotalSize,
+				FsUsedSize:  dbStatsData.FsUsedSize,
 			}
 			returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
 		}

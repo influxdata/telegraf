@@ -11,7 +11,7 @@ defer to the output plugins configuration.
 
 Telegraf minimum version: Telegraf 1.16.0
 
-### Configuration:
+## Configuration
 
 ```toml
 [[inputs.influxdb_v2_listener]]
@@ -40,16 +40,22 @@ Telegraf minimum version: Telegraf 1.16.0
   ## Optional token to accept for HTTP authentication.
   ## You probably want to make sure you have TLS configured above for this.
   # token = "some-long-shared-secret-token"
+
+  ## Influx line protocol parser
+  ## 'internal' is the default. 'upstream' is a newer parser that is faster
+  ## and more memory efficient.
+  # parser_type = "internal"
 ```
 
-### Metrics:
+## Metrics
 
 Metrics are created from InfluxDB Line Protocol in the request body.
 
-### Troubleshooting:
+## Troubleshooting
 
 **Example Query:**
-```
+
+```sh
 curl -i -XPOST 'http://localhost:8186/api/v2/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 ```
 

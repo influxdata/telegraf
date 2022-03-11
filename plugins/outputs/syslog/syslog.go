@@ -3,7 +3,6 @@ package syslog
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/go-syslog/v3/rfc5424"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
@@ -29,6 +29,7 @@ type Syslog struct {
 	Separator           string `toml:"sdparam_separator"`
 	Framing             framing.Framing
 	Trailer             nontransparent.TrailerType
+	Log                 telegraf.Logger `toml:"-"`
 	net.Conn
 	tlsint.ClientConfig
 	mapper *SyslogMapper
@@ -135,7 +136,7 @@ func (s *Syslog) Connect() error {
 	}
 
 	if err := s.setKeepAlive(c); err != nil {
-		log.Printf("unable to configure keep alive (%s): %s", s.Address, err)
+		s.Log.Warnf("unable to configure keep alive (%s): %s", s.Address, err)
 	}
 
 	s.Conn = c
@@ -186,17 +187,17 @@ func (s *Syslog) Write(metrics []telegraf.Metric) (err error) {
 	for _, metric := range metrics {
 		var msg *rfc5424.SyslogMessage
 		if msg, err = s.mapper.MapMetricToSyslogMessage(metric); err != nil {
-			log.Printf("E! [outputs.syslog] Failed to create syslog message: %v", err)
+			s.Log.Errorf("Failed to create syslog message: %v", err)
 			continue
 		}
 		var msgBytesWithFraming []byte
 		if msgBytesWithFraming, err = s.getSyslogMessageBytesWithFraming(msg); err != nil {
-			log.Printf("E! [outputs.syslog] Failed to convert syslog message with framing: %v", err)
+			s.Log.Errorf("Failed to convert syslog message with framing: %v", err)
 			continue
 		}
 		if _, err = s.Conn.Write(msgBytesWithFraming); err != nil {
 			if netErr, ok := err.(net.Error); !ok || !netErr.Temporary() {
-				s.Close()
+				s.Close() //nolint:revive // There is another error which will be returned here
 				s.Conn = nil
 				return fmt.Errorf("closing connection: %v", netErr)
 			}
@@ -218,7 +219,11 @@ func (s *Syslog) getSyslogMessageBytesWithFraming(msg *rfc5424.SyslogMessage) ([
 		return append([]byte(strconv.Itoa(len(msgBytes))+" "), msgBytes...), nil
 	}
 	// Non-transparent framing
-	return append(msgBytes, byte(s.Trailer)), nil
+	trailer, err := s.Trailer.Value()
+	if err != nil {
+		return nil, err
+	}
+	return append(msgBytes, byte(trailer)), nil
 }
 
 func (s *Syslog) initializeSyslogMapper() {

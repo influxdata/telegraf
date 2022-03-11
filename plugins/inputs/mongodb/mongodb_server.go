@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"strconv"
 	"strings"
 	"time"
 
@@ -126,11 +127,29 @@ func (s *Server) gatherClusterStatus() (*ClusterStatus, error) {
 	}, nil
 }
 
-func (s *Server) gatherShardConnPoolStats() (*ShardStats, error) {
+func poolStatsCommand(version string) (string, error) {
+	majorPart := string(version[0])
+	major, err := strconv.ParseInt(majorPart, 10, 64)
+	if err != nil {
+		return "", err
+	}
+
+	if major == 5 {
+		return "connPoolStats", nil
+	}
+	return "shardConnPoolStats", nil
+}
+
+func (s *Server) gatherShardConnPoolStats(version string) (*ShardStats, error) {
+	command, err := poolStatsCommand(version)
+	if err != nil {
+		return nil, err
+	}
+
 	shardStats := &ShardStats{}
-	err := s.runCommand("admin", bson.D{
+	err = s.runCommand("admin", bson.D{
 		{
-			Key:   "shardConnPoolStats",
+			Key:   command,
 			Value: 1,
 		},
 	}, &shardStats)
@@ -272,7 +291,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus bool, 
 		clusterStatus = status
 	}
 
-	shardStats, err := s.gatherShardConnPoolStats()
+	shardStats, err := s.gatherShardConnPoolStats(serverStatus.Version)
 	if err != nil {
 		s.authLog(fmt.Errorf("unable to gather shard connection pool stats: %s", err.Error()))
 	}

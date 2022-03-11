@@ -1,11 +1,12 @@
 package kinesis
 
 import (
+	"context"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kinesis"
-	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
@@ -19,14 +20,14 @@ const maxRecordsPerRequest uint32 = 500
 type (
 	KinesisOutput struct {
 		StreamName         string     `toml:"streamname"`
-		PartitionKey       string     `toml:"partitionkey"`
-		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
+		PartitionKey       string     `toml:"partitionkey" deprecated:"1.5.0;use 'partition.key' instead"`
+		RandomPartitionKey bool       `toml:"use_random_partitionkey" deprecated:"1.5.0;use 'partition.method' instead"`
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
 
 		Log        telegraf.Logger `toml:"-"`
 		serializer serializers.Serializer
-		svc        kinesisiface.KinesisAPI
+		svc        kinesisClient
 
 		internalaws.CredentialConfig
 	}
@@ -37,6 +38,10 @@ type (
 		Default string `toml:"default"`
 	}
 )
+
+type kinesisClient interface {
+	PutRecords(context.Context, *kinesis.PutRecordsInput, ...func(*kinesis.Options)) (*kinesis.PutRecordsOutput, error)
+}
 
 var sampleConfig = `
   ## Amazon REGION of kinesis endpoint.
@@ -68,12 +73,7 @@ var sampleConfig = `
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
-  ## DEPRECATED: PartitionKey as used for sharding data.
-  partitionkey = "PartitionKey"
-  ## DEPRECATED: If set the partitionKey will be a random UUID on every put.
-  ## This allows for scaling across multiple shards in a stream.
-  ## This will cause issues with ordering.
-  use_random_partitionkey = false
+
   ## The partition key can be calculated using one of several methods:
   ##
   ## Use a static value for all writes:
@@ -126,9 +126,14 @@ func (k *KinesisOutput) Connect() error {
 		k.Log.Infof("Establishing a connection to Kinesis in %s", k.Region)
 	}
 
-	svc := kinesis.New(k.CredentialConfig.Credentials())
+	cfg, err := k.CredentialConfig.Credentials()
+	if err != nil {
+		return err
+	}
 
-	_, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
+	svc := kinesis.NewFromConfig(cfg)
+
+	_, err = svc.DescribeStreamSummary(context.Background(), &kinesis.DescribeStreamSummaryInput{
 		StreamName: aws.String(k.StreamName),
 	})
 	k.svc = svc
@@ -143,14 +148,14 @@ func (k *KinesisOutput) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
-func (k *KinesisOutput) writeKinesis(r []*kinesis.PutRecordsRequestEntry) time.Duration {
+func (k *KinesisOutput) writeKinesis(r []types.PutRecordsRequestEntry) time.Duration {
 	start := time.Now()
 	payload := &kinesis.PutRecordsInput{
 		Records:    r,
 		StreamName: aws.String(k.StreamName),
 	}
 
-	resp, err := k.svc.PutRecords(payload)
+	resp, err := k.svc.PutRecords(context.Background(), payload)
 	if err != nil {
 		k.Log.Errorf("Unable to write to Kinesis : %s", err.Error())
 		return time.Since(start)
@@ -210,7 +215,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	r := []*kinesis.PutRecordsRequestEntry{}
+	r := []types.PutRecordsRequestEntry{}
 
 	for _, metric := range metrics {
 		sz++
@@ -223,12 +228,12 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		partitionKey := k.getPartitionKey(metric)
 
-		d := kinesis.PutRecordsRequestEntry{
+		d := types.PutRecordsRequestEntry{
 			Data:         values,
 			PartitionKey: aws.String(partitionKey),
 		}
 
-		r = append(r, &d)
+		r = append(r, d)
 
 		if sz == maxRecordsPerRequest {
 			elapsed := k.writeKinesis(r)

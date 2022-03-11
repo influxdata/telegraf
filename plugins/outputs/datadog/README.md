@@ -3,8 +3,7 @@
 This plugin writes to the [Datadog Metrics API][metrics] and requires an
 `apikey` which can be obtained [here][apikey] for the account.
 
-
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.datadog]]
@@ -19,9 +18,13 @@ This plugin writes to the [Datadog Metrics API][metrics] and requires an
 
   ## Set http_proxy (telegraf uses the system wide proxy settings if it isn't set)
   # http_proxy_url = "http://localhost:8888"
+
+  ## Override the default (none) compression used to send data.
+  ## Supports: "zlib", "none"
+  # compression = "none"
 ```
 
-### Metrics
+## Metrics
 
 Datadog metric names are formed by joining the Telegraf metric name and the field
 key with a `.` character.

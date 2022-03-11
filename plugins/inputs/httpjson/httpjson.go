@@ -3,7 +3,7 @@ package httpjson
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -23,7 +23,7 @@ var (
 
 // HTTPJSON struct
 type HTTPJSON struct {
-	Name            string
+	Name            string `toml:"name" deprecated:"1.3.0;use 'name_override', 'name_suffix', 'name_prefix' instead"`
 	Servers         []string
 	Method          string
 	TagKeys         []string
@@ -69,12 +69,6 @@ func (c *RealHTTPClient) HTTPClient() *http.Client {
 var sampleConfig = `
   ## NOTE This plugin only reads numerical measurements, strings and booleans
   ## will be ignored.
-
-  ## Name for the service being polled.  Will be appended to the name of the
-  ## measurement e.g. httpjson_webserver_stats
-  ##
-  ## Deprecated (1.3.0): Use name_override, name_suffix, name_prefix instead.
-  name = "webserver_stats"
 
   ## URL of each server in the service's cluster
   servers = [
@@ -263,7 +257,7 @@ func (h *HTTPJSON) sendRequest(serverURL string) (string, float64, error) {
 	defer resp.Body.Close()
 	responseTime := time.Since(start).Seconds()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return string(body), responseTime, err
 	}

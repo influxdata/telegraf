@@ -13,8 +13,7 @@ func TestBasicStartup(t *testing.T) {
 	p.Log = &testutil.Logger{}
 	p.ImdsTags = []string{"accountId", "instanceId"}
 	acc := &testutil.Accumulator{}
-	require.NoError(t, p.Start(acc))
-	require.NoError(t, p.Stop())
+	require.NoError(t, p.Init())
 
 	require.Len(t, acc.GetTelegrafMetrics(), 0)
 	require.Len(t, acc.Errors, 0)
@@ -26,8 +25,7 @@ func TestBasicStartupWithEC2Tags(t *testing.T) {
 	p.ImdsTags = []string{"accountId", "instanceId"}
 	p.EC2Tags = []string{"Name"}
 	acc := &testutil.Accumulator{}
-	require.NoError(t, p.Start(acc))
-	require.NoError(t, p.Stop())
+	require.NoError(t, p.Init())
 
 	require.Len(t, acc.GetTelegrafMetrics(), 0)
 	require.Len(t, acc.Errors, 0)

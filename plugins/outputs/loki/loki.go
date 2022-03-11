@@ -7,16 +7,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 const (
@@ -56,7 +58,7 @@ type Loki struct {
 	Timeout      config.Duration   `toml:"timeout"`
 	Username     string            `toml:"username"`
 	Password     string            `toml:"password"`
-	Headers      map[string]string `toml:"headers"`
+	Headers      map[string]string `toml:"http_headers"`
 	ClientID     string            `toml:"client_id"`
 	ClientSecret string            `toml:"client_secret"`
 	TokenURL     string            `toml:"token_url"`
@@ -125,7 +127,7 @@ func (l *Loki) Connect() (err error) {
 		return fmt.Errorf("http client fail: %w", err)
 	}
 
-	return
+	return nil
 }
 
 func (l *Loki) Close() error {
@@ -137,7 +139,13 @@ func (l *Loki) Close() error {
 func (l *Loki) Write(metrics []telegraf.Metric) error {
 	s := Streams{}
 
+	sort.SliceStable(metrics, func(i, j int) bool {
+		return metrics[i].Time().Before(metrics[j].Time())
+	})
+
 	for _, m := range metrics {
+		m.AddTag("__name", m.Name())
+
 		tags := m.TagList()
 		var line string
 
@@ -148,10 +156,10 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line})
 	}
 
-	return l.write(s)
+	return l.writeMetrics(s)
 }
 
-func (l *Loki) write(s Streams) error {
+func (l *Loki) writeMetrics(s Streams) error {
 	bs, err := json.Marshal(s)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)

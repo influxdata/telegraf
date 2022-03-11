@@ -5,14 +5,14 @@ Gather repository information from [GitHub][] hosted repositories.
 **Note:** Telegraf also contains the [webhook][] input which can be used as an
 alternative method for collecting repository information.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.github]]
   ## List of repositories to monitor
   repositories = [
-	  "influxdata/telegraf",
-	  "influxdata/influxdb"
+    "influxdata/telegraf",
+    "influxdata/influxdb"
   ]
 
   ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
@@ -25,11 +25,11 @@ alternative method for collecting repository information.
   # http_timeout = "5s"
 
   ## List of additional fields to query.
-	## NOTE: Getting those fields might involve issuing additional API-calls, so please
-	##       make sure you do not exceed the rate-limit of GitHub.
-	##
-	## Available fields are:
-	## 	- pull-requests			-- number of open and closed pull requests (2 API-calls per repository)
+  ## NOTE: Getting those fields might involve issuing additional API-calls, so please
+  ##       make sure you do not exceed the rate-limit of GitHub.
+  ##
+  ## Available fields are:
+  ##  - pull-requests -- number of open and closed pull requests (2 API-calls per repository)
   # additional_fields = []
 ```
 
@@ -52,7 +52,7 @@ alternative method for collecting repository information.
 
 When the [internal][] input is enabled:
 
-+ internal_github
+- internal_github
   - tags:
     - access_token - An obfuscated reference to the configured access token or "Unauthenticated"
   - fields:
@@ -72,7 +72,7 @@ In the following we list the available options with the required API-calls and t
 
 ### Example Output
 
-```
+```shell
 github_repository,language=Go,license=MIT\ License,name=telegraf,owner=influxdata forks=2679i,networks=2679i,open_issues=794i,size=23263i,stars=7091i,subscribers=316i,watchers=7091i 1563901372000000000
 internal_github,access_token=Unauthenticated closed_pull_requests=3522i,rate_limit_remaining=59i,rate_limit_limit=60i,rate_limit_blocks=0i,open_pull_requests=260i 1552653551000000000
 ```

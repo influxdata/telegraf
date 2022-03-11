@@ -9,7 +9,7 @@ used for all values, which are not contained in the value_mappings. The
 processor supports explicit configuration of a destination tag or field. By default the
 source tag or field is overwritten.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[processors.enum]]
@@ -25,7 +25,7 @@ source tag or field is overwritten.
     dest = "status_code"
 
     ## Default value to be used for all values not contained in the mapping
-    ## table.  When unset and no match is found, the original field will remain 
+    ## table.  When unset and no match is found, the original field will remain
     ## unmodified and the destination tag or field will not be created.
     # default = 0
 
@@ -36,7 +36,7 @@ source tag or field is overwritten.
       red = 3
 ```
 
-### Example:
+## Example
 
 ```diff
 - xyzzy status="green" 1502489900000000000
@@ -44,6 +44,7 @@ source tag or field is overwritten.
 ```
 
 With unknown value and no default set:
+
 ```diff
 - xyzzy status="black" 1502489900000000000
 + xyzzy status="black" 1502489900000000000

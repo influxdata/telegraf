@@ -23,10 +23,10 @@ const (
 	// The limit of locations is 20.
 	owmRequestSeveralCityID int = 20
 
-	defaultBaseURL                       = "https://api.openweathermap.org/"
-	defaultResponseTimeout time.Duration = time.Second * 5
-	defaultUnits           string        = "metric"
-	defaultLang            string        = "en"
+	defaultBaseURL         = "https://api.openweathermap.org/"
+	defaultResponseTimeout = time.Second * 5
+	defaultUnits           = "metric"
+	defaultLang            = "en"
 )
 
 type OpenWeatherMap struct {
@@ -38,8 +38,8 @@ type OpenWeatherMap struct {
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Units           string          `toml:"units"`
 
-	client  *http.Client
-	baseURL *url.URL
+	client        *http.Client
+	baseParsedURL *url.URL
 }
 
 var sampleConfig = `
@@ -176,6 +176,7 @@ type WeatherEntry struct {
 		Humidity int64   `json:"humidity"`
 		Pressure float64 `json:"pressure"`
 		Temp     float64 `json:"temp"`
+		Feels    float64 `json:"feels_like"`
 	} `json:"main"`
 	Rain struct {
 		Rain1 float64 `json:"1h"`
@@ -246,6 +247,7 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 			"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
 			"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"visibility":   e.Visibility,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
@@ -283,6 +285,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			"pressure":     e.Main.Pressure,
 			"rain":         gatherRain(e),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
 		}
@@ -309,7 +312,7 @@ func init() {
 
 func (n *OpenWeatherMap) Init() error {
 	var err error
-	n.baseURL, err = url.Parse(n.BaseURL)
+	n.baseParsedURL, err = url.Parse(n.BaseURL)
 	if err != nil {
 		return err
 	}
@@ -353,5 +356,5 @@ func (n *OpenWeatherMap) formatURL(path string, city string) string {
 		RawQuery: v.Encode(),
 	}
 
-	return n.baseURL.ResolveReference(relative).String()
+	return n.baseParsedURL.ResolveReference(relative).String()
 }

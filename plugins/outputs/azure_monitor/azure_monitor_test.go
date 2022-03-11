@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -209,7 +211,11 @@ func TestAggregate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.plugin.Connect()
+			msiEndpoint, err := adal.GetMSIVMEndpoint()
+			require.NoError(t, err)
+
+			os.Setenv("MSI_ENDPOINT", msiEndpoint)
+			err = tt.plugin.Connect()
 			require.NoError(t, err)
 
 			// Reset globals
@@ -366,4 +372,24 @@ func TestWrite(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	// Set up a fake environment for Authorizer
+	// This used to fake an MSI environment, but since https://github.com/Azure/go-autorest/pull/670/files it's no longer possible,
+	// So we fake a user/password authentication
+	err := os.Setenv("AZURE_CLIENT_ID", "fake")
+	if err != nil {
+		panic(err)
+	}
+	err = os.Setenv("AZURE_USERNAME", "fake")
+	if err != nil {
+		panic(err)
+	}
+	err = os.Setenv("AZURE_PASSWORD", "fake")
+	if err != nil {
+		panic(err)
+	}
+
+	os.Exit(m.Run())
 }

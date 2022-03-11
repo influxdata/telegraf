@@ -2,7 +2,7 @@
 
 Pulls campaign reports from the [Mailchimp API](https://developer.mailchimp.com/).
 
-### Configuration
+## Configuration
 
 This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage mailchimp`.
@@ -21,7 +21,7 @@ generate it using `telegraf --usage mailchimp`.
   # campaign_id = ""
 ```
 
-### Metrics
+## Metrics
 
 - mailchimp
   - tags:

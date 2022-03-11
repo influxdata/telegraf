@@ -5,8 +5,9 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"time"
@@ -17,6 +18,7 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -25,6 +27,8 @@ const (
 	// if the request body is over this size, we will return an HTTP 413 error.
 	defaultMaxBodySize = 32 * 1024 * 1024
 )
+
+var ErrEOF = errors.New("EOF")
 
 // The BadRequestCode constants keep standard error messages
 // see: https://v2.docs.influxdata.com/v2.0/api/#operation/PostWrite
@@ -43,6 +47,7 @@ type InfluxDBV2Listener struct {
 	MaxBodySize config.Size `toml:"max_body_size"`
 	Token       string      `toml:"token"`
 	BucketTag   string      `toml:"bucket_tag"`
+	ParserType  string      `toml:"parser_type"`
 
 	timeFunc influx.TimeFunc
 
@@ -92,6 +97,11 @@ const sampleConfig = `
   ## Optional token to accept for HTTP authentication.
   ## You probably want to make sure you have TLS configured above for this.
   # token = "some-long-shared-secret-token"
+
+  ## Influx line protocol parser
+  ## 'internal' is the default. 'upstream' is a newer parser that is faster
+  ## and more memory efficient.
+  # parser_type = "internal"
 `
 
 func (h *InfluxDBV2Listener) SampleConfig() string {
@@ -256,7 +266,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		var readErr error
 		var bytes []byte
 		//body = http.MaxBytesReader(res, req.Body, 1000000) //p.MaxBodySize.Size)
-		bytes, readErr = ioutil.ReadAll(body)
+		bytes, readErr = io.ReadAll(body)
 		if readErr != nil {
 			h.Log.Debugf("Error parsing the request body: %v", readErr.Error())
 			if err := badRequest(res, InternalError, readErr.Error()); err != nil {
@@ -264,22 +274,35 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			}
 			return
 		}
-		metricHandler := influx.NewMetricHandler()
-		parser := influx.NewParser(metricHandler)
-		parser.SetTimeFunc(h.timeFunc)
 
 		precisionStr := req.URL.Query().Get("precision")
-		if precisionStr != "" {
-			precision := getPrecisionMultiplier(precisionStr)
-			metricHandler.SetTimePrecision(precision)
-		}
 
 		var metrics []telegraf.Metric
 		var err error
+		if h.ParserType == "upstream" {
+			parser := influx_upstream.NewParser()
+			parser.SetTimeFunc(influx_upstream.TimeFunc(h.timeFunc))
 
-		metrics, err = parser.Parse(bytes)
+			if precisionStr != "" {
+				precision := getPrecisionMultiplier(precisionStr)
+				parser.SetTimePrecision(precision)
+			}
 
-		if err != influx.EOF && err != nil {
+			metrics, err = parser.Parse(bytes)
+		} else {
+			metricHandler := influx.NewMetricHandler()
+			parser := influx.NewParser(metricHandler)
+			parser.SetTimeFunc(h.timeFunc)
+
+			if precisionStr != "" {
+				precision := getPrecisionMultiplier(precisionStr)
+				metricHandler.SetTimePrecision(precision)
+			}
+
+			metrics, err = parser.Parse(bytes)
+		}
+
+		if err != ErrEOF && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, Invalid, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)

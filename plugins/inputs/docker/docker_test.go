@@ -3,7 +3,7 @@ package docker
 import (
 	"context"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"reflect"
 	"sort"
 	"strings"
@@ -263,6 +263,162 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_id": "123456789",
 	}
 	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu3fields, cputags)
+}
+
+func TestDockerMemoryExcludesCache(t *testing.T) {
+	var acc testutil.Accumulator
+	stats := testStats()
+
+	tags := map[string]string{
+		"container_name":  "redis",
+		"container_image": "redis/image",
+	}
+
+	d := &Docker{
+		Log: testutil.Logger{},
+	}
+
+	delete(stats.MemoryStats.Stats, "cache")
+	delete(stats.MemoryStats.Stats, "inactive_file")
+	delete(stats.MemoryStats.Stats, "total_inactive_file")
+
+	// set cgroup v2 cache value
+	stats.MemoryStats.Stats["inactive_file"] = 9
+
+	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
+
+	// test docker_container_mem measurement
+	memfields := map[string]interface{}{
+		"active_anon":               uint64(0),
+		"active_file":               uint64(1),
+		"container_id":              "123456789",
+		"fail_count":                uint64(1),
+		"hierarchical_memory_limit": uint64(0),
+		"inactive_anon":             uint64(0),
+		"inactive_file":             uint64(9),
+		"limit":                     uint64(2000),
+		"mapped_file":               uint64(0),
+		"max_usage":                 uint64(1001),
+		"pgfault":                   uint64(2),
+		"pgmajfault":                uint64(0),
+		"pgpgin":                    uint64(0),
+		"pgpgout":                   uint64(0),
+		"rss_huge":                  uint64(0),
+		"rss":                       uint64(0),
+		"total_active_anon":         uint64(0),
+		"total_active_file":         uint64(0),
+		"total_cache":               uint64(0),
+		"total_inactive_anon":       uint64(0),
+		"total_mapped_file":         uint64(0),
+		"total_pgfault":             uint64(0),
+		"total_pgmajfault":          uint64(0),
+		"total_pgpgin":              uint64(4),
+		"total_pgpgout":             uint64(0),
+		"total_rss_huge":            uint64(444),
+		"total_rss":                 uint64(44),
+		"total_unevictable":         uint64(0),
+		"total_writeback":           uint64(55),
+		"unevictable":               uint64(0),
+		"usage_percent":             float64(55.1), // 1102 / 2000
+		"usage":                     uint64(1102),
+		"writeback":                 uint64(0),
+	}
+
+	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
+	acc.ClearMetrics()
+
+	// set cgroup v1 cache value (has priority over cgroups v2)
+	stats.MemoryStats.Stats["total_inactive_file"] = 7
+
+	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
+
+	// test docker_container_mem measurement
+	memfields = map[string]interface{}{
+		"active_anon": uint64(0),
+		"active_file": uint64(1),
+		// "cache":                     uint64(0),
+		"container_id":              "123456789",
+		"fail_count":                uint64(1),
+		"hierarchical_memory_limit": uint64(0),
+		"inactive_anon":             uint64(0),
+		"inactive_file":             uint64(9),
+		"limit":                     uint64(2000),
+		"mapped_file":               uint64(0),
+		"max_usage":                 uint64(1001),
+		"pgfault":                   uint64(2),
+		"pgmajfault":                uint64(0),
+		"pgpgin":                    uint64(0),
+		"pgpgout":                   uint64(0),
+		"rss_huge":                  uint64(0),
+		"rss":                       uint64(0),
+		"total_active_anon":         uint64(0),
+		"total_active_file":         uint64(0),
+		"total_cache":               uint64(0),
+		"total_inactive_anon":       uint64(0),
+		"total_inactive_file":       uint64(7),
+		"total_mapped_file":         uint64(0),
+		"total_pgfault":             uint64(0),
+		"total_pgmajfault":          uint64(0),
+		"total_pgpgin":              uint64(4),
+		"total_pgpgout":             uint64(0),
+		"total_rss_huge":            uint64(444),
+		"total_rss":                 uint64(44),
+		"total_unevictable":         uint64(0),
+		"total_writeback":           uint64(55),
+		"unevictable":               uint64(0),
+		"usage_percent":             float64(55.2), // 1104 / 2000
+		"usage":                     uint64(1104),
+		"writeback":                 uint64(0),
+	}
+
+	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
+	acc.ClearMetrics()
+
+	// set Docker 19.03 and older cache value (has priority over cgroups v1 and v2)
+	stats.MemoryStats.Stats["cache"] = 16
+
+	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
+
+	// test docker_container_mem measurement
+	memfields = map[string]interface{}{
+		"active_anon":               uint64(0),
+		"active_file":               uint64(1),
+		"cache":                     uint64(16),
+		"container_id":              "123456789",
+		"fail_count":                uint64(1),
+		"hierarchical_memory_limit": uint64(0),
+		"inactive_anon":             uint64(0),
+		"inactive_file":             uint64(9),
+		"limit":                     uint64(2000),
+		"mapped_file":               uint64(0),
+		"max_usage":                 uint64(1001),
+		"pgfault":                   uint64(2),
+		"pgmajfault":                uint64(0),
+		"pgpgin":                    uint64(0),
+		"pgpgout":                   uint64(0),
+		"rss_huge":                  uint64(0),
+		"rss":                       uint64(0),
+		"total_active_anon":         uint64(0),
+		"total_active_file":         uint64(0),
+		"total_cache":               uint64(0),
+		"total_inactive_anon":       uint64(0),
+		"total_inactive_file":       uint64(7),
+		"total_mapped_file":         uint64(0),
+		"total_pgfault":             uint64(0),
+		"total_pgmajfault":          uint64(0),
+		"total_pgpgin":              uint64(4),
+		"total_pgpgout":             uint64(0),
+		"total_rss_huge":            uint64(444),
+		"total_rss":                 uint64(44),
+		"total_unevictable":         uint64(0),
+		"total_writeback":           uint64(55),
+		"unevictable":               uint64(0),
+		"usage_percent":             float64(54.75), // 1095 / 2000
+		"usage":                     uint64(1095),
+		"writeback":                 uint64(0),
+	}
+
+	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
 }
 
 func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
@@ -948,7 +1104,7 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 		"docker_swarm",
 		map[string]interface{}{
 			"tasks_running": int(1),
-			"tasks_desired": int(1),
+			"tasks_desired": uint64(1),
 		},
 		map[string]string{
 			"service_id":   "qolkls9g5iasdiuihcyz9rn3",
@@ -1060,7 +1216,7 @@ func TestContainerName(t *testing.T) {
 				}
 				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
 					return types.ContainerStats{
-						Body: ioutil.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
+						Body: io.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
 					}, nil
 				}
 				return &client, nil
@@ -1080,7 +1236,7 @@ func TestContainerName(t *testing.T) {
 				}
 				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
 					return types.ContainerStats{
-						Body: ioutil.NopCloser(strings.NewReader(`{}`)),
+						Body: io.NopCloser(strings.NewReader(`{}`)),
 					}, nil
 				}
 				return &client, nil

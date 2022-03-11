@@ -3,8 +3,8 @@ package multifile
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"path"
 	"strconv"
 	"time"
@@ -84,7 +84,7 @@ func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
 
 	for _, file := range m.Files {
-		fileContents, err := ioutil.ReadFile(file.Name)
+		fileContents, err := os.ReadFile(file.Name)
 
 		if err != nil {
 			if m.FailEarly {

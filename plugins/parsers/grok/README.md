@@ -4,13 +4,12 @@ The grok data format parses line delimited data using a regular expression like
 language.
 
 The best way to get acquainted with grok patterns is to read the logstash docs,
-which are available here:
-  https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
+which are available [here](https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html).
 
 The grok parser uses a slightly modified version of logstash "grok"
 patterns, with the format:
 
-```
+```text
 %{<capture_syntax>[:<semantic_name>][:<modifier>]}
 ```
 
@@ -58,7 +57,7 @@ CUSTOM time layouts must be within quotes and be the representation of the
 "reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`.
 To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:timestamp:ts-"2006-01-02 15:04:05.000"}` can be used to match `"2018-01-02 15:04:05,000"`
 To match a comma decimal point you can use a period in the pattern string.
-See https://golang.org/pkg/time/#Parse for more details.
+See [Goloang Time docs](https://golang.org/pkg/time/#Parse) for more details.
 
 Telegraf has many of its own [built-in patterns][] as well as support for most
 of the Logstash builtin patterns using [these Go compatible patterns][grok-patterns].
@@ -71,9 +70,10 @@ friendly pattern that is not fully compatible with the Logstash pattern.
 [grok-patterns]: https://github.com/vjeantet/grok/blob/master/patterns/grok-patterns
 
 If you need help building patterns to match your logs,
-you will find the https://grokdebug.herokuapp.com application quite useful!
+you will find the [Grok Debug](https://grokdebug.herokuapp.com) application quite useful!
 
-### Configuration
+## Configuration
+
 ```toml
 [[inputs.file]]
   ## Files to parse each interval.
@@ -121,11 +121,11 @@ you will find the https://grokdebug.herokuapp.com application quite useful!
   # grok_unique_timestamp = "auto"
 ```
 
-#### Timestamp Examples
+### Timestamp Examples
 
 This example input and config parses a file using a custom timestamp conversion:
 
-```
+```text
 2017-02-21 13:10:34 value=42
 ```
 
@@ -136,7 +136,7 @@ This example input and config parses a file using a custom timestamp conversion:
 
 This example input and config parses a file using a timestamp in unix time:
 
-```
+```text
 1466004605 value=42
 1466004605.123456789 value=42
 ```
@@ -148,7 +148,7 @@ This example input and config parses a file using a timestamp in unix time:
 
 This example parses a file using a built-in conversion and a custom pattern:
 
-```
+```text
 Wed Apr 12 13:10:34 PST 2017 value=42
 ```
 
@@ -162,7 +162,7 @@ Wed Apr 12 13:10:34 PST 2017 value=42
 
 This example input and config parses a file using a custom timestamp conversion that doesn't match any specific standard:
 
-```
+```text
 21/02/2017 13:10:34 value=42
 ```
 
@@ -192,7 +192,7 @@ syntax with `'''` may be useful.
 
 The following config examples will parse this input file:
 
-```
+```text
 |42|\uD83D\uDC2F|'telegraf'|
 ```
 
@@ -208,6 +208,7 @@ backslash must be escaped, requiring us to escape the backslash a second time.
 
 We cannot use a literal TOML string for the pattern, because we cannot match a
 `'` within it.  However, it works well for the custom pattern.
+
 ```toml
 [[inputs.file]]
   grok_patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
@@ -215,6 +216,7 @@ We cannot use a literal TOML string for the pattern, because we cannot match a
 ```
 
 A multi-line literal string allows us to encode the pattern:
+
 ```toml
 [[inputs.file]]
   grok_patterns = ['''
@@ -251,7 +253,8 @@ are a few techniques that can help:
 
 - Avoid using patterns such as `%{DATA}` that will always match.
 - If possible, add `^` and `$` anchors to your pattern:
-  ```
+
+  ```toml
   [[inputs.file]]
     grok_patterns = ["^%{COMBINED_LOG_FORMAT}$"]
   ```

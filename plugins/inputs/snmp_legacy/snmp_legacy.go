@@ -1,17 +1,17 @@
 package snmp_legacy
 
 import (
-	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/gosnmp/gosnmp"
 )
 
 // Snmp is a snmp plugin
@@ -46,9 +46,9 @@ type Host struct {
 	// Table
 	Table []HostTable
 	// Oids
-	getOids  []Data
-	bulkOids []Data
-	tables   []HostTable
+	internalGetOids []Data
+	bulkOids        []Data
+	tables          []HostTable
 	// array of processed oids
 	// to skip oid duplication
 	processedOids []string
@@ -250,7 +250,7 @@ func fillnode(parentNode Node, oidName string, ids []string) {
 	}
 }
 
-func findnodename(node Node, ids []string) (string, string) {
+func findNodeName(node Node, ids []string) (oidName string, instance string) {
 	// ids = ["1", "3", "6", ...]
 	if len(ids) == 1 {
 		return node.name, ids[0]
@@ -259,7 +259,7 @@ func findnodename(node Node, ids []string) (string, string) {
 	// Get node
 	subnode, ok := node.subnodes[id]
 	if ok {
-		return findnodename(subnode, ids)
+		return findNodeName(subnode, ids)
 	}
 	// We got a node
 	// Get node name
@@ -296,7 +296,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			subnodes: make(map[string]Node),
 		}
 
-		data, err := ioutil.ReadFile(s.SnmptranslateFile)
+		data, err := os.ReadFile(s.SnmptranslateFile)
 		if err != nil {
 			s.Log.Errorf("Reading SNMPtranslate file error: %s", err.Error())
 			return err
@@ -345,7 +345,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 					oid.rawOid = oidstring
 				}
 			}
-			host.getOids = append(host.getOids, oid)
+			host.internalGetOids = append(host.internalGetOids, oid)
 		}
 
 		for _, oidName := range host.Collect {
@@ -362,7 +362,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 					} else {
 						oid.rawOid = oid.Oid
 					}
-					host.getOids = append(host.getOids, oid)
+					host.internalGetOids = append(host.internalGetOids, oid)
 				}
 			}
 			// Get GETBULK oids
@@ -463,7 +463,7 @@ func (h *Host) SNMPMap(
 					}
 					// TODO check oid validity
 
-					// Add the new oid to getOids list
+					// Add the new oid to bulkOids list
 					h.bulkOids = append(h.bulkOids, oid)
 				}
 			}
@@ -569,8 +569,8 @@ func (h *Host) SNMPMap(
 									}
 									// TODO check oid validity
 
-									// Add the new oid to getOids list
-									h.getOids = append(h.getOids, oid)
+									// Add the new oid to internalGetOids list
+									h.internalGetOids = append(h.internalGetOids, oid)
 								}
 							}
 						default:
@@ -606,7 +606,7 @@ func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
 	defer snmpClient.Conn.Close()
 	// Prepare OIDs
 	oidsList := make(map[string]Data)
-	for _, oid := range h.getOids {
+	for _, oid := range h.internalGetOids {
 		oidsList[oid.rawOid] = oid
 	}
 	oidsNameList := make([]string, 0, len(oidsList))
@@ -701,7 +701,7 @@ func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
 	// Prepare host and port
 	host, portStr, err := net.SplitHostPort(h.Address)
 	if err != nil {
-		portStr = string("161")
+		portStr = "161"
 	}
 	// convert port_str to port in uint16
 	port64, err := strconv.ParseUint(portStr, 10, 16)
@@ -763,7 +763,7 @@ func (h *Host) HandleResponse(
 					var oidName string
 					var instance string
 					// Get oidname and instance from translate file
-					oidName, instance = findnodename(initNode,
+					oidName, instance = findNodeName(initNode,
 						strings.Split(variable.Name[1:], "."))
 					// Set instance tag
 					// From mapping table

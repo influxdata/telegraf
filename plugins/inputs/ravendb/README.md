@@ -4,14 +4,17 @@ Reads metrics from RavenDB servers via monitoring endpoints APIs.
 
 Requires RavenDB Server 5.2+.
 
-### Configuration
+## Configuration
 
 The following is an example config for RavenDB. **Note:** The client certificate used should have `Operator` permissions on the cluster.
 
 ```toml
 [[inputs.ravendb]]
-  ## Node URL and port that RavenDB is listening on
-  url = "https://localhost:8080"
+  ## Node URL and port that RavenDB is listening on. By default,
+  ## attempts to connect securely over HTTPS, however, if the user
+  ## is running a local unsecure development cluster users can use
+  ## HTTP via a URL like "http://localhost:8080"
+  url = "https://localhost:4433"
 
   ## RavenDB X509 client certificate setup
   tls_cert = "/etc/telegraf/raven.crt"
@@ -43,7 +46,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
   # collection_stats_dbs = []
 ```
 
-### Metrics
+## Metrics
 
 - ravendb_server
   - tags:
@@ -57,7 +60,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - certificate_server_certificate_expiration_left_in_sec (optional)
     - certificate_well_known_admin_certificates (optional, separated by ';')
     - cluster_current_term
-    - cluster_index      
+    - cluster_index
     - cluster_node_state
       - 0 -> Passive
       - 1 -> Candidate
@@ -147,7 +150,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - uptime_in_sec
 
 - ravendb_indexes
-  - tags: 
+  - tags:
     - database_name
     - index_name
     - node_tag
@@ -201,16 +204,16 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - tombstones_size_in_bytes
     - total_size_in_bytes
 
-### Example output
+## Example output
 
-```
+```text
 > ravendb_server,cluster_id=07aecc42-9194-4181-999c-1c42450692c9,host=DESKTOP-2OISR6D,node_tag=A,url=http://localhost:8080 backup_current_number_of_running_backups=0i,backup_max_number_of_concurrent_backups=4i,certificate_server_certificate_expiration_left_in_sec=-1,cluster_current_term=2i,cluster_index=10i,cluster_node_state=4i,config_server_urls="http://127.0.0.1:8080",cpu_assigned_processor_count=8i,cpu_machine_usage=19.09944089456869,cpu_process_usage=0.16977205323024872,cpu_processor_count=8i,cpu_thread_pool_available_completion_port_threads=1000i,cpu_thread_pool_available_worker_threads=32763i,databases_loaded_count=1i,databases_total_count=1i,disk_remaining_storage_space_percentage=18i,disk_system_store_total_data_file_size_in_mb=35184372088832i,disk_system_store_used_data_file_size_in_mb=31379031064576i,disk_total_free_space_in_mb=42931i,license_expiration_left_in_sec=24079222.8772186,license_max_cores=256i,license_type="Enterprise",license_utilized_cpu_cores=8i,memory_allocated_in_mb=205i,memory_installed_in_mb=16384i,memory_low_memory_severity=0i,memory_physical_in_mb=16250i,memory_total_dirty_in_mb=0i,memory_total_swap_size_in_mb=0i,memory_total_swap_usage_in_mb=0i,memory_working_set_swap_usage_in_mb=0i,network_concurrent_requests_count=1i,network_last_request_time_in_sec=0.0058717,network_requests_per_sec=0.09916543455308825,network_tcp_active_connections=128i,network_total_requests=10i,server_full_version="5.2.0-custom-52",server_process_id=31044i,server_version="5.2",uptime_in_sec=56i 1613027977000000000
 > ravendb_databases,database_id=ced0edba-8f80-48b8-8e81-c3d2c6748ec3,database_name=db1,host=DESKTOP-2OISR6D,node_tag=A,url=http://localhost:8080 counts_alerts=0i,counts_attachments=17i,counts_documents=1059i,counts_performance_hints=0i,counts_rehabs=0i,counts_replication_factor=1i,counts_revisions=5475i,counts_unique_attachments=17i,indexes_auto_count=0i,indexes_count=7i,indexes_disabled_count=0i,indexes_errored_count=0i,indexes_errors_count=0i,indexes_idle_count=0i,indexes_stale_count=0i,indexes_static_count=7i,statistics_doc_puts_per_sec=0,statistics_map_index_indexes_per_sec=0,statistics_map_reduce_index_mapped_per_sec=0,statistics_map_reduce_index_reduced_per_sec=0,statistics_request_average_duration_in_ms=0,statistics_requests_count=0i,statistics_requests_per_sec=0,storage_documents_allocated_data_file_in_mb=140737488355328i,storage_documents_used_data_file_in_mb=74741020884992i,storage_indexes_allocated_data_file_in_mb=175921860444160i,storage_indexes_used_data_file_in_mb=120722940755968i,storage_total_allocated_storage_file_in_mb=325455441821696i,storage_total_free_space_in_mb=42931i,uptime_in_sec=54 1613027977000000000
 > ravendb_indexes,database_name=db1,host=DESKTOP-2OISR6D,index_name=Orders/Totals,node_tag=A,url=http://localhost:8080 errors=0i,is_invalid=false,lock_mode="Unlock",mapped_per_sec=0,priority="Normal",reduced_per_sec=0,state="Normal",status="Running",time_since_last_indexing_in_sec=45.4256655,time_since_last_query_in_sec=45.4304202,type="Map" 1613027977000000000
 > ravendb_collections,collection_name=@hilo,database_name=db1,host=DESKTOP-2OISR6D,node_tag=A,url=http://localhost:8080 documents_count=8i,documents_size_in_bytes=122880i,revisions_size_in_bytes=0i,tombstones_size_in_bytes=122880i,total_size_in_bytes=245760i 1613027977000000000
 ```
 
-### Contributors
+## Contributors
 
-- Marcin Lewandowski (https://github.com/ml054/)
-- Casey Barton (https://github.com/bartoncasey)
+- Marcin Lewandowski (<https://github.com/ml054/>)
+- Casey Barton (<https://github.com/bartoncasey>)

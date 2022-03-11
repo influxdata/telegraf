@@ -4,7 +4,7 @@ Wavefront Data Format is metrics are parsed directly into Telegraf metrics.
 For more information about the Wavefront Data Format see
 [here](https://docs.wavefront.com/wavefront_data_format.html).
 
-### Configuration
+## Configuration
 
 There are no additional configuration options for Wavefront Data Format line-protocol.
 

@@ -7,7 +7,7 @@ Instrumental accepts stats in a format very close to Graphite, with the only dif
 the type of stat (gauge, increment) is the first token, separated from the metric itself
 by whitespace. The `increment` type is only used if the metric comes in as a counter through `[[input.statsd]]`.
 
-## Configuration:
+## Configuration
 
 ```toml
 [[outputs.instrumental]]

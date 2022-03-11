@@ -710,6 +710,64 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 
 	logstash7accPipelinesStats.AssertContainsTaggedFields(
 		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"duration_in_millis": float64(2802177.0),
+			"in":                 float64(2665549.0),
+			"out":                float64(2665549.0),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"plugin_name":  string("elasticsearch"),
+			"plugin_id":    string("38967f09bbd2647a95aa00702b6b557bdbbab31da6a04f991d38abe5629779e3"),
+			"plugin_type":  string("output"),
+		},
+	)
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"bulk_requests_successes":     float64(2870),
+			"bulk_requests_responses_200": float64(2870),
+			"bulk_requests_failures":      float64(262),
+			"bulk_requests_with_errors":   float64(9089),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"plugin_name":  string("elasticsearch"),
+			"plugin_id":    string("38967f09bbd2647a95aa00702b6b557bdbbab31da6a04f991d38abe5629779e3"),
+			"plugin_type":  string("output"),
+		},
+	)
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
+		"logstash_plugins",
+		map[string]interface{}{
+			"documents_successes":          float64(2665549),
+			"documents_retryable_failures": float64(13733),
+		},
+		map[string]string{
+			"node_id":      string("28580380-ad2c-4032-934b-76359125edca"),
+			"node_name":    string("HOST01.local"),
+			"source":       string("HOST01.local"),
+			"node_version": string("7.4.2"),
+			"pipeline":     string("infra"),
+			"plugin_name":  string("elasticsearch"),
+			"plugin_id":    string("38967f09bbd2647a95aa00702b6b557bdbbab31da6a04f991d38abe5629779e3"),
+			"plugin_type":  string("output"),
+		},
+	)
+
+	logstash7accPipelinesStats.AssertContainsTaggedFields(
+		test,
 		"logstash_queue",
 		map[string]interface{}{
 			"events":                  float64(0),

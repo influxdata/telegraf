@@ -1,9 +1,9 @@
-# Example
+# Example README
 
 This description explains at a high level what the serializer does and
 provides links to where additional information about the format can be found.
 
-### Configuration
+## Configuration
 
 This section contains the sample configuration for the serializer.  Since the
 configuration for a serializer is not have a standalone plugin, use the `file`
@@ -24,22 +24,23 @@ or `http` outputs as the base config.
   data_format = "example"
 ```
 
-#### example_option
+### example_option
 
 If an option requires a more expansive explanation than can be included inline
 in the sample configuration, it may be described here.
 
-### Metrics
+## Metrics
 
 The optional Metrics section contains details about how the serializer converts
 Telegraf metrics into output.
 
-### Example
+## Example
 
 The optional Example section can show an example conversion to the output
 format using InfluxDB Line Protocol as the reference format.
 
 For line delimited text formats a diff may be appropriate:
+
 ```diff
 - cpu,host=localhost,source=example.org value=42
 + cpu|host=localhost|source=example.org|value=42

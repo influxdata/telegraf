@@ -3,11 +3,10 @@ package file
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -21,7 +20,7 @@ const (
 )
 
 func TestFileExistingFile(t *testing.T) {
-	fh := createFile()
+	fh := createFile(t)
 	defer os.Remove(fh.Name())
 	s, _ := serializers.NewInfluxSerializer()
 	f := File{
@@ -30,20 +29,20 @@ func TestFileExistingFile(t *testing.T) {
 	}
 
 	err := f.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	validateFile(fh.Name(), expExistFile, t)
+	validateFile(t, fh.Name(), expExistFile)
 
 	err = f.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestFileNewFile(t *testing.T) {
 	s, _ := serializers.NewInfluxSerializer()
-	fh := tmpFile()
+	fh := tmpFile(t)
 	defer os.Remove(fh)
 	f := File{
 		Files:      []string{fh},
@@ -51,23 +50,23 @@ func TestFileNewFile(t *testing.T) {
 	}
 
 	err := f.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	validateFile(fh, expNewFile, t)
+	validateFile(t, fh, expNewFile)
 
 	err = f.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestFileExistingFiles(t *testing.T) {
-	fh1 := createFile()
+	fh1 := createFile(t)
 	defer os.Remove(fh1.Name())
-	fh2 := createFile()
+	fh2 := createFile(t)
 	defer os.Remove(fh2.Name())
-	fh3 := createFile()
+	fh3 := createFile(t)
 	defer os.Remove(fh3.Name())
 
 	s, _ := serializers.NewInfluxSerializer()
@@ -77,26 +76,26 @@ func TestFileExistingFiles(t *testing.T) {
 	}
 
 	err := f.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	validateFile(fh1.Name(), expExistFile, t)
-	validateFile(fh2.Name(), expExistFile, t)
-	validateFile(fh3.Name(), expExistFile, t)
+	validateFile(t, fh1.Name(), expExistFile)
+	validateFile(t, fh2.Name(), expExistFile)
+	validateFile(t, fh3.Name(), expExistFile)
 
 	err = f.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestFileNewFiles(t *testing.T) {
 	s, _ := serializers.NewInfluxSerializer()
-	fh1 := tmpFile()
+	fh1 := tmpFile(t)
 	defer os.Remove(fh1)
-	fh2 := tmpFile()
+	fh2 := tmpFile(t)
 	defer os.Remove(fh2)
-	fh3 := tmpFile()
+	fh3 := tmpFile(t)
 	defer os.Remove(fh3)
 	f := File{
 		Files:      []string{fh1, fh2, fh3},
@@ -104,23 +103,23 @@ func TestFileNewFiles(t *testing.T) {
 	}
 
 	err := f.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	validateFile(fh1, expNewFile, t)
-	validateFile(fh2, expNewFile, t)
-	validateFile(fh3, expNewFile, t)
+	validateFile(t, fh1, expNewFile)
+	validateFile(t, fh2, expNewFile)
+	validateFile(t, fh3, expNewFile)
 
 	err = f.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestFileBoth(t *testing.T) {
-	fh1 := createFile()
+	fh1 := createFile(t)
 	defer os.Remove(fh1.Name())
-	fh2 := tmpFile()
+	fh2 := tmpFile(t)
 	defer os.Remove(fh2)
 
 	s, _ := serializers.NewInfluxSerializer()
@@ -130,16 +129,16 @@ func TestFileBoth(t *testing.T) {
 	}
 
 	err := f.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	validateFile(fh1.Name(), expExistFile, t)
-	validateFile(fh2, expNewFile, t)
+	validateFile(t, fh1.Name(), expExistFile)
+	validateFile(t, fh2, expNewFile)
 
 	err = f.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestFileStdout(t *testing.T) {
@@ -155,52 +154,52 @@ func TestFileStdout(t *testing.T) {
 	}
 
 	err := f.Connect()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = f.Write(testutil.MockMetrics())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = f.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	outC := make(chan string)
 	// copy the output in a separate goroutine so printing can't block indefinitely
 	go func() {
 		var buf bytes.Buffer
-		io.Copy(&buf, r)
+		_, err := io.Copy(&buf, r)
+		require.NoError(t, err)
 		outC <- buf.String()
 	}()
 
 	// back to normal state
-	w.Close()
+	err = w.Close()
+	require.NoError(t, err)
+
 	// restoring the real stdout
 	os.Stdout = old
 	out := <-outC
 
-	assert.Equal(t, expNewFile, out)
+	require.Equal(t, expNewFile, out)
 }
 
-func createFile() *os.File {
-	f, err := ioutil.TempFile("", "")
-	if err != nil {
-		panic(err)
-	}
-	f.WriteString("cpu,cpu=cpu0 value=100 1455312810012459582\n")
+func createFile(t *testing.T) *os.File {
+	f, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+
+	_, err = f.WriteString("cpu,cpu=cpu0 value=100 1455312810012459582\n")
+	require.NoError(t, err)
 	return f
 }
 
-func tmpFile() string {
-	d, err := ioutil.TempDir("", "")
-	if err != nil {
-		panic(err)
-	}
+func tmpFile(t *testing.T) string {
+	d, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+
 	return d + internal.RandomString(10)
 }
 
-func validateFile(fname, expS string, t *testing.T) {
-	buf, err := ioutil.ReadFile(fname)
-	if err != nil {
-		panic(err)
-	}
-	assert.Equal(t, expS, string(buf))
+func validateFile(t *testing.T, fileName, expS string) {
+	buf, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+	require.Equal(t, expS, string(buf))
 }

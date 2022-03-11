@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/benbjohnson/clock"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/cookie"
@@ -54,7 +55,7 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 	client = h.OAuth2Config.CreateOauth2Client(ctx, client)
 
 	if h.CookieAuthConfig.URL != "" {
-		if err := h.CookieAuthConfig.Start(client, log); err != nil {
+		if err := h.CookieAuthConfig.Start(client, log, clock.New()); err != nil {
 			return nil, err
 		}
 	}

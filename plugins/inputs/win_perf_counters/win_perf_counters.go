@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package win_perf_counters
@@ -27,8 +28,19 @@ var sampleConfig = `
   # and in case of localized Windows, counter paths will be also localized. It also returns instance indexes in instance names.
   # If false, wildcards (not partial) in instance names will still be expanded, but instance indexes will not be returned in instance names.
   #UseWildcardsExpansion = false
+  # When running on a localized version of Windows and with UseWildcardsExpansion = true, Windows will
+  # localize object and counter names. When LocalizeWildcardsExpansion = false, use the names in object.Counters instead
+  # of the localized names. Only Instances can have wildcards in this case. ObjectName and Counters must not have wildcards when this
+  # setting is false.
+  #LocalizeWildcardsExpansion = true
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
+  ## Accepts a list of PDH error codes which are defined in pdh.go, if this error is encountered it will be ignored
+  ## For example, you can provide "PDH_NO_DATA" to ignore performance counters with no instances
+  ## By default no errors are ignored
+  ## You can find the list here: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_perf_counters/pdh.go
+  ## e.g.: IgnoredErrors = ["PDH_NO_DATA"]
+  # IgnoredErrors = []
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
@@ -47,6 +59,8 @@ var sampleConfig = `
     # IncludeTotal=false
     # Print out when the performance counter is missing from object, counter or instance.
     # WarnOnMissing = false
+    # Gather raw values instead of formatted. Raw value is stored in the field name with the "_Raw" suffix, e.g. "Disk_Read_Bytes_sec_Raw".
+    # UseRawValues = true
 
   [[inputs.win_perf_counters.object]]
     # Disk times and queues
@@ -138,13 +152,14 @@ var sampleConfig = `
 `
 
 type Win_PerfCounters struct {
-	PrintValid bool
-	//deprecated: determined dynamically
-	PreVistaSupport         bool
-	UsePerfCounterTime      bool
-	Object                  []perfobject
-	CountersRefreshInterval config.Duration
-	UseWildcardsExpansion   bool
+	PrintValid                 bool `toml:"PrintValid"`
+	PreVistaSupport            bool `toml:"PreVistaSupport" deprecated:"1.7.0;determined dynamically"`
+	UsePerfCounterTime         bool
+	Object                     []perfobject
+	CountersRefreshInterval    config.Duration
+	UseWildcardsExpansion      bool
+	LocalizeWildcardsExpansion bool
+	IgnoredErrors              []string `toml:"IgnoredErrors"`
 
 	Log telegraf.Logger
 
@@ -161,6 +176,7 @@ type perfobject struct {
 	WarnOnMissing bool
 	FailOnMissing bool
 	IncludeTotal  bool
+	UseRawValues  bool
 }
 
 type counter struct {
@@ -170,6 +186,7 @@ type counter struct {
 	instance      string
 	measurement   string
 	includeTotal  bool
+	useRawValue   bool
 	counterHandle PDH_HCOUNTER
 }
 
@@ -244,8 +261,21 @@ func (m *Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-//objectName string, counter string, instance string, measurement string, include_total bool
-func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
+func newCounter(counterHandle PDH_HCOUNTER, counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) *counter {
+	measurementName := sanitizedChars.Replace(measurement)
+	if measurementName == "" {
+		measurementName = "win_perf_counters"
+	}
+	newCounterName := sanitizedChars.Replace(counterName)
+	if useRawValue {
+		newCounterName += "_Raw"
+	}
+	return &counter{counterPath, objectName, newCounterName, instance, measurementName,
+		includeTotal, useRawValue, counterHandle}
+}
+
+func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) error {
+	origCounterPath := counterPath
 	var err error
 	var counterHandle PDH_HCOUNTER
 	if !m.query.IsVistaOrNewer() {
@@ -272,21 +302,62 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			return err
 		}
 
+		origObjectName, _, origCounterName, err := extractCounterInfoFromCounterPath(origCounterPath)
+		if err != nil {
+			return err
+		}
+
 		for _, counterPath := range counters {
 			var err error
-			counterHandle, err := m.query.AddCounterToQuery(counterPath)
 
 			objectName, instance, counterName, err = extractCounterInfoFromCounterPath(counterPath)
 			if err != nil {
 				return err
 			}
 
+			var newItem *counter
+			if !m.LocalizeWildcardsExpansion {
+				// On localized installations of Windows, Telegraf
+				// should return English metrics, but
+				// ExpandWildCardPath returns localized counters. Undo
+				// that by using the original object and counter
+				// names, along with the expanded instance.
+
+				var newInstance string
+				if instance == "" {
+					newInstance = emptyInstance
+				} else {
+					newInstance = instance
+				}
+				counterPath = formatPath(origObjectName, newInstance, origCounterName)
+				counterHandle, err = m.query.AddEnglishCounterToQuery(counterPath)
+				newItem = newCounter(
+					counterHandle,
+					counterPath,
+					origObjectName, instance,
+					origCounterName,
+					measurement,
+					includeTotal,
+					useRawValue,
+				)
+			} else {
+				counterHandle, err = m.query.AddCounterToQuery(counterPath)
+				newItem = newCounter(
+					counterHandle,
+					counterPath,
+					objectName,
+					instance,
+					counterName,
+					measurement,
+					includeTotal,
+					useRawValue,
+				)
+			}
+
 			if instance == "_Total" && origInstance == "*" && !includeTotal {
 				continue
 			}
 
-			newItem := &counter{counterPath, objectName, counterName, instance, measurement,
-				includeTotal, counterHandle}
 			m.counters = append(m.counters, newItem)
 
 			if m.PrintValid {
@@ -294,8 +365,16 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			}
 		}
 	} else {
-		newItem := &counter{counterPath, objectName, counterName, instance, measurement,
-			includeTotal, counterHandle}
+		newItem := newCounter(
+			counterHandle,
+			counterPath,
+			objectName,
+			instance,
+			counterName,
+			measurement,
+			includeTotal,
+			useRawValue,
+		)
 		m.counters = append(m.counters, newItem)
 		if m.PrintValid {
 			m.Log.Infof("Valid: %s", counterPath)
@@ -305,22 +384,31 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 	return nil
 }
 
+const emptyInstance = "------"
+
+func formatPath(objectname string, instance string, counter string) string {
+	if instance == emptyInstance {
+		return "\\" + objectname + "\\" + counter
+	} else {
+		return "\\" + objectname + "(" + instance + ")\\" + counter
+	}
+}
+
 func (m *Win_PerfCounters) ParseConfig() error {
 	var counterPath string
 
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
 			for _, counter := range PerfObject.Counters {
+				if len(PerfObject.Instances) == 0 {
+					m.Log.Warnf("Missing 'Instances' param for object '%s'\n", PerfObject.ObjectName)
+				}
 				for _, instance := range PerfObject.Instances {
 					objectname := PerfObject.ObjectName
 
-					if instance == "------" {
-						counterPath = "\\" + objectname + "\\" + counter
-					} else {
-						counterPath = "\\" + objectname + "(" + instance + ")\\" + counter
-					}
+					counterPath = formatPath(objectname, instance, counter)
 
-					err := m.AddItem(counterPath, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal)
+					err := m.AddItem(counterPath, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal, PerfObject.UseRawValues)
 
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
@@ -341,6 +429,19 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 }
 
+func (m *Win_PerfCounters) checkError(err error) error {
+	if pdhErr, ok := err.(*PdhError); ok {
+		for _, ignoredErrors := range m.IgnoredErrors {
+			if PDHErrors[pdhErr.ErrorCode] == ignoredErrors {
+				return nil
+			}
+		}
+
+		return err
+	}
+	return err
+}
+
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
@@ -359,7 +460,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 		//some counters need two data samples before computing a value
 		if err = m.query.CollectData(); err != nil {
-			return err
+			return m.checkError(err)
 		}
 		m.lastRefreshed = time.Now()
 
@@ -380,12 +481,16 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-
+	var value interface{}
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.counters {
 		// collect
 		if m.UseWildcardsExpansion {
-			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
+			if metric.useRawValue {
+				value, err = m.query.GetRawCounterValue(metric.counterHandle)
+			} else {
+				value, err = m.query.GetFormattedCounterValueDouble(metric.counterHandle)
+			}
 			if err != nil {
 				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
@@ -396,7 +501,12 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			}
 			addCounterMeasurement(metric, metric.instance, value, collectFields)
 		} else {
-			counterValues, err := m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
+			var counterValues []CounterValue
+			if metric.useRawValue {
+				counterValues, err = m.query.GetRawCounterArray(metric.counterHandle)
+			} else {
+				counterValues, err = m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
+			}
 			if err != nil {
 				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
@@ -446,22 +556,18 @@ func shouldIncludeMetric(metric *counter, cValue CounterValue) bool {
 		// Catch if we set it to total or some form of it
 		return true
 	}
-	if metric.instance == "------" {
+	if metric.instance == emptyInstance {
 		return true
 	}
 	return false
 }
 
-func addCounterMeasurement(metric *counter, instanceName string, value float64, collectFields map[instanceGrouping]map[string]interface{}) {
-	measurement := sanitizedChars.Replace(metric.measurement)
-	if measurement == "" {
-		measurement = "win_perf_counters"
-	}
-	var instance = instanceGrouping{measurement, instanceName, metric.objectName}
+func addCounterMeasurement(metric *counter, instanceName string, value interface{}, collectFields map[instanceGrouping]map[string]interface{}) {
+	var instance = instanceGrouping{metric.measurement, instanceName, metric.objectName}
 	if collectFields[instance] == nil {
 		collectFields[instance] = make(map[string]interface{})
 	}
-	collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
+	collectFields[instance][sanitizedChars.Replace(metric.counter)] = value
 }
 
 func isKnownCounterDataError(err error) bool {
@@ -475,8 +581,43 @@ func isKnownCounterDataError(err error) bool {
 	return false
 }
 
+func (m *Win_PerfCounters) Init() error {
+	if m.UseWildcardsExpansion && !m.LocalizeWildcardsExpansion {
+		// Counters must not have wildcards with this option
+
+		found := false
+		wildcards := []string{"*", "?"}
+
+		for _, object := range m.Object {
+			for _, wildcard := range wildcards {
+				if strings.Contains(object.ObjectName, wildcard) {
+					found = true
+					m.Log.Errorf("object: %s, contains wildcard %s", object.ObjectName, wildcard)
+				}
+			}
+			for _, counter := range object.Counters {
+				for _, wildcard := range wildcards {
+					if strings.Contains(counter, wildcard) {
+						found = true
+						m.Log.Errorf("object: %s, counter: %s contains wildcard %s", object.ObjectName, counter, wildcard)
+					}
+				}
+			}
+		}
+
+		if found {
+			return fmt.Errorf("wildcards can't be used with LocalizeWildcardsExpansion=false")
+		}
+	}
+	return nil
+}
+
 func init() {
 	inputs.Add("win_perf_counters", func() telegraf.Input {
-		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: config.Duration(time.Second * 60)}
+		return &Win_PerfCounters{
+			query:                      &PerformanceQueryImpl{},
+			CountersRefreshInterval:    config.Duration(time.Second * 60),
+			LocalizeWildcardsExpansion: true,
+		}
 	})
 }

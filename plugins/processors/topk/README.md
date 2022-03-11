@@ -4,17 +4,18 @@ The TopK processor plugin is a filter designed to get the top series over a peri
 
 This processor goes through these steps when processing a batch of metrics:
 
-  1. Groups measurements in buckets based on their tags and name
-  2. Every N seconds, for each bucket, for each selected field: aggregate all the measurements using a given aggregation function (min, sum, mean, etc) and the field.
-  3. For each computed aggregation: order the buckets by the aggregation, then returns all measurements in the top `K` buckets
+1. Groups measurements in buckets based on their tags and name
+2. Every N seconds, for each bucket, for each selected field: aggregate all the measurements using a given aggregation function (min, sum, mean, etc) and the field.
+3. For each computed aggregation: order the buckets by the aggregation, then returns all measurements in the top `K` buckets
 
 Notes:
-  * The deduplicates metrics
-  * The name of the measurement is always used when grouping it
-  * Depending on the amount of metrics on each  bucket, more than `K` series may be returned
-  * If a measurement does not have one of the selected fields, it is dropped from the aggregation
 
-### Configuration:
+* The deduplicates metrics
+* The name of the measurement is always used when grouping it
+* Depending on the amount of metrics on each  bucket, more than `K` series may be returned
+* If a measurement does not have one of the selected fields, it is dropped from the aggregation
+
+## Configuration
 
 ```toml
 [[processors.topk]]
@@ -60,18 +61,18 @@ Notes:
   # add_aggregate_fields = []
 ```
 
-### Tags:
+### Tags
 
 This processor does not add tags by default. But the setting `add_groupby_tag` will add a tag if set to anything other than ""
 
-
-### Fields:
+### Fields
 
 This processor does not add fields by default. But the settings `add_rank_fields` and `add_aggregation_fields` will add one or several fields if set to anything other than ""
 
-
 ### Example
-**Config**
+
+Below is an example configuration:
+
 ```toml
 [[processors.topk]]
   period = 20
@@ -80,7 +81,8 @@ This processor does not add fields by default. But the settings `add_rank_fields
   fields = ["cpu_usage"]
 ```
 
-**Output difference with topk**
+Output difference with topk:
+
 ```diff
 < procstat,pid=2088,process_name=Xorg cpu_usage=7.296576662282613 1546473820000000000
 < procstat,pid=2780,process_name=ibus-engine-simple cpu_usage=0 1546473820000000000

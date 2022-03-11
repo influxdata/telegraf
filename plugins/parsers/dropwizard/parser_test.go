@@ -1,16 +1,15 @@
 package dropwizard
 
 import (
+	"fmt"
+	"github.com/influxdata/telegraf/testutil"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-
-	"fmt"
-	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var testTimeFunc = func() time.Time {
@@ -34,8 +33,8 @@ func TestParseValidEmptyJSON(t *testing.T) {
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validEmptyJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 0)
+	require.NoError(t, err)
+	require.Len(t, metrics, 0)
 }
 
 // validCounterJSON is a valid dropwizard json document containing one counter
@@ -58,13 +57,13 @@ func TestParseValidCounterJSON(t *testing.T) {
 	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validCounterJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "measurement", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "measurement", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"count": float64(1),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"metric_type": "counter"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"metric_type": "counter"}, metrics[0].Tags())
 }
 
 // validEmbeddedCounterJSON is a valid json document containing separate fields for dropwizard metrics, tags and time override.
@@ -99,19 +98,19 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	parser.TimePath = "time"
 
 	metrics, err := parser.Parse([]byte(validEmbeddedCounterJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "measurement", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "measurement", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"count": float64(1),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"metric_type":             "counter",
 		"tag1":                    "green",
 		"tag2":                    "yellow",
 		"tag3 space,comma=equals": "red ,=",
 	}, metrics[0].Tags())
-	assert.True(t, metricTime.Equal(metrics[0].Time()), fmt.Sprintf("%s should be equal to %s", metrics[0].Time(), metricTime))
+	require.True(t, metricTime.Equal(metrics[0].Time()), fmt.Sprintf("%s should be equal to %s", metrics[0].Time(), metricTime))
 
 	// now test json tags through TagPathsMap
 	parser2 := NewParser()
@@ -119,8 +118,8 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	parser2.TagPathsMap = map[string]string{"tag1": "tags.tag1"}
 	parser2.TimePath = "time"
 	metrics2, err2 := parser2.Parse([]byte(validEmbeddedCounterJSON))
-	assert.NoError(t, err2)
-	assert.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green"}, metrics2[0].Tags())
+	require.NoError(t, err2)
+	require.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green"}, metrics2[0].Tags())
 }
 
 // validMeterJSON1 is a valid dropwizard json document containing one meter
@@ -148,10 +147,10 @@ func TestParseValidMeterJSON1(t *testing.T) {
 	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validMeterJSON1))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "measurement1", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "measurement1", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"count":     float64(1),
 		"m15_rate":  float64(1),
 		"m1_rate":   float64(1),
@@ -160,7 +159,7 @@ func TestParseValidMeterJSON1(t *testing.T) {
 		"units":     "events/second",
 	}, metrics[0].Fields())
 
-	assert.Equal(t, map[string]string{"metric_type": "meter"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"metric_type": "meter"}, metrics[0].Tags())
 }
 
 // validMeterJSON2 is a valid dropwizard json document containing one meter with one tag
@@ -188,10 +187,10 @@ func TestParseValidMeterJSON2(t *testing.T) {
 	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validMeterJSON2))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "measurement2", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "measurement2", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"count":     float64(2),
 		"m15_rate":  float64(2),
 		"m1_rate":   float64(2),
@@ -199,7 +198,7 @@ func TestParseValidMeterJSON2(t *testing.T) {
 		"mean_rate": float64(2),
 		"units":     "events/second",
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"metric_type": "meter", "key": "value"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"metric_type": "meter", "key": "value"}, metrics[0].Tags())
 }
 
 // validGaugeJSON is a valid dropwizard json document containing one gauge
@@ -222,13 +221,13 @@ func TestParseValidGaugeJSON(t *testing.T) {
 	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validGaugeJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "measurement", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "measurement", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"value": true,
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"metric_type": "gauge"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"metric_type": "gauge"}, metrics[0].Tags())
 }
 
 // validHistogramJSON is a valid dropwizard json document containing one histogram
@@ -261,10 +260,10 @@ func TestParseValidHistogramJSON(t *testing.T) {
 	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validHistogramJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "measurement", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "measurement", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"count":  float64(1),
 		"max":    float64(2),
 		"mean":   float64(3),
@@ -277,7 +276,7 @@ func TestParseValidHistogramJSON(t *testing.T) {
 		"p999":   float64(10),
 		"stddev": float64(11),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"metric_type": "histogram"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"metric_type": "histogram"}, metrics[0].Tags())
 }
 
 // validTimerJSON is a valid dropwizard json document containing one timer
@@ -316,10 +315,10 @@ func TestParseValidTimerJSON(t *testing.T) {
 	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validTimerJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "measurement", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "measurement", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"count":          float64(1),
 		"max":            float64(2),
 		"mean":           float64(3),
@@ -338,7 +337,7 @@ func TestParseValidTimerJSON(t *testing.T) {
 		"duration_units": "seconds",
 		"rate_units":     "calls/second",
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"metric_type": "timer"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"metric_type": "timer"}, metrics[0].Tags())
 }
 
 // validAllJSON is a valid dropwizard json document containing one metric of each type
@@ -367,8 +366,8 @@ func TestParseValidAllJSON(t *testing.T) {
 	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validAllJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 5)
+	require.NoError(t, err)
+	require.Len(t, metrics, 5)
 }
 
 func TestTagParsingProblems(t *testing.T) {
@@ -376,20 +375,22 @@ func TestTagParsingProblems(t *testing.T) {
 	parser1 := NewParser()
 	parser1.MetricRegistryPath = "metrics"
 	parser1.TagsPath = "tags1"
+	parser1.Log = testutil.Logger{}
 	metrics1, err1 := parser1.Parse([]byte(validEmbeddedCounterJSON))
-	assert.NoError(t, err1)
-	assert.Len(t, metrics1, 1)
-	assert.Equal(t, map[string]string{"metric_type": "counter"}, metrics1[0].Tags())
+	require.NoError(t, err1)
+	require.Len(t, metrics1, 1)
+	require.Equal(t, map[string]string{"metric_type": "counter"}, metrics1[0].Tags())
 
 	// giving a wrong TagsPath falls back to TagPathsMap
 	parser2 := NewParser()
 	parser2.MetricRegistryPath = "metrics"
 	parser2.TagsPath = "tags1"
 	parser2.TagPathsMap = map[string]string{"tag1": "tags.tag1"}
+	parser2.Log = testutil.Logger{}
 	metrics2, err2 := parser2.Parse([]byte(validEmbeddedCounterJSON))
-	assert.NoError(t, err2)
-	assert.Len(t, metrics2, 1)
-	assert.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green"}, metrics2[0].Tags())
+	require.NoError(t, err2)
+	require.Len(t, metrics2, 1)
+	require.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green"}, metrics2[0].Tags())
 }
 
 // sampleTemplateJSON is a sample json document containing metrics to be tested against the templating engine.

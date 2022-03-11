@@ -46,7 +46,7 @@ func Compile(path string) (*GlobPath, error) {
 // All returned path will have the host platform separator.
 func (g *GlobPath) Match() []string {
 	// This string replacement is for backwards compatibility support
-	// The original implemention allowed **.txt but the double star package requires **/**.txt
+	// The original implementation allowed **.txt but the double star package requires **/**.txt
 	g.path = strings.ReplaceAll(g.path, "**/**", "**")
 	g.path = strings.ReplaceAll(g.path, "**", "**/**")
 
