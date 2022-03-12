@@ -82,7 +82,7 @@ func (p *pki) ReadClientEncKey() string {
 }
 
 func (p *pki) ClientEncKeyPath() string {
-	return path.Join(p.path, "clientenckey.pem")
+	return path.Join(p.keyPath, "clientenckey.pem")
 }
 
 func (p *pki) ReadClientCertAndEncKey() string {
