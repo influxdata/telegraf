@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -31,6 +32,8 @@ type Kafka struct {
 	TopicSuffix     TopicSuffix `toml:"topic_suffix"`
 	RoutingTag      string      `toml:"routing_tag"`
 	RoutingKey      string      `toml:"routing_key"`
+
+	proxy.Socks5ProxyConfig
 
 	// Legacy TLS config options
 	// TLS client certificate
@@ -189,6 +192,12 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SOCKS5 proxy to use when connecting to brokers
+  # socks5_enabled = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
+
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
@@ -290,6 +299,16 @@ func (k *Kafka) Init() error {
 		k.TLSCert = k.Certificate
 		k.TLSCA = k.CA
 		k.TLSKey = k.Key
+	}
+
+	if k.Socks5ProxyEnabled {
+		config.Net.Proxy.Enable = true
+
+		dialer, err := k.Socks5ProxyConfig.GetDialer()
+		if err != nil {
+			return fmt.Errorf("connecting to proxy server failed: %s", err)
+		}
+		config.Net.Proxy.Dialer = dialer
 	}
 
 	return nil

@@ -28,14 +28,14 @@ import (
 // Docker object
 type Docker struct {
 	Endpoint       string
-	ContainerNames []string // deprecated in 1.4; use container_name_include
+	ContainerNames []string `toml:"container_names" deprecated:"1.4.0;use 'container_name_include' instead"`
 
 	GatherServices bool `toml:"gather_services"`
 
 	Timeout          config.Duration
-	PerDevice        bool     `toml:"perdevice"`
+	PerDevice        bool     `toml:"perdevice" deprecated:"1.18.0;use 'perdevice_include' instead"`
 	PerDeviceInclude []string `toml:"perdevice_include"`
-	Total            bool     `toml:"total"`
+	Total            bool     `toml:"total" deprecated:"1.18.0;use 'total_include' instead"`
 	TotalInclude     []string `toml:"total_include"`
 	TagEnvironment   []string `toml:"tag_env"`
 	LabelInclude     []string `toml:"docker_label_include"`
@@ -74,14 +74,6 @@ const (
 	PB = 1000 * TB
 
 	defaultEndpoint = "unix:///var/run/docker.sock"
-
-	perDeviceIncludeDeprecationWarning = "'perdevice' setting is set to 'true' so 'blkio' and 'network' metrics will " +
-		"be collected. Please set it to 'false' and use 'perdevice_include' instead to control this behaviour as " +
-		"'perdevice' will be deprecated"
-
-	totalIncludeDeprecationWarning = "'total' setting is set to 'false' so 'blkio' and 'network' metrics will not be " +
-		"collected. Please set it to 'true' and use 'total_include' instead to control this behaviour as 'total' " +
-		"will be deprecated"
 )
 
 var (
@@ -99,9 +91,6 @@ var sampleConfig = `
 
   ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
   gather_services = false
-
-  ## Only collect metrics for these containers, collect all if empty
-  container_names = []
 
   ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
   source_tag = false
@@ -121,23 +110,10 @@ var sampleConfig = `
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
 
-  ## Whether to report for each container per-device blkio (8:0, 8:1...),
-  ## network (eth0, eth1, ...) and cpu (cpu0, cpu1, ...) stats or not.
-  ## Usage of this setting is discouraged since it will be deprecated in favor of 'perdevice_include'.
-  ## Default value is 'true' for backwards compatibility, please set it to 'false' so that 'perdevice_include' setting
-  ## is honored.
-  perdevice = true
-
   ## Specifies for which classes a per-device metric should be issued
   ## Possible values are 'cpu' (cpu0, cpu1, ...), 'blkio' (8:0, 8:1, ...) and 'network' (eth0, eth1, ...)
   ## Please note that this setting has no effect if 'perdevice' is set to 'true'
   # perdevice_include = ["cpu"]
-
-  ## Whether to report for each container total blkio and network stats or not.
-  ## Usage of this setting is discouraged since it will be deprecated in favor of 'total_include'.
-  ## Default value is 'false' for backwards compatibility, please set it to 'true' so that 'total_include' setting
-  ## is honored.
-  total = false
 
   ## Specifies for which classes a total metric should be issued. Total is an aggregated of the 'perdevice' values.
   ## Possible values are 'cpu', 'blkio' and 'network'
@@ -182,7 +158,6 @@ func (d *Docker) Init() error {
 
 	// Temporary logic needed for backwards compatibility until 'perdevice' setting is removed.
 	if d.PerDevice {
-		d.Log.Warn(perDeviceIncludeDeprecationWarning)
 		if !choice.Contains("network", d.PerDeviceInclude) {
 			d.PerDeviceInclude = append(d.PerDeviceInclude, "network")
 		}
@@ -193,7 +168,6 @@ func (d *Docker) Init() error {
 
 	// Temporary logic needed for backwards compatibility until 'total' setting is removed.
 	if !d.Total {
-		d.Log.Warn(totalIncludeDeprecationWarning)
 		if choice.Contains("cpu", d.TotalInclude) {
 			d.TotalInclude = []string{"cpu"}
 		} else {
@@ -314,7 +288,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 		}
 
 		running := map[string]int{}
-		tasksNoShutdown := map[string]int{}
+		tasksNoShutdown := map[string]uint64{}
 
 		activeNodes := make(map[string]struct{})
 		for _, n := range nodes {

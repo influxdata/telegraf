@@ -7,11 +7,11 @@ import (
 )
 
 type pki struct {
-	path string
+	keyPath string
 }
 
-func NewPKI(path string) *pki {
-	return &pki{path: path}
+func NewPKI(keyPath string) *pki {
+	return &pki{keyPath: keyPath}
 }
 
 func (p *pki) TLSClientConfig() *tls.ClientConfig {
@@ -38,7 +38,7 @@ func (p *pki) ReadCACert() string {
 }
 
 func (p *pki) CACertPath() string {
-	return path.Join(p.path, "cacert.pem")
+	return path.Join(p.keyPath, "cacert.pem")
 }
 
 func (p *pki) CipherSuite() string {
@@ -58,7 +58,7 @@ func (p *pki) ReadClientCert() string {
 }
 
 func (p *pki) ClientCertPath() string {
-	return path.Join(p.path, "clientcert.pem")
+	return path.Join(p.keyPath, "clientcert.pem")
 }
 
 func (p *pki) ReadClientKey() string {
@@ -66,7 +66,7 @@ func (p *pki) ReadClientKey() string {
 }
 
 func (p *pki) ClientKeyPath() string {
-	return path.Join(p.path, "clientkey.pem")
+	return path.Join(p.keyPath, "clientkey.pem")
 }
 
 func (p *pki) ReadClientCertAndKey() string {
@@ -74,7 +74,7 @@ func (p *pki) ReadClientCertAndKey() string {
 }
 
 func (p *pki) ClientCertAndKeyPath() string {
-	return path.Join(p.path, "client.pem")
+	return path.Join(p.keyPath, "client.pem")
 }
 
 func (p *pki) ReadClientEncKey() string {
@@ -90,7 +90,7 @@ func (p *pki) ReadClientCertAndEncKey() string {
 }
 
 func (p *pki) ClientCertAndEncKeyPath() string {
-	return path.Join(p.path, "clientenc.pem")
+	return path.Join(p.keyPath, "clientenc.pem")
 }
 
 func (p *pki) ReadServerCert() string {
@@ -98,7 +98,7 @@ func (p *pki) ReadServerCert() string {
 }
 
 func (p *pki) ServerCertPath() string {
-	return path.Join(p.path, "servercert.pem")
+	return path.Join(p.keyPath, "servercert.pem")
 }
 
 func (p *pki) ReadServerKey() string {
@@ -106,7 +106,7 @@ func (p *pki) ReadServerKey() string {
 }
 
 func (p *pki) ServerKeyPath() string {
-	return path.Join(p.path, "serverkey.pem")
+	return path.Join(p.keyPath, "serverkey.pem")
 }
 
 func (p *pki) ReadServerCertAndKey() string {
@@ -114,7 +114,7 @@ func (p *pki) ReadServerCertAndKey() string {
 }
 
 func (p *pki) ServerCertAndKeyPath() string {
-	return path.Join(p.path, "server.pem")
+	return path.Join(p.keyPath, "server.pem")
 }
 
 func (p *pki) ReadServerEncKey() string {

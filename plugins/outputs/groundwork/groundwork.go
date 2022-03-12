@@ -280,6 +280,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 		MonitoredInfo: transit.MonitoredInfo{
 			Status:           transit.MonitorStatus(status),
 			LastCheckTime:    lastCheckTime,
+			NextCheckTime:    lastCheckTime, // if not added, GW will make this as LastCheckTime + 5 mins
 			LastPluginOutput: message,
 		},
 		Metrics: nil,

@@ -43,6 +43,7 @@ const sampleStatusResponse = `
                 "pressure": 1018.65,
                 "sea_level": 1030.99,
                 "temp": 6.71,
+                "feels_like": 5.71,
                 "temp_kf": -2.14
             },
             "rain": {
@@ -76,6 +77,7 @@ const sampleStatusResponse = `
                 "pressure": 1032.18,
                 "sea_level": 1044.78,
                 "temp": 6.38,
+                "feels_like": 5.38,
                 "temp_kf": 0
             },
             "rain": {
@@ -118,7 +120,8 @@ const groupWeatherResponse = `
         "main": {
             "humidity": 87,
             "pressure": 1007,
-            "temp": 9.25
+            "temp": 9.25,
+            "feels_like": 8.25
         },
         "name": "Paris",
         "sys": {
@@ -155,7 +158,8 @@ const rainWeatherResponse = `
         "main": {
             "humidity": 87,
             "pressure": 1007,
-            "temp": 9.25
+            "temp": 9.25,
+            "feels_like": 8.25
         },
         "name": "Paris",
         "sys": {
@@ -189,7 +193,8 @@ const rainWeatherResponse = `
         "main": {
             "humidity": 87,
             "pressure": 1007,
-            "temp": 9.25
+            "temp": 9.25,
+            "feels_like": 8.25
         },
         "name": "Paris",
         "sys": {
@@ -223,7 +228,8 @@ const rainWeatherResponse = `
         "main": {
             "humidity": 87,
             "pressure": 1007,
-            "temp": 9.25
+            "temp": 9.25,
+            "feels_like": 8.25
         },
         "name": "Paris",
         "sys": {
@@ -258,7 +264,8 @@ const rainWeatherResponse = `
         "main": {
             "humidity": 87,
             "pressure": 1007,
-            "temp": 9.25
+            "temp": 9.25,
+            "feels_like": 8.25
         },
         "name": "Paris",
         "sys": {
@@ -309,6 +316,7 @@ const batchWeatherResponse = `
 		}],
 		"main": {
 			"temp": 9.57,
+			"feels_like": 8.57,
 			"pressure": 1014,
 			"humidity": 46
 		},
@@ -344,6 +352,7 @@ const batchWeatherResponse = `
 		}],
 		"main": {
 			"temp": 19.29,
+			"feels_like": 18.29,
 			"pressure": 1009,
 			"humidity": 63
 		},
@@ -378,6 +387,7 @@ const batchWeatherResponse = `
 		}],
 		"main": {
 			"temp": 10.62,
+			"feels_like": 9.62,
 			"pressure": 1019,
 			"humidity": 66
 		},
@@ -445,6 +455,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 				"humidity":              int64(91),
 				"pressure":              1018.65,
 				"temperature":           6.71,
+				"feels_like":            5.71,
 				"rain":                  0.035,
 				"wind_degrees":          228.501,
 				"wind_speed":            3.76,
@@ -468,6 +479,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 				"humidity":              int64(98),
 				"pressure":              1032.18,
 				"temperature":           6.38,
+				"feels_like":            5.38,
 				"rain":                  0.049999999999997,
 				"wind_degrees":          335.005,
 				"wind_speed":            2.66,
@@ -529,6 +541,7 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 				"humidity":              int64(87),
 				"pressure":              1007.0,
 				"temperature":           9.25,
+				"feels_like":            8.25,
 				"rain":                  0.0,
 				"sunrise":               int64(1544167818000000000),
 				"sunset":                int64(1544198047000000000),
@@ -590,6 +603,7 @@ func TestRainMetrics(t *testing.T) {
 				"humidity":              int64(87),
 				"pressure":              1007.0,
 				"temperature":           9.25,
+				"feels_like":            8.25,
 				"rain":                  1.0,
 				"sunrise":               int64(1544167818000000000),
 				"sunset":                int64(1544198047000000000),
@@ -617,6 +631,7 @@ func TestRainMetrics(t *testing.T) {
 				"humidity":              int64(87),
 				"pressure":              1007.0,
 				"temperature":           9.25,
+				"feels_like":            8.25,
 				"rain":                  3.0,
 				"sunrise":               int64(1544167818000000000),
 				"sunset":                int64(1544198047000000000),
@@ -644,6 +659,7 @@ func TestRainMetrics(t *testing.T) {
 				"humidity":              int64(87),
 				"pressure":              1007.0,
 				"temperature":           9.25,
+				"feels_like":            8.25,
 				"rain":                  1.3,
 				"sunrise":               int64(1544167818000000000),
 				"sunset":                int64(1544198047000000000),
@@ -671,6 +687,7 @@ func TestRainMetrics(t *testing.T) {
 				"humidity":              int64(87),
 				"pressure":              1007.0,
 				"temperature":           9.25,
+				"feels_like":            8.25,
 				"rain":                  0.0,
 				"sunrise":               int64(1544167818000000000),
 				"sunset":                int64(1544198047000000000),
@@ -732,6 +749,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 				"humidity":              int64(46),
 				"pressure":              1014.0,
 				"temperature":           9.57,
+				"feels_like":            8.57,
 				"wind_degrees":          60.0,
 				"wind_speed":            5.0,
 				"rain":                  0.0,
@@ -758,6 +776,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 				"humidity":              int64(63),
 				"pressure":              1009.0,
 				"temperature":           19.29,
+				"feels_like":            18.29,
 				"wind_degrees":          0.0,
 				"wind_speed":            1.0,
 				"rain":                  0.0,
@@ -784,6 +803,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 				"humidity":              int64(66),
 				"pressure":              1019.0,
 				"temperature":           10.62,
+				"feels_like":            9.62,
 				"wind_degrees":          290.0,
 				"wind_speed":            6.2,
 				"rain":                  0.072,

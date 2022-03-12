@@ -1196,6 +1196,10 @@ func TestTestCases(t *testing.T) {
 			name:     "message-pack",
 			filename: "testcases/tracker_msgpack.conf",
 		},
+		{
+			name:     "field and tag batch (json)",
+			filename: "testcases/field_tag_batch.conf",
+		},
 	}
 
 	parser := influx.NewParser(influx.NewMetricHandler())
