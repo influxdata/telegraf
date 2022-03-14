@@ -24,6 +24,11 @@ path onto the global path variable
   ##
   # service_address = "udp://:162"
   ##
+  ## Translator for OIDs
+  ## Valid values are "netsnmp" which calls snmptranslate and snmptable,
+  ## and "gosmi" which uses the gosmi library
+  # translator = "netsnmp"
+  ##
   ## Path to mib files
   # path = ["/usr/share/snmp/mibs"]
   ##

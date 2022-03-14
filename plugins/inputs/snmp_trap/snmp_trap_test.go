@@ -16,6 +16,28 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+type entry struct {
+	oid string
+	e   snmp.MibEntry
+}
+
+type testTranslator struct {
+	entries []entry
+}
+
+func (t *testTranslator) lookup(input string) (snmp.MibEntry, error) {
+	for _, entry := range t.entries {
+		if input == entry.oid {
+			return snmp.MibEntry{MibName: entry.e.MibName, OidText: entry.e.OidText}, nil
+		}
+	}
+	return snmp.MibEntry{}, fmt.Errorf("unexpected oid")
+}
+
+func newTestTranslator(entries []entry) *testTranslator {
+	return &testTranslator{entries: entries}
+}
+
 func newMsgFlagsV3(secLevel string) gosnmp.SnmpV3MsgFlags {
 	var msgFlags gosnmp.SnmpV3MsgFlags
 	switch strings.ToLower(secLevel) {
@@ -129,11 +151,6 @@ func sendTrap(t *testing.T, goSNMP gosnmp.GoSNMP, trap gosnmp.SnmpTrap) {
 func TestReceiveTrap(t *testing.T) {
 	now := uint32(123123123)
 	fakeTime := time.Unix(456456456, 456)
-
-	type entry struct {
-		oid string
-		e   snmp.MibEntry
-	}
 
 	// If the first pdu isn't type TimeTicks, gosnmp.SendTrap() will
 	// prepend one with time.Now()
@@ -1260,14 +1277,6 @@ func TestReceiveTrap(t *testing.T) {
 				timeFunc: func() time.Time {
 					return fakeTime
 				},
-				lookupFunc: func(input string) (snmp.MibEntry, error) {
-					for _, entry := range tt.entries {
-						if input == entry.oid {
-							return snmp.MibEntry{MibName: entry.e.MibName, OidText: entry.e.OidText}, nil
-						}
-					}
-					return snmp.MibEntry{}, fmt.Errorf("unexpected oid")
-				},
 				//if cold start be answer otherwise err
 				Log:          testutil.Logger{},
 				Version:      tt.version.String(),
@@ -1280,6 +1289,9 @@ func TestReceiveTrap(t *testing.T) {
 			}
 
 			require.NoError(t, s.Init())
+
+			//inject test translator
+			s.translator = newTestTranslator(tt.entries)
 
 			var acc testutil.Accumulator
 			require.Nil(t, s.Start(&acc))

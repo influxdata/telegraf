@@ -15,10 +15,15 @@ import (
 	"github.com/gosnmp/gosnmp"
 )
 
+type translator interface {
+	lookup(oid string) (snmp.MibEntry, error)
+}
+
 type SnmpTrap struct {
 	ServiceAddress string          `toml:"service_address"`
 	Timeout        config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
 	Version        string          `toml:"version"`
+	Translator     string          `toml:"translator"`
 	Path           []string        `toml:"path"`
 
 	// Settings for version 3
@@ -32,15 +37,16 @@ type SnmpTrap struct {
 	PrivProtocol string `toml:"priv_protocol"`
 	PrivPassword string `toml:"priv_password"`
 
-	acc        telegraf.Accumulator
-	listener   *gosnmp.TrapListener
-	timeFunc   func() time.Time
-	lookupFunc func(string) (snmp.MibEntry, error)
-	errCh      chan error
+	acc      telegraf.Accumulator
+	listener *gosnmp.TrapListener
+	timeFunc func() time.Time
+	errCh    chan error
 
 	makeHandlerWrapper func(gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc
 
 	Log telegraf.Logger `toml:"-"`
+
+	translator translator
 }
 
 var sampleConfig = `
@@ -52,6 +58,11 @@ var sampleConfig = `
   ## 1024.  See README.md for details
   ##
   # service_address = "udp://:162"
+  ##
+  ## Translator for OIDs
+  ## Valid values are "netsnmp" which calls snmptranslate and snmptable,
+  ## and "gosmi" which uses the gosmi library
+  # translator = "netsnmp"
   ##
   ## Path to mib files
   # path = ["/usr/share/snmp/mibs"]
@@ -90,16 +101,24 @@ func init() {
 	inputs.Add("snmp_trap", func() telegraf.Input {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
-			lookupFunc:     snmp.TrapLookup,
 			ServiceAddress: "udp://:162",
 			Path:           []string{"/usr/share/snmp/mibs"},
 			Version:        "2c",
+			Translator:     "netsnmp",
 		}
 	})
 }
 
 func (s *SnmpTrap) Init() error {
-	err := snmp.LoadMibsFromPath(s.Path, s.Log, &snmp.GosmiMibLoader{})
+	var err error
+	if s.Translator == "gosmi" {
+		s.translator, err = newGosmiTranslator(s.Path, s.Log)
+		if err != nil {
+			return err
+		}
+	} else {
+		s.translator = newNetsnmpTranslator()
+	}
 	if err != nil {
 		s.Log.Errorf("Could not get path %v", err)
 	}
@@ -259,7 +278,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 			}
 
 			if trapOid != "" {
-				e, err := s.lookupFunc(trapOid)
+				e, err := s.translator.lookup(trapOid)
 				if err != nil {
 					s.Log.Errorf("Error resolving V1 OID, oid=%s, source=%s: %v", trapOid, tags["source"], err)
 					return
@@ -297,7 +316,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 
 				var e snmp.MibEntry
 				var err error
-				e, err = s.lookupFunc(val)
+				e, err = s.translator.lookup(val)
 				if nil != err {
 					s.Log.Errorf("Error resolving value OID, oid=%s, source=%s: %v", val, tags["source"], err)
 					return
@@ -315,7 +334,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 				value = v.Value
 			}
 
-			e, err := s.lookupFunc(v.Name)
+			e, err := s.translator.lookup(v.Name)
 			if nil != err {
 				s.Log.Errorf("Error resolving OID oid=%s, source=%s: %v", v.Name, tags["source"], err)
 				return
