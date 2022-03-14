@@ -269,7 +269,7 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	accessToken, err := f.cip.GetAccessToken()
+	accessToken, err := f.cip.GetIdAccessToken()
 	if err != nil {
 		return errors.Wrapf(err, "[outputs.proto] unable to get access token")
 	}

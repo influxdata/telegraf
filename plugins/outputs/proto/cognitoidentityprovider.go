@@ -17,6 +17,7 @@ type CognitoIdentityProvider struct {
 	clientId *string
 
 	accessToken  *string
+	idToken      *string
 	refreshToken *string
 	expiresAt    time.Time
 }
@@ -46,6 +47,20 @@ func (c *CognitoIdentityProvider) GetAccessToken() (*string, error) {
 	return c.accessToken, nil
 }
 
+func (c *CognitoIdentityProvider) GetIdAccessToken() (*string, error) {
+	if c.idToken != nil && !c.isExpired() {
+		return c.idToken, nil
+	}
+
+	if err := c.refreshTokenLogin(); err != nil {
+		if err := c.userPasswordLogin(); err != nil {
+			return nil, err
+		}
+	}
+
+	return c.idToken, nil
+}
+
 func (c *CognitoIdentityProvider) userPasswordLogin() error {
 	resp, err := c.awsCip.InitiateAuth(
 		c.loginRequest(cognitoidentityprovider.AuthFlowTypeUserPasswordAuth, map[string]*string{
@@ -56,6 +71,7 @@ func (c *CognitoIdentityProvider) userPasswordLogin() error {
 		return errors.Wrap(err, "unable to get access token using user/password auth")
 	}
 	c.accessToken = resp.AuthenticationResult.AccessToken
+	c.idToken = resp.AuthenticationResult.IdToken
 	c.refreshToken = resp.AuthenticationResult.RefreshToken
 	c.expiresAt = time.Now().Add(time.Duration(*resp.AuthenticationResult.ExpiresIn) * time.Second)
 
@@ -79,6 +95,7 @@ func (c *CognitoIdentityProvider) refreshTokenLogin() error {
 		return errors.Wrap(err, "unable to get access token using refresh token")
 	}
 	c.accessToken = resp.AuthenticationResult.AccessToken
+	c.idToken = resp.AuthenticationResult.IdToken
 	c.refreshToken = resp.AuthenticationResult.RefreshToken
 	c.expiresAt = time.Now().Add(time.Duration(*resp.AuthenticationResult.ExpiresIn) * time.Second)
 
