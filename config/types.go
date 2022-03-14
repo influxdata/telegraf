@@ -38,6 +38,10 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	// Finally, try value is a TOML string (e.g. "3s", 3s) or literal (e.g. '3s')
 	durStr = strings.ReplaceAll(durStr, "'", "")
 	durStr = strings.ReplaceAll(durStr, "\"", "")
+	if durStr == "" {
+		durStr = "0s"
+	}
+
 	dur, err := time.ParseDuration(durStr)
 	if err != nil {
 		return err
