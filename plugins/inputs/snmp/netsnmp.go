@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"log"
+	"log" //nolint:revive
 	"os/exec"
 	"strings"
 	"sync"

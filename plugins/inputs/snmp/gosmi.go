@@ -38,6 +38,7 @@ func (g *gosmiTranslator) SnmpTranslate(oid string) (string, string, string, str
 	return a, b, c, d, e
 }
 
+//nolint:revive
 func (g *gosmiTranslator) SnmpTranslateFull(oid string) (
 	mibName string, oidNum string, oidText string,
 	conversion string,
