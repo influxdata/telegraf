@@ -124,7 +124,7 @@ Remove User Id and Password keywords from the connection string in your config f
 
   ## Queries enabled by default for database_type = "SQLServer" are - 
   ## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
-  ## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates
+  ## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates,
   ## SQLServerRecentBackups
 
   ## Queries enabled by default for database_type = "AzureSQLDB" are - 
