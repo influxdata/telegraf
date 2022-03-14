@@ -17,7 +17,7 @@ func getGosmiTr(t *testing.T) Translator {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	tr, err := newGosmiTranslator([]string{testDataPath}, testutil.Logger{})
+	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
 	require.NoError(t, err)
 	return tr
 }
@@ -26,7 +26,7 @@ func TestGosmiTranslator(t *testing.T) {
 	var tr Translator
 	var err error
 
-	tr, err = newGosmiTranslator([]string{"testdata"}, testutil.Logger{})
+	tr, err = NewGosmiTranslator([]string{"testdata"}, testutil.Logger{})
 	require.NoError(t, err)
 	require.NotNil(t, tr)
 }
@@ -79,7 +79,7 @@ func TestFieldInitGosmi(t *testing.T) {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	tr, err := newGosmiTranslator([]string{testDataPath}, testutil.Logger{})
+	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
 	require.NoError(t, err)
 
 	translations := []struct {
@@ -262,7 +262,7 @@ func TestTableBuild_walk_noTranslate(t *testing.T) {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	tr, err := newGosmiTranslator([]string{testDataPath}, testutil.Logger{})
+	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
 	require.NoError(t, err)
 
 	tb, err := tbl.Build(gosmiTsc, true, tr)
@@ -320,7 +320,7 @@ func TestTableBuild_walk_Translate(t *testing.T) {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	tr, err := newGosmiTranslator([]string{testDataPath}, testutil.Logger{})
+	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
 	require.NoError(t, err)
 
 	tbl := Table{
@@ -390,7 +390,7 @@ func TestTableBuild_noWalkGosmi(t *testing.T) {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	tr, err := newGosmiTranslator([]string{testDataPath}, testutil.Logger{})
+	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
 	require.NoError(t, err)
 
 	tbl := Table{
@@ -690,7 +690,7 @@ func TestTableJoin_walkGosmi(t *testing.T) {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	tr, err := newGosmiTranslator([]string{testDataPath}, testutil.Logger{})
+	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
 	require.NoError(t, err)
 
 	tb, err := tbl.Build(gosmiTsc, true, tr)
@@ -773,7 +773,7 @@ func TestTableOuterJoin_walkGosmi(t *testing.T) {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	tr, err := newGosmiTranslator([]string{testDataPath}, testutil.Logger{})
+	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
 	require.NoError(t, err)
 
 	tb, err := tbl.Build(gosmiTsc, true, tr)
@@ -865,7 +865,7 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 	testDataPath, err := filepath.Abs("./testdata")
 	require.NoError(t, err)
 
-	tr, err := newGosmiTranslator([]string{testDataPath}, testutil.Logger{})
+	tr, err := NewGosmiTranslator([]string{testDataPath}, testutil.Logger{})
 	require.NoError(t, err)
 
 	tb, err := tbl.Build(gosmiTsc, true, tr)
