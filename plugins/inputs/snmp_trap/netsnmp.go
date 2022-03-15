@@ -57,18 +57,6 @@ func (s *netsnmpTranslator) lookup(oid string) (e snmp.MibEntry, err error) {
 	return e, nil
 }
 
-func (s *netsnmpTranslator) clear() {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-	s.cache = map[string]snmp.MibEntry{}
-}
-
-func (s *netsnmpTranslator) load(oid string, e snmp.MibEntry) {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-	s.cache[oid] = e
-}
-
 func (s *netsnmpTranslator) snmptranslate(oid string) (e snmp.MibEntry, err error) {
 	var out []byte
 	out, err = s.execCmd(s.Timeout, "snmptranslate", "-Td", "-Ob", "-m", "all", oid)
