@@ -387,7 +387,7 @@ These are metrics for Azure SQL to monitor resources usage at Elastic Pool level
 - SQLServerCpu: Uses the buffer ring (`sys.dm_os_ring_buffers`) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
 - SQLServerAvailabilityReplicaStates: Collects availability replica state information from `sys.dm_hadr_availability_replica_states` for a High Availability / Disaster Recovery (HADR) setup
 - SQLServerDatabaseReplicaStates: Collects database replica state information from `sys.dm_hadr_database_replica_states` for a High Availability / Disaster Recovery (HADR) setup
-- SQLServerRecentBackups: Collectrs latest full, differential and transaction log backup date and size from `msdb.dbo.backupset`
+- SQLServerRecentBackups: Collects latest full, differential and transaction log backup date and size from `msdb.dbo.backupset`
 
 ### Output Measures
 
