@@ -40,7 +40,7 @@ Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html>
     - free (integer)
     - surplus (integer)
     - total (integer)
-- hugepages_meminfo (gathered from `/proc/meminfo` file) 
+- hugepages_meminfo (gathered from `/proc/meminfo` file)
   - The fields `total`, `free`, `reserved`, and `surplus` are counts of pages of default size. Fields with suffix `_kb` are in kilobytes.
   - fields:
     - anonymous_kb (integer, kB)
