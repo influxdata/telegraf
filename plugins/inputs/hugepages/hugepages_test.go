@@ -131,15 +131,15 @@ func TestGather(t *testing.T) {
 		require.NoError(t, h.Gather(acc))
 
 		expectedFields := map[string]interface{}{
-			"anonymous_kb":                   0,
-			"shared_memory_kb":               0,
-			"file_kb":                        0,
-			"total_of_default_size":          2048,
-			"free_of_default_size":           883,
-			"reserved_of_default_size":       0,
-			"surplus_of_default_size":        0,
-			"default_size_kb":                2048,
-			"total_consumed_by_all_sizes_kb": 12582912,
+			"anonymous_kb": 0,
+			"shared_kb":    0,
+			"file_kb":      0,
+			"total":        2048,
+			"free":         883,
+			"reserved":     0,
+			"surplus":      0,
+			"size_kb":      2048,
+			"tlb_kb":       12582912,
 		}
 		acc.AssertContainsFields(t, "hugepages_meminfo", expectedFields)
 	})

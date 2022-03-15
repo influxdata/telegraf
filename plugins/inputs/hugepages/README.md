@@ -40,17 +40,18 @@ Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html>
     - free (integer)
     - surplus (integer)
     - total (integer)
-- hugepages_meminfo (gathered from `/proc/meminfo` file)
+- hugepages_meminfo (gathered from `/proc/meminfo` file) 
+  - The fields `total`, `free`, `reserved`, and `surplus` are counts of pages of default size. Fields with suffix `_kb` are in kilobytes.
   - fields:
     - anonymous_kb (integer, kB)
-    - default_size_kb (integer, kB)
     - file_kb (integer, kB)
-    - free_of_default_size (integer)
-    - reserved_of_default_size (integer)
-    - shared_memory_kb (integer, kB)
-    - surplus_of_default_size (integer)
-    - total_consumed_by_all_sizes_kb (integer, kB)
-    - total_of_default_size (integer)
+    - free (integer)
+    - reserved (integer)
+    - shared_kb (integer, kB)
+    - size_kb (integer, kB)
+    - surplus (integer)
+    - tlb_kb (integer, kB)
+    - total (integer)
 
 ## Example Output
 
@@ -62,5 +63,5 @@ $ ./telegraf -config telegraf.conf -input-filter hugepages -test
 > hugepages_per_node,host=ubuntu,size_kb=2048,node=0 free=434i,surplus=0i,total=1024i 1646258020000000000
 > hugepages_per_node,host=ubuntu,size_kb=1048576,node=1 free=0i,surplus=0i,total=4i 1646258020000000000
 > hugepages_per_node,host=ubuntu,size_kb=2048,node=1 free=449i,surplus=0i,total=1024i 1646258020000000000
-> hugepages_meminfo,host=ubuntu anonymous_kb=0i,default_size_kb=2048i,file_kb=0i,free_of_default_size=883i,reserved_of_default_size=0i,shared_memory_kb=0i,surplus_of_default_size=0i,total_consumed_by_all_sizes_kb=12582912i,total_of_default_size=2048i 1646258020000000000
+> hugepages_meminfo,host=ubuntu anonymous_kb=0i,file_kb=0i,free=883i,reserved=0i,shared_kb=0i,size_kb=2048i,surplus=0i,tlb_kb=12582912i,total=2048i 1646258020000000000
 ```

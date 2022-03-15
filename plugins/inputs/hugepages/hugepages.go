@@ -56,14 +56,14 @@ var (
 	}
 
 	hugepagesMetricsFromMeminfo = map[string]string{
-		"HugePages_Total": "total_of_default_size",
-		"HugePages_Free":  "free_of_default_size",
-		"HugePages_Rsvd":  "reserved_of_default_size",
-		"HugePages_Surp":  "surplus_of_default_size",
-		"Hugepagesize":    "default_size_kb",
-		"Hugetlb":         "total_consumed_by_all_sizes_kb",
+		"HugePages_Total": "total",
+		"HugePages_Free":  "free",
+		"HugePages_Rsvd":  "reserved",
+		"HugePages_Surp":  "surplus",
+		"Hugepagesize":    "size_kb",
+		"Hugetlb":         "tlb_kb",
 		"AnonHugePages":   "anonymous_kb",
-		"ShmemHugePages":  "shared_memory_kb",
+		"ShmemHugePages":  "shared_kb",
 		"FileHugePages":   "file_kb",
 	}
 )
