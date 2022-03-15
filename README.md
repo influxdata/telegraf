@@ -3,8 +3,8 @@
 
 ![tiger](TelegrafTiger.png "tiger")
 
-[![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
-[![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack) [![Contribute](https://img.shields.io/badge/Contribute%20To%20Telegraf-green.svg)](#Contributing)
+[![Contribute](https://img.shields.io/badge/Contribute%20To%20Telegraf-green.svg)](#Contributing) [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack) [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![GoDoc](https://godoc.org/github.com/influxdata/telegraf?status.svg)](https://godoc.org/github.com/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
+
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics. Based on a
 plugin system to enable developers in the community to easily add support for additional
@@ -160,3 +160,5 @@ There are multiple great ways to get involved with the Telegraf project, from co
 - Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
 - [Contribute plugins](CONTRIBUTING.md)
 - [Contribute external plugins](docs/EXTERNAL_PLUGINS.md)
+
+Checkout our [Contributing Doc](CONTRIBUTING.md) to find out more!

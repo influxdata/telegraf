@@ -1,5 +1,14 @@
 # Contributing
 
+Telegraf is a large open-source project and there are multiple ways to contribute.
+
+- [Contributing Code](#contributing-code)
+- [Contributing External Plugins](#contributing-an-external-plugin)
+- Sharing your story on how you use Telegraf through blogs
+- [Improve documentation](https://github.com/influxdata/telegraf/issues?q=is%3Aopen+label%3Adocumentation)
+
+## Contributing code
+
 1. [Sign the CLA][cla].
 2. Open a [new issue][] to discuss the changes you would like to make.  This is
    not strictly required but it may help reduce the amount of rework you need
