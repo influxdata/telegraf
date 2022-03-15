@@ -4,7 +4,7 @@
 ![tiger](TelegrafTiger.png "tiger")
 
 [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
-[![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack) [![Contribute](https://img.shields.io/badge/Contribute-green.svg)](#Contributing)
+[![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack) [![Contribute](https://img.shields.io/badge/Contribute%20To%20Telegraf-green.svg)](#Contributing)
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics. Based on a
 plugin system to enable developers in the community to easily add support for additional
@@ -152,7 +152,7 @@ For documentation on the latest development code see the [documentation index](/
 
 ## Contributing
 
-There are many ways to contribute:
+There are multiple great ways to get involved with the Telegraf project, from contributing code to sharing your story on how you use it.
 
 - Fix and [report bugs](https://github.com/influxdata/telegraf/issues/new)
 - [Improve documentation](https://github.com/influxdata/telegraf/issues?q=is%3Aopen+label%3Adocumentation)
