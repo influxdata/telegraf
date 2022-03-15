@@ -46,7 +46,7 @@ type SnmpTrap struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	translator translator
+	translator translator //nolint:revive
 }
 
 var sampleConfig = `
