@@ -39,8 +39,8 @@ values.
   ## Indicates the number of rows to parse as metadata before looking for header information. 
   ## By default, the parser assumes there are no metadata rows to parse. 
   ## If set, the parser would use the provided separators in the csv_metadata_separators to look for metadata.
-  ## Please note that by default, the (key, value) pairs will be added as fields. 
-  ## Use the csv_tag_columns to convert the metadata into tags.
+  ## Please note that by default, the (key, value) pairs will be added as tags. 
+  ## Use the converter processor to use metadata otherwise.
   csv_metadata_rows = 0
   
   ## A list of metadata separators. If csv_metadata_rows is set,
