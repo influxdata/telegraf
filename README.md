@@ -3,7 +3,7 @@
 
 ![tiger](TelegrafTiger.png "tiger")
 
-[![Contribute](https://img.shields.io/badge/Contribute%20To%20Telegraf-orange.svg?style=for-the-badge)](#Contributing) [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=for-the-badge)](https://www.influxdata.com/slack) [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![GoDoc](https://godoc.org/github.com/influxdata/telegraf?status.svg)](https://godoc.org/github.com/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
+[![Contribute](https://img.shields.io/badge/Contribute%20To%20Telegraf-orange.svg?logo=influx&style=for-the-badge)](#Contributing) [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=for-the-badge)](https://www.influxdata.com/slack) [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![GoDoc](https://godoc.org/github.com/influxdata/telegraf?status.svg)](https://godoc.org/github.com/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics. Based on a
@@ -139,17 +139,6 @@ telegraf --config telegraf.conf
 telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 ```
 
-## Documentation
-
-[Latest Release Documentation](https://docs.influxdata.com/telegraf/latest/)
-
-For documentation on the latest development code see the [documentation index](/docs).
-
-- [Input Plugins](/docs/INPUTS.md)
-- [Output Plugins](/docs/OUTPUTS.md)
-- [Processor Plugins](/docs/PROCESSORS.md)
-- [Aggregator Plugins](/docs/AGGREGATORS.md)
-
 ## Contributing
 
 There are multiple great ways to get involved with the Telegraf project, from contributing code to sharing your story on how you use it.
@@ -162,3 +151,14 @@ There are multiple great ways to get involved with the Telegraf project, from co
 - [Contribute external plugins](docs/EXTERNAL_PLUGINS.md)
 
 Checkout our [Contributing Doc](CONTRIBUTING.md) to find out more!
+
+## Documentation
+
+[Latest Release Documentation](https://docs.influxdata.com/telegraf/latest/)
+
+For documentation on the latest development code see the [documentation index](/docs).
+
+- [Input Plugins](/docs/INPUTS.md)
+- [Output Plugins](/docs/OUTPUTS.md)
+- [Processor Plugins](/docs/PROCESSORS.md)
+- [Aggregator Plugins](/docs/AGGREGATORS.md)
