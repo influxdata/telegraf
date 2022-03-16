@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite"
 	"github.com/aws/aws-sdk-go-v2/service/timestreamwrite/types"
 	"github.com/aws/smithy-go"
@@ -181,11 +182,47 @@ var sampleConfig = `
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
 var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
-	cfg, err := credentialConfig.Credentials()
-	if err != nil {
-		return &timestreamwrite.Client{}, err
+
+	awsCreds, awsErr :=  credentialConfig.Credentials()
+	if awsErr != nil {
+		panic("Unable to load credentials config " + awsErr.Error())
 	}
-	return timestreamwrite.NewFromConfig(cfg), nil
+
+	cfg, cfgErr := config.LoadDefaultConfig(context.TODO())
+	if cfgErr != nil {
+		panic("Unable to load SDK config for Timestream " + cfgErr.Error())
+	}
+
+        if credentialConfig.EndpointURL != "" && credentialConfig.Region != "" {
+		customResolver := aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
+                        return aws.Endpoint{
+                                PartitionID:   "aws",
+                                URL:           credentialConfig.EndpointURL,
+                                SigningRegion: credentialConfig.Region,
+                        }, nil
+                        return aws.Endpoint{}, &aws.EndpointNotFoundError{}
+                })
+
+                cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolver(customResolver))
+
+		if err != nil {
+                        panic("unable to load SDK config for Timestream " + err.Error())
+                }
+
+		cfg.Credentials = awsCreds.Credentials
+
+                return timestreamwrite.NewFromConfig(cfg, func(o *timestreamwrite.Options) {
+                        o.Region = credentialConfig.Region
+			o.EndpointDiscovery.EnableEndpointDiscovery = aws.EndpointDiscoveryDisabled
+                }), nil
+        } else {
+                // Use the SDK's default configuration.
+		cfg.Credentials = awsCreds.Credentials
+
+                return timestreamwrite.NewFromConfig(cfg, func(o *timestreamwrite.Options) {
+                        o.Region = credentialConfig.Region
+                }), nil
+        }
 }
 
 func (t *Timestream) Connect() error {
