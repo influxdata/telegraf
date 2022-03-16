@@ -200,7 +200,6 @@ var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteCl
                                 URL:           credentialConfig.EndpointURL,
                                 SigningRegion: credentialConfig.Region,
                         }, nil
-                        return aws.Endpoint{}, &aws.EndpointNotFoundError{}
                 })
 
                 cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
