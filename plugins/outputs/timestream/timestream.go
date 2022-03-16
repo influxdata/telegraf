@@ -183,7 +183,7 @@ var sampleConfig = `
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
 var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
 
-	awsCreds, awsErr :=  credentialConfig.Credentials()
+	awsCreds, awsErr := credentialConfig.Credentials()
 	if awsErr != nil {
 		panic("Unable to load credentials config " + awsErr.Error())
 	}
@@ -193,33 +193,34 @@ var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteCl
 		panic("Unable to load SDK config for Timestream " + cfgErr.Error())
 	}
 
-        if credentialConfig.EndpointURL != "" && credentialConfig.Region != "" {
+	if credentialConfig.EndpointURL != "" && credentialConfig.Region != "" {
 		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-                        return aws.Endpoint{
-                                PartitionID:   "aws",
-                                URL:           credentialConfig.EndpointURL,
-                                SigningRegion: credentialConfig.Region,
-                        }, nil
-                })
+			return aws.Endpoint{
+				PartitionID:   "aws",
+				URL:           credentialConfig.EndpointURL,
+				SigningRegion: credentialConfig.Region,
+			}, nil
+		})
 
-                cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
+		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
 
 		if err != nil {
-                        panic("unable to load SDK config for Timestream " + err.Error())
-                }
+			panic("unable to load SDK config for Timestream " + err.Error())
+		}
 
 		cfg.Credentials = awsCreds.Credentials
 
-                return timestreamwrite.NewFromConfig(cfg, func(o *timestreamwrite.Options) {
-                        o.Region = credentialConfig.Region
+		return timestreamwrite.NewFromConfig(cfg, func(o *timestreamwrite.Options) {
+			o.Region = credentialConfig.Region
 			o.EndpointDiscovery.EnableEndpointDiscovery = aws.EndpointDiscoveryDisabled
-                }), nil
-        }
-        cfg.Credentials = awsCreds.Credentials
+		}), nil
+	}
 
-        return timestreamwrite.NewFromConfig(cfg, func(o *timestreamwrite.Options) {
+	cfg.Credentials = awsCreds.Credentials
+
+	return timestreamwrite.NewFromConfig(cfg, func(o *timestreamwrite.Options) {
 		o.Region = credentialConfig.Region
-        }), nil
+	}), nil
 }
 
 func (t *Timestream) Connect() error {
