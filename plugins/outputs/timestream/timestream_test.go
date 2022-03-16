@@ -693,6 +693,22 @@ func TestTransformMetricsUnsupportedFieldsAreSkipped(t *testing.T) {
 		[]*timestreamwrite.WriteRecordsInput{expectedResultMultiTable})
 }
 
+func TestCustomEndpoint(t *testing.T) {
+	customEndpoint := "http://test.custom.endpoint.com"
+	plugin := Timestream{
+		MappingMode:  MappingModeMultiTable,
+		DatabaseName: tsDbName,
+		Log:          testutil.Logger{},
+		CredentialConfig: internalaws.CredentialConfig{EndpointURL: customEndpoint},
+	}
+
+	// validate config correctness
+	err := plugin.Connect()
+	require.Nil(t, err, "Invalid configuration")
+	// Check customURL is used
+	require.Equal(t, plugin.EndpointURL, customEndpoint)
+}
+
 func comparisonTest(t *testing.T,
 	mappingMode string,
 	telegrafMetrics []telegraf.Metric,
