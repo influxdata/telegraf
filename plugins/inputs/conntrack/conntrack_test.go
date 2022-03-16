@@ -1,9 +1,9 @@
+//go:build linux
 // +build linux
 
 package conntrack
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func restoreDflts(savedFiles, savedDirs []string) {
@@ -28,18 +28,18 @@ func TestNoFilesFound(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := c.Gather(acc)
 
-	assert.EqualError(t, err, "Conntrack input failed to collect metrics. "+
+	require.EqualError(t, err, "Conntrack input failed to collect metrics. "+
 		"Is the conntrack kernel module loaded?")
 }
 
 func TestDefaultsUsed(t *testing.T) {
 	defer restoreDflts(dfltFiles, dfltDirs)
-	tmpdir, err := ioutil.TempDir("", "tmp1")
-	assert.NoError(t, err)
+	tmpdir, err := os.MkdirTemp("", "tmp1")
+	require.NoError(t, err)
 	defer os.Remove(tmpdir)
 
-	tmpFile, err := ioutil.TempFile(tmpdir, "ip_conntrack_count")
-	assert.NoError(t, err)
+	tmpFile, err := os.CreateTemp(tmpdir, "ip_conntrack_count")
+	require.NoError(t, err)
 	defer os.Remove(tmpFile.Name())
 
 	dfltDirs = []string{tmpdir}
@@ -47,24 +47,25 @@ func TestDefaultsUsed(t *testing.T) {
 	dfltFiles = []string{fname}
 
 	count := 1234321
-	ioutil.WriteFile(tmpFile.Name(), []byte(strconv.Itoa(count)), 0660)
+	require.NoError(t, os.WriteFile(tmpFile.Name(), []byte(strconv.Itoa(count)), 0660))
 	c := &Conntrack{}
 	acc := &testutil.Accumulator{}
 
-	c.Gather(acc)
+	require.NoError(t, c.Gather(acc))
 	acc.AssertContainsFields(t, inputName, map[string]interface{}{
 		fname: float64(count)})
 }
 
 func TestConfigsUsed(t *testing.T) {
 	defer restoreDflts(dfltFiles, dfltDirs)
-	tmpdir, err := ioutil.TempDir("", "tmp1")
-	assert.NoError(t, err)
+	tmpdir, err := os.MkdirTemp("", "tmp1")
+	require.NoError(t, err)
 	defer os.Remove(tmpdir)
 
-	cntFile, err := ioutil.TempFile(tmpdir, "nf_conntrack_count")
-	maxFile, err := ioutil.TempFile(tmpdir, "nf_conntrack_max")
-	assert.NoError(t, err)
+	cntFile, err := os.CreateTemp(tmpdir, "nf_conntrack_count")
+	require.NoError(t, err)
+	maxFile, err := os.CreateTemp(tmpdir, "nf_conntrack_max")
+	require.NoError(t, err)
 	defer os.Remove(cntFile.Name())
 	defer os.Remove(maxFile.Name())
 
@@ -75,12 +76,12 @@ func TestConfigsUsed(t *testing.T) {
 
 	count := 1234321
 	max := 9999999
-	ioutil.WriteFile(cntFile.Name(), []byte(strconv.Itoa(count)), 0660)
-	ioutil.WriteFile(maxFile.Name(), []byte(strconv.Itoa(max)), 0660)
+	require.NoError(t, os.WriteFile(cntFile.Name(), []byte(strconv.Itoa(count)), 0660))
+	require.NoError(t, os.WriteFile(maxFile.Name(), []byte(strconv.Itoa(max)), 0660))
 	c := &Conntrack{}
 	acc := &testutil.Accumulator{}
 
-	c.Gather(acc)
+	require.NoError(t, c.Gather(acc))
 
 	fix := func(s string) string {
 		return strings.Replace(s, "nf_", "ip_", 1)

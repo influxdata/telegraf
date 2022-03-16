@@ -8,9 +8,7 @@ import (
 )
 
 func TestConnectAndWrite(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+	t.Skip("Skipping legacy integration test")
 
 	url := testutil.GetLocalHost() + ":5555"
 

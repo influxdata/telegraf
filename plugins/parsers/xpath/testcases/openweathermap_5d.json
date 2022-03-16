@@ -1,0 +1,127 @@
+{
+  "cod": "200",
+  "message": 0.0179,
+  "cnt": 96,
+  "list": [
+     {
+       "dt": 1596632400,
+       "main": {
+         "temp": 280.16,
+         "feels_like": 280.41,
+         "temp_min": 280.16,
+         "temp_max": 280.16,
+         "pressure": 1010,
+         "sea_level": 1010,
+         "grnd_level": 1010,
+         "humidity": 70,
+         "temp_kf": 0
+       },
+       "weather": [
+         {
+           "id": 804,
+           "main": "Clouds",
+           "description": "overcast clouds",
+           "icon": "04n"
+         }
+       ],
+       "clouds": {
+         "all": 100
+       },
+       "wind": {
+         "speed": 2.03,
+         "deg": 252,
+         "gust":5.46
+       },
+       "visibility": 10000,
+       "pop": 0.04,
+       "sys": {
+         "pod": "n"
+       },
+       "dt_txt": "2020-08-05 13:00:00"
+     },
+     {
+       "dt": 159663600,
+       "main": {
+         "temp": 281.16,
+         "feels_like": 281.41,
+         "temp_min": 281.16,
+         "temp_max": 281.16,
+         "pressure": 1011,
+         "sea_level": 1011,
+         "grnd_level": 1011,
+         "humidity": 71,
+         "temp_kf": 0
+       },
+       "weather": [
+         {
+           "id": 804,
+           "main": "Clouds",
+           "description": "overcast clouds",
+           "icon": "04n"
+         }
+       ],
+       "clouds": {
+         "all": 100
+       },
+       "wind": {
+         "speed": 2.03,
+         "deg": 252,
+         "gust":5.46
+       },
+       "visibility": 10000,
+       "pop": 0.04,
+       "sys": {
+         "pod": "n"
+       },
+       "dt_txt": "2020-08-05 14:00:00"
+     },
+     {
+       "dt": 159667200,
+       "main": {
+         "temp": 282.16,
+         "feels_like": 282.41,
+         "temp_min": 282.16,
+         "temp_max": 282.16,
+         "pressure": 1012,
+         "sea_level": 1012,
+         "grnd_level": 1012,
+         "humidity": 71,
+         "temp_kf": 0
+       },
+       "weather": [
+         {
+           "id": 804,
+           "main": "Clouds",
+           "description": "overcast clouds",
+           "icon": "04n"
+         }
+       ],
+       "clouds": {
+         "all": 100
+       },
+       "wind": {
+         "speed": 2.03,
+         "deg": 252,
+         "gust":5.46
+       },
+       "visibility": 10000,
+       "pop": 0.04,
+       "sys": {
+         "pod": "n"
+       },
+       "dt_txt": "2020-08-05 15:00:00"
+     }
+  ],
+  "city": {
+   "id": 2643743,
+   "name": "London",
+   "coord": {
+     "lat": 51.5085,
+     "lon": -0.1258
+   },
+   "country": "GB",
+   "timezone": 0,
+   "sunrise": 1568958164,
+   "sunset": 1569002733
+  }
+}

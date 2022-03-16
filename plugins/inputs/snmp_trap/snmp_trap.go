@@ -1,37 +1,25 @@
 package snmp_trap
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"net"
-	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"github.com/soniah/gosnmp"
+	"github.com/gosnmp/gosnmp"
 )
 
-var defaultTimeout = internal.Duration{Duration: time.Second * 5}
-
-type handler func(*gosnmp.SnmpPacket, *net.UDPAddr)
-type execer func(internal.Duration, string, ...string) ([]byte, error)
-
-type mibEntry struct {
-	mibName string
-	oidText string
-}
-
 type SnmpTrap struct {
-	ServiceAddress string            `toml:"service_address"`
-	Timeout        internal.Duration `toml:"timeout"`
-	Version        string            `toml:"version"`
+	ServiceAddress string          `toml:"service_address"`
+	Timeout        config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
+	Version        string          `toml:"version"`
+	Path           []string        `toml:"path"`
 
 	// Settings for version 3
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
@@ -44,19 +32,15 @@ type SnmpTrap struct {
 	PrivProtocol string `toml:"priv_protocol"`
 	PrivPassword string `toml:"priv_password"`
 
-	acc      telegraf.Accumulator
-	listener *gosnmp.TrapListener
-	timeFunc func() time.Time
-	errCh    chan error
+	acc        telegraf.Accumulator
+	listener   *gosnmp.TrapListener
+	timeFunc   func() time.Time
+	lookupFunc func(string) (snmp.MibEntry, error)
+	errCh      chan error
 
-	makeHandlerWrapper func(handler) handler
+	makeHandlerWrapper func(gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc
 
 	Log telegraf.Logger `toml:"-"`
-
-	cacheLock sync.Mutex
-	cache     map[string]mibEntry
-
-	execCmd execer
 }
 
 var sampleConfig = `
@@ -68,8 +52,10 @@ var sampleConfig = `
   ## 1024.  See README.md for details
   ##
   # service_address = "udp://:162"
-  ## Timeout running snmptranslate command
-  # timeout = "5s"
+  ##
+  ## Path to mib files
+  # path = ["/usr/share/snmp/mibs"]
+  ##
   ## Snmp version, defaults to 2c
   # version = "2c"
   ## SNMPv3 authentication and encryption options.
@@ -104,27 +90,19 @@ func init() {
 	inputs.Add("snmp_trap", func() telegraf.Input {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
+			lookupFunc:     snmp.TrapLookup,
 			ServiceAddress: "udp://:162",
-			Timeout:        defaultTimeout,
+			Path:           []string{"/usr/share/snmp/mibs"},
 			Version:        "2c",
 		}
 	})
 }
 
-func realExecCmd(Timeout internal.Duration, arg0 string, args ...string) ([]byte, error) {
-	cmd := exec.Command(arg0, args...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
-	if err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
-}
-
 func (s *SnmpTrap) Init() error {
-	s.cache = map[string]mibEntry{}
-	s.execCmd = realExecCmd
+	err := snmp.LoadMibsFromPath(s.Path, s.Log, &snmp.GosmiMibLoader{})
+	if err != nil {
+		s.Log.Errorf("Could not get path %v", err)
+	}
 	return nil
 }
 
@@ -206,7 +184,6 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			AuthenticationPassphrase: s.AuthPassword,
 			AuthenticationProtocol:   authenticationProtocol,
 		}
-
 	}
 
 	// wrap the handler, used in unit tests
@@ -255,13 +232,13 @@ func (s *SnmpTrap) Stop() {
 	}
 }
 
-func setTrapOid(tags map[string]string, oid string, e mibEntry) {
+func setTrapOid(tags map[string]string, oid string, e snmp.MibEntry) {
 	tags["oid"] = oid
-	tags["name"] = e.oidText
-	tags["mib"] = e.mibName
+	tags["name"] = e.OidText
+	tags["mib"] = e.MibName
 }
 
-func makeTrapHandler(s *SnmpTrap) handler {
+func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 	return func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
 		tm := s.timeFunc()
 		fields := map[string]interface{}{}
@@ -282,9 +259,9 @@ func makeTrapHandler(s *SnmpTrap) handler {
 			}
 
 			if trapOid != "" {
-				e, err := s.lookup(trapOid)
+				e, err := s.lookupFunc(trapOid)
 				if err != nil {
-					s.Log.Errorf("Error resolving V1 OID: %v", err)
+					s.Log.Errorf("Error resolving V1 OID, oid=%s, source=%s: %v", trapOid, tags["source"], err)
 					return
 				}
 				setTrapOid(tags, trapOid, e)
@@ -318,15 +295,15 @@ func makeTrapHandler(s *SnmpTrap) handler {
 					return
 				}
 
-				var e mibEntry
+				var e snmp.MibEntry
 				var err error
-				e, err = s.lookup(val)
+				e, err = s.lookupFunc(val)
 				if nil != err {
-					s.Log.Errorf("Error resolving value OID: %v", err)
+					s.Log.Errorf("Error resolving value OID, oid=%s, source=%s: %v", val, tags["source"], err)
 					return
 				}
 
-				value = e.oidText
+				value = e.OidText
 
 				// 1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.
 				// If v.Name is this oid, set a tag of the trap name.
@@ -338,13 +315,13 @@ func makeTrapHandler(s *SnmpTrap) handler {
 				value = v.Value
 			}
 
-			e, err := s.lookup(v.Name)
+			e, err := s.lookupFunc(v.Name)
 			if nil != err {
-				s.Log.Errorf("Error resolving OID: %v", err)
+				s.Log.Errorf("Error resolving OID oid=%s, source=%s: %v", v.Name, tags["source"], err)
 				return
 			}
 
-			name := e.oidText
+			name := e.OidText
 
 			fields[name] = value
 		}
@@ -357,60 +334,12 @@ func makeTrapHandler(s *SnmpTrap) handler {
 				// SNMP RFCs like 3411 and 5343 show engine ID as a hex string
 				tags["engine_id"] = fmt.Sprintf("%x", packet.ContextEngineID)
 			}
+		} else {
+			if packet.Community != "" {
+				tags["community"] = packet.Community
+			}
 		}
 
 		s.acc.AddFields("snmp_trap", fields, tags, tm)
 	}
-}
-
-func (s *SnmpTrap) lookup(oid string) (e mibEntry, err error) {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-	var ok bool
-	if e, ok = s.cache[oid]; !ok {
-		// cache miss.  exec snmptranslate
-		e, err = s.snmptranslate(oid)
-		if err == nil {
-			s.cache[oid] = e
-		}
-		return e, err
-	}
-	return e, nil
-}
-
-func (s *SnmpTrap) clear() {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-	s.cache = map[string]mibEntry{}
-}
-
-func (s *SnmpTrap) load(oid string, e mibEntry) {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-	s.cache[oid] = e
-}
-
-func (s *SnmpTrap) snmptranslate(oid string) (e mibEntry, err error) {
-	var out []byte
-	out, err = s.execCmd(s.Timeout, "snmptranslate", "-Td", "-Ob", "-m", "all", oid)
-
-	if err != nil {
-		return e, err
-	}
-
-	scanner := bufio.NewScanner(bytes.NewBuffer(out))
-	ok := scanner.Scan()
-	if err = scanner.Err(); !ok && err != nil {
-		return e, err
-	}
-
-	e.oidText = scanner.Text()
-
-	i := strings.Index(e.oidText, "::")
-	if i == -1 {
-		return e, fmt.Errorf("not found")
-	}
-	e.mibName = e.oidText[:i]
-	e.oidText = e.oidText[i+2:]
-	return e, nil
 }

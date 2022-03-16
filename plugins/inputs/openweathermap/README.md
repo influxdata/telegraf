@@ -6,11 +6,11 @@ To use this plugin you will need an [api key][] (app_id).
 
 City identifiers can be found in the [city list][]. Alternately you
 can [search][] by name; the `city_id` can be found as the last digits
-of the URL: https://openweathermap.org/city/2643743. Language
+of the URL: <https://openweathermap.org/city/2643743>. Language
 identifiers can be found in the [lang list][]. Documentation for
 condition ID, icon, and main is at [weather conditions][].
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.openweathermap]]
@@ -44,7 +44,7 @@ condition ID, icon, and main is at [weather conditions][].
   interval = "10m"
 ```
 
-### Metrics
+## Metrics
 
 - weather
   - tags:
@@ -60,19 +60,20 @@ condition ID, icon, and main is at [weather conditions][].
     - sunrise (int, nanoseconds since unix epoch)
     - sunset (int, nanoseconds since unix epoch)
     - temperature (float, degrees)
+    - feels_like (float, degrees)
     - visibility (int, meters, not available on forecast data)
     - wind_degrees (float, wind direction in degrees)
     - wind_speed (float, wind speed in meters/sec or miles/sec)
     - condition_description (string, localized long description)
     - condition_icon
 
+## Example Output
 
-### Example Output
+```shell
+> weather,city=San\ Francisco,city_id=5391959,condition_id=803,condition_main=Clouds,country=US,forecast=114h,host=robot pressure=1027,temperature=10.09,wind_degrees=34,wind_speed=1.24,condition_description="broken clouds",cloudiness=80i,humidity=67i,rain=0,feels_like=8.9,condition_icon="04n" 1645952400000000000
+> weather,city=San\ Francisco,city_id=5391959,condition_id=804,condition_main=Clouds,country=US,forecast=117h,host=robot humidity=65i,rain=0,temperature=10.12,wind_degrees=31,cloudiness=90i,pressure=1026,feels_like=8.88,wind_speed=1.31,condition_description="overcast clouds",condition_icon="04n" 1645963200000000000
+> weather,city=San\ Francisco,city_id=5391959,condition_id=804,condition_main=Clouds,country=US,forecast=120h,host=robot cloudiness=100i,humidity=61i,rain=0,temperature=10.28,wind_speed=1.94,condition_icon="04d",pressure=1027,feels_like=8.96,wind_degrees=16,condition_description="overcast clouds" 1645974000000000000
 
-```
-> weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=* cloudiness=1i,condition_description="clear sky",condition_icon="01d",humidity=35i,pressure=1012,rain=0,sunrise=1570630329000000000i,sunset=1570671689000000000i,temperature=21.52,visibility=16093i,wind_degrees=280,wind_speed=5.7 1570659256000000000
-> weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=3h cloudiness=0i,condition_description="clear sky",condition_icon="01n",humidity=41i,pressure=1010,rain=0,temperature=22.34,wind_degrees=249.393,wind_speed=2.085 1570665600000000000
-> weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=6h cloudiness=0i,condition_description="clear sky",condition_icon="01n",humidity=50i,pressure=1012,rain=0,temperature=17.09,wind_degrees=310.754,wind_speed=3.009 1570676400000000000
 ```
 
 [api key]: https://openweathermap.org/appid

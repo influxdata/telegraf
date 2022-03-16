@@ -1,0 +1,2 @@
+file,from_station=COLM,to_station=ANTC,etd_estimate_direction=North minutes=2i
+file,from_station=POWL,to_station=DALY,etd_estimate_direction=South minutes=6i

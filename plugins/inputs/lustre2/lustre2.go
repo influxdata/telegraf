@@ -1,16 +1,16 @@
-/*
-Lustre 2.x telegraf plugin
+//go:build !windows
+// +build !windows
 
-Lustre (http://lustre.org/) is an open-source, parallel file system
-for HPC environments. It stores statistics about its activity in
-/proc
-
-*/
+// Package lustre2 (doesn't aim for Windows)
+// Lustre 2.x Telegraf plugin
+// Lustre (http://lustre.org/) is an open-source, parallel file system
+// for HPC environments. It stores statistics about its activity in /proc
 package lustre2
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -25,8 +25,8 @@ type tags struct {
 // Lustre proc files can change between versions, so we want to future-proof
 // by letting people choose what to look at.
 type Lustre2 struct {
-	Ost_procfiles []string `toml:"ost_procfiles"`
-	Mds_procfiles []string `toml:"mds_procfiles"`
+	OstProcfiles []string `toml:"ost_procfiles"`
+	MdsProcfiles []string `toml:"mds_procfiles"`
 
 	// allFields maps and OST name to the metric fields associated with that OST
 	allFields map[tags]map[string]interface{}
@@ -55,10 +55,9 @@ type mapping struct {
 	inProc   string // What to look for at the start of a line in /proc/fs/lustre/*
 	field    uint32 // which field to extract from that line
 	reportAs string // What measurement name to use
-	tag      string // Additional tag to add for this metric
 }
 
-var wanted_ost_fields = []*mapping{
+var wantedOstFields = []*mapping{
 	{
 		inProc:   "write_bytes",
 		field:    6,
@@ -90,7 +89,7 @@ var wanted_ost_fields = []*mapping{
 	},
 }
 
-var wanted_ost_jobstats_fields = []*mapping{
+var wantedOstJobstatsFields = []*mapping{
 	{ // The read line has several fields, so we need to differentiate what they are
 		inProc:   "read",
 		field:    3,
@@ -223,7 +222,7 @@ var wanted_ost_jobstats_fields = []*mapping{
 	},
 }
 
-var wanted_mds_fields = []*mapping{
+var wantedMdsFields = []*mapping{
 	{
 		inProc: "open",
 	},
@@ -274,7 +273,7 @@ var wanted_mds_fields = []*mapping{
 	},
 }
 
-var wanted_mdt_jobstats_fields = []*mapping{
+var wantedMdtJobstatsFields = []*mapping{
 	{
 		inProc:   "open",
 		field:    3,
@@ -357,11 +356,13 @@ var wanted_mdt_jobstats_fields = []*mapping{
 	},
 }
 
-func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, acc telegraf.Accumulator) error {
+func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) error {
 	files, err := filepath.Glob(fileglob)
 	if err != nil {
 		return err
 	}
+
+	fieldSplitter := regexp.MustCompile(`[ :]+`)
 
 	for _, file := range files {
 		/* Turn /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
@@ -373,13 +374,13 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 		name := path[len(path)-2]
 
 		//lines, err := internal.ReadLines(file)
-		wholeFile, err := ioutil.ReadFile(file)
+		wholeFile, err := os.ReadFile(file)
 		if err != nil {
 			return err
 		}
 		jobs := strings.Split(string(wholeFile), "- ")
 		for _, job := range jobs {
-			lines := strings.Split(string(job), "\n")
+			lines := strings.Split(job, "\n")
 			jobid := ""
 
 			// figure out if the data should be tagged with job_id here
@@ -393,7 +394,11 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 				if len(line) < 1 {
 					continue
 				}
-				parts := strings.Fields(line)
+
+				parts := fieldSplitter.Split(line, -1)
+				if len(parts[0]) == 0 {
+					parts = parts[1:]
+				}
 
 				var fields map[string]interface{}
 				fields, ok := l.allFields[tags{name, jobid}]
@@ -404,14 +409,14 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 
 				for _, wanted := range wantedFields {
 					var data uint64
-					if strings.TrimSuffix(parts[0], ":") == wanted.inProc {
+					if parts[0] == wanted.inProc {
 						wantedField := wanted.field
 						// if not set, assume field[1]. Shouldn't be field[0], as
 						// that's a string
 						if wantedField == 0 {
 							wantedField = 1
 						}
-						data, err = strconv.ParseUint(strings.TrimSuffix((parts[wantedField]), ","), 10, 64)
+						data, err = strconv.ParseUint(strings.TrimSuffix(parts[wantedField], ","), 10, 64)
 						if err != nil {
 							return err
 						}
@@ -443,66 +448,60 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	//l.allFields = make(map[string]map[string]interface{})
 	l.allFields = make(map[tags]map[string]interface{})
 
-	if len(l.Ost_procfiles) == 0 {
+	if len(l.OstProcfiles) == 0 {
 		// read/write bytes are in obdfilter/<ost_name>/stats
-		err := l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/stats",
-			wanted_ost_fields, acc)
+		err := l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/stats", wantedOstFields)
 		if err != nil {
 			return err
 		}
 		// cache counters are in osd-ldiskfs/<ost_name>/stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/osd-ldiskfs/*/stats",
-			wanted_ost_fields, acc)
+		err = l.GetLustreProcStats("/proc/fs/lustre/osd-ldiskfs/*/stats", wantedOstFields)
 		if err != nil {
 			return err
 		}
 		// per job statistics are in obdfilter/<ost_name>/job_stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/job_stats",
-			wanted_ost_jobstats_fields, acc)
+		err = l.GetLustreProcStats("/proc/fs/lustre/obdfilter/*/job_stats", wantedOstJobstatsFields)
 		if err != nil {
 			return err
 		}
 	}
 
-	if len(l.Mds_procfiles) == 0 {
+	if len(l.MdsProcfiles) == 0 {
 		// Metadata server stats
-		err := l.GetLustreProcStats("/proc/fs/lustre/mdt/*/md_stats",
-			wanted_mds_fields, acc)
+		err := l.GetLustreProcStats("/proc/fs/lustre/mdt/*/md_stats", wantedMdsFields)
 		if err != nil {
 			return err
 		}
 
 		// Metadata target job stats
-		err = l.GetLustreProcStats("/proc/fs/lustre/mdt/*/job_stats",
-			wanted_mdt_jobstats_fields, acc)
+		err = l.GetLustreProcStats("/proc/fs/lustre/mdt/*/job_stats", wantedMdtJobstatsFields)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, procfile := range l.Ost_procfiles {
-		ost_fields := wanted_ost_fields
+	for _, procfile := range l.OstProcfiles {
+		ostFields := wantedOstFields
 		if strings.HasSuffix(procfile, "job_stats") {
-			ost_fields = wanted_ost_jobstats_fields
+			ostFields = wantedOstJobstatsFields
 		}
-		err := l.GetLustreProcStats(procfile, ost_fields, acc)
+		err := l.GetLustreProcStats(procfile, ostFields)
 		if err != nil {
 			return err
 		}
 	}
-	for _, procfile := range l.Mds_procfiles {
-		mdt_fields := wanted_mds_fields
+	for _, procfile := range l.MdsProcfiles {
+		mdtFields := wantedMdsFields
 		if strings.HasSuffix(procfile, "job_stats") {
-			mdt_fields = wanted_mdt_jobstats_fields
+			mdtFields = wantedMdtJobstatsFields
 		}
-		err := l.GetLustreProcStats(procfile, mdt_fields, acc)
+		err := l.GetLustreProcStats(procfile, mdtFields)
 		if err != nil {
 			return err
 		}
 	}
 
 	for tgs, fields := range l.allFields {
-
 		tags := map[string]string{
 			"name": tgs.name,
 		}

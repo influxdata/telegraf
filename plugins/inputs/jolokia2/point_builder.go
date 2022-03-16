@@ -40,7 +40,6 @@ func (pb *pointBuilder) Build(mbean string, value interface{}) []point {
 
 	points := make([]point, 0)
 	for mbean, value := range valueMap {
-
 		points = append(points, point{
 			Tags:   pb.extractTags(mbean),
 			Fields: pb.extractFields(mbean, value),
@@ -99,13 +98,11 @@ func (pb *pointBuilder) extractFields(mbean string, value interface{}) map[strin
 			// if there were no attributes requested,
 			// then the keys are attributes
 			pb.fillFields("", valueMap, fieldMap)
-
 		} else if len(pb.objectAttributes) == 1 {
 			// if there was a single attribute requested,
 			// then the keys are the attribute's properties
 			fieldName := pb.formatFieldName(pb.objectAttributes[0], pb.objectPath)
 			pb.fillFields(fieldName, valueMap, fieldMap)
-
 		} else {
 			// if there were multiple attributes requested,
 			// then the keys are the attribute names
@@ -199,7 +196,6 @@ func (pb *pointBuilder) applySubstitutions(mbean string, fieldMap map[string]int
 	properties := makePropertyMap(mbean)
 
 	for i, subKey := range pb.substitutions[1:] {
-
 		symbol := fmt.Sprintf("$%d", i+1)
 		substitution := properties[subKey]
 

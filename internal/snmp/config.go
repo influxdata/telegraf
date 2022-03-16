@@ -1,21 +1,23 @@
 package snmp
 
 import (
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 )
 
 type ClientConfig struct {
 	// Timeout to wait for a response.
-	Timeout internal.Duration `toml:"timeout"`
-	Retries int               `toml:"retries"`
+	Timeout config.Duration `toml:"timeout"`
+	Retries int             `toml:"retries"`
 	// Values: 1, 2, 3
 	Version uint8 `toml:"version"`
+	// Path to mib files
+	Path []string `toml:"path"`
 
 	// Parameters for Version 1 & 2
 	Community string `toml:"community"`
 
 	// Parameters for Version 2 & 3
-	MaxRepetitions uint8 `toml:"max_repetitions"`
+	MaxRepetitions uint32 `toml:"max_repetitions"`
 
 	// Parameters for Version 3
 	ContextName string `toml:"context_name"`

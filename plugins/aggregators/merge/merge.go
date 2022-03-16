@@ -19,7 +19,6 @@ const (
 
 type Merge struct {
 	grouper *metric.SeriesGrouper
-	log     telegraf.Logger
 }
 
 func (a *Merge) Init() error {
@@ -36,13 +35,7 @@ func (a *Merge) SampleConfig() string {
 }
 
 func (a *Merge) Add(m telegraf.Metric) {
-	tags := m.Tags()
-	for _, field := range m.FieldList() {
-		err := a.grouper.Add(m.Name(), tags, m.Time(), field.Key, field.Value)
-		if err != nil {
-			a.log.Errorf("Error adding metric: %v", err)
-		}
-	}
+	a.grouper.AddMetric(m)
 }
 
 func (a *Merge) Push(acc telegraf.Accumulator) {

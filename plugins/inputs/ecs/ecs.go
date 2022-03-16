@@ -6,15 +6,15 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Ecs config object
 type Ecs struct {
 	EndpointURL string `toml:"endpoint_url"`
-	Timeout     internal.Duration
+	Timeout     config.Duration
 
 	ContainerNameInclude []string `toml:"container_name_include"`
 	ContainerNameExclude []string `toml:"container_name_exclude"`
@@ -114,7 +114,7 @@ func initSetup(ecs *Ecs) error {
 	if ecs.client == nil {
 		resolveEndpoint(ecs)
 
-		c, err := ecs.newClient(ecs.Timeout.Duration, ecs.EndpointURL, ecs.metadataVersion)
+		c, err := ecs.newClient(time.Duration(ecs.Timeout), ecs.EndpointURL, ecs.metadataVersion)
 		if err != nil {
 			return err
 		}
@@ -166,14 +166,13 @@ func resolveEndpoint(ecs *Ecs) {
 
 func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumulator) {
 	taskFields := map[string]interface{}{
-		"revision":       task.Revision,
 		"desired_status": task.DesiredStatus,
 		"known_status":   task.KnownStatus,
 		"limit_cpu":      task.Limits["CPU"],
 		"limit_mem":      task.Limits["Memory"],
 	}
 
-	acc.AddFields("ecs_task", taskFields, tags, task.PullStoppedAt)
+	acc.AddFields("ecs_task", taskFields, tags)
 }
 
 func (ecs *Ecs) accContainers(task *Task, taskTags map[string]string, acc telegraf.Accumulator) {
@@ -221,20 +220,20 @@ func mergeTags(a map[string]string, b map[string]string) map[string]string {
 }
 
 func (ecs *Ecs) createContainerNameFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(ecs.ContainerNameInclude, ecs.ContainerNameExclude)
+	containerNameFilter, err := filter.NewIncludeExcludeFilter(ecs.ContainerNameInclude, ecs.ContainerNameExclude)
 	if err != nil {
 		return err
 	}
-	ecs.containerNameFilter = filter
+	ecs.containerNameFilter = containerNameFilter
 	return nil
 }
 
 func (ecs *Ecs) createLabelFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(ecs.LabelInclude, ecs.LabelExclude)
+	labelFilter, err := filter.NewIncludeExcludeFilter(ecs.LabelInclude, ecs.LabelExclude)
 	if err != nil {
 		return err
 	}
-	ecs.labelFilter = filter
+	ecs.labelFilter = labelFilter
 	return nil
 }
 
@@ -251,11 +250,11 @@ func (ecs *Ecs) createContainerStatusFilters() error {
 		ecs.ContainerStatusExclude[i] = strings.ToUpper(exclude)
 	}
 
-	filter, err := filter.NewIncludeExcludeFilter(ecs.ContainerStatusInclude, ecs.ContainerStatusExclude)
+	statusFilter, err := filter.NewIncludeExcludeFilter(ecs.ContainerStatusInclude, ecs.ContainerStatusExclude)
 	if err != nil {
 		return err
 	}
-	ecs.statusFilter = filter
+	ecs.statusFilter = statusFilter
 	return nil
 }
 
@@ -263,7 +262,7 @@ func init() {
 	inputs.Add("ecs", func() telegraf.Input {
 		return &Ecs{
 			EndpointURL:    "",
-			Timeout:        internal.Duration{Duration: 5 * time.Second},
+			Timeout:        config.Duration(5 * time.Second),
 			newClient:      NewClient,
 			filtersCreated: false,
 		}

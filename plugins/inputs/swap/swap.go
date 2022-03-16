@@ -12,14 +12,14 @@ type SwapStats struct {
 	ps system.PS
 }
 
-func (_ *SwapStats) Description() string {
+func (ss *SwapStats) Description() string {
 	return "Read metrics about swap memory usage"
 }
 
-func (_ *SwapStats) SampleConfig() string { return "" }
+func (ss *SwapStats) SampleConfig() string { return "" }
 
-func (s *SwapStats) Gather(acc telegraf.Accumulator) error {
-	swap, err := s.ps.SwapStat()
+func (ss *SwapStats) Gather(acc telegraf.Accumulator) error {
+	swap, err := ss.ps.SwapStat()
 	if err != nil {
 		return fmt.Errorf("error getting swap memory info: %s", err)
 	}

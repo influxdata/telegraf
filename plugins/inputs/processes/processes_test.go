@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package processes
@@ -8,36 +9,37 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestProcesses(t *testing.T) {
+	tester := tester{}
 	processes := &Processes{
-		Log:          testutil.Logger{},
-		execPS:       execPS,
-		readProcFile: readProcFile,
+		Log: testutil.Logger{},
+		execPS: testExecPS("STAT\n		Ss  \n		S   \n		Z   \n		R   \n		S<  \n		SNs \n		Ss+ \n		\n		\n"),
+		readProcFile: tester.testProcFile,
 	}
 	var acc testutil.Accumulator
 
 	err := processes.Gather(&acc)
 	require.NoError(t, err)
 
-	assert.True(t, acc.HasInt64Field("processes", "running"))
-	assert.True(t, acc.HasInt64Field("processes", "sleeping"))
-	assert.True(t, acc.HasInt64Field("processes", "stopped"))
-	assert.True(t, acc.HasInt64Field("processes", "total"))
+	require.True(t, acc.HasInt64Field("processes", "running"))
+	require.True(t, acc.HasInt64Field("processes", "sleeping"))
+	require.True(t, acc.HasInt64Field("processes", "stopped"))
+	require.True(t, acc.HasInt64Field("processes", "total"))
 	total, ok := acc.Get("processes")
 	require.True(t, ok)
-	assert.True(t, total.Fields["total"].(int64) > 0)
+	require.True(t, total.Fields["total"].(int64) > 0)
 }
 
 func TestFromPS(t *testing.T) {
 	processes := &Processes{
 		Log:     testutil.Logger{},
-		execPS:  testExecPS,
+		execPS:  testExecPS("\nSTAT\nD\nI\nL\nR\nR+\nS\nS+\nSNs\nSs\nU\nZ\n"),
 		forcePS: true,
 	}
 
@@ -46,12 +48,12 @@ func TestFromPS(t *testing.T) {
 	require.NoError(t, err)
 
 	fields := getEmptyFields()
-	fields["blocked"] = int64(4)
+	fields["blocked"] = int64(3)
 	fields["zombies"] = int64(1)
-	fields["running"] = int64(4)
-	fields["sleeping"] = int64(34)
-	fields["idle"] = int64(2)
-	fields["total"] = int64(45)
+	fields["running"] = int64(2)
+	fields["sleeping"] = int64(4)
+	fields["idle"] = int64(1)
+	fields["total"] = int64(11)
 
 	acc.AssertContainsTaggedFields(t, "processes", fields, map[string]string{})
 }
@@ -168,8 +170,8 @@ func TestParkedProcess(t *testing.T) {
 		testutil.IgnoreTime())
 }
 
-func testExecPS() ([]byte, error) {
-	return []byte(testPSOut), nil
+func testExecPS(out string) func() ([]byte, error) {
+	return func() ([]byte, error) { return []byte(out), nil }
 }
 
 // struct for counting calls to testProcFile
@@ -188,57 +190,8 @@ func (t *tester) testProcFile2(_ string) ([]byte, error) {
 }
 
 func testExecPSError() ([]byte, error) {
-	return []byte(testPSOut), fmt.Errorf("ERROR!")
+	return []byte("\nSTAT\nD\nI\nL\nR\nR+\nS\nS+\nSNs\nSs\nU\nZ\n"), fmt.Errorf("error")
 }
-
-const testPSOut = `
-STAT
-S
-S
-S
-S
-R
-R
-S
-S
-Ss
-Ss
-S
-SNs
-Ss
-Ss
-S
-R+
-S
-U
-S
-S
-S
-S
-Ss
-S+
-Ss
-S
-S+
-S+
-Ss
-S+
-Ss
-S
-R+
-Ss
-S
-S+
-S+
-Ss
-L
-U
-Z
-D
-S+
-I
-I
-`
 
 const testProcStat = `10 (rcuob/0) %s 2 0 0 0 -1 2129984 0 0 0 0 0 0 0 0 20 0 %s 0 11 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 `

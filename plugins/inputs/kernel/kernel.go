@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package kernel
@@ -5,7 +6,6 @@ package kernel
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -16,11 +16,11 @@ import (
 
 // /proc/stat file line prefixes to gather stats on:
 var (
-	interrupts       = []byte("intr")
-	context_switches = []byte("ctxt")
-	processes_forked = []byte("processes")
-	disk_pages       = []byte("page")
-	boot_time        = []byte("btime")
+	interrupts      = []byte("intr")
+	contextSwitches = []byte("ctxt")
+	processesForked = []byte("processes")
+	diskPages       = []byte("page")
+	bootTime        = []byte("btime")
 )
 
 type Kernel struct {
@@ -35,13 +35,12 @@ func (k *Kernel) Description() string {
 func (k *Kernel) SampleConfig() string { return "" }
 
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
-
 	data, err := k.getProcStat()
 	if err != nil {
 		return err
 	}
 
-	entropyData, err := ioutil.ReadFile(k.entropyStatFile)
+	entropyData, err := os.ReadFile(k.entropyStatFile)
 	if err != nil {
 		return err
 	}
@@ -54,7 +53,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 
 	fields := make(map[string]interface{})
 
-	fields["entropy_avail"] = int64(entropyValue)
+	fields["entropy_avail"] = entropyValue
 
 	dataFields := bytes.Fields(data)
 	for i, field := range dataFields {
@@ -64,26 +63,26 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				return err
 			}
-			fields["interrupts"] = int64(m)
-		case bytes.Equal(field, context_switches):
+			fields["interrupts"] = m
+		case bytes.Equal(field, contextSwitches):
 			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
-			fields["context_switches"] = int64(m)
-		case bytes.Equal(field, processes_forked):
+			fields["context_switches"] = m
+		case bytes.Equal(field, processesForked):
 			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
-			fields["processes_forked"] = int64(m)
-		case bytes.Equal(field, boot_time):
+			fields["processes_forked"] = m
+		case bytes.Equal(field, bootTime):
 			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}
-			fields["boot_time"] = int64(m)
-		case bytes.Equal(field, disk_pages):
+			fields["boot_time"] = m
+		case bytes.Equal(field, diskPages):
 			in, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
@@ -92,8 +91,8 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				return err
 			}
-			fields["disk_pages_in"] = int64(in)
-			fields["disk_pages_out"] = int64(out)
+			fields["disk_pages_in"] = in
+			fields["disk_pages_out"] = out
 		}
 	}
 
@@ -104,12 +103,12 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 
 func (k *Kernel) getProcStat() ([]byte, error) {
 	if _, err := os.Stat(k.statFile); os.IsNotExist(err) {
-		return nil, fmt.Errorf("kernel: %s does not exist!", k.statFile)
+		return nil, fmt.Errorf("kernel: %s does not exist", k.statFile)
 	} else if err != nil {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(k.statFile)
+	data, err := os.ReadFile(k.statFile)
 	if err != nil {
 		return nil, err
 	}

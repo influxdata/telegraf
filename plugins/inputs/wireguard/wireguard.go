@@ -2,12 +2,12 @@ package wireguard
 
 import (
 	"fmt"
-	"log"
+
+	"golang.zx2c4.com/wireguard/wgctrl"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.zx2c4.com/wireguard/wgctrl"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 const (
@@ -26,7 +26,8 @@ var (
 // Wireguard is an input that enumerates all Wireguard interfaces/devices on
 // the host, and reports gauge metrics for the device itself and its peers.
 type Wireguard struct {
-	Devices []string `toml:"devices"`
+	Devices []string        `toml:"devices"`
+	Log     telegraf.Logger `toml:"-"`
 
 	client *wgctrl.Client
 }
@@ -81,7 +82,7 @@ func (wg *Wireguard) enumerateDevices() ([]*wgtypes.Device, error) {
 	for _, name := range wg.Devices {
 		dev, err := wg.client.Device(name)
 		if err != nil {
-			log.Printf("W! [inputs.wireguard] No Wireguard device found with name %s", name)
+			wg.Log.Warnf("No Wireguard device found with name %s", name)
 			continue
 		}
 

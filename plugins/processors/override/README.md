@@ -21,7 +21,7 @@ Use-case of this plugin encompass ensuring certain tags or naming conventions
 are adhered to irrespective of input plugin configurations, e.g. by
 `taginclude`.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Apply metric modifications using override semantics.

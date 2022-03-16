@@ -2,15 +2,14 @@ package webhooks
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"reflect"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill"
@@ -20,7 +19,7 @@ import (
 )
 
 type Webhook interface {
-	Register(router *mux.Router, acc telegraf.Accumulator)
+	Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger)
 }
 
 func init() {
@@ -28,14 +27,16 @@ func init() {
 }
 
 type Webhooks struct {
-	ServiceAddress string
+	ServiceAddress string `toml:"service_address"`
 
-	Github     *github.GithubWebhook
-	Filestack  *filestack.FilestackWebhook
-	Mandrill   *mandrill.MandrillWebhook
-	Rollbar    *rollbar.RollbarWebhook
-	Papertrail *papertrail.PapertrailWebhook
-	Particle   *particle.ParticleWebhook
+	Github     *github.GithubWebhook         `toml:"github"`
+	Filestack  *filestack.FilestackWebhook   `toml:"filestack"`
+	Mandrill   *mandrill.MandrillWebhook     `toml:"mandrill"`
+	Rollbar    *rollbar.RollbarWebhook       `toml:"rollbar"`
+	Papertrail *papertrail.PapertrailWebhook `toml:"papertrail"`
+	Particle   *particle.ParticleWebhook     `toml:"particle"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	srv *http.Server
 }
@@ -52,21 +53,45 @@ func (wb *Webhooks) SampleConfig() string {
   [inputs.webhooks.filestack]
     path = "/filestack"
 
+	## HTTP basic auth
+	#username = ""
+	#password = ""
+
   [inputs.webhooks.github]
     path = "/github"
     # secret = ""
 
+	## HTTP basic auth
+	#username = ""
+	#password = ""
+
   [inputs.webhooks.mandrill]
     path = "/mandrill"
+
+	## HTTP basic auth
+	#username = ""
+	#password = ""
 
   [inputs.webhooks.rollbar]
     path = "/rollbar"
 
+	## HTTP basic auth
+	#username = ""
+	#password = ""
+
   [inputs.webhooks.papertrail]
     path = "/papertrail"
 
+	## HTTP basic auth
+	#username = ""
+	#password = ""
+
   [inputs.webhooks.particle]
     path = "/particle"
+
+	## HTTP basic auth
+	#username = ""
+	#password = ""
 `
 }
 
@@ -78,7 +103,7 @@ func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-// Looks for fields which implement Webhook interface
+// AvailableWebhooks Looks for fields which implement Webhook interface
 func (wb *Webhooks) AvailableWebhooks() []Webhook {
 	webhooks := make([]Webhook, 0)
 	s := reflect.ValueOf(wb).Elem()
@@ -103,32 +128,32 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 	r := mux.NewRouter()
 
 	for _, webhook := range wb.AvailableWebhooks() {
-		webhook.Register(r, acc)
+		webhook.Register(r, acc, wb.Log)
 	}
 
 	wb.srv = &http.Server{Handler: r}
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s", wb.ServiceAddress))
+	ln, err := net.Listen("tcp", wb.ServiceAddress)
 	if err != nil {
-		log.Fatalf("E! Error starting server: %v", err)
-		return err
-
+		return fmt.Errorf("error starting server: %v", err)
 	}
 
 	go func() {
 		if err := wb.srv.Serve(ln); err != nil {
 			if err != http.ErrServerClosed {
-				acc.AddError(fmt.Errorf("E! Error listening: %v", err))
+				acc.AddError(fmt.Errorf("error listening: %v", err))
 			}
 		}
 	}()
 
-	log.Printf("I! Started the webhooks service on %s\n", wb.ServiceAddress)
+	wb.Log.Infof("Started the webhooks service on %s", wb.ServiceAddress)
 
 	return nil
 }
 
-func (rb *Webhooks) Stop() {
-	rb.srv.Close()
-	log.Println("I! Stopping the Webhooks service")
+func (wb *Webhooks) Stop() {
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
+	wb.srv.Close()
+	wb.Log.Infof("Stopping the Webhooks service")
 }

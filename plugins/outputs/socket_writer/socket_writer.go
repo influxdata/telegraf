@@ -3,11 +3,12 @@ package socket_writer
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -17,8 +18,9 @@ import (
 type SocketWriter struct {
 	ContentEncoding string `toml:"content_encoding"`
 	Address         string
-	KeepAlivePeriod *internal.Duration
+	KeepAlivePeriod *config.Duration
 	tlsint.ClientConfig
+	Log telegraf.Logger `toml:"-"`
 
 	serializers.Serializer
 
@@ -97,7 +99,7 @@ func (sw *SocketWriter) Connect() error {
 	}
 
 	if err := sw.setKeepAlive(c); err != nil {
-		log.Printf("unable to configure keep alive (%s): %s", sw.Address, err)
+		sw.Log.Debugf("Unable to configure keep alive (%s): %s", sw.Address, err)
 	}
 	//set encoder
 	sw.encoder, err = internal.NewContentEncoder(sw.ContentEncoding)
@@ -117,13 +119,13 @@ func (sw *SocketWriter) setKeepAlive(c net.Conn) error {
 	if !ok {
 		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(sw.Address, "://", 2)[0])
 	}
-	if sw.KeepAlivePeriod.Duration == 0 {
+	if *sw.KeepAlivePeriod == 0 {
 		return tcpc.SetKeepAlive(false)
 	}
 	if err := tcpc.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return tcpc.SetKeepAlivePeriod(sw.KeepAlivePeriod.Duration)
+	return tcpc.SetKeepAlivePeriod(time.Duration(*sw.KeepAlivePeriod))
 }
 
 // Write writes the given metrics to the destination.
@@ -140,13 +142,13 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		bs, err := sw.Serialize(m)
 		if err != nil {
-			log.Printf("D! [outputs.socket_writer] Could not serialize metric: %v", err)
+			sw.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 
 		bs, err = sw.encoder.Encode(bs)
 		if err != nil {
-			log.Printf("D! [outputs.socket_writer] Could not encode metric: %v", err)
+			sw.Log.Debugf("Could not encode metric: %v", err)
 			continue
 		}
 
@@ -154,7 +156,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 			//TODO log & keep going with remaining strings
 			if err, ok := err.(net.Error); !ok || !err.Temporary() {
 				// permanent error. close the connection
-				sw.Close()
+				sw.Close() //nolint:revive // There is another error which will be returned here
 				sw.Conn = nil
 				return fmt.Errorf("closing connection: %v", err)
 			}

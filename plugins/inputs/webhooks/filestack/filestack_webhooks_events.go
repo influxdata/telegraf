@@ -5,7 +5,7 @@ import "strconv"
 type FilestackEvent struct {
 	Action    string `json:"action"`
 	TimeStamp int64  `json:"timestamp"`
-	Id        int    `json:"id"`
+	ID        int    `json:"id"`
 }
 
 func (fe *FilestackEvent) Tags() map[string]string {
@@ -16,6 +16,6 @@ func (fe *FilestackEvent) Tags() map[string]string {
 
 func (fe *FilestackEvent) Fields() map[string]interface{} {
 	return map[string]interface{}{
-		"id": strconv.Itoa(fe.Id),
+		"id": strconv.Itoa(fe.ID),
 	}
 }

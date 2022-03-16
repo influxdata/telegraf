@@ -2,7 +2,8 @@
 
 This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
 
-### Configuration:
+## Configuration
+
 ```toml
 [[outputs.kafka]]
   ## URLs of kafka brokers
@@ -72,13 +73,18 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##       routing_key = "telegraf"
   # routing_key = ""
 
-  ## CompressionCodec represents the various compression codecs recognized by
+  ## Compression codec represents the various compression codecs recognized by
   ## Kafka in messages.
-  ##  0 : No compression
-  ##  1 : Gzip compression
-  ##  2 : Snappy compression
-  ##  3 : LZ4 compression
-  # compression_codec = 0
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
+   # compression_codec = 0
+
+  ## Idempotent Writes
+  ## If enabled, exactly one copy of each message is written.
+  # idempotent_writes = false
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
   ##  replica acknowledgements it must see before responding
@@ -107,12 +113,38 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SOCKS5 proxy to use when connecting to brokers
+  # socks5_enabled = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
+
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
+  ## Optional SASL:
+  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
+  ## (defaults to PLAIN)
+  # sasl_mechanism = ""
+
+  ## used if sasl_mechanism is GSSAPI (experimental)
+  # sasl_gssapi_service_name = ""
+  # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
+  # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
+  # sasl_gssapi_kerberos_config_path = "/"
+  # sasl_gssapi_realm = "realm"
+  # sasl_gssapi_key_tab_path = ""
+  # sasl_gssapi_disable_pafxfast = false
+
+  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  # sasl_access_token = ""
+
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
+
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -121,7 +153,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   # data_format = "influx"
 ```
 
-#### `max_retry`
+### `max_retry`
 
 This option controls the number of retries before a failure notification is
 displayed for each message when no acknowledgement is received from the

@@ -95,7 +95,6 @@ func (o *Options) applyFunc(bo BaseOpts, fn ProcessorFunc, metric telegraf.Metri
 			if v, ok := v.(string); ok {
 				metric.AddField(targetField, fn(v))
 			}
-
 		}
 	}
 }

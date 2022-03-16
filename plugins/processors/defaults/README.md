@@ -10,7 +10,8 @@ There are three cases where this processor will insert a configured default fiel
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Configuration
+## Configuration
+
 ```toml
 ## Set default fields on your metric(s) when they are nil or empty
 [[processors.defaults]]
@@ -22,7 +23,8 @@ Telegraf minimum version: Telegraf 1.15.0
     is_error = true
 ```
 
-### Example
+## Example
+
 Ensure a _status\_code_ field with _N/A_ is inserted in the metric when one is not set in the metric by default:
 
 ```toml

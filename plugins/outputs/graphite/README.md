@@ -6,7 +6,7 @@ via raw TCP.
 For details on the translation between Telegraf Metrics and Graphite output,
 see the [Graphite Data Format](../../../docs/DATA_FORMATS_OUTPUT.md)
 
-### Configuration:
+## Configuration
 
 ```toml
 # Configuration for Graphite server to send metrics to

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -43,11 +43,11 @@ var (
 type Vars map[string]interface{}
 
 type Aurora struct {
-	Schedulers []string          `toml:"schedulers"`
-	Roles      []string          `toml:"roles"`
-	Timeout    internal.Duration `toml:"timeout"`
-	Username   string            `toml:"username"`
-	Password   string            `toml:"password"`
+	Schedulers []string        `toml:"schedulers"`
+	Roles      []string        `toml:"roles"`
+	Timeout    config.Duration `toml:"timeout"`
+	Username   string          `toml:"username"`
+	Password   string          `toml:"password"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -95,7 +95,7 @@ func (a *Aurora) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), a.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
 
 	var wg sync.WaitGroup
@@ -147,8 +147,8 @@ func (a *Aurora) initialize() error {
 		urls = append(urls, loc)
 	}
 
-	if a.Timeout.Duration < time.Second {
-		a.Timeout.Duration = defaultTimeout
+	if a.Timeout < config.Duration(time.Second) {
+		a.Timeout = config.Duration(defaultTimeout)
 	}
 
 	if len(a.Roles) == 0 {
@@ -190,7 +190,9 @@ func (a *Aurora) gatherRole(ctx context.Context, origin *url.URL) (RoleType, err
 	if err != nil {
 		return Unknown, err
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		return Unknown, fmt.Errorf("closing body failed: %v", err)
+	}
 
 	switch resp.StatusCode {
 	case http.StatusOK:

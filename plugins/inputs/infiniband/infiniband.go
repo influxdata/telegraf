@@ -13,10 +13,10 @@ type Infiniband struct {
 // Sample configuration for plugin
 var InfinibandConfig = ``
 
-func (_ *Infiniband) SampleConfig() string {
+func (i *Infiniband) SampleConfig() string {
 	return InfinibandConfig
 }
 
-func (_ *Infiniband) Description() string {
+func (i *Infiniband) Description() string {
 	return "Gets counters from all InfiniBand cards and ports installed"
 }

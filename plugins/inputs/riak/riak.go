@@ -21,19 +21,19 @@ type Riak struct {
 
 // NewRiak return a new instance of Riak with a default http client
 func NewRiak() *Riak {
-	tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+	tr := &http.Transport{ResponseHeaderTimeout: 3 * time.Second}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   time.Duration(4 * time.Second),
+		Timeout:   4 * time.Second,
 	}
 	return &Riak{client: client}
 }
 
 // Type riakStats represents the data that is received from Riak
 type riakStats struct {
-	CpuAvg1                  int64  `json:"cpu_avg1"`
-	CpuAvg15                 int64  `json:"cpu_avg15"`
-	CpuAvg5                  int64  `json:"cpu_avg5"`
+	CPUAvg1                  int64  `json:"cpu_avg1"`
+	CPUAvg15                 int64  `json:"cpu_avg15"`
+	CPUAvg5                  int64  `json:"cpu_avg5"`
 	MemoryCode               int64  `json:"memory_code"`
 	MemoryEts                int64  `json:"memory_ets"`
 	MemoryProcesses          int64  `json:"memory_processes"`
@@ -144,9 +144,9 @@ func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
 
 	// Build a map of field values
 	fields := map[string]interface{}{
-		"cpu_avg1":                     stats.CpuAvg1,
-		"cpu_avg15":                    stats.CpuAvg15,
-		"cpu_avg5":                     stats.CpuAvg5,
+		"cpu_avg1":                     stats.CPUAvg1,
+		"cpu_avg15":                    stats.CPUAvg15,
+		"cpu_avg5":                     stats.CPUAvg5,
 		"memory_code":                  stats.MemoryCode,
 		"memory_ets":                   stats.MemoryEts,
 		"memory_processes":             stats.MemoryProcesses,

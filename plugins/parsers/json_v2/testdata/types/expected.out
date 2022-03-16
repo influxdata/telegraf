@@ -1,0 +1,4 @@
+file explicitstringtypeName="Bilbo",defaultstringtypeName="Baggins",convertbooltostringName="true",convertinttostringName="1",convertfloattostringName="1.1"
+file defaultinttypeName=2,convertfloatointName=3i,convertstringtointName=4i,convertbooltointName=0i,explicitinttypeName=1i,uinttype=1u
+file convertstringtofloatName=4.1,explicitfloattypeName=1.1,defaultfloattypeName=2.1,convertintotfloatName=3
+file explicitbooltypeName=true,defaultbooltypeName=false,convertinttoboolName=true,convertstringtoboolName=false,convertintstringtoboolTrueName=true,convertintstringtoboolFalseName=false

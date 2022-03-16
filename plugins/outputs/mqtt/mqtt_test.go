@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConnectAndWrite(t *testing.T) {
+func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -19,6 +19,7 @@ func TestConnectAndWrite(t *testing.T) {
 	m := &MQTT{
 		Servers:    []string{url},
 		serializer: s,
+		KeepAlive:  30,
 	}
 
 	// Verify that we can connect to the MQTT broker

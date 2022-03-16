@@ -79,7 +79,7 @@ func logName(pluginType, name, alias string) string {
 	return pluginType + "." + name + "::" + alias
 }
 
-func setLoggerOnPlugin(i interface{}, log telegraf.Logger) {
+func SetLoggerOnPlugin(i interface{}, logger telegraf.Logger) {
 	valI := reflect.ValueOf(i)
 
 	if valI.Type().Kind() != reflect.Ptr {
@@ -94,9 +94,10 @@ func setLoggerOnPlugin(i interface{}, log telegraf.Logger) {
 	switch field.Type().String() {
 	case "telegraf.Logger":
 		if field.CanSet() {
-			field.Set(reflect.ValueOf(log))
+			field.Set(reflect.ValueOf(logger))
 		}
+	default:
+		logger.Debugf("Plugin %q defines a 'Log' field on its struct of an unexpected type %q. Expected telegraf.Logger",
+			valI.Type().Name(), field.Type().String())
 	}
-
-	return
 }

@@ -8,151 +8,131 @@ import (
 	"testing"
 	"time"
 
-	"github.com/soniah/gosnmp"
+	"github.com/gosnmp/gosnmp"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/require"
 )
 
-func TestLoad(t *testing.T) {
-	s := &SnmpTrap{}
-	require.Nil(t, s.Init())
-
-	defer s.clear()
-	s.load(
-		".1.3.6.1.6.3.1.1.5.1",
-		mibEntry{
-			"SNMPv2-MIB",
-			"coldStart",
-		},
-	)
-
-	e, err := s.lookup(".1.3.6.1.6.3.1.1.5.1")
-	require.NoError(t, err)
-	require.Equal(t, "SNMPv2-MIB", e.mibName)
-	require.Equal(t, "coldStart", e.oidText)
-}
-
-func fakeExecCmd(_ internal.Duration, x string, y ...string) ([]byte, error) {
-	return nil, fmt.Errorf("mock " + x + " " + strings.Join(y, " "))
-}
-
-func sendTrap(t *testing.T, port uint16, now uint32, trap gosnmp.SnmpTrap, version gosnmp.SnmpVersion, secLevel string, username string, authProto string, authPass string, privProto string, privPass string, contextName string, engineID string) {
-	var s gosnmp.GoSNMP
-
-	if version == gosnmp.Version3 {
-		var msgFlags gosnmp.SnmpV3MsgFlags
-		switch strings.ToLower(secLevel) {
-		case "noauthnopriv", "":
-			msgFlags = gosnmp.NoAuthNoPriv
-		case "authnopriv":
-			msgFlags = gosnmp.AuthNoPriv
-		case "authpriv":
-			msgFlags = gosnmp.AuthPriv
-		default:
-			msgFlags = gosnmp.NoAuthNoPriv
-		}
-
-		var authenticationProtocol gosnmp.SnmpV3AuthProtocol
-		switch strings.ToLower(authProto) {
-		case "md5":
-			authenticationProtocol = gosnmp.MD5
-		case "sha":
-			authenticationProtocol = gosnmp.SHA
-		//case "sha224":
-		//	authenticationProtocol = gosnmp.SHA224
-		//case "sha256":
-		//	authenticationProtocol = gosnmp.SHA256
-		//case "sha384":
-		//	authenticationProtocol = gosnmp.SHA384
-		//case "sha512":
-		//	authenticationProtocol = gosnmp.SHA512
-		case "":
-			authenticationProtocol = gosnmp.NoAuth
-		default:
-			authenticationProtocol = gosnmp.NoAuth
-		}
-
-		var privacyProtocol gosnmp.SnmpV3PrivProtocol
-		switch strings.ToLower(privProto) {
-		case "aes":
-			privacyProtocol = gosnmp.AES
-		case "des":
-			privacyProtocol = gosnmp.DES
-		case "aes192":
-			privacyProtocol = gosnmp.AES192
-		case "aes192c":
-			privacyProtocol = gosnmp.AES192C
-		case "aes256":
-			privacyProtocol = gosnmp.AES256
-		case "aes256c":
-			privacyProtocol = gosnmp.AES256C
-		case "":
-			privacyProtocol = gosnmp.NoPriv
-		default:
-			privacyProtocol = gosnmp.NoPriv
-		}
-
-		sp := &gosnmp.UsmSecurityParameters{
-			AuthoritativeEngineID:    "1",
-			AuthoritativeEngineBoots: 1,
-			AuthoritativeEngineTime:  1,
-			UserName:                 username,
-			PrivacyProtocol:          privacyProtocol,
-			PrivacyPassphrase:        privPass,
-			AuthenticationPassphrase: authPass,
-			AuthenticationProtocol:   authenticationProtocol,
-		}
-		s = gosnmp.GoSNMP{
-			Port:               port,
-			Version:            version,
-			Timeout:            time.Duration(2) * time.Second,
-			Retries:            1,
-			MaxOids:            gosnmp.MaxOids,
-			Target:             "127.0.0.1",
-			SecurityParameters: sp,
-			SecurityModel:      gosnmp.UserSecurityModel,
-			MsgFlags:           msgFlags,
-			ContextName:        contextName,
-			ContextEngineID:    engineID,
-		}
-	} else {
-		s = gosnmp.GoSNMP{
-			Port:      port,
-			Version:   version,
-			Timeout:   time.Duration(2) * time.Second,
-			Retries:   1,
-			MaxOids:   gosnmp.MaxOids,
-			Target:    "127.0.0.1",
-			Community: "public",
-		}
+func newMsgFlagsV3(secLevel string) gosnmp.SnmpV3MsgFlags {
+	var msgFlags gosnmp.SnmpV3MsgFlags
+	switch strings.ToLower(secLevel) {
+	case "noauthnopriv", "":
+		msgFlags = gosnmp.NoAuthNoPriv
+	case "authnopriv":
+		msgFlags = gosnmp.AuthNoPriv
+	case "authpriv":
+		msgFlags = gosnmp.AuthPriv
+	default:
+		msgFlags = gosnmp.NoAuthNoPriv
 	}
 
-	err := s.Connect()
+	return msgFlags
+}
+
+func newUsmSecurityParametersForV3(authProto string, privProto string, username string, privPass string, authPass string) *gosnmp.UsmSecurityParameters {
+	var authenticationProtocol gosnmp.SnmpV3AuthProtocol
+	switch strings.ToLower(authProto) {
+	case "md5":
+		authenticationProtocol = gosnmp.MD5
+	case "sha":
+		authenticationProtocol = gosnmp.SHA
+	//case "sha224":
+	//	authenticationProtocol = gosnmp.SHA224
+	//case "sha256":
+	//	authenticationProtocol = gosnmp.SHA256
+	//case "sha384":
+	//	authenticationProtocol = gosnmp.SHA384
+	//case "sha512":
+	//	authenticationProtocol = gosnmp.SHA512
+	case "":
+		authenticationProtocol = gosnmp.NoAuth
+	default:
+		authenticationProtocol = gosnmp.NoAuth
+	}
+
+	var privacyProtocol gosnmp.SnmpV3PrivProtocol
+	switch strings.ToLower(privProto) {
+	case "aes":
+		privacyProtocol = gosnmp.AES
+	case "des":
+		privacyProtocol = gosnmp.DES
+	case "aes192":
+		privacyProtocol = gosnmp.AES192
+	case "aes192c":
+		privacyProtocol = gosnmp.AES192C
+	case "aes256":
+		privacyProtocol = gosnmp.AES256
+	case "aes256c":
+		privacyProtocol = gosnmp.AES256C
+	case "":
+		privacyProtocol = gosnmp.NoPriv
+	default:
+		privacyProtocol = gosnmp.NoPriv
+	}
+
+	return &gosnmp.UsmSecurityParameters{
+		AuthoritativeEngineID:    "1",
+		AuthoritativeEngineBoots: 1,
+		AuthoritativeEngineTime:  1,
+		UserName:                 username,
+		PrivacyProtocol:          privacyProtocol,
+		PrivacyPassphrase:        privPass,
+		AuthenticationPassphrase: authPass,
+		AuthenticationProtocol:   authenticationProtocol,
+	}
+}
+
+func newGoSNMPV3(port uint16, contextName string, engineID string, msgFlags gosnmp.SnmpV3MsgFlags, sp *gosnmp.UsmSecurityParameters) gosnmp.GoSNMP {
+	return gosnmp.GoSNMP{
+		Port:               port,
+		Version:            gosnmp.Version3,
+		Timeout:            time.Duration(2) * time.Second,
+		Retries:            1,
+		MaxOids:            gosnmp.MaxOids,
+		Target:             "127.0.0.1",
+		SecurityParameters: sp,
+		SecurityModel:      gosnmp.UserSecurityModel,
+		MsgFlags:           msgFlags,
+		ContextName:        contextName,
+		ContextEngineID:    engineID,
+	}
+}
+
+func newGoSNMP(version gosnmp.SnmpVersion, port uint16) gosnmp.GoSNMP {
+	return gosnmp.GoSNMP{
+		Port:      port,
+		Version:   version,
+		Timeout:   time.Duration(2) * time.Second,
+		Retries:   1,
+		MaxOids:   gosnmp.MaxOids,
+		Target:    "127.0.0.1",
+		Community: "public",
+	}
+}
+
+func sendTrap(t *testing.T, goSNMP gosnmp.GoSNMP, trap gosnmp.SnmpTrap) {
+	err := goSNMP.Connect()
 	if err != nil {
 		t.Errorf("Connect() err: %v", err)
 	}
-	defer s.Conn.Close()
+	defer goSNMP.Conn.Close()
 
-	_, err = s.SendTrap(trap)
+	_, err = goSNMP.SendTrap(trap)
 	if err != nil {
 		t.Errorf("SendTrap() err: %v", err)
 	}
 }
 
 func TestReceiveTrap(t *testing.T) {
-	var now uint32
-	now = 123123123
-
-	var fakeTime time.Time
-	fakeTime = time.Unix(456456456, 456)
+	now := uint32(123123123)
+	fakeTime := time.Unix(456456456, 456)
 
 	type entry struct {
 		oid string
-		e   mibEntry
+		e   snmp.MibEntry
 	}
 
 	// If the first pdu isn't type TimeTicks, gosnmp.SendTrap() will
@@ -200,23 +180,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -224,11 +204,12 @@ func TestReceiveTrap(t *testing.T) {
 				testutil.MustMetric(
 					"snmp_trap", // name
 					map[string]string{ // tags
-						"oid":     ".1.3.6.1.6.3.1.1.5.1",
-						"name":    "coldStart",
-						"mib":     "SNMPv2-MIB",
-						"version": "2c",
-						"source":  "127.0.0.1",
+						"oid":       ".1.3.6.1.6.3.1.1.5.1",
+						"name":      "coldStart",
+						"mib":       "SNMPv2-MIB",
+						"version":   "2c",
+						"source":    "127.0.0.1",
+						"community": "public",
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": now,
@@ -282,16 +263,16 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					".1.2.3.4.5",
-					mibEntry{
-						"valueMIB",
-						"valueOID",
+					snmp.MibEntry{
+						MibName: "valueMIB",
+						OidText: "valueOID",
 					},
 				},
 				{
 					".1.2.3.0.55",
-					mibEntry{
-						"enterpriseMIB",
-						"enterpriseOID",
+					snmp.MibEntry{
+						MibName: "enterpriseMIB",
+						OidText: "enterpriseOID",
 					},
 				},
 			},
@@ -305,6 +286,7 @@ func TestReceiveTrap(t *testing.T) {
 						"version":       "1",
 						"source":        "127.0.0.1",
 						"agent_address": "10.20.30.40",
+						"community":     "public",
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": uint(now),
@@ -335,16 +317,16 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					".1.2.3.4.5",
-					mibEntry{
-						"valueMIB",
-						"valueOID",
+					snmp.MibEntry{
+						MibName: "valueMIB",
+						OidText: "valueOID",
 					},
 				},
 				{
 					".1.3.6.1.6.3.1.1.5.1",
-					mibEntry{
-						"coldStartMIB",
-						"coldStartOID",
+					snmp.MibEntry{
+						MibName: "coldStartMIB",
+						OidText: "coldStartOID",
 					},
 				},
 			},
@@ -358,6 +340,7 @@ func TestReceiveTrap(t *testing.T) {
 						"version":       "1",
 						"source":        "127.0.0.1",
 						"agent_address": "10.20.30.40",
+						"community":     "public",
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": uint(now),
@@ -392,23 +375,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -456,23 +439,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -519,23 +502,23 @@ func TestReceiveTrap(t *testing.T) {
 				entries: []entry{
 					{
 						oid: ".1.3.6.1.6.3.1.1.4.1.0",
-						e: mibEntry{
-							"SNMPv2-MIB",
-							"snmpTrapOID.0",
+						e: snmp.MibEntry{
+							MibName: "SNMPv2-MIB",
+							OidText: "snmpTrapOID.0",
 						},
 					},
 					{
 						oid: ".1.3.6.1.6.3.1.1.5.1",
-						e: mibEntry{
-							"SNMPv2-MIB",
-							"coldStart",
+						e: snmp.MibEntry{
+							MibName: "SNMPv2-MIB",
+							OidText: "coldStart",
 						},
 					},
 					{
 						oid: ".1.3.6.1.2.1.1.3.0",
-						e: mibEntry{
-							"UNUSED_MIB_NAME",
-							"sysUpTimeInstance",
+						e: snmp.MibEntry{
+							MibName: "UNUSED_MIB_NAME",
+							OidText: "sysUpTimeInstance",
 						},
 					},
 				},
@@ -581,23 +564,23 @@ func TestReceiveTrap(t *testing.T) {
 				entries: []entry{
 					{
 						oid: ".1.3.6.1.6.3.1.1.4.1.0",
-						e: mibEntry{
-							"SNMPv2-MIB",
-							"snmpTrapOID.0",
+						e: snmp.MibEntry{
+							MibName: "SNMPv2-MIB",
+							OidText: "snmpTrapOID.0",
 						},
 					},
 					{
 						oid: ".1.3.6.1.6.3.1.1.5.1",
-						e: mibEntry{
-							"SNMPv2-MIB",
-							"coldStart",
+						e: snmp.MibEntry{
+							MibName: "SNMPv2-MIB",
+							OidText: "coldStart",
 						},
 					},
 					{
 						oid: ".1.3.6.1.2.1.1.3.0",
-						e: mibEntry{
-							"UNUSED_MIB_NAME",
-							"sysUpTimeInstance",
+						e: snmp.MibEntry{
+							MibName: "UNUSED_MIB_NAME",
+							OidText: "sysUpTimeInstance",
 						},
 					},
 				},
@@ -643,23 +626,23 @@ func TestReceiveTrap(t *testing.T) {
 				entries: []entry{
 					{
 						oid: ".1.3.6.1.6.3.1.1.4.1.0",
-						e: mibEntry{
-							"SNMPv2-MIB",
-							"snmpTrapOID.0",
+						e: snmp.MibEntry{
+							MibName: "SNMPv2-MIB",
+							OidText: "snmpTrapOID.0",
 						},
 					},
 					{
 						oid: ".1.3.6.1.6.3.1.1.5.1",
-						e: mibEntry{
-							"SNMPv2-MIB",
-							"coldStart",
+						e: snmp.MibEntry{
+							MibName: "SNMPv2-MIB",
+							OidText: "coldStart",
 						},
 					},
 					{
 						oid: ".1.3.6.1.2.1.1.3.0",
-						e: mibEntry{
-							"UNUSED_MIB_NAME",
-							"sysUpTimeInstance",
+						e: snmp.MibEntry{
+							MibName: "UNUSED_MIB_NAME",
+							OidText: "sysUpTimeInstance",
 						},
 					},
 				},
@@ -705,23 +688,23 @@ func TestReceiveTrap(t *testing.T) {
 				entries: []entry{
 					{
 						oid: ".1.3.6.1.6.3.1.1.4.1.0",
-						e: mibEntry{
-							"SNMPv2-MIB",
-							"snmpTrapOID.0",
+						e: snmp.MibEntry{
+							MibName: "SNMPv2-MIB",
+							OidText: "snmpTrapOID.0",
 						},
 					},
 					{
 						oid: ".1.3.6.1.6.3.1.1.5.1",
-						e: mibEntry{
-							"SNMPv2-MIB",
-							"coldStart",
+						e: snmp.MibEntry{
+							MibName: "SNMPv2-MIB",
+							OidText: "coldStart",
 						},
 					},
 					{
 						oid: ".1.3.6.1.2.1.1.3.0",
-						e: mibEntry{
-							"UNUSED_MIB_NAME",
-							"sysUpTimeInstance",
+						e: snmp.MibEntry{
+							MibName: "UNUSED_MIB_NAME",
+							OidText: "sysUpTimeInstance",
 						},
 					},
 				},
@@ -767,23 +750,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -829,23 +812,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -893,23 +876,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -957,23 +940,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -1021,23 +1004,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -1085,23 +1068,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -1149,23 +1132,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -1213,23 +1196,23 @@ func TestReceiveTrap(t *testing.T) {
 			entries: []entry{
 				{
 					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"snmpTrapOID.0",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "snmpTrapOID.0",
 					},
 				},
 				{
 					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: mibEntry{
-						"SNMPv2-MIB",
-						"coldStart",
+					e: snmp.MibEntry{
+						MibName: "SNMPv2-MIB",
+						OidText: "coldStart",
 					},
 				},
 				{
 					oid: ".1.3.6.1.2.1.1.3.0",
-					e: mibEntry{
-						"UNUSED_MIB_NAME",
-						"sysUpTimeInstance",
+					e: snmp.MibEntry{
+						MibName: "UNUSED_MIB_NAME",
+						OidText: "sysUpTimeInstance",
 					},
 				},
 			},
@@ -1263,7 +1246,7 @@ func TestReceiveTrap(t *testing.T) {
 			// Hook into the trap handler so the test knows when the
 			// trap has been received
 			received := make(chan int)
-			wrap := func(f handler) handler {
+			wrap := func(f gosnmp.TrapHandlerFunc) gosnmp.TrapHandlerFunc {
 				return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
 					f(p, a)
 					received <- 0
@@ -1277,6 +1260,15 @@ func TestReceiveTrap(t *testing.T) {
 				timeFunc: func() time.Time {
 					return fakeTime
 				},
+				lookupFunc: func(input string) (snmp.MibEntry, error) {
+					for _, entry := range tt.entries {
+						if input == entry.oid {
+							return snmp.MibEntry{MibName: entry.e.MibName, OidText: entry.e.OidText}, nil
+						}
+					}
+					return snmp.MibEntry{}, fmt.Errorf("unexpected oid")
+				},
+				//if cold start be answer otherwise err
 				Log:          testutil.Logger{},
 				Version:      tt.version.String(),
 				SecName:      tt.secName,
@@ -1286,21 +1278,24 @@ func TestReceiveTrap(t *testing.T) {
 				PrivProtocol: tt.privProto,
 				PrivPassword: tt.privPass,
 			}
-			require.Nil(t, s.Init())
-			// Don't look up oid with snmptranslate.
-			s.execCmd = fakeExecCmd
+
+			require.NoError(t, s.Init())
+
 			var acc testutil.Accumulator
 			require.Nil(t, s.Start(&acc))
 			defer s.Stop()
 
-			// Preload the cache with the oids we'll use in this test
-			// so snmptranslate and mibs don't need to be installed.
-			for _, entry := range tt.entries {
-				s.load(entry.oid, entry.e)
+			var goSNMP gosnmp.GoSNMP
+			if tt.version == gosnmp.Version3 {
+				msgFlags := newMsgFlagsV3(tt.secLevel)
+				sp := newUsmSecurityParametersForV3(tt.authProto, tt.privProto, tt.secName, tt.privPass, tt.authPass)
+				goSNMP = newGoSNMPV3(port, tt.contextName, tt.engineID, msgFlags, sp)
+			} else {
+				goSNMP = newGoSNMP(tt.version, port)
 			}
 
 			// Send the trap
-			sendTrap(t, port, now, tt.trap, tt.version, tt.secLevel, tt.secName, tt.authProto, tt.authPass, tt.privProto, tt.privPass, tt.contextName, tt.engineID)
+			sendTrap(t, goSNMP, tt.trap)
 
 			// Wait for trap to be received
 			select {
@@ -1315,5 +1310,4 @@ func TestReceiveTrap(t *testing.T) {
 				testutil.SortMetrics())
 		})
 	}
-
 }

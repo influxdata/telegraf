@@ -1,7 +1,6 @@
 package kafka
 
 import (
-	"crypto/tls"
 	"fmt"
 	"log"
 	"strings"
@@ -9,9 +8,10 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/gofrs/uuid"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -24,53 +24,41 @@ var ValidTopicSuffixMethods = []string{
 
 var zeroTime = time.Unix(0, 0)
 
-type (
-	Kafka struct {
-		Brokers          []string    `toml:"brokers"`
-		Topic            string      `toml:"topic"`
-		TopicTag         string      `toml:"topic_tag"`
-		ExcludeTopicTag  bool        `toml:"exclude_topic_tag"`
-		ClientID         string      `toml:"client_id"`
-		TopicSuffix      TopicSuffix `toml:"topic_suffix"`
-		RoutingTag       string      `toml:"routing_tag"`
-		RoutingKey       string      `toml:"routing_key"`
-		CompressionCodec int         `toml:"compression_codec"`
-		RequiredAcks     int         `toml:"required_acks"`
-		MaxRetry         int         `toml:"max_retry"`
-		MaxMessageBytes  int         `toml:"max_message_bytes"`
+type Kafka struct {
+	Brokers         []string    `toml:"brokers"`
+	Topic           string      `toml:"topic"`
+	TopicTag        string      `toml:"topic_tag"`
+	ExcludeTopicTag bool        `toml:"exclude_topic_tag"`
+	TopicSuffix     TopicSuffix `toml:"topic_suffix"`
+	RoutingTag      string      `toml:"routing_tag"`
+	RoutingKey      string      `toml:"routing_key"`
 
-		Version string `toml:"version"`
+	proxy.Socks5ProxyConfig
 
-		// Legacy TLS config options
-		// TLS client certificate
-		Certificate string
-		// TLS client key
-		Key string
-		// TLS certificate authority
-		CA string
+	// Legacy TLS config options
+	// TLS client certificate
+	Certificate string
+	// TLS client key
+	Key string
+	// TLS certificate authority
+	CA string
 
-		EnableTLS *bool `toml:"enable_tls"`
-		tlsint.ClientConfig
+	kafka.WriteConfig
 
-		SASLUsername string `toml:"sasl_username"`
-		SASLPassword string `toml:"sasl_password"`
-		SASLVersion  *int   `toml:"sasl_version"`
+	Log telegraf.Logger `toml:"-"`
 
-		Log telegraf.Logger `toml:"-"`
+	saramaConfig *sarama.Config
+	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
+	producer     sarama.SyncProducer
 
-		tlsConfig tls.Config
+	serializer serializers.Serializer
+}
 
-		producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
-		producer     sarama.SyncProducer
-
-		serializer serializers.Serializer
-	}
-	TopicSuffix struct {
-		Method    string   `toml:"method"`
-		Keys      []string `toml:"keys"`
-		Separator string   `toml:"separator"`
-	}
-)
+type TopicSuffix struct {
+	Method    string   `toml:"method"`
+	Keys      []string `toml:"keys"`
+	Separator string   `toml:"separator"`
+}
 
 // DebugLogger logs messages from sarama at the debug level.
 type DebugLogger struct {
@@ -78,8 +66,8 @@ type DebugLogger struct {
 
 func (*DebugLogger) Print(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
-	args = append(args, "D! [sarama] ")
-	log.Print(v...)
+	args = append(append(args, "D! [sarama] "), v...)
+	log.Print(args...)
 }
 
 func (*DebugLogger) Printf(format string, v ...interface{}) {
@@ -88,7 +76,7 @@ func (*DebugLogger) Printf(format string, v ...interface{}) {
 
 func (*DebugLogger) Println(v ...interface{}) {
 	args := make([]interface{}, 0, len(v)+1)
-	args = append(args, "D! [sarama] ")
+	args = append(append(args, "D! [sarama] "), v...)
 	log.Println(args...)
 }
 
@@ -160,13 +148,18 @@ var sampleConfig = `
   ##       routing_key = "telegraf"
   # routing_key = ""
 
-  ## CompressionCodec represents the various compression codecs recognized by
+  ## Compression codec represents the various compression codecs recognized by
   ## Kafka in messages.
-  ##  0 : No compression
-  ##  1 : Gzip compression
-  ##  2 : Snappy compression
-  ##  3 : LZ4 compression
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
   # compression_codec = 0
+
+  ## Idempotent Writes
+  ## If enabled, exactly one copy of each message is written.
+  # idempotent_writes = false
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
   ##  replica acknowledgements it must see before responding
@@ -193,19 +186,44 @@ var sampleConfig = `
   # max_message_bytes = 1000000
 
   ## Optional TLS Config
-  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SOCKS5 proxy to use when connecting to brokers
+  # socks5_enabled = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
+
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
+  ## Optional SASL:
+  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
+  ## (defaults to PLAIN)
+  # sasl_mechanism = ""
+
+  ## used if sasl_mechanism is GSSAPI (experimental)
+  # sasl_gssapi_service_name = ""
+  # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
+  # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
+  # sasl_gssapi_kerberos_config_path = "/"
+  # sasl_gssapi_realm = "realm"
+  # sasl_gssapi_key_tab_path = ""
+  # sasl_gssapi_disable_pafxfast = false
+
+  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  # sasl_access_token = ""
+
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
+
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -220,7 +238,7 @@ func ValidateTopicSuffixMethod(method string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("Unknown topic suffix method provided: %s", method)
+	return fmt.Errorf("unknown topic suffix method provided: %s", method)
 }
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
@@ -263,35 +281,18 @@ func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
-func (k *Kafka) Connect() error {
+func (k *Kafka) Init() error {
 	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
 	if err != nil {
 		return err
 	}
 	config := sarama.NewConfig()
 
-	if k.Version != "" {
-		version, err := sarama.ParseKafkaVersion(k.Version)
-		if err != nil {
-			return err
-		}
-		config.Version = version
+	if err := k.SetConfig(config); err != nil {
+		return err
 	}
 
-	if k.ClientID != "" {
-		config.ClientID = k.ClientID
-	} else {
-		config.ClientID = "Telegraf"
-	}
-
-	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
-	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
-	config.Producer.Retry.Max = k.MaxRetry
-	config.Producer.Return.Successes = true
-
-	if k.MaxMessageBytes > 0 {
-		config.Producer.MaxMessageBytes = k.MaxMessageBytes
-	}
+	k.saramaConfig = config
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
@@ -300,39 +301,21 @@ func (k *Kafka) Connect() error {
 		k.TLSKey = k.Key
 	}
 
-	if k.EnableTLS != nil && *k.EnableTLS {
-		config.Net.TLS.Enable = true
-	}
+	if k.Socks5ProxyEnabled {
+		config.Net.Proxy.Enable = true
 
-	tlsConfig, err := k.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-
-	if tlsConfig != nil {
-		config.Net.TLS.Config = tlsConfig
-
-		// To maintain backwards compatibility, if the enable_tls option is not
-		// set TLS is enabled if a non-default TLS config is used.
-		if k.EnableTLS == nil {
-			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
-			config.Net.TLS.Enable = true
-		}
-	}
-
-	if k.SASLUsername != "" && k.SASLPassword != "" {
-		config.Net.SASL.User = k.SASLUsername
-		config.Net.SASL.Password = k.SASLPassword
-		config.Net.SASL.Enable = true
-
-		version, err := kafka.SASLVersion(config.Version, k.SASLVersion)
+		dialer, err := k.Socks5ProxyConfig.GetDialer()
 		if err != nil {
-			return err
+			return fmt.Errorf("connecting to proxy server failed: %s", err)
 		}
-		config.Net.SASL.Version = version
+		config.Net.Proxy.Dialer = dialer
 	}
 
-	producer, err := k.producerFunc(k.Brokers, config)
+	return nil
+}
+
+func (k *Kafka) Connect() error {
+	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
 	if err != nil {
 		return err
 	}
@@ -416,7 +399,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
 					return nil
 				}
-				return prodErr
+				return prodErr //nolint:staticcheck // Return first error encountered
 			}
 		}
 		return err
@@ -429,8 +412,10 @@ func init() {
 	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
-			MaxRetry:     3,
-			RequiredAcks: -1,
+			WriteConfig: kafka.WriteConfig{
+				MaxRetry:     3,
+				RequiredAcks: -1,
+			},
 			producerFunc: sarama.NewSyncProducer,
 		}
 	})

@@ -1,8 +1,8 @@
-### Processor Plugins
+# Processor Plugins
 
 This section is for developers who want to create a new processor plugin.
 
-### Processor Plugin Guidelines
+## Processor Plugin Guidelines
 
 * A processor must conform to the [telegraf.Processor][] interface.
 * Processors should call `processors.Add` in their `init` function to register
@@ -12,13 +12,13 @@ This section is for developers who want to create a new processor plugin.
 * The `SampleConfig` function should return valid toml that describes how the
   processor can be configured. This is include in the output of `telegraf
   config`.
-- The `SampleConfig` function should return valid toml that describes how the
+* The `SampleConfig` function should return valid toml that describes how the
   plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [SampleConfig][] page for the latest style guidelines.
+  consult the [Sample Config][] page for the latest style guidelines.
 * The `Description` function should say in one line what this processor does.
-- Follow the recommended [CodeStyle][].
+* Follow the recommended [Code Style][].
 
-### Processor Plugin Example
+## Processor Plugin Example
 
 ```go
 package printer
@@ -26,45 +26,47 @@ package printer
 // printer.go
 
 import (
-	"fmt"
+    "fmt"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
+    "github.com/influxdata/telegraf"
+    "github.com/influxdata/telegraf/plugins/processors"
 )
 
 type Printer struct {
+    Log telegraf.Logger `toml:"-"`
 }
 
 var sampleConfig = `
 `
 
 func (p *Printer) SampleConfig() string {
-	return sampleConfig
+    return sampleConfig
 }
 
 func (p *Printer) Description() string {
-	return "Print all metrics that pass through this filter."
+    return "Print all metrics that pass through this filter."
 }
 
+// Init is for setup, and validating config.
 func (p *Printer) Init() error {
-	return nil
+    return nil
 }
 
 func (p *Printer) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	for _, metric := range in {
-		fmt.Println(metric.String())
-	}
-	return in
+    for _, metric := range in {
+        fmt.Println(metric.String())
+    }
+    return in
 }
 
 func init() {
-	processors.Add("printer", func() telegraf.Processor {
-		return &Printer{}
-	})
+    processors.Add("printer", func() telegraf.Processor {
+        return &Printer{}
+    })
 }
 ```
 
-### Streaming Processors
+## Streaming Processors
 
 Streaming processors are a new processor type available to you. They are
 particularly useful to implement processor types that use background processes
@@ -82,7 +84,7 @@ Some differences from classic Processors:
 * Processors should call `processors.AddStreaming` in their `init` function to register
   themselves.  See below for a quick example.
 
-### Streaming Processor Example
+## Streaming Processor Example
 
 ```go
 package printer
@@ -90,54 +92,75 @@ package printer
 // printer.go
 
 import (
-	"fmt"
+    "fmt"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
+    "github.com/influxdata/telegraf"
+    "github.com/influxdata/telegraf/plugins/processors"
 )
 
 type Printer struct {
+    Log telegraf.Logger `toml:"-"`
 }
 
 var sampleConfig = `
 `
 
 func (p *Printer) SampleConfig() string {
-	return sampleConfig
+    return sampleConfig
 }
 
 func (p *Printer) Description() string {
-	return "Print all metrics that pass through this filter."
+    return "Print all metrics that pass through this filter."
 }
 
+// Init is for setup, and validating config.
 func (p *Printer) Init() error {
-	return nil
+    return nil
 }
 
+// Start is called once when the plugin starts; it is only called once per
+// plugin instance, and never in parallel.
+// Start should return once it is ready to receive metrics.
+// The passed in accumulator is the same as the one passed to Add(), so you
+// can choose to save it in the plugin, or use the one received from Add().
 func (p *Printer) Start(acc telegraf.Accumulator) error {
 }
 
+// Add is called for each metric to be processed. The Add() function does not
+// need to wait for the metric to be processed before returning, and it may
+// be acceptable to let background goroutine(s) handle the processing if you
+// have slow processing you need to do in parallel.
+// Keep in mind Add() should not spawn unbounded goroutines, so you may need
+// to use a semaphore or pool of workers (eg: reverse_dns plugin does this).
+// Metrics you don't want to pass downstream should have metric.Drop() called,
+// rather than simply omitting the acc.AddMetric() call
 func (p *Printer) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
-	// print!
-	fmt.Println(metric.String())
-	// pass the metric downstream, or metric.Drop() it.
-	// Metric will be dropped if this function returns an error.
-	acc.AddMetric(metric)
+    // print!
+    fmt.Println(metric.String())
+    // pass the metric downstream, or metric.Drop() it.
+    // Metric will be dropped if this function returns an error.
+    acc.AddMetric(metric)
 
-	return nil
+    return nil
 }
 
+// Stop gives you an opportunity to gracefully shut down the processor.
+// Once Stop() is called, Add() will not be called any more. If you are using
+// goroutines, you should wait for any in-progress metrics to be processed
+// before returning from Stop().
+// When stop returns, you should no longer be writing metrics to the
+// accumulator.
 func (p *Printer) Stop() error {
 }
 
 func init() {
-	processors.AddStreaming("printer", func() telegraf.StreamingProcessor {
-		return &Printer{}
-	})
+    processors.AddStreaming("printer", func() telegraf.StreamingProcessor {
+        return &Printer{}
+    })
 }
 ```
 
-[SampleConfig]: https://github.com/influxdata/telegraf/wiki/SampleConfig
-[CodeStyle]: https://github.com/influxdata/telegraf/wiki/CodeStyle
+[Sample Config]: https://github.com/influxdata/telegraf/blob/master/docs/developers/SAMPLE_CONFIG.md
+[Code Style]: https://github.com/influxdata/telegraf/blob/master/docs/developers/CODE_STYLE.md
 [telegraf.Processor]: https://godoc.org/github.com/influxdata/telegraf#Processor
 [telegraf.StreamingProcessor]: https://godoc.org/github.com/influxdata/telegraf#StreamingProcessor

@@ -1,11 +1,12 @@
 package kinesis
 
 import (
-	"log"
+	"context"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
@@ -13,25 +14,22 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// Limit set by AWS (https://docs.aws.amazon.com/kinesis/latest/APIReference/API_PutRecords.html)
+const maxRecordsPerRequest uint32 = 500
+
 type (
 	KinesisOutput struct {
-		Region      string `toml:"region"`
-		AccessKey   string `toml:"access_key"`
-		SecretKey   string `toml:"secret_key"`
-		RoleARN     string `toml:"role_arn"`
-		Profile     string `toml:"profile"`
-		Filename    string `toml:"shared_credential_file"`
-		Token       string `toml:"token"`
-		EndpointURL string `toml:"endpoint_url"`
-
 		StreamName         string     `toml:"streamname"`
-		PartitionKey       string     `toml:"partitionkey"`
-		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
+		PartitionKey       string     `toml:"partitionkey" deprecated:"1.5.0;use 'partition.key' instead"`
+		RandomPartitionKey bool       `toml:"use_random_partitionkey" deprecated:"1.5.0;use 'partition.method' instead"`
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
-		svc                *kinesis.Kinesis
 
+		Log        telegraf.Logger `toml:"-"`
 		serializer serializers.Serializer
+		svc        kinesisClient
+
+		internalaws.CredentialConfig
 	}
 
 	Partition struct {
@@ -41,22 +39,29 @@ type (
 	}
 )
 
+type kinesisClient interface {
+	PutRecords(context.Context, *kinesis.PutRecordsInput, ...func(*kinesis.Options)) (*kinesis.PutRecordsOutput, error)
+}
+
 var sampleConfig = `
   ## Amazon REGION of kinesis endpoint.
   region = "ap-southeast-2"
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) explicit credentials from 'access_key' and 'secret_key'
-  ## 3) shared profile from 'profile'
-  ## 4) environment variables
-  ## 5) shared credentials file
-  ## 6) EC2 Instance Profile
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
   #access_key = ""
   #secret_key = ""
   #token = ""
   #role_arn = ""
+  #web_identity_token_file = ""
+  #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
 
@@ -68,12 +73,7 @@ var sampleConfig = `
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
-  ## DEPRECATED: PartitionKey as used for sharding data.
-  partitionkey = "PartitionKey"
-  ## DEPRECATED: If set the partitionKey will be a random UUID on every put.
-  ## This allows for scaling across multiple shards in a stream.
-  ## This will cause issues with ordering.
-  use_random_partitionkey = false
+
   ## The partition key can be calculated using one of several methods:
   ##
   ## Use a static value for all writes:
@@ -117,29 +117,23 @@ func (k *KinesisOutput) Description() string {
 
 func (k *KinesisOutput) Connect() error {
 	if k.Partition == nil {
-		log.Print("E! kinesis : Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")
+		k.Log.Error("Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")
 	}
 
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
-		log.Printf("I! kinesis: Establishing a connection to Kinesis in %s", k.Region)
+		k.Log.Infof("Establishing a connection to Kinesis in %s", k.Region)
 	}
 
-	credentialConfig := &internalaws.CredentialConfig{
-		Region:      k.Region,
-		AccessKey:   k.AccessKey,
-		SecretKey:   k.SecretKey,
-		RoleARN:     k.RoleARN,
-		Profile:     k.Profile,
-		Filename:    k.Filename,
-		Token:       k.Token,
-		EndpointURL: k.EndpointURL,
+	cfg, err := k.CredentialConfig.Credentials()
+	if err != nil {
+		return err
 	}
-	configProvider := credentialConfig.Credentials()
-	svc := kinesis.New(configProvider)
 
-	_, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
+	svc := kinesis.NewFromConfig(cfg)
+
+	_, err = svc.DescribeStreamSummary(context.Background(), &kinesis.DescribeStreamSummaryInput{
 		StreamName: aws.String(k.StreamName),
 	})
 	k.svc = svc
@@ -154,26 +148,28 @@ func (k *KinesisOutput) SetSerializer(serializer serializers.Serializer) {
 	k.serializer = serializer
 }
 
-func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Duration {
+func (k *KinesisOutput) writeKinesis(r []types.PutRecordsRequestEntry) time.Duration {
 	start := time.Now()
 	payload := &kinesis.PutRecordsInput{
 		Records:    r,
 		StreamName: aws.String(k.StreamName),
 	}
 
-	if k.Debug {
-		resp, err := k.svc.PutRecords(payload)
-		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
-		}
-		log.Printf("I! Wrote: '%+v'", resp)
-
-	} else {
-		_, err := k.svc.PutRecords(payload)
-		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
-		}
+	resp, err := k.svc.PutRecords(context.Background(), payload)
+	if err != nil {
+		k.Log.Errorf("Unable to write to Kinesis : %s", err.Error())
+		return time.Since(start)
 	}
+
+	if k.Debug {
+		k.Log.Infof("Wrote: '%+v'", resp)
+	}
+
+	failed := *resp.FailedRecordCount
+	if failed > 0 {
+		k.Log.Errorf("Unable to write %+v of %+v record(s) to Kinesis", failed, len(r))
+	}
+
 	return time.Since(start)
 }
 
@@ -199,7 +195,7 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 			// Default partition name if default is not set
 			return "telegraf"
 		default:
-			log.Printf("E! kinesis : You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
+			k.Log.Errorf("You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
 		}
 	}
 	if k.RandomPartitionKey {
@@ -219,38 +215,36 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	r := []*kinesis.PutRecordsRequestEntry{}
+	r := []types.PutRecordsRequestEntry{}
 
 	for _, metric := range metrics {
 		sz++
 
 		values, err := k.serializer.Serialize(metric)
 		if err != nil {
-			log.Printf("D! [outputs.kinesis] Could not serialize metric: %v", err)
+			k.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 
 		partitionKey := k.getPartitionKey(metric)
 
-		d := kinesis.PutRecordsRequestEntry{
+		d := types.PutRecordsRequestEntry{
 			Data:         values,
 			PartitionKey: aws.String(partitionKey),
 		}
 
-		r = append(r, &d)
+		r = append(r, d)
 
-		if sz == 500 {
-			// Max Messages Per PutRecordRequest is 500
-			elapsed := writekinesis(k, r)
-			log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+		if sz == maxRecordsPerRequest {
+			elapsed := k.writeKinesis(r)
+			k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 			sz = 0
 			r = nil
 		}
-
 	}
 	if sz > 0 {
-		elapsed := writekinesis(k, r)
-		log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+		elapsed := k.writeKinesis(r)
+		k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 	}
 
 	return nil

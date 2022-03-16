@@ -1,4 +1,4 @@
-# Google Cloud PubSub Push Input Service Plugin
+# Google Cloud PubSub Push Input Plugin
 
 The Google Cloud PubSub Push listener is a service input plugin that listens for messages sent via an HTTP POST from [Google Cloud PubSub][pubsub].
 The plugin expects messages in Google's Pub/Sub JSON Format ONLY.
@@ -9,8 +9,7 @@ Enable TLS by specifying the file names of a service TLS certificate and key.
 
 Enable mutually authenticated TLS and authorize client connections by signing certificate authority by including a list of allowed CA certificate file names in `tls_allowed_cacerts`.
 
-
-### Configuration:
+## Configuration
 
 This is a sample configuration for the plugin.
 

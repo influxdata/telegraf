@@ -15,14 +15,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Uwsgi server struct
 type Uwsgi struct {
-	Servers []string          `toml:"servers"`
-	Timeout internal.Duration `toml:"timeout"`
+	Servers []string        `toml:"servers"`
+	Timeout config.Duration `toml:"timeout"`
 
 	client *http.Client
 }
@@ -51,7 +51,7 @@ func (u *Uwsgi) SampleConfig() string {
 func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 	if u.client == nil {
 		u.client = &http.Client{
-			Timeout: u.Timeout.Duration,
+			Timeout: time.Duration(u.Timeout),
 		}
 	}
 	wg := &sync.WaitGroup{}
@@ -78,20 +78,20 @@ func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
+func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, address *url.URL) error {
 	var err error
 	var r io.ReadCloser
 	var s StatsServer
 
-	switch url.Scheme {
+	switch address.Scheme {
 	case "tcp":
-		r, err = net.DialTimeout(url.Scheme, url.Host, u.Timeout.Duration)
+		r, err = net.DialTimeout(address.Scheme, address.Host, time.Duration(u.Timeout))
 		if err != nil {
 			return err
 		}
-		s.source = url.Host
+		s.source = address.Host
 	case "unix":
-		r, err = net.DialTimeout(url.Scheme, url.Path, u.Timeout.Duration)
+		r, err = net.DialTimeout(address.Scheme, address.Path, time.Duration(u.Timeout))
 		if err != nil {
 			return err
 		}
@@ -100,20 +100,20 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 			s.source = ""
 		}
 	case "http":
-		resp, err := u.client.Get(url.String())
+		resp, err := u.client.Get(address.String()) //nolint:bodyclose // response body is closed after switch
 		if err != nil {
 			return err
 		}
 		r = resp.Body
-		s.source = url.Host
+		s.source = address.Host
 	default:
-		return fmt.Errorf("'%s' is not a supported scheme", url.Scheme)
+		return fmt.Errorf("'%s' is not a supported scheme", address.Scheme)
 	}
 
 	defer r.Close()
 
 	if err := json.NewDecoder(r).Decode(&s); err != nil {
-		return fmt.Errorf("failed to decode json payload from '%s': %s", url.String(), err.Error())
+		return fmt.Errorf("failed to decode json payload from '%s': %s", address.String(), err.Error())
 	}
 
 	u.gatherStatServer(acc, &s)
@@ -210,14 +210,13 @@ func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) {
 			}
 			acc.AddFields("uwsgi_cores", fields, tags)
 		}
-
 	}
 }
 
 func init() {
 	inputs.Add("uwsgi", func() telegraf.Input {
 		return &Uwsgi{
-			Timeout: internal.Duration{Duration: 5 * time.Second},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }

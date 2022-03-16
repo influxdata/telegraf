@@ -12,14 +12,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Nginx struct {
 	Urls            []string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	// HTTP client
@@ -55,7 +55,7 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 	// Create an HTTP client that is re-used for each
 	// collection interval
 	if n.client == nil {
-		client, err := n.createHttpClient()
+		client, err := n.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc))
+			acc.AddError(n.gatherURL(addr, acc))
 		}(addr)
 	}
 
@@ -80,27 +80,27 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Nginx) createHttpClient() (*http.Client, error) {
+func (n *Nginx) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = time.Second * 5
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: n.ResponseTimeout.Duration,
+		Timeout: time.Duration(n.ResponseTimeout),
 	}
 
 	return client, nil
 }
 
-func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (n *Nginx) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	resp, err := n.client.Get(addr.String())
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)

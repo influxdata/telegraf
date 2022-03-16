@@ -6,7 +6,6 @@ This plugin writes to [CrateDB](https://crate.io/) via its [PostgreSQL protocol]
 
 The plugin requires a table with the following schema.
 
-
 ```sql
 CREATE TABLE my_metrics (
   "hash_id" LONG INDEX OFF,
@@ -26,8 +25,8 @@ config option, see below.
 ```toml
 # Configuration for CrateDB to send metrics to.
 [[outputs.cratedb]]
-  # A github.com/jackc/pgx connection string.
-  # See https://godoc.org/github.com/jackc/pgx#ParseDSN
+  # A github.com/jackc/pgx/v4 connection string.
+  # See https://pkg.go.dev/github.com/jackc/pgx/v4#ParseConfig
   url = "postgres://user:password@localhost/schema?sslmode=disable"
   # Timeout for all CrateDB queries.
   timeout = "5s"
@@ -35,4 +34,6 @@ config option, see below.
   table = "metrics"
   # If true, and the metrics table does not exist, create it automatically.
   table_create = true
+  # The character(s) to replace any '.' in an object key with
+  key_separator = "_"
 ```

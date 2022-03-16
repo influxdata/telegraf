@@ -1,4 +1,4 @@
-### Input Plugins
+# Input Plugins
 
 This section is for developers who want to create new collection inputs.
 Telegraf is entirely plugin driven. This interface allows for operators to
@@ -8,7 +8,7 @@ to create new ways of generating metrics.
 Plugin authorship is kept as simple as possible to promote people to develop
 and submit new inputs.
 
-### Input Plugin Guidelines
+## Input Plugin Guidelines
 
 - A plugin must conform to the [telegraf.Input][] interface.
 - Input Plugins should call `inputs.Add` in their `init` function to register
@@ -17,15 +17,15 @@ and submit new inputs.
   `github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
 - The `SampleConfig` function should return valid toml that describes how the
   plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [SampleConfig][] page for the latest style
+  consult the [Sample Config][] page for the latest style
   guidelines.
 - The `Description` function should say in one line what this plugin does.
-- Follow the recommended [CodeStyle][].
+- Follow the recommended [Code Style][].
 
 Let's say you've written a plugin that emits metrics about processes on the
 current host.
 
-### Input Plugin Example
+## Input Plugin Example
 
 ```go
 package simple
@@ -38,7 +38,8 @@ import (
 )
 
 type Simple struct {
-    Ok bool `toml:"ok"`
+    Ok  bool            `toml:"ok"`
+    Log telegraf.Logger `toml:"-"`
 }
 
 func (s *Simple) Description() string {
@@ -52,8 +53,9 @@ func (s *Simple) SampleConfig() string {
 `
 }
 
+// Init is for setup, and validating config.
 func (s *Simple) Init() error {
-	return nil
+    return nil
 }
 
 func (s *Simple) Gather(acc telegraf.Accumulator) error {
@@ -73,15 +75,15 @@ func init() {
 
 ### Development
 
-* Run `make static` followed by `make plugin-[pluginName]` to spin up a docker
+- Run `make static` followed by `make plugin-[pluginName]` to spin up a docker
   dev environment using docker-compose.
-* ***[Optional]*** When developing a plugin, add a `dev` directory with a
+- ***[Optional]*** When developing a plugin, add a `dev` directory with a
   `docker-compose.yml` and `telegraf.conf` as well as any other supporting
   files, where sensible.
 
 ### Typed Metrics
 
-In addition the the `AddFields` function, the accumulator also supports
+In addition to the `AddFields` function, the accumulator also supports
 functions to add typed metrics: `AddGauge`, `AddCounter`, etc.  Metric types
 are ignored by the InfluxDB output, but can be used for other outputs, such as
 [prometheus][prom metric types].
@@ -141,8 +143,8 @@ Check the [amqp_consumer][] for an example implementation.
 [amqp_consumer]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/amqp_consumer
 [prom metric types]: https://prometheus.io/docs/concepts/metric_types/
 [input data formats]: https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-[SampleConfig]: https://github.com/influxdata/telegraf/wiki/SampleConfig
-[CodeStyle]: https://github.com/influxdata/telegraf/wiki/CodeStyle
+[Sample Config]: https://github.com/influxdata/telegraf/blob/master/docs/developers/SAMPLE_CONFIG.md
+[Code Style]: https://github.com/influxdata/telegraf/blob/master/docs/developers/CODE_STYLE.md
 [telegraf.Input]: https://godoc.org/github.com/influxdata/telegraf#Input
 [telegraf.ServiceInput]: https://godoc.org/github.com/influxdata/telegraf#ServiceInput
 [telegraf.Accumulator]: https://godoc.org/github.com/influxdata/telegraf#Accumulator

@@ -2,14 +2,14 @@ package jolokia
 
 import (
 	_ "fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	_ "github.com/stretchr/testify/require"
 )
 
 const validThreeLevelMultiValueJSON = `
@@ -98,24 +98,7 @@ const validMultiValueJSON = `
   }
 ]`
 
-const validSingleValueJSON = `
-[
-  {
-    "request":{
-      "path":"used",
-      "mbean":"java.lang:type=Memory",
-      "attribute":"HeapMemoryUsage",
-      "type":"read"
-    },
-    "value":209274376,
-    "timestamp":1446129256,
-    "status":200
-  }
-]`
-
 const invalidJSON = "I don't think this is JSON"
-
-const empty = ""
 
 var Servers = []Server{{Name: "as1", Host: "127.0.0.1", Port: "8080"}}
 var HeapMetric = Metric{Name: "heap_memory_usage",
@@ -130,10 +113,10 @@ type jolokiaClientStub struct {
 	statusCode   int
 }
 
-func (c jolokiaClientStub) MakeRequest(req *http.Request) (*http.Response, error) {
+func (c jolokiaClientStub) MakeRequest(_ *http.Request) (*http.Response, error) {
 	resp := http.Response{}
 	resp.StatusCode = c.statusCode
-	resp.Body = ioutil.NopCloser(strings.NewReader(c.responseBody))
+	resp.Body = io.NopCloser(strings.NewReader(c.responseBody))
 	return &resp, nil
 }
 
@@ -160,8 +143,8 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(acc.Metrics))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_init":      67108864.0,
@@ -184,8 +167,8 @@ func TestHttpJsonBulkResponse(t *testing.T) {
 	var acc testutil.Accumulator
 	err := jolokia.Gather(&acc)
 
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(acc.Metrics))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_init":          67108864.0,
@@ -212,8 +195,8 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(acc.Metrics))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_java.lang:type=Memory_ObjectPendingFinalizationCount": 0.0,
@@ -239,30 +222,26 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 
 // Test that the proper values are ignored or collected
 func TestHttp404(t *testing.T) {
-
-	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers,
-		[]Metric{UsedHeapMetric})
+	jolokia := genJolokiaClientStub(invalidJSON, 404, Servers, []Metric{UsedHeapMetric})
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, len(acc.Metrics))
-	assert.Contains(t, err.Error(), "has status code 404")
+	require.Error(t, err)
+	require.Equal(t, 0, len(acc.Metrics))
+	require.Contains(t, err.Error(), "has status code 404")
 }
 
 // Test that the proper values are ignored or collected
 func TestHttpInvalidJson(t *testing.T) {
-
-	jolokia := genJolokiaClientStub(invalidJSON, 200, Servers,
-		[]Metric{UsedHeapMetric})
+	jolokia := genJolokiaClientStub(invalidJSON, 200, Servers, []Metric{UsedHeapMetric})
 
 	var acc testutil.Accumulator
 	acc.SetDebug(true)
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, len(acc.Metrics))
-	assert.Contains(t, err.Error(), "Error decoding JSON response")
+	require.Error(t, err)
+	require.Equal(t, 0, len(acc.Metrics))
+	require.Contains(t, err.Error(), "error decoding JSON response")
 }

@@ -12,20 +12,20 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w+)\s+([\w\.\-]+)`)
+var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w[\w\.\-]*)\s+([\w\.\-]+)`)
 
 // Zookeeper is a zookeeper plugin
 type Zookeeper struct {
 	Servers []string
-	Timeout internal.Duration
+	Timeout config.Duration
 
 	EnableTLS bool `toml:"enable_tls"`
-	EnableSSL bool `toml:"enable_ssl"` // deprecated in 1.7; use enable_tls
+	EnableSSL bool `toml:"enable_ssl" deprecated:"1.7.0;use 'enable_tls' instead"`
 	tlsint.ClientConfig
 
 	initialized bool
@@ -72,9 +72,8 @@ func (z *Zookeeper) dial(ctx context.Context, addr string) (net.Conn, error) {
 			dialer.Deadline = deadline
 		}
 		return tls.DialWithDialer(&dialer, "tcp", addr, z.tlsConfig)
-	} else {
-		return dialer.DialContext(ctx, "tcp", addr)
 	}
+	return dialer.DialContext(ctx, "tcp", addr)
 }
 
 // Gather reads stats from all configured servers accumulates stats
@@ -90,11 +89,11 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 		z.initialized = true
 	}
 
-	if z.Timeout.Duration < 1*time.Second {
-		z.Timeout.Duration = defaultTimeout
+	if z.Timeout < config.Duration(1*time.Second) {
+		z.Timeout = config.Duration(defaultTimeout)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, z.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(z.Timeout))
 	defer cancel()
 
 	if len(z.Servers) == 0 {
@@ -108,7 +107,7 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 }
 
 func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegraf.Accumulator) error {
-	var zookeeper_state string
+	var zookeeperState string
 	_, _, err := net.SplitHostPort(address)
 	if err != nil {
 		address = address + ":2181"
@@ -123,22 +122,26 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 	// Apply deadline to connection
 	deadline, ok := ctx.Deadline()
 	if ok {
-		c.SetDeadline(deadline)
+		if err := c.SetDeadline(deadline); err != nil {
+			return err
+		}
 	}
 
-	fmt.Fprintf(c, "%s\n", "mntr")
+	if _, err := fmt.Fprintf(c, "%s\n", "mntr"); err != nil {
+		return err
+	}
 	rdr := bufio.NewReader(c)
 	scanner := bufio.NewScanner(rdr)
 
 	service := strings.Split(address, ":")
 	if len(service) != 2 {
-		return fmt.Errorf("Invalid service address: %s", address)
+		return fmt.Errorf("invalid service address: %s", address)
 	}
 
 	fields := make(map[string]interface{})
 	for scanner.Scan() {
 		line := scanner.Text()
-		parts := zookeeperFormatRE.FindStringSubmatch(string(line))
+		parts := zookeeperFormatRE.FindStringSubmatch(line)
 
 		if len(parts) != 3 {
 			return fmt.Errorf("unexpected line in mntr response: %q", line)
@@ -146,9 +149,9 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 
 		measurement := strings.TrimPrefix(parts[1], "zk_")
 		if measurement == "server_state" {
-			zookeeper_state = parts[2]
+			zookeeperState = parts[2]
 		} else {
-			sValue := string(parts[2])
+			sValue := parts[2]
 
 			iVal, err := strconv.ParseInt(sValue, 10, 64)
 			if err == nil {
@@ -167,7 +170,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 	tags := map[string]string{
 		"server": srv,
 		"port":   service[1],
-		"state":  zookeeper_state,
+		"state":  zookeeperState,
 	}
 	acc.AddFields("zookeeper", fields, tags)
 

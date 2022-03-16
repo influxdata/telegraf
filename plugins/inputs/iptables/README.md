@@ -1,4 +1,4 @@
-# Iptables Plugin
+# Iptables Input Plugin
 
 The iptables plugin gathers packets and bytes counters for rules within a set of table and chain from the Linux's iptables firewall.
 
@@ -14,11 +14,11 @@ The iptables command requires CAP_NET_ADMIN and CAP_NET_RAW capabilities. You ha
 * Configure systemd to run telegraf with CAP_NET_ADMIN and CAP_NET_RAW. This is the simplest and recommended option.
 * Configure sudo to grant telegraf to run iptables. This is the most restrictive option, but require sudo setup.
 
-### Using systemd capabilities
+## Using systemd capabilities
 
 You may run `systemctl edit telegraf.service` and add the following:
 
-```
+```shell
 [Service]
 CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
 AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
@@ -26,9 +26,10 @@ AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
 Since telegraf will fork a process to run iptables, `AmbientCapabilities` is required to transmit the capabilities bounding set to the forked process.
 
-### Using sudo
+## Using sudo
 
 You will need the following in your telegraf config:
+
 ```toml
 [[inputs.iptables]]
   use_sudo = true
@@ -44,11 +45,11 @@ telegraf  ALL=(root) NOPASSWD: IPTABLESSHOW
 Defaults!IPTABLESSHOW !logfile, !syslog, !pam_session
 ```
 
-### Using IPtables lock feature
+## Using IPtables lock feature
 
 Defining multiple instances of this plugin in telegraf.conf can lead to concurrent IPtables access resulting in "ERROR in input [inputs.iptables]: exit status 4" messages in telegraf.log and missing metrics. Setting 'use_lock = true' in the plugin configuration will run IPtables with the '-w' switch, allowing a lock usage to prevent this error.
 
-### Configuration:
+## Configuration
 
 ```toml
   # use sudo to run iptables
@@ -63,25 +64,24 @@ Defining multiple instances of this plugin in telegraf.conf can lead to concurre
   chains = [ "INPUT" ]
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
+* iptables
+  * pkts (integer, count)
+  * bytes (integer, bytes)
 
-- iptables
-    - pkts (integer, count)
-    - bytes (integer, bytes)
+## Tags
 
-### Tags:
-
-- All measurements have the following tags:
-    - table
-    - chain
-    - ruleid
+* All measurements have the following tags:
+  * table
+  * chain
+  * ruleid
 
 The `ruleid` is the comment associated to the rule.
 
-### Example Output:
+## Example Output
 
-```
+```text
 $ iptables -nvL INPUT
 Chain INPUT (policy DROP 0 packets, 0 bytes)
 pkts bytes target     prot opt in     out     source               destination
@@ -89,7 +89,7 @@ pkts bytes target     prot opt in     out     source               destination
  42   2048   ACCEPT     tcp  --  *      *       192.168.0.0/24       0.0.0.0/0            tcp dpt:80 /* httpd */
 ```
 
-```
+```shell
 $ ./telegraf --config telegraf.conf --input-filter iptables --test
 iptables,table=filter,chain=INPUT,ruleid=ssh pkts=100i,bytes=1024i 1453831884664956455
 iptables,table=filter,chain=INPUT,ruleid=httpd pkts=42i,bytes=2048i 1453831884664956455

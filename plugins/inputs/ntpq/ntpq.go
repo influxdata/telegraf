@@ -14,7 +14,7 @@ import (
 )
 
 // Mapping of ntpq header names to tag keys
-var tagHeaders map[string]string = map[string]string{
+var tagHeaders = map[string]string{
 	"remote": "remote",
 	"refid":  "refid",
 	"st":     "stratum",
@@ -50,7 +50,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	// Due to problems with a parsing, we have to use regexp expression in order
 	// to remove string that starts from '(' and ends with space
 	// see: https://github.com/influxdata/telegraf/issues/2386
-	reg, err := regexp.Compile("\\s+\\([\\S]*")
+	reg, err := regexp.Compile(`\s+\([\S]*`)
 	if err != nil {
 		return err
 	}
@@ -122,13 +122,13 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					continue
 				}
 
-				if key == "when" {
+				if key == "when" || key == "poll" {
 					when := fields[index]
 					switch {
 					case strings.HasSuffix(when, "h"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "h"))
 						if err != nil {
-							acc.AddError(fmt.Errorf("E! Error ntpq: parsing int: %s", fields[index]))
+							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
 							continue
 						}
 						// seconds in an hour
@@ -137,7 +137,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					case strings.HasSuffix(when, "d"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "d"))
 						if err != nil {
-							acc.AddError(fmt.Errorf("E! Error ntpq: parsing int: %s", fields[index]))
+							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
 							continue
 						}
 						// seconds in a day
@@ -146,7 +146,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					case strings.HasSuffix(when, "m"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "m"))
 						if err != nil {
-							acc.AddError(fmt.Errorf("E! Error ntpq: parsing int: %s", fields[index]))
+							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
 							continue
 						}
 						// seconds in a day
@@ -157,7 +157,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 				m, err := strconv.Atoi(fields[index])
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error ntpq: parsing int: %s", fields[index]))
+					acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
 					continue
 				}
 				mFields[key] = int64(m)
@@ -174,7 +174,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 				m, err := strconv.ParseFloat(fields[index], 64)
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error ntpq: parsing float: %s", fields[index]))
+					acc.AddError(fmt.Errorf("error ntpq: parsing float: %s", fields[index]))
 					continue
 				}
 				mFields[key] = m

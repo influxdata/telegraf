@@ -2,7 +2,7 @@
 
 The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP service.
 
-### Configuration:
+## Configuration
 
 ```toml
 # Configuration for sending metrics to InfluxDB
@@ -75,7 +75,7 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
 
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
+  # content_encoding = "gzip"
 
   ## When true, Telegraf will output unsigned integers as unsigned values,
   ## i.e.: "42u".  You will need a version of InfluxDB supporting unsigned
@@ -84,9 +84,9 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
   # influx_uint_support = false
 ```
 
-### Metrics
-￼
+## Metrics
+
 Reference the [influx serializer][] for details about metric production.
-￼
+
 [InfluxDB v1.x]: https://github.com/influxdata/influxdb
 [influx serializer]: /plugins/serializers/influx/README.md#Metrics

@@ -4,20 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Default http timeouts
-var DefaultResponseHeaderTimeout = internal.Duration{Duration: 3 * time.Second}
-var DefaultClientTimeout = internal.Duration{Duration: 4 * time.Second}
+var DefaultResponseHeaderTimeout = config.Duration(3 * time.Second)
+var DefaultClientTimeout = config.Duration(4 * time.Second)
 
 type Server struct {
 	Name     string
@@ -55,8 +54,9 @@ type Jolokia struct {
 	Proxy     Server
 	Delimiter string
 
-	ResponseHeaderTimeout internal.Duration `toml:"response_header_timeout"`
-	ClientTimeout         internal.Duration `toml:"client_timeout"`
+	ResponseHeaderTimeout config.Duration `toml:"response_header_timeout"`
+	ClientTimeout         config.Duration `toml:"client_timeout"`
+	Log                   telegraf.Logger `toml:"-"`
 }
 
 const sampleConfig = `
@@ -143,7 +143,7 @@ func (j *Jolokia) doRequest(req *http.Request) ([]map[string]interface{}, error)
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			req.RequestURI,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
@@ -153,22 +153,22 @@ func (j *Jolokia) doRequest(req *http.Request) ([]map[string]interface{}, error)
 	}
 
 	// read body
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal json
 	var jsonOut []map[string]interface{}
-	if err = json.Unmarshal([]byte(body), &jsonOut); err != nil {
-		return nil, fmt.Errorf("Error decoding JSON response: %s: %s", err, body)
+	if err = json.Unmarshal(body, &jsonOut); err != nil {
+		return nil, fmt.Errorf("error decoding JSON response: %s: %s", err, body)
 	}
 
 	return jsonOut, nil
 }
 
 func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request, error) {
-	var jolokiaUrl *url.URL
+	var jolokiaURL *url.URL
 	context := j.Context // Usually "/jolokia/"
 
 	var bulkBodyContent []map[string]interface{}
@@ -188,11 +188,11 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 
 		// Add target, only in proxy mode
 		if j.Mode == "proxy" {
-			serviceUrl := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi",
+			serviceURL := fmt.Sprintf("service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi",
 				server.Host, server.Port)
 
 			target := map[string]string{
-				"url": serviceUrl,
+				"url": serviceURL,
 			}
 
 			if server.Username != "" {
@@ -208,35 +208,36 @@ func (j *Jolokia) prepareRequest(server Server, metrics []Metric) (*http.Request
 			proxy := j.Proxy
 
 			// Prepare ProxyURL
-			proxyUrl, err := url.Parse("http://" + proxy.Host + ":" + proxy.Port + context)
+			proxyURL, err := url.Parse("http://" + proxy.Host + ":" + proxy.Port + context)
 			if err != nil {
 				return nil, err
 			}
 			if proxy.Username != "" || proxy.Password != "" {
-				proxyUrl.User = url.UserPassword(proxy.Username, proxy.Password)
+				proxyURL.User = url.UserPassword(proxy.Username, proxy.Password)
 			}
 
-			jolokiaUrl = proxyUrl
-
+			jolokiaURL = proxyURL
 		} else {
-			serverUrl, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
+			serverURL, err := url.Parse("http://" + server.Host + ":" + server.Port + context)
 			if err != nil {
 				return nil, err
 			}
 			if server.Username != "" || server.Password != "" {
-				serverUrl.User = url.UserPassword(server.Username, server.Password)
+				serverURL.User = url.UserPassword(server.Username, server.Password)
 			}
 
-			jolokiaUrl = serverUrl
+			jolokiaURL = serverURL
 		}
 
 		bulkBodyContent = append(bulkBodyContent, bodyContent)
 	}
 
 	requestBody, err := json.Marshal(bulkBodyContent)
+	if err != nil {
+		return nil, err
+	}
 
-	req, err := http.NewRequest("POST", jolokiaUrl.String(), bytes.NewBuffer(requestBody))
-
+	req, err := http.NewRequest("POST", jolokiaURL.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, err
 	}
@@ -257,16 +258,15 @@ func (j *Jolokia) extractValues(measurement string, value interface{}, fields ma
 }
 
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
-
 	if j.jClient == nil {
-		log.Println("W! DEPRECATED: the jolokia plugin has been deprecated " +
+		j.Log.Warn("DEPRECATED: the jolokia plugin has been deprecated " +
 			"in favor of the jolokia2 plugin " +
 			"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2)")
 
-		tr := &http.Transport{ResponseHeaderTimeout: j.ResponseHeaderTimeout.Duration}
+		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(j.ResponseHeaderTimeout)}
 		j.jClient = &JolokiaClientImpl{&http.Client{
 			Transport: tr,
-			Timeout:   j.ClientTimeout.Duration,
+			Timeout:   time.Duration(j.ClientTimeout),
 		}}
 	}
 
@@ -297,18 +297,18 @@ func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 		}
 		for i, resp := range out {
 			if status, ok := resp["status"]; ok && status != float64(200) {
-				acc.AddError(fmt.Errorf("Not expected status value in response body (%s:%s mbean=\"%s\" attribute=\"%s\"): %3.f",
+				acc.AddError(fmt.Errorf("not expected status value in response body (%s:%s mbean=\"%s\" attribute=\"%s\"): %3.f",
 					server.Host, server.Port, metrics[i].Mbean, metrics[i].Attribute, status))
 				continue
 			} else if !ok {
-				acc.AddError(fmt.Errorf("Missing status in response body"))
+				acc.AddError(fmt.Errorf("missing status in response body"))
 				continue
 			}
 
 			if values, ok := resp["value"]; ok {
 				j.extractValues(metrics[i].Name, values, fields)
 			} else {
-				acc.AddError(fmt.Errorf("Missing key 'value' in output response\n"))
+				acc.AddError(fmt.Errorf("missing key 'value' in output response"))
 			}
 		}
 

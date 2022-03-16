@@ -13,13 +13,15 @@ type DiskStats struct {
 	ps system.PS
 
 	// Legacy support
-	Mountpoints []string `toml:"mountpoints"`
+	LegacyMountPoints []string `toml:"mountpoints"`
 
 	MountPoints []string `toml:"mount_points"`
 	IgnoreFS    []string `toml:"ignore_fs"`
+
+	Log telegraf.Logger `toml:"-"`
 }
 
-func (_ *DiskStats) Description() string {
+func (ds *DiskStats) Description() string {
 	return "Read metrics about disk usage by mount point"
 }
 
@@ -32,36 +34,43 @@ var diskSampleConfig = `
   ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
 `
 
-func (_ *DiskStats) SampleConfig() string {
+func (ds *DiskStats) SampleConfig() string {
 	return diskSampleConfig
 }
 
-func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
+func (ds *DiskStats) Init() error {
 	// Legacy support:
-	if len(s.Mountpoints) != 0 {
-		s.MountPoints = s.Mountpoints
+	if len(ds.LegacyMountPoints) != 0 {
+		ds.MountPoints = ds.LegacyMountPoints
 	}
 
-	disks, partitions, err := s.ps.DiskUsage(s.MountPoints, s.IgnoreFS)
+	ps := system.NewSystemPS()
+	ps.Log = ds.Log
+	ds.ps = ps
+
+	return nil
+}
+
+func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
+	disks, partitions, err := ds.ps.DiskUsage(ds.MountPoints, ds.IgnoreFS)
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
-
 	for i, du := range disks {
 		if du.Total == 0 {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
 			continue
 		}
-		mountOpts := parseOptions(partitions[i].Opts)
+		mountOpts := MountOptions(partitions[i].Opts)
 		tags := map[string]string{
 			"path":   du.Path,
 			"device": strings.Replace(partitions[i].Device, "/dev/", "", -1),
 			"fstype": du.Fstype,
 			"mode":   mountOpts.Mode(),
 		}
-		var used_percent float64
+		var usedPercent float64
 		if du.Used+du.Free > 0 {
-			used_percent = float64(du.Used) /
+			usedPercent = float64(du.Used) /
 				(float64(du.Used) + float64(du.Free)) * 100
 		}
 
@@ -69,7 +78,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"total":        du.Total,
 			"free":         du.Free,
 			"used":         du.Used,
-			"used_percent": used_percent,
+			"used_percent": usedPercent,
 			"inodes_total": du.InodesTotal,
 			"inodes_free":  du.InodesFree,
 			"inodes_used":  du.InodesUsed,
@@ -101,13 +110,8 @@ func (opts MountOptions) exists(opt string) bool {
 	return false
 }
 
-func parseOptions(opts string) MountOptions {
-	return strings.Split(opts, ",")
-}
-
 func init() {
-	ps := system.NewSystemPS()
 	inputs.Add("disk", func() telegraf.Input {
-		return &DiskStats{ps: ps}
+		return &DiskStats{}
 	})
 }

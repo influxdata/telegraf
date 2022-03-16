@@ -3,7 +3,8 @@ package docker
 import (
 	"context"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -11,9 +12,11 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type MockClient struct {
@@ -24,6 +27,7 @@ type MockClient struct {
 	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
+	CloseF            func() error
 }
 
 func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
@@ -73,6 +77,10 @@ func (c *MockClient) NodeList(
 	return c.NodeListF(ctx, options)
 }
 
+func (c *MockClient) Close() error {
+	return c.CloseF()
+}
+
 var baseClient = MockClient{
 	InfoF: func(context.Context) (types.Info, error) {
 		return info, nil
@@ -95,9 +103,12 @@ var baseClient = MockClient{
 	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 		return NodeList, nil
 	},
+	CloseF: func() error {
+		return nil
+	},
 }
 
-func newClient(host string, tlsConfig *tls.Config) (Client, error) {
+func newClient(_ string, _ *tls.Config) (Client, error) {
 	return &baseClient, nil
 }
 
@@ -110,7 +121,12 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_image": "redis/image",
 	}
 
-	parseContainerStats(stats, &acc, tags, "123456789", true, true, "linux")
+	d := &Docker{
+		Log:              testutil.Logger{},
+		PerDeviceInclude: containerMetricClasses,
+		TotalInclude:     containerMetricClasses,
+	}
+	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
 
 	// test docker_container_net measurement
 	netfields := map[string]interface{}{
@@ -249,6 +265,162 @@ func TestDockerGatherContainerStats(t *testing.T) {
 	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu3fields, cputags)
 }
 
+func TestDockerMemoryExcludesCache(t *testing.T) {
+	var acc testutil.Accumulator
+	stats := testStats()
+
+	tags := map[string]string{
+		"container_name":  "redis",
+		"container_image": "redis/image",
+	}
+
+	d := &Docker{
+		Log: testutil.Logger{},
+	}
+
+	delete(stats.MemoryStats.Stats, "cache")
+	delete(stats.MemoryStats.Stats, "inactive_file")
+	delete(stats.MemoryStats.Stats, "total_inactive_file")
+
+	// set cgroup v2 cache value
+	stats.MemoryStats.Stats["inactive_file"] = 9
+
+	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
+
+	// test docker_container_mem measurement
+	memfields := map[string]interface{}{
+		"active_anon":               uint64(0),
+		"active_file":               uint64(1),
+		"container_id":              "123456789",
+		"fail_count":                uint64(1),
+		"hierarchical_memory_limit": uint64(0),
+		"inactive_anon":             uint64(0),
+		"inactive_file":             uint64(9),
+		"limit":                     uint64(2000),
+		"mapped_file":               uint64(0),
+		"max_usage":                 uint64(1001),
+		"pgfault":                   uint64(2),
+		"pgmajfault":                uint64(0),
+		"pgpgin":                    uint64(0),
+		"pgpgout":                   uint64(0),
+		"rss_huge":                  uint64(0),
+		"rss":                       uint64(0),
+		"total_active_anon":         uint64(0),
+		"total_active_file":         uint64(0),
+		"total_cache":               uint64(0),
+		"total_inactive_anon":       uint64(0),
+		"total_mapped_file":         uint64(0),
+		"total_pgfault":             uint64(0),
+		"total_pgmajfault":          uint64(0),
+		"total_pgpgin":              uint64(4),
+		"total_pgpgout":             uint64(0),
+		"total_rss_huge":            uint64(444),
+		"total_rss":                 uint64(44),
+		"total_unevictable":         uint64(0),
+		"total_writeback":           uint64(55),
+		"unevictable":               uint64(0),
+		"usage_percent":             float64(55.1), // 1102 / 2000
+		"usage":                     uint64(1102),
+		"writeback":                 uint64(0),
+	}
+
+	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
+	acc.ClearMetrics()
+
+	// set cgroup v1 cache value (has priority over cgroups v2)
+	stats.MemoryStats.Stats["total_inactive_file"] = 7
+
+	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
+
+	// test docker_container_mem measurement
+	memfields = map[string]interface{}{
+		"active_anon": uint64(0),
+		"active_file": uint64(1),
+		// "cache":                     uint64(0),
+		"container_id":              "123456789",
+		"fail_count":                uint64(1),
+		"hierarchical_memory_limit": uint64(0),
+		"inactive_anon":             uint64(0),
+		"inactive_file":             uint64(9),
+		"limit":                     uint64(2000),
+		"mapped_file":               uint64(0),
+		"max_usage":                 uint64(1001),
+		"pgfault":                   uint64(2),
+		"pgmajfault":                uint64(0),
+		"pgpgin":                    uint64(0),
+		"pgpgout":                   uint64(0),
+		"rss_huge":                  uint64(0),
+		"rss":                       uint64(0),
+		"total_active_anon":         uint64(0),
+		"total_active_file":         uint64(0),
+		"total_cache":               uint64(0),
+		"total_inactive_anon":       uint64(0),
+		"total_inactive_file":       uint64(7),
+		"total_mapped_file":         uint64(0),
+		"total_pgfault":             uint64(0),
+		"total_pgmajfault":          uint64(0),
+		"total_pgpgin":              uint64(4),
+		"total_pgpgout":             uint64(0),
+		"total_rss_huge":            uint64(444),
+		"total_rss":                 uint64(44),
+		"total_unevictable":         uint64(0),
+		"total_writeback":           uint64(55),
+		"unevictable":               uint64(0),
+		"usage_percent":             float64(55.2), // 1104 / 2000
+		"usage":                     uint64(1104),
+		"writeback":                 uint64(0),
+	}
+
+	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
+	acc.ClearMetrics()
+
+	// set Docker 19.03 and older cache value (has priority over cgroups v1 and v2)
+	stats.MemoryStats.Stats["cache"] = 16
+
+	d.parseContainerStats(stats, &acc, tags, "123456789", "linux")
+
+	// test docker_container_mem measurement
+	memfields = map[string]interface{}{
+		"active_anon":               uint64(0),
+		"active_file":               uint64(1),
+		"cache":                     uint64(16),
+		"container_id":              "123456789",
+		"fail_count":                uint64(1),
+		"hierarchical_memory_limit": uint64(0),
+		"inactive_anon":             uint64(0),
+		"inactive_file":             uint64(9),
+		"limit":                     uint64(2000),
+		"mapped_file":               uint64(0),
+		"max_usage":                 uint64(1001),
+		"pgfault":                   uint64(2),
+		"pgmajfault":                uint64(0),
+		"pgpgin":                    uint64(0),
+		"pgpgout":                   uint64(0),
+		"rss_huge":                  uint64(0),
+		"rss":                       uint64(0),
+		"total_active_anon":         uint64(0),
+		"total_active_file":         uint64(0),
+		"total_cache":               uint64(0),
+		"total_inactive_anon":       uint64(0),
+		"total_inactive_file":       uint64(7),
+		"total_mapped_file":         uint64(0),
+		"total_pgfault":             uint64(0),
+		"total_pgmajfault":          uint64(0),
+		"total_pgpgin":              uint64(4),
+		"total_pgpgout":             uint64(0),
+		"total_rss_huge":            uint64(444),
+		"total_rss":                 uint64(44),
+		"total_unevictable":         uint64(0),
+		"total_writeback":           uint64(55),
+		"unevictable":               uint64(0),
+		"usage_percent":             float64(54.75), // 1095 / 2000
+		"usage":                     uint64(1095),
+		"writeback":                 uint64(0),
+	}
+
+	acc.AssertContainsTaggedFields(t, "docker_container_mem", memfields, tags)
+}
+
 func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 	var acc testutil.Accumulator
 
@@ -276,6 +448,9 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 					return NodeList, nil
+				},
+				CloseF: func() error {
+					return nil
 				},
 			}, nil
 		},
@@ -396,6 +571,8 @@ func TestContainerLabels(t *testing.T) {
 				newClient:    newClientFunc,
 				LabelInclude: tt.include,
 				LabelExclude: tt.exclude,
+				Total:        true,
+				TotalInclude: []string{"cpu"},
 			}
 
 			err := d.Gather(&acc)
@@ -571,7 +748,7 @@ func TestContainerStatus(t *testing.T) {
 					map[string]string{
 						"container_name":    "etcd",
 						"container_image":   "quay.io/coreos/etcd",
-						"container_version": "v2.2.2",
+						"container_version": "v3.3.25",
 						"engine_host":       "absol",
 						"label1":            "test_value_1",
 						"label2":            "test_value_2",
@@ -607,7 +784,7 @@ func TestContainerStatus(t *testing.T) {
 					map[string]string{
 						"container_name":    "etcd",
 						"container_image":   "quay.io/coreos/etcd",
-						"container_version": "v2.2.2",
+						"container_version": "v3.3.25",
 						"engine_host":       "absol",
 						"label1":            "test_value_1",
 						"label2":            "test_value_2",
@@ -645,7 +822,7 @@ func TestContainerStatus(t *testing.T) {
 					map[string]string{
 						"container_name":    "etcd",
 						"container_image":   "quay.io/coreos/etcd",
-						"container_version": "v2.2.2",
+						"container_version": "v3.3.25",
 						"engine_host":       "absol",
 						"label1":            "test_value_1",
 						"label2":            "test_value_2",
@@ -681,7 +858,7 @@ func TestContainerStatus(t *testing.T) {
 					map[string]string{
 						"container_name":    "etcd",
 						"container_image":   "quay.io/coreos/etcd",
-						"container_version": "v2.2.2",
+						"container_version": "v3.3.25",
 						"engine_host":       "absol",
 						"label1":            "test_value_1",
 						"label2":            "test_value_2",
@@ -751,6 +928,9 @@ func TestDockerGatherInfo(t *testing.T) {
 		newClient: newClient,
 		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
 			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
+		PerDeviceInclude: []string{"cpu", "network", "blkio"},
+		Total:            true,
+		TotalInclude:     []string{""},
 	}
 
 	err := acc.GatherError(d.Gather)
@@ -856,7 +1036,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"container_name":    "etcd2",
 			"container_image":   "quay.io:4443/coreos/etcd",
 			"cpu":               "cpu3",
-			"container_version": "v2.2.2",
+			"container_version": "v3.3.25",
 			"engine_host":       "absol",
 			"ENVVAR1":           "loremipsum",
 			"ENVVAR2":           "dolorsitamet",
@@ -881,7 +1061,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"engine_host":       "absol",
 			"container_name":    "etcd2",
 			"container_image":   "quay.io:4443/coreos/etcd",
-			"container_version": "v2.2.2",
+			"container_version": "v3.3.25",
 			"ENVVAR1":           "loremipsum",
 			"ENVVAR2":           "dolorsitamet",
 			"ENVVAR3":           "=ubuntu:10.04",
@@ -904,7 +1084,7 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 	err := acc.GatherError(d.Gather)
 	require.NoError(t, err)
 
-	d.gatherSwarmInfo(&acc)
+	require.NoError(t, d.gatherSwarmInfo(&acc))
 
 	// test docker_container_net measurement
 	acc.AssertContainsTaggedFields(t,
@@ -924,7 +1104,7 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 		"docker_swarm",
 		map[string]interface{}{
 			"tasks_running": int(1),
-			"tasks_desired": int(1),
+			"tasks_desired": uint64(1),
 		},
 		map[string]string{
 			"service_id":   "qolkls9g5iasdiuihcyz9rn3",
@@ -1036,7 +1216,7 @@ func TestContainerName(t *testing.T) {
 				}
 				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
 					return types.ContainerStats{
-						Body: ioutil.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
+						Body: io.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
 					}, nil
 				}
 				return &client, nil
@@ -1056,7 +1236,7 @@ func TestContainerName(t *testing.T) {
 				}
 				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
 					return types.ContainerStats{
-						Body: ioutil.NopCloser(strings.NewReader(`{}`)),
+						Body: io.NopCloser(strings.NewReader(`{}`)),
 					}, nil
 				}
 				return &client, nil
@@ -1115,5 +1295,245 @@ func TestHostnameFromID(t *testing.T) {
 			}
 		})
 	}
+}
 
+func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
+	type args struct {
+		stat             *types.StatsJSON
+		tags             map[string]string
+		id               string
+		perDeviceInclude []string
+		totalInclude     []string
+		daemonOSType     string
+	}
+
+	var (
+		testDate       = time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
+		metricCPUTotal = testutil.MustMetric(
+			"docker_container_cpu",
+			map[string]string{
+				"cpu": "cpu-total",
+			},
+			map[string]interface{}{},
+			testDate)
+
+		metricCPU0 = testutil.MustMetric(
+			"docker_container_cpu",
+			map[string]string{
+				"cpu": "cpu0",
+			},
+			map[string]interface{}{},
+			testDate)
+		metricCPU1 = testutil.MustMetric(
+			"docker_container_cpu",
+			map[string]string{
+				"cpu": "cpu1",
+			},
+			map[string]interface{}{},
+			testDate)
+
+		metricNetworkTotal = testutil.MustMetric(
+			"docker_container_net",
+			map[string]string{
+				"network": "total",
+			},
+			map[string]interface{}{},
+			testDate)
+
+		metricNetworkEth0 = testutil.MustMetric(
+			"docker_container_net",
+			map[string]string{
+				"network": "eth0",
+			},
+			map[string]interface{}{},
+			testDate)
+
+		metricNetworkEth1 = testutil.MustMetric(
+			"docker_container_net",
+			map[string]string{
+				"network": "eth0",
+			},
+			map[string]interface{}{},
+			testDate)
+		metricBlkioTotal = testutil.MustMetric(
+			"docker_container_blkio",
+			map[string]string{
+				"device": "total",
+			},
+			map[string]interface{}{},
+			testDate)
+		metricBlkio6_0 = testutil.MustMetric(
+			"docker_container_blkio",
+			map[string]string{
+				"device": "6:0",
+			},
+			map[string]interface{}{},
+			testDate)
+		metricBlkio6_1 = testutil.MustMetric(
+			"docker_container_blkio",
+			map[string]string{
+				"device": "6:1",
+			},
+			map[string]interface{}{},
+			testDate)
+	)
+	stats := testStats()
+	tests := []struct {
+		name     string
+		args     args
+		expected []telegraf.Metric
+	}{
+		{
+			name: "Per device and total metrics enabled",
+			args: args{
+				stat:             stats,
+				perDeviceInclude: containerMetricClasses,
+				totalInclude:     containerMetricClasses,
+			},
+			expected: []telegraf.Metric{
+				metricCPUTotal, metricCPU0, metricCPU1,
+				metricNetworkTotal, metricNetworkEth0, metricNetworkEth1,
+				metricBlkioTotal, metricBlkio6_0, metricBlkio6_1,
+			},
+		},
+		{
+			name: "Per device metrics enabled",
+			args: args{
+				stat:             stats,
+				perDeviceInclude: containerMetricClasses,
+				totalInclude:     []string{},
+			},
+			expected: []telegraf.Metric{
+				metricCPU0, metricCPU1,
+				metricNetworkEth0, metricNetworkEth1,
+				metricBlkio6_0, metricBlkio6_1,
+			},
+		},
+		{
+			name: "Total metrics enabled",
+			args: args{
+				stat:             stats,
+				perDeviceInclude: []string{},
+				totalInclude:     containerMetricClasses,
+			},
+			expected: []telegraf.Metric{metricCPUTotal, metricNetworkTotal, metricBlkioTotal},
+		},
+		{
+			name: "Per device and total metrics disabled",
+			args: args{
+				stat:             stats,
+				perDeviceInclude: []string{},
+				totalInclude:     []string{},
+			},
+			expected: []telegraf.Metric{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+			d := &Docker{
+				Log:              testutil.Logger{},
+				PerDeviceInclude: tt.args.perDeviceInclude,
+				TotalInclude:     tt.args.totalInclude,
+			}
+			d.parseContainerStats(tt.args.stat, &acc, tt.args.tags, tt.args.id, tt.args.daemonOSType)
+
+			actual := FilterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
+				return choice.Contains(m.Name(),
+					[]string{"docker_container_cpu", "docker_container_net", "docker_container_blkio"})
+			})
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.OnlyTags(), testutil.SortMetrics())
+		})
+	}
+}
+
+func TestDocker_Init(t *testing.T) {
+	type fields struct {
+		PerDevice        bool
+		PerDeviceInclude []string
+		Total            bool
+		TotalInclude     []string
+	}
+	tests := []struct {
+		name                 string
+		fields               fields
+		wantErr              bool
+		wantPerDeviceInclude []string
+		wantTotalInclude     []string
+	}{
+		{
+			"Unsupported perdevice_include setting",
+			fields{
+				PerDevice:        false,
+				PerDeviceInclude: []string{"nonExistentClass"},
+				Total:            false,
+				TotalInclude:     []string{"cpu"},
+			},
+			true,
+			[]string{},
+			[]string{},
+		},
+		{
+			"Unsupported total_include setting",
+			fields{
+				PerDevice:        false,
+				PerDeviceInclude: []string{"cpu"},
+				Total:            false,
+				TotalInclude:     []string{"nonExistentClass"},
+			},
+			true,
+			[]string{},
+			[]string{},
+		},
+		{
+			"PerDevice true adds network and blkio",
+			fields{
+				PerDevice:        true,
+				PerDeviceInclude: []string{"cpu"},
+				Total:            true,
+				TotalInclude:     []string{"cpu"},
+			},
+			false,
+			[]string{"cpu", "network", "blkio"},
+			[]string{"cpu"},
+		},
+		{
+			"Total false removes network and blkio",
+			fields{
+				PerDevice:        false,
+				PerDeviceInclude: []string{"cpu"},
+				Total:            false,
+				TotalInclude:     []string{"cpu", "network", "blkio"},
+			},
+			false,
+			[]string{"cpu"},
+			[]string{"cpu"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &Docker{
+				Log:              testutil.Logger{},
+				PerDevice:        tt.fields.PerDevice,
+				PerDeviceInclude: tt.fields.PerDeviceInclude,
+				Total:            tt.fields.Total,
+				TotalInclude:     tt.fields.TotalInclude,
+			}
+			err := d.Init()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if err == nil {
+				if !reflect.DeepEqual(d.PerDeviceInclude, tt.wantPerDeviceInclude) {
+					t.Errorf("Perdevice include: got  '%v', want '%v'", d.PerDeviceInclude, tt.wantPerDeviceInclude)
+				}
+
+				if !reflect.DeepEqual(d.TotalInclude, tt.wantTotalInclude) {
+					t.Errorf("Total include: got  '%v', want '%v'", d.TotalInclude, tt.wantTotalInclude)
+				}
+			}
+		})
+	}
 }

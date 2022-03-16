@@ -17,7 +17,7 @@ Additional information including client setup can be found
 You can also change the path to the typesdb or add additional typesdb using
 `collectd_typesdb`.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.socket_listener]]
@@ -39,13 +39,13 @@ You can also change the path to the typesdb or add additional typesdb using
   ## Multi-value plugins can be handled two ways.
   ## "split" will parse and store the multi-value plugin data into separate measurements
   ## "join" will parse and store the multi-value plugin as a single multi-value measurement.
-  ## "split" is the default behavior for backward compatability with previous versions of influxdb.
+  ## "split" is the default behavior for backward compatibility with previous versions of influxdb.
   collectd_parse_multivalue = "split"
 ```
 
-### Example Output
+## Example Output
 
-```
+```text
 memory,type=memory,type_instance=buffered value=2520051712 1560455990829955922
 memory,type=memory,type_instance=used value=3710791680 1560455990829955922
 memory,type=memory,type_instance=buffered value=2520047616 1560455980830417318

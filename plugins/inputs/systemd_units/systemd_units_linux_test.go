@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -73,13 +73,13 @@ func TestSystemdUnits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			systemd_units := &SystemdUnits{
-				systemctl: func(Timeout internal.Duration, UnitType string) (*bytes.Buffer, error) {
+			systemdUnits := &SystemdUnits{
+				systemctl: func(timeout config.Duration, unitType string, pattern string) (*bytes.Buffer, error) {
 					return bytes.NewBufferString(tt.line), nil
 				},
 			}
 			acc := new(testutil.Accumulator)
-			err := acc.GatherError(systemd_units.Gather)
+			err := acc.GatherError(systemdUnits.Gather)
 			if !reflect.DeepEqual(tt.err, err) {
 				t.Errorf("%s: expected error '%#v' got '%#v'", tt.name, tt.err, err)
 			}

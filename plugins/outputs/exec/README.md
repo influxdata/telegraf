@@ -4,11 +4,15 @@ This plugin sends telegraf metrics to an external application over stdin.
 
 The command should be defined similar to docker's `exec` form:
 
-    ["executable", "param1", "param2"]
+```text
+["executable", "param1", "param2"]
+```
 
 On non-zero exit stderr will be logged at error level.
 
-### Configuration
+For better performance, consider execd, which runs continuously.
+
+## Configuration
 
 ```toml
 [[outputs.exec]]

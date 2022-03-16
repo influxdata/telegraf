@@ -1,0 +1,7 @@
+[04/Jun/2016:12:41:45 +0100] DEBUG HelloExample: This is debug
+[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is info
+[04/Jun/2016:12:41:46 +0100] ERROR HelloExample: Sorry, something wrong! 
+java.lang.ArithmeticException: / by zero
+	at com.foo.HelloExample2.divide(HelloExample2.java:24)
+	at com.foo.HelloExample2.main(HelloExample2.java:14)
+[04/Jun/2016:12:41:48 +0100] WARN HelloExample: This is warn

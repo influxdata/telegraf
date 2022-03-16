@@ -6,7 +6,7 @@ creates metrics using one of the supported [input data formats][].
 A [Queue Group][queue group] is used when subscribing to subjects so multiple
 instances of telegraf can read from a NATS cluster in parallel.
 
-### Configuration:
+## Configuration
 
 ```toml
 [[inputs.nats_consumer]]

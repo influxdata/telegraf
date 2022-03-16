@@ -22,6 +22,7 @@ type Strings struct {
 	Replace      []converter `toml:"replace"`
 	Left         []converter `toml:"left"`
 	Base64Decode []converter `toml:"base64decode"`
+	ValidUTF8    []converter `toml:"valid_utf8"`
 
 	converters []converter
 	init       bool
@@ -42,6 +43,7 @@ type converter struct {
 	Old         string
 	New         string
 	Width       int
+	Replacement string
 
 	fn ConvertFunc
 }
@@ -98,6 +100,12 @@ const sampleConfig = `
   ## Decode a base64 encoded utf-8 string
   # [[processors.strings.base64decode]]
   #   field = "message"
+
+  ## Sanitize a string to ensure it is a valid utf-8 string
+  ## Each run of invalid UTF-8 byte sequences is replaced by the replacement string, which may be empty
+  # [[processors.strings.valid_utf8]]
+  #   field = "message"
+  #   replacement = ""
 `
 
 func (s *Strings) SampleConfig() string {
@@ -287,9 +295,9 @@ func (s *Strings) initOnce() {
 			newString := strings.Replace(s, c.Old, c.New, -1)
 			if newString == "" {
 				return s
-			} else {
-				return newString
 			}
+
+			return newString
 		}
 		s.converters = append(s.converters, c)
 	}
@@ -298,9 +306,9 @@ func (s *Strings) initOnce() {
 		c.fn = func(s string) string {
 			if len(s) < c.Width {
 				return s
-			} else {
-				return s[:c.Width]
 			}
+
+			return s[:c.Width]
 		}
 		s.converters = append(s.converters, c)
 	}
@@ -316,6 +324,11 @@ func (s *Strings) initOnce() {
 			}
 			return s
 		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.ValidUTF8 {
+		c := c
+		c.fn = func(s string) string { return strings.ToValidUTF8(s, c.Replacement) }
 		s.converters = append(s.converters, c)
 	}
 

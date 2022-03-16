@@ -2,7 +2,7 @@
 
 This plugin writes telegraf metrics to files
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.file]]

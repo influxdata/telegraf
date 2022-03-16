@@ -23,9 +23,9 @@ type Agent struct {
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(config *config.Config) (*Agent, error) {
+func NewAgent(cfg *config.Config) (*Agent, error) {
 	a := &Agent{
-		Config: config,
+		Config: cfg,
 	}
 	return a, nil
 }
@@ -98,8 +98,8 @@ type outputUnit struct {
 func (a *Agent) Run(ctx context.Context) error {
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
-		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
-		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
+		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
+		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
 	log.Printf("D! [agent] Initializing plugins")
 	err := a.initPlugins()
@@ -126,10 +126,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			}
 		}
 
-		next, au, err = a.startAggregators(aggC, next, a.Config.Aggregators)
-		if err != nil {
-			return err
-		}
+		next, au = a.startAggregators(aggC, next, a.Config.Aggregators)
 	}
 
 	var pu []*processorUnit
@@ -149,29 +146,20 @@ func (a *Agent) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.runOutputs(ou)
-		if err != nil {
-			log.Printf("E! [agent] Error running outputs: %v", err)
-		}
+		a.runOutputs(ou)
 	}()
 
 	if au != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(apu)
-			if err != nil {
-				log.Printf("E! [agent] Error running processors: %v", err)
-			}
+			a.runProcessors(apu)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runAggregators(startTime, au)
-			if err != nil {
-				log.Printf("E! [agent] Error running aggregators: %v", err)
-			}
+			a.runAggregators(startTime, au)
 		}()
 	}
 
@@ -179,20 +167,14 @@ func (a *Agent) Run(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(pu)
-			if err != nil {
-				log.Printf("E! [agent] Error running processors: %v", err)
-			}
+			a.runProcessors(pu)
 		}()
 	}
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.runInputs(ctx, startTime, iu)
-		if err != nil {
-			log.Printf("E! [agent] Error running inputs: %v", err)
-		}
+		a.runInputs(ctx, startTime, iu)
 	}()
 
 	wg.Wait()
@@ -210,32 +192,39 @@ func (a *Agent) initPlugins() error {
 				input.LogName(), err)
 		}
 	}
+	for _, parser := range a.Config.Parsers {
+		err := parser.Init()
+		if err != nil {
+			return fmt.Errorf("could not initialize parser %s::%s: %v",
+				parser.Config.DataFormat, parser.Config.Parent, err)
+		}
+	}
 	for _, processor := range a.Config.Processors {
 		err := processor.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.Config.Name, err)
+				processor.LogName(), err)
 		}
 	}
 	for _, aggregator := range a.Config.Aggregators {
 		err := aggregator.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize aggregator %s: %v",
-				aggregator.Config.Name, err)
+				aggregator.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.AggProcessors {
 		err := processor.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize processor %s: %v",
-				processor.Config.Name, err)
+				processor.LogName(), err)
 		}
 	}
 	for _, output := range a.Config.Outputs {
 		err := output.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize output %s: %v",
-				output.Config.Name, err)
+				output.LogName(), err)
 		}
 	}
 	return nil
@@ -288,32 +277,38 @@ func (a *Agent) runInputs(
 	ctx context.Context,
 	startTime time.Time,
 	unit *inputUnit,
-) error {
+) {
 	var wg sync.WaitGroup
 	for _, input := range unit.inputs {
 		// Overwrite agent interval if this plugin has its own.
-		interval := a.Config.Agent.Interval.Duration
+		interval := time.Duration(a.Config.Agent.Interval)
 		if input.Config.Interval != 0 {
 			interval = input.Config.Interval
 		}
 
 		// Overwrite agent precision if this plugin has its own.
-		precision := a.Config.Agent.Precision.Duration
+		precision := time.Duration(a.Config.Agent.Precision)
 		if input.Config.Precision != 0 {
 			precision = input.Config.Precision
 		}
 
 		// Overwrite agent collection_jitter if this plugin has its own.
-		jitter := a.Config.Agent.CollectionJitter.Duration
+		jitter := time.Duration(a.Config.Agent.CollectionJitter)
 		if input.Config.CollectionJitter != 0 {
 			jitter = input.Config.CollectionJitter
 		}
 
+		// Overwrite agent collection_offset if this plugin has its own.
+		offset := time.Duration(a.Config.Agent.CollectionOffset)
+		if input.Config.CollectionOffset != 0 {
+			offset = input.Config.CollectionOffset
+		}
+
 		var ticker Ticker
 		if a.Config.Agent.RoundInterval {
-			ticker = NewAlignedTicker(startTime, interval, jitter)
+			ticker = NewAlignedTicker(startTime, interval, jitter, offset)
 		} else {
-			ticker = NewUnalignedTicker(interval, jitter)
+			ticker = NewUnalignedTicker(interval, jitter, offset)
 		}
 		defer ticker.Stop()
 
@@ -334,8 +329,6 @@ func (a *Agent) runInputs(
 
 	close(unit.dst)
 	log.Printf("D! [agent] Input channel closed")
-
-	return nil
 }
 
 // testStartInputs is a variation of startInputs for use in --test and --once
@@ -344,7 +337,7 @@ func (a *Agent) runInputs(
 func (a *Agent) testStartInputs(
 	dst chan<- telegraf.Metric,
 	inputs []*models.RunningInput,
-) (*inputUnit, error) {
+) *inputUnit {
 	log.Printf("D! [agent] Starting service inputs")
 
 	unit := &inputUnit{
@@ -364,13 +357,12 @@ func (a *Agent) testStartInputs(
 			if err != nil {
 				log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
 			}
-
 		}
 
 		unit.inputs = append(unit.inputs, input)
 	}
 
-	return unit, nil
+	return unit
 }
 
 // testRunInputs is a variation of runInputs for use in --test and --once mode.
@@ -379,7 +371,7 @@ func (a *Agent) testRunInputs(
 	ctx context.Context,
 	wait time.Duration,
 	unit *inputUnit,
-) error {
+) {
 	var wg sync.WaitGroup
 
 	nul := make(chan telegraf.Metric)
@@ -394,13 +386,13 @@ func (a *Agent) testRunInputs(
 			defer wg.Done()
 
 			// Overwrite agent interval if this plugin has its own.
-			interval := a.Config.Agent.Interval.Duration
+			interval := time.Duration(a.Config.Agent.Interval)
 			if input.Config.Interval != 0 {
 				interval = input.Config.Interval
 			}
 
 			// Overwrite agent precision if this plugin has its own.
-			precision := a.Config.Agent.Precision.Duration
+			precision := time.Duration(a.Config.Agent.Precision)
 			if input.Config.Precision != 0 {
 				precision = input.Config.Precision
 			}
@@ -435,7 +427,6 @@ func (a *Agent) testRunInputs(
 
 	close(unit.dst)
 	log.Printf("D! [agent] Input channel closed")
-	return nil
 }
 
 // stopServiceInputs stops all service inputs.
@@ -444,6 +435,13 @@ func stopServiceInputs(inputs []*models.RunningInput) {
 		if si, ok := input.Input.(telegraf.ServiceInput); ok {
 			si.Stop()
 		}
+	}
+}
+
+// stopRunningOutputs stops all running outputs.
+func stopRunningOutputs(outputs []*models.RunningOutput) {
+	for _, output := range outputs {
+		output.Close()
 	}
 }
 
@@ -547,7 +545,7 @@ func (a *Agent) startProcessors(
 // closed and all metrics have been written.
 func (a *Agent) runProcessors(
 	units []*processorUnit,
-) error {
+) {
 	var wg sync.WaitGroup
 	for _, unit := range units {
 		wg.Add(1)
@@ -567,8 +565,6 @@ func (a *Agent) runProcessors(
 		}(unit)
 	}
 	wg.Wait()
-
-	return nil
 }
 
 // startAggregators sets up the aggregator unit and returns the source channel.
@@ -576,7 +572,7 @@ func (a *Agent) startAggregators(
 	aggC chan<- telegraf.Metric,
 	outputC chan<- telegraf.Metric,
 	aggregators []*models.RunningAggregator,
-) (chan<- telegraf.Metric, *aggregatorUnit, error) {
+) (chan<- telegraf.Metric, *aggregatorUnit) {
 	src := make(chan telegraf.Metric, 100)
 	unit := &aggregatorUnit{
 		src:         src,
@@ -584,7 +580,7 @@ func (a *Agent) startAggregators(
 		outputC:     outputC,
 		aggregators: aggregators,
 	}
-	return src, unit, nil
+	return src, unit
 }
 
 // runAggregators beings aggregating metrics and runs until the source channel
@@ -592,7 +588,7 @@ func (a *Agent) startAggregators(
 func (a *Agent) runAggregators(
 	startTime time.Time,
 	unit *aggregatorUnit,
-) error {
+) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Before calling Add, initialize the aggregation window.  This ensures
@@ -628,8 +624,8 @@ func (a *Agent) runAggregators(
 		go func(agg *models.RunningAggregator) {
 			defer wg.Done()
 
-			interval := a.Config.Agent.Interval.Duration
-			precision := a.Config.Agent.Precision.Duration
+			interval := time.Duration(a.Config.Agent.Interval)
+			precision := time.Duration(a.Config.Agent.Precision)
 
 			acc := NewAccumulator(agg, unit.aggC)
 			acc.SetPrecision(getPrecision(precision, interval))
@@ -644,8 +640,6 @@ func (a *Agent) runAggregators(
 	// processor chain will close the outputC when it finishes processing.
 	close(unit.aggC)
 	log.Printf("D! [agent] Aggregator channel closed")
-
-	return nil
 }
 
 func updateWindow(start time.Time, roundInterval bool, period time.Duration) (time.Time, time.Time) {
@@ -738,12 +732,12 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 // written one last time and dropped if unsuccessful.
 func (a *Agent) runOutputs(
 	unit *outputUnit,
-) error {
+) {
 	var wg sync.WaitGroup
 
 	// Start flush loop
-	interval := a.Config.Agent.FlushInterval.Duration
-	jitter := a.Config.Agent.FlushJitter.Duration
+	interval := time.Duration(a.Config.Agent.FlushInterval)
+	jitter := time.Duration(a.Config.Agent.FlushJitter)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -785,7 +779,8 @@ func (a *Agent) runOutputs(
 	cancel()
 	wg.Wait()
 
-	return nil
+	log.Println("I! [agent] Stopping running outputs")
+	stopRunningOutputs(unit.outputs)
 }
 
 // flushLoop runs an output's flush function periodically until the context is
@@ -919,10 +914,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 			}
 		}
 
-		next, au, err = a.startAggregators(procC, next, a.Config.Aggregators)
-		if err != nil {
-			return err
-		}
+		next, au = a.startAggregators(procC, next, a.Config.Aggregators)
 	}
 
 	var pu []*processorUnit
@@ -933,30 +925,20 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 		}
 	}
 
-	iu, err := a.testStartInputs(next, a.Config.Inputs)
-	if err != nil {
-		return err
-	}
+	iu := a.testStartInputs(next, a.Config.Inputs)
 
 	var wg sync.WaitGroup
-
 	if au != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(apu)
-			if err != nil {
-				log.Printf("E! [agent] Error running processors: %v", err)
-			}
+			a.runProcessors(apu)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runAggregators(startTime, au)
-			if err != nil {
-				log.Printf("E! [agent] Error running aggregators: %v", err)
-			}
+			a.runAggregators(startTime, au)
 		}()
 	}
 
@@ -964,20 +946,14 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(pu)
-			if err != nil {
-				log.Printf("E! [agent] Error running processors: %v", err)
-			}
+			a.runProcessors(pu)
 		}()
 	}
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.testRunInputs(ctx, wait, iu)
-		if err != nil {
-			log.Printf("E! [agent] Error running inputs: %v", err)
-		}
+		a.testRunInputs(ctx, wait, iu)
 	}()
 
 	wg.Wait()
@@ -1037,10 +1013,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 			}
 		}
 
-		next, au, err = a.startAggregators(procC, next, a.Config.Aggregators)
-		if err != nil {
-			return err
-		}
+		next, au = a.startAggregators(procC, next, a.Config.Aggregators)
 	}
 
 	var pu []*processorUnit
@@ -1051,38 +1024,26 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 		}
 	}
 
-	iu, err := a.testStartInputs(next, a.Config.Inputs)
-	if err != nil {
-		return err
-	}
+	iu := a.testStartInputs(next, a.Config.Inputs)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.runOutputs(ou)
-		if err != nil {
-			log.Printf("E! [agent] Error running outputs: %v", err)
-		}
+		a.runOutputs(ou)
 	}()
 
 	if au != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(apu)
-			if err != nil {
-				log.Printf("E! [agent] Error running processors: %v", err)
-			}
+			a.runProcessors(apu)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runAggregators(startTime, au)
-			if err != nil {
-				log.Printf("E! [agent] Error running aggregators: %v", err)
-			}
+			a.runAggregators(startTime, au)
 		}()
 	}
 
@@ -1090,20 +1051,14 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(pu)
-			if err != nil {
-				log.Printf("E! [agent] Error running processors: %v", err)
-			}
+			a.runProcessors(pu)
 		}()
 	}
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.testRunInputs(ctx, wait, iu)
-		if err != nil {
-			log.Printf("E! [agent] Error running inputs: %v", err)
-		}
+		a.testRunInputs(ctx, wait, iu)
 	}()
 
 	wg.Wait()

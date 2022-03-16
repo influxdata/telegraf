@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -33,10 +34,10 @@ func (e *APIError) Error() string {
 }
 
 type InfluxDB struct {
-	URLs     []string          `toml:"urls"`
-	Username string            `toml:"username"`
-	Password string            `toml:"password"`
-	Timeout  internal.Duration `toml:"timeout"`
+	URLs     []string        `toml:"urls"`
+	Username string          `toml:"username"`
+	Password string          `toml:"password"`
+	Timeout  config.Duration `toml:"timeout"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -86,10 +87,10 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 		}
 		i.client = &http.Client{
 			Transport: &http.Transport{
-				ResponseHeaderTimeout: i.Timeout.Duration,
+				ResponseHeaderTimeout: time.Duration(i.Timeout),
 				TLSClientConfig:       tlsCfg,
 			},
-			Timeout: i.Timeout.Duration,
+			Timeout: time.Duration(i.Timeout),
 		}
 	}
 
@@ -318,7 +319,7 @@ func readResponseError(resp *http.Response) error {
 func init() {
 	inputs.Add("influxdb", func() telegraf.Input {
 		return &InfluxDB{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }

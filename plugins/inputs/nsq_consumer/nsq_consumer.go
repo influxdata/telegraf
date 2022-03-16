@@ -2,6 +2,7 @@ package nsq_consumer
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -21,14 +22,14 @@ type logger struct {
 	log telegraf.Logger
 }
 
-func (l *logger) Output(calldepth int, s string) error {
+func (l *logger) Output(_ int, s string) error {
 	l.log.Debug(s)
 	return nil
 }
 
 //NSQConsumer represents the configuration of the plugin
 type NSQConsumer struct {
-	Server      string   `toml:"server"`
+	Server      string   `toml:"server" deprecated:"1.5.0;use 'nsqd' instead"`
 	Nsqd        []string `toml:"nsqd"`
 	Nsqlookupd  []string `toml:"nsqlookupd"`
 	Topic       string   `toml:"topic"`
@@ -49,9 +50,6 @@ type NSQConsumer struct {
 }
 
 var sampleConfig = `
-  ## Server option still works but is deprecated, we just prepend it to the nsqd array.
-  # server = "localhost:4150"
-
   ## An array representing the NSQD TCP HTTP Endpoints
   nsqd = ["localhost:4150"]
 
@@ -102,7 +100,9 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	n.cancel = cancel
 
-	n.connect()
+	if err := n.connect(); err != nil {
+		return err
+	}
 	n.consumer.SetLogger(&logger{log: n.Log}, nsq.LogLevelInfo)
 	n.consumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
 		metrics, err := n.parser.Parse(message.Body)
@@ -132,10 +132,29 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 		return nil
 	}))
 
-	if len(n.Nsqlookupd) > 0 {
-		n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
+	// For backward compatibility
+	if n.Server != "" {
+		n.Nsqd = append(n.Nsqd, n.Server)
 	}
-	n.consumer.ConnectToNSQDs(append(n.Nsqd, n.Server))
+
+	// Check if we have anything to connect to
+	if len(n.Nsqlookupd) == 0 && len(n.Nsqd) == 0 {
+		return fmt.Errorf("either 'nsqd' or 'nsqlookupd' needs to be specified")
+	}
+
+	if len(n.Nsqlookupd) > 0 {
+		err := n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
+		if err != nil && err != nsq.ErrAlreadyConnected {
+			return err
+		}
+	}
+
+	if len(n.Nsqd) > 0 {
+		err := n.consumer.ConnectToNSQDs(n.Nsqd)
+		if err != nil && err != nsq.ErrAlreadyConnected {
+			return err
+		}
+	}
 
 	n.wg.Add(1)
 	go func() {
@@ -179,7 +198,7 @@ func (n *NSQConsumer) Stop() {
 }
 
 // Gather is a noop
-func (n *NSQConsumer) Gather(acc telegraf.Accumulator) error {
+func (n *NSQConsumer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

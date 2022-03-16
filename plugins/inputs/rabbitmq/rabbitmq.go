@@ -3,14 +3,15 @@ package rabbitmq
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -35,27 +36,30 @@ const DefaultClientTimeout = 4
 // see the sample config for further details
 type RabbitMQ struct {
 	URL      string `toml:"url"`
-	Name     string `toml:"name"`
+	Name     string `toml:"name" deprecated:"1.3.0;use 'tags' instead"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
 
-	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
-	ClientTimeout         internal.Duration `toml:"client_timeout"`
+	ResponseHeaderTimeout config.Duration `toml:"header_timeout"`
+	ClientTimeout         config.Duration `toml:"client_timeout"`
 
 	Nodes     []string `toml:"nodes"`
-	Queues    []string `toml:"queues"`
+	Queues    []string `toml:"queues" deprecated:"1.6.0;use 'queue_name_include' instead"`
 	Exchanges []string `toml:"exchanges"`
 
+	MetricInclude             []string `toml:"metric_include"`
+	MetricExclude             []string `toml:"metric_exclude"`
 	QueueInclude              []string `toml:"queue_name_include"`
 	QueueExclude              []string `toml:"queue_name_exclude"`
 	FederationUpstreamInclude []string `toml:"federation_upstream_include"`
 	FederationUpstreamExclude []string `toml:"federation_upstream_exclude"`
 
-	Client *http.Client `toml:"-"`
+	Log telegraf.Logger `toml:"-"`
 
-	filterCreated     bool
+	client            *http.Client
 	excludeEveryQueue bool
+	metricFilter      filter.Filter
 	queueFilter       filter.Filter
 	upstreamFilter    filter.Filter
 }
@@ -157,17 +161,17 @@ type Node struct {
 	Uptime                   int64   `json:"uptime"`
 	MnesiaDiskTxCount        int64   `json:"mnesia_disk_tx_count"`
 	MnesiaDiskTxCountDetails Details `json:"mnesia_disk_tx_count_details"`
-	MnesiaRamTxCount         int64   `json:"mnesia_ram_tx_count"`
-	MnesiaRamTxCountDetails  Details `json:"mnesia_ram_tx_count_details"`
+	MnesiaRAMTxCount         int64   `json:"mnesia_ram_tx_count"`
+	MnesiaRAMTxCountDetails  Details `json:"mnesia_ram_tx_count_details"`
 	GcNum                    int64   `json:"gc_num"`
 	GcNumDetails             Details `json:"gc_num_details"`
 	GcBytesReclaimed         int64   `json:"gc_bytes_reclaimed"`
 	GcBytesReclaimedDetails  Details `json:"gc_bytes_reclaimed_details"`
-	IoReadAvgTime            int64   `json:"io_read_avg_time"`
+	IoReadAvgTime            float64 `json:"io_read_avg_time"`
 	IoReadAvgTimeDetails     Details `json:"io_read_avg_time_details"`
 	IoReadBytes              int64   `json:"io_read_bytes"`
 	IoReadBytesDetails       Details `json:"io_read_bytes_details"`
-	IoWriteAvgTime           int64   `json:"io_write_avg_time"`
+	IoWriteAvgTime           float64 `json:"io_write_avg_time"`
 	IoWriteAvgTimeDetails    Details `json:"io_write_avg_time_details"`
 	IoWriteBytes             int64   `json:"io_write_bytes"`
 	IoWriteBytesDetails      Details `json:"io_write_bytes_details"`
@@ -226,38 +230,48 @@ type MemoryResponse struct {
 
 // Memory details
 type Memory struct {
-	ConnectionReaders   int64 `json:"connection_readers"`
-	ConnectionWriters   int64 `json:"connection_writers"`
-	ConnectionChannels  int64 `json:"connection_channels"`
-	ConnectionOther     int64 `json:"connection_other"`
-	QueueProcs          int64 `json:"queue_procs"`
-	QueueSlaveProcs     int64 `json:"queue_slave_procs"`
-	Plugins             int64 `json:"plugins"`
-	OtherProc           int64 `json:"other_proc"`
-	Metrics             int64 `json:"metrics"`
-	MgmtDb              int64 `json:"mgmt_db"`
-	Mnesia              int64 `json:"mnesia"`
-	OtherEts            int64 `json:"other_ets"`
-	Binary              int64 `json:"binary"`
-	MsgIndex            int64 `json:"msg_index"`
-	Code                int64 `json:"code"`
-	Atom                int64 `json:"atom"`
-	OtherSystem         int64 `json:"other_system"`
-	AllocatedUnused     int64 `json:"allocated_unused"`
-	ReservedUnallocated int64 `json:"reserved_unallocated"`
-	Total               int64 `json:"total"`
+	ConnectionReaders   int64       `json:"connection_readers"`
+	ConnectionWriters   int64       `json:"connection_writers"`
+	ConnectionChannels  int64       `json:"connection_channels"`
+	ConnectionOther     int64       `json:"connection_other"`
+	QueueProcs          int64       `json:"queue_procs"`
+	QueueSlaveProcs     int64       `json:"queue_slave_procs"`
+	Plugins             int64       `json:"plugins"`
+	OtherProc           int64       `json:"other_proc"`
+	Metrics             int64       `json:"metrics"`
+	MgmtDb              int64       `json:"mgmt_db"`
+	Mnesia              int64       `json:"mnesia"`
+	OtherEts            int64       `json:"other_ets"`
+	Binary              int64       `json:"binary"`
+	MsgIndex            int64       `json:"msg_index"`
+	Code                int64       `json:"code"`
+	Atom                int64       `json:"atom"`
+	OtherSystem         int64       `json:"other_system"`
+	AllocatedUnused     int64       `json:"allocated_unused"`
+	ReservedUnallocated int64       `json:"reserved_unallocated"`
+	Total               interface{} `json:"total"`
+}
+
+// Error response
+type ErrorResponse struct {
+	Error  string `json:"error"`
+	Reason string `json:"reason"`
 }
 
 // gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
-var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues, gatherExchanges, gatherFederationLinks}
+var gatherFunctions = map[string]gatherFunc{
+	"exchange":   gatherExchanges,
+	"federation": gatherFederationLinks,
+	"node":       gatherNodes,
+	"overview":   gatherOverview,
+	"queue":      gatherQueues,
+}
 
 var sampleConfig = `
   ## Management Plugin url. (default: http://localhost:15672)
   # url = "http://localhost:15672"
-  ## Tag added to rabbitmq_overview series; deprecated: use tags
-  # name = "rmq-server-1"
   ## Credentials
   # username = "guest"
   # password = "guest"
@@ -283,13 +297,15 @@ var sampleConfig = `
   ## specified, metrics for all nodes are gathered.
   # nodes = ["rabbit@node1", "rabbit@node2"]
 
-  ## A list of queues to gather as the rabbitmq_queue measurement. If not
-  ## specified, metrics for all queues are gathered.
-  # queues = ["telegraf"]
-
   ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
   ## specified, metrics for all exchanges are gathered.
   # exchanges = ["telegraf"]
+
+  ## Metrics to include and exclude. Globs accepted.
+  ## Note that an empty array for both will include all metrics
+  ## Currently the following metrics are supported: "exchange", "federation", "node", "overview", "queue"
+  # metric_include = []
+  # metric_exclude = []
 
   ## Queues to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all queues
@@ -323,39 +339,47 @@ func (r *RabbitMQ) Description() string {
 	return "Reads metrics from RabbitMQ servers via the Management Plugin"
 }
 
+func (r *RabbitMQ) Init() error {
+	var err error
+
+	// Create gather filters
+	if err := r.createQueueFilter(); err != nil {
+		return err
+	}
+	if err := r.createUpstreamFilter(); err != nil {
+		return err
+	}
+
+	// Create a filter for the metrics
+	if r.metricFilter, err = filter.NewIncludeExcludeFilter(r.MetricInclude, r.MetricExclude); err != nil {
+		return err
+	}
+
+	tlsCfg, err := r.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+	tr := &http.Transport{
+		ResponseHeaderTimeout: time.Duration(r.ResponseHeaderTimeout),
+		TLSClientConfig:       tlsCfg,
+	}
+	r.client = &http.Client{
+		Transport: tr,
+		Timeout:   time.Duration(r.ClientTimeout),
+	}
+
+	return nil
+}
+
 // Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
-	if r.Client == nil {
-		tlsCfg, err := r.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
-		tr := &http.Transport{
-			ResponseHeaderTimeout: r.ResponseHeaderTimeout.Duration,
-			TLSClientConfig:       tlsCfg,
-		}
-		r.Client = &http.Client{
-			Transport: tr,
-			Timeout:   r.ClientTimeout.Duration,
-		}
-	}
-
-	// Create gather filters if not already created
-	if !r.filterCreated {
-		err := r.createQueueFilter()
-		if err != nil {
-			return err
-		}
-		err = r.createUpstreamFilter()
-		if err != nil {
-			return err
-		}
-		r.filterCreated = true
-	}
-
 	var wg sync.WaitGroup
-	wg.Add(len(gatherFunctions))
-	for _, f := range gatherFunctions {
+	for name, f := range gatherFunctions {
+		// Query only metrics that are supported
+		if !r.metricFilter.Match(name) {
+			continue
+		}
+		wg.Add(1)
 		go func(gf gatherFunc) {
 			defer wg.Done()
 			gf(r, acc)
@@ -366,15 +390,16 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
+func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 	if r.URL == "" {
 		r.URL = DefaultURL
 	}
-	u = fmt.Sprintf("%s%s", r.URL, u)
+	endpoint := r.URL + u
+	r.Log.Debugf("Requesting %q...", endpoint)
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	username := r.Username
@@ -389,14 +414,37 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 
 	req.SetBasicAuth(username, password)
 
-	resp, err := r.Client.Do(req)
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	r.Log.Debugf("HTTP status code: %v %v", resp.StatusCode, http.StatusText(resp.StatusCode))
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("getting %q failed: %v %v", u, resp.StatusCode, http.StatusText(resp.StatusCode))
+	}
+
+	return io.ReadAll(resp.Body)
+}
+
+func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
+	buf, err := r.requestEndpoint(u)
 	if err != nil {
 		return err
 	}
+	if err := json.Unmarshal(buf, target); err != nil {
+		if _, ok := err.(*json.UnmarshalTypeError); ok {
+			// Try to get the error reason from the response
+			var errResponse ErrorResponse
+			if json.Unmarshal(buf, &errResponse) == nil && errResponse.Error != "" {
+				// Return the error reason in the response
+				return fmt.Errorf("error response trying to get %q: %q (reason: %q)", u, errResponse.Error, errResponse.Reason)
+			}
+		}
 
-	defer resp.Body.Close()
-
-	json.NewDecoder(resp.Body).Decode(target)
+		return fmt.Errorf("decoding answer from %q failed: %v", u, err)
+	}
 
 	return nil
 }
@@ -491,8 +539,8 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				"uptime":                    node.Uptime,
 				"mnesia_disk_tx_count":      node.MnesiaDiskTxCount,
 				"mnesia_disk_tx_count_rate": node.MnesiaDiskTxCountDetails.Rate,
-				"mnesia_ram_tx_count":       node.MnesiaRamTxCount,
-				"mnesia_ram_tx_count_rate":  node.MnesiaRamTxCountDetails.Rate,
+				"mnesia_ram_tx_count":       node.MnesiaRAMTxCount,
+				"mnesia_ram_tx_count_rate":  node.MnesiaRAMTxCountDetails.Rate,
 				"gc_num":                    node.GcNum,
 				"gc_num_rate":               node.GcNumDetails.Rate,
 				"gc_bytes_reclaimed":        node.GcBytesReclaimed,
@@ -506,19 +554,6 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				"io_write_bytes":            node.IoWriteBytes,
 				"io_write_bytes_rate":       node.IoWriteBytesDetails.Rate,
 				"running":                   boolToInt(node.Running),
-			}
-
-			var health HealthCheck
-			err := r.requestJSON("/api/healthchecks/node/"+node.Name, &health)
-			if err != nil {
-				acc.AddError(err)
-				return
-			}
-
-			if health.Status == "ok" {
-				fields["health_check_status"] = int64(1)
-			} else {
-				fields["health_check_status"] = int64(0)
 			}
 
 			var memory MemoryResponse
@@ -548,7 +583,27 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				fields["mem_other_system"] = memory.Memory.OtherSystem
 				fields["mem_allocated_unused"] = memory.Memory.AllocatedUnused
 				fields["mem_reserved_unallocated"] = memory.Memory.ReservedUnallocated
-				fields["mem_total"] = memory.Memory.Total
+				switch v := memory.Memory.Total.(type) {
+				case float64:
+					fields["mem_total"] = int64(v)
+				case map[string]interface{}:
+					var foundEstimator bool
+					for _, estimator := range []string{"rss", "allocated", "erlang"} {
+						if x, found := v[estimator]; found {
+							if total, ok := x.(float64); ok {
+								fields["mem_total"] = int64(total)
+								foundEstimator = true
+								break
+							}
+							acc.AddError(fmt.Errorf("unknown type %T for %q total memory", x, estimator))
+						}
+					}
+					if !foundEstimator {
+						acc.AddError(fmt.Errorf("no known memory estimation in %v", v))
+					}
+				default:
+					acc.AddError(fmt.Errorf("unknown type %T for total memory", memory.Memory.Total))
+				}
 			}
 
 			acc.AddFields("rabbitmq_node", fields, tags)
@@ -777,8 +832,8 @@ func (r *RabbitMQ) shouldGatherFederationLink(link FederationLink) bool {
 func init() {
 	inputs.Add("rabbitmq", func() telegraf.Input {
 		return &RabbitMQ{
-			ResponseHeaderTimeout: internal.Duration{Duration: DefaultResponseHeaderTimeout * time.Second},
-			ClientTimeout:         internal.Duration{Duration: DefaultClientTimeout * time.Second},
+			ResponseHeaderTimeout: config.Duration(DefaultResponseHeaderTimeout * time.Second),
+			ClientTimeout:         config.Duration(DefaultClientTimeout * time.Second),
 		}
 	})
 }

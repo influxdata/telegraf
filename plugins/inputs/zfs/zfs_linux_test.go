@@ -1,9 +1,9 @@
+//go:build linux
 // +build linux
 
 package zfs
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -115,9 +115,19 @@ streams_resets                  4    20989756
 streams_noresets                4    503182328
 bogus_streams                   4    0
 `
-const pool_ioContents = `11 3 0x00 1 80 2225326830828 32953476980628
+const poolIoContents = `11 3 0x00 1 80 2225326830828 32953476980628
 nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt
 1884160  6450688  22       978      272187126 2850519036 2263669418655 424226814 2850519036 2263669871823 0        0
+`
+const objsetContents = `36 1 0x01 7 2160 5214787391 74985931356512
+name                            type data
+dataset_name                    7    HOME
+writes                          4    978
+nwritten                        4    6450688
+reads                           4    22
+nread                           4    1884160
+nunlinks                        4    14148
+nunlinked                       4    14147
 `
 const zilContents = `7 1 0x01 14 672 34118481334 437444452158445
 name                            type data
@@ -142,7 +152,7 @@ erpt-set-failed                 4    202
 fmri-set-failed                 4    303
 payload-set-failed              4    404
 `
-const dmu_txContents = `5 1 0x01 11 528 34103260832 437683925071438
+const dmuTxContents = `5 1 0x01 11 528 34103260832 437683925071438
 name                            type data
 dmu_tx_assigned                 4    39321636
 dmu_tx_delay                    4    111
@@ -182,67 +192,6 @@ scatter_page_alloc_retry        4    99311
 scatter_sg_table_retry          4    99221
 `
 
-const dbufcachestatsContents = `
-15 1 0x01 11 2992 6257505590736 8516276189184
-name                            type data
-size                            4    242688
-size_max                        4    338944
-max_bytes                       4    62834368
-lowater_bytes                   4    56550932
-hiwater_bytes                   4    69117804
-total_evicts                    4    0
-hash_collisions                 4    0
-hash_elements                   4    31
-hash_elements_max               4    32
-hash_chains                     4    0
-hash_chain_max                  4    0
-`
-
-const dnodestatsContents = `
-10 1 0x01 28 7616 6257498525011 8671911551753
-name                            type data
-dnode_hold_dbuf_hold            4    0
-dnode_hold_dbuf_read            4    0
-dnode_hold_alloc_hits           4    1460
-dnode_hold_alloc_misses         4    0
-dnode_hold_alloc_interior       4    0
-dnode_hold_alloc_lock_retry     4    0
-dnode_hold_alloc_lock_misses    4    0
-dnode_hold_alloc_type_none      4    0
-dnode_hold_free_hits            4    2
-dnode_hold_free_misses          4    0
-dnode_hold_free_lock_misses     4    0
-dnode_hold_free_lock_retry      4    0
-dnode_hold_free_overflow        4    0
-dnode_hold_free_refcount        4    0
-dnode_hold_free_txg             4    0
-dnode_allocate                  4    2
-dnode_reallocate                4    0
-dnode_buf_evict                 4    6
-dnode_alloc_next_chunk          4    1
-dnode_alloc_race                4    0
-dnode_alloc_next_block          4    0
-dnode_move_invalid              4    0
-dnode_move_recheck1             4    0
-dnode_move_recheck2             4    0
-dnode_move_special              4    0
-dnode_move_handle               4    0
-dnode_move_rwlock               4    0
-dnode_move_active               4    0
-`
-
-const vdevmirrorcachestatsContents = `
-18 1 0x01 7 1904 6257505684227 9638257816287
-name                            type data
-rotating_linear                 4    0
-rotating_offset                 4    0
-rotating_seek                   4    0
-non_rotating_linear             4    0
-non_rotating_seek               4    0
-preferred_found                 4    0
-preferred_not_found             4    43
-`
-
 var testKstatPath = os.TempDir() + "/telegraf/proc/spl/kstat/zfs"
 
 func TestZfsPoolMetrics(t *testing.T) {
@@ -252,10 +201,10 @@ func TestZfsPoolMetrics(t *testing.T) {
 	err = os.MkdirAll(testKstatPath+"/HOME", 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/HOME/io", []byte(pool_ioContents), 0644)
+	err = os.WriteFile(testKstatPath+"/HOME/io", []byte(poolIoContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
 	require.NoError(t, err)
 
 	poolMetrics := getPoolMetrics()
@@ -280,6 +229,19 @@ func TestZfsPoolMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 
+	err = os.WriteFile(testKstatPath+"/HOME/objset-0x20a", []byte(objsetContents), 0644)
+	require.NoError(t, err)
+
+	acc.Metrics = nil
+
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	tags["dataset"] = "HOME"
+
+	poolMetrics = getPoolMetricsNewFormat()
+	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
+
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
 }
@@ -291,25 +253,25 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = os.MkdirAll(testKstatPath+"/HOME", 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/HOME/io", []byte(""), 0644)
+	err = os.WriteFile(testKstatPath+"/HOME/io", []byte(""), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/zfetchstats", []byte(zfetchstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/zfetchstats", []byte(zfetchstatsContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/zil", []byte(zilContents), 0644)
+	err = os.WriteFile(testKstatPath+"/zil", []byte(zilContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/fm", []byte(fmContents), 0644)
+	err = os.WriteFile(testKstatPath+"/fm", []byte(fmContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/dmu_tx", []byte(dmu_txContents), 0644)
+	err = os.WriteFile(testKstatPath+"/dmu_tx", []byte(dmuTxContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/abdstats", []byte(abdstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/abdstats", []byte(abdstatsContents), 0644)
 	require.NoError(t, err)
 
 	intMetrics := getKstatMetricsAll()
@@ -332,7 +294,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = os.MkdirAll(testKstatPath+"/STORAGE", 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/STORAGE/io", []byte(""), 0644)
+	err = os.WriteFile(testKstatPath+"/STORAGE/io", []byte(""), 0644)
 	require.NoError(t, err)
 
 	tags = map[string]string{
@@ -536,5 +498,16 @@ func getPoolMetrics() map[string]interface{} {
 		"rupdate":  int64(2263669871823),
 		"wcnt":     int64(0),
 		"rcnt":     int64(0),
+	}
+}
+
+func getPoolMetricsNewFormat() map[string]interface{} {
+	return map[string]interface{}{
+		"nread":     int64(1884160),
+		"nunlinked": int64(14147),
+		"nunlinks":  int64(14148),
+		"nwritten":  int64(6450688),
+		"reads":     int64(22),
+		"writes":    int64(978),
 	}
 }

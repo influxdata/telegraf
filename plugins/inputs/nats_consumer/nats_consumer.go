@@ -49,9 +49,7 @@ type natsConsumer struct {
 	PendingBytesLimit   int `toml:"pending_bytes_limit"`
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
-
-	// Legacy metric buffer support; deprecated in v0.10.3
-	MetricBuffer int
+	MetricBuffer           int `toml:"metric_buffer" deprecated:"0.10.3;2.0.0;option is ignored"`
 
 	conn *nats.Conn
 	subs []*nats.Subscription
@@ -264,7 +262,7 @@ func (n *natsConsumer) Stop() {
 	n.clean()
 }
 
-func (n *natsConsumer) Gather(acc telegraf.Accumulator) error {
+func (n *natsConsumer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

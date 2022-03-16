@@ -5,26 +5,30 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 // NewRelic nr structure
 type NewRelic struct {
-	InsightsKey  string            `toml:"insights_key"`
-	MetricPrefix string            `toml:"metric_prefix"`
-	Timeout      internal.Duration `toml:"timeout"`
+	InsightsKey  string          `toml:"insights_key"`
+	MetricPrefix string          `toml:"metric_prefix"`
+	Timeout      config.Duration `toml:"timeout"`
+	HTTPProxy    string          `toml:"http_proxy"`
+	MetricURL    string          `toml:"metric_url"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
 	savedErrors map[int]interface{}
 	errorCount  int
-	Client      http.Client `toml:"-"`
+	client      http.Client
 }
 
 // Description returns a one-sentence description on the Output
@@ -35,14 +39,26 @@ func (nr *NewRelic) Description() string {
 // SampleConfig : return  default configuration of the Output
 func (nr *NewRelic) SampleConfig() string {
 	return `
-  ## New Relic Insights API key
-  insights_key = "insights api key"
+  ## The 'insights_key' parameter requires a NR license key.
+  ## New Relic recommends you create one
+  ## with a convenient name such as TELEGRAF_INSERT_KEY.
+  ## reference: https://docs.newrelic.com/docs/apis/intro-apis/new-relic-api-keys/#ingest-license-key
+  # insights_key = "New Relic License Key Here"
 
   ## Prefix to add to add to metric name for easy identification.
+  ## This is very useful if your metric names are ambiguous.
   # metric_prefix = ""
 
   ## Timeout for writes to the New Relic API.
   # timeout = "15s"
+
+  ## HTTP Proxy override. If unset use values from the standard
+  ## proxy environment variables to determine proxy, if any.
+  # http_proxy = "http://corporate.proxy:3128"
+
+  ## Metric URL override to enable geographic location endpoints.
+  # If not set use values from the standard 
+  # metric_url = "https://metric-api.newrelic.com/metric/v1"
 `
 }
 
@@ -51,14 +67,18 @@ func (nr *NewRelic) Connect() error {
 	if nr.InsightsKey == "" {
 		return fmt.Errorf("InsightKey is a required for newrelic")
 	}
-	var err error
+	err := nr.initClient()
+	if err != nil {
+		return err
+	}
+
 	nr.harvestor, err = telemetry.NewHarvester(telemetry.ConfigAPIKey(nr.InsightsKey),
 		telemetry.ConfigHarvestPeriod(0),
 		func(cfg *telemetry.Config) {
 			cfg.Product = "NewRelic-Telegraf-Plugin"
 			cfg.ProductVersion = "1.0"
-			cfg.HarvestTimeout = nr.Timeout.Duration
-			cfg.Client = &nr.Client
+			cfg.HarvestTimeout = time.Duration(nr.Timeout)
+			cfg.Client = &nr.client
 			cfg.ErrorLogger = func(e map[string]interface{}) {
 				var errorString string
 				for k, v := range e {
@@ -66,6 +86,9 @@ func (nr *NewRelic) Connect() error {
 				}
 				nr.errorCount++
 				nr.savedErrors[nr.errorCount] = errorString
+			}
+			if nr.MetricURL != "" {
+				cfg.MetricsURLOverride = nr.MetricURL
 			}
 		})
 	if err != nil {
@@ -79,7 +102,7 @@ func (nr *NewRelic) Connect() error {
 // Close any connections to the Output
 func (nr *NewRelic) Close() error {
 	nr.errorCount = 0
-	nr.Client.CloseIdleConnections()
+	nr.client.CloseIdleConnections()
 	return nil
 }
 
@@ -108,7 +131,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 			case uint64:
 				mvalue = float64(n)
 			case float64:
-				mvalue = float64(n)
+				mvalue = n
 			case bool:
 				mvalue = float64(0)
 				if n {
@@ -119,7 +142,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 				// we just skip
 				continue
 			default:
-				return fmt.Errorf("Undefined field type: %T", field.Value)
+				return fmt.Errorf("undefined field type: %T", field.Value)
 			}
 
 			switch metric.Type() {
@@ -151,8 +174,28 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
 		return &NewRelic{
-			Timeout: internal.Duration{Duration: time.Second * 15},
-			Client:  http.Client{},
+			Timeout: config.Duration(time.Second * 15),
 		}
 	})
+}
+
+func (nr *NewRelic) initClient() error {
+	if nr.HTTPProxy == "" {
+		nr.client = http.Client{}
+		return nil
+	}
+
+	proxyURL, err := url.Parse(nr.HTTPProxy)
+	if err != nil {
+		return err
+	}
+
+	transport := &http.Transport{
+		Proxy: http.ProxyURL(proxyURL),
+	}
+
+	nr.client = http.Client{
+		Transport: transport,
+	}
+	return nil
 }

@@ -4,25 +4,26 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
+	"io"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
 
 // Librato structure for configuration and client
 type Librato struct {
-	APIUser   string `toml:"api_user"`
-	APIToken  string `toml:"api_token"`
-	Debug     bool
-	SourceTag string // Deprecated, keeping for backward-compatibility
-	Timeout   internal.Duration
-	Template  string
+	APIUser   string          `toml:"api_user"`
+	APIToken  string          `toml:"api_token"`
+	Debug     bool            `toml:"debug"`
+	SourceTag string          `toml:"source_tag" deprecated:"1.0.0;use 'template' instead"`
+	Timeout   config.Duration `toml:"timeout"`
+	Template  string          `toml:"template"`
+	Log       telegraf.Logger `toml:"-"`
 
 	APIUrl string
 	client *http.Client
@@ -83,13 +84,12 @@ func (l *Librato) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: l.Timeout.Duration,
+		Timeout: time.Duration(l.Timeout),
 	}
 	return nil
 }
 
 func (l *Librato) Write(metrics []telegraf.Metric) error {
-
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -106,12 +106,11 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		if gauges, err := l.buildGauges(m); err == nil {
 			for _, gauge := range gauges {
 				tempGauges = append(tempGauges, gauge)
-				log.Printf("D! Got a gauge: %v\n", gauge)
+				l.Log.Debugf("Got a gauge: %v", gauge)
 			}
 		} else {
-			log.Printf("I! unable to build Gauge for %s, skipping\n", m.Name())
-			log.Printf("D! Couldn't build gauge: %v\n", err)
-
+			l.Log.Infof("Unable to build Gauge for %s, skipping", m.Name())
+			l.Log.Debugf("Couldn't build gauge: %v", err)
 		}
 	}
 
@@ -119,55 +118,61 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 	// make sur we send a batch of maximum 300
 	sizeBatch := 300
 	for start := 0; start < metricCounter; start += sizeBatch {
-		lmetrics := LMetrics{}
-		end := start + sizeBatch
-		if end > metricCounter {
-			end = metricCounter
-			sizeBatch = end - start
-		}
-		lmetrics.Gauges = make([]*Gauge, sizeBatch)
-		copy(lmetrics.Gauges, tempGauges[start:end])
-		metricsBytes, err := json.Marshal(lmetrics)
+		err := l.writeBatch(start, sizeBatch, metricCounter, tempGauges)
 		if err != nil {
-			return fmt.Errorf("unable to marshal Metrics, %s\n", err.Error())
-		}
-
-		log.Printf("D! Librato request: %v\n", string(metricsBytes))
-
-		req, err := http.NewRequest(
-			"POST",
-			l.APIUrl,
-			bytes.NewBuffer(metricsBytes))
-		if err != nil {
-			return fmt.Errorf(
-				"unable to create http.Request, %s\n",
-				err.Error())
-		}
-		req.Header.Add("Content-Type", "application/json")
-		req.SetBasicAuth(l.APIUser, l.APIToken)
-
-		resp, err := l.client.Do(req)
-		if err != nil {
-			log.Printf("D! Error POSTing metrics: %v\n", err.Error())
-			return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != 200 || l.Debug {
-			htmlData, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Printf("D! Couldn't get response! (%v)\n", err)
-			}
-			if resp.StatusCode != 200 {
-				return fmt.Errorf(
-					"received bad status code, %d\n %s",
-					resp.StatusCode,
-					string(htmlData))
-			}
-			log.Printf("D! Librato response: %v\n", string(htmlData))
+			return err
 		}
 	}
 
+	return nil
+}
+
+func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGauges []*Gauge) error {
+	lmetrics := LMetrics{}
+	end := start + sizeBatch
+	if end > metricCounter {
+		end = metricCounter
+		sizeBatch = end - start
+	}
+	lmetrics.Gauges = make([]*Gauge, sizeBatch)
+	copy(lmetrics.Gauges, tempGauges[start:end])
+	metricsBytes, err := json.Marshal(lmetrics)
+	if err != nil {
+		return fmt.Errorf("unable to marshal Metrics, %s", err.Error())
+	}
+
+	l.Log.Debugf("Librato request: %v", string(metricsBytes))
+
+	req, err := http.NewRequest(
+		"POST",
+		l.APIUrl,
+		bytes.NewBuffer(metricsBytes))
+	if err != nil {
+		return fmt.Errorf("unable to create http.Request, %s", err.Error())
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(l.APIUser, l.APIToken)
+
+	resp, err := l.client.Do(req)
+	if err != nil {
+		l.Log.Debugf("Error POSTing metrics: %v", err.Error())
+		return fmt.Errorf("error POSTing metrics, %s", err.Error())
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 || l.Debug {
+		htmlData, err := io.ReadAll(resp.Body)
+		if err != nil {
+			l.Log.Debugf("Couldn't get response! (%v)", err)
+		}
+		if resp.StatusCode != 200 {
+			return fmt.Errorf(
+				"received bad status code, %d\n %s",
+				resp.StatusCode,
+				string(htmlData))
+		}
+		l.Log.Debugf("Librato response: %v", string(htmlData))
+	}
 	return nil
 }
 
@@ -183,7 +188,6 @@ func (l *Librato) Description() string {
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
-
 	gauges := []*Gauge{}
 	if m.Time().Unix() == 0 {
 		return gauges, fmt.Errorf("time was zero %s", m.Name())
@@ -193,11 +197,9 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 		"value")
 	if metricSource == "" {
 		return gauges,
-			fmt.Errorf("undeterminable Source type from Field, %s\n",
-				l.Template)
+			fmt.Errorf("undeterminable Source type from Field, %s", l.Template)
 	}
 	for fieldName, value := range m.Fields() {
-
 		metricName := m.Name()
 		if fieldName != "value" {
 			metricName = fmt.Sprintf("%s.%s", m.Name(), fieldName)
@@ -212,14 +214,12 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 			continue
 		}
 		if err := gauge.setValue(value); err != nil {
-			return gauges, fmt.Errorf(
-				"unable to extract value from Fields, %s\n",
-				err.Error())
+			return gauges, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
 		}
 		gauges = append(gauges, gauge)
 	}
 
-	log.Printf("D! Built gauges: %v\n", gauges)
+	l.Log.Debugf("Built gauges: %v", gauges)
 	return gauges, nil
 }
 
@@ -227,18 +227,19 @@ func verifyValue(v interface{}) bool {
 	switch v.(type) {
 	case string:
 		return false
+	default:
+		return true
 	}
-	return true
 }
 
 func (g *Gauge) setValue(v interface{}) error {
 	switch d := v.(type) {
 	case int64:
-		g.Value = float64(int64(d))
+		g.Value = float64(d)
 	case uint64:
 		g.Value = float64(d)
 	case float64:
-		g.Value = float64(d)
+		g.Value = d
 	case bool:
 		if d {
 			g.Value = float64(1.0)

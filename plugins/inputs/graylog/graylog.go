@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,12 +14,12 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type ResponseMetrics struct {
-	total   int
 	Metrics []Metric `json:"metrics"`
 }
 
@@ -31,12 +31,13 @@ type Metric struct {
 }
 
 type GrayLog struct {
-	Servers  []string
-	Metrics  []string
-	Username string
-	Password string
-	tls.ClientConfig
+	Servers  []string        `toml:"servers"`
+	Metrics  []string        `toml:"metrics"`
+	Username string          `toml:"username"`
+	Password string          `toml:"password"`
+	Timeout  config.Duration `toml:"timeout"`
 
+	tls.ClientConfig
 	client HTTPClient
 }
 
@@ -78,22 +79,25 @@ func (c *RealHTTPClient) HTTPClient() *http.Client {
 var sampleConfig = `
   ## API endpoint, currently supported API:
   ##
-  ##   - multiple  (Ex http://<host>:12900/system/metrics/multiple)
-  ##   - namespace (Ex http://<host>:12900/system/metrics/namespace/{namespace})
+  ##   - multiple  (e.g. http://<host>:9000/api/system/metrics/multiple)
+  ##   - namespace (e.g. http://<host>:9000/api/system/metrics/namespace/{namespace})
   ##
   ## For namespace endpoint, the metrics array will be ignored for that call.
   ## Endpoint can contain namespace and multiple type calls.
   ##
-  ## Please check http://[graylog-server-ip]:12900/api-browser for full list
+  ## Please check http://[graylog-server-ip]:9000/api/api-browser for full list
   ## of endpoints
   servers = [
-    "http://[graylog-server-ip]:12900/system/metrics/multiple",
+    "http://[graylog-server-ip]:9000/api/system/metrics/multiple",
   ]
+
+  ## Set timeout (default 5 seconds)
+  # timeout = "5s"
 
   ## Metrics list
   ## List of metrics can be found on Graylog webservice documentation.
-  ## Or by hitting the the web service api at:
-  ##   http://[graylog-host]:12900/system/metrics
+  ## Or by hitting the web service api at:
+  ##   http://[graylog-host]:9000/api/system/metrics
   metrics = [
     "jvm.cl.loaded",
     "jvm.memory.pools.Metaspace.committed"
@@ -129,12 +133,12 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			ResponseHeaderTimeout: time.Duration(h.Timeout),
 			TLSClientConfig:       tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+			Timeout:   time.Duration(h.Timeout),
 		}
 		h.client.SetHTTPClient(client)
 	}
@@ -169,24 +173,25 @@ func (h *GrayLog) gatherServer(
 		return err
 	}
 	requestURL, err := url.Parse(serverURL)
+	if err != nil {
+		return fmt.Errorf("unable to parse address '%s': %s", serverURL, err)
+	}
+
 	host, port, _ := net.SplitHostPort(requestURL.Host)
 	var dat ResponseMetrics
-	if err != nil {
-		return err
-	}
 	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
 		return err
 	}
-	for _, m_item := range dat.Metrics {
+	for _, mItem := range dat.Metrics {
 		fields := make(map[string]interface{})
 		tags := map[string]string{
 			"server": host,
 			"port":   port,
-			"name":   m_item.Name,
-			"type":   m_item.Type,
+			"name":   mItem.Name,
+			"type":   mItem.Type,
 		}
-		h.flatten(m_item.Fields, fields, "")
-		acc.AddFields(m_item.FullName, fields, tags)
+		h.flatten(mItem.Fields, fields, "")
+		acc.AddFields(mItem.FullName, fields, tags)
 	}
 	return nil
 }
@@ -203,13 +208,13 @@ func (h *GrayLog) flatten(item map[string]interface{}, fields map[string]interfa
 		id = id + "_"
 	}
 	for k, i := range item {
-		switch i.(type) {
+		switch i := i.(type) {
 		case int:
-			fields[id+k] = i.(float64)
+			fields[id+k] = float64(i)
 		case float64:
-			fields[id+k] = i.(float64)
+			fields[id+k] = i
 		case map[string]interface{}:
-			h.flatten(i.(map[string]interface{}), fields, id+k)
+			h.flatten(i, fields, id+k)
 		default:
 		}
 	}
@@ -233,19 +238,19 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
-		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
+		return "", -1, fmt.Errorf("invalid server URL \"%s\"", serverURL)
 	}
 	// Add X-Requested-By header
 	headers["X-Requested-By"] = "Telegraf"
 
 	if strings.Contains(requestURL.String(), "multiple") {
 		m := &Messagebody{Metrics: h.Metrics}
-		http_body, err := json.Marshal(m)
+		httpBody, err := json.Marshal(m)
 		if err != nil {
-			return "", -1, fmt.Errorf("Invalid list of Metrics %s", h.Metrics)
+			return "", -1, fmt.Errorf("invalid list of Metrics %s", h.Metrics)
 		}
 		method = "POST"
-		content = bytes.NewBuffer(http_body)
+		content = bytes.NewBuffer(httpBody)
 	}
 	req, err := http.NewRequest(method, requestURL.String(), content)
 	if err != nil {
@@ -264,14 +269,14 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	defer resp.Body.Close()
 	responseTime := time.Since(start).Seconds()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return string(body), responseTime, err
 	}
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			requestURL.String(),
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
@@ -285,7 +290,8 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 func init() {
 	inputs.Add("graylog", func() telegraf.Input {
 		return &GrayLog{
-			client: &RealHTTPClient{},
+			client:  &RealHTTPClient{},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }

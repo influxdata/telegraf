@@ -3,9 +3,10 @@ package jolokia2
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
@@ -17,7 +18,7 @@ type JolokiaAgent struct {
 	URLs            []string `toml:"urls"`
 	Username        string
 	Password        string
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
 
@@ -67,7 +68,7 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 		for _, url := range ja.URLs {
 			client, err := ja.createClient(url)
 			if err != nil {
-				acc.AddError(fmt.Errorf("Unable to create client for %s: %v", url, err))
+				acc.AddError(fmt.Errorf("unable to create client for %s: %v", url, err))
 				continue
 			}
 			ja.clients = append(ja.clients, client)
@@ -83,9 +84,8 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 
 			err := ja.gatherer.Gather(client, acc)
 			if err != nil {
-				acc.AddError(fmt.Errorf("Unable to gather metrics for %s: %v", client.URL, err))
+				acc.AddError(fmt.Errorf("unable to gather metrics for %s: %v", client.URL, err))
 			}
-
 		}(client)
 	}
 
@@ -97,8 +97,8 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 func (ja *JolokiaAgent) createMetrics() []Metric {
 	var metrics []Metric
 
-	for _, config := range ja.Metrics {
-		metrics = append(metrics, NewMetric(config,
+	for _, metricConfig := range ja.Metrics {
+		metrics = append(metrics, NewMetric(metricConfig,
 			ja.DefaultFieldPrefix, ja.DefaultFieldSeparator, ja.DefaultTagPrefix))
 	}
 
@@ -109,7 +109,7 @@ func (ja *JolokiaAgent) createClient(url string) (*Client, error) {
 	return NewClient(url, &ClientConfig{
 		Username:        ja.Username,
 		Password:        ja.Password,
-		ResponseTimeout: ja.ResponseTimeout.Duration,
+		ResponseTimeout: time.Duration(ja.ResponseTimeout),
 		ClientConfig:    ja.ClientConfig,
 	})
 }

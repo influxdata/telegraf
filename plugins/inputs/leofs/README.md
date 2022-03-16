@@ -2,7 +2,7 @@
 
 The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using SNMP. See [LeoFS Documentation / System Administration / System Monitoring](https://leo-project.net/leofs/docs/admin/system_admin/monitoring/).
 
-## Configuration:
+## Configuration
 
 ```toml
 # Sample Config:
@@ -11,57 +11,60 @@ The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using
         servers = ["127.0.0.1:4010"]
 ```
 
-## Measurements & Fields:
+## Measurements & Fields
+
 ### Statistics specific to the internals of LeoManager
-#### Erlang VM
+
+#### Erlang VM of LeoManager
 
 - 1 min Statistics
-    - num_of_processes
-    - total_memory_usage
-    - system_memory_usage
-    - processes_memory_usage
-    - ets_memory_usage
-    - used_allocated_memory
-    - allocated_memory
+  - num_of_processes
+  - total_memory_usage
+  - system_memory_usage
+  - processes_memory_usage
+  - ets_memory_usage
+  - used_allocated_memory
+  - allocated_memory
 - 5 min Statistics
-    - num_of_processes_5min
-    - total_memory_usage_5min
-    - system_memory_usage_5min
-    - processes_memory_usage_5min
-    - ets_memory_usage_5min
-    - used_allocated_memory_5min
-    - allocated_memory_5min
+  - num_of_processes_5min
+  - total_memory_usage_5min
+  - system_memory_usage_5min
+  - processes_memory_usage_5min
+  - ets_memory_usage_5min
+  - used_allocated_memory_5min
+  - allocated_memory_5min
 
 ### Statistics specific to the internals of LeoStorage
-#### Erlang VM
+
+### Erlang VM of LeoStorage
 
 - 1 min Statistics
-    - num_of_processes
-    - total_memory_usage
-    - system_memory_usage
-    - processes_memory_usage
-    - ets_memory_usage
-    - used_allocated_memory
-    - allocated_memory
+  - num_of_processes
+  - total_memory_usage
+  - system_memory_usage
+  - processes_memory_usage
+  - ets_memory_usage
+  - used_allocated_memory
+  - allocated_memory
 - 5 min Statistics
-    - num_of_processes_5min
-    - total_memory_usage_5min
-    - system_memory_usage_5min
-    - processes_memory_usage_5min
-    - ets_memory_usage_5min
-    - used_allocated_memory_5min
-    - allocated_memory_5min
+  - num_of_processes_5min
+  - total_memory_usage_5min
+  - system_memory_usage_5min
+  - processes_memory_usage_5min
+  - ets_memory_usage_5min
+  - used_allocated_memory_5min
+  - allocated_memory_5min
 
-#### Total Number of Requests
+### Total Number of Requests for LeoStorage
 
 - 1 min Statistics
-    - num_of_writes
-    - num_of_reads
-    - num_of_deletes
+  - num_of_writes
+  - num_of_reads
+  - num_of_deletes
 - 5 min Statistics
-    - num_of_writes_5min
-    - num_of_reads_5min
-    - num_of_deletes_5min
+  - num_of_writes_5min
+  - num_of_reads_5min
+  - num_of_deletes_5min
 
 #### Total Number of Objects and Total Size of Objects
 
@@ -103,35 +106,36 @@ Note: The following items are available since LeoFS v1.4.0:
 Note: The all items are available since LeoFS v1.4.0.
 
 ### Statistics specific to the internals of LeoGateway
-#### Erlang VM
+
+#### Erlang VM of LeoGateway
 
 - 1 min Statistics
-    - num_of_processes
-    - total_memory_usage
-    - system_memory_usage
-    - processes_memory_usage
-    - ets_memory_usage
-    - used_allocated_memory
-    - allocated_memory
+  - num_of_processes
+  - total_memory_usage
+  - system_memory_usage
+  - processes_memory_usage
+  - ets_memory_usage
+  - used_allocated_memory
+  - allocated_memory
 - 5 min Statistics
-    - num_of_processes_5min
-    - total_memory_usage_5min
-    - system_memory_usage_5min
-    - processes_memory_usage_5min
-    - ets_memory_usage_5min
-    - used_allocated_memory_5min
-    - allocated_memory_5min
+  - num_of_processes_5min
+  - total_memory_usage_5min
+  - system_memory_usage_5min
+  - processes_memory_usage_5min
+  - ets_memory_usage_5min
+  - used_allocated_memory_5min
+  - allocated_memory_5min
 
-#### Total Number of Requests
+#### Total Number of Requests for LeoGateway
 
 - 1 min Statistics
-    - num_of_writes
-    - num_of_reads
-    - num_of_deletes
+  - num_of_writes
+  - num_of_reads
+  - num_of_deletes
 - 5 min Statistics
-    - num_of_writes_5min
-    - num_of_reads_5min
-    - num_of_deletes_5min
+  - num_of_writes_5min
+  - num_of_reads_5min
+  - num_of_deletes_5min
 
 #### Object Cache
 
@@ -140,15 +144,13 @@ Note: The all items are available since LeoFS v1.4.0.
 - total_of_files
 - total_cached_size
 
-
-### Tags:
+### Tags
 
 All measurements have the following tags:
 
 - node
 
-
-### Example output:
+### Example output
 
 #### LeoManager
 
@@ -221,7 +223,7 @@ $ ./telegraf --config ./plugins/inputs/leofs/leo_storage.conf --input-filter leo
 
 #### LeoGateway
 
-```
+```shell
 $ ./telegraf --config ./plugins/inputs/leofs/leo_gateway.conf --input-filter leofs --test
 > leofs, host=gateway_0, node=gateway_0@127.0.0.1
   allocated_memory=87941120,

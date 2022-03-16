@@ -7,8 +7,9 @@ Metrics are read from a topic exchange using the configured queue and binding_ke
 Message payload should be formatted in one of the [Telegraf Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
 
 For an introduction to AMQP see:
-- https://www.rabbitmq.com/tutorials/amqp-concepts.html
-- https://www.rabbitmq.com/getstarted.html
+
+- [amqp - concepts](https://www.rabbitmq.com/tutorials/amqp-concepts.html)
+- [rabbitmq: getting started](https://www.rabbitmq.com/getstarted.html)
 
 The following defaults are known to work with RabbitMQ:
 
@@ -43,7 +44,7 @@ The following defaults are known to work with RabbitMQ:
   # exchange_arguments = { }
   # exchange_arguments = {"hash_property" = "timestamp"}
 
-  ## AMQP queue name
+  ## AMQP queue name.
   queue = "telegraf"
 
   ## AMQP queue durability can be "transient" or "durable".

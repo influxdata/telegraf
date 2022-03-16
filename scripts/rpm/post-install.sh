@@ -43,6 +43,15 @@ if [[ ! -d /etc/telegraf/telegraf.d ]]; then
     mkdir -p /etc/telegraf/telegraf.d
 fi
 
+# If 'telegraf.conf' is not present use package's sample (fresh install)
+if [[ ! -f /etc/telegraf/telegraf.conf ]] && [[ -f /etc/telegraf/telegraf.conf.sample ]]; then
+   cp /etc/telegraf/telegraf.conf.sample /etc/telegraf/telegraf.conf
+fi
+
+test -d $LOG_DIR || mkdir -p $LOG_DIR
+chown -R -L telegraf:telegraf $LOG_DIR
+chmod 755 $LOG_DIR
+
 # Distribution-specific logic
 if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
     # RHEL-variant logic

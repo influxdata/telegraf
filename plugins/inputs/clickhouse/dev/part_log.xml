@@ -1,0 +1,12 @@
+<yandex>
+    <part_log>
+        <database>system</database>
+        <table>part_log</table>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        <!-- 19.16 -->
+        <partition_by>event_date</partition_by>
+        <!-- 20.5 -->
+        <!-- <engine>Engine = MergeTree PARTITION BY event_date ORDER BY event_time TTL event_date + INTERVAL 30 day</engine> -->
+    </part_log>
+
+</yandex>
