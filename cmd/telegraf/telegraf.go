@@ -135,7 +135,7 @@ func reloadLoop(
 		if *fWatchConfig != "" {
 			for _, fConfig := range fConfigs {
 				if _, err := os.Stat(fConfig); err == nil {
-					go watchLocalConfig(signals, fConfig)
+					go watchLocalConfig(ctx, signals, fConfig)
 				} else {
 					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
 				}
@@ -162,7 +162,7 @@ func reloadLoop(
 	}
 }
 
-func watchLocalConfig(signals chan os.Signal, fConfig string) {
+func watchLocalConfig(ctx context.Context, signals chan os.Signal, fConfig string) {
 	var mytomb tomb.Tomb
 	var watcher watch.FileWatcher
 	if *fWatchConfig == "poll" {
@@ -177,6 +177,9 @@ func watchLocalConfig(signals chan os.Signal, fConfig string) {
 	}
 	log.Println("I! Config watcher started")
 	select {
+	case <-ctx.Done():
+		close(signals)
+		return
 	case <-changes.Modified:
 		log.Println("I! Config file modified")
 	case <-changes.Deleted:
