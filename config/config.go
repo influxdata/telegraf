@@ -381,7 +381,7 @@ var agentConfig = `
   ##
   ## Precision will NOT be used for service inputs. It is up to each individual
   ## service input to set the timestamp at the appropriate precision.
-  precision = ""
+  precision = "0s"
 
   ## Log at debug level.
   # debug = false
