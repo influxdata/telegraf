@@ -2,6 +2,7 @@ package kube_inventory
 
 import (
 	"context"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -28,21 +29,45 @@ func (ki *KubernetesInventory) gatherResourceQuota(r corev1.ResourceQuota, acc t
 
 	for resourceName, val := range r.Status.Hard {
 		switch resourceName {
-		case "cpu":
-			fields["hard_cpu_cores_limit"] = ki.convertQuantity(val.String(), 1)
-		case "memory":
-			fields["hard_memory_bytes_limit"] = ki.convertQuantity(val.String(), 1)
+		case "cpu", "limits.cpu", "requests.cpu":
+			key := "hard_cpu"
+			if strings.Contains(string(resourceName), "limits") {
+				key = key + "_limits"
+			} else if strings.Contains(string(resourceName), "requests") {
+				key = key + "_requests"
+			}
+			fields[key] = ki.convertQuantity(val.String(), 1)
+		case "memory", "limits.memory", "requests.memory":
+			key := "hard_memory"
+			if strings.Contains(string(resourceName), "limits") {
+				key = key + "_limits"
+			} else if strings.Contains(string(resourceName), "requests") {
+				key = key + "_requests"
+			}
+			fields[key] = ki.convertQuantity(val.String(), 1)
 		case "pods":
-			fields["hard_pods_limit"] = atoi(val.String())
+			fields["hard_pods"] = atoi(val.String())
 		}
 	}
 
 	for resourceName, val := range r.Status.Used {
 		switch resourceName {
-		case "cpu":
-			fields["used_cpu_cores"] = ki.convertQuantity(val.String(), 1)
-		case "memory":
-			fields["used_memory_bytes"] = ki.convertQuantity(val.String(), 1)
+		case "cpu", "requests.cpu", "limits.cpu":
+			key := "used_cpu"
+			if strings.Contains(string(resourceName), "limits") {
+				key = key + "_limits"
+			} else if strings.Contains(string(resourceName), "requests") {
+				key = key + "_requests"
+			}
+			fields[key] = ki.convertQuantity(val.String(), 1)
+		case "memory", "requests.memory", "limits.memory":
+			key := "used_memory"
+			if strings.Contains(string(resourceName), "limits") {
+				key = key + "_limits"
+			} else if strings.Contains(string(resourceName), "requests") {
+				key = key + "_requests"
+			}
+			fields[key] = ki.convertQuantity(val.String(), 1)
 		case "pods":
 			fields["used_pods"] = atoi(val.String())
 		}

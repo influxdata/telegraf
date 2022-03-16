@@ -2,6 +2,7 @@ package kube_inventory
 
 import (
 	"context"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -82,14 +83,20 @@ func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.Contai
 		fields["phase_reason"] = phaseReason
 	}
 
+	tok := strings.Split(c.Image, ":")
+
 	tags := map[string]string{
 		"container_name": c.Name,
+		"image":          c.Image,
 		"namespace":      p.Namespace,
 		"node_name":      p.Spec.NodeName,
 		"pod_name":       p.Name,
 		"phase":          string(p.Status.Phase),
 		"state":          state,
 		"readiness":      readiness,
+	}
+	if len(tok) == 2 {
+		tags["version"] = tok[1]
 	}
 	for key, val := range p.Spec.NodeSelector {
 		if ki.selectorFilter.Match(key) {
@@ -119,10 +126,18 @@ func (ki *KubernetesInventory) gatherPodContainer(p corev1.Pod, cs corev1.Contai
 
 	for _, val := range p.Status.Conditions {
 		conditionfields := map[string]interface{}{}
-		conditiontags := map[string]string{}
-		conditiontags["status"] = string(val.Status)
-		conditiontags["condition"] = string(val.Type)
-		conditiontags["pod_name"] = p.Name
+		conditiontags := map[string]string{
+			"container_name": c.Name,
+			"image":          c.Image,
+			"status":         string(val.Status),
+			"namespace":      p.Namespace,
+			"node_name":      p.Spec.NodeName,
+			"pod_name":       p.Name,
+			"condition":      string(val.Type),
+		}
+		if len(tok) == 2 {
+			conditiontags["version"] = tok[1]
+		}
 		running := 0
 		podready := 0
 		if val.Status == "True" {

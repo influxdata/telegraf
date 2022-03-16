@@ -180,15 +180,15 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 	acc.AddFields("kubernetes_node", fields, tags)
 }
 
-func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
+func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Item, error) {
 	var podAPI Pods
 	err := k.LoadJSON(fmt.Sprintf("%s/pods", baseURL), &podAPI)
 	if err != nil {
 		return nil, err
 	}
-	var podInfos []Metadata
+	var podInfos []Item
 	for _, podMetadata := range podAPI.Items {
-		podInfos = append(podInfos, podMetadata.Metadata)
+		podInfos = append(podInfos, podMetadata)
 	}
 	return podInfos, nil
 }
@@ -232,12 +232,16 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Item, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		podLabels := make(map[string]string)
+		containerImages := make(map[string]string)
 		for _, info := range podInfo {
-			if info.Name == pod.PodRef.Name && info.Namespace == pod.PodRef.Namespace {
-				for k, v := range info.Labels {
+			if info.Metadata.Name == pod.PodRef.Name && info.Metadata.Namespace == pod.PodRef.Namespace {
+				for _, v := range info.Spec.Containers {
+					containerImages[v.Name] = v.Image
+				}
+				for k, v := range info.Metadata.Labels {
 					if labelFilter.Match(k) {
 						podLabels[k] = v
 					}
@@ -251,6 +255,15 @@ func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFi
 				"namespace":      pod.PodRef.Namespace,
 				"container_name": container.Name,
 				"pod_name":       pod.PodRef.Name,
+			}
+			for k, v := range containerImages {
+				if k == container.Name {
+					tags["image"] = v
+					tok := strings.Split(v, ":")
+					if len(tok) == 2 {
+						tags["version"] = tok[1]
+					}
+				}
 			}
 			for k, v := range podLabels {
 				tags[k] = v
