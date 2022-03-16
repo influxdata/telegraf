@@ -696,9 +696,9 @@ func TestTransformMetricsUnsupportedFieldsAreSkipped(t *testing.T) {
 func TestCustomEndpoint(t *testing.T) {
 	customEndpoint := "http://test.custom.endpoint.com"
 	plugin := Timestream{
-		MappingMode:  MappingModeMultiTable,
-		DatabaseName: tsDbName,
-		Log:          testutil.Logger{},
+		MappingMode:      MappingModeMultiTable,
+		DatabaseName:     tsDbName,
+		Log:              testutil.Logger{},
 		CredentialConfig: internalaws.CredentialConfig{EndpointURL: customEndpoint},
 	}
 
