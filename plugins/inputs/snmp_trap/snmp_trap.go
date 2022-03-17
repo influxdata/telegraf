@@ -109,14 +109,15 @@ func (s *SnmpTrap) SetTranslator(name string) {
 
 func (s *SnmpTrap) Init() error {
 	var err error
-	if s.Translator == "gosmi" {
+	switch s.Translator {
+	case "gosmi":
 		s.translator, err = newGosmiTranslator(s.Path, s.Log)
 		if err != nil {
 			return err
 		}
-	} else if s.Translator == "netsnmp" {
+	case "netsnmp":
 		s.translator = newNetsnmpTranslator()
-	} else {
+	default:
 		return fmt.Errorf("invalid translator value")
 	}
 
