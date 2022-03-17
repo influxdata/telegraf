@@ -104,8 +104,6 @@ func (m *Mock) Gather(acc telegraf.Accumulator) error {
 
 	acc.AddFields(m.MetricName, fields, tags)
 
-	m.counter++
-
 	return nil
 }
 
