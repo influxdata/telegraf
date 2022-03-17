@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
+// The endpoint_url supplied here is used for specific AWS service (Cloudwatch / Timestream / etc.)
 type CredentialConfig struct {
 	Region               string `toml:"region"`
 	AccessKey            string `toml:"access_key"`
@@ -24,25 +25,14 @@ type CredentialConfig struct {
 
 func (c *CredentialConfig) Credentials() (awsV2.Config, error) {
 	if c.RoleARN != "" {
-		return c.assumeCredentials()
+		return c.configWithAssumeCredentials()
 	}
-	return c.rootCredentials()
+	return c.configWithRootCredentials()
 }
 
-func (c *CredentialConfig) rootCredentials() (awsV2.Config, error) {
+func (c *CredentialConfig) configWithRootCredentials() (awsV2.Config, error) {
 	options := []func(*configV2.LoadOptions) error{
 		configV2.WithRegion(c.Region),
-	}
-
-	if c.EndpointURL != "" {
-		resolver := awsV2.EndpointResolverFunc(func(service, region string) (awsV2.Endpoint, error) {
-			return awsV2.Endpoint{
-				URL:               c.EndpointURL,
-				HostnameImmutable: true,
-				Source:            awsV2.EndpointSourceCustom,
-			}, nil
-		})
-		options = append(options, configV2.WithEndpointResolver(resolver))
 	}
 
 	if c.Profile != "" {
@@ -60,14 +50,15 @@ func (c *CredentialConfig) rootCredentials() (awsV2.Config, error) {
 	return configV2.LoadDefaultConfig(context.Background(), options...)
 }
 
-func (c *CredentialConfig) assumeCredentials() (awsV2.Config, error) {
-	rootCredentials, err := c.rootCredentials()
+func (c *CredentialConfig) configWithAssumeCredentials() (awsV2.Config, error) {
+	// To generate credentials using assumeRole, we need to create AWS STS client with the default AWS endpoint,
+	defaultConfig, err := c.configWithRootCredentials()
 	if err != nil {
 		return awsV2.Config{}, err
 	}
 
 	var provider awsV2.CredentialsProvider
-	stsService := sts.NewFromConfig(rootCredentials)
+	stsService := sts.NewFromConfig(defaultConfig)
 	if c.WebIdentityTokenFile != "" {
 		provider = stscredsV2.NewWebIdentityRoleProvider(stsService, c.RoleARN, stscredsV2.IdentityTokenFile(c.WebIdentityTokenFile), func(opts *stscredsV2.WebIdentityRoleOptions) {
 			if c.RoleSessionName != "" {
@@ -82,6 +73,6 @@ func (c *CredentialConfig) assumeCredentials() (awsV2.Config, error) {
 		})
 	}
 
-	rootCredentials.Credentials = awsV2.NewCredentialsCache(provider)
-	return rootCredentials, nil
+	defaultConfig.Credentials = awsV2.NewCredentialsCache(provider)
+	return defaultConfig, nil
 }
