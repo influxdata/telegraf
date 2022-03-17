@@ -77,5 +77,4 @@ Examples:
   telegraf --service install --service-name=my-telegraf --service-display-name="My Telegraf"
 
   # install telegraf service with auto restart and restart delay of 3 minutes
-  telegraf --service install --service-auto-restart --service-restart-delay 3m
-  `
+  telegraf --service install --service-auto-restart --service-restart-delay 3m`
