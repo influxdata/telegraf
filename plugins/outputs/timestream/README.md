@@ -15,7 +15,6 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 1. [Shared Credentials]
 1. [EC2 Instance Profile]
 
-
 ## Configuration
 
 ```toml
