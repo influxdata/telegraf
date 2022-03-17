@@ -196,27 +196,27 @@ func (c *CloudWatchLogs) Connect() error {
 		return awsErr
 	}
 
-    cfg, err := config.LoadDefaultConfig(context.TODO())
-    if err != nil {
-            return err
-    }
-    if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
-            customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-                    return aws.Endpoint{
-                            PartitionID:   "aws",
-                            URL:           c.CredentialConfig.EndpointURL,
-                            SigningRegion: c.CredentialConfig.Region,
-                    }, nil
-            })
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		return err
+	}
+	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				PartitionID:   "aws",
+				URL:           c.CredentialConfig.EndpointURL,
+				SigningRegion: c.CredentialConfig.Region,
+			}, nil
+		})
 
-            cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
-            if err != nil {
-                    return err
-            }
-    }
+		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
+		if err != nil {
+			return err
+		}
+	}
 
-    cfg.Credentials = awsCreds.Credentials
-    c.svc = cloudwatchlogs.NewFromConfig(cfg)
+	cfg.Credentials = awsCreds.Credentials
+	c.svc = cloudwatchlogs.NewFromConfig(cfg)
 
 	//Find log group with name 'c.LogGroup'
 	if c.lg == nil { //In case connection is not retried, first time
