@@ -108,7 +108,6 @@ func TestSampleConfig(t *testing.T) {
 			Community:      "public",
 			MaxRepetitions: 10,
 			Retries:        3,
-			Translator:     "netsnmp",
 		},
 		Name: "snmp",
 	}
@@ -179,6 +178,9 @@ func TestSnmpInit(t *testing.T) {
 		Fields: []Field{
 			{Oid: "TEST::hostname"},
 		},
+		ClientConfig: snmp.ClientConfig{
+			Translator: "netsnmp",
+		},
 	}
 
 	err := s.Init()
@@ -217,6 +219,9 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 					{Oid: ".1.1.1.5", Name: "five"},
 					{Oid: ".1.1.1.6"},
 				}},
+		},
+		ClientConfig: snmp.ClientConfig{
+			Translator: "netsnmp",
 		},
 	}
 
@@ -267,10 +272,11 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
 		ClientConfig: snmp.ClientConfig{
-			Timeout:   config.Duration(3 * time.Second),
-			Retries:   4,
-			Version:   2,
-			Community: "foo",
+			Timeout:    config.Duration(3 * time.Second),
+			Retries:    4,
+			Version:    2,
+			Community:  "foo",
+			Translator: "netsnmp",
 		},
 	}
 	err := s.Init()
@@ -308,6 +314,9 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 
 	s := &Snmp{
 		Agents: []string{"tcp://127.0.0.1:56789"},
+		ClientConfig: snmp.ClientConfig{
+			Translator: "netsnmp",
+		},
 	}
 	err := s.Init()
 	require.NoError(t, err)
@@ -348,6 +357,7 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 			EngineID:       "myengineid",
 			EngineBoots:    1,
 			EngineTime:     2,
+			Translator:     "netsnmp",
 		},
 	}
 	err := s.Init()
@@ -396,6 +406,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 					EngineID:       "myengineid",
 					EngineBoots:    1,
 					EngineTime:     2,
+					Translator:     "netsnmp",
 				},
 			},
 		},
@@ -417,6 +428,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 					EngineID:       "myengineid",
 					EngineBoots:    1,
 					EngineTime:     2,
+					Translator:     "netsnmp",
 				},
 			},
 		},
@@ -438,6 +450,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 					EngineID:       "myengineid",
 					EngineBoots:    1,
 					EngineTime:     2,
+					Translator:     "netsnmp",
 				},
 			},
 		},
@@ -459,6 +472,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 					EngineID:       "myengineid",
 					EngineBoots:    1,
 					EngineTime:     2,
+					Translator:     "netsnmp",
 				},
 			},
 		},
@@ -494,6 +508,9 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 func TestGetSNMPConnection_caching(t *testing.T) {
 	s := &Snmp{
 		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
+		ClientConfig: snmp.ClientConfig{
+			Translator: "netsnmp",
+		},
 	}
 	err := s.Init()
 	require.NoError(t, err)

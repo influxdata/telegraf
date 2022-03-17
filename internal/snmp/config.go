@@ -13,7 +13,7 @@ type ClientConfig struct {
 	// Path to mib files
 	Path []string `toml:"path"`
 	// Translator implementation
-	Translator string `toml:"translator"`
+	Translator string `toml:"-"`
 
 	// Parameters for Version 1 & 2
 	Community string `toml:"community"`

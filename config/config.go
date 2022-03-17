@@ -225,6 +225,8 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
+
+	Translator string `toml:"translator"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -418,6 +420,11 @@ var agentConfig = `
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
+
+  ## Translator for SNMP OIDs
+  ## Valid values are "netsnmp" which runs snmptranslate and snmptable,
+  ## and "gosmi" which uses the gosmi library.
+  # translator = "netsnmp"
 `
 
 var outputHeader = `
@@ -853,6 +860,11 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 
 		c.Tags["host"] = c.Agent.Hostname
+	}
+
+	// Set snmp agent translator default
+	if c.Agent.Translator == "" {
+		c.Agent.Translator = "netsnmp"
 	}
 
 	if len(c.UnusedFields) > 0 {

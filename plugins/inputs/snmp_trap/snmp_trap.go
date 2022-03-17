@@ -23,7 +23,7 @@ type SnmpTrap struct {
 	ServiceAddress string          `toml:"service_address"`
 	Timeout        config.Duration `toml:"timeout" deprecated:"1.20.0;unused option"`
 	Version        string          `toml:"version"`
-	Translator     string          `toml:"translator"`
+	Translator     string          `toml:"-"`
 	Path           []string        `toml:"path"`
 
 	// Settings for version 3
@@ -58,11 +58,6 @@ var sampleConfig = `
   ## 1024.  See README.md for details
   ##
   # service_address = "udp://:162"
-  ##
-  ## Translator for OIDs
-  ## Valid values are "netsnmp" which calls snmptranslate and snmptable,
-  ## and "gosmi" which uses the gosmi library
-  # translator = "netsnmp"
   ##
   ## Path to mib files
   # path = ["/usr/share/snmp/mibs"]
@@ -104,9 +99,12 @@ func init() {
 			ServiceAddress: "udp://:162",
 			Path:           []string{"/usr/share/snmp/mibs"},
 			Version:        "2c",
-			Translator:     "netsnmp",
 		}
 	})
+}
+
+func (s *SnmpTrap) SetTranslator(name string) {
+	s.Translator = name
 }
 
 func (s *SnmpTrap) Init() error {
@@ -116,9 +114,12 @@ func (s *SnmpTrap) Init() error {
 		if err != nil {
 			return err
 		}
-	} else {
+	} else if s.Translator == "netsnmp" {
 		s.translator = newNetsnmpTranslator()
+	} else {
+		return fmt.Errorf("invalid translator value")
 	}
+
 	if err != nil {
 		s.Log.Errorf("Could not get path %v", err)
 	}

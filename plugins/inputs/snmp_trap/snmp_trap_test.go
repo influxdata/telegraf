@@ -1286,6 +1286,7 @@ func TestReceiveTrap(t *testing.T) {
 				AuthPassword: tt.authPass,
 				PrivProtocol: tt.privProto,
 				PrivPassword: tt.privPass,
+				Translator:   "netsnmp",
 			}
 
 			require.NoError(t, s.Init())

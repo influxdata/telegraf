@@ -37,13 +37,9 @@ const sampleConfig = `
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
 
-  ## Translator for OIDs
-  ## Valid values are "netsnmp" which calls snmptranslate and snmptable,
-  ## and "gosmi" which uses the gosmi library
-  # translator = "netsnmp"
-
   ## Path to mib files
-  ## Only used with GoSMI translator
+  ## Used by the gosmi translator.
+  ## To add paths when translating with netsnmp, use the MIBDIRS environment variable
   # path = ["/usr/share/snmp/mibs"]
 
   ## Agent host tag; the tag used to reference the source host
@@ -120,16 +116,21 @@ type Snmp struct {
 	translator Translator
 }
 
+func (s *Snmp) SetTranslator(name string) {
+	s.Translator = name
+}
+
 func (s *Snmp) Init() error {
 	var err error
-
 	if s.Translator == "gosmi" {
 		s.translator, err = NewGosmiTranslator(s.Path, s.Log)
 		if err != nil {
 			return err
 		}
-	} else {
+	} else if s.Translator == "netsnmp" {
 		s.translator = NewNetsnmpTranslator()
+	} else {
+		return fmt.Errorf("invalid translator value")
 	}
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
@@ -356,7 +357,6 @@ func init() {
 				Timeout:        config.Duration(5 * time.Second),
 				Version:        2,
 				Path:           []string{"/usr/share/snmp/mibs"},
-				Translator:     "netsnmp",
 				Community:      "public",
 			},
 		}

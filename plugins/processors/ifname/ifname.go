@@ -31,11 +31,6 @@ var sampleConfig = `
   ## SNMP version; can be 1, 2, or 3.
   # version = 2
 
-  ## Translator for OIDs
-  ## Valid values are "netsnmp" which calls snmptranslate and snmptable,
-  ## and "gosmi" which uses the gosmi library
-  # translator = "netsnmp"
-
   ## SNMP community string.
   # community = "public"
 
@@ -139,15 +134,9 @@ func (d *IfName) Init() error {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
-	if d.Translator == "gosmi" {
-		var err error
-		d.translator, err = si.NewGosmiTranslator(d.Path, d.Log)
-		if err != nil {
-			return err
-		}
-	} else {
-		d.translator = si.NewNetsnmpTranslator()
-	}
+	// Since OIDs in this plugin are always numeric there is no need
+	// to translate.
+	d.translator = si.NewNetsnmpTranslator()
 
 	return nil
 }
