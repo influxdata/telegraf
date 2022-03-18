@@ -296,7 +296,6 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			} else {
 				require.Equal(t, nil, plugin.Init())
 			}
-
 		})
 	}
 }
