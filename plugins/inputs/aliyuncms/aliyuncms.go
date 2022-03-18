@@ -436,14 +436,16 @@ L:
 				metric.discoveryTags[instanceID][tagKey] = tagValue
 			}
 
-			//Preparing dimensions (first adding dimensions that comes from discovery data)
-			metric.requestDimensions = append(
-				metric.requestDimensions,
-				map[string]string{s.dimensionKey: instanceID})
+			//if no dimension configured in config file, use discovery data
+			if len(metric.dimensionsUdArr) == 0 && len(metric.dimensionsUdObj) == 0 {
+				metric.requestDimensions = append(
+					metric.requestDimensions,
+					map[string]string{s.dimensionKey: instanceID})
+			}
+
 		}
 
-		//Get final dimension (need to get full lis of
-		//what was provided in config + what comes from discovery
+		//add dimensions filter from config file
 		if len(metric.dimensionsUdArr) != 0 {
 			metric.requestDimensions = append(metric.requestDimensions, metric.dimensionsUdArr...)
 		}
