@@ -75,6 +75,7 @@ const sampleConfig = `
   ##   name = "abc"
   ##   price = 50.00
   ##   volatility = 0.2
+  ## "code change"
 `
 
 func (m *Mock) SampleConfig() string {
