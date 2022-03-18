@@ -144,10 +144,16 @@ func (s *AliyunCMS) Init() error {
 		if metric.Dimensions != "" {
 			metric.dimensionsUdObj = map[string]string{}
 			metric.dimensionsUdArr = []map[string]string{}
+
+			// first try to unmarshal as an object
 			err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdObj)
 			if err != nil {
+				// then try to unmarshal as an array
 				err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdArr)
-				return errors.Errorf("Can't parse dimensions (it is neither obj, nor array) %q :%v", metric.Dimensions, err)
+
+				if err != nil {
+					return errors.Errorf("cannot parse dimensions (neither obj, nor array) %q :%v", metric.Dimensions, err)
+				}
 			}
 		}
 	}
