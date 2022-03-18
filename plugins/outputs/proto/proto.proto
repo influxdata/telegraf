@@ -1,5 +1,9 @@
 syntax = "proto3";
 
+package proto;
+
+option go_package = "../proto";
+
 message Diskio {
 
   message Fields {
@@ -662,6 +666,7 @@ message GPS {
     double lat = 1;
     double lon = 2;
     double heading = 3;
+    double pdop = 4;
   }
 
   message Tags {
