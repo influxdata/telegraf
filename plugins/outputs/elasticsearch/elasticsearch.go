@@ -32,6 +32,7 @@ type Elasticsearch struct {
 	FloatReplacement    float64         `toml:"float_replacement_value"`
 	ForceDocumentID     bool            `toml:"force_document_id"`
 	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	IndexName           string          `toml:"index_name"`
 	ManageTemplate      bool            `toml:"manage_template"`
 	OverwriteTemplate   bool            `toml:"overwrite_template"`
@@ -66,6 +67,9 @@ var sampleConfig = `
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
+  ## Set the timeout for periodic health checks.
+  ## The default healthcheck timeout is 1s
+  health_check_timeout = "5s"
   ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"
@@ -246,6 +250,7 @@ func (a *Elasticsearch) Connect() error {
 		elastic.SetScheme(elasticURL.Scheme),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
+		elastic.SetHealthcheckTimeout(time.Duration(a.HealthCheckTimeout)),
 		elastic.SetGzip(a.EnableGzip),
 	)
 
@@ -544,6 +549,7 @@ func init() {
 		return &Elasticsearch{
 			Timeout:             config.Duration(time.Second * 5),
 			HealthCheckInterval: config.Duration(time.Second * 10),
+			HealthCheckTimeout:  config.Duration(time.Second * 1),
 		}
 	})
 }
