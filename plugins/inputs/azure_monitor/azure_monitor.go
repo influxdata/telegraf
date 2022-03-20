@@ -1,15 +1,11 @@
 package azure_monitor
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strconv"
-	"time"
-
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -24,7 +20,7 @@ type AzureMonitor struct {
 	SubscriptionTargets  []*Resource            `toml:"subscription_target"`
 	Log                  telegraf.Logger        `toml:"-"`
 
-	azureClient *azureClient
+	azureClients *azureClients
 }
 
 type ResourceTarget struct {
@@ -44,16 +40,29 @@ type Resource struct {
 	Aggregations []string `toml:"aggregations"`
 }
 
-type azureClient struct {
-	client               *http.Client
-	accessToken          string
-	accessTokenExpiresOn time.Time
+type azureClients struct {
+	ctx                     context.Context
+	resourcesClient         resourcesClient
+	metricDefinitionsClient metricDefinitionsClient
+	metricsClient           metricsClient
 }
 
-const (
-	accessTokenURLGrantType = "client_credentials"
-	accessTokenURLResource  = "https://management.azure.com/"
-)
+type azureResourcesClient struct {
+	client *armresources.Client
+}
+
+type resourcesClient interface {
+	List(context.Context, *armresources.ClientListOptions) ([]*armresources.ClientListResponse, error)
+	ListByResourceGroup(context.Context, string, *armresources.ClientListByResourceGroupOptions) ([]*armresources.ClientListByResourceGroupResponse, error)
+}
+
+type metricDefinitionsClient interface {
+	List(context.Context, string, *armmonitor.MetricDefinitionsClientListOptions) (armmonitor.MetricDefinitionsClientListResponse, error)
+}
+
+type metricsClient interface {
+	List(context.Context, string, *armmonitor.MetricsClientListOptions) (armmonitor.MetricsClientListResponse, error)
+}
 
 var sampleConfig = `
   # can be found under Overview->Essentials in the Azure portal for your application/service
@@ -126,7 +135,7 @@ var sampleConfig = `
 `
 
 func (am *AzureMonitor) Description() string {
-	return "Gather Azure resources metrics from Azure Monitor API"
+	return "Gather Azure resources metrics from Azure Monitor"
 }
 
 func (am *AzureMonitor) SampleConfig() string {
@@ -135,22 +144,22 @@ func (am *AzureMonitor) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (am *AzureMonitor) Init() error {
-	am.azureClient = newAzureClient()
+	if err := am.setAzureClients(); err != nil {
+		return fmt.Errorf("error setting azure clients: %v", err)
+	}
 
 	if err := am.checkConfigValidation(); err != nil {
 		return fmt.Errorf("config is not valid: %v", err)
 	}
 
-	if err := am.getAccessToken(); err != nil {
-		return fmt.Errorf("error getting access token: %v", err)
-	}
-
-	if err := am.createResourceGroupTargetsFromSubscriptionTargets(); err != nil {
-		return fmt.Errorf("error creating group targets from subscription targets: %v", err)
-	}
+	am.addPrefixToResourceTargetsResourceID()
 
 	if err := am.createResourceTargetsFromResourceGroupTargets(); err != nil {
 		return fmt.Errorf("error creating resource targets from resource group targets: %v", err)
+	}
+
+	if err := am.createResourceTargetsFromSubscriptionTargets(); err != nil {
+		return fmt.Errorf("error creating resource targets from subscription targets: %v", err)
 	}
 
 	if err := am.checkResourceTargetsMetricsValidation(); err != nil {
@@ -166,147 +175,38 @@ func (am *AzureMonitor) Init() error {
 	}
 
 	am.checkResourceTargetsMaxMetrics()
+	am.changeResourceTargetsMetricsWithComma()
 	am.setResourceTargetsAggregations()
 
 	am.Log.Debug("Total resource targets: ", len(am.ResourceTargets))
-
-	if len(am.ResourceTargets) == 0 {
-		return fmt.Errorf("no resource target was created. Please check your resource group targets and " +
-			"subscription targets in your configuration")
-	}
 
 	return nil
 }
 
 func (am *AzureMonitor) Gather(acc telegraf.Accumulator) error {
-	// access token has expiration date. Must check every gather if access token has expired and create a new one
-	if err := am.refreshAccessToken(); err != nil {
-		return fmt.Errorf("error refreshing access token: %v", err)
-	}
-
 	am.collectResourceTargetsMetrics(acc)
 
 	return nil
 }
 
-func newAzureClient() *azureClient {
-	return &azureClient{
-		client:               &http.Client{},
-		accessToken:          "",
-		accessTokenExpiresOn: time.Time{},
+func (am *AzureMonitor) setAzureClients() error {
+	if am.azureClients != nil {
+		return nil
 	}
-}
 
-func (am *AzureMonitor) getAccessToken() error {
-	var response *http.Response
-	var err error
-
-	am.Log.Debug("Getting access token")
-
-	target := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", am.TenantID)
-	form := url.Values{
-		"grant_type":    {accessTokenURLGrantType},
-		"resource":      {accessTokenURLResource},
-		"client_id":     {am.ClientID},
-		"client_secret": {am.ClientSecret},
-	}
-	response, err = am.azureClient.client.PostForm(target, form)
+	credential, err := azidentity.NewClientSecretCredential(am.TenantID, am.ClientID, am.ClientSecret, nil)
 	if err != nil {
-		return fmt.Errorf("error authenticating against Azure API: %v", err)
+		return fmt.Errorf("error creating Azure client credentials: %v", err)
 	}
 
-	defer closeResponseBody(response.Body, &err)
-
-	body, err := getResponseBody(response)
-	if err != nil {
-		return fmt.Errorf("error getting access token response body: %v", err)
-	}
-
-	accessToken, ok := body["access_token"].(string)
-	if !ok {
-		return fmt.Errorf("access_token key is missing in access token response body")
-	}
-
-	am.azureClient.accessToken = accessToken
-
-	expiresOnStr, ok := body["expires_on"].(string)
-	if !ok {
-		return fmt.Errorf("expires_on key is missing in access token response body")
-	}
-
-	expiresOn, err := strconv.ParseInt(expiresOnStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("error ParseInt of expires_on: %v", err)
-	}
-
-	am.azureClient.accessTokenExpiresOn = time.Unix(expiresOn, 0).UTC()
-
-	return nil
-}
-
-func (am *AzureMonitor) refreshAccessToken() error {
-	now := time.Now().UTC()
-	refreshAt := am.azureClient.accessTokenExpiresOn.Add(-10 * time.Minute)
-
-	if now.After(refreshAt) {
-		am.Log.Debug("Refreshing access token")
-
-		if err := am.getAccessToken(); err != nil {
-			return fmt.Errorf("error refreshing access token: %v", err)
-		}
+	am.azureClients = &azureClients{
+		ctx:                     context.Background(),
+		resourcesClient:         newAzureResourcesClient(am.SubscriptionID, credential),
+		metricsClient:           armmonitor.NewMetricsClient(credential, nil),
+		metricDefinitionsClient: armmonitor.NewMetricDefinitionsClient(credential, nil),
 	}
 
 	return nil
-}
-
-func (am *AzureMonitor) getAPIResponseBody(apiURL string) (map[string]interface{}, error) {
-	request, err := http.NewRequest("GET", apiURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error creating HTTP request: %v", err)
-	}
-
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Accept", "application/json")
-	request.Header.Set("Authorization", "Bearer "+am.azureClient.accessToken)
-
-	response, err := am.azureClient.client.Do(request)
-	if err != nil {
-		return nil, fmt.Errorf("error getting response from API: %v", err)
-	}
-
-	defer closeResponseBody(response.Body, &err)
-
-	body, err := getResponseBody(response)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
-}
-
-func getResponseBody(response *http.Response) (map[string]interface{}, error) {
-	if response.StatusCode != 200 {
-		responseBytes, _ := ioutil.ReadAll(response.Body)
-		return nil, fmt.Errorf("did not get status code 200, got: %d with body: %s", response.StatusCode, string(responseBytes))
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading body of response: %v", err)
-	}
-
-	var data map[string]interface{}
-	if err = json.Unmarshal(body, &data); err != nil {
-		return nil, fmt.Errorf("error unmarshalling response body: %v", err)
-	}
-
-	return data, err
-}
-
-func closeResponseBody(body io.ReadCloser, err *error) {
-	if closeError := body.Close(); closeError != nil {
-		*err = fmt.Errorf("error closing body of response: %v", closeError)
-	}
 }
 
 func init() {

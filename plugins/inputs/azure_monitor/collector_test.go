@@ -1,262 +1,155 @@
 package azure_monitor
 
 import (
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetMetricName_Success(t *testing.T) {
 	am := &AzureMonitor{
-		SubscriptionID: "subscriptionID",
-		ClientID:       "clientID",
-		ClientSecret:   "clientSecret",
-		TenantID:       "tenantID",
+		SubscriptionID: testSubscriptionID,
+		ClientID:       testClientID,
+		ClientSecret:   testClientSecret,
+		TenantID:       testTenantID,
 		ResourceTargets: []*ResourceTarget{
-			newResourceTarget("resource1", []string{"metric1"}, []string{"Total", "Maximum"}),
+			newResourceTarget(testFullResourceGroup1ResourceType1Resource1, []string{testMetric1}, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}),
 		},
-		Log:         testutil.Logger{},
-		azureClient: newAzureClient(),
+		Log:          testutil.Logger{},
+		azureClients: setMockAzureClients(),
 	}
 
-	resourceMetricValuesBody, err := getFileBody("testdata/resource_1_metric_values_body.json")
-	require.NoError(t, err)
-	require.NotNil(t, resourceMetricValuesBody)
+	response, err := am.azureClients.metricsClient.List(am.azureClients.ctx, am.ResourceTargets[0].ResourceID, nil)
+	assert.NoError(t, err)
 
-	apiURL := am.buildMetricValuesAPIURL(am.ResourceTargets[0])
-	require.NotNil(t, apiURL)
-
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	httpmock.RegisterResponder(
-		"GET",
-		apiURL,
-		httpmock.NewBytesResponder(200, resourceMetricValuesBody))
-
-	body, err := am.getAPIResponseBody(apiURL)
-	require.NoError(t, err)
-	require.NotNil(t, body)
-
-	values, ok := body["value"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, values)
-
-	metricName, err := getMetricName(body, values[0].(map[string]interface{}))
+	metricName, err := createMetricName(response.Value[0], &response)
 	require.NoError(t, err)
 	require.NotNil(t, metricName)
 
-	assert.Equal(t, "azure_monitor_microsoft_type1_metric1", *metricName)
+	assert.Equal(t, "azure_monitor_microsoft_test_type1_metric1", *metricName)
 }
 
-func TestGetMetricFields_AllTimeSeriesWithData(t *testing.T) {
+func TestGetMetricFields_AllTimeseriesWithData(t *testing.T) {
 	am := &AzureMonitor{
-		SubscriptionID: "subscriptionID",
-		ClientID:       "clientID",
-		ClientSecret:   "clientSecret",
-		TenantID:       "tenantID",
+		SubscriptionID: testSubscriptionID,
+		ClientID:       testClientID,
+		ClientSecret:   testClientSecret,
+		TenantID:       testTenantID,
 		ResourceTargets: []*ResourceTarget{
-			newResourceTarget("resource1", []string{"metric1"}, []string{"Total", "Maximum"}),
+			newResourceTarget(testFullResourceGroup1ResourceType1Resource1, []string{testMetric1}, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumMaximum)}),
 		},
-		Log:         testutil.Logger{},
-		azureClient: newAzureClient(),
+		Log:          testutil.Logger{},
+		azureClients: setMockAzureClients(),
 	}
 
-	expectedMetricFields := make(map[string]interface{})
-	expectedMetricFields["timeStamp"] = "2021-11-05T10:59:00Z"
-	expectedMetricFields["total"] = 5.0
-	expectedMetricFields["maximum"] = 5.0
+	response, err := am.azureClients.metricsClient.List(am.azureClients.ctx, am.ResourceTargets[0].ResourceID, nil)
+	assert.NoError(t, err)
 
-	apiURL := am.buildMetricValuesAPIURL(am.ResourceTargets[0])
-	require.NotNil(t, apiURL)
-
-	resourceMetricValuesBody, err := getFileBody("testdata/resource_1_metric_values_body.json")
-	require.NoError(t, err)
-	require.NotNil(t, resourceMetricValuesBody)
-
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	httpmock.RegisterResponder(
-		"GET",
-		apiURL,
-		httpmock.NewBytesResponder(200, resourceMetricValuesBody))
-
-	body, err := am.getAPIResponseBody(apiURL)
-	require.NoError(t, err)
-	require.NotNil(t, body)
-
-	values, ok := body["value"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, values)
-
-	timesSeries, ok := values[0].(map[string]interface{})["timeseries"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, timesSeries)
-
-	data, ok := timesSeries[0].(map[string]interface{})["data"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, data)
-
-	metricFields := getMetricFields(data)
+	metricFields := getMetricFields(response.Value[0].Timeseries[0].Data)
 	require.NotNil(t, metricFields)
 
-	assert.Equal(t, expectedMetricFields, metricFields)
+	assert.Len(t, metricFields, 3)
+
+	assert.Equal(t, "2022-02-22T22:59:00Z", metricFields["timeStamp"])
+	assert.Equal(t, 5.0, metricFields["total"])
+	assert.Equal(t, 5.0, metricFields["maximum"])
 }
 
-func TestGetMetricFields_LastTimeSeriesWithoutData(t *testing.T) {
+func TestGetMetricFields_LastTimeseriesWithoutData(t *testing.T) {
 	am := &AzureMonitor{
-		SubscriptionID: "subscriptionID",
-		ClientID:       "clientID",
-		ClientSecret:   "clientSecret",
-		TenantID:       "tenantID",
+		SubscriptionID: testSubscriptionID,
+		ClientID:       testClientID,
+		ClientSecret:   testClientSecret,
+		TenantID:       testTenantID,
 		ResourceTargets: []*ResourceTarget{
-			newResourceTarget("resource1", []string{"metric2"}, []string{"Total", "Maximum"}),
+			newResourceTarget(testFullResourceGroup2ResourceType1Resource3, []string{testMetric1}, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumAverage)}),
 		},
-		Log:         testutil.Logger{},
-		azureClient: newAzureClient(),
+		Log:          testutil.Logger{},
+		azureClients: setMockAzureClients(),
 	}
 
-	expectedMetricFields := make(map[string]interface{})
-	expectedMetricFields["timeStamp"] = "2021-11-05T10:57:00Z"
-	expectedMetricFields["total"] = 4.0
-	expectedMetricFields["maximum"] = 9.0
+	response, err := am.azureClients.metricsClient.List(am.azureClients.ctx, am.ResourceTargets[0].ResourceID, nil)
+	assert.NoError(t, err)
 
-	apiURL := am.buildMetricValuesAPIURL(am.ResourceTargets[0])
-	require.NotNil(t, apiURL)
-
-	resourceMetricValuesBody, err := getFileBody("testdata/resource_1_metric_values_body.json")
-	require.NoError(t, err)
-	require.NotNil(t, resourceMetricValuesBody)
-
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	httpmock.RegisterResponder(
-		"GET",
-		apiURL,
-		httpmock.NewBytesResponder(200, resourceMetricValuesBody))
-
-	body, err := am.getAPIResponseBody(apiURL)
-	require.NoError(t, err)
-	require.NotNil(t, body)
-
-	values, ok := body["value"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, values)
-
-	timesSeries, ok := values[1].(map[string]interface{})["timeseries"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, timesSeries)
-
-	data, ok := timesSeries[0].(map[string]interface{})["data"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, data)
-
-	metricFields := getMetricFields(data)
+	metricFields := getMetricFields(response.Value[0].Timeseries[0].Data)
 	require.NotNil(t, metricFields)
 
-	assert.Equal(t, expectedMetricFields, metricFields)
+	assert.Len(t, metricFields, 3)
+
+	assert.Equal(t, "2022-02-22T22:58:00Z", metricFields["timeStamp"])
+	assert.Equal(t, 2.5, metricFields["total"])
+	assert.Equal(t, 2.5, metricFields["minimum"])
 }
 
-func TestGetMetricFields_AllTimeSeriesWithoutData(t *testing.T) {
+func TestGetMetricFields_AllTimeseriesWithoutData(t *testing.T) {
 	am := &AzureMonitor{
-		SubscriptionID: "subscriptionID",
-		ClientID:       "clientID",
-		ClientSecret:   "clientSecret",
-		TenantID:       "tenantID",
+		SubscriptionID: testSubscriptionID,
+		ClientID:       testClientID,
+		ClientSecret:   testClientSecret,
+		TenantID:       testTenantID,
 		ResourceTargets: []*ResourceTarget{
-			newResourceTarget("resource2", []string{"metric3"}, []string{"Total", "Maximum"}),
+			newResourceTarget(testFullResourceGroup2ResourceType2Resource4, []string{testMetric1}, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumMaximum)}),
 		},
-		Log:         testutil.Logger{},
-		azureClient: newAzureClient(),
+		Log:          testutil.Logger{},
+		azureClients: setMockAzureClients(),
 	}
 
-	apiURL := am.buildMetricValuesAPIURL(am.ResourceTargets[0])
-	require.NotNil(t, apiURL)
+	response, err := am.azureClients.metricsClient.List(am.azureClients.ctx, am.ResourceTargets[0].ResourceID, nil)
+	assert.NoError(t, err)
 
-	resourceMetricValuesBody, err := getFileBody("testdata/resource_2_metric_values_body.json")
-	require.NoError(t, err)
-	require.NotNil(t, resourceMetricValuesBody)
+	metricFields := getMetricFields(response.Value[0].Timeseries[0].Data)
+	require.Nil(t, metricFields)
+}
 
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
+func TestGetMetricFields_NoTimeseriesData(t *testing.T) {
+	am := &AzureMonitor{
+		SubscriptionID: testSubscriptionID,
+		ClientID:       testClientID,
+		ClientSecret:   testClientSecret,
+		TenantID:       testTenantID,
+		ResourceTargets: []*ResourceTarget{
+			newResourceTarget(testFullResourceGroup2ResourceType2Resource5, []string{testMetric1}, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumMaximum)}),
+		},
+		Log:          testutil.Logger{},
+		azureClients: setMockAzureClients(),
+	}
 
-	httpmock.RegisterResponder(
-		"GET",
-		apiURL,
-		httpmock.NewBytesResponder(200, resourceMetricValuesBody))
+	response, err := am.azureClients.metricsClient.List(am.azureClients.ctx, am.ResourceTargets[0].ResourceID, nil)
+	assert.NoError(t, err)
 
-	body, err := am.getAPIResponseBody(apiURL)
-	require.NoError(t, err)
-	require.NotNil(t, body)
-
-	values, ok := body["value"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, values)
-
-	timesSeries, ok := values[2].(map[string]interface{})["timeseries"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, timesSeries)
-
-	data, ok := timesSeries[0].(map[string]interface{})["data"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, data)
-
-	metricFields := getMetricFields(data)
+	metricFields := getMetricFields(response.Value[0].Timeseries[0].Data)
 	require.Nil(t, metricFields)
 }
 
 func TestGetMetricTags_Success(t *testing.T) {
 	am := &AzureMonitor{
-		SubscriptionID: "subscriptionID",
-		ClientID:       "clientID",
-		ClientSecret:   "clientSecret",
-		TenantID:       "tenantID",
+		SubscriptionID: testSubscriptionID,
+		ClientID:       testClientID,
+		ClientSecret:   testClientSecret,
+		TenantID:       testTenantID,
 		ResourceTargets: []*ResourceTarget{
-			newResourceTarget("resource1", []string{"metric1"}, []string{"Total", "Maximum"}),
+			newResourceTarget(testFullResourceGroup1ResourceType1Resource1, []string{testMetric1}, []string{string(armmonitor.AggregationTypeEnumTotal), string(armmonitor.AggregationTypeEnumMaximum)}),
 		},
-		Log:         testutil.Logger{},
-		azureClient: newAzureClient(),
+		Log:          testutil.Logger{},
+		azureClients: &azureClients{metricsClient: &mockAzureMetricsClient{}},
 	}
 
-	expectedMetricTags := make(map[string]string)
-	expectedMetricTags["subscription_id"] = "subscriptionID"
-	expectedMetricTags["resource_group"] = "resourceGroup"
-	expectedMetricTags["namespace"] = "Microsoft/type1"
-	expectedMetricTags["resource_name"] = "resource1"
-	expectedMetricTags["resource_region"] = "eastus"
-	expectedMetricTags["unit"] = "Count"
+	response, err := am.azureClients.metricsClient.List(am.azureClients.ctx, am.ResourceTargets[0].ResourceID, nil)
+	assert.NoError(t, err)
 
-	apiURL := am.buildMetricValuesAPIURL(am.ResourceTargets[0])
-	require.NotNil(t, apiURL)
-
-	resourceMetricValuesBody, err := getFileBody("testdata/resource_1_metric_values_body.json")
-	require.NoError(t, err)
-	require.NotNil(t, resourceMetricValuesBody)
-
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-
-	httpmock.RegisterResponder(
-		"GET",
-		apiURL,
-		httpmock.NewBytesResponder(200, resourceMetricValuesBody))
-
-	body, err := am.getAPIResponseBody(apiURL)
-	require.NoError(t, err)
-	require.NotNil(t, body)
-
-	values, ok := body["value"].([]interface{})
-	require.True(t, ok)
-	require.NotNil(t, values)
-
-	metricTags, err := getMetricTags(body, values[0].(map[string]interface{}))
+	metricTags, err := getMetricTags(response.Value[0], &response)
 	require.NoError(t, err)
 	require.NotNil(t, metricTags)
 
-	assert.Equal(t, expectedMetricTags, metricTags)
+	assert.Len(t, metricTags, 6)
+
+	assert.Equal(t, testSubscriptionID, metricTags[metricTagSubscriptionID])
+	assert.Equal(t, testResourceGroup1, metricTags[metricTagResourceGroup])
+	assert.Equal(t, "resource1", metricTags[metricTagResourceName])
+	assert.Equal(t, testResourceType1, metricTags[metricTagNamespace])
+	assert.Equal(t, testResourceRegion, metricTags[metricTagResourceRegion])
+	assert.Equal(t, string(armmonitor.MetricUnitCount), metricTags[metricTagUnit])
 }

@@ -112,27 +112,20 @@ Use `subscription_targets` to collect metrics from resources under the subscript
 
 ## Metrics
 
-Each metric name will be as follows:
-
-azure_monitor_<<RESOURCE_NAMESPACE>>_<<METRIC_NAME>>
-
-### Fields
-
-Each metric will have the following fields:
-
-- timeStamp: the time when the value was taken
-- total, count, average, minimum, maximum: aggregation types values (according the target `aggregation` value)
-
-### Tags
-
-Each metric will have the following tags:
-
-- namespace: the resource namespace.
-- resource_group: the resource group name.
-- resource_name: the resource name.
-- subscription_id: the subscription id.
-- resource_region: the region of the resource.
-- unit: the field value unit.
+* azure_monitor_<<RESOURCE_NAMESPACE>>_<<METRIC_NAME>>
+  * fields:
+    * total (float64)
+    * count (float64)
+    * average (float64)
+    * minimum (float64)
+    * maximum (float64)
+  * tags:
+    * namespace
+    * resource_group
+    * resource_name
+    * subscription_id
+    * resource_region
+    * unit
 
 ## Example Output
 

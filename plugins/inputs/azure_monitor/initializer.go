@@ -1,17 +1,17 @@
 package azure_monitor
 
 import (
+	"context"
 	"fmt"
 	"strings"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 )
 
 const (
-	maxMetricsPerRequest   = 20
-	totalAggregationName   = "Total"
-	countAggregationName   = "Count"
-	averageAggregationName = "Average"
-	minAggregationName     = "Minimum"
-	maxAggregationName     = "Maximum"
+	maxMetricsPerRequest = 20
 )
 
 func newResourceTarget(resourceID string, metrics []string, aggregations []string) *ResourceTarget {
@@ -22,33 +22,10 @@ func newResourceTarget(resourceID string, metrics []string, aggregations []strin
 	}
 }
 
-func newResourceGroupTarget(resourceGroup string, resources []*Resource) *ResourceGroupTarget {
-	return &ResourceGroupTarget{
-		ResourceGroup: resourceGroup,
-		Resources:     resources,
+func newAzureResourcesClient(subscriptionID string, credential *azidentity.ClientSecretCredential) *azureResourcesClient {
+	return &azureResourcesClient{
+		client: armresources.NewClient(subscriptionID, credential, nil),
 	}
-}
-
-func (am *AzureMonitor) buildMetricDefinitionsAPIURL(resourceTargetResourceID string) string {
-	apiURL := fmt.Sprintf(
-		"https://management.azure.com/subscriptions/%s/%s/providers/microsoft.insights/metricDefinitions?api-version=2018-01-01",
-		am.SubscriptionID, resourceTargetResourceID)
-
-	return apiURL
-}
-
-func (am *AzureMonitor) buildResourceGroupResourcesAPIURL(resourceGroup string) string {
-	apiURL := fmt.Sprintf("https://management.azure.com/subscriptions/%s/resourceGroups/%s/resources?api-version=2018-02-01",
-		am.SubscriptionID, resourceGroup)
-
-	return apiURL
-}
-
-func (am *AzureMonitor) buildSubscriptionResourceGroupsAPIURL() string {
-	apiURL := fmt.Sprintf("https://management.azure.com/subscriptions/%s/resourceGroups?api-version=2018-02-01",
-		am.SubscriptionID)
-
-	return apiURL
 }
 
 func (am *AzureMonitor) checkConfigValidation() error {
@@ -93,8 +70,7 @@ func (am *AzureMonitor) checkResourceTargetsValidation() error {
 		if len(target.Aggregations) > 0 {
 			if !areTargetAggregationsValid(target.Aggregations) {
 				return fmt.Errorf("resource target #%d aggregations contain invalid aggregation/s. "+
-					"Please check your configuration. The valid aggregations are: %s, %s, %s, %s, %s", index,
-					totalAggregationName, countAggregationName, averageAggregationName, minAggregationName, maxAggregationName)
+					"Please check your configuration. The valid aggregations are: %s", index, strings.Join(getPossibleAggregations(), ", "))
 			}
 		}
 	}
@@ -124,8 +100,8 @@ func (am *AzureMonitor) checkResourceGroupTargetsValidation() error {
 			if len(resource.Aggregations) > 0 {
 				if !areTargetAggregationsValid(resource.Aggregations) {
 					return fmt.Errorf("resource group target #%d resource #%d aggregations contain invalid aggregation/s. "+
-						"Please check your configuration. The valid aggregations are: %s, %s, %s, %s, %s", resourceGroupIndex, resourceIndex,
-						totalAggregationName, countAggregationName, averageAggregationName, minAggregationName, maxAggregationName)
+						"Please check your configuration. The valid aggregations are: %s", resourceGroupIndex, resourceIndex,
+						strings.Join(getPossibleAggregations(), ", "))
 				}
 			}
 		}
@@ -144,8 +120,7 @@ func (am *AzureMonitor) checkSubscriptionTargetValidation() error {
 		if len(target.Aggregations) > 0 {
 			if !areTargetAggregationsValid(target.Aggregations) {
 				return fmt.Errorf("subscription target #%d aggregations contain invalid aggregation/s. "+
-					"Please check your configuration. The valid aggregations are: %s, %s, %s, %s, %s", index,
-					totalAggregationName, countAggregationName, averageAggregationName, minAggregationName, maxAggregationName)
+					"Please check your configuration. The valid aggregations are: %s", index, strings.Join(getPossibleAggregations(), ", "))
 			}
 		}
 	}
@@ -153,37 +128,10 @@ func (am *AzureMonitor) checkSubscriptionTargetValidation() error {
 	return nil
 }
 
-func (am *AzureMonitor) createResourceGroupTargetsFromSubscriptionTargets() error {
-	if len(am.SubscriptionTargets) == 0 {
-		am.Log.Debug("No subscription targets in configuration")
-		return nil
+func (am *AzureMonitor) addPrefixToResourceTargetsResourceID() {
+	for _, target := range am.ResourceTargets {
+		target.ResourceID = "/subscriptions/" + am.SubscriptionID + "/" + target.ResourceID
 	}
-
-	am.Log.Debug("Creating resource group targets from subscription targets")
-
-	apiURL := am.buildSubscriptionResourceGroupsAPIURL()
-	body, err := am.getAPIResponseBody(apiURL)
-	if err != nil {
-		return fmt.Errorf("error getting subscription resource groups API response body: %v", err)
-	}
-
-	values, ok := body["value"].([]interface{})
-	if !ok {
-		return fmt.Errorf("subscription resource groups API response body bad format: value is missing")
-	}
-
-	for _, value := range values {
-		resourceGroup, ok := value.(map[string]interface{})["name"].(string)
-		if !ok {
-			return fmt.Errorf("subscription resource groups API response body bad format: name of value is missing")
-		}
-
-		resourceGroupTarget := newResourceGroupTarget(resourceGroup, am.SubscriptionTargets)
-		am.ResourceGroupTargets = append(am.ResourceGroupTargets, resourceGroupTarget)
-	}
-
-	am.Log.Debug("Total resource group targets: ", len(am.ResourceGroupTargets))
-	return nil
 }
 
 func (am *AzureMonitor) createResourceTargetsFromResourceGroupTargets() error {
@@ -204,64 +152,98 @@ func (am *AzureMonitor) createResourceTargetsFromResourceGroupTargets() error {
 }
 
 func (am *AzureMonitor) createResourceTargetFromResourceGroupTarget(target *ResourceGroupTarget) error {
-	apiURL := am.buildResourceGroupResourcesAPIURL(target.ResourceGroup)
-	body, err := am.getAPIResponseBody(apiURL)
+	resourceTargetsCreatedNum := 0
+	filter := createClientResourcesFilter(target.Resources)
+	responses, err := am.azureClients.resourcesClient.ListByResourceGroup(am.azureClients.ctx, target.ResourceGroup,
+		&armresources.ClientListByResourceGroupOptions{Filter: &filter})
 	if err != nil {
-		return fmt.Errorf("error getting resource group resources API response body: %v", err)
+		return err
 	}
 
-	values, ok := body["value"].([]interface{})
-	if !ok {
-		return fmt.Errorf("resource group resources API response body bad format: value is missing")
+	for _, response := range responses {
+		currentResourceTargetsCreatedNum, err := am.createResourceTargetFromTargetResources(response.Value, target.Resources)
+		if err != nil {
+			return fmt.Errorf("error creating resource target from resource group target resources: %v", err)
+		}
+
+		resourceTargetsCreatedNum += currentResourceTargetsCreatedNum
 	}
 
-	for _, value := range values {
-		fullResourceID, ok := value.(map[string]interface{})["id"].(string)
-		if !ok {
-			return fmt.Errorf("resource group resources API response body bad format: id of value is missing")
-		}
-
-		resourceIDParts := strings.Split(fullResourceID, "/")
-		resourceID := strings.Join(resourceIDParts[3:], "/")
-
-		resourceType, ok := value.(map[string]interface{})["type"].(string)
-		if !ok {
-			return fmt.Errorf("resource group resources API response body bad format: type of value is missing")
-		}
-
-		resourcesWithResourceType := target.getResourcesWithResourceType(resourceType)
-		if resourcesWithResourceType == nil {
-			continue
-		}
-
-		for _, resourceWithResourceType := range resourcesWithResourceType {
-			resourceTarget := newResourceTarget(resourceID, resourceWithResourceType.Metrics, resourceWithResourceType.Aggregations)
-			am.ResourceTargets = append(am.ResourceTargets, resourceTarget)
-		}
-	}
-
+	am.Log.Debug("Total resource targets created from resource group target ", target.ResourceGroup, ": ", resourceTargetsCreatedNum)
 	return nil
 }
 
-func (am *AzureMonitor) getResourceTargetMetricDefinitions(target *ResourceTarget) (map[string]interface{}, error) {
-	apiURL := am.buildMetricDefinitionsAPIURL(target.ResourceID)
-	body, err := am.getAPIResponseBody(apiURL)
-	if err != nil {
-		return nil, fmt.Errorf("error getting metric definitions API response body: %v", err)
+func (am *AzureMonitor) createResourceTargetsFromSubscriptionTargets() error {
+	if len(am.SubscriptionTargets) == 0 {
+		am.Log.Debug("No subscription targets in configuration")
+		return nil
 	}
 
-	return body, nil
+	am.Log.Debug("Creating resource targets from subscription targets")
+
+	resourceTargetsCreatedNum := 0
+	filter := createClientResourcesFilter(am.SubscriptionTargets)
+	responses, err := am.azureClients.resourcesClient.List(am.azureClients.ctx, &armresources.ClientListOptions{Filter: &filter})
+	if err != nil {
+		return err
+	}
+
+	for _, response := range responses {
+		currentResourceTargetsCreatedNum, err := am.createResourceTargetFromTargetResources(response.Value, am.SubscriptionTargets)
+		if err != nil {
+			return fmt.Errorf("error creating resource target from subscription targets: %v", err)
+		}
+
+		resourceTargetsCreatedNum += currentResourceTargetsCreatedNum
+	}
+
+	am.Log.Debug("Total resource targets created from subscription targets: ", resourceTargetsCreatedNum)
+	return nil
+}
+
+func (am *AzureMonitor) createResourceTargetFromTargetResources(resources []*armresources.GenericResourceExpanded, targetResources []*Resource) (int, error) {
+	resourceTargetsCreatedNum := 0
+
+	for _, targetResource := range targetResources {
+		isResourceTargetCreated := false
+
+		for _, resource := range resources {
+			resourceID, err := getResourcesClientResourceID(resource)
+			if err != nil {
+				return resourceTargetsCreatedNum, err
+			}
+
+			resourceType, err := getResourcesClientResourceType(resource)
+			if err != nil {
+				return resourceTargetsCreatedNum, err
+			}
+
+			if *resourceType != targetResource.ResourceType {
+				continue
+			}
+
+			am.ResourceTargets = append(am.ResourceTargets, newResourceTarget(*resourceID, targetResource.Metrics, targetResource.Aggregations))
+			isResourceTargetCreated = true
+			resourceTargetsCreatedNum++
+		}
+
+		if !isResourceTargetCreated {
+			return resourceTargetsCreatedNum, fmt.Errorf("could not find resources with resource type %s", targetResource.ResourceType)
+		}
+	}
+
+	return resourceTargetsCreatedNum, nil
 }
 
 func (am *AzureMonitor) checkResourceTargetsMetricsValidation() error {
 	for _, target := range am.ResourceTargets {
 		if len(target.Metrics) > 0 {
-			body, err := am.getResourceTargetMetricDefinitions(target)
+			response, err := am.getMetricDefinitionsResponse(target.ResourceID)
 			if err != nil {
-				return fmt.Errorf("error getting resource target %s metric definitions: %v", target.ResourceID, err)
+				return fmt.Errorf("error getting metric definitions response for resource target %s: %v", target.ResourceID, err)
 			}
 
-			if err = target.checkMetricsValidation(body); err != nil {
+			if err = target.checkMetricsValidation(response.Value); err != nil {
 				return fmt.Errorf("error checking resource target %s metrics: %v", target.ResourceID, err)
 			}
 		}
@@ -276,14 +258,14 @@ func (am *AzureMonitor) setResourceTargetsMetrics() error {
 			continue
 		}
 
-		am.Log.Debug("Getting metrics for resource target ", target.ResourceID)
+		am.Log.Debug("Setting metrics for resource target ", target.ResourceID)
 
-		body, err := am.getResourceTargetMetricDefinitions(target)
+		response, err := am.getMetricDefinitionsResponse(target.ResourceID)
 		if err != nil {
-			return fmt.Errorf("error getting resource target %s metric definitions: %v", target.ResourceID, err)
+			return fmt.Errorf("error getting metric definitions response for resource target %s: %v", target.ResourceID, err)
 		}
 
-		if err = target.setMetrics(body); err != nil {
+		if err = target.setMetrics(response.Value); err != nil {
 			return fmt.Errorf("error setting resource target %s metrics: %v", target.ResourceID, err)
 		}
 	}
@@ -304,17 +286,12 @@ func (am *AzureMonitor) checkResourceTargetsMetricsMinTimeGrain() error {
 }
 
 func (am *AzureMonitor) checkResourceTargetMetricsMinTimeGrain(target *ResourceTarget) error {
-	body, err := am.getResourceTargetMetricDefinitions(target)
+	response, err := am.getMetricDefinitionsResponse(target.ResourceID)
 	if err != nil {
-		return fmt.Errorf("error getting resource target %s metric definitions: %v", target.ResourceID, err)
+		return fmt.Errorf("error getting metric definitions response for resource target %s: %v", target.ResourceID, err)
 	}
 
-	values, err := getMetricDefinitionsValues(body)
-	if err != nil {
-		return err
-	}
-
-	timeGrainsMetricsMap, err := am.createResourceTargetTimeGrainsMetricsMap(target, values)
+	timeGrainsMetricsMap, err := target.createResourceTargetTimeGrainsMetricsMap(response.Value)
 	if err != nil {
 		return fmt.Errorf("error creating resource target time grains metrics map: %v", err)
 	}
@@ -347,32 +324,17 @@ func (am *AzureMonitor) checkResourceTargetMetricsMinTimeGrain(target *ResourceT
 	return nil
 }
 
-func (am *AzureMonitor) createResourceTargetTimeGrainsMetricsMap(target *ResourceTarget, values []interface{}) (map[string][]string, error) {
-	timeGrainsMetrics := make(map[string][]string)
-
-	for _, metric := range target.Metrics {
-		for _, value := range values {
-			metricName, err := getMetricDefinitionsMetricName(value.(map[string]interface{}))
-			if err != nil {
-				return nil, err
-			}
-
-			if metric == *metricName {
-				metricMinTimeGrain, err := getMetricDefinitionsMetricMinTimeGrain(value.(map[string]interface{}))
-				if err != nil {
-					return nil, err
-				}
-
-				if _, found := timeGrainsMetrics[*metricMinTimeGrain]; !found {
-					timeGrainsMetrics[*metricMinTimeGrain] = []string{*metricName}
-				} else {
-					timeGrainsMetrics[*metricMinTimeGrain] = append(timeGrainsMetrics[*metricMinTimeGrain], *metricName)
-				}
-			}
-		}
+func (am *AzureMonitor) getMetricDefinitionsResponse(resourceID string) (*armmonitor.MetricDefinitionsClientListResponse, error) {
+	response, err := am.azureClients.metricDefinitionsClient.List(am.azureClients.ctx, resourceID, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error listing metric definitions for the resource target %s: %v", resourceID, err)
 	}
 
-	return timeGrainsMetrics, nil
+	if len(response.Value) == 0 {
+		return nil, fmt.Errorf("metric definitions response is bad formatted: Value is empty")
+	}
+
+	return &response, nil
 }
 
 func (am *AzureMonitor) checkResourceTargetsMaxMetrics() {
@@ -404,6 +366,12 @@ func (am *AzureMonitor) checkResourceTargetsMaxMetrics() {
 	}
 }
 
+func (am *AzureMonitor) changeResourceTargetsMetricsWithComma() {
+	for _, target := range am.ResourceTargets {
+		target.changeMetricsWithComma()
+	}
+}
+
 func (am *AzureMonitor) setResourceTargetsAggregations() {
 	for _, target := range am.ResourceTargets {
 		if len(target.Aggregations) == 0 {
@@ -413,45 +381,70 @@ func (am *AzureMonitor) setResourceTargetsAggregations() {
 	}
 }
 
-func (rt *ResourceTarget) setMetrics(body map[string]interface{}) error {
-	values, ok := body["value"].([]interface{})
-	if !ok {
-		return fmt.Errorf("metric definitions API response body bad format: value is missing")
+func (arc *azureResourcesClient) List(ctx context.Context, options *armresources.ClientListOptions) ([]*armresources.ClientListResponse, error) {
+	responses := make([]*armresources.ClientListResponse, 0)
+	pager := arc.client.List(options)
+
+	for pager.NextPage(ctx) {
+		response := pager.PageResponse()
+		responses = append(responses, &response)
 	}
 
-	for _, value := range values {
-		metricName, err := getMetricDefinitionsMetricName(value.(map[string]interface{}))
+	if err := pager.Err(); err != nil {
+		return nil, err
+	}
+
+	return responses, nil
+}
+
+func (arc *azureResourcesClient) ListByResourceGroup(
+	ctx context.Context,
+	resourceGroup string,
+	options *armresources.ClientListByResourceGroupOptions,
+) ([]*armresources.ClientListByResourceGroupResponse, error) {
+	responses := make([]*armresources.ClientListByResourceGroupResponse, 0)
+	pager := arc.client.ListByResourceGroup(resourceGroup, options)
+
+	for pager.NextPage(ctx) {
+		response := pager.PageResponse()
+		responses = append(responses, &response)
+	}
+
+	if err := pager.Err(); err != nil {
+		return nil, err
+	}
+
+	return responses, nil
+}
+
+func (rt *ResourceTarget) setMetrics(metricDefinitions []*armmonitor.MetricDefinition) error {
+	for _, metricDefinition := range metricDefinitions {
+		metricNameValue, err := getMetricDefinitionsClientMetricNameValue(metricDefinition)
 		if err != nil {
 			return err
 		}
 
-		rt.Metrics = append(rt.Metrics, *metricName)
+		rt.Metrics = append(rt.Metrics, *metricNameValue)
 	}
 
 	return nil
 }
 
 func (rt *ResourceTarget) setAggregations() {
-	rt.Aggregations = append(rt.Aggregations, totalAggregationName, countAggregationName, averageAggregationName,
-		minAggregationName, maxAggregationName)
+	rt.Aggregations = append(rt.Aggregations, getPossibleAggregations()...)
 }
 
-func (rt *ResourceTarget) checkMetricsValidation(metricDefinitionsBody map[string]interface{}) error {
-	values, err := getMetricDefinitionsValues(metricDefinitionsBody)
-	if err != nil {
-		return err
-	}
-
+func (rt *ResourceTarget) checkMetricsValidation(metricDefinitions []*armmonitor.MetricDefinition) error {
 	for _, metric := range rt.Metrics {
 		isMetricExist := false
 
-		for _, value := range values {
-			metricName, err := getMetricDefinitionsMetricName(value.(map[string]interface{}))
+		for _, metricDefinition := range metricDefinitions {
+			metricNameValue, err := getMetricDefinitionsClientMetricNameValue(metricDefinition)
 			if err != nil {
 				return err
 			}
 
-			if metric == *metricName {
+			if metric == *metricNameValue {
 				isMetricExist = true
 				break
 			}
@@ -466,72 +459,146 @@ func (rt *ResourceTarget) checkMetricsValidation(metricDefinitionsBody map[strin
 	return nil
 }
 
-func (rgt *ResourceGroupTarget) getResourcesWithResourceType(resourceType string) []*Resource {
-	resourcesWithResourceType := make([]*Resource, 0)
+func (rt *ResourceTarget) createResourceTargetTimeGrainsMetricsMap(metricDefinitions []*armmonitor.MetricDefinition) (map[string][]string, error) {
+	timeGrainsMetrics := make(map[string][]string)
 
-	for _, resource := range rgt.Resources {
-		if resource.ResourceType == resourceType {
-			resourcesWithResourceType = append(resourcesWithResourceType, resource)
+	for _, metric := range rt.Metrics {
+		for _, metricDefinition := range metricDefinitions {
+			metricNameValue, err := getMetricDefinitionsClientMetricNameValue(metricDefinition)
+			if err != nil {
+				return nil, err
+			}
+
+			if metric == *metricNameValue {
+				metricMinTimeGrain, err := getMetricDefinitionsMetricMinTimeGrain(metricDefinition)
+				if err != nil {
+					return nil, err
+				}
+
+				if _, found := timeGrainsMetrics[*metricMinTimeGrain]; !found {
+					timeGrainsMetrics[*metricMinTimeGrain] = []string{metric}
+				} else {
+					timeGrainsMetrics[*metricMinTimeGrain] = append(timeGrainsMetrics[*metricMinTimeGrain], metric)
+				}
+			}
 		}
 	}
 
-	if len(resourcesWithResourceType) == 0 {
-		return nil
-	}
-
-	return resourcesWithResourceType
+	return timeGrainsMetrics, nil
 }
 
-func areTargetAggregationsValid(aggregations []string) bool {
-	for _, aggregation := range aggregations {
-		if aggregation == totalAggregationName || aggregation == countAggregationName || aggregation == averageAggregationName ||
-			aggregation == minAggregationName || aggregation == maxAggregationName {
-			continue
+func (rt *ResourceTarget) changeMetricsWithComma() {
+	for index := 0; index < len(rt.Metrics); index++ {
+		if strings.Contains(rt.Metrics[index], ",") {
+			rt.Metrics[index] = strings.Replace(rt.Metrics[index], ",", "%2", -1)
+		}
+	}
+}
+
+func getPossibleAggregations() []string {
+	possibleAggregations := make([]string, 0)
+
+	for _, aggregation := range armmonitor.PossibleAggregationTypeEnumValues() {
+		possibleAggregations = append(possibleAggregations, string(aggregation))
+	}
+
+	return possibleAggregations
+}
+
+func areTargetAggregationsValid(targetAggregations []string) bool {
+	for _, targetAggregation := range targetAggregations {
+		isTargetAggregationValid := false
+
+		for _, aggregation := range getPossibleAggregations() {
+			if targetAggregation == aggregation {
+				isTargetAggregationValid = true
+				break
+			}
 		}
 
-		return false
+		if !isTargetAggregationValid {
+			return false
+		}
 	}
 
 	return true
 }
 
-func getMetricDefinitionsValues(body map[string]interface{}) ([]interface{}, error) {
-	values, ok := body["value"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("metric definitions API response body bad format: value is missing")
+func createClientResourcesFilter(resources []*Resource) string {
+	var filter string
+	resourcesSize := len(resources)
+
+	for index, resource := range resources {
+		if index+1 == resourcesSize {
+			filter += "resourceType eq " + "'" + resource.ResourceType + "'"
+		} else {
+			filter += "resourceType eq " + "'" + resource.ResourceType + "'" + " or "
+		}
 	}
 
-	return values, nil
+	return filter
 }
 
-func getMetricDefinitionsMetricName(value map[string]interface{}) (*string, error) {
-	metricName, ok := value["name"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("metric definitions API response body bad format: name of value is missing")
+func getResourcesClientResourceID(resource *armresources.GenericResourceExpanded) (*string, error) {
+	if resource == nil {
+		return nil, fmt.Errorf("resources client response is bad formatted: resource is missing")
 	}
 
-	metricNameValue, ok := metricName["value"].(string)
-	if !ok {
-		return nil, fmt.Errorf("metric definitions API response body bad format: value of name is missing")
+	if resource.ID == nil {
+		return nil, fmt.Errorf("resources client response is bad formatted: resource ID is missing")
 	}
 
-	return &metricNameValue, nil
+	return resource.ID, nil
 }
 
-func getMetricDefinitionsMetricMinTimeGrain(value map[string]interface{}) (*string, error) {
-	metricAvailabilities, ok := value["metricAvailabilities"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("metric definitions API response body bad format: metricAvailabilities of value is missing")
+func getResourcesClientResourceType(resource *armresources.GenericResourceExpanded) (*string, error) {
+	if resource == nil {
+		return nil, fmt.Errorf("resources client response is bad formatted: resource is missing")
 	}
 
-	if len(metricAvailabilities) == 0 {
-		return nil, fmt.Errorf("metric definitions API response body bad format: metricAvailabilities of value is empty")
+	if resource.Type == nil {
+		return nil, fmt.Errorf("resources client response is bad formatted: resource Type is missing")
 	}
 
-	metricMinTimeGrain, ok := metricAvailabilities[0].(map[string]interface{})["timeGrain"].(string)
-	if !ok {
-		return nil, fmt.Errorf("metric definitions API response body bad format: timeGrain of metricAvailabilities is missing")
+	return resource.Type, nil
+}
+
+func getMetricDefinitionsClientMetricNameValue(metricDefinition *armmonitor.MetricDefinition) (*string, error) {
+	if metricDefinition == nil {
+		return nil, fmt.Errorf("metric definitions client response is bad formatted: metric definition is missing")
 	}
 
-	return &metricMinTimeGrain, nil
+	metricName := metricDefinition.Name
+	if metricName == nil {
+		return nil, fmt.Errorf("metric definitions client response is bad formatted: metric definition Name is missing")
+	}
+
+	metricNameValue := metricName.Value
+	if metricNameValue == nil {
+		return nil, fmt.Errorf("metric definitions client response is bad formatted: metric definition Name.Value is missing")
+	}
+
+	return metricNameValue, nil
+}
+
+func getMetricDefinitionsMetricMinTimeGrain(metricDefinition *armmonitor.MetricDefinition) (*string, error) {
+	if metricDefinition == nil {
+		return nil, fmt.Errorf("metric definitions client response is bad formatted: metric definition is missing")
+	}
+
+	if len(metricDefinition.MetricAvailabilities) == 0 {
+		return nil, fmt.Errorf("metric definitions client response is bad formatted: metric definition MetricAvailabilities is empty")
+	}
+
+	metricAvailability := metricDefinition.MetricAvailabilities[0]
+	if metricDefinition.MetricAvailabilities[0] == nil {
+		return nil, fmt.Errorf("metric definitions client response is bad formatted: metric definition MetricAvailabilities[0] is missing")
+	}
+
+	timeGrain := metricAvailability.TimeGrain
+	if timeGrain == nil {
+		return nil, fmt.Errorf("metric definitions client response is bad formatted: metric definition MetricAvailabilities[0].TimeGrain is missing")
+	}
+
+	return timeGrain, nil
 }

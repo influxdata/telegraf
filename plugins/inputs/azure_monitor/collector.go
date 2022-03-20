@@ -6,26 +6,24 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
 	"github.com/influxdata/telegraf"
 )
 
 const (
-	minMetricsFields      = 2
-	timeSeriesIsEmpty     = "timeseries is empty"
+	minMetricsFields = 2
+
+	metricTagSubscriptionID = "subscription_id"
+	metricTagResourceGroup  = "resource_group"
+	metricTagResourceName   = "resource_name"
+	metricTagNamespace      = "namespace"
+	metricTagResourceRegion = "resource_region"
+	metricTagUnit           = "unit"
+
+	timeseriesIsEmpty     = "timeseries is empty"
 	dataIsEmpty           = "data is empty"
 	noDataInMetricsFields = "no data in metric fields"
 )
-
-func (am *AzureMonitor) buildMetricValuesAPIURL(target *ResourceTarget) string {
-	metrics := strings.Join(target.Metrics, ",")
-	metrics = strings.Replace(metrics, " ", "+", -1)
-	apiURL := fmt.Sprintf(
-		"https://management.azure.com/subscriptions/%s/%s/providers/microsoft.insights/metrics?metricnames=%s&"+
-			"aggregation=%s&api-version=2019-07-01",
-		am.SubscriptionID, target.ResourceID, metrics, strings.Join(target.Aggregations, ","))
-
-	return apiURL
-}
 
 func (am *AzureMonitor) collectResourceTargetsMetrics(acc telegraf.Accumulator) {
 	var waitGroup sync.WaitGroup
@@ -37,15 +35,17 @@ func (am *AzureMonitor) collectResourceTargetsMetrics(acc telegraf.Accumulator) 
 		go func(target *ResourceTarget) {
 			defer waitGroup.Done()
 
-			apiURL := am.buildMetricValuesAPIURL(target)
-			body, err := am.getAPIResponseBody(apiURL)
+			metricNames := strings.Join(target.Metrics, ",")
+			aggregations := strings.Join(target.Aggregations, ",")
+			response, err := am.azureClients.metricsClient.List(am.azureClients.ctx, target.ResourceID, &armmonitor.MetricsClientListOptions{
+				Metricnames: &metricNames,
+				Aggregation: &aggregations,
+			})
 			if err != nil {
-				acc.AddError(fmt.Errorf("error getting metric values API response body for resource target %s: %v",
-					target.ResourceID, err))
-				return
+				acc.AddError(fmt.Errorf("error listing metrics for the resource target %s: %v", target.ResourceID, err))
 			}
 
-			if err = am.collectResourceTargetMetrics(body, acc); err != nil {
+			if err = am.collectResourceTargetMetrics(&response, acc); err != nil {
 				acc.AddError(fmt.Errorf("error collecting resource target %s metrics: %v", target.ResourceID, err))
 				return
 			}
@@ -55,52 +55,50 @@ func (am *AzureMonitor) collectResourceTargetsMetrics(acc telegraf.Accumulator) 
 	}
 }
 
-func (am *AzureMonitor) collectResourceTargetMetrics(body map[string]interface{}, acc telegraf.Accumulator) error {
-	values, ok := body["value"].([]interface{})
-	if !ok {
-		return fmt.Errorf("metric values API response body bad format: value is missing")
-	}
-
-	for _, value := range values {
-		timesSeries, ok := value.(map[string]interface{})["timeseries"].([]interface{})
-		if !ok {
-			return fmt.Errorf("metric values API response body bad format: timeseries of value is missing")
-		}
-
-		if len(timesSeries) == 0 {
-			if err := am.writeNoMetricDataLog(body, value.(map[string]interface{}), timeSeriesIsEmpty); err != nil {
-				return fmt.Errorf("error getting metric details: %v", err)
-			}
-			continue
-		}
-
-		timeSeries := timesSeries[0].(map[string]interface{})
-		data, ok := timeSeries["data"].([]interface{})
-		if !ok {
-			return fmt.Errorf("metric values API response body bad format: data of timeseries is missing")
-		}
-
-		if len(data) == 0 {
-			if err := am.writeNoMetricDataLog(body, value.(map[string]interface{}), dataIsEmpty); err != nil {
-				return fmt.Errorf("error getting metric details: %v", err)
-			}
-			continue
-		}
-
-		metricName, err := getMetricName(body, value.(map[string]interface{}))
+func (am *AzureMonitor) collectResourceTargetMetrics(response *armmonitor.MetricsClientListResponse, acc telegraf.Accumulator) error {
+	for _, metric := range response.Value {
+		errorMessage, err := getMetricsClientMetricErrorMessage(metric)
 		if err != nil {
-			return fmt.Errorf("error getting metric name: %v", err)
+			return err
 		}
 
-		metricFields := getMetricFields(data)
-		if metricFields == nil {
-			if err = am.writeNoMetricDataLog(body, value.(map[string]interface{}), noDataInMetricsFields); err != nil {
-				return fmt.Errorf("error getting metric details: %v", err)
+		if errorMessage != nil {
+			return fmt.Errorf("response error: %s", *errorMessage)
+		}
+
+		if len(metric.Timeseries) == 0 {
+			if err = am.writeNoMetricDataLog(metric, timeseriesIsEmpty); err != nil {
+				return fmt.Errorf("error writing no metric data log: %v", err)
 			}
 			continue
 		}
 
-		metricTags, err := getMetricTags(body, value.(map[string]interface{}))
+		timeseries := metric.Timeseries[0]
+		if timeseries == nil {
+			return fmt.Errorf("metrics client response is bad formatted: metric timeseries is missing")
+		}
+
+		if len(timeseries.Data) == 0 {
+			if err = am.writeNoMetricDataLog(metric, dataIsEmpty); err != nil {
+				return fmt.Errorf("error writing no metric data log: %v", err)
+			}
+			continue
+		}
+
+		metricName, err := createMetricName(metric, response)
+		if err != nil {
+			return fmt.Errorf("error creating metric name: %v", err)
+		}
+
+		metricFields := getMetricFields(timeseries.Data)
+		if metricFields == nil {
+			if err = am.writeNoMetricDataLog(metric, noDataInMetricsFields); err != nil {
+				return fmt.Errorf("error writing no metric data log: %v", err)
+			}
+			continue
+		}
+
+		metricTags, err := getMetricTags(metric, response)
 		if err != nil {
 			return fmt.Errorf("error getting metric tags: %v", err)
 		}
@@ -111,175 +109,225 @@ func (am *AzureMonitor) collectResourceTargetMetrics(body map[string]interface{}
 	return nil
 }
 
-func (am *AzureMonitor) writeNoMetricDataLog(body map[string]interface{}, value map[string]interface{}, reason string) error {
-	name, err := getMetricValuesValueName(value)
+func (am *AzureMonitor) writeNoMetricDataLog(metric *armmonitor.Metric, reason string) error {
+	metricID, err := getMetricsClientMetricID(metric)
 	if err != nil {
 		return err
 	}
 
-	metricName, ok := name["value"].(string)
-	if !ok {
-		return fmt.Errorf("metric values API response body bad format: value of name is missing")
-	}
-
-	resourceGroupName, err := getResourceGroupName(value)
-	if err != nil {
-		return err
-	}
-
-	resourceName, err := getResourceName(value)
-	if err != nil {
-		return err
-	}
-
-	namespace, err := getMetricValuesNamespace(body)
-	if err != nil {
-		return err
-	}
-
-	am.Log.Info("No data from Azure Monitor API about metric: ", metricName, " resource group: ",
-		*resourceGroupName, " resource: ", *resourceName, " type: ", *namespace, " (", reason, ")")
+	am.Log.Info("No data from Azure Monitor API about metric ", *metricID, ": ", reason)
 
 	return nil
 }
 
-func getMetricName(body map[string]interface{}, value map[string]interface{}) (*string, error) {
-	namespace, err := getMetricValuesNamespace(body)
+func getMetricsClientMetricErrorMessage(metric *armmonitor.Metric) (*string, error) {
+	if metric == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric is missing")
+	}
+
+	if metric.ErrorCode == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric ErrorCode is missing")
+	}
+
+	if *metric.ErrorCode == "Success" {
+		return nil, nil
+	}
+
+	errorMessage := fmt.Sprintf("error code %s: %s", *metric.ErrorCode, *metric.ErrorMessage)
+	return &errorMessage, nil
+}
+
+func getMetricsClientMetricID(metric *armmonitor.Metric) (*string, error) {
+	if metric == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric is missing")
+	}
+
+	if metric.ID == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric ID is missing")
+	}
+
+	return metric.ID, nil
+}
+
+func getMetricsClientMetricNameLocalizedValue(metric *armmonitor.Metric) (*string, error) {
+	if metric == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric is missing")
+	}
+
+	metricName := metric.Name
+	if metricName == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric Name is missing")
+	}
+
+	metricNameLocalizedValue := metricName.LocalizedValue
+	if metricName == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric Name.LocalizedValue is missing")
+	}
+
+	return metricNameLocalizedValue, nil
+}
+
+func getMetricsClientMetricUnit(metric *armmonitor.Metric) (*string, error) {
+	if metric == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric is missing")
+	}
+
+	if metric.Unit == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric Unit is missing")
+	}
+
+	metricUnit := fmt.Sprintf(string(*metric.Unit))
+	return &metricUnit, nil
+}
+
+func getMetricsClientResponseNamespace(response *armmonitor.MetricsClientListResponse) (*string, error) {
+	if response.Namespace == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: reponse Namespace is missing")
+	}
+
+	return response.Namespace, nil
+}
+
+func getMetricsClientResponseResourceRegion(response *armmonitor.MetricsClientListResponse) (*string, error) {
+	if response.Resourceregion == nil {
+		return nil, fmt.Errorf("metrics client response is bad formatted: reponse Resourceregion is missing")
+	}
+
+	return response.Resourceregion, nil
+}
+
+func getMetricsClientMetricValueFields(metricValue *armmonitor.MetricValue) map[string]interface{} {
+	if metricValue == nil {
+		return nil
+	}
+
+	if metricValue.TimeStamp == nil {
+		return nil
+	}
+
+	metricFields := make(map[string]interface{})
+	metricValueFieldsNum := 1
+
+	metricFields["timeStamp"] = metricValue.TimeStamp.Format("2006-01-02T15:04:05Z07:00")
+
+	if metricValue.Total != nil {
+		metricFields["total"] = *metricValue.Total
+		metricValueFieldsNum++
+	}
+
+	if metricValue.Average != nil {
+		metricFields["average"] = *metricValue.Average
+		metricValueFieldsNum++
+	}
+
+	if metricValue.Count != nil {
+		metricFields["count"] = *metricValue.Count
+		metricValueFieldsNum++
+	}
+
+	if metricValue.Minimum != nil {
+		metricFields["minimum"] = *metricValue.Minimum
+		metricValueFieldsNum++
+	}
+
+	if metricValue.Maximum != nil {
+		metricFields["maximum"] = *metricValue.Maximum
+		metricValueFieldsNum++
+	}
+
+	if metricValueFieldsNum < minMetricsFields {
+		return nil
+	}
+
+	return metricFields
+}
+
+func createMetricName(metric *armmonitor.Metric, response *armmonitor.MetricsClientListResponse) (*string, error) {
+	namespace, err := getMetricsClientResponseNamespace(response)
+	if err != nil {
+		return nil, err
+	}
+
+	name, err := getMetricsClientMetricNameLocalizedValue(metric)
 	if err != nil {
 		return nil, err
 	}
 
 	replacer := strings.NewReplacer(".", "_", "/", "_", " ", "_", "(", "_", ")", "_")
-	name, err := getMetricValuesValueName(value)
-	if err != nil {
-		return nil, err
-	}
-
-	localizedValue, ok := name["localizedValue"].(string)
-	if !ok {
-		return nil, fmt.Errorf("localizedValue key in name is missing in metric values API response body")
-	}
-
 	metricName := fmt.Sprintf("azure_monitor_%s_%s",
 		replacer.Replace(strings.ToLower(*namespace)),
-		replacer.Replace(strings.ToLower(localizedValue)))
+		replacer.Replace(strings.ToLower(*name)))
 
 	return &metricName, nil
 }
 
-func getMetricFields(data []interface{}) map[string]interface{} {
-	for index := len(data) - 1; index >= 0; index-- {
-		if len(data[index].(map[string]interface{})) < minMetricsFields {
+func getMetricFields(metricValues []*armmonitor.MetricValue) map[string]interface{} {
+	for index := len(metricValues) - 1; index >= 0; index-- {
+		metricFields := getMetricsClientMetricValueFields(metricValues[index])
+		if metricFields == nil {
 			continue
 		}
 
-		return data[index].(map[string]interface{})
+		return metricFields
 	}
 
 	return nil
 }
 
-func getMetricTags(body map[string]interface{}, value map[string]interface{}) (map[string]string, error) {
+func getMetricTags(metric *armmonitor.Metric, response *armmonitor.MetricsClientListResponse) (map[string]string, error) {
 	tags := make(map[string]string)
-	subscriptionID, err := getSubscriptionID(value)
+	subscriptionID, err := getMetricSubscriptionID(metric)
 	if err != nil {
 		return nil, err
 	}
 
-	tags["subscription_id"] = *subscriptionID
+	tags[metricTagSubscriptionID] = *subscriptionID
 
-	resourceGroupName, err := getResourceGroupName(value)
+	resourceGroupName, err := getMetricResourceGroupName(metric)
 	if err != nil {
 		return nil, err
 	}
 
-	tags["resource_group"] = *resourceGroupName
+	tags[metricTagResourceGroup] = *resourceGroupName
 
-	resourceName, err := getResourceName(value)
+	resourceName, err := getMetricResourceName(metric)
 	if err != nil {
 		return nil, err
 	}
 
-	tags["resource_name"] = *resourceName
+	tags[metricTagResourceName] = *resourceName
 
-	namespace, err := getMetricValuesNamespace(body)
+	namespace, err := getMetricsClientResponseNamespace(response)
 	if err != nil {
 		return nil, err
 	}
 
-	tags["namespace"] = *namespace
+	tags[metricTagNamespace] = *namespace
 
-	resourceRegion, ok := body["resourceregion"].(string)
-	if !ok {
-		return nil, fmt.Errorf("metric values API response body bad format: resourceregion is missing")
+	resourceRegion, err := getMetricsClientResponseResourceRegion(response)
+	if err != nil {
+		return nil, err
 	}
 
-	tags["resource_region"] = resourceRegion
+	tags[metricTagResourceRegion] = *resourceRegion
 
-	unit, ok := value["unit"].(string)
-	if !ok {
-		return nil, fmt.Errorf("metric values API response body bad format: unit of value is missing")
+	unit, err := getMetricsClientMetricUnit(metric)
+	if err != nil {
+		return nil, err
 	}
 
-	tags["unit"] = unit
+	tags[metricTagUnit] = *unit
 
 	return tags, nil
 }
 
-func getMetricValuesNamespace(body map[string]interface{}) (*string, error) {
-	namespace, ok := body["namespace"].(string)
-	if !ok {
-		return nil, fmt.Errorf("metric values API response body bad format: namespace is missing")
-	}
-
-	return &namespace, nil
-}
-func getMetricValuesValueID(value map[string]interface{}) (*string, error) {
-	resourceID, ok := value["id"].(string)
-	if !ok {
-		return nil, fmt.Errorf("metric values API response body bad format: id of value is missing")
-	}
-
-	return &resourceID, nil
-}
-
-func getMetricValuesValueName(value map[string]interface{}) (map[string]interface{}, error) {
-	name, ok := value["name"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("name key in value is missing in metric values API response body")
-	}
-
-	return name, nil
-}
-
-func getPartOfResourceID(resourceID string, partIndex int, partSubPartIndex int, getPartToEnd bool) (*string, error) {
-	resourceIDParts := strings.Split(resourceID, "/providers/")
-	if len(resourceIDParts) <= partIndex {
-		return nil, fmt.Errorf("metric values API value id bad format")
-	}
-
-	resourceIDPartSubParts := strings.Split(resourceIDParts[partIndex], "/")
-	if len(resourceIDPartSubParts) <= partSubPartIndex {
-		return nil, fmt.Errorf("metric values API value id bad format")
-	}
-
-	var part string
-	if getPartToEnd {
-		part = strings.Join(resourceIDPartSubParts[partSubPartIndex:], "/")
-	} else {
-		part = resourceIDPartSubParts[partSubPartIndex]
-	}
-
-	return &part, nil
-}
-
-func getSubscriptionID(value map[string]interface{}) (*string, error) {
-	resourceID, err := getMetricValuesValueID(value)
+func getMetricSubscriptionID(metric *armmonitor.Metric) (*string, error) {
+	metricID, err := getMetricsClientMetricID(metric)
 	if err != nil {
 		return nil, err
 	}
 
-	subscriptionID, err := getPartOfResourceID(*resourceID, 0, 2, false)
+	subscriptionID, err := getPartOfMetricID(*metricID, 0, 2, false)
 	if err != nil {
 		return nil, err
 	}
@@ -287,13 +335,13 @@ func getSubscriptionID(value map[string]interface{}) (*string, error) {
 	return subscriptionID, nil
 }
 
-func getResourceGroupName(value map[string]interface{}) (*string, error) {
-	resourceID, err := getMetricValuesValueID(value)
+func getMetricResourceGroupName(metric *armmonitor.Metric) (*string, error) {
+	metricID, err := getMetricsClientMetricID(metric)
 	if err != nil {
 		return nil, err
 	}
 
-	resourceGroupName, err := getPartOfResourceID(*resourceID, 0, 4, false)
+	resourceGroupName, err := getPartOfMetricID(*metricID, 0, 4, false)
 	if err != nil {
 		return nil, err
 	}
@@ -301,16 +349,38 @@ func getResourceGroupName(value map[string]interface{}) (*string, error) {
 	return resourceGroupName, nil
 }
 
-func getResourceName(value map[string]interface{}) (*string, error) {
-	resourceID, err := getMetricValuesValueID(value)
+func getMetricResourceName(metric *armmonitor.Metric) (*string, error) {
+	metricID, err := getMetricsClientMetricID(metric)
 	if err != nil {
 		return nil, err
 	}
 
-	resourceGroupName, err := getPartOfResourceID(*resourceID, 1, 2, true)
+	resourceGroupName, err := getPartOfMetricID(*metricID, 1, 2, true)
 	if err != nil {
 		return nil, err
 	}
 
 	return resourceGroupName, nil
+}
+
+func getPartOfMetricID(metricID string, partIndex int, partSubPartIndex int, getPartToEnd bool) (*string, error) {
+	metricIDParts := strings.Split(metricID, "/providers/")
+	if len(metricIDParts) <= partIndex {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric ID is bad formatted")
+	}
+
+	resourceIDPartSubParts := strings.Split(metricIDParts[partIndex], "/")
+	if len(resourceIDPartSubParts) <= partSubPartIndex {
+		return nil, fmt.Errorf("metrics client response is bad formatted: metric ID is bad formatted")
+	}
+
+	var part string
+
+	if getPartToEnd {
+		part = strings.Join(resourceIDPartSubParts[partSubPartIndex:], "/")
+	} else {
+		part = resourceIDPartSubParts[partSubPartIndex]
+	}
+
+	return &part, nil
 }
