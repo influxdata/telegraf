@@ -160,7 +160,7 @@ func getMetricsClientMetricNameLocalizedValue(metric *armmonitor.Metric) (*strin
 	}
 
 	metricNameLocalizedValue := metricName.LocalizedValue
-	if metricName == nil {
+	if metricNameLocalizedValue == nil {
 		return nil, fmt.Errorf("metrics client response is bad formatted: metric Name.LocalizedValue is missing")
 	}
 
@@ -176,7 +176,7 @@ func getMetricsClientMetricUnit(metric *armmonitor.Metric) (*string, error) {
 		return nil, fmt.Errorf("metrics client response is bad formatted: metric Unit is missing")
 	}
 
-	metricUnit := fmt.Sprintf(string(*metric.Unit))
+	metricUnit := string(*metric.Unit)
 	return &metricUnit, nil
 }
 

@@ -309,7 +309,6 @@ func (mamc *mockAzureMetricsClient) List(
 	metricIDS := make([]string, 0)
 	metricNames := make([]string, 0)
 	metricUnits := make([]armmonitor.MetricUnit, 0)
-	metricTypes := make([]string, 0)
 	timeStamps := make([]time.Time, 0)
 	aggregationValues := make([]float64, 0)
 	namespaces = append(namespaces, testResourceType1, testResourceType2)
@@ -323,7 +322,6 @@ func (mamc *mockAzureMetricsClient) List(
 		testFullResourceGroup2ResourceType2Resource6+"/providers/Microsoft.Insights/metrics/metric2")
 	metricNames = append(metricNames, testMetric1, testMetric2, testMetric3)
 	metricUnits = append(metricUnits, armmonitor.MetricUnitCount, armmonitor.MetricUnitBytes)
-	metricTypes = append(metricTypes, testResourceType1, testResourceType2)
 	timeStamps = append(timeStamps,
 		time.Date(2022, 2, 22, 22, 0, 0, 0, time.UTC),
 		time.Date(2022, 2, 22, 22, 1, 0, 0, time.UTC),

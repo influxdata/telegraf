@@ -489,9 +489,7 @@ func (rt *ResourceTarget) createResourceTargetTimeGrainsMetricsMap(metricDefinit
 
 func (rt *ResourceTarget) changeMetricsWithComma() {
 	for index := 0; index < len(rt.Metrics); index++ {
-		if strings.Contains(rt.Metrics[index], ",") {
-			rt.Metrics[index] = strings.Replace(rt.Metrics[index], ",", "%2", -1)
-		}
+		rt.Metrics[index] = strings.Replace(rt.Metrics[index], ",", "%2", -1)
 	}
 }
 

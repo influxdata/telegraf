@@ -447,15 +447,6 @@ func TestInit_AllTargetTypes(t *testing.T) {
 		}
 	}
 
-	expectedResourceMetrics := make([]string, 0)
-	for index := 1; index <= maxMetricsPerRequest; index++ {
-		if index <= 10 {
-			expectedResourceMetrics = append(expectedResourceMetrics, testMetric1)
-		} else {
-			expectedResourceMetrics = append(expectedResourceMetrics, testMetric2)
-		}
-	}
-
 	err := am.Init()
 	require.NoError(t, err)
 
