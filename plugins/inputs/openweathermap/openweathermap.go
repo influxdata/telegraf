@@ -176,6 +176,7 @@ type WeatherEntry struct {
 		Humidity int64   `json:"humidity"`
 		Pressure float64 `json:"pressure"`
 		Temp     float64 `json:"temp"`
+		Feels    float64 `json:"feels_like"`
 	} `json:"main"`
 	Rain struct {
 		Rain1 float64 `json:"1h"`
@@ -246,6 +247,7 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 			"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
 			"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"visibility":   e.Visibility,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
@@ -283,6 +285,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			"pressure":     e.Main.Pressure,
 			"rain":         gatherRain(e),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
 		}

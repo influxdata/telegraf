@@ -34,7 +34,7 @@ func (a *externalAuth) Response() string {
 }
 
 type AMQP struct {
-	URL                string            `toml:"url"` // deprecated in 1.7; use brokers
+	URL                string            `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
 	Brokers            []string          `toml:"brokers"`
 	Exchange           string            `toml:"exchange"`
 	ExchangeType       string            `toml:"exchange_type"`
@@ -48,9 +48,9 @@ type AMQP struct {
 	RoutingTag         string            `toml:"routing_tag"`
 	RoutingKey         string            `toml:"routing_key"`
 	DeliveryMode       string            `toml:"delivery_mode"`
-	Database           string            `toml:"database"`         // deprecated in 1.7; use headers
-	RetentionPolicy    string            `toml:"retention_policy"` // deprecated in 1.7; use headers
-	Precision          string            `toml:"precision"`        // deprecated; has no effect
+	Database           string            `toml:"database" deprecated:"1.7.0;use 'headers' instead"`
+	RetentionPolicy    string            `toml:"retention_policy" deprecated:"1.7.0;use 'headers' instead"`
+	Precision          string            `toml:"precision" deprecated:"1.2.0;option is ignored"`
 	Headers            map[string]string `toml:"headers"`
 	Timeout            config.Duration   `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
@@ -72,10 +72,6 @@ type Client interface {
 }
 
 var sampleConfig = `
-  ## Broker to publish to.
-  ##   deprecated in 1.7; use the brokers option
-  # url = "amqp://localhost:5672/influxdb"
-
   ## Brokers to publish to.  If multiple brokers are specified a random broker
   ## will be selected anytime a connection is established.  This can be
   ## helpful for load balancing when not using a dedicated load balancer.
@@ -123,14 +119,6 @@ var sampleConfig = `
   ## Delivery Mode controls if a published message is persistent.
   ##   One of "transient" or "persistent".
   # delivery_mode = "transient"
-
-  ## InfluxDB database added as a message header.
-  ##   deprecated in 1.7; use the headers option
-  # database = "telegraf"
-
-  ## InfluxDB retention policy added as a message header
-  ##   deprecated in 1.7; use the headers option
-  # retention_policy = "default"
 
   ## Static headers added to each published message.
   # headers = { }
@@ -259,7 +247,10 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 				if err != nil {
 					return err
 				}
-			} else {
+			} else if q.client != nil {
+				if err := q.client.Close(); err != nil {
+					q.Log.Errorf("Closing connection failed: %v", err)
+				}
 				q.client = nil
 				return err
 			}

@@ -3,12 +3,17 @@ package disk
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
+	"time"
 
 	diskUtil "github.com/shirou/gopsutil/v3/disk"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -376,4 +381,169 @@ func TestDiskStats(t *testing.T) {
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
 	require.NoError(t, err)
 	require.Equal(t, 2*expectedAllDiskMetrics+7, acc.NFields())
+}
+
+func TestDiskUsageIssues(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping due to Linux-only test-cases...")
+	}
+
+	tests := []struct {
+		name     string
+		prefix   string
+		du       diskUtil.UsageStat
+		expected []telegraf.Metric
+	}{
+		{
+			name:   "success",
+			prefix: "",
+			du: diskUtil.UsageStat{
+				Total:       256,
+				Free:        46,
+				Used:        200,
+				InodesTotal: 2468,
+				InodesFree:  468,
+				InodesUsed:  2000,
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"disk",
+					map[string]string{
+						"device": "tmpfs",
+						"fstype": "tmpfs",
+						"mode":   "rw",
+						"path":   "/tmp",
+					},
+					map[string]interface{}{
+						"total":        uint64(256),
+						"used":         uint64(200),
+						"free":         uint64(46),
+						"inodes_total": uint64(2468),
+						"inodes_free":  uint64(468),
+						"inodes_used":  uint64(2000),
+						"used_percent": float64(81.30081300813008),
+					},
+					time.Unix(0, 0),
+					telegraf.Gauge,
+				),
+				testutil.MustMetric(
+					"disk",
+					map[string]string{
+						"device": "nvme0n1p4",
+						"fstype": "ext4",
+						"mode":   "rw",
+						"path":   "/",
+					},
+					map[string]interface{}{
+						"total":        uint64(256),
+						"used":         uint64(200),
+						"free":         uint64(46),
+						"inodes_total": uint64(2468),
+						"inodes_free":  uint64(468),
+						"inodes_used":  uint64(2000),
+						"used_percent": float64(81.30081300813008),
+					},
+					time.Unix(0, 0),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name:   "issue 10297",
+			prefix: "/host",
+			du: diskUtil.UsageStat{
+				Total:       256,
+				Free:        46,
+				Used:        200,
+				InodesTotal: 2468,
+				InodesFree:  468,
+				InodesUsed:  2000,
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"disk",
+					map[string]string{
+						"device": "sda1",
+						"fstype": "ext4",
+						"mode":   "rw",
+						"path":   "/",
+					},
+					map[string]interface{}{
+						"total":        uint64(256),
+						"used":         uint64(200),
+						"free":         uint64(46),
+						"inodes_total": uint64(2468),
+						"inodes_free":  uint64(468),
+						"inodes_used":  uint64(2000),
+						"used_percent": float64(81.30081300813008),
+					},
+					time.Unix(0, 0),
+					telegraf.Gauge,
+				),
+				testutil.MustMetric(
+					"disk",
+					map[string]string{
+						"device": "sdb",
+						"fstype": "ext4",
+						"mode":   "rw",
+						"path":   "/mnt/storage",
+					},
+					map[string]interface{}{
+						"total":        uint64(256),
+						"used":         uint64(200),
+						"free":         uint64(46),
+						"inodes_total": uint64(2468),
+						"inodes_free":  uint64(468),
+						"inodes_used":  uint64(2000),
+						"used_percent": float64(81.30081300813008),
+					},
+					time.Unix(0, 0),
+					telegraf.Gauge,
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the environment
+			hostMountPrefix := tt.prefix
+			hostProcPrefix, err := filepath.Abs(filepath.Join("testdata", strings.ReplaceAll(tt.name, " ", "_")))
+			require.NoError(t, err)
+
+			// Get the partitions in the test-case
+			os.Clearenv()
+			require.NoError(t, os.Setenv("HOST_PROC", hostProcPrefix))
+			partitions, err := diskUtil.Partitions(true)
+			require.NoError(t, err)
+
+			// Mock the disk usage
+			mck := &mock.Mock{}
+			mps := system.MockPSDisk{SystemPS: &system.SystemPS{PSDiskDeps: &system.MockDiskUsage{Mock: mck}}, Mock: mck}
+			defer mps.AssertExpectations(t)
+
+			mps.On("Partitions", true).Return(partitions, nil)
+
+			for _, partition := range partitions {
+				mountpoint := partition.Mountpoint
+				if hostMountPrefix != "" {
+					mountpoint = filepath.Join(hostMountPrefix, partition.Mountpoint)
+				}
+				diskUsage := tt.du
+				diskUsage.Path = mountpoint
+				diskUsage.Fstype = partition.Fstype
+				mps.On("PSDiskUsage", mountpoint).Return(&diskUsage, nil)
+			}
+			mps.On("OSGetenv", "HOST_MOUNT_PREFIX").Return(hostMountPrefix)
+
+			// Setup the plugin and run the test
+			var acc testutil.Accumulator
+			plugin := &DiskStats{ps: &mps}
+			require.NoError(t, plugin.Gather(&acc))
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+		})
+	}
+	os.Clearenv()
 }

@@ -13,7 +13,7 @@ type Parser struct {
 	Merge        string          `toml:"merge"`
 	ParseFields  []string        `toml:"parse_fields"`
 	Log          telegraf.Logger `toml:"-"`
-	parser       parsers.Parser
+	parser       telegraf.Parser
 }
 
 var SampleConfig = `

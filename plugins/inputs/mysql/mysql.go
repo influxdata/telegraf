@@ -994,7 +994,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	return nil
 }
 
-// GatherUserStatistics can be used to collect metrics on each running command
+// GatherUserStatisticsStatuses can be used to collect metrics on each running command
 // and its state with its running count
 func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
 	// run query

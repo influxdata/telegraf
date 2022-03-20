@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -34,11 +35,12 @@ type PSDiskDeps interface {
 }
 
 func NewSystemPS() *SystemPS {
-	return &SystemPS{&SystemPSDisk{}}
+	return &SystemPS{PSDiskDeps: &SystemPSDisk{}}
 }
 
 type SystemPS struct {
 	PSDiskDeps
+	Log telegraf.Logger `toml:"-"`
 }
 
 type SystemPSDisk struct{}
@@ -62,6 +64,31 @@ func (s *SystemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	return cpuTimes, nil
 }
 
+type set struct {
+	m map[string]struct{}
+}
+
+func (s *set) empty() bool {
+	return len(s.m) == 0
+}
+
+func (s *set) add(key string) {
+	s.m[key] = struct{}{}
+}
+
+func (s *set) has(key string) bool {
+	var ok bool
+	_, ok = s.m[key]
+	return ok
+}
+
+func newSet() *set {
+	s := &set{
+		m: make(map[string]struct{}),
+	}
+	return s
+}
+
 func (s *SystemPS) DiskUsage(
 	mountPointFilter []string,
 	fstypeExclude []string,
@@ -71,24 +98,23 @@ func (s *SystemPS) DiskUsage(
 		return nil, nil, err
 	}
 
-	// Make a "set" out of the filter slice
-	mountPointFilterSet := make(map[string]bool)
+	mountPointFilterSet := newSet()
 	for _, filter := range mountPointFilter {
-		mountPointFilterSet[filter] = true
+		mountPointFilterSet.add(filter)
 	}
-	fstypeExcludeSet := make(map[string]bool)
+	fstypeExcludeSet := newSet()
 	for _, filter := range fstypeExclude {
-		fstypeExcludeSet[filter] = true
+		fstypeExcludeSet.add(filter)
 	}
-	paths := make(map[string]bool)
+	paths := newSet()
 	for _, part := range parts {
-		paths[part.Mountpoint] = true
+		paths.add(part.Mountpoint)
 	}
 
 	// Autofs mounts indicate a potential mount, the partition will also be
 	// listed with the actual filesystem when mounted.  Ignore the autofs
 	// partition to avoid triggering a mount.
-	fstypeExcludeSet["autofs"] = true
+	fstypeExcludeSet.add("autofs")
 
 	var usage []*disk.UsageStat
 	var partitions []*disk.PartitionStat
@@ -97,30 +123,39 @@ func (s *SystemPS) DiskUsage(
 	for i := range parts {
 		p := parts[i]
 
-		if len(mountPointFilter) > 0 {
-			// If the mount point is not a member of the filter set,
-			// don't gather info on it.
-			if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
-				continue
-			}
+		// If there is a filter set and if the mount point is not a
+		// member of the filter set, don't gather info on it.
+		if !mountPointFilterSet.empty() && !mountPointFilterSet.has(p.Mountpoint) {
+			continue
 		}
 
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
-		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
+		if fstypeExcludeSet.has(p.Fstype) {
 			continue
 		}
 
-		// If there's a host mount prefix, exclude any paths which conflict
-		// with the prefix.
-		if len(hostMountPrefix) > 0 &&
-			!strings.HasPrefix(p.Mountpoint, hostMountPrefix) &&
-			paths[hostMountPrefix+p.Mountpoint] {
-			continue
+		// If there's a host mount prefix use it as newer gopsutil version check for
+		// the init's mountpoints usually pointing to the host-mountpoint but in the
+		// container. This won't work for checking the disk-usage as the disks are
+		// mounted at HOST_MOUNT_PREFIX...
+		mountpoint := p.Mountpoint
+		if hostMountPrefix != "" && !strings.HasPrefix(p.Mountpoint, hostMountPrefix) {
+			mountpoint = filepath.Join(hostMountPrefix, p.Mountpoint)
+			// Exclude conflicting paths
+			if paths.has(mountpoint) {
+				if s.Log != nil {
+					s.Log.Debugf("[SystemPS] => dropped by mount prefix (%q): %q", mountpoint, hostMountPrefix)
+				}
+				continue
+			}
 		}
 
-		du, err := s.PSDiskUsage(p.Mountpoint)
+		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
+			if s.Log != nil {
+				s.Log.Errorf("[SystemPS] => error getting disk usage (%q): %v", mountpoint, err)
+			}
 			continue
 		}
 

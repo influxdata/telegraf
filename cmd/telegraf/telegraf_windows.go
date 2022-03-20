@@ -1,6 +1,8 @@
 //go:build windows
 // +build windows
 
+//go:generate goversioninfo -icon=../../assets/tiger.ico
+
 package main
 
 import (
@@ -91,6 +93,10 @@ func runAsWindowsService(inputFilters, outputFilters []string) {
 
 		//set servicename to service cmd line, to have a custom name after relaunch as a service
 		svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", *fServiceName)
+
+		if *fServiceAutoRestart {
+			svcConfig.Option = service.KeyValue{"OnFailure": "restart", "OnFailureDelayDuration": *fServiceRestartDelay}
+		}
 
 		err := service.Control(s, *fService)
 		if err != nil {

@@ -26,6 +26,9 @@ name of the plugin.
   ## override the default metric name of "exec"
   name_override = "entropy_available"
 
+  ## override the field name of "value"
+  # value_field_name = "value"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:

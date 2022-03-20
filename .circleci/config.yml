@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.17.5'
+      - image: 'quay.io/influxdb/telegraf-ci:1.17.7'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -42,6 +42,9 @@ commands:
       os:
         type: string
         default: "linux"
+      arch:
+        type: string
+        default: "amd64"
       gotestsum:
         type: string
         default: "gotestsum"
@@ -74,11 +77,17 @@ commands:
             - restore_cache:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
+            - run: choco install mingw
       - run: mkdir -p test-results
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
+      - unless:
+          condition:
+            equal: [ "386", << parameters.arch >> ]
+          steps:
+            - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
           PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- ${RACE} -short $PACKAGE_NAMES
       - store_test_results:
           path: test-results
       - when:
@@ -127,6 +136,11 @@ commands:
       - attach_workspace:
           at: '/go'
       - when:
+          condition:
+            equal: [ windows, << parameters.type >> ]
+          steps:
+            - run: make versioninfo
+      - when:
           condition: << parameters.nightly >>
           steps:
             - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
@@ -166,6 +180,19 @@ jobs:
           root: '/go'
           paths:
             - '*'
+  test-go-linux-386:
+    executor: go-1_17
+    parallelism: 4
+    steps:
+      - checkout
+      - restore_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt
+      - run: 'GOARCH=386 make deps'
+      - run: 'GOARCH=386 make tidy'
+      - run: 'GOARCH=386 make check'
+      - test-go:
+          arch: "386"
   test-go-mac:
     executor: mac
     steps:
@@ -379,6 +406,9 @@ jobs:
     steps:
       - attach_workspace:
           at: '.'
+      - run:
+          command: |
+            cd dist && find . -type f -name '._*' -delete
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
@@ -415,6 +445,10 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - 'test-go-linux-386':
+          filters:
+            tags:
+              only: /.*/
       - 'test-go-mac':
           filters:
             tags: # only runs on tags if you specify this filter
@@ -443,7 +477,7 @@ workflows:
               only: /.*/
       - 'i386-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
@@ -585,6 +619,7 @@ workflows:
   nightly:
     jobs:
       - 'test-go-linux'
+      - 'test-go-linux-386'
       - 'test-go-mac'
       - 'test-go-windows'
       - 'windows-package':
@@ -606,7 +641,7 @@ workflows:
           name: 'i386-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-linux-386'
       - 'ppc64le-package':
           name: 'ppc64le-package-nightly'
           nightly: true

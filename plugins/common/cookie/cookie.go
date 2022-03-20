@@ -19,6 +19,8 @@ type CookieAuthConfig struct {
 	URL    string `toml:"cookie_auth_url"`
 	Method string `toml:"cookie_auth_method"`
 
+	Headers map[string]string `toml:"cookie_auth_headers"`
+
 	// HTTP Basic Auth Credentials
 	Username string `toml:"cookie_auth_username"`
 	Password string `toml:"cookie_auth_password"`
@@ -88,6 +90,14 @@ func (c *CookieAuthConfig) auth() error {
 
 	if c.Username != "" {
 		req.SetBasicAuth(c.Username, c.Password)
+	}
+
+	for k, v := range c.Headers {
+		if strings.ToLower(k) == "host" {
+			req.Host = v
+		} else {
+			req.Header.Add(k, v)
+		}
 	}
 
 	resp, err := c.client.Do(req)

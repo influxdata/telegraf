@@ -37,6 +37,31 @@ func TestFullMdstatProcFile(t *testing.T) {
 	acc.AssertContainsFields(t, "mdstat", fields)
 }
 
+func TestMdstatSyncStart(t *testing.T) {
+	filename := makeFakeMDStatFile([]byte(mdStatSyncStart))
+	defer os.Remove(filename)
+	k := MdstatConf{
+		FileName: filename,
+	}
+	acc := testutil.Accumulator{}
+	err := k.Gather(&acc)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"BlocksSynced":           int64(10620027200),
+		"BlocksSyncedFinishTime": float64(101.6),
+		"BlocksSyncedPct":        float64(1.5),
+		"BlocksSyncedSpeed":      float64(103517),
+		"BlocksTotal":            int64(11251451904),
+		"DisksActive":            int64(12),
+		"DisksFailed":            int64(0),
+		"DisksSpare":             int64(0),
+		"DisksTotal":             int64(12),
+		"DisksDown":              int64(0),
+	}
+	acc.AssertContainsFields(t, "mdstat", fields)
+}
+
 func TestFailedDiskMdStatProcFile1(t *testing.T) {
 	filename := makeFakeMDStatFile([]byte(mdStatFileFailedDisk))
 	defer os.Remove(filename)
@@ -107,6 +132,23 @@ md0 : active raid1 sdb1[2] sda1[0]
 unused devices: <none>
 `
 
+const mdStatSyncStart = `
+Personalities : [raid1] [raid10] [linear] [multipath] [raid0] [raid6] [raid5] [raid4]
+md2 : active raid10 sde[2] sdl[9] sdf[3] sdk[8] sdh[5] sdd[1] sdg[4] sdn[11] sdm[10] sdj[7] sdc[0] sdi[6]
+      11251451904 blocks super 1.2 512K chunks 2 near-copies [12/12] [UUUUUUUUUUUU]
+      [>....................]  check =  1.5% (10620027200/11251451904) finish=101.6min speed=103517K/sec
+      bitmap: 35/84 pages [140KB], 65536KB chunk
+
+md1 : active raid1 sdb2[2] sda2[0]
+      5909504 blocks super 1.2 [2/2] [UU]
+
+md0 : active raid1 sdb1[2] sda1[0]
+      244005888 blocks super 1.2 [2/2] [UU]
+      bitmap: 1/2 pages [4KB], 65536KB chunk
+
+unused devices: <none>
+`
+
 const mdStatFileFailedDisk = `
 Personalities : [linear] [multipath] [raid0] [raid1] [raid6] [raid5] [raid4] [raid10]
 md0 : active raid5 sdd1[3] sdb1[1] sda1[0]
@@ -124,7 +166,7 @@ unused devices: <none>
 const mdStatFileInvalid = `
 Personalities :
 
-mdf1: testman actve 
+mdf1: testman actve
 
 md0 : active raid1 sdb1[2] sda1[0]
       244005888 blocks super 1.2 [2/2] [UU]

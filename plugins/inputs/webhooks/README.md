@@ -23,21 +23,45 @@ sudo service telegraf start
   [inputs.webhooks.filestack]
     path = "/filestack"
 
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
+
   [inputs.webhooks.github]
     path = "/github"
     # secret = ""
 
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
+
   [inputs.webhooks.mandrill]
     path = "/mandrill"
+
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
 
   [inputs.webhooks.rollbar]
     path = "/rollbar"
 
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
+
   [inputs.webhooks.papertrail]
     path = "/papertrail"
 
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
+
   [inputs.webhooks.particle]
     path = "/particle"
+
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
 ```
 
 ## Available webhooks

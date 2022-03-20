@@ -144,6 +144,43 @@ This plugin will format the events in the following way:
 }
 ```
 
+## OpenSearch Support
+
+OpenSearch is a fork of Elasticsearch hosted by AWS. The OpenSearch server will
+report itself to clients with an AWS specific-version (e.g. v1.0). In reality,
+the actual underlying Elasticsearch version is v7.1. This breaks Telegraf and
+other Elasticsearch clients that need to know what major version they are
+interfacing with.
+
+Amazon has created a [compatibility mode](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/rename.html#rename-upgrade)
+to allow existing Elasticsearch clients to properly work when the version needs
+to be checked. To enable compatibility mode users need to set the
+`override_main_response_version` to `true`.
+
+On existing clusters run:
+
+```json
+PUT /_cluster/settings
+{
+  "persistent" : {
+    "compatibility.override_main_response_version" : true
+  }
+}
+```
+
+And on new clusters set the option to true under advanced options:
+
+```json
+POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
+{
+  "DomainName": "domain-name",
+  "TargetVersion": "OpenSearch_1.0",
+  "AdvancedOptions": {
+    "override_main_response_version": "true"
+   }
+}
+```
+
 ## Configuration
 
 ```toml
@@ -163,6 +200,8 @@ This plugin will format the events in the following way:
   ## HTTP basic authentication details.
   # username = "telegraf"
   # password = "mypassword"
+  ## HTTP bearer token authentication details
+  # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 
   ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
@@ -208,6 +247,16 @@ This plugin will format the events in the following way:
   ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
   # float_handling = "none"
   # float_replacement_value = 0.0
+  
+  ## Pipeline Config
+  ## To use a ingest pipeline, set this to the name of the pipeline you want to use.
+  # use_pipeline = "my_pipeline"
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the pipeline name. If the tag does not exist,
+  ## the default pipeline will be used as the pipeline. If no default pipeline is set,
+  ## no pipeline is used for the metric.
+  # use_pipeline = "{{es_pipeline}}"
+  # default_pipeline = "my_pipeline"
 ```
 
 ### Permissions
@@ -247,6 +296,8 @@ Additionally, you can specify dynamic index names by using tags with the notatio
 * `force_document_id`: Set to true will compute a unique hash from as sha256(concat(timestamp,measurement,series-hash)),enables resend or update data withoud ES duplicated documents.
 * `float_handling`: Specifies how to handle `NaN` and infinite field values. `"none"` (default) will do nothing, `"drop"` will drop the field and `replace` will replace the field value by the number in `float_replacement_value`
 * `float_replacement_value`: Value (defaulting to `0.0`) to replace `NaN`s and `inf`s if `float_handling` is set to `replace`. Negative `inf` will be replaced by the negative value in this number to respect the sign of the field's original value.
+* `use_pipeline`: If set, the set value will be used as the pipeline to call when sending events to elasticsearch. Additionally, you can specify dynamic pipeline names by using tags with the notation ```{{tag_name}}```.  If the tag does not exist in a particular metric, the `default_pipeline` will be used instead.
+* `default_pipeline`: If dynamic pipeline names the tag does not exist in a particular metric, this value will be used instead.
 
 ## Known issues
 

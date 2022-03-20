@@ -4,6 +4,7 @@ Documentation=https://github.com/influxdata/telegraf
 After=network.target
 
 [Service]
+Type=notify
 EnvironmentFile=-/etc/default/telegraf
 User=telegraf
 ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d $TELEGRAF_OPTS

@@ -21,24 +21,41 @@ const (
 )
 
 var sampleConfig = `
-  servers = ["localhost:1883"] # required.
+  ## MQTT Brokers
+  ## The list of brokers should only include the hostname or IP address and the
+  ## port to the broker. This should follow the format '{host}:{port}'. For
+  ## example, "localhost:1883" or "127.0.0.1:8883".
+  servers = ["localhost:1883"]
 
-  ## MQTT outputs send metrics to this topic format
-  ##    "<topic_prefix>/<hostname>/<pluginname>/"
-  ##   ex: prefix/web01.example.com/mem
+  ## MQTT Topic for Producer Messages
+  ## MQTT outputs send metrics to this topic format:
+  ## <topic_prefix>/<hostname>/<pluginname>/ (e.g. prefix/web01.example.com/mem)
   topic_prefix = "telegraf"
 
   ## QoS policy for messages
+  ## The mqtt QoS policy for sending messages.
+  ## See https://www.ibm.com/support/knowledgecenter/en/SSFKSJ_9.0.0/com.ibm.mq.dev.doc/q029090_.htm
   ##   0 = at most once
   ##   1 = at least once
   ##   2 = exactly once
   # qos = 2
 
+  ## Keep Alive
+  ## Defines the maximum length of time that the broker and client may not
+  ## communicate. Defaults to 0 which turns the feature off.
+  ##
+  ## For version v2.0.12 and later mosquitto there is a bug
+  ## (see https://github.com/eclipse/mosquitto/issues/2117), which requires
+  ## this to be non-zero. As a reference eclipse/paho.mqtt.golang defaults to 30.
+  # keep_alive = 0
+
   ## username and password to connect MQTT server.
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
-  ## client ID, if not set a random ID is generated
+  ## client ID
+  ## The unique client id to connect MQTT server. If this parameter is not set
+  ## then a random ID is generated.
   # client_id = ""
 
   ## Timeout for write operations. default: 5s
@@ -48,10 +65,11 @@ var sampleConfig = `
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## When true, metrics will be sent in one MQTT message per flush.  Otherwise,
+  ## When true, metrics will be sent in one MQTT message per flush. Otherwise,
   ## metrics are written one metric per MQTT message.
   # batch = false
 
@@ -59,13 +77,6 @@ var sampleConfig = `
   ## actually reads it
   # retain = false
 
-  ## Defines the maximum length of time that the broker and client may not communicate. 
-  ## Defaults to 0 which turns the feature off. For version v2.0.12 of eclipse/mosquitto there is a 
-  ## [bug](https://github.com/eclipse/mosquitto/issues/2117) which requires keep_alive to be set.
-  ## As a reference eclipse/paho.mqtt.golang v1.3.0 defaults to 30.
-  # keep_alive = 0
-
-  ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md

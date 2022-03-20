@@ -27,6 +27,12 @@ It can output data in any of the [supported output formats](https://github.com/i
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Optional SOCKS5 proxy to use
+  # socks5_enabled = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
+
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:

@@ -219,7 +219,11 @@ func (s *Syslog) getSyslogMessageBytesWithFraming(msg *rfc5424.SyslogMessage) ([
 		return append([]byte(strconv.Itoa(len(msgBytes))+" "), msgBytes...), nil
 	}
 	// Non-transparent framing
-	return append(msgBytes, byte(s.Trailer)), nil
+	trailer, err := s.Trailer.Value()
+	if err != nil {
+		return nil, err
+	}
+	return append(msgBytes, byte(trailer)), nil
 }
 
 func (s *Syslog) initializeSyslogMapper() {

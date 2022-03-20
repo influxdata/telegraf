@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -23,9 +24,9 @@ type Agent struct {
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(config *config.Config) (*Agent, error) {
+func NewAgent(cfg *config.Config) (*Agent, error) {
 	a := &Agent{
-		Config: config,
+		Config: cfg,
 	}
 	return a, nil
 }
@@ -186,10 +187,21 @@ func (a *Agent) Run(ctx context.Context) error {
 // initPlugins runs the Init function on plugins.
 func (a *Agent) initPlugins() error {
 	for _, input := range a.Config.Inputs {
+		// Share the snmp translator setting with plugins that need it.
+		if tp, ok := input.Input.(snmp.TranslatorPlugin); ok {
+			tp.SetTranslator(a.Config.Agent.Translator)
+		}
 		err := input.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize input %s: %v",
 				input.LogName(), err)
+		}
+	}
+	for _, parser := range a.Config.Parsers {
+		err := parser.Init()
+		if err != nil {
+			return fmt.Errorf("could not initialize parser %s::%s: %v",
+				parser.Config.DataFormat, parser.Config.Parent, err)
 		}
 	}
 	for _, processor := range a.Config.Processors {
@@ -291,11 +303,17 @@ func (a *Agent) runInputs(
 			jitter = input.Config.CollectionJitter
 		}
 
+		// Overwrite agent collection_offset if this plugin has its own.
+		offset := time.Duration(a.Config.Agent.CollectionOffset)
+		if input.Config.CollectionOffset != 0 {
+			offset = input.Config.CollectionOffset
+		}
+
 		var ticker Ticker
 		if a.Config.Agent.RoundInterval {
-			ticker = NewAlignedTicker(startTime, interval, jitter)
+			ticker = NewAlignedTicker(startTime, interval, jitter, offset)
 		} else {
-			ticker = NewUnalignedTicker(interval, jitter)
+			ticker = NewUnalignedTicker(interval, jitter, offset)
 		}
 		defer ticker.Stop()
 

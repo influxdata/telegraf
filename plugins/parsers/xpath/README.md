@@ -13,7 +13,7 @@ For supported XPath functions check [the underlying XPath library][xpath lib].
 | [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
 | [JSON][json]                            | `"xpath_json"`        |         |
 | [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
-| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](protocol-buffers-additiona-settings)|
+| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
 
 ### Protocol buffers additional settings
 
@@ -136,6 +136,19 @@ metric.
     ## This allows to flatten out nodes with non-unique names in the subtree
     # field_name_expansion = false
 
+    ## Tag specifications using a selector.
+    ## tag_selection = "child::*"
+    ## Optional: Queries to specify tag name and value.
+    ## These options are only to be used in combination with 'tag_selection'!
+    ## By default the node name and node content is used if a tag-selection
+    ## is specified.
+    # tag_name  = "name()"
+    # tag_value = "."
+
+    ## Optional: Expand tag names relative to the selected node
+    ## This allows to flatten out nodes with non-unique names in the subtree
+    # tag_name_expansion = false
+
     ## Tag definitions using the given XPath queries.
     [inputs.file.xpath.tags]
       name   = "substring-after(Sensor/@name, ' ')"
@@ -205,6 +218,21 @@ Specifying `field_selection` is optional. This is an alternative way to specify 
 When *true*, field names selected with `field_selection` are expanded to a *path* relative to the *selected node*. This
 is necessary if we e.g. select all leaf nodes as fields and those leaf nodes do not have unique names. That is in case
 you have duplicate names in the fields you select you should set this to `true`.
+
+### tag_selection, tag_name, tag_value (optional)
+
+You can specify a [XPath][xpath] query to select a set of nodes forming the tags of the metric. The specified path can be absolute (starting with `/`) or relative to the currently selected node. Each node selected by `tag_selection` forms a new tag within the metric.
+
+The *name* and the *value* of each tag can be specified using the optional `tag_name` and `tag_value` queries. The queries are relative to the selected tag if not starting with `/`. If not specified the tag's *name* defaults to the node name and the tag's *value* defaults to the content of the selected tag node.
+**NOTE**: `tag_name` and `tag_value` queries are only evaluated if a `tag_selection` is specified.
+
+Specifying `tag_selection` is optional. This is an alternative way to specify tags especially for documents where the node names are not known a priori or if there is a large number of tags to be specified. These options can also be combined with the tag specifications above.
+
+### tag_name_expansion (optional)
+
+When *true*, tag names selected with `tag_selection` are expanded to a *path* relative to the *selected node*. This
+is necessary if we e.g. select all leaf nodes as tags and those leaf nodes do not have unique names. That is in case
+you have duplicate names in the tags you select you should set this to `true`.
 
 ## Examples
 

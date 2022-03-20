@@ -52,6 +52,8 @@ InfluxDB-formatted endpoints. See below for more information.
   - **expandSourcesReq**: Number of remote node requests made to find measurements on this node that match a particular regular expression.
   - **fieldDimensionsReq**: Number of remote node requests for information about the fields and associated types, and tag keys of measurements on this data node.
   - **iteratorCostReq**: Number of internal requests for iterator cost.
+  - **openConnections**: Tracks the number of open connections being handled by the data node
+    (including logical connections multiplexed onto a single yamux connection).
   - **removeShardReq**: Number of internal requests to delete a shard from this data node. Exclusively incremented by use of the influxd-ctl remove shard command.
   - **writeShardFail**: Total number of internal write requests from a remote node that failed.
   - **writeShardPointsReq**: Number of points in every internal write request from any remote node, regardless of success.

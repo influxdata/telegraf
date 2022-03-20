@@ -1,0 +1,8 @@
+AnonHugePages:         0 kB
+ShmemHugePages:        0 kB
+HugePages_Total:    2048
+HugePages_Free:      sixtynine
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:        12582912 kB
