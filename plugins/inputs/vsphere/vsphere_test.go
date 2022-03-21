@@ -238,6 +238,10 @@ func TestConfigDurationParsing(t *testing.T) {
 }
 
 func TestMaxQuery(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -295,6 +299,10 @@ func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, exp
 }
 
 func TestFinder(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -411,6 +419,10 @@ func TestFinder(t *testing.T) {
 }
 
 func TestFolders(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -452,10 +464,18 @@ func TestFolders(t *testing.T) {
 }
 
 func TestCollectionWithClusterMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	testCollection(t, false)
 }
 
 func TestCollectionNoClusterMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	testCollection(t, true)
 }
 
