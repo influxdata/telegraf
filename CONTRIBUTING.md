@@ -1,6 +1,5 @@
 # Contributing to Telegraf
 
-Telegraf is a large open-source project and there are multiple ways to contribute.
 There are many ways to get involved in the Telegraf project! From opening issues, creating pull requests, to joining the conversation in Slack. We would to see you contribute your expertise and join our community. To get started review this document to learn best practices.
 
 ![tiger](assets/GopherAndTiger.png "tiger")
@@ -9,16 +8,11 @@ There are many ways to get involved in the Telegraf project! From opening issues
 
 ### Bug reports
 
-Before you file an issue, please search existing issues in case it has already been filed, or perhaps even fixed. If you file an issue, please include the following.
-
-- Full details of your operating system (or distribution) e.g. 64bit Ubuntu 18.04.
-- The version of Telegraf you are running
-- Whether you installed it using a pre-built package, or built it from source.
-- Clear steps to reproduce the issue described, if at all possible.
+Before you file an issue, please search existing issues in case it has already been filed, or perhaps even fixed. If you file an issue, please ensure you include all the requested details (e.g. Telegraf config and logs, platform, etc.)
 
 ### Feature requests
 
-We really like to receive feature requests as it helps us prioritize our work. Please be clear about your requirements and goals, help us to understand what you would like to see added to Telegraf with examples and the reasons why it is important to you. If you find your feature request already exists as a Github issue please indicate your support for that feature by using the "thumbs up" reaction.
+We really like to receive feature requests as it helps us prioritize our work. Before you file a feature request, please search existing issues, you can filter issues that have the label `feature request`. Please be clear about your requirements and goals, help us to understand what you would like to see added to Telegraf with examples and the reasons why it is important to you. If you find your feature request already exists as a Github issue please indicate your support for that feature by using the "thumbs up" reaction.
 
 ### Support questions
 
