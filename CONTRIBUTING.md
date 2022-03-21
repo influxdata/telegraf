@@ -10,11 +10,6 @@ There are many ways to get involved in the Telegraf project! From opening issues
 
 Before you file an issue, please search existing issues in case it has already been filed, or perhaps even fixed. If you file an issue, please ensure you include all the requested details (e.g. Telegraf config and logs, platform, etc.)
 
-- Full details of your operating system (or distribution) e.g. 64bit Ubuntu 18.04.
-- The version of Telegraf you are running
-- Whether you installed it using a pre-built package, or built it from source.
-- Clear steps to reproduce the issue described, if at all possible.
-
 ### Feature requests
 
 We really like to receive feature requests as it helps us prioritize our work. Please be clear about your requirements and goals, help us to understand what you would like to see added to Telegraf with examples and the reasons why it is important to you. If you find your feature request already exists as a Github issue please indicate your support for that feature by using the "thumbs up" reaction.
