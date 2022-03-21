@@ -110,9 +110,7 @@ func TestOpenConfigTelemetryData(t *testing.T) {
 		"_subcomponent_id": uint32(0),
 	}
 
-	// Give sometime for gRPC channel to be established
-	time.Sleep(tenMillisecondsDuration)
-
+	require.Eventually(t, func() bool { return acc.HasMeasurement("/sensor") }, 5*time.Second, 10*time.Millisecond)
 	acc.AssertContainsTaggedFields(t, "/sensor", fields, tags)
 }
 
@@ -136,9 +134,7 @@ func TestOpenConfigTelemetryDataWithPrefix(t *testing.T) {
 		"_subcomponent_id":      uint32(0),
 	}
 
-	// Give sometime for gRPC channel to be established
-	time.Sleep(tenMillisecondsDuration)
-
+	require.Eventually(t, func() bool { return acc.HasMeasurement("/sensor_with_prefix") }, 5*time.Second, 10*time.Millisecond)
 	acc.AssertContainsTaggedFields(t, "/sensor_with_prefix", fields, tags)
 }
 
@@ -177,9 +173,7 @@ func TestOpenConfigTelemetryDataWithMultipleTags(t *testing.T) {
 		"_subcomponent_id":      uint32(0),
 	}
 
-	// Give sometime for gRPC channel to be established
-	time.Sleep(tenMillisecondsDuration)
-
+	require.Eventually(t, func() bool { return acc.HasMeasurement("/sensor_with_multiple_tags") }, 5*time.Second, 10*time.Millisecond)
 	acc.AssertContainsTaggedFields(t, "/sensor_with_multiple_tags", fields1, tags1)
 	acc.AssertContainsTaggedFields(t, "/sensor_with_multiple_tags", fields2, tags2)
 }
@@ -206,8 +200,7 @@ func TestOpenConfigTelemetryDataWithStringValues(t *testing.T) {
 	}
 
 	// Give sometime for gRPC channel to be established
-	time.Sleep(tenMillisecondsDuration)
-
+	require.Eventually(t, func() bool { return acc.HasMeasurement("/sensor_with_string_values") }, 5*time.Second, 10*time.Millisecond)
 	acc.AssertContainsTaggedFields(t, "/sensor_with_string_values", fields, tags)
 }
 
