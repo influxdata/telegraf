@@ -63,5 +63,4 @@ Examples:
   telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 
   # run telegraf with pprof
-  telegraf --config telegraf.conf --pprof-addr localhost:6060
-`
+  telegraf --config telegraf.conf --pprof-addr localhost:6060`
