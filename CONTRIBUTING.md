@@ -1,6 +1,5 @@
 # Contributing to Telegraf
 
-Telegraf is a large open-source project and there are multiple ways to contribute.
 There are many ways to get involved in the Telegraf project! From opening issues, creating pull requests, to joining the conversation in Slack. We would to see you contribute your expertise and join our community. To get started review this document to learn best practices.
 
 ![tiger](assets/GopherAndTiger.png "tiger")
