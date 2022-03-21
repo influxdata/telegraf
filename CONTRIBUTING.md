@@ -8,7 +8,7 @@ There are many ways to get involved in the Telegraf project! From opening issues
 
 ### Bug reports
 
-Before you file an issue, please search existing issues in case it has already been filed, or perhaps even fixed. If you file an issue, please include the following.
+Before you file an issue, please search existing issues in case it has already been filed, or perhaps even fixed. If you file an issue, please ensure you include all the requested details (e.g. Telegraf config and logs, platform, etc.)
 
 - Full details of your operating system (or distribution) e.g. 64bit Ubuntu 18.04.
 - The version of Telegraf you are running
