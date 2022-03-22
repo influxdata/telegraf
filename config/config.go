@@ -613,10 +613,8 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 	// Print Inputs
 	for _, pname := range pnames {
 		// Skip inputs that are registered twice for backward compatibility
-		if pname == "cisco_telemetry_gnmi" {
-			continue
-		}
-		if pname == "KNXListener" {
+		switch pname {
+		case "cisco_telemetry_gnmi", "io", "KNXListener":
 			continue
 		}
 		creator := inputs.Inputs[pname]
@@ -1241,14 +1239,6 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 func (c *Config) addInput(name string, table *ast.Table) error {
 	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
 		return nil
-	}
-
-	// Legacy support renaming io input to diskio
-	if name == "io" {
-		if err := c.printUserDeprecation("inputs", name, nil); err != nil {
-			return err
-		}
-		name = "diskio"
 	}
 
 	// For inputs with parsers we need to compute the set of
