@@ -69,7 +69,7 @@ var sampleConfig = `
   health_check_interval = "10s"
   ## Set the timeout for periodic health checks.
   ## The default healthcheck timeout is 1s
-  health_check_timeout = "5s"
+  health_check_timeout = "1s"
   ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"

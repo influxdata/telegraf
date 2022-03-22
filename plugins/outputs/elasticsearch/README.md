@@ -199,7 +199,7 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
   health_check_interval = "10s"
   ## Set the timeout for periodic health checks.
   ## The default healthcheck timeout is 1s
-  health_check_timeout = "5s"
+  health_check_timeout = "1s"
   ## HTTP basic authentication details.
   # username = "telegraf"
   # password = "mypassword"
