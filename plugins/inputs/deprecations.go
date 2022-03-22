@@ -8,6 +8,10 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		Since:  "1.7.0",
 		Notice: "use 'inputs.jolokia2' with the 'cassandra.conf' example configuration instead",
 	},
+	"cisco_telemetry_gnmi": {
+		Since:  "1.15.0",
+		Notice: "has been renamed to 'gnmi'",
+	},
 	"http_listener": {
 		Since:  "1.9.0",
 		Notice: "has been renamed to 'influxdb_listener', use 'inputs.influxdb_listener' or 'inputs.http_listener_v2' instead",
