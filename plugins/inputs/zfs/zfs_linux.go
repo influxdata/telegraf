@@ -69,11 +69,11 @@ func getPools(kstatPath string) ([]poolInfo, error) {
 
 func getTags(pools []poolInfo) map[string]string {
 	poolNames := ""
-	knownPools := make(map[string]bool)
+	knownPools := make(map[string]struct{})
 	for _, entry := range pools {
 		name := entry.name
 		if _, value := knownPools[name]; !value {
-			knownPools[name] = true
+			knownPools[name] = struct{}{}
 			if poolNames != "" {
 				poolNames += "::"
 			}
