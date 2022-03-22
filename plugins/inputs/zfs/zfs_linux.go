@@ -72,7 +72,7 @@ func getTags(pools []poolInfo) map[string]string {
 	knownPools := make(map[string]struct{})
 	for _, entry := range pools {
 		name := entry.name
-		if _, value := knownPools[name]; !value {
+		if _, ok := knownPools[name]; !ok {
 			knownPools[name] = struct{}{}
 			if poolNames != "" {
 				poolNames += "::"
