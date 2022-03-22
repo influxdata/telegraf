@@ -10,6 +10,8 @@ There are many ways to get involved in the Telegraf project! From opening issues
 
 Before you file an issue, please search existing issues in case it has already been filed, or perhaps even fixed. If you file an issue, please ensure you include all the requested details (e.g. Telegraf config and logs, platform, etc.)
 
+Please note that issues are not the place to file general support requests such as "How do I use the mongoDB plugin?" Questions of this nature should be sent to the [Community Slack](https://influxdata.com/slack) or [Community Page](https://community.influxdata.com/), not filed as issues.
+
 ### Feature requests
 
 We really like to receive feature requests as it helps us prioritize our work. Before you file a feature request, please search existing issues, you can filter issues that have the label `feature request`. Please be clear about your requirements and goals, help us to understand what you would like to see added to Telegraf with examples and the reasons why it is important to you. If you find your feature request already exists as a Github issue please indicate your support for that feature by using the "thumbs up" reaction.
