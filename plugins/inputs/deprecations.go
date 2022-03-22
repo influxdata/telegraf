@@ -33,6 +33,10 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		Since:  "1.4.0",
 		Notice: "use 'inputs.kafka_consumer' instead, NOTE: 'kafka_consumer' only supports Kafka v0.8+",
 	},
+	"KNXListener": {
+		Since:  "1.20.1",
+		Notice: "has been renamed to 'knx_listener'",
+	},
 	"logparser": {
 		Since:  "1.15.0",
 		Notice: "use 'inputs.tail' with 'grok' data format instead",
