@@ -189,7 +189,7 @@ func (a *Agent) initPlugins() error {
 	for _, input := range a.Config.Inputs {
 		// Share the snmp translator setting with plugins that need it.
 		if tp, ok := input.Input.(snmp.TranslatorPlugin); ok {
-			tp.SetTranslator(a.Config.Agent.Translator)
+			tp.SetTranslator(a.Config.Agent.SnmpTranslator)
 		}
 		err := input.Init()
 		if err != nil {
