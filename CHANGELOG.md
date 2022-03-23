@@ -2,6 +2,21 @@
 
 # Changelog
 
+## v1.22.0
+
+This version introduces an agent setting to select the method of
+translating SNMP objects. The agent setting "snmp_translator" can be
+"netsnmp" which translates by calling external programs snmptranslate
+and snmptable, or "gosmi" which translates using the built-in gosmi
+library.
+
+Before version 1.21.0, Telegraf only used the netsnmp method. Versions
+1.21.0 through 1.21.4 only used the gosmi method. Since the
+translation method is now configurable and "netsnmp" is the default,
+users who wish to continue using "gosmi" must add `snmp_translator =
+"gosmi"` in the agent section of their config file. See
+[#10802](https://github.com/influxdata/telegraf/pull/10802).
+
 ## v1.21.4 [2022-02-16]
 
 ### Bugfixes
