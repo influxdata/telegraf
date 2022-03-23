@@ -1886,8 +1886,9 @@ var cephStatusResults = []expectedResult{
 	{
 		metric: "ceph_health",
 		fields: map[string]interface{}{
-			"status":      "HEALTH_OK",
-			"status_code": float64(2),
+			"status":         "HEALTH_OK",
+			"status_code":    float64(2),
+			"overall_status": (*string)(nil),
 		},
 		tags: map[string]string{},
 	},
@@ -1916,6 +1917,8 @@ var cephStatusResults = []expectedResult{
 			"num_up_osds":      float64(24),
 			"num_in_osds":      float64(24),
 			"num_remapped_pgs": float64(0),
+			"full":             (*bool)(nil),
+			"nearfull":         (*bool)(nil),
 		},
 		tags: map[string]string{},
 	},
@@ -1944,6 +1947,7 @@ var cephStatusResults = []expectedResult{
 			"write_bytes_sec":            float64(367217),
 			"read_op_per_sec":            float64(322),
 			"write_op_per_sec":           float64(1022),
+			"op_per_sec":                 (*float64)(nil),
 		},
 		tags: map[string]string{},
 	},
@@ -2269,4 +2273,8 @@ var cephOSDPoolStatsResults = []expectedResult{
 			"name": "pbench",
 		},
 	},
+}
+
+func pf(i float64) *float64 {
+	return &i
 }

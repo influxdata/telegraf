@@ -179,6 +179,7 @@ All admin measurements will have the following tags:
   - fields:
     - status (string)
     - status_code (int)
+    - overall_status (string, exists only in ceph <15)
 
 - ceph_monmap
   - fields:
@@ -191,6 +192,8 @@ All admin measurements will have the following tags:
     - num_up_osds (float)
     - num_in_osds (float)
     - num_remapped_pgs (float)
+    - full (bool, exists only in ceph <15)
+    - nearfull (bool, exists only in ceph <15)
 
 - ceph_pgmap
   - fields:
@@ -216,6 +219,7 @@ All admin measurements will have the following tags:
     - write_bytes_sec (float)
     - read_op_per_sec (float)
     - write_op_per_sec (float)
+    - op_per_sec (float, exists only in ceph <10)
 
 - ceph_pgmap_state
   - tags:
@@ -272,33 +276,34 @@ All admin measurements will have the following tags:
     - num_objects_recovered (float)
     - num_bytes_recovered (float)
     - num_keys_recovered (float)
+    - op_per_sec (float, exists only in ceph <10)
 
 ## Example
 
 Below is an example of a custer stats:
 
-```shell
-> ceph_fsmap,host=ceph in=1,max=1,up=1,up_standby=2 1646782035000000000
-> ceph_health,host=ceph status="HEALTH_OK",status_code=2 1646782035000000000
-> ceph_monmap,host=ceph num_mons=3 1646782035000000000
-> ceph_osdmap,host=ceph epoch=10560,num_in_osds=6,num_osds=6,num_remapped_pgs=0,num_up_osds=6 1646782035000000000
-> ceph_pgmap,host=ceph bytes_avail=7863124942848,bytes_total=14882929901568,bytes_used=7019804958720,data_bytes=2411111520818,degraded_objects=0,degraded_ratio=0,degraded_total=0,inactive_pgs_ratio=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects=973030,num_objects_recovered=0,num_pgs=233,num_pools=6,read_bytes_sec=7334,read_op_per_sec=2,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,version=0,write_bytes_sec=13113085,write_op_per_sec=355 1646782035000000000
-> ceph_pgmap_state,host=ceph,state=active+clean count=233 1646782035000000000
-> ceph_usage,host=ceph num_osds=6,num_per_pool_omap_osds=6,num_per_pool_osds=6,total_avail_bytes=7863124942848,total_bytes=14882929901568,total_used_bytes=7019804958720,total_used_raw_bytes=7019804958720,total_used_raw_ratio=0.47166821360588074 1646782035000000000
-> ceph_deviceclass_usage,class=hdd,host=ceph total_avail_bytes=6078650843136,total_bytes=12002349023232,total_used_bytes=5923698180096,total_used_raw_bytes=5923698180096,total_used_raw_ratio=0.49354490637779236 1646782035000000000
-> ceph_deviceclass_usage,class=ssd,host=ceph total_avail_bytes=1784474099712,total_bytes=2880580878336,total_used_bytes=1096106778624,total_used_raw_bytes=1096106778624,total_used_raw_ratio=0.3805158734321594 1646782035000000000
-> ceph_pool_usage,host=ceph,name=Foo bytes_used=2019483848658,kb_used=1972152196,max_avail=1826022621184,objects=161029,percent_used=0.26935243606567383,stored=672915064134 1646782035000000000
-> ceph_pool_usage,host=ceph,name=Bar_metadata bytes_used=4370899787,kb_used=4268457,max_avail=546501918720,objects=89702,percent_used=0.002658897778019309,stored=1456936576 1646782035000000000
-> ceph_pool_usage,host=ceph,name=Bar_data bytes_used=3893328740352,kb_used=3802078848,max_avail=1826022621184,objects=518396,percent_used=0.41544806957244873,stored=1292214337536 1646782035000000000
-> ceph_pool_usage,host=ceph,name=device_health_metrics bytes_used=85289044,kb_used=83291,max_avail=3396406870016,objects=9,percent_used=0.000012555617104226258,stored=42644520 1646782035000000000
-> ceph_pool_usage,host=ceph,name=Foo_Fast bytes_used=597511814461,kb_used=583507632,max_avail=546501918720,objects=67014,percent_used=0.2671019732952118,stored=199093853972 1646782035000000000
-> ceph_pool_usage,host=ceph,name=Bar_data_fast bytes_used=490009280512,kb_used=478524688,max_avail=546501918720,objects=136880,percent_used=0.23010368645191193,stored=163047325696 1646782035000000000
-> ceph_pool_stats,host=ceph,name=Foo degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=27720,write_op_per_sec=4 1646782036000000000
-> ceph_pool_stats,host=ceph,name=Bar_metadata degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=9638,read_op_per_sec=3,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=11802778,write_op_per_sec=60 1646782036000000000
-> ceph_pool_stats,host=ceph,name=Bar_data degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=0,write_op_per_sec=104 1646782036000000000
-> ceph_pool_stats,host=ceph,name=device_health_metrics degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=0,write_op_per_sec=0 1646782036000000000
-> ceph_pool_stats,host=ceph,name=Foo_Fast degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=11173,write_op_per_sec=1 1646782036000000000
-> ceph_pool_stats,host=ceph,name=Bar_data_fast degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=2155404,write_op_per_sec=262 1646782036000000000
+```text
+ceph_fsmap,host=ceph in=1,max=1,up=1,up_standby=2 1646782035000000000
+ceph_health,host=ceph status="HEALTH_OK",status_code=2 1646782035000000000
+ceph_monmap,host=ceph num_mons=3 1646782035000000000
+ceph_osdmap,host=ceph epoch=10560,num_in_osds=6,num_osds=6,num_remapped_pgs=0,num_up_osds=6 1646782035000000000
+ceph_pgmap,host=ceph bytes_avail=7863124942848,bytes_total=14882929901568,bytes_used=7019804958720,data_bytes=2411111520818,degraded_objects=0,degraded_ratio=0,degraded_total=0,inactive_pgs_ratio=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects=973030,num_objects_recovered=0,num_pgs=233,num_pools=6,read_bytes_sec=7334,read_op_per_sec=2,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,version=0,write_bytes_sec=13113085,write_op_per_sec=355 1646782035000000000
+ceph_pgmap_state,host=ceph,state=active+clean count=233 1646782035000000000
+ceph_usage,host=ceph num_osds=6,num_per_pool_omap_osds=6,num_per_pool_osds=6,total_avail_bytes=7863124942848,total_bytes=14882929901568,total_used_bytes=7019804958720,total_used_raw_bytes=7019804958720,total_used_raw_ratio=0.47166821360588074 1646782035000000000
+ceph_deviceclass_usage,class=hdd,host=ceph total_avail_bytes=6078650843136,total_bytes=12002349023232,total_used_bytes=5923698180096,total_used_raw_bytes=5923698180096,total_used_raw_ratio=0.49354490637779236 1646782035000000000
+ceph_deviceclass_usage,class=ssd,host=ceph total_avail_bytes=1784474099712,total_bytes=2880580878336,total_used_bytes=1096106778624,total_used_raw_bytes=1096106778624,total_used_raw_ratio=0.3805158734321594 1646782035000000000
+ceph_pool_usage,host=ceph,name=Foo bytes_used=2019483848658,kb_used=1972152196,max_avail=1826022621184,objects=161029,percent_used=0.26935243606567383,stored=672915064134 1646782035000000000
+ceph_pool_usage,host=ceph,name=Bar_metadata bytes_used=4370899787,kb_used=4268457,max_avail=546501918720,objects=89702,percent_used=0.002658897778019309,stored=1456936576 1646782035000000000
+ceph_pool_usage,host=ceph,name=Bar_data bytes_used=3893328740352,kb_used=3802078848,max_avail=1826022621184,objects=518396,percent_used=0.41544806957244873,stored=1292214337536 1646782035000000000
+ceph_pool_usage,host=ceph,name=device_health_metrics bytes_used=85289044,kb_used=83291,max_avail=3396406870016,objects=9,percent_used=0.000012555617104226258,stored=42644520 1646782035000000000
+ceph_pool_usage,host=ceph,name=Foo_Fast bytes_used=597511814461,kb_used=583507632,max_avail=546501918720,objects=67014,percent_used=0.2671019732952118,stored=199093853972 1646782035000000000
+ceph_pool_usage,host=ceph,name=Bar_data_fast bytes_used=490009280512,kb_used=478524688,max_avail=546501918720,objects=136880,percent_used=0.23010368645191193,stored=163047325696 1646782035000000000
+ceph_pool_stats,host=ceph,name=Foo degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=27720,write_op_per_sec=4 1646782036000000000
+ceph_pool_stats,host=ceph,name=Bar_metadata degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=9638,read_op_per_sec=3,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=11802778,write_op_per_sec=60 1646782036000000000
+ceph_pool_stats,host=ceph,name=Bar_data degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=0,write_op_per_sec=104 1646782036000000000
+ceph_pool_stats,host=ceph,name=device_health_metrics degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=0,write_op_per_sec=0 1646782036000000000
+ceph_pool_stats,host=ceph,name=Foo_Fast degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=11173,write_op_per_sec=1 1646782036000000000
+ceph_pool_stats,host=ceph,name=Bar_data_fast degraded_objects=0,degraded_ratio=0,degraded_total=0,num_bytes_recovered=0,num_keys_recovered=0,num_objects_recovered=0,read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=2155404,write_op_per_sec=262 1646782036000000000
 ```
 
 Below is an example of admin socket stats:
