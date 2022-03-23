@@ -1,4 +1,4 @@
-# Hashicorp Consul Metrics Input Plugin
+# Hashicorp Consul Agent Metrics Input Plugin
 
 This plugin grabs metrics from a Consul agent. Telegraf may be present in every node and connect to the agent locally. In this case should be something like `http://127.0.0.1:8500`.
 
@@ -11,7 +11,7 @@ This plugin grabs metrics from a Consul agent. Telegraf may be present in every 
   ## URL for the Consul agent
   # url = "http://127.0.0.1:8500"
 
-  ## Use auth token for authorization. 
+  ## Use auth token for authorization.
   ## If both are set, an error is thrown.
   ## If both are empty, no token will be used.
   # token_file = "/path/to/auth/token"
