@@ -361,8 +361,8 @@ type CephStatus struct {
 		NumUpStandby float64 `json:"up:standby"`
 	} `json:"fsmap"`
 	Health struct {
-		Status        string  `json:"status"`
-		OverallStatus *string `json:"overall_status"` // Only valid for ceph version <15
+		Status        string `json:"status"`
+		OverallStatus string `json:"overall_status"` // Only valid for ceph version <15
 	} `json:"health"`
 	MonMap struct {
 		NumMons float64 `json:"num_mons"`
@@ -373,37 +373,37 @@ type CephStatus struct {
 		NumUpOSDs      float64 `json:"num_up_osds"`
 		NumInOSDs      float64 `json:"num_in_osds"`
 		NumRemappedPGs float64 `json:"num_remapped_pgs"`
-		Full           *bool   `json:"full"`     // Only valid for ceph version <15
-		NearFull       *bool   `json:"nearfull"` // Only valid for ceph version <15
+		Full           bool    `json:"full"`     // Only valid for ceph version <15
+		NearFull       bool    `json:"nearfull"` // Only valid for ceph version <15
 	} `json:"osdmap"`
 	PGMap struct {
 		PGsByState []struct {
 			StateName string  `json:"state_name"`
 			Count     float64 `json:"count"`
 		} `json:"pgs_by_state"`
-		Version                 float64  `json:"version"`
-		NumPGs                  float64  `json:"num_pgs"`
-		NumPools                float64  `json:"num_pools"`
-		NumObjects              float64  `json:"num_objects"`
-		DataBytes               float64  `json:"data_bytes"`
-		BytesUsed               float64  `json:"bytes_used"`
-		BytesAvail              float64  `json:"bytes_avail"`
-		BytesTotal              float64  `json:"bytes_total"`
-		ReadBytesSec            float64  `json:"read_bytes_sec"`
-		WriteBytesSec           float64  `json:"write_bytes_sec"`
-		ReadOpPerSec            float64  `json:"read_op_per_sec"`
-		WriteOpPerSec           float64  `json:"write_op_per_sec"`
-		InactivePGsRatio        float64  `json:"inactive_pgs_ratio"`
-		DegradedObjects         float64  `json:"degraded_objects"`
-		DegraedTotal            float64  `json:"degraded_total"`
-		DegradedRatio           float64  `json:"degraded_ratio"`
-		RecoveringObjectsPerSec float64  `json:"recovering_objects_per_sec"`
-		RecoveringBytesPerSec   float64  `json:"recovering_bytes_per_sec"`
-		RecoveringKeysPerSec    float64  `json:"recovering_keys_per_sec"`
-		NumOjbectRecovered      float64  `json:"num_objects_recovered"`
-		NumBytesRecovered       float64  `json:"num_bytes_recovered"`
-		NumKeysRecovered        float64  `json:"num_keys_recovered"`
-		OpPerSec                *float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
+		Version                 float64 `json:"version"`
+		NumPGs                  float64 `json:"num_pgs"`
+		NumPools                float64 `json:"num_pools"`
+		NumObjects              float64 `json:"num_objects"`
+		DataBytes               float64 `json:"data_bytes"`
+		BytesUsed               float64 `json:"bytes_used"`
+		BytesAvail              float64 `json:"bytes_avail"`
+		BytesTotal              float64 `json:"bytes_total"`
+		ReadBytesSec            float64 `json:"read_bytes_sec"`
+		WriteBytesSec           float64 `json:"write_bytes_sec"`
+		ReadOpPerSec            float64 `json:"read_op_per_sec"`
+		WriteOpPerSec           float64 `json:"write_op_per_sec"`
+		InactivePGsRatio        float64 `json:"inactive_pgs_ratio"`
+		DegradedObjects         float64 `json:"degraded_objects"`
+		DegraedTotal            float64 `json:"degraded_total"`
+		DegradedRatio           float64 `json:"degraded_ratio"`
+		RecoveringObjectsPerSec float64 `json:"recovering_objects_per_sec"`
+		RecoveringBytesPerSec   float64 `json:"recovering_bytes_per_sec"`
+		RecoveringKeysPerSec    float64 `json:"recovering_keys_per_sec"`
+		NumOjbectRecovered      float64 `json:"num_objects_recovered"`
+		NumBytesRecovered       float64 `json:"num_bytes_recovered"`
+		NumKeysRecovered        float64 `json:"num_keys_recovered"`
+		OpPerSec                float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
 	} `json:"pgmap"`
 }
 
