@@ -704,7 +704,7 @@ func TestGatherHttpLimitReqsMetrics(t *testing.T) {
 		map[string]string{
 			"source": host,
 			"port":   port,
-			"zone":   "limit_1",
+			"limit":   "limit_1",
 		})
 
 	acc.AssertContainsTaggedFields(
@@ -720,7 +720,7 @@ func TestGatherHttpLimitReqsMetrics(t *testing.T) {
 		map[string]string{
 			"source": host,
 			"port":   port,
-			"zone":   "limit_2",
+			"limit":   "limit_2",
 		})
 }
 
