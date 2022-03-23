@@ -46,6 +46,7 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
 | nginx_plus_api_stream_server_zones   | >= 3                      |
 | nginx_plus_api_http_location_zones   | >= 5                      |
 | nginx_plus_api_resolver_zones        | >= 5                      |
+| nginx_plus_api_http_limit_reqs       | >= 6                      |
 
 ## Measurements & Fields
 
@@ -170,6 +171,12 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
   - refused
   - timedout
   - unknown
+- nginx_plus_api_http_limit_reqs
+  - passed
+  - delayed
+  - rejected
+  - delayed_dry_run
+  - rejected_dry_run
 
 ## Tags
 
@@ -197,6 +204,12 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
 - nginx_plus_api_http_caches
   - source
   - port
+
+- nginx_plus_api_http_limit_reqs
+  - source
+  - port
+  - limit
+
 
 ## Example Output
 
@@ -251,6 +264,8 @@ It produces:
 > nginx_plus_api_http_location_zones,port=80,source=demo.nginx.com,zone=swagger discarded=0i,received=1622i,requests=8i,responses_1xx=0i,responses_2xx=7i,responses_3xx=0i,responses_4xx=1i,responses_5xx=0i,responses_total=8i,sent=638333i 1570696323000000000
 > nginx_plus_api_http_location_zones,port=80,source=demo.nginx.com,zone=api-calls discarded=64i,received=337530181i,requests=1726513i,responses_1xx=0i,responses_2xx=1726428i,responses_3xx=0i,responses_4xx=21i,responses_5xx=0i,responses_total=1726449i,sent=1902577668i 1570696323000000000
 > nginx_plus_api_resolver_zones,port=80,source=demo.nginx.com,zone=resolver1 addr=0i,formerr=0i,name=0i,noerror=0i,notimp=0i,nxdomain=0i,refused=0i,servfail=0i,srv=0i,timedout=0i,unknown=0i 1570696324000000000
+> nginx_plus_api_http_limit_reqs,port=80,source=demo.nginx.com,limit=limit_1 delayed=0i,delayed_dry_run=0i,passed=6i,rejected=9i,rejected_dry_run=0i 1570696322000000000
+> nginx_plus_api_http_limit_reqs,port=80,source=demo.nginx.com,limit=limit_2 delayed=0i,delayed_dry_run=3i,passed=6i,rejected=1i,rejected_dry_run=31i 1570696322000000000
 ```
 
 ### Reference material

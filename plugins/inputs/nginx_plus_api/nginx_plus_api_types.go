@@ -157,3 +157,11 @@ type HTTPCaches map[string]struct { // added in version 2
 	Expired     ExtendedHitStats `json:"expired"`
 	Bypass      ExtendedHitStats `json:"bypass"`
 }
+
+type HTTPLimitReqs map[string]struct {
+	Passed         int64 `json:"passed"`
+	Delayed        int64 `json:"delayed"`
+	Rejected       int64 `json:"rejected"`
+	DelayedDryRun  int64 `json:"delayed_dry_run"`
+	RejectedDryRun int64 `json:"rejected_dry_run"`
+}
