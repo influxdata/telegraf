@@ -1943,6 +1943,7 @@ var cephStatusResults = []expectedResult{
 			"num_objects_recovered":      float64(40),
 			"num_bytes_recovered":        float64(1335808),
 			"num_keys_recovered":         float64(64),
+			"op_per_sec":                 float64(0), // exists only in ceph <10
 			"read_bytes_sec":             float64(0),
 			"write_bytes_sec":            float64(367217),
 			"read_op_per_sec":            float64(322),
@@ -2065,12 +2066,14 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_usage",
 		fields: map[string]interface{}{
+			"total_avail":            float64(0), // pre ceph 0.84
 			"total_bytes":            float64(14882929901568),
-			"total_avail_bytes":      float64(7866135064576),
+			"total_space":            float64(0), // pre ceph 0.84
 			"total_used_bytes":       float64(7016794836992),
 			"total_used_raw_bytes":   float64(7016794836992),
 			"total_used_raw_ratio":   float64(0.47146594524383545),
-			"num_osds":               float64(6),
+			"total_used":             float64(0), // pre ceph 0.84
+            "num_osds":               float64(6),
 			"num_per_pool_osds":      float64(6),
 			"num_per_pool_omap_osds": float64(6),
 		},
@@ -2213,6 +2216,7 @@ var cephOSDPoolStatsResults = []expectedResult{
 	{
 		metric: "ceph_pool_stats",
 		fields: map[string]interface{}{
+			"op_per_sec":                 float64(0), // This field is no longer reported in ceph 10 and later
 			"read_bytes_sec":             float64(0),
 			"write_bytes_sec":            float64(0),
 			"read_op_per_sec":            float64(0),
@@ -2234,6 +2238,7 @@ var cephOSDPoolStatsResults = []expectedResult{
 	{
 		metric: "ceph_pool_stats",
 		fields: map[string]interface{}{
+			"op_per_sec":                 float64(0), // This field is no longer reported in ceph 10 and later
 			"read_bytes_sec":             float64(0),
 			"write_bytes_sec":            float64(0),
 			"read_op_per_sec":            float64(0),
@@ -2255,6 +2260,7 @@ var cephOSDPoolStatsResults = []expectedResult{
 	{
 		metric: "ceph_pool_stats",
 		fields: map[string]interface{}{
+			"op_per_sec":                 float64(0), // This field is no longer reported in ceph 10 and later
 			"read_bytes_sec":             float64(10566067),
 			"write_bytes_sec":            float64(15165220376),
 			"read_op_per_sec":            float64(182),
