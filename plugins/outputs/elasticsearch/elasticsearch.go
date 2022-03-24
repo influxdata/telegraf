@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"text/template"
@@ -13,7 +14,7 @@ import (
 
 	"crypto/sha256"
 
-	"gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -22,25 +23,29 @@ import (
 )
 
 type Elasticsearch struct {
-	URLs                []string `toml:"urls"`
-	IndexName           string
-	DefaultTagValue     string
-	TagKeys             []string
-	Username            string
-	Password            string
-	AuthBearerToken     string
-	EnableSniffer       bool
-	Timeout             config.Duration
-	HealthCheckInterval config.Duration
-	EnableGzip          bool
-	ManageTemplate      bool
-	TemplateName        string
-	OverwriteTemplate   bool
-	ForceDocumentID     bool `toml:"force_document_id"`
-	MajorReleaseNumber  int
+	AuthBearerToken     string          `toml:"auth_bearer_token"`
+	DefaultPipeline     string          `toml:"default_pipeline"`
+	DefaultTagValue     string          `toml:"default_tag_value"`
+	EnableGzip          bool            `toml:"enable_gzip"`
+	EnableSniffer       bool            `toml:"enable_sniffer"`
 	FloatHandling       string          `toml:"float_handling"`
 	FloatReplacement    float64         `toml:"float_replacement_value"`
+	ForceDocumentID     bool            `toml:"force_document_id"`
+	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	IndexName           string          `toml:"index_name"`
+	ManageTemplate      bool            `toml:"manage_template"`
+	OverwriteTemplate   bool            `toml:"overwrite_template"`
+	Password            string          `toml:"password"`
+	TemplateName        string          `toml:"template_name"`
+	Timeout             config.Duration `toml:"timeout"`
+	URLs                []string        `toml:"urls"`
+	UsePipeline         string          `toml:"use_pipeline"`
+	Username            string          `toml:"username"`
 	Log                 telegraf.Logger `toml:"-"`
+	majorReleaseNumber  int
+	pipelineName        string
+	pipelineTagKeys     []string
+	tagKeys             []string
 	tls.ClientConfig
 
 	Client *elastic.Client
@@ -111,6 +116,16 @@ var sampleConfig = `
   ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
   # float_handling = "none"
   # float_replacement_value = 0.0
+
+  ## Pipeline Config
+  ## To use a ingest pipeline, set this to the name of the pipeline you want to use.
+  # use_pipeline = "my_pipeline"
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the pipeline name. If the tag does not exist,
+  ## the default pipeline will be used as the pipeline. If no default pipeline is set,
+  ## no pipeline is used for the metric.
+  # use_pipeline = "{{es_pipeline}}"
+  # default_pipeline = "my_pipeline"
 `
 
 const telegrafTemplate = `
@@ -220,9 +235,15 @@ func (a *Elasticsearch) Connect() error {
 		Timeout:   time.Duration(a.Timeout),
 	}
 
+	elasticURL, err := url.Parse(a.URLs[0])
+	if err != nil {
+		return fmt.Errorf("parsing URL failed: %v", err)
+	}
+
 	clientOptions = append(clientOptions,
 		elastic.SetHttpClient(httpclient),
 		elastic.SetSniff(a.EnableSniffer),
+		elastic.SetScheme(elasticURL.Scheme),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
 		elastic.SetGzip(a.EnableGzip),
@@ -271,7 +292,7 @@ func (a *Elasticsearch) Connect() error {
 	a.Log.Infof("Elasticsearch version: %q", esVersion)
 
 	a.Client = client
-	a.MajorReleaseNumber = majorReleaseNumber
+	a.majorReleaseNumber = majorReleaseNumber
 
 	if a.ManageTemplate {
 		err := a.manageTemplate(ctx)
@@ -280,7 +301,8 @@ func (a *Elasticsearch) Connect() error {
 		}
 	}
 
-	a.IndexName, a.TagKeys = a.GetTagKeys(a.IndexName)
+	a.IndexName, a.tagKeys = a.GetTagKeys(a.IndexName)
+	a.pipelineName, a.pipelineTagKeys = a.GetTagKeys(a.UsePipeline)
 
 	return nil
 }
@@ -309,7 +331,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
+		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.tagKeys, metric.Tags())
 
 		// Handle NaN and inf field-values
 		fields := make(map[string]interface{})
@@ -344,8 +366,14 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 			br.Id(id)
 		}
 
-		if a.MajorReleaseNumber <= 6 {
+		if a.majorReleaseNumber <= 6 {
 			br.Type("metrics")
+		}
+
+		if a.UsePipeline != "" {
+			if pipelineName := a.getPipelineName(a.pipelineName, a.pipelineTagKeys, metric.Tags()); pipelineName != "" {
+				br.Pipeline(pipelineName)
+			}
 		}
 
 		bulkRequest.Add(br)
@@ -399,7 +427,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
 		tp := templatePart{
 			TemplatePattern: templatePattern + "*",
-			Version:         a.MajorReleaseNumber,
+			Version:         a.majorReleaseNumber,
 		}
 
 		t := template.Must(template.New("template").Parse(telegrafTemplate))
@@ -473,6 +501,24 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 	}
 
 	return fmt.Sprintf(indexName, tagValues...)
+}
+
+func (a *Elasticsearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
+	if !strings.Contains(pipelineInput, "%") || len(tagKeys) == 0 {
+		return pipelineInput
+	}
+
+	var tagValues []interface{}
+
+	for _, key := range tagKeys {
+		if value, ok := metricTags[key]; ok {
+			tagValues = append(tagValues, value)
+			continue
+		}
+		a.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
+		return a.DefaultPipeline
+	}
+	return fmt.Sprintf(pipelineInput, tagValues...)
 }
 
 func getISOWeek(eventTime time.Time) string {

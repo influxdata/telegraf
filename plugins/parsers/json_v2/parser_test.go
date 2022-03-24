@@ -25,6 +25,16 @@ func TestMultipleConfigs(t *testing.T) {
 	// Make sure testdata contains data
 	require.Greater(t, len(folders), 0)
 
+	expectedErrors := []struct {
+		Name  string
+		Error string
+	}{
+		{
+			Name:  "wrong_path",
+			Error: "wrong",
+		},
+	}
+
 	for _, f := range folders {
 		t.Run(f.Name(), func(t *testing.T) {
 			// Process the telegraf config file for the test
@@ -39,11 +49,22 @@ func TestMultipleConfigs(t *testing.T) {
 
 			// Gather the metrics from the input file configure
 			acc := testutil.Accumulator{}
-			for _, i := range cfg.Inputs {
-				err = i.Init()
+			for _, input := range cfg.Inputs {
+				err = input.Init()
 				require.NoError(t, err)
-				err = i.Gather(&acc)
-				require.NoError(t, err)
+				err = input.Gather(&acc)
+				// If the test has an expected error then require one was received
+				var expectedError bool
+				for _, e := range expectedErrors {
+					if e.Name == f.Name() {
+						require.Contains(t, err.Error(), e.Error)
+						expectedError = true
+						break
+					}
+				}
+				if !expectedError {
+					require.NoError(t, err)
+				}
 			}
 
 			// Process expected metrics and compare with resulting metrics

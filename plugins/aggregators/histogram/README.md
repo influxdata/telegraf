@@ -44,6 +44,14 @@ of the algorithm which is implemented in the Prometheus
   ## Defaults to true.
   cumulative = true
 
+  ## Expiration interval for each histogram. The histogram will be expired if
+  ## there are no changes in any buckets for this time interval. 0 == no expiration.
+  # expiration_interval = "0m"
+
+  ## If true, aggregated histogram are pushed to output only if it was updated since
+  ## previous push. Defaults to false.
+  # push_only_on_update = false
+
   ## Example config that aggregates all fields of the metric.
   # [[aggregators.histogram.config]]
   #   ## Right borders of buckets (with +Inf implicitly added).

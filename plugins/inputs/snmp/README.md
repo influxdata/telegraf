@@ -30,6 +30,8 @@ path onto the global path variable
   # version = 2
 
   ## Path to mib files
+  ## Used by the gosmi translator.
+  ## To add paths when translating with netsnmp, use the MIBDIRS environment variable
   # path = ["/usr/share/snmp/mibs"]
 
   ## SNMP community string.

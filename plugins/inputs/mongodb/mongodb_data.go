@@ -245,15 +245,17 @@ var defaultStorageStats = map[string]string{
 }
 
 var dbDataStats = map[string]string{
-	"collections":  "Collections",
-	"objects":      "Objects",
-	"avg_obj_size": "AvgObjSize",
-	"data_size":    "DataSize",
-	"storage_size": "StorageSize",
-	"num_extents":  "NumExtents",
-	"indexes":      "Indexes",
-	"index_size":   "IndexSize",
-	"ok":           "Ok",
+	"collections":   "Collections",
+	"objects":       "Objects",
+	"avg_obj_size":  "AvgObjSize",
+	"data_size":     "DataSize",
+	"storage_size":  "StorageSize",
+	"num_extents":   "NumExtents",
+	"indexes":       "Indexes",
+	"index_size":    "IndexSize",
+	"ok":            "Ok",
+	"fs_used_size":  "FsUsedSize",
+	"fs_total_size": "FsTotalSize",
 }
 
 var colDataStats = map[string]string{

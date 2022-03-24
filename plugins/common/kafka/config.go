@@ -1,8 +1,6 @@
 package kafka
 
 import (
-	"log"
-
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
@@ -53,8 +51,7 @@ type Config struct {
 	ClientID         string `toml:"client_id"`
 	CompressionCodec int    `toml:"compression_codec"`
 
-	// EnableTLS deprecated
-	EnableTLS *bool `toml:"enable_tls"`
+	EnableTLS *bool `toml:"enable_tls" deprecated:"1.17.0;option is ignored"`
 
 	// Disable full metadata fetching
 	MetadataFull *bool `toml:"metadata_full"`
@@ -62,9 +59,6 @@ type Config struct {
 
 // SetConfig on the sarama.Config object from the Config struct.
 func (k *Config) SetConfig(config *sarama.Config) error {
-	if k.EnableTLS != nil {
-		log.Printf("W! [kafka] enable_tls is deprecated, and the setting does nothing, you can safely remove it from the config")
-	}
 	if k.Version != "" {
 		version, err := sarama.ParseKafkaVersion(k.Version)
 		if err != nil {

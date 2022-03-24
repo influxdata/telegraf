@@ -56,7 +56,10 @@ var sampleConfig = `
   ## How many seconds between aggregations
   # period = 10
 
-  ## How many top metrics to return
+  ## How many top buckets to return per field
+  ## Every field specified to aggregate over will return k number of results.
+  ## For example, 1 field with k of 10 will return 10 buckets. While 2 fields
+  ## with k of 3 will return 6 buckets.
   # k = 10
 
   ## Over which tags should the aggregation be done. Globs can be specified, in
@@ -64,7 +67,11 @@ var sampleConfig = `
   ## empty list is no aggregation over tags is done
   # group_by = ['*']
 
-  ## Over which fields are the top k are calculated
+  ## The field(s) to aggregate
+  ## Each field defined is used to create an independent aggregation. Each
+  ## aggregation will return k buckets. If a metric does not have a defined
+  ## field the metric will be dropped from the aggregation. Considering using
+  ## the defaults processor plugin to ensure fields are set if required.
   # fields = ["value"]
 
   ## What aggregation to use. Options: sum, mean, min, max

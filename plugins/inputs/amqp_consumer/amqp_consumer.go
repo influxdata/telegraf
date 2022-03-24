@@ -27,7 +27,7 @@ type semaphore chan empty
 
 // AMQPConsumer is the top level struct for this plugin
 type AMQPConsumer struct {
-	URL                    string            `toml:"url"` // deprecated in 1.7; use brokers
+	URL                    string            `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
 	Brokers                []string          `toml:"brokers"`
 	Username               string            `toml:"username"`
 	Password               string            `toml:"password"`
@@ -90,10 +90,6 @@ const (
 
 func (a *AMQPConsumer) SampleConfig() string {
 	return `
-  ## Broker to consume from.
-  ##   deprecated in 1.7; use the brokers option
-  # url = "amqp://localhost:5672/influxdb"
-
   ## Brokers to consume from.  If multiple brokers are specified a random broker
   ## will be selected anytime a connection is established.  This can be
   ## helpful for load balancing when not using a dedicated load balancer.

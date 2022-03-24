@@ -16,7 +16,7 @@ type Consul struct {
 	Token      string
 	Username   string
 	Password   string
-	Datacentre string // deprecated in 1.10; use Datacenter
+	Datacentre string `toml:"datacentre" deprecated:"1.10.0;use 'datacenter' instead"`
 	Datacenter string
 	tls.ClientConfig
 	TagDelimiter  string

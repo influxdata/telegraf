@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs/uwsgi"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -160,6 +162,7 @@ func TestInvalidJSON(t *testing.T) {
 func TestHttpError(t *testing.T) {
 	plugin := &uwsgi.Uwsgi{
 		Servers: []string{"http://novalidurladress/"},
+		Timeout: config.Duration(10 * time.Millisecond),
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))

@@ -14,10 +14,6 @@ import (
 )
 
 const sampleConfig = `
-  ## Directory to gather stats about.
-  ##   deprecated in 1.9; use the directories option
-  # directory = "/var/cache/apt/archives"
-
   ## Directories to gather stats about.
   ## This accept standard unit glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
@@ -51,7 +47,7 @@ const sampleConfig = `
 `
 
 type FileCount struct {
-	Directory      string // deprecated in 1.9
+	Directory      string `toml:"directory" deprecated:"1.9.0;use 'directories' instead"`
 	Directories    []string
 	Name           string
 	Recursive      bool

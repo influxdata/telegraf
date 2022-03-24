@@ -270,3 +270,114 @@ func TestPostgreSQL(t *testing.T) {
 		})
 	}
 }
+
+func TestClickHouse(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	logger := testutil.Logger{}
+
+	addr := "127.0.0.1"
+	port := "9000"
+	user := "default"
+
+	if *spinup {
+		logger.Infof("Spinning up container...")
+
+		// Determine the test-data mountpoint
+		testdata, err := filepath.Abs("testdata/clickhouse")
+		require.NoError(t, err, "determining absolute path of test-data failed")
+
+		// Spin-up the container
+		ctx := context.Background()
+		req := testcontainers.GenericContainerRequest{
+			ContainerRequest: testcontainers.ContainerRequest{
+				Image: "yandex/clickhouse-server",
+				BindMounts: map[string]string{
+					testdata: "/docker-entrypoint-initdb.d",
+				},
+				ExposedPorts: []string{"9000/tcp", "8123/tcp"},
+				WaitingFor:   wait.NewHTTPStrategy("/").WithPort("8123/tcp"),
+			},
+			Started: true,
+		}
+		container, err := testcontainers.GenericContainer(ctx, req)
+		require.NoError(t, err, "starting container failed")
+		defer func() {
+			require.NoError(t, container.Terminate(ctx), "terminating container failed")
+		}()
+
+		// Get the connection details from the container
+		addr, err = container.Host(ctx)
+		require.NoError(t, err, "getting container host address failed")
+		p, err := container.MappedPort(ctx, "9000/tcp")
+		require.NoError(t, err, "getting container host port failed")
+		port = p.Port()
+	}
+
+	// Define the testset
+	var testset = []struct {
+		name     string
+		queries  []Query
+		expected []telegraf.Metric
+	}{
+		{
+			name: "metric_one",
+			queries: []Query{
+				{
+					Query:               "SELECT * FROM default.metric_one",
+					TagColumnsInclude:   []string{"tag_*"},
+					FieldColumnsExclude: []string{"tag_*", "timestamp"},
+					TimeColumn:          "timestamp",
+					TimeFormat:          "unix",
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"sql",
+					map[string]string{
+						"tag_one": "tag1",
+						"tag_two": "tag2",
+					},
+					map[string]interface{}{
+						"int64_one": int64(1234),
+						"int64_two": int64(2345),
+					},
+					time.Unix(1621289085, 0),
+				),
+			},
+		},
+	}
+
+	for _, tt := range testset {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the plugin-under-test
+			plugin := &SQL{
+				Driver:  "clickhouse",
+				Dsn:     fmt.Sprintf("tcp://%v:%v?username=%v", addr, port, user),
+				Queries: tt.queries,
+				Log:     logger,
+			}
+
+			var acc testutil.Accumulator
+
+			// Startup the plugin
+			err := plugin.Init()
+			require.NoError(t, err)
+			err = plugin.Start(&acc)
+			require.NoError(t, err)
+
+			// Gather
+			err = plugin.Gather(&acc)
+			require.NoError(t, err)
+			require.Len(t, acc.Errors, 0)
+
+			// Stopping the plugin
+			plugin.Stop()
+
+			// Do the comparison
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
+		})
+	}
+}
