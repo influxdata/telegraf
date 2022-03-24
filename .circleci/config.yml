@@ -86,8 +86,7 @@ commands:
           steps:
             - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
-          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- ${RACE} -short $PACKAGE_NAMES
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- ${RACE} -short ./...
       - store_test_results:
           path: test-results
       - when:
@@ -160,7 +159,6 @@ commands:
 jobs:
   test-go-linux:
     executor: go-1_17
-    parallelism: 4
     steps:
       - checkout
       - restore_cache:
@@ -182,7 +180,6 @@ jobs:
             - '*'
   test-go-linux-386:
     executor: go-1_17
-    parallelism: 4
     steps:
       - checkout
       - restore_cache:
@@ -198,7 +195,6 @@ jobs:
     steps:
       - test-go:
           os: darwin
-    parallelism: 4
   test-go-windows:
     executor:
         name: win/default
@@ -207,7 +203,6 @@ jobs:
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
-    parallelism: 4
 
   windows-package:
     parameters:
