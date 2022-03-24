@@ -1,0 +1,91 @@
+processor	: 0
+Processor	: ARMv7 Processor rev 4 (v7l)
+model name	: ARMv7 Processor rev 4 (v7l)
+BogoMIPS	: 42.43
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm aes pmull sha1 sha2 crc32 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xd03
+CPU revision	: 4
+
+processor	: 1
+Processor	: ARMv7 Processor rev 4 (v7l)
+model name	: ARMv7 Processor rev 4 (v7l)
+BogoMIPS	: 42.43
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm aes pmull sha1 sha2 crc32 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xd03
+CPU revision	: 4
+
+processor	: 2
+Processor	: ARMv7 Processor rev 4 (v7l)
+model name	: ARMv7 Processor rev 4 (v7l)
+BogoMIPS	: 42.43
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm aes pmull sha1 sha2 crc32 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xd03
+CPU revision	: 4
+
+processor	: 3
+Processor	: ARMv7 Processor rev 4 (v7l)
+model name	: ARMv7 Processor rev 4 (v7l)
+BogoMIPS	: 42.43
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm aes pmull sha1 sha2 crc32 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xd03
+CPU revision	: 4
+
+processor	: 4
+Processor	: ARMv7 Processor rev 2 (v7l)
+model name	: ARMv7 Processor rev 2 (v7l)
+BogoMIPS	: 29.52
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm aes pmull sha1 sha2 crc32 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xd09
+CPU revision	: 2
+
+processor	: 5
+Processor	: ARMv7 Processor rev 2 (v7l)
+model name	: ARMv7 Processor rev 2 (v7l)
+BogoMIPS	: 29.52
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm aes pmull sha1 sha2 crc32 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xd09
+CPU revision	: 2
+
+processor	: 6
+Processor	: ARMv7 Processor rev 2 (v7l)
+model name	: ARMv7 Processor rev 2 (v7l)
+BogoMIPS	: 29.52
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm aes pmull sha1 sha2 crc32 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xd09
+CPU revision	: 2
+
+processor	: 7
+Processor	: ARMv7 Processor rev 2 (v7l)
+model name	: ARMv7 Processor rev 2 (v7l)
+BogoMIPS	: 29.52
+Features	: half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm aes pmull sha1 sha2 crc32 
+CPU implementer	: 0x41
+CPU architecture: 7
+CPU variant	: 0x0
+CPU part	: 0xd09
+CPU revision	: 2
+
+Hardware	: MT8183
+Revision	: 0000
+Serial		: 29aa1cf5ba0159c3

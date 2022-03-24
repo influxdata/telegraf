@@ -1,0 +1,3 @@
+64-bit amd64 applications
+	amd_svm amd_lzcnt popcnt amd_sse4a tscp ahf cx16 sse3 sse2 sse fxsr
+	amd_3dnowx amd_3dnow amd_mmx mmx cmov amd_sysc cx8 tsc fpu

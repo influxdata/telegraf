@@ -1,0 +1,3 @@
+The physical processor has 1 virtual processor (0)
+  x86 (GenuineIntel 406E3 family 6 model 78 step 3 clock 3312 MHz)
+        Intel(r) Core(tm) i7-6567U CPU @ 3.30GHz

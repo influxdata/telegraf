@@ -1,0 +1,6 @@
+The physical processor has 12 virtual processors (0-11)
+  x86 (AuthenticAMD 100F91 family 16 model 9 step 1 clock 2300 MHz)
+	AMD Opteron(tm) Processor 6176	[ Socket: G34 ]
+The physical processor has 12 virtual processors (12-23)
+  x86 (AuthenticAMD 100F91 family 16 model 9 step 1 clock 2300 MHz)
+	AMD Opteron(tm) Processor 6176	[ Socket: G34 ]

@@ -1,0 +1,47 @@
+Name:	server
+Umask:	0022
+State:	S (sleeping)
+Tgid:	2549
+Ngid:	0
+Pid:	2549
+PPid:	1
+TracerPid:	0
+Uid:	107	107	107	107
+Gid:	113	113	113	113
+FDSize:	64
+Groups:	113 
+VmPeak:	  664744 kB
+VmSize:	  664744 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	    2892 kB
+VmRSS:	    2892 kB
+RssAnon:	     524 kB
+RssFile:	    2368 kB
+RssShmem:	       0 kB
+VmData:	    5932 kB
+VmStk:	     132 kB
+VmExe:	    1304 kB
+VmLib:	    1180 kB
+VmPTE:	      44 kB
+VmSwap:	       0 kB
+CoreDumping:	0
+THP_enabled:	1
+Threads:	5
+SigQ:	0/1823
+SigPnd:	00000000000000000000000000000000
+ShdPnd:	00000000000000000000000000000000
+SigBlk:	00000000000000000000000000000000
+SigIgn:	00000000000000000000000000000000
+SigCgt:	fffffffffffffffffffffffe783ffeff
+CapInh:	0000000000000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+CapBnd:	0000003fffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Speculation_Store_Bypass:	unknown
+Cpus_allowed:	3
+Cpus_allowed_list:	0-1
+voluntary_ctxt_switches:	3
+nonvoluntary_ctxt_switches:	146
