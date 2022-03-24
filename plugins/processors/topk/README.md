@@ -22,14 +22,21 @@ Notes:
   ## How many seconds between aggregations
   # period = 10
 
-  ## How many top buckets to return
+  ## How many top buckets to return per field
+  ## Every field specified to aggregate over will return k number of results.
+  ## For example, 1 field with k of 10 will return 10 buckets. While 2 fields
+  ## with k of 3 will return 6 buckets.
   # k = 10
 
   ## Based on which tags should the buckets be computed. Globs can be specified.
   ## If set to an empty list tags are not considered when creating the buckets
   # group_by = ['*']
 
-  ## Over which fields is the aggregation done
+  ## The field(s) to aggregate
+  ## Each field defined is used to create an independent aggregation. Each
+  ## aggregation will return k buckets. If a metric does not have a defined
+  ## field the metric will be dropped from the aggregation. Considering using
+  ## the defaults processor plugin to ensure fields are set if required.
   # fields = ["value"]
 
   ## What aggregation function to use. Options: sum, mean, min, max
