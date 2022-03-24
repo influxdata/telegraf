@@ -209,7 +209,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_eventlog"
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters"
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_services"
-	_ "github.com/influxdata/telegraf/plugins/inputs/wireguard"
 	_ "github.com/influxdata/telegraf/plugins/inputs/wireless"
 	_ "github.com/influxdata/telegraf/plugins/inputs/x509_cert"
 	_ "github.com/influxdata/telegraf/plugins/inputs/xtremio"
