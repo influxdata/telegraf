@@ -69,6 +69,15 @@ func TestDecodeStatus(t *testing.T) {
 		acc.AssertContainsTaggedFields(t, r.metric, r.fields, r.tags)
 	}
 }
+func TestDecodeStatusNestedOSD(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	err := decodeStatus(acc, clusterStatusDumpNestedOSD)
+	require.NoError(t, err)
+
+	for _, r := range cephStatusResultsNestedOSD {
+		acc.AssertContainsTaggedFields(t, r.metric, r.fields, r.tags)
+	}
+}
 
 func TestDecodeDf(t *testing.T) {
 	acc := &testutil.Accumulator{}
@@ -1977,6 +1986,141 @@ var cephStatusResults = []expectedResult{
 		tags: map[string]string{
 			"state": "active+backfilling",
 		},
+	},
+}
+
+var clusterStatusDumpNestedOSD = `
+{
+    "health": {
+        "status": "HEALTH_OK",
+        "checks": {},
+        "mutes": []
+    },
+    "fsid": "01234567-abcd-9876-0123-ffeeddccbbaa",
+    "election_epoch": 504,
+    "quorum": [
+        0,
+        1,
+        2
+    ],
+    "quorum_names": [
+        "a",
+        "b",
+        "c"
+    ],
+    "monmap": {
+        "epoch": 27,
+        "min_mon_release_name": "pacific",
+        "num_mons": 3
+    },
+    "osdmap": {
+        "osdmap": {
+            "epoch": 21734,
+            "num_osds": 24,
+            "num_up_osds": 24,
+            "osd_up_since": 1646008974,
+            "num_in_osds": 24,
+            "osd_in_since": 1637261831,
+            "num_remapped_pgs": 0
+        }
+    },
+    "pgmap": {
+        "pgs_by_state": [
+            {
+                "state_name": "active+clean",
+                "count": 2560
+            },
+            {
+                "state_name": "active+scrubbing",
+                "count": 10
+            },
+            {
+                "state_name": "active+backfilling",
+                "count": 5
+            }
+        ],
+        "version": 52314277,
+        "num_pgs": 2560,
+        "num_pools": 4,
+        "num_objects": 974827,
+        "data_bytes": 2700031960713,
+        "bytes_used": 7478347665408,
+        "bytes_avail": 9857462382592,
+        "bytes_total": 17335810048000,
+        "inactive_pgs_ratio": 0.19742488861083984,
+        "degraded_objects": 25919,
+        "degraded_total": 2920050,
+        "degraded_ratio": 0.008876217872981627,
+        "recovering_objects_per_sec": 6,
+        "recovering_bytes_per_sec": 223303,
+        "recovering_keys_per_sec": 10,
+        "num_objects_recovered": 40,
+        "num_bytes_recovered": 1335808,
+        "num_keys_recovered": 64,
+        "read_bytes_sec": 0,
+        "write_bytes_sec": 367217,
+        "read_op_per_sec": 322,
+        "write_op_per_sec": 1022
+    },
+    "mdsmap": {
+        "epoch": 1,
+        "up": 0,
+        "in": 0,
+        "max": 0,
+        "by_rank": []
+    },
+    "fsmap": {
+        "epoch": 24756,
+        "id": 4,
+        "up": 1,
+        "in": 1,
+        "max": 1,
+        "by_rank": [
+            {
+                "filesystem_id": 4,
+                "rank": 0,
+                "name": "a",
+                "status": "up:active",
+                "gid": 83585495
+            }
+        ],
+        "up:standby": 2
+    },
+    "mgrmap": {
+        "available": true,
+        "num_standbys": 2,
+        "modules": [
+            "dashboard",
+            "iostat",
+            "restful",
+            "stats"
+        ],
+        "services": {
+            "dashboard": "https://192.168.0.1:8443/"
+        }
+    },
+    "servicemap": {
+        "epoch": 219919,
+        "modified": "2022-03-07T13:52:42.430153-0500",
+        "services": {}
+    },
+    "progress_events": {}
+}
+`
+
+var cephStatusResultsNestedOSD = []expectedResult{
+	{
+		metric: "ceph_osdmap",
+		fields: map[string]interface{}{
+			"epoch":            float64(21734),
+			"full":             false,
+			"nearfull":         false,
+			"num_in_osds":      float64(24),
+			"num_osds":         float64(24),
+			"num_remapped_pgs": float64(0),
+			"num_up_osds":      float64(24),
+		},
+		tags: map[string]string{},
 	},
 }
 
