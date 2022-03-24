@@ -364,7 +364,9 @@ func convertField(v interface{}) interface{} {
 			return float64(*v)
 		}
 	default:
-		return nil
+		//TODO: change here once we figure out how to handle our own map-based metric definition
+		//return v here because we don't want to return nil for unknown types
+		return v
 	}
 	return nil
 }
