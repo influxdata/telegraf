@@ -357,9 +357,9 @@ func (a *AzureMonitor) send(body []byte) error {
 	}
 	defer resp.Body.Close()
 
-	_, err = io.ReadAll(resp.Body)
+	respbody, err := io.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("failed to write batch: [%v] %s: %s", resp.StatusCode, resp.Status, resp.Body)
+		return fmt.Errorf("failed to write batch: [%v] %s: %s", resp.StatusCode, resp.Status, string(respbody))
 	}
 
 	return nil
