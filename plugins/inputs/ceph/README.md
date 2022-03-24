@@ -188,38 +188,38 @@ All admin measurements will have the following tags:
 - ceph_osdmap
   - fields:
     - epoch (float)
-    - num_osds (float)
-    - num_up_osds (float)
-    - num_in_osds (float)
-    - num_remapped_pgs (float)
     - full (bool, exists only in ceph <15)
     - nearfull (bool, exists only in ceph <15)
+    - num_in_osds (float)
+    - num_osds (float)
+    - num_remapped_pgs (float)
+    - num_up_osds (float)
 
 - ceph_pgmap
   - fields:
-    - version (float)
-    - num_pgs (float)
-    - num_pools (float)
-    - num_objects (float)
-    - data_bytes (float)
-    - bytes_used (float)
     - bytes_avail (float)
     - bytes_total (float)
-    - inactive_pgs_ratio (float)
+    - bytes_used (float)
+    - data_bytes (float)
     - degraded_objects (float)
-    - degraded_total (float)
     - degraded_ratio (float)
-    - recovering_objects_per_sec (float)
-    - recovering_bytes_per_sec (float)
-    - recovering_keys_per_sec (float)
-    - num_objects_recovered (float)
+    - degraded_total (float)
+    - inactive_pgs_ratio (float)
     - num_bytes_recovered (float)
     - num_keys_recovered (float)
-    - read_bytes_sec (float)
-    - write_bytes_sec (float)
-    - read_op_per_sec (float)
-    - write_op_per_sec (float)
+    - num_objects (float)
+    - num_objects_recovered (float)
+    - num_pgs (float)
+    - num_pools (float)
     - op_per_sec (float, exists only in ceph <10)
+    - read_bytes_sec (float)
+    - read_op_per_sec (float)
+    - recovering_bytes_per_sec (float)
+    - recovering_keys_per_sec (float)
+    - recovering_objects_per_sec (float)
+    - version (float)
+    - write_bytes_sec (float)
+    - write_op_per_sec (float)
 
 - ceph_pgmap_state
   - tags:
@@ -229,21 +229,24 @@ All admin measurements will have the following tags:
 
 - ceph_usage
   - fields:
-    - total_bytes (float)
-    - total_used_bytes (float)
+    - num_osd (float)
+    - num_per_pool_omap_osds (float)
+    - num_per_pool_osds (float)
+    - total_avail (float, exists only in ceph <0.84)
     - total_avail_bytes (float)
+    - total_bytes (float)
+    - total_space (float, exists only in ceph <0.84)
+    - total_used (float, exists only in ceph <0.84)
+    - total_used_bytes (float)
     - total_used_raw_bytes (float)
     - total_used_raw_ratio (float)
-    - num_osd (float)
-    - num_per_pool_osds (float)
-    - num_per_pool_omap_osds (float)
 
 - ceph_deviceclass_usage
   - tags:
     - class
   - fields:
-    - total_bytes (float)
     - total_avail_bytes (float)
+    - total_bytes (float)
     - total_used_bytes (float)
     - total_used_raw_bytes (float)
     - total_used_raw_ratio (float)
@@ -252,31 +255,31 @@ All admin measurements will have the following tags:
   - tags:
     - name
   - fields:
-    - kb_used (float)
     - bytes_used (float)
+    - kb_used (float)
+    - max_avail (float)
     - objects (float)
     - percent_used (float)
-    - max_avail (float)
     - stored (float)
 
 - ceph_pool_stats
   - tags:
     - name
   - fields:
-    - read_bytes_sec (float)
-    - write_bytes_sec (float)
-    - read_op_per_sec (float)
-    - write_op_per_sec (float)
-    - recovering_objects_per_sec (float)
-    - recovering_bytes_per_sec (float)
-    - recovering_keys_per_sec (float)
     - degraded_objects (float)
-    - degraded_total (float)
     - degraded_ratio (float)
-    - num_objects_recovered (float)
+    - degraded_total (float)
     - num_bytes_recovered (float)
     - num_keys_recovered (float)
+    - num_objects_recovered (float)
     - op_per_sec (float, exists only in ceph <10)
+    - read_bytes_sec (float)
+    - read_op_per_sec (float)
+    - recovering_bytes_per_sec (float)
+    - recovering_keys_per_sec (float)
+    - recovering_objects_per_sec (float)
+    - write_bytes_sec (float)
+    - write_op_per_sec (float)
 
 ## Example
 

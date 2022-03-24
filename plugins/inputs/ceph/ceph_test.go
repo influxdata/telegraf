@@ -1884,11 +1884,21 @@ var clusterStatusDump = `
 
 var cephStatusResults = []expectedResult{
 	{
+		metric: "ceph_fsmap",
+		fields: map[string]interface{}{
+			"in":         float64(1),
+			"max":        float64(1),
+			"up_standby": float64(2),
+			"up":         float64(1),
+		},
+		tags: map[string]string{},
+	},
+	{
 		metric: "ceph_health",
 		fields: map[string]interface{}{
-			"status":         "HEALTH_OK",
-			"status_code":    float64(2),
 			"overall_status": "",
+			"status_code":    float64(2),
+			"status":         "HEALTH_OK",
 		},
 		tags: map[string]string{},
 	},
@@ -1900,55 +1910,44 @@ var cephStatusResults = []expectedResult{
 		tags: map[string]string{},
 	},
 	{
-		metric: "ceph_fsmap",
-		fields: map[string]interface{}{
-			"up":         float64(1),
-			"in":         float64(1),
-			"max":        float64(1),
-			"up_standby": float64(2),
-		},
-		tags: map[string]string{},
-	},
-	{
 		metric: "ceph_osdmap",
 		fields: map[string]interface{}{
 			"epoch":            float64(21734),
-			"num_osds":         float64(24),
-			"num_up_osds":      float64(24),
-			"num_in_osds":      float64(24),
-			"num_remapped_pgs": float64(0),
 			"full":             false,
 			"nearfull":         false,
+			"num_in_osds":      float64(24),
+			"num_osds":         float64(24),
+			"num_remapped_pgs": float64(0),
+			"num_up_osds":      float64(24),
 		},
 		tags: map[string]string{},
 	},
 	{
 		metric: "ceph_pgmap",
 		fields: map[string]interface{}{
-			"version":                    float64(52314277),
-			"num_pgs":                    float64(2560),
-			"num_pools":                  float64(4),
-			"num_objects":                float64(974827),
-			"data_bytes":                 float64(2700031960713),
-			"bytes_used":                 float64(7478347665408),
 			"bytes_avail":                float64(9857462382592),
 			"bytes_total":                float64(17335810048000),
-			"inactive_pgs_ratio":         float64(0.19742488861083984),
+			"bytes_used":                 float64(7478347665408),
+			"data_bytes":                 float64(2700031960713),
 			"degraded_objects":           float64(25919),
-			"degraded_total":             float64(2920050),
 			"degraded_ratio":             float64(0.0088762178729816267),
-			"recovering_objects_per_sec": float64(6),
-			"recovering_bytes_per_sec":   float64(223303),
-			"recovering_keys_per_sec":    float64(10),
-			"num_objects_recovered":      float64(40),
+			"degraded_total":             float64(2920050),
+			"inactive_pgs_ratio":         float64(0.19742488861083984),
 			"num_bytes_recovered":        float64(1335808),
 			"num_keys_recovered":         float64(64),
+			"num_objects_recovered":      float64(40),
+			"num_objects":                float64(974827),
+			"num_pgs":                    float64(2560),
+			"num_pools":                  float64(4),
 			"op_per_sec":                 float64(0), // exists only in ceph <10
 			"read_bytes_sec":             float64(0),
-			"write_bytes_sec":            float64(367217),
 			"read_op_per_sec":            float64(322),
+			"recovering_bytes_per_sec":   float64(223303),
+			"recovering_keys_per_sec":    float64(10),
+			"recovering_objects_per_sec": float64(6),
+			"version":                    float64(52314277),
+			"write_bytes_sec":            float64(367217),
 			"write_op_per_sec":           float64(1022),
-			"op_per_sec":                 float64(0),
 		},
 		tags: map[string]string{},
 	},
@@ -2066,6 +2065,10 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_usage",
 		fields: map[string]interface{}{
+			"num_osds":               float64(6),
+			"num_per_pool_omap_osds": float64(6),
+			"num_per_pool_osds":      float64(6),
+			"total_avail_bytes":      float64(7866135064576),
 			"total_avail":            float64(0), // pre ceph 0.84
 			"total_bytes":            float64(14882929901568),
 			"total_space":            float64(0), // pre ceph 0.84
@@ -2073,21 +2076,18 @@ var cephDfResults = []expectedResult{
 			"total_used_raw_bytes":   float64(7016794836992),
 			"total_used_raw_ratio":   float64(0.47146594524383545),
 			"total_used":             float64(0), // pre ceph 0.84
-            "num_osds":               float64(6),
-			"num_per_pool_osds":      float64(6),
-			"num_per_pool_omap_osds": float64(6),
 		},
 		tags: map[string]string{},
 	},
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"stored":       float64(672914410122),
-			"objects":      float64(161029),
-			"kb_used":      float64(1972149256),
 			"bytes_used":   float64(2019480838046),
-			"percent_used": float64(0.26929000020027161),
+			"kb_used":      float64(1972149256),
 			"max_avail":    float64(1826599337984),
+			"objects":      float64(161029),
+			"percent_used": float64(0.26929000020027161),
+			"stored":       float64(672914410122),
 		},
 		tags: map[string]string{
 			"name": "foo",
@@ -2096,12 +2096,12 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"stored":       float64(1486436928),
-			"objects":      float64(88452),
-			"kb_used":      float64(4354883),
 			"bytes_used":   float64(4459399953),
-			"percent_used": float64(0.0027088995557278395),
+			"kb_used":      float64(4354883),
 			"max_avail":    float64(547248046080),
+			"objects":      float64(88452),
+			"percent_used": float64(0.0027088995557278395),
+			"stored":       float64(1486436928),
 		},
 		tags: map[string]string{
 			"name": "bar_metadata",
@@ -2110,12 +2110,12 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"stored":       float64(1291824398336),
-			"objects":      float64(522694),
-			"kb_used":      float64(3800912960),
 			"bytes_used":   float64(3892134871040),
-			"percent_used": float64(0.41529691219329834),
+			"kb_used":      float64(3800912960),
 			"max_avail":    float64(1826599337984),
+			"objects":      float64(522694),
+			"percent_used": float64(0.41529691219329834),
+			"stored":       float64(1291824398336),
 		},
 		tags: map[string]string{
 			"name": "bar_data",
@@ -2124,12 +2124,12 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"stored":       float64(42634584),
-			"objects":      float64(9),
-			"kb_used":      float64(83271),
 			"bytes_used":   float64(85269164),
-			"percent_used": float64(0.000012548729500849731),
+			"kb_used":      float64(83271),
 			"max_avail":    float64(3397479301120),
+			"objects":      float64(9),
+			"percent_used": float64(0.000012548729500849731),
+			"stored":       float64(42634584),
 		},
 		tags: map[string]string{
 			"name": "device_health_metrics",
@@ -2138,8 +2138,8 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_deviceclass_usage",
 		fields: map[string]interface{}{
-			"total_bytes":          float64(12002349023232),
 			"total_avail_bytes":    float64(6080040206336),
+			"total_bytes":          float64(12002349023232),
 			"total_used_bytes":     float64(5922308816896),
 			"total_used_raw_bytes": float64(5922308816896),
 			"total_used_raw_ratio": float64(0.49342915415763855),
@@ -2151,8 +2151,8 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_deviceclass_usage",
 		fields: map[string]interface{}{
-			"total_bytes":          float64(2880580878336),
 			"total_avail_bytes":    float64(1786094858240),
+			"total_bytes":          float64(2880580878336),
 			"total_used_bytes":     float64(1094486020096),
 			"total_used_raw_bytes": float64(1094486020096),
 			"total_used_raw_ratio": float64(0.3799532353878021),
@@ -2216,20 +2216,20 @@ var cephOSDPoolStatsResults = []expectedResult{
 	{
 		metric: "ceph_pool_stats",
 		fields: map[string]interface{}{
-			"op_per_sec":                 float64(0), // This field is no longer reported in ceph 10 and later
-			"read_bytes_sec":             float64(0),
-			"write_bytes_sec":            float64(0),
-			"read_op_per_sec":            float64(0),
-			"write_op_per_sec":           float64(0),
-			"recovering_objects_per_sec": float64(0),
-			"recovering_bytes_per_sec":   float64(0),
-			"recovering_keys_per_sec":    float64(0),
 			"degraded_objects":           float64(12),
-			"degraded_total":             float64(483087),
 			"degraded_ratio":             float64(0.000024840246166839513),
-			"num_objects_recovered":      float64(0),
+			"degraded_total":             float64(483087),
 			"num_bytes_recovered":        float64(0),
 			"num_keys_recovered":         float64(0),
+			"num_objects_recovered":      float64(0),
+			"op_per_sec":                 float64(0), // This field is no longer reported in ceph 10 and later
+			"read_bytes_sec":             float64(0),
+			"read_op_per_sec":            float64(0),
+			"recovering_bytes_per_sec":   float64(0),
+			"recovering_keys_per_sec":    float64(0),
+			"recovering_objects_per_sec": float64(0),
+			"write_bytes_sec":            float64(0),
+			"write_op_per_sec":           float64(0),
 		},
 		tags: map[string]string{
 			"name": "data",
@@ -2238,20 +2238,20 @@ var cephOSDPoolStatsResults = []expectedResult{
 	{
 		metric: "ceph_pool_stats",
 		fields: map[string]interface{}{
-			"op_per_sec":                 float64(0), // This field is no longer reported in ceph 10 and later
-			"read_bytes_sec":             float64(0),
-			"write_bytes_sec":            float64(0),
-			"read_op_per_sec":            float64(0),
-			"write_op_per_sec":           float64(0),
-			"recovering_objects_per_sec": float64(0),
-			"recovering_bytes_per_sec":   float64(0),
-			"recovering_keys_per_sec":    float64(0),
 			"degraded_objects":           float64(0),
-			"degraded_total":             float64(0),
 			"degraded_ratio":             float64(0),
-			"num_objects_recovered":      float64(0),
+			"degraded_total":             float64(0),
 			"num_bytes_recovered":        float64(0),
 			"num_keys_recovered":         float64(0),
+			"num_objects_recovered":      float64(0),
+			"op_per_sec":                 float64(0), // This field is no longer reported in ceph 10 and later
+			"read_bytes_sec":             float64(0),
+			"read_op_per_sec":            float64(0),
+			"recovering_bytes_per_sec":   float64(0),
+			"recovering_keys_per_sec":    float64(0),
+			"recovering_objects_per_sec": float64(0),
+			"write_bytes_sec":            float64(0),
+			"write_op_per_sec":           float64(0),
 		},
 		tags: map[string]string{
 			"name": "metadata",
@@ -2260,27 +2260,23 @@ var cephOSDPoolStatsResults = []expectedResult{
 	{
 		metric: "ceph_pool_stats",
 		fields: map[string]interface{}{
-			"op_per_sec":                 float64(0), // This field is no longer reported in ceph 10 and later
-			"read_bytes_sec":             float64(10566067),
-			"write_bytes_sec":            float64(15165220376),
-			"read_op_per_sec":            float64(182),
-			"write_op_per_sec":           float64(473),
-			"recovering_objects_per_sec": float64(16),
-			"recovering_bytes_per_sec":   float64(0),
-			"recovering_keys_per_sec":    float64(0),
 			"degraded_objects":           float64(0),
-			"degraded_total":             float64(0),
 			"degraded_ratio":             float64(0),
-			"num_objects_recovered":      float64(200),
+			"degraded_total":             float64(0),
 			"num_bytes_recovered":        float64(0),
 			"num_keys_recovered":         float64(0),
+			"num_objects_recovered":      float64(200),
+			"op_per_sec":                 float64(0), // This field is no longer reported in ceph 10 and later
+			"read_bytes_sec":             float64(10566067),
+			"read_op_per_sec":            float64(182),
+			"recovering_bytes_per_sec":   float64(0),
+			"recovering_keys_per_sec":    float64(0),
+			"recovering_objects_per_sec": float64(16),
+			"write_bytes_sec":            float64(15165220376),
+			"write_op_per_sec":           float64(473),
 		},
 		tags: map[string]string{
 			"name": "pbench",
 		},
 	},
-}
-
-func pf(i float64) *float64 {
-	return &i
 }
