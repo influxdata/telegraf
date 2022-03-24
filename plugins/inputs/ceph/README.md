@@ -283,7 +283,7 @@ All admin measurements will have the following tags:
 
 ## Example
 
-Below is an example of a custer stats:
+Below is an example of a cluster stats:
 
 ```text
 ceph_fsmap,host=ceph in=1,max=1,up=1,up_standby=2 1646782035000000000
