@@ -45,11 +45,11 @@ telegraf [flags]
 
 **Generate a telegraf config file:**
 
-`telegraf config > telegraf.conf`
+`telegraf --sample-config > telegraf.conf`
 
 **Generate config with only cpu input & influxdb output plugins defined:**
 
-`telegraf --input-filter cpu --output-filter influxdb config`
+`telegraf --sample-config --input-filter cpu --output-filter influxdb > telegraf.conf`
 
 **Run a single telegraf collection, outputting metrics to stdout:**
 

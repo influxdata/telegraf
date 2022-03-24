@@ -7,7 +7,7 @@ You can generate a full sample
 config:
 
 ```shell
-telegraf config
+telegraf --sample-config
 ```
 
 You can also generate the config for a particular plugin using the `-usage`

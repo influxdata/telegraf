@@ -112,7 +112,7 @@ telegraf --help
 ### Generate a telegraf config file
 
 ```shell
-telegraf config > telegraf.conf
+telegraf --sample-config > telegraf.conf
 ```
 
 ### Generate config with only cpu input & influxdb output plugins defined
