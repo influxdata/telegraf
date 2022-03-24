@@ -23,7 +23,9 @@ CREATE TABLE public.metric_one (
     int64_one integer,
     int64_two integer,
     bool_one boolean,
-    bool_two boolean
+    bool_two boolean,
+    uint64_one bigint,
+    float64_one double precision
 );
 ALTER TABLE public.metric_one OWNER TO postgres;
 CREATE TABLE public.metric_two (
@@ -35,8 +37,8 @@ ALTER TABLE public.metric_two OWNER TO postgres;
 COPY public."metric three" ("timestamp", "tag four", "string two") FROM stdin;
 2021-05-17 22:04:45	tag4	string2
 \.
-COPY public.metric_one ("timestamp", tag_one, tag_two, int64_one, int64_two, bool_one, bool_two) FROM stdin;
-2021-05-17 22:04:45	tag1	tag2	1234	2345	t	f
+COPY public.metric_one ("timestamp", tag_one, tag_two, int64_one, int64_two, bool_one, bool_two, uint64_one, float64_one) FROM stdin;
+2021-05-17 22:04:45	tag1	tag2	1234	2345	t	f	1000000000	3.1415
 \.
 COPY public.metric_two ("timestamp", tag_three, string_one) FROM stdin;
 2021-05-17 22:04:45	tag3	string1

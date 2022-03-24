@@ -25,6 +25,8 @@ path onto the global path variable
   # service_address = "udp://:162"
   ##
   ## Path to mib files
+  ## Used by the gosmi translator.
+  ## To add paths when translating with netsnmp, use the MIBDIRS environment variable
   # path = ["/usr/share/snmp/mibs"]
   ##
   ## Deprecated in 1.20.0; no longer running snmptranslate

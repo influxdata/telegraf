@@ -19,10 +19,9 @@ type ClientConfig struct {
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
 	ServerName         string `toml:"tls_server_name"`
 
-	// Deprecated in 1.7; use TLS variables above
-	SSLCA   string `toml:"ssl_ca"`
-	SSLCert string `toml:"ssl_cert"`
-	SSLKey  string `toml:"ssl_key"`
+	SSLCA   string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
+	SSLCert string `toml:"ssl_cert" deprecated:"1.7.0;use 'tls_cert' instead"`
+	SSLKey  string `toml:"ssl_key" deprecated:"1.7.0;use 'tls_key' instead"`
 }
 
 // ServerConfig represents the standard server TLS config.

@@ -160,17 +160,33 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 }
 
 func TestLeoFSManagerMasterMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Manager, "localhost:4020", ServerTypeManagerMaster)
 }
 
 func TestLeoFSManagerSlaveMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Manager, "localhost:4021", ServerTypeManagerSlave)
 }
 
 func TestLeoFSStorageMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Storage, "localhost:4010", ServerTypeStorage)
 }
 
 func TestLeoFSGatewayMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Gateway, "localhost:4000", ServerTypeGateway)
 }

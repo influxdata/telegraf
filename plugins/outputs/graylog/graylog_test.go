@@ -5,13 +5,13 @@ import (
 	"compress/zlib"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
-	reuse "github.com/libp2p/go-reuseport"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/metric"
@@ -66,20 +66,13 @@ func TestWriteUDP(t *testing.T) {
 	}{
 		{
 			name: "default without scheme",
-			instance: Graylog{
-				Servers: []string{"127.0.0.1:12201"},
-			},
 		},
 		{
 			name: "UDP",
-			instance: Graylog{
-				Servers: []string{"udp://127.0.0.1:12201"},
-			},
 		},
 		{
 			name: "UDP non-standard name field",
 			instance: Graylog{
-				Servers:           []string{"udp://127.0.0.1:12201"},
 				NameFieldNoPrefix: true,
 			},
 		},
@@ -88,13 +81,14 @@ func TestWriteUDP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
-			var wg2 sync.WaitGroup
 			wg.Add(1)
-			wg2.Add(1)
-			go UDPServer(t, &wg, &wg2, &tt.instance)
-			wg2.Wait()
+			address := make(chan string, 1)
+			errs := make(chan error)
+			go UDPServer(t, &wg, &tt.instance, address, errs)
+			require.NoError(t, <-errs)
 
 			i := tt.instance
+			i.Servers = []string{fmt.Sprintf("udp://%s", <-address)}
 			err := i.Connect()
 			require.NoError(t, err)
 			defer i.Close()
@@ -130,14 +124,10 @@ func TestWriteTCP(t *testing.T) {
 	}{
 		{
 			name: "TCP",
-			instance: Graylog{
-				Servers: []string{"tcp://127.0.0.1:12201"},
-			},
 		},
 		{
 			name: "TLS",
 			instance: Graylog{
-				Servers: []string{"tcp://127.0.0.1:12201"},
 				ClientConfig: tlsint.ClientConfig{
 					ServerName: "localhost",
 					TLSCA:      tlsClientConfig.TLSCA,
@@ -150,7 +140,6 @@ func TestWriteTCP(t *testing.T) {
 		{
 			name: "TLS no validation",
 			instance: Graylog{
-				Servers: []string{"tcp://127.0.0.1:12201"},
 				ClientConfig: tlsint.ClientConfig{
 					InsecureSkipVerify: true,
 					ServerName:         "localhost",
@@ -165,15 +154,14 @@ func TestWriteTCP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var wg sync.WaitGroup
-			var wg2 sync.WaitGroup
-			var wg3 sync.WaitGroup
 			wg.Add(1)
-			wg2.Add(1)
-			wg3.Add(1)
-			go TCPServer(t, &wg, &wg2, &wg3, tt.tlsServerConfig)
-			wg2.Wait()
+			address := make(chan string, 1)
+			errs := make(chan error)
+			go TCPServer(t, &wg, tt.tlsServerConfig, address, errs)
+			require.NoError(t, <-errs)
 
 			i := tt.instance
+			i.Servers = []string{fmt.Sprintf("tcp://%s", <-address)}
 			err = i.Connect()
 			require.NoError(t, err)
 			defer i.Close()
@@ -191,9 +179,10 @@ func TestWriteTCP(t *testing.T) {
 			require.NoError(t, err)
 			err = i.Write(metrics)
 			require.NoError(t, err)
-			wg3.Wait()
+
+			require.NoError(t, <-errs)
+
 			err = i.Write(metrics)
-			require.Error(t, err)
 			err = i.Write(metrics)
 			require.NoError(t, err)
 		})
@@ -202,28 +191,46 @@ func TestWriteTCP(t *testing.T) {
 
 type GelfObject map[string]interface{}
 
-func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Graylog) {
-	udpServer, err := reuse.ListenPacket("udp", "127.0.0.1:12201")
-	require.NoError(t, err)
+func UDPServer(t *testing.T, wg *sync.WaitGroup, config *Graylog, address chan string, errs chan error) {
+	udpServer, err := net.ListenPacket("udp", "127.0.0.1:0")
+	errs <- err
+	if err != nil {
+		return
+	}
+
+	// Send the address with the random port to the channel for the graylog instance to use it
+	address <- udpServer.LocalAddr().String()
 	defer udpServer.Close()
 	defer wg.Done()
-	wg2.Done()
 
-	recv := func() {
+	recv := func() error {
 		bufR := make([]byte, 1024)
 		n, _, err := udpServer.ReadFrom(bufR)
-		require.NoError(t, err)
+		if err != nil {
+			return err
+		}
 
 		b := bytes.NewReader(bufR[0:n])
-		r, _ := zlib.NewReader(b)
+		r, err := zlib.NewReader(b)
+		if err != nil {
+			return err
+		}
 
 		bufW := bytes.NewBuffer(nil)
-		_, _ = io.Copy(bufW, r)
-		_ = r.Close()
+		_, err = io.Copy(bufW, r)
+		if err != nil {
+			return err
+		}
+		err = r.Close()
+		if err != nil {
+			return err
+		}
 
 		var obj GelfObject
-		_ = json.Unmarshal(bufW.Bytes(), &obj)
-		require.NoError(t, err)
+		err = json.Unmarshal(bufW.Bytes(), &obj)
+		if err != nil {
+			return err
+		}
 		require.Equal(t, obj["short_message"], "telegraf")
 		if config.NameFieldNoPrefix {
 			require.Equal(t, obj["name"], "test1")
@@ -232,47 +239,78 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, config *Gr
 		}
 		require.Equal(t, obj["_tag1"], "value1")
 		require.Equal(t, obj["_value"], float64(1))
+
+		return nil
 	}
 
 	// in UDP scenario all 4 messages are received
 
-	recv()
-	recv()
-	recv()
-	recv()
+	err = recv()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = recv()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = recv()
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = recv()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
-func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.WaitGroup, tlsConfig *tls.Config) {
-	tcpServer, err := reuse.Listen("tcp", "127.0.0.1:12201")
-	require.NoError(t, err)
+func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address chan string, errs chan error) {
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:0")
+	errs <- err
+	if err != nil {
+		return
+	}
+
+	// Send the address with the random port to the channel for the graylog instance to use it
+	address <- tcpServer.Addr().String()
 	defer tcpServer.Close()
 	defer wg.Done()
-	wg2.Done()
 
-	accept := func() net.Conn {
+	accept := func() (net.Conn, error) {
 		conn, err := tcpServer.Accept()
 		require.NoError(t, err)
 		if tcpConn, ok := conn.(*net.TCPConn); ok {
-			_ = tcpConn.SetLinger(0)
+			err = tcpConn.SetLinger(0)
+			if err != nil {
+				return nil, err
+			}
 		}
-		_ = conn.SetDeadline(time.Now().Add(15 * time.Second))
+		err = conn.SetDeadline(time.Now().Add(15 * time.Second))
+		if err != nil {
+			return nil, err
+		}
 		if tlsConfig != nil {
 			conn = tls.Server(conn, tlsConfig)
 		}
-		return conn
+		return conn, nil
 	}
 
-	recv := func(conn net.Conn) {
+	recv := func(conn net.Conn) error {
 		bufR := make([]byte, 1)
 		bufW := bytes.NewBuffer(nil)
 		for {
 			n, err := conn.Read(bufR)
-			require.NoError(t, err)
+			if err != nil {
+				return err
+			}
+
 			if n > 0 {
 				if bufR[0] == 0 { // message delimiter found
 					break
 				}
-				_, _ = bufW.Write(bufR)
+				_, err = bufW.Write(bufR)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -283,18 +321,40 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, wg2 *sync.WaitGroup, wg3 *sync.
 		require.Equal(t, obj["_name"], "test1")
 		require.Equal(t, obj["_tag1"], "value1")
 		require.Equal(t, obj["_value"], float64(1))
+		return nil
 	}
 
-	conn := accept()
+	conn, err := accept()
+	if err != nil {
+		fmt.Println(err)
+	}
 	defer conn.Close()
 
 	// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
 
-	recv(conn)
-	recv(conn)
-	_ = conn.Close()
-	wg3.Done()
-	conn = accept()
+	err = recv(conn)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = recv(conn)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = conn.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+	errs <- err
+	if err != nil {
+		return
+	}
+	conn, err = accept()
+	if err != nil {
+		fmt.Println(err)
+	}
 	defer conn.Close()
-	recv(conn)
+	err = recv(conn)
+	if err != nil {
+		fmt.Println(err)
+	}
 }

@@ -47,6 +47,15 @@ func (i *Ipset) SampleConfig() string {
 `
 }
 
+func (i *Ipset) Init() error {
+	_, err := exec.LookPath("ipset")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 	out, e := i.lister(i.Timeout, i.UseSudo)
 	if e != nil {

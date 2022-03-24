@@ -38,7 +38,7 @@ const (
 var (
 	statusLineRE         = regexp.MustCompile(`(\d+) blocks .*\[(\d+)/(\d+)\] \[([U_]+)\]`)
 	recoveryLineBlocksRE = regexp.MustCompile(`\((\d+)/\d+\)`)
-	recoveryLinePctRE    = regexp.MustCompile(`= (.+)%`)
+	recoveryLinePctRE    = regexp.MustCompile(`= +(.+)%`)
 	recoveryLineFinishRE = regexp.MustCompile(`finish=(.+)min`)
 	recoveryLineSpeedRE  = regexp.MustCompile(`speed=(.+)[A-Z]`)
 	componentDeviceRE    = regexp.MustCompile(`(.*)\[\d+\]`)

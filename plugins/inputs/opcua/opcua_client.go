@@ -529,7 +529,9 @@ func (o *OpcUA) getData() error {
 	for i, d := range resp.Results {
 		o.nodeData[i].Quality = d.Status
 		if !o.checkStatusCode(d.Status) {
-			o.Log.Errorf("status not OK for node %v: %v", o.nodes[i].tag.FieldName, d.Status)
+			mp := newMP(&o.nodes[i])
+			o.Log.Errorf("status not OK for node '%s'(metric name '%s', tags '%s')",
+				mp.fieldName, mp.metricName, mp.tags)
 			continue
 		}
 		o.nodeData[i].TagName = o.nodes[i].tag.FieldName
@@ -603,7 +605,6 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 
 			fields[o.nodeData[i].TagName] = o.nodeData[i].Value
 			fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.nodeData[i].Quality))
-			acc.AddFields(n.metricName, fields, tags)
 
 			switch o.Timestamp {
 			case "server":

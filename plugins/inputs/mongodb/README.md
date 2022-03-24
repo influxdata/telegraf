@@ -248,6 +248,8 @@ by running Telegraf with the `--debug` argument.
     - ok (integer)
     - storage_size (integer)
     - type (string)
+    - fs_used_size (integer)
+    - fs_total_size (integer)
 
 - mongodb_col_stats
   - tags:

@@ -2,6 +2,7 @@ package snmp
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,14 +19,25 @@ var m sync.Mutex
 var once sync.Once
 var cache = make(map[string]bool)
 
-func appendPath(path string) {
+type MibLoader interface {
+	// appendPath takes the path of a directory
+	appendPath(path string)
+
+	// loadModule takes the name of a file in one of the
+	// directories. Basename only, no relative or absolute path
+	loadModule(path string) error
+}
+
+type GosmiMibLoader struct{}
+
+func (*GosmiMibLoader) appendPath(path string) {
 	m.Lock()
 	defer m.Unlock()
 
 	gosmi.AppendPath(path)
 }
 
-func loadModule(path string) error {
+func (*GosmiMibLoader) loadModule(path string) error {
 	m.Lock()
 	defer m.Unlock()
 
@@ -37,13 +49,52 @@ func ClearCache() {
 	cache = make(map[string]bool)
 }
 
-func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
+//will give all found folders to gosmi and load in all modules found in the folders
+func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) error {
+	folders, err := walkPaths(paths, log)
+	if err != nil {
+		return err
+	}
+	for _, path := range folders {
+		loader.appendPath(path)
+		modules, err := ioutil.ReadDir(path)
+		if err != nil {
+			log.Warnf("Can't read directory %v", modules)
+		}
+
+		for _, info := range modules {
+			if info.Mode()&os.ModeSymlink != 0 {
+				symlink := filepath.Join(path, info.Name())
+				target, err := filepath.EvalSymlinks(symlink)
+				if err != nil {
+					log.Warnf("Couldn't evaluate symbolic links for %v: %v", symlink, err)
+					continue
+				}
+				//replace symlink's info with the target's info
+				info, err = os.Lstat(target)
+				if err != nil {
+					log.Warnf("Couldn't stat target %v: %v", target, err)
+					continue
+				}
+			}
+			if info.Mode().IsRegular() {
+				err := loader.loadModule(info.Name())
+				if err != nil {
+					log.Warnf("Couldn't load module %v: %v", info.Name(), err)
+					continue
+				}
+			}
+		}
+	}
+	return nil
+}
+
+//should walk the paths given and find all folders
+func walkPaths(paths []string, log telegraf.Logger) ([]string, error) {
 	once.Do(gosmi.Init)
-	modules := []string{}
+	folders := []string{}
 
 	for _, mibPath := range paths {
-		folders := []string{}
-
 		// Check if we loaded that path already and skip it if so
 		m.Lock()
 		cached := cache[mibPath]
@@ -53,7 +104,6 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 			continue
 		}
 
-		appendPath(mibPath)
 		err := filepath.Walk(mibPath, func(path string, info os.FileInfo, err error) error {
 			if info == nil {
 				log.Warnf("No mibs found")
@@ -64,44 +114,29 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger) error {
 				}
 				return nil
 			}
-			folders = append(folders, mibPath)
-			// symlinks are files so we need to double check if any of them are folders
-			// Will check file vs directory later on
+
 			if info.Mode()&os.ModeSymlink != 0 {
-				link, err := os.Readlink(path)
+				target, err := filepath.EvalSymlinks(path)
 				if err != nil {
-					log.Warnf("Bad symbolic link %v", link)
+					log.Warnf("Couldn't evaluate symbolic links for %v: %v", path, err)
 				}
-				folders = append(folders, link)
+				info, err = os.Lstat(target)
+				if err != nil {
+					log.Warnf("Couldn't stat target %v: %v", target, err)
+				}
+				path = target
 			}
+			if info.IsDir() {
+				folders = append(folders, path)
+			}
+
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("Filepath %q could not be walked: %v", mibPath, err)
-		}
-
-		for _, folder := range folders {
-			err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
-				// checks if file or directory
-				if info.IsDir() {
-					appendPath(path)
-				} else if info.Mode()&os.ModeSymlink == 0 {
-					modules = append(modules, info.Name())
-				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("Filepath could not be walked: %v", err)
-			}
+			return folders, fmt.Errorf("Couldn't walk path %q: %v", mibPath, err)
 		}
 	}
-	for _, module := range modules {
-		err := loadModule(module)
-		if err != nil {
-			log.Warnf("module %v could not be loaded", module)
-		}
-	}
-	return nil
+	return folders, nil
 }
 
 // The following is for snmp_trap
@@ -111,22 +146,29 @@ type MibEntry struct {
 }
 
 func TrapLookup(oid string) (e MibEntry, err error) {
-	var node gosmi.SmiNode
-	node, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
+	var givenOid types.Oid
+	if givenOid, err = types.OidFromString(oid); err != nil {
+		return e, fmt.Errorf("could not convert OID %s: %w", oid, err)
+	}
 
-	// ensure modules are loaded or node will be empty (might not error)
-	if err != nil {
+	// Get node name
+	var node gosmi.SmiNode
+	if node, err = gosmi.GetNodeByOID(givenOid); err != nil {
 		return e, err
 	}
+	e.OidText = node.Name
 
-	e.OidText = node.RenderQualified()
-
-	i := strings.Index(e.OidText, "::")
-	if i == -1 {
-		return e, fmt.Errorf("not found")
+	// Add not found OID part
+	if !givenOid.Equals(node.Oid) {
+		e.OidText += "." + givenOid[len(node.Oid):].String()
 	}
-	e.MibName = e.OidText[:i]
-	e.OidText = e.OidText[i+2:]
+
+	// Get module name
+	module := node.GetModule()
+	if module.Name != "<well-known>" {
+		e.MibName = module.Name
+	}
+
 	return e, nil
 }
 

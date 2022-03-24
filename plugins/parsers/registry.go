@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
@@ -154,20 +155,24 @@ type Config struct {
 	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
 
 	//csv configuration
-	CSVColumnNames       []string `toml:"csv_column_names"`
-	CSVColumnTypes       []string `toml:"csv_column_types"`
-	CSVComment           string   `toml:"csv_comment"`
-	CSVDelimiter         string   `toml:"csv_delimiter"`
-	CSVHeaderRowCount    int      `toml:"csv_header_row_count"`
-	CSVMeasurementColumn string   `toml:"csv_measurement_column"`
-	CSVSkipColumns       int      `toml:"csv_skip_columns"`
-	CSVSkipRows          int      `toml:"csv_skip_rows"`
-	CSVTagColumns        []string `toml:"csv_tag_columns"`
-	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
-	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
-	CSVTimezone          string   `toml:"csv_timezone"`
-	CSVTrimSpace         bool     `toml:"csv_trim_space"`
-	CSVSkipValues        []string `toml:"csv_skip_values"`
+	CSVColumnNames        []string `toml:"csv_column_names"`
+	CSVColumnTypes        []string `toml:"csv_column_types"`
+	CSVComment            string   `toml:"csv_comment"`
+	CSVDelimiter          string   `toml:"csv_delimiter"`
+	CSVHeaderRowCount     int      `toml:"csv_header_row_count"`
+	CSVMeasurementColumn  string   `toml:"csv_measurement_column"`
+	CSVSkipColumns        int      `toml:"csv_skip_columns"`
+	CSVSkipRows           int      `toml:"csv_skip_rows"`
+	CSVTagColumns         []string `toml:"csv_tag_columns"`
+	CSVTimestampColumn    string   `toml:"csv_timestamp_column"`
+	CSVTimestampFormat    string   `toml:"csv_timestamp_format"`
+	CSVTimezone           string   `toml:"csv_timezone"`
+	CSVTrimSpace          bool     `toml:"csv_trim_space"`
+	CSVSkipValues         []string `toml:"csv_skip_values"`
+	CSVSkipErrors         bool     `toml:"csv_skip_errors"`
+	CSVMetadataRows       int      `toml:"csv_metadata_rows"`
+	CSVMetadataSeparators []string `toml:"csv_metadata_separators"`
+	CSVMetadataTrimSet    string   `toml:"csv_metadata_trim_set"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -179,13 +184,17 @@ type Config struct {
 	ValueFieldName string `toml:"value_field_name"`
 
 	// XPath configuration
-	XPathPrintDocument bool   `toml:"xpath_print_document"`
-	XPathProtobufFile  string `toml:"xpath_protobuf_file"`
-	XPathProtobufType  string `toml:"xpath_protobuf_type"`
-	XPathConfig        []XPathConfig
+	XPathPrintDocument       bool     `toml:"xpath_print_document"`
+	XPathProtobufFile        string   `toml:"xpath_protobuf_file"`
+	XPathProtobufType        string   `toml:"xpath_protobuf_type"`
+	XPathProtobufImportPaths []string `toml:"xpath_protobuf_import_paths"`
+	XPathConfig              []XPathConfig
 
 	// JSONPath configuration
 	JSONV2Config []JSONV2Config `toml:"json_v2"`
+
+	// Influx configuration
+	InfluxParserType string `toml:"influx_parser_type"`
 }
 
 type XPathConfig xpath.Config
@@ -218,7 +227,11 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.ValueFieldName, config.DefaultTags)
 	case "influx":
-		parser, err = NewInfluxParser()
+		if config.InfluxParserType == "upstream" {
+			parser, err = NewInfluxUpstreamParser()
+		} else {
+			parser, err = NewInfluxParser()
+		}
 	case "nagios":
 		parser, err = NewNagiosParser()
 	case "graphite":
@@ -268,6 +281,7 @@ func NewParser(config *Config) (Parser, error) {
 			Format:              config.DataFormat,
 			ProtobufMessageDef:  config.XPathProtobufFile,
 			ProtobufMessageType: config.XPathProtobufType,
+			ProtobufImportPaths: config.XPathProtobufImportPaths,
 			PrintDocument:       config.XPathPrintDocument,
 			DefaultTags:         config.DefaultTags,
 			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
@@ -317,6 +331,10 @@ func NewNagiosParser() (Parser, error) {
 func NewInfluxParser() (Parser, error) {
 	handler := influx.NewMetricHandler()
 	return influx.NewParser(handler), nil
+}
+
+func NewInfluxUpstreamParser() (Parser, error) {
+	return influx_upstream.NewParser(), nil
 }
 
 func NewGraphiteParser(
