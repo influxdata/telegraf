@@ -125,7 +125,7 @@ func TestServeHTTP(t *testing.T) {
 			sem:          make(chan struct{}, 1),
 			undelivered:  make(map[telegraf.TrackingID]chan bool),
 			mu:           &sync.Mutex{},
-			WriteTimeout: config.Duration(time.Second * 1),
+			WriteTimeout: config.Duration(time.Millisecond * 10),
 		}
 
 		pubPush.ctx, pubPush.cancel = context.WithCancel(context.Background())
