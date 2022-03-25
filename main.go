@@ -65,8 +65,9 @@ func checkFile(filename string) error {
 
 	for _, rule := range rules {
 		tester := T{
-			filename: filename,
-			markdown: md,
+			filename:       filename,
+			markdown:       md,
+			newlineOffsets: newlineOffsets,
 		}
 		err = rule(&tester, root)
 		if err != nil {
