@@ -10,24 +10,14 @@ func mainHeading(t *T, root ast.Node) error {
 	// var children []ast.Node
 	// var n ast.Node
 
-	// var validTitle = regexp.MustCompile(`Plugin$`)
-
 	// children = root.GetChildren()
 	// t.assert(len(children) > 0)
 	// n = children[0]
 	var n ast.Node
 	n = root.FirstChild()
 
-	// t.assert(getNodeType(n) == "Heading")
 	t.assertKind(ast.KindHeading, n)
-	t.assertKind(ast.KindAutoLink, n)
-
-	// children = n.GetChildren()
-	// t.assert(len(children) > 0)
-	// n = children[0]
-	// t.assert(getNodeType(n) == "Text")
-	// title := getContent(n)
-	// t.assert(validTitle.MatchString(title))
+	t.assertFirstChildRegexp(` Plugin$`, n)
 
 	return nil
 }

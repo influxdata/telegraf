@@ -73,7 +73,7 @@ func checkFile(filename string) error {
 		if err != nil {
 			return err
 		}
-		tester.printPass()
+		//tester.printPass()
 		fmt.Printf("\n")
 	}
 

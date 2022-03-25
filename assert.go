@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"runtime"
 	"sort"
 
@@ -78,5 +79,26 @@ func (t *T) printFile(n ast.Node) {
 func (t *T) printPass() {
 	if t.fails == 0 {
 		fmt.Printf("Pass %s\n", t.filename)
+	}
+}
+
+func (t *T) assertFirstChildRegexp(expectedPattern string, n ast.Node) {
+	var validRegexp = regexp.MustCompile(expectedPattern)
+
+	if !n.HasChildren() {
+		t.printRule()
+		t.printFile(n)
+		fmt.Printf("expected children")
+		return
+	}
+	c := n.FirstChild()
+
+	actual := string(c.Text(t.markdown))
+
+	if !validRegexp.MatchString(actual) {
+		t.printRule()
+		t.printFile(n)
+		fmt.Printf(`"%s" doesn't match regexp "%s"`, actual, expectedPattern)
+		return
 	}
 }
