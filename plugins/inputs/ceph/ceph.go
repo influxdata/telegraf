@@ -369,16 +369,14 @@ type CephStatus struct {
 	} `json:"monmap"`
 	OSDMap struct {
 		Epoch          float64  `json:"epoch"`
-		Full           bool     `json:"full"`     // Only valid for ceph version <15
-		NearFull       bool     `json:"nearfull"` // Only valid for ceph version <15
 		NumInOSDs      float64  `json:"num_in_osds"`
 		NumOSDs        float64  `json:"num_osds"`
 		NumRemappedPGs float64  `json:"num_remapped_pgs"`
 		NumUpOSDs      float64  `json:"num_up_osds"`
 		OSDMap         struct { // nested OSDmap used in ceph version <15
 			Epoch          float64 `json:"epoch"`
-			Full           bool    `json:"full"`     // Only valid for ceph version <15
-			NearFull       bool    `json:"nearfull"` // Only valid for ceph version <15
+			Full           bool    `json:"full"`
+			NearFull       bool    `json:"nearfull"`
 			NumInOSDs      float64 `json:"num_in_osds"`
 			NumOSDs        float64 `json:"num_osds"`
 			NumRemappedPGs float64 `json:"num_remapped_pgs"`
@@ -482,14 +480,12 @@ func decodeStatusMonmap(acc telegraf.Accumulator, data *CephStatus) error {
 func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
 	fields := map[string]interface{}{
 		"epoch":            data.OSDMap.Epoch,
-		"full":             data.OSDMap.Full,
-		"nearfull":         data.OSDMap.NearFull,
 		"num_in_osds":      data.OSDMap.NumInOSDs,
 		"num_osds":         data.OSDMap.NumOSDs,
 		"num_remapped_pgs": data.OSDMap.NumRemappedPGs,
 		"num_up_osds":      data.OSDMap.NumUpOSDs,
 	}
-	if data.OSDMap.Epoch == 0 && data.OSDMap.NumOSDs == 0 {
+	if data.OSDMap.OSDMap.Epoch != 0 && data.OSDMap.OSDMap.NumOSDs != 0 {
 		fields = map[string]interface{}{
 			"epoch":            data.OSDMap.OSDMap.Epoch,
 			"full":             data.OSDMap.OSDMap.Full,

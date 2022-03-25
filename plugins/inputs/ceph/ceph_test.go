@@ -1922,8 +1922,6 @@ var cephStatusResults = []expectedResult{
 		metric: "ceph_osdmap",
 		fields: map[string]interface{}{
 			"epoch":            float64(21734),
-			"full":             false,
-			"nearfull":         false,
 			"num_in_osds":      float64(24),
 			"num_osds":         float64(24),
 			"num_remapped_pgs": float64(0),
