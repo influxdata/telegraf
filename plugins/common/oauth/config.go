@@ -25,6 +25,9 @@ type OAuth2Config struct {
 }
 
 func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) (*http.Client, error) {
+	// Boy, if this works... |o/
+	fmt.Println("URL!:", ctx.Value("url"))
+
 	if o.ClientID != "" && o.ClientSecret != "" && o.TokenURL != "" {
 		oauthConfig := clientcredentials.Config{
 			ClientID:     o.ClientID,
@@ -36,9 +39,13 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 		client = oauthConfig.Client(ctx)
 	}
 
-	// Not using Client Credentials grant, instead using Authorization Code Grant
-	fmt.Println("o.TokenURL (common/oauth/config.go): ", o.TokenURL)
+	// Not using Client Credentials grant, instead using Authorization Code Grant...
+	fmt.Println("o.TokenURL 1 (common/oauth/config.go): ", o.TokenURL)
+	// This leads to cookie config...
+	// o.TokenURL = ctx.Value("url").(string)
+	fmt.Println("o.TokenURL 2 (common/oauth/config.go): ", o.TokenURL)
 	if o.CredentialsFile != "" {
+		o.TokenURL = ctx.Value("url").(string)
 		err := o.GetAccessToken(ctx, o.TokenURL)
 		if err != nil {
 			return nil, err
@@ -54,7 +61,6 @@ func (o *OAuth2Config) GetAccessToken(ctx context.Context, audience string) erro
 		return err
 	}
 
-	// TODO: Should Audience instead be scope?
 	conf, err := google.JWTConfigFromJSON(data, audience)
 	if err != nil {
 		return err
@@ -70,6 +76,7 @@ func (o *OAuth2Config) GetAccessToken(ctx context.Context, audience string) erro
 	if err != nil {
 		return err
 	}
+
 	o.AccessToken = token.Extra("id_token").(string)
 	return nil
 }
