@@ -114,6 +114,17 @@ func TestDiskPartitionStat_String(t *testing.T) {
 	if e != fmt.Sprintf("%v", v) {
 		t.Errorf("DiskUsageStat string is invalid: %v", v)
 	}
+	v = PartitionStat{
+		Device:     "dm-1",
+		Source:     "vg0--lv0",
+		Mountpoint: "/",
+		Fstype:     "ext4",
+		Opts:       []string{"ro"},
+	}
+	e = `{"device":"dm-1","source":"vg0--lv0","mountpoint":"/","fstype":"ext4","opts":"ro"}`
+	if e != fmt.Sprintf("%v", v) {
+		t.Errorf("DiskUsageStat string is invalid: %v", v)
+	}
 }
 
 func TestDiskIOCountersStat_String(t *testing.T) {

@@ -3,7 +3,6 @@ package disk
 import (
 	"context"
 	"encoding/json"
-	"modernc.org/cc/v3"
 
 	"github.com/shirou/gopsutil/v3/internal/common"
 )
@@ -25,6 +24,7 @@ type UsageStat struct {
 
 type PartitionStat struct {
 	Device     string   `json:"device"`
+	Source	   string   `json:"source,omitempty"`
 	Mountpoint string   `json:"mountpoint"`
 	Fstype     string   `json:"fstype"`
 	Opts       []string `json:"opts"`
