@@ -163,8 +163,9 @@ func (h *HTTP) Connect() error {
 	if h.Method != http.MethodPost && h.Method != http.MethodPut {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
-
 	ctx := context.Background()
+	// TODO: throwing stuff at the
+	// ctx := context.WithValue(context.Background(), oauth2.HTTPClient, h.HTTPClientConfig)
 	// TODO: review setting h.URL in this fashion...
 	h.HTTPClientConfig.URL = h.URL
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
@@ -273,13 +274,9 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	// Authorization Code Grant
 	if h.CredentialsFile != "" {
 		claims := jwtGo.RegisteredClaims{}
-		_, err = jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
+		jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
 			return nil, nil
 		})
-		if err != nil {
-			// TODO: What to do with this err
-			fmt.Println("err parsing with claims: ", err)
-		}
 
 		// Request new token if expired
 		if !claims.VerifyExpiresAt(time.Now(), true) {
