@@ -26,7 +26,7 @@ type OAuth2Config struct {
 
 func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) (*http.Client, error) {
 	// Boy, if this works... |o/
-	fmt.Println("URL!:", ctx.Value("url"))
+	// fmt.Println("URL!:", ctx.Value("url"))
 
 	if o.ClientID != "" && o.ClientSecret != "" && o.TokenURL != "" {
 		oauthConfig := clientcredentials.Config{
@@ -45,7 +45,6 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 	// o.TokenURL = ctx.Value("url").(string)
 	fmt.Println("o.TokenURL 2 (common/oauth/config.go): ", o.TokenURL)
 	if o.CredentialsFile != "" {
-		o.TokenURL = ctx.Value("url").(string)
 		err := o.GetAccessToken(ctx, o.TokenURL)
 		if err != nil {
 			return nil, err

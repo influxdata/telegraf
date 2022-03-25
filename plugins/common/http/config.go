@@ -58,13 +58,13 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 	}
 
 	// NOTE: Using token URL leads to needing to comment out cookie auth config
-	fmt.Println("h.URL (common/http/config.go):", h.URL)
+	// fmt.Println("h.URL (common/http/config.go):", h.URL)
 
 	// TODO: review this...
-	// h.OAuth2Config.TokenURL = h.URL
+	h.OAuth2Config.TokenURL = h.URL
 
-	// Could maybe set token url on ctx?
-	ctx = context.WithValue(context.Background(), "url", h.URL)
+	// Can set token url on ctx
+	// ctx = context.WithValue(context.Background(), "url", h.URL)
 
 	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
 	if err != nil {
@@ -72,7 +72,7 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 	}
 
 	h.AccessToken = h.OAuth2Config.AccessToken
-	// Cheeky, but no
+	// Cheeky, but no. Temporary.
 	h.CookieAuthConfig.URL = ""
 
 	if h.CookieAuthConfig.URL != "" {
