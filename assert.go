@@ -28,20 +28,28 @@ type T struct {
 // 	t.printFile()
 // }
 
-func (t *T) assertKind(expected ast.NodeKind, n ast.Node) {
-	if n.Kind() == expected {
-		return
-	}
-
-	t.printRule()
+// called by all assert functions that involve a node
+func (t *T) printFailedAssert(n ast.Node, format string, args ...interface{}) {
 	t.printFile(n)
-	fmt.Printf("expected %s, have %s\n", expected.String(), n.Kind().String())
-
-	//n.Dump(t.markdown, 0)
+	fmt.Printf(format+"\n", args...)
+	t.printRule(3)
+	t.fails += 1
 }
 
-func (t *T) printRule() {
-	pc, codeFilename, codeLine, ok := runtime.Caller(2)
+// Assert function that doesnt involve a node, for example if something is missing
+func (t *T) assertf(format string, args ...interface{}) {
+	fmt.Printf("%s:%d: ", t.filename, 1) //similar to printFile
+	fmt.Printf(format+"\n", args...)
+	t.printRule(2)
+	t.fails += 1
+}
+
+func (t *T) assertNodef(n ast.Node, format string, args ...interface{}) {
+	t.printFailedAssert(n, format, args...)
+}
+
+func (t *T) printRule(callers int) {
+	pc, codeFilename, codeLine, ok := runtime.Caller(callers)
 	if !ok {
 		panic("can't get caller")
 	}
@@ -52,12 +60,12 @@ func (t *T) printRule() {
 		funcName = f.Name()
 	}
 
+	fmt.Printf("%s:%d: ", codeFilename, codeLine)
 	if len(funcName) == 0 {
 		fmt.Printf("failed assert\n")
 	} else {
 		fmt.Printf("failed assert in function %s\n", funcName)
 	}
-	fmt.Printf("%s:%d:\n", codeFilename, codeLine)
 }
 
 func (t *T) line(offset int) int {
@@ -76,19 +84,29 @@ func (t *T) printFile(n ast.Node) {
 	//fmt.Printf("offset: %d\n", offset)
 }
 
-func (t *T) printPass() {
+func (t *T) printPassFail() {
 	if t.fails == 0 {
 		fmt.Printf("Pass %s\n", t.filename)
+	} else {
+		fmt.Printf("Fail %s, %d failed assertions\n", t.filename, t.fails)
 	}
+}
+
+func (t *T) assertKind(expected ast.NodeKind, n ast.Node) {
+	if n.Kind() == expected {
+		return
+	}
+
+	t.printFailedAssert(n, "expected %s, have %s", expected.String(), n.Kind().String())
+
+	//n.Dump(t.markdown, 0)
 }
 
 func (t *T) assertFirstChildRegexp(expectedPattern string, n ast.Node) {
 	var validRegexp = regexp.MustCompile(expectedPattern)
 
 	if !n.HasChildren() {
-		t.printRule()
-		t.printFile(n)
-		fmt.Printf("expected children")
+		t.printFailedAssert(n, "expected children")
 		return
 	}
 	c := n.FirstChild()
@@ -96,9 +114,25 @@ func (t *T) assertFirstChildRegexp(expectedPattern string, n ast.Node) {
 	actual := string(c.Text(t.markdown))
 
 	if !validRegexp.MatchString(actual) {
-		t.printRule()
-		t.printFile(n)
-		fmt.Printf(`"%s" doesn't match regexp "%s"`, actual, expectedPattern)
+		t.printFailedAssert(n, "'%s' doesn't match regexp '%s'", actual, expectedPattern)
 		return
 	}
+}
+
+func (t *T) assertHeadingLevel(expected int, n ast.Node) {
+
+	h, ok := n.(*ast.Heading)
+	if !ok {
+		fmt.Printf("failed Heading type assertion\n")
+		t.fails += 1
+		return
+	}
+
+	if h.Level == expected {
+		return
+	}
+
+	t.printFailedAssert(n, "expected header level %d, have %d", expected, h.Level)
+
+	//n.Dump(t.markdown, 0)
 }

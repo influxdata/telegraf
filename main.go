@@ -45,15 +45,15 @@ func checkFile(filename string) error {
 	}
 
 	// Find long lines
-	last := 0
-	threshold := 80
-	for i, cur := range newlineOffsets {
-		len := cur - last - 1 // -1 to exclude the newline
-		if len > threshold {
-			fmt.Printf("%s:%d: long line\n", filename, i+1) // +1 because line numbers start with 1
-		}
-		last = cur
-	}
+	// last := 0
+	// threshold := 80
+	// for i, cur := range newlineOffsets {
+	// 	len := cur - last - 1 // -1 to exclude the newline
+	// 	if len > threshold {
+	// 		fmt.Printf("%s:%d: long line\n", filename, i+1) // +1 because line numbers start with 1
+	// 	}
+	// 	last = cur
+	// }
 
 	p := goldmark.DefaultParser()
 	r := text.NewReader(md)
@@ -61,21 +61,22 @@ func checkFile(filename string) error {
 
 	rules := []ruleFunc{
 		mainHeading,
+		requiredSections,
 	}
 
+	tester := T{
+		filename:       filename,
+		markdown:       md,
+		newlineOffsets: newlineOffsets,
+	}
 	for _, rule := range rules {
-		tester := T{
-			filename:       filename,
-			markdown:       md,
-			newlineOffsets: newlineOffsets,
-		}
 		err = rule(&tester, root)
 		if err != nil {
 			return err
 		}
-		//tester.printPass()
 		fmt.Printf("\n")
 	}
+	tester.printPassFail()
 
 	return nil
 }
