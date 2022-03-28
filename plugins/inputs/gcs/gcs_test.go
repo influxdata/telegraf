@@ -51,7 +51,7 @@ func TestRunSetUpClient(t *testing.T) {
 		Log:       testutil.Logger{},
 	}
 
-	require.NoError(t, gcs.setUpClient())
+	require.Error(t, gcs.setUpClient())
 }
 
 func TestRunInit(t *testing.T) {
@@ -227,10 +227,12 @@ func startGCSServer(t *testing.T) *httptest.Server {
 		switch r.URL.Path {
 		case "/test-bucket/prefix/offset.json":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(currentOffSetKey))
+			_, err := w.Write([]byte(currentOffSetKey))
+			require.NoError(t, err)
 		case "/test-bucket/prefix/offset-key.json":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("{\"offSet\":\"offsetfile\"}"))
+			_, err := w.Write([]byte("{\"offSet\":\"offsetfile\"}"))
+			require.NoError(t, err)
 		default:
 			failPath(r.URL.Path, t, w)
 		}
@@ -279,7 +281,8 @@ func startMultipleItemGCSServer(t *testing.T) *httptest.Server {
 
 			if data, err := json.Marshal(objListing); err == nil {
 				w.WriteHeader(http.StatusOK)
-				w.Write(data)
+				_, err := w.Write(data)
+				require.NoError(t, err)
 			} else {
 				w.WriteHeader(http.StatusNotFound)
 				t.Fatalf("unexpected path: " + r.URL.Path)
@@ -326,7 +329,8 @@ func stateFulGCSServer(t *testing.T) *httptest.Server {
 
 			if data, err := json.Marshal(objListing); err == nil {
 				w.WriteHeader(http.StatusOK)
-				w.Write(data)
+				_, err := w.Write(data)
+				require.NoError(t, err)
 			} else {
 				failPath(r.URL.Path, t, w)
 			}
@@ -390,7 +394,10 @@ func fetchJson(t *testing.T, boundary string, rc io.ReadCloser) (string, error) 
 
 func serveJsonText(w http.ResponseWriter, jsonText string) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(jsonText))
+	if _, err := w.Write([]byte(jsonText)); err != nil {
+		fmt.Println(err)
+	}
+
 }
 
 func failPath(path string, t *testing.T, w http.ResponseWriter) {
