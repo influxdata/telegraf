@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 	"gotest.tools/assert"
 )
 
@@ -50,7 +51,7 @@ func TestRunSetUpClient(t *testing.T) {
 		Log:       testutil.Logger{},
 	}
 
-	gcs.setUpClient()
+	require.NoError(t, gcs.setUpClient())
 }
 
 func TestRunInit(t *testing.T) {
