@@ -442,7 +442,6 @@ L:
 					metric.requestDimensions,
 					map[string]string{s.dimensionKey: instanceID})
 			}
-
 		}
 
 		//add dimensions filter from config file
