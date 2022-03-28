@@ -68,7 +68,7 @@ func TestRunInit(t *testing.T) {
 		Log:       testutil.Logger{},
 	}
 
-	gcs.Init()
+	require.NoError(t, gcs.Init())
 
 	assert.Equal(t, "offsetfile", gcs.offSet.OffSet)
 }
@@ -86,7 +86,7 @@ func TestRunInitNoOffsetKey(t *testing.T) {
 		Log:     testutil.Logger{},
 	}
 
-	gcs.Init()
+	require.NoError(t, gcs.Init())
 
 	assert.Equal(t, "offsetfile", gcs.offSet.OffSet)
 	assert.Equal(t, "prefix/offset-key.json", gcs.OffsetKey)
@@ -107,8 +107,9 @@ func TestRunGatherOneItem(t *testing.T) {
 		parser:  createParser(),
 	}
 
-	gcs.Init()
-	gcs.Gather(acc)
+	require.NoError(t, gcs.Init())
+
+	require.NoError(t, gcs.Gather(acc))
 
 	metric := acc.Metrics[0]
 	assert.Equal(t, "cpu", metric.Measurement)
@@ -135,8 +136,9 @@ func TestRunGatherOneIteration(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	gcs.Init()
-	gcs.Gather(acc)
+	require.NoError(t, gcs.Init())
+
+	require.NoError(t, gcs.Gather(acc))
 
 	assert.Equal(t, 3, len(acc.Metrics))
 }
@@ -159,12 +161,16 @@ func TestRunGatherIteratiosnWithLimit(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	gcs.Init()
-	gcs.Gather(acc)
+	require.NoError(t, gcs.Init())
+
+	require.NoError(t, gcs.Gather(acc))
+
 	assert.Equal(t, 1, len(acc.Metrics))
-	gcs.Gather(acc)
+	require.NoError(t, gcs.Gather(acc))
+
 	assert.Equal(t, 2, len(acc.Metrics))
-	gcs.Gather(acc)
+	require.NoError(t, gcs.Gather(acc))
+
 	assert.Equal(t, 3, len(acc.Metrics))
 }
 
@@ -185,14 +191,17 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	gcs.Init()
-	gcs.Gather(acc)
+	require.NoError(t, gcs.Init())
+
+	require.NoError(t, gcs.Gather(acc))
+
 	assert.Equal(t, 4, len(acc.Metrics))
 	assert.Equal(t, true, gcs.offSet.hasOffset())
 	assert.Equal(t, "prefix/1604148850994", gcs.offSet.OffSet)
 
 	emptyAcc := &testutil.Accumulator{}
-	gcs.Gather(emptyAcc)
+	require.NoError(t, gcs.Gather(emptyAcc))
+
 	assert.Equal(t, 0, len(emptyAcc.Metrics))
 }
 
