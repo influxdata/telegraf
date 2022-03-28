@@ -1,10 +1,9 @@
 
 # Telegraf
 
-![tiger](TelegrafTiger.png "tiger")
+![tiger](assets/TelegrafTiger.png "tiger")
 
-[![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
-[![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](https://www.influxdata.com/slack)
+[![Contribute](https://img.shields.io/badge/Contribute%20To%20Telegraf-orange.svg?logo=influx&style=for-the-badge)](#Contributing) [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=for-the-badge)](https://www.influxdata.com/slack) [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![GoDoc](https://godoc.org/github.com/influxdata/telegraf?status.svg)](https://godoc.org/github.com/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 
 Telegraf is an agent for collecting, processing, aggregating, and writing metrics. Based on a
 plugin system to enable developers in the community to easily add support for additional
@@ -139,6 +138,12 @@ telegraf --config telegraf.conf
 telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 ```
 
+## Contribute to the Project
+
+Telegraf is an MIT licensed open source project and we love our community. The fastest way to get something fixed is to open a PR. Check out our [contributing guide](CONTRIBUTING.md) if you're interested in helping out. Also, join us on our [Community Slack](https://influxdata.com/slack) or [Community Page](https://community.influxdata.com/) if you have questions or comments for our engineering teams.
+
+If your completely new to Telegraf and InfluxDB, you can also enroll for free at [InfluxDB university](https://www.influxdata.com/university/) to take courses to learn more.
+
 ## Documentation
 
 [Latest Release Documentation](https://docs.influxdata.com/telegraf/latest/)
@@ -149,14 +154,3 @@ For documentation on the latest development code see the [documentation index](/
 - [Output Plugins](/docs/OUTPUTS.md)
 - [Processor Plugins](/docs/PROCESSORS.md)
 - [Aggregator Plugins](/docs/AGGREGATORS.md)
-
-## Contributing
-
-There are many ways to contribute:
-
-- Fix and [report bugs](https://github.com/influxdata/telegraf/issues/new)
-- [Improve documentation](https://github.com/influxdata/telegraf/issues?q=is%3Aopen+label%3Adocumentation)
-- [Review code and feature proposals](https://github.com/influxdata/telegraf/pulls)
-- Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
-- [Contribute plugins](CONTRIBUTING.md)
-- [Contribute external plugins](docs/EXTERNAL_PLUGINS.md)
