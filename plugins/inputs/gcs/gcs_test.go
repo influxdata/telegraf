@@ -36,11 +36,11 @@ const (
 	offSetTemplate       = "{\"offSet\":\"%s\"}"
 )
 
-var objListing, _ = parseJsonFromText(fileListing)
-var firstElement, _ = parseJsonFromText(firstFileListing)
-var secondElement, _ = parseJsonFromText(secondFileListing)
-var thirdElement, _ = parseJsonFromText(thirdFileListing)
-var fourthElement, _ = parseJsonFromText(fourthFileListing)
+var objListing = parseJsonFromText(fileListing)
+var firstElement = parseJsonFromText(firstFileListing)
+var secondElement = parseJsonFromText(secondFileListing)
+var thirdElement = parseJsonFromText(thirdFileListing)
+var fourthElement = parseJsonFromText(fourthFileListing)
 
 func TestRunSetUpClient(t *testing.T) {
 	gcs := &GCS{
@@ -398,11 +398,11 @@ func failPath(path string, t *testing.T, w http.ResponseWriter) {
 	t.Fatalf("unexpected path: " + path)
 }
 
-func parseJsonFromText(jsonText string) (map[string]interface{}, error) {
+func parseJsonFromText(jsonText string) map[string]interface{} {
 	var element map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonText), &element); err != nil {
-		return nil, err
-	} else {
-		return element, nil
+		fmt.Println(err)
 	}
+
+	return element
 }
