@@ -101,8 +101,7 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 		processed++
 
 		if gcs.reachedThreshlod(processed) {
-			gcs.updateOffset(bucket, name)
-			break
+			return gcs.updateOffset(bucket, name)
 		}
 
 	}
