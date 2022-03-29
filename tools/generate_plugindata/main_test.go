@@ -64,14 +64,14 @@ func (*Plugin) SampleConfig() string {
 
 func TestCleanGeneratedFiles(t *testing.T) {
 	// Create files that will be cleaned up
-	_, err := os.Create("test.go")
+	_, err := os.Create("testClean.go")
 	require.NoError(t, err)
-	_, err = os.Create("test.go.tmp")
+	_, err = os.Create("testClean.go.tmp")
 	require.NoError(t, err)
 
 	err = cleanGeneratedFiles("test")
 	require.NoError(t, err)
 
-	err = os.Remove("test.go")
+	err = os.Remove("testClean.go")
 	require.NoError(t, err)
 }
