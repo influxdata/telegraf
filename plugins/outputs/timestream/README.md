@@ -70,8 +70,9 @@ The Timestream output plugin writes metrics to the [Amazon Timestream] service.
   ## as a single row in a Timestream table.
   ## When use_multi_measure_record is set to false, Timestream stores each field in a 
   ## separate table row, thereby storing the tags multiple times (once for each field).
-  ## The default is true.
-  use_multi_measure_records = "true"
+  ## The recommended setting is true.
+  ## The default is false.
+  use_multi_measure_records = "false"
     
   ## Specifies the measure_name to use when sending multi-measure records.
   ## NOTE: This property is valid when use_multi_measure_records=true and mapping_mode=multi-table
