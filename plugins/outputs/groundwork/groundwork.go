@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package groundwork
 
 import (
@@ -60,7 +62,7 @@ type Groundwork struct {
 }
 
 func (g *Groundwork) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (g *Groundwork) Init() error {
@@ -210,10 +212,6 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
-}
-
-func (g *Groundwork) Description() string {
-	return "Send telegraf metrics to GroundWork Monitor"
 }
 
 func init() {

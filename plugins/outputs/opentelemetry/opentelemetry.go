@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package opentelemetry
 
 import (
@@ -70,11 +72,7 @@ const sampleConfig = `
 `
 
 func (o *OpenTelemetry) SampleConfig() string {
-	return sampleConfig
-}
-
-func (o *OpenTelemetry) Description() string {
-	return "Send OpenTelemetry metrics over gRPC"
+	return `{{ .SampleConfig }}`
 }
 
 func (o *OpenTelemetry) Connect() error {

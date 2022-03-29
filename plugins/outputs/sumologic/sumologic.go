@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package sumologic
 
 import (
@@ -164,12 +166,8 @@ func (s *SumoLogic) Close() error {
 	return s.err
 }
 
-func (s *SumoLogic) Description() string {
-	return "A plugin that can transmit metrics to Sumo Logic HTTP Source"
-}
-
 func (s *SumoLogic) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (s *SumoLogic) Write(metrics []telegraf.Metric) error {

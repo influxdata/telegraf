@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package bigquery
 
 import (
@@ -21,23 +23,6 @@ const timeStampFieldName = "timestamp"
 
 var defaultTimeout = config.Duration(5 * time.Second)
 
-const sampleConfig = `
-  ## Credentials File
-  credentials_file = "/path/to/service/account/key.json"
-
-  ## Google Cloud Platform Project
-  project = "my-gcp-project"
-
-  ## The namespace for the metric descriptor
-  dataset = "telegraf"
-
-  ## Timeout for BigQuery operations.
-  # timeout = "5s"
-
-  ## Character to replace hyphens on Metric name
-  # replace_hyphen_to = "_"
-`
-
 type BigQuery struct {
 	CredentialsFile string `toml:"credentials_file"`
 	Project         string `toml:"project"`
@@ -55,12 +40,7 @@ type BigQuery struct {
 
 // SampleConfig returns the formatted sample configuration for the plugin.
 func (s *BigQuery) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the human-readable function definition of the plugin.
-func (s *BigQuery) Description() string {
-	return "Configuration for Google Cloud BigQuery to send entries"
+	return `{{ .SampleConfig }}`
 }
 
 func (s *BigQuery) Connect() error {

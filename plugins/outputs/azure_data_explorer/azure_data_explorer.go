@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package azure_data_explorer
 
 import (
@@ -55,36 +57,8 @@ type ingestorFactory func(localClient, string, string) (localIngestor, error)
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
-func (adx *AzureDataExplorer) Description() string {
-	return "Sends metrics to Azure Data Explorer"
-}
-
 func (adx *AzureDataExplorer) SampleConfig() string {
-	return `
-  ## Azure Data Explorer cluster endpoint
-  ## ex: endpoint_url = "https://clustername.australiasoutheast.kusto.windows.net"
-  endpoint_url = ""
-  
-  ## The Azure Data Explorer database that the metrics will be ingested into.
-  ## The plugin will NOT generate this database automatically, it's expected that this database already exists before ingestion.
-  ## ex: "exampledatabase"
-  database = ""
-
-  ## Timeout for Azure Data Explorer operations
-  # timeout = "20s"
-
-  ## Type of metrics grouping used when pushing to Azure Data Explorer. 
-  ## Default is "TablePerMetric" for one table per different metric. 
-  ## For more information, please check the plugin README.
-  # metrics_grouping_type = "TablePerMetric"
-
-  ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
-  # table_name = ""
-
-  ## Creates tables and relevant mapping if set to true(default). 
-  ## Skips table and mapping creation if set to false, this is useful for running Telegraf with the lowest possible permissions i.e. table ingestor role.
-  # create_tables = true
-`
+	return `{{ .SampleConfig }}`
 }
 
 func (adx *AzureDataExplorer) Connect() error {

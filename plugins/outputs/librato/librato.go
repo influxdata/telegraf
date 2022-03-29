@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package librato
 
 import (
@@ -31,24 +33,6 @@ type Librato struct {
 
 // https://www.librato.com/docs/kb/faq/best_practices/naming_convention_metrics_sources.html#naming-limitations-for-sources-and-metrics
 var reUnacceptedChar = regexp.MustCompile("[^.a-zA-Z0-9_-]")
-
-var sampleConfig = `
-  ## Librato API Docs
-  ## http://dev.librato.com/v1/metrics-authentication
-  ## Librato API user
-  api_user = "telegraf@influxdb.com" # required.
-  ## Librato API token
-  api_token = "my-secret-token" # required.
-  ## Debug
-  # debug = false
-  ## Connection timeout.
-  # timeout = "5s"
-  ## Output source Template (same as graphite buckets)
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
-  ## This template is used in librato's source (not metric's name)
-  template = "host"
-
-`
 
 // LMetrics is the default struct for Librato's API fromat
 type LMetrics struct {
@@ -179,12 +163,7 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 // SampleConfig is function who return the default configuration for this
 // output
 func (l *Librato) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description is function who return the Description of this output
-func (l *Librato) Description() string {
-	return "Configuration for Librato API to send metrics to."
+	return `{{ .SampleConfig }}`
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {

@@ -14,10 +14,6 @@ For an introduction to AMQP see:
 ```toml
 # Publishes metrics to an AMQP broker
 [[outputs.amqp]]
-  ## Broker to publish to.
-  ##   deprecated in 1.7; use the brokers option
-  # url = "amqp://localhost:5672/influxdb"
-
   ## Brokers to publish to.  If multiple brokers are specified a random broker
   ## will be selected anytime a connection is established.  This can be
   ## helpful for load balancing when not using a dedicated load balancer.
@@ -65,14 +61,6 @@ For an introduction to AMQP see:
   ## Delivery Mode controls if a published message is persistent.
   ##   One of "transient" or "persistent".
   # delivery_mode = "transient"
-
-  ## InfluxDB database added as a message header.
-  ##   deprecated in 1.7; use the headers option
-  # database = "telegraf"
-
-  ## InfluxDB retention policy added as a message header
-  ##   deprecated in 1.7; use the headers option
-  # retention_policy = "default"
 
   ## Static headers added to each published message.
   # headers = { }

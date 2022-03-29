@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package cratedb
 
 import (
@@ -28,20 +30,6 @@ type CrateDB struct {
 	KeySeparator string `toml:"key_separator"`
 	DB           *sql.DB
 }
-
-var sampleConfig = `
-  # A github.com/jackc/pgx/v4 connection string.
-  # See https://pkg.go.dev/github.com/jackc/pgx/v4#ParseConfig
-  url = "postgres://user:password@localhost/schema?sslmode=disable"
-  # Timeout for all CrateDB queries.
-  timeout = "5s"
-  # Name of the table to store metrics in.
-  table = "metrics"
-  # If true, and the metrics table does not exist, create it automatically.
-  table_create = true
-  # The character(s) to replace any '.' in an object key with
-  key_separator = "_"
-`
 
 func (c *CrateDB) Connect() error {
 	db, err := sql.Open("pgx", c.URL)
@@ -232,11 +220,7 @@ func hashID(m telegraf.Metric) int64 {
 }
 
 func (c *CrateDB) SampleConfig() string {
-	return sampleConfig
-}
-
-func (c *CrateDB) Description() string {
-	return "Configuration for CrateDB to send metrics to."
+	return `{{ .SampleConfig }}`
 }
 
 func (c *CrateDB) Close() error {

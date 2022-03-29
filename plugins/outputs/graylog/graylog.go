@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package graylog
 
 import (
@@ -317,31 +319,6 @@ type Graylog struct {
 	closers []io.WriteCloser
 }
 
-var sampleConfig = `
-  ## Endpoints for your graylog instances.
-  servers = ["udp://127.0.0.1:12201"]
-
-  ## Connection timeout.
-  # timeout = "5s"
-
-  ## The field to use as the GELF short_message, if unset the static string
-  ## "telegraf" will be used.
-  ##   example: short_message_field = "message"
-  # short_message_field = ""
-
-  ## According to GELF payload specification, additional fields names must be prefixed
-  ## with an underscore. Previous versions did not prefix custom field 'name' with underscore.
-  ## Set to true for backward compatibility.
-  # name_field_no_prefix = false
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
 func (g *Graylog) Connect() error {
 	var writers []io.Writer
 	dialer := &net.Dialer{Timeout: time.Duration(g.Timeout)}
@@ -377,11 +354,7 @@ func (g *Graylog) Close() error {
 }
 
 func (g *Graylog) SampleConfig() string {
-	return sampleConfig
-}
-
-func (g *Graylog) Description() string {
-	return "Send telegraf metrics to graylog"
+	return `{{ .SampleConfig }}`
 }
 
 func (g *Graylog) Write(metrics []telegraf.Metric) error {
