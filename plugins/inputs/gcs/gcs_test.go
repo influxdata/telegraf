@@ -57,7 +57,7 @@ func TestRunInit(t *testing.T) {
 	srv := startGCSServer(t)
 	defer srv.Close()
 
-	emulatorSetEnv(t ,srv)
+	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
 		Project:   "test-project",
@@ -76,7 +76,7 @@ func TestRunInitNoOffsetKey(t *testing.T) {
 	srv := startGCSServer(t)
 	defer srv.Close()
 
-	emulatorSetEnv(t ,srv)
+	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
 		Project: "test-project",
@@ -95,7 +95,7 @@ func TestRunGatherOneItem(t *testing.T) {
 	srv := startOneItemGCSServer(t)
 	defer srv.Close()
 
-	emulatorSetEnv(t ,srv)
+	emulatorSetEnv(t, srv)
 
 	acc := &testutil.Accumulator{}
 
@@ -123,7 +123,7 @@ func TestRunGatherOneIteration(t *testing.T) {
 	srv := startMultipleItemGCSServer(t)
 	defer srv.Close()
 
-	emulatorSetEnv(t ,srv)
+	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
 		Project:   "test-project",
@@ -147,7 +147,7 @@ func TestRunGatherIteratiosnWithLimit(t *testing.T) {
 	srv := startMultipleItemGCSServer(t)
 	defer srv.Close()
 
-	emulatorSetEnv(t ,srv)
+	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
 		Project:             "test-project",
@@ -178,7 +178,7 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 	srv := stateFulGCSServer(t)
 	defer srv.Close()
 
-	emulatorSetEnv(t ,srv)
+	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
 		Project:   "test-project",
