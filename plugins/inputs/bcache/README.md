@@ -51,7 +51,7 @@ cache_readaheads
   Count of times readahead occurred.
 ```
 
-## Example
+## Configuration
 
 Using this configuration:
 
