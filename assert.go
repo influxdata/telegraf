@@ -32,7 +32,7 @@ type T struct {
 func (t *T) printFailedAssert(n ast.Node, format string, args ...interface{}) {
 	t.printFile(n)
 	fmt.Printf(format+"\n", args...)
-	t.printRule(3)
+	//t.printRule(3)
 	t.fails += 1
 }
 
@@ -40,7 +40,7 @@ func (t *T) printFailedAssert(n ast.Node, format string, args ...interface{}) {
 func (t *T) assertf(format string, args ...interface{}) {
 	fmt.Printf("%s:%d: ", t.filename, 1) //similar to printFile
 	fmt.Printf(format+"\n", args...)
-	t.printRule(2)
+	//t.printRule(2)
 	t.fails += 1
 }
 

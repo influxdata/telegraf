@@ -3,27 +3,83 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"os"
+	"strings"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
 )
 
+type plugin int
+
+const (
+	none plugin = iota
+	input
+	output
+	processor
+	aggregator
+	parser
+)
+
+func guessPluginType(filename string) plugin {
+	switch {
+	case strings.Contains(filename, "plugins/inputs/"):
+		return input
+	case strings.Contains(filename, "plugins/outputs/"):
+		return output
+	case strings.Contains(filename, "plugins/processors/"):
+		return processor
+	case strings.Contains(filename, "plugins/aggregators/"):
+		return aggregator
+	case strings.Contains(filename, "plugins/parsers/"):
+		return parser
+	default:
+		return none
+	}
+}
+
 func main() {
 	var err error
-	filename := "/home/reim/go/src/github.com/influxdata/telegraf/plugins/inputs/modbus/README.md"
-	//filename := "test.txt"
-	err = checkFile(filename)
-	if err != nil {
-		panic(err)
+	for _, filename := range os.Args[1:] {
+		err = checkFile(filename, guessPluginType(filename))
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
 type ruleFunc func(*T, ast.Node) error
 
-func checkFile(filename string) error {
+type rulesMap map[plugin][]ruleFunc
+
+var rules rulesMap
+
+func init() {
+	rules = make(rulesMap)
+
+	//rules for all plugin types
+	all := []ruleFunc{
+		mainHeading,
+		requiredHeadingsClose([]string{
+			"Configuration",
+		}),
+	}
+	for i := input; i <= parser; i++ {
+		rules[i] = all
+	}
+
+	inputRules := []ruleFunc{
+		requiredHeadingsClose([]string{
+			"Example Output",
+			"Metrics",
+		}),
+	}
+	rules[input] = append(rules[input], inputRules...)
+
+}
+
+func checkFile(filename string, pluginType plugin) error {
 	md, err := os.ReadFile(filename)
 	if err != nil {
 		return err
@@ -59,10 +115,7 @@ func checkFile(filename string) error {
 	r := text.NewReader(md)
 	root := p.Parse(r)
 
-	rules := []ruleFunc{
-		mainHeading,
-		requiredSections,
-	}
+	rules := rules[pluginType]
 
 	tester := T{
 		filename:       filename,
@@ -74,7 +127,7 @@ func checkFile(filename string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("\n")
+		//fmt.Printf("\n")
 	}
 	tester.printPassFail()
 
