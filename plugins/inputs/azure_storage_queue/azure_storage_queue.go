@@ -1,5 +1,5 @@
-//go:generate go run ../../../scripts/generate_plugindata/main.go
-//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/nerate_plugindata/main.go --clean
 package azure_storage_queue
 
 import (

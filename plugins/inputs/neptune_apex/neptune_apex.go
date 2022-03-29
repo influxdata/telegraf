@@ -1,5 +1,5 @@
-//go:generate go run ../../../scripts/generate_plugindata/main.go
-//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/nerate_plugindata/main.go --clean
 // Package neptune_apex implements an input plugin for the Neptune Apex
 // aquarium controller.
 package neptune_apex

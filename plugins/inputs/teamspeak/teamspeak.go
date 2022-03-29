@@ -1,13 +1,14 @@
-//go:generate go run ../../../scripts/generate_plugindata/main.go
-//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/nerate_plugindata/main.go --clean
 package teamspeak
 
 import (
 	"github.com/multiplay/go-ts3"
 
+	"strconv"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"strconv"
 )
 
 type Teamspeak struct {
