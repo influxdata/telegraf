@@ -244,7 +244,10 @@ func (gcs *GCS) setOffset() error {
 	var offSet OffSet
 
 	if r, err := obj.NewReader(gcs.ctx); err == nil {
-		defer r.Close()
+		defer func() {
+			err = r.Close()
+			gcs.Log.Errorf("Could not close reader", err)
+		}()
 
 		buf := new(bytes.Buffer)
 
