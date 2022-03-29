@@ -350,16 +350,20 @@ func serveBlobs(urlPath string, offsetKey string, t *testing.T, w http.ResponseW
 	switch urlPath {
 	case "/test-iteration-bucket/prefix/offset-key.json":
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(singleObjectNotFound))
+		_, err := w.Write([]byte(singleObjectNotFound))
+		require.NoError(t, err)
 	case "/test-bucket/prefix/offset.json":
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(offsetKey))
+		_, err := w.Write([]byte(offsetKey))
+		require.NoError(t, err)
 	case "/test-bucket/prefix/offset-key.json":
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("{\"offSet\":\"offsetfile\"}"))
+		_, err := w.Write([]byte("{\"offSet\":\"offsetfile\"}"))
+		require.NoError(t, err)
 	case "/test-iteration-bucket/prefix/custom-offset-key.json":
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(offsetKey))
+		_, err := w.Write([]byte(offsetKey))
+		require.NoError(t, err)
 	case "/test-iteration-bucket/1604148850990":
 		serveJsonText(w, firstFile)
 	case "/test-iteration-bucket/prefix/1604148850991":
