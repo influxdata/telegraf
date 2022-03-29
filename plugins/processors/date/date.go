@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package date
 
 import (
@@ -8,31 +10,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
-
-const sampleConfig = `
-	## New tag to create
-	tag_key = "month"
-
-	## New field to create (cannot set both field_key and tag_key)
-	# field_key = "month"
-
-	## Date format string, must be a representation of the Go "reference time"
-	## which is "Mon Jan 2 15:04:05 -0700 MST 2006".
-	date_format = "Jan"
-
-	## If destination is a field, date format can also be one of
-	## "unix", "unix_ms", "unix_us", or "unix_ns", which will insert an integer field.
-	# date_format = "unix"
-
-	## Offset duration added to the date string when writing the new tag.
-	# date_offset = "0s"
-
-	## Timezone to use when creating the tag or field using a reference time
-	## string.  This can be set to one of "UTC", "Local", or to a location name
-	## in the IANA Time Zone database.
-	##   example: timezone = "America/Los_Angeles"
-	# timezone = "UTC"
-`
 
 const defaultTimezone = "UTC"
 
@@ -47,11 +24,7 @@ type Date struct {
 }
 
 func (d *Date) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *Date) Description() string {
-	return "Dates measurements, tags, and fields that pass through this filter."
+	return `{{ .SampleConfig }}`
 }
 
 func (d *Date) Init() error {

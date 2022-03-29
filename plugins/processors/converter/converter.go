@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package converter
 
 import (
@@ -12,35 +14,6 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
-
-var sampleConfig = `
-  ## Tags to convert
-  ##
-  ## The table key determines the target type, and the array of key-values
-  ## select the keys to convert.  The array may contain globs.
-  ##   <target-type> = [<tag-key>...]
-  [processors.converter.tags]
-    measurement = []
-    string = []
-    integer = []
-    unsigned = []
-    boolean = []
-    float = []
-
-  ## Fields to convert
-  ##
-  ## The table key determines the target type, and the array of key-values
-  ## select the keys to convert.  The array may contain globs.
-  ##   <target-type> = [<field-key>...]
-  [processors.converter.fields]
-    measurement = []
-    tag = []
-    string = []
-    integer = []
-    unsigned = []
-    boolean = []
-    float = []
-`
 
 type Conversion struct {
 	Measurement []string `toml:"measurement"`
@@ -72,11 +45,7 @@ type ConversionFilter struct {
 }
 
 func (p *Converter) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Converter) Description() string {
-	return "Convert values to another metric value type"
+	return `{{ .SampleConfig }}`
 }
 
 func (p *Converter) Init() error {

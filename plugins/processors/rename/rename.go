@@ -1,12 +1,11 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package rename
 
 import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
-
-const sampleConfig = `
-`
 
 type Replace struct {
 	Measurement string `toml:"measurement"`
@@ -20,11 +19,7 @@ type Rename struct {
 }
 
 func (r *Rename) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Rename) Description() string {
-	return "Rename measurements, tags, and fields that pass through this filter."
+	return `{{ .SampleConfig }}`
 }
 
 func (r *Rename) Apply(in ...telegraf.Metric) []telegraf.Metric {

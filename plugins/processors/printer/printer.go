@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package printer
 
 import (
@@ -13,15 +15,8 @@ type Printer struct {
 	serializer serializers.Serializer
 }
 
-var sampleConfig = `
-`
-
 func (p *Printer) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Printer) Description() string {
-	return "Print all metrics that pass through this filter."
+	return `{{ .SampleConfig }}`
 }
 
 func (p *Printer) Apply(in ...telegraf.Metric) []telegraf.Metric {

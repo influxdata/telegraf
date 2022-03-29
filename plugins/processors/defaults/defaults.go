@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package defaults
 
 import (
@@ -7,22 +9,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-const sampleConfig = `
-  ## Ensures a set of fields always exists on your metric(s) with their 
-  ## respective default value.
-  ## For any given field pair (key = default), if it's not set, a field 
-  ## is set on the metric with the specified default.
-  ## 
-  ## A field is considered not set if it is nil on the incoming metric;
-  ## or it is not nil but its value is an empty string or is a string 
-  ## of one or more spaces.
-  ##   <target-field> = <value>
-  # [processors.defaults.fields]
-  #   field_1 = "bar"
-  #   time_idle = 0
-  #   is_error = true
-`
-
 // Defaults is a processor for ensuring certain fields always exist
 // on your Metrics with at least a default value.
 type Defaults struct {
@@ -31,12 +17,7 @@ type Defaults struct {
 
 // SampleConfig represents a sample toml config for this plugin.
 func (def *Defaults) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description is a brief description of this processor plugin's behaviour.
-func (def *Defaults) Description() string {
-	return "Defaults sets default value(s) for specified fields that are not set on incoming metrics."
+	return `{{ .SampleConfig }}`
 }
 
 // Apply contains the main implementation of this processor.

@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package execd
 
 import (
@@ -16,15 +18,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
-
-const sampleConfig = `
-	## Program to run as daemon
-	## eg: command = ["/path/to/your_program", "arg1", "arg2"]
-	command = ["cat"]
-
-  ## Delay before the process is restarted after an unexpected termination
-  restart_delay = "10s"
-`
 
 type Execd struct {
 	Command      []string        `toml:"command"`
@@ -52,11 +45,7 @@ func New() *Execd {
 }
 
 func (e *Execd) SampleConfig() string {
-	return sampleConfig
-}
-
-func (e *Execd) Description() string {
-	return "Run executable as long-running processor plugin"
+	return `{{ .SampleConfig }}`
 }
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {

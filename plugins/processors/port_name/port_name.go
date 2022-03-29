@@ -1,4 +1,6 @@
-package portname
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
+package port_name
 
 import (
 	"bufio"
@@ -10,26 +12,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
-
-var sampleConfig = `
-[[processors.port_name]]
-  ## Name of tag holding the port number
-  # tag = "port"
-  ## Or name of the field holding the port number
-  # field = "port"
-
-  ## Name of output tag or field (depending on the source) where service name will be added
-  # dest = "service"
-
-  ## Default tcp or udp
-  # default_protocol = "tcp"
-
-  ## Tag containing the protocol (tcp or udp, case-insensitive)
-  # protocol_tag = "proto"
-
-  ## Field containing the protocol (tcp or udp, case-insensitive)
-  # protocol_field = "proto"
-`
 
 type sMap map[string]map[int]string // "https" == services["tcp"][443]
 
@@ -47,11 +29,7 @@ type PortName struct {
 }
 
 func (pn *PortName) SampleConfig() string {
-	return sampleConfig
-}
-
-func (pn *PortName) Description() string {
-	return "Given a tag/field of a TCP or UDP port number, add a tag/field of the service name looked up in the system services file"
+	return `{{ .SampleConfig }}`
 }
 
 func readServicesFile() {

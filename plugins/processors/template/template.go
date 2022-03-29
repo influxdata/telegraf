@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package template
 
 import (
@@ -15,22 +17,8 @@ type TemplateProcessor struct {
 	tmpl     *template.Template
 }
 
-const sampleConfig = `
-  ## Tag to set with the output of the template.
-  tag = "topic"
-
-  ## Go template used to create the tag value.  In order to ease TOML
-  ## escaping requirements, you may wish to use single quotes around the
-  ## template string.
-  template = '{{ .Tag "hostname" }}.{{ .Tag "level" }}'
-`
-
 func (r *TemplateProcessor) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *TemplateProcessor) Description() string {
-	return "Uses a Go template to create a new tag"
+	return `{{ .SampleConfig }}`
 }
 
 func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {

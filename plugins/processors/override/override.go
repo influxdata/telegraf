@@ -1,20 +1,11 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package override
 
 import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
-
-var sampleConfig = `
-  ## All modifications on inputs and aggregators can be overridden:
-  # name_override = "new_name"
-  # name_prefix = "new_name_prefix"
-  # name_suffix = "new_name_suffix"
-
-  ## Tags to be added (all values must be strings)
-  # [processors.override.tags]
-  #   additional_tag = "tag_value"
-`
 
 type Override struct {
 	NameOverride string
@@ -24,11 +15,7 @@ type Override struct {
 }
 
 func (p *Override) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Override) Description() string {
-	return "Apply metric modifications using override semantics."
+	return `{{ .SampleConfig }}`
 }
 
 func (p *Override) Apply(in ...telegraf.Metric) []telegraf.Metric {

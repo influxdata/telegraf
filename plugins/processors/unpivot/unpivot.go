@@ -1,18 +1,10 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package unpivot
 
 import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
-)
-
-const (
-	description  = "Rotate multi field metric into several single field metrics"
-	sampleConfig = `
-  ## Tag to use for the name.
-  tag_key = "name"
-  ## Field to use for the name of the value.
-  value_key = "value"
-`
 )
 
 type Unpivot struct {
@@ -21,11 +13,7 @@ type Unpivot struct {
 }
 
 func (p *Unpivot) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Unpivot) Description() string {
-	return description
+	return `{{ .SampleConfig }}`
 }
 
 func copyWithoutFields(metric telegraf.Metric) telegraf.Metric {

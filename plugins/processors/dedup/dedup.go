@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package dedup
 
 import (
@@ -8,11 +10,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-var sampleConfig = `
-  ## Maximum time to suppress output
-  dedup_interval = "600s"
-`
-
 type Dedup struct {
 	DedupInterval config.Duration `toml:"dedup_interval"`
 	FlushTime     time.Time
@@ -20,11 +17,7 @@ type Dedup struct {
 }
 
 func (d *Dedup) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *Dedup) Description() string {
-	return "Filter metrics with repeating field values"
+	return `{{ .SampleConfig }}`
 }
 
 // Remove expired items from cache
