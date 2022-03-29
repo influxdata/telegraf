@@ -69,7 +69,7 @@ func TestCleanGeneratedFiles(t *testing.T) {
 	_, err = os.Create("testClean.go.tmp")
 	require.NoError(t, err)
 
-	err = cleanGeneratedFiles("test")
+	err = cleanGeneratedFiles("testClean")
 	require.NoError(t, err)
 
 	err = os.Remove("testClean.go")
