@@ -19,7 +19,7 @@ import (
 )
 
 type tags struct {
-	name, job string
+	name, job, client string
 }
 
 // Lustre proc files can change between versions, so we want to future-proof
@@ -40,10 +40,12 @@ var sampleConfig = `
   #   "/proc/fs/lustre/obdfilter/*/stats",
   #   "/proc/fs/lustre/osd-ldiskfs/*/stats",
   #   "/proc/fs/lustre/obdfilter/*/job_stats",
+  #   "/proc/fs/lustre/obdfilter/*/exports/*/stats",
   # ]
   # mds_procfiles = [
   #   "/proc/fs/lustre/mdt/*/md_stats",
   #   "/proc/fs/lustre/mdt/*/job_stats",
+  #   "/proc/fs/lustre/mdt/*/exports/*/stats",
   # ]
 `
 
@@ -365,13 +367,26 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 	fieldSplitter := regexp.MustCompile(`[ :]+`)
 
 	for _, file := range files {
-		/* Turn /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
-		 * into just the object store target name
-		 * Assumption: the target name is always second to last,
-		 * which is true in Lustre 2.1->2.8
+
+		/* From /proc/fs/lustre/obdfilter/<ost_name>/stats and similar
+		 * extract the object store target name,
+		 * and for per-client files under
+		 * /proc/fs/lustre/obdfilter/<ost_name>/exports/<client_nid>/stats
+		 * and similar the client NID
+		 * Assumption: the target name is fourth to last
+		 * for per-client files and second to last otherwise
+		 * and the client NID is always second to last,
+		 * which is true in Lustre 2.1->2.14
 		 */
 		path := strings.Split(file, "/")
-		name := path[len(path)-2]
+		var name, client string
+		if strings.Contains(file, "/exports/") {
+			name = path[len(path)-4]
+			client = path[len(path)-2]
+		} else {
+			name = path[len(path)-2]
+			client = ""
+		}
 
 		//lines, err := internal.ReadLines(file)
 		wholeFile, err := os.ReadFile(file)
@@ -401,10 +416,10 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 				}
 
 				var fields map[string]interface{}
-				fields, ok := l.allFields[tags{name, jobid}]
+				fields, ok := l.allFields[tags{name, jobid, client}]
 				if !ok {
 					fields = make(map[string]interface{})
-					l.allFields[tags{name, jobid}] = fields
+					l.allFields[tags{name, jobid, client}] = fields
 				}
 
 				for _, wanted := range wantedFields {
@@ -507,6 +522,9 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 		}
 		if len(tgs.job) > 0 {
 			tags["jobid"] = tgs.job
+		}
+		if len(tgs.client) > 0 {
+			tags["client"] = tgs.client
 		}
 		acc.AddFields("lustre2", fields, tags)
 	}
