@@ -261,7 +261,7 @@ func (gcs *GCS) setOffset() error {
 }
 
 func init() {
-	inputs.Add("gcs", func() telegraf.Input {
+	inputs.Add("google_cloud_storage", func() telegraf.Input {
 		gcs := &GCS{}
 		return gcs
 	})
