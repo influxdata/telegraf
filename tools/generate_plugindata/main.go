@@ -38,7 +38,7 @@ func extractPluginData() (string, error) {
 		}
 	}
 
-	fmt.Printf("No configuration found for plugin: %s", os.Getenv("GOPACKAGE"))
+	fmt.Printf("No configuration found for plugin: %s\n", os.Getenv("GOPACKAGE"))
 
 	return "", nil
 }
