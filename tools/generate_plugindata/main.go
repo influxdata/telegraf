@@ -38,7 +38,9 @@ func extractPluginData() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("No configuration found for plugin: %s", os.Getenv("GOPACKAGE"))
+	fmt.Printf("No configuration found for plugin: %s", os.Getenv("GOPACKAGE"))
+
+	return "", nil
 }
 
 // generatePluginData parses the main source file of the plugin as a template and updates it with the sample configuration
