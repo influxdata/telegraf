@@ -123,7 +123,7 @@ func (gcs *GCS) shoudIgnore(name string) bool {
 
 func (gcs *GCS) processMeasurementsInObject(name string, bucket *storage.BucketHandle, acc telegraf.Accumulator) error {
 	r, err := bucket.Object(name).NewReader(gcs.ctx)
-	defer r.Close()
+	defer gcs.closeReader(r)
 
 	if err != nil {
 		return err
@@ -244,11 +244,7 @@ func (gcs *GCS) setOffset() error {
 	var offSet OffSet
 
 	if r, err := obj.NewReader(gcs.ctx); err == nil {
-		defer func() {
-			err = r.Close()
-			gcs.Log.Errorf("Could not close reader", err)
-		}()
-
+		defer gcs.closeReader(r)
 		buf := new(bytes.Buffer)
 
 		if _, err := io.Copy(buf, r); err == nil {
@@ -270,6 +266,11 @@ func init() {
 		gcs := &GCS{}
 		return gcs
 	})
+}
+
+func (gcs *GCS) closeReader(r *storage.Reader) {
+	err := r.Close()
+	gcs.Log.Errorf("Could not close reader", err)
 }
 
 const sampleConfig = `
