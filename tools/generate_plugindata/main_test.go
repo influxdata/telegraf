@@ -8,6 +8,10 @@ import (
 )
 
 func TestGeneratePluginData(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	readme := `# plugin
 
 ## Configuration
@@ -63,6 +67,10 @@ func (*Plugin) SampleConfig() string {
 }
 
 func TestCleanGeneratedFiles(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	// Create files that will be cleaned up
 	_, err := os.Create("testClean.go")
 	require.NoError(t, err)
