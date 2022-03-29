@@ -18,6 +18,8 @@ This section is for developers who want to create a new processor plugin.
 ## Processor Plugin Example
 
 ```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package printer
 
 // printer.go

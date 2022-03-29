@@ -22,6 +22,8 @@ This section is for developers who want to create a new aggregator plugin.
 ### Aggregator Plugin Example
 
 ```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package min
 
 // min.go

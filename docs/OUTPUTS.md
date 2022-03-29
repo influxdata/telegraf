@@ -20,6 +20,8 @@ similar constructs.
 ## Output Plugin Example
 
 ```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package simpleoutput
 
 // simpleoutput.go
