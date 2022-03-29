@@ -30,7 +30,6 @@ type GCS struct {
 
 	Prefix              string `toml:"key_prefix"`
 	OffsetKey           string `toml:"offset_key"`
-	ProcessOffset       bool   `toml:"process_offset"`
 	ObjectsPerIteration int    `toml:"objects_per_iteration"`
 
 	Log    telegraf.Logger
