@@ -65,6 +65,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/snappy v0.0.4
+	github.com/gomarkdown/markdown v0.0.0-20220310201231-552c6011c0b8
 	github.com/google/go-cmp v0.5.7
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.3.1
