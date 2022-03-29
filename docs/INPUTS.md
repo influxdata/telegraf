@@ -27,6 +27,8 @@ current host.
 ## Input Plugin Example
 
 ```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package simple
 
 // simple.go
