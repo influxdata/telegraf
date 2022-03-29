@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package dovecot
 
 import (
@@ -20,33 +22,15 @@ type Dovecot struct {
 	Servers []string
 }
 
-func (d *Dovecot) Description() string {
-	return "Read statistics from one or many dovecot servers"
-}
-
-var sampleConfig = `
-  ## specify dovecot servers via an address:port list
-  ##  e.g.
-  ##    localhost:24242
-  ##
-  ## If no servers are specified, then localhost is used as the host.
-  servers = ["localhost:24242"]
-
-  ## Type is one of "user", "domain", "ip", or "global"
-  type = "global"
-
-  ## Wildcard matches like "*.com". An empty string "" is same as "*"
-  ## If type = "ip" filters should be <IP/network>
-  filters = [""]
-`
-
 var defaultTimeout = time.Second * time.Duration(5)
 
 var validQuery = map[string]bool{
 	"user": true, "domain": true, "global": true, "ip": true,
 }
 
-func (d *Dovecot) SampleConfig() string { return sampleConfig }
+func (d *Dovecot) SampleConfig() string {
+	return `{{ .SampleConfig }}`
+}
 
 // Reads stats from all configured servers.
 func (d *Dovecot) Gather(acc telegraf.Accumulator) error {

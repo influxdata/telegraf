@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 //go:build linux
 // +build linux
 
@@ -24,31 +26,9 @@ type Iptables struct {
 	lister  chainLister
 }
 
-// Description returns a short description of the plugin.
-func (ipt *Iptables) Description() string {
-	return "Gather packets and bytes throughput from iptables"
-}
-
 // SampleConfig returns sample configuration options.
 func (ipt *Iptables) SampleConfig() string {
-	return `
-  ## iptables require root access on most systems.
-  ## Setting 'use_sudo' to true will make use of sudo to run iptables.
-  ## Users must configure sudo to allow telegraf user to run iptables with no password.
-  ## iptables can be restricted to only list command "iptables -nvL".
-  use_sudo = false
-  ## Setting 'use_lock' to true runs iptables with the "-w" option.
-  ## Adjust your sudo settings appropriately if using this option ("iptables -w 5 -nvl")
-  use_lock = false
-  ## Define an alternate executable, such as "ip6tables". Default is "iptables".
-  # binary = "ip6tables"
-  ## defines the table to monitor:
-  table = "filter"
-  ## defines the chains to monitor.
-  ## NOTE: iptables rules without a comment will not be monitored.
-  ## Read the plugin documentation for more information.
-  chains = [ "INPUT" ]
-`
+	return `{{ .SampleConfig }}`
 }
 
 // Gather gathers iptables packets and bytes throughput from the configured tables and chains.

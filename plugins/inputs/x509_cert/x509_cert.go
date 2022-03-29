@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 // Package x509_cert reports metrics from an SSL certificate.
 package x509_cert
 
@@ -23,30 +25,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## List certificate sources
-  ## Prefix your entry with 'file://' if you intend to use relative paths
-  sources = ["tcp://example.org:443", "https://influxdata.com:443",
-            "udp://127.0.0.1:4433", "/etc/ssl/certs/ssl-cert-snakeoil.pem",
-            "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem"]
-
-  ## Timeout for SSL connection
-  # timeout = "5s"
-
-  ## Pass a different name into the TLS request (Server Name Indication)
-  ##   example: server_name = "myhost.example.org"
-  # server_name = ""
-
-  ## Don't include root or intermediate certificates in output
-  # exclude_root_certs = false
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-`
-const description = "Reads metrics from a SSL certificate"
-
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
 	Sources          []string        `toml:"sources"`
@@ -60,14 +38,9 @@ type X509Cert struct {
 	Log       telegraf.Logger
 }
 
-// Description returns description of the plugin.
-func (c *X509Cert) Description() string {
-	return description
-}
-
 // SampleConfig returns configuration sample for the plugin.
 func (c *X509Cert) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (c *X509Cert) sourcesToURLs() error {

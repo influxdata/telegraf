@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package openldap
 
 import (
@@ -25,30 +27,6 @@ type Openldap struct {
 	ReverseMetricNames bool
 }
 
-const sampleConfig string = `
-  host = "localhost"
-  port = 389
-
-  # ldaps, starttls, or no encryption. default is an empty string, disabling all encryption.
-  # note that port will likely need to be changed to 636 for ldaps
-  # valid options: "" | "starttls" | "ldaps"
-  tls = ""
-
-  # skip peer certificate verification. Default is false.
-  insecure_skip_verify = false
-
-  # Path to PEM-encoded Root certificate to use to verify server certificate
-  tls_ca = "/etc/ssl/certs.pem"
-
-  # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
-  bind_dn = ""
-  bind_password = ""
-
-  # Reverse metric names so they sort more naturally. Recommended.
-  # This defaults to false if unset, but is set to true when generating a new config
-  reverse_metric_names = true
-`
-
 var searchBase = "cn=Monitor"
 var searchFilter = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))"
 var searchAttrs = []string{"monitorCounter", "monitorOpInitiated", "monitorOpCompleted", "monitoredInfo"}
@@ -66,11 +44,7 @@ var attrTranslate = map[string]string{
 }
 
 func (o *Openldap) SampleConfig() string {
-	return sampleConfig
-}
-
-func (o *Openldap) Description() string {
-	return "OpenLDAP cn=Monitor plugin"
+	return `{{ .SampleConfig }}`
 }
 
 // return an initialized Openldap

@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 //go:build !freebsd || (freebsd && cgo)
 // +build !freebsd freebsd,cgo
 
@@ -25,20 +27,8 @@ type Nats struct {
 	client *http.Client
 }
 
-var sampleConfig = `
-  ## The address of the monitoring endpoint of the NATS server
-  server = "http://localhost:8222"
-
-  ## Maximum time to receive response
-  # response_timeout = "5s"
-`
-
 func (n *Nats) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *Nats) Description() string {
-	return "Provides metrics about the state of a NATS server"
+	return `{{ .SampleConfig }}`
 }
 
 func (n *Nats) Gather(acc telegraf.Accumulator) error {

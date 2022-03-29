@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 //go:build linux
 // +build linux
 
@@ -17,12 +19,8 @@ type KernelVmstat struct {
 	statFile string
 }
 
-func (k *KernelVmstat) Description() string {
-	return "Get kernel statistics from /proc/vmstat"
-}
-
 func (k *KernelVmstat) SampleConfig() string {
-	return ""
+	return `{{ .SampleConfig }}`
 }
 
 func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {

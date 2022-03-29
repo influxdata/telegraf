@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 //go:build !windows
 // +build !windows
 
@@ -16,14 +18,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
-
-const sampleConfig = `
-  ## Postfix queue directory. If not provided, telegraf will try to use
-  ## 'postconf -h queue_directory' to determine it.
-  # queue_directory = "/var/spool/postfix"
-`
-
-const description = "Measure postfix queue statistics"
 
 func getQueueDirectory() (string, error) {
 	qd, err := exec.Command("postconf", "-h", "queue_directory").Output()
@@ -106,11 +100,7 @@ func (p *Postfix) Gather(acc telegraf.Accumulator) error {
 }
 
 func (p *Postfix) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Postfix) Description() string {
-	return description
+	return `{{ .SampleConfig }}`
 }
 
 func init() {

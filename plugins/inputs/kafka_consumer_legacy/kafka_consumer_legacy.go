@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package kafka_consumer_legacy
 
 import (
@@ -47,39 +49,8 @@ type Kafka struct {
 	doNotCommitMsgs bool
 }
 
-var sampleConfig = `
-  ## topic(s) to consume
-  topics = ["telegraf"]
-
-  ## an array of Zookeeper connection strings
-  zookeeper_peers = ["localhost:2181"]
-
-  ## Zookeeper Chroot
-  zookeeper_chroot = ""
-
-  ## the name of the consumer group
-  consumer_group = "telegraf_metrics_consumers"
-
-  ## Offset (must be either "oldest" or "newest")
-  offset = "oldest"
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-
-  ## Maximum length of a message to consume, in bytes (default 0/unlimited);
-  ## larger messages are dropped
-  max_message_len = 65536
-`
-
 func (k *Kafka) SampleConfig() string {
-	return sampleConfig
-}
-
-func (k *Kafka) Description() string {
-	return "Read metrics from Kafka topic(s)"
+	return `{{ .SampleConfig }}`
 }
 
 func (k *Kafka) SetParser(parser parsers.Parser) {

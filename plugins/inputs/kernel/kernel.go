@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 //go:build linux
 // +build linux
 
@@ -28,11 +30,9 @@ type Kernel struct {
 	entropyStatFile string
 }
 
-func (k *Kernel) Description() string {
-	return "Get kernel statistics from /proc/stat"
+func (k *Kernel) SampleConfig() string {
+	return `{{ .SampleConfig }}`
 }
-
-func (k *Kernel) SampleConfig() string { return "" }
 
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	data, err := k.getProcStat()

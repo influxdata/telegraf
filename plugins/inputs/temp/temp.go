@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package temp
 
 import (
@@ -13,14 +15,8 @@ type Temperature struct {
 	ps system.PS
 }
 
-func (t *Temperature) Description() string {
-	return "Read metrics about temperature"
-}
-
-const sampleConfig = ""
-
 func (t *Temperature) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (t *Temperature) Gather(acc telegraf.Accumulator) error {

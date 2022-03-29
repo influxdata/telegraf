@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package stackdriver
 
 import (
@@ -264,14 +266,9 @@ func (smc *stackdriverMetricClient) Close() error {
 	return smc.conn.Close()
 }
 
-// Description implements telegraf.Input interface
-func (s *Stackdriver) Description() string {
-	return description
-}
-
 // SampleConfig implements telegraf.Input interface
 func (s *Stackdriver) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 // Gather implements telegraf.Input interface

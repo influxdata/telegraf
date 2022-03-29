@@ -15,6 +15,7 @@ The docker plugin uses the [Official Docker Client][] to gather logs from the
 ## Configuration
 
 ```toml
+# Read logging output from the Docker engine
 [[inputs.docker_log]]
   ## Docker Endpoint
   ##   To use TCP, set endpoint = "tcp://[ip]:[port]"

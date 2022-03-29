@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package icinga2
 
 import (
@@ -50,34 +52,8 @@ var levels = []string{"ok", "warning", "critical", "unknown"}
 
 type ObjectType string
 
-var sampleConfig = `
-  ## Required Icinga2 server address
-  # server = "https://localhost:5665"
-
-  ## Required Icinga2 object type ("services" or "hosts")
-  # object_type = "services"
-
-  ## Credentials for basic HTTP authentication
-  # username = "admin"
-  # password = "admin"
-
-  ## Maximum time to receive response.
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = true
-  `
-
-func (i *Icinga2) Description() string {
-	return "Gather Icinga2 status"
-}
-
 func (i *Icinga2) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {

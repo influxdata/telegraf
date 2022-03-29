@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package wireguard
 
 import (
@@ -32,16 +34,8 @@ type Wireguard struct {
 	client *wgctrl.Client
 }
 
-func (wg *Wireguard) Description() string {
-	return "Collect Wireguard server interface and peer statistics"
-}
-
 func (wg *Wireguard) SampleConfig() string {
-	return `
-  ## Optional list of Wireguard device/interface names to query.
-  ## If omitted, all Wireguard interfaces are queried.
-  # devices = ["wg0"]
-`
+	return `{{ .SampleConfig }}`
 }
 
 func (wg *Wireguard) Init() error {

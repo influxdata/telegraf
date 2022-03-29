@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 //go:build linux && (386 || amd64 || arm || arm64)
 // +build linux
 // +build 386 amd64 arm arm64
@@ -70,16 +72,7 @@ const (
 
 // SampleConfig returns sample configuration for this plugin.
 func (r *Ras) SampleConfig() string {
-	return `
-  ## Optional path to RASDaemon sqlite3 database.
-  ## Default: /var/lib/rasdaemon/ras-mc_event.db
-  # db_path = ""
-`
-}
-
-// Description returns the plugin description.
-func (r *Ras) Description() string {
-	return "RAS plugin exposes counter metrics for Machine Check Errors provided by RASDaemon (sqlite3 output is required)."
+	return `{{ .SampleConfig }}`
 }
 
 // Start initializes connection to DB, metrics are gathered in Gather

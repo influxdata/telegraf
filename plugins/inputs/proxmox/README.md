@@ -7,6 +7,7 @@ Telegraf minimum version: Telegraf 1.16.0
 ## Configuration
 
 ```toml
+# Provides metrics from Proxmox nodes (Proxmox Virtual Environment > 6.2).
 [[inputs.proxmox]]
   ## API connection configuration. The API token was introduced in Proxmox v6.2. Required permissions for user and token: PVEAuditor role on /.
   base_url = "https://localhost:8006/api2/json"

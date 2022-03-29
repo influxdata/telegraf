@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package sflow
 
 import (
@@ -13,18 +15,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
-
-const sampleConfig = `
-  ## Address to listen for sFlow packets.
-  ##   example: service_address = "udp://:6343"
-  ##            service_address = "udp4://:6343"
-  ##            service_address = "udp6://:6343"
-  service_address = "udp://:6343"
-
-  ## Set the size of the operating system's receive buffer.
-  ##   example: read_buffer_size = "64KiB"
-  # read_buffer_size = ""
-`
 
 const (
 	maxPacketSize = 64 * 1024
@@ -42,14 +32,9 @@ type SFlow struct {
 	wg      sync.WaitGroup
 }
 
-// Description answers a description of this input plugin
-func (s *SFlow) Description() string {
-	return "SFlow V5 Protocol Listener"
-}
-
 // SampleConfig answers a sample configuration
 func (s *SFlow) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (s *SFlow) Init() error {

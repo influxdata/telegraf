@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package solr
 
 import (
@@ -18,18 +20,6 @@ import (
 
 const mbeansPath = "/admin/mbeans?stats=true&wt=json&cat=CORE&cat=QUERYHANDLER&cat=UPDATEHANDLER&cat=CACHE"
 const adminCoresPath = "/solr/admin/cores?action=STATUS&wt=json"
-
-const sampleConfig = `
-  ## specify a list of one or more Solr servers
-  servers = ["http://localhost:8983"]
-
-  ## specify a list of one or more Solr cores (default - all)
-  # cores = ["main"]
-
-  ## Optional HTTP Basic Auth Credentials
-  # username = "username"
-  # password = "pa$$word"
-`
 
 // Solr is a plugin to read stats from one or many Solr servers
 type Solr struct {
@@ -128,12 +118,7 @@ func NewSolr() *Solr {
 
 // SampleConfig returns sample configuration for this plugin.
 func (s *Solr) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the plugin description.
-func (s *Solr) Description() string {
-	return "Read stats from one or more Solr servers or cores"
+	return `{{ .SampleConfig }}`
 }
 
 // Gather reads the stats from Solr and writes it to the

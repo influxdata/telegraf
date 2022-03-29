@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package monit
 
 import (
@@ -187,31 +189,8 @@ type Messagebody struct {
 	Metrics []string `json:"metrics"`
 }
 
-func (m *Monit) Description() string {
-	return "Read metrics and status information about processes managed by Monit"
-}
-
-var sampleConfig = `
-  ## Monit HTTPD address
-  address = "http://127.0.0.1:2812"
-
-  ## Username and Password for Monit
-  # username = ""
-  # password = ""
-
-  ## Amount of time allowed to complete the HTTP request
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
 func (m *Monit) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (m *Monit) Init() error {

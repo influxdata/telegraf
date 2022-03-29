@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package apcupsd
 
 import (
@@ -23,21 +25,8 @@ type ApcUpsd struct {
 	Timeout config.Duration
 }
 
-func (*ApcUpsd) Description() string {
-	return "Monitor APC UPSes connected to apcupsd"
-}
-
-var sampleConfig = `
-  # A list of running apcupsd server to connect to.
-  # If not provided will default to tcp://127.0.0.1:3551
-  servers = ["tcp://127.0.0.1:3551"]
-
-  ## Timeout for dialing server.
-  timeout = "5s"
-`
-
 func (*ApcUpsd) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {

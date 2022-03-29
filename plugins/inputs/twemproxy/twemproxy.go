@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package twemproxy
 
 import (
@@ -16,19 +18,8 @@ type Twemproxy struct {
 	Pools []string
 }
 
-var sampleConfig = `
-  ## Twemproxy stats address and port (no scheme)
-  addr = "localhost:22222"
-  ## Monitor pool name
-  pools = ["redis_pool", "mc_pool"]
-`
-
 func (t *Twemproxy) SampleConfig() string {
-	return sampleConfig
-}
-
-func (t *Twemproxy) Description() string {
-	return "Read Twemproxy stats data"
+	return `{{ .SampleConfig }}`
 }
 
 // Gather data from all Twemproxy instances

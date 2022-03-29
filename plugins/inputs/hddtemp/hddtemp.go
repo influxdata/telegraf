@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package hddtemp
 
 import (
@@ -20,10 +22,6 @@ type Fetcher interface {
 	Fetch(address string) ([]gohddtemp.Disk, error)
 }
 
-func (h *HDDTemp) Description() string {
-	return "Monitor disks' temperatures using hddtemp"
-}
-
 var hddtempSampleConfig = `
   ## By default, telegraf gathers temps data from all disks detected by the
   ## hddtemp.
@@ -37,7 +35,7 @@ var hddtempSampleConfig = `
 `
 
 func (h *HDDTemp) SampleConfig() string {
-	return hddtempSampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (h *HDDTemp) Gather(acc telegraf.Accumulator) error {

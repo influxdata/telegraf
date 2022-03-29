@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package passenger
 
 import (
@@ -125,24 +127,8 @@ func (p *process) getUptime() int64 {
 	return uptime
 }
 
-var sampleConfig = `
-  ## Path of passenger-status.
-  ##
-  ## Plugin gather metric via parsing XML output of passenger-status
-  ## More information about the tool:
-  ##   https://www.phusionpassenger.com/library/admin/apache/overall_status_report.html
-  ##
-  ## If no path is specified, then the plugin simply execute passenger-status
-  ## hopefully it can be found in your PATH
-  command = "passenger-status -v --show=xml"
-`
-
 func (p *passenger) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *passenger) Description() string {
-	return "Read metrics of passenger using passenger-status"
+	return `{{ .SampleConfig }}`
 }
 
 func (p *passenger) Gather(acc telegraf.Accumulator) error {

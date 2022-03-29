@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package teamspeak
 
 import (
@@ -18,23 +20,8 @@ type Teamspeak struct {
 	connected bool
 }
 
-func (ts *Teamspeak) Description() string {
-	return "Reads metrics from a Teamspeak 3 Server via ServerQuery"
-}
-
-const sampleConfig = `
-  ## Server address for Teamspeak 3 ServerQuery
-  # server = "127.0.0.1:10011"
-  ## Username for ServerQuery
-  username = "serverqueryuser"
-  ## Password for ServerQuery
-  password = "secret"
-  ## Array of virtual servers
-  # virtual_servers = [1]
-`
-
 func (ts *Teamspeak) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {

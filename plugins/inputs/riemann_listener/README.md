@@ -8,6 +8,7 @@ client that use riemann clients using riemann-protobuff format.
 This is a sample configuration for the plugin.
 
 ```toml
+# Riemann protobuff listener
 [[inputs.rimann_listener]]
   ## URL to listen on
   ## Default is "tcp://:5555"

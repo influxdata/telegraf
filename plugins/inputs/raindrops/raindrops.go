@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package raindrops
 
 import (
@@ -20,17 +22,8 @@ type Raindrops struct {
 	httpClient *http.Client
 }
 
-var sampleConfig = `
-  ## An array of raindrops middleware URI to gather stats.
-  urls = ["http://localhost:8080/_raindrops"]
-`
-
 func (r *Raindrops) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Raindrops) Description() string {
-	return "Read raindrops stats (raindrops - real-time stats for preforking Rack servers)"
+	return `{{ .SampleConfig }}`
 }
 
 func (r *Raindrops) Gather(acc telegraf.Accumulator) error {

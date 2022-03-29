@@ -18,8 +18,8 @@ Note: if namespace end point specified metrics array will be ignored for that ca
 [[inputs.graylog]]
   ## API endpoint, currently supported API:
   ##
-  ##   - multiple  (e.g. `http://<host>:9000/api/system/metrics/multiple`)
-  ##   - namespace (e.g. `http://<host>:9000/api/system/metrics/namespace/{namespace}`)
+  ##   - multiple  (e.g. http://<host>:9000/api/system/metrics/multiple)
+  ##   - namespace (e.g. http://<host>:9000/api/system/metrics/namespace/{namespace})
   ##
   ## For namespace endpoint, the metrics array will be ignored for that call.
   ## Endpoint can contain namespace and multiple type calls.

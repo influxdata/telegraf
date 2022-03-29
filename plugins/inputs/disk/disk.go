@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package disk
 
 import (
@@ -21,21 +23,8 @@ type DiskStats struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-func (ds *DiskStats) Description() string {
-	return "Read metrics about disk usage by mount point"
-}
-
-var diskSampleConfig = `
-  ## By default stats will be gathered for all mount points.
-  ## Set mount_points will restrict the stats to only the specified mount points.
-  # mount_points = ["/"]
-
-  ## Ignore mount points by filesystem type.
-  ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
-`
-
 func (ds *DiskStats) SampleConfig() string {
-	return diskSampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (ds *DiskStats) Init() error {

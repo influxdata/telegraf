@@ -14,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -95,23 +94,74 @@ var tsc = &testSNMPConnection{
 
 func TestSampleConfig(t *testing.T) {
 	conf := inputs.Inputs["snmp"]()
-	err := toml.Unmarshal([]byte(conf.SampleConfig()), conf)
+	cfg := config.NewConfig()
+	err := cfg.LoadConfigData([]byte(conf.SampleConfig()))
 	require.NoError(t, err)
 
-	expected := &Snmp{
-		Agents:       []string{"udp://127.0.0.1:161"},
-		AgentHostTag: "",
-		ClientConfig: snmp.ClientConfig{
-			Timeout:        config.Duration(5 * time.Second),
-			Version:        2,
-			Path:           []string{"/usr/share/snmp/mibs"},
-			Community:      "public",
-			MaxRepetitions: 10,
-			Retries:        3,
-		},
-		Name: "snmp",
+	for _, input := range cfg.Inputs {
+		expected := &Snmp{
+			Agents:       []string{"udp://127.0.0.1:161"},
+			AgentHostTag: "",
+			ClientConfig: snmp.ClientConfig{
+				Timeout:        config.Duration(5 * time.Second),
+				Version:        2,
+				Path:           []string{"/usr/share/snmp/mibs"},
+				Community:      "public",
+				MaxRepetitions: 10,
+				Retries:        3,
+			},
+			Name: "snmp",
+			Tables: []Table{{
+				Name: "interface",
+				InheritTags: []string{
+					"source",
+				},
+				Fields: []Field{
+					{
+						Name:                "ifDescr",
+						Oid:                 "IF-MIB::ifDescr",
+						OidIndexSuffix:      "",
+						OidIndexLength:      0,
+						IsTag:               true,
+						Conversion:          "",
+						Translate:           false,
+						SecondaryIndexTable: false,
+						SecondaryIndexUse:   false,
+						SecondaryOuterJoin:  false,
+						initialized:         false,
+					},
+				},
+				Oid: "IF-MIB::ifTable",
+			},
+			},
+			Fields: []Field{
+				{
+					Name:                "uptime",
+					Oid:                 "RFC1213-MIB::sysUpTime.0",
+					OidIndexSuffix:      "",
+					OidIndexLength:      0,
+					IsTag:               false,
+					Conversion:          "",
+					Translate:           false,
+					SecondaryIndexTable: false,
+					SecondaryIndexUse:   false,
+					SecondaryOuterJoin:  false,
+					initialized:         false,
+				},
+				{
+					Name:  "source",
+					Oid:   "RFC1213-MIB::sysName.0",
+					IsTag: true,
+				},
+			},
+		}
+
+		if s, ok := input.Input.(*Snmp); ok {
+			expected.Log = s.Log
+		}
+
+		require.Equal(t, expected, input.Input)
 	}
-	require.Equal(t, expected, conf)
 }
 
 func TestFieldInit(t *testing.T) {

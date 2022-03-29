@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package mock
 
 import (
@@ -49,40 +51,8 @@ type stock struct {
 	Volatility float64 `toml:"volatility"`
 }
 
-const sampleConfig = `
-  ## Set the metric name to use for reporting
-  metric_name = "mock"
-
-  ## Optional string key-value pairs of tags to add to all metrics
-  # [inputs.mock.tags]
-  # "key" = "value"
-
-  ## One or more mock data fields *must* be defined.
-  ##
-  ## [[inputs.mock.random]]
-  ##   name = "rand"
-  ##   min = 1.0
-  ##   max = 6.0
-  ## [[inputs.mock.sine_wave]]
-  ##   name = "wave"
-  ##   amplitude = 1.0
-  ##   period = 0.5
-  ## [[inputs.mock.step]]
-  ##   name = "plus_one"
-  ##   start = 0.0
-  ##   step = 1.0
-  ## [[inputs.mock.stock]]
-  ##   name = "abc"
-  ##   price = 50.00
-  ##   volatility = 0.2
-`
-
 func (m *Mock) SampleConfig() string {
-	return sampleConfig
-}
-
-func (m *Mock) Description() string {
-	return "Generate metrics for test and demonstration purposes"
+	return `{{ .SampleConfig }}`
 }
 
 func (m *Mock) Init() error {

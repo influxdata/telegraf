@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 //go:build linux
 // +build linux
 
@@ -21,14 +23,9 @@ type IPVS struct {
 	Log    telegraf.Logger
 }
 
-// Description returns a description string
-func (i *IPVS) Description() string {
-	return "Collect virtual and real server stats from Linux IPVS"
-}
-
 // SampleConfig returns a sample configuration for this input plugin
 func (i *IPVS) SampleConfig() string {
-	return ``
+	return `{{ .SampleConfig }}`
 }
 
 // Gather gathers the stats

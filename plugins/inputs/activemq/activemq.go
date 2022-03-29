@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package activemq
 
 import (
@@ -82,34 +84,8 @@ type Stats struct {
 	DequeueCounter      int      `xml:"dequeueCounter,attr"`
 }
 
-var sampleConfig = `
-  ## ActiveMQ WebConsole URL
-  url = "http://127.0.0.1:8161"
-
-  ## Credentials for basic HTTP authentication
-  # username = "admin"
-  # password = "admin"
-
-  ## Required ActiveMQ webadmin root path
-  # webadmin = "admin"
-
-  ## Maximum time to receive response.
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-  `
-
-func (a *ActiveMQ) Description() string {
-	return "Gather ActiveMQ metrics"
-}
-
 func (a *ActiveMQ) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 func (a *ActiveMQ) createHTTPClient() (*http.Client, error) {

@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package puppetagent
 
 import (
@@ -16,11 +18,6 @@ import (
 type PuppetAgent struct {
 	Location string
 }
-
-var sampleConfig = `
-  ## Location of puppet last run summary file
-  location = "/var/lib/puppet/state/last_run_summary.yaml"
-`
 
 type State struct {
 	Events    event
@@ -84,12 +81,7 @@ type version struct {
 
 // SampleConfig returns sample configuration message
 func (pa *PuppetAgent) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns description of PuppetAgent plugin
-func (pa *PuppetAgent) Description() string {
-	return `Reads last_run_summary.yaml file and converts to measurements`
+	return `{{ .SampleConfig }}`
 }
 
 // Gather reads stats from all configured servers accumulates stats

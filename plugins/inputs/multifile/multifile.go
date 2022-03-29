@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package multifile
 
 import (
@@ -27,37 +29,9 @@ type File struct {
 	Conversion string
 }
 
-const sampleConfig = `
-  ## Base directory where telegraf will look for files.
-  ## Omit this option to use absolute paths.
-  base_dir = "/sys/bus/i2c/devices/1-0076/iio:device0"
-
-  ## If true, Telegraf discard all data when a single file can't be read.
-  ## Else, Telegraf omits the field generated from this file.
-  # fail_early = true
-
-  ## Files to parse each interval.
-  [[inputs.multifile.file]]
-    file = "in_pressure_input"
-    dest = "pressure"
-    conversion = "float"
-  [[inputs.multifile.file]]
-    file = "in_temp_input"
-    dest = "temperature"
-    conversion = "float(3)"
-  [[inputs.multifile.file]]
-    file = "in_humidityrelative_input"
-    dest = "humidityrelative"
-    conversion = "float(3)"
-`
-
 // SampleConfig returns the default configuration of the Input
 func (m *MultiFile) SampleConfig() string {
-	return sampleConfig
-}
-
-func (m *MultiFile) Description() string {
-	return "Aggregates the contents of multiple files into a single point"
+	return `{{ .SampleConfig }}`
 }
 
 func (m *MultiFile) init() {

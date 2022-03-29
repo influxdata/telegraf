@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package trig
 
 import (
@@ -12,17 +14,8 @@ type Trig struct {
 	Amplitude float64
 }
 
-var TrigConfig = `
-  ## Set the amplitude
-  amplitude = 10.0
-`
-
 func (s *Trig) SampleConfig() string {
-	return TrigConfig
-}
-
-func (s *Trig) Description() string {
-	return "Inserts sine and cosine waves for demonstration purposes"
+	return `{{ .SampleConfig }}`
 }
 
 func (s *Trig) Gather(acc telegraf.Accumulator) error {

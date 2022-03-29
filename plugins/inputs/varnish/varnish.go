@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 //go:build !windows
 // +build !windows
 
@@ -70,51 +72,9 @@ type Varnish struct {
 	regexpsCompiled []*regexp.Regexp
 }
 
-var sampleConfig = `
-  ## If running as a restricted user you can prepend sudo for additional access:
-  #use_sudo = false
-
-  ## The default location of the varnishstat binary can be overridden with:
-  binary = "/usr/bin/varnishstat"
-
-  ## Additional custom arguments for the varnishstat command
-  # binary_args = ["-f", "MAIN.*"]
-  
-  ## The default location of the varnishadm binary can be overriden with:
-  adm_binary = "/usr/bin/varnishadm"
-
-  ## Custom arguments for the varnishadm command 
-  # adm_binary_args = [""] 
-
-  ## Metric version defaults to metric_version=1, use metric_version=2 for removal of nonactive vcls.
-  metric_version = 1
-
-  ## Additional regexps to override builtin conversion of varnish metrics into telegraf metrics. 
-  ## Regexp group "_vcl" is used for extracting the VCL name. Metrics that contains nonactive VCL's are skipped.  
-  ## Regexp group "_field" overrides field name. Other named regexp groups are used as tags.
-  # regexps = ['XCNT\.(?P<_vcl>[\w\-]*)\.(?P<group>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
-
-  ## By default, telegraf gather stats for 3 metric points.
-  ## Setting stats will override the defaults shown below.
-  ## Glob matching can be used, ie, stats = ["MAIN.*"]
-  ## stats may also be set to ["*"], which will collect all stats
-  stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
-
-  ## Optional name for the varnish instance (or working directory) to query
-  ## Usually append after -n in varnish cli
-  # instance_name = instanceName
-
-  ## Timeout for varnishstat command
-  # timeout = "1s"
-`
-
-func (s *Varnish) Description() string {
-	return "A plugin to collect stats from Varnish HTTP Cache"
-}
-
 // SampleConfig displays configuration instructions
 func (s *Varnish) SampleConfig() string {
-	return sampleConfig
+	return `{{ .SampleConfig }}`
 }
 
 // Shell out to varnish cli and return the output

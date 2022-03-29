@@ -891,7 +891,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			// Determine time of last successful collection
 			metricName := e.getMetricNameForID(metric.CounterId)
 			if metricName == "" {
-				e.log.Debugf("Unable to find metric name for id %d. Skipping!", metric.CounterId)
+				e.log.Infof("Unable to find metric name for id %d. Skipping!", metric.CounterId)
 				continue
 			}
 			start, ok := e.hwMarks.Get(obj.ref.Value, metricName)
