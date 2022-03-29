@@ -406,9 +406,6 @@ require (
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
-)
-
-require (
 	cloud.google.com/go/storage v1.21.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	github.com/apache/arrow/go/arrow v0.0.0-20211006091945-a69884db78f4 // indirect
@@ -432,5 +429,4 @@ require (
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gotest.tools v2.2.0+incompatible
-
 )
