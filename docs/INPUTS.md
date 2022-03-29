@@ -15,10 +15,9 @@ and submit new inputs.
   themselves.  See below for a quick example.
 - Input Plugins must be added to the
   `github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
-- The `SampleConfig` function should return valid toml that describes how the
-  plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [Sample Config][] page for the latest style
-  guidelines.
+- The `SampleConfig` function will be automatically updated in the build process to include
+  the sample configuration from the README.md. This is included in `telegraf config`.  Please
+  consult the [Sample Config][] page for the latest style guidelines.
 - The `Description` function should say in one line what this plugin does.
 - Follow the recommended [Code Style][].
 
@@ -42,15 +41,8 @@ type Simple struct {
     Log telegraf.Logger `toml:"-"`
 }
 
-func (s *Simple) Description() string {
-    return "a demo plugin"
-}
-
 func (s *Simple) SampleConfig() string {
-    return `
-  ## Indicate if everything is fine
-  ok = true
-`
+    return `{{ .SampleConfig }}`
 }
 
 // Init is for setup, and validating config.
@@ -101,7 +93,7 @@ You can then utilize the parser internally in your plugin, parsing data as you
 see fit. Telegraf's configuration layer will take care of instantiating and
 creating the `Parser` object.
 
-Add the following to the `SampleConfig()`:
+Add the following to the sample configuration in the README.md:
 
 ```toml
   ## Data format to consume.

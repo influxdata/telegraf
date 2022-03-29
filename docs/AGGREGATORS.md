@@ -9,8 +9,8 @@ This section is for developers who want to create a new aggregator plugin.
   register themselves.  See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
   `github.com/influxdata/telegraf/plugins/aggregators/all/all.go` file.
-* The `SampleConfig` function should return valid toml that describes how the
-  plugin can be configured. This is included in `telegraf config`.  Please
+* The `SampleConfig` function will be automatically updated in the build process to include
+  the sample configuration from the README.md. This is included in `telegraf config`.  Please
   consult the [Sample Config][] page for the latest style guidelines.
 * The `Description` function should say in one line what this aggregator does.
 * The Aggregator plugin will need to keep caches of metrics that have passed
@@ -44,24 +44,12 @@ func NewMin() telegraf.Aggregator {
     return m
 }
 
-var sampleConfig = `
-  ## period is the flush & clear interval of the aggregator.
-  period = "30s"
-  ## If true drop_original will drop the original metrics and
-  ## only send aggregates.
-  drop_original = false
-`
-
 func (m *Min) Init() error {
     return nil
 }
 
 func (m *Min) SampleConfig() string {
-    return sampleConfig
-}
-
-func (m *Min) Description() string {
-    return "Keep the aggregate min of each metric passing through."
+    return `{{ .SampleConfig }}`
 }
 
 func (m *Min) Add(in telegraf.Metric) {

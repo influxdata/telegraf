@@ -9,11 +9,8 @@ This section is for developers who want to create a new processor plugin.
   themselves.  See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
   `github.com/influxdata/telegraf/plugins/processors/all/all.go` file.
-* The `SampleConfig` function should return valid toml that describes how the
-  processor can be configured. This is include in the output of `telegraf
-  config`.
-* The `SampleConfig` function should return valid toml that describes how the
-  plugin can be configured. This is included in `telegraf config`.  Please
+* The `SampleConfig` function will be automatically updated in the build process to include
+  the sample configuration from the README.md. This is included in `telegraf config`.  Please
   consult the [Sample Config][] page for the latest style guidelines.
 * The `Description` function should say in one line what this processor does.
 * Follow the recommended [Code Style][].
@@ -36,15 +33,8 @@ type Printer struct {
     Log telegraf.Logger `toml:"-"`
 }
 
-var sampleConfig = `
-`
-
 func (p *Printer) SampleConfig() string {
-    return sampleConfig
-}
-
-func (p *Printer) Description() string {
-    return "Print all metrics that pass through this filter."
+    return `{{ .SampleConfig }}`
 }
 
 // Init is for setup, and validating config.
