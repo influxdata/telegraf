@@ -25,7 +25,6 @@ const (
 
 type GCS struct {
 	CredentialsFile string `toml:"credentials_file"`
-	Project         string `toml:"project"`
 	Bucket          string `toml:"bucket"`
 
 	Prefix              string `toml:"key_prefix"`
@@ -274,10 +273,6 @@ func (gcs *GCS) closeReader(r *storage.Reader) {
 }
 
 const sampleConfig = `
-  ## Required. Name of Google Cloud Platform (GCP) Project that owns
-  ## the given Cloud Storage bucket.
-  project = "my-project"
-
   ## Required. Name of Cloud Storage bucket to ingest metrics from.
   bucket = "my-bucket"
 

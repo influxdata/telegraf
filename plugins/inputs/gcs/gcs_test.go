@@ -41,7 +41,6 @@ var fourthElement = parseJSONFromText(fourthFileListing)
 
 func TestRunSetUpClient(t *testing.T) {
 	gcs := &GCS{
-		Project:   "test-project",
 		Bucket:    "test-bucket",
 		Prefix:    "prefix",
 		OffsetKey: "1230405",
@@ -60,7 +59,6 @@ func TestRunInit(t *testing.T) {
 	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
-		Project:   "test-project",
 		Bucket:    "test-bucket",
 		Prefix:    "prefix/",
 		OffsetKey: "offset.json",
@@ -79,7 +77,6 @@ func TestRunInitNoOffsetKey(t *testing.T) {
 	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
-		Project: "test-project",
 		Bucket:  "test-bucket",
 		Prefix:  "prefix/",
 		Log:     testutil.Logger{},
@@ -100,7 +97,6 @@ func TestRunGatherOneItem(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	gcs := &GCS{
-		Project: "test-project",
 		Bucket:  "test-iteration-bucket",
 		Prefix:  "prefix/",
 		Log:     testutil.Logger{},
@@ -126,7 +122,6 @@ func TestRunGatherOneIteration(t *testing.T) {
 	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
-		Project:   "test-project",
 		Bucket:    "test-iteration-bucket",
 		Prefix:    "prefix/",
 		OffsetKey: "custom-offset-key.json",
@@ -150,7 +145,6 @@ func TestRunGatherIteratiosnWithLimit(t *testing.T) {
 	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
-		Project:             "test-project",
 		Bucket:              "test-iteration-bucket",
 		Prefix:              "prefix/",
 		ObjectsPerIteration: 1,
@@ -181,7 +175,6 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
-		Project:   "test-project",
 		Bucket:    "test-iteration-bucket",
 		Prefix:    "prefix/",
 		OffsetKey: "custom-offset-key.json",
