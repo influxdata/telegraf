@@ -31,7 +31,7 @@ type GCS struct {
 	Prefix              string `toml:"key_prefix"`
 	OffsetKey           string `toml:"offset_key"`
 	ProcessOffset       bool   `toml:"process_offset"`
-	objectsPerIteration int    `toml:"objects_per_iteration"`
+	ObjectsPerIteration int    `toml:"objects_per_iteration"`
 
 	Log    telegraf.Logger
 	offSet OffSet
@@ -54,8 +54,8 @@ func NewOffset(offset string) *OffSet {
 	return &OffSet{OffSet: offset}
 }
 
-func (os *OffSet) hasOffset() bool {
-	return os.OffSet != ""
+func (offSet *OffSet) isPresent() bool {
+	return offSet.OffSet != ""
 }
 
 func (gcs *GCS) SampleConfig() string {
@@ -103,18 +103,17 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 		if gcs.reachedThreshlod(processed) {
 			return gcs.updateOffset(bucket, name)
 		}
-
 	}
 
 	return gcs.updateOffset(bucket, name)
 }
 
 func (gcs *GCS) createQuery() storage.Query {
-	if gcs.offSet.hasOffset() {
+	if gcs.offSet.isPresent() {
 		return storage.Query{Prefix: gcs.Prefix, StartOffset: gcs.offSet.OffSet}
-	} else {
-		return storage.Query{Prefix: gcs.Prefix}
 	}
+
+	return storage.Query{Prefix: gcs.Prefix}
 }
 
 func (gcs *GCS) shoudIgnore(name string) bool {
@@ -152,7 +151,7 @@ func (gcs *GCS) fetchedMetrics(r *storage.Reader) ([]telegraf.Metric, error) {
 }
 
 func (gcs *GCS) reachedThreshlod(processed int) bool {
-	return gcs.objectsPerIteration != 0 && processed >= gcs.objectsPerIteration
+	return gcs.ObjectsPerIteration != 0 && processed >= gcs.ObjectsPerIteration
 }
 
 func (gcs *GCS) updateOffset(bucket *storage.BucketHandle, name string) error {
@@ -199,12 +198,14 @@ func (gcs *GCS) setUpClient() error {
 func (gcs *GCS) setUpLocalClient(endpoint string) error {
 	noAuth := option.WithoutAuthentication()
 	endpoints := option.WithEndpoint("http://" + endpoint)
-	if client, err := storage.NewClient(gcs.ctx, noAuth, endpoints); err != nil {
+	client, err := storage.NewClient(gcs.ctx, noAuth, endpoints)
+
+	if err != nil {
 		return err
-	} else {
-		gcs.client = client
-		return nil
 	}
+
+	gcs.client = client
+	return nil
 }
 
 func (gcs *GCS) setUpDefaultClient() error {
