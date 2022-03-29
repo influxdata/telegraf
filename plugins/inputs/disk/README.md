@@ -15,7 +15,7 @@ Note that `used_percent` is calculated by doing `used / (used + free)`, _not_
   # mount_points = ["/"]
 
   ## Ignore mount points by filesystem type.
-  ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
+  ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs", "tracefs"]
 ```
 
 ### Docker container
