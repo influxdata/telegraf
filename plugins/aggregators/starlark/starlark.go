@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package starlark
 
 import (
@@ -5,39 +7,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
 	"go.starlark.net/starlark"
-)
-
-const (
-	description  = "Aggregate metrics using a Starlark script"
-	sampleConfig = `
-  ## The Starlark source can be set as a string in this configuration file, or
-  ## by referencing a file containing the script.  Only one source or script
-  ## should be set at once.
-  ##
-  ## Source of the Starlark script.
-  source = '''
-state = {}
-
-def add(metric):
-  state["last"] = metric
-
-def push():
-  return state.get("last")
-
-def reset():
-  state.clear()
-'''
-
-  ## File containing a Starlark script.
-  # script = "/usr/local/bin/myscript.star"
-
-  ## The constants of the Starlark script.
-  # [aggregators.starlark.constants]
-  #   max_size = 10
-  #   threshold = 0.75
-  #   default_name = "Julia"
-  #   debug_mode = true
-`
 )
 
 type Starlark struct {
@@ -73,11 +42,7 @@ func (s *Starlark) Init() error {
 }
 
 func (s *Starlark) SampleConfig() string {
-	return sampleConfig
-}
-
-func (s *Starlark) Description() string {
-	return description
+	return `{{ .SampleConfig }}`
 }
 
 func (s *Starlark) Add(metric telegraf.Metric) {

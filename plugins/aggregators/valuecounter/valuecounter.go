@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package valuecounter
 
 import (
@@ -27,25 +29,9 @@ func NewValueCounter() telegraf.Aggregator {
 	return vc
 }
 
-var sampleConfig = `
-  ## General Aggregator Arguments:
-  ## The period on which to flush & clear the aggregator.
-  period = "30s"
-  ## If true, the original metric will be dropped by the
-  ## aggregator and will not get sent to the output plugins.
-  drop_original = false
-  ## The fields for which the values will be counted
-  fields = []
-`
-
 // SampleConfig generates a sample config for the ValueCounter plugin
 func (vc *ValueCounter) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the description of the ValueCounter plugin
-func (vc *ValueCounter) Description() string {
-	return "Count the occurrence of values in fields."
+	return `{{ .SampleConfig }}`
 }
 
 // Add is run on every metric which passes the plugin

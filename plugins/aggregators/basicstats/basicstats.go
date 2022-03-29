@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package basicstats
 
 import (
@@ -57,24 +59,8 @@ type basicstats struct {
 	TIME     time.Time //intermediate value for rate
 }
 
-var sampleConfig = `
-  ## The period on which to flush & clear the aggregator.
-  period = "30s"
-
-  ## If true, the original metric will be dropped by the
-  ## aggregator and will not get sent to the output plugins.
-  drop_original = false
-
-  ## Configures which basic stats to push as fields
-  # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
-`
-
 func (*BasicStats) SampleConfig() string {
-	return sampleConfig
-}
-
-func (*BasicStats) Description() string {
-	return "Keep the aggregate basicstats of each metric passing through."
+	return `{{ .SampleConfig }}`
 }
 
 func (b *BasicStats) Add(in telegraf.Metric) {

@@ -1,3 +1,5 @@
+//go:generate go run ../../../scripts/generate_plugindata/main.go
+//go:generate go run ../../../scripts/generate_plugindata/main.go --clean
 package minmax
 
 import (
@@ -26,21 +28,8 @@ type minmax struct {
 	max float64
 }
 
-var sampleConfig = `
-  ## General Aggregator Arguments:
-  ## The period on which to flush & clear the aggregator.
-  period = "30s"
-  ## If true, the original metric will be dropped by the
-  ## aggregator and will not get sent to the output plugins.
-  drop_original = false
-`
-
 func (m *MinMax) SampleConfig() string {
-	return sampleConfig
-}
-
-func (m *MinMax) Description() string {
-	return "Keep the aggregate min/max of each metric passing through."
+	return `{{ .SampleConfig }}`
 }
 
 func (m *MinMax) Add(in telegraf.Metric) {
