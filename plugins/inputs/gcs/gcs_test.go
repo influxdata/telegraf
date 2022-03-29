@@ -57,7 +57,7 @@ func TestRunInit(t *testing.T) {
 	srv := startGCSServer(t)
 	defer srv.Close()
 
-	os.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", ""))
+	emulatorSetEnv(t ,srv)
 
 	gcs := &GCS{
 		Project:   "test-project",
@@ -76,7 +76,7 @@ func TestRunInitNoOffsetKey(t *testing.T) {
 	srv := startGCSServer(t)
 	defer srv.Close()
 
-	os.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", ""))
+	emulatorSetEnv(t ,srv)
 
 	gcs := &GCS{
 		Project: "test-project",
@@ -94,7 +94,8 @@ func TestRunInitNoOffsetKey(t *testing.T) {
 func TestRunGatherOneItem(t *testing.T) {
 	srv := startOneItemGCSServer(t)
 	defer srv.Close()
-	os.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", ""))
+
+	emulatorSetEnv(t ,srv)
 
 	acc := &testutil.Accumulator{}
 
@@ -122,7 +123,7 @@ func TestRunGatherOneIteration(t *testing.T) {
 	srv := startMultipleItemGCSServer(t)
 	defer srv.Close()
 
-	os.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", ""))
+	emulatorSetEnv(t ,srv)
 
 	gcs := &GCS{
 		Project:   "test-project",
@@ -146,7 +147,7 @@ func TestRunGatherIteratiosnWithLimit(t *testing.T) {
 	srv := startMultipleItemGCSServer(t)
 	defer srv.Close()
 
-	os.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", ""))
+	emulatorSetEnv(t ,srv)
 
 	gcs := &GCS{
 		Project:             "test-project",
@@ -177,7 +178,7 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 	srv := stateFulGCSServer(t)
 	defer srv.Close()
 
-	os.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", ""))
+	emulatorSetEnv(t ,srv)
 
 	gcs := &GCS{
 		Project:   "test-project",
@@ -412,4 +413,10 @@ func parseJSONFromText(jsonText string) map[string]interface{} {
 	}
 
 	return element
+}
+
+func emulatorSetEnv(t *testing.T, srv *httptest.Server) {
+	if err := os.Setenv("STORAGE_EMULATOR_HOST", strings.ReplaceAll(srv.URL, "http://", "")); err != nil {
+		t.Error(err)
+	}
 }
