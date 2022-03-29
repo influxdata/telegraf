@@ -6,6 +6,7 @@ per metric it sees and emits the quantiles every `period`.
 ## Configuration
 
 ```toml
+# Keep the aggregate quantiles of each metric passing through.
 [[aggregators.quantile]]
   ## General Aggregator Arguments:
   ## The period on which to flush & clear the aggregator.
