@@ -19,7 +19,6 @@ import (
 )
 
 const (
-	gcsMetricJson        = "{\"metrics\":[{\"fields\":{\"cosine\":10,\"sine\":-1.0975806427415925e-12},\"name\":\"cpu\",\"tags\":{\"datacenter\":\"us-east-1\",\"host\":\"localhost\"},\"timestamp\":1604148850990}]}"
 	singleObjectNotFound = "{\"error\":{\"code\":404,\"message\":\"No such object: test-iteration-bucket/prefix/offset-key.json\",\"errors\":[{\"message\":\"No such object: test-iteration-bucket/prefix/offset-key.json\",\"domain\":\"global\",\"reason\":\"notFound\"}]}}"
 	singleFileList       = "{\"kind\":\"storage#objects\",\"items\":[{\"kind\":\"storage#object\",\"id\":\"test-iteration-bucket/1604148850990/1604148851295698\",\"selfLink\":\"https://www.googleapis.com/storage/v1/b/1604148850990/o/1604148850990\",\"mediaLink\":\"https://content-storage.googleapis.com/download/storage/v1/b/test-iteration-bucket/o/1604148850990?generation=1604148851295698&alt=media\",\"name\":\"1604148850990\",\"bucket\":\"test-iteration-bucket\",\"generation\":\"1604148851295698\",\"metageneration\":\"1\",\"contentType\":\"text/plain; charset=utf-8\",\"storageClass\":\"STANDARD\",\"size\":\"161\",\"md5Hash\":\"y59iuRCTpkm7wpvU5YHUYw==\",\"crc32c\":\"y57reA==\",\"etag\":\"CNKLy5Pw3uwCEAE=\",\"timeCreated\":\"2020-10-31T12:54:11.295Z\",\"updated\":\"2020-10-31T12:54:11.295Z\",\"timeStorageClassUpdated\":\"2020-10-31T12:54:11.295Z\"}]}"
 	firstFile            = "{\"metrics\":[{\"fields\":{\"cosine\":10,\"sine\":-1.0975806427415925e-12},\"name\":\"cpu\",\"tags\":{\"datacenter\":\"us-east-1\",\"host\":\"localhost\"},\"timestamp\":1604148850991}]}"
@@ -34,11 +33,11 @@ const (
 	offSetTemplate       = "{\"offSet\":\"%s\"}"
 )
 
-var objListing = parseJsonFromText(fileListing)
-var firstElement = parseJsonFromText(firstFileListing)
-var secondElement = parseJsonFromText(secondFileListing)
-var thirdElement = parseJsonFromText(thirdFileListing)
-var fourthElement = parseJsonFromText(fourthFileListing)
+var objListing = parseJSONFromText(fileListing)
+var firstElement = parseJSONFromText(firstFileListing)
+var secondElement = parseJSONFromText(secondFileListing)
+var thirdElement = parseJSONFromText(thirdFileListing)
+var fourthElement = parseJSONFromText(fourthFileListing)
 
 func TestRunSetUpClient(t *testing.T) {
 	gcs := &GCS{
@@ -151,7 +150,7 @@ func TestRunGatherIteratiosnWithLimit(t *testing.T) {
 		Project:             "test-project",
 		Bucket:              "test-iteration-bucket",
 		Prefix:              "prefix/",
-		objectsPerIteration: 1,
+		ObjectsPerIteration: 1,
 		OffsetKey:           "custom-offset-key.json",
 		Log:                 testutil.Logger{},
 		parser:              createParser(),
@@ -194,7 +193,7 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 	require.NoError(t, gcs.Gather(acc))
 
 	assert.Equal(t, 4, len(acc.Metrics))
-	assert.Equal(t, true, gcs.offSet.hasOffset())
+	assert.Equal(t, true, gcs.offSet.isPresent())
 	assert.Equal(t, "prefix/1604148850994", gcs.offSet.OffSet)
 
 	emptyAcc := &testutil.Accumulator{}
@@ -245,7 +244,7 @@ func startOneItemGCSServer(t *testing.T) *httptest.Server {
 	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/b/test-iteration-bucket/o":
-			serveJsonText(w, singleFileList)
+			serveJSONText(w, singleFileList)
 		default:
 			serveBlobs(r.URL.Path, "", t, w)
 		}
@@ -303,7 +302,7 @@ func stateFulGCSServer(t *testing.T) *httptest.Server {
 		switch r.URL.Path {
 		case "/b/test-iteration-bucket/o":
 			offset := r.URL.Query().Get("startOffset")
-			objListing := parseJsonFromText(fileListing)
+			objListing := parseJSONFromText(fileListing)
 
 			pageToken := r.URL.Query().Get("pageToken")
 
@@ -317,9 +316,6 @@ func stateFulGCSServer(t *testing.T) *httptest.Server {
 				objListing["items"] = []interface{}{fourthElement}
 			} else if offset == "prefix/1604148850994" {
 				objListing["items"] = []interface{}{}
-			} else if offset == "prefix/1604148850990" {
-				objListing["items"] = []interface{}{firstElement}
-				objListing["nextPageToken"] = "page2"
 			} else {
 				objListing["items"] = []interface{}{firstElement}
 				objListing["nextPageToken"] = "page2"
@@ -335,7 +331,7 @@ func stateFulGCSServer(t *testing.T) *httptest.Server {
 		case "/upload/storage/v1/b/test-iteration-bucket/o":
 			_, params, _ := mime.ParseMediaType(r.Header["Content-Type"][0])
 			boundary := params["boundary"]
-			currentOffSetKey, _ = fetchJson(t, boundary, r.Body)
+			currentOffSetKey, _ = fetchJSON(t, boundary, r.Body)
 		default:
 			serveBlobs(r.URL.Path, currentOffSetKey, t, w)
 		}
@@ -363,43 +359,43 @@ func serveBlobs(urlPath string, offsetKey string, t *testing.T, w http.ResponseW
 		_, err := w.Write([]byte(offsetKey))
 		require.NoError(t, err)
 	case "/test-iteration-bucket/1604148850990":
-		serveJsonText(w, firstFile)
+		serveJSONText(w, firstFile)
 	case "/test-iteration-bucket/prefix/1604148850991":
-		serveJsonText(w, firstFile)
+		serveJSONText(w, firstFile)
 	case "/test-iteration-bucket/prefix/1604148850992":
-		serveJsonText(w, secondFile)
+		serveJSONText(w, secondFile)
 	case "/test-iteration-bucket/prefix/1604148850993":
-		serveJsonText(w, thirdFile)
+		serveJSONText(w, thirdFile)
 	case "/test-iteration-bucket/prefix/1604148850994":
-		serveJsonText(w, fourthFile)
+		serveJSONText(w, fourthFile)
 	case "/upload/storage/v1/b/test-iteration-bucket/o":
 		w.WriteHeader(http.StatusOK)
 	default:
 		failPath(urlPath, t, w)
 	}
-
 }
 
-func fetchJson(t *testing.T, boundary string, rc io.ReadCloser) (string, error) {
+func fetchJSON(t *testing.T, boundary string, rc io.ReadCloser) (string, error) {
 	defer rc.Close()
-	if bodyBytes, err := ioutil.ReadAll(rc); err != nil {
+	bodyBytes, err := ioutil.ReadAll(rc)
+
+	if err != nil {
 		t.Fatalf("Could not read bytes from offset action")
 		return "", err
-	} else {
-		splits := strings.Split(string(bodyBytes), boundary)
-		offsetPart := splits[2]
-		offsets := strings.Split(offsetPart, "\n")
-		fmt.Printf("%s", offsets[3])
-		return offsets[3], nil
 	}
+
+	splits := strings.Split(string(bodyBytes), boundary)
+	offsetPart := splits[2]
+	offsets := strings.Split(offsetPart, "\n")
+	fmt.Printf("%s", offsets[3])
+	return offsets[3], nil
 }
 
-func serveJsonText(w http.ResponseWriter, jsonText string) {
+func serveJSONText(w http.ResponseWriter, jsonText string) {
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte(jsonText)); err != nil {
 		fmt.Println(err)
 	}
-
 }
 
 func failPath(path string, t *testing.T, w http.ResponseWriter) {
@@ -407,7 +403,7 @@ func failPath(path string, t *testing.T, w http.ResponseWriter) {
 	t.Fatalf("unexpected path: " + path)
 }
 
-func parseJsonFromText(jsonText string) map[string]interface{} {
+func parseJSONFromText(jsonText string) map[string]interface{} {
 	var element map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonText), &element); err != nil {
 		fmt.Println(err)
