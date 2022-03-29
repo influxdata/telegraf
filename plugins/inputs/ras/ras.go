@@ -1,5 +1,5 @@
 //go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/nerate_plugindata/main.go --clean
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 //go:build linux && (386 || amd64 || arm || arm64)
 // +build linux
 // +build 386 amd64 arm arm64

@@ -1,5 +1,5 @@
 //go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/nerate_plugindata/main.go --clean
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 // Package x509_cert reports metrics from an SSL certificate.
 package x509_cert
 

@@ -1,5 +1,5 @@
 //go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/nerate_plugindata/main.go --clean
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 // Package uwsgi implements a telegraf plugin for collecting uwsgi stats from
 // the uwsgi stats server.
 package uwsgi
