@@ -48,7 +48,7 @@ func TestRunSetUpClient(t *testing.T) {
 		Log:       testutil.Logger{},
 	}
 
-	if err := gcs.setUpClient(); err !=nil {
+	if err := gcs.setUpClient(); err != nil {
 		t.Log(err)
 	}
 }
