@@ -121,7 +121,7 @@ commands:
                 paths:
                   - 'C:\Go'
                   - 'C:\Users\circleci\project\gotestsum.exe'
-      - run: 'make cleanGenerate'
+      - run: 'make generate-clean'
   package-build:
     parameters:
       type:
