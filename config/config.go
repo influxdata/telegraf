@@ -139,10 +139,15 @@ type AgentConfig struct {
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
+	// Collected metrics are rounded to the precision specified. Precision is
+	// specified as an interval with an integer + unit (e.g. 0s, 10ms, 2us, 4s).
+	// Valid time units are "ns", "us" (or "µs"), "ms", "s".
+	//
 	// By default or when set to "0s", precision will be set to the same
-	// timestamp order as the collection interval, with the maximum being 1s.
+	// timestamp order as the collection interval, with the maximum being 1s:
 	//   ie, when interval = "10s", precision will be "1s"
 	//       when interval = "250ms", precision will be "1ms"
+	//
 	// Precision will NOT be used for service inputs. It is up to each individual
 	// service input to set the timestamp at the appropriate precision.
 	Precision Duration
@@ -181,13 +186,12 @@ type AgentConfig struct {
 	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
 	// it fills up, regardless of FlushInterval. Setting this option to true
 	// does _not_ deactivate FlushInterval.
-	FlushBufferWhenFull bool // deprecated in 0.13; has no effect
+	FlushBufferWhenFull bool `toml:"flush_buffer_when_full" deprecated:"0.13.0;2.0.0;option is ignored"`
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatibility
-	// Deprecated: 1.0.0 after, has no effect
-	UTC bool `toml:"utc"`
+	UTC bool `toml:"utc" deprecated:"1.0.0;option is ignored"`
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
@@ -221,6 +225,10 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
+
+	// Method for translating SNMP objects. 'netsnmp' to call external programs,
+	// 'gosmi' to use the built-in library.
+	SnmpTranslator string `toml:"snmp_translator"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -366,14 +374,18 @@ var agentConfig = `
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
+  ## Collected metrics are rounded to the precision specified. Precision is
+  ## specified as an interval with an integer + unit (e.g. 0s, 10ms, 2us, 4s).
+  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
+  ##
   ## By default or when set to "0s", precision will be set to the same
-  ## timestamp order as the collection interval, with the maximum being 1s.
+  ## timestamp order as the collection interval, with the maximum being 1s:
   ##   ie, when interval = "10s", precision will be "1s"
   ##       when interval = "250ms", precision will be "1ms"
+  ##
   ## Precision will NOT be used for service inputs. It is up to each individual
   ## service input to set the timestamp at the appropriate precision.
-  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
-  precision = ""
+  precision = "0s"
 
   ## Log at debug level.
   # debug = false
@@ -392,7 +404,7 @@ var agentConfig = `
   ## The logfile will be rotated after the time interval specified.  When set
   ## to 0 no time based rotation is performed.  Logs are rotated only when
   ## written to, if there is no log activity rotation may be delayed.
-  # logfile_rotation_interval = "0d"
+  # logfile_rotation_interval = "0h"
 
   ## The logfile will be rotated when it becomes larger than the specified
   ## size.  When set to 0 no size based rotation is performed.
@@ -410,6 +422,11 @@ var agentConfig = `
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
+
+  ## Method of translating SNMP objects. Can be "netsnmp" which
+  ## translates by calling external programs snmptranslate and snmptable,
+  ## or "gosmi" which translates using the built-in gosmi library.
+  # snmp_translator = "netsnmp"
 `
 
 var outputHeader = `
@@ -845,6 +862,11 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 
 		c.Tags["host"] = c.Agent.Hostname
+	}
+
+	// Set snmp agent translator default
+	if c.Agent.SnmpTranslator == "" {
+		c.Agent.SnmpTranslator = "netsnmp"
 	}
 
 	if len(c.UnusedFields) > 0 {
@@ -1595,10 +1617,14 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 
 	c.getFieldString(tbl, "value_field_name", &pc.ValueFieldName)
 
+	// for influx parser
+	c.getFieldString(tbl, "influx_parser_type", &pc.InfluxParserType)
+
 	//for XPath parser family
 	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
 		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
+		c.getFieldStringSlice(tbl, "xpath_protobuf_import_paths", &pc.XPathProtobufImportPaths)
 		c.getFieldBool(tbl, "xpath_print_document", &pc.XPathPrintDocument)
 
 		// Determine the actual xpath configuration tables
@@ -1699,6 +1725,7 @@ func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 				c.getFieldString(fieldconfig, "path", &f.Path)
 				c.getFieldString(fieldconfig, "rename", &f.Rename)
 				c.getFieldString(fieldconfig, "type", &f.Type)
+				c.getFieldBool(fieldconfig, "optional", &f.Optional)
 				fields = append(fields, f)
 			}
 		}
@@ -1718,6 +1745,7 @@ func getTagSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 				c.getFieldString(fieldconfig, "rename", &t.Rename)
 				t.Type = "string"
 				tags = append(tags, t)
+				c.getFieldBool(fieldconfig, "optional", &t.Optional)
 			}
 		}
 	}
@@ -1815,7 +1843,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
 		"grace", "graphite_separator", "graphite_tag_sanitize_mode", "graphite_tag_support",
 		"grok_custom_pattern_files", "grok_custom_patterns", "grok_named_patterns", "grok_patterns",
-		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_sort_fields",
+		"grok_timezone", "grok_unique_timestamp", "influx_max_line_bytes", "influx_parser_type", "influx_sort_fields",
 		"influx_uint_support", "interval", "json_name_key", "json_query", "json_strict",
 		"json_string_fields", "json_time_format", "json_time_key", "json_timestamp_format", "json_timestamp_units", "json_timezone", "json_v2",
 		"lvm", "metric_batch_size", "metric_buffer_limit", "name_override", "name_prefix",
@@ -1825,7 +1853,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
 		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "wavefront_disable_prefix_conversion",
 		"xml", "xpath", "xpath_json", "xpath_msgpack", "xpath_protobuf", "xpath_print_document",
-		"xpath_protobuf_file", "xpath_protobuf_type":
+		"xpath_protobuf_file", "xpath_protobuf_type", "xpath_protobuf_import_paths":
 
 		// ignore fields that are common to all plugins.
 	default:

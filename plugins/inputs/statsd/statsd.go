@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -72,13 +73,13 @@ type Statsd struct {
 	DeleteCounters bool
 	DeleteSets     bool
 	DeleteTimings  bool
-	ConvertNames   bool
+	ConvertNames   bool `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
 	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
-	ParseDataDogTags bool // depreciated in 1.10; use datadog_extensions
+	ParseDataDogTags bool `toml:"parse_data_dog_tags" deprecated:"1.10.0;use 'datadog_extensions' instead"`
 
 	// Parses extensions to statsd in the datadog statsd format
 	// currently supports metrics and datadog tags.
@@ -94,9 +95,11 @@ type Statsd struct {
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
 	// see https://github.com/influxdata/telegraf/pull/992
-	UDPPacketSize int `toml:"udp_packet_size"`
+	UDPPacketSize int `toml:"udp_packet_size" deprecated:"0.12.1;2.0.0;option is ignored"`
 
 	ReadBufferSize int `toml:"read_buffer_size"`
+
+	SanitizeNamesMethod string `toml:"sanitize_name_method"`
 
 	sync.Mutex
 	// Lock for preventing a data race during resource cleanup
@@ -284,6 +287,14 @@ const sampleConfig = `
 
   ## Max duration (TTL) for each metric to stay cached/reported without being updated.
   #max_ttl = "1000h"
+
+  ## Sanitize name method
+  ## By default, telegraf will pass names directly as they are received.
+  ## However, upstream statsd now does sanitization of names which can be
+  ## enabled by using the "upstream" method option. This option will a) replace
+  ## white space with '_', replace '/' with '-', and remove charachters not
+  ## matching 'a-zA-Z_\-0-9\.;='.
+  #sanitize_name_method = ""
 `
 
 func (s *Statsd) SampleConfig() string {
@@ -364,7 +375,6 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	if s.ParseDataDogTags {
 		s.DataDogExtensions = true
-		s.Log.Warn("'parse_data_dog_tags' config option is deprecated, please use 'datadog_extensions' instead")
 	}
 
 	s.acc = ac
@@ -404,10 +414,6 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	}
 	for i := 0; i < s.MaxTCPConnections; i++ {
 		s.accept <- true
-	}
-
-	if s.ConvertNames {
-		s.Log.Warn("'convert_names' config option is deprecated, please use 'metric_separator' instead")
 	}
 
 	if s.MetricSeparator == "" {
@@ -763,6 +769,17 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 	}
 
 	name = bucketparts[0]
+	switch s.SanitizeNamesMethod {
+	case "":
+	case "upstream":
+		whitespace := regexp.MustCompile(`\s+`)
+		name = whitespace.ReplaceAllString(name, "_")
+		name = strings.ReplaceAll(name, "/", "-")
+		allowedChars := regexp.MustCompile(`[^a-zA-Z_\-0-9\.;=]`)
+		name = allowedChars.ReplaceAllString(name, "")
+	default:
+		s.Log.Errorf("Unknown sanitizae name method: %s", s.SanitizeNamesMethod)
+	}
 
 	p := s.graphiteParser
 	var err error
@@ -1089,6 +1106,7 @@ func init() {
 			DeleteGauges:           true,
 			DeleteSets:             true,
 			DeleteTimings:          true,
+			SanitizeNamesMethod:    "",
 		}
 	})
 }

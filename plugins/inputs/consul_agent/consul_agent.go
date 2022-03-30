@@ -1,4 +1,4 @@
-package consul_metrics
+package consul_agent
 
 import (
 	"encoding/json"
@@ -15,8 +15,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// Consul_metrics configuration object
-type ConsulMetrics struct {
+// consul_agent configuration object
+type ConsulAgent struct {
 	URL string `toml:"url"`
 
 	TokenFile string `toml:"token_file"`
@@ -35,7 +35,7 @@ const sampleConfig = `
   ## URL for the Consul agent
   # url = "http://127.0.0.1:8500"
 
-  ## Use auth token for authorization. 
+  ## Use auth token for authorization.
   ## Only one of the options can be set. Leave empty to not use any token.
   # token_file = "/path/to/auth/token"
   ## OR
@@ -51,24 +51,24 @@ const sampleConfig = `
 `
 
 func init() {
-	inputs.Add("consul_metrics", func() telegraf.Input {
-		return &ConsulMetrics{
+	inputs.Add("consul_agent", func() telegraf.Input {
+		return &ConsulAgent{
 			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }
 
 // SampleConfig returns a sample config
-func (n *ConsulMetrics) SampleConfig() string {
+func (n *ConsulAgent) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns a description of the plugin
-func (n *ConsulMetrics) Description() string {
-	return "Read metrics from the Consul API"
+func (n *ConsulAgent) Description() string {
+	return "Read metrics from the Consul Agent API"
 }
 
-func (n *ConsulMetrics) Init() error {
+func (n *ConsulAgent) Init() error {
 	if n.URL == "" {
 		n.URL = "http://127.0.0.1:8500"
 	}
@@ -100,16 +100,16 @@ func (n *ConsulMetrics) Init() error {
 }
 
 // Gather, collects metrics from Consul endpoint
-func (n *ConsulMetrics) Gather(acc telegraf.Accumulator) error {
+func (n *ConsulAgent) Gather(acc telegraf.Accumulator) error {
 	summaryMetrics, err := n.loadJSON(n.URL + "/v1/agent/metrics")
 	if err != nil {
 		return err
 	}
 
-	return buildConsulMetrics(acc, summaryMetrics)
+	return buildConsulAgent(acc, summaryMetrics)
 }
 
-func (n *ConsulMetrics) loadJSON(url string) (*MetricsInfo, error) {
+func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (n *ConsulMetrics) loadJSON(url string) (*MetricsInfo, error) {
 		return nil, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
-	var metrics MetricsInfo
+	var metrics AgentInfo
 	err = json.NewDecoder(resp.Body).Decode(&metrics)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing json response: %s", err)
@@ -137,14 +137,14 @@ func (n *ConsulMetrics) loadJSON(url string) (*MetricsInfo, error) {
 	return &metrics, nil
 }
 
-// buildConsulMetrics, it builds all the metrics and adds them to the accumulator)
-func buildConsulMetrics(acc telegraf.Accumulator, metricsInfo *MetricsInfo) error {
-	t, err := time.Parse(timeLayout, metricsInfo.Timestamp)
+// buildConsulAgent, it builds all the metrics and adds them to the accumulator)
+func buildConsulAgent(acc telegraf.Accumulator, agentInfo *AgentInfo) error {
+	t, err := time.Parse(timeLayout, agentInfo.Timestamp)
 	if err != nil {
 		return fmt.Errorf("error parsing time: %s", err)
 	}
 
-	for _, counters := range metricsInfo.Counters {
+	for _, counters := range agentInfo.Counters {
 		fields := map[string]interface{}{
 			"count":  counters.Count,
 			"sum":    counters.Sum,
@@ -159,7 +159,7 @@ func buildConsulMetrics(acc telegraf.Accumulator, metricsInfo *MetricsInfo) erro
 		acc.AddCounter(counters.Name, fields, tags, t)
 	}
 
-	for _, gauges := range metricsInfo.Gauges {
+	for _, gauges := range agentInfo.Gauges {
 		fields := map[string]interface{}{
 			"value": gauges.Value,
 		}
@@ -168,7 +168,7 @@ func buildConsulMetrics(acc telegraf.Accumulator, metricsInfo *MetricsInfo) erro
 		acc.AddGauge(gauges.Name, fields, tags, t)
 	}
 
-	for _, points := range metricsInfo.Points {
+	for _, points := range agentInfo.Points {
 		fields := map[string]interface{}{
 			"value": points.Points,
 		}
@@ -177,7 +177,7 @@ func buildConsulMetrics(acc telegraf.Accumulator, metricsInfo *MetricsInfo) erro
 		acc.AddFields(points.Name, fields, tags, t)
 	}
 
-	for _, samples := range metricsInfo.Samples {
+	for _, samples := range agentInfo.Samples {
 		fields := map[string]interface{}{
 			"count":  samples.Count,
 			"sum":    samples.Sum,

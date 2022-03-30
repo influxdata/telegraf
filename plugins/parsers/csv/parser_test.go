@@ -844,7 +844,7 @@ func TestParseMetadataSeparators(t *testing.T) {
 	err = p.Init()
 	require.Error(t, err)
 	require.Equal(t, err.Error(), "initializing separators failed: "+
-		"csv_metadata_separator required when specifying csv_metadata_rows")
+		"csv_metadata_separators required when specifying csv_metadata_rows")
 	p = &Parser{
 		ColumnNames:        []string{"a", "b"},
 		MetadataRows:       1,

@@ -52,9 +52,10 @@ type Config struct {
 }
 
 type DataSet struct {
-	Path   string `toml:"path"` // REQUIRED
-	Type   string `toml:"type"` // OPTIONAL, can't be set for tags they will always be a string
-	Rename string `toml:"rename"`
+	Path     string `toml:"path"` // REQUIRED
+	Type     string `toml:"type"` // OPTIONAL, can't be set for tags they will always be a string
+	Rename   string `toml:"rename"`
+	Optional bool   `toml:"optional"` // Will suppress errors if there isn't a match with Path
 }
 
 type JSONObject struct {
@@ -89,8 +90,6 @@ type MetricNode struct {
 	gjson.Result
 }
 
-const GJSONPathNUllErrorMSG = "GJSON Path returned null, either couldn't find value or path has null value"
-
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 	// Only valid JSON is supported
 	if !gjson.Valid(string(input)) {
@@ -116,7 +115,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 			if result.Type == gjson.Null {
 				p.Log.Debugf("Message: %s", input)
-				return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+				return nil, fmt.Errorf("The timestamp path %s returned NULL", c.TimestampPath)
 			}
 			if !result.IsArray() && !result.IsObject() {
 				if c.TimestampFormat == "" {
@@ -182,8 +181,11 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 			return nil, fmt.Errorf("GJSON path is required")
 		}
 		result := gjson.GetBytes(input, c.Path)
-		if result.Type == gjson.Null {
-			return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+		if skip, err := p.checkResult(result, c.Path, c.Optional); err != nil {
+			if skip {
+				continue
+			}
+			return nil, err
 		}
 
 		if result.IsObject() {
@@ -224,6 +226,10 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 
 	for i := 1; i < len(metrics); i++ {
 		metrics[i] = cartesianProduct(metrics[i-1], metrics[i])
+	}
+
+	if len(metrics) == 0 {
+		return nil, nil
 	}
 
 	return metrics[len(metrics)-1], nil
@@ -412,22 +418,22 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject, timestamp ti
 		}
 
 		result := gjson.GetBytes(input, c.Path)
-		if result.Type == gjson.Null {
-			if c.Optional {
-				// If path is marked as optional don't error if path doesn't return a result
-				p.Log.Debugf(GJSONPathNUllErrorMSG)
-				return nil, nil
+		if skip, err := p.checkResult(result, c.Path, c.Optional); err != nil {
+			if skip {
+				continue
 			}
-
-			return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+			return nil, err
 		}
 
 		scopedJSON := []byte(result.Raw)
 		for _, f := range c.FieldPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
-			if r.result.Type == gjson.Null {
-				return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+			if skip, err := p.checkResult(r.result, f.Path, f.Optional); err != nil {
+				if skip {
+					continue
+				}
+				return nil, err
 			}
 			r.DataSet = f
 			p.subPathResults = append(p.subPathResults, r)
@@ -436,8 +442,11 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject, timestamp ti
 		for _, f := range c.TagPaths {
 			var r PathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
-			if r.result.Type == gjson.Null {
-				return nil, fmt.Errorf(GJSONPathNUllErrorMSG)
+			if skip, err := p.checkResult(r.result, f.Path, f.Optional); err != nil {
+				if skip {
+					continue
+				}
+				return nil, err
 			}
 			r.DataSet = f
 			r.tag = true
@@ -648,4 +657,18 @@ func (p *Parser) convertType(input gjson.Result, desiredType string, name string
 	}
 
 	return input.Value(), nil
+}
+
+func (p *Parser) checkResult(result gjson.Result, path string, optional bool) (bool, error) {
+	if !result.Exists() {
+		if optional {
+			// If path is marked as optional don't error if path doesn't return a result
+			p.Log.Debugf("the path %s doesn't exist", path)
+			return true, nil
+		}
+
+		return false, fmt.Errorf("the path %s doesn't exist", path)
+	}
+
+	return false, nil
 }

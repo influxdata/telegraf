@@ -20,7 +20,7 @@ type Librato struct {
 	APIUser   string          `toml:"api_user"`
 	APIToken  string          `toml:"api_token"`
 	Debug     bool            `toml:"debug"`
-	SourceTag string          `toml:"source_tag"` // Deprecated, keeping for backward-compatibility
+	SourceTag string          `toml:"source_tag" deprecated:"1.0.0;use 'template' instead"`
 	Timeout   config.Duration `toml:"timeout"`
 	Template  string          `toml:"template"`
 	Log       telegraf.Logger `toml:"-"`

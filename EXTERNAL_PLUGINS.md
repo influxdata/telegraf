@@ -28,6 +28,7 @@ Pull requests welcome.
 - [db2](https://github.com/bonitoo-io/telegraf-input-db2) - Gather the statistic data from DB2 RDBMS
 - [apt](https://github.com/x70b1/telegraf-apt) - Check Debian for package updates.
 - [knot](https://github.com/x70b1/telegraf-knot) - Collect stats from Knot DNS.
+- [fritzbox](https://github.com/hdecarne-github/fritzbox-telegraf-plugin) - Gather statistics from [FRITZ!Box](https://avm.de/produkte/fritzbox/) router and repeater
 
 ## Outputs
 
