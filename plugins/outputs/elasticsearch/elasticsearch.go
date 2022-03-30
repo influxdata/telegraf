@@ -68,7 +68,6 @@ var sampleConfig = `
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
   ## Set the timeout for periodic health checks.
-  ## The default healthcheck timeout is 1s
   # health_check_timeout = "1s"
   ## HTTP basic authentication details
   # username = "telegraf"
