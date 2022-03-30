@@ -40,7 +40,7 @@ values.
   ## By default, the parser assumes there are no metadata rows to parse. 
   ## If set, the parser would use the provided separators in the csv_metadata_separators to look for metadata.
   ## Please note that by default, the (key, value) pairs will be added as tags. 
-  ## Use the converter processor to use metadata otherwise.
+  ## If fields are required, use the converter processor.
   csv_metadata_rows = 0
   
   ## A list of metadata separators. If csv_metadata_rows is set,
