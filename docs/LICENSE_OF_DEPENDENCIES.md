@@ -202,6 +202,7 @@ following works:
 - github.com/opencontainers/go-digest [Apache License 2.0](https://github.com/opencontainers/go-digest/blob/master/LICENSE)
 - github.com/opencontainers/image-spec [Apache License 2.0](https://github.com/opencontainers/image-spec/blob/master/LICENSE)
 - github.com/opentracing/opentracing-go [Apache License 2.0](https://github.com/opentracing/opentracing-go/blob/master/LICENSE)
+- github.com/pborman/ansi [BSD 3-Clause "New" or "Revised" License](https://github.com/pborman/ansi/blob/master/LICENSE)
 - github.com/philhofer/fwd [MIT License](https://github.com/philhofer/fwd/blob/master/LICENSE.md)
 - github.com/pierrec/lz4 [BSD 3-Clause "New" or "Revised" License](https://github.com/pierrec/lz4/blob/master/LICENSE)
 - github.com/pion/dtls [MIT License](https://github.com/pion/dtls/blob/master/LICENSE)
