@@ -18,16 +18,6 @@ type T struct {
 	fails int
 }
 
-// func (t *T) assert(b bool) {
-// 	if b {
-// 		return
-// 	}
-// 	t.fails += 1
-
-// 	t.printRule()
-// 	t.printFile()
-// }
-
 // called by all assert functions that involve a node
 func (t *T) printFailedAssert(n ast.Node, format string, args ...interface{}) {
 	t.printFile(n)
@@ -98,8 +88,6 @@ func (t *T) assertKind(expected ast.NodeKind, n ast.Node) {
 	}
 
 	t.printFailedAssert(n, "expected %s, have %s", expected.String(), n.Kind().String())
-
-	//n.Dump(t.markdown, 0)
 }
 
 func (t *T) assertFirstChildRegexp(expectedPattern string, n ast.Node) {
@@ -133,6 +121,4 @@ func (t *T) assertHeadingLevel(expected int, n ast.Node) {
 	}
 
 	t.printFailedAssert(n, "expected header level %d, have %d", expected, h.Level)
-
-	//n.Dump(t.markdown, 0)
 }

@@ -127,7 +127,6 @@ func checkFile(filename string, pluginType plugin) error {
 		if err != nil {
 			return err
 		}
-		//fmt.Printf("\n")
 	}
 	tester.printPassFail()
 
