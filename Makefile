@@ -113,8 +113,8 @@ versioninfo:
 generate:
 	go generate -run="plugindata/main.go$$" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
 
-.PHONY: cleanGenerate
-cleanGenerate:
+.PHONY: generate-clean
+generate-clean:
 	go generate -run="plugindata/main.go --clean" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
 
 .PHONY: build
@@ -122,7 +122,7 @@ build:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
-telegraf: generate build cleanGenerate
+telegraf: generate build generate-clean
 
 # Used by dockerfile builds
 .PHONY: go-install
@@ -323,7 +323,7 @@ darwin-arm64:
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: generate $(include_packages) cleanGenerate
+package: generate $(include_packages) generate-clean
 
 .PHONY: $(include_packages)
 $(include_packages):
