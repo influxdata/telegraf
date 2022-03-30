@@ -71,7 +71,6 @@ func (t *T) printFile(n ast.Node) {
 	line := t.line(offset)
 
 	fmt.Printf("%s:%d: ", t.filename, line)
-	//fmt.Printf("offset: %d\n", offset)
 }
 
 func (t *T) printPassFail() {
