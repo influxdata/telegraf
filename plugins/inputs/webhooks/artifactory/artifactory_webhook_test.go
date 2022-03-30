@@ -32,13 +32,13 @@ func ArtifactoryWebhookRequestWithSignature(event string, jsonString string, t *
 	}
 }
 
-func TestUnsupportedEvent(t *testing.T){
+func TestUnsupportedEvent(t *testing.T) {
 	var acc testutil.Accumulator
 	awh := &ArtifactoryWebhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
 	req, _ := http.NewRequest("POST", "/artifactory", strings.NewReader(UnsupportedEventJSON()))
 	w := httptest.NewRecorder()
 	awh.eventHandler(w, req)
-	if w.Code != http.StatusBadRequest{
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("POST returned HTTP status code %v.\nExpected %v", w.Code, http.StatusBadRequest)
 	}
 }
