@@ -4,5 +4,3 @@ package sensors
 func (*Sensors) SampleConfig() string {
 	return `{{ .SampleConfig }}`
 }
-		return errors.New("sensors not found: verify that lm-sensors package is installed and that sensors is in your PATH")
-
