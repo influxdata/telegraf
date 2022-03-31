@@ -14,9 +14,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/gomarkdown/markdown"
-	"github.com/gomarkdown/markdown/ast"
-	"github.com/gomarkdown/markdown/parser"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/text"
 )
 
 func createSourceName(packageName string) string {
@@ -29,18 +29,25 @@ func extractPluginData() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	extensions := parser.CommonExtensions | parser.AutoHeadingIDs
-	mdParser := parser.NewWithExtensions(extensions)
-	md := markdown.Parse(readMe, mdParser)
+	p := goldmark.DefaultParser()
+	r := text.NewReader(readMe)
+	root := p.Parse(r)
 
 	var currentSection string
-	for _, t := range md.GetChildren() {
-		switch tok := t.(type) {
+	for n := root.FirstChild(); n != nil; n = n.NextSibling() {
+		switch tok := n.(type) {
 		case *ast.Heading:
-			currentSection = tok.HeadingID
-		case *ast.CodeBlock:
-			if currentSection == "configuration" && string(tok.Info) == "toml" {
-				return string(tok.Literal), nil
+			if tok.FirstChild() != nil {
+				currentSection = string(tok.FirstChild().Text(readMe))
+			}
+		case *ast.FencedCodeBlock:
+			if currentSection == "Configuration" && string(tok.Language(readMe)) == "toml" {
+				var config []byte
+				for i := 0; i < tok.Lines().Len(); i++ {
+					line := tok.Lines().At(i)
+					config = append(config, line.Value(readMe)...)
+				}
+				return string(config), nil
 			}
 		}
 	}

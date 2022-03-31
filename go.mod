@@ -65,7 +65,6 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/snappy v0.0.4
-	github.com/gomarkdown/markdown v0.0.0-20220310201231-552c6011c0b8
 	github.com/google/go-cmp v0.5.7
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.3.1
@@ -138,6 +137,7 @@ require (
 	github.com/wavefronthq/wavefront-sdk-go v0.9.10
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/xdg/scram v1.0.3
+	github.com/yuin/goldmark v1.4.1
 	go.mongodb.org/mongo-driver v1.8.3
 	go.opentelemetry.io/collector/model v0.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.27.0
