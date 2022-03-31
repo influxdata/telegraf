@@ -1,5 +1,3 @@
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package jti_openconfig_telemetry
 
 import (

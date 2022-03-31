@@ -1,5 +1,3 @@
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package http_listener_v2
 
 import (
