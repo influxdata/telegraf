@@ -30,9 +30,6 @@ type File struct {
 }
 
 // SampleConfig returns the default configuration of the Input
-func (m *MultiFile) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (m *MultiFile) init() {
 	if m.initialized {

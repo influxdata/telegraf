@@ -20,10 +20,6 @@ type MailChimp struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-func (m *MailChimp) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (m *MailChimp) Init() error {
 	m.api = NewChimpAPI(m.APIKey, m.Log)
 

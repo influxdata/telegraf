@@ -27,10 +27,6 @@ type Nats struct {
 	client *http.Client
 }
 
-func (n *Nats) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *Nats) Gather(acc telegraf.Accumulator) error {
 	address, err := url.Parse(n.Server)
 	if err != nil {

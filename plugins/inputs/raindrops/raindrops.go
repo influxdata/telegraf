@@ -22,10 +22,6 @@ type Raindrops struct {
 	httpClient *http.Client
 }
 
-func (r *Raindrops) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *Raindrops) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

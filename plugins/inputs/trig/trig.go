@@ -14,10 +14,6 @@ type Trig struct {
 	Amplitude float64
 }
 
-func (s *Trig) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Trig) Gather(acc telegraf.Accumulator) error {
 	sinner := math.Sin((s.x*math.Pi)/5.0) * s.Amplitude
 	cosinner := math.Cos((s.x*math.Pi)/5.0) * s.Amplitude

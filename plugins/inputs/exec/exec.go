@@ -147,10 +147,6 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	}
 }
 
-func (e *Exec) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (e *Exec) SetParser(parser parsers.Parser) {
 	e.parser = parser
 }

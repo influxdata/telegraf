@@ -66,9 +66,6 @@ type Zipkin struct {
 }
 
 // SampleConfig is a  necessary  method implementation from telegraf.ServiceInput
-func (z Zipkin) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather is empty for the zipkin plugin; all gathering is done through
 // the separate goroutine launched in (*Zipkin).Start()

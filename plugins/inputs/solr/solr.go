@@ -117,9 +117,6 @@ func NewSolr() *Solr {
 }
 
 // SampleConfig returns sample configuration for this plugin.
-func (s *Solr) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather reads the stats from Solr and writes it to the
 // Accumulator.

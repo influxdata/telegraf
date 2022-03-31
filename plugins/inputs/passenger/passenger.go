@@ -127,10 +127,6 @@ func (p *process) getUptime() int64 {
 	return uptime
 }
 
-func (p *passenger) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *passenger) Gather(acc telegraf.Accumulator) error {
 	if p.Command == "" {
 		p.Command = "passenger-status -v --show=xml"

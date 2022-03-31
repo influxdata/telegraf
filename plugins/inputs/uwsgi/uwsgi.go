@@ -30,9 +30,6 @@ type Uwsgi struct {
 }
 
 // SampleConfig returns the sample configuration
-func (u *Uwsgi) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather collect data from uWSGI Server
 func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {

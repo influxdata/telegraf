@@ -25,10 +25,6 @@ type ApcUpsd struct {
 	Timeout config.Duration
 }
 
-func (*ApcUpsd) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 

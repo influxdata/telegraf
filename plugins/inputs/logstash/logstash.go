@@ -46,9 +46,6 @@ func NewLogstash() *Logstash {
 }
 
 // SampleConfig returns details how to configure plugin
-func (logstash *Logstash) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 type ProcessStats struct {
 	ID      string      `json:"id"`

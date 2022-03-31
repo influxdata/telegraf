@@ -79,10 +79,6 @@ func (r *IntelRDT) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *IntelRDT) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *IntelRDT) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	r.cancel = cancel

@@ -212,10 +212,6 @@ type SQL struct {
 	db         *dbsql.DB
 }
 
-func (s *SQL) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *SQL) Init() error {
 	// Option handling
 	if s.Driver == "" {

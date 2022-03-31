@@ -61,10 +61,6 @@ type PubSub struct {
 	sem         semaphore
 }
 
-func (ps *PubSub) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather does nothing for this service input.
 func (ps *PubSub) Gather(_ telegraf.Accumulator) error {
 	return nil

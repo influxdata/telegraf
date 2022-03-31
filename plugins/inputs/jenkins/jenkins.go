@@ -56,11 +56,6 @@ const (
 	measurementJob     = "jenkins_job"
 )
 
-// SampleConfig implements telegraf.Input interface
-func (j *Jenkins) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather implements telegraf.Input interface
 func (j *Jenkins) Gather(acc telegraf.Accumulator) error {
 	if j.client == nil {

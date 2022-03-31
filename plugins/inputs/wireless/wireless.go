@@ -14,9 +14,6 @@ type Wireless struct {
 }
 
 // SampleConfig displays configuration instructions.
-func (w *Wireless) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func init() {
 	inputs.Add("wireless", func() telegraf.Input {

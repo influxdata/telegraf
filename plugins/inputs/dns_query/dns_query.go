@@ -43,10 +43,6 @@ type DNSQuery struct {
 	Timeout int
 }
 
-func (d *DNSQuery) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	d.setDefaultValues()

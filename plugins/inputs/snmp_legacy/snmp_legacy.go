@@ -120,9 +120,6 @@ type Node struct {
 }
 
 // SampleConfig returns sample configuration message
-func (s *Snmp) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func fillnode(parentNode Node, oidName string, ids []string) {
 	// ids = ["1", "3", "6", ...]

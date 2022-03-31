@@ -40,10 +40,6 @@ type Ssl struct {
 	CaCerts []string `toml:"cacerts" deprecated:"1.3.0;use 'tls_ca' instead"`
 }
 
-func (m *MongoDB) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (m *MongoDB) Init() error {
 	var tlsConfig *tls.Config
 	if m.Ssl.Enabled {

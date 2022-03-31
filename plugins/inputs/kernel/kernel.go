@@ -30,10 +30,6 @@ type Kernel struct {
 	entropyStatFile string
 }
 
-func (k *Kernel) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	data, err := k.getProcStat()
 	if err != nil {

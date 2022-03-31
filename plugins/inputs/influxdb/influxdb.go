@@ -45,10 +45,6 @@ type InfluxDB struct {
 	client *http.Client
 }
 
-func (*InfluxDB) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	if len(i.URLs) == 0 {
 		i.URLs = []string{"http://localhost:8086/debug/vars"}

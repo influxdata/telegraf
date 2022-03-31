@@ -79,10 +79,6 @@ func (beat *Beat) Init() error {
 	return nil
 }
 
-func (beat *Beat) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // createHTTPClient create a clients to access API
 func (beat *Beat) createHTTPClient() (*http.Client, error) {
 	tlsConfig, err := beat.ClientConfig.TLSConfig()

@@ -113,10 +113,6 @@ type eventWithQuals struct {
 	custom ia.CustomizableEvent
 }
 
-func (i *IntelPMU) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Start is required for IntelPMU to implement the telegraf.ServiceInput interface.
 // Necessary initialization and config checking are done in Init.
 func (IntelPMU) Start(_ telegraf.Accumulator) error {

@@ -42,11 +42,6 @@ type HTTP struct {
 	parserFunc telegraf.ParserFunc
 }
 
-// SampleConfig returns the default configuration of the Input
-func (*HTTP) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (h *HTTP) Init() error {
 	ctx := context.Background()
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)

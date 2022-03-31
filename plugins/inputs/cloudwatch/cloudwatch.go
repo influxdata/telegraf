@@ -92,11 +92,6 @@ type cloudwatchClient interface {
 	GetMetricData(context.Context, *cwClient.GetMetricDataInput, ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error)
 }
 
-// SampleConfig returns the default configuration of the Cloudwatch input plugin.
-func (c *CloudWatch) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *CloudWatch) Init() error {
 	if len(c.Namespace) != 0 {
 		c.Namespaces = append(c.Namespaces, c.Namespace)

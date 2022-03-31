@@ -7,10 +7,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-func (ja *JolokiaAgent) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func init() {
 	inputs.Add("jolokia2_agent", func() telegraf.Input {
 		return &JolokiaAgent{

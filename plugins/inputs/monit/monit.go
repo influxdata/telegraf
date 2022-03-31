@@ -189,10 +189,6 @@ type Messagebody struct {
 	Metrics []string `json:"metrics"`
 }
 
-func (m *Monit) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (m *Monit) Init() error {
 	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {

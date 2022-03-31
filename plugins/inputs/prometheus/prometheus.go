@@ -90,10 +90,6 @@ type Prometheus struct {
 	consulServices map[string]URLAndAddress
 }
 
-func (p *Prometheus) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Prometheus) Init() error {
 	// Config processing for node scrape scope for monitor_kubernetes_pods
 	p.isNodeScrapeScope = strings.EqualFold(p.PodScrapeScope, "node")

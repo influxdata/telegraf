@@ -63,10 +63,6 @@ type Payload struct {
 	Subscription string  `json:"subscription"`
 }
 
-func (p *PubSubPush) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *PubSubPush) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

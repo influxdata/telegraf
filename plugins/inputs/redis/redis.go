@@ -189,10 +189,6 @@ func (r *RedisClient) BaseTags() map[string]string {
 
 var replicationSlaveMetricPrefix = regexp.MustCompile(`^slave\d+`)
 
-func (r *Redis) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 var Tracking = map[string]string{
 	"uptime_in_seconds": "uptime",
 	"connected_clients": "clients",

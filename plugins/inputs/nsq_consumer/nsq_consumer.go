@@ -57,9 +57,6 @@ func (n *NSQConsumer) SetParser(parser parsers.Parser) {
 }
 
 // SampleConfig returns config values for generating a sample configuration file
-func (n *NSQConsumer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Start pulls data from nsq
 func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {

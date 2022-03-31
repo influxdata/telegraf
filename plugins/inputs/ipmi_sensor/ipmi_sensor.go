@@ -44,11 +44,6 @@ type Ipmi struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-// SampleConfig returns the documentation about the sample configuration
-func (m *Ipmi) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather is the main execution function for the plugin
 func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 	if len(m.Path) == 0 {

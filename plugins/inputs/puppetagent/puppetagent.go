@@ -80,9 +80,6 @@ type version struct {
 }
 
 // SampleConfig returns sample configuration message
-func (pa *PuppetAgent) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather reads stats from all configured servers accumulates stats
 func (pa *PuppetAgent) Gather(acc telegraf.Accumulator) error {

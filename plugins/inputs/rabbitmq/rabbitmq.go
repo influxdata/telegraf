@@ -279,9 +279,6 @@ func boolToInt(b bool) int64 {
 }
 
 // SampleConfig ...
-func (r *RabbitMQ) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (r *RabbitMQ) Init() error {
 	var err error

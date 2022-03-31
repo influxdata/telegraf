@@ -214,10 +214,6 @@ type SocketListener struct {
 	io.Closer
 }
 
-func (sl *SocketListener) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (sl *SocketListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

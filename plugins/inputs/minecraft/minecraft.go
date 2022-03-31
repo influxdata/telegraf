@@ -28,10 +28,6 @@ type Minecraft struct {
 	client Client
 }
 
-func (s *Minecraft) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
 		connector := newConnector(s.Server, s.Port, s.Password)

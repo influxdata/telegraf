@@ -27,10 +27,6 @@ type Kapacitor struct {
 	client *http.Client
 }
 
-func (*Kapacitor) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {
 		client, err := k.createHTTPClient()

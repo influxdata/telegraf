@@ -31,11 +31,6 @@ const measurement = "ipset"
 
 var defaultTimeout = config.Duration(time.Second)
 
-// SampleConfig returns sample configuration options.
-func (i *Ipset) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (i *Ipset) Init() error {
 	_, err := exec.LookPath("ipset")
 	if err != nil {

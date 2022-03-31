@@ -58,9 +58,6 @@ type NeptuneApex struct {
 }
 
 // SampleConfig implements telegraf.Input.SampleConfig
-func (*NeptuneApex) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather implements telegraf.Input.Gather
 func (n *NeptuneApex) Gather(acc telegraf.Accumulator) error {

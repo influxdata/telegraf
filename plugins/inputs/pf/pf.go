@@ -25,10 +25,6 @@ type PF struct {
 	infoFunc     func() (string, error)
 }
 
-func (pf *PF) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather is the entrypoint for the plugin.
 func (pf *PF) Gather(acc telegraf.Accumulator) error {
 	if pf.PfctlCommand == "" {

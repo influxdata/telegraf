@@ -35,9 +35,6 @@ var defaultBinary = "/usr/sbin/nsd-control"
 var defaultTimeout = config.Duration(time.Second)
 
 // SampleConfig displays configuration instructions
-func (s *NSD) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Shell out to nsd_stat and return the output
 func nsdRunner(cmdName string, timeout config.Duration, useSudo bool, server string, configFile string) (*bytes.Buffer, error) {

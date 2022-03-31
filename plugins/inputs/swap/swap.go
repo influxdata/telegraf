@@ -14,10 +14,6 @@ type SwapStats struct {
 	ps system.PS
 }
 
-func (ss *SwapStats) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (ss *SwapStats) Gather(acc telegraf.Accumulator) error {
 	swap, err := ss.ps.SwapStat()
 	if err != nil {

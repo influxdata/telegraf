@@ -42,9 +42,6 @@ func init() {
 }
 
 // SampleConfig returns a sample config
-func (n *Vault) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (n *Vault) Init() error {
 	if n.URL == "" {

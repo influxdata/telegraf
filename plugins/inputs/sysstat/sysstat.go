@@ -72,10 +72,6 @@ type Sysstat struct {
 	Log telegraf.Logger
 }
 
-func (*Sysstat) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 	if time.Duration(s.SadcInterval) != 0 {
 		// Collect interval is calculated as interval - parseInterval

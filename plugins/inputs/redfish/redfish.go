@@ -112,10 +112,6 @@ type Status struct {
 	Health string
 }
 
-func (r *Redfish) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *Redfish) Init() error {
 	if r.Address == "" {
 		return fmt.Errorf("did not provide IP")

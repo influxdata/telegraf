@@ -167,10 +167,6 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 	}
 }
 
-func (c *Cassandra) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *Cassandra) getAttr(requestURL *url.URL) (map[string]interface{}, error) {
 	// Create + send request
 	req, err := http.NewRequest("GET", requestURL.String(), nil)

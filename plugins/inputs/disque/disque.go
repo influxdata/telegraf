@@ -25,10 +25,6 @@ type Disque struct {
 
 var defaultTimeout = 5 * time.Second
 
-func (d *Disque) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 var Tracking = map[string]string{
 	"uptime_in_seconds":          "uptime",
 	"connected_clients":          "clients",

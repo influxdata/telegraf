@@ -51,10 +51,6 @@ type SnmpTrap struct {
 	translator translator //nolint:revive
 }
 
-func (s *SnmpTrap) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *SnmpTrap) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

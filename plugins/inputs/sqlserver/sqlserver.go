@@ -75,9 +75,6 @@ const (
 const sqlAzureResourceID = "https://database.windows.net/"
 
 // SampleConfig return the sample configuration
-func (s *SQLServer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 type scanner interface {
 	Scan(dest ...interface{}) error

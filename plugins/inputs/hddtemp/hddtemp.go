@@ -34,10 +34,6 @@ var hddtempSampleConfig = `
   # devices = ["sda", "*"]
 `
 
-func (h *HDDTemp) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (h *HDDTemp) Gather(acc telegraf.Accumulator) error {
 	if h.fetcher == nil {
 		h.fetcher = gohddtemp.New()

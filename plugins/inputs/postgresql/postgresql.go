@@ -24,10 +24,6 @@ type Postgresql struct {
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
 
-func (p *Postgresql) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
 }

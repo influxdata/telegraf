@@ -85,11 +85,6 @@ var (
 	now                    = time.Now
 )
 
-// SampleConfig returns the default Docker TOML configuration.
-func (d *Docker) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *Docker) Init() error {
 	err := choice.CheckSlice(d.PerDeviceInclude, containerMetricClasses)
 	if err != nil {

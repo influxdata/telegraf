@@ -158,11 +158,6 @@ func mapShardStatusToCode(s string) int {
 	return 0
 }
 
-// SampleConfig returns sample configuration for this plugin.
-func (e *Elasticsearch) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Init the plugin.
 func (e *Elasticsearch) Init() error {
 	// Compile the configured indexes to match for sorting.

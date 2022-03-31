@@ -22,10 +22,6 @@ type NetIOStats struct {
 	Interfaces          []string
 }
 
-func (n *NetIOStats) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	netio, err := n.ps.NetIO()
 	if err != nil {

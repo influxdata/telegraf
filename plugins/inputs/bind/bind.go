@@ -23,10 +23,6 @@ type Bind struct {
 	client http.Client
 }
 
-func (b *Bind) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (b *Bind) Init() error {
 	b.client = http.Client{
 		Timeout: time.Duration(b.Timeout),

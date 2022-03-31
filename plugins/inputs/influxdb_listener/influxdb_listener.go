@@ -65,10 +65,6 @@ type InfluxDBListener struct {
 	mux http.ServeMux
 }
 
-func (h *InfluxDBListener) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

@@ -52,10 +52,6 @@ var protectedHexFields = map[string]bool{
 	"paxos_principal": true,
 }
 
-func (a *Aerospike) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
 	if !a.initialized {
 		tlsConfig, err := a.ClientConfig.TLSConfig()

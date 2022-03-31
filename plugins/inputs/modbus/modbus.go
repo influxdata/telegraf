@@ -77,9 +77,6 @@ const (
 )
 
 // SampleConfig returns a basic configuration for the plugin
-func (m *Modbus) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (m *Modbus) Init() error {
 	//check device name

@@ -19,11 +19,6 @@ type InternetSpeed struct {
 	serverCache        *speedtest.Server
 }
 
-// SampleConfig displays configuration instructions.
-func (is *InternetSpeed) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 const measurement = "internet_speed"
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {

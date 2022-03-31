@@ -40,10 +40,6 @@ type Nstat struct {
 	DumpZeros      bool   `toml:"dump_zeros"`
 }
 
-func (ns *Nstat) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (ns *Nstat) Gather(acc telegraf.Accumulator) error {
 	// load paths, get from env if config values are empty
 	ns.loadPaths()

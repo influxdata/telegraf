@@ -37,7 +37,3 @@ const (
 	tagDriverName    = "driver"
 	fieldInterfaceUp = "interface_up"
 )
-
-func (e *Ethtool) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}

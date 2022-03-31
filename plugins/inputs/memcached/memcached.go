@@ -79,9 +79,6 @@ var sendMetrics = []string{
 }
 
 // SampleConfig returns sample configuration message
-func (m *Memcached) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather reads stats from all configured servers accumulates stats
 func (m *Memcached) Gather(acc telegraf.Accumulator) error {

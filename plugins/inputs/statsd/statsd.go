@@ -221,10 +221,6 @@ type cacheddistributions struct {
 	tags  map[string]string
 }
 
-func (s *Statsd) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()

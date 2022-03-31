@@ -36,10 +36,6 @@ func NewFileStat() *FileStat {
 	}
 }
 
-func (*FileStat) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 	var err error
 

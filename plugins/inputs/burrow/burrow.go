@@ -93,10 +93,6 @@ func init() {
 	})
 }
 
-func (b *burrow) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (b *burrow) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

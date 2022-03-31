@@ -12,10 +12,6 @@ type DMCache struct {
 	getCurrentStatus func() ([]string, error)
 }
 
-func (c *DMCache) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func init() {
 	inputs.Add("dmcache", func() telegraf.Input {
 		return &DMCache{

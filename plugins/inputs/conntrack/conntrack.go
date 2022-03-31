@@ -49,10 +49,6 @@ func (c *Conntrack) setDefaults() {
 	}
 }
 
-func (c *Conntrack) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 	c.setDefaults()
 

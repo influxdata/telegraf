@@ -47,11 +47,6 @@ const (
 	v2Endpoint = "http://169.254.170.2"
 )
 
-// SampleConfig returns the ECS example config
-func (ecs *Ecs) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather is the entrypoint for telegraf metrics collection
 func (ecs *Ecs) Gather(acc telegraf.Accumulator) error {
 	err := initSetup(ecs)

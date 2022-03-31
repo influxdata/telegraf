@@ -21,10 +21,6 @@ type Teamspeak struct {
 	connected bool
 }
 
-func (ts *Teamspeak) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 	var err error
 

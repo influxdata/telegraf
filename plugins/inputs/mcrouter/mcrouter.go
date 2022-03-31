@@ -107,9 +107,6 @@ var sendMetrics = map[string]statType{
 }
 
 // SampleConfig returns sample configuration message
-func (m *Mcrouter) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather reads stats from all configured servers accumulates stats
 func (m *Mcrouter) Gather(acc telegraf.Accumulator) error {

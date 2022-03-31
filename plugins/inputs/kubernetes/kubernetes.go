@@ -52,9 +52,6 @@ func init() {
 }
 
 //SampleConfig returns a sample config
-func (k *Kubernetes) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 //Description returns the description of this plugin
 

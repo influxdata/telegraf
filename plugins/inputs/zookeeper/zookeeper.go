@@ -37,9 +37,6 @@ type Zookeeper struct {
 var defaultTimeout = 5 * time.Second
 
 // SampleConfig returns sample configuration message
-func (z *Zookeeper) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (z *Zookeeper) dial(ctx context.Context, addr string) (net.Conn, error) {
 	var dialer net.Dialer

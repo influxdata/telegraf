@@ -33,9 +33,6 @@ type SFlow struct {
 }
 
 // SampleConfig answers a sample configuration
-func (s *SFlow) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (s *SFlow) Init() error {
 	s.decoder = NewDecoder()

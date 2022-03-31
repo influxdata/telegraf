@@ -29,10 +29,6 @@ type Tengine struct {
 	client *http.Client
 }
 
-func (n *Tengine) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *Tengine) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

@@ -64,10 +64,6 @@ type MdstatConf struct {
 	FileName string `toml:"file_name"`
 }
 
-func (k *MdstatConf) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func evalStatusLine(deviceLine, statusLineStr string) (statusLine, error) {
 	sizeFields := strings.Fields(statusLineStr)
 	if len(sizeFields) < 1 {

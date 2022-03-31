@@ -99,10 +99,6 @@ func (p *Postfix) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Postfix) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func init() {
 	inputs.Add("postfix", func() telegraf.Input {
 		return &Postfix{

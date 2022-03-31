@@ -32,10 +32,6 @@ type NTPQ struct {
 	DNSLookup bool `toml:"dns_lookup"`
 }
 
-func (n *NTPQ) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	out, err := n.runQ()
 	if err != nil {

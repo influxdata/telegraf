@@ -55,11 +55,6 @@ func parse(data []byte) (datapointArray []pluginData, err error) {
 	return datapointArray, err
 }
 
-// SampleConfig - generate configuration
-func (h *Fluentd) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather - Main code responsible for gathering, processing and creating metrics
 func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 	_, err := url.Parse(h.Endpoint)

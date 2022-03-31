@@ -38,9 +38,6 @@ var defaultBinary = "/usr/sbin/unbound-control"
 var defaultTimeout = config.Duration(time.Second)
 
 // SampleConfig displays configuration instructions
-func (s *Unbound) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Shell out to unbound_stat and return the output
 func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {

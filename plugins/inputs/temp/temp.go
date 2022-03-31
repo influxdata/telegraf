@@ -15,10 +15,6 @@ type Temperature struct {
 	ps system.PS
 }
 
-func (t *Temperature) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (t *Temperature) Gather(acc telegraf.Accumulator) error {
 	temps, err := t.ps.Temperature()
 	if err != nil {

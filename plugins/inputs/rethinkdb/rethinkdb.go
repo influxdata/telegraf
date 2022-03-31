@@ -17,10 +17,6 @@ type RethinkDB struct {
 	Servers []string
 }
 
-func (r *RethinkDB) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 var localhost = &Server{URL: &url.URL{Host: "127.0.0.1:28015"}}
 
 // Reads stats from all configured servers accumulates stats.

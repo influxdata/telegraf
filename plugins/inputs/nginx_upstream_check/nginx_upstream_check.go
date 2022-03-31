@@ -47,10 +47,6 @@ func init() {
 	})
 }
 
-func (check *NginxUpstreamCheck) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 type NginxUpstreamCheckData struct {
 	Servers struct {
 		Total      uint64                     `json:"total"`

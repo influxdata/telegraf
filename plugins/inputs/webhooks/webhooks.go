@@ -47,10 +47,6 @@ func NewWebhooks() *Webhooks {
 	return &Webhooks{}
 }
 
-func (wb *Webhooks) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

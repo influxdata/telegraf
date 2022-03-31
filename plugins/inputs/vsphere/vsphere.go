@@ -72,9 +72,6 @@ type VSphere struct {
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
 // Telegraf.
-func (v *VSphere) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.

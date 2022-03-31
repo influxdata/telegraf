@@ -20,7 +20,3 @@ type Zfs struct {
 	zdataset       Zdataset        //nolint:varcheck,unused // False positive - this var is used for non-default build tag: freebsd
 	Log            telegraf.Logger `toml:"-"`
 }
-
-func (z *Zfs) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}

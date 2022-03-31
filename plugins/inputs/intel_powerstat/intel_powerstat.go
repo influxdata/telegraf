@@ -45,11 +45,6 @@ type PowerStat struct {
 	skipFirstIteration  bool
 }
 
-// SampleConfig returns the default configuration of the plugin.
-func (p *PowerStat) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Init performs one time setup of the plugin.
 func (p *PowerStat) Init() error {
 	p.parseCPUMetricsConfig()

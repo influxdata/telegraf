@@ -69,10 +69,6 @@ type HTTPListenerV2 struct {
 	acc telegraf.Accumulator
 }
 
-func (h *HTTPListenerV2) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (h *HTTPListenerV2) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

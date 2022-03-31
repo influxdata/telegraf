@@ -61,10 +61,6 @@ type DirectoryMonitor struct {
 	filesToProcess      chan string
 }
 
-func (monitor *DirectoryMonitor) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 	// Get all files sitting in the directory.
 	files, err := os.ReadDir(monitor.Directory)

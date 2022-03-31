@@ -23,10 +23,6 @@ type Powerdns struct {
 
 var defaultTimeout = 5 * time.Second
 
-func (p *Powerdns) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Powerdns) Gather(acc telegraf.Accumulator) error {
 	if len(p.UnixSockets) == 0 {
 		return p.gatherServer("/var/run/pdns.controlsocket", acc)

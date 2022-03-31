@@ -25,11 +25,6 @@ type File struct {
 	decoder    *encoding.Decoder
 }
 
-// SampleConfig returns the default configuration of the Input
-func (f *File) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (f *File) Init() error {
 	var err error
 	f.decoder, err = encoding.NewDecoder(f.CharacterEncoding)

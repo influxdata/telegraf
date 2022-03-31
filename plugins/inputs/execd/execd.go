@@ -30,10 +30,6 @@ type Execd struct {
 	parser  parsers.Parser
 }
 
-func (e *Execd) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (e *Execd) SetParser(parser parsers.Parser) {
 	e.parser = parser
 }

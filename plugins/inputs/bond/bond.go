@@ -36,10 +36,6 @@ type sysFiles struct {
 	ADPortsFile string
 }
 
-func (bond *Bond) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 	// load proc path, get default value if config value and env variable are empty
 	bond.loadPaths()

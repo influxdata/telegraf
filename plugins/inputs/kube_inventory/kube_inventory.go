@@ -47,9 +47,6 @@ type KubernetesInventory struct {
 }
 
 // SampleConfig returns a sample config
-func (ki *KubernetesInventory) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (ki *KubernetesInventory) Init() error {
 	// If neither are provided, use the default service account.

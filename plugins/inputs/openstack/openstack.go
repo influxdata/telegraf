@@ -113,9 +113,6 @@ func (o *OpenStack) convertTimeFormat(t time.Time) interface{} {
 
 // SampleConfig return a sample configuration file for auto-generation and
 // implements the Input interface.
-func (o *OpenStack) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // initialize performs any necessary initialization functions
 func (o *OpenStack) Init() error {

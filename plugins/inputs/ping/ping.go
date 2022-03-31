@@ -99,10 +99,6 @@ type stats struct {
 	roundTripTimeStats
 }
 
-func (*Ping) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	for _, host := range p.Urls {
 		p.wg.Add(1)

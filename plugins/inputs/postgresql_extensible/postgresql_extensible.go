@@ -56,10 +56,6 @@ func (p *Postgresql) Init() error {
 	return nil
 }
 
-func (p *Postgresql) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
 }

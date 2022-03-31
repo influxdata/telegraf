@@ -79,9 +79,6 @@ func NewLogParser() *LogParserPlugin {
 }
 
 // SampleConfig returns the sample configuration for the plugin
-func (l *LogParserPlugin) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (l *LogParserPlugin) Init() error {
 	l.Log.Warnf(`The logparser plugin is deprecated; please use the 'tail' input with the 'grok' data_format`)

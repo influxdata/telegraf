@@ -90,10 +90,6 @@ const (
 	DefaultPrefetchCount = 50
 )
 
-func (a *AMQPConsumer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (a *AMQPConsumer) SetParser(parser parsers.Parser) {
 	a.parser = parser
 }

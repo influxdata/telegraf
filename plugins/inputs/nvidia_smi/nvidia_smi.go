@@ -26,9 +26,6 @@ type NvidiaSMI struct {
 }
 
 // SampleConfig returns the sample configuration for the NvidiaSMI plugin
-func (smi *NvidiaSMI) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (smi *NvidiaSMI) Init() error {
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {

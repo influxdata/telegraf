@@ -109,9 +109,6 @@ const (
 )
 
 // SampleConfig will populate the sample configuration portion of the plugin's configuration
-func (o *OpcUA) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Init will initialize all tags
 func (o *OpcUA) Init() error {

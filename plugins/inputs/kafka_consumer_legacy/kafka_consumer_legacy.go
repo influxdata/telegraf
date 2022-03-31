@@ -49,10 +49,6 @@ type Kafka struct {
 	doNotCommitMsgs bool
 }
 
-func (k *Kafka) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (k *Kafka) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }

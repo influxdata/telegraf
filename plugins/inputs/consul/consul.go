@@ -37,10 +37,6 @@ func (c *Consul) Init() error {
 	return nil
 }
 
-func (c *Consul) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *Consul) createAPIClient() (*api.Client, error) {
 	config := api.DefaultConfig()
 

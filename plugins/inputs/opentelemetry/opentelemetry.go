@@ -32,10 +32,6 @@ type OpenTelemetry struct {
 	wg sync.WaitGroup
 }
 
-func (o *OpenTelemetry) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (o *OpenTelemetry) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

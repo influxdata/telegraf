@@ -68,10 +68,6 @@ func (c *RealHTTPClient) HTTPClient() *http.Client {
 	return c.client
 }
 
-func (h *HTTPJSON) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gathers data for all servers.
 func (h *HTTPJSON) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup

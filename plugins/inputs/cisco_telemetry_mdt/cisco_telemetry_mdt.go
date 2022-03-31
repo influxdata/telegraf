@@ -684,11 +684,6 @@ func (c *CiscoTelemetryMDT) Stop() {
 	c.wg.Wait()
 }
 
-// SampleConfig of plugin
-func (c *CiscoTelemetryMDT) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather plugin measurements (unused)
 func (c *CiscoTelemetryMDT) Gather(_ telegraf.Accumulator) error {
 	return nil

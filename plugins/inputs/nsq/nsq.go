@@ -60,10 +60,6 @@ func New() *NSQ {
 	return &NSQ{}
 }
 
-func (n *NSQ) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *NSQ) Gather(acc telegraf.Accumulator) error {
 	var err error
 

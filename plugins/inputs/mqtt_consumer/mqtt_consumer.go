@@ -87,9 +87,6 @@ type MQTTConsumer struct {
 	cancel        context.CancelFunc
 }
 
-func (m *MQTTConsumer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
 	m.parser = parser
 }

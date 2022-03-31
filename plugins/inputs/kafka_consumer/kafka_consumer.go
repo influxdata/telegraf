@@ -69,10 +69,6 @@ func (*SaramaCreator) Create(brokers []string, group string, cfg *sarama.Config)
 	return sarama.NewConsumerGroup(brokers, group, cfg)
 }
 
-func (k *KafkaConsumer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (k *KafkaConsumer) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }

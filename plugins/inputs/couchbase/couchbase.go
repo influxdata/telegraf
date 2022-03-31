@@ -30,10 +30,6 @@ type Couchbase struct {
 
 var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
 
-func (cb *Couchbase) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Reads stats from all configured clusters. Accumulates stats.
 // Returns one of the errors encountered while gathering stats (if any).
 func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {

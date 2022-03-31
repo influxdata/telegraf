@@ -30,9 +30,6 @@ type XtremIO struct {
 }
 
 // SampleConfig will populate the sample configuration portion of the plugin's configuration
-func (xio *XtremIO) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (xio *XtremIO) Init() error {
 	if xio.Username == "" {

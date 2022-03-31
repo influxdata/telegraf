@@ -32,10 +32,6 @@ type haproxy struct {
 	client *http.Client
 }
 
-func (h *haproxy) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (h *haproxy) Gather(acc telegraf.Accumulator) error {

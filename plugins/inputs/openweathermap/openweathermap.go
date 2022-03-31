@@ -44,10 +44,6 @@ type OpenWeatherMap struct {
 	baseParsedURL *url.URL
 }
 
-func (n *OpenWeatherMap) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	var strs []string

@@ -31,10 +31,6 @@ func NewLanz() *Lanz {
 	return &Lanz{}
 }
 
-func (l *Lanz) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (l *Lanz) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

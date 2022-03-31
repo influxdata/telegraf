@@ -56,10 +56,6 @@ type Aurora struct {
 	urls   []*url.URL
 }
 
-func (a *Aurora) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (a *Aurora) Gather(acc telegraf.Accumulator) error {
 	if a.client == nil {
 		err := a.initialize()

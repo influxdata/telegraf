@@ -34,14 +34,6 @@ type Example struct {
 	count int64
 }
 
-// Usually the default (example) configuration is contained in this constant.
-// Please use '## '' to denote comments and '# ' to specify default settings and start each line with two spaces.
-
-// SampleConfig will populate the sample configuration portion of the plugin's configuration
-func (m *Example) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Init can be implemented to do one-time processing stuff like initializing variables
 func (m *Example) Init() error {
 	// Check your options according to your requirements

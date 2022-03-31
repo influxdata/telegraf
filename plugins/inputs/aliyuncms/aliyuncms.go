@@ -105,11 +105,6 @@ var aliyunRegionList = []string{
 	"me-east-1",
 }
 
-// SampleConfig implements telegraf.Inputs interface
-func (s *AliyunCMS) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Init perform checks of plugin inputs and initialize internals
 func (s *AliyunCMS) Init() error {
 	if s.Project == "" {

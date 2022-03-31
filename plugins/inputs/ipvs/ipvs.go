@@ -23,11 +23,6 @@ type IPVS struct {
 	Log    telegraf.Logger
 }
 
-// SampleConfig returns a sample configuration for this input plugin
-func (i *IPVS) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather gathers the stats
 func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 	if i.handle == nil {

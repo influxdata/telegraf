@@ -23,10 +23,6 @@ type LVM struct {
 	UseSudo bool `toml:"use_sudo"`
 }
 
-func (lvm *LVM) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (lvm *LVM) Init() error {
 	return nil
 }

@@ -49,9 +49,6 @@ var allMetrics = map[Role][]string{
 }
 
 // SampleConfig returns a sample configuration block
-func (m *Mesos) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (m *Mesos) parseURL(s string, role Role) (*url.URL, error) {
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {

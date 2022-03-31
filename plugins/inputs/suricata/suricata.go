@@ -39,9 +39,6 @@ type Suricata struct {
 
 // SampleConfig returns a sample TOML section to illustrate configuration
 // options.
-func (s *Suricata) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Start initiates background collection of JSON data from the socket
 // provided to Suricata.

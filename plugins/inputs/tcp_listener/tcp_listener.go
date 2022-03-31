@@ -60,10 +60,6 @@ var dropwarn = "tcp_listener message queue full. " +
 var malformedwarn = "tcp_listener has received %d malformed packets" +
 	" thus far."
 
-func (t *TCPListener) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // All the work is done in the Start() function, so this is just a dummy
 // function.
 func (t *TCPListener) Gather(_ telegraf.Accumulator) error {

@@ -75,10 +75,6 @@ type processContent func([]byte) ([]byte, error)
 // this is the largest sequence number allowed - https://docs.aws.amazon.com/kinesis/latest/APIReference/API_SequenceNumberRange.html
 var maxSeq = strToBint(strings.Repeat("9", 129))
 
-func (k *KinesisConsumer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }

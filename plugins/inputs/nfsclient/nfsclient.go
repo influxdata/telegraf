@@ -27,10 +27,6 @@ type NFSClient struct {
 	mountstatsPath    string
 }
 
-func (n *NFSClient) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func convertToUint64(line []string) ([]uint64, error) {
 	/* A "line" of input data (a pre-split array of strings) is
 	   processed one field at a time.  Each field is converted to

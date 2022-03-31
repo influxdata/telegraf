@@ -27,10 +27,6 @@ type NginxVTS struct {
 	client *http.Client
 }
 
-func (n *NginxVTS) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *NginxVTS) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

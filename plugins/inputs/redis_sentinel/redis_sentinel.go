@@ -41,10 +41,6 @@ func init() {
 	})
 }
 
-func (r *RedisSentinel) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *RedisSentinel) Init() error {
 	if len(r.Servers) == 0 {
 		r.Servers = []string{"tcp://localhost:26379"}

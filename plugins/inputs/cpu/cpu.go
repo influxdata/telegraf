@@ -31,10 +31,6 @@ func NewCPUStats(ps system.PS) *CPUStats {
 	}
 }
 
-func (c *CPUStats) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 	times, err := c.ps.CPUTimes(c.PerCPU, c.TotalCPU)
 	if err != nil {

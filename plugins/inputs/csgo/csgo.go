@@ -33,10 +33,6 @@ type CSGO struct {
 	Servers [][]string `toml:"servers"`
 }
 
-func (*CSGO) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *CSGO) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

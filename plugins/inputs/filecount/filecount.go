@@ -30,10 +30,6 @@ type FileCount struct {
 	Log            telegraf.Logger
 }
 
-func (fc *FileCount) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 type fileFilterFunc func(os.FileInfo) (bool, error)
 
 func rejectNilFilters(filters []fileFilterFunc) []fileFilterFunc {

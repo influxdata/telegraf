@@ -53,11 +53,6 @@ type esAggregation struct {
 	aggregationQueryList []aggregationQueryData
 }
 
-// SampleConfig returns sample configuration for this plugin.
-func (e *ElasticsearchQuery) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Init the plugin.
 func (e *ElasticsearchQuery) Init() error {
 	if e.URLs == nil {

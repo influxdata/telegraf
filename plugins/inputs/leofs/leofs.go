@@ -148,10 +148,6 @@ var serverTypeMapping = map[string]ServerType{
 	"4001": ServerTypeGateway,
 }
 
-func (l *LeoFS) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 	if len(l.Servers) == 0 {
 		return l.gatherServer(defaultEndpoint, ServerTypeManagerMaster, acc)

@@ -29,10 +29,6 @@ type Apache struct {
 	client *http.Client
 }
 
-func (n *Apache) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

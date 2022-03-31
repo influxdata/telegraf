@@ -26,11 +26,6 @@ type Iptables struct {
 	lister  chainLister
 }
 
-// SampleConfig returns sample configuration options.
-func (ipt *Iptables) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather gathers iptables packets and bytes throughput from the configured tables and chains.
 func (ipt *Iptables) Gather(acc telegraf.Accumulator) error {
 	if ipt.Table == "" || len(ipt.Chains) == 0 {

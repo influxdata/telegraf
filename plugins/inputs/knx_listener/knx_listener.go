@@ -44,10 +44,6 @@ type KNXListener struct {
 	wg  sync.WaitGroup
 }
 
-func (kl *KNXListener) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (kl *KNXListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

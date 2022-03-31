@@ -28,10 +28,6 @@ var validQuery = map[string]bool{
 	"user": true, "domain": true, "global": true, "ip": true,
 }
 
-func (d *Dovecot) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Reads stats from all configured servers.
 func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 	if !validQuery[d.Type] {

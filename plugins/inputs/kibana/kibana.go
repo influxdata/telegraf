@@ -113,9 +113,6 @@ func mapHealthStatusToCode(s string) int {
 }
 
 // SampleConfig returns sample configuration for this plugin.
-func (k *Kibana) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {

@@ -61,10 +61,6 @@ type Jolokia struct {
 	Log                   telegraf.Logger `toml:"-"`
 }
 
-func (j *Jolokia) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (j *Jolokia) doRequest(req *http.Request) ([]map[string]interface{}, error) {
 	resp, err := j.jClient.MakeRequest(req)
 	if err != nil {

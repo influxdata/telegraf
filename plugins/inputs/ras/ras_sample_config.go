@@ -1,0 +1,6 @@
+// DON'T EDIT; This file is used as a template by tools/generate_plugindata
+package ras
+
+func (r *Ras) SampleConfig() string {
+	return `{{ .SampleConfig }}`
+}

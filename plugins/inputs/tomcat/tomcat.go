@@ -72,10 +72,6 @@ type Tomcat struct {
 	request *http.Request
 }
 
-func (s *Tomcat) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
 		client, err := s.createHTTPClient()

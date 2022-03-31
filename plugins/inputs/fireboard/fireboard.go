@@ -47,13 +47,6 @@ type fireboardStats struct {
 	Latesttemps []RTT  `json:"latest_temps"`
 }
 
-// A sample configuration to only gather stats from localhost, default port.
-
-// SampleConfig Returns a sample configuration for the plugin
-func (r *Fireboard) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Init the things
 func (r *Fireboard) Init() error {
 	if len(r.AuthToken) == 0 {

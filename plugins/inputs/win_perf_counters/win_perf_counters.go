@@ -118,10 +118,6 @@ func extractCounterInfoFromCounterPath(counterPath string) (object string, insta
 	return
 }
 
-func (m *Win_PerfCounters) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func newCounter(counterHandle PDH_HCOUNTER, counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) *counter {
 	measurementName := sanitizedChars.Replace(measurement)
 	if measurementName == "" {

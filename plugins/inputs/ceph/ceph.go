@@ -44,10 +44,6 @@ type Ceph struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-func (c *Ceph) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *Ceph) Gather(acc telegraf.Accumulator) error {
 	if c.GatherAdminSocketStats {
 		if err := c.gatherAdminSocketStats(acc); err != nil {

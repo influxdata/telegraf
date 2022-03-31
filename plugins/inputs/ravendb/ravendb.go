@@ -48,10 +48,6 @@ type RavenDB struct {
 	requestURLCollection string
 }
 
-func (r *RavenDB) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

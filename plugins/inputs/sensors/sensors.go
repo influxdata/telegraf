@@ -32,10 +32,6 @@ type Sensors struct {
 	path          string
 }
 
-func (*Sensors) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 	if len(s.path) == 0 {
 		return errors.New("sensors not found: verify that lm-sensors package is installed and that sensors is in your PATH")

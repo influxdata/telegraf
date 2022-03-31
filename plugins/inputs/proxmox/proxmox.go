@@ -16,10 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-func (px *Proxmox) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 	err := getNodeSearchDomain(px)
 	if err != nil {

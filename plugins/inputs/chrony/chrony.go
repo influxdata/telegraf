@@ -24,10 +24,6 @@ type Chrony struct {
 	path      string
 }
 
-func (*Chrony) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *Chrony) Init() error {
 	var err error
 	c.path, err = exec.LookPath("chronyc")

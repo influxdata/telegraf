@@ -421,9 +421,6 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) e
 }
 
 // SampleConfig returns sample configuration message
-func (l *Lustre2) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather reads stats from all lustre targets
 func (l *Lustre2) Gather(acc telegraf.Accumulator) error {

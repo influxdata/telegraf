@@ -18,10 +18,6 @@ type Beanstalkd struct {
 	Tubes  []string `toml:"tubes"`
 }
 
-func (b *Beanstalkd) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (b *Beanstalkd) Gather(acc telegraf.Accumulator) error {
 	connection, err := textproto.Dial("tcp", b.Server)
 	if err != nil {

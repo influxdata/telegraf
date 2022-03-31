@@ -21,10 +21,6 @@ var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode"
 	"avg_req": true, "avg_recv": true, "avg_sent": true, "avg_query": true,
 }
 
-func (p *PgBouncer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 	var (
 		err     error

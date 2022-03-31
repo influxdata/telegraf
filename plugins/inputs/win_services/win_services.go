@@ -109,10 +109,6 @@ func (m *WinServices) Init() error {
 	return nil
 }
 
-func (m *WinServices) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 	scmgr, err := m.mgrProvider.Connect()
 	if err != nil {

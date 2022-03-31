@@ -48,10 +48,6 @@ var (
 	keyPathRegex = regexp.MustCompile(`/([^/]*)\[([A-Za-z0-9\-/]*=[^\[]*)]`)
 )
 
-func (m *OpenConfigTelemetry) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (m *OpenConfigTelemetry) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

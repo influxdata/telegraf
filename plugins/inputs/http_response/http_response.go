@@ -61,11 +61,6 @@ type httpClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// SampleConfig returns the plugin SampleConfig
-func (h *HTTPResponse) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // ErrRedirectAttempted indicates that a redirect occurred
 var ErrRedirectAttempted = errors.New("redirect")
 

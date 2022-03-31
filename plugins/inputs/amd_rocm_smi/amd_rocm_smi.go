@@ -24,11 +24,6 @@ type ROCmSMI struct {
 	Timeout config.Duration
 }
 
-// SampleConfig returns the sample configuration for the ROCmSMI plugin
-func (rsmi *ROCmSMI) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather implements the telegraf interface
 func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
 	if _, err := os.Stat(rsmi.BinPath); os.IsNotExist(err) {

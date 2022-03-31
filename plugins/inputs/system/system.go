@@ -21,10 +21,6 @@ type SystemStats struct {
 	Log telegraf.Logger
 }
 
-func (*SystemStats) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {

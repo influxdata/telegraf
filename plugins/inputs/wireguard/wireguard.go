@@ -34,10 +34,6 @@ type Wireguard struct {
 	client *wgctrl.Client
 }
 
-func (wg *Wireguard) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (wg *Wireguard) Init() error {
 	var err error
 

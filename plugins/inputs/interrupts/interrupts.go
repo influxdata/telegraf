@@ -30,10 +30,6 @@ func NewIRQ(id string) *IRQ {
 	return &IRQ{ID: id, Cpus: []int64{}}
 }
 
-func (s *Interrupts) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func parseInterrupts(r io.Reader) ([]IRQ, error) {
 	var irqs []IRQ
 	var cpucount int

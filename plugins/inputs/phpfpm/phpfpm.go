@@ -48,10 +48,6 @@ type phpfpm struct {
 	client *http.Client
 }
 
-func (p *phpfpm) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *phpfpm) Init() error {
 	tlsCfg, err := p.ClientConfig.TLSConfig()
 	if err != nil {

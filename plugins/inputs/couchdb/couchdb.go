@@ -90,10 +90,6 @@ type (
 	}
 )
 
-func (*CouchDB) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for _, u := range c.Hosts {

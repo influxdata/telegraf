@@ -73,9 +73,6 @@ type Varnish struct {
 }
 
 // SampleConfig displays configuration instructions
-func (s *Varnish) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Shell out to varnish cli and return the output
 func varnishRunner(cmdName string, useSudo bool, cmdArgs []string, timeout config.Duration) (*bytes.Buffer, error) {

@@ -267,10 +267,6 @@ func (rsl *riemannListener) riemannReturnErrorResponse(conn net.Conn, errorMessa
 	}
 }
 
-func (rsl *RiemannSocketListener) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (rsl *RiemannSocketListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

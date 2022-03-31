@@ -65,13 +65,6 @@ type Devices struct {
 	} `json:"properties"`
 }
 
-// Description returns a string explaining the purpose of this plugin
-
-// SampleConfig returns text explaining how plugin should be configured
-func (f *Fibaro) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // getJSON connects, authenticates and reads JSON payload returned by Fibaro box
 func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 	var requestURL = f.URL + path

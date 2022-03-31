@@ -267,9 +267,6 @@ func (smc *stackdriverMetricClient) Close() error {
 }
 
 // SampleConfig implements telegraf.Input interface
-func (s *Stackdriver) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather implements telegraf.Input interface
 func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {

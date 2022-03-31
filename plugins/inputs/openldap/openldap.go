@@ -43,10 +43,6 @@ var attrTranslate = map[string]string{
 	"olmMDBEntries":      "_mdb_entries",
 }
 
-func (o *Openldap) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // return an initialized Openldap
 func NewOpenldap() *Openldap {
 	return &Openldap{

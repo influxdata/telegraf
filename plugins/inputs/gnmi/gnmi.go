@@ -540,11 +540,6 @@ func (c *GNMI) Stop() {
 	c.wg.Wait()
 }
 
-// SampleConfig of plugin
-func (c *GNMI) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather plugin measurements (unused)
 func (c *GNMI) Gather(_ telegraf.Accumulator) error {
 	return nil

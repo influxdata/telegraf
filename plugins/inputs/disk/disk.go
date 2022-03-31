@@ -23,10 +23,6 @@ type DiskStats struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-func (ds *DiskStats) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (ds *DiskStats) Init() error {
 	// Legacy support:
 	if len(ds.LegacyMountPoints) != 0 {

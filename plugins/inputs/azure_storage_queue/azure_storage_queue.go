@@ -23,10 +23,6 @@ type AzureStorageQueue struct {
 	serviceURL *azqueue.ServiceURL
 }
 
-func (a *AzureStorageQueue) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (a *AzureStorageQueue) Init() error {
 	if a.StorageAccountName == "" {
 		return errors.New("account_name must be configured")

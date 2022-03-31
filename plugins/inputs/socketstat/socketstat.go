@@ -40,9 +40,6 @@ type Socketstat struct {
 type socketLister func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error)
 
 // SampleConfig returns sample configuration options
-func (ss *Socketstat) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather gathers indicators from established connections
 func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {

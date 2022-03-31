@@ -36,9 +36,6 @@ func init() {
 }
 
 // SampleConfig returns a sample config
-func (n *Nomad) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (n *Nomad) Init() error {
 	if n.URL == "" {

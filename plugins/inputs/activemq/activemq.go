@@ -84,10 +84,6 @@ type Stats struct {
 	DequeueCounter      int      `xml:"dequeueCounter,attr"`
 }
 
-func (a *ActiveMQ) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (a *ActiveMQ) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := a.ClientConfig.TLSConfig()
 	if err != nil {

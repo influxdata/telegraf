@@ -52,10 +52,6 @@ var levels = []string{"ok", "warning", "critical", "unknown"}
 
 type ObjectType string
 
-func (i *Icinga2) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 	for _, check := range checks {
 		serverURL, err := url.Parse(i.Server)

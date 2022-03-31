@@ -57,10 +57,6 @@ func init() {
 	})
 }
 
-func (dpdk *dpdk) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Performs validation of all parameters from configuration
 func (dpdk *dpdk) Init() error {
 	if dpdk.SocketPath == "" {

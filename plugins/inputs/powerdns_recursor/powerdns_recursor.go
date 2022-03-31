@@ -30,10 +30,6 @@ type PowerdnsRecursor struct {
 
 var defaultTimeout = 5 * time.Second
 
-func (p *PowerdnsRecursor) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *PowerdnsRecursor) Init() error {
 	if p.SocketMode != "" {
 		mode, err := strconv.ParseUint(p.SocketMode, 8, 32)

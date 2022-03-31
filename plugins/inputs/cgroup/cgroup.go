@@ -12,10 +12,6 @@ type CGroup struct {
 	Files []string `toml:"files"`
 }
 
-func (g *CGroup) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func init() {
 	inputs.Add("cgroup", func() telegraf.Input { return &CGroup{} })
 }

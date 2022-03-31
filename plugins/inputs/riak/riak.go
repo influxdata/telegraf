@@ -84,9 +84,6 @@ type riakStats struct {
 // A sample configuration to only gather stats from localhost, default port.
 
 // Returns a sample configuration for the plugin
-func (r *Riak) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Returns a description of the plugin
 

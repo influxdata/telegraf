@@ -107,9 +107,6 @@ func (c *Marklogic) Init() error {
 }
 
 // SampleConfig to gather stats from localhost, default port.
-func (c *Marklogic) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather metrics from HTTP Server.
 func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {

@@ -16,10 +16,6 @@ type MemStats struct {
 	platform string
 }
 
-func (ms *MemStats) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (ms *MemStats) Init() error {
 	ms.platform = runtime.GOOS
 	return nil

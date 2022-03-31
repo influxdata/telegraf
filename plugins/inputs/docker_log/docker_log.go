@@ -63,10 +63,6 @@ type DockerLogs struct {
 	containerList   map[string]context.CancelFunc
 }
 
-func (d *DockerLogs) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *DockerLogs) Init() error {
 	var err error
 	if d.Endpoint == "ENV" {

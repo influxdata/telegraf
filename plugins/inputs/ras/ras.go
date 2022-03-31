@@ -71,9 +71,6 @@ const (
 )
 
 // SampleConfig returns sample configuration for this plugin.
-func (r *Ras) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Start initializes connection to DB, metrics are gathered in Gather
 func (r *Ras) Start(telegraf.Accumulator) error {

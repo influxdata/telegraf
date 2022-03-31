@@ -37,10 +37,6 @@ var metricsTargets = []struct {
 	},
 }
 
-func (f *Fail2ban) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 	if len(f.path) == 0 {
 		return errors.New("fail2ban-client not found: verify that fail2ban is installed and that fail2ban-client is in your PATH")

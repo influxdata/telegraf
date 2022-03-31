@@ -69,10 +69,6 @@ var dropwarn = "udp_listener message queue full. " +
 var malformedwarn = "udp_listener has received %d malformed packets" +
 	" thus far."
 
-func (u *UDPListener) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // All the work is done in the Start() function, so this is just a dummy
 // function.
 func (u *UDPListener) Gather(_ telegraf.Accumulator) error {

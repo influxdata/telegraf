@@ -51,10 +51,6 @@ type stock struct {
 	Volatility float64 `toml:"volatility"`
 }
 
-func (m *Mock) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (m *Mock) Init() error {
 	rand.Seed(time.Now().UnixNano())
 	return nil

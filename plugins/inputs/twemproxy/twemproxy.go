@@ -18,10 +18,6 @@ type Twemproxy struct {
 	Pools []string
 }
 
-func (t *Twemproxy) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gather data from all Twemproxy instances
 func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 	conn, err := net.DialTimeout("tcp", t.Addr, 1*time.Second)

@@ -22,10 +22,6 @@ func NewSelf() telegraf.Input {
 	}
 }
 
-func (s *Self) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Self) Gather(acc telegraf.Accumulator) error {
 	if s.CollectMemstats {
 		m := &runtime.MemStats{}

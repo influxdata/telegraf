@@ -50,10 +50,6 @@ type Procstat struct {
 	createProcess   func(PID) (Process, error)
 }
 
-func (p *Procstat) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 type PidsTags struct {
 	PIDS []PID
 	Tags map[string]string

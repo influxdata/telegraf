@@ -357,9 +357,6 @@ func newSmart() *Smart {
 }
 
 // SampleConfig returns sample configuration for this plugin.
-func (m *Smart) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Init performs one time setup of the plugin and returns an error if the configuration is invalid.
 func (m *Smart) Init() error {

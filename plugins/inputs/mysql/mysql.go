@@ -61,10 +61,6 @@ const (
 	defaultGatherGlobalVars                    = true
 )
 
-func (m *Mysql) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 const localhost = ""
 
 func (m *Mysql) InitMysql() {

@@ -39,9 +39,6 @@ type X509Cert struct {
 }
 
 // SampleConfig returns configuration sample for the plugin.
-func (c *X509Cert) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {

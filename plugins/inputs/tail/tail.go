@@ -78,10 +78,6 @@ func NewTail() *Tail {
 	}
 }
 
-func (t *Tail) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (t *Tail) Init() error {
 	if t.MaxUndeliveredLines == 0 {
 		return errors.New("max_undelivered_lines must be positive")

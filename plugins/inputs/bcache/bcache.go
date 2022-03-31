@@ -24,10 +24,6 @@ type Bcache struct {
 	BcacheDevs []string
 }
 
-func (b *Bcache) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func getTags(bdev string) map[string]string {
 	backingDevFile, _ := os.Readlink(bdev)
 	backingDevPath := strings.Split(backingDevFile, "/")

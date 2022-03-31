@@ -32,10 +32,6 @@ type DiskIO struct {
 	initialized  bool
 }
 
-func (d *DiskIO) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
 	return strings.ContainsAny(s, "*?[")

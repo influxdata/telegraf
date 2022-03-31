@@ -65,11 +65,6 @@ type EventHub struct {
 	in     chan []telegraf.Metric
 }
 
-// SampleConfig is provided here
-func (*EventHub) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // SetParser sets the parser
 func (e *EventHub) SetParser(parser parsers.Parser) {
 	e.parser = parser

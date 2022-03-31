@@ -45,10 +45,6 @@ const (
 	streamUpstreamsPath   = "stream/upstreams"
 )
 
-func (n *NginxPlusAPI) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *NginxPlusAPI) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

@@ -38,9 +38,6 @@ type NetResponse struct {
 var description = "Collect response time of a TCP or UDP connection"
 
 // SampleConfig will return a complete configuration example with details about each field.
-func (*NetResponse) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // TCPGather will execute if there are TCP tests defined in the configuration.
 // It will return a map[string]interface{} for fields and a map[string]string for tags

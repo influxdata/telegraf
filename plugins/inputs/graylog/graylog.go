@@ -78,10 +78,6 @@ func (c *RealHTTPClient) HTTPClient() *http.Client {
 	return c.client
 }
 
-func (h *GrayLog) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Gathers data for all servers.
 func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup

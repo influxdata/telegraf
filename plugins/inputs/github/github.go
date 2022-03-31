@@ -35,11 +35,6 @@ type GitHub struct {
 	RateRemaining   selfstat.Stat
 }
 
-// SampleConfig returns sample configuration for this plugin.
-func (g *GitHub) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Create GitHub Client
 func (g *GitHub) createGitHubClient(ctx context.Context) (*githubLib.Client, error) {
 	httpClient := &http.Client{

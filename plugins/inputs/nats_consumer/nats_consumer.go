@@ -66,10 +66,6 @@ type natsConsumer struct {
 	cancel context.CancelFunc
 }
 
-func (n *natsConsumer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *natsConsumer) SetParser(parser parsers.Parser) {
 	n.parser = parser
 }

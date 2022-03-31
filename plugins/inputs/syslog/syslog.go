@@ -64,9 +64,6 @@ type Syslog struct {
 }
 
 // SampleConfig returns sample configuration message
-func (s *Syslog) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Gather ...
 func (s *Syslog) Gather(_ telegraf.Accumulator) error {

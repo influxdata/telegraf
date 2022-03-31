@@ -56,10 +56,6 @@ func NewSalesforce() *Salesforce {
 		Environment: defaultEnvironment}
 }
 
-func (s *Salesforce) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Reads limits values from Salesforce API
 func (s *Salesforce) Gather(acc telegraf.Accumulator) error {
 	limits, err := s.fetchLimits()

@@ -74,10 +74,6 @@ type Hugepages struct {
 	meminfoPath      string
 }
 
-func (h *Hugepages) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (h *Hugepages) Init() error {
 	err := h.parseHugepagesConfig()
 	if err != nil {

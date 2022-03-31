@@ -11,7 +11,3 @@ import (
 type Infiniband struct {
 	Log telegraf.Logger `toml:"-"`
 }
-
-func (i *Infiniband) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}

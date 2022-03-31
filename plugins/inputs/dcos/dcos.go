@@ -71,10 +71,6 @@ type DCOS struct {
 	appFilter       filter.Filter
 }
 
-func (d *DCOS) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *DCOS) Gather(acc telegraf.Accumulator) error {
 	err := d.init()
 	if err != nil {

@@ -55,11 +55,6 @@ type ClickHouse struct {
 	tls.ClientConfig
 }
 
-// SampleConfig returns the sample config
-func (*ClickHouse) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Start ClickHouse input service
 func (ch *ClickHouse) Start(telegraf.Accumulator) error {
 	timeout := defaultTimeout

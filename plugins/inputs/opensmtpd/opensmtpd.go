@@ -33,9 +33,6 @@ var defaultBinary = "/usr/sbin/smtpctl"
 var defaultTimeout = config.Duration(time.Second)
 
 // SampleConfig displays configuration instructions
-func (s *Opensmtpd) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 
 // Shell out to opensmtpd_stat and return the output
 func opensmtpdRunner(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
