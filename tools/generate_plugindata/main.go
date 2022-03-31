@@ -5,16 +5,23 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"log" //nolint:revive
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/ast"
 	"github.com/gomarkdown/markdown/parser"
 )
+
+func createSourceName(packageName string) string {
+	return fmt.Sprintf("%s_sample_config.go", packageName)
+}
 
 // extractPluginData reads the README.md to get the sample configuration
 func extractPluginData() (string, error) {
@@ -45,15 +52,10 @@ func extractPluginData() (string, error) {
 
 // generatePluginData parses the main source file of the plugin as a template and updates it with the sample configuration
 // The original source file is saved so that these changes can be reverted
-func generatePluginData(goPackage string, sampleConfig string) error {
-	sourceName := fmt.Sprintf("%s.go", goPackage)
+func generatePluginData(packageName string, sampleConfig string) error {
+	sourceName := createSourceName(packageName)
 
 	plugin, err := os.ReadFile(sourceName)
-	if err != nil {
-		return err
-	}
-
-	err = os.Rename(sourceName, fmt.Sprintf("%s.tmp", sourceName))
 	if err != nil {
 		return err
 	}
@@ -78,14 +80,45 @@ func generatePluginData(goPackage string, sampleConfig string) error {
 	return nil
 }
 
+var newSampleConfigFunc = `	return ` + "`{{ .SampleConfig }}`\n"
+
 // cleanGeneratedFiles will revert the changes made by generatePluginData
-func cleanGeneratedFiles(goPackage string) error {
-	sourceName := fmt.Sprintf("%s.go", goPackage)
-	err := os.Remove(sourceName)
+func cleanGeneratedFiles(packageName string) error {
+	sourceName := createSourceName(packageName)
+	sourcefile, err := os.Open(sourceName)
 	if err != nil {
 		return err
 	}
-	err = os.Rename(fmt.Sprintf("%s.tmp", sourceName), sourceName)
+	defer sourcefile.Close()
+
+	var c []byte
+	buf := bytes.NewBuffer(c)
+
+	scanner := bufio.NewScanner(sourcefile)
+
+	var sampleconfigSection bool
+	for scanner.Scan() {
+		if sampleconfigSection && strings.TrimSpace(scanner.Text()) == "}" {
+			sampleconfigSection = false
+			if _, err := buf.Write([]byte(newSampleConfigFunc)); err != nil {
+				return err
+			}
+		}
+
+		if !sampleconfigSection {
+			if _, err := buf.Write(scanner.Bytes()); err != nil {
+				return err
+			}
+			if _, err = buf.WriteString("\n"); err != nil {
+				return err
+			}
+		}
+		if !sampleconfigSection && strings.Contains(scanner.Text(), "SampleConfig() string") {
+			sampleconfigSection = true
+		}
+	}
+
+	err = os.WriteFile(sourceName, buf.Bytes(), 0664)
 	if err != nil {
 		return err
 	}
