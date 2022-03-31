@@ -7,6 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var originalPlugin = `package main
+func (*Plugin) SampleConfig() string {
+	return ` + "`{{ .SampleConfig }}`" + `
+}
+
+`
+
 func TestGeneratePluginData(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
@@ -25,21 +32,18 @@ func TestGeneratePluginData(t *testing.T) {
 	require.NoError(t, err)
 	_, err = r.Write([]byte(readme))
 	require.NoError(t, err)
-
-	plugin := `package main
-func (*Plugin) SampleConfig() string {
-	return ` + "`{{ .SampleConfig }}`" + `
-}
-`
-	sourceFile, err := os.Create("test.go")
+	err = r.Close()
 	require.NoError(t, err)
-	_, err = sourceFile.Write([]byte(plugin))
+
+	sourceFile, err := os.Create("test_sample_config.go")
+	require.NoError(t, err)
+	_, err = sourceFile.Write([]byte(originalPlugin))
+	require.NoError(t, err)
+	err = sourceFile.Close()
 	require.NoError(t, err)
 
 	defer func() {
-		err = os.Remove("test.go")
-		require.NoError(t, err)
-		err = os.Remove("test.go.tmp")
+		err = os.Remove("test_sample_config.go")
 		require.NoError(t, err)
 		err = os.Remove("README.md")
 		require.NoError(t, err)
@@ -58,12 +62,29 @@ func (*Plugin) SampleConfig() string {
   # No configuration
 ` + "`" + `
 }
+
 `
 
-	newSourceFile, err := os.ReadFile("test.go")
+	newSourceFile, err := os.ReadFile("test_sample_config.go")
 	require.NoError(t, err)
 
 	require.Equal(t, expected, string(newSourceFile))
+}
+
+func setupGeneratedPluginFile(t *testing.T, fileName string) {
+	// Create files that will be cleaned up
+	r, err := os.Create(fileName)
+	require.NoError(t, err)
+	defer r.Close()
+
+	updatePlugin := `package main
+func (*Plugin) SampleConfig() string {
+	return "I am a sample config"
+}
+
+`
+	_, err = r.Write([]byte(updatePlugin))
+	require.NoError(t, err)
 }
 
 func TestCleanGeneratedFiles(t *testing.T) {
@@ -71,15 +92,18 @@ func TestCleanGeneratedFiles(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 
-	// Create files that will be cleaned up
-	_, err := os.Create("testClean.go")
-	require.NoError(t, err)
-	_, err = os.Create("testClean.go.tmp")
+	filename := "testClean_sample_config.go"
+
+	setupGeneratedPluginFile(t, filename)
+
+	err := cleanGeneratedFiles("testClean")
 	require.NoError(t, err)
 
-	err = cleanGeneratedFiles("testClean")
+	b, err := os.ReadFile(filename)
 	require.NoError(t, err)
 
-	err = os.Remove("testClean.go")
+	require.Equal(t, originalPlugin, string(b))
+
+	err = os.Remove(filename)
 	require.NoError(t, err)
 }
