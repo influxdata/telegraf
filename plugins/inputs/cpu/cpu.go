@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package cpu
 
 import (
@@ -27,25 +29,6 @@ func NewCPUStats(ps system.PS) *CPUStats {
 		CollectCPUTime: true,
 		ReportActive:   true,
 	}
-}
-
-func (c *CPUStats) Description() string {
-	return "Read metrics about cpu usage"
-}
-
-var sampleConfig = `
-  ## Whether to report per-cpu stats or not
-  percpu = true
-  ## Whether to report total system cpu stats or not
-  totalcpu = true
-  ## If true, collect raw CPU time metrics
-  collect_cpu_time = false
-  ## If true, compute and report the sum of all non-idle CPU states
-  report_active = false
-`
-
-func (c *CPUStats) SampleConfig() string {
-	return sampleConfig
 }
 
 func (c *CPUStats) Gather(acc telegraf.Accumulator) error {

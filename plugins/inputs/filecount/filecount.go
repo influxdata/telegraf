@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package filecount
 
 import (
@@ -13,39 +15,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const sampleConfig = `
-  ## Directories to gather stats about.
-  ## This accept standard unit glob matching rules, but with the addition of
-  ## ** as a "super asterisk". ie:
-  ##   /var/log/**    -> recursively find all directories in /var/log and count files in each directories
-  ##   /var/log/*/*   -> find all directories with a parent dir in /var/log and count files in each directories
-  ##   /var/log       -> count all files in /var/log and all of its subdirectories
-  directories = ["/var/cache/apt/archives"]
-
-  ## Only count files that match the name pattern. Defaults to "*".
-  name = "*.deb"
-
-  ## Count files in subdirectories. Defaults to true.
-  recursive = false
-
-  ## Only count regular files. Defaults to true.
-  regular_only = true
-
-  ## Follow all symlinks while walking the directory tree. Defaults to false.
-  follow_symlinks = false
-
-  ## Only count files that are at least this size. If size is
-  ## a negative number, only count files that are smaller than the
-  ## absolute value of size. Acceptable units are B, KiB, MiB, KB, ...
-  ## Without quotes and units, interpreted as size in bytes.
-  size = "0B"
-
-  ## Only count files that have not been touched for at least this
-  ## duration. If mtime is negative, only count files that have been
-  ## touched in this duration. Defaults to "0s".
-  mtime = "0s"
-`
-
 type FileCount struct {
 	Directory      string `toml:"directory" deprecated:"1.9.0;use 'directories' instead"`
 	Directories    []string
@@ -60,12 +29,6 @@ type FileCount struct {
 	Fs             fileSystem
 	Log            telegraf.Logger
 }
-
-func (fc *FileCount) Description() string {
-	return "Count files in a directory"
-}
-
-func (fc *FileCount) SampleConfig() string { return sampleConfig }
 
 type fileFilterFunc func(os.FileInfo) (bool, error)
 

@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 //go:build !windows
 // +build !windows
 
@@ -20,25 +22,6 @@ import (
 type Bcache struct {
 	BcachePath string
 	BcacheDevs []string
-}
-
-var sampleConfig = `
-  ## Bcache sets path
-  ## If not specified, then default is:
-  bcachePath = "/sys/fs/bcache"
-
-  ## By default, Telegraf gather stats for all bcache devices
-  ## Setting devices will restrict the stats to the specified
-  ## bcache devices.
-  bcacheDevs = ["bcache0"]
-`
-
-func (b *Bcache) SampleConfig() string {
-	return sampleConfig
-}
-
-func (b *Bcache) Description() string {
-	return "Read metrics of bcache from stats_total and dirty_data"
 }
 
 func getTags(bdev string) map[string]string {

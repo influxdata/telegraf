@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package linux_sysctl_fs
 
 import (
@@ -19,13 +21,6 @@ type SysctlFS struct {
 
 var sysctlFSDescription = `Provides Linux sysctl fs metrics`
 var sysctlFSSampleConfig = ``
-
-func (sfs SysctlFS) Description() string {
-	return sysctlFSDescription
-}
-func (sfs SysctlFS) SampleConfig() string {
-	return sysctlFSSampleConfig
-}
 
 func (sfs *SysctlFS) gatherList(file string, fields map[string]interface{}, fieldNames ...string) error {
 	bs, err := os.ReadFile(sfs.path + "/" + file)

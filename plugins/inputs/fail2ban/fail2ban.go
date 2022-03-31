@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package fail2ban
 
 import (
@@ -21,11 +23,6 @@ type Fail2ban struct {
 	UseSudo bool
 }
 
-var sampleConfig = `
-  ## Use sudo to run fail2ban-client
-  use_sudo = false
-`
-
 var metricsTargets = []struct {
 	target string
 	field  string
@@ -38,14 +35,6 @@ var metricsTargets = []struct {
 		target: "Currently banned:",
 		field:  "banned",
 	},
-}
-
-func (f *Fail2ban) Description() string {
-	return "Read metrics from fail2ban."
-}
-
-func (f *Fail2ban) SampleConfig() string {
-	return sampleConfig
 }
 
 func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {

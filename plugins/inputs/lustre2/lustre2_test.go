@@ -204,69 +204,6 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestLustre2GeneratesClientMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
-	ostName := "OST0001"
-	clientName := "10.2.4.27@o2ib1"
-	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName+"/exports/"+clientName, 0755)
-	require.NoError(t, err)
-
-	obddir := tempdir + "/obdfilter/"
-	err = os.MkdirAll(obddir+"/"+ostName+"/exports/"+clientName, 0755)
-	require.NoError(t, err)
-
-	err = os.WriteFile(mdtdir+"/"+ostName+"/exports/"+clientName+"/stats", []byte(mdtProcContents), 0644)
-	require.NoError(t, err)
-
-	err = os.WriteFile(obddir+"/"+ostName+"/exports/"+clientName+"/stats", []byte(obdfilterProcContents), 0644)
-	require.NoError(t, err)
-
-	// Begin by testing standard Lustre stats
-	m := &Lustre2{
-		OstProcfiles: []string{obddir + "/*/exports/*/stats"},
-		MdsProcfiles: []string{mdtdir + "/*/exports/*/stats"},
-	}
-
-	var acc testutil.Accumulator
-
-	err = m.Gather(&acc)
-	require.NoError(t, err)
-
-	tags := map[string]string{
-		"name":   ostName,
-		"client": clientName,
-	}
-
-	fields := map[string]interface{}{
-		"close":           uint64(873243496),
-		"crossdir_rename": uint64(369571),
-		"getattr":         uint64(1503663097),
-		"getxattr":        uint64(6145349681),
-		"link":            uint64(445),
-		"mkdir":           uint64(705499),
-		"mknod":           uint64(349042),
-		"open":            uint64(1024577037),
-		"read_bytes":      uint64(78026117632000),
-		"read_calls":      uint64(203238095),
-		"rename":          uint64(629196),
-		"rmdir":           uint64(227434),
-		"samedir_rename":  uint64(259625),
-		"setattr":         uint64(1898364),
-		"setxattr":        uint64(83969),
-		"statfs":          uint64(2916320),
-		"sync":            uint64(434081),
-		"unlink":          uint64(3549417),
-		"write_bytes":     uint64(15201500833981),
-		"write_calls":     uint64(71893382),
-	}
-
-	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
-}
-
 func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
 	ostName := "OST0001"

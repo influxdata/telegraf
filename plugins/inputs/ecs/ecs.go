@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package ecs
 
 import (
@@ -44,43 +46,6 @@ const (
 
 	v2Endpoint = "http://169.254.170.2"
 )
-
-var sampleConfig = `
-  ## ECS metadata url.
-  ## Metadata v2 API is used if set explicitly. Otherwise,
-  ## v3 metadata endpoint API is used if available.
-  # endpoint_url = ""
-
-  ## Containers to include and exclude. Globs accepted.
-  ## Note that an empty array for both will include all containers
-  # container_name_include = []
-  # container_name_exclude = []
-
-  ## Container states to include and exclude. Globs accepted.
-  ## When empty only containers in the "RUNNING" state will be captured.
-  ## Possible values are "NONE", "PULLED", "CREATED", "RUNNING",
-  ## "RESOURCES_PROVISIONED", "STOPPED".
-  # container_status_include = []
-  # container_status_exclude = []
-
-  ## ecs labels to include and exclude as tags.  Globs accepted.
-  ## Note that an empty array for both will include all labels as tags
-  ecs_label_include = [ "com.amazonaws.ecs.*" ]
-  ecs_label_exclude = []
-
-  ## Timeout for queries.
-  # timeout = "5s"
-`
-
-// Description describes ECS plugin
-func (ecs *Ecs) Description() string {
-	return "Read metrics about docker containers from Fargate/ECS v2, v3 meta endpoints."
-}
-
-// SampleConfig returns the ECS example config
-func (ecs *Ecs) SampleConfig() string {
-	return sampleConfig
-}
 
 // Gather is the entrypoint for telegraf metrics collection
 func (ecs *Ecs) Gather(acc telegraf.Accumulator) error {

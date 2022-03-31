@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package leofs
 
 import (
@@ -144,20 +146,6 @@ var serverTypeMapping = map[string]ServerType{
 	"4013": ServerTypeStorage,
 	"4000": ServerTypeGateway,
 	"4001": ServerTypeGateway,
-}
-
-var sampleConfig = `
-  ## An array of URLs of the form:
-  ##   host [ ":" port]
-  servers = ["127.0.0.1:4020"]
-`
-
-func (l *LeoFS) SampleConfig() string {
-	return sampleConfig
-}
-
-func (l *LeoFS) Description() string {
-	return "Read metrics from a LeoFS Server via SNMP"
 }
 
 func (l *LeoFS) Gather(acc telegraf.Accumulator) error {

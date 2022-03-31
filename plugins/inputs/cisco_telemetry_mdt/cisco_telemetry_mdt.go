@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package cisco_telemetry_mdt
 
 import (
@@ -680,44 +682,6 @@ func (c *CiscoTelemetryMDT) Stop() {
 		c.listener.Close()
 	}
 	c.wg.Wait()
-}
-
-const sampleConfig = `
- ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when
- ## using the grpc transport.
- transport = "grpc"
-
- ## Address and port to host telemetry listener
- service_address = ":57000"
-
- ## Enable TLS; grpc transport only.
- # tls_cert = "/etc/telegraf/cert.pem"
- # tls_key = "/etc/telegraf/key.pem"
-
- ## Enable TLS client authentication and define allowed CA certificates; grpc
- ##  transport only.
- # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
- ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
- # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
-
- ## Define aliases to map telemetry encoding paths to simple measurement names
- [inputs.cisco_telemetry_mdt.aliases]
-   ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
- ##Define Property Xformation, please refer README and https://pubhub.devnetcloud.com/media/dme-docs-9-3-3/docs/appendix/ for Model details.
- [inputs.cisco_telemetry_mdt.dmes]
-   ModTs = "ignore"
-   CreateTs = "ignore"
-`
-
-// SampleConfig of plugin
-func (c *CiscoTelemetryMDT) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description of plugin
-func (c *CiscoTelemetryMDT) Description() string {
-	return "Cisco model-driven telemetry (MDT) input plugin for IOS XR, IOS XE and NX-OS platforms"
 }
 
 // Gather plugin measurements (unused)

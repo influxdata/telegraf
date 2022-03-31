@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package fireboard
 
 import (
@@ -43,28 +45,6 @@ type fireboardStats struct {
 	Title       string `json:"title"`
 	UUID        string `json:"uuid"`
 	Latesttemps []RTT  `json:"latest_temps"`
-}
-
-// A sample configuration to only gather stats from localhost, default port.
-const sampleConfig = `
-  ## Specify auth token for your account
-  auth_token = "invalidAuthToken"
-  ## You can override the fireboard server URL if necessary
-  # url = https://fireboard.io/api/v1/devices.json
-  ## You can set a different http_timeout if you need to
-  ## You should set a string using an number and time indicator
-  ## for example "12s" for 12 seconds.
-  # http_timeout = "4s"
-`
-
-// SampleConfig Returns a sample configuration for the plugin
-func (r *Fireboard) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description Returns a description of the plugin
-func (r *Fireboard) Description() string {
-	return "Read real time temps from fireboard.io servers"
 }
 
 // Init the things

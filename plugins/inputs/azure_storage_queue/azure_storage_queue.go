@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package azure_storage_queue
 
 import (
@@ -19,25 +21,6 @@ type AzureStorageQueue struct {
 	Log                  telegraf.Logger
 
 	serviceURL *azqueue.ServiceURL
-}
-
-var sampleConfig = `
-  ## Required Azure Storage Account name
-  account_name = "mystorageaccount"
-
-  ## Required Azure Storage Account access key
-  account_key = "storageaccountaccesskey"
-
-  ## Set to false to disable peeking age of oldest message (executes faster)
-  # peek_oldest_message_age = true
-  `
-
-func (a *AzureStorageQueue) Description() string {
-	return "Gather Azure Storage Queue metrics"
-}
-
-func (a *AzureStorageQueue) SampleConfig() string {
-	return sampleConfig
 }
 
 func (a *AzureStorageQueue) Init() error {

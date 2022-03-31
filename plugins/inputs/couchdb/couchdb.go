@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package couchdb
 
 import (
@@ -87,22 +89,6 @@ type (
 		client *http.Client
 	}
 )
-
-func (*CouchDB) Description() string {
-	return "Read CouchDB Stats from one or more servers"
-}
-
-func (*CouchDB) SampleConfig() string {
-	return `
-  ## Works with CouchDB stats endpoints out of the box
-  ## Multiple Hosts from which to read CouchDB stats:
-  hosts = ["http://localhost:8086/_stats"]
-
-  ## Use HTTP Basic Authentication.
-  # basic_username = "telegraf"
-  # basic_password = "p@ssw0rd"
-`
-}
 
 func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
 	var wg sync.WaitGroup

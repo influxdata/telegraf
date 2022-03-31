@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package lanz
 
 import (
@@ -13,13 +15,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var sampleConfig = `
-  ## URL to Arista LANZ endpoint
-  servers = [
-    "tcp://127.0.0.1:50001"
-  ]
-`
-
 func init() {
 	inputs.Add("lanz", func() telegraf.Input {
 		return NewLanz()
@@ -34,14 +29,6 @@ type Lanz struct {
 
 func NewLanz() *Lanz {
 	return &Lanz{}
-}
-
-func (l *Lanz) SampleConfig() string {
-	return sampleConfig
-}
-
-func (l *Lanz) Description() string {
-	return "Read metrics off Arista LANZ, via socket"
 }
 
 func (l *Lanz) Gather(_ telegraf.Accumulator) error {

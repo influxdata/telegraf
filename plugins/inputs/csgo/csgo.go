@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package csgo
 
 import (
@@ -29,25 +31,6 @@ type statsData struct {
 
 type CSGO struct {
 	Servers [][]string `toml:"servers"`
-}
-
-func (*CSGO) Description() string {
-	return "Fetch metrics from a CSGO SRCDS"
-}
-
-var sampleConfig = `
-  ## Specify servers using the following format:
-  ##    servers = [
-  ##      ["ip1:port1", "rcon_password1"],
-  ##      ["ip2:port2", "rcon_password2"],
-  ##    ]
-  #
-  ## If no servers are specified, no data will be collected
-  servers = []
-`
-
-func (*CSGO) SampleConfig() string {
-	return sampleConfig
 }
 
 func (s *CSGO) Gather(acc telegraf.Accumulator) error {

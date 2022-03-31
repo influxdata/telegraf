@@ -11,6 +11,8 @@ For an introduction to AMQP see:
 - [amqp - concepts](https://www.rabbitmq.com/tutorials/amqp-concepts.html)
 - [rabbitmq: getting started](https://www.rabbitmq.com/getstarted.html)
 
+## Configuration
+
 The following defaults are known to work with RabbitMQ:
 
 ```toml

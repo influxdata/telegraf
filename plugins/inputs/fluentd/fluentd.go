@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package fluentd
 
 import (
@@ -12,24 +14,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const (
-	measurement  = "fluentd"
-	description  = "Read metrics exposed by fluentd in_monitor plugin"
-	sampleConfig = `
-  ## This plugin reads information exposed by fluentd (using /api/plugins.json endpoint).
-  ##
-  ## Endpoint:
-  ## - only one URI is allowed
-  ## - https is not supported
-  endpoint = "http://localhost:24220/api/plugins.json"
-
-  ## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
-  exclude = [
-	  "monitor_agent",
-	  "dummy",
-  ]
-`
-)
+const measurement = "fluentd"
 
 // Fluentd - plugin main structure
 type Fluentd struct {
@@ -69,12 +54,6 @@ func parse(data []byte) (datapointArray []pluginData, err error) {
 	datapointArray = append(datapointArray, endpointData.Payload...)
 	return datapointArray, err
 }
-
-// Description - display description
-func (h *Fluentd) Description() string { return description }
-
-// SampleConfig - generate configuration
-func (h *Fluentd) SampleConfig() string { return sampleConfig }
 
 // Gather - Main code responsible for gathering, processing and creating metrics
 func (h *Fluentd) Gather(acc telegraf.Accumulator) error {

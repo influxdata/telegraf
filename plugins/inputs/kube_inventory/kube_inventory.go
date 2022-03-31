@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package kube_inventory
 
 import (
@@ -44,57 +46,7 @@ type KubernetesInventory struct {
 	selectorFilter filter.Filter
 }
 
-var sampleConfig = `
-  ## URL for the Kubernetes API
-  url = "https://127.0.0.1"
-
-  ## Namespace to use. Set to "" to use all namespaces.
-  # namespace = "default"
-
-  ## Use bearer token for authorization. ('bearer_token' takes priority)
-  ## If both of these are empty, we'll use the default serviceaccount:
-  ## at: /run/secrets/kubernetes.io/serviceaccount/token
-  # bearer_token = "/path/to/bearer/token"
-  ## OR
-  # bearer_token_string = "abc_123"
-
-  ## Set response_timeout (default 5 seconds)
-  # response_timeout = "5s"
-
-  ## Optional Resources to exclude from gathering
-  ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
-  ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
-  # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
-
-  ## Optional Resources to include when gathering
-  ## Overrides resource_exclude if both set.
-  # resource_include = [ "deployments", "nodes", "statefulsets" ]
-
-  ## selectors to include and exclude as tags.  Globs accepted.
-  ## Note that an empty array for both will include all selectors as tags
-  ## selector_exclude overrides selector_include if both set.
-  # selector_include = []
-  # selector_exclude = ["*"]
-
-  ## Optional TLS Config
-  # tls_ca = "/path/to/cafile"
-  # tls_cert = "/path/to/certfile"
-  # tls_key = "/path/to/keyfile"
-  # tls_server_name = "kubernetes.example.com"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
 // SampleConfig returns a sample config
-func (ki *KubernetesInventory) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the description of this plugin
-func (ki *KubernetesInventory) Description() string {
-	return "Read metrics from the Kubernetes api"
-}
 
 func (ki *KubernetesInventory) Init() error {
 	// If neither are provided, use the default service account.

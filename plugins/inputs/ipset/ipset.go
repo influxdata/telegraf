@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package ipset
 
 import (
@@ -28,24 +30,6 @@ type setLister func(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error
 const measurement = "ipset"
 
 var defaultTimeout = config.Duration(time.Second)
-
-// Description returns a short description of the plugin
-func (i *Ipset) Description() string {
-	return "Gather packets and bytes counters from Linux ipsets"
-}
-
-// SampleConfig returns sample configuration options.
-func (i *Ipset) SampleConfig() string {
-	return `
-  ## By default, we only show sets which have already matched at least 1 packet.
-  ## set include_unmatched_sets = true to gather them all.
-  include_unmatched_sets = false
-  ## Adjust your sudo settings appropriately if using this option ("sudo ipset save")
-  use_sudo = false
-  ## The default timeout of 1s for ipset execution can be overridden here:
-  # timeout = "1s"
-`
-}
 
 func (i *Ipset) Init() error {
 	_, err := exec.LookPath("ipset")
