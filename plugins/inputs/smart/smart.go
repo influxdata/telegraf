@@ -884,6 +884,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
 						continue
 					}
+					fmt.Printf("%-34s: '%s' -> '%d'\n", attr.Name, matches[2], fields["raw_value"])
 					// if the field is classified as an attribute, only add it
 					// if m.Attributes is true
 					if m.Attributes {
@@ -1045,7 +1046,17 @@ func parsePercentageInt(fields, deviceFields map[string]interface{}, str string)
 }
 
 func parseDataUnits(fields, deviceFields map[string]interface{}, str string) error {
-	units := strings.Fields(str)[0]
+	// Remove everything after '[' and stip non-numeric chars
+	data := strings.Split(str, "[")
+
+	regex, err := regexp.Compile("[^0-9]+")
+	if err != nil {
+		return fmt.Errorf("failed to compile numeric regex")
+	}
+
+	// '16,626,888 [8,51 TB]' --> 16626888
+	// '16 829 004 [8,61 TB]' --> 16829004
+	units := regex.ReplaceAllString(data[0], "")
 	return parseCommaSeparatedInt(fields, deviceFields, units)
 }
 
