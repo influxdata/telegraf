@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package mailchimp
 
 import (
@@ -16,25 +18,6 @@ type MailChimp struct {
 	CampaignID string `toml:"campaign_id"`
 
 	Log telegraf.Logger `toml:"-"`
-}
-
-var sampleConfig = `
-  ## MailChimp API key
-  ## get from https://admin.mailchimp.com/account/api/
-  api_key = "" # required
-  ## Reports for campaigns sent more than days_old ago will not be collected.
-  ## 0 means collect all.
-  days_old = 0
-  ## Campaign ID to get, if empty gets all campaigns, this option overrides days_old
-  # campaign_id = ""
-`
-
-func (m *MailChimp) SampleConfig() string {
-	return sampleConfig
-}
-
-func (m *MailChimp) Description() string {
-	return "Gathers metrics from the /3.0/reports MailChimp API"
 }
 
 func (m *MailChimp) Init() error {

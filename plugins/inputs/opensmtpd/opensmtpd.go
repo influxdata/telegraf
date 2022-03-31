@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package opensmtpd
 
 import (
@@ -29,26 +31,6 @@ type Opensmtpd struct {
 
 var defaultBinary = "/usr/sbin/smtpctl"
 var defaultTimeout = config.Duration(time.Second)
-
-var sampleConfig = `
-  ## If running as a restricted user you can prepend sudo for additional access:
-  #use_sudo = false
-
-  ## The default location of the smtpctl binary can be overridden with:
-  binary = "/usr/sbin/smtpctl"
-
-  ## The default timeout of 1000ms can be overridden with (in milliseconds):
-  timeout = 1000
-`
-
-func (s *Opensmtpd) Description() string {
-	return "A plugin to collect stats from Opensmtpd - a validating, recursive, and caching DNS resolver "
-}
-
-// SampleConfig displays configuration instructions
-func (s *Opensmtpd) SampleConfig() string {
-	return sampleConfig
-}
 
 // Shell out to opensmtpd_stat and return the output
 func opensmtpdRunner(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {

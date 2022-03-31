@@ -67,10 +67,6 @@ The plugin expects messages in one of the
   ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
   # path_tag = "path"
 
-  ## Filters to apply to files before generating metrics
-  ## "ansi_color" removes ANSI colors
-  # filters = []
-
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
   #[inputs.tail.multiline]

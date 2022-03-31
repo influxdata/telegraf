@@ -6,8 +6,6 @@ The SNMP input plugin gathers metrics from SNMP agents
 
 ## Configuration
 
-### Very simple example
-
 In this example, the plugin will gather value of OIDS:
 
 - `.1.3.6.1.2.1.2.2.1.4.1`
@@ -478,7 +476,7 @@ Note: the plugin will add instance name as tag *instance*
     # if empty get all instances
     mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
     # if empty get all subtables
-    # sub_tables could be not "real subtables"  
+    # sub_tables could be not "real subtables"
     sub_tables=[".1.3.6.1.2.1.2.2.1.13", "bytes_recv", "bytes_send"]
     # note
     # oid attribute is useless

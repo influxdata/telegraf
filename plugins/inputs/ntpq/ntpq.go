@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package ntpq
 
 import (
@@ -28,17 +30,6 @@ type NTPQ struct {
 	intI   map[string]int
 
 	DNSLookup bool `toml:"dns_lookup"`
-}
-
-func (n *NTPQ) Description() string {
-	return "Get standard NTP query metrics, requires ntpq executable."
-}
-
-func (n *NTPQ) SampleConfig() string {
-	return `
-  ## If false, set the -n ntpq flag. Can reduce metric gather time.
-  dns_lookup = true
-`
 }
 
 func (n *NTPQ) Gather(acc telegraf.Accumulator) error {

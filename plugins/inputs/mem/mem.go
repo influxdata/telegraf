@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package mem
 
 import (
@@ -13,12 +15,6 @@ type MemStats struct {
 	ps       system.PS
 	platform string
 }
-
-func (ms *MemStats) Description() string {
-	return "Read metrics about memory usage"
-}
-
-func (ms *MemStats) SampleConfig() string { return "" }
 
 func (ms *MemStats) Init() error {
 	ms.platform = runtime.GOOS

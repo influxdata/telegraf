@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package xtremio
 
 import (
@@ -27,34 +29,7 @@ type XtremIO struct {
 	client *http.Client
 }
 
-const sampleConfig = `
-  ## XtremIO User Interface Endpoint
-  url = "https://xtremio.example.com/" # required
-
-  ## Credentials
-  username = "user1"
-  password = "pass123"
-
-  ## Metrics to collect from the XtremIO
-  # collectors = ["bbus","clusters","ssds","volumes","xms"]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-// Description will appear directly above the plugin definition in the config file
-func (xio *XtremIO) Description() string {
-	return `Gathers Metrics From a Dell EMC XtremIO Storage Array's V3 API`
-}
-
 // SampleConfig will populate the sample configuration portion of the plugin's configuration
-func (xio *XtremIO) SampleConfig() string {
-	return sampleConfig
-}
 
 func (xio *XtremIO) Init() error {
 	if xio.Username == "" {

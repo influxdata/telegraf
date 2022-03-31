@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 // Package uwsgi implements a telegraf plugin for collecting uwsgi stats from
 // the uwsgi stats server.
 package uwsgi
@@ -27,25 +29,7 @@ type Uwsgi struct {
 	client *http.Client
 }
 
-// Description returns the plugin description
-func (u *Uwsgi) Description() string {
-	return "Read uWSGI metrics."
-}
-
 // SampleConfig returns the sample configuration
-func (u *Uwsgi) SampleConfig() string {
-	return `
-  ## List with urls of uWSGI Stats servers. URL must match pattern:
-  ## scheme://address[:port]
-  ##
-  ## For example:
-  ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
-  servers = ["tcp://127.0.0.1:1717"]
-
-  ## General connection timeout
-  # timeout = "5s"
-`
-}
 
 // Gather collect data from uWSGI Server
 func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {

@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package nomad
 
 import (
@@ -25,35 +27,12 @@ type Nomad struct {
 
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 
-var sampleConfig = `
-  ## URL for the Nomad agent
-  # url = "http://127.0.0.1:4646"
-
-  ## Set response_timeout (default 5 seconds)
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = /path/to/cafile
-  # tls_cert = /path/to/certfile
-  # tls_key = /path/to/keyfile
-`
-
 func init() {
 	inputs.Add("nomad", func() telegraf.Input {
 		return &Nomad{
 			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
-}
-
-// SampleConfig returns a sample config
-func (n *Nomad) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns a description of the plugin
-func (n *Nomad) Description() string {
-	return "Read metrics from the Nomad API"
 }
 
 func (n *Nomad) Init() error {

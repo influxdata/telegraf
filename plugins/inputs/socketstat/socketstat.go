@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 //go:build !windows
 // +build !windows
 
@@ -36,22 +38,6 @@ type Socketstat struct {
 }
 
 type socketLister func(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error)
-
-// Description returns a short description of the plugin
-func (ss *Socketstat) Description() string {
-	return "Gather indicators from established connections, using iproute2's `ss` command."
-}
-
-// SampleConfig returns sample configuration options
-func (ss *Socketstat) SampleConfig() string {
-	return `
-  ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets
-  ## List of protocol types to collect
-  # protocols = [ "tcp", "udp" ]
-  ## The default timeout of 1s for ss execution can be overridden here:
-  # timeout = "1s"
-`
-}
 
 // Gather gathers indicators from established connections
 func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {

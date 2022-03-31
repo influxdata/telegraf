@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package vault
 
 import (
@@ -31,26 +33,6 @@ type Vault struct {
 
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 
-const sampleConfig = `
-  ## URL for the Vault agent
-  # url = "http://127.0.0.1:8200"
-
-  ## Use Vault token for authorization.
-  ## Vault token configuration is mandatory.
-  ## If both are empty or both are set, an error is thrown.
-  # token_file = "/path/to/auth/token"
-  ## OR
-  token = "s.CDDrgg5zPv5ssI0Z2P4qxJj2"
-
-  ## Set response_timeout (default 5 seconds)
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = /path/to/cafile
-  # tls_cert = /path/to/certfile
-  # tls_key = /path/to/keyfile
-`
-
 func init() {
 	inputs.Add("vault", func() telegraf.Input {
 		return &Vault{
@@ -60,14 +42,6 @@ func init() {
 }
 
 // SampleConfig returns a sample config
-func (n *Vault) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns a description of the plugin
-func (n *Vault) Description() string {
-	return "Read metrics from the Vault API"
-}
 
 func (n *Vault) Init() error {
 	if n.URL == "" {

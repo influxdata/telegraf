@@ -83,40 +83,6 @@ func TestTailBadLine(t *testing.T) {
 	require.Contains(t, buf.String(), "Malformed log line")
 }
 
-func TestColoredLine(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-	_, err = tmpfile.WriteString("cpu usage_idle=\033[4A\033[4A100\ncpu2 usage_idle=200\n")
-	require.NoError(t, err)
-	require.NoError(t, tmpfile.Close())
-
-	tt := NewTestTail()
-	tt.Log = testutil.Logger{}
-	tt.FromBeginning = true
-	tt.Filters = []string{"ansi_color"}
-	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
-
-	err = tt.Init()
-	require.NoError(t, err)
-
-	acc := testutil.Accumulator{}
-	require.NoError(t, tt.Start(&acc))
-	defer tt.Stop()
-	require.NoError(t, acc.GatherError(tt.Gather))
-
-	acc.Wait(2)
-	acc.AssertContainsFields(t, "cpu",
-		map[string]interface{}{
-			"usage_idle": float64(100),
-		})
-	acc.AssertContainsFields(t, "cpu2",
-		map[string]interface{}{
-			"usage_idle": float64(200),
-		})
-}
-
 func TestTailDosLineEndings(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)

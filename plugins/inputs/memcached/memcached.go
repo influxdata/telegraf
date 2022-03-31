@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package memcached
 
 import (
@@ -22,21 +24,6 @@ type Memcached struct {
 	EnableTLS   bool     `toml:"enable_tls"`
 	tlsint.ClientConfig
 }
-
-var sampleConfig = `
-  ## An array of address to gather stats about. Specify an ip on hostname
-  ## with optional port. ie localhost, 10.0.0.1:11211, etc.
-  servers = ["localhost:11211"]
-  # unix_sockets = ["/var/run/memcached.sock"]
-
-  ## Optional TLS Config
-  # enable_tls = true
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## If false, skip chain & host verification
-  # insecure_skip_verify = true
-`
 
 var defaultTimeout = 5 * time.Second
 
@@ -89,16 +76,6 @@ var sendMetrics = []string{
 	"touch_hits",
 	"touch_misses",
 	"uptime",
-}
-
-// SampleConfig returns sample configuration message
-func (m *Memcached) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns description of Memcached plugin
-func (m *Memcached) Description() string {
-	return "Read metrics from one or many memcached servers"
 }
 
 // Gather reads stats from all configured servers accumulates stats

@@ -1,11 +1,14 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package teamspeak
 
 import (
 	"github.com/multiplay/go-ts3"
 
+	"strconv"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"strconv"
 )
 
 type Teamspeak struct {
@@ -16,25 +19,6 @@ type Teamspeak struct {
 
 	client    *ts3.Client
 	connected bool
-}
-
-func (ts *Teamspeak) Description() string {
-	return "Reads metrics from a Teamspeak 3 Server via ServerQuery"
-}
-
-const sampleConfig = `
-  ## Server address for Teamspeak 3 ServerQuery
-  # server = "127.0.0.1:10011"
-  ## Username for ServerQuery
-  username = "serverqueryuser"
-  ## Password for ServerQuery
-  password = "secret"
-  ## Array of virtual servers
-  # virtual_servers = [1]
-`
-
-func (ts *Teamspeak) SampleConfig() string {
-	return sampleConfig
 }
 
 func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {

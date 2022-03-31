@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package system
 
 import (
@@ -17,17 +19,6 @@ import (
 
 type SystemStats struct {
 	Log telegraf.Logger
-}
-
-func (*SystemStats) Description() string {
-	return "Read metrics about system load & uptime"
-}
-
-func (*SystemStats) SampleConfig() string {
-	return `
-  ## Uncomment to remove deprecated metrics.
-  # fielddrop = ["uptime_format"]
-`
 }
 
 func (s *SystemStats) Gather(acc telegraf.Accumulator) error {

@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package pf
 
 import (
@@ -21,20 +23,6 @@ type PF struct {
 	UseSudo      bool
 	StateTable   []*Entry
 	infoFunc     func() (string, error)
-}
-
-func (pf *PF) Description() string {
-	return "Gather counters from PF"
-}
-
-func (pf *PF) SampleConfig() string {
-	return `
-  ## PF require root access on most systems.
-  ## Setting 'use_sudo' to true will make use of sudo to run pfctl.
-  ## Users must configure sudo to allow telegraf user to run pfctl with no password.
-  ## pfctl can be restricted to only list command "pfctl -s info".
-  use_sudo = false
-`
 }
 
 // Gather is the entrypoint for the plugin.

@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package postgresql_extensible
 
 import (
@@ -40,87 +42,6 @@ type query []struct {
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
 
-var sampleConfig = `
-  ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
-  ##       ?sslmode=[disable|verify-ca|verify-full]
-  ## or a simple string:
-  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
-  #
-  ## All connection parameters are optional.  #
-  ## Without the dbname parameter, the driver will default to a database
-  ## with the same name as the user. This dbname is just for instantiating a
-  ## connection with the server and doesn't restrict the databases we are trying
-  ## to grab metrics for.
-  #
-  address = "host=localhost user=postgres sslmode=disable"
-
-  ## connection configuration.
-  ## maxlifetime - specify the maximum lifetime of a connection.
-  ## default is forever (0s)
-  max_lifetime = "0s"
-
-  ## Whether to use prepared statements when connecting to the database.
-  ## This should be set to false when connecting through a PgBouncer instance
-  ## with pool_mode set to transaction.
-  # prepared_statements = true
-
-  ## A list of databases to pull metrics about. If not specified, metrics for all
-  ## databases are gathered.
-  ## databases = ["app_production", "testing"]
-  #
-  ## A custom name for the database that will be used as the "server" tag in the
-  ## measurement output. If not specified, a default one generated from
-  ## the connection address is used.
-  # outputaddress = "db01"
-  #
-  ## Define the toml config where the sql queries are stored
-  ## New queries can be added, if the withdbname is set to true and there is no
-  ## databases defined in the 'databases field', the sql query is ended by a
-  ## 'is not null' in order to make the query succeed.
-  ## Example :
-  ## The sqlquery : "SELECT * FROM pg_stat_database where datname" become
-  ## "SELECT * FROM pg_stat_database where datname IN ('postgres', 'pgbench')"
-  ## because the databases variable was set to ['postgres', 'pgbench' ] and the
-  ## withdbname was true. Be careful that if the withdbname is set to false you
-  ## don't have to define the where clause (aka with the dbname) the tagvalue
-  ## field is used to define custom tags (separated by commas)
-  ## The optional "measurement" value can be used to override the default
-  ## output measurement name ("postgresql").
-  ##
-  ## The script option can be used to specify the .sql file path.
-  ## If script and sqlquery options specified at same time, sqlquery will be used
-  ##
-  ## the tagvalue field is used to define custom tags (separated by comas).
-  ## the query is expected to return columns which match the names of the
-  ## defined tags. The values in these columns must be of a string-type,
-  ## a number-type or a blob-type.
-  ##
-  ## The timestamp field is used to override the data points timestamp value. By
-  ## default, all rows inserted with current time. By setting a timestamp column,
-  ## the row will be inserted with that column's value.
-  ##
-  ## Structure :
-  ## [[inputs.postgresql_extensible.query]]
-  ##   sqlquery string
-  ##   version string
-  ##   withdbname boolean
-  ##   tagvalue string (comma separated)
-  ##   measurement string
-  ##   timestamp string
-  [[inputs.postgresql_extensible.query]]
-    sqlquery="SELECT * FROM pg_stat_database"
-    version=901
-    withdbname=false
-    tagvalue=""
-    measurement=""
-  [[inputs.postgresql_extensible.query]]
-    sqlquery="SELECT * FROM pg_stat_bgwriter"
-    version=901
-    withdbname=false
-    tagvalue="postgresql.stats"
-`
-
 func (p *Postgresql) Init() error {
 	var err error
 	for i := range p.Query {
@@ -133,14 +54,6 @@ func (p *Postgresql) Init() error {
 	}
 	p.Service.IsPgBouncer = !p.PreparedStatements
 	return nil
-}
-
-func (p *Postgresql) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Postgresql) Description() string {
-	return "Read metrics from one or many postgresql servers"
 }
 
 func (p *Postgresql) IgnoredColumns() map[string]bool {

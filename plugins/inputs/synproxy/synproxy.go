@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package synproxy
 
 import (
@@ -13,14 +15,6 @@ type Synproxy struct {
 
 	// Synproxy stats filename (proc filesystem)
 	statFile string
-}
-
-func (k *Synproxy) Description() string {
-	return "Get synproxy counter statistics from procfs"
-}
-
-func (k *Synproxy) SampleConfig() string {
-	return ""
 }
 
 func getHostProc() string {

@@ -1,3 +1,5 @@
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package suricata
 
 import (
@@ -35,30 +37,8 @@ type Suricata struct {
 	wg sync.WaitGroup
 }
 
-// Description returns the plugin description.
-func (s *Suricata) Description() string {
-	return "Suricata stats and alerts plugin"
-}
-
-const sampleConfig = `
-  ## Data sink for Suricata stats and alerts logs
-  # This is expected to be a filename of a
-  # unix socket to be created for listening.
-  source = "/var/run/suricata-stats.sock"
-
-  # Delimiter for flattening field keys, e.g. subitem "alert" of "detect"
-  # becomes "detect_alert" when delimiter is "_".
-  delimiter = "_"
-  
-  ## Detect alert logs 
-  # alerts = false 
-`
-
 // SampleConfig returns a sample TOML section to illustrate configuration
 // options.
-func (s *Suricata) SampleConfig() string {
-	return sampleConfig
-}
 
 // Start initiates background collection of JSON data from the socket
 // provided to Suricata.

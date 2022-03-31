@@ -3,7 +3,7 @@
 The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding
 Registers via Modbus TCP or Modbus RTU/ASCII.
 
-## Example configuration
+## Configuration
 
 ```toml
 [[inputs.modbus]]
@@ -187,7 +187,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       { address=1, name="temperature", type="INT16", scale=0.1        },  # will result in FLOAT64 field
       { address=2, name="force",       type="INT32", output="FLOAT64" },  # will result in FLOAT64 field
       { address=4, name="hours",       type="UINT32"                  },  # will result in UIN64 field
-    ]  
+    ]
 
     [[inputs.modbus.request.tags]]
       machine = "impresser"
