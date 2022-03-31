@@ -1,5 +1,3 @@
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 // The MIT License (MIT)
 //
 // Copyright (c) 2015 Jeff Nickoloff (jeff@allingeek.com)

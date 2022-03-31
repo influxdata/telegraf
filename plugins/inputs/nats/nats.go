@@ -1,5 +1,3 @@
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 //go:build !freebsd || (freebsd && cgo)
 // +build !freebsd freebsd,cgo
 
