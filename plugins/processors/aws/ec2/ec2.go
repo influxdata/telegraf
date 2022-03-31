@@ -59,10 +59,6 @@ var allowedImdsTags = map[string]struct{}{
 	"version":          {},
 }
 
-func (r *AwsEc2Processor) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	r.parallel.Enqueue(metric)
 	return nil
