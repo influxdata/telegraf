@@ -40,10 +40,6 @@ func NewDerivative() *Derivative {
 	return derivative
 }
 
-func (d *Derivative) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *Derivative) Add(in telegraf.Metric) {
 	id := in.HashID()
 	current, ok := d.cache[id]

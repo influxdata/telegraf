@@ -29,11 +29,6 @@ func NewValueCounter() telegraf.Aggregator {
 	return vc
 }
 
-// SampleConfig generates a sample config for the ValueCounter plugin
-func (vc *ValueCounter) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Add is run on every metric which passes the plugin
 func (vc *ValueCounter) Add(in telegraf.Metric) {
 	id := in.HashID()

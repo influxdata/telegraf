@@ -59,10 +59,6 @@ type basicstats struct {
 	TIME     time.Time //intermediate value for rate
 }
 
-func (*BasicStats) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (b *BasicStats) Add(in telegraf.Metric) {
 	id := in.HashID()
 	if _, ok := b.cache[id]; !ok {

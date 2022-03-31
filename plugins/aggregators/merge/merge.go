@@ -19,10 +19,6 @@ func (a *Merge) Init() error {
 	return nil
 }
 
-func (a *Merge) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (a *Merge) Add(m telegraf.Metric) {
 	a.grouper.AddMetric(m)
 }

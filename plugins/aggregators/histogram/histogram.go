@@ -84,11 +84,6 @@ func NewHistogramAggregator() *HistogramAggregator {
 	return h
 }
 
-// SampleConfig returns sample of config
-func (h *HistogramAggregator) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Add adds new hit to the buckets
 func (h *HistogramAggregator) Add(in telegraf.Metric) {
 	addTime := timeNow()

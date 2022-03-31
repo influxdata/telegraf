@@ -28,10 +28,6 @@ type aggregate struct {
 
 type newAlgorithmFunc func(compression float64) (algorithm, error)
 
-func (q *Quantile) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (q *Quantile) Add(in telegraf.Metric) {
 	id := in.HashID()
 	if cached, ok := q.cache[id]; ok {

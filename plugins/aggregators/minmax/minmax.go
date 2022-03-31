@@ -28,10 +28,6 @@ type minmax struct {
 	max float64
 }
 
-func (m *MinMax) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (m *MinMax) Add(in telegraf.Metric) {
 	id := in.HashID()
 	if _, ok := m.cache[id]; !ok {

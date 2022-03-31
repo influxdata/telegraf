@@ -41,10 +41,6 @@ func (s *Starlark) Init() error {
 	return nil
 }
 
-func (s *Starlark) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Starlark) Add(metric telegraf.Metric) {
 	parameters, found := s.GetParameters("add")
 	if !found {

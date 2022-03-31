@@ -24,10 +24,6 @@ func NewFinal() *Final {
 	}
 }
 
-func (m *Final) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (m *Final) Add(in telegraf.Metric) {
 	id := in.HashID()
 	m.metricCache[id] = in
