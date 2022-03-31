@@ -154,7 +154,7 @@ func (s *SystemPS) DiskUsage(
 		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
 			if s.Log != nil {
-				s.Log.Errorf("[SystemPS] => error getting disk usage (%q): %v", mountpoint, err)
+				s.Log.Warnf("[SystemPS] => unable to get disk usage (%q): %v", mountpoint, err)
 			}
 			continue
 		}
