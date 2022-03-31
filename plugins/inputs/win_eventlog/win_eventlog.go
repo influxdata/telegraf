@@ -46,8 +46,6 @@ var bufferSize = 1 << 14
 
 var description = "Input plugin to collect Windows Event Log messages"
 
-// SampleConfig for win_eventlog
-
 // Gather Windows Event Log entries
 func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 
