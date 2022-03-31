@@ -50,11 +50,6 @@ func (e *Exec) Close() error {
 	return nil
 }
 
-// SampleConfig returns a sample configuration.
-func (e *Exec) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Write writes the metrics to the configured command.
 func (e *Exec) Write(metrics []telegraf.Metric) error {
 	var buffer bytes.Buffer

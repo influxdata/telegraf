@@ -77,10 +77,6 @@ func (g *Graphite) Close() error {
 	return nil
 }
 
-func (g *Graphite) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // We need check eof as we can write to nothing without noticing anything is wrong
 // the connection stays in a close_wait
 // We can detect that by finding an eof

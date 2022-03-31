@@ -193,11 +193,6 @@ func floatToString(inputNum float64) string {
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
-// SampleConfig get config
-func (w *Warp10) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Close close
 func (w *Warp10) Close() error {
 	return nil

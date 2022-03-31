@@ -122,10 +122,6 @@ func (i *InfluxDB) Close() error {
 	return nil
 }
 
-func (i *InfluxDB) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Write sends metrics to one of the configured servers, logging each
 // unsuccessful. If all servers fail, return an error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {

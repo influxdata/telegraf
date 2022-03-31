@@ -75,10 +75,6 @@ func (n *NATS) Close() error {
 	return nil
 }
 
-func (n *NATS) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *NATS) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil

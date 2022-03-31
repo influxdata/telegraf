@@ -156,10 +156,6 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (i *Instrumental) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (i *Instrumental) authenticate(conn net.Conn) error {
 	_, err := fmt.Fprintf(conn, HandshakeFormat, i.APIToken)
 	if err != nil {

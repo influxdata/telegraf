@@ -363,11 +363,6 @@ func (s *Stackdriver) Close() error {
 	return s.client.Close()
 }
 
-// SampleConfig returns the formatted sample configuration for the plugin.
-func (s *Stackdriver) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func newStackdriver() *Stackdriver {
 	return &Stackdriver{}
 }

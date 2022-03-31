@@ -51,11 +51,6 @@ func (d *Dynatrace) Close() error {
 	return nil
 }
 
-// SampleConfig Returns a sample configuration for the Dynatrace output plugin
-func (d *Dynatrace) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil

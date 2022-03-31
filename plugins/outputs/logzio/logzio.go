@@ -75,11 +75,6 @@ func (l *Logzio) Close() error {
 	return nil
 }
 
-// SampleConfig returns the default configuration of the Output
-func (l *Logzio) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Write takes in group of points to be written to the Output
 func (l *Logzio) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {

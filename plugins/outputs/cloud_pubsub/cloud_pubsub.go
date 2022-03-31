@@ -43,10 +43,6 @@ type PubSub struct {
 	publishResults []publishResult
 }
 
-func (ps *PubSub) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (ps *PubSub) SetSerializer(serializer serializers.Serializer) {
 	ps.serializer = serializer
 }

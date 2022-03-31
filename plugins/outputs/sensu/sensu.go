@@ -103,11 +103,6 @@ type Sensu struct {
 	client *http.Client
 }
 
-// SampleConfig provides a sample configuration for the plugin
-func (s *Sensu) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Sensu) createClient() (*http.Client, error) {
 	tlsCfg, err := s.ClientConfig.TLSConfig()
 	if err != nil {

@@ -25,10 +25,6 @@ type Execd struct {
 	serializer serializers.Serializer
 }
 
-func (e *Execd) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (e *Execd) SetSerializer(s serializers.Serializer) {
 	e.serializer = s
 }

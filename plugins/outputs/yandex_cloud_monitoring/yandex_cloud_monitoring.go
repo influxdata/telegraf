@@ -65,11 +65,6 @@ const (
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
 
-// SampleConfig provides a sample configuration for the plugin
-func (a *YandexCloudMonitoring) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Connect initializes the plugin and validates connectivity
 func (a *YandexCloudMonitoring) Connect() error {
 	if a.Timeout <= 0 {

@@ -56,10 +56,6 @@ func (r *Riemann) Close() (err error) {
 	return err
 }
 
-func (r *Riemann) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil

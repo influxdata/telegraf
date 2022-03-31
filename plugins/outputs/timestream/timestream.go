@@ -150,10 +150,6 @@ func (t *Timestream) Close() error {
 	return nil
 }
 
-func (t *Timestream) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func init() {
 	outputs.Add("timestream", func() telegraf.Output {
 		return &Timestream{}

@@ -103,11 +103,6 @@ const (
 	maxRequestBodySize         = 4000000
 )
 
-// SampleConfig provides a sample configuration for the plugin
-func (a *AzureMonitor) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Connect initializes the plugin and validates connectivity
 func (a *AzureMonitor) Connect() error {
 	a.cache = make(map[time.Time]map[uint64]*aggregate, 36)

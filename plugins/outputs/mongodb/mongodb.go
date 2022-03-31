@@ -63,10 +63,6 @@ type MongoDB struct {
 	tls.ClientConfig
 }
 
-func (s *MongoDB) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *MongoDB) Init() error {
 	if s.MetricDatabase == "" {
 		s.MetricDatabase = "telegraf"

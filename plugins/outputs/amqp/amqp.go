@@ -73,10 +73,6 @@ type Client interface {
 	Close() error
 }
 
-func (q *AMQP) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (q *AMQP) SetSerializer(serializer serializers.Serializer) {
 	q.serializer = serializer
 }

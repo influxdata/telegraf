@@ -219,10 +219,6 @@ func hashID(m telegraf.Metric) int64 {
 	return int64(binary.LittleEndian.Uint64(sum))
 }
 
-func (c *CrateDB) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *CrateDB) Close() error {
 	return c.DB.Close()
 }

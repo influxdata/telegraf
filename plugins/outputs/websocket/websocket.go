@@ -47,11 +47,6 @@ func (w *WebSocket) SetSerializer(serializer serializers.Serializer) {
 	w.serializer = serializer
 }
 
-// SampleConfig returns plugin config sample.
-func (w *WebSocket) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 var errInvalidURL = errors.New("invalid websocket URL")
 
 // Init the output plugin.

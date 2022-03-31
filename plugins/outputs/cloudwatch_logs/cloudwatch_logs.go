@@ -75,11 +75,6 @@ const (
 	// Otherwise, the operation fails.
 )
 
-// SampleConfig returns sample config description for plugin
-func (c *CloudWatchLogs) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Init initialize plugin with checking configuration parameters
 func (c *CloudWatchLogs) Init() error {
 	if c.LogGroup == "" {

@@ -58,10 +58,6 @@ type PrometheusClient struct {
 	wg        sync.WaitGroup
 }
 
-func (p *PrometheusClient) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *PrometheusClient) Init() error {
 	defaultCollectors := map[string]bool{
 		"gocollector": true,

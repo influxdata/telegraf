@@ -97,10 +97,6 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (a *Amon) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (a *Amon) authenticatedURL() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }

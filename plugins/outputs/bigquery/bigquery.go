@@ -38,11 +38,6 @@ type BigQuery struct {
 	warnedOnHyphens map[string]bool
 }
 
-// SampleConfig returns the formatted sample configuration for the plugin.
-func (s *BigQuery) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *BigQuery) Connect() error {
 	if s.Project == "" {
 		return fmt.Errorf("Project is a required field for BigQuery output")

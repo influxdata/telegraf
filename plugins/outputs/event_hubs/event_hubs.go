@@ -62,10 +62,6 @@ const (
 	defaultRequestTimeout = time.Second * 30
 )
 
-func (e *EventHubs) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (e *EventHubs) Init() error {
 	err := e.Hub.GetHub(e.ConnectionString)
 

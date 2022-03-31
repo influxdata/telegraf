@@ -94,10 +94,6 @@ func (s *Syslog) Close() error {
 	return err
 }
 
-func (s *Syslog) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Syslog) Write(metrics []telegraf.Metric) (err error) {
 	if s.Conn == nil {
 		// previous write failed with permanent error and socket was closed.

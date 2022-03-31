@@ -31,10 +31,6 @@ type SocketWriter struct {
 	net.Conn
 }
 
-func (sw *SocketWriter) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (sw *SocketWriter) SetSerializer(s serializers.Serializer) {
 	sw.Serializer = s
 }

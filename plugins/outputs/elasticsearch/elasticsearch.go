@@ -306,10 +306,6 @@ func getISOWeek(eventTime time.Time) string {
 	return strconv.Itoa(week)
 }
 
-func (a *Elasticsearch) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (a *Elasticsearch) Close() error {
 	a.Client = nil
 	return nil

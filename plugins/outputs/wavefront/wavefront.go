@@ -273,10 +273,6 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 	return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 }
 
-func (w *Wavefront) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (w *Wavefront) Close() error {
 	w.sender.Close()
 	return nil

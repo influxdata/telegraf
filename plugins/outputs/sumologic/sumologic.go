@@ -166,10 +166,6 @@ func (s *SumoLogic) Close() error {
 	return s.err
 }
 
-func (s *SumoLogic) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
 	if s.err != nil {
 		return errors.Wrap(s.err, "sumologic: incorrect configuration")

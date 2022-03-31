@@ -72,10 +72,6 @@ const sampleConfig = `
   # key1 = "value1"
 `
 
-func (o *OpenTelemetry) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (o *OpenTelemetry) Connect() error {
 	logger := &otelLogger{o.Log}
 

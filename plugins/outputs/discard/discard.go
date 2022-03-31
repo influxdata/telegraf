@@ -11,9 +11,6 @@ type Discard struct{}
 
 func (d *Discard) Connect() error { return nil }
 func (d *Discard) Close() error   { return nil }
-func (d *Discard) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
 func (d *Discard) Write(_ []telegraf.Metric) error {
 	return nil
 }

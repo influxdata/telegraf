@@ -160,12 +160,6 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 	return nil
 }
 
-// SampleConfig is function who return the default configuration for this
-// output
-func (l *Librato) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 	gauges := []*Gauge{}
 	if m.Time().Unix() == 0 {

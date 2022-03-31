@@ -68,10 +68,6 @@ func (f *File) Close() error {
 	return err
 }
 
-func (f *File) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (f *File) Write(metrics []telegraf.Metric) error {
 	var writeErr error
 

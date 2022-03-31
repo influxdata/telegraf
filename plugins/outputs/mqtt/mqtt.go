@@ -77,10 +77,6 @@ func (m *MQTT) Close() error {
 	return nil
 }
 
-func (m *MQTT) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	m.Lock()
 	defer m.Unlock()

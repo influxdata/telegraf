@@ -42,10 +42,6 @@ func (n *NSQ) Close() error {
 	return nil
 }
 
-func (n *NSQ) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (n *NSQ) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil

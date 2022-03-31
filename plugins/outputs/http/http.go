@@ -89,10 +89,6 @@ func (h *HTTP) Close() error {
 	return nil
 }
 
-func (h *HTTP) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (h *HTTP) Write(metrics []telegraf.Metric) error {
 	var reqBody []byte
 

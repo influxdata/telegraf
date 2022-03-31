@@ -353,10 +353,6 @@ func (g *Graylog) Close() error {
 	return nil
 }
 
-func (g *Graylog) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (g *Graylog) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		values, err := g.serialize(metric)

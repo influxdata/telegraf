@@ -57,10 +57,6 @@ type ingestorFactory func(localClient, string, string) (localIngestor, error)
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
-func (adx *AzureDataExplorer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (adx *AzureDataExplorer) Connect() error {
 	authorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(adx.Endpoint)
 	if err != nil {

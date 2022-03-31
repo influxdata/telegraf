@@ -177,10 +177,6 @@ func (k *Kafka) Close() error {
 	return k.producer.Close()
 }
 
-func (k *Kafka) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
 	if k.RoutingTag != "" {
 		key, ok := metric.GetTag(k.RoutingTag)

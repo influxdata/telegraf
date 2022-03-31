@@ -45,10 +45,6 @@ type kinesisClient interface {
 	PutRecords(context.Context, *kinesis.PutRecordsInput, ...func(*kinesis.Options)) (*kinesis.PutRecordsOutput, error)
 }
 
-func (k *KinesisOutput) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (k *KinesisOutput) Connect() error {
 	if k.Partition == nil {
 		k.Log.Error("Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")

@@ -46,10 +46,6 @@ type Loki struct {
 	tls.ClientConfig
 }
 
-func (l *Loki) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
 	tlsCfg, err := l.ClientConfig.TLSConfig()
 	if err != nil {

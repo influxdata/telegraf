@@ -41,10 +41,6 @@ var (
 	is32BitChecked bool
 )
 
-func (a *ApplicationInsights) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (a *ApplicationInsights) Connect() error {
 	if a.InstrumentationKey == "" {
 		return fmt.Errorf("instrumentation key is required")

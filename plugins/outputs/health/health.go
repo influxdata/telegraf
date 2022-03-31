@@ -54,10 +54,6 @@ type Health struct {
 	healthy bool
 }
 
-func (h *Health) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (h *Health) Init() error {
 	u, err := url.Parse(h.ServiceAddress)
 	if err != nil {

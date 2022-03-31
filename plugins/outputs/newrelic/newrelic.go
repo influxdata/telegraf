@@ -33,11 +33,6 @@ type NewRelic struct {
 	client      http.Client
 }
 
-// SampleConfig : return  default configuration of the Output
-func (nr *NewRelic) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Connect to the Output
 func (nr *NewRelic) Connect() error {
 	if nr.InsightsKey == "" {

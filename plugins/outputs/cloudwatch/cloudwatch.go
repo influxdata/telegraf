@@ -150,10 +150,6 @@ func (f *valueField) buildDatum() []types.MetricDatum {
 	}
 }
 
-func (c *CloudWatch) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *CloudWatch) Connect() error {
 	cfg, err := c.CredentialConfig.Credentials()
 	if err != nil {

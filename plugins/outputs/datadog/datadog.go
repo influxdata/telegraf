@@ -154,10 +154,6 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (d *Datadog) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *Datadog) authenticatedURL() string {
 	q := url.Values{
 		"api_key": []string{d.Apikey},

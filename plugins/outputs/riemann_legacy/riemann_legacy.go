@@ -47,10 +47,6 @@ func (r *Riemann) Close() error {
 	return err
 }
 
-func (r *Riemann) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	r.Log.Error(deprecationMsg)
 	if len(metrics) == 0 {

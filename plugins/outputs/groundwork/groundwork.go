@@ -61,10 +61,6 @@ type Groundwork struct {
 	client              clients.GWClient
 }
 
-func (g *Groundwork) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (g *Groundwork) Init() error {
 	if g.Server == "" {
 		return errors.New("no 'url' provided")

@@ -229,10 +229,6 @@ func FloatToString(inputNum float64) string {
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
-func (o *OpenTSDB) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (o *OpenTSDB) Close() error {
 	return nil
 }

@@ -73,11 +73,6 @@ func NewSignalFx() *SignalFx {
 	}
 }
 
-// SampleConfig returns the sample configuration for the plugin
-func (s *SignalFx) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Connect establishes a connection to SignalFx
 func (s *SignalFx) Connect() error {
 	client := s.client.(*sfxclient.HTTPSink)
