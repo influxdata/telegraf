@@ -30,7 +30,7 @@ type converter struct {
 const sampleConfig = `
   ## Tag and field conversions defined in a separate sub-tables
   # [[processors.regex.tags]]
-  #   ## Tag to change
+  #   ## Tag to change, "*" will change every tag
   #   key = "resp_code"
   #   ## Regular expression to match on a tag value
   #   pattern = "^(\\d)\\d\\d$"
@@ -168,14 +168,17 @@ func (r *Regex) Description() string {
 func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		for _, converter := range r.Tags {
-			if value, ok := metric.GetTag(converter.Key); ok {
-				if key, newValue := r.convert(converter, value); newValue != "" {
-					if converter.Append {
-						if v, ok := metric.GetTag(key); ok {
-							newValue = v + newValue
-						}
+			if converter.Key == "*" {
+				for _, tag := range metric.TagList() {
+					regex := r.regexCache[converter.Pattern]
+					if regex.MatchString(tag.Value) {
+						newValue := regex.ReplaceAllString(tag.Value, converter.Replacement)
+						updateTag(converter, metric, tag.Key, newValue)
 					}
-					metric.AddTag(key, newValue)
+				}
+			} else if value, ok := metric.GetTag(converter.Key); ok {
+				if key, newValue := r.convert(converter, value); newValue != "" {
+					updateTag(converter, metric, key, newValue)
 				}
 			}
 		}
@@ -281,6 +284,15 @@ func (r *Regex) convert(c converter, src string) (key string, value string) {
 	}
 
 	return c.Key, value
+}
+
+func updateTag(converter converter, metric telegraf.Metric, key string, newValue string) {
+	if converter.Append {
+		if v, ok := metric.GetTag(key); ok {
+			newValue = v + newValue
+		}
+	}
+	metric.AddTag(key, newValue)
 }
 
 func init() {

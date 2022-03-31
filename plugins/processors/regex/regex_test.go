@@ -1,6 +1,8 @@
 package regex
 
 import (
+	"github.com/influxdata/telegraf/metric"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
@@ -38,6 +40,21 @@ func newM2() telegraf.Metric {
 		},
 		time.Now(),
 	)
+}
+
+func newUuidTags() telegraf.Metric {
+	m1 := metric.New("access_log",
+		map[string]string{
+			"compound": "other-18cb0b46-73b8-4084-9fc4-5105f32a8a68",
+			"simple":   "d60be57c-2f43-4e4f-a68a-4ca8204bae41",
+			"control":  "not_uuid",
+		},
+		map[string]interface{}{
+			"request": "/users/42/",
+		},
+		time.Now(),
+	)
+	return m1
 }
 
 func TestFieldConversions(t *testing.T) {
@@ -826,5 +843,45 @@ func BenchmarkConversions(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		processed := regex.Apply(newM1())
 		_ = processed
+	}
+}
+
+func TestAnyTagConversion(t *testing.T) {
+	tests := []struct {
+		message      string
+		converter    converter
+		expectedTags map[string]string
+	}{
+		{
+			message: "Should change existing tag",
+			converter: converter{
+				Key:         "*",
+				Pattern:     "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+				Replacement: "{UUID}",
+			},
+			expectedTags: map[string]string{
+				"compound": "other-{UUID}",
+				"simple":   "{UUID}",
+				"control":  "not_uuid",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		regex := Regex{
+			Tags: []converter{test.converter},
+			Log:  testutil.Logger{},
+		}
+		require.NoError(t, regex.Init())
+
+		processed := regex.Apply(newUuidTags())
+
+		expectedFields := map[string]interface{}{
+			"request": "/users/42/",
+		}
+
+		assert.Equal(t, expectedFields, processed[0].Fields(), test.message, "Should not change fields")
+		assert.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
+		assert.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
 }
