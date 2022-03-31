@@ -96,10 +96,6 @@ func (r *Regex) Init() error {
 	return nil
 }
 
-func (r *Regex) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		for _, converter := range r.Tags {

@@ -16,10 +16,6 @@ type Dedup struct {
 	Cache         map[uint64]telegraf.Metric
 }
 
-func (d *Dedup) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Remove expired items from cache
 func (d *Dedup) cleanup() {
 	// No need to cleanup cache too often. Lets save some CPU

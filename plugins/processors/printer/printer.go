@@ -15,10 +15,6 @@ type Printer struct {
 	serializer serializers.Serializer
 }
 
-func (p *Printer) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Printer) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		octets, err := p.serializer.Serialize(metric)

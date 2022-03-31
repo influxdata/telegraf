@@ -18,10 +18,6 @@ type Parser struct {
 	parser       telegraf.Parser
 }
 
-func (p *Parser) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	if p.parser == nil {
 		var err error

@@ -49,10 +49,6 @@ func (mapper *EnumMapper) Init() error {
 	return nil
 }
 
-func (mapper *EnumMapper) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for i := 0; i < len(in); i++ {
 		in[i] = mapper.applyMappings(in[i])

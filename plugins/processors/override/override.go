@@ -14,10 +14,6 @@ type Override struct {
 	Tags         map[string]string
 }
 
-func (p *Override) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Override) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		if len(p.NameOverride) > 0 {

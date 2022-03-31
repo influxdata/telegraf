@@ -30,10 +30,6 @@ type ReverseDNS struct {
 	Log                telegraf.Logger `toml:"-"`
 }
 
-func (r *ReverseDNS) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *ReverseDNS) Start(acc telegraf.Accumulator) error {
 	r.acc = acc
 	r.reverseDNSCache = NewReverseDNSCache(

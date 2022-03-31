@@ -17,10 +17,6 @@ type Geo struct {
 	CellLevel int    `toml:"cell_level"`
 }
 
-func (g *Geo) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (g *Geo) Init() error {
 	if g.CellLevel < 0 || g.CellLevel > 30 {
 		return fmt.Errorf("invalid cell level %d", g.CellLevel)

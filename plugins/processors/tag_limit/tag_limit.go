@@ -17,10 +17,6 @@ type TagLimit struct {
 	keepTags map[string]string
 }
 
-func (d *TagLimit) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *TagLimit) initOnce() error {
 	if d.init {
 		return nil

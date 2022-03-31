@@ -14,10 +14,6 @@ type Clone struct {
 	Tags         map[string]string
 }
 
-func (c *Clone) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *Clone) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	cloned := []telegraf.Metric{}
 

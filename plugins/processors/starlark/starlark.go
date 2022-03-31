@@ -35,10 +35,6 @@ func (s *Starlark) Init() error {
 	return nil
 }
 
-func (s *Starlark) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (s *Starlark) Start(_ telegraf.Accumulator) error {
 	return nil
 }

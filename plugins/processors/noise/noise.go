@@ -34,10 +34,6 @@ type Noise struct {
 	fieldFilter   filter.Filter
 }
 
-func (p *Noise) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // generates a random noise value depending on the defined probability density
 // function and adds that to the original value. If any integer overflows
 // happen during the calculation, the result is set to MaxInt or 0 (for uint)

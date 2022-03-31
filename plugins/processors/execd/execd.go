@@ -44,10 +44,6 @@ func New() *Execd {
 	}
 }
 
-func (e *Execd) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	var err error
 	e.parser, err = parsers.NewParser(e.parserConfig)

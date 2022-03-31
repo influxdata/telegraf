@@ -56,10 +56,6 @@ type IfName struct {
 
 const minRetry = 5 * time.Minute
 
-func (d *IfName) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *IfName) Init() error {
 	d.getMapRemote = d.getMapRemoteNoMock
 	d.makeTable = d.makeTableNoMock

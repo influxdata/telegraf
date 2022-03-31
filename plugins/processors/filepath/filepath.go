@@ -33,10 +33,6 @@ type RelOpts struct {
 	BasePath string
 }
 
-func (o *Options) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // applyFunc applies the specified function to the metric
 func (o *Options) applyFunc(bo BaseOpts, fn ProcessorFunc, metric telegraf.Metric) {
 	if bo.Tag != "" {

@@ -17,10 +17,6 @@ type TemplateProcessor struct {
 	tmpl     *template.Template
 }
 
-func (r *TemplateProcessor) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// for each metric in "in" array
 	for _, metric := range in {

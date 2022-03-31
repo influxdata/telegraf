@@ -18,10 +18,6 @@ type Rename struct {
 	Replaces []Replace `toml:"replace"`
 }
 
-func (r *Rename) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (r *Rename) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
 		for _, replace := range r.Replaces {

@@ -12,10 +12,6 @@ type Pivot struct {
 	ValueKey string `toml:"value_key"`
 }
 
-func (p *Pivot) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Pivot) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	for _, m := range metrics {
 		key, ok := m.GetTag(p.TagKey)

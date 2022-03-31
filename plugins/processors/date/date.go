@@ -23,10 +23,6 @@ type Date struct {
 	location *time.Location
 }
 
-func (d *Date) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (d *Date) Init() error {
 	// Check either TagKey or FieldKey specified
 	if len(d.FieldKey) > 0 && len(d.TagKey) > 0 {

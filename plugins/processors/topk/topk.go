@@ -73,10 +73,6 @@ func sortMetrics(metrics []MetricAggregation, field string, reverse bool) {
 	}
 }
 
-func (t *TopK) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (t *TopK) Reset() {
 	t.cache = make(map[string][]telegraf.Metric)
 	t.lastAggregation = time.Now()

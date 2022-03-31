@@ -15,11 +15,6 @@ type Defaults struct {
 	DefaultFieldsSets map[string]interface{} `toml:"fields"`
 }
 
-// SampleConfig represents a sample toml config for this plugin.
-func (def *Defaults) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 // Apply contains the main implementation of this processor.
 // For each metric in 'inputMetrics', it goes over each default pair.
 // If the field in the pair does not exist on the metric, the associated default is added.

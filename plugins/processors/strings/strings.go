@@ -50,10 +50,6 @@ type converter struct {
 	fn ConvertFunc
 }
 
-func (s *Strings) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (c *converter) convertTag(metric telegraf.Metric) {
 	var tags map[string]string
 	if c.Tag == "*" {

@@ -44,10 +44,6 @@ type ConversionFilter struct {
 	Float       filter.Filter
 }
 
-func (p *Converter) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func (p *Converter) Init() error {
 	return p.compile()
 }

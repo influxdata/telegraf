@@ -28,10 +28,6 @@ type PortName struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-func (pn *PortName) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func readServicesFile() {
 	file, err := os.Open(servicesPath())
 	if err != nil {

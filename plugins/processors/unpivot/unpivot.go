@@ -12,10 +12,6 @@ type Unpivot struct {
 	ValueKey string `toml:"value_key"`
 }
 
-func (p *Unpivot) SampleConfig() string {
-	return `{{ .SampleConfig }}`
-}
-
 func copyWithoutFields(metric telegraf.Metric) telegraf.Metric {
 	m := metric.Copy()
 
