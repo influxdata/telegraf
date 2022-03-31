@@ -882,6 +882,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					}
 
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
+						fmt.Printf("error parsing %s: '%s': %s\n", attr.Name, matches[2], err.Error())
 						continue
 					}
 					fmt.Printf("%-34s: '%s' -> '%d'\n", attr.Name, matches[2], fields["raw_value"])
