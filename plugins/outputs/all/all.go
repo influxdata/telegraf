@@ -9,7 +9,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
 	_ "github.com/influxdata/telegraf/plugins/outputs/bigquery"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloud_pubsub"
-	_ "github.com/influxdata/telegraf/plugins/outputs/cloudrun"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch_logs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
