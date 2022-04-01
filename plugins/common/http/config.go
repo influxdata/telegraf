@@ -58,11 +58,6 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 
 	// TODO: review this...
 	h.OAuth2Config.TokenURL = fmt.Sprintf("%v", ctx.Value("url"))
-	// h.OAuth2Config.TokenURL = h.URL
-
-	// Can set token url on ctx
-	// fmt.Println("url value from ctx: ", ctx.Value("url")) // prints!
-	// ctx = context.WithValue(context.Background(), "url", h.URL)
 
 	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
 	if err != nil {
@@ -70,8 +65,6 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 	}
 
 	h.AccessToken = h.OAuth2Config.AccessToken
-	// Cheeky, but no. Temporary.
-	h.CookieAuthConfig.URL = ""
 
 	if h.CookieAuthConfig.URL != "" {
 		fmt.Println("I guess h.CookieAuthConfig.URL is not empty string...", h.CookieAuthConfig.URL)

@@ -477,7 +477,6 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
-	// var token = "2YotnFZFEjr1zCsicMWpAA"
 	var token = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg2NzUzMDliMjJiMDFiZTU2YzIxM2M5ODU0MGFiNTYzYmZmNWE1OGMiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJodHRwOi8vMTI3LjAuMC4xOjU4MDI1LyIsImF6cCI6InRlc3Qtc2VydmljZS1hY2NvdW50LWVtYWlsQGV4YW1wbGUuY29tIiwiZW1haWwiOiJ0ZXN0LXNlcnZpY2UtYWNjb3VudC1lbWFpbEBleGFtcGxlLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjk0NjY4NDgwMCwiaWF0Ijo5NDY2ODEyMDAsImlzcyI6Imh0dHBzOi8vYWNjb3VudHMudGVzdC5jb20iLCJzdWIiOiIxMTAzMDAwMDk4MTM3Mzg2NzUzMDkifQ.qi2LsXP2o6nl-rbYKUlHAgTBY0QoU7Nhty5NGR4GMdc8OoGEPW-vlD0WBSaKSr11vyFcIO4ftFDWXElo9Ut-AIQPKVxinsjHIU2-LoIATgI1kyifFLyU_pBecwcI4CIXEcDK5wEkfonWFSkyDZHBeZFKbJXlQXtxj0OHvQ-DEEepXLuKY6v3s4U6GyD9_ppYUy6gzDZPYUbfPfgxCj_Jbv6qkLU0DiZ7F5-do6X6n-qkpgCRLTGHcY__rn8oe8_pSimsyJEeY49ZQ5lj4mXkVCwgL9bvL1_eW1p6sgbHaBnPKVPbM7S1_cBmzgSonm__qWyZUxfDgNdigtNsvzBQTg"
 
 	tests := []struct {
@@ -485,17 +484,12 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 		plugin       *HTTP
 		handler      TestHandlerFunc
 		tokenHandler TestHandlerFunc
-		// metrics []telegraf.Metric
-		// wantErr bool
 	}{
 		{
 			name: "no credentials file",
-			// metrics: testutil.MockMetrics(),
 			plugin: &HTTP{
-				// CredentialsFile: "./testdata/missing.json",
 				URL: u.String(),
 			},
-			// wantErr: true,
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Len(t, r.Header["Authorization"], 0)
 				w.WriteHeader(http.StatusOK)
@@ -503,32 +497,25 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 		},
 		{
 			name: "write success",
-			// metrics: testutil.MockMetrics(),
 			plugin: &HTTP{
-				//
-				// CredentialsFile: "./testdata/test_key_file.json",
 				URL: u.String() + "/write",
 				HTTPClientConfig: httpconfig.HTTPClientConfig{
 					OAuth2Config: oauth.OAuth2Config{
 						// ClientID:     "howdy",
 						// ClientSecret: "secret",
-						TokenURL: u.String() + "/token",
+						// TokenURL: u.String() + "/token",
+						TokenURL: u.String(),
 						// Scopes:       []string{"urn:opc:idm:__myscopes__"},
 						CredentialsFile: "./testdata/test_key_file.json",
 					},
 				},
 			},
-			// wantErr: false,
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				fmt.Println("⭐️")
 				w.WriteHeader(http.StatusOK)
-				values := url.Values{}
-				values.Add("id_token", token)
-				_, err = w.Write([]byte(values.Encode()))
+				_, _ = w.Write([]byte(`{"id_token":"eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg2NzUzMDliMjJiMDFiZTU2YzIxM2M5ODU0MGFiNTYzYmZmNWE1OGMiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJodHRwOi8vMTI3LjAuMC4xOjU4MDI1LyIsImF6cCI6InRlc3Qtc2VydmljZS1hY2NvdW50LWVtYWlsQGV4YW1wbGUuY29tIiwiZW1haWwiOiJ0ZXN0LXNlcnZpY2UtYWNjb3VudC1lbWFpbEBleGFtcGxlLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjk0NjY4NDgwMCwiaWF0Ijo5NDY2ODEyMDAsImlzcyI6Imh0dHBzOi8vYWNjb3VudHMudGVzdC5jb20iLCJzdWIiOiIxMTAzMDAwMDk4MTM3Mzg2NzUzMDkifQ.qi2LsXP2o6nl-rbYKUlHAgTBY0QoU7Nhty5NGR4GMdc8OoGEPW-vlD0WBSaKSr11vyFcIO4ftFDWXElo9Ut-AIQPKVxinsjHIU2-LoIATgI1kyifFLyU_pBecwcI4CIXEcDK5wEkfonWFSkyDZHBeZFKbJXlQXtxj0OHvQ-DEEepXLuKY6v3s4U6GyD9_ppYUy6gzDZPYUbfPfgxCj_Jbv6qkLU0DiZ7F5-do6X6n-qkpgCRLTGHcY__rn8oe8_pSimsyJEeY49ZQ5lj4mXkVCwgL9bvL1_eW1p6sgbHaBnPKVPbM7S1_cBmzgSonm__qWyZUxfDgNdigtNsvzBQTg"}`))
 				require.NoError(t, err)
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				fmt.Println("r.Header", r.Header)
 				require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
 				w.WriteHeader(http.StatusOK)
 			},
@@ -539,10 +526,8 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
 				case "/write":
-					// fmt.Println("✨")
 					tt.handler(t, w, r)
 				case "/token":
-					fmt.Println("✨")
 					tt.tokenHandler(t, w, r)
 				}
 			})
