@@ -2,7 +2,6 @@ package oauth
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -20,14 +19,10 @@ type OAuth2Config struct {
 	Scopes       []string `toml:"scopes"`
 
 	CredentialsFile string `toml:"credentials_file"`
-	// TODO: Could maybe add access token to this struct?
-	AccessToken string
+	AccessToken     string
 }
 
 func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) (*http.Client, error) {
-	// Boy, if this works... |o/
-	// fmt.Println("URL!:", ctx.Value("url"))
-
 	if o.ClientID != "" && o.ClientSecret != "" && o.TokenURL != "" {
 		oauthConfig := clientcredentials.Config{
 			ClientID:     o.ClientID,
@@ -39,12 +34,8 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 		client = oauthConfig.Client(ctx)
 	}
 
-	// Not using Client Credentials grant, instead using Authorization Code Grant...
-	fmt.Println("o.TokenURL 1 (common/oauth/config.go): ", o.TokenURL)
-	// This leads to cookie config...
-	// o.TokenURL = ctx.Value("url").(string)
-	fmt.Println("o.TokenURL 2 (common/oauth/config.go): ", o.TokenURL)
 	if o.CredentialsFile != "" {
+		o.TokenURL = ctx.Value("url").(string)
 		err := o.GetAccessToken(ctx, o.TokenURL)
 		if err != nil {
 			return nil, err
@@ -71,6 +62,7 @@ func (o *OAuth2Config) GetAccessToken(ctx context.Context, audience string) erro
 		PrivateKey:    conf.PrivateKey,
 		PrivateClaims: map[string]interface{}{"target_audience": audience},
 	}
+
 	token, err := jwtConfig.TokenSource(ctx).Token()
 	if err != nil {
 		return err
