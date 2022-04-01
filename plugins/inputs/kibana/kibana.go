@@ -110,8 +110,6 @@ func mapHealthStatusToCode(s string) int {
 	return 0
 }
 
-// SampleConfig returns sample configuration for this plugin.
-
 func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {
 		client, err := k.createHTTPClient()

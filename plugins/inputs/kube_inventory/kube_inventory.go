@@ -44,8 +44,6 @@ type KubernetesInventory struct {
 	selectorFilter filter.Filter
 }
 
-// SampleConfig returns a sample config
-
 func (ki *KubernetesInventory) Init() error {
 	// If neither are provided, use the default service account.
 	if ki.BearerToken == "" && ki.BearerTokenString == "" {

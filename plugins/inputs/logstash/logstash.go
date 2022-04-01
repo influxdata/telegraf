@@ -43,8 +43,6 @@ func NewLogstash() *Logstash {
 	}
 }
 
-// SampleConfig returns details how to configure plugin
-
 type ProcessStats struct {
 	ID      string      `json:"id"`
 	Process interface{} `json:"process"`

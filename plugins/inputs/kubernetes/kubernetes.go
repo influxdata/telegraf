@@ -49,10 +49,6 @@ func init() {
 	})
 }
 
-//SampleConfig returns a sample config
-
-//Description returns the description of this plugin
-
 func (k *Kubernetes) Init() error {
 	// If neither are provided, use the default service account.
 	if k.BearerToken == "" && k.BearerTokenString == "" {
