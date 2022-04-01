@@ -130,10 +130,6 @@ type HTTP struct {
 	UseBatchFormat          bool              `toml:"use_batch_format"`
 	AwsService              string            `toml:"aws_service"`
 	NonRetryableStatusCodes []int             `toml:"non_retryable_statuscodes"`
-	// TODO: What struct should AccessToken live in? Does it live in a client?
-	// It might get picked up in in oauth/config.go similar to credentials_file
-	// AccessToken string
-
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
@@ -163,11 +159,12 @@ func (h *HTTP) Connect() error {
 	if h.Method != http.MethodPost && h.Method != http.MethodPut {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
-	ctx := context.Background()
-	// TODO: throwing stuff at the
+
+	// ctx := context.Background()
 	// ctx := context.WithValue(context.Background(), oauth2.HTTPClient, h.HTTPClientConfig)
-	// TODO: review setting h.URL in this fashion...
-	h.HTTPClientConfig.URL = h.URL
+	// TODO: use h.TokenURL, or h.URL? passing it in to ctx...
+	ctx := context.WithValue(context.Background(), "url", h.TokenURL)
+
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
