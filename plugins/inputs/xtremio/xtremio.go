@@ -27,8 +27,6 @@ type XtremIO struct {
 	client *http.Client
 }
 
-// SampleConfig will populate the sample configuration portion of the plugin's configuration
-
 func (xio *XtremIO) Init() error {
 	if xio.Username == "" {
 		return errors.New("username cannot be empty")

@@ -35,8 +35,6 @@ type Unbound struct {
 var defaultBinary = "/usr/sbin/unbound-control"
 var defaultTimeout = config.Duration(time.Second)
 
-// SampleConfig displays configuration instructions
-
 // Shell out to unbound_stat and return the output
 func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}

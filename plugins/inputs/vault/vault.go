@@ -39,8 +39,6 @@ func init() {
 	})
 }
 
-// SampleConfig returns a sample config
-
 func (n *Vault) Init() error {
 	if n.URL == "" {
 		n.URL = "http://127.0.0.1:8200"

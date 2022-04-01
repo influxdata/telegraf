@@ -27,8 +27,6 @@ type Uwsgi struct {
 	client *http.Client
 }
 
-// SampleConfig returns the sample configuration
-
 // Gather collect data from uWSGI Server
 func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 	if u.client == nil {

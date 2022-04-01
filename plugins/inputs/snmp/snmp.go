@@ -307,8 +307,6 @@ func init() {
 	})
 }
 
-// SampleConfig returns the default configuration of the input.
-
 // Gather retrieves all the configured fields and tables.
 // Any error encountered does not halt the process. The errors are accumulated
 // and returned at the end.

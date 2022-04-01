@@ -63,8 +63,6 @@ type Zipkin struct {
 	waitGroup *sync.WaitGroup
 }
 
-// SampleConfig is a  necessary  method implementation from telegraf.ServiceInput
-
 // Gather is empty for the zipkin plugin; all gathering is done through
 // the separate goroutine launched in (*Zipkin).Start()
 func (z *Zipkin) Gather(_ telegraf.Accumulator) error { return nil }

@@ -35,9 +35,6 @@ type Suricata struct {
 	wg sync.WaitGroup
 }
 
-// SampleConfig returns a sample TOML section to illustrate configuration
-// options.
-
 // Start initiates background collection of JSON data from the socket
 // provided to Suricata.
 func (s *Suricata) Start(acc telegraf.Accumulator) error {

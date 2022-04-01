@@ -36,8 +36,6 @@ type X509Cert struct {
 	Log       telegraf.Logger
 }
 
-// SampleConfig returns configuration sample for the plugin.
-
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
 		if strings.HasPrefix(source, "file://") ||

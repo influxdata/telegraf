@@ -72,8 +72,6 @@ const (
 // resource id for Azure SQL Database
 const sqlAzureResourceID = "https://database.windows.net/"
 
-// SampleConfig return the sample configuration
-
 type scanner interface {
 	Scan(dest ...interface{}) error
 }

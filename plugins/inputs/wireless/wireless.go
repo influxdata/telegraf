@@ -11,8 +11,6 @@ type Wireless struct {
 	Log      telegraf.Logger `toml:"-"`
 }
 
-// SampleConfig displays configuration instructions.
-
 func init() {
 	inputs.Add("wireless", func() telegraf.Input {
 		return &Wireless{}

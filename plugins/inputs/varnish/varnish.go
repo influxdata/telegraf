@@ -70,8 +70,6 @@ type Varnish struct {
 	regexpsCompiled []*regexp.Regexp
 }
 
-// SampleConfig displays configuration instructions
-
 // Shell out to varnish cli and return the output
 func varnishRunner(cmdName string, useSudo bool, cmdArgs []string, timeout config.Duration) (*bytes.Buffer, error) {
 	cmd := exec.Command(cmdName, cmdArgs...)

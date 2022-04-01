@@ -68,9 +68,6 @@ type VSphere struct {
 	Log telegraf.Logger
 }
 
-// SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
-// Telegraf.
-
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
 func (v *VSphere) Start(_ telegraf.Accumulator) error {

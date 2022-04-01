@@ -61,8 +61,6 @@ type Syslog struct {
 	udpListener net.PacketConn
 }
 
-// SampleConfig returns sample configuration message
-
 // Gather ...
 func (s *Syslog) Gather(_ telegraf.Accumulator) error {
 	return nil

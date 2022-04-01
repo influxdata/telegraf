@@ -117,8 +117,6 @@ type Node struct {
 	subnodes map[string]Node
 }
 
-// SampleConfig returns sample configuration message
-
 func fillnode(parentNode Node, oidName string, ids []string) {
 	// ids = ["1", "3", "6", ...]
 	id, ids := ids[0], ids[1:]
