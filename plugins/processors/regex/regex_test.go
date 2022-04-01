@@ -42,7 +42,7 @@ func newM2() telegraf.Metric {
 	)
 }
 
-func newUuidTags() telegraf.Metric {
+func newUUIDTags() telegraf.Metric {
 	m1 := metric.New("access_log",
 		map[string]string{
 			"compound": "other-18cb0b46-73b8-4084-9fc4-5105f32a8a68",
@@ -874,7 +874,7 @@ func TestAnyTagConversion(t *testing.T) {
 		}
 		require.NoError(t, regex.Init())
 
-		processed := regex.Apply(newUuidTags())
+		processed := regex.Apply(newUUIDTags())
 
 		expectedFields := map[string]interface{}{
 			"request": "/users/42/",
