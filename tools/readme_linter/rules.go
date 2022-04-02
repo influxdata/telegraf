@@ -6,13 +6,22 @@ import (
 
 // The first section is a heading with plugin name and paragraph short
 // description
-func mainHeading(t *T, root ast.Node) error {
+func firstSection(t *T, root ast.Node) error {
 	var n ast.Node
 	n = root.FirstChild()
 
 	t.assertKind(ast.KindHeading, n)
 	t.assertHeadingLevel(1, n)
 	t.assertFirstChildRegexp(` Plugin$`, n)
+
+	// Make sure there is some text after the heading
+	n = n.NextSibling()
+	t.assertKind(ast.KindParagraph, n)
+	length := len(n.Text(t.markdown))
+	min := 30
+	if length < min {
+		t.assertNodef(n, "short first section. Please add short description of plugin. length %d, minimum %d", length, min)
+	}
 
 	return nil
 }
@@ -22,7 +31,7 @@ func mainHeading(t *T, root ast.Node) error {
 // code
 
 // Second level headings should include
-func requiredHeadings(t *T, root ast.Node, headings []string) error {
+func requiredSections(t *T, root ast.Node, headings []string) error {
 	headingsSet := newSet(headings)
 
 	expectedLevel := 2
@@ -54,8 +63,10 @@ func requiredHeadings(t *T, root ast.Node, headings []string) error {
 	return nil
 }
 
-func requiredHeadingsClose(headings []string) func(*T, ast.Node) error {
+// Use this to make a rule that looks for a list of settings. (this is
+// a closure of func requiredSection)
+func requiredSectionsClose(headings []string) func(*T, ast.Node) error {
 	return func(t *T, root ast.Node) error {
-		return requiredHeadings(t, root, headings)
+		return requiredSections(t, root, headings)
 	}
 }

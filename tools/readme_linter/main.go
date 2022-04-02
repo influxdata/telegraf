@@ -14,28 +14,28 @@ import (
 type plugin int
 
 const (
-	none plugin = iota
-	input
-	output
-	processor
-	aggregator
-	parser
+	pluginNone plugin = iota
+	pluginInput
+	pluginOutput
+	pluginProcessor
+	pluginAggregator
+	pluginParser
 )
 
 func guessPluginType(filename string) plugin {
 	switch {
 	case strings.Contains(filename, "plugins/inputs/"):
-		return input
+		return pluginInput
 	case strings.Contains(filename, "plugins/outputs/"):
-		return output
+		return pluginOutput
 	case strings.Contains(filename, "plugins/processors/"):
-		return processor
+		return pluginProcessor
 	case strings.Contains(filename, "plugins/aggregators/"):
-		return aggregator
+		return pluginAggregator
 	case strings.Contains(filename, "plugins/parsers/"):
-		return parser
+		return pluginParser
 	default:
-		return none
+		return pluginNone
 	}
 }
 
@@ -60,22 +60,22 @@ func init() {
 
 	//rules for all plugin types
 	all := []ruleFunc{
-		mainHeading,
-		requiredHeadingsClose([]string{
+		firstSection,
+		requiredSectionsClose([]string{
 			"Configuration",
 		}),
 	}
-	for i := input; i <= parser; i++ {
+	for i := pluginInput; i <= pluginParser; i++ {
 		rules[i] = all
 	}
 
 	inputRules := []ruleFunc{
-		requiredHeadingsClose([]string{
+		requiredSectionsClose([]string{
 			"Example Output",
 			"Metrics",
 		}),
 	}
-	rules[input] = append(rules[input], inputRules...)
+	rules[pluginInput] = append(rules[pluginInput], inputRules...)
 
 }
 
