@@ -255,7 +255,6 @@ func (a *Aerospike) parseNodeInfo(acc telegraf.Accumulator, stats map[string]str
 		nFields[key] = parseAerospikeValue(key, parts[1])
 	}
 	acc.AddFields("aerospike_node", nFields, nTags, time.Now())
-
 }
 
 func (a *Aerospike) getNamespaces(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, error) {
