@@ -33,9 +33,7 @@ func init() {
 	all := []ruleFunc{
 		firstSection,
 		noLongLinesInParagraphs(80),
-		requiredSectionsClose([]string{
-			"Configuration",
-		}),
+		configSection,
 	}
 	for i := pluginInput; i <= pluginParser; i++ {
 		rules[i] = all

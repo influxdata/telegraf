@@ -28,14 +28,18 @@ func (t *T) printFailedAssert(n ast.Node, format string, args ...interface{}) {
 
 // Assert function that doesnt involve a node, for example if something is missing
 func (t *T) assertf(format string, args ...interface{}) {
-	t.printFileLine(0) // There's no line number associated, so use the first
-	fmt.Printf(format+"\n", args...)
-	//t.printRule(2)
-	t.fails += 1
+	t.assertLinef(0, format, args...) // There's no line number associated, so use the first
 }
 
 func (t *T) assertNodef(n ast.Node, format string, args ...interface{}) {
 	t.printFailedAssert(n, format, args...)
+}
+
+func (t *T) assertLinef(line int, format string, args ...interface{}) {
+	t.printFileLine(line)
+	fmt.Printf(format+"\n", args...)
+	//t.printRule(2) This can either be 2 or 3 since it's called through assertf
+	t.fails += 1
 }
 
 func (t *T) printRule(callers int) {

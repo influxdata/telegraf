@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 
 	"github.com/yuin/goldmark/ast"
 )
@@ -127,9 +127,52 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 		}
 
 		for _, bad := range bads {
-			t.printFileLine(bad)
-			fmt.Printf("long line in paragraph\n")
+			t.assertLinef(bad, "long line in paragraph")
 		}
 		return nil
 	}
+}
+
+func configSection(t *T, root ast.Node) error {
+	var config *ast.Heading
+	config = nil
+	expectedTitle := "Configuration"
+	for n := root.FirstChild(); n != nil; n = n.NextSibling() {
+		var h *ast.Heading
+		var ok bool
+		if h, ok = n.(*ast.Heading); !ok {
+			continue
+		}
+
+		title := string(h.FirstChild().Text(t.markdown))
+		if title == expectedTitle {
+			config = h
+			continue
+		}
+	}
+
+	if config == nil {
+		t.assertf("missing section '%s'", expectedTitle)
+		return nil
+	}
+
+	toml := config.NextSibling()
+	if toml == nil {
+		t.assertNodef(toml, "missing config next sibling")
+		return nil
+	}
+
+	var b *ast.FencedCodeBlock
+	var ok bool
+	if b, ok = toml.(*ast.FencedCodeBlock); !ok {
+		t.assertNodef(toml, "config next sibling isn't a fenced code block")
+		return nil
+	}
+
+	if !bytes.Equal(b.Language(t.markdown), []byte("toml")) {
+		t.assertNodef(b, "config fenced code block isn't toml language")
+		return nil
+	}
+
+	return nil
 }
