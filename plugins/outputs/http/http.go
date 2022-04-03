@@ -263,9 +263,12 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	// Authorization Code Grant
 	if h.CredentialsFile != "" {
 		claims := jwtGo.RegisteredClaims{}
-		jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
+		_, err := jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
 			return nil, nil
 		})
+		if err != nil {
+			return err
+		}
 
 		// Request new token if expired
 		if !claims.VerifyExpiresAt(time.Now(), true) {
