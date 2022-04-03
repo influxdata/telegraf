@@ -18,9 +18,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
 type podMetadata struct {
@@ -89,10 +91,7 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 						p.Log.Errorf("Unable to monitor pods with node scrape scope: %s", err.Error())
 					}
 				} else {
-					err = p.watchPod(ctx, client)
-					if err != nil {
-						p.Log.Errorf("Unable to watch resources: %s", err.Error())
-					}
+					p.watchPod(ctx, client)
 				}
 			}
 		}
@@ -105,48 +104,98 @@ func (p *Prometheus) startK8s(ctx context.Context) error {
 // (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
 // pod, causing errors in the logs. This is only true if the pod going offline is not
 // directed to do so by K8s.
-func (p *Prometheus) watchPod(ctx context.Context, client *kubernetes.Clientset) error {
-	watcher, err := client.CoreV1().Pods(p.PodNamespace).Watch(ctx, metav1.ListOptions{
-		LabelSelector: p.KubernetesLabelSelector,
-		FieldSelector: p.KubernetesFieldSelector,
-	})
-	if err != nil {
-		return err
+func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clientset) {
+	var resyncinterval time.Duration
+
+	if p.CacheRefreshInterval != 0 {
+		resyncinterval = time.Duration(p.CacheRefreshInterval) * time.Minute
+	} else {
+		resyncinterval = 60 * time.Minute
 	}
-	defer watcher.Stop()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-			for event := range watcher.ResultChan() {
-				pod, ok := event.Object.(*corev1.Pod)
-				if !ok {
-					return fmt.Errorf("Unexpected object when getting pods")
-				}
+	informerfactory := informers.NewSharedInformerFactory(clientset, resyncinterval)
 
-				// If the pod is not "ready", there will be no ip associated with it.
-				if pod.Annotations["prometheus.io/scrape"] != "true" ||
-					!podReady(pod.Status.ContainerStatuses) {
-					continue
-				}
+	podinformer := informerfactory.Core().V1().Pods()
+	podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(new_obj interface{}){
+			key, err := cache.MetaNamespaceKeyFunc(new_obj)
+			if err != nil {
+				p.Log.Errorf("getting key from cache %s\n", err.Error())
+			}
 
-				switch event.Type {
-				case watch.Added:
-					registerPod(pod, p)
-				case watch.Modified:
-					// To avoid multiple actions for each event, unregister on the first event
-					// in the delete sequence, when the containers are still "ready".
-					if pod.GetDeletionTimestamp() != nil {
-						unregisterPod(pod, p)
-					} else {
-						registerPod(pod, p)
-					}
+			namespace, name, err := cache.SplitMetaNamespaceKey(key)
+			if err != nil {
+				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
+			}
+
+			pod, _ := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+
+			if pod.Annotations["prometheus.io/scrape"] == "true" && podReady(pod.Status.ContainerStatuses) {
+				registerPod(pod, p)
+			}
+		},
+		UpdateFunc: func(old_obj, new_obj interface{}){
+			new_key, err := cache.MetaNamespaceKeyFunc(new_obj)
+			if err != nil {
+				p.Log.Errorf("getting key from cache %s\n", err.Error())
+			}
+
+			new_namespace, new_name, err := cache.SplitMetaNamespaceKey(new_key)
+			if err != nil {
+				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
+			}
+
+			new_pod, _ := clientset.CoreV1().Pods(new_namespace).Get(ctx, new_name, metav1.GetOptions{})
+
+			if new_pod.Annotations["prometheus.io/scrape"] == "true" && podReady(new_pod.Status.ContainerStatuses) {
+				if new_pod.GetDeletionTimestamp() == nil {
+					registerPod(new_pod, p)
 				}
 			}
-		}
-	}
+
+			old_key, err := cache.MetaNamespaceKeyFunc(old_obj)
+			if err != nil {
+				p.Log.Errorf("getting key from cache %s\n", err.Error())
+			}
+
+			old_namespace, old_name, err := cache.SplitMetaNamespaceKey(old_key)
+			if err != nil {
+				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
+			}
+
+			old_pod, _ := clientset.CoreV1().Pods(old_namespace).Get(ctx, old_name, metav1.GetOptions{})
+
+			if old_pod.Annotations["prometheus.io/scrape"] == "true" && podReady(old_pod.Status.ContainerStatuses) {
+				if old_pod.GetDeletionTimestamp() != nil {
+					unregisterPod(old_pod, p)
+				}
+			}
+		},
+		DeleteFunc: func(old_obj interface{}){
+			key, err := cache.MetaNamespaceKeyFunc(old_obj)
+			if err != nil {
+				p.Log.Errorf("getting key from cache %s", err.Error())
+			}
+
+			namespace, name, err := cache.SplitMetaNamespaceKey(key)
+			if err != nil {
+				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
+			}
+
+			pod, _ := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+
+			if pod.Annotations["prometheus.io/scrape"] == "true" && podReady(pod.Status.ContainerStatuses) {
+				if pod.GetDeletionTimestamp() != nil {
+					unregisterPod(pod, p)
+				}
+			}
+		},
+	})
+
+	informerfactory.Start(wait.NeverStop)
+	informerfactory.WaitForCacheSync(wait.NeverStop)
+
+	<-ctx.Done()
 }
 
 func (p *Prometheus) cAdvisor(ctx context.Context, bearerToken string) error {
