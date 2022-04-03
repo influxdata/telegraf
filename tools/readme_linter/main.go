@@ -46,7 +46,6 @@ func init() {
 		}),
 	}
 	rules[pluginInput] = append(rules[pluginInput], inputRules...)
-
 }
 
 func checkFile(filename string, pluginType plugin) error {
@@ -67,7 +66,7 @@ func checkFile(filename string, pluginType plugin) error {
 			newlineOffsets = append(newlineOffsets, offset)
 		}
 
-		offset += 1
+		offset++
 	}
 
 	p := goldmark.DefaultParser()

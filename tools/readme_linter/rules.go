@@ -53,7 +53,7 @@ func requiredSections(t *T, root ast.Node, headings []string) error {
 				title, expectedLevel, h.Level)
 		}
 
-		titleCounts[title] += 1
+		titleCounts[title]++
 	}
 
 	headingsSet.forEach(func(title string) {
@@ -98,8 +98,8 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 		longLines := []int{}
 		last := 0
 		for i, cur := range t.newlineOffsets {
-			len := cur - last - 1 // -1 to exclude the newline
-			if len > threshold {
+			length := cur - last - 1 // -1 to exclude the newline
+			if length > threshold {
 				longLines = append(longLines, i)
 				// t.printFileLine(i)
 				// fmt.Printf("long line\n")
@@ -117,12 +117,12 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 			switch {
 			case long == para:
 				bads = append(bads, long)
-				p += 1
-				l += 1
+				p++
+				l++
 			case long < para:
-				l += 1
+				l++
 			case long > para:
-				p += 1
+				p++
 			}
 		}
 
