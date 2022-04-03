@@ -220,7 +220,7 @@ func (adx *AzureDataExplorer) Init() error {
 		return errors.New("Metrics grouping type is not valid")
 	}
 
-	serializer, err := json.NewSerializer(time.Nanosecond, time.RFC3339Nano)
+	serializer, err := json.NewSerializer(time.Nanosecond, time.RFC3339Nano, false) // FIXME: get the json.TimestampFormat, and json.LogstashSupport from the config file
 	if err != nil {
 		return err
 	}

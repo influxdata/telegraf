@@ -645,7 +645,7 @@ func TestBatchedUnbatched(t *testing.T) {
 		"json": func(s serializers.Serializer, err error) serializers.Serializer {
 			require.NoError(t, err)
 			return s
-		}(json.NewSerializer(time.Second, "")),
+		}(json.NewSerializer(time.Second, "", false)),
 	}
 
 	for name, serializer := range s {

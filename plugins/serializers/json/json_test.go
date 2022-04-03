@@ -23,7 +23,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer(0, "")
+	s, _ := NewSerializer(0, "", false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -84,7 +84,7 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 				},
 				time.Unix(1525478795, 123456789),
 			)
-			s, _ := NewSerializer(tt.timestampUnits, tt.timestampFormat)
+			s, _ := NewSerializer(tt.timestampUnits, tt.timestampFormat, false) // FIXME: add testcase
 			actual, err := s.Serialize(m)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected+"\n", string(actual))
@@ -102,7 +102,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer(0, "")
+	s, _ := NewSerializer(0, "", false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestSerializeMetricString(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer(0, "")
+	s, _ := NewSerializer(0, "", false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestSerializeMultiFields(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer(0, "")
+	s, _ := NewSerializer(0, "", false)
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -160,7 +160,7 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	}
 	m := metric.New("My CPU", tags, fields, now)
 
-	s, _ := NewSerializer(0, "")
+	s, _ := NewSerializer(0, "", false)
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
 
@@ -179,7 +179,7 @@ func TestSerializeBatch(t *testing.T) {
 	)
 
 	metrics := []telegraf.Metric{m, m}
-	s, _ := NewSerializer(0, "")
+	s, _ := NewSerializer(0, "", false)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 	require.Equal(t, []byte(`{"metrics":[{"fields":{"value":42},"name":"cpu","tags":{},"timestamp":0},{"fields":{"value":42},"name":"cpu","tags":{},"timestamp":0}]}`), buf)
@@ -198,7 +198,7 @@ func TestSerializeBatchSkipInf(t *testing.T) {
 		),
 	}
 
-	s, err := NewSerializer(0, "")
+	s, err := NewSerializer(0, "", false)
 	require.NoError(t, err)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
@@ -217,7 +217,7 @@ func TestSerializeBatchSkipInfAllFields(t *testing.T) {
 		),
 	}
 
-	s, err := NewSerializer(0, "")
+	s, err := NewSerializer(0, "", false)
 	require.NoError(t, err)
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)

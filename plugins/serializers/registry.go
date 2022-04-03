@@ -85,6 +85,9 @@ type Config struct {
 	// Support unsigned integer output; influx format only
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 
+	// Support for Logstash (send metrics as a simple array of single metrics)
+	JSONLogstashSupport bool `toml:"json_logstash_support"`
+
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string `toml:"prefix"`
 
@@ -141,7 +144,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
-		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat)
+		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat, config.JSONLogstashSupport)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
 	case "nowmetric":
@@ -210,8 +213,8 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 	return wavefront.NewSerializer(prefix, useStrict, sourceOverride, disablePrefixConversions)
 }
 
-func NewJSONSerializer(timestampUnits time.Duration, timestampFormat string) (Serializer, error) {
-	return json.NewSerializer(timestampUnits, timestampFormat)
+func NewJSONSerializer(timestampUnits time.Duration, timestampFormat string, jsonLogstashSupport bool) (Serializer, error) {
+	return json.NewSerializer(timestampUnits, timestampFormat, jsonLogstashSupport)
 }
 
 func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {

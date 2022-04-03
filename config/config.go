@@ -1353,6 +1353,7 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 
 	c.getFieldString(tbl, "graphite_separator", &sc.GraphiteSeparator)
 
+	c.getFieldBool(tbl, "json_logstash_support", &sc.JSONLogstashSupport)
 	c.getFieldDuration(tbl, "json_timestamp_units", &sc.TimestampUnits)
 	c.getFieldString(tbl, "json_timestamp_format", &sc.TimestampFormat)
 
@@ -1440,7 +1441,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"csv_column_prefix", "csv_header", "csv_separator", "csv_timestamp_format",
 		"graphite_tag_sanitize_mode", "graphite_tag_support", "graphite_separator",
 		"influx_max_line_bytes", "influx_sort_fields", "influx_uint_support",
-		"json_timestamp_format", "json_timestamp_units",
+		"json_logstash_support", "json_timestamp_format", "json_timestamp_units",
 		"prometheus_export_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"splunkmetric_hec_routing", "splunkmetric_multimetric",
 		"wavefront_disable_prefix_conversion", "wavefront_source_override", "wavefront_use_strict":

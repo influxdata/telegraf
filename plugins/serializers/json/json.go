@@ -9,14 +9,16 @@ import (
 )
 
 type Serializer struct {
-	TimestampUnits  time.Duration
-	TimestampFormat string
+	JSONLogstashSupport bool
+	TimestampUnits      time.Duration
+	TimestampFormat     string
 }
 
-func NewSerializer(timestampUnits time.Duration, timestampFormat string) (*Serializer, error) {
+func NewSerializer(timestampUnits time.Duration, timestampFormat string, jsonLogstashSupport bool) (*Serializer, error) {
 	s := &Serializer{
-		TimestampUnits:  truncateDuration(timestampUnits),
-		TimestampFormat: timestampFormat,
+		TimestampUnits:      truncateDuration(timestampUnits),
+		TimestampFormat:     timestampFormat,
+		JSONLogstashSupport: jsonLogstashSupport,
 	}
 	return s, nil
 }
@@ -39,11 +41,20 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		objects = append(objects, m)
 	}
 
-	obj := map[string]interface{}{
-		"metrics": objects,
+	var (
+		serialized []byte
+		err        error
+	)
+
+	if s.JSONLogstashSupport {
+		serialized, err = json.Marshal(objects)
+	} else {
+		obj := map[string]interface{}{
+			"metrics": objects,
+		}
+		serialized, err = json.Marshal(obj)
 	}
 
-	serialized, err := json.Marshal(obj)
 	if err != nil {
 		return []byte{}, err
 	}
