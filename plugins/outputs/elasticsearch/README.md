@@ -197,6 +197,8 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
+  ## Set the timeout for periodic health checks.
+  # health_check_timeout = "1s"
   ## HTTP basic authentication details.
   # username = "telegraf"
   # password = "mypassword"

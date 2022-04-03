@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/pborman/ansi"
 )
 
 const (
@@ -42,6 +43,9 @@ type Tail struct {
 	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
 	CharacterEncoding   string   `toml:"character_encoding"`
 	PathTag             string   `toml:"path_tag"`
+
+	Filters      []string `toml:"filters"`
+	filterColors bool
 
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
@@ -121,6 +125,10 @@ const sampleConfig = `
   ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
   # path_tag = "path"
 
+  ## Filters to apply to files before generating metrics
+  ## "ansi_color" removes ANSI colors
+  # filters = []
+  
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
   #[inputs.tail.multiline]
@@ -156,6 +164,12 @@ func (t *Tail) Init() error {
 		return errors.New("max_undelivered_lines must be positive")
 	}
 	t.sem = make(semaphore, t.MaxUndeliveredLines)
+
+	for _, filter := range t.Filters {
+		if filter == "ansi_color" {
+			t.filterColors = true
+		}
+	}
 
 	var err error
 	t.decoder, err = encoding.NewDecoder(t.CharacterEncoding)
@@ -366,6 +380,14 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		if line != nil && line.Err != nil {
 			t.Log.Errorf("Tailing %q: %s", tailer.Filename, line.Err.Error())
 			continue
+		}
+
+		if t.filterColors {
+			out, err := ansi.Strip([]byte(text))
+			if err != nil {
+				t.Log.Errorf("Cannot strip ansi colors from %s: %s", text, err)
+			}
+			text = string(out)
 		}
 
 		metrics, err := parseLine(parser, text)
