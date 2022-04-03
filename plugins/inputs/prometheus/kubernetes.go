@@ -117,8 +117,8 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 	podinformer := informerfactory.Core().V1().Pods()
 	podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(new_obj interface{}){
-			key, err := cache.MetaNamespaceKeyFunc(new_obj)
+		AddFunc: func(newObj interface{}){
+			key, err := cache.MetaNamespaceKeyFunc(newObj)
 			if err != nil {
 				p.Log.Errorf("getting key from cache %s\n", err.Error())
 			}
@@ -134,45 +134,45 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 				registerPod(pod, p)
 			}
 		},
-		UpdateFunc: func(old_obj, new_obj interface{}){
-			new_key, err := cache.MetaNamespaceKeyFunc(new_obj)
+		UpdateFunc: func(oldObj, newObj interface{}){
+			newKey, err := cache.MetaNamespaceKeyFunc(newObj)
 			if err != nil {
 				p.Log.Errorf("getting key from cache %s\n", err.Error())
 			}
 
-			new_namespace, new_name, err := cache.SplitMetaNamespaceKey(new_key)
+			newNamespace, newName, err := cache.SplitMetaNamespaceKey(newKey)
 			if err != nil {
 				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
 			}
 
-			new_pod, _ := clientset.CoreV1().Pods(new_namespace).Get(ctx, new_name, metav1.GetOptions{})
+			newPod, _ := clientset.CoreV1().Pods(newNamespace).Get(ctx, newName, metav1.GetOptions{})
 
-			if new_pod.Annotations["prometheus.io/scrape"] == "true" && podReady(new_pod.Status.ContainerStatuses) {
-				if new_pod.GetDeletionTimestamp() == nil {
-					registerPod(new_pod, p)
+			if newPod.Annotations["prometheus.io/scrape"] == "true" && podReady(newPod.Status.ContainerStatuses) {
+				if newPod.GetDeletionTimestamp() == nil {
+					registerPod(newPod, p)
 				}
 			}
 
-			old_key, err := cache.MetaNamespaceKeyFunc(old_obj)
+			oldKey, err := cache.MetaNamespaceKeyFunc(oldObj)
 			if err != nil {
 				p.Log.Errorf("getting key from cache %s\n", err.Error())
 			}
 
-			old_namespace, old_name, err := cache.SplitMetaNamespaceKey(old_key)
+			oldNamespace, oldName, err := cache.SplitMetaNamespaceKey(oldKey)
 			if err != nil {
 				p.Log.Errorf("splitting key into namespace and name %s\n", err.Error())
 			}
 
-			old_pod, _ := clientset.CoreV1().Pods(old_namespace).Get(ctx, old_name, metav1.GetOptions{})
+			oldPod, _ := clientset.CoreV1().Pods(oldNamespace).Get(ctx, oldName, metav1.GetOptions{})
 
-			if old_pod.Annotations["prometheus.io/scrape"] == "true" && podReady(old_pod.Status.ContainerStatuses) {
-				if old_pod.GetDeletionTimestamp() != nil {
-					unregisterPod(old_pod, p)
+			if oldPod.Annotations["prometheus.io/scrape"] == "true" && podReady(oldPod.Status.ContainerStatuses) {
+				if oldPod.GetDeletionTimestamp() != nil {
+					unregisterPod(oldPod, p)
 				}
 			}
 		},
-		DeleteFunc: func(old_obj interface{}){
-			key, err := cache.MetaNamespaceKeyFunc(old_obj)
+		DeleteFunc: func(oldObj interface{}){
+			key, err := cache.MetaNamespaceKeyFunc(oldObj)
 			if err != nil {
 				p.Log.Errorf("getting key from cache %s", err.Error())
 			}
