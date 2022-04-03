@@ -28,6 +28,10 @@ batch format by default.
   # token_url = "https://indentityprovider/oauth2/v1/token"
   # scopes = ["urn:opc:idm:__myscopes__"]
 
+  ## OAuth2 Authorization Code Grant
+  # credentials_file = "/etc/telegraf/example_secret.json"
+  # token_url = "https://metrics-endpoint-uc.a.run.app"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
