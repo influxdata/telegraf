@@ -61,6 +61,7 @@ func init() {
 	//rules for all plugin types
 	all := []ruleFunc{
 		firstSection,
+		noLongLinesInParagraphs(80),
 		requiredSectionsClose([]string{
 			"Configuration",
 		}),
@@ -99,17 +100,6 @@ func checkFile(filename string, pluginType plugin) error {
 
 		offset += 1
 	}
-
-	// Find long lines
-	// last := 0
-	// threshold := 80
-	// for i, cur := range newlineOffsets {
-	// 	len := cur - last - 1 // -1 to exclude the newline
-	// 	if len > threshold {
-	// 		fmt.Printf("%s:%d: long line\n", filename, i+1) // +1 because line numbers start with 1
-	// 	}
-	// 	last = cur
-	// }
 
 	p := goldmark.DefaultParser()
 	r := text.NewReader(md)

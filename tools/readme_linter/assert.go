@@ -28,7 +28,7 @@ func (t *T) printFailedAssert(n ast.Node, format string, args ...interface{}) {
 
 // Assert function that doesnt involve a node, for example if something is missing
 func (t *T) assertf(format string, args ...interface{}) {
-	fmt.Printf("%s:%d: ", t.filename, 1) //similar to printFile
+	t.printFileLine(0) // There's no line number associated, so use the first
 	fmt.Printf(format+"\n", args...)
 	//t.printRule(2)
 	t.fails += 1
@@ -59,7 +59,7 @@ func (t *T) printRule(callers int) {
 }
 
 func (t *T) line(offset int) int {
-	return sort.SearchInts(t.newlineOffsets, offset) + 1
+	return sort.SearchInts(t.newlineOffsets, offset)
 }
 
 func (t *T) printFile(n ast.Node) {
@@ -69,8 +69,11 @@ func (t *T) printFile(n ast.Node) {
 	}
 	offset := lines.At(0).Start
 	line := t.line(offset)
+	t.printFileLine(line)
+}
 
-	fmt.Printf("%s:%d: ", t.filename, line)
+func (t *T) printFileLine(line int) {
+	fmt.Printf("%s:%d: ", t.filename, line+1) // Lines start with 1
 }
 
 func (t *T) printPassFail() {

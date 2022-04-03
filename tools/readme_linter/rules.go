@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/yuin/goldmark/ast"
 )
 
@@ -68,5 +70,66 @@ func requiredSections(t *T, root ast.Node, headings []string) error {
 func requiredSectionsClose(headings []string) func(*T, ast.Node) error {
 	return func(t *T, root ast.Node) error {
 		return requiredSections(t, root, headings)
+	}
+}
+
+func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
+	return func(t *T, root ast.Node) error {
+		// We're looking for long lines in paragraphs. Find paragraphs
+		// first, then which lines are in paragraphs
+		paraLines := []int{}
+		for n := root.FirstChild(); n != nil; n = n.NextSibling() {
+			var p *ast.Paragraph
+			var ok bool
+			if p, ok = n.(*ast.Paragraph); !ok {
+				continue //only looking for paragraphs
+			}
+
+			segs := p.Lines()
+			for _, seg := range segs.Sliced(0, segs.Len()) {
+				line := t.line(seg.Start)
+				paraLines = append(paraLines, line)
+				// t.printFileLine(line)
+				// fmt.Printf("paragraph line\n")
+			}
+		}
+
+		// Find long lines in the whole file
+		longLines := []int{}
+		last := 0
+		for i, cur := range t.newlineOffsets {
+			len := cur - last - 1 // -1 to exclude the newline
+			if len > threshold {
+				longLines = append(longLines, i)
+				// t.printFileLine(i)
+				// fmt.Printf("long line\n")
+			}
+			last = cur
+		}
+
+		// Merge both lists
+		p := 0
+		l := 0
+		bads := []int{}
+		for p < len(paraLines) && l < len(longLines) {
+			long := longLines[l]
+			para := paraLines[p]
+			switch {
+			case long == para:
+				bads = append(bads, long)
+				p += 1
+				l += 1
+			case long < para:
+				l += 1
+			case long > para:
+				p += 1
+			}
+		}
+
+		for _, bad := range bads {
+			t.printFileLine(bad)
+			fmt.Printf("long line in paragraph\n")
+		}
+		return nil
 	}
 }
