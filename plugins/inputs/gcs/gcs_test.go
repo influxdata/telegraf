@@ -77,9 +77,9 @@ func TestRunInitNoOffsetKey(t *testing.T) {
 	emulatorSetEnv(t, srv)
 
 	gcs := &GCS{
-		Bucket:  "test-bucket",
-		Prefix:  "prefix/",
-		Log:     testutil.Logger{},
+		Bucket: "test-bucket",
+		Prefix: "prefix/",
+		Log:    testutil.Logger{},
 	}
 
 	require.NoError(t, gcs.Init())
@@ -97,10 +97,10 @@ func TestRunGatherOneItem(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	gcs := &GCS{
-		Bucket:  "test-iteration-bucket",
-		Prefix:  "prefix/",
-		Log:     testutil.Logger{},
-		parser:  createParser(),
+		Bucket: "test-iteration-bucket",
+		Prefix: "prefix/",
+		Log:    testutil.Logger{},
+		parser: createParser(),
 	}
 
 	require.NoError(t, gcs.Init())
