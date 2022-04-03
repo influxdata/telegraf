@@ -63,7 +63,6 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 	h.AccessToken = h.OAuth2Config.AccessToken
 
 	if h.CookieAuthConfig.URL != "" {
-		fmt.Println("I guess h.CookieAuthConfig.URL is not empty string...", h.CookieAuthConfig.URL)
 		if err := h.CookieAuthConfig.Start(client, log, clock.New()); err != nil {
 			return nil, err
 		}
