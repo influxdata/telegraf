@@ -53,10 +53,6 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		Timeout:   time.Duration(timeout),
 	}
 
-	// NOTE: Using token URL leads to needing to comment out cookie auth config
-	// fmt.Println("h.URL (common/http/config.go):", h.URL) // doesn't print
-
-	// TODO: review this...
 	h.OAuth2Config.TokenURL = fmt.Sprintf("%v", ctx.Value("url"))
 
 	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
