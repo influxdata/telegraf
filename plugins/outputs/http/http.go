@@ -118,7 +118,10 @@ const (
 	defaultContentType    = "text/plain; charset=utf-8"
 	defaultMethod         = http.MethodPost
 	defaultUseBatchFormat = true
+	key                   = contextKey("url")
 )
+
+type contextKey string
 
 type HTTP struct {
 	URL                     string            `toml:"url"`
@@ -160,10 +163,7 @@ func (h *HTTP) Connect() error {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
-	// ctx := context.Background()
-	// ctx := context.WithValue(context.Background(), oauth2.HTTPClient, h.HTTPClientConfig)
-	// TODO: use h.TokenURL, or h.URL? passing it in to ctx...
-	ctx := context.WithValue(context.Background(), "url", h.TokenURL)
+	ctx := context.WithValue(context.Background(), key, h.TokenURL)
 
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
