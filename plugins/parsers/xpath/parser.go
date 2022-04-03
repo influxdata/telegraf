@@ -9,6 +9,7 @@ import (
 	path "github.com/antchfx/xpath"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -26,6 +27,7 @@ type Parser struct {
 	Format              string
 	ProtobufMessageDef  string
 	ProtobufMessageType string
+	ProtobufImportPaths []string
 	PrintDocument       bool
 	Configs             []Config
 	DefaultTags         map[string]string
@@ -48,6 +50,11 @@ type Config struct {
 	FieldNameQuery  string `toml:"field_name"`
 	FieldValueQuery string `toml:"field_value"`
 	FieldNameExpand bool   `toml:"field_name_expansion"`
+
+	TagSelection  string `toml:"tag_selection"`
+	TagNameQuery  string `toml:"tag_name"`
+	TagValueQuery string `toml:"tag_value"`
+	TagNameExpand bool   `toml:"tag_name_expansion"`
 }
 
 func (p *Parser) Init() error {
@@ -62,6 +69,7 @@ func (p *Parser) Init() error {
 		pbdoc := protobufDocument{
 			MessageDefinition: p.ProtobufMessageDef,
 			MessageType:       p.ProtobufMessageType,
+			ImportPaths:       p.ProtobufImportPaths,
 			Log:               p.Log,
 		}
 		if err := pbdoc.Init(); err != nil {
@@ -89,6 +97,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	// Queries
 	metrics := make([]telegraf.Metric, 0)
+	p.Log.Debugf("Number of configs: %d", len(p.Configs))
 	for _, config := range p.Configs {
 		if len(config.Selection) == 0 {
 			config.Selection = "/"
@@ -243,6 +252,69 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 			return nil, fmt.Errorf("unknown format '%T' for tag '%s'", v, name)
 		}
 	}
+
+	// Handle the tag batch definitions if any.
+	if len(config.TagSelection) > 0 {
+		tagnamequery := "name()"
+		tagvaluequery := "."
+		if len(config.TagNameQuery) > 0 {
+			tagnamequery = config.TagNameQuery
+		}
+		if len(config.TagValueQuery) > 0 {
+			tagvaluequery = config.TagValueQuery
+		}
+
+		// Query all tags
+		selectedTagNodes, err := p.document.QueryAll(selected, config.TagSelection)
+		if err != nil {
+			return nil, err
+		}
+		p.Log.Debugf("Number of selected tag nodes: %d", len(selectedTagNodes))
+		if len(selectedTagNodes) > 0 && selectedTagNodes[0] != nil {
+			for _, selectedtag := range selectedTagNodes {
+				n, err := p.executeQuery(doc, selectedtag, tagnamequery)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query tag name with query '%s': %v", tagnamequery, err)
+				}
+				name, ok := n.(string)
+				if !ok {
+					return nil, fmt.Errorf("failed to query tag name with query '%s': result is not a string (%v)", tagnamequery, n)
+				}
+				v, err := p.executeQuery(doc, selectedtag, tagvaluequery)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query tag value for '%s': %v", name, err)
+				}
+
+				if config.TagNameExpand {
+					p := p.document.GetNodePath(selectedtag, selected, "_")
+					if len(p) > 0 {
+						name = p + "_" + name
+					}
+				}
+
+				// Check if field name already exists and if so, append an index number.
+				if _, ok := tags[name]; ok {
+					for i := 1; ; i++ {
+						p := name + "_" + strconv.Itoa(i)
+						if _, ok := tags[p]; !ok {
+							name = p
+							break
+						}
+					}
+				}
+
+				// Convert the tag to be a string
+				s, err := internal.ToString(v)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query tag value for '%s': result is not a string (%v)", name, v)
+				}
+				tags[name] = s
+			}
+		} else {
+			p.debugEmptyQuery("tag selection", selected, config.TagSelection)
+		}
+	}
+
 	for name, v := range p.DefaultTags {
 		tags[name] = v
 	}

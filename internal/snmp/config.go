@@ -12,6 +12,8 @@ type ClientConfig struct {
 	Version uint8 `toml:"version"`
 	// Path to mib files
 	Path []string `toml:"path"`
+	// Translator implementation
+	Translator string `toml:"-"`
 
 	// Parameters for Version 1 & 2
 	Community string `toml:"community"`

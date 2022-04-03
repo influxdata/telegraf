@@ -87,7 +87,7 @@ Example:
 
 #### PreVistaSupport
 
-(Deprecated. Necessary features on Windows Vista and newer are checked dynamically)
+(Deprecated in 1.7; Necessary features on Windows Vista and newer are checked dynamically)
 
 Bool, if set to `true`, the plugin will use the localized PerfCounter interface that has been present since before Vista for backwards compatibility.
 
@@ -104,6 +104,15 @@ If se to `false`, current time will be used.
 Supported on Windows Vista/Windows Server 2008 and newer
 Example:
 `UsePerfCounterTime=true`
+
+#### IgnoredErrors
+
+IgnoredErrors accepts a list of PDH error codes which are defined in pdh.go, if this error is encountered it will be ignored.
+For example, you can provide "PDH_NO_DATA" to ignore performance counters with no instances, but by default no errors are ignored.
+You can find the list of possible errors here: [PDH errors](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_perf_counters/pdh.go)
+
+Example:
+`IgnoredErrors=["PDH_NO_DATA"]`
 
 ### Object
 
@@ -170,7 +179,19 @@ So for ordering your data in a good manner,
 this is a good key to set with a value when you want your IIS and Disk results stored
 separately from Processor results.
 
-Example: `Measurement = "win_disk"``
+Example: `Measurement = "win_disk"`
+
+#### UseRawValues
+
+(Optional)
+
+This key is optional. It is a simple bool.
+If set to `true`, counter values will be provided in the raw, integer, form. This is in contrast with the default behavior, where values are returned in a formatted, displayable, form
+as seen in the Windows Performance Monitor.  
+A field representing raw counter value has the `_Raw` suffix. Raw values should be further used in a calculation, e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
+Note: Time based counters (i.e. _% Processor Time_) are reported in hundredths of nanoseconds.
+
+Example: `UseRawValues = true`
 
 #### IncludeTotal
 

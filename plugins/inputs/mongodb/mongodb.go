@@ -34,8 +34,8 @@ type MongoDB struct {
 }
 
 type Ssl struct {
-	Enabled bool
-	CaCerts []string `toml:"cacerts"`
+	Enabled bool     `toml:"ssl_enabled" deprecated:"1.3.0;use 'tls_*' options instead"`
+	CaCerts []string `toml:"cacerts" deprecated:"1.3.0;use 'tls_ca' instead"`
 }
 
 var sampleConfig = `

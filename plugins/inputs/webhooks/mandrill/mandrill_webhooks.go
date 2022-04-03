@@ -2,20 +2,22 @@ package mandrill
 
 import (
 	"encoding/json"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
 
-	"github.com/influxdata/telegraf"
-
 	"github.com/gorilla/mux"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
 type MandrillWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
 	log  telegraf.Logger
+	auth.BasicAuth
 }
 
 func (md *MandrillWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
@@ -33,7 +35,13 @@ func (md *MandrillWebhook) returnOK(w http.ResponseWriter, _ *http.Request) {
 
 func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
+
+	if !md.Verify(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

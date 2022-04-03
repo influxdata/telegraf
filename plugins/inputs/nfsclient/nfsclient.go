@@ -190,6 +190,10 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 		fields["bytes"] = nline[3] + nline[4]
 		fields["rtt"] = nline[6]
 		fields["exe"] = nline[7]
+		fields["rtt_per_op"] = 0.0
+		if nline[0] > 0 {
+			fields["rtt_per_op"] = float64(nline[6]) / float64(nline[0])
+		}
 		tags["operation"] = first
 		acc.AddFields("nfsstat", fields, tags)
 	}
