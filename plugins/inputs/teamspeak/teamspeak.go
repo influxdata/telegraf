@@ -15,8 +15,9 @@ type Teamspeak struct {
 	Nickname       string
 	VirtualServers []int `toml:"virtual_servers"`
 
-	client    *ts3.Client
-	connected bool
+	client      *ts3.Client
+	connected   bool
+	nicknameSet bool
 }
 
 func (ts *Teamspeak) Description() string {
@@ -54,20 +55,21 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		if len(ts.Nickname) > 0 {
-			err = ts.client.SetNick(ts.Nickname)
-			if err != nil {
-				return err
-			}
-		}
-
 		ts.connected = true
+		ts.nicknameSet = false
 	}
 
 	for _, vserver := range ts.VirtualServers {
 		if err := ts.client.Use(vserver); err != nil {
 			ts.connected = false
 			return err
+		}
+
+		if !ts.nicknameSet && len(ts.Nickname) > 0 {
+			if err = ts.client.SetNick(ts.Nickname); err != nil {
+				ts.connected = false
+				return err
+			}
 		}
 
 		sm, err := ts.client.Server.Info()
@@ -101,6 +103,9 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 
 		acc.AddFields("teamspeak", fields, tags)
 	}
+
+	ts.nicknameSet = true
+
 	return nil
 }
 
