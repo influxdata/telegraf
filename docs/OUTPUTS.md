@@ -78,7 +78,7 @@ func init() {
 package <plugin_package>
 
 func (k *<plugin_struct>) SampleConfig() string {
-	return `{{ .SampleConfig }}`
+    return `{{ .SampleConfig }}`
 }
 ```
 

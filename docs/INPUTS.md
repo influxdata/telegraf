@@ -62,8 +62,6 @@ func init() {
 }
 ```
 
-### Sample Configuration Template
-
 ```go
 //go:generate go run ../../../tools/generate_plugindata/main.go
 //go:generate go run ../../../tools/generate_plugindata/main.go --clean
@@ -71,7 +69,7 @@ func init() {
 package <plugin_package>
 
 func (k *<plugin_struct>) SampleConfig() string {
-	return `{{ .SampleConfig }}`
+    return `{{ .SampleConfig }}`
 }
 ```
 
