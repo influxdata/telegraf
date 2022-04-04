@@ -84,7 +84,7 @@ type Prometheus struct {
 	podFieldSelector  fields.Selector
 	isNodeScrapeScope bool
 
-	// Only for monitor_kubernetes_pods=true 
+	// Only for monitor_kubernetes_pods=true
 	CacheRefreshInterval int `toml:"cache_refresh_interval"`
 
 	// List of consul services to scrape

@@ -117,7 +117,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 	podinformer := informerfactory.Core().V1().Pods()
 	podinformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(newObj interface{}){
+		AddFunc: func(newObj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(newObj)
 			if err != nil {
 				p.Log.Errorf("getting key from cache %s\n", err.Error())
@@ -134,7 +134,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 				registerPod(pod, p)
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}){
+		UpdateFunc: func(oldObj, newObj interface{}) {
 			newKey, err := cache.MetaNamespaceKeyFunc(newObj)
 			if err != nil {
 				p.Log.Errorf("getting key from cache %s\n", err.Error())
@@ -171,7 +171,7 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 				}
 			}
 		},
-		DeleteFunc: func(oldObj interface{}){
+		DeleteFunc: func(oldObj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(oldObj)
 			if err != nil {
 				p.Log.Errorf("getting key from cache %s", err.Error())
