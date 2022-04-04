@@ -7,7 +7,10 @@ import (
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 )
 
 func main() {
@@ -70,6 +73,22 @@ func checkFile(filename string, pluginType plugin) error {
 	}
 
 	p := goldmark.DefaultParser()
+
+	// We need goldmark to parse tables, otherwise they show up as
+	// paragraphs. Since tables often have long lines and we check for long
+	// lines in paragraphs, without table parsing there are false positive long
+	// lines in tables.
+	//
+	// The tableParagraphTransformer is an extension and not part of the default
+	// parser so we add it. There may be an easier way to do it, but this works:
+	p.AddOptions(
+		parser.WithParagraphTransformers(
+			[]util.PrioritizedValue{
+				util.Prioritized(extension.NewTableParagraphTransformer(), 99),
+			}...,
+		),
+	)
+
 	r := text.NewReader(md)
 	root := p.Parse(r)
 
