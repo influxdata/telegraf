@@ -11,9 +11,10 @@ similar constructs.
   themselves.  See below for a quick example.
 - To be available within Telegraf itself, plugins must add themselves to the
   `github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
-- The `SampleConfig` function will be automatically updated in the build process to include
-  the sample configuration from the README.md. This is included in `telegraf config`.  Please
-  consult the [Sample Config][] page for the latest style guidelines.
+- Each plugin requires a file called `<plugin_name>_sample_config.go`, were `<plugin_name>` is replaced with the actual plugin name.
+  Copy the [example template](#sample-configuration-template) into this file, also updating `<plugin_name>` were appropriate.
+  This file is automatically updated during the build process to include the sample configuration from the `README.md`.
+  Please consult the [Sample Config][] page for the latest style guidelines.
 - The `Description` function should say in one line what this output does.
 - Follow the recommended [Code Style][].
 
@@ -34,10 +35,6 @@ import (
 type Simple struct {
     Ok  bool            `toml:"ok"`
     Log telegraf.Logger `toml:"-"`
-}
-
-func (s *Simple) SampleConfig() string {
-    return `{{ .SampleConfig }}`
 }
 
 // Init is for setup, and validating config.
@@ -70,6 +67,19 @@ func init() {
     outputs.Add("simpleoutput", func() telegraf.Output { return &Simple{} })
 }
 
+```
+
+### Sample Configuration Template
+
+```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
+// DON'T EDIT; This file is used as a template by tools/generate_plugindata
+package <plugin_package>
+
+func (k *<plugin_struct>) SampleConfig() string {
+	return `{{ .SampleConfig }}`
+}
 ```
 
 ## Data Formats

@@ -71,6 +71,30 @@ func (*Plugin) SampleConfig() string {
 	require.Equal(t, expected, string(newSourceFile))
 }
 
+func TestGeneratePluginDataNoConfig(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	readme := `# plugin`
+
+	r, err := os.Create("README.md")
+	require.NoError(t, err)
+	_, err = r.Write([]byte(readme))
+	require.NoError(t, err)
+	err = r.Close()
+	require.NoError(t, err)
+
+	defer func() {
+		err = os.Remove("README.md")
+		require.NoError(t, err)
+	}()
+
+	s, err := extractPluginData()
+	require.NoError(t, err)
+	require.Empty(t, s)
+}
+
 func setupGeneratedPluginFile(t *testing.T, fileName string) {
 	// Create files that will be cleaned up
 	r, err := os.Create(fileName)

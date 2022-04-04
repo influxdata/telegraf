@@ -1,6 +1,6 @@
 // generate_plugindata is a tool used to inject the sample configuration into all the plugins
 // It extracts the sample configuration from the plugins README.md
-// Then the plugin's main source file is used as a template, and {{ .SampleConfig }} is replaced with the configuration
+// Then using the file <plugin_name>_sample_config.go as a template, and {{ .SampleConfig }} is replaced with the configuration
 // This tool is then also used to revert these changes with the `--clean` flag
 package main
 

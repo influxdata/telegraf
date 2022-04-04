@@ -15,9 +15,10 @@ and submit new inputs.
   themselves.  See below for a quick example.
 - Input Plugins must be added to the
   `github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
-- The `SampleConfig` function will be automatically updated in the build process to include
-  the sample configuration from the README.md. This is included in `telegraf config`.  Please
-  consult the [Sample Config][] page for the latest style guidelines.
+- Each plugin requires a file called `<plugin_name>_sample_config.go`, were `<plugin_name>` is replaced with the actual plugin name.
+  Copy the [example template](#sample-configuration-template) into this file, also updating `<plugin_name>` were appropriate.
+  This file is automatically updated during the build process to include the sample configuration from the `README.md`.
+  Please consult the [Sample Config][] page for the latest style guidelines.
 - The `Description` function should say in one line what this plugin does.
 - Follow the recommended [Code Style][].
 
@@ -31,8 +32,6 @@ current host.
 //go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package simple
 
-// simple.go
-
 import (
     "github.com/influxdata/telegraf"
     "github.com/influxdata/telegraf/plugins/inputs"
@@ -41,10 +40,6 @@ import (
 type Simple struct {
     Ok  bool            `toml:"ok"`
     Log telegraf.Logger `toml:"-"`
-}
-
-func (s *Simple) SampleConfig() string {
-    return `{{ .SampleConfig }}`
 }
 
 // Init is for setup, and validating config.
@@ -64,6 +59,19 @@ func (s *Simple) Gather(acc telegraf.Accumulator) error {
 
 func init() {
     inputs.Add("simple", func() telegraf.Input { return &Simple{} })
+}
+```
+
+### Sample Configuration Template
+
+```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
+// DON'T EDIT; This file is used as a template by tools/generate_plugindata
+package <plugin_package>
+
+func (k *<plugin_struct>) SampleConfig() string {
+	return `{{ .SampleConfig }}`
 }
 ```
 
