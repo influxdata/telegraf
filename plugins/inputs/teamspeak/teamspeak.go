@@ -12,6 +12,7 @@ type Teamspeak struct {
 	Server         string
 	Username       string
 	Password       string
+	Nickname       string
 	VirtualServers []int `toml:"virtual_servers"`
 
 	client    *ts3.Client
@@ -29,6 +30,8 @@ const sampleConfig = `
   username = "serverqueryuser"
   ## Password for ServerQuery
   password = "secret"
+  ## Nickname of the ServerQuery client
+  nickname = "telegraf"
   ## Array of virtual servers
   # virtual_servers = [1]
 `
@@ -49,6 +52,13 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 		err = ts.client.Login(ts.Username, ts.Password)
 		if err != nil {
 			return err
+		}
+
+		if len(ts.Nickname) > 0 {
+			err = ts.client.SetNick(ts.Nickname)
+			if err != nil {
+				return err
+			}
 		}
 
 		ts.connected = true

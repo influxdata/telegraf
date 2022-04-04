@@ -16,6 +16,8 @@ the [Teamspeak 3 ServerQuery Manual](http://media.teamspeak.com/ts3_literature/T
   username = "serverqueryuser"
   ## Password for ServerQuery
   password = "secret"
+  ## Nickname of the ServerQuery client
+  nickname = "telegraf"
   ## Array of virtual servers
   # virtual_servers = [1]
 ```
