@@ -347,6 +347,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - used_pods
 
 #### pv `phase_type`
+### pv `phase_type`
 
 The persistentvolume "phase" is saved in the `phase` tag with a correlated
 numeric field called `phase_type` corresponding with that tag value.
