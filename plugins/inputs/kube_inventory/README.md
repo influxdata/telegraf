@@ -305,11 +305,15 @@ tls_key = "/run/telegraf-kubernetes-key"
     - resource
     - namespace
   - fields:
-    - hard_cpu_cores_limit
-    - hard_memory_bytes_limit
-    - hard_pods_limit
-    - used_cpu_cores
-    - used_memory_bytes
+    - hard_cpu_limits
+    - hard_cpu_requests
+    - hard_memory_limit
+    - hard_memory_requests
+    - hard_pods
+    - used_cpu_limits
+    - used_cpu_requests
+    - used_memory_limits
+    - used_memory_requests
     - used_pods
 
 #### pv `phase_type`
@@ -346,9 +350,8 @@ kubernetes_deployment,deployment_name=deployd,selector_select1=s1,namespace=defa
 kubernetes_node,host=vjain count=8i 1628918652000000000
 kubernetes_node,condition=Ready,host=vjain,node_name=ip-172-17-0-2.internal,status=True status_condition=1i 1629177980000000000
 kubernetes_node,cluster_namespace=tools,condition=Ready,host=vjain,node_name=ip-172-17-0-2.internal,status=True allocatable_cpu_cores=4i,allocatable_memory_bytes=7186567168i,allocatable_millicpu_cores=4000i,allocatable_pods=110i,capacity_cpu_cores=4i,capacity_memory_bytes=7291424768i,capacity_millicpu_cores=4000i,capacity_pods=110i,spec_unschedulable=0i,status_condition=1i 1628918652000000000
-kubernetes_resourcequota,host=vjain,namespace=default,resource=pods-high hard_cpu_cores=1000i,hard_memory_bytes=214748364800i,hard_pods=10i,used_cpu_cores=0i,used_memory_bytes=0i,used_pods=0i 1629110393000000000
-kubernetes_resourcequota,host=vjain,namespace=default,resource=pods-low hard_cpu_cores=5i,hard_memory_bytes=10737418240i,hard_pods=10i,used_cpu_cores=0i,used_memory_bytes=0i,used_pods=0i 1629110393000000000
-kubernetes_resourcequota,host=vjain,namespace=default,resource=pods-medium hard_cpu_cores=10i,hard_memory_bytes=21474836480i,hard_pods=10i,used_cpu_cores=0i,used_memory_bytes=0i,used_pods=0i 1629110393000000000
+kubernetes_resourcequota,host=vjain,namespace=default,resource=pods-high hard_cpu=1000i,hard_memory=214748364800i,hard_pods=10i,used_cpu=0i,used_memory=0i,used_pods=0i 1629110393000000000
+kubernetes_resourcequota,host=vjain,namespace=default,resource=pods-low hard_cpu=5i,hard_memory=10737418240i,hard_pods=10i,used_cpu=0i,used_memory=0i,used_pods=0i 1629110393000000000
 kubernetes_persistentvolume,phase=Released,pv_name=pvc-aaaaaaaa-bbbb-cccc-1111-222222222222,storageclass=ebs-1-retain phase_type=3i 1547597616000000000
 kubernetes_persistentvolumeclaim,namespace=default,phase=Bound,pvc_name=data-etcd-0,selector_select1=s1,storageclass=ebs-1-retain phase_type=0i 1547597615000000000
 kubernetes_pod,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1 last_transition_time=1547578322000000000i,ready="false" 1547597616000000000
