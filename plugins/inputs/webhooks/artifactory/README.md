@@ -1,80 +1,93 @@
 # artifactory webhook
 
-You need to configure to orginizations artifactory instance/s as detailed via the artifactory [webhook documentation] (https://www.jfrog.com/confluence/display/JFROG/Webhooks).  Multiple webhooks may need be needed to configure different domains.
+You need to configure to orginizations artifactory instance/s as detailed via the artifactory webhook documentation: <https://www.jfrog.com/confluence/display/JFROG/Webhooks>.  Multiple webhooks may need be needed to configure different domains.
 
 You can also add a secret that will be used by telegraf to verify the authenticity of the requests.
 
 ## Events
 
-The different events type can be found found in the [webhook documentation] (https://www.jfrog.com/confluence/display/JFROG/Webhooks).  Events are identified by their `domain` and `event`.  The following sections break down each event by domain.
+The different events type can be found found in the webhook documentation: <https://www.jfrog.com/confluence/display/JFROG/Webhooks>.  Events are identified by their `domain` and `event`.  The following sections break down each event by domain.
 
 ### Artifact Domain
 
-#### Deployed Event
+#### Artifact Deployed Event
 
 The Webhook is triggered when an artifact is deployed to a repository.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'repo' string
 * 'path' string
 * 'name' string
-**Fields**
+
+**Fields:**
+
 * 'size' int
 * 'sha256' string
 
-#### Deleted Event
+#### Artifact Deleted Event
 
 The Webhook is triggered when an artifact is deleted from a repository.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'repo' string
 * 'path' string
 * 'name' string
-**Fields**
+
+**Fields:**
+
 * 'size' int
 * 'sha256' string
 
-#### Moved Event
+#### Artifact Moved Event
 
 The Webhook is triggered when an artifact is moved from a repository.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'repo' string
 * 'path' string
 * 'name' string
-**Fields**
+
+**Fields:**
+
 * 'size' int
 * 'source_path' string
 * 'target_path' string
 
-#### Copied Event
+#### Artifact Copied Event
 
 The Webhook is triggered when an artifact is copied from a repository.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'repo' string
 * 'path' string
 * 'name' string
-**Fields**
+
+**Fields:**
+
 * 'size' int
 * 'source_path' string
 * 'target_path' string
 
 ### Artifact Properties Domain
 
-#### Added Event
+#### Properties Added Event
 
 The Webhook is triggered when a property is added to an artifact/folder in a repository, or the repository itself.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'repo' string
@@ -84,350 +97,415 @@ The Webhook is triggered when a property is added to an artifact/folder in a rep
 * 'property_key' string
 * 'property_values' string (joined comma seperated list)
 
-#### Deleted Event
+#### Properties Deleted Event
 
 The Webhook is triggered when a property is deleted from an artifact/folder in a repository, or the repository itself.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'repo' string
 * 'path' string
 * 'name' string
-**Fields**
+
+**Fields:**
+
 * 'property_key' string
 * 'property_values' string (joined comma seperated list)
 
 ### Docker Domain
 
-#### Pushed Event
+#### Docker Pushed Event
 
 The Webhook is triggered when a new tag of a Docker image is pushed to a Docker repository.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'repo' string
 * 'path' string
 * 'name' string
 * 'image_name' string
-**Fields**
+
+**Fields:**
+
 * 'size' string
 * 'sha256' string
 * 'tag' string
 * 'platforms' []object
-    * 'achitecture' string
-    * 'os' string
+  * 'achitecture' string
+  * 'os' string
 
-#### Deleted Event
+#### Docker Deleted Event
 
 The Webhook is triggered when a tag of a Docker image is deleted from a Docker repository.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'repo' string
 * 'path' string
 * 'name' string
 * 'image_name' string
-**Fields**
+
+**Fields:**
+
 * 'size' string
 * 'sha256' string
 * 'tag' string
 * 'platforms' []object
-    * 'achitecture' string
-    * 'os' string
+  * 'achitecture' string
+  * 'os' string
 
-#### Promoted Event
+#### Docker Promoted Event
 
 The Webhook is triggered when a tag of a Docker image is promoted.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'repo' string
 * 'path' string
 * 'name' string
 * 'image_name' string
-**Fields**
+
+**Fields:**
+
 * 'size' string
 * 'sha256' string
 * 'tag' string
 * 'platforms' []object
-    * 'achitecture' string
-    * 'os' string
+  * 'achitecture' string
+  * 'os' string
 
 ### Build Domain
 
-#### Uploaded Event
+#### Build Uploaded Event
 
 The Webhook is triggered when a new build is uploaded.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
-**Fields**
+
+**Fields:**
+
 * 'build_name' string
 * 'build_number' string
 * 'build_started' string
 
-#### Deleted Event
+#### Build Deleted Event
 
 The Webhook is triggered when a build is deleted.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
-**Fields**
+
+**Fields:**
+
 * 'build_name' string
 * 'build_number' string
 * 'build_started' string
 
-#### Promoted Event
+#### Build Promoted Event
 
 The Webhook is triggered when a build is promoted.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
-**Fields**
+
+**Fields:**
+
 * 'build_name' string
 * 'build_number' string
 * 'build_started' string
 
 ### Release Bundle Domain
 
-#### Created Event
+#### Release Bundle Created Event
 
 The Webhook is triggered when a Release Bundle is created.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_name' string
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'jpd_origin' string
 
-#### Signed Event
+#### Release Bundle Signed Event
 
 The Webhook is triggered when a Release Bundle is signed.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_name' string
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'jpd_origin' string
 
-#### Deleted Event
+#### Release Bundle Deleted Event
 
 The Webhook is triggered when a Release Bundle is deleted.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'jpd_origin' string
 
-### Distribution Domain
+### Release Bundle Distribution Domain
 
-#### Distibute Started Event
+#### Release Bundle Distribution Started Event
 
 The Webhook is triggered when Release Bundle distribution has started
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'status_message' string
 * 'transaction_id' string
 * 'edge_node_info_list' []object
-    * 'edge_node_address' string
-    * 'edge_node_name' string
+  * 'edge_node_address' string
+  * 'edge_node_name' string
 * 'jpd_origin' string
 
-#### Distribute Completed Event
+#### Release Bundle Distribution Completed Event
 
 The Webhook is triggered when Release Bundle distribution has completed.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'status_message' string
 * 'transaction_id' string
 * 'edge_node_info_list' []object
-    * 'edge_node_address' string
-    * 'edge_node_name' string
+  * 'edge_node_address' string
+  * 'edge_node_name' string
 * 'jpd_origin' string
 
-#### Distribute Aborted Event
+#### Release Bundle Distribution Aborted Event
 
 The Webhook is triggered when Release Bundle distribution has been aborted.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'status_message' string
 * 'transaction_id' string
 * 'edge_node_info_list' []object
-    * 'edge_node_address' string
-    * 'edge_node_name' string
+  * 'edge_node_address' string
+  * 'edge_node_name' string
 * 'jpd_origin' string
 
-#### Distribute Failed Event
+#### Release Bundle Distribution Failed Event
 
 The Webhook is triggered when Release Bundle distribution has failed.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'status_message' string
 * 'transaction_id' string
 * 'edge_node_info_list' []object
-    * 'edge_node_address' string
-    * 'edge_node_name' string
+  * 'edge_node_address' string
+  * 'edge_node_name' string
 * 'jpd_origin' string
 
-#### Deletion Started EVent
+### Release Bundle Version Domain
+
+#### Release Bundle Version Deletion Started EVent
 
 The Webhook is triggered when a Release Bundle version deletion has started on one or more Edge nodes.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'status_message' string
 * 'transaction_id' string
 * 'edge_node_info_list' []object
-    * 'edge_node_address' string
-    * 'edge_node_name' string
+  * 'edge_node_address' string
+  * 'edge_node_name' string
 * 'jpd_origin' string
 
-#### Deletion Completed Event
+#### Release Bundle Version Deletion Completed Event
 
 The Webhook is triggered when a Release Bundle version deletion has completed from one or more Edge nodes.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'status_message' string
 * 'transaction_id' string
 * 'edge_node_info_list' []object
-    * 'edge_node_address' string
-    * 'edge_node_name' string
+  * 'edge_node_address' string
+  * 'edge_node_name' string
 * 'jpd_origin' string
 
-#### Deletion Failed Event
+#### Release Bundle Version Deletion Failed Event
 
 The Webhook is triggered when a Release Bundle version deletion has failed on one or more Edge nodes.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_size' string
 * 'release_bundle_version' string
 * 'status_message' string
 * 'transaction_id' string
 * 'edge_node_info_list' []object
-    * 'edge_node_address' string
-    * 'edge_node_name' string
+  * 'edge_node_address' string
+  * 'edge_node_name' string
 * 'jpd_origin' string
 
-### Destination Domain
+### Release Bundle Destination Domain
 
-#### Received Event
+#### Release Bundle Received Event
 
 The Webhook is triggered when a Release Bundle was received on an Edge Node.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_version' string
 * 'status_message' string
 * 'jpd_origin' string
 
-### Delete Started Event
+### Release Bundle Delete Started Event
 
 The Webhook is triggered when a Release Bundle deletion from an Edge Node completed.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_version' string
 * 'status_message' string
 * 'jpd_origin' string
 
-#### Delete Completed Event
+#### Release Bundle Delete Completed Event
 
-The Webhook is triggered when a Release Bundle deletion from an Edge Node completed. 
+The Webhook is triggered when a Release Bundle deletion from an Edge Node completed.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_version' string
 * 'status_message' string
 * 'jpd_origin' string
 
-#### Delete Failed Event
+#### Release Bundle Delete Failed Event
 
 The Webhook is triggered when a Release Bundle deletion from an Edge Node fails.
 
-**Tags**
+**Tags:**
+
 * 'domain' string
 * 'event_type' string
 * 'destination' string
 * 'release_bundle_name' string
-**Fields**
+
+**Fields:**
+
 * 'release_bundle_version' string
 * 'status_message' string
 * 'jpd_origin' string
