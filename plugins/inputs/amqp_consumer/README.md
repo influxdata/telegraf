@@ -16,11 +16,8 @@ For an introduction to AMQP see:
 The following defaults are known to work with RabbitMQ:
 
 ```toml
+# AMQP consumer plugin
 [[inputs.amqp_consumer]]
-  ## Broker to consume from.
-  ##   deprecated in 1.7; use the brokers option
-  # url = "amqp://localhost:5672/influxdb"
-
   ## Brokers to consume from.  If multiple brokers are specified a random broker
   ## will be selected anytime a connection is established.  This can be
   ## helpful for load balancing when not using a dedicated load balancer.
