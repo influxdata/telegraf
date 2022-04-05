@@ -482,6 +482,10 @@ func TestWriteHighTraffic(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		t.Skip("Skipping due to hang on darwin")
 	}
+	// resource intensive, large test
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}

@@ -1,6 +1,6 @@
-package consul_metrics
+package consul_agent
 
-type MetricsInfo struct {
+type AgentInfo struct {
 	Timestamp string
 	Gauges    []GaugeValue
 	Points    []PointValue

@@ -1269,6 +1269,19 @@ func TestTestCases(t *testing.T) {
 	}
 }
 
+func TestProtobufImporting(t *testing.T) {
+	// Setup the parser and run it.
+	parser := &Parser{
+		Format:              "xpath_protobuf",
+		ProtobufMessageDef:  "person.proto",
+		ProtobufMessageType: "importtest.Person",
+		ProtobufImportPaths: []string{"testcases/protos"},
+		Configs:             []Config{},
+		Log:                 testutil.Logger{Name: "parsers.protobuf"},
+	}
+	require.NoError(t, parser.Init())
+}
+
 func loadTestConfiguration(filename string) (*Config, []string, error) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {

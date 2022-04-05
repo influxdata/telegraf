@@ -1,4 +1,4 @@
-package consul_metrics
+package consul_agent
 
 import (
 	"fmt"
@@ -81,7 +81,7 @@ func TestConsulStats(t *testing.T) {
 			}))
 			defer ts.Close()
 
-			plugin := &ConsulMetrics{
+			plugin := &ConsulAgent{
 				URL: ts.URL,
 			}
 			err := plugin.Init()

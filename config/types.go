@@ -38,6 +38,16 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 	// Finally, try value is a TOML string (e.g. "3s", 3s) or literal (e.g. '3s')
 	durStr = strings.ReplaceAll(durStr, "'", "")
 	durStr = strings.ReplaceAll(durStr, "\"", "")
+	if durStr == "" {
+		durStr = "0s"
+	}
+	// special case: logging interval had a default of 0d, which silently
+	// failed, but in order to prevent issues with default configs that had
+	// uncommented the option, change it from zero days to zero hours.
+	if durStr == "0d" {
+		durStr = "0h"
+	}
+
 	dur, err := time.ParseDuration(durStr)
 	if err != nil {
 		return err
