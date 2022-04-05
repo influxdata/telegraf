@@ -32,7 +32,6 @@ type ArtifactDeploymentOrDeletedEvent struct {
 }
 
 func (e ArtifactDeploymentOrDeletedEvent) NewMetric() telegraf.Metric {
-
 	t := map[string]string{
 		"domain":     e.Domain,
 		"event_type": e.Event,
@@ -210,9 +209,9 @@ type DistributionEvent struct {
 		Size          int64  `json:"release_bundle_size"`
 		Version       string `json:"release_bundle_version"`
 		Message       string `json:"status_message"`
-		TransactionId int64  `json:"transaction_id"`
+		TransactionID int64  `json:"transaction_id"`
 	} `json:"data"`
-	OriginUrl string `json:"jpd_origin"`
+	OriginURL string `json:"jpd_origin"`
 }
 
 func (e DistributionEvent) NewMetric() telegraf.Metric {
@@ -226,9 +225,9 @@ func (e DistributionEvent) NewMetric() telegraf.Metric {
 		"release_bundle_size":    e.Data.Size,
 		"release_bundle_version": e.Data.Version,
 		"status_message":         e.Data.Message,
-		"transaction_id":         e.Data.TransactionId,
+		"transaction_id":         e.Data.TransactionID,
 		"edge_node_info_list":    e.Data.EdgeNodeInfoList,
-		"jpd_origin":             e.OriginUrl,
+		"jpd_origin":             e.OriginURL,
 	}
 	return metric.New(meas, t, f, time.Now())
 }
@@ -242,7 +241,7 @@ type DestinationEvent struct {
 		Version string `json:"release_bundle_version"`
 		Message string `json:"status_message"`
 	} `json:"data"`
-	OriginUrl string `json:"jpd_origin"`
+	OriginURL string `json:"jpd_origin"`
 }
 
 func (e DestinationEvent) NewMetric() telegraf.Metric {
@@ -255,7 +254,7 @@ func (e DestinationEvent) NewMetric() telegraf.Metric {
 	f := map[string]interface{}{
 		"release_bundle_version": e.Data.Version,
 		"status_message":         e.Data.Message,
-		"jpd_origin":             e.OriginUrl,
+		"jpd_origin":             e.OriginURL,
 	}
 	return metric.New(meas, t, f, time.Now())
 }

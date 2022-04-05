@@ -93,10 +93,9 @@ func (awh *ArtifactoryWebhook) NewEvent(data []byte, et string, ed string) (Even
 		return generateEvent(data, &DistributionEvent{})
 	case "destination":
 		return generateEvent(data, &DestinationEvent{})
-
 	}
-	return nil, &newEventError{"Not a recognized event type"}
 
+	return nil, &newEventError{"Not a recognized event type"}
 }
 
 func generateEvent(data []byte, event Event) (Event, error) {
