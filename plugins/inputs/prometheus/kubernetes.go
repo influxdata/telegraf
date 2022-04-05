@@ -421,11 +421,10 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	p.Log.Debugf("registered a delete request for %q in namespace %q", pod.Name, pod.Namespace)
-
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	if _, ok := p.kubernetesPods[targetURL.String()]; ok {
+		p.Log.Debugf("registered a delete request for %q in namespace %q", pod.Name, pod.Namespace)
 		delete(p.kubernetesPods, targetURL.String())
 		p.Log.Debugf("will stop scraping for %q", targetURL.String())
 	}
