@@ -11,7 +11,7 @@ Example output:
 ## Configuration
 
 ```toml
-# # Provides Linux sysctl fs metrics
-# [[inputs.linux_sysctl_fs]]
-#   # no configuration
+# Provides Linux sysctl fs metrics
+[[inputs.linux_sysctl_fs]]
+  # no configuration
 ```
