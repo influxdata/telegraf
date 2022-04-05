@@ -56,6 +56,7 @@ cache_readaheads
 Using this configuration:
 
 ```toml
+# Read metrics of bcache from stats_total and dirty_data
 [[inputs.bcache]]
   ## Bcache sets path
   ## If not specified, then default is:

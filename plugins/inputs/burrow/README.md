@@ -8,6 +8,7 @@ Supported Burrow version: `1.x`
 ## Configuration
 
 ```toml
+# Collect Kafka topics and consumers status from Burrow HTTP API.
 [[inputs.burrow]]
   ## Burrow API endpoints in format "schema://host:port".
   ## Default is "http://localhost:8000".
