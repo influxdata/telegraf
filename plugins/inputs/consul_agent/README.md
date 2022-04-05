@@ -7,6 +7,7 @@ This plugin grabs metrics from a Consul agent. Telegraf may be present in every 
 ## Configuration
 
 ```toml
+# Read metrics from the Consul Agent API
 [[inputs.consul_agent]]
   ## URL for the Consul agent
   # url = "http://127.0.0.1:8500"
