@@ -37,6 +37,7 @@ func init() {
 		firstSection,
 		noLongLinesInParagraphs(80),
 		configSection,
+		relativeTelegrafLinks,
 	}
 	for i := pluginInput; i <= pluginParser; i++ {
 		rules[i] = all
@@ -83,9 +84,7 @@ func checkFile(filename string, pluginType plugin) error {
 	// parser so we add it. There may be an easier way to do it, but this works:
 	p.AddOptions(
 		parser.WithParagraphTransformers(
-			[]util.PrioritizedValue{
-				util.Prioritized(extension.NewTableParagraphTransformer(), 99),
-			}...,
+			util.Prioritized(extension.NewTableParagraphTransformer(), 99),
 		),
 	)
 

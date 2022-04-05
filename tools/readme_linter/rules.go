@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/yuin/goldmark/ast"
 )
@@ -47,7 +48,11 @@ func requiredSections(t *T, root ast.Node, headings []string) error {
 			continue
 		}
 
-		title := string(h.FirstChild().Text(t.markdown))
+		child := h.FirstChild()
+		if child == nil {
+			continue
+		}
+		title := string(child.Text(t.markdown))
 		if headingsSet.has(title) && h.Level != expectedLevel {
 			t.assertNodef(n, "has required section '%s' but wrong heading level. Expected level %d, found %d",
 				title, expectedLevel, h.Level)
@@ -176,3 +181,30 @@ func configSection(t *T, root ast.Node) error {
 
 	return nil
 }
+
+// Links from one markdown file to another in the repo should be relative
+func relativeTelegrafLinks(t *T, root ast.Node) error {
+	for n := root.FirstChild(); n != nil; n = n.NextSibling() {
+		if _, ok := n.(*ast.Paragraph); !ok {
+			continue
+		}
+
+		for n2 := n.FirstChild(); n2 != nil; n2 = n2.NextSibling() {
+			var l *ast.Link
+			var ok bool
+			if l, ok = n2.(*ast.Link); !ok {
+				continue
+			}
+			link := string(l.Destination)
+			if strings.HasPrefix(link, "https://github.com/influxdata/telegraf/blob") {
+				t.assertNodef(n, "in-repo link must be relative: %s", link)
+			}
+		}
+	}
+	return nil
+}
+
+// To do: Check markdown files that aren't plugin readme files for paragraphs
+// with long lines
+
+// To do: Check the toml inside the configuration section for syntax errors
