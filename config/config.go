@@ -689,6 +689,7 @@ func printConfig(name string, p telegraf.PluginDescriber, op string, commented b
 
 	config := p.SampleConfig()
 	if config == "" {
+		fmt.Printf("\n#[[%s.%s]]", op, name)
 		fmt.Printf("\n%s  # no configuration\n\n", comment)
 	} else {
 		lines := strings.Split(config, "\n")
