@@ -78,6 +78,7 @@ commands:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
             - run: choco install mingw
+      - run: 'make generate'
       - run: mkdir -p test-results
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
@@ -120,7 +121,7 @@ commands:
                 paths:
                   - 'C:\Go'
                   - 'C:\Users\circleci\project\gotestsum.exe'
-
+      - run: 'make generate-clean'
   package-build:
     parameters:
       type:
