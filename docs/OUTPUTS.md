@@ -11,11 +11,10 @@ similar constructs.
   themselves.  See below for a quick example.
 - To be available within Telegraf itself, plugins must add themselves to the
   `github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
-- Each plugin requires a file called `<plugin_name>_sample_config.go`, were `<plugin_name>` is replaced with the actual plugin name.
+- Each plugin requires a file called `<plugin_name>_sample_config.go`, where `<plugin_name>` is replaced with the actual plugin name.
   Copy the [example template](#sample-configuration-template) into this file, also updating `<plugin_name>` were appropriate.
   This file is automatically updated during the build process to include the sample configuration from the `README.md`.
   Please consult the [Sample Config][] page for the latest style guidelines.
-- The `Description` function should say in one line what this output does.
 - Follow the recommended [Code Style][].
 
 ## Output Plugin Example
