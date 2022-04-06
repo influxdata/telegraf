@@ -52,11 +52,6 @@ type Elasticsearch struct {
 	Client *elastic.Client
 }
 
-type templatePart struct {
-	TemplatePattern string
-	Version         int
-}
-
 const telegrafTemplate = `
 {
 	{{ if (lt .Version 6) }}
@@ -126,6 +121,11 @@ const telegrafTemplate = `
 		{{ end }}
 	}
 }`
+
+type templatePart struct {
+	TemplatePattern string
+	Version         int
+}
 
 func (a *Elasticsearch) Connect() error {
 	if a.URLs == nil || a.IndexName == "" {
@@ -324,72 +324,6 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
-	if strings.Contains(indexName, "%") {
-		var dateReplacer = strings.NewReplacer(
-			"%Y", eventTime.UTC().Format("2006"),
-			"%y", eventTime.UTC().Format("06"),
-			"%m", eventTime.UTC().Format("01"),
-			"%d", eventTime.UTC().Format("02"),
-			"%H", eventTime.UTC().Format("15"),
-			"%V", getISOWeek(eventTime.UTC()),
-		)
-
-		indexName = dateReplacer.Replace(indexName)
-	}
-
-	tagValues := []interface{}{}
-
-	for _, key := range tagKeys {
-		if value, ok := metricTags[key]; ok {
-			tagValues = append(tagValues, value)
-		} else {
-			a.Log.Debugf("Tag '%s' not found, using '%s' on index name instead\n", key, a.DefaultTagValue)
-			tagValues = append(tagValues, a.DefaultTagValue)
-		}
-	}
-
-	return fmt.Sprintf(indexName, tagValues...)
-}
-
-func (a *Elasticsearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
-	if !strings.Contains(pipelineInput, "%") || len(tagKeys) == 0 {
-		return pipelineInput
-	}
-
-	var tagValues []interface{}
-
-	for _, key := range tagKeys {
-		if value, ok := metricTags[key]; ok {
-			tagValues = append(tagValues, value)
-			continue
-		}
-		a.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
-		return a.DefaultPipeline
-	}
-	return fmt.Sprintf(pipelineInput, tagValues...)
-}
-
-func getISOWeek(eventTime time.Time) string {
-	_, week := eventTime.ISOWeek()
-	return strconv.Itoa(week)
-}
-
-func (a *Elasticsearch) Close() error {
-	a.Client = nil
-	return nil
-}
-
-func init() {
-	outputs.Add("elasticsearch", func() telegraf.Output {
-		return &Elasticsearch{
-			Timeout:             config.Duration(time.Second * 5),
-			HealthCheckInterval: config.Duration(time.Second * 10),
-			HealthCheckTimeout:  config.Duration(time.Second * 1),
-		}
-	})
-}
-
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if a.TemplateName == "" {
 		return fmt.Errorf("elasticsearch template_name configuration not defined")
@@ -464,4 +398,70 @@ func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
 	}
 
 	return indexName, tagKeys
+}
+
+func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
+	if strings.Contains(indexName, "%") {
+		var dateReplacer = strings.NewReplacer(
+			"%Y", eventTime.UTC().Format("2006"),
+			"%y", eventTime.UTC().Format("06"),
+			"%m", eventTime.UTC().Format("01"),
+			"%d", eventTime.UTC().Format("02"),
+			"%H", eventTime.UTC().Format("15"),
+			"%V", getISOWeek(eventTime.UTC()),
+		)
+
+		indexName = dateReplacer.Replace(indexName)
+	}
+
+	tagValues := []interface{}{}
+
+	for _, key := range tagKeys {
+		if value, ok := metricTags[key]; ok {
+			tagValues = append(tagValues, value)
+		} else {
+			a.Log.Debugf("Tag '%s' not found, using '%s' on index name instead\n", key, a.DefaultTagValue)
+			tagValues = append(tagValues, a.DefaultTagValue)
+		}
+	}
+
+	return fmt.Sprintf(indexName, tagValues...)
+}
+
+func (a *Elasticsearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
+	if !strings.Contains(pipelineInput, "%") || len(tagKeys) == 0 {
+		return pipelineInput
+	}
+
+	var tagValues []interface{}
+
+	for _, key := range tagKeys {
+		if value, ok := metricTags[key]; ok {
+			tagValues = append(tagValues, value)
+			continue
+		}
+		a.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
+		return a.DefaultPipeline
+	}
+	return fmt.Sprintf(pipelineInput, tagValues...)
+}
+
+func getISOWeek(eventTime time.Time) string {
+	_, week := eventTime.ISOWeek()
+	return strconv.Itoa(week)
+}
+
+func (a *Elasticsearch) Close() error {
+	a.Client = nil
+	return nil
+}
+
+func init() {
+	outputs.Add("elasticsearch", func() telegraf.Output {
+		return &Elasticsearch{
+			Timeout:             config.Duration(time.Second * 5),
+			HealthCheckInterval: config.Duration(time.Second * 10),
+			HealthCheckTimeout:  config.Duration(time.Second * 1),
+		}
+	})
 }
