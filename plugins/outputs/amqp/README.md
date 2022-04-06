@@ -15,7 +15,7 @@ For an introduction to AMQP see:
 # Publishes metrics to an AMQP broker
 [[outputs.amqp]]
   ## Broker to publish to.
-  ## deprecated in 1.7; use the brokers option
+  ##   deprecated in 1.7; use the brokers option
   # url = "amqp://localhost:5672/influxdb"
 
   ## Brokers to publish to.  If multiple brokers are specified a random broker
@@ -69,6 +69,7 @@ For an introduction to AMQP see:
   ## InfluxDB database added as a message header.
   ##   deprecated in 1.7; use the headers option
   # database = "telegraf"
+
   ## InfluxDB retention policy added as a message header
   ##   deprecated in 1.7; use the headers option
   # retention_policy = "default"
