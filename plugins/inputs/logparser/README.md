@@ -99,7 +99,7 @@ Migration Example:
     # timezone = "Canada/Eastern"
 
     ## When set to "disable", timestamp will not incremented if there is a
-  	## duplicate.
+    ## duplicate.
     # unique_timestamp = "auto"
 ```
 
