@@ -191,6 +191,7 @@ tag
 For this purpose, we will use the `tail` input plugin, the `grok` parser plugin and the `filepath` processor.
 
 ```toml
+# Performs file path manipulations on tags and fields
 [[inputs.tail]]
   files = ["/var/log/myjobs/**.log"]
   data_format = "grok"

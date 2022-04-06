@@ -5,6 +5,7 @@ Filter metrics whose field values are exact repetitions of the previous values.
 ## Configuration
 
 ```toml
+# Filter metrics with repeating field values
 [[processors.dedup]]
   ## Maximum time to suppress output
   dedup_interval = "600s"

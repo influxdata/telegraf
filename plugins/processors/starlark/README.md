@@ -17,6 +17,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ## Configuration
 
 ```toml
+# Process metrics using a Starlark script
 [[processors.starlark]]
   ## The Starlark source can be set as a string in this configuration file, or
   ## by referencing a file containing the script.  Only one source or script
