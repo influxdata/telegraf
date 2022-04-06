@@ -118,6 +118,10 @@ The Timestream output plugin writes metrics to the [Amazon Timestream] service.
   ## Specifies the Timestream table tags.
   ## Check Timestream documentation for more details
   # create_table_tags = { "foo" = "bar", "environment" = "dev"}
+
+  ## Specify the maximum number of parallel go routines to ingest/write data
+  ## If not specified, defaulted to 1 go routines
+  max_write_go_routines = 25
 ```
 
 ### Batching

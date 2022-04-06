@@ -24,6 +24,7 @@ to the field name.
 ## Configuration
 
 ```toml
+# Send telegraf metrics to graylog
 [[outputs.graylog]]
   ## Endpoints for your graylog instances.
   servers = ["udp://127.0.0.1:12201"]

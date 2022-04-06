@@ -7,7 +7,6 @@ This is a deprecated plugin
 ```toml
 # Configuration for the Riemann server to send metrics to
 [[outputs.riemann_legacy]]
-  ## DEPRECATED: The 'riemann_legacy' plugin is deprecated in version 1.3.0, use 'outputs.riemann' instead (see https://github.com/influxdata/telegraf/issues/1878).
   ## URL of server
   url = "localhost:5555"
   ## transport protocol to use either tcp or udp

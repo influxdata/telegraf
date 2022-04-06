@@ -11,6 +11,7 @@ Syslog messages are formatted according to
 ## Configuration
 
 ```toml
+# Configuration for Syslog server to send metrics to
 [[outputs.syslog]]
   ## URL to connect to
   ## ex: address = "tcp://127.0.0.1:8094"

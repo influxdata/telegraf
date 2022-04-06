@@ -18,6 +18,7 @@ Additional resource labels can be configured by `resource_labels`. By default th
 ## Configuration
 
 ```toml
+# Configuration for Google Cloud Stackdriver to send metrics to
 [[outputs.stackdriver]]
   ## GCP Project
   project = "erudite-bloom-151019"
