@@ -16,7 +16,7 @@ emitting the aggregate every `period` seconds.
   drop_original = false
 
   ## Configures which basic stats to push as fields
-  # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
+  # stats = ["count","diff","rate","min","max","mean","non_negative_diff","non_negative_rate","stdev","s2","sum","interval"]
 ```
 
 - stats
