@@ -14,6 +14,7 @@ When a series has not been updated within the time defined in
 ## Configuration
 
 ```toml
+# Report the final metric of a series
 [[aggregators.final]]
   ## The period on which to flush & clear the aggregator.
   period = "30s"
