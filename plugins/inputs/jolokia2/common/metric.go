@@ -1,4 +1,4 @@
-package jolokia2
+package common
 
 import "strings"
 

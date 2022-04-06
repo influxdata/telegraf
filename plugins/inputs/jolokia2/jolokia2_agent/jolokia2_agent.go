@@ -1,4 +1,4 @@
-package jolokia2
+package jolokia2_agent
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/common"
 )
 
 type JolokiaAgent struct {
@@ -22,19 +23,19 @@ type JolokiaAgent struct {
 
 	tls.ClientConfig
 
-	Metrics  []MetricConfig `toml:"metric"`
-	gatherer *Gatherer
-	clients  []*Client
+	Metrics  []common.MetricConfig `toml:"metric"`
+	gatherer *common.Gatherer
+	clients  []*common.Client
 }
 
 func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 	if ja.gatherer == nil {
-		ja.gatherer = NewGatherer(ja.createMetrics())
+		ja.gatherer = common.NewGatherer(ja.createMetrics())
 	}
 
 	// Initialize clients once
 	if ja.clients == nil {
-		ja.clients = make([]*Client, 0, len(ja.URLs))
+		ja.clients = make([]*common.Client, 0, len(ja.URLs))
 		for _, url := range ja.URLs {
 			client, err := ja.createClient(url)
 			if err != nil {
@@ -49,7 +50,7 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 
 	for _, client := range ja.clients {
 		wg.Add(1)
-		go func(client *Client) {
+		go func(client *common.Client) {
 			defer wg.Done()
 
 			err := ja.gatherer.Gather(client, acc)
@@ -64,19 +65,19 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (ja *JolokiaAgent) createMetrics() []Metric {
-	var metrics []Metric
+func (ja *JolokiaAgent) createMetrics() []common.Metric {
+	var metrics []common.Metric
 
 	for _, metricConfig := range ja.Metrics {
-		metrics = append(metrics, NewMetric(metricConfig,
+		metrics = append(metrics, common.NewMetric(metricConfig,
 			ja.DefaultFieldPrefix, ja.DefaultFieldSeparator, ja.DefaultTagPrefix))
 	}
 
 	return metrics
 }
 
-func (ja *JolokiaAgent) createClient(url string) (*Client, error) {
-	return NewClient(url, &ClientConfig{
+func (ja *JolokiaAgent) createClient(url string) (*common.Client, error) {
+	return common.NewClient(url, &common.ClientConfig{
 		Username:        ja.Username,
 		Password:        ja.Password,
 		ResponseTimeout: time.Duration(ja.ResponseTimeout),

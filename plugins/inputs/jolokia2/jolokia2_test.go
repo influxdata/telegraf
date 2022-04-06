@@ -1,4 +1,4 @@
-package jolokia2
+package jolokia2_test
 
 import (
 	"fmt"
@@ -9,6 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/common"
+	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/jolokia2_agent"
+	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/jolokia2_proxy"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -77,7 +80,7 @@ func TestJolokia2_ScalarValues(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -237,7 +240,7 @@ func TestJolokia2_ObjectValues(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -325,7 +328,7 @@ func TestJolokia2_StatusCodes(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -375,7 +378,7 @@ func TestJolokia2_TagRenaming(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -468,7 +471,7 @@ func TestJolokia2_FieldRenaming(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -576,7 +579,7 @@ func TestJolokia2_MetricMbeanMatching(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -669,7 +672,7 @@ func TestJolokia2_MetricCompaction(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -730,7 +733,7 @@ func TestJolokia2_ProxyTargets(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -754,11 +757,11 @@ func TestFillFields(t *testing.T) {
 	scalarPoint := []interface{}{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 	results := map[string]interface{}{}
-	newPointBuilder(Metric{Name: "test", Mbean: "complex"}, []string{"this", "that"}, "/").fillFields("", complexPoint, results)
+	common.NewPointBuilder(common.Metric{Name: "test", Mbean: "complex"}, []string{"this", "that"}, "/").FillFields("", complexPoint, results)
 	require.Equal(t, map[string]interface{}{}, results)
 
 	results = map[string]interface{}{}
-	newPointBuilder(Metric{Name: "test", Mbean: "scalar"}, []string{"this", "that"}, "/").fillFields("", scalarPoint, results)
+	common.NewPointBuilder(common.Metric{Name: "test", Mbean: "scalar"}, []string{"this", "that"}, "/").FillFields("", scalarPoint, results)
 	require.Equal(t, map[string]interface{}{}, results)
 }
 
@@ -771,7 +774,7 @@ func setupServer(resp string) *httptest.Server {
 	}))
 }
 
-func setupPlugin(t *testing.T, conf string) telegraf.Input {
+func SetupPlugin(t *testing.T, conf string) telegraf.Input {
 	table, err := toml.Parse([]byte(conf))
 	if err != nil {
 		t.Fatalf("Unable to parse config! %v", err)
@@ -781,8 +784,8 @@ func setupPlugin(t *testing.T, conf string) telegraf.Input {
 		object := table.Fields[name]
 		switch name {
 		case "jolokia2_agent":
-			plugin := JolokiaAgent{
-				Metrics:               []MetricConfig{},
+			plugin := jolokia2_agent.JolokiaAgent{
+				Metrics:               []common.MetricConfig{},
 				DefaultFieldSeparator: ".",
 			}
 
@@ -793,8 +796,8 @@ func setupPlugin(t *testing.T, conf string) telegraf.Input {
 			return &plugin
 
 		case "jolokia2_proxy":
-			plugin := JolokiaProxy{
-				Metrics:               []MetricConfig{},
+			plugin := jolokia2_proxy.JolokiaProxy{
+				Metrics:               []common.MetricConfig{},
 				DefaultFieldSeparator: ".",
 			}
 

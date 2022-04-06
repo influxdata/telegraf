@@ -1,4 +1,4 @@
-package jolokia2
+package common
 
 import (
 	"fmt"
@@ -93,7 +93,7 @@ func (g *Gatherer) generatePoints(metric Metric, responses []ReadResponse) ([]po
 			continue
 		}
 
-		pb := newPointBuilder(metric, response.RequestAttributes, response.RequestPath)
+		pb := NewPointBuilder(metric, response.RequestAttributes, response.RequestPath)
 		for _, point := range pb.Build(metric.Mbean, response.Value) {
 			if response.RequestTarget != "" {
 				point.Tags["jolokia_agent_url"] = response.RequestTarget

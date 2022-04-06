@@ -1,4 +1,4 @@
-package jolokia2
+package common
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ type pointBuilder struct {
 	substitutions    []string
 }
 
-func newPointBuilder(metric Metric, attributes []string, path string) *pointBuilder {
+func NewPointBuilder(metric Metric, attributes []string, path string) *pointBuilder {
 	return &pointBuilder{
 		metric:           metric,
 		objectAttributes: attributes,
@@ -97,18 +97,18 @@ func (pb *pointBuilder) extractFields(mbean string, value interface{}) map[strin
 		if len(pb.objectAttributes) == 0 {
 			// if there were no attributes requested,
 			// then the keys are attributes
-			pb.fillFields("", valueMap, fieldMap)
+			pb.FillFields("", valueMap, fieldMap)
 		} else if len(pb.objectAttributes) == 1 {
 			// if there was a single attribute requested,
 			// then the keys are the attribute's properties
 			fieldName := pb.formatFieldName(pb.objectAttributes[0], pb.objectPath)
-			pb.fillFields(fieldName, valueMap, fieldMap)
+			pb.FillFields(fieldName, valueMap, fieldMap)
 		} else {
 			// if there were multiple attributes requested,
 			// then the keys are the attribute names
 			for _, attribute := range pb.objectAttributes {
 				fieldName := pb.formatFieldName(attribute, pb.objectPath)
-				pb.fillFields(fieldName, valueMap[attribute], fieldMap)
+				pb.FillFields(fieldName, valueMap[attribute], fieldMap)
 			}
 		}
 	} else {
@@ -120,7 +120,7 @@ func (pb *pointBuilder) extractFields(mbean string, value interface{}) map[strin
 			fieldName = pb.formatFieldName(pb.objectAttributes[0], pb.objectPath)
 		}
 
-		pb.fillFields(fieldName, value, fieldMap)
+		pb.FillFields(fieldName, value, fieldMap)
 	}
 
 	if len(pb.substitutions) > 1 {
@@ -149,9 +149,9 @@ func (pb *pointBuilder) formatFieldName(attribute, path string) string {
 	return fieldName
 }
 
-// fillFields recurses into the supplied value object, generating a named field
+// FillFields recurses into the supplied value object, generating a named field
 // for every value it discovers.
-func (pb *pointBuilder) fillFields(name string, value interface{}, fieldMap map[string]interface{}) {
+func (pb *pointBuilder) FillFields(name string, value interface{}, fieldMap map[string]interface{}) {
 	if valueMap, ok := value.(map[string]interface{}); ok {
 		// keep going until we get to something that is not a map
 		for key, innerValue := range valueMap {
@@ -166,7 +166,7 @@ func (pb *pointBuilder) fillFields(name string, value interface{}, fieldMap map[
 				innerName = name + pb.metric.FieldSeparator + key
 			}
 
-			pb.fillFields(innerName, innerValue, fieldMap)
+			pb.FillFields(innerName, innerValue, fieldMap)
 		}
 
 		return
