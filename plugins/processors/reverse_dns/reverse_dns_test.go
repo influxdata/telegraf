@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -57,12 +56,4 @@ func TestSimpleReverseLookup(t *testing.T) {
 	tag, ok := processedMetric.GetTag("dest_name")
 	require.True(t, ok)
 	require.EqualValues(t, "dns.google.", tag)
-}
-
-func TestLoadingConfig(t *testing.T) {
-	c := config.NewConfig()
-	err := c.LoadConfigData([]byte("[[processors.reverse_dns]]\n" + sampleConfig))
-	require.NoError(t, err)
-
-	require.Len(t, c.Processors, 1)
 }
