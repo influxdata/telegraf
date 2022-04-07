@@ -5,10 +5,11 @@ The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using
 ## Configuration
 
 ```toml
-# Sample Config:
-
+# Read metrics from a LeoFS Server via SNMP
 [[inputs.leofs]]
-        servers = ["127.0.0.1:4010"]
+  ## An array of URLs of the form:
+  ##   host [ ":" port]
+  servers = ["127.0.0.1:4010"]
 ```
 
 ## Measurements & Fields

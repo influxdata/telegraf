@@ -8,6 +8,7 @@ alternative method for collecting repository information.
 ## Configuration
 
 ```toml
+# Gather repository information from GitHub hosted repositories.
 [[inputs.github]]
   ## List of repositories to monitor
   repositories = [

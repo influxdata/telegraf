@@ -14,13 +14,10 @@ InfluxDB it is recommended to use [`influxdb_listener`][influxdb_listener] or [`
 This is a sample configuration for the plugin.
 
 ```toml
+# Generic HTTP write listener
 [[inputs.http_listener_v2]]
   ## Address and port to host HTTP listener on
   service_address = ":8080"
-
-  ## Path to listen to.
-  ## This option is deprecated and only available for backward-compatibility. Please use paths instead.
-  # path = ""
 
   ## Paths to listen to.
   # paths = ["/telegraf"]

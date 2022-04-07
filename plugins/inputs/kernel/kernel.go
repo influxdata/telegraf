@@ -28,12 +28,6 @@ type Kernel struct {
 	entropyStatFile string
 }
 
-func (k *Kernel) Description() string {
-	return "Get kernel statistics from /proc/stat"
-}
-
-func (k *Kernel) SampleConfig() string { return "" }
-
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	data, err := k.getProcStat()
 	if err != nil {

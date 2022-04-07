@@ -9,10 +9,20 @@ plugin instead.
 ## Configuration
 
 ```toml
+# Parse a complete file each interval
 [[inputs.file]]
   ## Files to parse each interval.  Accept standard unix glob matching rules,
   ## as well as ** to match recursive files and directories.
   files = ["/tmp/metrics.out"]
+
+  ## Character encoding to use when interpreting the file contents.  Invalid
+  ## characters are replaced using the unicode replacement character.  When set
+  ## to the empty string the data is not decoded to text.
+  ##   ex: character_encoding = "utf-8"
+  ##       character_encoding = "utf-16le"
+  ##       character_encoding = "utf-16be"
+  ##       character_encoding = ""
+  # character_encoding = ""
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
