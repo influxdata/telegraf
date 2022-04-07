@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"k8s.io/apimachinery/pkg/fields"
@@ -69,15 +70,19 @@ type Prometheus struct {
 	headers map[string]string
 
 	// Should we scrape Kubernetes services for prometheus annotations
-	MonitorPods       bool   `toml:"monitor_kubernetes_pods"`
-	PodScrapeScope    string `toml:"pod_scrape_scope"`
-	NodeIP            string `toml:"node_ip"`
-	PodScrapeInterval int    `toml:"pod_scrape_interval"`
-	PodNamespace      string `toml:"monitor_kubernetes_pods_namespace"`
-	lock              sync.Mutex
-	kubernetesPods    map[string]URLAndAddress
-	cancel            context.CancelFunc
-	wg                sync.WaitGroup
+	MonitorPods           bool   `toml:"monitor_kubernetes_pods"`
+	PodScrapeScope        string `toml:"pod_scrape_scope"`
+	PodLabelTemplate      string `toml:"pod_label_template"`
+	PodAnnotationTemplate string `toml:"pod_annotation_template"`
+	NodeIP                string `toml:"node_ip"`
+	PodScrapeInterval     int    `toml:"pod_scrape_interval"`
+	PodNamespace          string `toml:"monitor_kubernetes_pods_namespace"`
+	lock                  sync.Mutex
+	kubernetesPods        map[string]URLAndAddress
+	cancel                context.CancelFunc
+	wg                    sync.WaitGroup
+	podLabelTmpl          *template.Template
+	podAnnotationTmpl     *template.Template
 
 	// Only for monitor_kubernetes_pods=true and pod_scrape_scope="node"
 	podLabelSelector  labels.Selector
@@ -128,6 +133,24 @@ func (p *Prometheus) Init() error {
 		p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
 	}
 
+	// Configure pod label template
+	if p.PodLabelTemplate != "" {
+		podLabelTmpl, err := template.New("pod_label_template").Parse(p.PodLabelTemplate)
+		if err != nil {
+			return err
+		}
+		p.podLabelTmpl = podLabelTmpl
+	}
+
+	// Configure pod annotation template
+	if p.PodAnnotationTemplate != "" {
+		podAnnotationTmpl, err := template.New("pod_annotation_template").Parse(p.PodAnnotationTemplate)
+		if err != nil {
+			return err
+		}
+		p.podAnnotationTmpl = podAnnotationTmpl
+	}
+
 	return nil
 }
 
@@ -150,11 +173,31 @@ func (p *Prometheus) AddressToURL(u *url.URL, address string) *url.URL {
 	return reconstructedURL
 }
 
+type Tag struct {
+	Value    string
+	Template *template.Template
+}
+
+func (t *Tag) RenderKey(k string) (string, error) {
+	if t.Template != nil {
+		var buffer strings.Builder
+		err := t.Template.Execute(&buffer, k)
+
+		if err != nil {
+			return k, fmt.Errorf("Failed to execute tag key template, skipping modification for `%s`. Error: %v", k, err)
+		}
+
+		return buffer.String(), nil
+	}
+
+	return k, nil
+}
+
 type URLAndAddress struct {
 	OriginalURL *url.URL
 	URL         *url.URL
 	Address     string
-	Tags        map[string]string
+	Tags        map[string]Tag
 }
 
 func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
@@ -354,7 +397,13 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 			tags["address"] = u.Address
 		}
 		for k, v := range u.Tags {
-			tags[k] = v
+			k, err := v.RenderKey(k)
+
+			if err != nil {
+				p.Log.Error(err)
+			}
+
+			tags[k] = v.Value
 		}
 
 		switch metric.Type() {
@@ -431,10 +480,12 @@ func (p *Prometheus) Stop() {
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
-			ResponseTimeout: config.Duration(time.Second * 3),
-			kubernetesPods:  map[string]URLAndAddress{},
-			consulServices:  map[string]URLAndAddress{},
-			URLTag:          "url",
+			ResponseTimeout:       config.Duration(time.Second * 3),
+			kubernetesPods:        map[string]URLAndAddress{},
+			consulServices:        map[string]URLAndAddress{},
+			PodLabelTemplate:      "{{ . }}",
+			PodAnnotationTemplate: "{{ . }}",
+			URLTag:                "url",
 		}
 	})
 }

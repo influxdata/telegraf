@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -173,6 +174,78 @@ func TestInvalidFieldSelector(t *testing.T) {
 
 	_, err := fields.ParseSelector(prom.KubernetesFieldSelector)
 	require.NotEqual(t, err, nil)
+}
+
+func TestPodLabelAnnotationTemplateOmitted(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
+	err := prom.Init()
+	require.NoError(t, err)
+
+	promScrapeKey := "prometheus.io/scrape"
+	kubernetesNameKey := "kubernetes.io/name"
+
+	p := pod()
+	p.Annotations = map[string]string{promScrapeKey: "true"}
+	p.Labels = map[string]string{kubernetesNameKey: "app"}
+	registerPod(p, prom)
+	require.Equal(t, 1, len(prom.kubernetesPods))
+
+	var pods []URLAndAddress
+	for _, v := range prom.kubernetesPods {
+		pods = append(pods, v)
+	}
+
+	kubernetesNameTag := pods[0].Tags[kubernetesNameKey]
+	require.NotEmpty(t, kubernetesNameTag)
+	promScrapeTag := pods[0].Tags[promScrapeKey]
+	require.NotEmpty(t, promScrapeTag)
+
+	kubernetesNameKeyRendered, err := kubernetesNameTag.RenderKey(kubernetesNameKey)
+	require.NoError(t, err)
+	require.Equal(t, kubernetesNameKey, kubernetesNameKeyRendered)
+
+	promScrapeKeyRendered, err := promScrapeTag.RenderKey(promScrapeKey)
+	require.NoError(t, err)
+	require.Equal(t, promScrapeKey, promScrapeKeyRendered)
+}
+
+func TestPodLabelAnnotationTemplate(t *testing.T) {
+	prom := &Prometheus{
+		Log:                   testutil.Logger{},
+		PodLabelTemplate:      "pod.label/{{ . }}",
+		PodAnnotationTemplate: "pod.annotation/{{ . }}",
+	}
+	err := prom.Init()
+	require.NoError(t, err)
+	require.NotEmpty(t, prom.podLabelTmpl)
+	require.NotEmpty(t, prom.podAnnotationTmpl)
+
+	promScrapeKey := "prometheus.io/scrape"
+	kubernetesNameKey := "kubernetes.io/name"
+
+	p := pod()
+	p.Annotations = map[string]string{promScrapeKey: "true"}
+	p.Labels = map[string]string{kubernetesNameKey: "app"}
+	registerPod(p, prom)
+	require.Equal(t, 1, len(prom.kubernetesPods))
+
+	var pods []URLAndAddress
+	for _, v := range prom.kubernetesPods {
+		pods = append(pods, v)
+	}
+
+	kubernetesNameTag := pods[0].Tags[kubernetesNameKey]
+	require.NotEmpty(t, kubernetesNameTag)
+	promScrapeTag := pods[0].Tags[promScrapeKey]
+	require.NotEmpty(t, promScrapeTag)
+
+	kubernetesNameKeyRendered, err := kubernetesNameTag.RenderKey(kubernetesNameKey)
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("pod.label/%s", kubernetesNameKey), kubernetesNameKeyRendered)
+
+	promScrapeKeyRendered, err := promScrapeTag.RenderKey(promScrapeKey)
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("pod.annotation/%s", promScrapeKey), promScrapeKeyRendered)
 }
 
 func pod() *corev1.Pod {

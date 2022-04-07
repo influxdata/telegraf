@@ -368,16 +368,16 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 
 	p.Log.Debugf("will scrape metrics from %q", targetURL.String())
+	tags := map[string]Tag{}
+	tags["pod_name"] = Tag{Value: pod.Name}
+	tags["namespace"] = Tag{Value: pod.Namespace}
 	// add annotation as metrics tags
-	tags := pod.Annotations
-	if tags == nil {
-		tags = map[string]string{}
+	for k, v := range pod.Annotations {
+		tags[k] = Tag{Value: v, Template: p.podAnnotationTmpl}
 	}
-	tags["pod_name"] = pod.Name
-	tags["namespace"] = pod.Namespace
 	// add labels as metrics tags
 	for k, v := range pod.Labels {
-		tags[k] = v
+		tags[k] = Tag{Value: v, Template: p.podLabelTmpl}
 	}
 	podURL := p.AddressToURL(targetURL, targetURL.Hostname())
 

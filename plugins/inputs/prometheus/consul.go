@@ -188,14 +188,14 @@ func (p *Prometheus) getConsulServiceURL(q *ConsulQuery, s *api.CatalogService) 
 		return nil, err
 	}
 
-	extraTags := make(map[string]string)
+	extraTags := make(map[string]Tag)
 	for tagName, tagTemplate := range q.serviceExtraTagsTemplate {
 		buffer.Reset()
 		err = tagTemplate.Execute(&buffer, s)
 		if err != nil {
 			return nil, err
 		}
-		extraTags[tagName] = buffer.String()
+		extraTags[tagName] = Tag{Value: buffer.String()}
 	}
 
 	p.Log.Debugf("Will scrape metrics from Consul Service %s", serviceURL.String())
