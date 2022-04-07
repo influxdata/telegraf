@@ -10,6 +10,7 @@ by whitespace. The `increment` type is only used if the metric comes in as a cou
 ## Configuration
 
 ```toml
+# Configuration for sending metrics to an Instrumental project
 [[outputs.instrumental]]
   ## Project API Token (required)
   api_token = "API Token"  # required

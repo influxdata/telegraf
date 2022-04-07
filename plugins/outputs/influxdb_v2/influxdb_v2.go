@@ -21,58 +21,6 @@ var (
 	ErrMissingURL = errors.New("missing URL")
 )
 
-var sampleConfig = `
-  ## The URLs of the InfluxDB cluster nodes.
-  ##
-  ## Multiple URLs can be specified for a single cluster, only ONE of the
-  ## urls will be written to each interval.
-  ##   ex: urls = ["https://us-west-2-1.aws.cloud2.influxdata.com"]
-  urls = ["http://127.0.0.1:8086"]
-
-  ## Token for authentication.
-  token = ""
-
-  ## Organization is the name of the organization you wish to write to; must exist.
-  organization = ""
-
-  ## Destination bucket to write into.
-  bucket = ""
-
-  ## The value of this tag will be used to determine the bucket.  If this
-  ## tag is not set the 'bucket' option is used as the default.
-  # bucket_tag = ""
-
-  ## If true, the bucket tag will not be added to the metric.
-  # exclude_bucket_tag = false
-
-  ## Timeout for HTTP messages.
-  # timeout = "5s"
-
-  ## Additional HTTP headers
-  # http_headers = {"X-Special-Header" = "Special-Value"}
-
-  ## HTTP Proxy override, if unset values the standard proxy environment
-  ## variables are consulted to determine which proxy, if any, should be used.
-  # http_proxy = "http://corporate.proxy:3128"
-
-  ## HTTP User-Agent
-  # user_agent = "telegraf"
-
-  ## Content-Encoding for write request body, can be set to "gzip" to
-  ## compress body or "identity" to apply no encoding.
-  # content_encoding = "gzip"
-
-  ## Enable or disable uint support for writing uints influxdb 2.0.
-  # influx_uint_support = false
-
-  ## Optional TLS Config for use on HTTP connections.
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
 type Client interface {
 	Write(context.Context, []telegraf.Metric) error
 
@@ -140,14 +88,6 @@ func (i *InfluxDB) Close() error {
 		client.Close()
 	}
 	return nil
-}
-
-func (i *InfluxDB) Description() string {
-	return "Configuration for sending metrics to InfluxDB"
-}
-
-func (i *InfluxDB) SampleConfig() string {
-	return sampleConfig
 }
 
 // Write sends metrics to one of the configured servers, logging each

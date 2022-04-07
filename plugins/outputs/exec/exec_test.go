@@ -94,7 +94,6 @@ func TestTruncate(t *testing.T) {
 
 func TestExecDocs(t *testing.T) {
 	e := &Exec{}
-	e.Description()
 	e.SampleConfig()
 	require.NoError(t, e.Close())
 

@@ -23,15 +23,6 @@ type Riemann struct {
 	client *raidman.Client
 }
 
-var sampleConfig = `
-  ## URL of server
-  url = "localhost:5555"
-  ## transport protocol to use either tcp or udp
-  transport = "tcp"
-  ## separator to use between input name and field name in Riemann service name
-  separator = " "
-`
-
 func (r *Riemann) Connect() error {
 	r.Log.Error(deprecationMsg)
 	c, err := raidman.Dial(r.Transport, r.URL)
@@ -52,14 +43,6 @@ func (r *Riemann) Close() error {
 	err := r.client.Close()
 	r.client = nil
 	return err
-}
-
-func (r *Riemann) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Riemann) Description() string {
-	return "Configuration for the Riemann server to send metrics to"
 }
 
 func (r *Riemann) Write(metrics []telegraf.Metric) error {

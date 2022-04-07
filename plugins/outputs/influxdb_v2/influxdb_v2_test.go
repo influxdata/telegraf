@@ -97,7 +97,6 @@ func TestConnect(t *testing.T) {
 func TestUnused(_ *testing.T) {
 	thing := influxdb.InfluxDB{}
 	thing.Close()
-	thing.Description()
 	thing.SampleConfig()
 	outputs.Outputs["influxdb_v2"]()
 }

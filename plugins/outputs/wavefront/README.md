@@ -5,6 +5,8 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
 ## Configuration
 
 ```toml
+# Configuration for Wavefront server to send metrics to
+[[outputs.wavefront]]
   ## Url for Wavefront Direct Ingestion. For Wavefront Proxy Ingestion, see
   ## the 'host' and 'port' options below.
   url = "https://metrics.wavefront.com"
