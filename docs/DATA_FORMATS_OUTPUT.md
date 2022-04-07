@@ -14,6 +14,7 @@ plugins.
 1. [ServiceNow Metrics](/plugins/serializers/nowmetric)
 1. [SplunkMetric](/plugins/serializers/splunkmetric)
 1. [Wavefront](/plugins/serializers/wavefront)
+1. [Extreme Networks](/plugins/serializers/extr)
 
 You will be able to identify the plugins with support by the presence of a
 `data_format` config option, for example, in the `file` output plugin:

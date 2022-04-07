@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
+	"github.com/influxdata/telegraf/plugins/serializers/extr"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -141,6 +142,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewPrometheusRemoteWriteSerializer(config)
 	case "msgpack":
 		serializer, err = NewMsgpackSerializer()
+	case "extr":
+		serializer, err = NewExtrSerializer(config.TimestampUnits)
 	default:
 		err = fmt.Errorf("invalid data format: %s", config.DataFormat)
 	}
@@ -205,6 +208,10 @@ func NewSplunkmetricSerializer(splunkmetricHecRouting bool, splunkmetricMultimet
 
 func NewNowSerializer() (Serializer, error) {
 	return nowmetric.NewSerializer()
+}
+
+func NewExtrSerializer(timestampUnits time.Duration) (Serializer, error) {
+	return extr.NewSerializer(timestampUnits)
 }
 
 func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
