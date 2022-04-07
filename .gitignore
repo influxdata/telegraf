@@ -1,11 +1,5 @@
-/.idea
-/build
-/telegraf
-/telegraf.exe
-/telegraf.gz
-/vendor
-.DS_Store
-process.yml
-/.vscode
-/*.toml
-/*.conf
+ /vendor
+ .DS_Store
+ process.yml
+.cache
+telegraf_*_*.tar
