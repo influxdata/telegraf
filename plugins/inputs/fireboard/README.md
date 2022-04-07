@@ -14,7 +14,9 @@ the [Fireboard REST API](https://docs.fireboard.io/reference/restapi.html).
   ## You can override the fireboard server URL if necessary
   # url = https://fireboard.io/api/v1/devices.json
   ## You can set a different http_timeout if you need to
-  # http_timeout = 4
+  ## You should set a string using an number and time indicator
+  ## for example "12s" for 12 seconds.
+  # http_timeout = "4s"
 ```
 
 ### auth_token
