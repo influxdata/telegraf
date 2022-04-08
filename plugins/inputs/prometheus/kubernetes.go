@@ -130,7 +130,11 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 			pod, _ := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 
-			if pod.Annotations["prometheus.io/scrape"] == "true" && podReady(pod.Status.ContainerStatuses) {
+			if pod.Annotations["prometheus.io/scrape"] == "true" &&
+				podReady(pod.Status.ContainerStatuses) &&
+				podHasMatchingNamespace(pod, p) &&
+				podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
+				podHasMatchingFieldSelector(pod, p.podFieldSelector) {
 				registerPod(pod, p)
 			}
 		},
@@ -147,7 +151,11 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 			newPod, _ := clientset.CoreV1().Pods(newNamespace).Get(ctx, newName, metav1.GetOptions{})
 
-			if newPod.Annotations["prometheus.io/scrape"] == "true" && podReady(newPod.Status.ContainerStatuses) {
+			if newPod.Annotations["prometheus.io/scrape"] == "true" &&
+				podReady(newPod.Status.ContainerStatuses) &&
+				podHasMatchingNamespace(newPod, p) &&
+				podHasMatchingLabelSelector(newPod, p.podLabelSelector) &&
+				podHasMatchingFieldSelector(newPod, p.podFieldSelector) {
 				if newPod.GetDeletionTimestamp() == nil {
 					registerPod(newPod, p)
 				}
@@ -165,7 +173,11 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 			oldPod, _ := clientset.CoreV1().Pods(oldNamespace).Get(ctx, oldName, metav1.GetOptions{})
 
-			if oldPod.Annotations["prometheus.io/scrape"] == "true" && podReady(oldPod.Status.ContainerStatuses) {
+			if oldPod.Annotations["prometheus.io/scrape"] == "true" &&
+				podReady(oldPod.Status.ContainerStatuses) &&
+				podHasMatchingNamespace(oldPod, p) &&
+				podHasMatchingLabelSelector(oldPod, p.podLabelSelector) &&
+				podHasMatchingFieldSelector(oldPod, p.podFieldSelector) {
 				if oldPod.GetDeletionTimestamp() != nil {
 					unregisterPod(oldPod, p)
 				}
@@ -184,7 +196,11 @@ func (p *Prometheus) watchPod(ctx context.Context, clientset *kubernetes.Clients
 
 			pod, _ := clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 
-			if pod.Annotations["prometheus.io/scrape"] == "true" && podReady(pod.Status.ContainerStatuses) {
+			if pod.Annotations["prometheus.io/scrape"] == "true" &&
+				podReady(pod.Status.ContainerStatuses) &&
+				podHasMatchingNamespace(pod, p) &&
+				podHasMatchingLabelSelector(pod, p.podLabelSelector) &&
+				podHasMatchingFieldSelector(pod, p.podFieldSelector) {
 				if pod.GetDeletionTimestamp() != nil {
 					unregisterPod(pod, p)
 				}
