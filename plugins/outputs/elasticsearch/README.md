@@ -199,32 +199,46 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
 
 ```toml
 # Configuration for Elasticsearch to send metrics to.
-[[outputs.elasticsearch]] ## The full HTTP endpoint URL for your Elasticsearch
-  instance ## Multiple urls can be specified as part of the same cluster, ##
-  this means that only ONE of the urls will be written to each interval urls = [
-  "http://node1.es.example.com:9200" ] # required.  ## Elasticsearch client
-  timeout, defaults to "5s" if not set.  timeout = "5s" ## Set to true to ask
-  Elasticsearch a list of all cluster nodes, ## thus it is not necessary to list
-  all nodes in the urls config option enable_sniffer = false ## Set to true to
-  enable gzip compression enable_gzip = false ## Set the interval to check if
-  the Elasticsearch nodes are available ## Setting to "0s" will disable the
-  health check (not recommended in production) health_check_interval = "10s" ##
-  Set the timeout for periodic health checks.  # health_check_timeout = "1s" ##
-  HTTP basic authentication details.  ## HTTP basic authentication details #
-  username = "telegraf" # password = "mypassword" ## HTTP bearer token
-  authentication details # auth_bearer_token =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+[[outputs.elasticsearch]]
+  ## The full HTTP endpoint URL for your Elasticsearch instance
+  ## Multiple urls can be specified as part of the same cluster,
+  ## this means that only ONE of the urls will be written to each interval
+  urls = [ "http://node1.es.example.com:9200" ] # required.
+  ## Elasticsearch client timeout, defaults to "5s" if not set.
+  timeout = "5s"
+  ## Set to true to ask Elasticsearch a list of all cluster nodes,
+  ## thus it is not necessary to list all nodes in the urls config option
+  enable_sniffer = false
+  ## Set to true to enable gzip compression
+  enable_gzip = false
+  ## Set the interval to check if the Elasticsearch nodes are available
+  ## Setting to "0s" will disable the health check (not recommended in production)
+  health_check_interval = "10s"
+  ## Set the timeout for periodic health checks.
+  # health_check_timeout = "1s"
+  ## HTTP basic authentication details.
+  ## HTTP basic authentication details
+  # username = "telegraf"
+  # password = "mypassword"
+  ## HTTP bearer token authentication details
+  # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 
-  ## Index Config ## The target index for metrics (Elasticsearch will create if
-  it not exists).  ## You can use the date specifiers below to create indexes
-  per time frame.  ## The metric timestamp will be used to decide the
-  destination index name # %Y - year (2016) # %y - last two digits of year
-  (00..99) # %m - month (01..12) # %d - day of month (e.g., 01) # %H - hour
-  (00..23) # %V - week of the year (ISO week) (01..53) ## Additionally, you can
-  specify a tag name using the notation {{tag_name}} ## which will be used as
-  part of the index name. If the tag does not exist, ## the default tag value
-  will be used.  # index_name = "telegraf-{{host}}-%Y.%m.%d" # default_tag_value
-  = "none" index_name = "telegraf-%Y.%m.%d" # required.
+  ## Index Config
+  ## The target index for metrics (Elasticsearch will create if it not exists).
+  ## You can use the date specifiers below to create indexes per time frame.
+  ## The metric timestamp will be used to decide the destination index name
+  # %Y - year (2016)
+  # %y - last two digits of year (00..99)
+  # %m - month (01..12)
+  # %d - day of month (e.g., 01)
+  # %H - hour (00..23)
+  # %V - week of the year (ISO week) (01..53)
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the index name. If the tag does not exist,
+  ## the default tag value will be used.
+  # index_name = "telegraf-{{host}}-%Y.%m.%d"
+  # default_tag_value = "none"
+  index_name = "telegraf-%Y.%m.%d" # required.
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -339,10 +353,9 @@ dynamic field mapping. This causes the metrics with such values to be dropped in
 case a field mapping has not been created yet on the telegraf index. If that's
 the case you will see an exception on Elasticsearch side like this:
 
-```{"error":{"root_cause":[{"type":"mapper_parsing_exception","reason":"failed
-to parse"}],"type":"mapper_parsing_exception","reason":"failed to
-parse","caused_by":{"type":"illegal_state_exception","reason":"No matching token
-for number_type [BIG_INTEGER]"}},"status":400}```
+```
+{"error":{"root_cause":[{"type":"mapper_parsing_exception","reason":"failed to parse"}],"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"illegal_state_exception","reason":"No matching token for number_type [BIG_INTEGER]"}},"status":400}
+```
 
 The correct field mapping will be created on the telegraf index as soon as a
 supported JSON value is received by Elasticsearch, and subsequent insertions

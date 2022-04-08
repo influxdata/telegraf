@@ -106,10 +106,8 @@ These methods are:
 1. AAD Application Tokens (Service Principals with secrets or certificates).
 
     For guidance on how to create and register an App in Azure Active Directory
-    check [this
-    article](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#register-an-application),
-    and for more information on the Service Principals check [this
-    article](https://docs.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals).
+    check [this article][register], and for more information on the Service
+    Principals check [this article][principal].
 
 2. AAD User Tokens
 
@@ -121,7 +119,9 @@ These methods are:
     - If you are running Telegraf from Azure VM or infrastructure, then this is
       the prefered authentication method.
 
-[principal]: https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-application-objects
+[register]: https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#register-an-application
+
+[principal]: https://docs.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals
 
 Whichever method, the designated Principal needs to be assigned the `Database
 User` role on the Database level in the Azure Data Explorer. This role will

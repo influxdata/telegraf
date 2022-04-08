@@ -39,8 +39,9 @@ will be used.
 
 ```toml
 # Configuration for the AWS Kinesis output.
-[[outputs.kinesis]] ## Amazon REGION of kinesis endpoint.  region =
-  "ap-southeast-2"
+[[outputs.kinesis]]
+  ## Amazon REGION of kinesis endpoint.
+  region = "ap-southeast-2"
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
