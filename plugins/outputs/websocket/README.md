@@ -2,7 +2,9 @@
 
 This plugin can write to a WebSocket endpoint.
 
-It can output data in any of the [supported output formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md).
+It can output data in any of the [supported output formats][formats].
+
+[formats]: ../../../docs/DATA_FORMATS_OUTPUT.md
 
 ## Configuration
 
