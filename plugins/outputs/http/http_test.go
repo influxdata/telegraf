@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/config"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -118,6 +120,74 @@ func TestMethod(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+
+			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestHTTPClientConfig(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name                        string
+		plugin                      *HTTP
+		connectError                bool
+		expectedMaxIdleConns        int
+		expectedMaxIdleConnsPerHost int
+	}{
+		{
+			name: "With default client Config",
+			plugin: &HTTP{
+				URL:    u.String(),
+				Method: defaultMethod,
+				HTTPClientConfig: httpconfig.HTTPClientConfig{
+					IdleConnTimeout: config.Duration(5 * time.Second),
+				},
+			},
+			expectedMaxIdleConns:        0,
+			expectedMaxIdleConnsPerHost: 0,
+		},
+		{
+			name: "With MaxIdleConns client Config",
+			plugin: &HTTP{
+				URL:    u.String(),
+				Method: defaultMethod,
+				HTTPClientConfig: httpconfig.HTTPClientConfig{
+					MaxIdleConns:        100,
+					MaxIdleConnsPerHost: 100,
+					IdleConnTimeout:     config.Duration(5 * time.Second),
+				},
+			},
+			expectedMaxIdleConns:        100,
+			expectedMaxIdleConnsPerHost: 100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			})
+
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			if tt.connectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			tr := tt.plugin.client.Transport.(*http.Transport)
+			maxIdleConns, maxIdleConnsPerHost := tr.MaxIdleConns, tr.MaxIdleConnsPerHost
+			require.Equal(t, tt.expectedMaxIdleConns, maxIdleConns)
+			require.Equal(t, tt.expectedMaxIdleConnsPerHost, maxIdleConnsPerHost)
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			require.NoError(t, err)
