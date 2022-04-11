@@ -6,10 +6,10 @@ ARCH=$(uname -m)
 GO_VERSION="1.18"
 if [ "$ARCH" = 'arm64' ]; then
     GO_ARCH="darwin-arm64"
-    GO_VERSION_SHA="7c48130b37a155e709ef1db22d3f40ca17cfdaee0dc9d0cc35d2d7c4e0e3d299" # from https://golang.org/dl
+    GO_VERSION_SHA="9cab6123af9ffade905525d79fc9ee76651e716c85f1f215872b5f2976782480" # from https://golang.org/dl
 elif [ "$ARCH" = 'x86_64' ]; then
     GO_ARCH="darwin-amd64"
-    GO_VERSION_SHA="dbfabbbb6377c225ccf28393ecc7aed55564870fcfb39d797411d6b8693013c6" # from https://golang.org/dl
+    GO_VERSION_SHA="70bb4a066997535e346c8bfa3e0dfe250d61100b17ccc5676274642447834969" # from https://golang.org/dl
 fi
 
 # This path is cachable. (Saving in /usr/local/ would cause issues restoring the cache.)
