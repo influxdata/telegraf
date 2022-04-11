@@ -2274,8 +2274,8 @@ Data Units Written:                 16 829 004 [8,61 TB]
 Host Read Commands:                 205 868 508
 Host Write Commands:                228 472 943
 Controller Busy Time:               686
-Power Cycles:                       10 779
-Power On Hours:                     1 290
+Power Cycles:                       10�779
+Power On Hours:                     1�290
 Unsafe Shutdowns:                   9
 Media and Data Integrity Errors:    0
 Error Information Log Entries:      979

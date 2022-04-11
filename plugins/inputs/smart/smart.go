@@ -882,7 +882,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					}
 
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
-						fmt.Printf("error parsing %s: '%s': %s\n", attr.Name, matches[2], err.Error())
+						acc.AddError(fmt.Errorf("error parsing %s: '%s': %s", attr.Name, matches[2], err.Error()))
 						continue
 					}
 					fmt.Printf("%-34s: '%s' -> '%d'\n", attr.Name, matches[2], fields["raw_value"])
@@ -1031,8 +1031,20 @@ func parseInt(str string) int64 {
 }
 
 func parseCommaSeparatedInt(fields, _ map[string]interface{}, str string) error {
-	str = strings.Join(strings.Fields(str), "")
-	i, err := strconv.ParseInt(strings.Replace(str, ",", "", -1), 10, 64)
+	// remove any non-utf8 values
+	// '1\xa0292' --> 1292
+	value := strings.ToValidUTF8(strings.Join(strings.Fields(str), ""), "")
+
+	// remove any non-alphanumeric values
+	// '16,626,888' --> 16626888
+	// '16 829 004' --> 16829004
+	numRegex, err := regexp.Compile(`[^0-9\-]+`)
+	if err != nil {
+		return fmt.Errorf("failed to compile numeric regex")
+	}
+	value = numRegex.ReplaceAllString(value, "")
+
+	i, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return err
 	}
@@ -1047,17 +1059,8 @@ func parsePercentageInt(fields, deviceFields map[string]interface{}, str string)
 }
 
 func parseDataUnits(fields, deviceFields map[string]interface{}, str string) error {
-	// Remove everything after '[' and stip non-numeric chars
-	data := strings.Split(str, "[")
-
-	regex, err := regexp.Compile("[^0-9]+")
-	if err != nil {
-		return fmt.Errorf("failed to compile numeric regex")
-	}
-
-	// '16,626,888 [8,51 TB]' --> 16626888
-	// '16 829 004 [8,61 TB]' --> 16829004
-	units := regex.ReplaceAllString(data[0], "")
+	// Remove everything after '['
+	units := strings.Split(str, "[")[0]
 	return parseCommaSeparatedInt(fields, deviceFields, units)
 }
 
