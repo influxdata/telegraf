@@ -107,7 +107,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 	}
 
-	return fmt.Errorf("failed to send metrics to all configured servers")
+	return fmt.Errorf("failed to send metrics to any configured server(s)")
 }
 
 func (i *InfluxDB) getHTTPClient(address *url.URL, proxy *url.URL) (Client, error) {
