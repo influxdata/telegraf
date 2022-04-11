@@ -11,6 +11,7 @@ This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage <plugin-name>`.
 
 ```toml
+# Read metrics from SQL queries
 [[inputs.sql]]
   ## Database Driver
   ## See https://github.com/influxdata/telegraf/blob/master/docs/SQL_DRIVERS_INPUT.md for
