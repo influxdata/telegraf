@@ -56,8 +56,7 @@ var remoteURLRe = regexp.MustCompile("^((udp|tcp)[46]?|https)://")
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
 		if strings.HasPrefix(source, "file://") ||
-			strings.HasPrefix(source, "/") ||
-			strings.Index(source, ":\\") != 1 {
+			strings.HasPrefix(source, "/") {
 			source = filepath.ToSlash(strings.TrimPrefix(source, "file://"))
 			g, err := globpath.Compile(source)
 			if err != nil {
@@ -93,6 +92,7 @@ func (c *X509Cert) serverName(u *url.URL) (string, error) {
 }
 
 func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, error) {
+	protocol := u.Scheme
 	switch u.Scheme {
 	case "udp", "udp4", "udp6":
 		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
@@ -133,6 +133,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, nil
 	case "https":
+		protocol = "tcp"
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
 		dialer, err := c.Proxy()
@@ -140,7 +141,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			return nil, err
 		}
 
-		ipConn, err := dialer.DialTimeout(u.Scheme, u.Host, timeout)
+		ipConn, err := dialer.DialTimeout(protocol, u.Host, timeout)
 		if err != nil {
 			return nil, err
 		}

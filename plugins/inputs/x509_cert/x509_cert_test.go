@@ -330,6 +330,7 @@ func TestGatherTCPCert(t *testing.T) {
 
 	m := &X509Cert{
 		Sources: []string{ts.URL},
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
@@ -370,6 +371,7 @@ func TestGatherCertIntegration(t *testing.T) {
 
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
@@ -386,6 +388,7 @@ func TestGatherCertMustNotTimeoutIntegration(t *testing.T) {
 	duration := time.Duration(15) * time.Second
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
+		Log:     testutil.Logger{},
 		Timeout: config.Duration(duration),
 	}
 	require.NoError(t, m.Init())
