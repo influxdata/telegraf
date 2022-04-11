@@ -885,7 +885,6 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 						acc.AddError(fmt.Errorf("error parsing %s: '%s': %s", attr.Name, matches[2], err.Error()))
 						continue
 					}
-					fmt.Printf("%-34s: '%s' -> '%d'\n", attr.Name, matches[2], fields["raw_value"])
 					// if the field is classified as an attribute, only add it
 					// if m.Attributes is true
 					if m.Attributes {
