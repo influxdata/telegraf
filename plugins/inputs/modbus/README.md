@@ -6,6 +6,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 ## Configuration
 
 ```toml
+# Retrieve data from MODBUS slave devices
 [[inputs.modbus]]
   ## Connection Configuration
   ##

@@ -1,4 +1,4 @@
-package net
+package netstat
 
 import (
 	"fmt"
@@ -10,21 +10,11 @@ import (
 )
 
 type NetStats struct {
-	ps system.PS
-}
-
-func (ns *NetStats) Description() string {
-	return "Read TCP metrics such as established, time wait and sockets counts."
-}
-
-var tcpstatSampleConfig = ""
-
-func (ns *NetStats) SampleConfig() string {
-	return tcpstatSampleConfig
+	PS system.PS
 }
 
 func (ns *NetStats) Gather(acc telegraf.Accumulator) error {
-	netconns, err := ns.ps.NetConnections()
+	netconns, err := ns.PS.NetConnections()
 	if err != nil {
 		return fmt.Errorf("error getting net connections info: %s", err)
 	}
@@ -67,6 +57,6 @@ func (ns *NetStats) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("netstat", func() telegraf.Input {
-		return &NetStats{ps: system.NewSystemPS()}
+		return &NetStats{PS: system.NewSystemPS()}
 	})
 }

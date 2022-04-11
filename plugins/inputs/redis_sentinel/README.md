@@ -6,13 +6,14 @@ monitoring multiple Redis servers and replicas.
 ## Configuration
 
 ```toml
-# Read Redis Sentinel's basic status information
+# Read metrics from one or many redis-sentinel servers
 [[inputs.redis_sentinel]]
   ## specify servers via a url matching:
   ##  [protocol://][:password]@address[:port]
   ##  e.g.
   ##    tcp://localhost:26379
   ##    tcp://:password@192.168.99.100
+  ##    unix:///var/run/redis-sentinel.sock
   ##
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 26379 is used
