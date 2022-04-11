@@ -8,9 +8,10 @@ based on its main usage cases and the evolution of the OpenTracing standard.*
 ## Configuration
 
 ```toml
+# This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
 [[inputs.zipkin]]
-    path = "/api/v1/spans" # URL path for span data
-    port = 9411 # Port on which Telegraf listens
+  # path = "/api/v1/spans" # URL path for span data
+  # port = 9411 # Port on which Telegraf listens
 ```
 
 The plugin accepts spans in `JSON` or `thrift` if the `Content-Type` is `application/json` or `application/x-thrift`, respectively.

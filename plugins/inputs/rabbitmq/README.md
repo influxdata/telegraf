@@ -10,6 +10,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
 ## Configuration
 
 ```toml
+# Reads metrics from RabbitMQ servers via the Management Plugin
 [[inputs.rabbitmq]]
   ## Management Plugin url. (default: http://localhost:15672)
   # url = "http://localhost:15672"

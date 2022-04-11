@@ -11,6 +11,16 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
   urls = ["http://localhost/api"]
   # Nginx API version, default: 3
   # api_version = 3
+
+  # HTTP response timeout (default: 5s)
+  response_timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 ## Migration from Nginx Plus (Status) input plugin

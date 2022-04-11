@@ -12,9 +12,7 @@ import (
 	"github.com/gosnmp/gosnmp"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -91,27 +89,6 @@ var tsc = &testSNMPConnection{
 		".1.0.0.3.1.3.11":    2,
 		".1.0.0.3.1.3.12":    3,
 	},
-}
-
-func TestSampleConfig(t *testing.T) {
-	conf := inputs.Inputs["snmp"]()
-	err := toml.Unmarshal([]byte(conf.SampleConfig()), conf)
-	require.NoError(t, err)
-
-	expected := &Snmp{
-		Agents:       []string{"udp://127.0.0.1:161"},
-		AgentHostTag: "",
-		ClientConfig: snmp.ClientConfig{
-			Timeout:        config.Duration(5 * time.Second),
-			Version:        2,
-			Path:           []string{"/usr/share/snmp/mibs"},
-			Community:      "public",
-			MaxRepetitions: 10,
-			Retries:        3,
-		},
-		Name: "snmp",
-	}
-	require.Equal(t, expected, conf)
 }
 
 func TestFieldInit(t *testing.T) {

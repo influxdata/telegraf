@@ -531,7 +531,6 @@ func TestV2ParseVarnishNames(t *testing.T) {
 func TestVersions(t *testing.T) {
 	server := &Varnish{regexpsCompiled: defaultRegexps}
 	require.NoError(t, server.Init())
-	require.Equal(t, "A plugin to collect stats from Varnish HTTP Cache", server.Description())
 	acc := &testutil.Accumulator{}
 
 	require.Equal(t, 0, len(acc.Metrics))

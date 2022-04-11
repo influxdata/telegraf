@@ -43,32 +43,6 @@ const (
 	streamUpstreamsPath   = "stream/upstreams"
 )
 
-var sampleConfig = `
-  ## An array of API URI to gather stats.
-  urls = ["http://localhost/api"]
-
-  # Nginx API version, default: 3
-  # api_version = 3
-
-  # HTTP response timeout (default: 5s)
-  response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (n *NginxPlusAPI) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *NginxPlusAPI) Description() string {
-	return "Read Nginx Plus Api documentation"
-}
-
 func (n *NginxPlusAPI) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

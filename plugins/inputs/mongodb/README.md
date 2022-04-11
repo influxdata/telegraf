@@ -5,6 +5,7 @@ All MongoDB server versions from 2.6 and higher are supported.
 ## Configuration
 
 ```toml
+# Read metrics from one or many MongoDB servers
 [[inputs.mongodb]]
   ## An array of URLs of the form:
   ##   "mongodb://" [user ":" pass "@"] host [ ":" port]

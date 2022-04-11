@@ -67,20 +67,6 @@ var dropwarn = "udp_listener message queue full. " +
 var malformedwarn = "udp_listener has received %d malformed packets" +
 	" thus far."
 
-const sampleConfig = `
-  # DEPRECATED: the TCP listener plugin has been deprecated in favor of the
-  # socket_listener plugin
-  # see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener
-`
-
-func (u *UDPListener) SampleConfig() string {
-	return sampleConfig
-}
-
-func (u *UDPListener) Description() string {
-	return "Generic UDP listener"
-}
-
 // All the work is done in the Start() function, so this is just a dummy
 // function.
 func (u *UDPListener) Gather(_ telegraf.Accumulator) error {

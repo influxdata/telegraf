@@ -17,6 +17,7 @@ The mock plugin only requires that:
 Below is a sample config to generate one of each of the four types:
 
 ```toml
+# Generate metrics for test and demonstration purposes
 [[inputs.mock]]
   ## Set the metric name to use for reporting
   metric_name = "mock"

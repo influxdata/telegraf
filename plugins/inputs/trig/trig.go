@@ -12,19 +12,6 @@ type Trig struct {
 	Amplitude float64
 }
 
-var TrigConfig = `
-  ## Set the amplitude
-  amplitude = 10.0
-`
-
-func (s *Trig) SampleConfig() string {
-	return TrigConfig
-}
-
-func (s *Trig) Description() string {
-	return "Inserts sine and cosine waves for demonstration purposes"
-}
-
 func (s *Trig) Gather(acc telegraf.Accumulator) error {
 	sinner := math.Sin((s.x*math.Pi)/5.0) * s.Amplitude
 	cosinner := math.Cos((s.x*math.Pi)/5.0) * s.Amplitude

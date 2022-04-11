@@ -119,31 +119,6 @@ var (
 	defaultPattern  = ""
 )
 
-// Description returns a short description of the plugin
-func (s *SystemdUnits) Description() string {
-	return "Gather systemd units state"
-}
-
-// SampleConfig returns sample configuration options.
-func (s *SystemdUnits) SampleConfig() string {
-	return `
-  ## Set timeout for systemctl execution
-  # timeout = "1s"
-  #
-  ## Filter for a specific unit type, default is "service", other possible
-  ## values are "socket", "target", "device", "mount", "automount", "swap",
-  ## "timer", "path", "slice" and "scope ":
-  # unittype = "service"
-  #
-  ## Filter for a specific pattern, default is "" (i.e. all), other possible
-  ## values are valid pattern for systemctl, e.g. "a*" for all units with
-  ## names starting with "a"
-  # pattern = ""
-  ## pattern = "telegraf* influxdb*"
-  ## pattern = "a*"
-`
-}
-
 // Gather parses systemctl outputs and adds counters to the Accumulator
 func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 	out, err := s.systemctl(s.Timeout, s.UnitType, s.Pattern)

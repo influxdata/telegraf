@@ -14,12 +14,6 @@ type MemStats struct {
 	platform string
 }
 
-func (ms *MemStats) Description() string {
-	return "Read metrics about memory usage"
-}
-
-func (ms *MemStats) SampleConfig() string { return "" }
-
 func (ms *MemStats) Init() error {
 	ms.platform = runtime.GOOS
 	return nil
