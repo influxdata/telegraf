@@ -84,6 +84,32 @@ message LTE {
   double timestamp = 4;
 }
 
+message Wireless {
+  message Fields {
+    int64 status = 1;
+    int64 link = 2;
+    int64 level = 3;
+    int64 noise = 4;
+    int64 nwid = 5;
+    int64 crypt = 6;
+    int64 frag = 7;
+    int64 retry = 8;
+    int64 misc = 9;
+    int64 missed_beacon = 10;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+
+  message Tags {
+    string host = 1;
+    string interface = 2;
+  }
+
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
 message SMART {
   message Fields {
     double exit_status = 1;
@@ -838,6 +864,7 @@ message Influx {
   repeated DetectNet detectnet = 26;
   repeated Uploader uploader = 27;
   repeated UploaderStats uploader_stats = 28;
+  repeated Wireless wireless = 29;
 }
 
 

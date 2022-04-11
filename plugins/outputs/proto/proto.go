@@ -6,9 +6,10 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"net/http"
 	"sync"
+
+	"github.com/aws/aws-sdk-go/aws/credentials"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -266,7 +267,14 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return errors.Wrap(err, "build glog")
 			}
 			influx.Glog = append(influx.Glog, &m)
+		case "wireless":
+			m := Wireless{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build wireless")
+			}
+			influx.Wireless = append(influx.Wireless, &m)
 		}
+
 	}
 
 	accessToken, err := f.cip.GetIdAccessToken()
