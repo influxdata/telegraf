@@ -7,6 +7,7 @@ The httpjson plugin collects data from HTTP URLs which respond with JSON.  It fl
 ## Configuration
 
 ```toml
+# Read flattened metrics from one or more JSON HTTP endpoints
 [[inputs.httpjson]]
   ## NOTE This plugin only reads numerical measurements, strings and booleans
   ## will be ignored.

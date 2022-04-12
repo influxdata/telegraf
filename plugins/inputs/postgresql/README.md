@@ -33,6 +33,7 @@ More information about the meaning of these metrics can be found in the [Postgre
 ## Configuration
 
 ```toml
+# Read metrics from one or many postgresql servers
 [[inputs.postgresql]]
   ## specify address via a url matching:
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
