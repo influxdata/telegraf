@@ -305,6 +305,7 @@ following works:
 - sigs.k8s.io/json [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/structured-merge-diff [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/yaml [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
+
 ## Telegraf used and modified code from these projects
 
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)
