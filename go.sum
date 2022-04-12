@@ -80,10 +80,6 @@ github.com/Azure/azure-amqp-common-go/v3 v3.2.3 h1:uDF62mbd9bypXWi19V1bN5NZEO84J
 github.com/Azure/azure-amqp-common-go/v3 v3.2.3/go.mod h1:7rPmbSfszeovxGfc5fSAXE4ehlXQZHpMja2OtxC2Tas=
 github.com/Azure/azure-event-hubs-go/v3 v3.3.17 h1:9k2yRMBJWgcIlSNBuKVja2af/oR3oMowqFPpHDV5Kl4=
 github.com/Azure/azure-event-hubs-go/v3 v3.3.17/go.mod h1:R5H325+EzgxcBDkUerEwtor7ZQg77G7HiOTwpcuIVXY=
-github.com/Azure/azure-kusto-go v0.5.2 h1:6kFVZp4iyz8YFTuxrIdivAXVcEs5wNKTVK5gai+E8pk=
-github.com/Azure/azure-kusto-go v0.5.2/go.mod h1:2xOhBxRcHyyNifFHmNMcqYL6AMdhyrUHCkEJkrZ+EI4=
-github.com/Azure/azure-kusto-go v0.5.3-0.20220411105257-84a841513a99 h1:pWfchBdtnfBoFXhk+3D6JLKaw2KQ50bxT2rsZToGj1Y=
-github.com/Azure/azure-kusto-go v0.5.3-0.20220411105257-84a841513a99/go.mod h1:PrnIeDgVjBc1Jv1dwOuL1om6/zIWQ7SbIBlx+/9UdWc=
 github.com/Azure/azure-kusto-go v0.6.0 h1:sAK4LE2emd7ZumN/HNJF6t1d/K8bjXe0MD5D1VsgKRE=
 github.com/Azure/azure-kusto-go v0.6.0/go.mod h1:PrnIeDgVjBc1Jv1dwOuL1om6/zIWQ7SbIBlx+/9UdWc=
 github.com/Azure/azure-pipeline-go v0.1.8/go.mod h1:XA1kFWRVhSK+KNFiOhfv83Fv8L9achrP7OxIzeTn1Yg=
