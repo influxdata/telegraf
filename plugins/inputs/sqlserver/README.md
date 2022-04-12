@@ -71,7 +71,7 @@ To create the login for the telegraf service run the following script:
 ```sql
 USE master;
 GO
-CREATE LOGIN [NT SERVICE\telegraf];
+CREATE LOGIN [NT SERVICE\telegraf] FROM WINDOWS;
 GO
 GRANT VIEW SERVER STATE TO [NT SERVICE\telegraf];
 GO
