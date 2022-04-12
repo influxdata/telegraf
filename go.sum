@@ -2223,8 +2223,8 @@ github.com/vmware/govmomi v0.27.3 h1:gwHHxKbMTNJON/3WPK3EsqZyQznTdHJAyRYPRSLm6R8
 github.com/vmware/govmomi v0.27.3/go.mod h1:daTuJEcQosNMXYJOeku0qdBJP9SOLLWB3Mqz8THtv6o=
 github.com/vmware/vmw-guestinfo v0.0.0-20170707015358-25eff159a728/go.mod h1:x9oS4Wk2s2u4tS29nEaDLdzvuHdB19CvSGJjPgkZJNk=
 github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad/go.mod h1:Hy8o65+MXnS6EwGElrSRjUzQDLXreJlzYLlWiHtt8hM=
-github.com/wavefronthq/wavefront-sdk-go v0.9.10 h1:L4eiEdHpudHTGwrJaPYaCXSjCYDex8FEKVqaprU2sY0=
-github.com/wavefronthq/wavefront-sdk-go v0.9.10/go.mod h1:ACJVXk0ksPHFkkTkXckqKEJGU3YDoAWjxTESkZlp+IE=
+github.com/wavefronthq/wavefront-sdk-go v0.9.11 h1:3qv/yyNNyLKPQftQWFrfHGUv50e/gMxKlUQnILlvHKw=
+github.com/wavefronthq/wavefront-sdk-go v0.9.11/go.mod h1:AcW8zJJcYodB7B9KYzoxVH6K0fmYd6MgpmXE1LMo+OU=
 github.com/willf/bitset v1.1.3/go.mod h1:RjeCKbqT1RxIR/KWY6phxZiaY1IyutSBfGjNPySAYV4=
 github.com/willf/bitset v1.1.11-0.20200630133818-d5bec3311243/go.mod h1:RjeCKbqT1RxIR/KWY6phxZiaY1IyutSBfGjNPySAYV4=
 github.com/willf/bitset v1.1.11/go.mod h1:83CECat5yLh5zVOf4P1ErAgKA5UDvKtgyUABdr3+MjI=
