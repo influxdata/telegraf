@@ -356,8 +356,9 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 			}
 		}
 
+		// if the keys and content fields are missing, skip the message as it
+		// does not have parsable data used by Telegraf
 		if keys == nil || content == nil {
-			c.Log.Infof("Message from %s missing keys or content", msg.GetNodeIdStr())
 			continue
 		}
 
