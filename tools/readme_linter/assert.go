@@ -67,12 +67,9 @@ func (t *T) line(offset int) int {
 
 func (t *T) printFile(n ast.Node) {
 	lines := n.Lines()
-	if lines == nil {
+	if lines == nil || lines.Len() == 0 {
 		t.printFileLine(0)
 		return
-	}
-	if lines.Len() == 0 {
-		panic("can't get offset of node")
 	}
 	offset := lines.At(0).Start
 	line := t.line(offset)
