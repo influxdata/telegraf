@@ -67,7 +67,7 @@ require (
 	github.com/golang/snappy v0.0.4
 	github.com/google/go-cmp v0.5.7
 	github.com/google/go-github/v32 v32.1.0
-	github.com/gopcua/opcua v0.3.1
+	github.com/gopcua/opcua v0.3.3
 	github.com/gophercloud/gophercloud v0.24.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2

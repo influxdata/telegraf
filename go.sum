@@ -1168,8 +1168,8 @@ github.com/googleapis/gnostic v0.5.1/go.mod h1:6U4PtQXGIEt/Z3h5MAT7FNofLnw9vXk2c
 github.com/googleapis/gnostic v0.5.5 h1:9fHAtK0uDfpveeqqo1hkEZJcFvYXAiCN3UutL8F9xHw=
 github.com/googleapis/gnostic v0.5.5/go.mod h1:7+EbHbldMins07ALC74bsA81Ovc97DwqyJO1AENw9kA=
 github.com/gookit/color v1.3.6/go.mod h1:R3ogXq2B9rTbXoSHJ1HyUVAZ3poOJHpd9nQmyGZsfvQ=
-github.com/gopcua/opcua v0.3.1 h1:BS1TRJUdsPSwU0mlfc8Dffchh0jTw9lWchmF4HFRo2w=
-github.com/gopcua/opcua v0.3.1/go.mod h1:rdqS1oF5s/+Ko4SnhZA+3tgK4MQuXDzH3KgnnLDaCCQ=
+github.com/gopcua/opcua v0.3.3 h1:tu1t/mx9fJybry1KYljqDdzxmik+BZk6410LJ4QzM2E=
+github.com/gopcua/opcua v0.3.3/go.mod h1:n/qSWDVB/KSPIG4vYhBSbs5zdYAW3yOcDCRrWd1BZo0=
 github.com/gophercloud/gophercloud v0.16.0/go.mod h1:wRtmUelyIIv3CSSDI47aUwbs075O6i+LY+pXsKCBsb4=
 github.com/gophercloud/gophercloud v0.24.0 h1:jDsIMGJ1KZpAjYfQgGI2coNQj5Q83oPzuiGJRFWgMzw=
 github.com/gophercloud/gophercloud v0.24.0/go.mod h1:Q8fZtyi5zZxPS/j9aj3sSxtvj41AdQMDwyo1myduD5c=
