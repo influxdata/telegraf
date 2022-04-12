@@ -181,7 +181,7 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 }
 
 func (a *Aerospike) getNodeInfo(n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
-	stats, err := n.RequestInfo(infoPolicy)
+	stats, err := n.RequestInfo(infoPolicy, "statistics")
 	if err != nil {
 		return nil, err
 	}
@@ -190,17 +190,21 @@ func (a *Aerospike) getNodeInfo(n *as.Node, infoPolicy *as.InfoPolicy) (map[stri
 }
 
 func (a *Aerospike) parseNodeInfo(acc telegraf.Accumulator, stats map[string]string, hostPort string, nodeName string) {
-	tags := map[string]string{
+	nTags := map[string]string{
 		"aerospike_host": hostPort,
 		"node_name":      nodeName,
 	}
-	fields := make(map[string]interface{})
-
-	for k, v := range stats {
-		key := strings.Replace(k, "-", "_", -1)
-		fields[key] = parseAerospikeValue(key, v)
+	nFields := make(map[string]interface{})
+	stat := strings.Split(stats["statistics"], ";")
+	for _, pair := range stat {
+		parts := strings.Split(pair, "=")
+		if len(parts) < 2 {
+			continue
+		}
+		key := strings.Replace(parts[0], "-", "_", -1)
+		nFields[key] = parseAerospikeValue(key, parts[1])
 	}
-	acc.AddFields("aerospike_node", fields, tags, time.Now())
+	acc.AddFields("aerospike_node", nFields, nTags, time.Now())
 }
 
 func (a *Aerospike) getNamespaces(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, error) {
