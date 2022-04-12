@@ -11,6 +11,9 @@ following works:
 - github.com/Azure/azure-kusto-go [MIT License](https://github.com/Azure/azure-kusto-go/blob/master/LICENSE)
 - github.com/Azure/azure-pipeline-go [MIT License](https://github.com/Azure/azure-pipeline-go/blob/master/LICENSE)
 - github.com/Azure/azure-sdk-for-go [Apache License 2.0](https://github.com/Azure/azure-sdk-for-go/blob/master/LICENSE)
+- github.com/Azure/azure-sdk-for-go/sdk/azcore [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/azcore/LICENSE.txt)
+- github.com/Azure/azure-sdk-for-go/sdk/internal [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/internal/LICENSE.txt)
+- github.com/Azure/azure-sdk-for-go/sdk/storage/azblob [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/storage/azblob/LICENSE.txt)
 - github.com/Azure/azure-storage-blob-go [MIT License](https://github.com/Azure/azure-storage-blob-go/blob/master/LICENSE)
 - github.com/Azure/azure-storage-queue-go [MIT License](https://github.com/Azure/azure-storage-queue-go/blob/master/LICENSE)
 - github.com/Azure/go-amqp [MIT License](https://github.com/Azure/go-amqp/blob/master/LICENSE)
@@ -302,9 +305,6 @@ following works:
 - sigs.k8s.io/json [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/structured-merge-diff [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/yaml [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
-- github.com/Azure/azure-sdk-for-go/sdk/azcore [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/azcore/LICENSE.txt)
-- github.com/Azure/azure-sdk-for-go/sdk/internal [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/internal/LICENSE.txt)
-- github.com/Azure/azure-sdk-for-go/sdk/storage/azblob [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/storage/azblob/LICENSE.txt)
 ## Telegraf used and modified code from these projects
 
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)
