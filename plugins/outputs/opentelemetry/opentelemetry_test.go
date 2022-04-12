@@ -2,6 +2,7 @@ package opentelemetry
 
 import (
 	"context"
+	"google.golang.org/grpc/credentials/insecure"
 	"net"
 	"strings"
 	"testing"
@@ -27,8 +28,8 @@ func TestOpenTelemetry(t *testing.T) {
 		rm := expect.ResourceMetrics().AppendEmpty()
 		rm.Resource().Attributes().InsertString("host.name", "potato")
 		rm.Resource().Attributes().InsertString("attr-key", "attr-val")
-		ilm := rm.InstrumentationLibraryMetrics().AppendEmpty()
-		ilm.InstrumentationLibrary().SetName("My Library Name")
+		ilm := rm.ScopeMetrics().AppendEmpty()
+		ilm.Scope().SetName("My Library Name")
 		m := ilm.Metrics().AppendEmpty()
 		m.SetName("cpu_temp")
 		m.SetDataType(pdata.MetricDataTypeGauge)
@@ -109,7 +110,7 @@ func newMockOtelService(t *testing.T) *mockOtelService {
 	otlpgrpc.RegisterMetricsServer(grpcServer, mockOtelService)
 	go func() { assert.NoError(t, grpcServer.Serve(listener)) }()
 
-	grpcClient, err := grpc.Dial(listener.Addr().String(), grpc.WithInsecure(), grpc.WithBlock())
+	grpcClient, err := grpc.Dial(listener.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	require.NoError(t, err)
 	mockOtelService.grpcClient = grpcClient
 

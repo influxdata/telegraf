@@ -2,6 +2,7 @@ package opentelemetry
 
 import (
 	"context"
+	"google.golang.org/grpc/credentials/insecure"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
@@ -60,7 +61,7 @@ func (o *OpenTelemetry) Connect() error {
 	} else if tlsConfig != nil {
 		grpcTLSDialOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
 	} else {
-		grpcTLSDialOption = grpc.WithInsecure()
+		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
 	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpcTLSDialOption)
