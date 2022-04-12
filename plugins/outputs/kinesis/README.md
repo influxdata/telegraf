@@ -34,7 +34,6 @@ will be used.
 [2]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file
 [3]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
-
 ## Configuration
 
 ```toml

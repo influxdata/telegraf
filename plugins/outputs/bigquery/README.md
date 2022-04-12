@@ -72,5 +72,4 @@ persistence
 Pay attention to the column `timestamp` since it is reserved upfront and cannot
 change.  If partitioning is required make sure it is applied beforehand.
 
-
 [rename]: ../../processors/rename/README.md

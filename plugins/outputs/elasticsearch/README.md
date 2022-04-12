@@ -353,7 +353,7 @@ dynamic field mapping. This causes the metrics with such values to be dropped in
 case a field mapping has not been created yet on the telegraf index. If that's
 the case you will see an exception on Elasticsearch side like this:
 
-```
+```json
 {"error":{"root_cause":[{"type":"mapper_parsing_exception","reason":"failed to parse"}],"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"illegal_state_exception","reason":"No matching token for number_type [BIG_INTEGER]"}},"status":400}
 ```
 
