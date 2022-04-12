@@ -22,6 +22,7 @@ The plugin expects messages in one of the
 ## Configuration
 
 ```toml
+# Parse the new lines appended to a file
 [[inputs.tail]]
   ## File names or a pattern to tail.
   ## These accept standard unix glob matching rules, but with the addition of
@@ -81,7 +82,7 @@ The plugin expects messages in one of the
     ## multi-line event.
     #match_which_line = "previous"
 
-    ## The invert_match can be true or false (defaults to false). 
+    ## The invert_match can be true or false (defaults to false).
     ## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
     #invert_match = false
 

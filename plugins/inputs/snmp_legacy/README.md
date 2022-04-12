@@ -11,6 +11,7 @@ In this example, the plugin will gather value of OIDS:
 - `.1.3.6.1.2.1.2.2.1.4.1`
 
 ```toml
+# DEPRECATED! PLEASE USE inputs.snmp INSTEAD.
 [[inputs.snmp_legacy]]
   ## Use 'oids.txt' file to translate oids to names
   ## To generate 'oids.txt' you need to run:

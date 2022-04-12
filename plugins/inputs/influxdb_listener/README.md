@@ -21,6 +21,7 @@ submits data to InfluxDB determines the destination database.
 ## Configuration
 
 ```toml
+# Accept metrics over InfluxDB 1.x HTTP API
 [[inputs.influxdb_listener]]
   ## Address and port to host HTTP listener on
   service_address = ":8186"
