@@ -136,7 +136,7 @@ require (
 	github.com/vmware/govmomi v0.27.3
 	github.com/wavefronthq/wavefront-sdk-go v0.9.10
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
-	github.com/xdg/scram v1.0.3
+	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.4.1
 	go.mongodb.org/mongo-driver v1.9.0
 	go.opentelemetry.io/collector/model v0.48.0
