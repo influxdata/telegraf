@@ -144,10 +144,16 @@ func (s *AliyunCMS) Init() error {
 		if metric.Dimensions != "" {
 			metric.dimensionsUdObj = map[string]string{}
 			metric.dimensionsUdArr = []map[string]string{}
+
+			// first try to unmarshal as an object
 			err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdObj)
 			if err != nil {
+				// then try to unmarshal as an array
 				err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdArr)
-				return errors.Errorf("Can't parse dimensions (it is neither obj, nor array) %q :%v", metric.Dimensions, err)
+
+				if err != nil {
+					return errors.Errorf("cannot parse dimensions (neither obj, nor array) %q :%v", metric.Dimensions, err)
+				}
 			}
 		}
 	}
@@ -430,14 +436,15 @@ L:
 				metric.discoveryTags[instanceID][tagKey] = tagValue
 			}
 
-			//Preparing dimensions (first adding dimensions that comes from discovery data)
-			metric.requestDimensions = append(
-				metric.requestDimensions,
-				map[string]string{s.dimensionKey: instanceID})
+			//if no dimension configured in config file, use discovery data
+			if len(metric.dimensionsUdArr) == 0 && len(metric.dimensionsUdObj) == 0 {
+				metric.requestDimensions = append(
+					metric.requestDimensions,
+					map[string]string{s.dimensionKey: instanceID})
+			}
 		}
 
-		//Get final dimension (need to get full lis of
-		//what was provided in config + what comes from discovery
+		//add dimensions filter from config file
 		if len(metric.dimensionsUdArr) != 0 {
 			metric.requestDimensions = append(metric.requestDimensions, metric.dimensionsUdArr...)
 		}
