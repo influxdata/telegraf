@@ -17,30 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
-const sampleConfig = `
-  ## Program to run as daemon
-  command = ["telegraf-smartctl", "-d", "/dev/sda"]
-
-  ## Define how the process is signaled on each collection interval.
-  ## Valid values are:
-  ##   "none"   : Do not signal anything.
-  ##              The process must output metrics by itself.
-  ##   "STDIN"   : Send a newline on STDIN.
-  ##   "SIGHUP"  : Send a HUP signal. Not available on Windows.
-  ##   "SIGUSR1" : Send a USR1 signal. Not available on Windows.
-  ##   "SIGUSR2" : Send a USR2 signal. Not available on Windows.
-  signal = "none"
-
-  ## Delay before the process is restarted after an unexpected termination
-  restart_delay = "10s"
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
-
 type Execd struct {
 	Command      []string        `toml:"command"`
 	Signal       string          `toml:"signal"`
@@ -50,14 +26,6 @@ type Execd struct {
 	process *process.Process
 	acc     telegraf.Accumulator
 	parser  parsers.Parser
-}
-
-func (e *Execd) SampleConfig() string {
-	return sampleConfig
-}
-
-func (e *Execd) Description() string {
-	return "Run executable as long-running input plugin"
 }
 
 func (e *Execd) SetParser(parser parsers.Parser) {

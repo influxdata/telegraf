@@ -42,33 +42,6 @@ type OpenTSDB struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-var sampleConfig = `
-  ## prefix for metrics keys
-  prefix = "my.specific.prefix."
-
-  ## DNS name of the OpenTSDB server
-  ## Using "opentsdb.example.com" or "tcp://opentsdb.example.com" will use the
-  ## telnet API. "http://opentsdb.example.com" will use the Http API.
-  host = "opentsdb.example.com"
-
-  ## Port of the OpenTSDB server
-  port = 4242
-
-  ## Number of data points to send to OpenTSDB in Http requests.
-  ## Not used with telnet API.
-  http_batch_size = 50
-
-  ## URI Path for Http requests to OpenTSDB.
-  ## Used in cases where OpenTSDB is located behind a reverse proxy.
-  http_path = "/api/put"
-
-  ## Debug true - Prints OpenTSDB communication
-  debug = false
-
-  ## Separator separates measurement name from field
-  separator = "_"
-`
-
 func ToLineFormat(tags map[string]string) string {
 	tagsArray := make([]string, len(tags))
 	index := 0
@@ -252,14 +225,6 @@ func UIntToString(inputNum uint64) string {
 
 func FloatToString(inputNum float64) string {
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
-}
-
-func (o *OpenTSDB) SampleConfig() string {
-	return sampleConfig
-}
-
-func (o *OpenTSDB) Description() string {
-	return "Configuration for OpenTSDB server to send metrics to"
 }
 
 func (o *OpenTSDB) Close() error {

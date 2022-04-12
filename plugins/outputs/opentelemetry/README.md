@@ -5,6 +5,7 @@ This plugin sends metrics to [OpenTelemetry](https://opentelemetry.io) servers a
 ## Configuration
 
 ```toml
+# Send OpenTelemetry metrics over gRPC
 [[outputs.opentelemetry]]
   ## Override the default (localhost:4317) OpenTelemetry gRPC service
   ## address:port

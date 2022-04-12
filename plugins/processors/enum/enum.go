@@ -9,30 +9,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-var sampleConfig = `
-  [[processors.enum.mapping]]
-    ## Name of the field to map. Globs accepted.
-    field = "status"
-
-    ## Name of the tag to map. Globs accepted.
-    # tag = "status"
-
-    ## Destination tag or field to be used for the mapped value.  By default the
-    ## source tag or field is used, overwriting the original value.
-    dest = "status_code"
-
-    ## Default value to be used for all values not contained in the mapping
-    ## table.  When unset, the unmodified value for the field will be used if no
-    ## match is found.
-    # default = 0
-
-    ## Table of mappings
-    [processors.enum.mapping.value_mappings]
-      green = 1
-      amber = 2
-      red = 3
-`
-
 type EnumMapper struct {
 	Mappings []Mapping `toml:"mapping"`
 
@@ -69,14 +45,6 @@ func (mapper *EnumMapper) Init() error {
 	}
 
 	return nil
-}
-
-func (mapper *EnumMapper) SampleConfig() string {
-	return sampleConfig
-}
-
-func (mapper *EnumMapper) Description() string {
-	return "Map enum values according to given table."
 }
 
 func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {

@@ -9,6 +9,7 @@ This plugin requires sudo, that is why you should setup and be sure that the tel
 ## Configuration
 
 ```toml
+# Provide a native collection for dmsetup based statistics for dm-cache
 [[inputs.dmcache]]
   ## Whether to report per-device stats or not
   per_device = true

@@ -21,6 +21,7 @@ avoid cardinality issues:
 ## Configuration
 
 ```toml
+# SFlow V5 Protocol Listener
 [[inputs.sflow]]
   ## Address to listen for sFlow packets.
   ##   example: service_address = "udp://:6343"

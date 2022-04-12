@@ -678,7 +678,6 @@ type MockupInputPluginParserOld struct {
 }
 
 func (m *MockupInputPluginParserOld) SampleConfig() string                  { return "Mockup old parser test plugin" }
-func (m *MockupInputPluginParserOld) Description() string                   { return "Mockup old parser test plugin" }
 func (m *MockupInputPluginParserOld) Gather(acc telegraf.Accumulator) error { return nil }
 func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser)       { m.Parser = parser }
 func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc)    { m.ParserFunc = f }
@@ -690,7 +689,6 @@ type MockupInputPluginParserNew struct {
 }
 
 func (m *MockupInputPluginParserNew) SampleConfig() string                  { return "Mockup old parser test plugin" }
-func (m *MockupInputPluginParserNew) Description() string                   { return "Mockup old parser test plugin" }
 func (m *MockupInputPluginParserNew) Gather(acc telegraf.Accumulator) error { return nil }
 func (m *MockupInputPluginParserNew) SetParser(parser telegraf.Parser)      { m.Parser = parser }
 func (m *MockupInputPluginParserNew) SetParserFunc(f telegraf.ParserFunc)   { m.ParserFunc = f }
@@ -714,7 +712,6 @@ type MockupInputPlugin struct {
 }
 
 func (m *MockupInputPlugin) SampleConfig() string                  { return "Mockup test input plugin" }
-func (m *MockupInputPlugin) Description() string                   { return "Mockup test input plugin" }
 func (m *MockupInputPlugin) Gather(acc telegraf.Accumulator) error { return nil }
 func (m *MockupInputPlugin) SetParser(parser telegraf.Parser)      { m.parser = parser }
 
@@ -730,7 +727,6 @@ type MockupOuputPlugin struct {
 
 func (m *MockupOuputPlugin) Connect() error                        { return nil }
 func (m *MockupOuputPlugin) Close() error                          { return nil }
-func (m *MockupOuputPlugin) Description() string                   { return "Mockup test output plugin" }
 func (m *MockupOuputPlugin) SampleConfig() string                  { return "Mockup test output plugin" }
 func (m *MockupOuputPlugin) Write(metrics []telegraf.Metric) error { return nil }
 

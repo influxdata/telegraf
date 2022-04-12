@@ -22,24 +22,6 @@ type ROCmSMI struct {
 	Timeout config.Duration
 }
 
-// Description returns the description of the ROCmSMI plugin
-func (rsmi *ROCmSMI) Description() string {
-	return "Query statistics from AMD Graphics cards using rocm-smi binary"
-}
-
-var ROCmSMIConfig = `
-## Optional: path to rocm-smi binary, defaults to $PATH via exec.LookPath
-# bin_path = "/opt/rocm/bin/rocm-smi"
-
-## Optional: timeout for GPU polling
-# timeout = "5s"
-`
-
-// SampleConfig returns the sample configuration for the ROCmSMI plugin
-func (rsmi *ROCmSMI) SampleConfig() string {
-	return ROCmSMIConfig
-}
-
 // Gather implements the telegraf interface
 func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
 	if _, err := os.Stat(rsmi.BinPath); os.IsNotExist(err) {

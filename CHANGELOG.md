@@ -2,6 +2,29 @@
 
 # Changelog
 
+## v1.22.1 [2022-04-06]
+
+### Bugfixes
+
+- [#10937](https://github.com/influxdata/telegraf/pull/10937) Update gonum.org/v1/gonum from 0.9.3 to 0.11.0
+- [#10906](https://github.com/influxdata/telegraf/pull/10906) Update github.com/golang-jwt/jwt/v4 from 4.2.0 to 4.4.1
+- [#10931](https://github.com/influxdata/telegraf/pull/10931) Update gopsutil and associated dependencies for improved OpenBSD support
+- [#10553](https://github.com/influxdata/telegraf/pull/10553) `inputs.sqlserver` Fix inconsistencies in sql*Requests queries
+- [#10883](https://github.com/influxdata/telegraf/pull/10883) `agent` Fix default value for logfile rotation interval
+- [#10871](https://github.com/influxdata/telegraf/pull/10871) `inputs.zfs` Fix redundant zfs pool tag
+- [#10903](https://github.com/influxdata/telegraf/pull/10903) `inputs.vsphere` Update vsphere info message to debug
+- [#10866](https://github.com/influxdata/telegraf/pull/10866) `outputs.azure_monitor` Include body in error message
+- [#10830](https://github.com/influxdata/telegraf/pull/10830) `processors.topk` Clarify the k and fields topk params
+- [#10858](https://github.com/influxdata/telegraf/pull/10858) `outputs.http` Switch HTTP 100 test case values
+- [#10859](https://github.com/influxdata/telegraf/pull/10859) `inputs.intel_pmu` Fix slow running intel-pmu test
+- [#10860](https://github.com/influxdata/telegraf/pull/10860) `inputs.cloud_pubsub` Skip longer/integration tests on -short mode
+- [#10861](https://github.com/influxdata/telegraf/pull/10861) `inputs.cloud_pubsub_push` Reduce timeouts and sleeps
+
+### New External Plugins
+
+- [#10462](https://github.com/influxdata/telegraf/pull/10462) `external.psi` Add psi plugin
+
+
 ## v1.22.0
 
 ### Influx Line Protocol Parser

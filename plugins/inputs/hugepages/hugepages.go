@@ -26,14 +26,6 @@ const (
 	rootHugepages    = "root"
 	perNodeHugepages = "per_node"
 	meminfoHugepages = "meminfo"
-
-	hugepagesSampleConfig = `
-  ## Supported huge page types:
-  ##   - "root" - based on root huge page control directory: /sys/kernel/mm/hugepages
-  ##   - "per_node" - based on per NUMA node directories: /sys/devices/system/node/node[0-9]*/hugepages
-  ##   - "meminfo" - based on /proc/meminfo file
-  # types = ["root", "per_node"]
-`
 )
 
 var (
@@ -78,14 +70,6 @@ type Hugepages struct {
 	rootHugepagePath string
 	numaNodePath     string
 	meminfoPath      string
-}
-
-func (h *Hugepages) Description() string {
-	return "Gathers huge pages measurements."
-}
-
-func (h *Hugepages) SampleConfig() string {
-	return hugepagesSampleConfig
 }
 
 func (h *Hugepages) Init() error {

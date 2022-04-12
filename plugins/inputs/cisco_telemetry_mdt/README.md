@@ -12,6 +12,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
 ## Configuration
 
 ```toml
+# Cisco model-driven telemetry (MDT) input plugin for IOS XR, IOS XE and NX-OS platforms
 [[inputs.cisco_telemetry_mdt]]
  ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when
  ## using the grpc transport.
@@ -21,7 +22,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  service_address = ":57000"
 
  ## Grpc Maximum Message Size, default is 4MB, increase the size.
- max_msg_size = 20000000
+ max_msg_size = 4000000
 
  ## Enable TLS; grpc transport only.
  # tls_cert = "/etc/telegraf/cert.pem"
@@ -37,6 +38,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
+ ## Define Property Xformation, please refer README and https://pubhub.devnetcloud.com/media/dme-docs-9-3-3/docs/appendix/ for Model details.
  [inputs.cisco_telemetry_mdt.dmes]
 #    Global Property Xformation.
 #    prop1 = "uint64 to int"

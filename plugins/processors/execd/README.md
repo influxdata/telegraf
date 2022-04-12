@@ -23,6 +23,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ## Configuration
 
 ```toml
+# Run executable as long-running processor plugin
 [[processors.execd]]
   ## One program to run as daemon.
   ## NOTE: process and each argument should each be their own string

@@ -14,6 +14,7 @@ Enable mutually authenticated TLS and authorize client connections by signing ce
 This is a sample configuration for the plugin.
 
 ```toml
+# Google Cloud Pub/Sub Push HTTP listener
 [[inputs.cloud_pubsub_push]]
   ## Address and port to host HTTP listener on
   service_address = ":8080"

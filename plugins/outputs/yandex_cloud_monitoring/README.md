@@ -5,6 +5,7 @@ This plugin will send custom metrics to [Yandex Cloud Monitoring](https://cloud.
 ## Configuration
 
 ```toml
+# Send aggregated metrics to Yandex.Cloud Monitoring
 [[outputs.yandex_cloud_monitoring]]
   ## Timeout for HTTP writes.
   # timeout = "20s"

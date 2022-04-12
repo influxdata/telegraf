@@ -5,6 +5,7 @@ The Kapacitor plugin collects metrics from the given Kapacitor instances.
 ## Configuration
 
 ```toml
+# Read Kapacitor-formatted JSON metrics from one or more HTTP endpoints
 [[inputs.kapacitor]]
   ## Multiple URLs from which to read Kapacitor-formatted JSON
   ## Default is "http://localhost:9092/kapacitor/v1/debug/vars".

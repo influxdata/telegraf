@@ -15,11 +15,10 @@ and submit new inputs.
   themselves.  See below for a quick example.
 - Input Plugins must be added to the
   `github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
-- The `SampleConfig` function should return valid toml that describes how the
-  plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [Sample Config][] page for the latest style
-  guidelines.
-- The `Description` function should say in one line what this plugin does.
+- Each plugin requires a file called `<plugin_name>_sample_config.go`, where `<plugin_name>` is replaced with the actual plugin name.
+  Copy the [example template](#sample-configuration-template) into this file, also updating `<plugin_name>` were appropriate.
+  This file is automatically updated during the build process to include the sample configuration from the `README.md`.
+  Please consult the [Sample Config][] page for the latest style guidelines.
 - Follow the recommended [Code Style][].
 
 Let's say you've written a plugin that emits metrics about processes on the
@@ -28,9 +27,9 @@ current host.
 ## Input Plugin Example
 
 ```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package simple
-
-// simple.go
 
 import (
     "github.com/influxdata/telegraf"
@@ -40,17 +39,6 @@ import (
 type Simple struct {
     Ok  bool            `toml:"ok"`
     Log telegraf.Logger `toml:"-"`
-}
-
-func (s *Simple) Description() string {
-    return "a demo plugin"
-}
-
-func (s *Simple) SampleConfig() string {
-    return `
-  ## Indicate if everything is fine
-  ok = true
-`
 }
 
 // Init is for setup, and validating config.
@@ -70,6 +58,17 @@ func (s *Simple) Gather(acc telegraf.Accumulator) error {
 
 func init() {
     inputs.Add("simple", func() telegraf.Input { return &Simple{} })
+}
+```
+
+```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
+// DON'T EDIT; This file is used as a template by tools/generate_plugindata
+package <plugin_package>
+
+func (k *<plugin_struct>) SampleConfig() string {
+    return `{{ .SampleConfig }}`
 }
 ```
 
@@ -101,7 +100,7 @@ You can then utilize the parser internally in your plugin, parsing data as you
 see fit. Telegraf's configuration layer will take care of instantiating and
 creating the `Parser` object.
 
-Add the following to the `SampleConfig()`:
+Add the following to the sample configuration in the README.md:
 
 ```toml
   ## Data format to consume.

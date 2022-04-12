@@ -8,17 +8,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
-var sampleConfig = `
-  ## The period on which to flush & clear the aggregator.
-  period = "30s"
-  ## If true, the original metric will be dropped by the
-  ## aggregator and will not get sent to the output plugins.
-  drop_original = false
-
-  ## The time that a series is not updated until considering it final.
-  series_timeout = "5m"
-`
-
 type Final struct {
 	SeriesTimeout config.Duration `toml:"series_timeout"`
 
@@ -31,14 +20,6 @@ func NewFinal() *Final {
 		SeriesTimeout: config.Duration(5 * time.Minute),
 		metricCache:   make(map[uint64]telegraf.Metric),
 	}
-}
-
-func (m *Final) SampleConfig() string {
-	return sampleConfig
-}
-
-func (m *Final) Description() string {
-	return "Report the final metric of a series"
 }
 
 func (m *Final) Add(in telegraf.Metric) {

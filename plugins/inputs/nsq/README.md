@@ -3,7 +3,7 @@
 ## Configuration
 
 ```toml
-# Description
+# Read NSQ topic and channel statistics.
 [[inputs.nsq]]
   ## An array of NSQD HTTP API endpoints
   endpoints  = ["http://localhost:4151"]

@@ -5,7 +5,7 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
 ## Configuration
 
 ```toml
-# Monitors internet speed in the network
+# Monitors internet speed using speedtest.net service
 [[inputs.internet_speed]]
   ## Sets if runs file download test
   # enable_file_download = false
