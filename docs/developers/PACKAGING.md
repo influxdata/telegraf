@@ -2,7 +2,7 @@
 
 Building the packages for Telegraf is automated using [Make](https://en.wikipedia.org/wiki/Make_(software)). Just running `make` will build a Telegraf binary for the operating system and architecture you are using (if it is supported). If you need to build a different package then you can run `make package` which will build all the supported packages. You will most likely only want a subset, you can define a subset of packages to be built by overriding the `include_packages` variable like so `make package include_packages="amd64.deb"`. You can also build all packages for a specific architecture like so `make package include_packages="$(make amd64)"`.
 
-The packaging steps require certain tools to be setup before hand to work. These dependencies are listed in the ci-1.17.docker file which you can find in the scripts directory. Therefore it is recommended to use Docker to build the artifacts, see more details below.
+The packaging steps require certain tools to be setup before hand to work. These dependencies are listed in the ci.docker file which you can find in the scripts directory. Therefore it is recommended to use Docker to build the artifacts, see more details below.
 
 ## Go Version
 

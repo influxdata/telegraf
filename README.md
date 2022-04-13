@@ -68,9 +68,9 @@ sudo yum install telegraf
 
 ### Build From Source
 
-Telegraf requires Go version 1.17 or newer, the Makefile requires GNU make.
+Telegraf requires Go version 1.18 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.17 (1.17.2 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.18 (1.18.0 recommended)
 2. Clone the Telegraf repository:
 
    ```shell
