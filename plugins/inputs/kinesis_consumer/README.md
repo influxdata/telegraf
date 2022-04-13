@@ -6,6 +6,7 @@ and creates metrics using one of the supported [input data formats][].
 ## Configuration
 
 ```toml
+# Configuration for the AWS Kinesis input.
 [[inputs.kinesis_consumer]]
   ## Amazon REGION of kinesis endpoint.
   region = "ap-southeast-2"

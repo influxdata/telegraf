@@ -62,8 +62,7 @@ const statusResponse = `
     "QTime": 13,
     "status": 0
   }
-}
-`
+}`
 
 const mBeansMainResponse = `{
   "solr-mbeans": [
@@ -905,8 +904,7 @@ const mBeansMainResponse = `{
     "QTime": 8,
     "status": 0
   }
-}
-`
+}`
 
 const mBeansCore1Response = `{
   "solr-mbeans": [
@@ -1748,8 +1746,7 @@ const mBeansCore1Response = `{
     "QTime": 5,
     "status": 0
   }
-}
-`
+}`
 
 var solrAdminMainCoreStatusExpected = map[string]interface{}{
 	"num_docs":      int64(168943425),

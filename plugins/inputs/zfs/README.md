@@ -7,6 +7,7 @@ from `sysctl`, 'zfs' and `zpool` on FreeBSD.
 ## Configuration
 
 ```toml
+# Read metrics of ZFS from arcstats, zfetchstats, vdev_cache_stats, pools and datasets
 [[inputs.zfs]]
   ## ZFS kstat path. Ignored on FreeBSD
   ## If not specified, then default is:

@@ -11,26 +11,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const sampleConfig = `
-  ## Server to collect data from
-  server = "localhost:11300"
-
-  ## List of tubes to gather stats about.
-  ## If no tubes specified then data gathered for each tube on server reported by list-tubes command
-  tubes = ["notifications"]
-`
-
 type Beanstalkd struct {
 	Server string   `toml:"server"`
 	Tubes  []string `toml:"tubes"`
-}
-
-func (b *Beanstalkd) Description() string {
-	return "Collects Beanstalkd server and tubes stats"
-}
-
-func (b *Beanstalkd) SampleConfig() string {
-	return sampleConfig
 }
 
 func (b *Beanstalkd) Gather(acc telegraf.Accumulator) error {

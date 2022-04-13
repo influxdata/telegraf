@@ -6,10 +6,20 @@ For module configuration details please see its [documentation](https://github.c
 ## Configuration
 
 ```toml
-# Read nginx status information using nginx-module-vts module
+# Read Nginx virtual host traffic status module information (nginx-module-vts)
 [[inputs.nginx_vts]]
-  ## An array of Nginx status URIs to gather stats.
+  ## An array of ngx_http_status_module or status URI to gather stats.
   urls = ["http://localhost/status"]
+
+  ## HTTP response timeout (default: 5s)
+  response_timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 ## Measurements & Fields

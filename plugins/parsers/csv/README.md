@@ -36,12 +36,11 @@ values.
   ## Indicates the number of rows to skip before looking for metadata and header information.
   csv_skip_rows = 0
   
-  
   ## Indicates the number of rows to parse as metadata before looking for header information. 
   ## By default, the parser assumes there are no metadata rows to parse. 
   ## If set, the parser would use the provided separators in the csv_metadata_separators to look for metadata.
-  ## Please note that by default, the (key, value) pairs will be added as fields. 
-  ## Use the tag_columns to convert the metadata into tags.
+  ## Please note that by default, the (key, value) pairs will be added as tags. 
+  ## If fields are required, use the converter processor.
   csv_metadata_rows = 0
   
   ## A list of metadata separators. If csv_metadata_rows is set,
@@ -50,7 +49,7 @@ values.
   csv_metadata_separators = [":", "="]
   
   ## A set of metadata trim characters. 
-  ## If csv_metadata_trim_cutset is not set, no trimming is performed.
+  ## If csv_metadata_trim_set is not set, no trimming is performed.
   ## Please note that the trim cutset is case sensitive.
   csv_metadata_trim_set = ""
 

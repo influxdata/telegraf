@@ -30,17 +30,6 @@ type NTPQ struct {
 	DNSLookup bool `toml:"dns_lookup"`
 }
 
-func (n *NTPQ) Description() string {
-	return "Get standard NTP query metrics, requires ntpq executable."
-}
-
-func (n *NTPQ) SampleConfig() string {
-	return `
-  ## If false, set the -n ntpq flag. Can reduce metric gather time.
-  dns_lookup = true
-`
-}
-
 func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	out, err := n.runQ()
 	if err != nil {

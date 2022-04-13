@@ -5,27 +5,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-const (
-	description  = "Rotate multi field metric into several single field metrics"
-	sampleConfig = `
-  ## Tag to use for the name.
-  tag_key = "name"
-  ## Field to use for the name of the value.
-  value_key = "value"
-`
-)
-
 type Unpivot struct {
 	TagKey   string `toml:"tag_key"`
 	ValueKey string `toml:"value_key"`
-}
-
-func (p *Unpivot) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Unpivot) Description() string {
-	return description
 }
 
 func copyWithoutFields(metric telegraf.Metric) telegraf.Metric {

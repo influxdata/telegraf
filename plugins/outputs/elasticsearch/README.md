@@ -184,20 +184,26 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
 ## Configuration
 
 ```toml
+# Configuration for Elasticsearch to send metrics to.
 [[outputs.elasticsearch]]
   ## The full HTTP endpoint URL for your Elasticsearch instance
   ## Multiple urls can be specified as part of the same cluster,
-  ## this means that only ONE of the urls will be written to each interval.
+  ## this means that only ONE of the urls will be written to each interval
   urls = [ "http://node1.es.example.com:9200" ] # required.
   ## Elasticsearch client timeout, defaults to "5s" if not set.
   timeout = "5s"
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
   enable_sniffer = false
+  ## Set to true to enable gzip compression
+  enable_gzip = false
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
+  ## Set the timeout for periodic health checks.
+  # health_check_timeout = "1s"
   ## HTTP basic authentication details.
+  ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"
   ## HTTP bearer token authentication details
@@ -247,7 +253,7 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
   ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
   # float_handling = "none"
   # float_replacement_value = 0.0
-  
+
   ## Pipeline Config
   ## To use a ingest pipeline, set this to the name of the pipeline you want to use.
   # use_pipeline = "my_pipeline"

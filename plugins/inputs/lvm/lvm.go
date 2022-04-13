@@ -17,21 +17,8 @@ var (
 	execCommand = exec.Command
 )
 
-var sampleConfig = `
-## Use sudo to run LVM commands
-use_sudo = false
-`
-
 type LVM struct {
 	UseSudo bool `toml:"use_sudo"`
-}
-
-func (lvm *LVM) Description() string {
-	return "Read metrics about LVM physical volumes, volume groups, logical volumes."
-}
-
-func (lvm *LVM) SampleConfig() string {
-	return sampleConfig
 }
 
 func (lvm *LVM) Init() error {

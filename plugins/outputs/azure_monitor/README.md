@@ -17,6 +17,7 @@ written as a dimension on each Azure Monitor metric.
 ## Configuration
 
 ```toml
+# Send aggregate metrics to Azure Monitor
 [[outputs.azure_monitor]]
   ## Timeout for HTTP writes.
   # timeout = "20s"
@@ -43,7 +44,7 @@ written as a dimension on each Azure Monitor metric.
 
   ## Optionally, if in Azure US Government, China, or other sovereign
   ## cloud environment, set the appropriate REST endpoint for receiving
-  ## metrics. (Note: region may be  unused in this context)
+  ## metrics. (Note: region may be unused in this context)
   # endpoint_url = "https://monitoring.core.usgovcloudapi.net"
 ```
 

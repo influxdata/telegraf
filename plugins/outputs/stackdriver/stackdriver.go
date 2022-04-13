@@ -51,23 +51,6 @@ const (
 	errStringPointsTooFrequent = "one or more points were written more frequently than the maximum sampling period configured for the metric"
 )
 
-var sampleConfig = `
-  ## GCP Project
-  project = "erudite-bloom-151019"
-
-  ## The namespace for the metric descriptor
-  namespace = "telegraf"
-
-  ## Custom resource type
-  # resource_type = "generic_node"
-
-  ## Additional resource labels
-  # [outputs.stackdriver.resource_labels]
-  #   node_id = "$HOSTNAME"
-  #   namespace = "myapp"
-  #   location = "eu-north0"
-`
-
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {
 	if s.Project == "" {
@@ -376,16 +359,6 @@ func (s *Stackdriver) getStackdriverLabels(tags []*telegraf.Tag) map[string]stri
 // Close will terminate the session to the backend, returning error if an issue arises.
 func (s *Stackdriver) Close() error {
 	return s.client.Close()
-}
-
-// SampleConfig returns the formatted sample configuration for the plugin.
-func (s *Stackdriver) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the human-readable function definition of the plugin.
-func (s *Stackdriver) Description() string {
-	return "Configuration for Google Cloud Stackdriver to send metrics to"
 }
 
 func newStackdriver() *Stackdriver {

@@ -42,7 +42,7 @@ All measurements have the `path` tag.
 
 ```toml
 # Read specific statistics per cgroup
-# [[inputs.cgroup]]
+[[inputs.cgroup]]
   ## Directories in which to look for files, globs are supported.
   ## Consider restricting paths to the set of cgroups you really
   ## want to monitor if you have a large number of cgroups, to avoid

@@ -48,6 +48,8 @@ Migration Example:
 ## Configuration
 
 ```toml
+## DEPRECATED: The 'logparser' plugin is deprecated in version 1.15.0, use 'inputs.tail' with 'grok' data format instead.
+# Read metrics off Arista LANZ, via socket
 [[inputs.logparser]]
   ## Log files to parse.
   ## These accept standard unix glob matching rules, but with the addition of
@@ -95,6 +97,10 @@ Migration Example:
     ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
     # timezone = "Canada/Eastern"
+
+    ## When set to "disable", timestamp will not incremented if there is a
+    ## duplicate.
+    # unique_timestamp = "auto"
 ```
 
 ## Grok Parser

@@ -14,6 +14,7 @@ Telegraf minimum version: Telegraf 1.16.0
 ## Configuration
 
 ```toml
+# Accept metrics over InfluxDB 2.x HTTP API
 [[inputs.influxdb_v2_listener]]
   ## Address and port to host InfluxDB listener on
   ## (Double check the port. Could be 9999 if using OSS Beta)

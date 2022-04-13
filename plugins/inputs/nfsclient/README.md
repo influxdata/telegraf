@@ -8,6 +8,7 @@ If `fullstat` is set, a great deal of additional metrics are collected, detailed
 ## Configuration
 
 ```toml
+# Read per-mount NFS client metrics from /proc/self/mountstats
 [[inputs.nfsclient]]
   ## Read more low-level metrics (optional, defaults to false)
   # fullstat = false
@@ -62,7 +63,8 @@ If `fullstat` is set, a great deal of additional metrics are collected, detailed
   - ops (integer, count) - The number of operations of this type executed.
   - retrans (integer, count) - The number of times an operation had to be retried (retrans = OP_trans - OP_ops.  See nfs_ops below)
   - exe (integer, miliseconds) - The number of miliseconds it took to process the operations.
-  - rtt (integer, miliseconds) - The round-trip time for operations.
+  - rtt (integer, miliseconds) - The total round-trip time for all operations.
+  - rtt_per_op (float, miliseconds) - The average round-trip time per operation.
 
 In addition enabling `fullstat` will make many more metrics available.
 

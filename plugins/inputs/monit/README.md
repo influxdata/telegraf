@@ -15,6 +15,7 @@ Minimum Version of Monit tested with is 5.16.
 ## Configuration
 
 ```toml
+# Read metrics and status information about processes managed by Monit
 [[inputs.monit]]
   ## Monit HTTPD address
   address = "http://127.0.0.1:2812"

@@ -7,6 +7,7 @@ For monitoring recommendations reference [Monitoring your Aurora cluster](https:
 ## Configuration
 
 ```toml
+# Gather metrics from Apache Aurora schedulers
 [[inputs.aurora]]
   ## Schedulers are the base addresses of your Aurora Schedulers
   schedulers = ["http://127.0.0.1:8081"]

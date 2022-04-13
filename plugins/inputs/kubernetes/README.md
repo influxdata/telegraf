@@ -35,6 +35,7 @@ avoid cardinality issues:
 ## Configuration
 
 ```toml
+# Read metrics from the kubernetes kubelet api
 [[inputs.kubernetes]]
   ## URL for the kubelet
   url = "http://127.0.0.1:10255"

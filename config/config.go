@@ -225,6 +225,10 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
+
+	// Method for translating SNMP objects. 'netsnmp' to call external programs,
+	// 'gosmi' to use the built-in library.
+	SnmpTranslator string `toml:"snmp_translator"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -381,7 +385,7 @@ var agentConfig = `
   ##
   ## Precision will NOT be used for service inputs. It is up to each individual
   ## service input to set the timestamp at the appropriate precision.
-  precision = ""
+  precision = "0s"
 
   ## Log at debug level.
   # debug = false
@@ -400,7 +404,7 @@ var agentConfig = `
   ## The logfile will be rotated after the time interval specified.  When set
   ## to 0 no time based rotation is performed.  Logs are rotated only when
   ## written to, if there is no log activity rotation may be delayed.
-  # logfile_rotation_interval = "0d"
+  # logfile_rotation_interval = "0h"
 
   ## The logfile will be rotated when it becomes larger than the specified
   ## size.  When set to 0 no size based rotation is performed.
@@ -418,6 +422,11 @@ var agentConfig = `
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
+
+  ## Method of translating SNMP objects. Can be "netsnmp" which
+  ## translates by calling external programs snmptranslate and snmptable,
+  ## or "gosmi" which translates using the built-in gosmi library.
+  # snmp_translator = "netsnmp"
 `
 
 var outputHeader = `
@@ -669,23 +678,24 @@ func printConfig(name string, p telegraf.PluginDescriber, op string, commented b
 	if commented {
 		comment = "# "
 	}
-	fmt.Printf("\n%s# %s\n%s[[%s.%s]]", comment, p.Description(), comment, op, name)
 
 	if di.Since != "" {
 		removalNote := ""
 		if di.RemovalIn != "" {
 			removalNote = " and will be removed in " + di.RemovalIn
 		}
-		fmt.Printf("\n%s  ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)
+		fmt.Printf("\n%s ## DEPRECATED: The '%s' plugin is deprecated in version %s%s, %s.", comment, name, di.Since, removalNote, di.Notice)
 	}
 
 	config := p.SampleConfig()
 	if config == "" {
+		fmt.Printf("\n#[[%s.%s]]", op, name)
 		fmt.Printf("\n%s  # no configuration\n\n", comment)
 	} else {
 		lines := strings.Split(config, "\n")
+		fmt.Print("\n")
 		for i, line := range lines {
-			if i == 0 || i == len(lines)-1 {
+			if i == len(lines)-1 {
 				fmt.Print("\n")
 				continue
 			}
@@ -853,6 +863,11 @@ func (c *Config) LoadConfigData(data []byte) error {
 		}
 
 		c.Tags["host"] = c.Agent.Hostname
+	}
+
+	// Set snmp agent translator default
+	if c.Agent.SnmpTranslator == "" {
+		c.Agent.SnmpTranslator = "netsnmp"
 	}
 
 	if len(c.UnusedFields) > 0 {
@@ -1610,6 +1625,7 @@ func (c *Config) getParserConfig(name string, tbl *ast.Table) (*parsers.Config, 
 	if choice.Contains(pc.DataFormat, []string{"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf"}) {
 		c.getFieldString(tbl, "xpath_protobuf_file", &pc.XPathProtobufFile)
 		c.getFieldString(tbl, "xpath_protobuf_type", &pc.XPathProtobufType)
+		c.getFieldStringSlice(tbl, "xpath_protobuf_import_paths", &pc.XPathProtobufImportPaths)
 		c.getFieldBool(tbl, "xpath_print_document", &pc.XPathPrintDocument)
 
 		// Determine the actual xpath configuration tables
@@ -1710,6 +1726,7 @@ func getFieldSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 				c.getFieldString(fieldconfig, "path", &f.Path)
 				c.getFieldString(fieldconfig, "rename", &f.Rename)
 				c.getFieldString(fieldconfig, "type", &f.Type)
+				c.getFieldBool(fieldconfig, "optional", &f.Optional)
 				fields = append(fields, f)
 			}
 		}
@@ -1729,6 +1746,7 @@ func getTagSubtable(c *Config, metricConfig *ast.Table) []json_v2.DataSet {
 				c.getFieldString(fieldconfig, "rename", &t.Rename)
 				t.Type = "string"
 				tags = append(tags, t)
+				c.getFieldBool(fieldconfig, "optional", &t.Optional)
 			}
 		}
 	}
@@ -1836,7 +1854,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
 		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "wavefront_disable_prefix_conversion",
 		"xml", "xpath", "xpath_json", "xpath_msgpack", "xpath_protobuf", "xpath_print_document",
-		"xpath_protobuf_file", "xpath_protobuf_type":
+		"xpath_protobuf_file", "xpath_protobuf_type", "xpath_protobuf_import_paths":
 
 		// ignore fields that are common to all plugins.
 	default:

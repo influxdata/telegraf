@@ -23,24 +23,6 @@ type NvidiaSMI struct {
 	Timeout config.Duration
 }
 
-// Description returns the description of the NvidiaSMI plugin
-func (smi *NvidiaSMI) Description() string {
-	return "Pulls statistics from nvidia GPUs attached to the host"
-}
-
-// SampleConfig returns the sample configuration for the NvidiaSMI plugin
-func (smi *NvidiaSMI) SampleConfig() string {
-	return `
-  ## Optional: path to nvidia-smi binary, defaults "/usr/bin/nvidia-smi"
-  ## We will first try to locate the nvidia-smi binary with the explicitly specified value (or default value), 
-  ## if it is not found, we will try to locate it on PATH(exec.LookPath), if it is still not found, an error will be returned
-  # bin_path = "/usr/bin/nvidia-smi"
-
-  ## Optional: timeout for GPU polling
-  # timeout = "5s"
-`
-}
-
 func (smi *NvidiaSMI) Init() error {
 	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
 		binPath, err := exec.LookPath("nvidia-smi")

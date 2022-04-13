@@ -9,6 +9,7 @@ system. These are the counters that can be found in
 ## Configuration
 
 ```toml
+# Gets counters from all InfiniBand cards and ports installed
 [[inputs.infiniband]]
   # no configuration
 ```

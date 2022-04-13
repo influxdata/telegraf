@@ -71,7 +71,7 @@ To create the login for the telegraf service run the following script:
 ```sql
 USE master;
 GO
-CREATE LOGIN [NT SERVICE\telegraf];
+CREATE LOGIN [NT SERVICE\telegraf] FROM WINDOWS;
 GO
 GRANT VIEW SERVER STATE TO [NT SERVICE\telegraf];
 GO
@@ -89,10 +89,6 @@ Remove User Id and Password keywords from the connection string in your config f
 ## Configuration
 
 ```toml
-[agent]
-  ## Default data collection interval for all inputs, can be changed as per collection interval needs
-  interval = "10s"
-
 # Read metrics from Microsoft SQL Server
 [[inputs.sqlserver]]
   ## Specify instances to monitor with a list of connection strings.
@@ -122,25 +118,25 @@ Remove User Id and Password keywords from the connection string in your config f
   ## A list of queries to explicitly ignore.
   exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
 
-  ## Queries enabled by default for database_type = "SQLServer" are - 
-  ## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
+  ## Queries enabled by default for database_type = "SQLServer" are -
+  ## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks,
   ## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates,
   ## SQLServerRecentBackups
 
-  ## Queries enabled by default for database_type = "AzureSQLDB" are - 
-  ## AzureSQLDBResourceStats, AzureSQLDBResourceGovernance, AzureSQLDBWaitStats, AzureSQLDBDatabaseIO, AzureSQLDBServerProperties, 
+  ## Queries enabled by default for database_type = "AzureSQLDB" are -
+  ## AzureSQLDBResourceStats, AzureSQLDBResourceGovernance, AzureSQLDBWaitStats, AzureSQLDBDatabaseIO, AzureSQLDBServerProperties,
   ## AzureSQLDBOsWaitstats, AzureSQLDBMemoryClerks, AzureSQLDBPerformanceCounters, AzureSQLDBRequests, AzureSQLDBSchedulers
 
-  ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
-  ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
+  ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are -
+  ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats,
   ## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
 
-  ## Queries enabled by default for database_type = "AzureSQLPool" are - 
-  ## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats, 
+  ## Queries enabled by default for database_type = "AzureSQLPool" are -
+  ## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats,
   ## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
 
   ## Following are old config settings
-  ## You may use them only if you are using the earlier flavor of queries, however it is recommended to use 
+  ## You may use them only if you are using the earlier flavor of queries, however it is recommended to use
   ## the new mechanism of identifying the database_type there by use it's corresponding queries
 
   ## Optional parameter, setting this to 2 will use a new version
@@ -152,18 +148,18 @@ Remove User Id and Password keywords from the connection string in your config f
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
   # azuredb = false
 
-  ## Toggling this to true will emit an additional metric called "sqlserver_telegraf_health". 
-  ## This metric tracks the count of attempted queries and successful queries for each SQL instance specified in "servers". 
-  ## The purpose of this metric is to assist with identifying and diagnosing any connectivity or query issues. 
+  ## Toggling this to true will emit an additional metric called "sqlserver_telegraf_health".
+  ## This metric tracks the count of attempted queries and successful queries for each SQL instance specified in "servers".
+  ## The purpose of this metric is to assist with identifying and diagnosing any connectivity or query issues.
   ## This setting/metric is optional and is disabled by default.
   # health_metric = false
 
   ## Possible queries accross different versions of the collectors
   ## Queries enabled by default for specific Database Type
-  
+
   ## database_type =  AzureSQLDB  by default collects the following queries
   ## - AzureSQLDBWaitStats
-  ## - AzureSQLDBResourceStats 
+  ## - AzureSQLDBResourceStats
   ## - AzureSQLDBResourceGovernance
   ## - AzureSQLDBDatabaseIO
   ## - AzureSQLDBServerProperties
@@ -174,11 +170,11 @@ Remove User Id and Password keywords from the connection string in your config f
   ## - AzureSQLDBSchedulers
 
   ## database_type =  AzureSQLManagedInstance by default collects the following queries
-  ## - AzureSQLMIResourceStats 
-  ## - AzureSQLMIResourceGovernance 
-  ## - AzureSQLMIDatabaseIO 
-  ## - AzureSQLMIServerProperties 
-  ## - AzureSQLMIOsWaitstats 
+  ## - AzureSQLMIResourceStats
+  ## - AzureSQLMIResourceGovernance
+  ## - AzureSQLMIDatabaseIO
+  ## - AzureSQLMIServerProperties
+  ## - AzureSQLMIOsWaitstats
   ## - AzureSQLMIMemoryClerks
   ## - AzureSQLMIPerformanceCounters
   ## - AzureSQLMIRequests
@@ -188,17 +184,17 @@ Remove User Id and Password keywords from the connection string in your config f
   ## - AzureSQLPoolResourceStats
   ## - AzureSQLPoolResourceGovernance
   ## - AzureSQLPoolDatabaseIO
-  ## - AzureSQLPoolOsWaitStats, 
+  ## - AzureSQLPoolOsWaitStats,
   ## - AzureSQLPoolMemoryClerks
   ## - AzureSQLPoolPerformanceCounters
   ## - AzureSQLPoolSchedulers
 
   ## database_type =  SQLServer by default collects the following queries
-  ## - SQLServerPerformanceCounters 
-  ## - SQLServerWaitStatsCategorized 
-  ## - SQLServerDatabaseIO 
-  ## - SQLServerProperties 
-  ## - SQLServerMemoryClerks 
+  ## - SQLServerPerformanceCounters
+  ## - SQLServerWaitStatsCategorized
+  ## - SQLServerDatabaseIO
+  ## - SQLServerProperties
+  ## - SQLServerMemoryClerks
   ## - SQLServerSchedulers
   ## - SQLServerRequests
   ## - SQLServerVolumeSpace

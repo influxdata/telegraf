@@ -6,6 +6,7 @@ creates new metrics based on the contents of the field.
 ## Configuration
 
 ```toml
+# Parse a value in a specified field/tag(s) and add the result in a new metric
 [[processors.parser]]
   ## The name of the fields whose value will be parsed.
   parse_fields = ["message"]
