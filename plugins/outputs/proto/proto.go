@@ -268,7 +268,20 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 			}
 			influx.Glog = append(influx.Glog, &m)
 		case "wireless":
-			m := Wireless{}
+			m := Wireless{
+				Fields: &Wireless_Fields{
+					Status:       MaxInt64,
+					Link:         MaxInt64,
+					Level:        MaxInt64,
+					Noise:        MaxInt64,
+					Nwid:         MaxInt64,
+					Crypt:        MaxInt64,
+					Frag:         MaxInt64,
+					Retry:        MaxInt64,
+					Misc:         MaxInt64,
+					MissedBeacon: MaxInt64,
+				},
+			}
 			if err := json.Unmarshal(b, &m); err != nil {
 				return errors.Wrap(err, "build wireless")
 			}
