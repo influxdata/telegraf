@@ -79,22 +79,6 @@ type riakStats struct {
 	ReadRepairsTotal         int64  `json:"read_repairs_total"`
 }
 
-// A sample configuration to only gather stats from localhost, default port.
-const sampleConfig = `
-  # Specify a list of one or more riak http servers
-  servers = ["http://localhost:8098"]
-`
-
-// Returns a sample configuration for the plugin
-func (r *Riak) SampleConfig() string {
-	return sampleConfig
-}
-
-// Returns a description of the plugin
-func (r *Riak) Description() string {
-	return "Read metrics one or many Riak servers"
-}
-
 // Reads stats from all configured servers.
 func (r *Riak) Gather(acc telegraf.Accumulator) error {
 	// Default to a single server at localhost (default port) if none specified

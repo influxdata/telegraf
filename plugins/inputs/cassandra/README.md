@@ -18,7 +18,7 @@ See: [https://jolokia.org/](https://jolokia.org/) and [Cassandra Documentation](
 
 Cassandra plugin produces one or more measurements for each metric configured, adding Server's name  as `host` tag. More than one measurement is generated when querying table metrics with a wildcard for the keyspace or table name.
 
-Given a configuration like:
+## Configuration
 
 ```toml
 # Read Cassandra metrics through Jolokia

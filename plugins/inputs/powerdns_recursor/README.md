@@ -6,6 +6,7 @@ the unix controlsocket.
 ## Configuration
 
 ```toml
+# Read metrics from one or many PowerDNS Recursor servers
 [[inputs.powerdns_recursor]]
   ## Path to the Recursor control socket.
   unix_sockets = ["/var/run/pdns_recursor.controlsocket"]

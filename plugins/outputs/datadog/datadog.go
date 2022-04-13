@@ -28,24 +28,6 @@ type Datadog struct {
 	proxy.HTTPProxy
 }
 
-var sampleConfig = `
-  ## Datadog API key
-  apikey = "my-secret-key"
-
-  ## Connection timeout.
-  # timeout = "5s"
-
-  ## Write URL override; useful for debugging.
-  # url = "https://app.datadoghq.com/api/v1/series"
-
-  ## Set http_proxy (telegraf uses the system wide proxy settings if it isn't set)
-  # http_proxy_url = "http://localhost:8888"
-
-  ## Override the default (none) compression used to send data.
-  ## Supports: "zlib", "none"
-  # compression = "none"
-`
-
 type TimeSeries struct {
 	Series []*Metric `json:"series"`
 }
@@ -168,14 +150,6 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
-}
-
-func (d *Datadog) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *Datadog) Description() string {
-	return "Configuration for DataDog API to send metrics to."
 }
 
 func (d *Datadog) authenticatedURL() string {

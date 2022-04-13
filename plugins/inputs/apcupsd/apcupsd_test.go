@@ -15,7 +15,6 @@ import (
 
 func TestApcupsdDocs(_ *testing.T) {
 	apc := &ApcUpsd{}
-	apc.Description()
 	apc.SampleConfig()
 }
 

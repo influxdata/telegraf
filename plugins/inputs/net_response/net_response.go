@@ -33,44 +33,6 @@ type NetResponse struct {
 	Protocol    string
 }
 
-var description = "Collect response time of a TCP or UDP connection"
-
-// Description will return a short string to explain what the plugin does.
-func (*NetResponse) Description() string {
-	return description
-}
-
-var sampleConfig = `
-  ## Protocol, must be "tcp" or "udp"
-  ## NOTE: because the "udp" protocol does not respond to requests, it requires
-  ## a send/expect string pair (see below).
-  protocol = "tcp"
-  ## Server address (default localhost)
-  address = "localhost:80"
-
-  ## Set timeout
-  # timeout = "1s"
-
-  ## Set read timeout (only used if expecting a response)
-  # read_timeout = "1s"
-
-  ## The following options are required for UDP checks. For TCP, they are
-  ## optional. The plugin will send the given string to the server and then
-  ## expect to receive the given 'expect' string back.
-  ## string sent to the server
-  # send = "ssh"
-  ## expected string in answer
-  # expect = "ssh"
-
-  ## Uncomment to remove deprecated fields
-  # fielddrop = ["result_type", "string_found"]
-`
-
-// SampleConfig will return a complete configuration example with details about each field.
-func (*NetResponse) SampleConfig() string {
-	return sampleConfig
-}
-
 // TCPGather will execute if there are TCP tests defined in the configuration.
 // It will return a map[string]interface{} for fields and a map[string]string for tags
 func (n *NetResponse) TCPGather() (map[string]string, map[string]interface{}, error) {

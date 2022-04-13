@@ -9,6 +9,7 @@ It can also report for triggered Suricata IDS/IPS alerts.
 ## Configuration
 
 ```toml
+# Suricata stats and alerts plugin
 [[inputs.suricata]]
   ## Data sink for Suricata stats log.
   # This is expected to be a filename of a
@@ -19,7 +20,7 @@ It can also report for triggered Suricata IDS/IPS alerts.
   # becomes "detect_alert" when delimiter is "_".
   delimiter = "_"
 
-  # Detect alert logs 
+  # Detect alert logs
   alerts = false
 ```
 

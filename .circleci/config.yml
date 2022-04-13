@@ -120,7 +120,6 @@ commands:
                 paths:
                   - 'C:\Go'
                   - 'C:\Users\circleci\project\gotestsum.exe'
-
   package-build:
     parameters:
       type:

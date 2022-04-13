@@ -20,6 +20,8 @@ In the following order the plugin will attempt to authenticate.
 ## Configuration
 
 ```toml
+# Pull Metric Statistics from Aliyun CMS
+[[inputs.aliyuncms]]
   ## Aliyun Credentials
   ## Credentials are loaded in the following order
   ## 1) Ram RoleArn credential

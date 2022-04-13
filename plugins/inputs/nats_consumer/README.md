@@ -9,6 +9,7 @@ instances of telegraf can read from a NATS cluster in parallel.
 ## Configuration
 
 ```toml
+# Read metrics from NATS subject(s)
 [[inputs.nats_consumer]]
   ## urls of NATS servers
   servers = ["nats://localhost:4222"]

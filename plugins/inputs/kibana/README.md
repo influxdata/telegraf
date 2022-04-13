@@ -10,6 +10,7 @@ The `kibana` plugin queries the [Kibana][] API to obtain the service status.
 ## Configuration
 
 ```toml
+# Read status information from one or more Kibana servers
 [[inputs.kibana]]
   ## Specify a list of one or more Kibana servers
   servers = ["http://localhost:5601"]

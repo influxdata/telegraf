@@ -3,7 +3,6 @@ package ec2
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -45,13 +44,4 @@ func TestBasicInitInvalidTagsReturnAnError(t *testing.T) {
 	p.ImdsTags = []string{"dummy", "qwerty"}
 	err := p.Init()
 	require.Error(t, err)
-}
-
-func TestLoadingConfig(t *testing.T) {
-	confFile := []byte("[[processors.aws_ec2]]" + "\n" + sampleConfig)
-	c := config.NewConfig()
-	err := c.LoadConfigData(confFile)
-	require.NoError(t, err)
-
-	require.Len(t, c.Processors, 1)
 }

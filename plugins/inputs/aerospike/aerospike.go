@@ -42,62 +42,12 @@ type Aerospike struct {
 	NumberHistogramBuckets int `toml:"num_histogram_buckets"`
 }
 
-var sampleConfig = `
-  ## Aerospike servers to connect to (with port)
-  ## This plugin will query all namespaces the aerospike
-  ## server has configured and get stats for them.
-  servers = ["localhost:3000"]
-
-  # username = "telegraf"
-  # password = "pa$$word"
-
-  ## Optional TLS Config
-  # enable_tls = false
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  # tls_name = "tlsname"
-  ## If false, skip chain & host verification
-  # insecure_skip_verify = true
-
-  # Feature Options
-  # Add namespace variable to limit the namespaces executed on
-  # Leave blank to do all
-  # disable_query_namespaces = true # default false
-  # namespaces = ["namespace1", "namespace2"]
-
-  # Enable set level telemetry
-  # query_sets = true # default: false
-  # Add namespace set combinations to limit sets executed on
-  # Leave blank to do all sets
-  # sets = ["namespace1/set1", "namespace1/set2", "namespace3"]
-
-  # Histograms
-  # enable_ttl_histogram = true # default: false
-  # enable_object_size_linear_histogram = true # default: false
-
-  # by default, aerospike produces a 100 bucket histogram
-  # this is not great for most graphing tools, this will allow
-  # the ability to squash this to a smaller number of buckets
-  # To have a balanced histogram, the number of buckets chosen
-  # should divide evenly into 100.
-  # num_histogram_buckets = 100 # default: 10
-`
-
 // On the random chance a hex value is all digits
 // these are fields that can contain hex and should always be strings
 var protectedHexFields = map[string]bool{
 	"node_name":       true,
 	"cluster_key":     true,
 	"paxos_principal": true,
-}
-
-func (a *Aerospike) SampleConfig() string {
-	return sampleConfig
-}
-
-func (a *Aerospike) Description() string {
-	return "Read stats from aerospike server(s)"
 }
 
 func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
@@ -231,7 +181,7 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 }
 
 func (a *Aerospike) getNodeInfo(n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
-	stats, err := n.RequestInfo(infoPolicy)
+	stats, err := n.RequestInfo(infoPolicy, "statistics")
 	if err != nil {
 		return nil, err
 	}
@@ -240,17 +190,21 @@ func (a *Aerospike) getNodeInfo(n *as.Node, infoPolicy *as.InfoPolicy) (map[stri
 }
 
 func (a *Aerospike) parseNodeInfo(acc telegraf.Accumulator, stats map[string]string, hostPort string, nodeName string) {
-	tags := map[string]string{
+	nTags := map[string]string{
 		"aerospike_host": hostPort,
 		"node_name":      nodeName,
 	}
-	fields := make(map[string]interface{})
-
-	for k, v := range stats {
-		key := strings.Replace(k, "-", "_", -1)
-		fields[key] = parseAerospikeValue(key, v)
+	nFields := make(map[string]interface{})
+	stat := strings.Split(stats["statistics"], ";")
+	for _, pair := range stat {
+		parts := strings.Split(pair, "=")
+		if len(parts) < 2 {
+			continue
+		}
+		key := strings.Replace(parts[0], "-", "_", -1)
+		nFields[key] = parseAerospikeValue(key, parts[1])
 	}
-	acc.AddFields("aerospike_node", fields, tags, time.Now())
+	acc.AddFields("aerospike_node", nFields, nTags, time.Now())
 }
 
 func (a *Aerospike) getNamespaces(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, error) {

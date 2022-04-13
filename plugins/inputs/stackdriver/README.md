@@ -9,6 +9,7 @@ costs.
 ## Configuration
 
 ```toml
+# Gather timeseries from Google Cloud Platform v3 monitoring API
 [[inputs.stackdriver]]
   ## GCP Project
   project = "erudite-bloom-151019"

@@ -5,6 +5,7 @@ The `beanstalkd` plugin collects server stats as well as tube stats (reported by
 ## Configuration
 
 ```toml
+# Collects Beanstalkd server and tubes stats
 [[inputs.beanstalkd]]
   ## Server to collect data from
   server = "localhost:11300"

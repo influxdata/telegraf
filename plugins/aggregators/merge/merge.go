@@ -1,4 +1,4 @@
-package seriesgrouper
+package merge
 
 import (
 	"time"
@@ -8,15 +8,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
-const (
-	description  = "Merge metrics into multifield metrics by series key"
-	sampleConfig = `
-  ## If true, the original metric will be dropped by the
-  ## aggregator and will not get sent to the output plugins.
-  drop_original = true
-`
-)
-
 type Merge struct {
 	grouper *metric.SeriesGrouper
 }
@@ -24,14 +15,6 @@ type Merge struct {
 func (a *Merge) Init() error {
 	a.grouper = metric.NewSeriesGrouper()
 	return nil
-}
-
-func (a *Merge) Description() string {
-	return description
-}
-
-func (a *Merge) SampleConfig() string {
-	return sampleConfig
 }
 
 func (a *Merge) Add(m telegraf.Metric) {

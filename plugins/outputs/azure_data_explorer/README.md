@@ -11,15 +11,16 @@ Azure Data Explorer is a distributed, columnar store, purpose built for any type
 ## Configuration
 
 ```toml
+# Sends metrics to Azure Data Explorer
 [[outputs.azure_data_explorer]]
   ## The URI property of the Azure Data Explorer resource on Azure
-  ## ex: https://myadxresource.australiasoutheast.kusto.windows.net
-  # endpoint_url = ""
+  ## ex: endpoint_url = https://myadxresource.australiasoutheast.kusto.windows.net
+  endpoint_url = ""
 
   ## The Azure Data Explorer database that the metrics will be ingested into.
   ## The plugin will NOT generate this database automatically, it's expected that this database already exists before ingestion.
   ## ex: "exampledatabase"
-  # database = ""
+  database = ""
 
   ## Timeout for Azure Data Explorer operations
   # timeout = "20s"

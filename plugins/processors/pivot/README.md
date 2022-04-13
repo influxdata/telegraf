@@ -11,6 +11,7 @@ To perform the reverse operation use the [unpivot] processor.
 ## Configuration
 
 ```toml
+# Rotate a single valued metric into a multi field metric
 [[processors.pivot]]
   ## Tag to use for naming the new field.
   tag_key = "name"

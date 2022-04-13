@@ -6,6 +6,7 @@ all metrics on `/metrics` (default) to be polled by a Prometheus server.
 ## Configuration
 
 ```toml
+# Configuration for the Prometheus client to spawn
 [[outputs.prometheus_client]]
   ## Address to listen on.
   listen = ":9273"

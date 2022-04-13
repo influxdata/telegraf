@@ -5,6 +5,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 ## Configuration
 
 ```toml
+# Configuration for the Kafka server to send metrics to
 [[outputs.kafka]]
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
@@ -105,6 +106,10 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## The maximum number of times to retry sending a metric before failing
   ## until the next flush.
   # max_retry = 3
+
+  ## The maximum permitted size of a message. Should be set equal to or
+  ## smaller than the broker's 'message.max.bytes'.
+  # max_message_bytes = 1000000
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

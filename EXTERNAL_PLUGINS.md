@@ -29,6 +29,7 @@ Pull requests welcome.
 - [apt](https://github.com/x70b1/telegraf-apt) - Check Debian for package updates.
 - [knot](https://github.com/x70b1/telegraf-knot) - Collect stats from Knot DNS.
 - [fritzbox](https://github.com/hdecarne-github/fritzbox-telegraf-plugin) - Gather statistics from [FRITZ!Box](https://avm.de/produkte/fritzbox/) router and repeater
+- [linux-psi-telegraf-plugin](https://github.com/gridscale/linux-psi-telegraf-plugin) - Gather pressure stall information ([PSI](https://facebookmicrosites.github.io/psi/)) from the Linux Kernel
 
 ## Outputs
 

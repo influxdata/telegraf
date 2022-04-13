@@ -7,6 +7,7 @@ This plugin grabs metrics from a Consul agent. Telegraf may be present in every 
 ## Configuration
 
 ```toml
+# Read metrics from the Consul Agent API
 [[inputs.consul_agent]]
   ## URL for the Consul agent
   # url = "http://127.0.0.1:8500"
@@ -18,7 +19,7 @@ This plugin grabs metrics from a Consul agent. Telegraf may be present in every 
   ## OR
   # token = "a1234567-40c7-9048-7bae-378687048181"
 
-  ## Set response_timeout (default 5 seconds)
+  ## Set timeout (default 5 seconds)
   # timeout = "5s"
 
   ## Optional TLS Config

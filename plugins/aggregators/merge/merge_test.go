@@ -1,4 +1,4 @@
-package seriesgrouper
+package merge
 
 import (
 	"testing"

@@ -41,34 +41,6 @@ type DNSQuery struct {
 	Timeout int
 }
 
-var sampleConfig = `
-  ## servers to query
-  servers = ["8.8.8.8"]
-
-  ## Network is the network protocol name.
-  # network = "udp"
-
-  ## Domains or subdomains to query.
-  # domains = ["."]
-
-  ## Query record type.
-  ## Possible values: A, AAAA, CNAME, MX, NS, PTR, TXT, SOA, SPF, SRV.
-  # record_type = "A"
-
-  ## Dns server port.
-  # port = 53
-
-  ## Query timeout in seconds.
-  # timeout = 2
-`
-
-func (d *DNSQuery) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *DNSQuery) Description() string {
-	return "Query given DNS server and gives statistics"
-}
 func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	d.setDefaultValues()

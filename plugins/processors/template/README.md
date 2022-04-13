@@ -13,6 +13,7 @@ Read the full [Go Template Documentation][].
 ## Configuration
 
 ```toml
+# Uses a Go template to create a new tag
 [[processors.template]]
   ## Tag to set with the output of the template.
   tag = "topic"

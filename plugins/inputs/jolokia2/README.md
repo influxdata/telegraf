@@ -2,6 +2,9 @@
 
 The [Jolokia](http://jolokia.org) _agent_ and _proxy_ input plugins collect JMX metrics from an HTTP endpoint using Jolokia's [JSON-over-HTTP protocol](https://jolokia.org/reference/html/protocol.html).
 
+* [jolokia2_agent Configuration](jolokia2_agent/README.md)
+* [jolokia2_proxy Configuration](jolokia2_proxy/README.md)
+
 ## Configuration
 
 ### Jolokia Agent Configuration
@@ -172,16 +175,16 @@ Both `jolokia2_agent` and `jolokia2_proxy` plugins support default configuration
 
 ## Example Configurations
 
-- [ActiveMQ](/plugins/inputs/jolokia2/examples/activemq.conf)
-- [BitBucket](/plugins/inputs/jolokia2/examples/bitbucket.conf)
-- [Cassandra](/plugins/inputs/jolokia2/examples/cassandra.conf)
-- [Hadoop-HDFS](/plugins/inputs/jolokia2/examples/hadoop-hdfs.conf)
-- [Java JVM](/plugins/inputs/jolokia2/examples/java.conf)
-- [JBoss](/plugins/inputs/jolokia2/examples/jboss.conf)
-- [Kafka](/plugins/inputs/jolokia2/examples/kafka.conf)
-- [Kafka Connect](/plugins/inputs/jolokia2/examples/kafka-connect.conf)
-- [Tomcat](/plugins/inputs/jolokia2/examples/tomcat.conf)
-- [Weblogic](/plugins/inputs/jolokia2/examples/weblogic.conf)
-- [ZooKeeper](/plugins/inputs/jolokia2/examples/zookeeper.conf)
+* [ActiveMQ](/plugins/inputs/jolokia2/examples/activemq.conf)
+* [BitBucket](/plugins/inputs/jolokia2/examples/bitbucket.conf)
+* [Cassandra](/plugins/inputs/jolokia2/examples/cassandra.conf)
+* [Hadoop-HDFS](/plugins/inputs/jolokia2/examples/hadoop-hdfs.conf)
+* [Java JVM](/plugins/inputs/jolokia2/examples/java.conf)
+* [JBoss](/plugins/inputs/jolokia2/examples/jboss.conf)
+* [Kafka](/plugins/inputs/jolokia2/examples/kafka.conf)
+* [Kafka Connect](/plugins/inputs/jolokia2/examples/kafka-connect.conf)
+* [Tomcat](/plugins/inputs/jolokia2/examples/tomcat.conf)
+* [Weblogic](/plugins/inputs/jolokia2/examples/weblogic.conf)
+* [ZooKeeper](/plugins/inputs/jolokia2/examples/zookeeper.conf)
 
 Please help improve this list and contribute new configuration files by opening an issue or pull request.

@@ -9,6 +9,7 @@ For metrics transforms, `key` denotes the element that should be transformed. Fu
 ## Configuration
 
 ```toml
+# Transforms tag and field values as well as measurement, tag and field names with regex pattern
 [[processors.regex]]
   namepass = ["nginx_requests"]
 

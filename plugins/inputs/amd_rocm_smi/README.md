@@ -5,7 +5,7 @@ This plugin uses a query on the [`rocm-smi`](https://github.com/RadeonOpenComput
 ## Configuration
 
 ```toml
-# Pulls statistics from AMD GPUs attached to the host
+# Query statistics from AMD Graphics cards using rocm-smi binary
 [[inputs.amd_rocm_smi]]
   ## Optional: path to rocm-smi binary, defaults to $PATH via exec.LookPath
   # bin_path = "/opt/rocm/bin/rocm-smi"

@@ -13,16 +13,6 @@ type Temperature struct {
 	ps system.PS
 }
 
-func (t *Temperature) Description() string {
-	return "Read metrics about temperature"
-}
-
-const sampleConfig = ""
-
-func (t *Temperature) SampleConfig() string {
-	return sampleConfig
-}
-
 func (t *Temperature) Gather(acc telegraf.Accumulator) error {
 	temps, err := t.ps.Temperature()
 	if err != nil {

@@ -31,41 +31,12 @@ type ConsulAgent struct {
 
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 
-const sampleConfig = `
-  ## URL for the Consul agent
-  # url = "http://127.0.0.1:8500"
-
-  ## Use auth token for authorization.
-  ## Only one of the options can be set. Leave empty to not use any token.
-  # token_file = "/path/to/auth/token"
-  ## OR
-  # token = "a1234567-40c7-9048-7bae-378687048181"
-
-  ## Set timeout (default 5 seconds)
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = /path/to/cafile
-  # tls_cert = /path/to/certfile
-  # tls_key = /path/to/keyfile
-`
-
 func init() {
 	inputs.Add("consul_agent", func() telegraf.Input {
 		return &ConsulAgent{
 			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
-}
-
-// SampleConfig returns a sample config
-func (n *ConsulAgent) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns a description of the plugin
-func (n *ConsulAgent) Description() string {
-	return "Read metrics from the Consul Agent API"
 }
 
 func (n *ConsulAgent) Init() error {
