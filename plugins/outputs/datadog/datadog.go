@@ -33,12 +33,12 @@ type TimeSeries struct {
 }
 
 type Metric struct {
-	Metric string   `json:"metric"`
-	Points [1]Point `json:"points"`
-	Host   string   `json:"host"`
-	Type   string   `json:"type,omitempty"`
-	Tags   []string `json:"tags,omitempty"`
-	Interval int64  `json:"interval"`
+	Metric   string   `json:"metric"`
+	Points   [1]Point `json:"points"`
+	Host     string   `json:"host"`
+	Type     string   `json:"type,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+	Interval int64    `json:"interval"`
 }
 
 type Point [2]float64
