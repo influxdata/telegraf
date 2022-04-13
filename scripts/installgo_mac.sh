@@ -3,7 +3,7 @@
 set -eux
 
 ARCH=$(uname -m)
-GO_VERSION="1.18"
+GO_VERSION="1.18.1"
 if [ "$ARCH" = 'arm64' ]; then
     GO_ARCH="darwin-arm64"
     GO_VERSION_SHA="9cab6123af9ffade905525d79fc9ee76651e716c85f1f215872b5f2976782480" # from https://golang.org/dl
