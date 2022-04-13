@@ -29,4 +29,5 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/sysstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/system"
 	_ "github.com/influxdata/telegraf/plugins/inputs/tail"
+	_ "github.com/influxdata/telegraf/plugins/inputs/wireless"
 )
