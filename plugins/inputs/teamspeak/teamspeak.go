@@ -13,27 +13,50 @@ type Teamspeak struct {
 	Server         string
 	Username       string
 	Password       string
+	Nickname       string
 	VirtualServers []int `toml:"virtual_servers"`
 
 	client    *ts3.Client
 	connected bool
 }
 
+func (ts *Teamspeak) connect() error {
+	var err error
+
+	ts.client, err = ts3.NewClient(ts.Server)
+	if err != nil {
+		return err
+	}
+
+	err = ts.client.Login(ts.Username, ts.Password)
+	if err != nil {
+		return err
+	}
+
+	if len(ts.Nickname) > 0 {
+		for _, vserver := range ts.VirtualServers {
+			if err = ts.client.Use(vserver); err != nil {
+				return err
+			}
+			if err = ts.client.SetNick(ts.Nickname); err != nil {
+				return err
+			}
+		}
+	}
+
+	ts.connected = true
+
+	return nil
+}
+
 func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 	var err error
 
 	if !ts.connected {
-		ts.client, err = ts3.NewClient(ts.Server)
+		err = ts.connect()
 		if err != nil {
 			return err
 		}
-
-		err = ts.client.Login(ts.Username, ts.Password)
-		if err != nil {
-			return err
-		}
-
-		ts.connected = true
 	}
 
 	for _, vserver := range ts.VirtualServers {
@@ -73,6 +96,7 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 
 		acc.AddFields("teamspeak", fields, tags)
 	}
+
 	return nil
 }
 
