@@ -120,7 +120,8 @@ Remove User Id and Password keywords from the connection string in your config f
 
   ## Queries enabled by default for database_type = "SQLServer" are -
   ## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks,
-  ## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates
+  ## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates,
+  ## SQLServerRecentBackups
 
   ## Queries enabled by default for database_type = "AzureSQLDB" are -
   ## AzureSQLDBResourceStats, AzureSQLDBResourceGovernance, AzureSQLDBWaitStats, AzureSQLDBDatabaseIO, AzureSQLDBServerProperties,
@@ -198,6 +199,7 @@ Remove User Id and Password keywords from the connection string in your config f
   ## - SQLServerRequests
   ## - SQLServerVolumeSpace
   ## - SQLServerCpu
+  ## - SQLServerRecentBackups
   ## and following as optional (if mentioned in the include_query list)
   ## - SQLServerAvailabilityReplicaStates
   ## - SQLServerDatabaseReplicaStates
@@ -381,6 +383,7 @@ These are metrics for Azure SQL to monitor resources usage at Elastic Pool level
 - SQLServerCpu: Uses the buffer ring (`sys.dm_os_ring_buffers`) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
 - SQLServerAvailabilityReplicaStates: Collects availability replica state information from `sys.dm_hadr_availability_replica_states` for a High Availability / Disaster Recovery (HADR) setup
 - SQLServerDatabaseReplicaStates: Collects database replica state information from `sys.dm_hadr_database_replica_states` for a High Availability / Disaster Recovery (HADR) setup
+- SQLServerRecentBackups: Collects latest full, differential and transaction log backup date and size from `msdb.dbo.backupset`
 
 ### Output Measures
 

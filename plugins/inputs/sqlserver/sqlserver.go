@@ -127,6 +127,7 @@ func (s *SQLServer) initQueries() error {
 		queries["SQLServerCpu"] = Query{ScriptName: "SQLServerCpu", Script: sqlServerRingBufferCPU, ResultByRow: false}
 		queries["SQLServerAvailabilityReplicaStates"] = Query{ScriptName: "SQLServerAvailabilityReplicaStates", Script: sqlServerAvailabilityReplicaStates, ResultByRow: false}
 		queries["SQLServerDatabaseReplicaStates"] = Query{ScriptName: "SQLServerDatabaseReplicaStates", Script: sqlServerDatabaseReplicaStates, ResultByRow: false}
+		queries["SQLServerRecentBackups"] = Query{ScriptName: "SQLServerRecentBackups", Script: sqlServerRecentBackups, ResultByRow: false}
 	} else {
 		// If this is an AzureDB instance, grab some extra metrics
 		if s.AzureDB {
