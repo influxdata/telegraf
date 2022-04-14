@@ -15,7 +15,7 @@ For metrics transforms, `key` denotes the element that should be transformed. Fu
 
   # Tag and field conversions defined in a separate sub-tables
   [[processors.regex.tags]]
-    ## Tag to change
+    ## Tag to change, "*" will change every tag
     key = "resp_code"
     ## Regular expression to match on a tag value
     pattern = "^(\\d)\\d\\d$"
