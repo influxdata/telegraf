@@ -9,14 +9,3 @@ import (
 type Infiniband struct {
 	Log telegraf.Logger `toml:"-"`
 }
-
-// Sample configuration for plugin
-var InfinibandConfig = ``
-
-func (i *Infiniband) SampleConfig() string {
-	return InfinibandConfig
-}
-
-func (i *Infiniband) Description() string {
-	return "Gets counters from all InfiniBand cards and ports installed"
-}

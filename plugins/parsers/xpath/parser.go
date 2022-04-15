@@ -27,6 +27,7 @@ type Parser struct {
 	Format              string
 	ProtobufMessageDef  string
 	ProtobufMessageType string
+	ProtobufImportPaths []string
 	PrintDocument       bool
 	Configs             []Config
 	DefaultTags         map[string]string
@@ -68,6 +69,7 @@ func (p *Parser) Init() error {
 		pbdoc := protobufDocument{
 			MessageDefinition: p.ProtobufMessageDef,
 			MessageType:       p.ProtobufMessageType,
+			ImportPaths:       p.ProtobufImportPaths,
 			Log:               p.Log,
 		}
 		if err := pbdoc.Init(); err != nil {

@@ -77,6 +77,15 @@ jcross@pit-devops-02 ~ >sudo ./telegraf_linux_amd64 --input-filter puppetagent -
 > [] puppetagent_version_puppet value=3.7.5
 ```
 
+## Configuration
+
+```toml
+# Reads last_run_summary.yaml file and converts to measurements
+[[inputs.puppetagent]]
+  ## Location of puppet last run summary file
+  location = "/var/lib/puppet/state/last_run_summary.yaml"
+```
+
 ## Measurements
 
 ### PuppetAgent int64 measurements

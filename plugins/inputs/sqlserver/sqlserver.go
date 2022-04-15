@@ -72,61 +72,6 @@ const (
 // resource id for Azure SQL Database
 const sqlAzureResourceID = "https://database.windows.net/"
 
-const sampleConfig = `
-## Specify instances to monitor with a list of connection strings.
-## All connection parameters are optional.
-## By default, the host is localhost, listening on default port, TCP 1433.
-##   for Windows, the user is the currently running AD user (SSO).
-##   See https://github.com/denisenkom/go-mssqldb for detailed connection
-##   parameters, in particular, tls connections can be created like so:
-##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
-servers = [
-  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
-]
-
-## Authentication method
-## valid methods: "connection_string", "AAD"
-# auth_method = "connection_string"
-
-## "database_type" enables a specific set of queries depending on the database type.
-## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
-## Possible values for database_type are - "SQLServer" or "AzureSQLDB" or "AzureSQLManagedInstance" or "AzureSQLPool"
-
-database_type = "SQLServer"
-
-## A list of queries to include. If not specified, all the below listed queries are used.
-include_query = []
-
-## A list of queries to explicitly ignore.
-exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
-
-## Queries enabled by default for database_type = "SQLServer" are - 
-## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
-## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates
-
-## Queries enabled by default for database_type = "AzureSQLDB" are - 
-## AzureSQLDBResourceStats, AzureSQLDBResourceGovernance, AzureSQLDBWaitStats, AzureSQLDBDatabaseIO, AzureSQLDBServerProperties, 
-## AzureSQLDBOsWaitstats, AzureSQLDBMemoryClerks, AzureSQLDBPerformanceCounters, AzureSQLDBRequests, AzureSQLDBSchedulers
-
-## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
-## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
-## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
-
-## Queries enabled by default for database_type = "AzureSQLPool" are - 
-## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats, 
-## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
-`
-
-// SampleConfig return the sample configuration
-func (s *SQLServer) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description return plugin description
-func (s *SQLServer) Description() string {
-	return "Read metrics from Microsoft SQL Server"
-}
-
 type scanner interface {
 	Scan(dest ...interface{}) error
 }
@@ -182,6 +127,7 @@ func (s *SQLServer) initQueries() error {
 		queries["SQLServerCpu"] = Query{ScriptName: "SQLServerCpu", Script: sqlServerRingBufferCPU, ResultByRow: false}
 		queries["SQLServerAvailabilityReplicaStates"] = Query{ScriptName: "SQLServerAvailabilityReplicaStates", Script: sqlServerAvailabilityReplicaStates, ResultByRow: false}
 		queries["SQLServerDatabaseReplicaStates"] = Query{ScriptName: "SQLServerDatabaseReplicaStates", Script: sqlServerDatabaseReplicaStates, ResultByRow: false}
+		queries["SQLServerRecentBackups"] = Query{ScriptName: "SQLServerRecentBackups", Script: sqlServerRecentBackups, ResultByRow: false}
 	} else {
 		// If this is an AzureDB instance, grab some extra metrics
 		if s.AzureDB {

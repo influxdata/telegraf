@@ -22,22 +22,6 @@ const (
 	logzioType        = "telegraf"
 )
 
-var sampleConfig = `
-  ## Connection timeout, defaults to "5s" if not set.
-  timeout = "5s"
-  
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Logz.io account token
-  token = "your logz.io token" # required
-
-  ## Use your listener URL for your Logz.io account region.
-  # url = "https://listener.logz.io:8071"
-`
-
 type Logzio struct {
 	Log     telegraf.Logger `toml:"-"`
 	Timeout config.Duration `toml:"timeout"`
@@ -87,16 +71,6 @@ func (l *Logzio) Connect() error {
 func (l *Logzio) Close() error {
 	l.Log.Debug("Closing logz.io output")
 	return nil
-}
-
-// Description returns a one-sentence description on the Output
-func (l *Logzio) Description() string {
-	return logzioDescription
-}
-
-// SampleConfig returns the default configuration of the Output
-func (l *Logzio) SampleConfig() string {
-	return sampleConfig
 }
 
 // Write takes in group of points to be written to the Output

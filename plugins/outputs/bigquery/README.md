@@ -8,11 +8,15 @@ Be aware that this plugin accesses APIs that are [chargeable](https://cloud.goog
 ## Configuration
 
 ```toml
+# Configuration for Google Cloud BigQuery to send entries
 [[outputs.bigquery]]
-  ## GCP Project
-  project = "erudite-bloom-151019"
+  ## Credentials File
+  credentials_file = "/path/to/service/account/key.json"
 
-  ## The BigQuery dataset
+  ## Google Cloud Platform Project
+  project = "my-gcp-project"
+
+  ## The namespace for the metric descriptor
   dataset = "telegraf"
 
   ## Timeout for BigQuery operations.

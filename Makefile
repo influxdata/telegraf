@@ -109,9 +109,20 @@ versioninfo:
 	go run scripts/generate_versioninfo/main.go; \
 	go generate cmd/telegraf/telegraf_windows.go; \
 
-.PHONY: telegraf
-telegraf:
+.PHONY: generate
+generate:
+	go generate -run="plugindata/main.go$$" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+
+.PHONY: generate-clean
+generate-clean:
+	go generate -run="plugindata/main.go --clean" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+
+.PHONY: build
+build:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+
+.PHONY: telegraf
+telegraf: generate build generate-clean
 
 # Used by dockerfile builds
 .PHONY: go-install
@@ -153,7 +164,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -219,10 +230,10 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
-.PHONY: ci-1.17
-ci-1.17:
-	docker build -t quay.io/influxdb/telegraf-ci:1.17.7 - < scripts/ci-1.17.docker
-	docker push quay.io/influxdb/telegraf-ci:1.17.7
+.PHONY: ci
+ci:
+	docker build -t quay.io/influxdb/telegraf-ci:1.18.1 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.18.1
 
 .PHONY: install
 install: $(buildbin)
@@ -312,7 +323,7 @@ darwin-arm64:
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: $(include_packages)
+package: generate $(include_packages) generate-clean
 
 .PHONY: $(include_packages)
 $(include_packages):

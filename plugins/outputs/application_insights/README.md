@@ -5,6 +5,7 @@ This plugin writes telegraf metrics to [Azure Application Insights](https://azur
 ## Configuration
 
 ```toml
+# Send metrics to Azure Application Insights
 [[outputs.application_insights]]
   ## Instrumentation key of the Application Insights resource.
   instrumentation_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"

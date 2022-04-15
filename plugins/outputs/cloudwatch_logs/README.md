@@ -22,9 +22,10 @@ The IAM user needs the following permissions (see this [reference](https://docs.
 - `logs:CreateLogStream` - required to create a new log stream in a log group.)
 - `logs:PutLogEvents` - required to upload a batch of log events into log stream.
 
-## Config
+## Configuration
 
 ```toml
+# Configuration for AWS CloudWatchLogs output.
 [[outputs.cloudwatch_logs]]
   ## The region is the Amazon region that you wish to connect to.
   ## Examples include but are not limited to:

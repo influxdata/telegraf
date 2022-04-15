@@ -5,6 +5,7 @@
 ## Configuration
 
 ```toml
+# Read metrics from one or many disque servers
 [[inputs.disque]]
   ## An array of URI to gather stats about. Specify an ip or hostname
   ## with optional port and password.

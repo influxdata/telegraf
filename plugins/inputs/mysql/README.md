@@ -21,6 +21,7 @@ This plugin gathers the statistic data from MySQL server
 ## Configuration
 
 ```toml
+# Read metrics from one or many mysql servers
 [[inputs.mysql]]
   ## specify servers via a url matching:
   ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify|custom]]
@@ -65,7 +66,7 @@ This plugin gathers the statistic data from MySQL server
 
   ## gather metrics from all channels from SHOW SLAVE STATUS command output
   # gather_all_slave_channels = false
-  
+
   ## gather metrics from SHOW SLAVE STATUS command output
   # gather_slave_status = false
 

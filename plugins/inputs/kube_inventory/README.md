@@ -34,9 +34,10 @@ avoid cardinality issues:
 ## Configuration
 
 ```toml
+# Read metrics from the Kubernetes api
 [[inputs.kube_inventory]]
   ## URL for the Kubernetes API
-  url = "https://$HOSTIP:6443"
+  url = "https://127.0.0.1"
 
   ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
@@ -64,8 +65,8 @@ avoid cardinality issues:
   ## selectors to include and exclude as tags.  Globs accepted.
   ## Note that an empty array for both will include all selectors as tags
   ## selector_exclude overrides selector_include if both set.
-  selector_include = []
-  selector_exclude = ["*"]
+  # selector_include = []
+  # selector_exclude = ["*"]
 
   ## Optional TLS Config
   ## Trusted root certificates for server

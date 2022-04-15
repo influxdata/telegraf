@@ -19,26 +19,6 @@ var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode"
 	"avg_req": true, "avg_recv": true, "avg_sent": true, "avg_query": true,
 }
 
-var sampleConfig = `
-  ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
-  ##       ?sslmode=[disable|verify-ca|verify-full]
-  ## or a simple string:
-  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
-  ##
-  ## All connection parameters are optional.
-  ##
-  address = "host=localhost user=pgbouncer sslmode=disable"
-`
-
-func (p *PgBouncer) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *PgBouncer) Description() string {
-	return "Read metrics from one or many pgbouncer servers"
-}
-
 func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 	var (
 		err     error

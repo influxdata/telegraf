@@ -5,13 +5,11 @@ import (
 	"crypto/tls"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 	"unsafe"
 
-	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
@@ -222,22 +220,16 @@ func TestAlignMetrics(t *testing.T) {
 	}
 }
 
-func TestParseConfig(t *testing.T) {
-	v := VSphere{}
-	c := v.SampleConfig()
-	p := regexp.MustCompile("\n#")
-	c = configHeader + "\n[[inputs.vsphere]]\n" + p.ReplaceAllLiteralString(c, "\n")
-	tab, err := toml.Parse([]byte(c))
-	require.NoError(t, err)
-	require.NotNil(t, tab)
-}
-
 func TestConfigDurationParsing(t *testing.T) {
 	v := defaultVSphere()
 	require.Equal(t, int32(300), int32(time.Duration(v.HistoricalInterval).Seconds()), "HistoricalInterval.Seconds() with default duration should resolve 300")
 }
 
 func TestMaxQuery(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -295,6 +287,10 @@ func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, exp
 }
 
 func TestFinder(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -411,6 +407,10 @@ func TestFinder(t *testing.T) {
 }
 
 func TestFolders(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -452,10 +452,18 @@ func TestFolders(t *testing.T) {
 }
 
 func TestCollectionWithClusterMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	testCollection(t, false)
 }
 
 func TestCollectionNoClusterMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
 	testCollection(t, true)
 }
 

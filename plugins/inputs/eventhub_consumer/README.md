@@ -13,6 +13,7 @@ The main focus for development of this plugin is Azure IoT hub:
 ## Configuration
 
 ```toml
+# Azure Event Hubs service input plugin
 [[inputs.eventhub_consumer]]
   ## The default behavior is to create a new Event Hub client from environment variables.
   ## This requires one of the following sets of environment variables to be set:

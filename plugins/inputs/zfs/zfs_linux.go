@@ -68,13 +68,17 @@ func getPools(kstatPath string) ([]poolInfo, error) {
 }
 
 func getTags(pools []poolInfo) map[string]string {
-	var poolNames string
-
-	for _, pool := range pools {
-		if len(poolNames) != 0 {
-			poolNames += "::"
+	poolNames := ""
+	knownPools := make(map[string]struct{})
+	for _, entry := range pools {
+		name := entry.name
+		if _, ok := knownPools[name]; !ok {
+			knownPools[name] = struct{}{}
+			if poolNames != "" {
+				poolNames += "::"
+			}
+			poolNames += name
 		}
-		poolNames += pool.name
 	}
 
 	return map[string]string{"pools": poolNames}

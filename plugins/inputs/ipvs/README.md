@@ -8,6 +8,7 @@ metrics about ipvs virtual and real servers.
 ## Configuration
 
 ```toml
+# Collect virtual and real server stats from Linux IPVS
 [[inputs.ipvs]]
   # no configuration
 ```

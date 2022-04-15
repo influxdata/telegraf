@@ -30,17 +30,6 @@ type NTPQ struct {
 	DNSLookup bool `toml:"dns_lookup"`
 }
 
-func (n *NTPQ) Description() string {
-	return "Get standard NTP query metrics, requires ntpq executable."
-}
-
-func (n *NTPQ) SampleConfig() string {
-	return `
-  ## If false, set the -n ntpq flag. Can reduce metric gather time.
-  dns_lookup = true
-`
-}
-
 func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	out, err := n.runQ()
 	if err != nil {
@@ -122,13 +111,13 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					continue
 				}
 
-				if key == "when" {
+				if key == "when" || key == "poll" {
 					when := fields[index]
 					switch {
 					case strings.HasSuffix(when, "h"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "h"))
 						if err != nil {
-							acc.AddError(fmt.Errorf("error ntpq: parsing int: %s", fields[index]))
+							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
 							continue
 						}
 						// seconds in an hour
@@ -137,7 +126,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					case strings.HasSuffix(when, "d"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "d"))
 						if err != nil {
-							acc.AddError(fmt.Errorf("error ntpq: parsing int: %s", fields[index]))
+							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
 							continue
 						}
 						// seconds in a day
@@ -146,7 +135,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					case strings.HasSuffix(when, "m"):
 						m, err := strconv.Atoi(strings.TrimSuffix(fields[index], "m"))
 						if err != nil {
-							acc.AddError(fmt.Errorf("error ntpq: parsing int: %s", fields[index]))
+							acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
 							continue
 						}
 						// seconds in a day
@@ -157,7 +146,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 				m, err := strconv.Atoi(fields[index])
 				if err != nil {
-					acc.AddError(fmt.Errorf("error ntpq: parsing int: %s", fields[index]))
+					acc.AddError(fmt.Errorf("error ntpq: parsing %s as int: %s", key, fields[index]))
 					continue
 				}
 				mFields[key] = int64(m)

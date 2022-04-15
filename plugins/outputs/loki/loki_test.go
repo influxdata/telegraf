@@ -87,7 +87,7 @@ func TestStatusCode(t *testing.T) {
 			plugin: &Loki{
 				Domain: u.String(),
 			},
-			statusCode: 103,
+			statusCode: http.StatusSwitchingProtocols,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
 			},

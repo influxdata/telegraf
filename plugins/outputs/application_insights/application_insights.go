@@ -35,38 +35,9 @@ type ApplicationInsights struct {
 }
 
 var (
-	sampleConfig = `
-  ## Instrumentation key of the Application Insights resource.
-  instrumentation_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
-  
-  ## Regions that require endpoint modification https://docs.microsoft.com/en-us/azure/azure-monitor/app/custom-endpoints
-  # endpoint_url = "https://dc.services.visualstudio.com/v2/track"
-
-  ## Timeout for closing (default: 5s).
-  # timeout = "5s"
-
-  ## Enable additional diagnostic logging.
-  # enable_diagnostic_logging = false
-
-  ## Context Tag Sources add Application Insights context tags to a tag value.
-  ##
-  ## For list of allowed context tag keys see:
-  ## https://github.com/microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
-  # [outputs.application_insights.context_tag_sources]
-  #   "ai.cloud.role" = "kubernetes_container_name"
-  #   "ai.cloud.roleInstance" = "kubernetes_pod_name"
-`
 	is32Bit        bool
 	is32BitChecked bool
 )
-
-func (a *ApplicationInsights) SampleConfig() string {
-	return sampleConfig
-}
-
-func (a *ApplicationInsights) Description() string {
-	return "Send metrics to Azure Application Insights"
-}
 
 func (a *ApplicationInsights) Connect() error {
 	if a.InstrumentationKey == "" {

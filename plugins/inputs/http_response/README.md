@@ -7,8 +7,6 @@ This input plugin checks HTTP/HTTPS connections.
 ```toml
 # HTTP/HTTPS request given an address a method and a timeout
 [[inputs.http_response]]
-  ## address is Deprecated in 1.12, use 'urls'
-
   ## List of urls to query.
   # urls = ["http://localhost"]
 

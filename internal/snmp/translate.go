@@ -20,8 +20,12 @@ var once sync.Once
 var cache = make(map[string]bool)
 
 type MibLoader interface {
-	loadModule(path string) error
+	// appendPath takes the path of a directory
 	appendPath(path string)
+
+	// loadModule takes the name of a file in one of the
+	// directories. Basename only, no relative or absolute path
+	loadModule(path string) error
 }
 
 type GosmiMibLoader struct{}
@@ -60,17 +64,18 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 
 		for _, info := range modules {
 			if info.Mode()&os.ModeSymlink != 0 {
-				target, err := filepath.EvalSymlinks(path)
+				symlink := filepath.Join(path, info.Name())
+				target, err := filepath.EvalSymlinks(symlink)
 				if err != nil {
-					log.Warnf("Couldn't evaluate symbolic links for %v: %v", target, err)
+					log.Warnf("Couldn't evaluate symbolic links for %v: %v", symlink, err)
 					continue
 				}
-				info, err = os.Lstat(filepath.Join(path, target))
+				//replace symlink's info with the target's info
+				info, err = os.Lstat(target)
 				if err != nil {
 					log.Warnf("Couldn't stat target %v: %v", target, err)
 					continue
 				}
-				path = target
 			}
 			if info.Mode().IsRegular() {
 				err := loader.loadModule(info.Name())
@@ -113,7 +118,7 @@ func walkPaths(paths []string, log telegraf.Logger) ([]string, error) {
 			if info.Mode()&os.ModeSymlink != 0 {
 				target, err := filepath.EvalSymlinks(path)
 				if err != nil {
-					log.Warnf("Couldn't evaluate symbolic links for %v: %v", target, err)
+					log.Warnf("Couldn't evaluate symbolic links for %v: %v", path, err)
 				}
 				info, err = os.Lstat(target)
 				if err != nil {

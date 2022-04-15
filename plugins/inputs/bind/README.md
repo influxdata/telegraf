@@ -16,6 +16,19 @@ not enable support for JSON statistics in their BIND packages.
 
 ## Configuration
 
+```toml
+# Read BIND nameserver XML statistics
+[[inputs.bind]]
+  ## An array of BIND XML statistics URI to gather stats.
+  ## Default is "http://localhost:8053/xml/v3".
+  # urls = ["http://localhost:8053/xml/v3"]
+  # gather_memory_contexts = false
+  # gather_views = false
+
+  ## Timeout for http requests made by bind nameserver
+  # timeout = "4s"
+```
+
 - **urls** []string: List of BIND statistics channel URLs to collect from. Do not include a
   trailing slash in the URL. Default is "http://localhost:8053/xml/v3".
 - **gather_memory_contexts** bool: Report per-context memory statistics.

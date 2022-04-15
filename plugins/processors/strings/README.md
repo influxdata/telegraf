@@ -28,6 +28,7 @@ If you'd like to apply multiple processings to the same `tag_key` or `field_key`
 ## Configuration
 
 ```toml
+# Perform string processing on tags, fields, and measurements
 [[processors.strings]]
   ## Convert a field value to lowercase and store in a new field
   # [[processors.strings.lowercase]]

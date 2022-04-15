@@ -20,6 +20,7 @@ body:
     attributes:
       label: Logs from Telegraf
       description: Please include the Telegraf logs, ideally with `--debug` used.
+      render: text
     validations:
       required: true
   - type: input

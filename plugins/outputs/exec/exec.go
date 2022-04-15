@@ -27,20 +27,6 @@ type Exec struct {
 	serializer serializers.Serializer
 }
 
-var sampleConfig = `
-  ## Command to ingest metrics via stdin.
-  command = ["tee", "-a", "/dev/null"]
-
-  ## Timeout for command to complete.
-  # timeout = "5s"
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  # data_format = "influx"
-`
-
 func (e *Exec) Init() error {
 	e.runner = &CommandRunner{log: e.Log}
 
@@ -60,16 +46,6 @@ func (e *Exec) Connect() error {
 // Close satisfies the Output interface.
 func (e *Exec) Close() error {
 	return nil
-}
-
-// Description describes the plugin.
-func (e *Exec) Description() string {
-	return "Send metrics to command as input over stdin"
-}
-
-// SampleConfig returns a sample configuration.
-func (e *Exec) SampleConfig() string {
-	return sampleConfig
 }
 
 // Write writes the metrics to the configured command.

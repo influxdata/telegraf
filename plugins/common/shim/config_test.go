@@ -34,16 +34,6 @@ func TestLoadConfig(t *testing.T) {
 	require.Equal(t, `test"\test`, inp.SecretValue)
 }
 
-func TestDefaultImportedPluginsSelfRegisters(t *testing.T) {
-	inputs.Add("test", func() telegraf.Input {
-		return &testInput{}
-	})
-
-	cfg, err := LoadConfig(nil)
-	require.NoError(t, err)
-	require.Equal(t, "test", cfg.Input.Description())
-}
-
 func TestLoadingSpecialTypes(t *testing.T) {
 	inputs.Add("test", func() telegraf.Input {
 		return &testDurationInput{}

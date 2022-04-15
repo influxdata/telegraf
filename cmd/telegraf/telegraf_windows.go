@@ -1,7 +1,7 @@
 //go:build windows
 // +build windows
 
-//go:generate goversioninfo -icon=../../assets/tiger.ico
+//go:generate goversioninfo -icon=../../assets/windows/tiger.ico
 
 package main
 

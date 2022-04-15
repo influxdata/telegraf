@@ -7,6 +7,7 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
 ## Configuration
 
 ```toml
+# Send telegraf metrics to GroundWork Monitor
 [[outputs.groundwork]]
   ## URL of your groundwork instance.
   url = "https://groundwork.example.com"
@@ -17,7 +18,7 @@ This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports G
   ## Username and password to access GroundWork API.
   username = ""
   password = ""
-  
+
   ## Default display name for the host with services(metrics).
   # default_host = "telegraf"
 

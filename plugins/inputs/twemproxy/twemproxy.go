@@ -16,21 +16,6 @@ type Twemproxy struct {
 	Pools []string
 }
 
-var sampleConfig = `
-  ## Twemproxy stats address and port (no scheme)
-  addr = "localhost:22222"
-  ## Monitor pool name
-  pools = ["redis_pool", "mc_pool"]
-`
-
-func (t *Twemproxy) SampleConfig() string {
-	return sampleConfig
-}
-
-func (t *Twemproxy) Description() string {
-	return "Read Twemproxy stats data"
-}
-
 // Gather data from all Twemproxy instances
 func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 	conn, err := net.DialTimeout("tcp", t.Addr, 1*time.Second)

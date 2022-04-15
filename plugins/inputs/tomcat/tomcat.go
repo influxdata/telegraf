@@ -70,33 +70,6 @@ type Tomcat struct {
 	request *http.Request
 }
 
-var sampleconfig = `
-  ## URL of the Tomcat server status
-  # url = "http://127.0.0.1:8080/manager/status/all?XML=true"
-
-  ## HTTP Basic Auth Credentials
-  # username = "tomcat"
-  # password = "s3cret"
-
-  ## Request timeout
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (s *Tomcat) Description() string {
-	return "Gather metrics from the Tomcat server status page."
-}
-
-func (s *Tomcat) SampleConfig() string {
-	return sampleconfig
-}
-
 func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
 		client, err := s.createHTTPClient()

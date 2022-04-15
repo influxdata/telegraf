@@ -10,7 +10,7 @@ The diskio input plugin gathers metrics about disk traffic and timing.
   ## By default, telegraf will gather stats for all devices including
   ## disk partitions.
   ## Setting devices will restrict the stats to the specified devices.
-  # devices = ["sda", "sdb"]
+  # devices = ["sda", "sdb", "vd*"]
   ## Uncomment the following line if you need disk serial numbers.
   # skip_serial_number = false
   #

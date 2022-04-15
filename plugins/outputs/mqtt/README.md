@@ -14,6 +14,7 @@ As a reference `eclipse/paho.mqtt.golang` sets the `keep_alive` to 30.
 ## Configuration
 
 ```toml
+# Configuration for MQTT server to send metrics to
 [[outputs.mqtt]]
   ## MQTT Brokers
   ## The list of brokers should only include the hostname or IP address and the

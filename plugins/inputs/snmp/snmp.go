@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gosnmp/gosnmp"
-	"github.com/sleepinggenius2/gosmi"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -20,60 +19,19 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const description = `Retrieves SNMP values from remote agents`
-const sampleConfig = `
-  ## Agent addresses to retrieve values from.
-  ##   format:  agents = ["<scheme://><hostname>:<port>"]
-  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.
-  ##            default is udp
-  ##   port:    optional
-  ##   example: agents = ["udp://127.0.0.1:161"]
-  ##            agents = ["tcp://127.0.0.1:161"]
-  ##            agents = ["udp4://v4only-snmp-agent"]
-  agents = ["udp://127.0.0.1:161"]
+type Translator interface {
+	SnmpTranslate(oid string) (
+		mibName string, oidNum string, oidText string,
+		conversion string,
+		err error,
+	)
 
-  ## Timeout for each request.
-  # timeout = "5s"
-
-  ## SNMP version; can be 1, 2, or 3.
-  # version = 2
-
-  ## Path to mib files
-  # path = ["/usr/share/snmp/mibs"]
-
-  ## Agent host tag; the tag used to reference the source host
-  # agent_host_tag = "agent_host"
-
-  ## SNMP community string.
-  # community = "public"
-
-  ## Number of retries to attempt.
-  # retries = 3
-
-  ## The GETBULK max-repetitions parameter.
-  # max_repetitions = 10
-
-  ## SNMPv3 authentication and encryption options.
-  ##
-  ## Security Name.
-  # sec_name = "myuser"
-  ## Authentication protocol; one of "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512" or "".
-  # auth_protocol = "MD5"
-  ## Authentication password.
-  # auth_password = "pass"
-  ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
-  # sec_level = "authNoPriv"
-  ## Context Name.
-  # context_name = ""
-  ## Privacy protocol used for encrypted messages; one of "DES", "AES" or "".
-  # priv_protocol = ""
-  ## Privacy password used for encrypted messages.
-  # priv_password = ""
-  
-  ## Add fields and tables defining the variables you wish to collect.  This
-  ## example collects the system uptime and interface variables.  Reference the
-  ## full plugin documentation for configuration details.
-`
+	SnmpTable(oid string) (
+		mibName string, oidNum string, oidText string,
+		fields []Field,
+		err error,
+	)
+}
 
 // Snmp holds the configuration for the plugin.
 type Snmp struct {
@@ -97,24 +55,38 @@ type Snmp struct {
 	connectionCache []snmpConnection
 
 	Log telegraf.Logger `toml:"-"`
+
+	translator Translator
+}
+
+func (s *Snmp) SetTranslator(name string) {
+	s.Translator = name
 }
 
 func (s *Snmp) Init() error {
-	err := snmp.LoadMibsFromPath(s.Path, s.Log, &snmp.GosmiMibLoader{})
-	if err != nil {
-		return err
+	var err error
+	switch s.Translator {
+	case "gosmi":
+		s.translator, err = NewGosmiTranslator(s.Path, s.Log)
+		if err != nil {
+			return err
+		}
+	case "netsnmp":
+		s.translator = NewNetsnmpTranslator()
+	default:
+		return fmt.Errorf("invalid translator value")
 	}
 
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
-		if err := s.Tables[i].Init(); err != nil {
+		if err := s.Tables[i].Init(s.translator); err != nil {
 			return fmt.Errorf("initializing table %s: %w", s.Tables[i].Name, err)
 		}
 	}
 
 	for i := range s.Fields {
-		if err := s.Fields[i].init(); err != nil {
+		if err := s.Fields[i].init(s.translator); err != nil {
 			return fmt.Errorf("initializing field %s: %w", s.Fields[i].Name, err)
 		}
 	}
@@ -149,7 +121,7 @@ type Table struct {
 }
 
 // Init() builds & initializes the nested fields.
-func (t *Table) Init() error {
+func (t *Table) Init(tr Translator) error {
 	//makes sure oid or name is set in config file
 	//otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
@@ -160,14 +132,14 @@ func (t *Table) Init() error {
 		return nil
 	}
 
-	if err := t.initBuild(); err != nil {
+	if err := t.initBuild(tr); err != nil {
 		return err
 	}
 
 	secondaryIndexTablePresent := false
 	// initialize all the nested fields
 	for i := range t.Fields {
-		if err := t.Fields[i].init(); err != nil {
+		if err := t.Fields[i].init(tr); err != nil {
 			return fmt.Errorf("initializing field %s: %w", t.Fields[i].Name, err)
 		}
 		if t.Fields[i].SecondaryIndexTable {
@@ -185,12 +157,12 @@ func (t *Table) Init() error {
 // initBuild initializes the table if it has an OID configured. If so, the
 // net-snmp tools will be used to look up the OID and auto-populate the table's
 // fields.
-func (t *Table) initBuild() error {
+func (t *Table) initBuild(tr Translator) error {
 	if t.Oid == "" {
 		return nil
 	}
 
-	_, _, oidText, fields, err := snmpTable(t.Oid)
+	_, _, oidText, fields, err := tr.SnmpTable(t.Oid)
 	if err != nil {
 		return err
 	}
@@ -254,14 +226,14 @@ type Field struct {
 }
 
 // init() converts OID names to numbers, and sets the .Name attribute if unset.
-func (f *Field) init() error {
+func (f *Field) init(tr Translator) error {
 	if f.initialized {
 		return nil
 	}
 
 	// check if oid needs translation or name is not set
 	if strings.ContainsAny(f.Oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") || f.Name == "" {
-		_, oidNum, oidText, conversion, _, err := SnmpTranslate(f.Oid)
+		_, oidNum, oidText, conversion, err := tr.SnmpTranslate(f.Oid)
 		if err != nil {
 			return fmt.Errorf("translating: %w", err)
 		}
@@ -335,16 +307,6 @@ func init() {
 	})
 }
 
-// SampleConfig returns the default configuration of the input.
-func (s *Snmp) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns a one-sentence description on the input.
-func (s *Snmp) Description() string {
-	return description
-}
-
 // Gather retrieves all the configured fields and tables.
 // Any error encountered does not halt the process. The errors are accumulated
 // and returned at the end.
@@ -384,7 +346,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 }
 
 func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table, topTags map[string]string, walk bool) error {
-	rt, err := t.Build(gs, walk)
+	rt, err := t.Build(gs, walk, s.translator)
 	if err != nil {
 		return err
 	}
@@ -413,7 +375,7 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 }
 
 // Build retrieves all the fields specified in the table and constructs the RTable.
-func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
+func (t Table) Build(gs snmpConnection, walk bool, tr Translator) (*RTable, error) {
 	rows := map[string]RTableRow{}
 
 	//translation table for secondary index (when preforming join on two tables)
@@ -505,7 +467,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				// snmptranslate table field value here
 				if f.Translate {
 					if entOid, ok := ent.Value.(string); ok {
-						_, _, oidText, _, _, err := SnmpTranslate(entOid)
+						_, _, oidText, _, err := tr.SnmpTranslate(entOid)
 						if err == nil {
 							// If no error translating, the original value for ent.Value should be replaced
 							ent.Value = oidText
@@ -793,94 +755,4 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	}
 
 	return nil, fmt.Errorf("invalid conversion type '%s'", conv)
-}
-
-type snmpTableCache struct {
-	mibName string
-	oidNum  string
-	oidText string
-	fields  []Field
-	err     error
-}
-
-var snmpTableCaches map[string]snmpTableCache
-var snmpTableCachesLock sync.Mutex
-
-// snmpTable resolves the given OID as a table, providing information about the
-// table and fields within.
-//nolint:revive //Too many return variable but necessary
-func snmpTable(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	snmpTableCachesLock.Lock()
-	if snmpTableCaches == nil {
-		snmpTableCaches = map[string]snmpTableCache{}
-	}
-
-	var stc snmpTableCache
-	var ok bool
-	if stc, ok = snmpTableCaches[oid]; !ok {
-		stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err = snmpTableCall(oid)
-		snmpTableCaches[oid] = stc
-	}
-
-	snmpTableCachesLock.Unlock()
-	return stc.mibName, stc.oidNum, stc.oidText, stc.fields, stc.err
-}
-
-//nolint:revive //Too many return variable but necessary
-func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	mibName, oidNum, oidText, _, node, err := SnmpTranslate(oid)
-	if err != nil {
-		return "", "", "", nil, fmt.Errorf("translating: %w", err)
-	}
-
-	mibPrefix := mibName + "::"
-
-	col, tagOids, err := snmp.GetIndex(oidNum, mibPrefix, node)
-
-	for _, c := range col {
-		_, isTag := tagOids[mibPrefix+c]
-		fields = append(fields, Field{Name: c, Oid: mibPrefix + c, IsTag: isTag})
-	}
-
-	return mibName, oidNum, oidText, fields, err
-}
-
-type snmpTranslateCache struct {
-	mibName    string
-	oidNum     string
-	oidText    string
-	conversion string
-	node       gosmi.SmiNode
-	err        error
-}
-
-var snmpTranslateCachesLock sync.Mutex
-var snmpTranslateCaches map[string]snmpTranslateCache
-
-// snmpTranslate resolves the given OID.
-//nolint:revive //Too many return variable but necessary
-func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, node gosmi.SmiNode, err error) {
-	snmpTranslateCachesLock.Lock()
-	if snmpTranslateCaches == nil {
-		snmpTranslateCaches = map[string]snmpTranslateCache{}
-	}
-
-	var stc snmpTranslateCache
-	var ok bool
-	if stc, ok = snmpTranslateCaches[oid]; !ok {
-		// This will result in only one call to snmptranslate running at a time.
-		// We could speed it up by putting a lock in snmpTranslateCache and then
-		// returning it immediately, and multiple callers would then release the
-		// snmpTranslateCachesLock and instead wait on the individual
-		// snmpTranslation.Lock to release. But I don't know that the extra complexity
-		// is worth it. Especially when it would slam the system pretty hard if lots
-		// of lookups are being performed.
-
-		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.node, stc.err = snmp.SnmpTranslateCall(oid)
-		snmpTranslateCaches[oid] = stc
-	}
-
-	snmpTranslateCachesLock.Unlock()
-
-	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.node, stc.err
 }

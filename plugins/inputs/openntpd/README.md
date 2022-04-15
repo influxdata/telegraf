@@ -23,6 +23,7 @@ server (RMS of difference of multiple time samples, milliseconds);
 ## Configuration
 
 ```toml
+# Get standard NTP query metrics from OpenNTPD.
 [[inputs.openntpd]]
   ## Run ntpctl binary with sudo.
   # use_sudo = false

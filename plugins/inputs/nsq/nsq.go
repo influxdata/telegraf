@@ -44,18 +44,6 @@ type NSQ struct {
 	httpClient *http.Client
 }
 
-var sampleConfig = `
-  ## An array of NSQD HTTP API endpoints
-  endpoints  = ["http://localhost:4151"]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
 const (
 	requestPattern = `%s/stats?format=json`
 )
@@ -68,14 +56,6 @@ func init() {
 
 func New() *NSQ {
 	return &NSQ{}
-}
-
-func (n *NSQ) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *NSQ) Description() string {
-	return "Read NSQ topic and channel statistics."
 }
 
 func (n *NSQ) Gather(acc telegraf.Accumulator) error {

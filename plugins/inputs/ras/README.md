@@ -7,6 +7,7 @@ The `RAS` plugin gathers and counts errors provided by [RASDaemon](https://githu
 ## Configuration
 
 ```toml
+# RAS plugin exposes counter metrics for Machine Check Errors provided by RASDaemon (sqlite3 output is required).
 [[inputs.ras]]
   ## Optional path to RASDaemon sqlite3 database.
   ## Default: /var/lib/rasdaemon/ras-mc_event.db

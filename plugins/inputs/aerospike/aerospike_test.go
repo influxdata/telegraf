@@ -316,9 +316,7 @@ func TestParseNodeInfo(t *testing.T) {
 	var acc testutil.Accumulator
 
 	stats := map[string]string{
-		"early_tsvc_from_proxy_error": "0",
-		"cluster_principal":           "BB9020012AC4202",
-		"cluster_is_member":           "true",
+		"statistics": "early_tsvc_from_proxy_error=0;cluster_principal=BB9020012AC4202;cluster_is_member=true",
 	}
 
 	expectedFields := map[string]interface{}{
