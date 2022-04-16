@@ -70,7 +70,7 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 
 func TestSocketListener_unix_tls(t *testing.T) {
 	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix_tls.sock")
+	sock := filepath.Join(tmpdir, "sock")
 
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
@@ -134,7 +134,7 @@ func TestSocketListener_udp(t *testing.T) {
 
 func TestSocketListener_unix(t *testing.T) {
 	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix.sock")
+	sock := filepath.Join(tmpdir, "sock")
 
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
@@ -163,7 +163,7 @@ func TestSocketListener_unixgram(t *testing.T) {
 	}
 
 	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unixgram.sock")
+	sock := filepath.Join(tmpdir, "sock")
 
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()

@@ -245,7 +245,7 @@ func TestSuricataInvalidPath(t *testing.T) {
 
 func TestSuricataTooLongLine(t *testing.T) {
 	dir := t.TempDir()
-	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+	tmpfn := filepath.Join(dir, "sock")
 
 	s := Suricata{
 		Source: tmpfn,
@@ -271,7 +271,7 @@ func TestSuricataTooLongLine(t *testing.T) {
 
 func TestSuricataEmptyJSON(t *testing.T) {
 	dir := t.TempDir()
-	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+	tmpfn := filepath.Join(dir, "sock")
 
 	s := Suricata{
 		Source: tmpfn,
@@ -296,7 +296,7 @@ func TestSuricataEmptyJSON(t *testing.T) {
 
 func TestSuricataDisconnectSocket(t *testing.T) {
 	dir := t.TempDir()
-	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+	tmpfn := filepath.Join(dir, "sock")
 
 	s := Suricata{
 		Source: tmpfn,
@@ -330,7 +330,7 @@ func TestSuricataDisconnectSocket(t *testing.T) {
 
 func TestSuricataStartStop(t *testing.T) {
 	dir := t.TempDir()
-	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
+	tmpfn := filepath.Join(dir, "sock")
 
 	s := Suricata{
 		Source: tmpfn,

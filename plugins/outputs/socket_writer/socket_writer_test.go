@@ -45,7 +45,7 @@ func TestSocketWriter_udp(t *testing.T) {
 
 func TestSocketWriter_unix(t *testing.T) {
 	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sw.TestSocketWriter_unix.sock")
+	sock := filepath.Join(tmpdir, "sock")
 
 	listener, err := net.Listen("unix", sock)
 	require.NoError(t, err)
@@ -68,7 +68,7 @@ func TestSocketWriter_unixgram(t *testing.T) {
 	}
 
 	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sw.TSW_unixgram.sock")
+	sock := filepath.Join(tmpdir, "sock")
 
 	listener, err := net.ListenPacket("unixgram", sock)
 	require.NoError(t, err)
