@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -469,33 +468,25 @@ func TestOctetCountingStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
 }
 
 func TestOctetCountingStrict_unix(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix.sock")
 	testStrictOctetCounting(t, "unix", sock, false, nil)
 }
 
 func TestOctetCountingBestEffort_unix(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
 	testBestEffortOctetCounting(t, "unix", sock, false)
 }
 
 func TestOctetCountingStrict_unix_tls(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix_tls.sock")
 	testStrictOctetCounting(t, "unix", sock, true, nil)
 }
 
 func TestOctetCountingBestEffort_unix_tls(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
 	testBestEffortOctetCounting(t, "unix", sock, true)
 }

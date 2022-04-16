@@ -3,7 +3,6 @@ package syslog
 import (
 	"crypto/tls"
 	"net"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -269,33 +268,25 @@ func TestNonTransparentStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
 }
 
 func TestNonTransparentStrict_unix(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix.sock")
 	testStrictNonTransparent(t, "unix", sock, false, nil)
 }
 
 func TestNonTransparentBestEffort_unix(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
 	testBestEffortNonTransparent(t, "unix", sock, false)
 }
 
 func TestNonTransparentStrict_unix_tls(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix_tls.sock")
 	testStrictNonTransparent(t, "unix", sock, true, nil)
 }
 
 func TestNonTransparentBestEffort_unix_tls(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
 	testBestEffortNonTransparent(t, "unix", sock, true)
 }

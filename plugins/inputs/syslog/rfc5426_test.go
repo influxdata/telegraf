@@ -289,12 +289,12 @@ func TestBestEffort_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unixgram.sock")
-	_, err = os.Create(sock)
+	f, err := os.Create(sock)
 	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, f.Close()) })
+
 	testRFC5426(t, "unixgram", sock, true)
 }
 
@@ -303,12 +303,12 @@ func TestStrict_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unixgram.sock")
-	_, err = os.Create(sock)
+	f, err := os.Create(sock)
 	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, f.Close()) })
+
 	testRFC5426(t, "unixgram", sock, false)
 }
 

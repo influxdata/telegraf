@@ -109,9 +109,7 @@ func TestGrokParseLogFiles(t *testing.T) {
 }
 
 func TestGrokParseLogFilesAppearLater(t *testing.T) {
-	emptydir, err := os.MkdirTemp("", "TestGrokParseLogFilesAppearLater")
-	defer os.RemoveAll(emptydir)
-	require.NoError(t, err)
+	emptydir := t.TempDir()
 
 	logparser := &LogParserPlugin{
 		Log:           testutil.Logger{},

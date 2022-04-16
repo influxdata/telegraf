@@ -69,9 +69,7 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 }
 
 func TestSocketListener_unix_tls(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix_tls.sock")
 
 	sl := newSocketListener()
@@ -80,7 +78,7 @@ func TestSocketListener_unix_tls(t *testing.T) {
 	sl.ServerConfig = *pki.TLSServerConfig()
 
 	acc := &testutil.Accumulator{}
-	err = sl.Start(acc)
+	err := sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
@@ -135,9 +133,7 @@ func TestSocketListener_udp(t *testing.T) {
 }
 
 func TestSocketListener_unix(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix.sock")
 
 	testEmptyLog := prepareLog(t)
@@ -151,7 +147,7 @@ func TestSocketListener_unix(t *testing.T) {
 	sl.ReadBufferSize = config.Size(1024)
 
 	acc := &testutil.Accumulator{}
-	err = sl.Start(acc)
+	err := sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
@@ -166,16 +162,16 @@ func TestSocketListener_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir, err := os.MkdirTemp("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unixgram.sock")
 
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
 
-	_, err = os.Create(sock)
+	f, err := os.Create(sock)
 	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, f.Close()) })
+
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unixgram://" + sock
