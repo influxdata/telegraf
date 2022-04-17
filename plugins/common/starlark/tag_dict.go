@@ -36,7 +36,7 @@ func (d TagDict) Type() string {
 	return "Tags"
 }
 
-func (d TagDict) Freeze() {
+func (d *TagDict) Freeze() {
 	d.frozen = true
 }
 
