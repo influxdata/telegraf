@@ -37,7 +37,7 @@ func (d FieldDict) Type() string {
 	return "Fields"
 }
 
-func (d FieldDict) Freeze() {
+func (d *FieldDict) Freeze() {
 	d.frozen = true
 }
 
