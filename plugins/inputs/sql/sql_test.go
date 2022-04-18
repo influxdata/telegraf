@@ -352,9 +352,11 @@ func TestClickHouse(t *testing.T) {
 	for _, tt := range testset {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the plugin-under-test
+			dsn, err := secretstore.NewSecret([]byte(fmt.Sprintf("tcp://%v:%v?username=%v", addr, port, user)))
+			require.NoError(t, err)
 			plugin := &SQL{
 				Driver:  "clickhouse",
-				Dsn:     fmt.Sprintf("tcp://%v:%v?username=%v", addr, port, user),
+				Dsn:     dsn,
 				Queries: tt.queries,
 				Log:     logger,
 			}
@@ -362,14 +364,11 @@ func TestClickHouse(t *testing.T) {
 			var acc testutil.Accumulator
 
 			// Startup the plugin
-			err := plugin.Init()
-			require.NoError(t, err)
-			err = plugin.Start(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Start(&acc))
 
 			// Gather
-			err = plugin.Gather(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Gather(&acc))
 			require.Len(t, acc.Errors, 0)
 
 			// Stopping the plugin
