@@ -54,6 +54,9 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - run: |
+          git checkout master
+          git cherry-pick ${CIRCLE_SHA1}
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
