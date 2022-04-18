@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -69,8 +68,7 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 }
 
 func TestSocketListener_unix_tls(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 
 	sl := newSocketListener()
 	sl.Log = testutil.Logger{}
@@ -133,8 +131,7 @@ func TestSocketListener_udp(t *testing.T) {
 }
 
 func TestSocketListener_unix(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()
@@ -162,8 +159,7 @@ func TestSocketListener_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 
 	testEmptyLog := prepareLog(t)
 	defer testEmptyLog()

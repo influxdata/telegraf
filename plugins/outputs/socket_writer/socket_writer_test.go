@@ -3,7 +3,6 @@ package socket_writer
 import (
 	"bufio"
 	"net"
-	"path/filepath"
 	"runtime"
 	"sync"
 	"testing"
@@ -44,8 +43,7 @@ func TestSocketWriter_udp(t *testing.T) {
 }
 
 func TestSocketWriter_unix(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 
 	listener, err := net.Listen("unix", sock)
 	require.NoError(t, err)
@@ -67,8 +65,7 @@ func TestSocketWriter_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 
 	listener, err := net.ListenPacket("unixgram", sock)
 	require.NoError(t, err)

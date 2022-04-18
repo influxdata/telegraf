@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sync/atomic"
 	"testing"
@@ -289,8 +288,7 @@ func TestBestEffort_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 	f, err := os.Create(sock)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, f.Close()) })
@@ -303,8 +301,7 @@ func TestStrict_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 	f, err := os.Create(sock)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, f.Close()) })

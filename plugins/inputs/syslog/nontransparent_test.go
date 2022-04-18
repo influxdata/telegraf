@@ -3,7 +3,6 @@ package syslog
 import (
 	"crypto/tls"
 	"net"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -268,25 +267,21 @@ func TestNonTransparentStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
 }
 
 func TestNonTransparentStrict_unix(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 	testStrictNonTransparent(t, "unix", sock, false, nil)
 }
 
 func TestNonTransparentBestEffort_unix(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 	testBestEffortNonTransparent(t, "unix", sock, false)
 }
 
 func TestNonTransparentStrict_unix_tls(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 	testStrictNonTransparent(t, "unix", sock, true, nil)
 }
 
 func TestNonTransparentBestEffort_unix_tls(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "s")
+	sock := testutil.TempSocket(t)
 	testBestEffortNonTransparent(t, "unix", sock, true)
 }

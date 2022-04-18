@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -468,25 +467,21 @@ func TestOctetCountingStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
 }
 
 func TestOctetCountingStrict_unix(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 	testStrictOctetCounting(t, "unix", sock, false, nil)
 }
 
 func TestOctetCountingBestEffort_unix(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 	testBestEffortOctetCounting(t, "unix", sock, false)
 }
 
 func TestOctetCountingStrict_unix_tls(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 	testStrictOctetCounting(t, "unix", sock, true, nil)
 }
 
 func TestOctetCountingBestEffort_unix_tls(t *testing.T) {
-	tmpdir := t.TempDir()
-	sock := filepath.Join(tmpdir, "sock")
+	sock := testutil.TempSocket(t)
 	testBestEffortOctetCounting(t, "unix", sock, true)
 }
