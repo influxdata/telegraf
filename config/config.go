@@ -704,7 +704,7 @@ func printFilteredGlobalSections(sectionFilters []string) {
 
 	if sliceContains("secretstore", sectionFilters) {
 		//nolint:revive  // If print fails we will notice
-		fmt.Println(secretStoreConfig)
+		fmt.Print(secretStoreConfig)
 	}
 }
 
