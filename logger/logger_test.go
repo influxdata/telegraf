@@ -96,8 +96,7 @@ func TestWriteToTruncatedFile(t *testing.T) {
 }
 
 func TestWriteToFileInRotation(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "LogRotation")
-	require.NoError(t, err)
+	tempDir := t.TempDir()
 	cfg := createBasicLogConfig(filepath.Join(tempDir, "test.log"))
 	cfg.LogTarget = LogTargetFile
 	cfg.RotationMaxSize = config.Size(30)
@@ -105,7 +104,7 @@ func TestWriteToFileInRotation(t *testing.T) {
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
 	closer, isCloser := writer.(io.Closer)
 	assert.True(t, isCloser)
-	defer func() { closer.Close(); os.RemoveAll(tempDir) }()
+	t.Cleanup(func() { require.NoError(t, closer.Close()) })
 
 	log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 	log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
