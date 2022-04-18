@@ -37,6 +37,9 @@ commands:
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
+  rebase-on-master:
+    steps:
+      - run: git fetch && git rebase origin/master
   test-go:
     parameters:
       os:
@@ -54,7 +57,7 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
-      - run: git fetch && git rebase origin/master
+      - rebase-on-master
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -132,6 +135,7 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - rebase-on-master
       - attach_workspace:
           at: '/go'
       - when:
