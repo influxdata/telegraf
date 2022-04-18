@@ -173,11 +173,10 @@ func TestFileStdout(t *testing.T) {
 }
 
 func createFile(t *testing.T) *os.File {
-	f, err := os.CreateTemp("", "")
+	f, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, f.Close())
-		require.NoError(t, os.Remove(f.Name()))
 	})
 
 	_, err = f.WriteString("cpu,cpu=cpu0 value=100 1455312810012459582\n")
