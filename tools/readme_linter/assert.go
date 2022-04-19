@@ -57,7 +57,7 @@ func (t *T) printRule(callers int) {
 
 	pc, codeFilename, codeLine, ok := runtime.Caller(callers)
 	if !ok {
-		panic("can't get caller")
+		panic("can not get caller")
 	}
 
 	f := runtime.FuncForPC(pc)
@@ -121,7 +121,7 @@ func (t *T) assertFirstChildRegexp(expectedPattern string, n ast.Node) {
 	actual := string(c.Text(t.markdown))
 
 	if !validRegexp.MatchString(actual) {
-		t.printFailedAssertf(n, "'%s' doesn't match regexp '%s'", actual, expectedPattern)
+		t.printFailedAssertf(n, "'%s' does not match regexp '%s'", actual, expectedPattern)
 		return
 	}
 }
