@@ -343,6 +343,32 @@ jobs:
       - package-build:
           type: armhf
           nightly: << parameters.nightly >>
+  docker-nightly:
+    docker:
+      - image: docker:20.10.14-git
+    steps:
+      - run:
+          name: login to quay.io
+          command: echo "$QUAY_PASS" | docker login --username "$QUAY_USER" --password-stdin quay.io
+      - run:
+          name: clone influxdata/influxdata-docker
+          command: git clone https://github.com/influxdata/influxdata-docker
+      - run:
+          name: build and push telegraf:nightly
+          command: |
+            cd influxdata-docker/telegraf/nightly
+            docker build -t telegraf .
+            docker tag telegraf quay.io/influxdb/telegraf:nightly
+            docker image ls
+            docker push quay.io/influxdb/telegraf:nightly
+      - run:
+          name: build and push telegraf:nightly-alpine
+          command: |
+            cd influxdata-docker/telegraf/nightly/alpine
+            docker build -t telegraf-alpine .
+            docker tag telegraf-alpine quay.io/influxdb/telegraf:nightly-alpine
+            docker image ls
+            docker push quay.io/influxdb/telegraf:nightly-alpine
   nightly:
     executor: go-1_17
     steps:
@@ -702,6 +728,9 @@ workflows:
             - 'static-package-nightly'
             - 'arm64-package-nightly'
             - 'armhf-package-nightly'
+      - docker-nightly:
+          requires:
+            - 'nightly'
     triggers:
       - schedule:
           cron: "0 7 * * *"
