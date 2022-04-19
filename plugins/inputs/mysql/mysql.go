@@ -338,6 +338,13 @@ const (
         FROM information_schema.INNODB_METRICS
         WHERE status='enabled'
     `
+	innoDBMetricsQueryMariadb = `
+        EXECUTE IMMEDIATE CONCAT("
+            SELECT NAME, COUNT
+            FROM information_schema.INNODB_METRICS
+            WHERE ", IF(version() REGEXP '10\.[1-4].*',"status='enabled'", "ENABLED=1"), "
+        ");
+	`
 	perfTableIOWaitsQuery = `
         SELECT OBJECT_SCHEMA, OBJECT_NAME, COUNT_FETCH, COUNT_INSERT, COUNT_UPDATE, COUNT_DELETE,
         SUM_TIMER_FETCH, SUM_TIMER_INSERT, SUM_TIMER_UPDATE, SUM_TIMER_DELETE
@@ -1352,8 +1359,18 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 // gatherInnoDBMetrics can be used to fetch enabled metrics from
 // information_schema.INNODB_METRICS
 func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	var (
+		query string
+	)
+
+	if m.MariadbDialect {
+		query = innoDBMetricsQueryMariadb
+	} else {
+		query = innoDBMetricsQuery
+	}
+
 	// run query
-	rows, err := db.Query(innoDBMetricsQuery)
+	rows, err := db.Query(query)
 	if err != nil {
 		return err
 	}
