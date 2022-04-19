@@ -262,6 +262,7 @@ following works:
 - go.mongodb.org/mongo-driver [Apache License 2.0](https://github.com/mongodb/mongo-go-driver/blob/master/LICENSE)
 - go.opencensus.io [Apache License 2.0](https://github.com/census-instrumentation/opencensus-go/blob/master/LICENSE)
 - go.opentelemetry.io/collector/model [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-collector/blob/main/LICENSE)
+- go.opentelemetry.io/collector/pdata [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-collector/blob/main/LICENSE)
 - go.starlark.net [BSD 3-Clause "New" or "Revised" License](https://github.com/google/starlark-go/blob/master/LICENSE)
 - go.uber.org/atomic [MIT License](https://pkg.go.dev/go.uber.org/atomic?tab=licenses)
 - go.uber.org/multierr [MIT License](https://pkg.go.dev/go.uber.org/multierr?tab=licenses)
