@@ -37,6 +37,14 @@ commands:
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
+  rebase-on-master:
+    steps:
+      - run: |
+          git config --global user.email "telegraf@influxdb.com"
+          git config --global user.name "telegraf"
+          git remote add upstream https://github.com/influxdata/telegraf
+          git fetch upstream
+          git rebase upstream/master
   test-go:
     parameters:
       os:
@@ -54,6 +62,7 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - rebase-on-master
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -131,6 +140,7 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - rebase-on-master
       - attach_workspace:
           at: '/go'
       - when:
