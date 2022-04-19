@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"os"
 
 	"github.com/yuin/goldmark"
@@ -14,9 +15,13 @@ import (
 )
 
 func main() {
+	sourceFlag := flag.Bool("source", false, "include location of linter code that failed assertion")
+
+	flag.Parse()
+
 	var err error
-	for _, filename := range os.Args[1:] {
-		err = checkFile(filename, guessPluginType(filename))
+	for _, filename := range flag.Args() {
+		err = checkFile(filename, guessPluginType(filename), *sourceFlag)
 		if err != nil {
 			panic(err)
 		}
@@ -52,7 +57,7 @@ func init() {
 	rules[pluginInput] = append(rules[pluginInput], inputRules...)
 }
 
-func checkFile(filename string, pluginType plugin) error {
+func checkFile(filename string, pluginType plugin, sourceFlag bool) error {
 	md, err := os.ReadFile(filename)
 	if err != nil {
 		return err
@@ -97,6 +102,7 @@ func checkFile(filename string, pluginType plugin) error {
 		filename:       filename,
 		markdown:       md,
 		newlineOffsets: newlineOffsets,
+		sourceFlag:     sourceFlag,
 	}
 	for _, rule := range rules {
 		err = rule(&tester, root)
