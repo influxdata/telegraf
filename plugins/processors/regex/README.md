@@ -2,6 +2,9 @@
 
 The `regex` plugin transforms tag and field values with regex pattern. If `result_key` parameter is present, it can produce new tags and fields from existing ones.
 
+The regex processor **only operates on string fields**. It will not work on
+any other data types, like an integer or float.
+
 For tags transforms, if `append` is set to `true`, it will append the transformation to the existing tag value, instead of overwriting it.
 
 For metrics transforms, `key` denotes the element that should be transformed. Furthermore, `result_key` allows control over the behavior applied in case the resulting `tag` or `field` name already exists.
