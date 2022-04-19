@@ -40,11 +40,11 @@ commands:
   rebase-on-master:
     steps:
       - run: |
-        git config --global user.email "telegraf@influxdb.com"
-        git config --global user.name "telegraf"
-        git remote add upstream https://github.com/influxdata/telegraf
-        git fetch upstream
-        git rebase upstream/master
+          git config --global user.email "telegraf@influxdb.com"
+          git config --global user.name "telegraf"
+          git remote add upstream https://github.com/influxdata/telegraf
+          git fetch upstream
+          git rebase upstream/master
   test-go:
     parameters:
       os:
