@@ -39,9 +39,12 @@ commands:
       - run: ./scripts/check-file-changes.sh
   rebase-on-master:
     steps:
-      - run: git remote add upstream https://github.com/influxdata/telegraf
-      - run: git fetch upstream
-      - run: git rebase upstream/master
+      - run: |
+        git config --global user.email "telegraf@influxdb.com"
+        git config --global user.name "telegraf"
+        git remote add upstream https://github.com/influxdata/telegraf
+        git fetch upstream
+        git rebase upstream/master
   test-go:
     parameters:
       os:
