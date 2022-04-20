@@ -12,6 +12,7 @@ type Parser struct {
 	DropOriginal bool            `toml:"drop_original"`
 	Merge        string          `toml:"merge"`
 	ParseFields  []string        `toml:"parse_fields"`
+	ParseTags    []string        `toml:"parse_tags"`
 	Log          telegraf.Logger `toml:"-"`
 	parser       telegraf.Parser
 }
@@ -35,12 +36,13 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			newMetrics = append(newMetrics, metric)
 		}
 
+		// parse fields
 		for _, key := range p.ParseFields {
 			for _, field := range metric.FieldList() {
 				if field.Key == key {
 					switch value := field.Value.(type) {
 					case string:
-						fromFieldMetric, err := p.parseField(value)
+						fromFieldMetric, err := p.parseValue(value)
 						if err != nil {
 							p.Log.Errorf("could not parse field %s: %v", key, err)
 						}
@@ -59,6 +61,18 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 						p.Log.Errorf("field '%s' not a string, skipping", key)
 					}
 				}
+			}
+		}
+
+		// parse tags
+		for _, key := range p.ParseTags {
+			if value, ok := metric.GetTag(key); ok {
+				fromTagMetric, err := p.parseValue(value)
+				if err != nil {
+					p.Log.Errorf("could not parse tag %s: %v", key, err)
+				}
+
+				newMetrics = append(newMetrics, fromTagMetric...)
 			}
 		}
 
@@ -88,7 +102,7 @@ func merge(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
 	return base
 }
 
-func (p *Parser) parseField(value string) ([]telegraf.Metric, error) {
+func (p *Parser) parseValue(value string) ([]telegraf.Metric, error) {
 	return p.parser.Parse([]byte(value))
 }
 
