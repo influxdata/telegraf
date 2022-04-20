@@ -115,7 +115,7 @@ func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "X-Consul-Token "+n.Token)
+	req.Header.Add("X-Consul-Token", n.Token)
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := n.roundTripper.RoundTrip(req)
