@@ -14,7 +14,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -45,13 +44,6 @@ type X509Cert struct {
 	globpaths []*globpath.GlobPath
 	Log       telegraf.Logger
 }
-
-// Description returns description of the plugin.
-func (c *X509Cert) Description() string {
-	return description
-}
-
-var remoteURLRe = regexp.MustCompile("^((udp|tcp)[46]?|https)://")
 
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
