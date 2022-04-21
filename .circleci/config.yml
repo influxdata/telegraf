@@ -4,15 +4,17 @@ jobs:
   docker-nightly:
     docker:
       - image: docker:20.10.14-git
+    variables:
+      QUAY_USERNAME: $QUAY_USER
+      QUAY_PASSWORD: $QUAY_PASS
     steps:
       - run:
           name: login to quay.io
           command: |
-            echo ${AWS_DEFAULT_REGION}
-            echo ${QUAY_USER}
-            QUAY_USER="blah"
-            echo ${QUAY_USER}
-            docker login --username="${QUAY_USER}" --password="${QUAY_PASS}" quay.io
+            echo ${QUAY_USERNAME}
+            QUAY_USERNAME="blah"
+            echo ${QUAY_USERNAME}
+            docker login --username="${QUAY_USERNAME}" --password="${QUAY_PASS}" quay.io
       - run:
           name: clone influxdata/influxdata-docker
           command: git clone https://github.com/influxdata/influxdata-docker
