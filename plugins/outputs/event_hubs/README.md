@@ -1,10 +1,17 @@
-# Azure Event Hubs output plugin
+# Azure Event Hubs Output Plugin
 
-This plugin for [Azure Event Hubs](https://azure.microsoft.com/en-gb/services/event-hubs/) will send metrics to a single Event Hub within an Event Hubs namespace. Metrics are sent as message batches, each message payload containing one metric object. The messages do not specify a partition key, and will thus be automatically load-balanced (round-robin) across all the Event Hub partitions.
+This plugin for [Azure Event
+Hubs](https://azure.microsoft.com/en-gb/services/event-hubs/) will send metrics
+to a single Event Hub within an Event Hubs namespace. Metrics are sent as
+message batches, each message payload containing one metric object. The messages
+do not specify a partition key, and will thus be automatically load-balanced
+(round-robin) across all the Event Hub partitions.
 
 ## Metrics
 
-The plugin uses the Telegraf serializers to format the metric data sent in the message payloads. You can select any of the supported output formats, although JSON is probably the easiest to integrate with downstream components.
+The plugin uses the Telegraf serializers to format the metric data sent in the
+message payloads. You can select any of the supported output formats, although
+JSON is probably the easiest to integrate with downstream components.
 
 ## Configuration
 

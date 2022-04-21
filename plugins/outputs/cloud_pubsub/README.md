@@ -5,9 +5,6 @@ as one of the supported [output data formats][].
 
 ## Configuration
 
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage cloud_pubsub`.
-
 ```toml
 # Publish Telegraf metrics to a Google Cloud PubSub topic
 [[outputs.cloud_pubsub]]

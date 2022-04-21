@@ -1,6 +1,8 @@
 # SignalFx Output Plugin
 
-The SignalFx output plugin sends metrics to [SignalFx](https://docs.signalfx.com/en/latest/).
+The SignalFx output plugin sends metrics to [SignalFx][docs].
+
+[docs]: https://docs.signalfx.com/en/latest/
 
 ## Configuration
 
