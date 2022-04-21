@@ -1,12 +1,17 @@
 version: 2.1
 
+executors:
+  go-1_17:
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+    resource_class: large
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.18.1'
+    environment:
+      GOFLAGS: -p=4
+
 jobs:
   docker-nightly:
-    docker:
-      - image: docker:20.10.14-git
-    variables:
-      QUAY_USERNAME: $QUAY_USER
-      QUAY_PASSWORD: $QUAY_PASS
+    executor: go-1_17
     steps:
       - run:
           name: login to quay.io
