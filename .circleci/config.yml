@@ -7,7 +7,7 @@ jobs:
     steps:
       - run:
           name: login to quay.io
-          command: docker login -u $QUAY_USER -p $QUAY_PASS quay.io
+          command: docker login -u ${QUAY_USER} -p ${QUAY_PASS} quay.io
       - run:
           name: clone influxdata/influxdata-docker
           command: git clone https://github.com/influxdata/influxdata-docker
