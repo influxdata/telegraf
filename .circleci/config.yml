@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   docker-nightly:
     docker:
-      - image: docker:20.10.14-git
+      - image: docker:20.10-dind
     steps:
       - run:
           name: login to quay.io
