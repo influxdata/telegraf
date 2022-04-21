@@ -2,8 +2,8 @@ version: 2.1
 
 jobs:
   docker-nightly:
-    docker:
-      - image: docker:20.10-dind
+    machine:
+      image: ubuntu-2004:current
     steps:
       - run:
           name: login to quay.io
