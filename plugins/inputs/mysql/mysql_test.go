@@ -326,10 +326,6 @@ func TestGatherGlobalVariables(t *testing.T) {
 			testCase.name = fmt.Sprintf("#%d", i)
 		}
 
-		// uncomment this to run only a single test case:
-		// if testCase.name != "#1" {
-		// 	continue
-		// }
 
 		rows := sqlmock.NewRows(columns)
 		for _, field := range testCase.fields {
