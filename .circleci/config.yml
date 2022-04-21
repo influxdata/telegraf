@@ -8,6 +8,7 @@ jobs:
       - run:
           name: login to quay.io
           command: |
+            echo ${AWS_DEFAULT_REGION}
             echo ${QUAY_USER}
             QUAY_USER="blah"
             echo ${QUAY_USER}
