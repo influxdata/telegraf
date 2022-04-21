@@ -326,7 +326,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 		for subscriptionName, values := range c.lookup {
 			if annotations, ok := values[subscriptionKey]; ok {
 				for k, v := range annotations {
-					tags[subscriptionName+"/"+k] = v.(string)
+					tags[subscriptionName+"/"+k] = fmt.Sprint(v)
 				}
 			}
 		}
