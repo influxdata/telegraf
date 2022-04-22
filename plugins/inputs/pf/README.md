@@ -20,7 +20,12 @@ telegraf ALL=(root) NOPASSWD: /sbin/pfctl -s info
 ## Configuration
 
 ```toml
-  # use sudo to run pfctl
+# Gather counters from PF
+[[inputs.pf]]
+  ## PF require root access on most systems.
+  ## Setting 'use_sudo' to true will make use of sudo to run pfctl.
+  ## Users must configure sudo to allow telegraf user to run pfctl with no password.
+  ## pfctl can be restricted to only list command "pfctl -s info".
   use_sudo = false
 ```
 
@@ -54,7 +59,7 @@ telegraf ALL=(root) NOPASSWD: /sbin/pfctl -s info
 Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
 State Table                          Total             Rate
-  current entries                        2               
+  current entries                        2
   searches                           11325            7.2/s
   inserts                                5            0.0/s
   removals                               3            0.0/s

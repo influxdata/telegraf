@@ -7,6 +7,7 @@ Hddtemp should be installed and its daemon running.
 ## Configuration
 
 ```toml
+# Monitor disks' temperatures using hddtemp
 [[inputs.hddtemp]]
   ## By default, telegraf gathers temps data from all disks detected by the
   ## hddtemp.

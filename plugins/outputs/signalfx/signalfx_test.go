@@ -614,48 +614,6 @@ func TestSignalFx_Errors(t *testing.T) {
 	}
 }
 
-// this is really just for complete code coverage
-func TestSignalFx_Description(t *testing.T) {
-	tests := []struct {
-		name string
-		want string
-	}{
-		{
-			name: "verify description is correct",
-			want: "Send metrics and events to SignalFx",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &SignalFx{}
-			if got := s.Description(); got != tt.want {
-				t.Errorf("SignalFx.Description() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-// this is also just for complete code coverage
-func TestSignalFx_SampleConfig(t *testing.T) {
-	tests := []struct {
-		name string
-		want string
-	}{
-		{
-			name: "verify sample config is returned",
-			want: sampleConfig,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &SignalFx{}
-			if got := s.SampleConfig(); got != tt.want {
-				t.Errorf("SignalFx.SampleConfig() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestGetMetricName(t *testing.T) {
 	type args struct {
 		metric string

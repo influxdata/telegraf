@@ -21,6 +21,7 @@ your database.
 ## Configuration
 
 ```toml
+# Input plugin for DC/OS metrics
 [[inputs.dcos]]
   ## The DC/OS cluster URL.
   cluster_url = "https://dcos-master-1"

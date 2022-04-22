@@ -169,9 +169,7 @@ func TestMysqlIntegration(t *testing.T) {
 	const username = "root"
 
 	password := pwgen(32)
-	outDir, err := os.MkdirTemp("", "tg-mysql-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(outDir)
+	outDir := t.TempDir()
 
 	ctx := context.Background()
 	req := testcontainers.GenericContainerRequest{
@@ -259,9 +257,7 @@ func TestPostgresIntegration(t *testing.T) {
 	const username = "postgres"
 
 	password := pwgen(32)
-	outDir, err := os.MkdirTemp("", "tg-postgres-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(outDir)
+	outDir := t.TempDir()
 
 	ctx := context.Background()
 	req := testcontainers.GenericContainerRequest{
@@ -361,9 +357,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	// default username for clickhouse is default
 	const username = "default"
 
-	outDir, err := os.MkdirTemp("", "tg-clickhouse-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(outDir)
+	outDir := t.TempDir()
 
 	ctx := context.Background()
 	req := testcontainers.GenericContainerRequest{

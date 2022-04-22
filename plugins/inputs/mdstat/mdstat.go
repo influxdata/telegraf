@@ -62,20 +62,6 @@ type MdstatConf struct {
 	FileName string `toml:"file_name"`
 }
 
-func (k *MdstatConf) Description() string {
-	return "Get md array statistics from /proc/mdstat"
-}
-
-var mdSampleConfig = `
-	## Sets file path
-	## If not specified, then default is /proc/mdstat
-	# file_name = "/proc/mdstat"
-`
-
-func (k *MdstatConf) SampleConfig() string {
-	return mdSampleConfig
-}
-
 func evalStatusLine(deviceLine, statusLineStr string) (statusLine, error) {
 	sizeFields := strings.Fields(statusLineStr)
 	if len(sizeFields) < 1 {

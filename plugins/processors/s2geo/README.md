@@ -7,6 +7,7 @@ The `lat` and `lon` fields values should contain WGS-84 coordinates in decimal d
 ## Configuration
 
 ```toml
+# Add the S2 Cell ID as a tag based on latitude and longitude fields
 [[processors.s2geo]]
   ## The name of the lat and lon fields containing WGS-84 latitude and
   ## longitude in decimal degrees.

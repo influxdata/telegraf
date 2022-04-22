@@ -29,6 +29,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ## Configuration
 
 ```toml
+# Performs file path manipulations on tags and fields
 [[processors.filepath]]
   ## Treat the tag value as a path and convert it to its last element, storing the result in a new tag
   # [[processors.filepath.basename]]
@@ -191,6 +192,7 @@ tag
 For this purpose, we will use the `tail` input plugin, the `grok` parser plugin and the `filepath` processor.
 
 ```toml
+# Performs file path manipulations on tags and fields
 [[inputs.tail]]
   files = ["/var/log/myjobs/**.log"]
   data_format = "grok"

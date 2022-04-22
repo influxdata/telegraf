@@ -155,17 +155,6 @@ func Test_validateCommands(t *testing.T) {
 	})
 }
 
-func Test_dpdkPluginDescriber(t *testing.T) {
-	dpdk := dpdk{}
-	t.Run("sampleConfig function should return value from constant", func(t *testing.T) {
-		require.Equal(t, sampleConfig, dpdk.SampleConfig())
-	})
-
-	t.Run("description function should return value from constant", func(t *testing.T) {
-		require.Equal(t, description, dpdk.Description())
-	})
-}
-
 func prepareEnvironment() (*mocks.Conn, dpdk, *testutil.Accumulator) {
 	mockConnection := &mocks.Conn{}
 	dpdk := dpdk{

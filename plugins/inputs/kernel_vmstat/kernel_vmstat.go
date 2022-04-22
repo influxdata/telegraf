@@ -17,14 +17,6 @@ type KernelVmstat struct {
 	statFile string
 }
 
-func (k *KernelVmstat) Description() string {
-	return "Get kernel statistics from /proc/vmstat"
-}
-
-func (k *KernelVmstat) SampleConfig() string {
-	return ""
-}
-
 func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 	data, err := k.getProcVmstat()
 	if err != nil {

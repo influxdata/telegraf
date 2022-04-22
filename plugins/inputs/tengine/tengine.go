@@ -27,29 +27,6 @@ type Tengine struct {
 	client *http.Client
 }
 
-var sampleConfig = `
-  # An array of Tengine reqstat module URI to gather stats.
-  urls = ["http://127.0.0.1/us"]
-
-  # HTTP response timeout (default: 5s)
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.cer"
-  # tls_key = "/etc/telegraf/key.key"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (n *Tengine) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *Tengine) Description() string {
-	return "Read Tengine's basic status information (ngx_http_reqstat_module)"
-}
-
 func (n *Tengine) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

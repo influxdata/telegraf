@@ -31,14 +31,14 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## 5) environment variables
   ## 6) shared credentials file
   ## 7) EC2 Instance Profile
-  #access_key = ""
-  #secret_key = ""
-  #token = ""
-  #role_arn = ""
-  #web_identity_token_file = ""
-  #role_session_name = ""
-  #profile = ""
-  #shared_credential_file = ""
+  # access_key = ""
+  # secret_key = ""
+  # token = ""
+  # role_arn = ""
+  # web_identity_token_file = ""
+  # role_session_name = ""
+  # profile = ""
+  # shared_credential_file = ""
 
   ## Endpoint to make request against, the correct endpoint is automatically
   ## determined and this option should only be set if you wish to override the

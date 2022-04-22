@@ -5,6 +5,7 @@ The `rename` processor renames measurements, fields, and tags.
 ## Configuration
 
 ```toml
+# Rename measurements, tags, and fields that pass through this filter.
 [[processors.rename]]
   ## Specify one sub-table per rename operation.
   [[processors.rename.replace]]

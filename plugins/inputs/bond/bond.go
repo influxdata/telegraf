@@ -34,34 +34,6 @@ type sysFiles struct {
 	ADPortsFile string
 }
 
-const sampleConfig = `
-  ## Sets 'proc' directory path
-  ## If not specified, then default is /proc
-  # host_proc = "/proc"
-
-  ## Sets 'sys' directory path
-  ## If not specified, then default is /sys
-  # host_sys = "/sys"
-
-  ## By default, telegraf gather stats for all bond interfaces
-  ## Setting interfaces will restrict the stats to the specified
-  ## bond interfaces.
-  # bond_interfaces = ["bond0"]
-
-  ## Tries to collect additional bond details from /sys/class/net/{bond}
-  ## currently only useful for LACP (mode 4) bonds
-  # collect_sys_details = false
-
-`
-
-func (bond *Bond) Description() string {
-	return "Collect bond interface status, slaves statuses and failures count"
-}
-
-func (bond *Bond) SampleConfig() string {
-	return sampleConfig
-}
-
 func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 	// load proc path, get default value if config value and env variable are empty
 	bond.loadPaths()

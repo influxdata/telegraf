@@ -8,7 +8,12 @@ to metrics associated with EC2 instances.
 ## Configuration
 
 ```toml
+# Attach AWS EC2 metadata to metrics
 [[processors.aws_ec2]]
+  ## Instance identity document tags to attach to metrics.
+  ## For more information see:
+  ## https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
+  ##
   ## Available tags:
   ## * accountId
   ## * architecture

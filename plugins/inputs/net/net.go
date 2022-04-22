@@ -20,28 +20,6 @@ type NetIOStats struct {
 	Interfaces          []string
 }
 
-func (n *NetIOStats) Description() string {
-	return "Read metrics about network interface usage"
-}
-
-var netSampleConfig = `
-  ## By default, telegraf gathers stats from any up interface (excluding loopback)
-  ## Setting interfaces will tell it to gather these explicit interfaces,
-  ## regardless of status.
-  ##
-  # interfaces = ["eth0"]
-  ##
-  ## On linux systems telegraf also collects protocol stats.
-  ## Setting ignore_protocol_stats to true will skip reporting of protocol metrics.
-  ##
-  # ignore_protocol_stats = false
-  ##
-`
-
-func (n *NetIOStats) SampleConfig() string {
-	return netSampleConfig
-}
-
 func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	netio, err := n.ps.NetIO()
 	if err != nil {

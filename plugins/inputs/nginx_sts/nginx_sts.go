@@ -25,29 +25,6 @@ type NginxSTS struct {
 	client *http.Client
 }
 
-var sampleConfig = `
-  ## An array of ngx_http_status_module or status URI to gather stats.
-  urls = ["http://localhost/status"]
-
-  ## HTTP response timeout (default: 5s)
-  response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (n *NginxSTS) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *NginxSTS) Description() string {
-	return "Read Nginx virtual host traffic status module information (nginx-module-sts)"
-}
-
 func (n *NginxSTS) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 

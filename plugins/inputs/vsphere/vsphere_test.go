@@ -5,13 +5,11 @@ import (
 	"crypto/tls"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 	"unsafe"
 
-	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
@@ -220,16 +218,6 @@ func TestAlignMetrics(t *testing.T) {
 	for _, v := range newValues {
 		require.Equal(t, 2.0, v, "Aligned value should be 2")
 	}
-}
-
-func TestParseConfig(t *testing.T) {
-	v := VSphere{}
-	c := v.SampleConfig()
-	p := regexp.MustCompile("\n#")
-	c = configHeader + "\n[[inputs.vsphere]]\n" + p.ReplaceAllLiteralString(c, "\n")
-	tab, err := toml.Parse([]byte(c))
-	require.NoError(t, err)
-	require.NotNil(t, tab)
 }
 
 func TestConfigDurationParsing(t *testing.T) {
