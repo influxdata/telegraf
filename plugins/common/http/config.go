@@ -2,6 +2,7 @@ package httpconfig
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -52,7 +53,14 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		Timeout:   time.Duration(timeout),
 	}
 
-	client = h.OAuth2Config.CreateOauth2Client(ctx, client)
+	h.OAuth2Config.TokenURL = fmt.Sprintf("%v", ctx.Value("url"))
+
+	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+
+	h.AccessToken = h.OAuth2Config.AccessToken
 
 	if h.CookieAuthConfig.URL != "" {
 		if err := h.CookieAuthConfig.Start(client, log, clock.New()); err != nil {

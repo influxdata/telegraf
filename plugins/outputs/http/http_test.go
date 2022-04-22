@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -434,6 +435,90 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		},
 	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/write":
+					tt.handler(t, w, r)
+				case "/token":
+					tt.tokenHandler(t, w, r)
+				}
+			})
+
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
+
+			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestOAuthAuthorizationCodeGrant(t *testing.T) {
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/":
+			w.WriteHeader(http.StatusAccepted)
+		case "/token":
+			w.WriteHeader(http.StatusAccepted)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	l, _ := net.Listen("tcp", "localhost:58025")
+	ts.Listener = l
+	ts.Start()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	var token = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg2NzUzMDliMjJiMDFiZTU2YzIxM2M5ODU0MGFiNTYzYmZmNWE1OGMiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJodHRwOi8vMTI3LjAuMC4xOjU4MDI1LyIsImF6cCI6InRlc3Qtc2VydmljZS1hY2NvdW50LWVtYWlsQGV4YW1wbGUuY29tIiwiZW1haWwiOiJ0ZXN0LXNlcnZpY2UtYWNjb3VudC1lbWFpbEBleGFtcGxlLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjk0NjY4NDgwMCwiaWF0Ijo5NDY2ODEyMDAsImlzcyI6Imh0dHBzOi8vYWNjb3VudHMudGVzdC5jb20iLCJzdWIiOiIxMTAzMDAwMDk4MTM3Mzg2NzUzMDkifQ.qi2LsXP2o6nl-rbYKUlHAgTBY0QoU7Nhty5NGR4GMdc8OoGEPW-vlD0WBSaKSr11vyFcIO4ftFDWXElo9Ut-AIQPKVxinsjHIU2-LoIATgI1kyifFLyU_pBecwcI4CIXEcDK5wEkfonWFSkyDZHBeZFKbJXlQXtxj0OHvQ-DEEepXLuKY6v3s4U6GyD9_ppYUy6gzDZPYUbfPfgxCj_Jbv6qkLU0DiZ7F5-do6X6n-qkpgCRLTGHcY__rn8oe8_pSimsyJEeY49ZQ5lj4mXkVCwgL9bvL1_eW1p6sgbHaBnPKVPbM7S1_cBmzgSonm__qWyZUxfDgNdigtNsvzBQTg"
+	var authHeader = fmt.Sprintf(`{"id_token":"%s"}`, token)
+
+	tests := []struct {
+		name         string
+		plugin       *HTTP
+		handler      TestHandlerFunc
+		tokenHandler TestHandlerFunc
+	}{
+		{
+			name: "no credentials file",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Len(t, r.Header["Authorization"], 0)
+				w.WriteHeader(http.StatusOK)
+			},
+		},
+		{
+			name: "write success",
+			plugin: &HTTP{
+				URL: u.String() + "/write",
+				HTTPClientConfig: httpconfig.HTTPClientConfig{
+					OAuth2Config: oauth.OAuth2Config{
+						TokenURL:        u.String() + "/token",
+						CredentialsFile: "./testdata/test_key_file.json",
+					},
+				},
+			},
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(authHeader))
+				require.NoError(t, err)
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				fmt.Println("auth header: ", r.Header["Authorization"])
+				require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
+				w.WriteHeader(http.StatusOK)
+			},
+		},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
