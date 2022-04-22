@@ -142,7 +142,15 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 
 func TestGatherNodeOnly(t *testing.T) {
 	faker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
+		if r.URL.Path == "/pools" {
+			_, _ = w.Write([]byte(poolsResponse))
+		} else if r.URL.Path == "/pools/default" {
+			_, _ = w.Write([]byte(poolsDefaultResponse))
+		} else if r.URL.Path == "/pools/default/buckets" {
+			_, _ = w.Write([]byte(bucketsResponse))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
 	}))
 
 	cb := Couchbase{
