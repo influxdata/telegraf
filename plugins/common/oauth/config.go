@@ -35,7 +35,6 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 	}
 
 	if o.CredentialsFile != "" {
-		o.TokenURL = ctx.Value("url").(string)
 		err := o.GetAccessToken(ctx, o.TokenURL)
 		if err != nil {
 			return nil, err

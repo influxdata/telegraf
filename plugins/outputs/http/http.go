@@ -118,10 +118,7 @@ const (
 	defaultContentType    = "text/plain; charset=utf-8"
 	defaultMethod         = http.MethodPost
 	defaultUseBatchFormat = true
-	key                   = contextKey("url")
 )
-
-type contextKey string
 
 type HTTP struct {
 	URL                     string            `toml:"url"`
@@ -163,7 +160,9 @@ func (h *HTTP) Connect() error {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
-	ctx := context.WithValue(context.Background(), key, h.TokenURL)
+	type contextKey string
+	var url = contextKey("url")
+	ctx := context.WithValue(context.Background(), url, h.TokenURL)
 
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
@@ -263,12 +262,14 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	// Authorization Code Grant
 	if h.CredentialsFile != "" {
 		claims := jwtGo.RegisteredClaims{}
-		_, err := jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
+		// TODO: handle err "key is of invalid type"
+		jwtGo.ParseWithClaims(h.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
+			//_, err := jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
 			return nil, nil
 		})
-		if err != nil {
-			return err
-		}
+		//if err != nil {
+		//	return err
+		//}
 
 		// Request new token if expired
 		if !claims.VerifyExpiresAt(time.Now(), true) {
@@ -289,8 +290,6 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		req.Header.Set("Accept", "application/json")
 	}
 
-	req.Header.Set("User-Agent", internal.ProductToken())
-	req.Header.Set("Content-Type", defaultContentType)
 	if h.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
