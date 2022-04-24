@@ -259,35 +259,30 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		req.SetBasicAuth(h.Username, h.Password)
 	}
 
-	// Authorization Code Grant
+	// Authorization Code Grant (WIP)
 	if h.CredentialsFile != "" {
 		claims := jwtGo.RegisteredClaims{}
-		// TODO: handle err "key is of invalid type"
 		jwtGo.ParseWithClaims(h.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
-			//_, err := jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
 			return nil, nil
 		})
+		// TODO: solve for "key is of invalid type" from keyFunc
 		//if err != nil {
 		//	return err
 		//}
 
-		// Request new token if expired
 		if !claims.VerifyExpiresAt(time.Now(), true) {
-			// token is expired
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, time.Duration(h.Timeout))
 			defer cancel()
 
-			err = h.OAuth2Config.GetAccessToken(ctx, h.URL)
+			err = h.GetAccessToken(ctx, h.URL)
 			if err != nil {
 				return err
 			}
 		}
 
-		bearerToken := "Bearer " + h.HTTPClientConfig.AccessToken
+		bearerToken := "Bearer " + h.AccessToken
 		req.Header.Set("Authorization", bearerToken)
-		req.Header.Set("User-Agent", internal.ProductToken())
-		req.Header.Set("Accept", "application/json")
 	}
 
 	if h.ContentEncoding == "gzip" {
