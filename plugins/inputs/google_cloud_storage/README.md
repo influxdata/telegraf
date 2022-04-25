@@ -42,3 +42,4 @@ The Google Cloud Storage plugin will collect metrics on the given Google Cloud S
   json_string_fields = ["cosine,sine"]
 
 ```
+```
