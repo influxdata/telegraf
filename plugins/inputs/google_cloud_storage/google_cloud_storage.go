@@ -60,7 +60,7 @@ func (gcs *GCS) SampleConfig() string {
 	return sampleConfig
 }
 
-func (k *GCS) SetParser(parser parsers.Parser) {
+func (gcs *GCS) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }
 
