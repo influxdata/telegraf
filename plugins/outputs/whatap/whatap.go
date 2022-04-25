@@ -25,7 +25,7 @@ const (
 type Whatap struct {
 	License string          `toml:"license"`
 	Servers []string        `toml:"servers"`
-	Pcode   int64           `toml:"project_code"`
+	Pcode   int64           `toml:"pcode"`
 	Timeout config.Duration `toml:"timeout"`
 	Log     telegraf.Logger `toml:"-"`
 	oname   string
@@ -42,7 +42,7 @@ const sampleConfig = `
   license = "xxxx-xxxx-xxxx"
 
   ## WhaTap project code. Required
-  project_code = 1111
+  pcode = 1111
 
   ## WhaTap server IP. Required
   ## Put multiple IPs. ["tcp://1.1.1.1:6600","tcp://2.2.2.2:6600"]
