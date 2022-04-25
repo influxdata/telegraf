@@ -61,7 +61,7 @@ func (gcs *GCS) SampleConfig() string {
 }
 
 func (gcs *GCS) SetParser(parser parsers.Parser) {
-	k.parser = parser
+	gcs.parser = parser
 }
 
 func (gcs *GCS) Description() string {
