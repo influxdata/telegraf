@@ -263,9 +263,9 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		if h.ParserType == "upstream" {
 			h.handleWriteUpstreamParser(res, req)
+		} else {
+			h.handleWriteInternalParser(res, req)
 		}
-
-		h.handleWriteInternalParser(res, req)
 	}
 }
 
