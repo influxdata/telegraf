@@ -60,6 +60,10 @@ func (gcs *GCS) SampleConfig() string {
 	return sampleConfig
 }
 
+func (k *GCS) SetParser(parser parsers.Parser) {
+	k.parser = parser
+}
+
 func (gcs *GCS) Description() string {
 	return "Read metrics from Google Cloud Storage"
 }
@@ -70,6 +74,8 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 	bucketName := gcs.Bucket
 	bucket := gcs.client.Bucket(bucketName)
 	it := bucket.Objects(gcs.ctx, &query)
+
+	gcs.Log.Debugf("Reading Data from Bucket ", bucketName)
 
 	processed := 0
 
@@ -119,6 +125,7 @@ func (gcs *GCS) shoudIgnore(name string) bool {
 }
 
 func (gcs *GCS) processMeasurementsInObject(name string, bucket *storage.BucketHandle, acc telegraf.Accumulator) error {
+	gcs.Log.Debugf("Fetching key: %s", name)
 	r, err := bucket.Object(name).NewReader(gcs.ctx)
 	defer gcs.closeReader(r)
 
@@ -134,6 +141,7 @@ func (gcs *GCS) processMeasurementsInObject(name string, bucket *storage.BucketH
 
 	for _, metric := range metrics {
 		acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+		gcs.Log.Debug("the metrics", metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
 	}
 
 	return nil
@@ -284,9 +292,6 @@ const sampleConfig = `
 
   ## Key that will store the offsets in order to pick up where the ingestion was left.
   objects_per_iteration = 10
-
-  ## By default when specifying offset GCS will list the keys after the offset and the offset. By ignoring the offset won't be processed
-  process_offset = false
 
   ## Required. Data format to consume.
   ## Each data format has its own unique set of configuration options.
