@@ -48,7 +48,7 @@ jobs:
       # Run Linter against code base #
       ################################
       - name: Lint Code Base
-        uses: github/super-linter@v4.8.1
+        uses: github/super-linter@v4.9.2
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: master
@@ -56,3 +56,4 @@ jobs:
           LINTER_RULES_PATH: '.'
           MARKDOWN_CONFIG_FILE: .markdownlint.yml
           VALIDATE_MARKDOWN: true
+          VALIDATE_SHELL_SHFMT: true
