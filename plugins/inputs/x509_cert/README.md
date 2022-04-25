@@ -33,7 +33,8 @@ When using a UDP address as a certificate source, the server must support
   # tls_key = "/etc/telegraf/key.pem"
   # tls_server_name = "myhost.example.org"
 
-  ## Set the proxy URL (telegraf uses the system wide proxy settings if it isn't set)
+  ## Set the proxy URL
+  # use_proxy = true
   # proxy_url = "http://localhost:8888"
 ```
 
