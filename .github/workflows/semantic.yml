@@ -8,4 +8,6 @@ on:
 jobs:
   semantic:
     uses: influxdata/validate-semantic-github-messages/.github/workflows/semantic.yml@main
-
+    # optional; 250 is default and max
+    with:
+      COMMITS_HISTORY: 1
