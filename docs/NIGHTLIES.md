@@ -22,7 +22,7 @@ These builds are generated from the master branch each night:
 |                 |                 | [linux_s390x.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_linux_s390x.tar.gz)        | |
 |                 |                 | [static_linux_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_static_linux_amd64.tar.gz) | |
 
-Nightly docker images are available on [quay.io](https://quay.io/repository/influxdb/telegraf?tab=tags):
+Nightly docker images are available on [quay.io](https://quay.io/repository/influxdb/telegraf-nightly?tab=tags):
 
 ```shell
 # Debian-based image
