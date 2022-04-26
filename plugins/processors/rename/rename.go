@@ -5,9 +5,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-const sampleConfig = `
-`
-
 type Replace struct {
 	Measurement string `toml:"measurement"`
 	Tag         string `toml:"tag"`
@@ -17,14 +14,6 @@ type Replace struct {
 
 type Rename struct {
 	Replaces []Replace `toml:"replace"`
-}
-
-func (r *Rename) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Rename) Description() string {
-	return "Rename measurements, tags, and fields that pass through this filter."
 }
 
 func (r *Rename) Apply(in ...telegraf.Metric) []telegraf.Metric {

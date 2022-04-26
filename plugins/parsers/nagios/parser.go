@@ -28,7 +28,7 @@ func getExitCode(err error) (int, error) {
 		// If it is not an *exec.ExitError, then it must be
 		// an io error, but docs do not say anything about the
 		// exit code in this case.
-		return 0, errors.New("expected *exec.ExitError")
+		return 0, err
 	}
 
 	ws, ok := ee.Sys().(syscall.WaitStatus)

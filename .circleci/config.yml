@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.17.5'
+      - image: 'quay.io/influxdb/telegraf-ci:1.18.1'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -37,11 +37,22 @@ commands:
   check-changed-files-or-halt:
     steps:
       - run: ./scripts/check-file-changes.sh
+  rebase-on-master:
+    steps:
+      - run: |
+          git config --global user.email "telegraf@influxdb.com"
+          git config --global user.name "telegraf"
+          git remote add upstream https://github.com/influxdata/telegraf
+          git fetch upstream
+          git rebase upstream/master
   test-go:
     parameters:
       os:
         type: string
         default: "linux"
+      arch:
+        type: string
+        default: "amd64"
       gotestsum:
         type: string
         default: "gotestsum"
@@ -51,6 +62,7 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - rebase-on-master
       - when:
           condition:
             equal: [ linux, << parameters.os >> ]
@@ -74,11 +86,16 @@ commands:
             - restore_cache:
                 key: windows-go-<< parameters.cache_version >>-{{ checksum "go.sum" }}
             - run: 'sh ./scripts/installgo_windows.sh'
+            - run: choco install mingw
       - run: mkdir -p test-results
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
+      - unless:
+          condition:
+            equal: [ "386", << parameters.arch >> ]
+          steps:
+            - run: echo 'export RACE="-race"' >> $BASH_ENV
       - run: |
-          PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-          ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- -short $PACKAGE_NAMES
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> --junitfile test-results/gotestsum-report.xml -- ${RACE} -short ./...
       - store_test_results:
           path: test-results
       - when:
@@ -112,7 +129,6 @@ commands:
                 paths:
                   - 'C:\Go'
                   - 'C:\Users\circleci\project\gotestsum.exe'
-
   package-build:
     parameters:
       type:
@@ -124,8 +140,14 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - rebase-on-master
       - attach_workspace:
           at: '/go'
+      - when:
+          condition:
+            equal: [ windows, << parameters.type >> ]
+          steps:
+            - run: make versioninfo
       - when:
           condition: << parameters.nightly >>
           steps:
@@ -146,7 +168,6 @@ commands:
 jobs:
   test-go-linux:
     executor: go-1_17
-    parallelism: 4
     steps:
       - checkout
       - restore_cache:
@@ -166,12 +187,23 @@ jobs:
           root: '/go'
           paths:
             - '*'
+  test-go-linux-386:
+    executor: go-1_17
+    steps:
+      - checkout
+      - restore_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt
+      - run: 'GOARCH=386 make deps'
+      - run: 'GOARCH=386 make tidy'
+      - run: 'GOARCH=386 make check'
+      - test-go:
+          arch: "386"
   test-go-mac:
     executor: mac
     steps:
       - test-go:
           os: darwin
-    parallelism: 4
   test-go-windows:
     executor:
         name: win/default
@@ -180,7 +212,6 @@ jobs:
       - test-go:
           os: windows
           gotestsum: "gotestsum.exe"
-    parallelism: 4
 
   windows-package:
     parameters:
@@ -379,6 +410,9 @@ jobs:
     steps:
       - attach_workspace:
           at: '.'
+      - run:
+          command: |
+            cd dist && find . -type f -name '._*' -delete
       - store_artifacts:
           path: './dist'
           destination: 'build/dist'
@@ -415,6 +449,10 @@ workflows:
           filters:
             tags:
               only: /.*/
+      - 'test-go-linux-386':
+          filters:
+            tags:
+              only: /.*/
       - 'test-go-mac':
           filters:
             tags: # only runs on tags if you specify this filter
@@ -443,7 +481,7 @@ workflows:
               only: /.*/
       - 'i386-package':
           requires:
-            - 'test-go-linux'
+            - 'test-go-linux-386'
           filters:
             tags:
               only: /.*/
@@ -585,6 +623,7 @@ workflows:
   nightly:
     jobs:
       - 'test-go-linux'
+      - 'test-go-linux-386'
       - 'test-go-mac'
       - 'test-go-windows'
       - 'windows-package':
@@ -606,7 +645,7 @@ workflows:
           name: 'i386-package-nightly'
           nightly: true
           requires:
-            - 'test-go-linux'
+            - 'test-go-linux-386'
       - 'ppc64le-package':
           name: 'ppc64le-package-nightly'
           nightly: true

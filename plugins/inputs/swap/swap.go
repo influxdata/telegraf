@@ -12,12 +12,6 @@ type SwapStats struct {
 	ps system.PS
 }
 
-func (ss *SwapStats) Description() string {
-	return "Read metrics about swap memory usage"
-}
-
-func (ss *SwapStats) SampleConfig() string { return "" }
-
 func (ss *SwapStats) Gather(acc telegraf.Accumulator) error {
 	swap, err := ss.ps.SwapStat()
 	if err != nil {

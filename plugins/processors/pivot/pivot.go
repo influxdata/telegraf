@@ -5,27 +5,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-const (
-	description  = "Rotate a single valued metric into a multi field metric"
-	sampleConfig = `
-  ## Tag to use for naming the new field.
-  tag_key = "name"
-  ## Field to use as the value of the new field.
-  value_key = "value"
-`
-)
-
 type Pivot struct {
 	TagKey   string `toml:"tag_key"`
 	ValueKey string `toml:"value_key"`
-}
-
-func (p *Pivot) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Pivot) Description() string {
-	return description
 }
 
 func (p *Pivot) Apply(metrics ...telegraf.Metric) []telegraf.Metric {

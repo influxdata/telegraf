@@ -3,19 +3,21 @@ package rollbar
 import (
 	"encoding/json"
 	"errors"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
 type RollbarWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
 	log  telegraf.Logger
+	auth.BasicAuth
 }
 
 func (rb *RollbarWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
@@ -27,7 +29,13 @@ func (rb *RollbarWebhook) Register(router *mux.Router, acc telegraf.Accumulator,
 
 func (rb *RollbarWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	data, err := io.ReadAll(r.Body)
+
+	if !rb.Verify(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

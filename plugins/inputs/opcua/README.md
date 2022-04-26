@@ -8,6 +8,7 @@ Plugin minimum tested version: 1.16
 ## Configuration
 
 ```toml
+# Retrieve data from OPCUA devices
 [[inputs.opcua]]
   ## Metric name
   # name = "opcua"
@@ -89,6 +90,11 @@ Plugin minimum tested version: 1.16
   #  {name="", namespace="", identifier_type="", identifier=""},
   #  {name="", namespace="", identifier_type="", identifier=""},
   #]
+
+  ## Enable workarounds required by some devices to work correctly
+  # [inputs.opcua.workarounds]
+    ## Set additional valid status codes, StatusOK (0x0) is always considered valid
+    # additional_valid_status_codes = ["0xC0"]
 ```
 
 ## Node Configuration

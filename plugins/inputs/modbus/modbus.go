@@ -1,6 +1,3 @@
-//go:build !openbsd
-// +build !openbsd
-
 package modbus
 
 import (
@@ -76,84 +73,6 @@ const (
 	cHoldingRegisters = "holding_register"
 	cInputRegisters   = "input_register"
 )
-
-const description = `Retrieve data from MODBUS slave devices`
-const sampleConfigStart = `
-  ## Connection Configuration
-  ##
-  ## The plugin supports connections to PLCs via MODBUS/TCP, RTU over TCP, ASCII over TCP or
-  ## via serial line communication in binary (RTU) or readable (ASCII) encoding
-  ##
-  ## Device name
-  name = "Device"
-
-  ## Slave ID - addresses a MODBUS device on the bus
-  ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
-  slave_id = 1
-
-  ## Timeout for each request
-  timeout = "1s"
-
-  ## Maximum number of retries and the time to wait between retries
-  ## when a slave-device is busy.
-  # busy_retries = 0
-  # busy_retries_wait = "100ms"
-
-  # TCP - connect via Modbus/TCP
-  controller = "tcp://localhost:502"
-
-  ## Serial (RS485; RS232)
-  # controller = "file:///dev/ttyUSB0"
-  # baud_rate = 9600
-  # data_bits = 8
-  # parity = "N"
-  # stop_bits = 1
-
-  ## Trace the connection to the modbus device as debug messages
-  ## Note: You have to enable telegraf's debug mode to see those messages!
-  # debug_connection = false
-
-  ## For Modbus over TCP you can choose between "TCP", "RTUoverTCP" and "ASCIIoverTCP"
-  ## default behaviour is "TCP" if the controller is TCP
-  ## For Serial you can choose between "RTU" and "ASCII"
-  # transmission_mode = "RTU"
-
-	## Define the configuration schema
-  ##  |---register -- define fields per register type in the original style (only supports one slave ID)
-  ##  |---request  -- define fields on a requests base
-  configuration_type = "register"
-`
-const sampleConfigEnd = `
-  ## Enable workarounds required by some devices to work correctly
-  # [inputs.modbus.workarounds]
-    ## Pause between read requests sent to the device. This might be necessary for (slow) serial devices.
-    # pause_between_requests = "0ms"
-    ## Close the connection after every gather cycle. Usually the plugin closes the connection after a certain
-    ## idle-timeout, however, if you query a device with limited simultaneous connectivity (e.g. serial devices)
-    ## from multiple instances you might want to only stay connected during gather and disconnect afterwards.
-    # close_connection_after_gather = false
-`
-
-// SampleConfig returns a basic configuration for the plugin
-func (m *Modbus) SampleConfig() string {
-	configs := []Configuration{}
-	cfgOriginal := m.ConfigurationOriginal
-	cfgPerRequest := m.ConfigurationPerRequest
-	configs = append(configs, &cfgOriginal, &cfgPerRequest)
-
-	totalConfig := sampleConfigStart
-	for _, c := range configs {
-		totalConfig += c.SampleConfigPart() + "\n"
-	}
-	totalConfig += "\n"
-	totalConfig += sampleConfigEnd
-	return totalConfig
-}
-
-// Description returns a short description of what the plugin does
-func (m *Modbus) Description() string {
-	return description
-}
 
 func (m *Modbus) Init() error {
 	//check device name

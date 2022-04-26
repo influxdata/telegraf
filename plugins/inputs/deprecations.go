@@ -8,18 +8,22 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		Since:  "1.7.0",
 		Notice: "use 'inputs.jolokia2' with the 'cassandra.conf' example configuration instead",
 	},
-	"io": {
-		Since:     "0.10.0",
-		RemovalIn: "2.0.0",
-		Notice:    "use 'inputs.diskio' instead",
+	"cisco_telemetry_gnmi": {
+		Since:  "1.15.0",
+		Notice: "has been renamed to 'gnmi'",
 	},
-	"http_listener_v2": {
+	"http_listener": {
 		Since:  "1.9.0",
-		Notice: "has been renamed to 'influxdb_listener', use 'inputs.influxdb_listener' or 'inputs.influxdb_listener_v2' instead",
+		Notice: "has been renamed to 'influxdb_listener', use 'inputs.influxdb_listener' or 'inputs.http_listener_v2' instead",
 	},
 	"httpjson": {
 		Since:  "1.6.0",
 		Notice: "use 'inputs.http' instead",
+	},
+	"io": {
+		Since:     "0.10.0",
+		RemovalIn: "2.0.0",
+		Notice:    "use 'inputs.diskio' instead",
 	},
 	"jolokia": {
 		Since:  "1.5.0",
@@ -28,6 +32,10 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 	"kafka_consumer_legacy": {
 		Since:  "1.4.0",
 		Notice: "use 'inputs.kafka_consumer' instead, NOTE: 'kafka_consumer' only supports Kafka v0.8+",
+	},
+	"KNXListener": {
+		Since:  "1.20.1",
+		Notice: "has been renamed to 'knx_listener'",
 	},
 	"logparser": {
 		Since:  "1.15.0",

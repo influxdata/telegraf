@@ -15,39 +15,15 @@ import (
 type Openldap struct {
 	Host               string
 	Port               int
-	SSL                string `toml:"ssl"` // Deprecated in 1.7; use TLS
+	SSL                string `toml:"ssl" deprecated:"1.7.0;use 'tls' instead"`
 	TLS                string `toml:"tls"`
 	InsecureSkipVerify bool
-	SSLCA              string `toml:"ssl_ca"` // Deprecated in 1.7; use TLSCA
+	SSLCA              string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
 	TLSCA              string `toml:"tls_ca"`
 	BindDn             string
 	BindPassword       string
 	ReverseMetricNames bool
 }
-
-const sampleConfig string = `
-  host = "localhost"
-  port = 389
-
-  # ldaps, starttls, or no encryption. default is an empty string, disabling all encryption.
-  # note that port will likely need to be changed to 636 for ldaps
-  # valid options: "" | "starttls" | "ldaps"
-  tls = ""
-
-  # skip peer certificate verification. Default is false.
-  insecure_skip_verify = false
-
-  # Path to PEM-encoded Root certificate to use to verify server certificate
-  tls_ca = "/etc/ssl/certs.pem"
-
-  # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
-  bind_dn = ""
-  bind_password = ""
-
-  # Reverse metric names so they sort more naturally. Recommended.
-  # This defaults to false if unset, but is set to true when generating a new config
-  reverse_metric_names = true
-`
 
 var searchBase = "cn=Monitor"
 var searchFilter = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))"
@@ -63,14 +39,6 @@ var attrTranslate = map[string]string{
 	"olmMDBReadersMax":   "_mdb_readers_max",
 	"olmMDBReadersUsed":  "_mdb_readers_used",
 	"olmMDBEntries":      "_mdb_entries",
-}
-
-func (o *Openldap) SampleConfig() string {
-	return sampleConfig
-}
-
-func (o *Openldap) Description() string {
-	return "OpenLDAP cn=Monitor plugin"
 }
 
 // return an initialized Openldap

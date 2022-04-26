@@ -31,6 +31,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	"gopkg.in/tomb.v1"
 )
@@ -94,6 +95,14 @@ var fServiceName = flag.String("service-name", "telegraf",
 //nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service",
 	"service display name (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceAutoRestart = flag.Bool("service-auto-restart", false,
+	"auto restart service on failure (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceRestartDelay = flag.String("service-restart-delay", "5m",
+	"delay before service auto restart, default is 5m (windows only)")
 
 //nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fRunAsConsole = flag.Bool("console", false,
@@ -197,8 +206,6 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	log.Printf("I! Starting Telegraf %s", version)
-
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
@@ -225,7 +232,7 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	if !*fTest && len(c.Outputs) == 0 {
+	if !(*fTest || *fTestWait != 0) && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
 	if *fPlugins == "" && len(c.Inputs) == 0 {
@@ -240,26 +247,22 @@ func runAgent(ctx context.Context,
 		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.Interval)
 	}
 
-	ag, err := agent.NewAgent(c)
-	if err != nil {
-		return err
-	}
-
 	// Setup logging as configured.
-	telegraf.Debug = ag.Config.Agent.Debug || *fDebug
+	telegraf.Debug = c.Agent.Debug || *fDebug
 	logConfig := logger.LogConfig{
 		Debug:               telegraf.Debug,
-		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
-		LogTarget:           ag.Config.Agent.LogTarget,
-		Logfile:             ag.Config.Agent.Logfile,
-		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
-		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
-		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
-		LogWithTimezone:     ag.Config.Agent.LogWithTimezone,
+		Quiet:               c.Agent.Quiet || *fQuiet,
+		LogTarget:           c.Agent.LogTarget,
+		Logfile:             c.Agent.Logfile,
+		RotationInterval:    c.Agent.LogfileRotationInterval,
+		RotationMaxSize:     c.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: c.Agent.LogfileRotationMaxArchives,
+		LogWithTimezone:     c.Agent.LogWithTimezone,
 	}
 
 	logger.SetupLogging(logConfig)
 
+	log.Printf("I! Starting Telegraf %s", version)
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
@@ -281,6 +284,11 @@ func runAgent(ctx context.Context,
 	}
 	if count, found := c.Deprecations["outputs"]; found && (count[0] > 0 || count[1] > 0) {
 		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
+	}
+
+	ag, err := agent.NewAgent(c)
+	if err != nil {
+		return err
 	}
 
 	// Notify systemd that telegraf is ready

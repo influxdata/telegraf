@@ -4,8 +4,8 @@ The Graylog plugin can collect data from remote Graylog service URLs.
 
 Plugin currently support two type of end points:-
 
-- multiple  (e.g. `http://[graylog-server-ip]:12900/system/metrics/multiple`)
-- namespace (e.g. `http://[graylog-server-ip]:12900/system/metrics/namespace/{namespace}`)
+- multiple  (e.g. `http://[graylog-server-ip]:9000/api/system/metrics/multiple`)
+- namespace (e.g. `http://[graylog-server-ip]:9000/api/system/metrics/namespace/{namespace}`)
 
 End Point can be a mix of one  multiple end point  and several namespaces end points
 
@@ -18,16 +18,16 @@ Note: if namespace end point specified metrics array will be ignored for that ca
 [[inputs.graylog]]
   ## API endpoint, currently supported API:
   ##
-  ##   - multiple  (Ex http://<host>:12900/system/metrics/multiple)
-  ##   - namespace (Ex http://<host>:12900/system/metrics/namespace/{namespace})
+  ##   - multiple  (e.g. http://<host>:9000/api/system/metrics/multiple)
+  ##   - namespace (e.g. http://<host>:9000/api/system/metrics/namespace/{namespace})
   ##
   ## For namespace endpoint, the metrics array will be ignored for that call.
   ## Endpoint can contain namespace and multiple type calls.
   ##
-  ## Please check http://[graylog-server-ip]:12900/api-browser for full list
+  ## Please check http://[graylog-server-ip]:9000/api/api-browser for full list
   ## of endpoints
   servers = [
-    "http://[graylog-server-ip]:12900/system/metrics/multiple",
+    "http://[graylog-server-ip]:9000/api/system/metrics/multiple",
   ]
 
   ## Set timeout (default 5 seconds)
@@ -36,7 +36,7 @@ Note: if namespace end point specified metrics array will be ignored for that ca
   ## Metrics list
   ## List of metrics can be found on Graylog webservice documentation.
   ## Or by hitting the web service api at:
-  ##   http://[graylog-host]:12900/system/metrics
+  ##   http://[graylog-host]:9000/api/system/metrics
   metrics = [
     "jvm.cl.loaded",
     "jvm.memory.pools.Metaspace.committed"
@@ -54,4 +54,5 @@ Note: if namespace end point specified metrics array will be ignored for that ca
   # insecure_skip_verify = false
 ```
 
-Please refer to GrayLog metrics api browser for full metric end points `http://host:12900/api-browser`
+Please refer to GrayLog metrics api browser for full metric end points:
+`http://host:9000/api/api-browser`

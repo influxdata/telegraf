@@ -87,7 +87,7 @@ Example:
 
 #### PreVistaSupport
 
-(Deprecated. Necessary features on Windows Vista and newer are checked dynamically)
+(Deprecated in 1.7; Necessary features on Windows Vista and newer are checked dynamically)
 
 Bool, if set to `true`, the plugin will use the localized PerfCounter interface that has been present since before Vista for backwards compatibility.
 
@@ -104,6 +104,15 @@ If se to `false`, current time will be used.
 Supported on Windows Vista/Windows Server 2008 and newer
 Example:
 `UsePerfCounterTime=true`
+
+#### IgnoredErrors
+
+IgnoredErrors accepts a list of PDH error codes which are defined in pdh.go, if this error is encountered it will be ignored.
+For example, you can provide "PDH_NO_DATA" to ignore performance counters with no instances, but by default no errors are ignored.
+You can find the list of possible errors here: [PDH errors](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_perf_counters/pdh.go)
+
+Example:
+`IgnoredErrors=["PDH_NO_DATA"]`
 
 ### Object
 
@@ -170,7 +179,19 @@ So for ordering your data in a good manner,
 this is a good key to set with a value when you want your IIS and Disk results stored
 separately from Processor results.
 
-Example: `Measurement = "win_disk"``
+Example: `Measurement = "win_disk"`
+
+#### UseRawValues
+
+(Optional)
+
+This key is optional. It is a simple bool.
+If set to `true`, counter values will be provided in the raw, integer, form. This is in contrast with the default behavior, where values are returned in a formatted, displayable, form
+as seen in the Windows Performance Monitor.  
+A field representing raw counter value has the `_Raw` suffix. Raw values should be further used in a calculation, e.g. `100-(non_negative_derivative("Percent_Processor_Time_Raw",1s)/100000`
+Note: Time based counters (i.e. _% Processor Time_) are reported in hundredths of nanoseconds.
+
+Example: `UseRawValues = true`
 
 #### IncludeTotal
 
@@ -202,7 +223,146 @@ It is a simple bool. If it is not set to true or included this is treated as fal
 If this is set to true, the plugin will abort and end prematurely
 if any of the combinations of ObjectName/Instances/Counters are invalid.
 
-## Examples
+## Configuration
+
+```toml
+# # Input plugin to counterPath Performance Counters on Windows operating systems
+# [[inputs.win_perf_counters]]
+#   ## By default this plugin returns basic CPU and Disk statistics.
+#   ## See the README file for more examples.
+#   ## Uncomment examples below or write your own as you see fit. If the system
+#   ## being polled for data does not have the Object at startup of the Telegraf
+#   ## agent, it will not be gathered.
+#   ## Settings:
+#   # PrintValid = false # Print All matching performance counters
+#   # Whether request a timestamp along with the PerfCounter data or just use current time
+#   # UsePerfCounterTime=true
+#   # If UseWildcardsExpansion params is set to true, wildcards (partial wildcards in instance names and wildcards in counters names) in configured counter paths will be expanded
+#   # and in case of localized Windows, counter paths will be also localized. It also returns instance indexes in instance names.
+#   # If false, wildcards (not partial) in instance names will still be expanded, but instance indexes will not be returned in instance names.
+#   #UseWildcardsExpansion = false
+#   # When running on a localized version of Windows and with UseWildcardsExpansion = true, Windows will
+#   # localize object and counter names. When LocalizeWildcardsExpansion = false, use the names in object.Counters instead
+#   # of the localized names. Only Instances can have wildcards in this case. ObjectName and Counters must not have wildcards when this
+#   # setting is false.
+#   #LocalizeWildcardsExpansion = true
+#   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
+#   CountersRefreshInterval="1m"
+#   ## Accepts a list of PDH error codes which are defined in pdh.go, if this error is encountered it will be ignored
+#   ## For example, you can provide "PDH_NO_DATA" to ignore performance counters with no instances
+#   ## By default no errors are ignored
+#   ## You can find the list here: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/win_perf_counters/pdh.go
+#   ## e.g.: IgnoredErrors = ["PDH_NO_DATA"]
+#   # IgnoredErrors = []
+#
+#   [[inputs.win_perf_counters.object]]
+#     # Processor usage, alternative to native, reports on a per core.
+#     ObjectName = "Processor"
+#     Instances = ["*"]
+#     Counters = [
+#       "% Idle Time",
+#       "% Interrupt Time",
+#       "% Privileged Time",
+#       "% User Time",
+#       "% Processor Time",
+#       "% DPC Time",
+#     ]
+#     Measurement = "win_cpu"
+#     # Set to true to include _Total instance when querying for all (*).
+#     # IncludeTotal=false
+#     # Print out when the performance counter is missing from object, counter or instance.
+#     # WarnOnMissing = false
+#     # Gather raw values instead of formatted. Raw value is stored in the field name with the "_Raw" suffix, e.g. "Disk_Read_Bytes_sec_Raw".
+#     # UseRawValues = true
+#
+#   [[inputs.win_perf_counters.object]]
+#     # Disk times and queues
+#     ObjectName = "LogicalDisk"
+#     Instances = ["*"]
+#     Counters = [
+#       "% Idle Time",
+#       "% Disk Time",
+#       "% Disk Read Time",
+#       "% Disk Write Time",
+#       "% User Time",
+#       "% Free Space",
+#       "Current Disk Queue Length",
+#       "Free Megabytes",
+#     ]
+#     Measurement = "win_disk"
+#
+#   [[inputs.win_perf_counters.object]]
+#     ObjectName = "PhysicalDisk"
+#     Instances = ["*"]
+#     Counters = [
+#       "Disk Read Bytes/sec",
+#       "Disk Write Bytes/sec",
+#       "Current Disk Queue Length",
+#       "Disk Reads/sec",
+#       "Disk Writes/sec",
+#       "% Disk Time",
+#       "% Disk Read Time",
+#       "% Disk Write Time",
+#     ]
+#     Measurement = "win_diskio"
+#
+#   [[inputs.win_perf_counters.object]]
+#     ObjectName = "Network Interface"
+#     Instances = ["*"]
+#     Counters = [
+#       "Bytes Received/sec",
+#       "Bytes Sent/sec",
+#       "Packets Received/sec",
+#       "Packets Sent/sec",
+#       "Packets Received Discarded",
+#       "Packets Outbound Discarded",
+#       "Packets Received Errors",
+#       "Packets Outbound Errors",
+#     ]
+#     Measurement = "win_net"
+#
+#
+#   [[inputs.win_perf_counters.object]]
+#     ObjectName = "System"
+#     Counters = [
+#       "Context Switches/sec",
+#       "System Calls/sec",
+#       "Processor Queue Length",
+#       "System Up Time",
+#     ]
+#     Instances = ["------"]
+#     Measurement = "win_system"
+#
+#   [[inputs.win_perf_counters.object]]
+#     # Example counterPath where the Instance portion must be removed to get data back,
+#     # such as from the Memory object.
+#     ObjectName = "Memory"
+#     Counters = [
+#       "Available Bytes",
+#       "Cache Faults/sec",
+#       "Demand Zero Faults/sec",
+#       "Page Faults/sec",
+#       "Pages/sec",
+#       "Transition Faults/sec",
+#       "Pool Nonpaged Bytes",
+#       "Pool Paged Bytes",
+#       "Standby Cache Reserve Bytes",
+#       "Standby Cache Normal Priority Bytes",
+#       "Standby Cache Core Bytes",
+#     ]
+#     Instances = ["------"] # Use 6 x - to remove the Instance bit from the counterPath.
+#     Measurement = "win_mem"
+#
+#   [[inputs.win_perf_counters.object]]
+#     # Example query where the Instance portion must be removed to get data back,
+#     # such as from the Paging File object.
+#     ObjectName = "Paging File"
+#     Counters = [
+#       "% Usage",
+#     ]
+#     Instances = ["_Total"]
+#     Measurement = "win_swap"
+```
 
 ### Generic Queries
 

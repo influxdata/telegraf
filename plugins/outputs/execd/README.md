@@ -7,6 +7,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ## Configuration
 
 ```toml
+# Run executable as long-running output plugin
 [[outputs.execd]]
   ## One program to run as daemon.
   ## NOTE: process and each argument should each be their own string
@@ -26,4 +27,4 @@ Telegraf minimum version: Telegraf 1.15.0
 
 see [examples][]
 
-[examples]: https://github.com/influxdata/telegraf/blob/master/plugins/outputs/execd/examples/
+[examples]: examples/

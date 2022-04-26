@@ -8,6 +8,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ## Configuration
 
 ```toml
+# ReverseDNS does a reverse lookup on IP addresses to retrieve the DNS name
 [[processors.reverse_dns]]
   ## For optimal performance, you may want to limit which metrics are passed to this
   ## processor. eg:

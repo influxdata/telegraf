@@ -10,6 +10,7 @@ item in seconds).
 ## Configuration
 
 ```toml
+# Measure postfix queue statistics
 [[inputs.postfix]]
   ## Postfix queue directory. If not provided, telegraf will try to use
   ## 'postconf -h queue_directory' to determine it.

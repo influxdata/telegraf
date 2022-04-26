@@ -5,7 +5,7 @@ This plugin gather queues, topics & subscribers metrics using ActiveMQ Console A
 ## Configuration
 
 ```toml
-# Description
+# Gather ActiveMQ metrics
 [[inputs.activemq]]
   ## ActiveMQ WebConsole URL
   url = "http://127.0.0.1:8161"

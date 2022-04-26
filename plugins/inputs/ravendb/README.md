@@ -9,25 +9,29 @@ Requires RavenDB Server 5.2+.
 The following is an example config for RavenDB. **Note:** The client certificate used should have `Operator` permissions on the cluster.
 
 ```toml
+# Reads metrics from RavenDB servers via the Monitoring Endpoints
 [[inputs.ravendb]]
-  ## Node URL and port that RavenDB is listening on
-  url = "https://localhost:8080"
+  ## Node URL and port that RavenDB is listening on. By default,
+  ## attempts to connect securely over HTTPS, however, if the user
+  ## is running a local unsecure development cluster users can use
+  ## HTTP via a URL like "http://localhost:8080"
+  url = "https://localhost:4433"
 
   ## RavenDB X509 client certificate setup
-  tls_cert = "/etc/telegraf/raven.crt"
-  tls_key = "/etc/telegraf/raven.key"
+  # tls_cert = "/etc/telegraf/raven.crt"
+  # tls_key = "/etc/telegraf/raven.key"
 
   ## Optional request timeout
   ##
   ## Timeout, specifies the amount of time to wait
-  ## for a server's response headers after fully writing the request and 
+  ## for a server's response headers after fully writing the request and
   ## time limit for requests made by this client
   # timeout = "5s"
 
   ## List of statistics which are collected
   # At least one is required
   # Allowed values: server, databases, indexes, collections
-  #  
+  #
   # stats_include = ["server", "databases", "indexes", "collections"]
 
   ## List of db where database stats are collected
@@ -37,7 +41,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
   ## List of db where index status are collected
   ## If empty, all indexes from all db are concerned
   # index_stats_dbs = []
-  
+
   ## List of db where collection status are collected
   ## If empty, all collections from all db are concerned
   # collection_stats_dbs = []
@@ -50,7 +54,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - url
     - node_tag
     - cluster_id
-    - public_server_url (optional)  
+    - public_server_url (optional)
   - fields:
     - backup_current_number_of_running_backups
     - backup_max_number_of_concurrent_backups
@@ -84,7 +88,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - license_max_cores
     - license_type
     - license_utilized_cpu_cores
-    - memory_allocated_in_mb  
+    - memory_allocated_in_mb
     - memory_installed_in_mb
     - memory_low_memory_severity
       - 0 -> None
@@ -105,7 +109,7 @@ The following is an example config for RavenDB. **Note:** The client certificate
     - server_process_id
     - server_version
     - uptime_in_sec
-  
+
 - ravendb_databases
   - tags:
     - url

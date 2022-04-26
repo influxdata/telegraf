@@ -3,9 +3,10 @@
 The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding
 Registers via Modbus TCP or Modbus RTU/ASCII.
 
-## Example configuration
+## Configuration
 
 ```toml
+# Retrieve data from MODBUS slave devices
 [[inputs.modbus]]
   ## Connection Configuration
   ##
@@ -187,7 +188,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       { address=1, name="temperature", type="INT16", scale=0.1        },  # will result in FLOAT64 field
       { address=2, name="force",       type="INT32", output="FLOAT64" },  # will result in FLOAT64 field
       { address=4, name="hours",       type="UINT32"                  },  # will result in UIN64 field
-    ]  
+    ]
 
     [[inputs.modbus.request.tags]]
       machine = "impresser"
@@ -205,9 +206,9 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 
 ## Notes
 
-You can debug Modbus connection issues by enabling `debug_connection`. To see those debug messages Telegraf has to be started with debugging enabled (i.e. with `--debug` option). Please be aware that connection tracing will produce a lot of messages and should **NOT** be used in production environments.
+You can debug Modbus connection issues by enabling `debug_connection`. To see those debug messages, Telegraf has to be started with debugging enabled (i.e. with the `--debug` option). Please be aware that connection tracing will produce a lot of messages and should **NOT** be used in production environments.
 
-Please use `pause_between_requests` with care. Especially make sure that the total gather time, including the pause(s), does not exceed the configured collection interval. Note, that pauses add up if multiple requests are sent!
+Please use `pause_between_requests` with care. Ensure the total gather time, including the pause(s), does not exceed the configured collection interval. Note that pauses add up if multiple requests are sent!
 
 ## Configuration styles
 
@@ -226,7 +227,7 @@ This is the original style used by this plugin. It allows a per-register configu
 
 #### Metrics
 
-Metric are custom and configured using the `discrete_inputs`, `coils`,
+Metrics are custom and configured using the `discrete_inputs`, `coils`,
 `holding_register` and `input_registers` options.
 
 #### Usage of `data_type`
@@ -245,7 +246,7 @@ These types are used for integer input values. Select the one that matches your 
 ##### Floating Point: `FLOAT32-IEEE`, `FLOAT64-IEEE`
 
 Use these types if your modbus registers contain a value that is encoded in this format. These types
-always include the sign and therefore there exists no variant.
+always include the sign, therefore no variant exists.
 
 ##### Fixed Point: `FIXED`, `UFIXED` (`FLOAT32`)
 
@@ -261,22 +262,21 @@ Select the type `FIXED` when the input type is declared to hold signed integer v
 of the modbus device should indicate this with a term like 'int32 containing fixed-point representation
 with N decimal places'.
 
-(FLOAT32 is deprecated and should not be used any more. UFIXED provides the same conversion
-from unsigned values).
+(FLOAT32 is deprecated and should not be used. UFIXED provides the same conversion from unsigned values).
 
 ---
 
 ### `request` configuration style
 
-This sytle can be used to specify the modbus requests directly. It allows to specify multiple `[[inputs.modbus.request]]` sections including multiple slave-devices. This way, _modbus_ gateway devices can be queried. Please not that _requests_ might be split for non-consecutive addresses. If you want to avoid this behavior please add _fields_ with the `omit` flag set filling the gaps between addresses.
+This sytle can be used to specify the modbus requests directly. It enables specifying multiple `[[inputs.modbus.request]]` sections including multiple slave-devices. This way, _modbus_ gateway devices can be queried. Please note that _requests_ might be split for non-consecutive addresses. If you want to avoid this behavior please add _fields_ with the `omit` flag set filling the gaps between addresses.
 
 #### Slave device
 
-You can use the `slave_id` setting to specify the ID of the slave device to query. It should be specified for each request and defaults to zero otherwise. Please note, only one `slave_id` can be specified for a request.
+You can use the `slave_id` setting to specify the ID of the slave device to query. It should be specified for each request, otherwise it defaults to zero. Please note, only one `slave_id` can be specified per request.
 
 #### Byte order of the register
 
-The `byte_order` setting specifies the byte- and word-order of the registers. It can be set to `ABCD` for _big endian (Motorola)_ or `DCBA` for _little endian (Intel)_ format as well as `BADC` and `CDAB` for _big endian_ or _little endian_ with _byte swap_.
+The `byte_order` setting specifies the byte and word-order of the registers. It can be set to `ABCD` for _big endian (Motorola)_ or `DCBA` for _little endian (Intel)_ format as well as `BADC` and `CDAB` for _big endian_ or _little endian_ with _byte swap_.
 
 #### Register type
 
@@ -310,7 +310,7 @@ The `register` setting specifies the datatype of the modbus register and can be 
 
 ##### scaling
 
-You can use the `scale` setting to scale the register values, e.g. if the register contains a fix-point values in `UINT32` format with two decimal places for example. To convert the read register value to the actual value you can set the `scale=0.01`. The scale is used as a factor as `field_value * scale`.
+You can use the `scale` setting to scale the register values, e.g. if the register contains a fix-point values in `UINT32` format with two decimal places for example. To convert the read register value to the actual value you can set the `scale=0.01`. The scale is used as a factor e.g. `field_value * scale`.
 
 This setting is ignored if the field's `omit` is set to `true` or if the `register` type is a bit-type (`coil` or `discrete`) and can be omitted in these cases.
 
@@ -318,13 +318,13 @@ __Please note:__ The resulting field-type will be set to `FLOAT64` if no output 
 
 ##### output datatype
 
-Using the `output` setting you might explicitly specify the output field-datatype. The `output` type can be `INT64`, `UINT64` or `FLOAT64`. If not set explicitly, the output type is guessed as follows: If `scale` is set to a non-zero value, the output type is `FLOAT64`. Otherwise, the output type corresponds to the register datatype _class_, i.e. `INT*` will result in `INT64`, `UINT*` in `UINT64` and `FLOAT*` in `FLOAT64`.
+Using the `output` setting you can explicitly specify the output field-datatype. The `output` type can be `INT64`, `UINT64` or `FLOAT64`. If not set explicitly, the output type is guessed as follows: If `scale` is set to a non-zero value, the output type is `FLOAT64`. Otherwise, the output type corresponds to the register datatype _class_, i.e. `INT*` will result in `INT64`, `UINT*` in `UINT64` and `FLOAT*` in `FLOAT64`.
 
 This setting is ignored if the field's `omit` is set to `true` or if the `register` type is a bit-type (`coil` or `discrete`) and can be omitted in these cases. For `coil` and `discrete` registers the field-value is output as zero or one in `UINT16` format.
 
 #### per-field measurement setting
 
-The `measurement` setting can be used to override the measurement name on a per-field basis. This might be useful if you can to split the fields in one request to multiple measurements. If not specified, the value specified in the [`request` section](#per-request-measurement-setting) or, if also omitted, `modbus` is used.
+The `measurement` setting can be used to override the measurement name on a per-field basis. This might be useful if you want to split the fields in one request to multiple measurements. If not specified, the value specified in the [`request` section](#per-request-measurement-setting) or, if also omitted, `modbus` is used.
 
 This setting is ignored if the field's `omit` is set to `true` and can be omitted in this case.
 
@@ -339,29 +339,28 @@ __Please note:__ These tags take precedence over predefined tags such as `name`,
 
 ---
 
-## Trouble shooting
+## Troubleshooting
 
 ### Strange data
 
-Modbus documentations are often a mess. People confuse memory-address (starts at one) and register address (starts at zero) or stay unclear about the used word-order. Furthermore, there are some non-standard implementations that also
-swap the bytes within the register word (16-bit).
+Modbus documentation is often a mess. People confuse memory-address (starts at one) and register address (starts at zero) or are unsure about the word-order used. Furthermore, there are some non-standard implementations that also swap the bytes within the register word (16-bit).
 
 If you get an error or don't get the expected values from your device, you can try the following steps (assuming a 32-bit value).
 
-In case are using a serial device and get an `permission denied` error, please check the permissions of your serial device and change accordingly.
+If you are using a serial device and get a `permission denied` error, check the permissions of your serial device and change them accordingly.
 
-In case you get an `exception '2' (illegal data address)` error you might try to offset your `address` entries by minus one as it is very likely that there is a confusion between memory and register addresses.
+In case you get an `exception '2' (illegal data address)` error you might try to offset your `address` entries by minus one as it is very likely that there is confusion between memory and register addresses.
 
-In case you see strange values, the `byte_order` might be off. You can either probe all combinations (`ABCD`, `CDBA`, `BADC` or `DCBA`) or you set `byte_order="ABCD" data_type="UINT32"` and use the resulting value(s) in an online converter like [this](https://www.scadacore.com/tools/programming-calculators/online-hex-converter/). This makes especially sense if you don't want to mess with the device, deal with 64-bit values and/or don't know the `data_type` of your register (e.g. fix-point floating values vs. IEEE floating point).
+If you see strange values, the `byte_order` might be wrong. You can either probe all combinations (`ABCD`, `CDBA`, `BADC` or `DCBA`) or set `byte_order="ABCD" data_type="UINT32"` and use the resulting value(s) in an online converter like [this](https://www.scadacore.com/tools/programming-calculators/online-hex-converter/). This especially makes sense if you don't want to mess with the device, deal with 64-bit values and/or don't know the `data_type` of your register (e.g. fix-point floating values vs. IEEE floating point).
 
-If your data still looks corrupted, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
-If nothing helps, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as issue).
+If your data still looks corrupted, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as an issue).
+If nothing helps, please post your configuration, error message and/or the output of `byte_order="ABCD" data_type="UINT32"` to one of the telegraf support channels (forum, slack or as an issue).
 
 ### Workarounds
 
-Some Modbus devices need special read characteristics when reading data and will fail otherwise. For example, there are certain serial devices that need a certain pause between register read requests. Others might only offer a limited number of simultaneously connected devices, like serial devices or some ModbusTCP devices. In case you need to access those devices in parallel you might want to disconnect immediately after the plugin finished reading.
+Some Modbus devices need special read characteristics when reading data and will fail otherwise. For example, some serial devices need a pause between register read requests. Others might only support a limited number of simultaneously connected devices, like serial devices or some ModbusTCP devices. In case you need to access those devices in parallel you might want to disconnect immediately after the plugin finishes reading.
 
-To allow this plugin to also handle those "special" devices there is the `workarounds` configuration options. In case your documentation states certain read requirements or you get read timeouts or other read errors you might want to try one or more workaround options.
+To enable this plugin to also handle those "special" devices, there is the `workarounds` configuration option. In case your documentation states certain read requirements or you get read timeouts or other read errors, you might want to try one or more workaround options.
 If you find that other/more workarounds are required for your device, please let us know.
 
 In case your device needs a workaround that is not yet implemented, please open an issue or submit a pull-request.

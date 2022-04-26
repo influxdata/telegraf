@@ -5,12 +5,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
-	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
@@ -21,6 +21,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 	"github.com/influxdata/telegraf/plugins/parsers/xpath"
 )
+
+// Creator is the function to create a new parser
+type Creator func(defaultMetricName string) telegraf.Parser
+
+// Parsers contains the registry of all known parsers (following the new style)
+var Parsers = map[string]Creator{}
+
+// Add adds a parser to the registry. Usually this function is called in the plugin's init function
+func Add(name string, creator Creator) {
+	Parsers[name] = creator
+}
 
 type ParserFunc func() (Parser, error)
 
@@ -60,6 +71,12 @@ type Parser interface {
 	// to each parsed metric.
 	// NOTE: do _not_ modify the map after you've passed it here!!
 	SetDefaultTags(tags map[string]string)
+}
+
+// ParserCompatibility is an interface for backward-compatible initialization of new parsers
+type ParserCompatibility interface {
+	// InitFromConfig sets the parser internal variables from the old-style config
+	InitFromConfig(config *Config) error
 }
 
 // Config is a struct that covers the data types needed for all parser types,
@@ -138,21 +155,24 @@ type Config struct {
 	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
 
 	//csv configuration
-	CSVColumnNames       []string `toml:"csv_column_names"`
-	CSVColumnTypes       []string `toml:"csv_column_types"`
-	CSVComment           string   `toml:"csv_comment"`
-	CSVDelimiter         string   `toml:"csv_delimiter"`
-	CSVHeaderRowCount    int      `toml:"csv_header_row_count"`
-	CSVMeasurementColumn string   `toml:"csv_measurement_column"`
-	CSVSkipColumns       int      `toml:"csv_skip_columns"`
-	CSVSkipRows          int      `toml:"csv_skip_rows"`
-	CSVTagColumns        []string `toml:"csv_tag_columns"`
-	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
-	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
-	CSVTimezone          string   `toml:"csv_timezone"`
-	CSVTrimSpace         bool     `toml:"csv_trim_space"`
-	CSVSkipValues        []string `toml:"csv_skip_values"`
-	CSVSkipErrors        bool     `toml:"csv_skip_errors"`
+	CSVColumnNames        []string `toml:"csv_column_names"`
+	CSVColumnTypes        []string `toml:"csv_column_types"`
+	CSVComment            string   `toml:"csv_comment"`
+	CSVDelimiter          string   `toml:"csv_delimiter"`
+	CSVHeaderRowCount     int      `toml:"csv_header_row_count"`
+	CSVMeasurementColumn  string   `toml:"csv_measurement_column"`
+	CSVSkipColumns        int      `toml:"csv_skip_columns"`
+	CSVSkipRows           int      `toml:"csv_skip_rows"`
+	CSVTagColumns         []string `toml:"csv_tag_columns"`
+	CSVTimestampColumn    string   `toml:"csv_timestamp_column"`
+	CSVTimestampFormat    string   `toml:"csv_timestamp_format"`
+	CSVTimezone           string   `toml:"csv_timezone"`
+	CSVTrimSpace          bool     `toml:"csv_trim_space"`
+	CSVSkipValues         []string `toml:"csv_skip_values"`
+	CSVSkipErrors         bool     `toml:"csv_skip_errors"`
+	CSVMetadataRows       int      `toml:"csv_metadata_rows"`
+	CSVMetadataSeparators []string `toml:"csv_metadata_separators"`
+	CSVMetadataTrimSet    string   `toml:"csv_metadata_trim_set"`
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -164,13 +184,17 @@ type Config struct {
 	ValueFieldName string `toml:"value_field_name"`
 
 	// XPath configuration
-	XPathPrintDocument bool   `toml:"xpath_print_document"`
-	XPathProtobufFile  string `toml:"xpath_protobuf_file"`
-	XPathProtobufType  string `toml:"xpath_protobuf_type"`
-	XPathConfig        []XPathConfig
+	XPathPrintDocument       bool     `toml:"xpath_print_document"`
+	XPathProtobufFile        string   `toml:"xpath_protobuf_file"`
+	XPathProtobufType        string   `toml:"xpath_protobuf_type"`
+	XPathProtobufImportPaths []string `toml:"xpath_protobuf_import_paths"`
+	XPathConfig              []XPathConfig
 
 	// JSONPath configuration
 	JSONV2Config []JSONV2Config `toml:"json_v2"`
+
+	// Influx configuration
+	InfluxParserType string `toml:"influx_parser_type"`
 }
 
 type XPathConfig xpath.Config
@@ -203,7 +227,11 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.ValueFieldName, config.DefaultTags)
 	case "influx":
-		parser, err = NewInfluxParser()
+		if config.InfluxParserType == "upstream" {
+			parser, err = NewInfluxUpstreamParser()
+		} else {
+			parser, err = NewInfluxParser()
+		}
 	case "nagios":
 		parser, err = NewNagiosParser()
 	case "graphite":
@@ -233,28 +261,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokCustomPatternFiles,
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
-	case "csv":
-		config := &csv.Config{
-			MetricName:        config.MetricName,
-			HeaderRowCount:    config.CSVHeaderRowCount,
-			SkipRows:          config.CSVSkipRows,
-			SkipColumns:       config.CSVSkipColumns,
-			Delimiter:         config.CSVDelimiter,
-			Comment:           config.CSVComment,
-			TrimSpace:         config.CSVTrimSpace,
-			ColumnNames:       config.CSVColumnNames,
-			ColumnTypes:       config.CSVColumnTypes,
-			TagColumns:        config.CSVTagColumns,
-			MeasurementColumn: config.CSVMeasurementColumn,
-			TimestampColumn:   config.CSVTimestampColumn,
-			TimestampFormat:   config.CSVTimestampFormat,
-			Timezone:          config.CSVTimezone,
-			DefaultTags:       config.DefaultTags,
-			SkipValues:        config.CSVSkipValues,
-			SkipErrors:        config.CSVSkipErrors,
-		}
-
-		return csv.NewParser(config)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
 	case "form_urlencoded":
@@ -275,6 +281,7 @@ func NewParser(config *Config) (Parser, error) {
 			Format:              config.DataFormat,
 			ProtobufMessageDef:  config.XPathProtobufFile,
 			ProtobufMessageType: config.XPathProtobufType,
+			ProtobufImportPaths: config.XPathProtobufImportPaths,
 			PrintDocument:       config.XPathPrintDocument,
 			DefaultTags:         config.DefaultTags,
 			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
@@ -282,7 +289,19 @@ func NewParser(config *Config) (Parser, error) {
 	case "json_v2":
 		parser, err = NewJSONPathParser(config.JSONV2Config)
 	default:
-		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
+		creator, found := Parsers[config.DataFormat]
+		if !found {
+			return nil, fmt.Errorf("invalid data format: %s", config.DataFormat)
+		}
+
+		// Try to create new-style parsers the old way...
+		// DEPRECATED: Please instantiate the parser directly instead of using this function.
+		parser = creator(config.MetricName)
+		p, ok := parser.(ParserCompatibility)
+		if !ok {
+			return nil, fmt.Errorf("parser for %q cannot be created the old way", config.DataFormat)
+		}
+		err = p.InitFromConfig(config)
 	}
 	return parser, err
 }
@@ -312,6 +331,10 @@ func NewNagiosParser() (Parser, error) {
 func NewInfluxParser() (Parser, error) {
 	handler := influx.NewMetricHandler()
 	return influx.NewParser(handler), nil
+}
+
+func NewInfluxUpstreamParser() (Parser, error) {
+	return influx_upstream.NewParser(), nil
 }
 
 func NewGraphiteParser(

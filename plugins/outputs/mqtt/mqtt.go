@@ -20,58 +20,6 @@ const (
 	defaultKeepAlive = 0
 )
 
-var sampleConfig = `
-  servers = ["localhost:1883"] # required.
-
-  ## MQTT outputs send metrics to this topic format
-  ##    "<topic_prefix>/<hostname>/<pluginname>/"
-  ##   ex: prefix/web01.example.com/mem
-  topic_prefix = "telegraf"
-
-  ## QoS policy for messages
-  ##   0 = at most once
-  ##   1 = at least once
-  ##   2 = exactly once
-  # qos = 2
-
-  ## username and password to connect MQTT server.
-  # username = "telegraf"
-  # password = "metricsmetricsmetricsmetrics"
-
-  ## client ID, if not set a random ID is generated
-  # client_id = ""
-
-  ## Timeout for write operations. default: 5s
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## When true, metrics will be sent in one MQTT message per flush.  Otherwise,
-  ## metrics are written one metric per MQTT message.
-  # batch = false
-
-  ## When true, metric will have RETAIN flag set, making broker cache entries until someone
-  ## actually reads it
-  # retain = false
-
-  ## Defines the maximum length of time that the broker and client may not communicate. 
-  ## Defaults to 0 which turns the feature off. For version v2.0.12 of eclipse/mosquitto there is a 
-  ## [bug](https://github.com/eclipse/mosquitto/issues/2117) which requires keep_alive to be set.
-  ## As a reference eclipse/paho.mqtt.golang v1.3.0 defaults to 30.
-  # keep_alive = 0
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
-`
-
 type MQTT struct {
 	Servers     []string `toml:"servers"`
 	Username    string
@@ -125,14 +73,6 @@ func (m *MQTT) Close() error {
 		m.client.Disconnect(20)
 	}
 	return nil
-}
-
-func (m *MQTT) SampleConfig() string {
-	return sampleConfig
-}
-
-func (m *MQTT) Description() string {
-	return "Configuration for MQTT server to send metrics to"
 }
 
 func (m *MQTT) Write(metrics []telegraf.Metric) error {

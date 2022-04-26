@@ -21,12 +21,19 @@ You configure this parser by describing the line protocol you want by defining t
         [[inputs.file.json_v2.tag]]
             path = "" # A string with valid GJSON path syntax to a non-array/non-object value
             rename = "new name" # A string with a new name for the tag key
+            ## Setting optional to true will suppress errors if the configured Path doesn't match the JSON
+            optional = false
         [[inputs.file.json_v2.field]]
             path = "" # A string with valid GJSON path syntax to a non-array/non-object value
             rename = "new name" # A string with a new name for the tag key
             type = "int" # A string specifying the type (int,uint,float,string,bool)
+            ## Setting optional to true will suppress errors if the configured Path doesn't match the JSON
+            optional = false
         [[inputs.file.json_v2.object]]
             path = "" # A string with valid GJSON path syntax, can include array's and object's
+
+            ## Setting optional to true will suppress errors if the configured Path doesn't match the JSON
+            optional = false
 
             ## Configuration to define what JSON keys should be used as timestamps ##
             timestamp_key = "" # A JSON key (for a nested key, prepend the parent keys with underscores) to a valid timestamp
@@ -93,6 +100,7 @@ Using this field configuration you can gather a non-array/non-object values. Not
 * **path (REQUIRED)**: A string with valid GJSON path syntax to a non-array/non-object value
 * **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
 * **type (OPTIONAL)**: You can define a string value to set the desired type (float, int, uint, string, bool). If not defined it won't enforce a type and default to using the original type defined in the JSON (bool, float, or string).
+* **optional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. An example case to use this is with the `inputs.mqtt_consumer` plugin when you are expecting multiple JSON files.
 
 #### **tag**
 
@@ -100,6 +108,7 @@ Using this tag configuration you can gather a non-array/non-object values. Note 
 
 * **path (REQUIRED)**: A string with valid GJSON path syntax to a non-array/non-object value
 * **name (OPTIONAL)**: You can define a string value to set the field name. If not defined it will use the trailing word from the provided query.
+* **optional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. An example case to use this is with the `inputs.mqtt_consumer` plugin when you are expecting multiple JSON files.
 
 For good examples in using `field` and `tag` you can reference the following example configs:
 
@@ -112,6 +121,7 @@ With the configuration section `object`, you can gather values from [JSON object
 #### The following keys can be set for `object`
 
 * **path (REQUIRED)**: You must define the path query that gathers the object with [GJSON Path Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md)
+* **optional (OPTIONAL)**: Setting optional to true will suppress errors if the configured Path doesn't match the JSON. This should be used with caution because it removes the safety net of verifying the provided path. An example case to use this is with the `inputs.mqtt_consumer` plugin when you are expecting multiple JSON files.
 
 *Keys to define what JSON keys should be used as timestamps:*
 

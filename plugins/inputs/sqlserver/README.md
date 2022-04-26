@@ -57,13 +57,38 @@ GO
 CREATE USER [telegraf] FOR LOGIN telegraf;
 ```
 
+For Service SID authentication to SQL Server (Windows service installations only).
+[More information about using service SIDs to grant permissions in SQL Server](https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server)
+
+In an administrative command prompt configure the telegraf service for use with a service SID
+
+```Batchfile
+sc.exe sidtype "telegraf" unrestricted
+```
+
+To create the login for the telegraf service run the following script:
+
+```sql
+USE master;
+GO
+CREATE LOGIN [NT SERVICE\telegraf] FROM WINDOWS;
+GO
+GRANT VIEW SERVER STATE TO [NT SERVICE\telegraf];
+GO
+GRANT VIEW ANY DEFINITION TO [NT SERVICE\telegraf];
+GO
+```
+
+Remove User Id and Password keywords from the connection string in your config file to use windows authentication.
+
+```toml
+[[inputs.sqlserver]]
+  servers = ["Server=192.168.1.10;Port=1433;app name=telegraf;log=1;",]
+```
+
 ## Configuration
 
 ```toml
-[agent]
-  ## Default data collection interval for all inputs, can be changed as per collection interval needs
-  interval = "10s"
-
 # Read metrics from Microsoft SQL Server
 [[inputs.sqlserver]]
   ## Specify instances to monitor with a list of connection strings.
@@ -93,24 +118,25 @@ CREATE USER [telegraf] FOR LOGIN telegraf;
   ## A list of queries to explicitly ignore.
   exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
 
-  ## Queries enabled by default for database_type = "SQLServer" are - 
-  ## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks, 
-  ## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates
+  ## Queries enabled by default for database_type = "SQLServer" are -
+  ## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks,
+  ## SQLServerSchedulers, SQLServerRequests, SQLServerVolumeSpace, SQLServerCpu, SQLServerAvailabilityReplicaStates, SQLServerDatabaseReplicaStates,
+  ## SQLServerRecentBackups
 
-  ## Queries enabled by default for database_type = "AzureSQLDB" are - 
-  ## AzureSQLDBResourceStats, AzureSQLDBResourceGovernance, AzureSQLDBWaitStats, AzureSQLDBDatabaseIO, AzureSQLDBServerProperties, 
+  ## Queries enabled by default for database_type = "AzureSQLDB" are -
+  ## AzureSQLDBResourceStats, AzureSQLDBResourceGovernance, AzureSQLDBWaitStats, AzureSQLDBDatabaseIO, AzureSQLDBServerProperties,
   ## AzureSQLDBOsWaitstats, AzureSQLDBMemoryClerks, AzureSQLDBPerformanceCounters, AzureSQLDBRequests, AzureSQLDBSchedulers
 
-  ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are - 
-  ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats, 
+  ## Queries enabled by default for database_type = "AzureSQLManagedInstance" are -
+  ## AzureSQLMIResourceStats, AzureSQLMIResourceGovernance, AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats,
   ## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
 
-  ## Queries enabled by default for database_type = "AzureSQLPool" are - 
-  ## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats, 
+  ## Queries enabled by default for database_type = "AzureSQLPool" are -
+  ## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats,
   ## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
 
   ## Following are old config settings
-  ## You may use them only if you are using the earlier flavor of queries, however it is recommended to use 
+  ## You may use them only if you are using the earlier flavor of queries, however it is recommended to use
   ## the new mechanism of identifying the database_type there by use it's corresponding queries
 
   ## Optional parameter, setting this to 2 will use a new version
@@ -122,18 +148,18 @@ CREATE USER [telegraf] FOR LOGIN telegraf;
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
   # azuredb = false
 
-  ## Toggling this to true will emit an additional metric called "sqlserver_telegraf_health". 
-  ## This metric tracks the count of attempted queries and successful queries for each SQL instance specified in "servers". 
-  ## The purpose of this metric is to assist with identifying and diagnosing any connectivity or query issues. 
+  ## Toggling this to true will emit an additional metric called "sqlserver_telegraf_health".
+  ## This metric tracks the count of attempted queries and successful queries for each SQL instance specified in "servers".
+  ## The purpose of this metric is to assist with identifying and diagnosing any connectivity or query issues.
   ## This setting/metric is optional and is disabled by default.
   # health_metric = false
 
   ## Possible queries accross different versions of the collectors
   ## Queries enabled by default for specific Database Type
-  
+
   ## database_type =  AzureSQLDB  by default collects the following queries
   ## - AzureSQLDBWaitStats
-  ## - AzureSQLDBResourceStats 
+  ## - AzureSQLDBResourceStats
   ## - AzureSQLDBResourceGovernance
   ## - AzureSQLDBDatabaseIO
   ## - AzureSQLDBServerProperties
@@ -144,11 +170,11 @@ CREATE USER [telegraf] FOR LOGIN telegraf;
   ## - AzureSQLDBSchedulers
 
   ## database_type =  AzureSQLManagedInstance by default collects the following queries
-  ## - AzureSQLMIResourceStats 
-  ## - AzureSQLMIResourceGovernance 
-  ## - AzureSQLMIDatabaseIO 
-  ## - AzureSQLMIServerProperties 
-  ## - AzureSQLMIOsWaitstats 
+  ## - AzureSQLMIResourceStats
+  ## - AzureSQLMIResourceGovernance
+  ## - AzureSQLMIDatabaseIO
+  ## - AzureSQLMIServerProperties
+  ## - AzureSQLMIOsWaitstats
   ## - AzureSQLMIMemoryClerks
   ## - AzureSQLMIPerformanceCounters
   ## - AzureSQLMIRequests
@@ -158,21 +184,22 @@ CREATE USER [telegraf] FOR LOGIN telegraf;
   ## - AzureSQLPoolResourceStats
   ## - AzureSQLPoolResourceGovernance
   ## - AzureSQLPoolDatabaseIO
-  ## - AzureSQLPoolOsWaitStats, 
+  ## - AzureSQLPoolOsWaitStats,
   ## - AzureSQLPoolMemoryClerks
   ## - AzureSQLPoolPerformanceCounters
   ## - AzureSQLPoolSchedulers
 
   ## database_type =  SQLServer by default collects the following queries
-  ## - SQLServerPerformanceCounters 
-  ## - SQLServerWaitStatsCategorized 
-  ## - SQLServerDatabaseIO 
-  ## - SQLServerProperties 
-  ## - SQLServerMemoryClerks 
+  ## - SQLServerPerformanceCounters
+  ## - SQLServerWaitStatsCategorized
+  ## - SQLServerDatabaseIO
+  ## - SQLServerProperties
+  ## - SQLServerMemoryClerks
   ## - SQLServerSchedulers
   ## - SQLServerRequests
   ## - SQLServerVolumeSpace
   ## - SQLServerCpu
+  ## - SQLServerRecentBackups
   ## and following as optional (if mentioned in the include_query list)
   ## - SQLServerAvailabilityReplicaStates
   ## - SQLServerDatabaseReplicaStates
@@ -213,6 +240,8 @@ To enable support for AAD authentication, we leverage the existing AAD authentic
 
 ### How to use AAD Auth with MSI
 
+- Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
+
 - Configure "system-assigned managed identity" for Azure resources on the Monitoring VM (the VM that'd connect to the SQL server/database) [using the Azure portal](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-portal-windows-vm).
 - On the database being monitored, create/update a USER with the name of the Monitoring VM as the principal using the below script. This might require allow-listing the client machine's IP address (from where the below SQL script is being run) on the SQL Server resource.
 
@@ -226,8 +255,6 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
 ```
 
 - On the SQL Server resource of the database(s) being monitored, go to "Firewalls and Virtual Networks" tab and allowlist the monitoring VM IP address.
-- On the Monitoring VM, update the telegraf config file with the database connection string in the following format. Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
-- On the Monitoring VM, update the telegraf config file with the database connection string in the following format.
 - On the Monitoring VM, update the telegraf config file with the database connection string in the following format. The connection string only provides the server and database name, but no password (since the VM's system-assigned managed identity would be used for authentication). The auth method must be set to "AAD"
 
 ```toml
@@ -236,8 +263,6 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
   ]
   auth_method = "AAD"
 ```
-
-- Please note AAD based auth is currently only supported for Azure SQL Database and Azure SQL Managed Instance (but not for SQL Server), as described [here](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
 
 ## Metrics
 
@@ -358,6 +383,7 @@ These are metrics for Azure SQL to monitor resources usage at Elastic Pool level
 - SQLServerCpu: Uses the buffer ring (`sys.dm_os_ring_buffers`) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
 - SQLServerAvailabilityReplicaStates: Collects availability replica state information from `sys.dm_hadr_availability_replica_states` for a High Availability / Disaster Recovery (HADR) setup
 - SQLServerDatabaseReplicaStates: Collects database replica state information from `sys.dm_hadr_database_replica_states` for a High Availability / Disaster Recovery (HADR) setup
+- SQLServerRecentBackups: Collects latest full, differential and transaction log backup date and size from `msdb.dbo.backupset`
 
 ### Output Measures
 

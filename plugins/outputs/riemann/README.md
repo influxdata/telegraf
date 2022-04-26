@@ -45,11 +45,16 @@ This plugin writes to [Riemann](http://riemann.io/) via TCP or UDP.
 
 ### Optional parameters
 
-* `ttl`: Riemann event TTL, floating-point time in seconds. Defines how long that an event is considered valid for in Riemann.
-* `separator`: Separator to use between measurement and field name in Riemann service name.
-* `measurement_as_attribute`: Set measurement name as a Riemann attribute, instead of prepending it to the Riemann service name.
-* `string_as_state`: Send string metrics as Riemann event states. If this is not enabled then all string metrics will be ignored.
-* `tag_keys`: A list of tag keys whose values get sent as Riemann tags. If empty, all Telegraf tag values will be sent as tags.
+* `ttl`: Riemann event TTL, floating-point time in seconds. Defines how long
+  that an event is considered valid for in Riemann.
+* `separator`: Separator to use between measurement and field name in Riemann
+  service name.
+* `measurement_as_attribute`: Set measurement name as a Riemann attribute,
+  instead of prepending it to the Riemann service name.
+* `string_as_state`: Send string metrics as Riemann event states. If this is not
+  enabled then all string metrics will be ignored.
+* `tag_keys`: A list of tag keys whose values get sent as Riemann tags. If
+  empty, all Telegraf tag values will be sent as tags.
 * `tags`: Additional Riemann tags that will be sent.
 * `description_text`: Description text for Riemann event.
 
@@ -63,7 +68,8 @@ Riemann event emitted by Telegraf with default configuration:
 :service "disk/used_percent", :metric 73.16736001949994, :path "/boot", :fstype "ext4", :time 1475605021}
 ```
 
-Telegraf emitting the same Riemann event with `measurement_as_attribute` set to `true`:
+Telegraf emitting the same Riemann event with `measurement_as_attribute` set to
+`true`:
 
 ```text
 #riemann.codec.Event{ ...
@@ -80,7 +86,8 @@ Telegraf emitting the same Riemann event with additional Riemann tags defined:
 :tags ["telegraf" "postgres_cluster"]}
 ```
 
-Telegraf emitting a Riemann event with a status text and `string_as_state` set to `true`, and a `description_text` defined:
+Telegraf emitting a Riemann event with a status text and `string_as_state` set
+to `true`, and a `description_text` defined:
 
 ```text
 #riemann.codec.Event{

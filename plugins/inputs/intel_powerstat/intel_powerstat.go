@@ -43,24 +43,6 @@ type PowerStat struct {
 	skipFirstIteration  bool
 }
 
-// Description returns a one-sentence description on the plugin.
-func (p *PowerStat) Description() string {
-	return `Intel PowerStat plugin enables monitoring of platform metrics (power, TDP) and Core metrics like temperature, power and utilization.`
-}
-
-// SampleConfig returns the default configuration of the plugin.
-func (p *PowerStat) SampleConfig() string {
-	return `
-  ## All global metrics are always collected by Intel PowerStat plugin.
-  ## User can choose which per-CPU metrics are monitored by the plugin in cpu_metrics array.
-  ## Empty array means no per-CPU specific metrics will be collected by the plugin - in this case only platform level
-  ## telemetry will be exposed by Intel PowerStat plugin.
-  ## Supported options:
-  ## "cpu_frequency", "cpu_busy_frequency", "cpu_temperature", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles"
-  # cpu_metrics = []
-`
-}
-
 // Init performs one time setup of the plugin.
 func (p *PowerStat) Init() error {
 	p.parseCPUMetricsConfig()

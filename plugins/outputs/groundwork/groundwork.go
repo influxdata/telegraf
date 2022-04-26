@@ -17,26 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const sampleConfig = `
-  ## URL of your groundwork instance.
-  url = "https://groundwork.example.com"
-
-  ## Agent uuid for GroundWork API Server.
-  agent_id = ""
-
-  ## Username and password to access GroundWork API.
-  username = ""
-  password = ""
-
-  ## Default display name for the host with services(metrics).
-  # default_host = "telegraf"
-
-  ## Default service state.
-  # default_service_state = "SERVICE_OK"
-
-  ## The name of the tag that contains the hostname.
-  # resource_tag = "host"
-`
+type metricMeta struct {
+	group    string
+	resource string
+}
 
 type Groundwork struct {
 	Server              string          `toml:"url"`
@@ -45,13 +29,10 @@ type Groundwork struct {
 	Password            string          `toml:"password"`
 	DefaultHost         string          `toml:"default_host"`
 	DefaultServiceState string          `toml:"default_service_state"`
+	GroupTag            string          `toml:"group_tag"`
 	ResourceTag         string          `toml:"resource_tag"`
 	Log                 telegraf.Logger `toml:"-"`
 	client              clients.GWClient
-}
-
-func (g *Groundwork) SampleConfig() string {
-	return sampleConfig
 }
 
 func (g *Groundwork) Init() error {
@@ -123,14 +104,39 @@ func (g *Groundwork) Close() error {
 }
 
 func (g *Groundwork) Write(metrics []telegraf.Metric) error {
+	groupMap := make(map[string][]transit.ResourceRef)
 	resourceToServicesMap := make(map[string][]transit.MonitoredService)
 	for _, metric := range metrics {
-		resource, service, err := g.parseMetric(metric)
+		meta, service, err := g.parseMetric(metric)
 		if err != nil {
 			g.Log.Errorf("%v", err)
 			continue
 		}
+		resource := meta.resource
 		resourceToServicesMap[resource] = append(resourceToServicesMap[resource], *service)
+
+		group := meta.group
+		if len(group) != 0 {
+			resRef := transit.ResourceRef{
+				Name: resource,
+				Type: transit.ResourceTypeHost,
+			}
+			if refs, ok := groupMap[group]; ok {
+				refs = append(refs, resRef)
+				groupMap[group] = refs
+			} else {
+				groupMap[group] = []transit.ResourceRef{resRef}
+			}
+		}
+	}
+
+	groups := make([]transit.ResourceGroup, 0, len(groupMap))
+	for groupName, refs := range groupMap {
+		groups = append(groups, transit.ResourceGroup{
+			GroupName: groupName,
+			Resources: refs,
+			Type:      transit.HostGroup,
+		})
 	}
 
 	var resources []transit.MonitoredResource
@@ -163,7 +169,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 			Version:    transit.ModelVersion,
 		},
 		Resources: resources,
-		Groups:    nil,
+		Groups:    groups,
 	})
 
 	if err != nil {
@@ -178,13 +184,10 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (g *Groundwork) Description() string {
-	return "Send telegraf metrics to GroundWork Monitor"
-}
-
 func init() {
 	outputs.Add("groundwork", func() telegraf.Output {
 		return &Groundwork{
+			GroupTag:            "group",
 			ResourceTag:         "host",
 			DefaultHost:         "telegraf",
 			DefaultServiceState: string(transit.ServiceOk),
@@ -192,7 +195,9 @@ func init() {
 	})
 }
 
-func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.MonitoredService, error) {
+func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.MonitoredService, error) {
+	group, _ := metric.GetTag(g.GroupTag)
+
 	resource := g.DefaultHost
 	if value, present := metric.GetTag(g.ResourceTag); present {
 		resource = value
@@ -243,6 +248,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Monit
 		MonitoredInfo: transit.MonitoredInfo{
 			Status:           transit.MonitorStatus(status),
 			LastCheckTime:    lastCheckTime,
+			NextCheckTime:    lastCheckTime, // if not added, GW will make this as LastCheckTime + 5 mins
 			LastPluginOutput: message,
 		},
 		Metrics: nil,
@@ -302,7 +308,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (string, *transit.Monit
 		serviceObject.Status = serviceStatus
 	}
 
-	return resource, &serviceObject, nil
+	return metricMeta{resource: resource, group: group}, &serviceObject, nil
 }
 
 func validStatus(status string) bool {

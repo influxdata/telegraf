@@ -375,6 +375,36 @@ func TestMissingDelayColumnNTPQ(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
 
+func TestLongPoll(t *testing.T) {
+	tt := tester{
+		ret: []byte(longPollTime),
+		err: nil,
+	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, acc.GatherError(n.Gather))
+
+	fields := map[string]interface{}{
+		"when":   int64(617),
+		"poll":   int64(4080),
+		"reach":  int64(377),
+		"offset": float64(2.849),
+		"jitter": float64(1.192),
+		"delay":  float64(9.145),
+	}
+	tags := map[string]string{
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "-",
+		"refid":        "10.177.80.46",
+		"type":         "u",
+		"stratum":      "3",
+	}
+
+	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
+}
+
 func TestFailedNTPQ(t *testing.T) {
 	tt := tester{
 		ret: []byte(singleNTPQ),
@@ -519,4 +549,9 @@ var noRefID = `     remote           refid      st t when poll reach   delay   o
  83.137.98.96    10.177.80.37     2 u  740 1024  377   54.033  243.426 449514.
  91.189.94.4                      2 u  673 1024  377  143.047  274.726 449445.
  131.188.3.221   10.177.80.37     2 u  783 1024  377  111.820  261.921 449528.
+`
+
+var longPollTime = `     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+-uschi5-ntp-002. 10.177.80.46     3 u  617 68m 377 9.145 +2.849 1.192
 `
