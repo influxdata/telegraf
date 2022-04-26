@@ -6,6 +6,7 @@ package intel_powerstat
 import (
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,60 +16,105 @@ import (
 )
 
 const (
-	cpuFrequency         = "cpu_frequency"
-	cpuBusyFrequency     = "cpu_busy_frequency"
-	cpuTemperature       = "cpu_temperature"
-	cpuC1StateResidency  = "cpu_c1_state_residency"
-	cpuC6StateResidency  = "cpu_c6_state_residency"
-	cpuBusyCycles        = "cpu_busy_cycles"
-	percentageMultiplier = 100
+	cpuFrequency                       = "cpu_frequency"
+	cpuBusyFrequency                   = "cpu_busy_frequency"
+	cpuTemperature                     = "cpu_temperature"
+	cpuC0StateResidency                = "cpu_c0_state_residency"
+	cpuC1StateResidency                = "cpu_c1_state_residency"
+	cpuC6StateResidency                = "cpu_c6_state_residency"
+	cpuBusyCycles                      = "cpu_busy_cycles"
+	packageCurrentPowerConsumption     = "current_power_consumption"
+	packageCurrentDramPowerConsumption = "current_dram_power_consumption"
+	packageThermalDesignPower          = "thermal_design_power"
+	packageTurboLimit                  = "max_turbo_frequency"
+	percentageMultiplier               = 100
 )
 
 // PowerStat plugin enables monitoring of platform metrics (power, TDP) and Core metrics like temperature, power and utilization.
 type PowerStat struct {
-	CPUMetrics []string        `toml:"cpu_metrics"`
-	Log        telegraf.Logger `toml:"-"`
+	CPUMetrics     []string        `toml:"cpu_metrics"`
+	PackageMetrics []string        `toml:"package_metrics"`
+	Log            telegraf.Logger `toml:"-"`
 
 	fs   fileService
 	rapl raplService
 	msr  msrService
 
-	cpuFrequency        bool
-	cpuBusyFrequency    bool
-	cpuTemperature      bool
-	cpuC1StateResidency bool
-	cpuC6StateResidency bool
-	cpuBusyCycles       bool
-	cpuInfo             map[string]*cpuInfo
-	skipFirstIteration  bool
+	cpuFrequency                       bool
+	cpuBusyFrequency                   bool
+	cpuTemperature                     bool
+	cpuC0StateResidency                bool
+	cpuC1StateResidency                bool
+	cpuC6StateResidency                bool
+	cpuBusyCycles                      bool
+	packageTurboLimit                  bool
+	packageCurrentPowerConsumption     bool
+	packageCurrentDramPowerConsumption bool
+	packageThermalDesignPower          bool
+	cpuInfo                            map[string]*cpuInfo
+	skipFirstIteration                 bool
+	logOnce                            map[string]error
 }
 
-// Init performs one time setup of the plugin.
+// Description returns a one-sentence description on the plugin.
+func (p *PowerStat) Description() string {
+	return `Intel PowerStat plugin enables monitoring of platform metrics (power, TDP) and Core metrics like temperature, power and utilization.`
+}
+
+// SampleConfig returns the default configuration of the plugin.
+func (p *PowerStat) SampleConfig() string {
+	return `
+  ## Some package metrics are collected by Intel PowerStat plugin by default.
+  ## User can choose which per-Core metrics are monitored by the plugin in package_metrics array.
+  ## No array means default metrics per-Core will be collected by the plugin.
+  ## Empty array means no per-Core metrics will be collected by the plugin.
+  ## User can choose which per-CPU metrics are monitored by the plugin in cpu_metrics array.
+  ## Empty or missing array means no per-CPU specific metrics will be collected by the plugin.
+  # Supported options:
+  #   "current_power_consumption", "current_dram_power_consumption", "thermal_design_power", "max_turbo_frequency"
+  # package_metrics = ["current_power_consumption", "current_dram_power_consumption", "thermal_design_power"]
+  # Supported options:
+  #   "cpu_frequency", "cpu_c0_state_residency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature", "cpu_busy_frequency"
+  # cpu_metrics = []
+  ## ATTENTION: metric cpu_busy_cycles is DEPRECATED - superseded by cpu_c0_state_residency_percent
+`
+}
+
+// Init performs one time setup of the plugin
 func (p *PowerStat) Init() error {
+	p.parsePackageMetricsConfig()
 	p.parseCPUMetricsConfig()
 	err := p.verifyProcessor()
 	if err != nil {
 		return err
 	}
-	// Initialize MSR service only when there is at least one core metric enabled.
-	if p.cpuFrequency || p.cpuBusyFrequency || p.cpuTemperature || p.cpuC1StateResidency ||
-		p.cpuC6StateResidency || p.cpuBusyCycles {
+	// Initialize MSR service only when there is at least one metric enabled
+	if p.cpuFrequency || p.cpuBusyFrequency || p.cpuTemperature || p.cpuC0StateResidency || p.cpuC1StateResidency ||
+		p.cpuC6StateResidency || p.cpuBusyCycles || p.packageTurboLimit {
 		p.msr = newMsrServiceWithFs(p.Log, p.fs)
 	}
-	p.rapl = newRaplServiceWithFs(p.Log, p.fs)
+	if p.packageCurrentPowerConsumption || p.packageCurrentDramPowerConsumption || p.packageThermalDesignPower || p.packageTurboLimit {
+		p.rapl = newRaplServiceWithFs(p.Log, p.fs)
+	}
+
+	if !p.areCoreMetricsEnabled() && !p.areGlobalMetricsEnabled() {
+		return fmt.Errorf("all configuration options are empty or invalid. Did not find anything to gather")
+	}
 
 	return nil
 }
 
-// Gather takes in an accumulator and adds the metrics that the Input gathers.
+// Gather takes in an accumulator and adds the metrics that the Input gathers
 func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
-	p.addGlobalMetrics(acc)
+	if p.areGlobalMetricsEnabled() {
+		p.addGlobalMetrics(acc)
+	}
 
 	if p.areCoreMetricsEnabled() {
 		p.addPerCoreMetrics(acc)
 	}
 
-	// Gathering the first iteration of metrics was skipped for most of them because they are based on delta calculations.
+	// Gathering the first iteration of metrics was skipped for most of them because they are based on delta calculations
 	p.skipFirstIteration = false
 
 	return nil
@@ -79,18 +125,36 @@ func (p *PowerStat) addGlobalMetrics(acc telegraf.Accumulator) {
 	p.rapl.initializeRaplData()
 
 	for socketID := range p.rapl.getRaplData() {
+		if p.packageTurboLimit {
+			p.addTurboRatioLimit(socketID, acc)
+		}
+
 		err := p.rapl.retrieveAndCalculateData(socketID)
 		if err != nil {
 			// In case of an error skip calculating metrics for this socket
-			p.Log.Errorf("error fetching rapl data for socket %s, err: %v", socketID, err)
+			if val := p.logOnce[socketID]; val == nil || val.Error() != err.Error() {
+				p.Log.Errorf("error fetching rapl data for socket %s, err: %v", socketID, err)
+				// Remember that specific error occurs for socketID to omit logging next time
+				p.logOnce[socketID] = err
+			}
 			continue
 		}
-		p.addThermalDesignPowerMetric(socketID, acc)
+
+		// If error stops occurring, clear logOnce indicator
+		p.logOnce[socketID] = nil
+		if p.packageThermalDesignPower {
+			p.addThermalDesignPowerMetric(socketID, acc)
+		}
+
 		if p.skipFirstIteration {
 			continue
 		}
-		p.addCurrentSocketPowerConsumption(socketID, acc)
-		p.addCurrentDramPowerConsumption(socketID, acc)
+		if p.packageCurrentPowerConsumption {
+			p.addCurrentSocketPowerConsumption(socketID, acc)
+		}
+		if p.packageCurrentDramPowerConsumption {
+			p.addCurrentDramPowerConsumption(socketID, acc)
+		}
 	}
 }
 
@@ -155,11 +219,10 @@ func (p *PowerStat) addMetricsForSingleCore(cpuID string, acc telegraf.Accumulat
 	}
 
 	// Read data from MSR only if required
-	if p.cpuC1StateResidency || p.cpuC6StateResidency || p.cpuBusyCycles || p.cpuTemperature ||
-		p.cpuBusyFrequency {
+	if p.cpuC0StateResidency || p.cpuC1StateResidency || p.cpuC6StateResidency || p.cpuBusyCycles || p.cpuTemperature || p.cpuBusyFrequency {
 		err := p.msr.openAndReadMsr(cpuID)
 		if err != nil {
-			// In case of an error exit the function. All metrics past this point are dependant on MSR.
+			// In case of an error exit the function. All metrics past this point are dependent on MSR
 			p.Log.Debugf("error while reading msr: %v", err)
 			return
 		}
@@ -169,22 +232,22 @@ func (p *PowerStat) addMetricsForSingleCore(cpuID string, acc telegraf.Accumulat
 		p.addCPUTemperatureMetric(cpuID, acc)
 	}
 
-	// cpuBusyFrequency metric does some calculations inside that are required in another plugin cycle.
+	// cpuBusyFrequency metric does some calculations inside that are required in another plugin cycle
 	if p.cpuBusyFrequency {
 		p.addCPUBusyFrequencyMetric(cpuID, acc)
 	}
 
 	if !p.skipFirstIteration {
+		if p.cpuC0StateResidency || p.cpuBusyCycles {
+			p.addCPUC0StateResidencyMetric(cpuID, acc)
+		}
+
 		if p.cpuC1StateResidency {
 			p.addCPUC1StateResidencyMetric(cpuID, acc)
 		}
 
 		if p.cpuC6StateResidency {
 			p.addCPUC6StateResidencyMetric(cpuID, acc)
-		}
-
-		if p.cpuBusyCycles {
-			p.addCPUBusyCyclesMetric(cpuID, acc)
 		}
 	}
 }
@@ -227,6 +290,153 @@ func (p *PowerStat) addCPUTemperatureMetric(cpuID string, acc telegraf.Accumulat
 	}
 
 	acc.AddGauge("powerstat_core", fields, tags)
+}
+
+func calculateTurboRatioGroup(coreCounts uint64, msr uint64, group map[int]uint64) {
+	from := coreCounts & 0xFF // value of number of active cores of bucket 1 is written in the first 8 bits. The next buckets values are saved on the following 8-bit sides
+	for i := 0; i < 8; i++ {
+		to := (coreCounts >> (i * 8)) & 0xFF
+		if to == 0 {
+			break
+		}
+		value := (msr >> (i * 8)) & 0xFF
+		// value of freq ratio is stored in 8-bit blocks, and their real value is obtained after multiplication by 100
+		if value != 0 && to != 0 {
+			for ; from <= to; from++ {
+				group[int(from)] = value * 100
+			}
+		}
+		from = to + 1
+	}
+}
+
+func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator) {
+	var err error
+	turboRatioLimitGroups := make(map[int]uint64)
+
+	var cpuID = "-1"
+	var model = "-1"
+	for _, v := range p.cpuInfo {
+		if v.physicalID == socketID {
+			cpuID = v.cpuID
+			model = v.model
+		}
+	}
+	if cpuID == "-1" || model == "-1" {
+		p.Log.Debugf("error while reading socket ID")
+		return
+	}
+	// dump_hsw_turbo_ratio_limit
+	if model == strconv.FormatInt(0x3F, 10) { // INTEL_FAM6_HASWELL_X
+		coreCounts := uint64(0x1211) // counting the number of active cores 17 and 18
+		msrTurboRatioLimit2, err := p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT2")
+		if err != nil {
+			p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT2: %v", err)
+			return
+		}
+
+		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit2, turboRatioLimitGroups)
+	}
+
+	// dump_ivt_turbo_ratio_limit
+	if (model == strconv.FormatInt(0x3E, 10)) || // INTEL_FAM6_IVYBRIDGE_X
+		(model == strconv.FormatInt(0x3F, 10)) { // INTEL_FAM6_HASWELL_X
+		coreCounts := uint64(0x100F0E0D0C0B0A09) // counting the number of active cores 9 to 16
+		msrTurboRatioLimit1, err := p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT1")
+		if err != nil {
+			p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT1: %v", err)
+			return
+		}
+		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit1, turboRatioLimitGroups)
+	}
+
+	if (model != strconv.FormatInt(0x37, 10)) && // INTEL_FAM6_ATOM_SILVERMONT
+		(model != strconv.FormatInt(0x4A, 10)) && // INTEL_FAM6_ATOM_SILVERMONT_MID:
+		(model != strconv.FormatInt(0x5A, 10)) && // INTEL_FAM6_ATOM_AIRMONT_MID:
+		(model != strconv.FormatInt(0x2E, 10)) && // INTEL_FAM6_NEHALEM_EX
+		(model != strconv.FormatInt(0x2F, 10)) && // INTEL_FAM6_WESTMERE_EX
+		(model != strconv.FormatInt(0x57, 10)) && // INTEL_FAM6_XEON_PHI_KNL
+		(model != strconv.FormatInt(0x85, 10)) { // INTEL_FAM6_XEON_PHI_KNM
+		coreCounts := uint64(0x0807060504030201)     // default value (counting the number of active cores 1 to 8). May be change in "if" segment below
+		if (model == strconv.FormatInt(0x5C, 10)) || // INTEL_FAM6_ATOM_GOLDMONT
+			(model == strconv.FormatInt(0x55, 10)) || // INTEL_FAM6_SKYLAKE_X
+			(model == strconv.FormatInt(0x6C, 10) || model == strconv.FormatInt(0x8F, 10) || model == strconv.FormatInt(0x6A, 10)) || // INTEL_FAM6_ICELAKE_X
+			(model == strconv.FormatInt(0x5F, 10)) || // INTEL_FAM6_ATOM_GOLDMONT_D
+			(model == strconv.FormatInt(0x86, 10)) { // INTEL_FAM6_ATOM_TREMONT_D
+			coreCounts, err = p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT1")
+
+			if err != nil {
+				p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT1: %v", err)
+				return
+			}
+		}
+
+		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT")
+		if err != nil {
+			p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT: %v", err)
+			return
+		}
+		calculateTurboRatioGroup(coreCounts, msrTurboRatioLimit, turboRatioLimitGroups)
+	}
+	// dump_atom_turbo_ratio_limits
+	if model == strconv.FormatInt(0x37, 10) || // INTEL_FAM6_ATOM_SILVERMONT
+		model == strconv.FormatInt(0x4A, 10) || // INTEL_FAM6_ATOM_SILVERMONT_MID:
+		model == strconv.FormatInt(0x5A, 10) { // INTEL_FAM6_ATOM_AIRMONT_MID
+		coreCounts := uint64(0x04030201) // counting the number of active cores 1 to 4
+		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, "MSR_ATOM_CORE_TURBO_RATIOS")
+
+		if err != nil {
+			p.Log.Debugf("error while reading MSR_ATOM_CORE_TURBO_RATIOS: %v", err)
+			return
+		}
+		value := uint64(0)
+		newValue := uint64(0)
+
+		for i := 0; i < 4; i++ { // value "4" is specific for this group of processors
+			newValue = (msrTurboRatioLimit >> (8 * (i))) & 0x3F // value of freq ratio is stored in 6-bit blocks, saved every 8 bits
+			value = value + (newValue << ((i - 1) * 8))         // now value of freq ratio is stored in 8-bit blocks, saved every 8 bits
+		}
+
+		calculateTurboRatioGroup(coreCounts, value, turboRatioLimitGroups)
+	}
+	// dump_knl_turbo_ratio_limits
+	if model == strconv.FormatInt(0x57, 10) { // INTEL_FAM6_XEON_PHI_KNL
+		msrTurboRatioLimit, err := p.msr.readSingleMsr(cpuID, "MSR_TURBO_RATIO_LIMIT")
+		if err != nil {
+			p.Log.Debugf("error while reading MSR_TURBO_RATIO_LIMIT: %v", err)
+			return
+		}
+
+		// value of freq ratio of bucket 1 is saved in bits 15 to 8.
+		// each next value is calculated as the previous value - delta. Delta is stored in 3-bit blocks every 8 bits (start at 21 (2*8+5))
+		value := (msrTurboRatioLimit >> 8) & 0xFF
+		newValue := value
+		for i := 2; i < 8; i++ {
+			newValue = newValue - (msrTurboRatioLimit>>(8*i+5))&0x7
+			value = value + (newValue << ((i - 1) * 8))
+		}
+
+		// value of number of active cores of bucket 1 is saved in bits 1 to 7.
+		// each next value is calculated as the previous value + delta. Delta is stored in 5-bit blocks every 8 bits (start at 16 (2*8))
+		coreCounts := (msrTurboRatioLimit & 0xFF) >> 1
+		newBucket := coreCounts
+		for i := 2; i < 8; i++ {
+			newBucket = newBucket + (msrTurboRatioLimit>>(8*i))&0x1F
+			coreCounts = coreCounts + (newBucket << ((i - 1) * 8))
+		}
+		calculateTurboRatioGroup(coreCounts, value, turboRatioLimitGroups)
+	}
+
+	for key, val := range turboRatioLimitGroups {
+		tags := map[string]string{
+			"package_id":   socketID,
+			"active_cores": strconv.Itoa(key),
+		}
+		fields := map[string]interface{}{
+			"max_turbo_frequency_mhz": val,
+		}
+		acc.AddGauge("powerstat_package", fields, tags)
+	}
 }
 
 func (p *PowerStat) addCPUBusyFrequencyMetric(cpuID string, acc telegraf.Accumulator) {
@@ -331,7 +541,7 @@ func (p *PowerStat) addCPUC6StateResidencyMetric(cpuID string, acc telegraf.Accu
 	acc.AddGauge("powerstat_core", fields, tags)
 }
 
-func (p *PowerStat) addCPUBusyCyclesMetric(cpuID string, acc telegraf.Accumulator) {
+func (p *PowerStat) addCPUC0StateResidencyMetric(cpuID string, acc telegraf.Accumulator) {
 	coresData := p.msr.getCPUCoresData()
 	// Avoid division by 0
 	if coresData[cpuID].timeStampCounterDelta == 0 {
@@ -339,7 +549,7 @@ func (p *PowerStat) addCPUBusyCyclesMetric(cpuID string, acc telegraf.Accumulato
 			timestampCounterLocation, cpuID)
 		return
 	}
-	busyCyclesValue := roundFloatToNearestTwoDecimalPlaces(percentageMultiplier *
+	c0Value := roundFloatToNearestTwoDecimalPlaces(percentageMultiplier *
 		float64(coresData[cpuID].mperfDelta) / float64(coresData[cpuID].timeStampCounterDelta))
 	cpu := p.cpuInfo[cpuID]
 	tags := map[string]string{
@@ -347,11 +557,42 @@ func (p *PowerStat) addCPUBusyCyclesMetric(cpuID string, acc telegraf.Accumulato
 		"core_id":    cpu.coreID,
 		"cpu_id":     cpu.cpuID,
 	}
-	fields := map[string]interface{}{
-		"cpu_busy_cycles_percent": busyCyclesValue,
+	if p.cpuC0StateResidency {
+		fields := map[string]interface{}{
+			"cpu_c0_state_residency_percent": c0Value,
+		}
+		acc.AddGauge("powerstat_core", fields, tags)
+	}
+	if p.cpuBusyCycles {
+		deprecatedFields := map[string]interface{}{
+			"cpu_busy_cycles_percent": c0Value,
+		}
+		acc.AddGauge("powerstat_core", deprecatedFields, tags)
+	}
+}
+
+func (p *PowerStat) parsePackageMetricsConfig() {
+	if p.PackageMetrics == nil {
+		return
+	}
+	// if Package Metric config is empty, use the default settings. If not, no metric name provide means not displaying it
+	p.packageCurrentPowerConsumption = false
+	p.packageCurrentDramPowerConsumption = false
+	p.packageThermalDesignPower = false
+
+	if contains(p.PackageMetrics, packageTurboLimit) {
+		p.packageTurboLimit = true
+	}
+	if contains(p.PackageMetrics, packageCurrentPowerConsumption) {
+		p.packageCurrentPowerConsumption = true
 	}
 
-	acc.AddGauge("powerstat_core", fields, tags)
+	if contains(p.PackageMetrics, packageCurrentDramPowerConsumption) {
+		p.packageCurrentDramPowerConsumption = true
+	}
+	if contains(p.PackageMetrics, packageThermalDesignPower) {
+		p.packageThermalDesignPower = true
+	}
 }
 
 func (p *PowerStat) parseCPUMetricsConfig() {
@@ -361,6 +602,10 @@ func (p *PowerStat) parseCPUMetricsConfig() {
 
 	if contains(p.CPUMetrics, cpuFrequency) {
 		p.cpuFrequency = true
+	}
+
+	if contains(p.CPUMetrics, cpuC0StateResidency) {
+		p.cpuC0StateResidency = true
 	}
 
 	if contains(p.CPUMetrics, cpuC1StateResidency) {
@@ -396,7 +641,7 @@ func (p *PowerStat) verifyProcessor() error {
 
 	p.cpuInfo = stats
 
-	// First CPU is sufficient for verification.
+	// First CPU is sufficient for verification
 	firstCPU := p.cpuInfo["0"]
 	if firstCPU == nil {
 		return fmt.Errorf("first core not found while parsing /proc/cpuinfo")
@@ -414,14 +659,16 @@ func (p *PowerStat) verifyProcessor() error {
 	if !strings.Contains(firstCPU.flags, "msr") {
 		p.cpuTemperature = false
 		p.cpuC6StateResidency = false
+		p.cpuC0StateResidency = false
 		p.cpuBusyCycles = false
 		p.cpuBusyFrequency = false
 		p.cpuC1StateResidency = false
 	}
 
 	if !strings.Contains(firstCPU.flags, "aperfmperf") {
-		p.cpuBusyFrequency = false
 		p.cpuBusyCycles = false
+		p.cpuBusyFrequency = false
+		p.cpuC0StateResidency = false
 		p.cpuC1StateResidency = false
 	}
 
@@ -438,7 +685,6 @@ func contains(slice []string, str string) bool {
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -446,17 +692,27 @@ func (p *PowerStat) areCoreMetricsEnabled() bool {
 	return p.msr != nil && len(p.msr.getCPUCoresData()) > 0
 }
 
-// newPowerStat creates and returns PowerStat struct.
+func (p *PowerStat) areGlobalMetricsEnabled() bool {
+	return p.rapl != nil
+}
+
+// newPowerStat creates and returns PowerStat struct
 func newPowerStat(fs fileService) *PowerStat {
 	p := &PowerStat{
-		cpuFrequency:        false,
-		cpuC1StateResidency: false,
-		cpuC6StateResidency: false,
-		cpuBusyCycles:       false,
-		cpuTemperature:      false,
-		cpuBusyFrequency:    false,
-		skipFirstIteration:  true,
-		fs:                  fs,
+		cpuFrequency:                       false,
+		cpuC0StateResidency:                false,
+		cpuC1StateResidency:                false,
+		cpuC6StateResidency:                false,
+		cpuBusyCycles:                      false,
+		cpuTemperature:                     false,
+		cpuBusyFrequency:                   false,
+		packageTurboLimit:                  false,
+		packageCurrentPowerConsumption:     true,
+		packageCurrentDramPowerConsumption: true,
+		packageThermalDesignPower:          true,
+		skipFirstIteration:                 true,
+		fs:                                 fs,
+		logOnce:                            make(map[string]error),
 	}
 
 	return p
