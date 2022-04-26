@@ -382,17 +382,17 @@ jobs:
           command: |
             cd influxdata-docker/telegraf/nightly
             docker build -t telegraf .
-            docker tag telegraf quay.io/influxdb/telegraf:nightly
+            docker tag telegraf quay.io/influxdb/telegraf-nightly:latest
             docker image ls
-            docker push quay.io/influxdb/telegraf:nightly
+            docker push quay.io/influxdb/telegraf-nightly:latest
       - run:
           name: build and push telegraf:nightly-alpine
           command: |
             cd influxdata-docker/telegraf/nightly/alpine
             docker build -t telegraf-alpine .
-            docker tag telegraf-alpine quay.io/influxdb/telegraf:nightly-alpine
+            docker tag telegraf-alpine quay.io/influxdb/telegraf-nightly:alpine
             docker image ls
-            docker push quay.io/influxdb/telegraf:nightly-alpine
+            docker push quay.io/influxdb/telegraf-nightly:alpine
   package-sign-windows:
     executor:
         name: win/default

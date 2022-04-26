@@ -26,7 +26,7 @@ Nightly docker images are available on [quay.io](https://quay.io/repository/infl
 
 ```shell
 # Debian-based image
-docker pull quay.io/influxdb/telegraf:nightly
+docker pull quay.io/influxdb/telegraf-nightly:latest
 # Alpine-based image
-docker pull quay.io/influxdb/telegraf:nightly-alpine
+docker pull quay.io/influxdb/telegraf-nightly:alpine
 ```
