@@ -186,7 +186,7 @@ func (s *SFlow_A10) Start(acc telegraf.Accumulator) error {
 		}()
 	}
 
-	s.Log.Info("Started the sflow_a10 service on %q", s.ServiceAddress)
+	s.Log.Info("Started the sflow_a10 service on ", s.ServiceAddress)
 
 	return nil
 }
