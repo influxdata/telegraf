@@ -336,9 +336,7 @@ func (cb *Couchbase) addBucketFieldChecked(fields map[string]interface{}, fieldK
 		return
 	}
 
-	index := len(values) - 1
-
-	cb.addBucketField(fields, fieldKey, values[index])
+	cb.addBucketField(fields, fieldKey, values[len(values)-1])
 }
 
 func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, bucketStats *BucketStats) error {
