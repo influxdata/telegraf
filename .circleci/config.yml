@@ -142,13 +142,17 @@ commands:
       - when:
           condition: << parameters.nightly >>
           steps:
-            - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
+            - run:
+                command: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
+                no_output_timeout: 30m
       - unless:
           condition:
             or:
               - << parameters.nightly >>
           steps:
-            - run: 'make package include_packages="$(make << parameters.type >>)"'
+            - run:
+                command: 'make package include_packages="$(make << parameters.type >>)"'
+                no_output_timeout: 30m
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
