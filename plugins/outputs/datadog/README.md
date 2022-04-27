@@ -33,5 +33,11 @@ field key with a `.` character.
 Field values are converted to floating point numbers.  Strings and floats that
 cannot be sent over JSON, namely NaN and Inf, are ignored.
 
+We do not send `Rate` types. Counts are sent as `count`, with an
+interval hard-coded to 1. Note that this behavior does *not* play
+super-well if running simultaneously with current Datadog agents; they
+will attempt to change to `Rate` with `interval=10`. We prefer this
+method, however, as it reflects the raw data more accurately.
+
 [metrics]: https://docs.datadoghq.com/api/v1/metrics/#submit-metrics
 [apikey]: https://app.datadoghq.com/account/settings#api
