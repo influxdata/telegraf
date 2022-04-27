@@ -18,7 +18,7 @@ import (
 
 type Postgresql struct {
 	postgresql.Service
-	Databases          []string
+	Databases          []string `deprecated:"1.22.3;use the sqlquery option to specify database to use"`
 	AdditionalTags     []string
 	Timestamp          string
 	Query              query

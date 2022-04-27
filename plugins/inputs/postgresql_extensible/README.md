@@ -28,8 +28,9 @@ The example below has two queries are specified, with the following parameters:
   # to grab metrics for.
   #
   address = "host=localhost user=postgres sslmode=disable"
-  # A list of databases to pull metrics about. If not specified, metrics for all
-  # databases are gathered.
+
+  ## A list of databases to pull metrics about.
+  ## deprecated in 1.22.3; use the sqlquery option to specify database to use
   # databases = ["app_production", "testing"]
 
   ## Whether to use prepared statements when connecting to the database.
