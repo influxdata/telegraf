@@ -35,6 +35,7 @@ require (
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/containerd/containerd v1.4.1 // indirect
+	github.com/cornelk/hashmap v1.0.1 // indirect
 	github.com/couchbase/go-couchbase v0.0.0-20180501122049-16db1f1fe037
 	github.com/couchbase/gomemcached v0.0.0-20180502221210-0da75df14530 // indirect
 	github.com/couchbase/goutils v0.0.0-20180530154633-e865a1461c8a // indirect
@@ -103,6 +104,7 @@ require (
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
+	github.com/orcaman/concurrent-map v0.0.0-20210106121528-16402b402231
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.5.1
 	github.com/prometheus/client_model v0.2.0
