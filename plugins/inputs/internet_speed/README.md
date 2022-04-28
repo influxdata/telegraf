@@ -23,9 +23,10 @@ It collects latency, download speed and upload speed
 | Download Speed | download   | float64 | Mbps |
 | Upload Speed   | upload     | float64 | Mbps |
 | Latency        | latency    | float64 | ms   |
+| Sponsor        | provider   | text    | --   |
 
 ## Example Output
 
 ```sh
-internet_speed,host=Sanyam-Ubuntu download=41.791,latency=28.518,upload=59.798 1631031183000000000
+internet_speed,host=Sanyam-Ubuntu download=41.791,latency=28.518,upload=59.798 1631031183000000000,provider=CenturyLink
 ```
