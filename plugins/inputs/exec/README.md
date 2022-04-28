@@ -18,8 +18,10 @@ This plugin can be used to poll for custom metrics from any source.
   ]
 
   ## Environment variables
-  ## eg: environment = ["LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs", "USERNAME=John Doe"]
-  environment = ["LD_LIBRARY_PATH=/opt/custom/lib64"]
+  ## Array of "key=value" pairs to pass as environment variables
+  ## e.g. "KEY=value", "USERNAME=John Doe",
+  ## "LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs"
+  # environment = []
 
   ## Timeout for each command to complete.
   timeout = "5s"
