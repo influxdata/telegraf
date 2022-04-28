@@ -9,23 +9,21 @@ import (
 )
 
 type HTTPProxy struct {
-	UseProxy     bool   `toml:"use_proxy"`
-	HTTPProxyURL string `toml:"http_proxy_url"`
+	UseSystemProxy bool   `toml:"use_system_proxy"`
+	HTTPProxyURL   string `toml:"http_proxy_url"`
 }
 
 type proxyFunc func(req *http.Request) (*url.URL, error)
 
 func (p *HTTPProxy) Proxy() (proxyFunc, error) {
-	if p.UseProxy {
-		if len(p.HTTPProxyURL) > 0 {
-			address, err := url.Parse(p.HTTPProxyURL)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing proxy url %q: %w", p.HTTPProxyURL, err)
-			}
-			return http.ProxyURL(address), nil
-		}
-
+	if p.UseSystemProxy {
 		return http.ProxyFromEnvironment, nil
+	} else if len(p.HTTPProxyURL) > 0 {
+		address, err := url.Parse(p.HTTPProxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing proxy url %q: %w", p.HTTPProxyURL, err)
+		}
+		return http.ProxyURL(address), nil
 	}
 
 	return nil, nil

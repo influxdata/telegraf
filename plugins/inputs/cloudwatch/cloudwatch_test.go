@@ -361,8 +361,8 @@ func TestUpdateWindow(t *testing.T) {
 func TestProxyFunction(t *testing.T) {
 	c := &CloudWatch{
 		HTTPProxy: proxy.HTTPProxy{
-			HTTPProxyURL: "http://www.penguins.com",
-			UseProxy:     true,
+			HTTPProxyURL:   "http://www.penguins.com",
+			UseSystemProxy: true,
 		},
 	}
 

@@ -36,7 +36,7 @@ It can output data in any of the [supported output formats][formats].
   # socks5_password = "pass123"
 
   ## Optional HTTP proxy to use
-  # use_proxy = true
+  # use_system_proxy = false
   # http_proxy_url = "http://localhost:8888"
 
   ## Data format to output.
