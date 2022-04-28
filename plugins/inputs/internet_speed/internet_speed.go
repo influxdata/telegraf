@@ -65,6 +65,7 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 	fields["download"] = s.DLSpeed
 	fields["upload"] = s.ULSpeed
 	fields["latency"] = timeDurationMillisecondToFloat64(s.Latency)
+	fields["provider"] = s.Sponsor
 
 	tags := make(map[string]string)
 
