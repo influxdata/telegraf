@@ -38,6 +38,7 @@ The example below has two queries are specified, with the following parameters:
   ## with pool_mode set to transaction.
   prepared_statements = true
 
+  # Define the toml config where the sql queries are stored
   # The script option can be used to specify the .sql file path.
   # If script and sqlquery options specified at same time, sqlquery will be used
   #
