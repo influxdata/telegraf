@@ -2,6 +2,15 @@
 
 # Changelog
 
+## v1.22.3 [2022-04-28]
+
+### Bugfixes
+
+- [#10961](https://github.com/influxdata/telegraf/pull/10961) Update Go to 1.18.1
+- [#10976](https://github.com/influxdata/telegraf/pull/10976) `inputs.influxdb_listener` Remove duplicate influxdb listener writes with upstream parser
+- [#11024](https://github.com/influxdata/telegraf/pull/11024) `inputs.gnmi` Use external xpath parser for gnmi
+- [#10925](https://github.com/influxdata/telegraf/pull/10925) `inputs.system` Reduce log level in disk plugin back to original level
+
 ## v1.22.2 [2022-04-25]
 
 ### Bugfixes
