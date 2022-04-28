@@ -13,6 +13,10 @@ Telegraf minimum version: Telegraf 1.15.0
   ## NOTE: process and each argument should each be their own string
   command = ["my-telegraf-output", "--some-flag", "value"]
 
+  ## Environment variables
+  ## eg: environment = ["LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs", "USERNAME=John Doe"]
+  environment = ["LD_LIBRARY_PATH=/opt/custom/lib64"]
+
   ## Delay before the process is restarted after an unexpected termination
   restart_delay = "10s"
 

@@ -30,6 +30,10 @@ Telegraf minimum version: Telegraf 1.15.0
   ## eg: command = ["/path/to/your_program", "arg1", "arg2"]
   command = ["cat"]
 
+  ## Environment variables
+  ## eg: environment = ["LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs", "USERNAME=John Doe"]
+  # environment = ["LD_LIBRARY_PATH=/opt/custom/lib64"]
+
   ## Delay before the process is restarted after an unexpected termination
   # restart_delay = "10s"
 ```

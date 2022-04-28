@@ -22,6 +22,10 @@ STDERR from the process will be relayed to Telegraf as errors in the logs.
   ## NOTE: process and each argument should each be their own string
   command = ["telegraf-smartctl", "-d", "/dev/sda"]
 
+  ## Environment variables
+  ## eg: environment = ["LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs", "USERNAME=John Doe"]
+  environment = ["LD_LIBRARY_PATH=/opt/custom/lib64"]
+
   ## Define how the process is signaled on each collection interval.
   ## Valid values are:
   ##   "none"    : Do not signal anything. (Recommended for service inputs)

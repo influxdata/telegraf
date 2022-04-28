@@ -27,7 +27,7 @@ func TestRestartingRebindsPipes(t *testing.T) {
 	exe, err := os.Executable()
 	require.NoError(t, err)
 
-	p, err := New([]string{exe, "-external"})
+	p, err := New([]string{exe, "-external"}, []string{"INTERNAL_PROCESS_MODE=application"})
 	p.RestartDelay = 100 * time.Nanosecond
 	p.Log = testutil.Logger{}
 	require.NoError(t, err)
@@ -62,7 +62,8 @@ var external = flag.Bool("external", false,
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	if *external {
+	runMode := os.Getenv("INTERNAL_PROCESS_MODE")
+	if *external && runMode == "application" {
 		externalProcess()
 		os.Exit(0)
 	}
