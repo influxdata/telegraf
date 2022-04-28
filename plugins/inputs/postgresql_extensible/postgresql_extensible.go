@@ -18,7 +18,7 @@ import (
 
 type Postgresql struct {
 	postgresql.Service
-	Databases          []string `deprecated:"1.22.3;use the sqlquery option to specify database to use"`
+	Databases          []string `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	AdditionalTags     []string
 	Timestamp          string
 	Query              query
@@ -32,7 +32,7 @@ type query []struct {
 	Sqlquery    string
 	Script      string
 	Version     int
-	Withdbname  bool
+	Withdbname  bool `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Tagvalue    string
 	Measurement string
 	Timestamp   string
