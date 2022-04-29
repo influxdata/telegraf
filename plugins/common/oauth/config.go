@@ -4,9 +4,8 @@ import (
 	"context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
-	"golang.org/x/oauth2/google"
-	"golang.org/x/oauth2/jwt"
-	"io/ioutil"
+	"google.golang.org/api/idtoken"
+	"google.golang.org/api/option"
 	"net/http"
 )
 
@@ -17,8 +16,9 @@ type OAuth2Config struct {
 	TokenURL     string   `toml:"token_url"`
 	Scopes       []string `toml:"scopes"`
 
+	// Google HTTP API
 	CredentialsFile string `toml:"credentials_file"`
-	AccessToken     string
+	AccessToken     *oauth2.Token
 }
 
 func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) (*http.Client, error) {
@@ -44,40 +44,17 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 }
 
 func (o *OAuth2Config) GetAccessToken(ctx context.Context, audience string) error {
-	data, err := ioutil.ReadFile(o.CredentialsFile)
+	ts, err := idtoken.NewTokenSource(ctx, audience, option.WithCredentialsFile(o.CredentialsFile))
 	if err != nil {
 		return err
 	}
 
-	conf, err := google.JWTConfigFromJSON(data, audience)
+	token, err := ts.Token()
 	if err != nil {
 		return err
 	}
 
-	jwtConfig := &jwt.Config{
-		Email:         conf.Email,
-		TokenURL:      conf.TokenURL,
-		PrivateKey:    conf.PrivateKey,
-		PrivateKeyID:  conf.PrivateKeyID,
-		PrivateClaims: map[string]interface{}{"target_audience": audience},
-	}
+	o.AccessToken = token
 
-	token, err := jwtConfig.TokenSource(ctx).Token()
-	if err != nil {
-		return err
-	}
-
-	// NOTE: using RSA256; Experimented with returning public key from keyFunc. Included commented code for discussion.
-	//privateKey, _ := jwtGo.ParseRSAPrivateKeyFromPEM(conf.PrivateKey)
-	//publicKey := privateKey.Public()
-	//claims := jwtGo.RegisteredClaims{}
-	//_, err = jwtGo.ParseWithClaims(token.Extra("id_token").(string), &jwtGo.RegisteredClaims{}, func(token *jwtGo.Token) (interface{}, error) {
-	//	return publicKey, nil
-	//})
-	//if err != nil {
-	//	return err
-	//}
-
-	o.AccessToken = token.Extra("id_token").(string)
 	return nil
 }

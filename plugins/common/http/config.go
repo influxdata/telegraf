@@ -56,7 +56,7 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		Timeout:   time.Duration(timeout),
 	}
 
-	client, err = h.CreateOauth2Client(ctx, client)
+	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
 	if err != nil {
 		return nil, err
 	}

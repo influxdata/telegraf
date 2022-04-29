@@ -130,6 +130,10 @@ type HTTP struct {
 	UseBatchFormat          bool              `toml:"use_batch_format"`
 	AwsService              string            `toml:"aws_service"`
 	NonRetryableStatusCodes []int             `toml:"non_retryable_statuscodes"`
+	// TODO: What struct should AccessToken live in? Does it live in a client?
+	// It might get picked up in in oauth/config.go similar to credentials_file
+	// AccessToken string
+
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
@@ -160,10 +164,9 @@ func (h *HTTP) Connect() error {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
-	type contextKey string
-	var url = contextKey("url")
-	ctx := context.WithValue(context.Background(), url, h.TokenURL)
-
+	ctx := context.Background()
+	// TODO: review setting h.URL in this fashion...
+	h.HTTPClientConfig.URL = h.URL
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
@@ -259,32 +262,38 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		req.SetBasicAuth(h.Username, h.Password)
 	}
 
-	// Authorization Code Grant (WIP)
+	// Authorization Code Grant
 	if h.CredentialsFile != "" {
 		claims := jwtGo.RegisteredClaims{}
-		jwtGo.ParseWithClaims(h.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
+		_, err = jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
 			return nil, nil
 		})
-		// TODO: solve for "key is of invalid type" from keyFunc
-		//if err != nil {
-		//	return err
-		//}
+		if err != nil {
+			// TODO: What to do with this err
+			fmt.Println("err parsing with claims: ", err)
+		}
 
+		// Request new token if expired
 		if !claims.VerifyExpiresAt(time.Now(), true) {
+			// token is expired
 			ctx := context.Background()
 			ctx, cancel := context.WithTimeout(ctx, time.Duration(h.Timeout))
 			defer cancel()
 
-			err = h.GetAccessToken(ctx, h.URL)
+			err = h.OAuth2Config.GetAccessToken(ctx, h.URL)
 			if err != nil {
 				return err
 			}
 		}
 
-		bearerToken := "Bearer " + h.AccessToken
+		bearerToken := "Bearer " + h.HTTPClientConfig.AccessToken
 		req.Header.Set("Authorization", bearerToken)
+		req.Header.Set("User-Agent", internal.ProductToken())
+		req.Header.Set("Accept", "application/json")
 	}
 
+	req.Header.Set("User-Agent", internal.ProductToken())
+	req.Header.Set("Content-Type", defaultContentType)
 	if h.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
 	}

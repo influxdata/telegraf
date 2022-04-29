@@ -137,22 +137,23 @@ require (
 	github.com/vmware/govmomi v0.27.3
 	github.com/wavefronthq/wavefront-sdk-go v0.9.10
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
-	github.com/xdg/scram v1.0.3
-	go.mongodb.org/mongo-driver v1.7.3
-	go.opentelemetry.io/collector/model v0.37.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.24.0
-	go.opentelemetry.io/otel/metric v0.24.0
-	go.opentelemetry.io/otel/sdk/metric v0.24.0
-	go.starlark.net v0.0.0-20210406145628-7a1108eaa012
-	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
-	golang.org/x/oauth2 v0.0.0-20210805134026-6f1e6394065a
+	github.com/xdg/scram v1.0.5
+	github.com/yuin/goldmark v1.4.1
+	go.mongodb.org/mongo-driver v1.9.0
+	go.opentelemetry.io/collector/pdata v0.49.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.28.0
+	go.opentelemetry.io/otel/metric v0.28.0
+	go.opentelemetry.io/otel/sdk/metric v0.28.0
+	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
+	golang.org/x/net v0.0.0-20220412020605-290c469a71a5
+	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654
+	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
 	golang.org/x/text v0.3.7
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.11.0
-	google.golang.org/api v0.67.0
-	google.golang.org/genproto v0.0.0-20220207164111-0872dc986b00
+	google.golang.org/api v0.76.0
+	google.golang.org/genproto v0.0.0-20220414192740-2d67ff6cf2b4
 	google.golang.org/grpc v1.45.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
@@ -167,7 +168,7 @@ require (
 
 require (
 	cloud.google.com/go v0.100.2 // indirect
-	cloud.google.com/go/compute v0.1.0 // indirect
+	cloud.google.com/go/compute v1.6.0 // indirect
 	cloud.google.com/go/iam v0.1.1 // indirect
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	github.com/Azure/azure-amqp-common-go/v3 v3.2.3 // indirect
@@ -243,7 +244,7 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/googleapis/gax-go/v2 v2.1.1 // indirect
+	github.com/googleapis/gax-go/v2 v2.3.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/grid-x/serial v0.0.0-20211107191517-583c7356b3aa // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
@@ -346,11 +347,10 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/mod v0.5.1 // indirect
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
-	golang.org/x/text v0.3.7
-	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
-	golang.org/x/tools v0.1.8 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
+	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
+	golang.org/x/tools v0.1.9 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
