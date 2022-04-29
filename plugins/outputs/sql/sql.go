@@ -194,8 +194,8 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			if err != nil {
 				return err
 			}
-			p.tables[tablename] = true
 		}
+		p.tables[tablename] = true
 
 		var columns []string
 		var values []interface{}
