@@ -26,17 +26,16 @@ func TestParsePath(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "theorigin", parsed.Origin)
 	require.Equal(t, "thetarget", parsed.Target)
-	require.Equal(t, []string{"foo", "bar", "bla[shoo=woo][shoop=/woop/]", "z"}, parsed.Element)
 	require.Equal(t, []*gnmiLib.PathElem{{Name: "foo"}, {Name: "bar"},
 		{Name: "bla", Key: map[string]string{"shoo": "woo", "shoop": "/woop/"}}, {Name: "z"}}, parsed.Elem)
 
 	parsed, err = parsePath("", "", "")
 	require.NoError(t, err)
-	require.Equal(t, gnmiLib.Path{}, *parsed)
+	require.Equal(t, &gnmiLib.Path{}, parsed)
 
 	parsed, err = parsePath("", "/foo[[", "")
 	require.Nil(t, parsed)
-	require.Equal(t, errors.New("Invalid gNMI path: /foo[[/"), err)
+	require.NotNil(t, err)
 }
 
 type MockServer struct {

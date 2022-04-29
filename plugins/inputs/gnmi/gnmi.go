@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/gnxi/utils/xpath"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -478,66 +479,13 @@ func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix
 
 //ParsePath from XPath-like string to gNMI path structure
 func parsePath(origin string, pathToParse string, target string) (*gnmiLib.Path, error) {
-	var err error
-	gnmiPath := gnmiLib.Path{Origin: origin, Target: target}
-
-	if len(pathToParse) > 0 && pathToParse[0] != '/' {
-		return nil, fmt.Errorf("path does not start with a '/': %s", pathToParse)
-	}
-
-	elem := &gnmiLib.PathElem{}
-	start, name, value, end := 0, -1, -1, -1
-
-	pathToParse = pathToParse + "/"
-
-	for i := 0; i < len(pathToParse); i++ {
-		if pathToParse[i] == '[' {
-			if name >= 0 {
-				break
-			}
-			if end < 0 {
-				end = i
-				elem.Key = make(map[string]string)
-			}
-			name = i + 1
-		} else if pathToParse[i] == '=' {
-			if name <= 0 || value >= 0 {
-				break
-			}
-			value = i + 1
-		} else if pathToParse[i] == ']' {
-			if name <= 0 || value <= name {
-				break
-			}
-			elem.Key[pathToParse[name:value-1]] = strings.Trim(pathToParse[value:i], "'\"")
-			name, value = -1, -1
-		} else if pathToParse[i] == '/' {
-			if name < 0 {
-				if end < 0 {
-					end = i
-				}
-
-				if end > start {
-					elem.Name = pathToParse[start:end]
-					gnmiPath.Elem = append(gnmiPath.Elem, elem)
-					gnmiPath.Element = append(gnmiPath.Element, pathToParse[start:i])
-				}
-
-				start, name, value, end = i+1, -1, -1, -1
-				elem = &gnmiLib.PathElem{}
-			}
-		}
-	}
-
-	if name >= 0 || value >= 0 {
-		err = fmt.Errorf("Invalid gNMI path: %s", pathToParse)
-	}
-
+	gnmiPath, err := xpath.ToGNMIPath(pathToParse)
 	if err != nil {
 		return nil, err
 	}
-
-	return &gnmiPath, nil
+	gnmiPath.Origin = origin
+	gnmiPath.Target = target
+	return gnmiPath, err
 }
 
 // Stop listener and cleanup

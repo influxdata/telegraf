@@ -69,6 +69,15 @@ format by default.
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
 
+  ## MaxIdleConns controls the maximum number of idle (keep-alive)
+  ## connections across all hosts. Zero means no limit.
+  # max_idle_conn = 0
+
+  ## MaxIdleConnsPerHost, if non-zero, controls the maximum idle
+  ## (keep-alive) connections to keep per-host. If zero,
+  ## DefaultMaxIdleConnsPerHost is used(2).
+  # max_idle_conn_per_host = 2
+
   ## Idle (keep-alive) connection timeout.
   ## Maximum amount of time before idle connection is closed.
   ## Zero means no limit.

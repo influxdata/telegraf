@@ -151,13 +151,17 @@ commands:
       - when:
           condition: << parameters.nightly >>
           steps:
-            - run: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
+            - run:
+                command: 'NIGHTLY=1 make package include_packages="$(make << parameters.type >>)"'
+                no_output_timeout: 30m
       - unless:
           condition:
             or:
               - << parameters.nightly >>
           steps:
-            - run: 'make package include_packages="$(make << parameters.type >>)"'
+            - run:
+                command: 'make package include_packages="$(make << parameters.type >>)"'
+                no_output_timeout: 30m
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
@@ -367,6 +371,32 @@ jobs:
               --include "*.rpm" \
               --include "*.zip" \
               --acl public-read
+  docker-nightly:
+    machine:
+      image: ubuntu-2004:current
+    steps:
+      - run:
+          name: login to quay.io
+          command: docker login --username="${QUAY_USER}" --password="${QUAY_PASS}" quay.io
+      - run:
+          name: clone influxdata/influxdata-docker
+          command: git clone https://github.com/influxdata/influxdata-docker
+      - run:
+          name: build and push telegraf:nightly
+          command: |
+            cd influxdata-docker/telegraf/nightly
+            docker build -t telegraf .
+            docker tag telegraf quay.io/influxdb/telegraf-nightly:latest
+            docker image ls
+            docker push quay.io/influxdb/telegraf-nightly:latest
+      - run:
+          name: build and push telegraf:nightly-alpine
+          command: |
+            cd influxdata-docker/telegraf/nightly/alpine
+            docker build -t telegraf-alpine .
+            docker tag telegraf-alpine quay.io/influxdb/telegraf-nightly:alpine
+            docker image ls
+            docker push quay.io/influxdb/telegraf-nightly:alpine
   package-sign-windows:
     executor:
         name: win/default
@@ -712,6 +742,9 @@ workflows:
             - 'static-package-nightly'
             - 'arm64-package-nightly'
             - 'armhf-package-nightly'
+      - docker-nightly:
+          requires:
+            - 'nightly'
     triggers:
       - schedule:
           cron: "0 7 * * *"

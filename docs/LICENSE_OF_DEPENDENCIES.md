@@ -113,6 +113,7 @@ following works:
 - github.com/golang/protobuf [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/protobuf/blob/master/LICENSE)
 - github.com/golang/snappy [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/snappy/blob/master/LICENSE)
 - github.com/google/flatbuffers [Apache License 2.0](https://github.com/google/flatbuffers/blob/master/LICENSE.txt)
+- github.com/google/gnxi [Apache License 2.0](https://github.com/google/gnxi/blob/master/LICENSE)
 - github.com/google/go-cmp [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-cmp/blob/master/LICENSE)
 - github.com/google/go-github [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-github/blob/master/LICENSE)
 - github.com/google/go-querystring [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-querystring/blob/master/LICENSE)
