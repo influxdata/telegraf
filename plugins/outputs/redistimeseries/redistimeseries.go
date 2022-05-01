@@ -1,6 +1,8 @@
 package redistimeseries
 
 import (
+	"fmt"
+
 	"github.com/go-redis/redis/v7"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -33,6 +35,9 @@ type RedisTimeSeries struct {
 }
 
 func (r *RedisTimeSeries) Connect() error {
+	if r.Address == "" {
+		return fmt.Errorf("Redis address must be specified")
+	}
 	r.client = redis.NewClient(&redis.Options{
 		Addr:     r.Address,
 		Password: r.Password,
