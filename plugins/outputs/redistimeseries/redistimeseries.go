@@ -26,10 +26,11 @@ var sampleConfig = `
 `
 
 type RedisTimeSeries struct {
-	Address  string `toml:"address"`
-	Username string `toml:"username"`
-	Password string `toml:"password"`
-	Database int    `toml:"database"`
+	Address  string          `toml:"address"`
+	Username string          `toml:"username"`
+	Password string          `toml:"password"`
+	Database int             `toml:"database"`
+	Log      telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 	client *redis.Client
 }
