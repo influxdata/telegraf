@@ -19,8 +19,8 @@ Note that `used_percent` is calculated by doing `used / (used + free)`, _not_
   ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
 
   ## Ignore mount points by mount options.
-  ## The `mount` command reports options of all mounts in parathesis.
-  ## Bind mounts can be ignored with the special `bind` option.
+  ## The 'mount' command reports options of all mounts in parathesis.
+  ## Bind mounts can be ignored with the special 'bind' option.
   # ignore_mount_opts = []
 ```
 
