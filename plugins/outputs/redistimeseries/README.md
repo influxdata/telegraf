@@ -12,9 +12,10 @@ The RedisTimeSeries output plugin writes metrics to the RedisTimeSeries server.
 
 ```
 
-### Required parameters:
+## Required parameters
 
 * `address`: The address of the RedisTimeSeries server
 
-### Optional parameters:
+## Optional parameters
+
 * `password`: The password to connect RedisTimeSeries server.
