@@ -62,9 +62,14 @@ func (r *RedisTimeSeries) SampleConfig() string {
 func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		now := m.Time().UnixNano() / 1000000 // in milliseconds
-		tags := m.Tags()
-
 		name := m.Name()
+
+		var tags []interface{}
+		for k, v := range m.Tags() {
+			tags = append(tags, k)
+			tags = append(tags, v)
+		}
+
 		for fieldName, value := range m.Fields() {
 			key := name + "_" + fieldName
 
@@ -73,28 +78,10 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 			addSlice = append(addSlice, key)
 			addSlice = append(addSlice, now)
 			addSlice = append(addSlice, value)
-			for k, v := range tags {
-				addSlice = append(addSlice, k)
-				addSlice = append(addSlice, v)
-			}
+			addSlice = append(addSlice, tags...)
 
-			err := r.client.Do(addSlice...).Err() //
-			if err != nil {
-				var createSlice []interface{}
-				createSlice = append(createSlice, "TS.CREATE")
-				createSlice = append(createSlice, key)
-				for k, v := range tags {
-					createSlice = append(createSlice, k)
-					createSlice = append(createSlice, v)
-				}
-				err2 := r.client.Do(createSlice...).Err() //Create a new timeseries with new labels
-				if err2 != nil {
-					return err
-				}
-				err3 := r.client.Do(addSlice...).Err() // Attempt the add again
-				if err3 != nil {
-					return err
-				}
+			if err := r.client.Do(addSlice...).Err(); err != nil {
+				return fmt.Errorf("reattempting adding sample failed: %v", err)
 			}
 		}
 	}
