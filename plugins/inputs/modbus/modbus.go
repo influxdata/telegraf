@@ -1,20 +1,24 @@
 package modbus
 
 import (
-	"encoding/binary"
 	"fmt"
-	"math"
 	"net"
 	"net/url"
-	"sort"
+	"strconv"
 	"time"
 
-	mb "github.com/goburrow/modbus"
+	mb "github.com/grid-x/modbus"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+type ModbusWorkarounds struct {
+	PollPause        config.Duration `toml:"pause_between_requests"`
+	CloseAfterGather bool            `toml:"close_connection_after_gather"`
+}
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
@@ -25,42 +29,42 @@ type Modbus struct {
 	DataBits         int               `toml:"data_bits"`
 	Parity           string            `toml:"parity"`
 	StopBits         int               `toml:"stop_bits"`
-	SlaveID          int               `toml:"slave_id"`
-	Timeout          internal.Duration `toml:"timeout"`
+	Timeout          config.Duration   `toml:"timeout"`
 	Retries          int               `toml:"busy_retries"`
-	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
-	DiscreteInputs   []fieldContainer  `toml:"discrete_inputs"`
-	Coils            []fieldContainer  `toml:"coils"`
-	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
-	InputRegisters   []fieldContainer  `toml:"input_registers"`
+	RetriesWaitTime  config.Duration   `toml:"busy_retries_wait"`
+	DebugConnection  bool              `toml:"debug_connection"`
+	Workarounds      ModbusWorkarounds `toml:"workarounds"`
 	Log              telegraf.Logger   `toml:"-"`
-	registers        []register
-	isConnected      bool
-	tcpHandler       *mb.TCPClientHandler
-	rtuHandler       *mb.RTUClientHandler
-	asciiHandler     *mb.ASCIIClientHandler
-	client           mb.Client
+	// Register configuration
+	ConfigurationType string `toml:"configuration_type"`
+	ConfigurationOriginal
+	ConfigurationPerRequest
+
+	// Connection handling
+	client      mb.Client
+	handler     mb.ClientHandler
+	isConnected bool
+	// Request handling
+	requests map[byte]requestSet
 }
 
-type register struct {
-	Type           string
-	RegistersRange []registerRange
-	Fields         []fieldContainer
+type fieldConverterFunc func(bytes []byte) interface{}
+
+type requestSet struct {
+	coil     []request
+	discrete []request
+	holding  []request
+	input    []request
 }
 
-type fieldContainer struct {
-	Measurement string   `toml:"measurement"`
-	Name        string   `toml:"name"`
-	ByteOrder   string   `toml:"byte_order"`
-	DataType    string   `toml:"data_type"`
-	Scale       float64  `toml:"scale"`
-	Address     []uint16 `toml:"address"`
+type field struct {
+	measurement string
+	name        string
+	address     uint16
+	length      uint16
+	omit        bool
+	converter   fieldConverterFunc
 	value       interface{}
-}
-
-type registerRange struct {
-	address uint16
-	length  uint16
 }
 
 const (
@@ -69,99 +73,6 @@ const (
 	cHoldingRegisters = "holding_register"
 	cInputRegisters   = "input_register"
 )
-
-const description = `Retrieve data from MODBUS slave devices`
-const sampleConfig = `
-  ## Connection Configuration
-  ##
-  ## The plugin supports connections to PLCs via MODBUS/TCP or
-  ## via serial line communication in binary (RTU) or readable (ASCII) encoding
-  ##
-  ## Device name
-  name = "Device"
-
-  ## Slave ID - addresses a MODBUS device on the bus
-  ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
-  slave_id = 1
-
-  ## Timeout for each request
-  timeout = "1s"
-
-  ## Maximum number of retries and the time to wait between retries
-  ## when a slave-device is busy.
-  # busy_retries = 0
-  # busy_retries_wait = "100ms"
-
-  # TCP - connect via Modbus/TCP
-  controller = "tcp://localhost:502"
-
-  ## Serial (RS485; RS232)
-  # controller = "file:///dev/ttyUSB0"
-  # baud_rate = 9600
-  # data_bits = 8
-  # parity = "N"
-  # stop_bits = 1
-  # transmission_mode = "RTU"
-
-
-  ## Measurements
-  ##
-
-  ## Digital Variables, Discrete Inputs and Coils
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## address     - variable address
-
-  discrete_inputs = [
-    { name = "start",          address = [0]},
-    { name = "stop",           address = [1]},
-    { name = "reset",          address = [2]},
-    { name = "emergency_stop", address = [3]},
-  ]
-  coils = [
-    { name = "motor1_run",     address = [0]},
-    { name = "motor1_jog",     address = [1]},
-    { name = "motor1_stop",    address = [2]},
-  ]
-
-  ## Analog Variables, Input Registers and Holding Registers
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## byte_order  - the ordering of bytes
-  ##  |---AB, ABCD   - Big Endian
-  ##  |---BA, DCBA   - Little Endian
-  ##  |---BADC       - Mid-Big Endian
-  ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64,
-  ##              FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
-  ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
-  ## scale      - the final numeric variable representation
-  ## address    - variable address
-
-  holding_registers = [
-    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
-    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
-    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
-    { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
-    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
-    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
-  ]
-  input_registers = [
-    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
-    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
-    { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
-  ]
-`
-
-// SampleConfig returns a basic configuration for the plugin
-func (m *Modbus) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns a short description of what the plugin does
-func (m *Modbus) Description() string {
-	return description
-}
 
 func (m *Modbus) Init() error {
 	//check device name
@@ -173,503 +84,40 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("retries cannot be negative")
 	}
 
-	err := m.InitRegister(m.DiscreteInputs, cDiscreteInputs)
-	if err != nil {
-		return err
+	// Determine the configuration style
+	var cfg Configuration
+	switch m.ConfigurationType {
+	case "", "register":
+		cfg = &m.ConfigurationOriginal
+	case "request":
+		cfg = &m.ConfigurationPerRequest
+	default:
+		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
 	}
 
-	err = m.InitRegister(m.Coils, cCoils)
-	if err != nil {
-		return err
+	// Check and process the configuration
+	if err := cfg.Check(); err != nil {
+		return fmt.Errorf("configuraton invalid: %v", err)
 	}
 
-	err = m.InitRegister(m.HoldingRegisters, cHoldingRegisters)
+	r, err := cfg.Process()
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot process configuraton: %v", err)
 	}
+	m.requests = r
 
-	err = m.InitRegister(m.InputRegisters, cInputRegisters)
-	if err != nil {
-		return err
+	// Setup client
+	if err := m.initClient(); err != nil {
+		return fmt.Errorf("initializing client failed: %v", err)
 	}
 
 	return nil
-}
-
-func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
-	if len(fields) == 0 {
-		return nil
-	}
-
-	err := validateFieldContainers(fields, name)
-	if err != nil {
-		return err
-	}
-
-	addrs := []uint16{}
-	for _, field := range fields {
-		for _, a := range field.Address {
-			addrs = append(addrs, a)
-		}
-	}
-
-	addrs = removeDuplicates(addrs)
-	sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
-
-	ii := 0
-	maxQuantity := 1
-	var registersRange []registerRange
-	if name == cDiscreteInputs || name == cCoils {
-		maxQuantity = 2000
-	} else if name == cInputRegisters || name == cHoldingRegisters {
-		maxQuantity = 125
-	}
-
-	// Get range of consecutive integers
-	// [1, 2, 3, 5, 6, 10, 11, 12, 14]
-	// (1, 3) , (5, 2) , (10, 3), (14 , 1)
-	for range addrs {
-		if ii >= len(addrs) {
-			break
-		}
-		quantity := 1
-		start := addrs[ii]
-		end := start
-
-		for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 && quantity < maxQuantity {
-			end = addrs[ii+1]
-			ii++
-			quantity++
-		}
-		ii++
-
-		registersRange = append(registersRange, registerRange{start, end - start + 1})
-	}
-
-	m.registers = append(m.registers, register{name, registersRange, fields})
-
-	return nil
-}
-
-// Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
-func connect(m *Modbus) error {
-	u, err := url.Parse(m.Controller)
-	if err != nil {
-		return err
-	}
-
-	switch u.Scheme {
-	case "tcp":
-		var host, port string
-		host, port, err = net.SplitHostPort(u.Host)
-		if err != nil {
-			return err
-		}
-		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
-		m.tcpHandler.Timeout = m.Timeout.Duration
-		m.tcpHandler.SlaveId = byte(m.SlaveID)
-		m.client = mb.NewClient(m.tcpHandler)
-		err := m.tcpHandler.Connect()
-		if err != nil {
-			return err
-		}
-		m.isConnected = true
-		return nil
-	case "file":
-		if m.TransmissionMode == "RTU" {
-			m.rtuHandler = mb.NewRTUClientHandler(u.Path)
-			m.rtuHandler.Timeout = m.Timeout.Duration
-			m.rtuHandler.SlaveId = byte(m.SlaveID)
-			m.rtuHandler.BaudRate = m.BaudRate
-			m.rtuHandler.DataBits = m.DataBits
-			m.rtuHandler.Parity = m.Parity
-			m.rtuHandler.StopBits = m.StopBits
-			m.client = mb.NewClient(m.rtuHandler)
-			err := m.rtuHandler.Connect()
-			if err != nil {
-				return err
-			}
-			m.isConnected = true
-			return nil
-		} else if m.TransmissionMode == "ASCII" {
-			m.asciiHandler = mb.NewASCIIClientHandler(u.Path)
-			m.asciiHandler.Timeout = m.Timeout.Duration
-			m.asciiHandler.SlaveId = byte(m.SlaveID)
-			m.asciiHandler.BaudRate = m.BaudRate
-			m.asciiHandler.DataBits = m.DataBits
-			m.asciiHandler.Parity = m.Parity
-			m.asciiHandler.StopBits = m.StopBits
-			m.client = mb.NewClient(m.asciiHandler)
-			err := m.asciiHandler.Connect()
-			if err != nil {
-				return err
-			}
-			m.isConnected = true
-			return nil
-		} else {
-			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
-		}
-	default:
-		return fmt.Errorf("invalid controller")
-	}
-}
-
-func disconnect(m *Modbus) error {
-	u, err := url.Parse(m.Controller)
-	if err != nil {
-		return err
-	}
-
-	switch u.Scheme {
-	case "tcp":
-		m.tcpHandler.Close()
-		return nil
-	case "file":
-		if m.TransmissionMode == "RTU" {
-			m.rtuHandler.Close()
-			return nil
-		} else if m.TransmissionMode == "ASCII" {
-			m.asciiHandler.Close()
-			return nil
-		} else {
-			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
-		}
-	default:
-		return fmt.Errorf("invalid controller")
-	}
-}
-
-func validateFieldContainers(t []fieldContainer, n string) error {
-	nameEncountered := map[string]bool{}
-	for _, item := range t {
-		//check empty name
-		if item.Name == "" {
-			return fmt.Errorf("empty name in '%s'", n)
-		}
-
-		//search name duplicate
-		canonicalName := item.Measurement + "." + item.Name
-		if nameEncountered[canonicalName] {
-			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, n, item.Name)
-		}
-		nameEncountered[canonicalName] = true
-
-		if n == cInputRegisters || n == cHoldingRegisters {
-			// search byte order
-			switch item.ByteOrder {
-			case "AB", "BA", "ABCD", "CDAB", "BADC", "DCBA", "ABCDEFGH", "HGFEDCBA", "BADCFEHG", "GHEFCDAB":
-				break
-			default:
-				return fmt.Errorf("invalid byte order '%s' in '%s' - '%s'", item.ByteOrder, n, item.Name)
-			}
-
-			// search data type
-			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
-				break
-			default:
-				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, n, item.Name)
-			}
-
-			// check scale
-			if item.Scale == 0.0 {
-				return fmt.Errorf("invalid scale '%f' in '%s' - '%s'", item.Scale, n, item.Name)
-			}
-		}
-
-		// check address
-		if len(item.Address) != 1 && len(item.Address) != 2 && len(item.Address) != 4 {
-			return fmt.Errorf("invalid address '%v' length '%v' in '%s' - '%s'", item.Address, len(item.Address), n, item.Name)
-		}
-
-		if n == cInputRegisters || n == cHoldingRegisters {
-			if 2*len(item.Address) != len(item.ByteOrder) {
-				return fmt.Errorf("invalid byte order '%s' and address '%v'  in '%s' - '%s'", item.ByteOrder, item.Address, n, item.Name)
-			}
-
-			// search duplicated
-			if len(item.Address) > len(removeDuplicates(item.Address)) {
-				return fmt.Errorf("duplicate address '%v'  in '%s' - '%s'", item.Address, n, item.Name)
-			}
-		} else if len(item.Address) != 1 {
-			return fmt.Errorf("invalid address'%v' length'%v' in '%s' - '%s'", item.Address, len(item.Address), n, item.Name)
-		}
-	}
-	return nil
-}
-
-func removeDuplicates(elements []uint16) []uint16 {
-	encountered := map[uint16]bool{}
-	result := []uint16{}
-
-	for v := range elements {
-		if encountered[elements[v]] {
-		} else {
-			encountered[elements[v]] = true
-			result = append(result, elements[v])
-		}
-	}
-
-	return result
-}
-
-func readRegisterValues(m *Modbus, rt string, rr registerRange) ([]byte, error) {
-	if rt == cDiscreteInputs {
-		return m.client.ReadDiscreteInputs(rr.address, rr.length)
-	} else if rt == cCoils {
-		return m.client.ReadCoils(rr.address, rr.length)
-	} else if rt == cInputRegisters {
-		return m.client.ReadInputRegisters(rr.address, rr.length)
-	} else if rt == cHoldingRegisters {
-		return m.client.ReadHoldingRegisters(rr.address, rr.length)
-	} else {
-		return []byte{}, fmt.Errorf("not Valid function")
-	}
-}
-
-func (m *Modbus) getFields() error {
-	for _, register := range m.registers {
-		rawValues := make(map[uint16][]byte)
-		bitRawValues := make(map[uint16]uint16)
-		for _, rr := range register.RegistersRange {
-			address := rr.address
-			readValues, err := readRegisterValues(m, register.Type, rr)
-			if err != nil {
-				return err
-			}
-
-			// Raw Values
-			if register.Type == cDiscreteInputs || register.Type == cCoils {
-				for _, readValue := range readValues {
-					for bitPosition := 0; bitPosition < 8; bitPosition++ {
-						bitRawValues[address] = getBitValue(readValue, bitPosition)
-						address = address + 1
-						if address > rr.address+rr.length {
-							break
-						}
-					}
-				}
-			}
-
-			// Raw Values
-			if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
-				batchSize := 2
-				for batchSize < len(readValues) {
-					rawValues[address] = readValues[0:batchSize:batchSize]
-					address = address + 1
-					readValues = readValues[batchSize:]
-				}
-
-				rawValues[address] = readValues[0:batchSize:batchSize]
-			}
-		}
-
-		if register.Type == cDiscreteInputs || register.Type == cCoils {
-			for i := 0; i < len(register.Fields); i++ {
-				register.Fields[i].value = bitRawValues[register.Fields[i].Address[0]]
-			}
-		}
-
-		if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
-			for i := 0; i < len(register.Fields); i++ {
-				var valuesT []byte
-
-				for j := 0; j < len(register.Fields[i].Address); j++ {
-					tempArray := rawValues[register.Fields[i].Address[j]]
-					for x := 0; x < len(tempArray); x++ {
-						valuesT = append(valuesT, tempArray[x])
-					}
-				}
-
-				register.Fields[i].value = convertDataType(register.Fields[i], valuesT)
-			}
-
-		}
-	}
-
-	return nil
-}
-
-func getBitValue(n byte, pos int) uint16 {
-	return uint16(n >> uint(pos) & 0x01)
-}
-
-func convertDataType(t fieldContainer, bytes []byte) interface{} {
-	switch t.DataType {
-	case "UINT16":
-		e16 := convertEndianness16(t.ByteOrder, bytes)
-		return scaleUint16(t.Scale, e16)
-	case "INT16":
-		e16 := convertEndianness16(t.ByteOrder, bytes)
-		f16 := int16(e16)
-		return scaleInt16(t.Scale, f16)
-	case "UINT32":
-		e32 := convertEndianness32(t.ByteOrder, bytes)
-		return scaleUint32(t.Scale, e32)
-	case "INT32":
-		e32 := convertEndianness32(t.ByteOrder, bytes)
-		f32 := int32(e32)
-		return scaleInt32(t.Scale, f32)
-	case "UINT64":
-		e64 := convertEndianness64(t.ByteOrder, bytes)
-		f64 := format64(t.DataType, e64).(uint64)
-		return scaleUint64(t.Scale, f64)
-	case "INT64":
-		e64 := convertEndianness64(t.ByteOrder, bytes)
-		f64 := format64(t.DataType, e64).(int64)
-		return scaleInt64(t.Scale, f64)
-	case "FLOAT32-IEEE":
-		e32 := convertEndianness32(t.ByteOrder, bytes)
-		f32 := math.Float32frombits(e32)
-		return scaleFloat32(t.Scale, f32)
-	case "FLOAT64-IEEE":
-		e64 := convertEndianness64(t.ByteOrder, bytes)
-		f64 := math.Float64frombits(e64)
-		return scaleFloat64(t.Scale, f64)
-	case "FIXED":
-		if len(bytes) == 2 {
-			e16 := convertEndianness16(t.ByteOrder, bytes)
-			f16 := int16(e16)
-			return scale16toFloat(t.Scale, f16)
-		} else if len(bytes) == 4 {
-			e32 := convertEndianness32(t.ByteOrder, bytes)
-			f32 := int32(e32)
-			return scale32toFloat(t.Scale, f32)
-		} else {
-			e64 := convertEndianness64(t.ByteOrder, bytes)
-			f64 := int64(e64)
-			return scale64toFloat(t.Scale, f64)
-		}
-	case "FLOAT32", "UFIXED":
-		if len(bytes) == 2 {
-			e16 := convertEndianness16(t.ByteOrder, bytes)
-			return scale16UtoFloat(t.Scale, e16)
-		} else if len(bytes) == 4 {
-			e32 := convertEndianness32(t.ByteOrder, bytes)
-			return scale32UtoFloat(t.Scale, e32)
-		} else {
-			e64 := convertEndianness64(t.ByteOrder, bytes)
-			return scale64UtoFloat(t.Scale, e64)
-		}
-	default:
-		return 0
-	}
-}
-
-func convertEndianness16(o string, b []byte) uint16 {
-	switch o {
-	case "AB":
-		return binary.BigEndian.Uint16(b)
-	case "BA":
-		return binary.LittleEndian.Uint16(b)
-	default:
-		return 0
-	}
-}
-
-func convertEndianness32(o string, b []byte) uint32 {
-	switch o {
-	case "ABCD":
-		return binary.BigEndian.Uint32(b)
-	case "DCBA":
-		return binary.LittleEndian.Uint32(b)
-	case "BADC":
-		return uint32(binary.LittleEndian.Uint16(b[0:]))<<16 | uint32(binary.LittleEndian.Uint16(b[2:]))
-	case "CDAB":
-		return uint32(binary.BigEndian.Uint16(b[2:]))<<16 | uint32(binary.BigEndian.Uint16(b[0:]))
-	default:
-		return 0
-	}
-}
-
-func convertEndianness64(o string, b []byte) uint64 {
-	switch o {
-	case "ABCDEFGH":
-		return binary.BigEndian.Uint64(b)
-	case "HGFEDCBA":
-		return binary.LittleEndian.Uint64(b)
-	case "BADCFEHG":
-		return uint64(binary.LittleEndian.Uint16(b[0:]))<<48 | uint64(binary.LittleEndian.Uint16(b[2:]))<<32 | uint64(binary.LittleEndian.Uint16(b[4:]))<<16 | uint64(binary.LittleEndian.Uint16(b[6:]))
-	case "GHEFCDAB":
-		return uint64(binary.BigEndian.Uint16(b[6:]))<<48 | uint64(binary.BigEndian.Uint16(b[4:]))<<32 | uint64(binary.BigEndian.Uint16(b[2:]))<<16 | uint64(binary.BigEndian.Uint16(b[0:]))
-	default:
-		return 0
-	}
-}
-
-func format64(f string, r uint64) interface{} {
-	switch f {
-	case "UINT64":
-		return r
-	case "INT64":
-		return int64(r)
-	default:
-		return r
-	}
-}
-
-func scale16toFloat(s float64, v int16) float64 {
-	return float64(v) * s
-}
-
-func scale32toFloat(s float64, v int32) float64 {
-	return float64(float64(v) * float64(s))
-}
-
-func scale64toFloat(s float64, v int64) float64 {
-	return float64(float64(v) * float64(s))
-}
-
-func scale16UtoFloat(s float64, v uint16) float64 {
-	return float64(v) * s
-}
-
-func scale32UtoFloat(s float64, v uint32) float64 {
-	return float64(float64(v) * float64(s))
-}
-
-func scale64UtoFloat(s float64, v uint64) float64 {
-	return float64(float64(v) * float64(s))
-}
-
-func scaleInt16(s float64, v int16) int16 {
-	return int16(float64(v) * s)
-}
-
-func scaleUint16(s float64, v uint16) uint16 {
-	return uint16(float64(v) * s)
-}
-
-func scaleUint32(s float64, v uint32) uint32 {
-	return uint32(float64(v) * float64(s))
-}
-
-func scaleInt32(s float64, v int32) int32 {
-	return int32(float64(v) * float64(s))
-}
-
-func scaleFloat32(s float64, v float32) float32 {
-	return float32(float64(v) * s)
-}
-
-func scaleFloat64(s float64, v float64) float64 {
-	return v * s
-}
-
-func scaleUint64(s float64, v uint64) uint64 {
-	return uint64(float64(v) * float64(s))
-}
-
-func scaleInt64(s float64, v int64) int64 {
-	return int64(float64(v) * float64(s))
 }
 
 // Gather implements the telegraf plugin interface method for data accumulation
 func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	if !m.isConnected {
-		err := connect(m)
-		if err != nil {
-			m.isConnected = false
+		if err := m.connect(); err != nil {
 			return err
 		}
 	}
@@ -677,47 +125,295 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	timestamp := time.Now()
 	for retry := 0; retry <= m.Retries; retry++ {
 		timestamp = time.Now()
-		err := m.getFields()
-		if err != nil {
-			mberr, ok := err.(*mb.ModbusError)
-			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
+		if err := m.gatherFields(); err != nil {
+			if mberr, ok := err.(*mb.Error); ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
 				m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
-				time.Sleep(m.RetriesWaitTime.Duration)
+				time.Sleep(time.Duration(m.RetriesWaitTime))
 				continue
 			}
-			disconnect(m)
-			m.isConnected = false
+			// Show the disconnect error this way to not shadow the initial error
+			if discerr := m.disconnect(); discerr != nil {
+				m.Log.Errorf("Disconnecting failed: %v", discerr)
+			}
 			return err
 		}
 		// Reading was successful, leave the retry loop
 		break
 	}
 
-	grouper := metric.NewSeriesGrouper()
-	for _, reg := range m.registers {
+	for slaveID, requests := range m.requests {
 		tags := map[string]string{
-			"name": m.Name,
-			"type": reg.Type,
+			"name":     m.Name,
+			"type":     cCoils,
+			"slave_id": strconv.Itoa(int(slaveID)),
 		}
+		m.collectFields(acc, timestamp, tags, requests.coil)
 
-		for _, field := range reg.Fields {
-			// In case no measurement was specified we use "modbus" as default
-			measurement := "modbus"
-			if field.Measurement != "" {
-				measurement = field.Measurement
+		tags["type"] = cDiscreteInputs
+		m.collectFields(acc, timestamp, tags, requests.discrete)
+
+		tags["type"] = cHoldingRegisters
+		m.collectFields(acc, timestamp, tags, requests.holding)
+
+		tags["type"] = cInputRegisters
+		m.collectFields(acc, timestamp, tags, requests.input)
+	}
+
+	// Disconnect after read if configured
+	if m.Workarounds.CloseAfterGather {
+		return m.disconnect()
+	}
+
+	return nil
+}
+
+func (m *Modbus) initClient() error {
+	u, err := url.Parse(m.Controller)
+	if err != nil {
+		return err
+	}
+
+	switch u.Scheme {
+	case "tcp":
+		host, port, err := net.SplitHostPort(u.Host)
+		if err != nil {
+			return err
+		}
+		switch m.TransmissionMode {
+		case "RTUoverTCP":
+			handler := mb.NewRTUOverTCPClientHandler(host + ":" + port)
+			handler.Timeout = time.Duration(m.Timeout)
+			if m.DebugConnection {
+				handler.Logger = m
 			}
-
-			// Group the data by series
-			grouper.Add(measurement, tags, timestamp, field.Name, field.value)
+			m.handler = handler
+		case "ASCIIoverTCP":
+			handler := mb.NewASCIIOverTCPClientHandler(host + ":" + port)
+			handler.Timeout = time.Duration(m.Timeout)
+			if m.DebugConnection {
+				handler.Logger = m
+			}
+			m.handler = handler
+		default:
+			handler := mb.NewTCPClientHandler(host + ":" + port)
+			handler.Timeout = time.Duration(m.Timeout)
+			if m.DebugConnection {
+				handler.Logger = m
+			}
+			m.handler = handler
 		}
+	case "file":
+		switch m.TransmissionMode {
+		case "RTU":
+			handler := mb.NewRTUClientHandler(u.Path)
+			handler.Timeout = time.Duration(m.Timeout)
+			handler.BaudRate = m.BaudRate
+			handler.DataBits = m.DataBits
+			handler.Parity = m.Parity
+			handler.StopBits = m.StopBits
+			if m.DebugConnection {
+				handler.Logger = m
+			}
+			m.handler = handler
+		case "ASCII":
+			handler := mb.NewASCIIClientHandler(u.Path)
+			handler.Timeout = time.Duration(m.Timeout)
+			handler.BaudRate = m.BaudRate
+			handler.DataBits = m.DataBits
+			handler.Parity = m.Parity
+			handler.StopBits = m.StopBits
+			if m.DebugConnection {
+				handler.Logger = m
+			}
+			m.handler = handler
+		default:
+			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
+		}
+	default:
+		return fmt.Errorf("invalid controller %q", m.Controller)
+	}
 
-		// Add the metrics grouped by series to the accumulator
-		for _, metric := range grouper.Metrics() {
-			acc.AddMetric(metric)
+	m.client = mb.NewClient(m.handler)
+	m.isConnected = false
+
+	return nil
+}
+
+// Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
+func (m *Modbus) connect() error {
+	err := m.handler.Connect()
+	m.isConnected = err == nil
+	return err
+}
+
+func (m *Modbus) disconnect() error {
+	err := m.handler.Close()
+	m.isConnected = false
+	return err
+}
+
+func (m *Modbus) gatherFields() error {
+	for slaveID, requests := range m.requests {
+		m.handler.SetSlave(slaveID)
+		if err := m.gatherRequestsCoil(requests.coil); err != nil {
+			return err
+		}
+		if err := m.gatherRequestsDiscrete(requests.discrete); err != nil {
+			return err
+		}
+		if err := m.gatherRequestsHolding(requests.holding); err != nil {
+			return err
+		}
+		if err := m.gatherRequestsInput(requests.input); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (m *Modbus) gatherRequestsCoil(requests []request) error {
+	for _, request := range requests {
+		m.Log.Debugf("trying to read coil@%v[%v]...", request.address, request.length)
+		bytes, err := m.client.ReadCoils(request.address, request.length)
+		if err != nil {
+			return err
+		}
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
+		m.Log.Debugf("got coil@%v[%v]: %v", request.address, request.length, bytes)
+
+		// Bit value handling
+		for i, field := range request.fields {
+			offset := field.address - request.address
+			idx := offset / 8
+			bit := offset % 8
+
+			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
+			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
+		}
+
+		// Some (serial) devices require a pause between requests...
+		time.Sleep(time.Until(nextRequest))
+	}
+	return nil
+}
+
+func (m *Modbus) gatherRequestsDiscrete(requests []request) error {
+	for _, request := range requests {
+		m.Log.Debugf("trying to read discrete@%v[%v]...", request.address, request.length)
+		bytes, err := m.client.ReadDiscreteInputs(request.address, request.length)
+		if err != nil {
+			return err
+		}
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
+		m.Log.Debugf("got discrete@%v[%v]: %v", request.address, request.length, bytes)
+
+		// Bit value handling
+		for i, field := range request.fields {
+			offset := field.address - request.address
+			idx := offset / 8
+			bit := offset % 8
+
+			request.fields[i].value = uint16((bytes[idx] >> bit) & 0x01)
+			m.Log.Debugf("  field %s with bit %d @ byte %d: %v --> %v", field.name, bit, idx, (bytes[idx]>>bit)&0x01, request.fields[i].value)
+		}
+
+		// Some (serial) devices require a pause between requests...
+		time.Sleep(time.Until(nextRequest))
+	}
+	return nil
+}
+
+func (m *Modbus) gatherRequestsHolding(requests []request) error {
+	for _, request := range requests {
+		m.Log.Debugf("trying to read holding@%v[%v]...", request.address, request.length)
+		bytes, err := m.client.ReadHoldingRegisters(request.address, request.length)
+		if err != nil {
+			return err
+		}
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
+		m.Log.Debugf("got holding@%v[%v]: %v", request.address, request.length, bytes)
+
+		// Non-bit value handling
+		for i, field := range request.fields {
+			// Determine the offset of the field values in the read array
+			offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
+			length := 2 * field.length                      // field length is in registers a 16bit
+
+			// Convert the actual value
+			request.fields[i].value = field.converter(bytes[offset : offset+length])
+			m.Log.Debugf("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
+		}
+
+		// Some (serial) devices require a pause between requests...
+		time.Sleep(time.Until(nextRequest))
+	}
+	return nil
+}
+
+func (m *Modbus) gatherRequestsInput(requests []request) error {
+	for _, request := range requests {
+		m.Log.Debugf("trying to read input@%v[%v]...", request.address, request.length)
+		bytes, err := m.client.ReadInputRegisters(request.address, request.length)
+		if err != nil {
+			return err
+		}
+		nextRequest := time.Now().Add(time.Duration(m.Workarounds.PollPause))
+		m.Log.Debugf("got input@%v[%v]: %v", request.address, request.length, bytes)
+
+		// Non-bit value handling
+		for i, field := range request.fields {
+			// Determine the offset of the field values in the read array
+			offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
+			length := 2 * field.length                      // field length is in registers a 16bit
+
+			// Convert the actual value
+			request.fields[i].value = field.converter(bytes[offset : offset+length])
+			m.Log.Debugf("  field %s with offset %d with len %d: %v --> %v", field.name, offset, length, bytes[offset:offset+length], request.fields[i].value)
+		}
+
+		// Some (serial) devices require a pause between requests...
+		time.Sleep(time.Until(nextRequest))
+	}
+	return nil
+}
+
+func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, tags map[string]string, requests []request) {
+	grouper := metric.NewSeriesGrouper()
+	for _, request := range requests {
+		// Collect tags from global and per-request
+		rtags := map[string]string{}
+		for k, v := range tags {
+			rtags[k] = v
+		}
+		for k, v := range request.tags {
+			rtags[k] = v
+		}
+
+		for _, field := range request.fields {
+			// In case no measurement was specified we use "modbus" as default
+			measurement := "modbus"
+			if field.measurement != "" {
+				measurement = field.measurement
+			}
+
+			// Group the data by series
+			if err := grouper.Add(measurement, rtags, timestamp, field.name, field.value); err != nil {
+				acc.AddError(fmt.Errorf("cannot add field %q for measurement %q: %v", field.name, measurement, err))
+				continue
+			}
+		}
+	}
+
+	// Add the metrics grouped by series to the accumulator
+	for _, x := range grouper.Metrics() {
+		acc.AddMetric(x)
+	}
+}
+
+// Implement the logger interface of the modbus client
+func (m *Modbus) Printf(format string, v ...interface{}) {
+	m.Log.Debugf(format, v...)
 }
 
 // Add this plugin to telegraf

@@ -46,7 +46,7 @@ func Compile(path string) (*GlobPath, error) {
 // All returned path will have the host platform separator.
 func (g *GlobPath) Match() []string {
 	// This string replacement is for backwards compatibility support
-	// The original implemention allowed **.txt but the double star package requires **/**.txt
+	// The original implementation allowed **.txt but the double star package requires **/**.txt
 	g.path = strings.ReplaceAll(g.path, "**/**", "**")
 	g.path = strings.ReplaceAll(g.path, "**", "**/**")
 
@@ -84,10 +84,10 @@ func (g *GlobPath) GetRoots() []string {
 
 // hasMeta reports whether path contains any magic glob characters.
 func hasMeta(path string) bool {
-	return strings.IndexAny(path, "*?[") >= 0
+	return strings.ContainsAny(path, "*?[")
 }
 
 // hasSuperMeta reports whether path contains any super magic glob characters (**).
 func hasSuperMeta(path string) bool {
-	return strings.Index(path, "**") >= 0
+	return strings.Contains(path, "**")
 }

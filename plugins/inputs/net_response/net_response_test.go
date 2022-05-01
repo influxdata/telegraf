@@ -6,28 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSample(t *testing.T) {
-	c := &NetResponse{}
-	output := c.SampleConfig()
-	if output != sampleConfig {
-		t.Error("Sample config doesn't match")
-	}
-}
-
-func TestDescription(t *testing.T) {
-	c := &NetResponse{}
-	output := c.Description()
-	if output != description {
-		t.Error("Description output is not correct")
-	}
-}
 func TestBadProtocol(t *testing.T) {
 	var acc testutil.Accumulator
 	// Init plugin
@@ -36,9 +20,9 @@ func TestBadProtocol(t *testing.T) {
 		Address:  ":9999",
 	}
 	// Error
-	err1 := c.Gather(&acc)
-	require.Error(t, err1)
-	assert.Equal(t, "Bad protocol", err1.Error())
+	err := c.Gather(&acc)
+	require.Error(t, err)
+	require.Equal(t, "bad protocol", err.Error())
 }
 
 func TestNoPort(t *testing.T) {
@@ -47,9 +31,9 @@ func TestNoPort(t *testing.T) {
 		Protocol: "tcp",
 		Address:  ":",
 	}
-	err1 := c.Gather(&acc)
-	require.Error(t, err1)
-	assert.Equal(t, "Bad port", err1.Error())
+	err := c.Gather(&acc)
+	require.Error(t, err)
+	require.Equal(t, "bad port", err.Error())
 }
 
 func TestAddressOnly(t *testing.T) {
@@ -58,9 +42,9 @@ func TestAddressOnly(t *testing.T) {
 		Protocol: "tcp",
 		Address:  "127.0.0.1",
 	}
-	err1 := c.Gather(&acc)
-	require.Error(t, err1)
-	assert.Equal(t, "address 127.0.0.1: missing port in address", err1.Error())
+	err := c.Gather(&acc)
+	require.Error(t, err)
+	require.Equal(t, "address 127.0.0.1: missing port in address", err.Error())
 }
 
 func TestSendExpectStrings(t *testing.T) {
@@ -77,12 +61,12 @@ func TestSendExpectStrings(t *testing.T) {
 		Send:     "toast",
 		Expect:   "",
 	}
-	err1 := tc.Gather(&acc)
-	require.Error(t, err1)
-	assert.Equal(t, "Send string cannot be empty", err1.Error())
-	err2 := uc.Gather(&acc)
-	require.Error(t, err2)
-	assert.Equal(t, "Expected string cannot be empty", err2.Error())
+	err := tc.Gather(&acc)
+	require.Error(t, err)
+	require.Equal(t, "send string cannot be empty", err.Error())
+	err = uc.Gather(&acc)
+	require.Error(t, err)
+	require.Equal(t, "expected string cannot be empty", err.Error())
 }
 
 func TestTCPError(t *testing.T) {
@@ -91,11 +75,10 @@ func TestTCPError(t *testing.T) {
 	c := NetResponse{
 		Protocol: "tcp",
 		Address:  ":9999",
-		Timeout:  internal.Duration{Duration: time.Second * 30},
+		Timeout:  config.Duration(time.Second * 30),
 	}
-	// Error
-	err1 := c.Gather(&acc)
-	require.NoError(t, err1)
+	// Gather
+	require.NoError(t, c.Gather(&acc))
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
@@ -119,23 +102,23 @@ func TestTCPOK1(t *testing.T) {
 		Address:     "127.0.0.1:2004",
 		Send:        "test",
 		Expect:      "test",
-		ReadTimeout: internal.Duration{Duration: time.Second * 3},
-		Timeout:     internal.Duration{Duration: time.Second},
+		ReadTimeout: config.Duration(time.Second * 3),
+		Timeout:     config.Duration(time.Second),
 		Protocol:    "tcp",
 	}
 	// Start TCP server
 	wg.Add(1)
 	go TCPServer(t, &wg)
-	wg.Wait()
-	// Connect
+	wg.Wait() // Wait for the server to spin up
 	wg.Add(1)
-	err1 := c.Gather(&acc)
-	wg.Wait()
+	// Connect
+	require.NoError(t, c.Gather(&acc))
+	acc.Wait(1)
+
 	// Override response time
 	for _, p := range acc.Metrics {
 		p.Fields["response_time"] = 1.0
 	}
-	require.NoError(t, err1)
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
@@ -163,23 +146,24 @@ func TestTCPOK2(t *testing.T) {
 		Address:     "127.0.0.1:2004",
 		Send:        "test",
 		Expect:      "test2",
-		ReadTimeout: internal.Duration{Duration: time.Second * 3},
-		Timeout:     internal.Duration{Duration: time.Second},
+		ReadTimeout: config.Duration(time.Second * 3),
+		Timeout:     config.Duration(time.Second),
 		Protocol:    "tcp",
 	}
 	// Start TCP server
 	wg.Add(1)
 	go TCPServer(t, &wg)
 	wg.Wait()
-	// Connect
 	wg.Add(1)
-	err1 := c.Gather(&acc)
-	wg.Wait()
+
+	// Connect
+	require.NoError(t, c.Gather(&acc))
+	acc.Wait(1)
+
 	// Override response time
 	for _, p := range acc.Metrics {
 		p.Fields["response_time"] = 1.0
 	}
-	require.NoError(t, err1)
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
@@ -209,13 +193,14 @@ func TestUDPError(t *testing.T) {
 		Protocol: "udp",
 	}
 	// Gather
-	err1 := c.Gather(&acc)
+	require.NoError(t, c.Gather(&acc))
+	acc.Wait(1)
+
 	// Override response time
 	for _, p := range acc.Metrics {
 		p.Fields["response_time"] = 1.0
 	}
 	// Error
-	require.NoError(t, err1)
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
@@ -241,23 +226,24 @@ func TestUDPOK1(t *testing.T) {
 		Address:     "127.0.0.1:2004",
 		Send:        "test",
 		Expect:      "test",
-		ReadTimeout: internal.Duration{Duration: time.Second * 3},
-		Timeout:     internal.Duration{Duration: time.Second},
+		ReadTimeout: config.Duration(time.Second * 3),
+		Timeout:     config.Duration(time.Second),
 		Protocol:    "udp",
 	}
 	// Start UDP server
 	wg.Add(1)
 	go UDPServer(t, &wg)
 	wg.Wait()
-	// Connect
 	wg.Add(1)
-	err1 := c.Gather(&acc)
-	wg.Wait()
+
+	// Connect
+	require.NoError(t, c.Gather(&acc))
+	acc.Wait(1)
+
 	// Override response time
 	for _, p := range acc.Metrics {
 		p.Fields["response_time"] = 1.0
 	}
-	require.NoError(t, err1)
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
@@ -278,25 +264,28 @@ func TestUDPOK1(t *testing.T) {
 }
 
 func UDPServer(t *testing.T, wg *sync.WaitGroup) {
+	defer wg.Done()
 	udpAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:2004")
 	conn, _ := net.ListenUDP("udp", udpAddr)
 	wg.Done()
 	buf := make([]byte, 1024)
 	_, remoteaddr, _ := conn.ReadFromUDP(buf)
-	conn.WriteToUDP(buf, remoteaddr)
-	conn.Close()
-	wg.Done()
+	_, err := conn.WriteToUDP(buf, remoteaddr)
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup) {
+	defer wg.Done()
 	tcpAddr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:2004")
 	tcpServer, _ := net.ListenTCP("tcp", tcpAddr)
 	wg.Done()
 	conn, _ := tcpServer.AcceptTCP()
 	buf := make([]byte, 1024)
-	conn.Read(buf)
-	conn.Write(buf)
-	conn.CloseWrite()
-	tcpServer.Close()
-	wg.Done()
+	_, err := conn.Read(buf)
+	require.NoError(t, err)
+	_, err = conn.Write(buf)
+	require.NoError(t, err)
+	require.NoError(t, conn.CloseWrite())
+	require.NoError(t, tcpServer.Close())
 }

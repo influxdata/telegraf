@@ -45,12 +45,14 @@ const (
 	maxPad   = 255
 )
 
+//nolint:varcheck // For having proper order
 const (
 	roleResponder = iota + 1 // only Responders are implemented.
 	roleAuthorizer
 	roleFilter
 )
 
+//nolint:varcheck // For having proper order
 const (
 	statusRequestComplete = iota
 	statusCantMultiplex
@@ -58,12 +60,10 @@ const (
 	statusUnknownRole
 )
 
-const headerLen = 8
-
 type header struct {
 	Version       uint8
 	Type          recType
-	Id            uint16
+	ID            uint16
 	ContentLength uint16
 	PaddingLength uint8
 	Reserved      uint8
@@ -72,7 +72,7 @@ type header struct {
 type beginRequest struct {
 	role     uint16
 	flags    uint8
-	reserved [5]uint8
+	reserved [5]uint8 //nolint:unused // Memory reservation
 }
 
 func (br *beginRequest) read(content []byte) error {
@@ -88,10 +88,10 @@ func (br *beginRequest) read(content []byte) error {
 // not synchronized because we don't care what the contents are
 var pad [maxPad]byte
 
-func (h *header) init(recType recType, reqId uint16, contentLength int) {
+func (h *header) init(recType recType, reqID uint16, contentLength int) {
 	h.Version = 1
 	h.Type = recType
-	h.Id = reqId
+	h.ID = reqID
 	h.ContentLength = uint16(contentLength)
 	h.PaddingLength = uint8(-contentLength & 7)
 }
@@ -140,11 +140,11 @@ func (rec *record) content() []byte {
 }
 
 // writeRecord writes and sends a single record.
-func (c *conn) writeRecord(recType recType, reqId uint16, b []byte) error {
+func (c *conn) writeRecord(recType recType, reqID uint16, b []byte) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.buf.Reset()
-	c.h.init(recType, reqId, len(b))
+	c.h.init(recType, reqID, len(b))
 	if err := binary.Write(&c.buf, binary.BigEndian, c.h); err != nil {
 		return err
 	}
@@ -158,20 +158,20 @@ func (c *conn) writeRecord(recType recType, reqId uint16, b []byte) error {
 	return err
 }
 
-func (c *conn) writeBeginRequest(reqId uint16, role uint16, flags uint8) error {
+func (c *conn) writeBeginRequest(reqID uint16, role uint16, flags uint8) error {
 	b := [8]byte{byte(role >> 8), byte(role), flags}
-	return c.writeRecord(typeBeginRequest, reqId, b[:])
+	return c.writeRecord(typeBeginRequest, reqID, b[:])
 }
 
-func (c *conn) writeEndRequest(reqId uint16, appStatus int, protocolStatus uint8) error {
+func (c *conn) writeEndRequest(reqID uint16, appStatus int, protocolStatus uint8) error {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint32(b, uint32(appStatus))
 	b[4] = protocolStatus
-	return c.writeRecord(typeEndRequest, reqId, b)
+	return c.writeRecord(typeEndRequest, reqID, b)
 }
 
-func (c *conn) writePairs(recType recType, reqId uint16, pairs map[string]string) error {
-	w := newWriter(c, recType, reqId)
+func (c *conn) writePairs(recType recType, reqID uint16, pairs map[string]string) error {
+	w := newWriter(c, recType, reqID)
 	b := make([]byte, 8)
 	for k, v := range pairs {
 		n := encodeSize(b, uint32(len(k)))
@@ -186,8 +186,7 @@ func (c *conn) writePairs(recType recType, reqId uint16, pairs map[string]string
 			return err
 		}
 	}
-	w.Close()
-	return nil
+	return w.Close()
 }
 
 func readSize(s []byte) (uint32, int) {
@@ -232,14 +231,16 @@ type bufWriter struct {
 
 func (w *bufWriter) Close() error {
 	if err := w.Writer.Flush(); err != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		w.closer.Close()
 		return err
 	}
 	return w.closer.Close()
 }
 
-func newWriter(c *conn, recType recType, reqId uint16) *bufWriter {
-	s := &streamWriter{c: c, recType: recType, reqId: reqId}
+func newWriter(c *conn, recType recType, reqID uint16) *bufWriter {
+	s := &streamWriter{c: c, recType: recType, reqID: reqID}
 	w := bufio.NewWriterSize(s, maxWrite)
 	return &bufWriter{s, w}
 }
@@ -249,7 +250,7 @@ func newWriter(c *conn, recType recType, reqId uint16) *bufWriter {
 type streamWriter struct {
 	c       *conn
 	recType recType
-	reqId   uint16
+	reqID   uint16
 }
 
 func (w *streamWriter) Write(p []byte) (int, error) {
@@ -259,7 +260,7 @@ func (w *streamWriter) Write(p []byte) (int, error) {
 		if n > maxWrite {
 			n = maxWrite
 		}
-		if err := w.c.writeRecord(w.recType, w.reqId, p[:n]); err != nil {
+		if err := w.c.writeRecord(w.recType, w.reqID, p[:n]); err != nil {
 			return nn, err
 		}
 		nn += n
@@ -270,5 +271,5 @@ func (w *streamWriter) Write(p []byte) (int, error) {
 
 func (w *streamWriter) Close() error {
 	// send empty record to close the stream
-	return w.c.writeRecord(w.recType, w.reqId, nil)
+	return w.c.writeRecord(w.recType, w.reqID, nil)
 }

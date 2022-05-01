@@ -2,17 +2,14 @@ package syslog
 
 import (
 	"crypto/tls"
-	"io/ioutil"
 	"net"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -136,11 +133,11 @@ func getTestCasesForNonTransparent() []testCaseStream {
 	return testCases
 }
 
-func testStrictNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+func testStrictNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *config.Duration) {
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, framing.NonTransparent)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 10, false, framing.NonTransparent)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -158,12 +155,14 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 				require.NoError(t, e)
 				config.ServerName = "localhost"
 				conn, err = tls.Dial(protocol, address, config)
+				require.NotNil(t, conn)
+				require.NoError(t, err)
 			} else {
 				conn, err = net.Dial(protocol, address)
+				require.NotNil(t, conn)
+				require.NoError(t, err)
 				defer conn.Close()
 			}
-			require.NotNil(t, conn)
-			require.NoError(t, err)
 
 			// Clear
 			acc.ClearMetrics()
@@ -192,11 +191,12 @@ func testStrictNonTransparent(t *testing.T, protocol string, address string, wan
 	}
 }
 
-func testBestEffortNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+func testBestEffortNonTransparent(t *testing.T, protocol string, address string, wantTLS bool) {
+	keepAlive := (*config.Duration)(nil)
 	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, framing.NonTransparent)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 10, true, framing.NonTransparent)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -245,7 +245,7 @@ func TestNonTransparentStrict_tcp(t *testing.T) {
 }
 
 func TestNonTransparentBestEffort_tcp(t *testing.T) {
-	testBestEffortNonTransparent(t, "tcp", address, false, nil)
+	testBestEffortNonTransparent(t, "tcp", address, false)
 }
 
 func TestNonTransparentStrict_tcp_tls(t *testing.T) {
@@ -253,45 +253,35 @@ func TestNonTransparentStrict_tcp_tls(t *testing.T) {
 }
 
 func TestNonTransparentBestEffort_tcp_tls(t *testing.T) {
-	testBestEffortNonTransparent(t, "tcp", address, true, nil)
+	testBestEffortNonTransparent(t, "tcp", address, true)
 }
 
 func TestNonTransparentStrictWithKeepAlive_tcp_tls(t *testing.T) {
-	testStrictNonTransparent(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
+	d := config.Duration(time.Minute)
+	testStrictNonTransparent(t, "tcp", address, true, &d)
 }
 
 func TestNonTransparentStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	testStrictNonTransparent(t, "tcp", address, true, &internal.Duration{Duration: 0})
+	d := config.Duration(0)
+	testStrictNonTransparent(t, "tcp", address, true, &d)
 }
 
 func TestNonTransparentStrict_unix(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix.sock")
+	sock := testutil.TempSocket(t)
 	testStrictNonTransparent(t, "unix", sock, false, nil)
 }
 
 func TestNonTransparentBestEffort_unix(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
-	testBestEffortNonTransparent(t, "unix", sock, false, nil)
+	sock := testutil.TempSocket(t)
+	testBestEffortNonTransparent(t, "unix", sock, false)
 }
 
 func TestNonTransparentStrict_unix_tls(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix_tls.sock")
+	sock := testutil.TempSocket(t)
 	testStrictNonTransparent(t, "unix", sock, true, nil)
 }
 
 func TestNonTransparentBestEffort_unix_tls(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
-	testBestEffortNonTransparent(t, "unix", sock, true, nil)
+	sock := testutil.TempSocket(t)
+	testBestEffortNonTransparent(t, "unix", sock, true)
 }

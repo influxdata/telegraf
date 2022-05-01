@@ -2,15 +2,15 @@ package ceph
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -24,42 +24,46 @@ type expectedResult struct {
 }
 
 func TestParseSockId(t *testing.T) {
-	s := parseSockId(sockFile(osdPrefix, 1), osdPrefix, sockSuffix)
-	assert.Equal(t, s, "1")
+	s := parseSockID(sockFile(osdPrefix, 1), osdPrefix, sockSuffix)
+	require.Equal(t, s, "1")
 }
 
 func TestParseMonDump(t *testing.T) {
-	dump, err := parseDump(monPerfDump)
-	assert.NoError(t, err)
-	assert.InEpsilon(t, int64(5678670180), dump["cluster"]["osd_kb_used"], epsilon)
-	assert.InEpsilon(t, 6866.540527000, dump["paxos"]["store_state_latency.sum"], epsilon)
+	c := &Ceph{Log: testutil.Logger{}}
+	dump, err := c.parseDump(monPerfDump)
+	require.NoError(t, err)
+	require.InEpsilon(t, int64(5678670180), dump["cluster"]["osd_kb_used"], epsilon)
+	require.InEpsilon(t, 6866.540527000, dump["paxos"]["store_state_latency.sum"], epsilon)
 }
 
 func TestParseOsdDump(t *testing.T) {
-	dump, err := parseDump(osdPerfDump)
-	assert.NoError(t, err)
-	assert.InEpsilon(t, 552132.109360000, dump["filestore"]["commitcycle_interval.sum"], epsilon)
-	assert.Equal(t, float64(0), dump["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
+	c := &Ceph{Log: testutil.Logger{}}
+	dump, err := c.parseDump(osdPerfDump)
+	require.NoError(t, err)
+	require.InEpsilon(t, 552132.109360000, dump["filestore"]["commitcycle_interval.sum"], epsilon)
+	require.Equal(t, float64(0), dump["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
 }
 
 func TestParseMdsDump(t *testing.T) {
-	dump, err := parseDump(mdsPerfDump)
-	assert.NoError(t, err)
-	assert.InEpsilon(t, 2408386.600934982, dump["mds"]["reply_latency.sum"], epsilon)
-	assert.Equal(t, float64(0), dump["throttle-write_buf_throttle"]["wait.avgcount"])
+	c := &Ceph{Log: testutil.Logger{}}
+	dump, err := c.parseDump(mdsPerfDump)
+	require.NoError(t, err)
+	require.InEpsilon(t, 2408386.600934982, dump["mds"]["reply_latency.sum"], epsilon)
+	require.Equal(t, float64(0), dump["throttle-write_buf_throttle"]["wait.avgcount"])
 }
 
 func TestParseRgwDump(t *testing.T) {
-	dump, err := parseDump(rgwPerfDump)
-	assert.NoError(t, err)
-	assert.InEpsilon(t, 0.002219876, dump["rgw"]["get_initial_lat.sum"], epsilon)
-	assert.Equal(t, float64(0), dump["rgw"]["put_initial_lat.avgcount"])
+	c := &Ceph{Log: testutil.Logger{}}
+	dump, err := c.parseDump(rgwPerfDump)
+	require.NoError(t, err)
+	require.InEpsilon(t, 0.002219876, dump["rgw"]["get_initial_lat.sum"], epsilon)
+	require.Equal(t, float64(0), dump["rgw"]["put_initial_lat.avgcount"])
 }
 
 func TestDecodeStatus(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := decodeStatus(acc, clusterStatusDump)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	for _, r := range cephStatusResults {
 		acc.AssertContainsTaggedFields(t, r.metric, r.fields, r.tags)
@@ -69,7 +73,7 @@ func TestDecodeStatus(t *testing.T) {
 func TestDecodeDf(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := decodeDf(acc, cephDFDump)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	for _, r := range cephDfResults {
 		acc.AssertContainsTaggedFields(t, r.metric, r.fields, r.tags)
@@ -79,7 +83,7 @@ func TestDecodeDf(t *testing.T) {
 func TestDecodeOSDPoolStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err := decodeOsdPoolStats(acc, cephODSPoolStatsDump)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	for _, r := range cephOSDPoolStatsResults {
 		acc.AssertContainsTaggedFields(t, r.metric, r.fields, r.tags)
@@ -104,17 +108,11 @@ func TestGather(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	c := &Ceph{}
-	c.Gather(acc)
-
+	require.NoError(t, c.Gather(acc))
 }
 
 func TestFindSockets(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "socktest")
-	assert.NoError(t, err)
-	defer func() {
-		err := os.Remove(tmpdir)
-		assert.NoError(t, err)
-	}()
+	tmpdir := t.TempDir()
 	c := &Ceph{
 		CephBinary:             "foo",
 		OsdPrefix:              "ceph-osd",
@@ -130,10 +128,10 @@ func TestFindSockets(t *testing.T) {
 	}
 
 	for _, st := range sockTestParams {
-		createTestFiles(tmpdir, st)
+		require.NoError(t, createTestFiles(tmpdir, st))
 
 		sockets, err := findSockets(c)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		for i := 1; i <= st.osds; i++ {
 			assertFoundSocket(t, tmpdir, typeOsd, i, sockets)
@@ -148,7 +146,7 @@ func TestFindSockets(t *testing.T) {
 		for i := 1; i <= st.rgws; i++ {
 			assertFoundSocket(t, tmpdir, typeRgw, i, sockets)
 		}
-		cleanupTestFiles(tmpdir, st)
+		require.NoError(t, cleanupTestFiles(tmpdir, st))
 	}
 }
 
@@ -166,54 +164,61 @@ func assertFoundSocket(t *testing.T, dir, sockType string, i int, sockets []*soc
 	expected := filepath.Join(dir, sockFile(prefix, i))
 	found := false
 	for _, s := range sockets {
-		fmt.Printf("Checking %s\n", s.socket)
+		_, err := fmt.Printf("Checking %s\n", s.socket)
+		require.NoError(t, err)
 		if s.socket == expected {
 			found = true
-			assert.Equal(t, s.sockType, sockType, "Unexpected socket type for '%s'", s)
-			assert.Equal(t, s.sockId, strconv.Itoa(i))
+			require.Equal(t, s.sockType, sockType, "Unexpected socket type for '%s'", s)
+			require.Equal(t, s.sockID, strconv.Itoa(i))
 		}
 	}
-	assert.True(t, found, "Did not find socket: %s", expected)
+	require.True(t, found, "Did not find socket: %s", expected)
 }
 
 func sockFile(prefix string, i int) string {
 	return strings.Join([]string{prefix, strconv.Itoa(i), sockSuffix}, ".")
 }
 
-func createTestFiles(dir string, st *SockTest) {
-	writeFile := func(prefix string, i int) {
+func createTestFiles(dir string, st *SockTest) error {
+	writeFile := func(prefix string, i int) error {
 		f := sockFile(prefix, i)
 		fpath := filepath.Join(dir, f)
-		ioutil.WriteFile(fpath, []byte(""), 0777)
+		return os.WriteFile(fpath, []byte(""), 0777)
 	}
-	tstFileApply(st, writeFile)
+	return tstFileApply(st, writeFile)
 }
 
-func cleanupTestFiles(dir string, st *SockTest) {
-	rmFile := func(prefix string, i int) {
+func cleanupTestFiles(dir string, st *SockTest) error {
+	rmFile := func(prefix string, i int) error {
 		f := sockFile(prefix, i)
 		fpath := filepath.Join(dir, f)
-		err := os.Remove(fpath)
-		if err != nil {
-			fmt.Printf("Error removing test file %s: %v\n", fpath, err)
+		return os.Remove(fpath)
+	}
+	return tstFileApply(st, rmFile)
+}
+
+func tstFileApply(st *SockTest, fn func(string, int) error) error {
+	for i := 1; i <= st.osds; i++ {
+		if err := fn(osdPrefix, i); err != nil {
+			return err
 		}
 	}
-	tstFileApply(st, rmFile)
-}
-
-func tstFileApply(st *SockTest, fn func(prefix string, i int)) {
-	for i := 1; i <= st.osds; i++ {
-		fn(osdPrefix, i)
-	}
 	for i := 1; i <= st.mons; i++ {
-		fn(monPrefix, i)
+		if err := fn(monPrefix, i); err != nil {
+			return err
+		}
 	}
 	for i := 1; i <= st.mdss; i++ {
-		fn(mdsPrefix, i)
+		if err := fn(mdsPrefix, i); err != nil {
+			return err
+		}
 	}
 	for i := 1; i <= st.rgws; i++ {
-		fn(rgwPrefix, i)
+		if err := fn(rgwPrefix, i); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 type SockTest struct {

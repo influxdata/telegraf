@@ -22,7 +22,7 @@ var (
 		`%`, "-",
 		"#", "-",
 		"$", "-")
-	defaultHttpPath  = "/api/put"
+	defaultHTTPPath  = "/api/put"
 	defaultSeparator = "_"
 )
 
@@ -32,8 +32,8 @@ type OpenTSDB struct {
 	Host string `toml:"host"`
 	Port int    `toml:"port"`
 
-	HttpBatchSize int    `toml:"http_batch_size"` // deprecated httpBatchSize form in 1.8
-	HttpPath      string `toml:"http_path"`
+	HTTPBatchSize int    `toml:"http_batch_size"`
+	HTTPPath      string `toml:"http_path"`
 
 	Debug bool `toml:"debug"`
 
@@ -41,33 +41,6 @@ type OpenTSDB struct {
 
 	Log telegraf.Logger `toml:"-"`
 }
-
-var sampleConfig = `
-  ## prefix for metrics keys
-  prefix = "my.specific.prefix."
-
-  ## DNS name of the OpenTSDB server
-  ## Using "opentsdb.example.com" or "tcp://opentsdb.example.com" will use the
-  ## telnet API. "http://opentsdb.example.com" will use the Http API.
-  host = "opentsdb.example.com"
-
-  ## Port of the OpenTSDB server
-  port = 4242
-
-  ## Number of data points to send to OpenTSDB in Http requests.
-  ## Not used with telnet API.
-  http_batch_size = 50
-
-  ## URI Path for Http requests to OpenTSDB.
-  ## Used in cases where OpenTSDB is located behind a reverse proxy.
-  http_path = "/api/put"
-
-  ## Debug true - Prints OpenTSDB communication
-  debug = false
-
-  ## Separator separates measurement name from field
-  separator = "_"
-`
 
 func ToLineFormat(tags map[string]string) string {
 	tagsArray := make([]string, len(tags))
@@ -116,20 +89,20 @@ func (o *OpenTSDB) Write(metrics []telegraf.Metric) error {
 	if u.Scheme == "" || u.Scheme == "tcp" {
 		return o.WriteTelnet(metrics, u)
 	} else if u.Scheme == "http" || u.Scheme == "https" {
-		return o.WriteHttp(metrics, u)
+		return o.WriteHTTP(metrics, u)
 	} else {
 		return fmt.Errorf("unknown scheme in host parameter")
 	}
 }
 
-func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
+func (o *OpenTSDB) WriteHTTP(metrics []telegraf.Metric, u *url.URL) error {
 	http := openTSDBHttp{
 		Host:      u.Host,
 		Port:      o.Port,
 		Scheme:    u.Scheme,
 		User:      u.User,
-		BatchSize: o.HttpBatchSize,
-		Path:      o.HttpPath,
+		BatchSize: o.HTTPBatchSize,
+		Path:      o.HTTPPath,
 		Debug:     o.Debug,
 	}
 
@@ -151,7 +124,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 				continue
 			}
 
-			metric := &HttpMetric{
+			metric := &HTTPMetric{
 				Metric: sanitize(fmt.Sprintf("%s%s%s%s",
 					o.Prefix, m.Name(), o.Separator, fieldName)),
 				Tags:      tags,
@@ -254,14 +227,6 @@ func FloatToString(inputNum float64) string {
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
-func (o *OpenTSDB) SampleConfig() string {
-	return sampleConfig
-}
-
-func (o *OpenTSDB) Description() string {
-	return "Configuration for OpenTSDB server to send metrics to"
-}
-
 func (o *OpenTSDB) Close() error {
 	return nil
 }
@@ -276,7 +241,7 @@ func sanitize(value string) string {
 func init() {
 	outputs.Add("opentsdb", func() telegraf.Output {
 		return &OpenTSDB{
-			HttpPath:  defaultHttpPath,
+			HTTPPath:  defaultHTTPPath,
 			Separator: defaultSeparator,
 		}
 	})

@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gosnmp/gosnmp"
 )
@@ -21,48 +22,17 @@ func (gs GosnmpWrapper) Host() string {
 
 // Walk wraps GoSNMP.Walk() or GoSNMP.BulkWalk(), depending on whether the
 // connection is using SNMPv1 or newer.
-// Also, if any error is encountered, it will just once reconnect and try again.
 func (gs GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
-	var err error
-	// On error, retry once.
-	// Unfortunately we can't distinguish between an error returned by gosnmp, and one returned by the walk function.
-	for i := 0; i < 2; i++ {
-		if gs.Version == gosnmp.Version1 {
-			err = gs.GoSNMP.Walk(oid, fn)
-		} else {
-			err = gs.GoSNMP.BulkWalk(oid, fn)
-		}
-		if err == nil {
-			return nil
-		}
-		if err := gs.GoSNMP.Connect(); err != nil {
-			return fmt.Errorf("reconnecting: %w", err)
-		}
+	if gs.Version == gosnmp.Version1 {
+		return gs.GoSNMP.Walk(oid, fn)
 	}
-	return err
-}
-
-// Get wraps GoSNMP.GET().
-// If any error is encountered, it will just once reconnect and try again.
-func (gs GosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
-	var err error
-	var pkt *gosnmp.SnmpPacket
-	for i := 0; i < 2; i++ {
-		pkt, err = gs.GoSNMP.Get(oids)
-		if err == nil {
-			return pkt, nil
-		}
-		if err := gs.GoSNMP.Connect(); err != nil {
-			return nil, fmt.Errorf("reconnecting: %w", err)
-		}
-	}
-	return nil, err
+	return gs.GoSNMP.BulkWalk(oid, fn)
 }
 
 func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 	gs := GosnmpWrapper{&gosnmp.GoSNMP{}}
 
-	gs.Timeout = s.Timeout.Duration
+	gs.Timeout = time.Duration(s.Timeout)
 
 	gs.Retries = s.Retries
 

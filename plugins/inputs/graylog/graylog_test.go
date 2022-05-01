@@ -1,14 +1,14 @@
 package graylog
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const validJSON = `
@@ -115,7 +115,7 @@ func (c *mockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) 
 		resp.StatusCode = 405 // Method not allowed
 	}
 
-	resp.Body = ioutil.NopCloser(strings.NewReader(c.responseBody))
+	resp.Body = io.NopCloser(strings.NewReader(c.responseBody))
 	return &resp, nil
 }
 
@@ -172,8 +172,8 @@ func TestHttpJson500(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(graylog[0].Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	require.Error(t, err)
+	require.Equal(t, 0, acc.NFields())
 }
 
 // Test response to malformed JSON
@@ -183,8 +183,8 @@ func TestHttpJsonBadJson(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(graylog[0].Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	require.Error(t, err)
+	require.Equal(t, 0, acc.NFields())
 }
 
 // Test response to empty string as response objectgT
@@ -194,6 +194,6 @@ func TestHttpJsonEmptyResponse(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(graylog[0].Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	require.Error(t, err)
+	require.Equal(t, 0, acc.NFields())
 }

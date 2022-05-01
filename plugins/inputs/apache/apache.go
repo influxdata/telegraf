@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -21,39 +21,10 @@ type Apache struct {
 	Urls            []string
 	Username        string
 	Password        string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	client *http.Client
-}
-
-var sampleConfig = `
-  ## An array of URLs to gather from, must be directed at the machine
-  ## readable version of the mod_status page including the auto query string.
-  ## Default is "http://localhost/server-status?auto".
-  urls = ["http://localhost/server-status?auto"]
-
-  ## Credentials for basic HTTP authentication.
-  # username = "myuser"
-  # password = "mypassword"
-
-  ## Maximum time to receive response.
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (n *Apache) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *Apache) Description() string {
-	return "Read Apache status information (mod_status)"
 }
 
 func (n *Apache) Gather(acc telegraf.Accumulator) error {
@@ -62,12 +33,12 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	if len(n.Urls) == 0 {
 		n.Urls = []string{"http://localhost/server-status?auto"}
 	}
-	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = time.Second * 5
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	if n.client == nil {
-		client, err := n.createHttpClient()
+		client, err := n.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -84,7 +55,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc))
+			acc.AddError(n.gatherURL(addr, acc))
 		}(addr)
 	}
 
@@ -92,7 +63,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Apache) createHttpClient() (*http.Client, error) {
+func (n *Apache) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -102,13 +73,13 @@ func (n *Apache) createHttpClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: n.ResponseTimeout.Duration,
+		Timeout: time.Duration(n.ResponseTimeout),
 	}
 
 	return client, nil
 }
 
-func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
 		return fmt.Errorf("error on new request to %s : %s", addr.String(), err)
@@ -158,32 +129,31 @@ func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 }
 
 func (n *Apache) gatherScores(data string) map[string]interface{} {
-	var waiting, open int = 0, 0
-	var S, R, W, K, D, C, L, G, I int = 0, 0, 0, 0, 0, 0, 0, 0, 0
+	var waiting, open = 0, 0
+	var s, r, w, k, d, c, l, g, i = 0, 0, 0, 0, 0, 0, 0, 0, 0
 
-	for _, s := range strings.Split(data, "") {
-
-		switch s {
+	for _, str := range strings.Split(data, "") {
+		switch str {
 		case "_":
 			waiting++
 		case "S":
-			S++
+			s++
 		case "R":
-			R++
+			r++
 		case "W":
-			W++
+			w++
 		case "K":
-			K++
+			k++
 		case "D":
-			D++
+			d++
 		case "C":
-			C++
+			c++
 		case "L":
-			L++
+			l++
 		case "G":
-			G++
+			g++
 		case "I":
-			I++
+			i++
 		case ".":
 			open++
 		}
@@ -191,15 +161,15 @@ func (n *Apache) gatherScores(data string) map[string]interface{} {
 
 	fields := map[string]interface{}{
 		"scboard_waiting":      float64(waiting),
-		"scboard_starting":     float64(S),
-		"scboard_reading":      float64(R),
-		"scboard_sending":      float64(W),
-		"scboard_keepalive":    float64(K),
-		"scboard_dnslookup":    float64(D),
-		"scboard_closing":      float64(C),
-		"scboard_logging":      float64(L),
-		"scboard_finishing":    float64(G),
-		"scboard_idle_cleanup": float64(I),
+		"scboard_starting":     float64(s),
+		"scboard_reading":      float64(r),
+		"scboard_sending":      float64(w),
+		"scboard_keepalive":    float64(k),
+		"scboard_dnslookup":    float64(d),
+		"scboard_closing":      float64(c),
+		"scboard_logging":      float64(l),
+		"scboard_finishing":    float64(g),
+		"scboard_idle_cleanup": float64(i),
 		"scboard_open":         float64(open),
 	}
 	return fields

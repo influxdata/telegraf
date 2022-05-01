@@ -18,27 +18,10 @@ import (
 type Disque struct {
 	Servers []string
 
-	c   net.Conn
-	buf []byte
+	c net.Conn
 }
-
-var sampleConfig = `
-  ## An array of URI to gather stats about. Specify an ip or hostname
-  ## with optional port and password.
-  ## ie disque://localhost, disque://10.10.3.33:18832, 10.0.0.1:10000, etc.
-  ## If no servers are specified, then localhost is used as the host.
-  servers = ["localhost"]
-`
 
 var defaultTimeout = 5 * time.Second
-
-func (d *Disque) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *Disque) Description() string {
-	return "Read metrics from one or many disque servers"
-}
 
 var Tracking = map[string]string{
 	"uptime_in_seconds":          "uptime",
@@ -66,11 +49,10 @@ var ErrProtocolError = errors.New("disque protocol error")
 // Returns one of the errors encountered while gather stats (if any).
 func (d *Disque) Gather(acc telegraf.Accumulator) error {
 	if len(d.Servers) == 0 {
-		url := &url.URL{
+		address := &url.URL{
 			Host: ":7711",
 		}
-		d.gatherServer(url, acc)
-		return nil
+		return d.gatherServer(address, acc)
 	}
 
 	var wg sync.WaitGroup
@@ -87,10 +69,10 @@ func (d *Disque) Gather(acc telegraf.Accumulator) error {
 			u.Path = ""
 		}
 		wg.Add(1)
-		go func(serv string) {
+		go func() {
 			defer wg.Done()
 			acc.AddError(d.gatherServer(u, acc))
-		}(serv)
+		}()
 	}
 
 	wg.Wait()
@@ -102,7 +84,6 @@ const defaultPort = "7711"
 
 func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 	if d.c == nil {
-
 		_, _, err := net.SplitHostPort(addr.Host)
 		if err != nil {
 			addr.Host = addr.Host + ":" + defaultPort
@@ -116,7 +97,9 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 		if addr.User != nil {
 			pwd, set := addr.User.Password()
 			if set && pwd != "" {
-				c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd)))
+				if _, err := c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd))); err != nil {
+					return err
+				}
 
 				r := bufio.NewReader(c)
 
@@ -134,9 +117,13 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	// Extend connection
-	d.c.SetDeadline(time.Now().Add(defaultTimeout))
+	if err := d.c.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
+		return err
+	}
 
-	d.c.Write([]byte("info\r\n"))
+	if _, err := d.c.Write([]byte("info\r\n")); err != nil {
+		return err
+	}
 
 	r := bufio.NewReader(d.c)
 

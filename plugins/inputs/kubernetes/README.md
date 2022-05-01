@@ -8,8 +8,8 @@ should configure this plugin to talk to its locally running kubelet.
 
 To find the ip address of the host you are running on you can issue a command like the following:
 
-```
-$ curl -s $API_URL/api/v1/namespaces/$POD_NAMESPACE/pods/$HOSTNAME --header "Authorization: Bearer $TOKEN" --insecure | jq -r '.status.hostIP'
+```sh
+curl -s $API_URL/api/v1/namespaces/$POD_NAMESPACE/pods/$HOSTNAME --header "Authorization: Bearer $TOKEN" --insecure | jq -r '.status.hostIP'
 ```
 
 In this case we used the downward API to pass in the `$POD_NAMESPACE` and `$HOSTNAME` is the hostname of the pod which is set by the kubernetes API.
@@ -20,7 +20,7 @@ the major cloud providers; this is roughly 4 release / 2 years.
 
 **This plugin supports Kubernetes 1.11 and later.**
 
-#### Series Cardinality Warning
+## Series Cardinality Warning
 
 This plugin may produce a high number of series which, when not controlled
 for, will cause high load on your database. Use the following techniques to
@@ -28,15 +28,14 @@ avoid cardinality issues:
 
 - Use [metric filtering][] options to exclude unneeded measurements and tags.
 - Write to a database with an appropriate [retention policy][].
-- Limit series cardinality in your database using the
-  [max-series-per-database][] and [max-values-per-tag][] settings.
 - Consider using the [Time Series Index][tsi].
 - Monitor your databases [series cardinality][].
 - Consult the [InfluxDB documentation][influx-docs] for the most up-to-date techniques.
 
-### Configuration
+## Configuration
 
 ```toml
+# Read metrics from the kubernetes kubelet api
 [[inputs.kubernetes]]
   ## URL for the kubelet
   url = "http://127.0.0.1:10255"
@@ -64,7 +63,7 @@ avoid cardinality issues:
   # insecure_skip_verify = false
 ```
 
-### DaemonSet
+## DaemonSet
 
 For recommendations on running Telegraf as a DaemonSet see [Monitoring Kubernetes
 Architecture][k8s-telegraf] or view the Helm charts:
@@ -74,7 +73,7 @@ Architecture][k8s-telegraf] or view the Helm charts:
 - [Chronograf][]
 - [Kapacitor][]
 
-### Metrics
+## Metrics
 
 - kubernetes_node
   - tags:
@@ -99,7 +98,7 @@ Architecture][k8s-telegraf] or view the Helm charts:
     - runtime_image_fs_capacity_bytes
     - runtime_image_fs_used_bytes
 
-* kubernetes_pod_container
+- kubernetes_pod_container
   - tags:
     - container_name
     - namespace
@@ -131,7 +130,7 @@ Architecture][k8s-telegraf] or view the Helm charts:
     - capacity_bytes
     - used_bytes
 
-* kubernetes_pod_network
+- kubernetes_pod_network
   - tags:
     - namespace
     - node_name
@@ -142,9 +141,9 @@ Architecture][k8s-telegraf] or view the Helm charts:
     - tx_bytes
     - tx_errors
 
-### Example Output
+## Example Output
 
-```
+```shell
 kubernetes_node
 kubernetes_pod_container,container_name=deis-controller,namespace=deis,node_name=ip-10-0-0-0.ec2.internal,pod_name=deis-controller-3058870187-xazsr cpu_usage_core_nanoseconds=2432835i,cpu_usage_nanocores=0i,logsfs_available_bytes=121128271872i,logsfs_capacity_bytes=153567944704i,logsfs_used_bytes=20787200i,memory_major_page_faults=0i,memory_page_faults=175i,memory_rss_bytes=0i,memory_usage_bytes=0i,memory_working_set_bytes=0i,rootfs_available_bytes=121128271872i,rootfs_capacity_bytes=153567944704i,rootfs_used_bytes=1110016i 1476477530000000000
 kubernetes_pod_network,namespace=deis,node_name=ip-10-0-0-0.ec2.internal,pod_name=deis-controller-3058870187-xazsr rx_bytes=120671099i,rx_errors=0i,tx_bytes=102451983i,tx_errors=0i 1476477530000000000
@@ -154,8 +153,6 @@ kubernetes_system_container
 
 [metric filtering]: https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering
 [retention policy]: https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/
-[max-series-per-database]: https://docs.influxdata.com/influxdb/latest/administration/config/#max-series-per-database-1000000
-[max-values-per-tag]: https://docs.influxdata.com/influxdb/latest/administration/config/#max-values-per-tag-100000
 [tsi]: https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/

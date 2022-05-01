@@ -3,7 +3,7 @@ package redfish
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,34 +16,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const description = "Read CPU, Fans, Powersupply and Voltage metrics of hardware server through redfish APIs"
-const sampleConfig = `
-  ## Server url
-  address = "https://127.0.0.1:5000"
-
-  ## Username, Password for hardware server
-  username = "root"
-  password = "password123456"
-
-  ## ComputerSystemId
-  computer_system_id="2M220100SL"
-
-  ## Amount of time allowed to complete the HTTP request
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
 type Redfish struct {
 	Address          string          `toml:"address"`
 	Username         string          `toml:"username"`
 	Password         string          `toml:"password"`
-	ComputerSystemId string          `toml:"computer_system_id"`
+	ComputerSystemID string          `toml:"computer_system_id"`
 	Timeout          config.Duration `toml:"timeout"`
 
 	client http.Client
@@ -73,7 +50,7 @@ type Chassis struct {
 type Power struct {
 	PowerSupplies []struct {
 		Name                 string
-		MemberId             string
+		MemberID             string
 		PowerInputWatts      *float64
 		PowerCapacityWatts   *float64
 		PowerOutputWatts     *float64
@@ -83,7 +60,7 @@ type Power struct {
 	}
 	Voltages []struct {
 		Name                   string
-		MemberId               string
+		MemberID               string
 		ReadingVolts           *float64
 		UpperThresholdCritical *float64
 		UpperThresholdFatal    *float64
@@ -96,7 +73,7 @@ type Power struct {
 type Thermal struct {
 	Fans []struct {
 		Name                   string
-		MemberId               string
+		MemberID               string
 		Reading                *int64
 		ReadingUnits           *string
 		UpperThresholdCritical *int64
@@ -107,7 +84,7 @@ type Thermal struct {
 	}
 	Temperatures []struct {
 		Name                   string
-		MemberId               string
+		MemberID               string
 		ReadingCelsius         *float64
 		UpperThresholdCritical *float64
 		UpperThresholdFatal    *float64
@@ -133,14 +110,6 @@ type Status struct {
 	Health string
 }
 
-func (r *Redfish) Description() string {
-	return description
-}
-
-func (r *Redfish) SampleConfig() string {
-	return sampleConfig
-}
-
 func (r *Redfish) Init() error {
 	if r.Address == "" {
 		return fmt.Errorf("did not provide IP")
@@ -150,7 +119,7 @@ func (r *Redfish) Init() error {
 		return fmt.Errorf("did not provide username and password")
 	}
 
-	if r.ComputerSystemId == "" {
+	if r.ComputerSystemID == "" {
 		return fmt.Errorf("did not provide the computer system ID of the resource")
 	}
 
@@ -176,8 +145,8 @@ func (r *Redfish) Init() error {
 	return nil
 }
 
-func (r *Redfish) getData(url string, payload interface{}) error {
-	req, err := http.NewRequest("GET", url, nil)
+func (r *Redfish) getData(address string, payload interface{}) error {
+	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
 	}
@@ -199,7 +168,7 @@ func (r *Redfish) getData(url string, payload interface{}) error {
 			r.Address)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -258,7 +227,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		address = r.baseURL.Host
 	}
 
-	system, err := r.getComputerSystem(r.ComputerSystemId)
+	system, err := r.getComputerSystem(r.ComputerSystemID)
 	if err != nil {
 		return err
 	}
@@ -276,7 +245,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range thermal.Temperatures {
 			tags := map[string]string{}
-			tags["member_id"] = j.MemberId
+			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
@@ -301,7 +270,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		for _, j := range thermal.Fans {
 			tags := map[string]string{}
 			fields := make(map[string]interface{})
-			tags["member_id"] = j.MemberId
+			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
@@ -333,7 +302,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range power.PowerSupplies {
 			tags := map[string]string{}
-			tags["member_id"] = j.MemberId
+			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
@@ -357,7 +326,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range power.Voltages {
 			tags := map[string]string{}
-			tags["member_id"] = j.MemberId
+			tags["member_id"] = j.MemberID
 			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname

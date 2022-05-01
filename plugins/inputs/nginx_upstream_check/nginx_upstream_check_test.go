@@ -45,14 +45,13 @@ func TestNginxUpstreamCheckData(test *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
 		var response string
 
-		if request.URL.Path == "/status" {
-			response = sampleStatusResponse
-			responseWriter.Header()["Content-Type"] = []string{"application/json"}
-		} else {
-			panic("Cannot handle request")
-		}
+		require.Equal(test, request.URL.Path, "/status", "Cannot handle request")
 
-		fmt.Fprintln(responseWriter, response)
+		response = sampleStatusResponse
+		responseWriter.Header()["Content-Type"] = []string{"application/json"}
+
+		_, err := fmt.Fprintln(responseWriter, response)
+		require.NoError(test, err)
 	}))
 	defer testServer.Close()
 
@@ -103,20 +102,18 @@ func TestNginxUpstreamCheckRequest(test *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
 		var response string
 
-		if request.URL.Path == "/status" {
-			response = sampleStatusResponse
-			responseWriter.Header()["Content-Type"] = []string{"application/json"}
-		} else {
-			panic("Cannot handle request")
-		}
+		require.Equal(test, request.URL.Path, "/status", "Cannot handle request")
 
-		fmt.Fprintln(responseWriter, response)
+		response = sampleStatusResponse
+		responseWriter.Header()["Content-Type"] = []string{"application/json"}
+
+		_, err := fmt.Fprintln(responseWriter, response)
+		require.NoError(test, err)
 
 		require.Equal(test, request.Method, "POST")
 		require.Equal(test, request.Header.Get("X-Test"), "test-value")
 		require.Equal(test, request.Header.Get("Authorization"), "Basic dXNlcjpwYXNzd29yZA==")
 		require.Equal(test, request.Host, "status.local")
-
 	}))
 	defer testServer.Close()
 

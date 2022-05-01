@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
@@ -46,11 +47,6 @@ type Handler interface {
 	Register(router *mux.Router, recorder Recorder) error
 }
 
-const sampleConfig = `
-  # path = "/api/v1/spans" # URL path for span data
-  # port = 9411            # Port on which Telegraf listens
-`
-
 // Zipkin is a telegraf configuration structure for the zipkin input plugin,
 // but it also contains fields for the management of a separate, concurrent
 // zipkin http server
@@ -67,19 +63,9 @@ type Zipkin struct {
 	waitGroup *sync.WaitGroup
 }
 
-// Description is a necessary method implementation from telegraf.ServiceInput
-func (z Zipkin) Description() string {
-	return "This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures."
-}
-
-// SampleConfig is a  necessary  method implementation from telegraf.ServiceInput
-func (z Zipkin) SampleConfig() string {
-	return sampleConfig
-}
-
 // Gather is empty for the zipkin plugin; all gathering is done through
 // the separate goroutine launched in (*Zipkin).Start()
-func (z *Zipkin) Gather(acc telegraf.Accumulator) error { return nil }
+func (z *Zipkin) Gather(_ telegraf.Accumulator) error { return nil }
 
 // Start launches a separate goroutine for collecting zipkin client http requests,
 // passing in a telegraf.Accumulator such that data can be collected.
@@ -108,8 +94,8 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	z.address = ln.Addr().String()
 	z.Log.Infof("Started the zipkin listener on %s", z.address)
 
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 
 		z.Listen(ln, acc)
@@ -125,6 +111,8 @@ func (z *Zipkin) Stop() {
 	defer z.waitGroup.Wait()
 	defer cancel()
 
+	// Ignore the returned error as we cannot do anything about it anyway
+	//nolint:errcheck,revive
 	z.server.Shutdown(ctx)
 }
 
@@ -138,7 +126,7 @@ func (z *Zipkin) Listen(ln net.Listener, acc telegraf.Accumulator) {
 		// This interferes with telegraf's internal data collection,
 		// by making it appear as if a serious error occurred.
 		if err != http.ErrServerClosed {
-			acc.AddError(fmt.Errorf("E! Error listening: %v", err))
+			acc.AddError(fmt.Errorf("error listening: %v", err))
 		}
 	}
 }

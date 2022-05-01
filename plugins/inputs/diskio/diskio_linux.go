@@ -41,8 +41,8 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		// This allows us to also "poison" it during test scenarios
 		udevDataPath = ic.udevDataPath
 	} else {
-		major := unix.Major(uint64(stat.Rdev))
-		minor := unix.Minor(uint64(stat.Rdev))
+		major := unix.Major(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
+		minor := unix.Minor(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
 		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
 
 		_, err := os.Stat(udevDataPath)
@@ -58,10 +58,10 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	}
 	// Final open of the confirmed (or the previously detected/used) udev file
 	f, err := os.Open(udevDataPath)
-	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	di := map[string]string{}
 
@@ -80,9 +80,12 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		}
 		if l[:2] == "S:" {
 			if devlinks.Len() > 0 {
+				//nolint:errcheck,revive // this will never fail
 				devlinks.WriteString(" ")
 			}
+			//nolint:errcheck,revive // this will never fail
 			devlinks.WriteString("/dev/")
+			//nolint:errcheck,revive // this will never fail
 			devlinks.WriteString(l[2:])
 			continue
 		}

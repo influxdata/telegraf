@@ -2,9 +2,10 @@
 
 The `rename` processor renames measurements, fields, and tags.
 
-### Configuration:
+## Configuration
 
 ```toml
+# Rename measurements, tags, and fields that pass through this filter.
 [[processors.rename]]
   ## Specify one sub-table per rename operation.
   [[processors.rename.replace]]
@@ -24,11 +25,11 @@ The `rename` processor renames measurements, fields, and tags.
     dest = "max"
 ```
 
-### Tags:
+## Tags
 
 No tags are applied by this processor, though it can alter them by renaming.
 
-### Example processing:
+## Example
 
 ```diff
 - network_interface_throughput,hostname=backend.example.com lower=10i,upper=1000i,mean=500i 1502489900000000000

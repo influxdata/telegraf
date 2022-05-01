@@ -1,20 +1,18 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/common/proxy"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type HTTP struct {
@@ -28,104 +26,28 @@ type HTTP struct {
 	// HTTP Basic Auth Credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-	tls.ClientConfig
-
-	proxy.HTTPProxy
 
 	// Absolute path to file with Bearer token
 	BearerToken string `toml:"bearer_token"`
 
 	SuccessStatusCodes []int `toml:"success_status_codes"`
 
-	Timeout internal.Duration `toml:"timeout"`
+	Log telegraf.Logger `toml:"-"`
 
-	client *http.Client
+	httpconfig.HTTPClientConfig
 
-	// The parser will automatically be set by Telegraf core code because
-	// this plugin implements the ParserInput interface (i.e. the SetParser method)
-	parser parsers.Parser
-}
-
-var sampleConfig = `
-  ## One or more URLs from which to read formatted metrics
-  urls = [
-    "http://localhost/metrics"
-  ]
-
-  ## HTTP method
-  # method = "GET"
-
-  ## Optional HTTP headers
-  # headers = {"X-Special-Header" = "Special-Value"}
-
-  ## Optional file with Bearer token
-  ## file content is added as an Authorization header
-  # bearer_token = "/path/to/file"
-
-  ## Optional HTTP Basic Auth Credentials
-  # username = "username"
-  # password = "pa$$word"
-
-  ## HTTP entity-body to send with POST/PUT requests.
-  # body = ""
-
-  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
-  ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
-
-  ## HTTP Proxy support
-  # http_proxy_url = ""
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Amount of time allowed to complete the HTTP request
-  # timeout = "5s"
-
-  ## List of success status codes
-  # success_status_codes = [200]
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  # data_format = "influx"
-`
-
-// SampleConfig returns the default configuration of the Input
-func (*HTTP) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns a one-sentence description on the Input
-func (*HTTP) Description() string {
-	return "Read formatted metrics from one or more HTTP endpoints"
+	client     *http.Client
+	parserFunc telegraf.ParserFunc
 }
 
 func (h *HTTP) Init() error {
-	tlsCfg, err := h.ClientConfig.TLSConfig()
+	ctx := context.Background()
+	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
 	}
 
-	proxy, err := h.HTTPProxy.Proxy()
-	if err != nil {
-		return err
-	}
-
-	transport := &http.Transport{
-		TLSClientConfig: tlsCfg,
-		Proxy:           proxy,
-	}
-
-	h.client = &http.Client{
-		Transport: transport,
-		Timeout:   h.Timeout.Duration,
-	}
+	h.client = client
 
 	// Set default as [200]
 	if len(h.SuccessStatusCodes) == 0 {
@@ -153,9 +75,9 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// SetParser takes the data_format from the config and finds the right parser for that format
-func (h *HTTP) SetParser(parser parsers.Parser) {
-	h.parser = parser
+// SetParserFunc takes the data_format from the config and finds the right parser for that format
+func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
+	h.parserFunc = fn
 }
 
 // Gathers data from a particular URL
@@ -173,7 +95,9 @@ func (h *HTTP) gatherURL(
 	if err != nil {
 		return err
 	}
-	defer body.Close()
+	if body != nil {
+		defer body.Close()
+	}
 
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
@@ -181,7 +105,7 @@ func (h *HTTP) gatherURL(
 	}
 
 	if h.BearerToken != "" {
-		token, err := ioutil.ReadFile(h.BearerToken)
+		token, err := os.ReadFile(h.BearerToken)
 		if err != nil {
 			return err
 		}
@@ -226,14 +150,19 @@ func (h *HTTP) gatherURL(
 			h.SuccessStatusCodes)
 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading body failed: %v", err)
 	}
 
-	metrics, err := h.parser.Parse(b)
+	// Instantiate a new parser for the new data to avoid trouble with stateful parsers
+	parser, err := h.parserFunc()
 	if err != nil {
-		return err
+		return fmt.Errorf("instantiating parser failed: %v", err)
+	}
+	metrics, err := parser.Parse(b)
+	if err != nil {
+		return fmt.Errorf("parsing metrics failed: %v", err)
 	}
 
 	for _, metric := range metrics {
@@ -247,6 +176,10 @@ func (h *HTTP) gatherURL(
 }
 
 func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) {
+	if body == "" {
+		return nil, nil
+	}
+
 	var reader io.Reader = strings.NewReader(body)
 	if contentEncoding == "gzip" {
 		rc, err := internal.CompressWithGzip(reader)
@@ -255,14 +188,13 @@ func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) 
 		}
 		return rc, nil
 	}
-	return ioutil.NopCloser(reader), nil
+	return io.NopCloser(reader), nil
 }
 
 func init() {
 	inputs.Add("http", func() telegraf.Input {
 		return &HTTP{
-			Timeout: internal.Duration{Duration: time.Second * 5},
-			Method:  "GET",
+			Method: "GET",
 		}
 	})
 }

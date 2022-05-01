@@ -4,9 +4,10 @@ Use the `s2geo` processor to add tag with S2 cell ID token of specified [cell le
 The tag is used in `experimental/geo` Flux package functions.
 The `lat` and `lon` fields values should contain WGS-84 coordinates in decimal degrees.
 
-### Configuration
+## Configuration
 
 ```toml
+# Add the S2 Cell ID as a tag based on latitude and longitude fields
 [[processors.s2geo]]
   ## The name of the lat and lon fields containing WGS-84 latitude and
   ## longitude in decimal degrees.
@@ -20,7 +21,7 @@ The `lat` and `lon` fields values should contain WGS-84 coordinates in decimal d
   # cell_level = 9
 ```
 
-### Example
+## Example
 
 ```diff
 - mta,area=llir,id=GO505_20_2704,status=1 lat=40.878738,lon=-72.517572 1560540094

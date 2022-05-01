@@ -20,19 +20,6 @@ func NewSelf() telegraf.Input {
 	}
 }
 
-var sampleConfig = `
-  ## If true, collect telegraf memory stats.
-  # collect_memstats = true
-`
-
-func (s *Self) Description() string {
-	return "Collect statistics about itself"
-}
-
-func (s *Self) SampleConfig() string {
-	return sampleConfig
-}
-
 func (s *Self) Gather(acc telegraf.Accumulator) error {
 	if s.CollectMemstats {
 		m := &runtime.MemStats{}

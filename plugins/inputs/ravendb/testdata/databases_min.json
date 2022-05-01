@@ -1,0 +1,49 @@
+{
+  "PublicServerUrl": null,
+  "NodeTag": "A",
+  "Results": [
+    {
+      "DatabaseName": "db2",
+      "DatabaseId": "06eefe8b-d720-4a8d-a809-2c5af9a4abb5",
+      "UptimeInSec": 1396,
+      "TimeSinceLastBackupInSec": null,
+      "Counts": {
+        "Documents": 425189,
+        "Revisions": 429605,
+        "Attachments": 17,
+        "UniqueAttachments": 16,
+        "Alerts": 2,
+        "Rehabs": 3,
+        "PerformanceHints": 5,
+        "ReplicationFactor": 2
+      },
+      "Statistics": {
+        "DocPutsPerSec": 23.4,
+        "MapIndexIndexesPerSec": 82.5,
+        "MapReduceIndexMappedPerSec": 50.3,
+        "MapReduceIndexReducedPerSec": 85.2,
+        "RequestsPerSec": 22.5,
+        "RequestsCount": 809,
+        "RequestAverageDurationInMs": 0.55
+      },
+      "Indexes": {
+        "Count": 7,
+        "StaleCount": 1,
+        "ErrorsCount": 2,
+        "StaticCount": 7,
+        "AutoCount": 3,
+        "IdleCount": 4,
+        "DisabledCount": 5,
+        "ErroredCount": 6
+      },
+      "Storage": {
+        "DocumentsAllocatedDataFileInMb": 1024,
+        "DocumentsUsedDataFileInMb": 942,
+        "IndexesAllocatedDataFileInMb": 464,
+        "IndexesUsedDataFileInMb": 278,
+        "TotalAllocatedStorageFileInMb": 1496,
+        "TotalFreeSpaceInMb": 52074
+      }
+    }
+  ]
+}

@@ -2,7 +2,6 @@ package sflow
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net"
@@ -11,47 +10,24 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
-
-const sampleConfig = `
-  ## Address to listen for sFlow packets.
-  ##   example: service_address = "udp://:6343"
-  ##            service_address = "udp4://:6343"
-  ##            service_address = "udp6://:6343"
-  service_address = "udp://:6343"
-
-  ## Set the size of the operating system's receive buffer.
-  ##   example: read_buffer_size = "64KiB"
-  # read_buffer_size = ""
-`
 
 const (
 	maxPacketSize = 64 * 1024
 )
 
 type SFlow struct {
-	ServiceAddress string        `toml:"service_address"`
-	ReadBufferSize internal.Size `toml:"read_buffer_size"`
+	ServiceAddress string      `toml:"service_address"`
+	ReadBufferSize config.Size `toml:"read_buffer_size"`
 
 	Log telegraf.Logger `toml:"-"`
 
 	addr    net.Addr
 	decoder *PacketDecoder
 	closer  io.Closer
-	cancel  context.CancelFunc
 	wg      sync.WaitGroup
-}
-
-// Description answers a description of this input plugin
-func (s *SFlow) Description() string {
-	return "SFlow V5 Protocol Listener"
-}
-
-// SampleConfig answers a sample configuration
-func (s *SFlow) SampleConfig() string {
-	return sampleConfig
 }
 
 func (s *SFlow) Init() error {
@@ -85,8 +61,10 @@ func (s *SFlow) Start(acc telegraf.Accumulator) error {
 	s.closer = conn
 	s.addr = conn.LocalAddr()
 
-	if s.ReadBufferSize.Size > 0 {
-		conn.SetReadBuffer(int(s.ReadBufferSize.Size))
+	if s.ReadBufferSize > 0 {
+		if err := conn.SetReadBuffer(int(s.ReadBufferSize)); err != nil {
+			return err
+		}
 	}
 
 	s.Log.Infof("Listening on %s://%s", s.addr.Network(), s.addr.String())
@@ -107,6 +85,8 @@ func (s *SFlow) Gather(_ telegraf.Accumulator) error {
 
 func (s *SFlow) Stop() {
 	if s.closer != nil {
+		// Ignore the returned error as we cannot do anything about it anyway
+		//nolint:errcheck,revive
 		s.closer.Close()
 	}
 	s.wg.Wait()
@@ -131,7 +111,6 @@ func (s *SFlow) read(acc telegraf.Accumulator, conn net.PacketConn) {
 }
 
 func (s *SFlow) process(acc telegraf.Accumulator, buf []byte) {
-
 	if err := s.decoder.Decode(bytes.NewBuffer(buf)); err != nil {
 		acc.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 	}

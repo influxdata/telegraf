@@ -1,43 +1,17 @@
 package converter
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
-
-var sampleConfig = `
-  ## Tags to convert
-  ##
-  ## The table key determines the target type, and the array of key-values
-  ## select the keys to convert.  The array may contain globs.
-  ##   <target-type> = [<tag-key>...]
-  [processors.converter.tags]
-    measurement = []
-    string = []
-    integer = []
-    unsigned = []
-    boolean = []
-    float = []
-
-  ## Fields to convert
-  ##
-  ## The table key determines the target type, and the array of key-values
-  ## select the keys to convert.  The array may contain globs.
-  ##   <target-type> = [<field-key>...]
-  [processors.converter.fields]
-    measurement = []
-    tag = []
-    string = []
-    integer = []
-    unsigned = []
-    boolean = []
-    float = []
-`
 
 type Conversion struct {
 	Measurement []string `toml:"measurement"`
@@ -66,14 +40,6 @@ type ConversionFilter struct {
 	Unsigned    filter.Filter
 	Boolean     filter.Filter
 	Float       filter.Filter
-}
-
-func (p *Converter) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Converter) Description() string {
-	return "Convert values to another metric value type"
 }
 
 func (p *Converter) Init() error {
@@ -325,7 +291,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 	}
 }
 
-func toBool(v interface{}) (bool, bool) {
+func toBool(v interface{}) (val bool, ok bool) {
 	switch value := v.(type) {
 	case int64:
 		return value != 0, true
@@ -368,10 +334,19 @@ func toInteger(v interface{}) (int64, bool) {
 		result, err := strconv.ParseInt(value, 0, 64)
 
 		if err != nil {
-			result, err := strconv.ParseFloat(value, 64)
+			var result float64
+			var err error
+
+			if isHexadecimal(value) {
+				result, err = parseHexadecimal(value)
+			} else {
+				result, err = strconv.ParseFloat(value, 64)
+			}
+
 			if err != nil {
 				return 0, false
 			}
+
 			return toInteger(result)
 		}
 		return result, true
@@ -405,10 +380,19 @@ func toUnsigned(v interface{}) (uint64, bool) {
 		result, err := strconv.ParseUint(value, 0, 64)
 
 		if err != nil {
-			result, err := strconv.ParseFloat(value, 64)
+			var result float64
+			var err error
+
+			if isHexadecimal(value) {
+				result, err = parseHexadecimal(value)
+			} else {
+				result, err = strconv.ParseFloat(value, 64)
+			}
+
 			if err != nil {
 				return 0, false
 			}
+
 			return toUnsigned(result)
 		}
 		return result, true
@@ -430,6 +414,11 @@ func toFloat(v interface{}) (float64, bool) {
 		}
 		return 0.0, true
 	case string:
+		if isHexadecimal(value) {
+			result, err := parseHexadecimal(value)
+			return result, err == nil
+		}
+
 		result, err := strconv.ParseFloat(value, 64)
 		return result, err == nil
 	}
@@ -450,6 +439,24 @@ func toString(v interface{}) (string, bool) {
 		return value, true
 	}
 	return "", false
+}
+
+func parseHexadecimal(value string) (float64, error) {
+	i := new(big.Int)
+
+	_, success := i.SetString(value, 0)
+	if !success {
+		return 0, errors.New("unable to parse string to big int")
+	}
+
+	f := new(big.Float).SetInt(i)
+	result, _ := f.Float64()
+
+	return result, nil
+}
+
+func isHexadecimal(value string) bool {
+	return len(value) >= 3 && strings.ToLower(value)[1] == 'x'
 }
 
 func init() {

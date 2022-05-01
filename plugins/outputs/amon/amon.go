@@ -6,31 +6,21 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 type Amon struct {
-	ServerKey    string            `toml:"server_key"`
-	AmonInstance string            `toml:"amon_instance"`
-	Timeout      internal.Duration `toml:"timeout"`
-	Log          telegraf.Logger   `toml:"-"`
+	ServerKey    string          `toml:"server_key"`
+	AmonInstance string          `toml:"amon_instance"`
+	Timeout      config.Duration `toml:"timeout"`
+	Log          telegraf.Logger `toml:"-"`
 
 	client *http.Client
 }
-
-var sampleConfig = `
-  ## Amon Server Key
-  server_key = "my-server-key" # required.
-
-  ## Amon Instance URL
-  amon_instance = "https://youramoninstance" # required
-
-  ## Connection timeout.
-  # timeout = "5s"
-`
 
 type TimeSeries struct {
 	Series []*Metric `json:"series"`
@@ -51,7 +41,7 @@ func (a *Amon) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: a.Timeout.Duration,
+		Timeout: time.Duration(a.Timeout),
 	}
 	return nil
 }
@@ -86,7 +76,7 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
 	}
-	req, err := http.NewRequest("POST", a.authenticatedUrl(), bytes.NewBuffer(tsBytes))
+	req, err := http.NewRequest("POST", a.authenticatedURL(), bytes.NewBuffer(tsBytes))
 	if err != nil {
 		return fmt.Errorf("unable to create http.Request, %s", err.Error())
 	}
@@ -105,16 +95,7 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (a *Amon) SampleConfig() string {
-	return sampleConfig
-}
-
-func (a *Amon) Description() string {
-	return "Configuration for Amon Server to send metrics to."
-}
-
-func (a *Amon) authenticatedUrl() string {
-
+func (a *Amon) authenticatedURL() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
 
@@ -134,15 +115,15 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 func (p *Point) setValue(v interface{}) error {
 	switch d := v.(type) {
 	case int:
-		p[1] = float64(int(d))
+		p[1] = float64(d)
 	case int32:
-		p[1] = float64(int32(d))
+		p[1] = float64(d)
 	case int64:
-		p[1] = float64(int64(d))
+		p[1] = float64(d)
 	case float32:
 		p[1] = float64(d)
 	case float64:
-		p[1] = float64(d)
+		p[1] = d
 	default:
 		return fmt.Errorf("undeterminable type")
 	}

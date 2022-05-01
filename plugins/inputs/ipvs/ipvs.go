@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package ipvs
@@ -8,26 +9,16 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/docker/libnetwork/ipvs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/logrus"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/moby/ipvs"
 )
 
 // IPVS holds the state for this input plugin
 type IPVS struct {
 	handle *ipvs.Handle
 	Log    telegraf.Logger
-}
-
-// Description returns a description string
-func (i *IPVS) Description() string {
-	return "Collect virtual and real server stats from Linux IPVS"
-}
-
-// SampleConfig returns a sample configuration for this input plugin
-func (i *IPVS) SampleConfig() string {
-	return ``
 }
 
 // Gather gathers the stats

@@ -30,55 +30,19 @@ type DiskIO struct {
 	initialized  bool
 }
 
-func (d *DiskIO) Description() string {
-	return "Read metrics about disk IO by device"
-}
-
-var diskIOsampleConfig = `
-  ## By default, telegraf will gather stats for all devices including
-  ## disk partitions.
-  ## Setting devices will restrict the stats to the specified devices.
-  # devices = ["sda", "sdb", "vd*"]
-  ## Uncomment the following line if you need disk serial numbers.
-  # skip_serial_number = false
-  #
-  ## On systems which support it, device metadata can be added in the form of
-  ## tags.
-  ## Currently only Linux is supported via udev properties. You can view
-  ## available properties for a device by running:
-  ## 'udevadm info -q property -n /dev/sda'
-  ## Note: Most, but not all, udev properties can be accessed this way. Properties
-  ## that are currently inaccessible include DEVTYPE, DEVNAME, and DEVPATH.
-  # device_tags = ["ID_FS_TYPE", "ID_FS_USAGE"]
-  #
-  ## Using the same metadata source as device_tags, you can also customize the
-  ## name of the device via templates.
-  ## The 'name_templates' parameter is a list of templates to try and apply to
-  ## the device. The template may contain variables in the form of '$PROPERTY' or
-  ## '${PROPERTY}'. The first template which does not contain any variables not
-  ## present for the device is used as the device name tag.
-  ## The typical use case is for LVM volumes, to get the VG/LV name instead of
-  ## the near-meaningless DM-0 name.
-  # name_templates = ["$ID_FS_LABEL","$DM_VG_NAME/$DM_LV_NAME"]
-`
-
-func (d *DiskIO) SampleConfig() string {
-	return diskIOsampleConfig
-}
-
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
-	return strings.IndexAny(s, "*?[") >= 0
+	return strings.ContainsAny(s, "*?[")
 }
 
 func (d *DiskIO) init() error {
 	for _, device := range d.Devices {
 		if hasMeta(device) {
-			filter, err := filter.Compile(d.Devices)
+			deviceFilter, err := filter.Compile(d.Devices)
 			if err != nil {
 				return fmt.Errorf("error compiling device pattern: %s", err.Error())
 			}
-			d.deviceFilter = filter
+			d.deviceFilter = deviceFilter
 		}
 	}
 	d.initialized = true
@@ -104,7 +68,6 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, io := range diskio {
-
 		match := false
 		if d.deviceFilter != nil && d.deviceFilter.Match(io.Name) {
 			match = true
@@ -219,6 +182,10 @@ func (d *DiskIO) diskTags(devName string) map[string]string {
 func init() {
 	ps := system.NewSystemPS()
 	inputs.Add("diskio", func() telegraf.Input {
+		return &DiskIO{ps: ps, SkipSerialNumber: true}
+	})
+	// Backwards compatible alias
+	inputs.Add("io", func() telegraf.Input {
 		return &DiskIO{ps: ps, SkipSerialNumber: true}
 	})
 }

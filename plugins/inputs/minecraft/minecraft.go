@@ -5,20 +5,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## Address of the Minecraft server.
-  # server = "localhost"
-
-  ## Server RCON Port.
-  # port = "25575"
-
-  ## Server RCON Password.
-  password = ""
-
-  ## Uncomment to remove deprecated metric components.
-  # tagdrop = ["server"]
-`
-
 // Client is a client for the Minecraft server.
 type Client interface {
 	// Connect establishes a connection to the server.
@@ -40,27 +26,10 @@ type Minecraft struct {
 	client Client
 }
 
-func (s *Minecraft) Description() string {
-	return "Collects scores from a Minecraft server's scoreboard using the RCON protocol"
-}
-
-func (s *Minecraft) SampleConfig() string {
-	return sampleConfig
-}
-
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
-		connector, err := newConnector(s.Server, s.Port, s.Password)
-		if err != nil {
-			return err
-		}
-
-		client, err := newClient(connector)
-		if err != nil {
-			return err
-		}
-
-		s.client = client
+		connector := newConnector(s.Server, s.Port, s.Password)
+		s.client = newClient(connector)
 	}
 
 	players, err := s.client.Players()

@@ -22,6 +22,7 @@ type Strings struct {
 	Replace      []converter `toml:"replace"`
 	Left         []converter `toml:"left"`
 	Base64Decode []converter `toml:"base64decode"`
+	ValidUTF8    []converter `toml:"valid_utf8"`
 
 	converters []converter
 	init       bool
@@ -42,70 +43,9 @@ type converter struct {
 	Old         string
 	New         string
 	Width       int
+	Replacement string
 
 	fn ConvertFunc
-}
-
-const sampleConfig = `
-  ## Convert a tag value to uppercase
-  # [[processors.strings.uppercase]]
-  #   tag = "method"
-
-  ## Convert a field value to lowercase and store in a new field
-  # [[processors.strings.lowercase]]
-  #   field = "uri_stem"
-  #   dest = "uri_stem_normalised"
-
-  ## Convert a field value to titlecase
-  # [[processors.strings.titlecase]]
-  #   field = "status"
-
-  ## Trim leading and trailing whitespace using the default cutset
-  # [[processors.strings.trim]]
-  #   field = "message"
-
-  ## Trim leading characters in cutset
-  # [[processors.strings.trim_left]]
-  #   field = "message"
-  #   cutset = "\t"
-
-  ## Trim trailing characters in cutset
-  # [[processors.strings.trim_right]]
-  #   field = "message"
-  #   cutset = "\r\n"
-
-  ## Trim the given prefix from the field
-  # [[processors.strings.trim_prefix]]
-  #   field = "my_value"
-  #   prefix = "my_"
-
-  ## Trim the given suffix from the field
-  # [[processors.strings.trim_suffix]]
-  #   field = "read_count"
-  #   suffix = "_count"
-
-  ## Replace all non-overlapping instances of old with new
-  # [[processors.strings.replace]]
-  #   measurement = "*"
-  #   old = ":"
-  #   new = "_"
-
-  ## Trims strings based on width
-  # [[processors.strings.left]]
-  #   field = "message"
-  #   width = 10
-
-  ## Decode a base64 encoded utf-8 string
-  # [[processors.strings.base64decode]]
-  #   field = "message"
-`
-
-func (s *Strings) SampleConfig() string {
-	return sampleConfig
-}
-
-func (s *Strings) Description() string {
-	return "Perform string processing on tags, fields, and measurements"
 }
 
 func (c *converter) convertTag(metric telegraf.Metric) {
@@ -316,6 +256,11 @@ func (s *Strings) initOnce() {
 			}
 			return s
 		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.ValidUTF8 {
+		c := c
+		c.fn = func(s string) string { return strings.ToValidUTF8(s, c.Replacement) }
 		s.converters = append(s.converters, c)
 	}
 

@@ -1,0 +1,15 @@
+{
+    "bbus": [
+        {
+            "href": "https://127.0.0.1/api/json/v3/types/bbus/987654321abcdef", 
+            "name": "X1-BBU", 
+            "sys-name": "ABCXIO001"
+        }
+    ], 
+    "links": [
+        {
+            "href": "https://127.0.0.1/api/json/v3/types/bbus/", 
+            "rel": "self"
+        }
+    ]
+}

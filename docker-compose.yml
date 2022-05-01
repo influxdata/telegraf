@@ -48,7 +48,7 @@ services:
     ports:
       - "11211:11211"
   pgbouncer:
-    image: mbentley/ubuntu-pgbouncer
+    image: z9pascal/pgbouncer-container:1.15-latest
     environment:
       - PG_ENV_POSTGRESQL_USER=pgbouncer
       - PG_ENV_POSTGRESQL_PASS=pgbouncer
@@ -78,6 +78,10 @@ services:
     image: ncarlier/mqtt
     ports:
       - "1883:1883"
+  opcua:
+    image: open62541/open62541
+    ports:
+      - "4840:4840"
   riemann:
     image: stealthly/docker-riemann
     ports:

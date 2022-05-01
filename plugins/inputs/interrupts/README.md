@@ -2,8 +2,10 @@
 
 The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and `/proc/softirqs`.
 
-### Configuration
+## Configuration
+
 ```toml
+# This plugin gathers interrupts data from /proc/interrupts and /proc/softirqs.
 [[inputs.interrupts]]
   ## When set to true, cpu metrics are tagged with the cpu.  Otherwise cpu is
   ## stored as a field.
@@ -18,7 +20,7 @@ The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and `/p
   #   irq = [ "NET_RX", "TASKLET" ]
 ```
 
-### Metrics
+## Metrics
 
 There are two styles depending on the value of `cpu_as_tag`.
 
@@ -64,10 +66,11 @@ With `cpu_as_tag = true`:
   - fields:
     - count (int, number of interrupts)
 
-### Example Output
+## Example Output
 
 With `cpu_as_tag = false`:
-```
+
+```shell
 interrupts,irq=0,type=IO-APIC,device=2-edge\ timer,cpu=cpu0 count=23i 1489346531000000000
 interrupts,irq=1,type=IO-APIC,device=1-edge\ i8042,cpu=cpu0 count=9i 1489346531000000000
 interrupts,irq=30,type=PCI-MSI,device=65537-edge\ virtio1-input.0,cpu=cpu1 count=1i 1489346531000000000
@@ -75,7 +78,8 @@ soft_interrupts,irq=NET_RX,cpu=cpu0 count=280879i 1489346531000000000
 ```
 
 With `cpu_as_tag = true`:
-```
+
+```shell
 interrupts,cpu=cpu6,irq=PIW,type=Posted-interrupt\ wakeup\ event count=0i 1543539773000000000
 interrupts,cpu=cpu7,irq=PIW,type=Posted-interrupt\ wakeup\ event count=0i 1543539773000000000
 soft_interrupts,cpu=cpu0,irq=HI count=246441i 1543539773000000000

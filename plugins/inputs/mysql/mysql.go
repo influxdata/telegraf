@@ -1,7 +1,6 @@
 package mysql
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"strconv"
@@ -10,11 +9,12 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
-	"github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
+	v1 "github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
+	v2 "github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
 
 type Mysql struct {
@@ -28,6 +28,8 @@ type Mysql struct {
 	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
 	GatherInnoDBMetrics                 bool     `toml:"gather_innodb_metrics"`
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
+	GatherAllSlaveChannels              bool     `toml:"gather_all_slave_channels"`
+	MariadbDialect                      bool     `toml:"mariadb_dialect"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
 	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
 	GatherTableLockWaits                bool     `toml:"gather_table_lock_waits"`
@@ -47,100 +49,8 @@ type Mysql struct {
 	lastT            time.Time
 	initDone         bool
 	scanIntervalSlow uint32
+	getStatusQuery   string
 }
-
-const sampleConfig = `
-  ## specify servers via a url matching:
-  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify|custom]]
-  ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
-  ##  e.g.
-  ##    servers = ["user:passwd@tcp(127.0.0.1:3306)/?tls=false"]
-  ##    servers = ["user@tcp(127.0.0.1:3306)/?tls=false"]
-  #
-  ## If no servers are specified, then localhost is used as the host.
-  servers = ["tcp(127.0.0.1:3306)/"]
-
-  ## Selects the metric output format.
-  ##
-  ## This option exists to maintain backwards compatibility, if you have
-  ## existing metrics do not set or change this value until you are ready to
-  ## migrate to the new format.
-  ##
-  ## If you do not have existing metrics from this plugin set to the latest
-  ## version.
-  ##
-  ## Telegraf >=1.6: metric_version = 2
-  ##           <1.6: metric_version = 1 (or unset)
-  metric_version = 2
-
-  ## if the list is empty, then metrics are gathered from all database tables
-  # table_schema_databases = []
-
-  ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided above list
-  # gather_table_schema = false
-
-  ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
-  # gather_process_list = false
-
-  ## gather user statistics from INFORMATION_SCHEMA.USER_STATISTICS
-  # gather_user_statistics = false
-
-  ## gather auto_increment columns and max values from information schema
-  # gather_info_schema_auto_inc = false
-
-  ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
-  # gather_innodb_metrics = false
-
-  ## gather metrics from SHOW SLAVE STATUS command output
-  # gather_slave_status = false
-
-  ## gather metrics from SHOW BINARY LOGS command output
-  # gather_binary_logs = false
-
-  ## gather metrics from PERFORMANCE_SCHEMA.GLOBAL_VARIABLES
-  # gather_global_variables = true
-
-  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
-  # gather_table_io_waits = false
-
-  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
-  # gather_table_lock_waits = false
-
-  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_INDEX_USAGE
-  # gather_index_io_waits = false
-
-  ## gather metrics from PERFORMANCE_SCHEMA.EVENT_WAITS
-  # gather_event_waits = false
-
-  ## gather metrics from PERFORMANCE_SCHEMA.FILE_SUMMARY_BY_EVENT_NAME
-  # gather_file_events_stats = false
-
-  ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_DIGEST
-  # gather_perf_events_statements = false
-
-  ## the limits for metrics form perf_events_statements
-  # perf_events_statements_digest_text_limit = 120
-  # perf_events_statements_limit = 250
-  # perf_events_statements_time_limit = 86400
-
-  ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_ACCOUNT_BY_EVENT_NAME
-  # gather_perf_sum_per_acc_per_event         = false
-
-  ## list of events to be gathered for gather_perf_sum_per_acc_per_event
-  ## in case of empty list all events will be gathered
-  # perf_summary_events                       = []
-
-  ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
-  ##   example: interval_slow = "30m"
-  # interval_slow = ""
-
-  ## Optional TLS Config (will be used if tls=custom parameter specified in server uri)
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
 
 const (
 	defaultPerfEventsStatementsDigestTextLimit = 120
@@ -148,14 +58,6 @@ const (
 	defaultPerfEventsStatementsTimeLimit       = 86400
 	defaultGatherGlobalVars                    = true
 )
-
-func (m *Mysql) SampleConfig() string {
-	return sampleConfig
-}
-
-func (m *Mysql) Description() string {
-	return "Read metrics from one or many mysql servers"
-}
 
 const localhost = ""
 
@@ -165,6 +67,11 @@ func (m *Mysql) InitMysql() {
 		if err == nil && interval.Seconds() >= 1.0 {
 			m.scanIntervalSlow = uint32(interval.Seconds())
 		}
+	}
+	if m.MariadbDialect {
+		m.getStatusQuery = slaveStatusQueryMariadb
+	} else {
+		m.getStatusQuery = slaveStatusQuery
 	}
 	m.initDone = true
 }
@@ -185,7 +92,9 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if tlsConfig != nil {
-		mysql.RegisterTLSConfig("custom", tlsConfig)
+		if err := mysql.RegisterTLSConfig("custom", tlsConfig); err != nil {
+			return err
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -293,6 +202,7 @@ const (
 	globalStatusQuery          = `SHOW GLOBAL STATUS`
 	globalVariablesQuery       = `SHOW GLOBAL VARIABLES`
 	slaveStatusQuery           = `SHOW SLAVE STATUS`
+	slaveStatusQueryMariadb    = `SHOW ALL SLAVES STATUS`
 	binaryLogsQuery            = `SHOW BINARY LOGS`
 	infoSchemaProcessListQuery = `
         SELECT COALESCE(command,''),COALESCE(state,''),count(*)
@@ -321,6 +231,13 @@ const (
         FROM information_schema.INNODB_METRICS
         WHERE status='enabled'
     `
+	innoDBMetricsQueryMariadb = `
+        EXECUTE IMMEDIATE CONCAT("
+            SELECT NAME, COUNT
+            FROM information_schema.INNODB_METRICS
+            WHERE ", IF(version() REGEXP '10\.[1-4].*',"status='enabled'", "ENABLED=1"), "
+        ");
+	`
 	perfTableIOWaitsQuery = `
         SELECT OBJECT_SCHEMA, OBJECT_NAME, COUNT_FETCH, COUNT_INSERT, COUNT_UPDATE, COUNT_DELETE,
         SUM_TIMER_FETCH, SUM_TIMER_INSERT, SUM_TIMER_UPDATE, SUM_TIMER_DELETE
@@ -453,7 +370,7 @@ const (
 			sum_sort_rows,
 			sum_sort_scan,
 			sum_no_index_used,
-			sum_no_good_index_used 
+			sum_no_good_index_used
 		FROM performance_schema.events_statements_summary_by_account_by_event_name
 	`
 )
@@ -620,7 +537,12 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 
 		value, err := m.parseGlobalVariables(key, val)
 		if err != nil {
-			m.Log.Debugf("Error parsing global variable %q: %v", key, err)
+			errString := fmt.Errorf("error parsing mysql global variable %q=%q: %v", key, string(val), err)
+			if m.MetricVersion < 2 {
+				m.Log.Debug(errString)
+			} else {
+				acc.AddError(errString)
+			}
 		} else {
 			fields[key] = value
 		}
@@ -640,11 +562,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 
 func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{}, error) {
 	if m.MetricVersion < 2 {
-		v, ok := v1.ParseValue(value)
-		if ok {
-			return v, nil
-		}
-		return v, fmt.Errorf("could not parse value: %q", string(value))
+		return v1.ParseValue(value)
 	}
 	return v2.ConvertGlobalVariables(key, value)
 }
@@ -655,7 +573,10 @@ func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{
 // This code does not work with multi-source replication.
 func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
 	// run query
-	rows, err := db.Query(slaveStatusQuery)
+	var rows *sql.Rows
+	var err error
+
+	rows, err = db.Query(m.getStatusQuery)
 	if err != nil {
 		return err
 	}
@@ -666,32 +587,72 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 
-	// to save the column names as a field key
-	// scanning keys and values separately
-	if rows.Next() {
+	// for each channel record
+	for rows.Next() {
+		// to save the column names as a field key
+		// scanning keys and values separately
+
 		// get columns names, and create an array with its length
-		cols, err := rows.Columns()
+		cols, err := rows.ColumnTypes()
 		if err != nil {
 			return err
 		}
-		vals := make([]interface{}, len(cols))
+		vals := make([]sql.RawBytes, len(cols))
+		valPtrs := make([]interface{}, len(cols))
 		// fill the array with sql.Rawbytes
 		for i := range vals {
-			vals[i] = &sql.RawBytes{}
+			vals[i] = sql.RawBytes{}
+			valPtrs[i] = &vals[i]
 		}
-		if err = rows.Scan(vals...); err != nil {
+		if err = rows.Scan(valPtrs...); err != nil {
 			return err
 		}
+
 		// range over columns, and try to parse values
 		for i, col := range cols {
+			colName := col.Name()
+
 			if m.MetricVersion >= 2 {
-				col = strings.ToLower(col)
+				colName = strings.ToLower(colName)
 			}
-			if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
-				fields["slave_"+col] = value
+
+			colValue := vals[i]
+
+			if m.GatherAllSlaveChannels &&
+				(strings.ToLower(colName) == "channel_name" || strings.ToLower(colName) == "connection_name") {
+				// Since the default channel name is empty, we need this block
+				channelName := "default"
+				if len(colValue) > 0 {
+					channelName = string(colValue)
+				}
+				tags["channel"] = channelName
+				continue
 			}
+
+			if colValue == nil || len(colValue) == 0 {
+				continue
+			}
+
+			value, err := m.parseValueByDatabaseTypeName(colValue, col.DatabaseTypeName())
+			if err != nil {
+				errString := fmt.Errorf("error parsing mysql slave status %q=%q: %v", colName, string(colValue), err)
+				if m.MetricVersion < 2 {
+					m.Log.Debug(errString)
+				} else {
+					acc.AddError(errString)
+				}
+				continue
+			}
+
+			fields["slave_"+colName] = value
 		}
 		acc.AddFields("mysql", fields, tags)
+
+		// Only the first row is relevant if not all slave-channels should be gathered,
+		// so break here and skip the remaining rows
+		if !m.GatherAllSlaveChannels {
+			break
+		}
 	}
 
 	return nil
@@ -711,17 +672,31 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	var (
-		size     uint64
-		count    uint64
-		fileSize uint64
-		fileName string
+		size      uint64
+		count     uint64
+		fileSize  uint64
+		fileName  string
+		encrypted string
 	)
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+	numColumns := len(columns)
 
 	// iterate over rows and count the size and count of files
 	for rows.Next() {
-		if err := rows.Scan(&fileName, &fileSize); err != nil {
-			return err
+		if numColumns == 3 {
+			if err := rows.Scan(&fileName, &fileSize, &encrypted); err != nil {
+				return err
+			}
+		} else {
+			if err := rows.Scan(&fileName, &fileSize); err != nil {
+				return err
+			}
 		}
+
 		size += fileSize
 		count++
 	}
@@ -729,6 +704,7 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 		"binary_size_bytes":  size,
 		"binary_files_count": count,
 	}
+
 	acc.AddFields("mysql", fields, tags)
 	return nil
 }
@@ -824,7 +800,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			key = strings.ToLower(key)
 			value, err := v2.ConvertGlobalStatus(key, val)
 			if err != nil {
-				m.Log.Debugf("Error parsing global status: %v", err)
+				acc.AddError(fmt.Errorf("error parsing mysql global status %q=%q: %v", key, string(val), err))
 			} else {
 				fields[key] = value
 			}
@@ -853,6 +829,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 		return err
 	}
 	defer rows.Close()
+
 	var (
 		command string
 		state   string
@@ -896,6 +873,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	if err != nil {
 		return err
 	}
+	defer connRows.Close()
 
 	for connRows.Next() {
 		var user string
@@ -916,7 +894,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	return nil
 }
 
-// GatherUserStatistics can be used to collect metrics on each running command
+// GatherUserStatisticsStatuses can be used to collect metrics on each running command
 // and its state with its running count
 func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
 	// run query
@@ -1274,8 +1252,18 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 // gatherInnoDBMetrics can be used to fetch enabled metrics from
 // information_schema.INNODB_METRICS
 func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	var (
+		query string
+	)
+
+	if m.MariadbDialect {
+		query = innoDBMetricsQueryMariadb
+	} else {
+		query = innoDBMetricsQuery
+	}
+
 	// run query
-	rows, err := db.Query(innoDBMetricsQuery)
+	rows, err := db.Query(query)
 	if err != nil {
 		return err
 	}
@@ -1291,10 +1279,16 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 		if err := rows.Scan(&key, &val); err != nil {
 			return err
 		}
+
 		key = strings.ToLower(key)
-		if value, ok := m.parseValue(val); ok {
-			fields[key] = value
+		value, err := m.parseValueByDatabaseTypeName(val, "BIGINT")
+		if err != nil {
+			acc.AddError(fmt.Errorf("error parsing mysql InnoDB metric %q=%q: %v", key, string(val), err))
+			continue
 		}
+
+		fields[key] = value
+
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_innodb", fields, tags)
@@ -1439,7 +1433,6 @@ func (m *Mysql) gatherPerfSummaryPerAccountPerEvent(db *sql.DB, serv string, acc
 			"sum_no_good_index_used":      sumNoGoodIndexUsed,
 		}
 		acc.AddFields("mysql_perf_acc_event", sqlLWFields, sqlLWTags)
-
 	}
 
 	return nil
@@ -1662,8 +1655,8 @@ func (m *Mysql) gatherPerfFileEventsStatuses(db *sql.DB, serv string, acc telegr
 		fields["file_events_seconds_total"] = sumTimerWrite / picoSeconds
 		fields["file_events_bytes_totals"] = sumNumBytesWrite
 		acc.AddFields("mysql_perf_schema", fields, writeTags)
-
 	}
+
 	return nil
 }
 
@@ -1761,123 +1754,121 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 	}
 
 	for _, database := range dbList {
-		rows, err := db.Query(fmt.Sprintf(tableSchemaQuery, database))
+		err := m.gatherSchemaForDB(db, database, servtag, acc)
 		if err != nil {
 			return err
-		}
-		defer rows.Close()
-		var (
-			tableSchema   string
-			tableName     string
-			tableType     string
-			engine        string
-			version       float64
-			rowFormat     string
-			tableRows     float64
-			dataLength    float64
-			indexLength   float64
-			dataFree      float64
-			createOptions string
-		)
-		for rows.Next() {
-			err = rows.Scan(
-				&tableSchema,
-				&tableName,
-				&tableType,
-				&engine,
-				&version,
-				&rowFormat,
-				&tableRows,
-				&dataLength,
-				&indexLength,
-				&dataFree,
-				&createOptions,
-			)
-			if err != nil {
-				return err
-			}
-			tags := map[string]string{"server": servtag}
-			tags["schema"] = tableSchema
-			tags["table"] = tableName
-
-			if m.MetricVersion < 2 {
-				acc.AddFields(newNamespace("info_schema", "table_rows"),
-					map[string]interface{}{"value": tableRows}, tags)
-
-				dlTags := copyTags(tags)
-				dlTags["component"] = "data_length"
-				acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
-					map[string]interface{}{"value": dataLength}, dlTags)
-
-				ilTags := copyTags(tags)
-				ilTags["component"] = "index_length"
-				acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
-					map[string]interface{}{"value": indexLength}, ilTags)
-
-				dfTags := copyTags(tags)
-				dfTags["component"] = "data_free"
-				acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
-					map[string]interface{}{"value": dataFree}, dfTags)
-			} else {
-				acc.AddFields("mysql_table_schema",
-					map[string]interface{}{"rows": tableRows}, tags)
-
-				acc.AddFields("mysql_table_schema",
-					map[string]interface{}{"data_length": dataLength}, tags)
-
-				acc.AddFields("mysql_table_schema",
-					map[string]interface{}{"index_length": indexLength}, tags)
-
-				acc.AddFields("mysql_table_schema",
-					map[string]interface{}{"data_free": dataFree}, tags)
-			}
-
-			versionTags := copyTags(tags)
-			versionTags["type"] = tableType
-			versionTags["engine"] = engine
-			versionTags["row_format"] = rowFormat
-			versionTags["create_options"] = createOptions
-
-			if m.MetricVersion < 2 {
-				acc.AddFields(newNamespace("info_schema", "table_version"),
-					map[string]interface{}{"value": version}, versionTags)
-			} else {
-				acc.AddFields("mysql_table_schema_version",
-					map[string]interface{}{"table_version": version}, versionTags)
-			}
 		}
 	}
 	return nil
 }
 
-func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
+func (m *Mysql) gatherSchemaForDB(db *sql.DB, database string, servtag string, acc telegraf.Accumulator) error {
+	rows, err := db.Query(fmt.Sprintf(tableSchemaQuery, database))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var (
+		tableSchema   string
+		tableName     string
+		tableType     string
+		engine        string
+		version       float64
+		rowFormat     string
+		tableRows     float64
+		dataLength    float64
+		indexLength   float64
+		dataFree      float64
+		createOptions string
+	)
+
+	for rows.Next() {
+		err = rows.Scan(
+			&tableSchema,
+			&tableName,
+			&tableType,
+			&engine,
+			&version,
+			&rowFormat,
+			&tableRows,
+			&dataLength,
+			&indexLength,
+			&dataFree,
+			&createOptions,
+		)
+		if err != nil {
+			return err
+		}
+		tags := map[string]string{"server": servtag}
+		tags["schema"] = tableSchema
+		tags["table"] = tableName
+
+		if m.MetricVersion < 2 {
+			acc.AddFields(newNamespace("info_schema", "table_rows"),
+				map[string]interface{}{"value": tableRows}, tags)
+
+			dlTags := copyTags(tags)
+			dlTags["component"] = "data_length"
+			acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
+				map[string]interface{}{"value": dataLength}, dlTags)
+
+			ilTags := copyTags(tags)
+			ilTags["component"] = "index_length"
+			acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
+				map[string]interface{}{"value": indexLength}, ilTags)
+
+			dfTags := copyTags(tags)
+			dfTags["component"] = "data_free"
+			acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
+				map[string]interface{}{"value": dataFree}, dfTags)
+		} else {
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"rows": tableRows}, tags)
+
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"data_length": dataLength}, tags)
+
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"index_length": indexLength}, tags)
+
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"data_free": dataFree}, tags)
+		}
+
+		versionTags := copyTags(tags)
+		versionTags["type"] = tableType
+		versionTags["engine"] = engine
+		versionTags["row_format"] = rowFormat
+		versionTags["create_options"] = createOptions
+
+		if m.MetricVersion < 2 {
+			acc.AddFields(newNamespace("info_schema", "table_version"),
+				map[string]interface{}{"value": version}, versionTags)
+		} else {
+			acc.AddFields("mysql_table_schema_version",
+				map[string]interface{}{"table_version": version}, versionTags)
+		}
+	}
+	return nil
+}
+
+func (m *Mysql) parseValueByDatabaseTypeName(value sql.RawBytes, databaseTypeName string) (interface{}, error) {
 	if m.MetricVersion < 2 {
 		return v1.ParseValue(value)
 	}
-	return parseValue(value)
-}
 
-// parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1
-func parseValue(value sql.RawBytes) (interface{}, bool) {
-	if bytes.EqualFold(value, []byte("YES")) || bytes.Compare(value, []byte("ON")) == 0 {
-		return 1, true
+	switch databaseTypeName {
+	case "INT":
+		return v2.ParseInt(value)
+	case "BIGINT":
+		return v2.ParseUint(value)
+	case "VARCHAR":
+		return v2.ParseString(value)
+	default:
+		m.Log.Debugf("unknown database type name %q in parseValueByDatabaseTypeName", databaseTypeName)
+		return v2.ParseValue(value)
 	}
-
-	if bytes.EqualFold(value, []byte("NO")) || bytes.Compare(value, []byte("OFF")) == 0 {
-		return 0, true
-	}
-
-	if val, err := strconv.ParseInt(string(value), 10, 64); err == nil {
-		return val, true
-	}
-	if val, err := strconv.ParseFloat(string(value), 64); err == nil {
-		return val, true
-	}
-
-	if len(string(value)) > 0 {
-		return string(value), true
-	}
-	return nil, false
 }
 
 // findThreadState can be used to find thread state by command and plain state

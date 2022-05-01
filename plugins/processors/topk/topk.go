@@ -7,23 +7,23 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type TopK struct {
-	Period             internal.Duration `toml:"period"`
-	K                  int               `toml:"k"`
-	GroupBy            []string          `toml:"group_by"`
-	Fields             []string          `toml:"fields"`
-	Aggregation        string            `toml:"aggregation"`
-	Bottomk            bool              `toml:"bottomk"`
-	AddGroupByTag      string            `toml:"add_groupby_tag"`
-	AddRankFields      []string          `toml:"add_rank_fields"`
-	AddAggregateFields []string          `toml:"add_aggregate_fields"`
-	Log                telegraf.Logger   `toml:"-"`
+	Period             config.Duration `toml:"period"`
+	K                  int             `toml:"k"`
+	GroupBy            []string        `toml:"group_by"`
+	Fields             []string        `toml:"fields"`
+	Aggregation        string          `toml:"aggregation"`
+	Bottomk            bool            `toml:"bottomk"`
+	AddGroupByTag      string          `toml:"add_groupby_tag"`
+	AddRankFields      []string        `toml:"add_rank_fields"`
+	AddAggregateFields []string        `toml:"add_aggregate_fields"`
+	Log                telegraf.Logger `toml:"-"`
 
 	cache           map[string][]telegraf.Metric
 	tagsGlobs       filter.Filter
@@ -37,7 +37,7 @@ func New() *TopK {
 	topk := TopK{}
 
 	// Setup defaults
-	topk.Period = internal.Duration{Duration: time.Second * time.Duration(10)}
+	topk.Period = config.Duration(time.Second * time.Duration(10))
 	topk.K = 10
 	topk.Fields = []string{"value"}
 	topk.Aggregation = "mean"
@@ -52,55 +52,6 @@ func New() *TopK {
 	return &topk
 }
 
-var sampleConfig = `
-  ## How many seconds between aggregations
-  # period = 10
-
-  ## How many top metrics to return
-  # k = 10
-
-  ## Over which tags should the aggregation be done. Globs can be specified, in
-  ## which case any tag matching the glob will aggregated over. If set to an
-  ## empty list is no aggregation over tags is done
-  # group_by = ['*']
-
-  ## Over which fields are the top k are calculated
-  # fields = ["value"]
-
-  ## What aggregation to use. Options: sum, mean, min, max
-  # aggregation = "mean"
-
-  ## Instead of the top k largest metrics, return the bottom k lowest metrics
-  # bottomk = false
-
-  ## The plugin assigns each metric a GroupBy tag generated from its name and
-  ## tags. If this setting is different than "" the plugin will add a
-  ## tag (which name will be the value of this setting) to each metric with
-  ## the value of the calculated GroupBy tag. Useful for debugging
-  # add_groupby_tag = ""
-
-  ## These settings provide a way to know the position of each metric in
-  ## the top k. The 'add_rank_field' setting allows to specify for which
-  ## fields the position is required. If the list is non empty, then a field
-  ## will be added to each and every metric for each string present in this
-  ## setting. This field will contain the ranking of the group that
-  ## the metric belonged to when aggregated over that field.
-  ## The name of the field will be set to the name of the aggregation field,
-  ## suffixed with the string '_topk_rank'
-  # add_rank_fields = []
-
-  ## These settings provide a way to know what values the plugin is generating
-  ## when aggregating metrics. The 'add_aggregate_field' setting allows to
-  ## specify for which fields the final aggregation value is required. If the
-  ## list is non empty, then a field will be added to each every metric for
-  ## each field present in this setting. This field will contain
-  ## the computed aggregation for the group that the metric belonged to when
-  ## aggregated over that field.
-  ## The name of the field will be set to the name of the aggregation field,
-  ## suffixed with the string '_topk_aggregate'
-  # add_aggregate_fields = []
-`
-
 type MetricAggregation struct {
 	groupbykey string
 	values     map[string]float64
@@ -110,10 +61,7 @@ func sortMetrics(metrics []MetricAggregation, field string, reverse bool) {
 	less := func(i, j int) bool {
 		iv := metrics[i].values[field]
 		jv := metrics[j].values[field]
-		if iv < jv {
-			return true
-		}
-		return false
+		return iv < jv
 	}
 
 	if reverse {
@@ -123,17 +71,9 @@ func sortMetrics(metrics []MetricAggregation, field string, reverse bool) {
 	}
 }
 
-func (t *TopK) SampleConfig() string {
-	return sampleConfig
-}
-
 func (t *TopK) Reset() {
 	t.cache = make(map[string][]telegraf.Metric)
 	t.lastAggregation = time.Now()
-}
-
-func (t *TopK) Description() string {
-	return "Print all metrics that pass through this filter."
 }
 
 func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
@@ -234,7 +174,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 	// If enough time has passed
 	elapsed := time.Since(t.lastAggregation)
-	if elapsed >= t.Period.Duration {
+	if elapsed >= time.Duration(t.Period) {
 		return t.push()
 	}
 
@@ -276,11 +216,10 @@ func (t *TopK) push() []telegraf.Metric {
 	}
 
 	// The return value that will hold the returned metrics
-	var ret = make([]telegraf.Metric, 0, 0)
+	var ret = make([]telegraf.Metric, 0)
 	// Get the top K metrics for each field and add them to the return value
 	addedKeys := make(map[string]bool)
 	for _, field := range t.Fields {
-
 		// Sort the aggregations
 		sortMetrics(aggregations, field, t.Bottomk)
 
@@ -316,10 +255,7 @@ func (t *TopK) push() []telegraf.Metric {
 
 	result := make([]telegraf.Metric, 0, len(ret))
 	for _, m := range ret {
-		newMetric, err := metric.New(m.Name(), m.Tags(), m.Fields(), m.Time(), m.Type())
-		if err != nil {
-			continue
-		}
+		newMetric := metric.New(m.Name(), m.Tags(), m.Fields(), m.Time(), m.Type())
 		result = append(result, newMetric)
 	}
 

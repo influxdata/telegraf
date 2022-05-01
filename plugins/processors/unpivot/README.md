@@ -4,9 +4,10 @@ You can use the `unpivot` processor to rotate a multi field series into single v
 
 To perform the reverse operation use the [pivot] processor.
 
-### Configuration
+## Configuration
 
 ```toml
+# Rotate multi field metric into several single field metrics
 [[processors.unpivot]]
   ## Tag to use for the name.
   tag_key = "name"
@@ -14,7 +15,7 @@ To perform the reverse operation use the [pivot] processor.
   value_key = "value"
 ```
 
-### Example
+## Example
 
 ```diff
 - cpu,cpu=cpu0 time_idle=42i,time_user=43i
@@ -23,4 +24,3 @@ To perform the reverse operation use the [pivot] processor.
 ```
 
 [pivot]: /plugins/processors/pivot/README.md
-

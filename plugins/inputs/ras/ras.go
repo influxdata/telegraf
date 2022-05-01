@@ -1,3 +1,4 @@
+//go:build linux && (386 || amd64 || arm || arm64)
 // +build linux
 // +build 386 amd64 arm arm64
 
@@ -22,11 +23,11 @@ type Ras struct {
 	DBPath string `toml:"db_path"`
 
 	Log telegraf.Logger `toml:"-"`
-	db  *sql.DB         `toml:"-"`
 
-	latestTimestamp   time.Time              `toml:"-"`
-	cpuSocketCounters map[int]metricCounters `toml:"-"`
-	serverCounters    metricCounters         `toml:"-"`
+	db                *sql.DB
+	latestTimestamp   time.Time
+	cpuSocketCounters map[int]metricCounters
+	serverCounters    metricCounters
 }
 
 type machineCheckError struct {
@@ -41,7 +42,7 @@ type metricCounters map[string]int64
 
 const (
 	mceQuery = `
-		SELECT 
+		SELECT
 			id, timestamp, error_msg, mcistatus_msg, socketid
 		FROM mce_record
 		WHERE timestamp > ?
@@ -66,20 +67,6 @@ const (
 	microcodeROMParity     = "microcode_rom_parity_errors"
 	unclassifiedMCEBase    = "unclassified_mce_errors"
 )
-
-// SampleConfig returns sample configuration for this plugin.
-func (r *Ras) SampleConfig() string {
-	return `
-  ## Optional path to RASDaemon sqlite3 database.
-  ## Default: /var/lib/rasdaemon/ras-mc_event.db
-  # db_path = ""
-`
-}
-
-// Description returns the plugin description.
-func (r *Ras) Description() string {
-	return "RAS plugin exposes counter metrics for Machine Check Errors provided by RASDaemon (sqlite3 output is required)."
-}
 
 // Start initializes connection to DB, metrics are gathered in Gather
 func (r *Ras) Start(telegraf.Accumulator) error {

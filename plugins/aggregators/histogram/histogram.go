@@ -3,8 +3,10 @@ package histogram
 import (
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	telegrafConfig "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
@@ -22,9 +24,11 @@ const bucketNegInf = "-Inf"
 
 // HistogramAggregator is aggregator with histogram configs and particular histograms for defined metrics
 type HistogramAggregator struct {
-	Configs      []config `toml:"config"`
-	ResetBuckets bool     `toml:"reset"`
-	Cumulative   bool     `toml:"cumulative"`
+	Configs            []config                `toml:"config"`
+	ResetBuckets       bool                    `toml:"reset"`
+	Cumulative         bool                    `toml:"cumulative"`
+	ExpirationInterval telegrafConfig.Duration `toml:"expiration_interval"`
+	PushOnlyOnUpdate   bool                    `toml:"push_only_on_update"`
 
 	buckets bucketsByMetrics
 	cache   map[uint64]metricHistogramCollection
@@ -51,6 +55,8 @@ type metricHistogramCollection struct {
 	histogramCollection map[string]counts
 	name                string
 	tags                map[string]string
+	expireTime          time.Time
+	updated             bool
 }
 
 // counts is the number of hits in the bucket
@@ -63,6 +69,8 @@ type groupedByCountFields struct {
 	fieldsWithCount map[string]int64
 }
 
+var timeNow = time.Now
+
 // NewHistogramAggregator creates new histogram aggregator
 func NewHistogramAggregator() *HistogramAggregator {
 	h := &HistogramAggregator{
@@ -74,51 +82,10 @@ func NewHistogramAggregator() *HistogramAggregator {
 	return h
 }
 
-var sampleConfig = `
-  ## The period in which to flush the aggregator.
-  period = "30s"
-
-  ## If true, the original metric will be dropped by the
-  ## aggregator and will not get sent to the output plugins.
-  drop_original = false
-
-  ## If true, the histogram will be reset on flush instead
-  ## of accumulating the results.
-  reset = false
-
-  ## Whether bucket values should be accumulated. If set to false, "gt" tag will be added.
-  ## Defaults to true.
-  cumulative = true
-
-  ## Example config that aggregates all fields of the metric.
-  # [[aggregators.histogram.config]]
-  #   ## Right borders of buckets (with +Inf implicitly added).
-  #   buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
-  #   ## The name of metric.
-  #   measurement_name = "cpu"
-
-  ## Example config that aggregates only specific fields of the metric.
-  # [[aggregators.histogram.config]]
-  #   ## Right borders of buckets (with +Inf implicitly added).
-  #   buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
-  #   ## The name of metric.
-  #   measurement_name = "diskio"
-  #   ## The concrete fields of metric
-  #   fields = ["io_time", "read_time", "write_time"]
-`
-
-// SampleConfig returns sample of config
-func (h *HistogramAggregator) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns description of aggregator plugin
-func (h *HistogramAggregator) Description() string {
-	return "Create aggregate histograms."
-}
-
 // Add adds new hit to the buckets
 func (h *HistogramAggregator) Add(in telegraf.Metric) {
+	addTime := timeNow()
+
 	bucketsByField := make(map[string][]float64)
 	for field := range in.Fields() {
 		buckets := h.getBuckets(in.Name(), field)
@@ -151,6 +118,10 @@ func (h *HistogramAggregator) Add(in telegraf.Metric) {
 				index := sort.SearchFloat64s(buckets, value)
 				agr.histogramCollection[field][index]++
 			}
+			if h.ExpirationInterval != 0 {
+				agr.expireTime = addTime.Add(time.Duration(h.ExpirationInterval))
+			}
+			agr.updated = true
 		}
 	}
 
@@ -160,8 +131,18 @@ func (h *HistogramAggregator) Add(in telegraf.Metric) {
 // Push returns histogram values for metrics
 func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
 	metricsWithGroupedFields := []groupedByCountFields{}
+	now := timeNow()
 
-	for _, aggregate := range h.cache {
+	for id, aggregate := range h.cache {
+		if h.ExpirationInterval != 0 && now.After(aggregate.expireTime) {
+			delete(h.cache, id)
+			continue
+		}
+		if h.PushOnlyOnUpdate && !h.cache[id].updated {
+			continue
+		}
+		aggregate.updated = false
+		h.cache[id] = aggregate
 		for field, counts := range aggregate.histogramCollection {
 			h.groupFieldsByBuckets(&metricsWithGroupedFields, aggregate.name, field, copyTags(aggregate.tags), counts)
 		}

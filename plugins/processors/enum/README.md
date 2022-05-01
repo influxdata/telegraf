@@ -2,16 +2,17 @@
 
 The Enum Processor allows the configuration of value mappings for metric tags or fields.
 The main use-case for this is to rewrite status codes such as _red_, _amber_ and
-_green_ by numeric values such as 0, 1, 2. The plugin supports string, int and bool
+_green_ by numeric values such as 0, 1, 2. The plugin supports string, int, float64 and bool
 types for the field values. Multiple tags or fields can be configured with separate
 value mappings for each. Default mapping values can be configured to be
 used for all values, which are not contained in the value_mappings. The
 processor supports explicit configuration of a destination tag or field. By default the
 source tag or field is overwritten.
 
-### Configuration:
+## Configuration
 
 ```toml
+# Map enum values according to given table.
 [[processors.enum]]
   [[processors.enum.mapping]]
     ## Name of the field to map. Globs accepted.
@@ -25,7 +26,7 @@ source tag or field is overwritten.
     dest = "status_code"
 
     ## Default value to be used for all values not contained in the mapping
-    ## table.  When unset and no match is found, the original field will remain 
+    ## table.  When unset and no match is found, the original field will remain
     ## unmodified and the destination tag or field will not be created.
     # default = 0
 
@@ -36,7 +37,7 @@ source tag or field is overwritten.
       red = 3
 ```
 
-### Example:
+## Example
 
 ```diff
 - xyzzy status="green" 1502489900000000000
@@ -44,6 +45,7 @@ source tag or field is overwritten.
 ```
 
 With unknown value and no default set:
+
 ```diff
 - xyzzy status="black" 1502489900000000000
 + xyzzy status="black" 1502489900000000000

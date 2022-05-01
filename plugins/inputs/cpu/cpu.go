@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"time"
 
+	cpuUtil "github.com/shirou/gopsutil/v3/cpu"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
-	"github.com/shirou/gopsutil/cpu"
 )
 
 type CPUStats struct {
 	ps        system.PS
-	lastStats map[string]cpu.TimesStat
+	lastStats map[string]cpuUtil.TimesStat
 
 	PerCPU         bool `toml:"percpu"`
 	TotalCPU       bool `toml:"totalcpu"`
@@ -28,25 +29,6 @@ func NewCPUStats(ps system.PS) *CPUStats {
 	}
 }
 
-func (c *CPUStats) Description() string {
-	return "Read metrics about cpu usage"
-}
-
-var sampleConfig = `
-  ## Whether to report per-cpu stats or not
-  percpu = true
-  ## Whether to report total system cpu stats or not
-  totalcpu = true
-  ## If true, collect raw CPU time metrics
-  collect_cpu_time = false
-  ## If true, compute and report the sum of all non-idle CPU states
-  report_active = false
-`
-
-func (c *CPUStats) SampleConfig() string {
-	return sampleConfig
-}
-
 func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 	times, err := c.ps.CPUTimes(c.PerCPU, c.TotalCPU)
 	if err != nil {
@@ -59,8 +41,8 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 			"cpu": cts.CPU,
 		}
 
-		total := totalCpuTime(cts)
-		active := activeCpuTime(cts)
+		total := totalCPUTime(cts)
+		active := activeCPUTime(cts)
 
 		if c.CollectCPUTime {
 			// Add cpu time metrics
@@ -77,7 +59,7 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 				"time_guest_nice": cts.GuestNice,
 			}
 			if c.ReportActive {
-				fieldsC["time_active"] = activeCpuTime(cts)
+				fieldsC["time_active"] = activeCPUTime(cts)
 			}
 			acc.AddCounter("cpu", fieldsC, tags, now)
 		}
@@ -92,8 +74,8 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 		if !ok {
 			continue
 		}
-		lastTotal := totalCpuTime(lastCts)
-		lastActive := activeCpuTime(lastCts)
+		lastTotal := totalCPUTime(lastCts)
+		lastActive := activeCPUTime(lastCts)
 		totalDelta := total - lastTotal
 
 		if totalDelta < 0 {
@@ -123,7 +105,7 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 		acc.AddGauge("cpu", fieldsG, tags, now)
 	}
 
-	c.lastStats = make(map[string]cpu.TimesStat)
+	c.lastStats = make(map[string]cpuUtil.TimesStat)
 	for _, cts := range times {
 		c.lastStats[cts.CPU] = cts
 	}
@@ -131,14 +113,13 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 	return err
 }
 
-func totalCpuTime(t cpu.TimesStat) float64 {
-	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal +
-		t.Idle
+func totalCPUTime(t cpuUtil.TimesStat) float64 {
+	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal + t.Idle
 	return total
 }
 
-func activeCpuTime(t cpu.TimesStat) float64 {
-	active := totalCpuTime(t) - t.Idle
+func activeCPUTime(t cpuUtil.TimesStat) float64 {
+	active := totalCPUTime(t) - t.Idle
 	return active
 }
 

@@ -8,48 +8,27 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 // NewRelic nr structure
 type NewRelic struct {
-	InsightsKey  string            `toml:"insights_key"`
-	MetricPrefix string            `toml:"metric_prefix"`
-	Timeout      internal.Duration `toml:"timeout"`
-	HttpProxy    string            `toml:"http_proxy"`
+	InsightsKey  string          `toml:"insights_key"`
+	MetricPrefix string          `toml:"metric_prefix"`
+	Timeout      config.Duration `toml:"timeout"`
+	HTTPProxy    string          `toml:"http_proxy"`
+	MetricURL    string          `toml:"metric_url"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
 	savedErrors map[int]interface{}
 	errorCount  int
-	client      http.Client `toml:"-"`
-}
-
-// Description returns a one-sentence description on the Output
-func (nr *NewRelic) Description() string {
-	return "Send metrics to New Relic metrics endpoint"
-}
-
-// SampleConfig : return  default configuration of the Output
-func (nr *NewRelic) SampleConfig() string {
-	return `
-  ## New Relic Insights API key
-  insights_key = "insights api key"
-
-  ## Prefix to add to add to metric name for easy identification.
-  # metric_prefix = ""
-
-  ## Timeout for writes to the New Relic API.
-  # timeout = "15s"
-
-  ## HTTP Proxy override. If unset use values from the standard
-  ## proxy environment variables to determine proxy, if any.
-  # http_proxy = "http://corporate.proxy:3128"
-`
+	client      http.Client
 }
 
 // Connect to the Output
@@ -67,7 +46,7 @@ func (nr *NewRelic) Connect() error {
 		func(cfg *telemetry.Config) {
 			cfg.Product = "NewRelic-Telegraf-Plugin"
 			cfg.ProductVersion = "1.0"
-			cfg.HarvestTimeout = nr.Timeout.Duration
+			cfg.HarvestTimeout = time.Duration(nr.Timeout)
 			cfg.Client = &nr.client
 			cfg.ErrorLogger = func(e map[string]interface{}) {
 				var errorString string
@@ -76,6 +55,9 @@ func (nr *NewRelic) Connect() error {
 				}
 				nr.errorCount++
 				nr.savedErrors[nr.errorCount] = errorString
+			}
+			if nr.MetricURL != "" {
+				cfg.MetricsURLOverride = nr.MetricURL
 			}
 		})
 	if err != nil {
@@ -161,18 +143,18 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
 		return &NewRelic{
-			Timeout: internal.Duration{Duration: time.Second * 15},
+			Timeout: config.Duration(time.Second * 15),
 		}
 	})
 }
 
 func (nr *NewRelic) initClient() error {
-	if nr.HttpProxy == "" {
+	if nr.HTTPProxy == "" {
 		nr.client = http.Client{}
 		return nil
 	}
 
-	proxyURL, err := url.Parse(nr.HttpProxy)
+	proxyURL, err := url.Parse(nr.HTTPProxy)
 	if err != nil {
 		return err
 	}

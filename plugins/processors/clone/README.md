@@ -22,7 +22,7 @@ created.
 A typical use-case is gathering metrics once and cloning them to simulate
 having several hosts (modifying ``host`` tag).
 
-### Configuration:
+## Configuration
 
 ```toml
 # Apply metric modifications using override semantics.

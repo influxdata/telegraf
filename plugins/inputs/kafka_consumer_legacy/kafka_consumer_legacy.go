@@ -47,41 +47,6 @@ type Kafka struct {
 	doNotCommitMsgs bool
 }
 
-var sampleConfig = `
-  ## topic(s) to consume
-  topics = ["telegraf"]
-
-  ## an array of Zookeeper connection strings
-  zookeeper_peers = ["localhost:2181"]
-
-  ## Zookeeper Chroot
-  zookeeper_chroot = ""
-
-  ## the name of the consumer group
-  consumer_group = "telegraf_metrics_consumers"
-
-  ## Offset (must be either "oldest" or "newest")
-  offset = "oldest"
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-
-  ## Maximum length of a message to consume, in bytes (default 0/unlimited);
-  ## larger messages are dropped
-  max_message_len = 65536
-`
-
-func (k *Kafka) SampleConfig() string {
-	return sampleConfig
-}
-
-func (k *Kafka) Description() string {
-	return "Read metrics from Kafka topic(s)"
-}
-
 func (k *Kafka) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }
@@ -161,8 +126,11 @@ func (k *Kafka) receiver() {
 				// TODO(cam) this locking can be removed if this PR gets merged:
 				// https://github.com/wvanbergen/kafka/pull/84
 				k.Lock()
-				k.Consumer.CommitUpto(msg)
+				err := k.Consumer.CommitUpto(msg)
 				k.Unlock()
+				if err != nil {
+					k.acc.AddError(fmt.Errorf("committing to consumer failed: %v", err))
+				}
 			}
 		}
 	}
@@ -177,7 +145,7 @@ func (k *Kafka) Stop() {
 	}
 }
 
-func (k *Kafka) Gather(acc telegraf.Accumulator) error {
+func (k *Kafka) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

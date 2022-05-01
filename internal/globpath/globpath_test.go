@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
@@ -19,7 +20,6 @@ var (
 )
 
 func TestCompileAndMatch(t *testing.T) {
-
 	type test struct {
 		path    string
 		matches int

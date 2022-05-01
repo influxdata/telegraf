@@ -7,7 +7,7 @@ This plugin is known to support Minecraft Java Edition versions 1.11 - 1.14.
 When using an version of Minecraft earlier than 1.13, be aware that the values
 for some criterion has changed and may need to be modified.
 
-#### Server Setup
+## Server Setup
 
 Enable [RCON][] on the Minecraft server, add this to your server configuration
 in the [server.properties][] file:
@@ -24,24 +24,28 @@ from the server console, or over an RCON connection.
 
 When getting started pick an easy to test objective.  This command will add an
 objective that counts the number of times a player has jumped:
-```
+
+```sh
 /scoreboard objectives add jumps minecraft.custom:minecraft.jump
 ```
 
 Once a player has triggered the event they will be added to the scoreboard,
 you can then list all players with recorded scores:
-```
+
+```sh
 /scoreboard players list
 ```
 
 View the current scores with a command, substituting your player name:
-```
+
+```sh
 /scoreboard players list Etho
 ```
 
-### Configuration
+## Configuration
 
 ```toml
+# Collects scores from a Minecraft server's scoreboard using the RCON protocol
 [[inputs.minecraft]]
   ## Address of the Minecraft server.
   # server = "localhost"
@@ -51,9 +55,12 @@ View the current scores with a command, substituting your player name:
 
   ## Server RCON Password.
   password = ""
+
+  ## Uncomment to remove deprecated metric components.
+  # tagdrop = ["server"]
 ```
 
-### Metrics
+## Metrics
 
 - minecraft
   - tags:
@@ -64,15 +71,17 @@ View the current scores with a command, substituting your player name:
   - fields:
     - `<objective_name>` (integer, count)
 
-### Sample Queries:
+## Sample Queries
 
 Get the number of jumps per player in the last hour:
+
 ```sql
 SELECT SPREAD("jumps") FROM "minecraft" WHERE time > now() - 1h GROUP BY "player"
 ```
 
-### Example Output:
-```
+## Example Output
+
+```shell
 minecraft,player=notch,source=127.0.0.1,port=25575 jumps=178i 1498261397000000000
 minecraft,player=dinnerbone,source=127.0.0.1,port=25575 deaths=1i,jumps=1999i,cow_kills=1i 1498261397000000000
 minecraft,player=jeb,source=127.0.0.1,port=25575 d_pickaxe=1i,damage_dealt=80i,d_sword=2i,hunger=20i,health=20i,kills=1i,level=33i,jumps=264i,armor=15i 1498261397000000000

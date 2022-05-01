@@ -13,11 +13,14 @@ import (
 	"github.com/influxdata/telegraf/filter"
 )
 
-const DEFAULT_TEMPLATE = "host.tags.measurement.field"
+const DefaultTemplate = "host.tags.measurement.field"
 
 var (
-	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
-	hyphenChars  = strings.NewReplacer(
+	strictAllowedChars          = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`)
+	compatibleAllowedCharsValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)
+	compatibleLeadingTildeDrop  = regexp.MustCompile(`^[~]*(.*)`)
+	hyphenChars                 = strings.NewReplacer(
 		"/", "-",
 		"@", "-",
 		"*", "-",
@@ -36,11 +39,12 @@ type GraphiteTemplate struct {
 }
 
 type GraphiteSerializer struct {
-	Prefix     string
-	Template   string
-	TagSupport bool
-	Separator  string
-	Templates  []*GraphiteTemplate
+	Prefix          string
+	Template        string
+	TagSupport      bool
+	TagSanitizeMode string
+	Separator       string
+	Templates       []*GraphiteTemplate
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -56,7 +60,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			if fieldValue == "" {
 				continue
 			}
-			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName)
+			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName, s.TagSanitizeMode)
 			metricString := fmt.Sprintf("%s %s %d\n",
 				// insert "field" section of template
 				bucket,
@@ -87,7 +91,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			}
 			metricString := fmt.Sprintf("%s %s %d\n",
 				// insert "field" section of template
-				sanitize(InsertField(bucket, fieldName)),
+				strictSanitize(InsertField(bucket, fieldName)),
 				fieldValue,
 				timestamp)
 			point := []byte(metricString)
@@ -141,7 +145,7 @@ func formatValue(value interface{}) string {
 
 // SerializeBucketName will take the given measurement name and tags and
 // produce a graphite bucket. It will use the GraphiteSerializer.Template
-// to generate this, or DEFAULT_TEMPLATE.
+// to generate this, or DefaultTemplate.
 //
 // NOTE: SerializeBucketName replaces the "field" portion of the template with
 // FIELDNAME. It is up to the user to replace this. This is so that
@@ -154,7 +158,7 @@ func SerializeBucketName(
 	prefix string,
 ) string {
 	if template == "" {
-		template = DEFAULT_TEMPLATE
+		template = DefaultTemplate
 	}
 	tagsCopy := make(map[string]string)
 	for k, v := range tags {
@@ -248,6 +252,7 @@ func SerializeBucketNameWithTags(
 	prefix string,
 	separator string,
 	field string,
+	tagSanitizeMode string,
 ) string {
 	var out string
 	var tagsCopy []string
@@ -255,7 +260,11 @@ func SerializeBucketNameWithTags(
 		if k == "name" {
 			k = "_name"
 		}
-		tagsCopy = append(tagsCopy, sanitize(k+"="+v))
+		if tagSanitizeMode == "compatible" {
+			tagsCopy = append(tagsCopy, compatibleSanitize(k, v))
+		} else {
+			tagsCopy = append(tagsCopy, strictSanitize(k+"="+v))
+		}
 	}
 	sort.Strings(tagsCopy)
 
@@ -269,7 +278,7 @@ func SerializeBucketNameWithTags(
 		out += separator + field
 	}
 
-	out = sanitize(out)
+	out = strictSanitize(out)
 
 	if len(tagsCopy) > 0 {
 		out += ";" + strings.Join(tagsCopy, ";")
@@ -296,23 +305,30 @@ func buildTags(tags map[string]string) string {
 	}
 	sort.Strings(keys)
 
-	var tag_str string
+	var tagStr string
 	for i, k := range keys {
-		tag_value := strings.Replace(tags[k], ".", "_", -1)
+		tagValue := strings.Replace(tags[k], ".", "_", -1)
 		if i == 0 {
-			tag_str += tag_value
+			tagStr += tagValue
 		} else {
-			tag_str += "." + tag_value
+			tagStr += "." + tagValue
 		}
 	}
-	return tag_str
+	return tagStr
 }
 
-func sanitize(value string) string {
+func strictSanitize(value string) string {
 	// Apply special hyphenation rules to preserve backwards compatibility
 	value = hyphenChars.Replace(value)
 	// Apply rule to drop some chars to preserve backwards compatibility
 	value = dropChars.Replace(value)
 	// Replace any remaining illegal chars
-	return allowedChars.ReplaceAllLiteralString(value, "_")
+	return strictAllowedChars.ReplaceAllLiteralString(value, "_")
+}
+
+func compatibleSanitize(name string, value string) string {
+	name = compatibleAllowedCharsName.ReplaceAllLiteralString(name, "_")
+	value = compatibleAllowedCharsValue.ReplaceAllLiteralString(value, "_")
+	value = compatibleLeadingTildeDrop.FindStringSubmatch(value)[1]
+	return name + "=" + value
 }

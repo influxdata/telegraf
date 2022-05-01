@@ -1,9 +1,10 @@
 package riemann
 
 import (
-	"github.com/influxdata/telegraf/testutil"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf/metric"
@@ -76,7 +77,7 @@ func TestMetricEvents(t *testing.T) {
 	}
 
 	// build a single event
-	m, _ := metric.New(
+	m := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1", "host": "abc123"},
 		map[string]interface{}{"value": 5.6},
@@ -101,7 +102,7 @@ func TestMetricEvents(t *testing.T) {
 	require.Equal(t, expectedEvent, events[0])
 
 	// build 2 events
-	m, _ = metric.New(
+	m = metric.New(
 		"test2",
 		map[string]string{"host": "xyz987"},
 		map[string]interface{}{"point": 1},
@@ -136,7 +137,7 @@ func TestStateEvents(t *testing.T) {
 	}
 
 	// string metrics will be skipped unless explicitly enabled
-	m, _ := metric.New(
+	m := metric.New(
 		"test",
 		map[string]string{"host": "host"},
 		map[string]interface{}{"value": "running"},

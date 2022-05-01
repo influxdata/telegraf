@@ -32,8 +32,8 @@ type Redis struct {
 
 	Log telegraf.Logger
 
-	clients     []Client
-	initialized bool
+	clients   []Client
+	connected bool
 }
 
 type Client interface {
@@ -187,51 +187,24 @@ func (r *RedisClient) BaseTags() map[string]string {
 
 var replicationSlaveMetricPrefix = regexp.MustCompile(`^slave\d+`)
 
-var sampleConfig = `
-  ## specify servers via a url matching:
-  ##  [protocol://][:password]@address[:port]
-  ##  e.g.
-  ##    tcp://localhost:6379
-  ##    tcp://:password@192.168.99.100
-  ##    unix:///var/run/redis.sock
-  ##
-  ## If no servers are specified, then localhost is used as the host.
-  ## If no port is specified, 6379 is used
-  servers = ["tcp://localhost:6379"]
-
-  ## Optional. Specify redis commands to retrieve values
-  # [[inputs.redis.commands]]
-  # command = ["get", "sample-key"]
-  # field = "sample-key-value"
-  # type = "string"
-
-  ## specify server password
-  # password = "s#cr@t%"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = true
-`
-
-func (r *Redis) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Redis) Description() string {
-	return "Read metrics from one or many redis servers"
-}
-
 var Tracking = map[string]string{
 	"uptime_in_seconds": "uptime",
 	"connected_clients": "clients",
 	"role":              "replication_role",
 }
 
-func (r *Redis) init() error {
-	if r.initialized {
+func (r *Redis) Init() error {
+	for _, command := range r.Commands {
+		if command.Type != "string" && command.Type != "integer" && command.Type != "float" {
+			return fmt.Errorf(`unknown result type: expected one of "string", "integer", "float"; got %q`, command.Type)
+		}
+	}
+
+	return nil
+}
+
+func (r *Redis) connect() error {
+	if r.connected {
 		return nil
 	}
 
@@ -299,15 +272,15 @@ func (r *Redis) init() error {
 		}
 	}
 
-	r.initialized = true
+	r.connected = true
 	return nil
 }
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (r *Redis) Gather(acc telegraf.Accumulator) error {
-	if !r.initialized {
-		err := r.init()
+	if !r.connected {
+		err := r.connect()
 		if err != nil {
 			return err
 		}
@@ -333,6 +306,10 @@ func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) err
 	for _, command := range r.Commands {
 		val, err := client.Do(command.Type, command.Command...)
 		if err != nil {
+			if strings.Contains(err.Error(), "unexpected type=") {
+				return fmt.Errorf("could not get command result: %s", err)
+			}
+
 			return err
 		}
 

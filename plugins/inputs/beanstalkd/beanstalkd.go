@@ -11,26 +11,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const sampleConfig = `
-  ## Server to collect data from
-  server = "localhost:11300"
-
-  ## List of tubes to gather stats about.
-  ## If no tubes specified then data gathered for each tube on server reported by list-tubes command
-  tubes = ["notifications"]
-`
-
 type Beanstalkd struct {
 	Server string   `toml:"server"`
 	Tubes  []string `toml:"tubes"`
-}
-
-func (b *Beanstalkd) Description() string {
-	return "Collects Beanstalkd server and tubes stats"
-}
-
-func (b *Beanstalkd) SampleConfig() string {
-	return sampleConfig
 }
 
 func (b *Beanstalkd) Gather(acc telegraf.Accumulator) error {
@@ -62,7 +45,10 @@ func (b *Beanstalkd) Gather(acc telegraf.Accumulator) error {
 	for _, tube := range tubes {
 		wg.Add(1)
 		go func(tube string) {
-			b.gatherTubeStats(connection, tube, acc)
+			err := b.gatherTubeStats(connection, tube, acc)
+			if err != nil {
+				acc.AddError(err)
+			}
 			wg.Done()
 		}(tube)
 	}
@@ -128,7 +114,7 @@ func (b *Beanstalkd) gatherServerStats(connection *textproto.Conn, acc telegraf.
 		},
 		map[string]string{
 			"hostname": stats.Hostname,
-			"id":       stats.Id,
+			"id":       stats.ID,
 			"server":   b.Server,
 			"version":  stats.Version,
 		},
@@ -169,13 +155,13 @@ func (b *Beanstalkd) gatherTubeStats(connection *textproto.Conn, tube string, ac
 }
 
 func runQuery(connection *textproto.Conn, cmd string, result interface{}) error {
-	requestId, err := connection.Cmd(cmd)
+	requestID, err := connection.Cmd(cmd)
 	if err != nil {
 		return err
 	}
 
-	connection.StartResponse(requestId)
-	defer connection.EndResponse(requestId)
+	connection.StartResponse(requestID)
+	defer connection.EndResponse(requestID)
 
 	status, err := connection.ReadLine()
 	if err != nil {
@@ -240,7 +226,7 @@ type statsResponse struct {
 	CurrentWaiting        int     `yaml:"current-waiting"`
 	CurrentWorkers        int     `yaml:"current-workers"`
 	Hostname              string  `yaml:"hostname"`
-	Id                    string  `yaml:"id"`
+	ID                    string  `yaml:"id"`
 	JobTimeouts           int     `yaml:"job-timeouts"`
 	MaxJobSize            int     `yaml:"max-job-size"`
 	Pid                   int     `yaml:"pid"`

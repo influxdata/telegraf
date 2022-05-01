@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package infiniband
@@ -38,7 +39,7 @@ func TestInfiniband(t *testing.T) {
 		"port":   "1",
 	}
 
-	sample_rdmastats_entries := []rdmamap.RdmaStatEntry{
+	sampleRdmastatsEntries := []rdmamap.RdmaStatEntry{
 		{
 			Name:  "excessive_buffer_overrun_errors",
 			Value: uint64(0),
@@ -127,8 +128,7 @@ func TestInfiniband(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	addStats("m1x5_0", "1", sample_rdmastats_entries, &acc)
+	addStats("m1x5_0", "1", sampleRdmastatsEntries, &acc)
 
 	acc.AssertContainsTaggedFields(t, "infiniband", fields, tags)
-
 }

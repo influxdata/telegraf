@@ -6,11 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type conTest struct {
-	Got  string
-	Want *Connection
-}
-
 func TestNewConnection(t *testing.T) {
 	testData := []struct {
 		addr string
@@ -33,6 +28,18 @@ func TestNewConnection(t *testing.T) {
 				Hostname:  "192.168.1.1",
 				Username:  "USERID",
 				Password:  "PASS:!@#$%^&*(234)_+W0RD",
+				Interface: "lan",
+				Privilege: "USER",
+				HexKey:    "0001",
+			},
+		},
+		// test connection doesn't panic if incorrect symbol used
+		{
+			"USERID@PASSW0RD@lan(192.168.1.1)",
+			&Connection{
+				Hostname:  "192.168.1.1",
+				Username:  "",
+				Password:  "",
 				Interface: "lan",
 				Privilege: "USER",
 				HexKey:    "0001",

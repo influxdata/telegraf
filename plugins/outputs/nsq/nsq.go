@@ -2,34 +2,22 @@ package nsq
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/nsqio/go-nsq"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/nsqio/go-nsq"
 )
 
 type NSQ struct {
-	Server   string
-	Topic    string
-	producer *nsq.Producer
+	Server string
+	Topic  string
+	Log    telegraf.Logger `toml:"-"`
 
+	producer   *nsq.Producer
 	serializer serializers.Serializer
 }
-
-var sampleConfig = `
-  ## Location of nsqd instance listening on TCP
-  server = "localhost:4150"
-  ## NSQ topic for producer messages
-  topic = "telegraf"
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
-`
 
 func (n *NSQ) SetSerializer(serializer serializers.Serializer) {
 	n.serializer = serializer
@@ -52,14 +40,6 @@ func (n *NSQ) Close() error {
 	return nil
 }
 
-func (n *NSQ) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *NSQ) Description() string {
-	return "Send telegraf measurements to NSQD"
-}
-
 func (n *NSQ) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
@@ -68,13 +48,13 @@ func (n *NSQ) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
-			log.Printf("D! [outputs.nsq] Could not serialize metric: %v", err)
+			n.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 
 		err = n.producer.Publish(n.Topic, buf)
 		if err != nil {
-			return fmt.Errorf("FAILED to send NSQD message: %s", err)
+			return fmt.Errorf("failed to send NSQD message: %s", err)
 		}
 	}
 	return nil

@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // bcache doesn't aim for Windows
@@ -6,7 +7,7 @@ package bcache
 
 import (
 	"errors"
-	"io/ioutil"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,25 +20,6 @@ import (
 type Bcache struct {
 	BcachePath string
 	BcacheDevs []string
-}
-
-var sampleConfig = `
-  ## Bcache sets path
-  ## If not specified, then default is:
-  bcachePath = "/sys/fs/bcache"
-
-  ## By default, Telegraf gather stats for all bcache devices
-  ## Setting devices will restrict the stats to the specified
-  ## bcache devices.
-  bcacheDevs = ["bcache0"]
-`
-
-func (b *Bcache) SampleConfig() string {
-	return sampleConfig
-}
-
-func (b *Bcache) Description() string {
-	return "Read metrics of bcache from stats_total and dirty_data"
 }
 
 func getTags(bdev string) map[string]string {
@@ -83,7 +65,7 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	if len(metrics) == 0 {
 		return errors.New("can't read any stats file")
 	}
-	file, err := ioutil.ReadFile(bdev + "/dirty_data")
+	file, err := os.ReadFile(bdev + "/dirty_data")
 	if err != nil {
 		return err
 	}
@@ -95,7 +77,7 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 
 	for _, path := range metrics {
 		key := filepath.Base(path)
-		file, err := ioutil.ReadFile(path)
+		file, err := os.ReadFile(path)
 		rawValue := strings.TrimSpace(string(file))
 		if err != nil {
 			return err
@@ -128,7 +110,7 @@ func (b *Bcache) Gather(acc telegraf.Accumulator) error {
 	}
 	bdevs, _ := filepath.Glob(bcachePath + "/*/bdev*")
 	if len(bdevs) < 1 {
-		return errors.New("Can't find any bcache device")
+		return errors.New("can't find any bcache device")
 	}
 	for _, bdev := range bdevs {
 		if restrictDevs {
@@ -137,7 +119,9 @@ func (b *Bcache) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 		}
-		b.gatherBcache(bdev, acc)
+		if err := b.gatherBcache(bdev, acc); err != nil {
+			return fmt.Errorf("gathering bcache failed: %v", err)
+		}
 	}
 	return nil
 }

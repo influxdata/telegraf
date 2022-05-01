@@ -3,41 +3,16 @@ package proxmox
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
-
-var sampleConfig = `
-  ## API connection configuration. The API token was introduced in Proxmox v6.2. Required permissions for user and token: PVEAuditor role on /.
-  base_url = "https://localhost:8006/api2/json"
-  api_token = "USER@REALM!TOKENID=UUID"
-  ## Node name, defaults to OS hostname
-  # node_name = ""
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  insecure_skip_verify = false
-
-  # HTTP response timeout (default: 5s)
-  response_timeout = "5s"
-`
-
-func (px *Proxmox) SampleConfig() string {
-	return sampleConfig
-}
-
-func (px *Proxmox) Description() string {
-	return "Provides metrics from Proxmox nodes (Proxmox Virtual Environment > 6.2)."
-}
 
 func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 	err := getNodeSearchDomain(px)
@@ -66,7 +41,7 @@ func (px *Proxmox) Init() error {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: px.ResponseTimeout.Duration,
+		Timeout: time.Duration(px.ResponseTimeout),
 	}
 
 	return nil
@@ -81,28 +56,28 @@ func init() {
 }
 
 func getNodeSearchDomain(px *Proxmox) error {
-	apiUrl := "/nodes/" + px.NodeName + "/dns"
-	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
+	apiURL := "/nodes/" + px.NodeName + "/dns"
+	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
 	if err != nil {
 		return err
 	}
 
-	var nodeDns NodeDns
-	err = json.Unmarshal(jsonData, &nodeDns)
+	var nodeDNS NodeDNS
+	err = json.Unmarshal(jsonData, &nodeDNS)
 	if err != nil {
 		return err
 	}
 
-	if nodeDns.Data.Searchdomain == "" {
+	if nodeDNS.Data.Searchdomain == "" {
 		return errors.New("search domain is not set")
 	}
-	px.nodeSearchDomain = nodeDns.Data.Searchdomain
+	px.nodeSearchDomain = nodeDNS.Data.Searchdomain
 
 	return nil
 }
 
-func performRequest(px *Proxmox, apiUrl string, method string, data url.Values) ([]byte, error) {
-	request, err := http.NewRequest(method, px.BaseURL+apiUrl, strings.NewReader(data.Encode()))
+func performRequest(px *Proxmox, apiURL string, method string, data url.Values) ([]byte, error) {
+	request, err := http.NewRequest(method, px.BaseURL+apiURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +89,7 @@ func performRequest(px *Proxmox, apiUrl string, method string, data url.Values) 
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -123,15 +98,15 @@ func performRequest(px *Proxmox, apiUrl string, method string, data url.Values) 
 }
 
 func gatherLxcData(px *Proxmox, acc telegraf.Accumulator) {
-	gatherVmData(px, acc, LXC)
+	gatherVMData(px, acc, LXC)
 }
 
 func gatherQemuData(px *Proxmox, acc telegraf.Accumulator) {
-	gatherVmData(px, acc, QEMU)
+	gatherVMData(px, acc, QEMU)
 }
 
-func gatherVmData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
-	vmStats, err := getVmStats(px, rt)
+func gatherVMData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
+	vmStats, err := getVMStats(px, rt)
 	if err != nil {
 		px.Log.Error("Error getting VM stats: %v", err)
 		return
@@ -139,7 +114,7 @@ func gatherVmData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 
 	// For each VM add metrics to Accumulator
 	for _, vmStat := range vmStats.Data {
-		vmConfig, err := getVmConfig(px, vmStat.ID, rt)
+		vmConfig, err := getVMConfig(px, vmStat.ID, rt)
 		if err != nil {
 			px.Log.Errorf("Error getting VM config: %v", err)
 			return
@@ -157,90 +132,85 @@ func gatherVmData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 			return
 		}
 
-		fields, err := getFields(currentVMStatus)
-		if err != nil {
-			px.Log.Errorf("Error getting VM measurements: %v", err)
-			return
-		}
-
+		fields := getFields(currentVMStatus)
 		acc.AddFields("proxmox", fields, tags)
 	}
 }
 
-func getCurrentVMStatus(px *Proxmox, rt ResourceType, id string) (VmStat, error) {
-	apiUrl := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + id + "/status/current"
+func getCurrentVMStatus(px *Proxmox, rt ResourceType, id json.Number) (VMStat, error) {
+	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + string(id) + "/status/current"
 
-	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
+	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
 	if err != nil {
-		return VmStat{}, err
+		return VMStat{}, err
 	}
 
-	var currentVmStatus VmCurrentStats
-	err = json.Unmarshal(jsonData, &currentVmStatus)
+	var currentVMStatus VMCurrentStats
+	err = json.Unmarshal(jsonData, &currentVMStatus)
 	if err != nil {
-		return VmStat{}, err
+		return VMStat{}, err
 	}
 
-	return currentVmStatus.Data, nil
+	return currentVMStatus.Data, nil
 }
 
-func getVmStats(px *Proxmox, rt ResourceType) (VmStats, error) {
-	apiUrl := "/nodes/" + px.NodeName + "/" + string(rt)
-	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
+func getVMStats(px *Proxmox, rt ResourceType) (VMStats, error) {
+	apiURL := "/nodes/" + px.NodeName + "/" + string(rt)
+	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
 	if err != nil {
-		return VmStats{}, err
+		return VMStats{}, err
 	}
 
-	var vmStats VmStats
+	var vmStats VMStats
 	err = json.Unmarshal(jsonData, &vmStats)
 	if err != nil {
-		return VmStats{}, err
+		return VMStats{}, err
 	}
 
 	return vmStats, nil
 }
 
-func getVmConfig(px *Proxmox, vmId string, rt ResourceType) (VmConfig, error) {
-	apiUrl := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + vmId + "/config"
-	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
+func getVMConfig(px *Proxmox, vmID json.Number, rt ResourceType) (VMConfig, error) {
+	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + string(vmID) + "/config"
+	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
 	if err != nil {
-		return VmConfig{}, err
+		return VMConfig{}, err
 	}
 
-	var vmConfig VmConfig
+	var vmConfig VMConfig
 	err = json.Unmarshal(jsonData, &vmConfig)
 	if err != nil {
-		return VmConfig{}, err
+		return VMConfig{}, err
 	}
 
 	return vmConfig, nil
 }
 
-func getFields(vmStat VmStat) (map[string]interface{}, error) {
-	mem_total, mem_used, mem_free, mem_used_percentage := getByteMetrics(vmStat.TotalMem, vmStat.UsedMem)
-	swap_total, swap_used, swap_free, swap_used_percentage := getByteMetrics(vmStat.TotalSwap, vmStat.UsedSwap)
-	disk_total, disk_used, disk_free, disk_used_percentage := getByteMetrics(vmStat.TotalDisk, vmStat.UsedDisk)
+func getFields(vmStat VMStat) map[string]interface{} {
+	memMetrics := getByteMetrics(vmStat.TotalMem, vmStat.UsedMem)
+	swapMetrics := getByteMetrics(vmStat.TotalSwap, vmStat.UsedSwap)
+	diskMetrics := getByteMetrics(vmStat.TotalDisk, vmStat.UsedDisk)
 
 	return map[string]interface{}{
 		"status":               vmStat.Status,
 		"uptime":               jsonNumberToInt64(vmStat.Uptime),
-		"cpuload":              jsonNumberToFloat64(vmStat.CpuLoad),
-		"mem_used":             mem_used,
-		"mem_total":            mem_total,
-		"mem_free":             mem_free,
-		"mem_used_percentage":  mem_used_percentage,
-		"swap_used":            swap_used,
-		"swap_total":           swap_total,
-		"swap_free":            swap_free,
-		"swap_used_percentage": swap_used_percentage,
-		"disk_used":            disk_used,
-		"disk_total":           disk_total,
-		"disk_free":            disk_free,
-		"disk_used_percentage": disk_used_percentage,
-	}, nil
+		"cpuload":              jsonNumberToFloat64(vmStat.CPULoad),
+		"mem_used":             memMetrics.used,
+		"mem_total":            memMetrics.total,
+		"mem_free":             memMetrics.free,
+		"mem_used_percentage":  memMetrics.usedPercentage,
+		"swap_used":            swapMetrics.used,
+		"swap_total":           swapMetrics.total,
+		"swap_free":            swapMetrics.free,
+		"swap_used_percentage": swapMetrics.usedPercentage,
+		"disk_used":            diskMetrics.used,
+		"disk_total":           diskMetrics.total,
+		"disk_free":            diskMetrics.free,
+		"disk_used_percentage": diskMetrics.usedPercentage,
+	}
 }
 
-func getByteMetrics(total json.Number, used json.Number) (int64, int64, int64, float64) {
+func getByteMetrics(total json.Number, used json.Number) metrics {
 	int64Total := jsonNumberToInt64(total)
 	int64Used := jsonNumberToInt64(used)
 	int64Free := int64Total - int64Used
@@ -249,7 +219,12 @@ func getByteMetrics(total json.Number, used json.Number) (int64, int64, int64, f
 		usedPercentage = float64(int64Used) * 100 / float64(int64Total)
 	}
 
-	return int64Total, int64Used, int64Free, usedPercentage
+	return metrics{
+		total:          int64Total,
+		used:           int64Used,
+		free:           int64Free,
+		usedPercentage: usedPercentage,
+	}
 }
 
 func jsonNumberToInt64(value json.Number) int64 {
@@ -270,7 +245,7 @@ func jsonNumberToFloat64(value json.Number) float64 {
 	return float64Value
 }
 
-func getTags(px *Proxmox, name string, vmConfig VmConfig, rt ResourceType) map[string]string {
+func getTags(px *Proxmox, name string, vmConfig VMConfig, rt ResourceType) map[string]string {
 	domain := vmConfig.Data.Searchdomain
 	if len(domain) == 0 {
 		domain = px.nodeSearchDomain

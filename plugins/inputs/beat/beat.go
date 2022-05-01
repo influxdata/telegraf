@@ -8,54 +8,17 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
-
-const sampleConfig = `
-  ## An URL from which to read Beat-formatted JSON
-  ## Default is "http://127.0.0.1:5066".
-  url = "http://127.0.0.1:5066"
-
-  ## Enable collection of the listed stats
-  ## An empty list means collect all. Available options are currently
-  ## "beat", "libbeat", "system" and "filebeat".
-  # include = ["beat", "libbeat", "filebeat"]
-
-  ## HTTP method
-  # method = "GET"
-
-  ## Optional HTTP headers
-  # headers = {"X-Special-Header" = "Special-Value"}
-
-  ## Override HTTP "Host" header
-  # host_header = "logstash.example.com"
-
-  ## Timeout for HTTP requests
-  # timeout = "5s"
-
-  ## Optional HTTP Basic Auth credentials
-  # username = "username"
-  # password = "pa$$word"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-const description = "Read metrics exposed by Beat"
 
 const suffixInfo = "/"
 const suffixStats = "/stats"
 
-type BeatInfo struct {
+type Info struct {
 	Beat     string `json:"beat"`
 	Hostname string `json:"hostname"`
 	Name     string `json:"name"`
@@ -63,7 +26,7 @@ type BeatInfo struct {
 	Version  string `json:"version"`
 }
 
-type BeatStats struct {
+type Stats struct {
 	Beat     map[string]interface{} `json:"beat"`
 	FileBeat interface{}            `json:"filebeat"`
 	Libbeat  interface{}            `json:"libbeat"`
@@ -80,7 +43,7 @@ type Beat struct {
 	Method     string            `toml:"method"`
 	Headers    map[string]string `toml:"headers"`
 	HostHeader string            `toml:"host_header"`
-	Timeout    internal.Duration `toml:"timeout"`
+	Timeout    config.Duration   `toml:"timeout"`
 
 	tls.ClientConfig
 	client *http.Client
@@ -92,7 +55,7 @@ func NewBeat() *Beat {
 		Includes: []string{"beat", "libbeat", "filebeat"},
 		Method:   "GET",
 		Headers:  make(map[string]string),
-		Timeout:  internal.Duration{Duration: time.Second * 5},
+		Timeout:  config.Duration(time.Second * 5),
 	}
 }
 
@@ -114,14 +77,6 @@ func (beat *Beat) Init() error {
 	return nil
 }
 
-func (beat *Beat) Description() string {
-	return description
-}
-
-func (beat *Beat) SampleConfig() string {
-	return sampleConfig
-}
-
 // createHTTPClient create a clients to access API
 func (beat *Beat) createHTTPClient() (*http.Client, error) {
 	tlsConfig, err := beat.ClientConfig.TLSConfig()
@@ -133,15 +88,15 @@ func (beat *Beat) createHTTPClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: beat.Timeout.Duration,
+		Timeout: time.Duration(beat.Timeout),
 	}
 
 	return client, nil
 }
 
 // gatherJSONData query the data source and parse the response JSON
-func (beat *Beat) gatherJSONData(url string, value interface{}) error {
-	request, err := http.NewRequest(beat.Method, url, nil)
+func (beat *Beat) gatherJSONData(address string, value interface{}) error {
+	request, err := http.NewRequest(beat.Method, address, nil)
 	if err != nil {
 		return err
 	}
@@ -167,19 +122,19 @@ func (beat *Beat) gatherJSONData(url string, value interface{}) error {
 }
 
 func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
-	beatStats := &BeatStats{}
-	beatInfo := &BeatInfo{}
+	beatStats := &Stats{}
+	beatInfo := &Info{}
 
-	infoUrl, err := url.Parse(beat.URL + suffixInfo)
+	infoURL, err := url.Parse(beat.URL + suffixInfo)
 	if err != nil {
 		return err
 	}
-	statsUrl, err := url.Parse(beat.URL + suffixStats)
+	statsURL, err := url.Parse(beat.URL + suffixStats)
 	if err != nil {
 		return err
 	}
 
-	err = beat.gatherJSONData(infoUrl.String(), beatInfo)
+	err = beat.gatherJSONData(infoURL.String(), beatInfo)
 	if err != nil {
 		return err
 	}
@@ -191,7 +146,7 @@ func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
 		"beat_version": beatInfo.Version,
 	}
 
-	err = beat.gatherJSONData(statsUrl.String(), beatStats)
+	err = beat.gatherJSONData(statsURL.String(), beatStats)
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,7 @@ Telegraf minimum version: Telegraf 1.16.0
 ### Configuration
 
 ```toml
+# Input plugin to collect Windows Event Log messages
 [[inputs.win_eventlog]]
   ## Telegraf should have Administrator permissions to subscribe for some Windows Events channels
   ## (System log, for example)

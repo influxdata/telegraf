@@ -17,18 +17,18 @@ type BasicStats struct {
 }
 
 type configuredStats struct {
-	count             bool
-	min               bool
-	max               bool
-	mean              bool
-	variance          bool
-	stdev             bool
-	sum               bool
-	diff              bool
-	non_negative_diff bool
-	rate              bool
-	non_negative_rate bool
-	interval          bool
+	count           bool
+	min             bool
+	max             bool
+	mean            bool
+	variance        bool
+	stdev           bool
+	sum             bool
+	diff            bool
+	nonNegativeDiff bool
+	rate            bool
+	nonNegativeRate bool
+	interval        bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -55,26 +55,6 @@ type basicstats struct {
 	M2       float64   //intermediate value for variance/stdev
 	LAST     float64   //intermediate value for diff
 	TIME     time.Time //intermediate value for rate
-}
-
-var sampleConfig = `
-  ## The period on which to flush & clear the aggregator.
-  period = "30s"
-
-  ## If true, the original metric will be dropped by the
-  ## aggregator and will not get sent to the output plugins.
-  drop_original = false
-
-  ## Configures which basic stats to push as fields
-  # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
-`
-
-func (*BasicStats) SampleConfig() string {
-	return sampleConfig
-}
-
-func (*BasicStats) Description() string {
-	return "Keep the aggregate basicstats of each metric passing through."
 }
 
 func (b *BasicStats) Add(in telegraf.Metric) {
@@ -129,7 +109,7 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				//variable initialization
 				x := fv
 				mean := tmp.mean
-				M2 := tmp.M2
+				m2 := tmp.M2
 				//counter compute
 				n := tmp.count + 1
 				tmp.count = n
@@ -138,8 +118,8 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				mean = mean + delta/n
 				tmp.mean = mean
 				//variance/stdev compute
-				M2 = M2 + delta*(x-mean)
-				tmp.M2 = M2
+				m2 = m2 + delta*(x-mean)
+				tmp.M2 = m2
 				//max/min compute
 				if fv < tmp.min {
 					tmp.min = fv
@@ -167,7 +147,6 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range b.cache {
 		fields := map[string]interface{}{}
 		for k, v := range aggregate.fields {
-
 			if b.statsConfig.count {
 				fields[k+"_count"] = v.count
 			}
@@ -197,13 +176,13 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 				if b.statsConfig.diff {
 					fields[k+"_diff"] = v.diff
 				}
-				if b.statsConfig.non_negative_diff && v.diff >= 0 {
+				if b.statsConfig.nonNegativeDiff && v.diff >= 0 {
 					fields[k+"_non_negative_diff"] = v.diff
 				}
 				if b.statsConfig.rate {
 					fields[k+"_rate"] = v.rate
 				}
-				if b.statsConfig.non_negative_rate && v.diff >= 0 {
+				if b.statsConfig.nonNegativeRate && v.diff >= 0 {
 					fields[k+"_non_negative_rate"] = v.rate
 				}
 				if b.statsConfig.interval {
@@ -242,11 +221,11 @@ func (b *BasicStats) parseStats() *configuredStats {
 		case "diff":
 			parsed.diff = true
 		case "non_negative_diff":
-			parsed.non_negative_diff = true
+			parsed.nonNegativeDiff = true
 		case "rate":
 			parsed.rate = true
 		case "non_negative_rate":
-			parsed.non_negative_rate = true
+			parsed.nonNegativeRate = true
 		case "interval":
 			parsed.interval = true
 		default:
@@ -260,16 +239,16 @@ func (b *BasicStats) parseStats() *configuredStats {
 func (b *BasicStats) getConfiguredStats() {
 	if b.Stats == nil {
 		b.statsConfig = &configuredStats{
-			count:             true,
-			min:               true,
-			max:               true,
-			mean:              true,
-			variance:          true,
-			stdev:             true,
-			sum:               false,
-			non_negative_diff: false,
-			rate:              false,
-			non_negative_rate: false,
+			count:           true,
+			min:             true,
+			max:             true,
+			mean:            true,
+			variance:        true,
+			stdev:           true,
+			sum:             false,
+			nonNegativeDiff: false,
+			rate:            false,
+			nonNegativeRate: false,
 		}
 	} else {
 		b.statsConfig = b.parseStats()

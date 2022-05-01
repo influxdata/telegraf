@@ -23,20 +23,6 @@ type PF struct {
 	infoFunc     func() (string, error)
 }
 
-func (pf *PF) Description() string {
-	return "Gather counters from PF"
-}
-
-func (pf *PF) SampleConfig() string {
-	return `
-  ## PF require root access on most systems.
-  ## Setting 'use_sudo' to true will make use of sudo to run pfctl.
-  ## Users must configure sudo to allow telegraf user to run pfctl with no password.
-  ## pfctl can be restricted to only list command "pfctl -s info".
-  use_sudo = false
-`
-}
-
 // Gather is the entrypoint for the plugin.
 func (pf *PF) Gather(acc telegraf.Accumulator) error {
 	if pf.PfctlCommand == "" {
@@ -164,7 +150,6 @@ func parseCounterTable(lines []string, fields map[string]interface{}) error {
 }
 
 func storeFieldValues(lines []string, regex *regexp.Regexp, fields map[string]interface{}, entryTable []*Entry) error {
-
 	for _, v := range lines {
 		entries := regex.FindStringSubmatch(v)
 		if entries != nil {

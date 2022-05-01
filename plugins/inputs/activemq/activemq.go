@@ -3,7 +3,7 @@ package activemq
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -12,19 +12,19 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type ActiveMQ struct {
-	Server          string            `toml:"server"`
-	Port            int               `toml:"port"`
-	URL             string            `toml:"url"`
-	Username        string            `toml:"username"`
-	Password        string            `toml:"password"`
-	Webadmin        string            `toml:"webadmin"`
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	Server          string          `toml:"server" deprecated:"1.11.0;use 'url' instead"`
+	Port            int             `toml:"port" deprecated:"1.11.0;use 'url' instead"`
+	URL             string          `toml:"url"`
+	Username        string          `toml:"username"`
+	Password        string          `toml:"password"`
+	Webadmin        string          `toml:"webadmin"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 	tls.ClientConfig
 
 	client  *http.Client
@@ -49,9 +49,9 @@ type Subscribers struct {
 
 type Subscriber struct {
 	XMLName          xml.Name `xml:"subscriber"`
-	ClientId         string   `xml:"clientId,attr"`
+	ClientID         string   `xml:"clientId,attr"`
 	SubscriptionName string   `xml:"subscriptionName,attr"`
-	ConnectionId     string   `xml:"connectionId,attr"`
+	ConnectionID     string   `xml:"connectionId,attr"`
 	DestinationName  string   `xml:"destinationName,attr"`
 	Selector         string   `xml:"selector,attr"`
 	Active           string   `xml:"active,attr"`
@@ -82,42 +82,7 @@ type Stats struct {
 	DequeueCounter      int      `xml:"dequeueCounter,attr"`
 }
 
-var sampleConfig = `
-  ## ActiveMQ WebConsole URL
-  url = "http://127.0.0.1:8161"
-
-  ## Required ActiveMQ Endpoint
-  ##   deprecated in 1.11; use the url option
-  # server = "127.0.0.1"
-  # port = 8161
-
-  ## Credentials for basic HTTP authentication
-  # username = "admin"
-  # password = "admin"
-
-  ## Required ActiveMQ webadmin root path
-  # webadmin = "admin"
-
-  ## Maximum time to receive response.
-  # response_timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-  `
-
-func (a *ActiveMQ) Description() string {
-	return "Gather ActiveMQ metrics"
-}
-
-func (a *ActiveMQ) SampleConfig() string {
-	return sampleConfig
-}
-
-func (a *ActiveMQ) createHttpClient() (*http.Client, error) {
+func (a *ActiveMQ) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := a.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -127,15 +92,15 @@ func (a *ActiveMQ) createHttpClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: a.ResponseTimeout.Duration,
+		Timeout: time.Duration(a.ResponseTimeout),
 	}
 
 	return client, nil
 }
 
 func (a *ActiveMQ) Init() error {
-	if a.ResponseTimeout.Duration < time.Second {
-		a.ResponseTimeout.Duration = time.Second * 5
+	if a.ResponseTimeout < config.Duration(time.Second) {
+		a.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	var err error
@@ -157,7 +122,7 @@ func (a *ActiveMQ) Init() error {
 
 	a.baseURL = u
 
-	a.client, err = a.createHttpClient()
+	a.client, err = a.createHTTPClient()
 	if err != nil {
 		return err
 	}
@@ -184,7 +149,7 @@ func (a *ActiveMQ) GetMetrics(u string) ([]byte, error) {
 		return nil, fmt.Errorf("GET %s returned status %q", u, resp.Status)
 	}
 
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
 }
 
 func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues Queues) {
@@ -228,9 +193,9 @@ func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscriber
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		tags["client_id"] = subscriber.ClientId
+		tags["client_id"] = subscriber.ClientID
 		tags["subscription_name"] = subscriber.SubscriptionName
-		tags["connection_id"] = subscriber.ConnectionId
+		tags["connection_id"] = subscriber.ConnectionID
 		tags["destination_name"] = subscriber.DestinationName
 		tags["selector"] = subscriber.Selector
 		tags["active"] = subscriber.Active

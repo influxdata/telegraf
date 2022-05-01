@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package win_services
@@ -78,23 +79,13 @@ func (rmr *MgProvider) Connect() (WinServiceManager, error) {
 	}
 }
 
-var sampleConfig = `
-  ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted.
-  service_names = [
-    "LanmanServer",
-	"TermService",
-	"Win*",
-  ]
-`
-
-var description = "Input plugin to report Windows services info."
-
 //WinServices is an implementation if telegraf.Input interface, providing info about Windows Services
 type WinServices struct {
 	Log telegraf.Logger
 
-	ServiceNames []string `toml:"service_names"`
-	mgrProvider  ManagerProvider
+	ServiceNames         []string `toml:"service_names"`
+	ServiceNamesExcluded []string `toml:"excluded_service_names"`
+	mgrProvider          ManagerProvider
 
 	servicesFilter filter.Filter
 }
@@ -108,20 +99,12 @@ type ServiceInfo struct {
 
 func (m *WinServices) Init() error {
 	var err error
-	m.servicesFilter, err = filter.NewIncludeExcludeFilter(m.ServiceNames, nil)
+	m.servicesFilter, err = filter.NewIncludeExcludeFilter(m.ServiceNames, m.ServiceNamesExcluded)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (m *WinServices) Description() string {
-	return description
-}
-
-func (m *WinServices) SampleConfig() string {
-	return sampleConfig
 }
 
 func (m *WinServices) Gather(acc telegraf.Accumulator) error {

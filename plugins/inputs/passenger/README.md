@@ -2,7 +2,7 @@
 
 Gather [Phusion Passenger](https://www.phusionpassenger.com/) metrics using the `passenger-status` command line utility.
 
-**Series Cardinality Warning**
+## Series Cardinality Warning
 
 Depending on your environment, this `passenger_process` measurement of this
 plugin can quickly create a high number of series which, when unchecked, can
@@ -15,15 +15,12 @@ manage your series cardinality:
   `tagexclude` to remove the `pid` and `process_group_id` tags.
 - Write to a database with an appropriate
   [retention policy](https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/).
-- Limit series cardinality in your database using the
-  [`max-series-per-database`](https://docs.influxdata.com/influxdb/latest/administration/config/#max-series-per-database-1000000) and
-  [`max-values-per-tag`](https://docs.influxdata.com/influxdb/latest/administration/config/#max-values-per-tag-100000) settings.
 - Consider using the
   [Time Series Index](https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/).
 - Monitor your databases
   [series cardinality](https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality).
 
-### Configuration
+## Configuration
 
 ```toml
 # Read metrics of passenger using passenger-status
@@ -39,11 +36,11 @@ manage your series cardinality:
   command = "passenger-status -v --show=xml"
 ```
 
-#### Permissions:
+### Permissions
 
 Telegraf must have permission to execute the `passenger-status` command.  On most systems, Telegraf runs as the `telegraf` user.
 
-### Metrics:
+## Metrics
 
 - passenger
   - tags:
@@ -98,8 +95,9 @@ Telegraf must have permission to execute the `passenger-status` command.  On mos
     - real_memory
     - vmsize
 
-### Example Output:
-```
+## Example Output
+
+```shell
 passenger,passenger_version=5.0.17 capacity_used=23i,get_wait_list_size=0i,max=23i,process_count=23i 1452984112799414257
 passenger_supergroup,name=/var/app/current/public capacity_used=23i,get_wait_list_size=0i 1452984112799496977
 passenger_group,app_root=/var/app/current,app_type=rack,name=/var/app/current/public capacity_used=23i,get_wait_list_size=0i,processes_being_spawned=0i 1452984112799527021

@@ -1,0 +1,11 @@
+//go:build !freebsd || (freebsd && cgo)
+// +build !freebsd freebsd,cgo
+
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
+// DON'T EDIT; This file is used as a template by tools/generate_plugindata
+package nats
+
+func (n *Nats) SampleConfig() string {
+	return `{{ .SampleConfig }}`
+}

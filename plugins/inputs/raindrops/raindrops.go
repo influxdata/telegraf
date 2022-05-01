@@ -16,21 +16,8 @@ import (
 )
 
 type Raindrops struct {
-	Urls        []string
-	http_client *http.Client
-}
-
-var sampleConfig = `
-  ## An array of raindrops middleware URI to gather stats.
-  urls = ["http://localhost:8080/_raindrops"]
-`
-
-func (r *Raindrops) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Raindrops) Description() string {
-	return "Read raindrops stats (raindrops - real-time stats for preforking Rack servers)"
+	Urls       []string
+	httpClient *http.Client
 }
 
 func (r *Raindrops) Gather(acc telegraf.Accumulator) error {
@@ -39,14 +26,14 @@ func (r *Raindrops) Gather(acc telegraf.Accumulator) error {
 	for _, u := range r.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			acc.AddError(fmt.Errorf("unable to parse address '%s': %s", u, err))
 			continue
 		}
 
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(r.gatherUrl(addr, acc))
+			acc.AddError(r.gatherURL(addr, acc))
 		}(addr)
 	}
 
@@ -55,8 +42,8 @@ func (r *Raindrops) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *Raindrops) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-	resp, err := r.http_client.Get(addr.String())
+func (r *Raindrops) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
+	resp, err := r.httpClient.Get(addr.String())
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
 	}
@@ -101,10 +88,10 @@ func (r *Raindrops) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	acc.AddFields("raindrops", fields, tags)
 
 	iterate := true
-	var queued_line_str string
-	var active_line_str string
-	var active_err error
-	var queued_err error
+	var queuedLineStr string
+	var activeLineStr string
+	var activeErr error
+	var queuedErr error
 
 	for iterate {
 		// Listen
@@ -114,48 +101,46 @@ func (r *Raindrops) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 			"active": 0,
 			"queued": 0,
 		}
-		active_line_str, active_err = buf.ReadString('\n')
-		if active_err != nil {
-			iterate = false
+		activeLineStr, activeErr = buf.ReadString('\n')
+		if activeErr != nil {
 			break
 		}
-		if strings.Compare(active_line_str, "\n") == 0 {
+		if strings.Compare(activeLineStr, "\n") == 0 {
 			break
 		}
-		queued_line_str, queued_err = buf.ReadString('\n')
-		if queued_err != nil {
+		queuedLineStr, queuedErr = buf.ReadString('\n')
+		if queuedErr != nil {
 			iterate = false
 		}
-		active_line := strings.Split(active_line_str, " ")
-		listen_name := active_line[0]
+		activeLine := strings.Split(activeLineStr, " ")
+		listenName := activeLine[0]
 
-		active, err := strconv.ParseUint(strings.TrimSpace(active_line[2]), 10, 64)
+		active, err := strconv.ParseUint(strings.TrimSpace(activeLine[2]), 10, 64)
 		if err != nil {
 			active = 0
 		}
 		lis["active"] = active
 
-		queued_line := strings.Split(queued_line_str, " ")
-		queued, err := strconv.ParseUint(strings.TrimSpace(queued_line[2]), 10, 64)
+		queuedLine := strings.Split(queuedLineStr, " ")
+		queued, err := strconv.ParseUint(strings.TrimSpace(queuedLine[2]), 10, 64)
 		if err != nil {
 			queued = 0
 		}
 		lis["queued"] = queued
-		if strings.Contains(listen_name, ":") {
-			listener := strings.Split(listen_name, ":")
+		if strings.Contains(listenName, ":") {
+			listener := strings.Split(listenName, ":")
 			tags = map[string]string{
 				"ip":   listener[0],
 				"port": listener[1],
 			}
-
 		} else {
 			tags = map[string]string{
-				"socket": listen_name,
+				"socket": listenName,
 			}
 		}
 		acc.AddFields("raindrops_listen", lis, tags)
 	}
-	return nil
+	return nil //nolint:nilerr // nil returned on purpose
 }
 
 // Get tag(s) for the raindrops calling/writing plugin
@@ -177,11 +162,11 @@ func (r *Raindrops) getTags(addr *url.URL) map[string]string {
 
 func init() {
 	inputs.Add("raindrops", func() telegraf.Input {
-		return &Raindrops{http_client: &http.Client{
+		return &Raindrops{httpClient: &http.Client{
 			Transport: &http.Transport{
-				ResponseHeaderTimeout: time.Duration(3 * time.Second),
+				ResponseHeaderTimeout: 3 * time.Second,
 			},
-			Timeout: time.Duration(4 * time.Second),
+			Timeout: 4 * time.Second,
 		}}
 	})
 }

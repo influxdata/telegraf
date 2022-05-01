@@ -4,51 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
-
-const sampleConfig = `
-  ## The URL of the exposed Logstash API endpoint.
-  url = "http://127.0.0.1:9600"
-
-  ## Use Logstash 5 single pipeline API, set to true when monitoring
-  ## Logstash 5.
-  # single_pipeline = false
-
-  ## Enable optional collection components.  Can contain
-  ## "pipelines", "process", and "jvm".
-  # collect = ["pipelines", "process", "jvm"]
-
-  ## Timeout for HTTP requests.
-  # timeout = "5s"
-
-  ## Optional HTTP Basic Auth credentials.
-  # username = "username"
-  # password = "pa$$word"
-
-  ## Optional TLS Config.
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Use TLS but skip chain & host verification.
-  # insecure_skip_verify = false
-
-  ## Optional HTTP headers.
-  # [inputs.logstash.headers]
-  #   "X-Special-Header" = "Special-Value"
-`
 
 type Logstash struct {
 	URL string `toml:"url"`
@@ -59,7 +26,7 @@ type Logstash struct {
 	Username string            `toml:"username"`
 	Password string            `toml:"password"`
 	Headers  map[string]string `toml:"headers"`
-	Timeout  internal.Duration `toml:"timeout"`
+	Timeout  config.Duration   `toml:"timeout"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -72,18 +39,8 @@ func NewLogstash() *Logstash {
 		SinglePipeline: false,
 		Collect:        []string{"pipelines", "process", "jvm"},
 		Headers:        make(map[string]string),
-		Timeout:        internal.Duration{Duration: time.Second * 5},
+		Timeout:        config.Duration(time.Second * 5),
 	}
-}
-
-// Description returns short info about plugin
-func (logstash *Logstash) Description() string {
-	return "Read metrics exposed by Logstash"
-}
-
-// SampleConfig returns details how to configure plugin
-func (logstash *Logstash) SampleConfig() string {
-	return sampleConfig
 }
 
 type ProcessStats struct {
@@ -126,9 +83,11 @@ type Pipeline struct {
 }
 
 type Plugin struct {
-	ID     string      `json:"id"`
-	Events interface{} `json:"events"`
-	Name   string      `json:"name"`
+	ID           string                 `json:"id"`
+	Events       interface{}            `json:"events"`
+	Name         string                 `json:"name"`
+	BulkRequests map[string]interface{} `json:"bulk_requests"`
+	Documents    map[string]interface{} `json:"documents"`
 }
 
 type PipelinePlugins struct {
@@ -138,10 +97,13 @@ type PipelinePlugins struct {
 }
 
 type PipelineQueue struct {
-	Events   float64     `json:"events"`
-	Type     string      `json:"type"`
-	Capacity interface{} `json:"capacity"`
-	Data     interface{} `json:"data"`
+	Events              float64     `json:"events"`
+	EventsCount         *float64    `json:"events_count"`
+	Type                string      `json:"type"`
+	Capacity            interface{} `json:"capacity"`
+	Data                interface{} `json:"data"`
+	QueueSizeInBytes    *float64    `json:"queue_size_in_bytes"`
+	MaxQueueSizeInBytes *float64    `json:"max_queue_size_in_bytes"`
 }
 
 const jvmStats = "/_node/stats/jvm"
@@ -157,8 +119,8 @@ func (logstash *Logstash) Init() error {
 	return nil
 }
 
-// createHttpClient create a clients to access API
-func (logstash *Logstash) createHttpClient() (*http.Client, error) {
+// createHTTPClient create a clients to access API
+func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 	tlsConfig, err := logstash.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -168,15 +130,15 @@ func (logstash *Logstash) createHttpClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: logstash.Timeout.Duration,
+		Timeout: time.Duration(logstash.Timeout),
 	}
 
 	return client, nil
 }
 
-// gatherJsonData query the data source and parse the response JSON
-func (logstash *Logstash) gatherJsonData(url string, value interface{}) error {
-	request, err := http.NewRequest("GET", url, nil)
+// gatherJSONData query the data source and parse the response JSON
+func (logstash *Logstash) gatherJSONData(address string, value interface{}) error {
+	request, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
 	}
@@ -201,8 +163,8 @@ func (logstash *Logstash) gatherJsonData(url string, value interface{}) error {
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
-		body, _ := ioutil.ReadAll(io.LimitReader(response.Body, 200))
-		return fmt.Errorf("%s returned HTTP status %s: %q", url, response.Status, body)
+		body, _ := io.ReadAll(io.LimitReader(response.Body, 200))
+		return fmt.Errorf("%s returned HTTP status %s: %q", address, response.Status, body)
 	}
 
 	err = json.NewDecoder(response.Body).Decode(value)
@@ -214,10 +176,10 @@ func (logstash *Logstash) gatherJsonData(url string, value interface{}) error {
 }
 
 // gatherJVMStats gather the JVM metrics and add results to the accumulator
-func (logstash *Logstash) gatherJVMStats(url string, accumulator telegraf.Accumulator) error {
+func (logstash *Logstash) gatherJVMStats(address string, accumulator telegraf.Accumulator) error {
 	jvmStats := &JVMStats{}
 
-	err := logstash.gatherJsonData(url, jvmStats)
+	err := logstash.gatherJSONData(address, jvmStats)
 	if err != nil {
 		return err
 	}
@@ -240,10 +202,10 @@ func (logstash *Logstash) gatherJVMStats(url string, accumulator telegraf.Accumu
 }
 
 // gatherJVMStats gather the Process metrics and add results to the accumulator
-func (logstash *Logstash) gatherProcessStats(url string, accumulator telegraf.Accumulator) error {
+func (logstash *Logstash) gatherProcessStats(address string, accumulator telegraf.Accumulator) error {
 	processStats := &ProcessStats{}
 
-	err := logstash.gatherJsonData(url, processStats)
+	err := logstash.gatherJSONData(address, processStats)
 	if err != nil {
 		return err
 	}
@@ -270,8 +232,8 @@ func (logstash *Logstash) gatherPluginsStats(
 	plugins []Plugin,
 	pluginType string,
 	tags map[string]string,
-	accumulator telegraf.Accumulator) error {
-
+	accumulator telegraf.Accumulator,
+) error {
 	for _, plugin := range plugins {
 		pluginTags := map[string]string{
 			"plugin_name": plugin.Name,
@@ -287,6 +249,63 @@ func (logstash *Logstash) gatherPluginsStats(
 			return err
 		}
 		accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+		/*
+			The elasticsearch output produces additional stats around
+			bulk requests and document writes (that are elasticsearch specific).
+			Collect those here
+		*/
+		if pluginType == "output" && plugin.Name == "elasticsearch" {
+			/*
+				The "bulk_requests" section has details about batch writes
+				into Elasticsearch
+
+				  "bulk_requests" : {
+					"successes" : 2870,
+					"responses" : {
+					  "200" : 2870
+					},
+					"failures": 262,
+					"with_errors": 9089
+				  },
+			*/
+			flattener := jsonParser.JSONFlattener{}
+			err := flattener.FlattenJSON("", plugin.BulkRequests)
+			if err != nil {
+				return err
+			}
+			for k, v := range flattener.Fields {
+				if strings.HasPrefix(k, "bulk_requests") {
+					continue
+				}
+				newKey := fmt.Sprintf("bulk_requests_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
+			}
+			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+
+			/*
+				The "documents" section has counts of individual documents
+				written/retried/etc.
+				  "documents" : {
+					"successes" : 2665549,
+					"retryable_failures": 13733
+				  }
+			*/
+			flattener = jsonParser.JSONFlattener{}
+			err = flattener.FlattenJSON("", plugin.Documents)
+			if err != nil {
+				return err
+			}
+			for k, v := range flattener.Fields {
+				if strings.HasPrefix(k, "documents") {
+					continue
+				}
+				newKey := fmt.Sprintf("documents_%s", k)
+				flattener.Fields[newKey] = v
+				delete(flattener.Fields, k)
+			}
+			accumulator.AddFields("logstash_plugins", flattener.Fields, pluginTags)
+		}
 	}
 
 	return nil
@@ -295,9 +314,8 @@ func (logstash *Logstash) gatherPluginsStats(
 func (logstash *Logstash) gatherQueueStats(
 	queue *PipelineQueue,
 	tags map[string]string,
-	accumulator telegraf.Accumulator) error {
-
-	var err error
+	accumulator telegraf.Accumulator,
+) error {
 	queueTags := map[string]string{
 		"queue_type": queue.Type,
 	}
@@ -305,13 +323,18 @@ func (logstash *Logstash) gatherQueueStats(
 		queueTags[tag] = value
 	}
 
+	events := queue.Events
+	if queue.EventsCount != nil {
+		events = *queue.EventsCount
+	}
+
 	queueFields := map[string]interface{}{
-		"events": queue.Events,
+		"events": events,
 	}
 
 	if queue.Type != "memory" {
 		flattener := jsonParser.JSONFlattener{}
-		err = flattener.FlattenJSON("", queue.Capacity)
+		err := flattener.FlattenJSON("", queue.Capacity)
 		if err != nil {
 			return err
 		}
@@ -322,6 +345,14 @@ func (logstash *Logstash) gatherQueueStats(
 		for field, value := range flattener.Fields {
 			queueFields[field] = value
 		}
+
+		if queue.MaxQueueSizeInBytes != nil {
+			queueFields["max_queue_size_in_bytes"] = *queue.MaxQueueSizeInBytes
+		}
+
+		if queue.QueueSizeInBytes != nil {
+			queueFields["queue_size_in_bytes"] = *queue.QueueSizeInBytes
+		}
 	}
 
 	accumulator.AddFields("logstash_queue", queueFields, queueTags)
@@ -330,10 +361,10 @@ func (logstash *Logstash) gatherQueueStats(
 }
 
 // gatherJVMStats gather the Pipeline metrics and add results to the accumulator (for Logstash < 6)
-func (logstash *Logstash) gatherPipelineStats(url string, accumulator telegraf.Accumulator) error {
+func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegraf.Accumulator) error {
 	pipelineStats := &PipelineStats{}
 
-	err := logstash.gatherJsonData(url, pipelineStats)
+	err := logstash.gatherJSONData(address, pipelineStats)
 	if err != nil {
 		return err
 	}
@@ -374,10 +405,10 @@ func (logstash *Logstash) gatherPipelineStats(url string, accumulator telegraf.A
 }
 
 // gatherJVMStats gather the Pipelines metrics and add results to the accumulator (for Logstash >= 6)
-func (logstash *Logstash) gatherPipelinesStats(url string, accumulator telegraf.Accumulator) error {
+func (logstash *Logstash) gatherPipelinesStats(address string, accumulator telegraf.Accumulator) error {
 	pipelinesStats := &PipelinesStats{}
 
-	err := logstash.gatherJsonData(url, pipelinesStats)
+	err := logstash.gatherJSONData(address, pipelinesStats)
 	if err != nil {
 		return err
 	}
@@ -423,7 +454,7 @@ func (logstash *Logstash) gatherPipelinesStats(url string, accumulator telegraf.
 // Gather ask this plugin to start gathering metrics
 func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 	if logstash.client == nil {
-		client, err := logstash.createHttpClient()
+		client, err := logstash.createHTTPClient()
 
 		if err != nil {
 			return err
@@ -432,40 +463,40 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 	}
 
 	if choice.Contains("jvm", logstash.Collect) {
-		jvmUrl, err := url.Parse(logstash.URL + jvmStats)
+		jvmURL, err := url.Parse(logstash.URL + jvmStats)
 		if err != nil {
 			return err
 		}
-		if err := logstash.gatherJVMStats(jvmUrl.String(), accumulator); err != nil {
+		if err := logstash.gatherJVMStats(jvmURL.String(), accumulator); err != nil {
 			return err
 		}
 	}
 
 	if choice.Contains("process", logstash.Collect) {
-		processUrl, err := url.Parse(logstash.URL + processStats)
+		processURL, err := url.Parse(logstash.URL + processStats)
 		if err != nil {
 			return err
 		}
-		if err := logstash.gatherProcessStats(processUrl.String(), accumulator); err != nil {
+		if err := logstash.gatherProcessStats(processURL.String(), accumulator); err != nil {
 			return err
 		}
 	}
 
 	if choice.Contains("pipelines", logstash.Collect) {
 		if logstash.SinglePipeline {
-			pipelineUrl, err := url.Parse(logstash.URL + pipelineStats)
+			pipelineURL, err := url.Parse(logstash.URL + pipelineStats)
 			if err != nil {
 				return err
 			}
-			if err := logstash.gatherPipelineStats(pipelineUrl.String(), accumulator); err != nil {
+			if err := logstash.gatherPipelineStats(pipelineURL.String(), accumulator); err != nil {
 				return err
 			}
 		} else {
-			pipelinesUrl, err := url.Parse(logstash.URL + pipelinesStats)
+			pipelinesURL, err := url.Parse(logstash.URL + pipelinesStats)
 			if err != nil {
 				return err
 			}
-			if err := logstash.gatherPipelinesStats(pipelinesUrl.String(), accumulator); err != nil {
+			if err := logstash.gatherPipelinesStats(pipelinesURL.String(), accumulator); err != nil {
 				return err
 			}
 		}

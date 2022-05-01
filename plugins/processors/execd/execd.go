@@ -17,15 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-const sampleConfig = `
-	## Program to run as daemon
-	## eg: command = ["/path/to/your_program", "arg1", "arg2"]
-	command = ["cat"]
-
-  ## Delay before the process is restarted after an unexpected termination
-  restart_delay = "10s"
-`
-
 type Execd struct {
 	Command      []string        `toml:"command"`
 	RestartDelay config.Duration `toml:"restart_delay"`
@@ -49,14 +40,6 @@ func New() *Execd {
 			DataFormat: "influx",
 		},
 	}
-}
-
-func (e *Execd) SampleConfig() string {
-	return sampleConfig
-}
-
-func (e *Execd) Description() string {
-	return "Run executable as long-running processor plugin"
 }
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
@@ -94,7 +77,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Execd) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
+func (e *Execd) Add(m telegraf.Metric, _ telegraf.Accumulator) error {
 	b, err := e.serializer.Serialize(m)
 	if err != nil {
 		return fmt.Errorf("metric serializing error: %w", err)

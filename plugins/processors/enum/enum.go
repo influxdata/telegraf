@@ -9,30 +9,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-var sampleConfig = `
-  [[processors.enum.mapping]]
-    ## Name of the field to map. Globs accepted.
-    field = "status"
-
-    ## Name of the tag to map. Globs accepted.
-    # tag = "status"
-
-    ## Destination tag or field to be used for the mapped value.  By default the
-    ## source tag or field is used, overwriting the original value.
-    dest = "status_code"
-
-    ## Default value to be used for all values not contained in the mapping
-    ## table.  When unset, the unmodified value for the field will be used if no
-    ## match is found.
-    # default = 0
-
-    ## Table of mappings
-    [processors.enum.mapping.value_mappings]
-      green = 1
-      amber = 2
-      red = 3
-`
-
 type EnumMapper struct {
 	Mappings []Mapping `toml:"mapping"`
 
@@ -55,28 +31,20 @@ func (mapper *EnumMapper) Init() error {
 		if mapping.Field != "" {
 			fieldFilter, err := filter.NewIncludeExcludeFilter([]string{mapping.Field}, nil)
 			if err != nil {
-				return fmt.Errorf("Failed to create new field filter: %w", err)
+				return fmt.Errorf("failed to create new field filter: %w", err)
 			}
 			mapper.FieldFilters[mapping.Field] = fieldFilter
 		}
 		if mapping.Tag != "" {
 			tagFilter, err := filter.NewIncludeExcludeFilter([]string{mapping.Tag}, nil)
 			if err != nil {
-				return fmt.Errorf("Failed to create new tag filter: %s", err)
+				return fmt.Errorf("failed to create new tag filter: %s", err)
 			}
 			mapper.TagFilters[mapping.Tag] = tagFilter
 		}
 	}
 
 	return nil
-}
-
-func (mapper *EnumMapper) SampleConfig() string {
-	return sampleConfig
-}
-
-func (mapper *EnumMapper) Description() string {
-	return "Map enum values according to given table."
 }
 
 func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
@@ -145,6 +113,8 @@ func adjustValue(in interface{}) interface{} {
 		return strconv.FormatBool(val)
 	case int64:
 		return strconv.FormatInt(val, 10)
+	case float64:
+		return strconv.FormatFloat(val, 'f', -1, 64)
 	case uint64:
 		return strconv.FormatUint(val, 10)
 	default:
@@ -153,7 +123,7 @@ func adjustValue(in interface{}) interface{} {
 }
 
 func (mapping *Mapping) mapValue(original string) (interface{}, bool) {
-	if mapped, found := mapping.ValueMappings[original]; found == true {
+	if mapped, found := mapping.ValueMappings[original]; found {
 		return mapped, true
 	}
 	if mapping.Default != nil {

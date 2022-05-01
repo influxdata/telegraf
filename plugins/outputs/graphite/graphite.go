@@ -15,8 +15,9 @@ import (
 )
 
 type Graphite struct {
-	GraphiteTagSupport bool   `toml:"graphite_tag_support"`
-	GraphiteSeparator  string `toml:"graphite_separator"`
+	GraphiteTagSupport      bool   `toml:"graphite_tag_support"`
+	GraphiteTagSanitizeMode string `toml:"graphite_tag_sanitize_mode"`
+	GraphiteSeparator       string `toml:"graphite_separator"`
 	// URL is only for backwards compatibility
 	Servers   []string        `toml:"servers"`
 	Prefix    string          `toml:"prefix"`
@@ -28,44 +29,6 @@ type Graphite struct {
 	conns []net.Conn
 	tlsint.ClientConfig
 }
-
-var sampleConfig = `
-  ## TCP endpoint for your graphite instance.
-  ## If multiple endpoints are configured, output will be load balanced.
-  ## Only one of the endpoints will be written to with each iteration.
-  servers = ["localhost:2003"]
-  ## Prefix metrics name
-  prefix = ""
-  ## Graphite output template
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  template = "host.tags.measurement.field"
-
-  ## Enable Graphite tags support
-  # graphite_tag_support = false
-
-  ## Character for separating metric name and field for Graphite tags
-  # graphite_separator = "."
-
-  ## Graphite templates patterns
-  ## 1. Template for cpu
-  ## 2. Template for disk*
-  ## 3. Default template
-  # templates = [
-  #  "cpu tags.measurement.host.field",
-  #  "disk* measurement.field",
-  #  "host.measurement.tags.field"
-  #]
-
-  ## timeout in seconds for the write connection to graphite
-  timeout = 2
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
 
 func (g *Graphite) Connect() error {
 	// Set default values
@@ -107,17 +70,9 @@ func (g *Graphite) Connect() error {
 func (g *Graphite) Close() error {
 	// Closing all connections
 	for _, conn := range g.conns {
-		conn.Close()
+		_ = conn.Close()
 	}
 	return nil
-}
-
-func (g *Graphite) SampleConfig() string {
-	return sampleConfig
-}
-
-func (g *Graphite) Description() string {
-	return "Configuration for Graphite server to send metrics to"
 }
 
 // We need check eof as we can write to nothing without noticing anything is wrong
@@ -127,11 +82,16 @@ func (g *Graphite) Description() string {
 // props to Tv via the authors of carbon-relay-ng` for this trick.
 func (g *Graphite) checkEOF(conn net.Conn) {
 	b := make([]byte, 1024)
-	conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
+
+	if err := conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond)); err != nil {
+		g.Log.Errorf("Couldn't set read deadline for connection %s. closing conn explicitly", conn)
+		_ = conn.Close()
+		return
+	}
 	num, err := conn.Read(b)
 	if err == io.EOF {
 		g.Log.Errorf("Conn %s is closed. closing conn explicitly", conn)
-		conn.Close()
+		_ = conn.Close()
 		return
 	}
 	// just in case i misunderstand something or the remote behaves badly
@@ -141,7 +101,7 @@ func (g *Graphite) checkEOF(conn net.Conn) {
 	// Log non-timeout errors or close.
 	if e, ok := err.(net.Error); !(ok && e.Timeout()) {
 		g.Log.Errorf("conn %s checkEOF .conn.Read returned err != EOF, which is unexpected.  closing conn. error: %s", conn, err)
-		conn.Close()
+		_ = conn.Close()
 	}
 }
 
@@ -150,7 +110,7 @@ func (g *Graphite) checkEOF(conn net.Conn) {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteSeparator, g.Templates)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteTagSanitizeMode, g.GraphiteSeparator, g.Templates)
 	if err != nil {
 		return err
 	}
@@ -168,7 +128,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// try to reconnect and retry to send
 	if err != nil {
 		g.Log.Error("Graphite: Reconnecting and retrying...")
-		g.Connect()
+		_ = g.Connect()
 		err = g.send(batch)
 	}
 
@@ -183,15 +143,14 @@ func (g *Graphite) send(batch []byte) error {
 	p := rand.Perm(len(g.conns))
 	for _, n := range p {
 		if g.Timeout > 0 {
-			g.conns[n].SetWriteDeadline(time.Now().Add(time.Duration(g.Timeout) * time.Second))
+			_ = g.conns[n].SetWriteDeadline(time.Now().Add(time.Duration(g.Timeout) * time.Second))
 		}
 		g.checkEOF(g.conns[n])
 		if _, e := g.conns[n].Write(batch); e != nil {
 			// Error
 			g.Log.Errorf("Graphite Error: " + e.Error())
-			// Close explicitly
-			g.conns[n].Close()
-			// Let's try the next one
+			// Close explicitly and let's try the next one
+			_ = g.conns[n].Close()
 		} else {
 			// Success
 			err = nil

@@ -7,9 +7,10 @@ The `kibana` plugin queries the [Kibana][] API to obtain the service status.
 
 [Kibana]: https://www.elastic.co/
 
-### Configuration
+## Configuration
 
 ```toml
+# Read status information from one or more Kibana servers
 [[inputs.kibana]]
   ## Specify a list of one or more Kibana servers
   servers = ["http://localhost:5601"]
@@ -29,7 +30,7 @@ The `kibana` plugin queries the [Kibana][] API to obtain the service status.
   # insecure_skip_verify = false
 ```
 
-### Metrics
+## Metrics
 
 - kibana
   - tags:
@@ -42,15 +43,16 @@ The `kibana` plugin queries the [Kibana][] API to obtain the service status.
     - heap_total_bytes (integer)
     - heap_max_bytes (integer; deprecated in 1.13.3: use `heap_total_bytes` field)
     - heap_used_bytes (integer)
+    - heap_size_limit (integer)
     - uptime_ms (integer)
     - response_time_avg_ms (float)
     - response_time_max_ms (integer)
     - concurrent_connections (integer)
     - requests_per_sec (float)
 
-### Example Output
+## Example Output
 
-```
+```shell
 kibana,host=myhost,name=my-kibana,source=localhost:5601,status=green,version=6.5.4 concurrent_connections=8i,heap_max_bytes=447778816i,heap_total_bytes=447778816i,heap_used_bytes=380603352i,requests_per_sec=1,response_time_avg_ms=57.6,response_time_max_ms=220i,status_code=1i,uptime_ms=6717489805i 1534864502000000000
 ```
 
@@ -58,8 +60,8 @@ kibana,host=myhost,name=my-kibana,source=localhost:5601,status=green,version=6.5
 
 Requires the following tools:
 
-* [Docker](https://docs.docker.com/get-docker/)
-* [Docker Compose](https://docs.docker.com/compose/install/)
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
 From the root of this project execute the following script: `./plugins/inputs/kibana/test_environment/run_test_env.sh`
 

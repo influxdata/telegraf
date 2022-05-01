@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package sensors
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -19,29 +21,13 @@ import (
 var (
 	execCommand    = exec.Command // execCommand is used to mock commands in tests.
 	numberRegp     = regexp.MustCompile("[0-9]+")
-	defaultTimeout = internal.Duration{Duration: 5 * time.Second}
+	defaultTimeout = config.Duration(5 * time.Second)
 )
 
 type Sensors struct {
-	RemoveNumbers bool              `toml:"remove_numbers"`
-	Timeout       internal.Duration `toml:"timeout"`
+	RemoveNumbers bool            `toml:"remove_numbers"`
+	Timeout       config.Duration `toml:"timeout"`
 	path          string
-}
-
-func (*Sensors) Description() string {
-	return "Monitor sensors, requires lm-sensors package"
-}
-
-func (*Sensors) SampleConfig() string {
-	return `
-  ## Remove numbers from field names.
-  ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
-  # remove_numbers = true
-
-  ## Timeout is the maximum amount of time that the sensors command can run.
-  # timeout = "5s"
-`
-
 }
 
 func (s *Sensors) Gather(acc telegraf.Accumulator) error {
@@ -60,7 +46,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	chip := ""
 	cmd := execCommand(s.path, "-A", "-u")
-	out, err := internal.StdOutputTimeout(cmd, s.Timeout.Duration)
+	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))
 	if err != nil {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}

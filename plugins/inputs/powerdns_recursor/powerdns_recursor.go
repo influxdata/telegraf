@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -22,29 +21,12 @@ type PowerdnsRecursor struct {
 	SocketDir   string   `toml:"socket_dir"`
 	SocketMode  string   `toml:"socket_mode"`
 
+	Log telegraf.Logger `toml:"-"`
+
 	mode uint32
 }
 
 var defaultTimeout = 5 * time.Second
-
-var sampleConfig = `
-  ## Path to the Recursor control socket.
-  unix_sockets = ["/var/run/pdns_recursor.controlsocket"]
-
-  ## Directory to create receive socket.  This default is likely not writable,
-  ## please reference the full plugin documentation for a recommended setup.
-  # socket_dir = "/var/run/"
-  ## Socket permissions for the receive socket.
-  # socket_mode = "0666"
-`
-
-func (p *PowerdnsRecursor) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *PowerdnsRecursor) Description() string {
-	return "Read metrics from one or many PowerDNS Recursor servers"
-}
 
 func (p *PowerdnsRecursor) Init() error {
 	if p.SocketMode != "" {
@@ -97,14 +79,16 @@ func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator
 	}
 	defer conn.Close()
 
-	conn.SetDeadline(time.Now().Add(defaultTimeout))
+	if err := conn.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
+		return err
+	}
 
 	// Read and write buffer
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 
 	// Send command
 	if _, err := fmt.Fprint(rw, "get-all\n"); err != nil {
-		return nil
+		return err
 	}
 	if err := rw.Flush(); err != nil {
 		return err
@@ -123,19 +107,17 @@ func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator
 	metrics := string(buf)
 
 	// Process data
-	fields := parseResponse(metrics)
+	fields := p.parseResponse(metrics)
 
 	// Add server socket as a tag
 	tags := map[string]string{"server": address}
 
 	acc.AddFields("powerdns_recursor", fields, tags)
 
-	conn.Close()
-
-	return nil
+	return conn.Close()
 }
 
-func parseResponse(metrics string) map[string]interface{} {
+func (p *PowerdnsRecursor) parseResponse(metrics string) map[string]interface{} {
 	values := make(map[string]interface{})
 
 	s := strings.Split(metrics, "\n")
@@ -148,8 +130,7 @@ func parseResponse(metrics string) map[string]interface{} {
 
 		i, err := strconv.ParseInt(m[1], 10, 64)
 		if err != nil {
-			log.Printf("E! [inputs.powerdns_recursor] error parsing integer for metric %q: %s",
-				metric, err.Error())
+			p.Log.Errorf("error parsing integer for metric %q: %s", metric, err.Error())
 			continue
 		}
 		values[m[0]] = i
