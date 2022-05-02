@@ -69,6 +69,7 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 
 		tags := map[string]string{
 			"interface": io.Name,
+			"interface_index": fmt.Sprint(interfacesByName[io.Name].Index),
 		}
 
 		fields := map[string]interface{}{

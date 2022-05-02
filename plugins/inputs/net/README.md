@@ -46,6 +46,7 @@ Explanation of the different metrics exposed by snmp is out of the scope of this
 
 * Net measurements have the following tags:
   * interface (the interface from which metrics are gathered)
+  * interface_index (the interface index from which metrics are gathered)
 
 Under Linux the system wide protocol metrics have the interface=all tag.
 

@@ -64,6 +64,7 @@ func TestNetStats(t *testing.T) {
 
 	ntags := map[string]string{
 		"interface": "eth0",
+		"interface_index": "0",
 	}
 
 	fields1 := map[string]interface{}{
