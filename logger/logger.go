@@ -2,9 +2,11 @@ package logger
 
 import (
 	"errors"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -19,6 +21,7 @@ var prefixRegex = regexp.MustCompile("^[DIWE]!")
 const (
 	LogTargetFile   = "file"
 	LogTargetStderr = "stderr"
+	LogTargetLumberjack = "lumberjack"
 )
 
 // LogConfig contains the log configuration settings
@@ -174,9 +177,42 @@ func newLogWriter(cfg LogConfig) io.Writer {
 	return logWriter
 }
 
+// Logger Creator for Lumberjack
+// Implement the LoggerCreator interface so it can be registered with telegraf_logger.
+type lumberjackLogCreator struct {
+}
+
+func (t *lumberjackLogCreator) CreateLogger(config LogConfig) (io.Writer, error) {
+	var writer, defaultWriter io.Writer
+	defaultWriter = os.Stderr
+	if config.Logfile != "" {
+		os.MkdirAll(filepath.Dir(config.Logfile), 0755)
+		// The codes below should not change, because the retention information has already been published to public doc.
+		writer = &lumberjack.Logger{
+			Filename:   config.Logfile,
+			MaxSize:    100,
+			MaxBackups: 5,
+			MaxAge:     7,
+			Compress:   true,
+		}
+	} else {
+		writer = defaultWriter
+	}
+	// Writer will be created with timezone from config.log LogWithTimezone.
+	// Empty string will result in writer created with UTC.
+	w, err := newTelegrafWriter(writer,config)
+	if err != nil {
+		log.Fatalf("Error creating telegraf writer: %v", err)
+	}
+	return w, err
+}
+
 func init() {
 	tlc := &telegrafLogCreator{}
+	llc := &lumberjackLogCreator{}
+
 	registerLogger("", tlc)
 	registerLogger(LogTargetStderr, tlc)
 	registerLogger(LogTargetFile, tlc)
+	registerLogger(LogTargetLumberjack, llc)
 }

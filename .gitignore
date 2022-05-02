@@ -11,3 +11,4 @@ process.yml
 /*.conf
 resource.syso
 versioninfo.json
+*.iml
