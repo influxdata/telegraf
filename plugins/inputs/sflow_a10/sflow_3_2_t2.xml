@@ -8334,7 +8334,6 @@
 			<ctr:fieldName>Max Health check time(ms)</ctr:fieldName>
 		</ctr:counter>
 	</ctr:counterBlock>
-
 	<ctr:counterBlock>
 		<ctr:mapVersion>v2</ctr:mapVersion>
 		<ctr:tag>601</ctr:tag>
@@ -8360,6 +8359,113 @@
 			<ctr:offset>0</ctr:offset>
 			<ctr:dtype>u64</ctr:dtype>
 			<ctr:fieldName>ZAPR Event Log</ctr:fieldName>
+		</ctr:counter>
+	</ctr:counterBlock>
+	<ctr:counterBlock>
+		<ctr:mapVersion>v2</ctr:mapVersion>
+		<ctr:tag>293</ctr:tag>
+		<ctr:ctrBlkType>Fixed</ctr:ctrBlkType>
+		<ctr:ctrBlkSz>6</ctr:ctrBlkSz>
+		<ctr:counter>
+			<ctr:offset>0</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>bw_limit_drop</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>1</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>bw_limit_ignored</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>2</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>egr_pps_limit_drop</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>3</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ing_pps_limit_drop</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>4</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>pps_limit_ignored</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>5</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>license_expire_drop</ctr:fieldName>
+		</ctr:counter>
+	</ctr:counterBlock>
+	<ctr:counterBlock>
+		<ctr:mapVersion>v2</ctr:mapVersion>
+		<ctr:tag>294</ctr:tag>
+		<ctr:ctrBlkType>Fixed</ctr:ctrBlkType>
+		<ctr:ctrBlkSz>13</ctr:ctrBlkSz>
+		<ctr:counter>
+			<ctr:offset>0</ctr:offset>
+			<ctr:dtype>u32</ctr:dtype>
+			<ctr:fieldName>ifIndex</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>1</ctr:offset>
+			<ctr:dtype>u32</ctr:dtype>
+			<ctr:fieldName>ifType</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>2</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ifSpeed</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>3</ctr:offset>
+			<ctr:dtype>u32</ctr:dtype>
+			<ctr:fieldName>ifDirection</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>4</ctr:offset>
+			<ctr:dtype>u32</ctr:dtype>
+			<ctr:fieldName>ifStatus</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>5</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ifcrcerr</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>6</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ifframeerr</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>7</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ifrunts</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>8</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ifgianterr</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>9</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ifInTcpPkts</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>10</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ifInUdpPkts</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>11</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ifOutTcpPkts</ctr:fieldName>
+		</ctr:counter>
+		<ctr:counter>
+			<ctr:offset>12</ctr:offset>
+			<ctr:dtype>u64</ctr:dtype>
+			<ctr:fieldName>ifOutUdpPkts</ctr:fieldName>
 		</ctr:counter>
 	</ctr:counterBlock>
 </ctr:allctrblocks>

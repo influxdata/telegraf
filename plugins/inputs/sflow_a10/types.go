@@ -42,11 +42,19 @@ type CounterSample struct {
 	CounterRecords []CounterRecord
 }
 
+func (c *CounterSample) NeedsIpAndPort() bool {
+	if c.CounterRecords == nil || len(c.CounterRecords) == 0 {
+		return false
+	}
+	return c.CounterRecords[0].NeedsIpAndPort
+}
+
 type CounterFormatType uint32
 
 type CounterRecord struct {
-	CounterFormat CounterFormatType
-	CounterData   *CounterData
+	CounterFormat  CounterFormatType
+	CounterData    *CounterData
+	NeedsIpAndPort bool
 }
 
 type CounterData struct {
@@ -142,14 +150,7 @@ func (a *Allctrblocks) Validate() error {
 	return nil
 }
 
-// DimensionsPerSourceID contains Port and IP information for each SourceID
-// Port and IP information is obtained by processing counter records tagged 260 and 271/272 respectively
-type DimensionsPerSourceID struct {
-	PortDimensions *PortDimension
-	IPDimensions   []IPDimension
-}
-
-// GetAllIPs concatenates all IPs in the DimensionsPerSourceID and returns them
+// GetAllIPs concatenates all IPs in the []IPDimension and returns them
 func GetAllIPs(ipDimensions []IPDimension) string {
 	var ips []string
 	for _, ip := range ipDimensions {
@@ -170,18 +171,6 @@ type PortDimension struct {
 type IPDimension struct {
 	IPAddress  string
 	SubnetMask uint8
-}
-
-// Validate returns true if all fields of the DimensionsPerSourceID struct are valid
-func (d *DimensionsPerSourceID) Validate() error {
-	if d.PortDimensions == nil {
-		return fmt.Errorf("PortDimension is nil")
-	} else if d.IPDimensions == nil {
-		return fmt.Errorf("IPDimensions is nil")
-	} else if len(d.IPDimensions) == 0 {
-		return fmt.Errorf("IPDimensions has zero length")
-	}
-	return nil
 }
 
 func tableTypeIntToString(tableType uint8) string {
