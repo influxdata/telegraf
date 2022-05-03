@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-logfmt/logfmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -17,17 +18,20 @@ var (
 
 // Parser decodes logfmt formatted messages into metrics.
 type Parser struct {
+	TagKeys []string `toml:"logfmt_tag_keys"`
+
 	MetricName  string
 	DefaultTags map[string]string
 	Now         func() time.Time
 }
 
 // NewParser creates a parser.
-func NewParser(metricName string, defaultTags map[string]string) *Parser {
+func NewParser(metricName string, defaultTags map[string]string, tagKeys []string) *Parser {
 	return &Parser{
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
 		Now:         time.Now,
+		TagKeys:     tagKeys,
 	}
 }
 
@@ -46,6 +50,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			break
 		}
 		fields := make(map[string]interface{})
+		tags := make(map[string]string)
 		for decoder.ScanKeyval() {
 			if string(decoder.Value()) == "" {
 				continue
@@ -53,7 +58,9 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 
 			//type conversions
 			value := string(decoder.Value())
-			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+			if choice.Contains(string(decoder.Key()), p.TagKeys) {
+				tags[string(decoder.Key())] = value
+			} else if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
 				fields[string(decoder.Key())] = iValue
 			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
 				fields[string(decoder.Key())] = fValue
@@ -67,7 +74,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			continue
 		}
 
-		m := metric.New(p.MetricName, map[string]string{}, fields, p.Now())
+		m := metric.New(p.MetricName, tags, fields, p.Now())
 
 		metrics = append(metrics, m)
 	}

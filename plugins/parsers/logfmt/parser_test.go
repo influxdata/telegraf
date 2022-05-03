@@ -7,6 +7,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 func MustMetric(t *testing.T, m *testutil.Metric) telegraf.Metric {
@@ -219,6 +220,60 @@ func TestParseLine(t *testing.T) {
 				t.Fatalf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
 			}
 			testutil.RequireMetricEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestTags(t *testing.T) {
+	tests := []struct {
+		name        string
+		measurement string
+		tagKeys     []string
+		s           string
+		want        telegraf.Metric
+		wantErr     bool
+	}{
+		{
+			name:        "logfmt parser returns tags and fields",
+			measurement: "testlog",
+			tagKeys:     []string{"lvl"},
+			s:           "ts=2018-07-24T19:43:40.275Z lvl=info msg=\"http request\" method=POST",
+			want: testutil.MustMetric(
+				"testlog",
+				map[string]string{
+					"lvl": "info",
+				},
+				map[string]interface{}{
+					"msg":    "http request",
+					"method": "POST",
+					"ts":     "2018-07-24T19:43:40.275Z",
+				},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name:        "logfmt parser returns no empty metrics",
+			measurement: "testlog",
+			tagKeys:     []string{"lvl"},
+			s:           "lvl=info",
+			wantErr:     true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := Parser{
+				MetricName: tt.measurement,
+				TagKeys:    tt.tagKeys,
+				Now:        time.Now,
+			}
+			got, err := l.ParseLine(tt.s)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			testutil.RequireMetricEqual(t, tt.want, got, testutil.IgnoreTime())
 		})
 	}
 }
