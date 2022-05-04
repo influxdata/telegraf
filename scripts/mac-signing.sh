@@ -53,7 +53,7 @@ do
   printf "\n"
 
   cp ~/project/info.plist "$RootAppDir"
-  cp  ~/project/assets/icon.icns "$RootAppDir/Resources"
+  cp  ~/project/assets/windows/icon.icns "$RootAppDir/Resources"
 
   chmod +x "$RootAppDir/MacOS/telegraf_entry_mac"
 

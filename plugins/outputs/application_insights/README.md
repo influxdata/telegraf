@@ -1,10 +1,12 @@
 # Application Insights Output Plugin
 
-This plugin writes telegraf metrics to [Azure Application Insights](https://azure.microsoft.com/en-us/services/application-insights/).
+This plugin writes telegraf metrics to [Azure Application
+Insights](https://azure.microsoft.com/en-us/services/application-insights/).
 
 ## Configuration
 
 ```toml
+# Send metrics to Azure Application Insights
 [[outputs.application_insights]]
   ## Instrumentation key of the Application Insights resource.
   instrumentation_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
@@ -38,7 +40,8 @@ on the measurement name and field.
 foo,host=a first=42,second=43 1525293034000000000
 ```
 
-In the special case of a single field named `value`, a single telemetry record is created named using only the measurement name
+In the special case of a single field named `value`, a single telemetry record
+is created named using only the measurement name
 
 **Example:** Create a telemetry record `bar`:
 

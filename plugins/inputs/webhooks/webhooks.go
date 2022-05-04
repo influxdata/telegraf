@@ -45,36 +45,6 @@ func NewWebhooks() *Webhooks {
 	return &Webhooks{}
 }
 
-func (wb *Webhooks) SampleConfig() string {
-	return `
-  ## Address and port to host Webhook listener on
-  service_address = ":1619"
-
-  [inputs.webhooks.filestack]
-    path = "/filestack"
-
-  [inputs.webhooks.github]
-    path = "/github"
-    # secret = ""
-
-  [inputs.webhooks.mandrill]
-    path = "/mandrill"
-
-  [inputs.webhooks.rollbar]
-    path = "/rollbar"
-
-  [inputs.webhooks.papertrail]
-    path = "/papertrail"
-
-  [inputs.webhooks.particle]
-    path = "/particle"
-`
-}
-
-func (wb *Webhooks) Description() string {
-	return "A Webhooks Event collector"
-}
-
 func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

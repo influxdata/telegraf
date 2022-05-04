@@ -351,7 +351,7 @@ outer:
 		}
 	}
 
-	// add metadata fields
+	// add metadata tags
 	for k, v := range p.metadataTags {
 		tags[k] = v
 	}

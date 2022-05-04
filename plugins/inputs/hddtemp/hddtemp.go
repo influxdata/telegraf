@@ -20,10 +20,6 @@ type Fetcher interface {
 	Fetch(address string) ([]gohddtemp.Disk, error)
 }
 
-func (h *HDDTemp) Description() string {
-	return "Monitor disks' temperatures using hddtemp"
-}
-
 var hddtempSampleConfig = `
   ## By default, telegraf gathers temps data from all disks detected by the
   ## hddtemp.
@@ -35,10 +31,6 @@ var hddtempSampleConfig = `
   # address = "127.0.0.1:7634"
   # devices = ["sda", "*"]
 `
-
-func (h *HDDTemp) SampleConfig() string {
-	return hddtempSampleConfig
-}
 
 func (h *HDDTemp) Gather(acc telegraf.Accumulator) error {
 	if h.fetcher == nil {

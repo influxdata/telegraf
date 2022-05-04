@@ -31,33 +31,6 @@ type NewRelic struct {
 	client      http.Client
 }
 
-// Description returns a one-sentence description on the Output
-func (nr *NewRelic) Description() string {
-	return "Send metrics to New Relic metrics endpoint"
-}
-
-// SampleConfig : return  default configuration of the Output
-func (nr *NewRelic) SampleConfig() string {
-	return `
-  ## New Relic Insights API key
-  insights_key = "insights api key"
-
-  ## Prefix to add to add to metric name for easy identification.
-  # metric_prefix = ""
-
-  ## Timeout for writes to the New Relic API.
-  # timeout = "15s"
-
-  ## HTTP Proxy override. If unset use values from the standard
-  ## proxy environment variables to determine proxy, if any.
-  # http_proxy = "http://corporate.proxy:3128"
-
-  ## Metric URL override to enable geographic location endpoints.
-  # If not set use values from the standard 
-  # metric_url = "https://metric-api.newrelic.com/metric/v1"
-`
-}
-
 // Connect to the Output
 func (nr *NewRelic) Connect() error {
 	if nr.InsightsKey == "" {

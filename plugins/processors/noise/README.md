@@ -8,6 +8,7 @@ Depending on the function, various parameters need to be configured:
 Depending on the choice of the distribution function, the respective parameters must be set. Default settings are `noise_type = "laplacian"` with `mu = 0.0` and `scale = 1.0`:
 
 ```toml
+# Adds noise to numerical fields
 [[processors.noise]]
   ## Specified the type of the random distribution.
   ## Can be "laplacian", "gaussian" or "uniform".

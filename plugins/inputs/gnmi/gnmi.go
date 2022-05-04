@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/gnxi/utils/xpath"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -57,7 +58,8 @@ type GNMI struct {
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 	// Lookup/device+name/key/value
-	lookup map[string]map[string]map[string]interface{}
+	lookup      map[string]map[string]map[string]interface{}
+	lookupMutex sync.Mutex
 
 	Log telegraf.Logger
 }
@@ -88,7 +90,9 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	var request *gnmiLib.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
+	c.lookupMutex.Lock()
 	c.lookup = make(map[string]map[string]map[string]interface{})
+	c.lookupMutex.Unlock()
 
 	// Validate configuration
 	if request, err = c.newSubscribeRequest(); err != nil {
@@ -142,7 +146,9 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 
 		if subscription.TagOnly {
 			// Create the top-level lookup for this tag
+			c.lookupMutex.Lock()
 			c.lookup[name] = make(map[string]map[string]interface{})
+			c.lookupMutex.Unlock()
 		}
 	}
 	for alias, encodingPath := range c.Aliases {
@@ -310,6 +316,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 
 		// Update tag lookups and discard rest of update
 		subscriptionKey := tags["source"] + "/" + tags["name"]
+		c.lookupMutex.Lock()
 		if _, ok := c.lookup[name]; ok {
 			// We are subscribed to this, so add the fields to the lookup-table
 			if _, ok := c.lookup[name][subscriptionKey]; !ok {
@@ -318,6 +325,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 			for k, v := range fields {
 				c.lookup[name][subscriptionKey][path.Base(k)] = v
 			}
+			c.lookupMutex.Unlock()
 			// Do not process the data further as we only subscribed here for the lookup table
 			continue
 		}
@@ -326,10 +334,11 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 		for subscriptionName, values := range c.lookup {
 			if annotations, ok := values[subscriptionKey]; ok {
 				for k, v := range annotations {
-					tags[subscriptionName+"/"+k] = v.(string)
+					tags[subscriptionName+"/"+k] = fmt.Sprint(v)
 				}
 			}
 		}
+		c.lookupMutex.Unlock()
 
 		// Group metrics
 		for k, v := range fields {
@@ -470,151 +479,19 @@ func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix
 
 //ParsePath from XPath-like string to gNMI path structure
 func parsePath(origin string, pathToParse string, target string) (*gnmiLib.Path, error) {
-	var err error
-	gnmiPath := gnmiLib.Path{Origin: origin, Target: target}
-
-	if len(pathToParse) > 0 && pathToParse[0] != '/' {
-		return nil, fmt.Errorf("path does not start with a '/': %s", pathToParse)
-	}
-
-	elem := &gnmiLib.PathElem{}
-	start, name, value, end := 0, -1, -1, -1
-
-	pathToParse = pathToParse + "/"
-
-	for i := 0; i < len(pathToParse); i++ {
-		if pathToParse[i] == '[' {
-			if name >= 0 {
-				break
-			}
-			if end < 0 {
-				end = i
-				elem.Key = make(map[string]string)
-			}
-			name = i + 1
-		} else if pathToParse[i] == '=' {
-			if name <= 0 || value >= 0 {
-				break
-			}
-			value = i + 1
-		} else if pathToParse[i] == ']' {
-			if name <= 0 || value <= name {
-				break
-			}
-			elem.Key[pathToParse[name:value-1]] = strings.Trim(pathToParse[value:i], "'\"")
-			name, value = -1, -1
-		} else if pathToParse[i] == '/' {
-			if name < 0 {
-				if end < 0 {
-					end = i
-				}
-
-				if end > start {
-					elem.Name = pathToParse[start:end]
-					gnmiPath.Elem = append(gnmiPath.Elem, elem)
-					gnmiPath.Element = append(gnmiPath.Element, pathToParse[start:i])
-				}
-
-				start, name, value, end = i+1, -1, -1, -1
-				elem = &gnmiLib.PathElem{}
-			}
-		}
-	}
-
-	if name >= 0 || value >= 0 {
-		err = fmt.Errorf("Invalid gNMI path: %s", pathToParse)
-	}
-
+	gnmiPath, err := xpath.ToGNMIPath(pathToParse)
 	if err != nil {
 		return nil, err
 	}
-
-	return &gnmiPath, nil
+	gnmiPath.Origin = origin
+	gnmiPath.Target = target
+	return gnmiPath, err
 }
 
 // Stop listener and cleanup
 func (c *GNMI) Stop() {
 	c.cancel()
 	c.wg.Wait()
-}
-
-const sampleConfig = `
- ## Address and port of the gNMI GRPC server
- addresses = ["10.49.234.114:57777"]
-
- ## define credentials
- username = "cisco"
- password = "cisco"
-
- ## gNMI encoding requested (one of: "proto", "json", "json_ietf", "bytes")
- # encoding = "proto"
-
- ## redial in case of failures after
- redial = "10s"
-
- ## enable client-side TLS and define CA to authenticate the device
- # enable_tls = true
- # tls_ca = "/etc/telegraf/ca.pem"
- # insecure_skip_verify = true
-
- ## define client-side TLS certificate & key to authenticate to the device
- # tls_cert = "/etc/telegraf/cert.pem"
- # tls_key = "/etc/telegraf/key.pem"
-
- ## gNMI subscription prefix (optional, can usually be left empty)
- ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
- # origin = ""
- # prefix = ""
- # target = ""
-
- ## Define additional aliases to map telemetry encoding paths to simple measurement names
- #[inputs.gnmi.aliases]
- #  ifcounters = "openconfig:/interfaces/interface/state/counters"
-
- [[inputs.gnmi.subscription]]
-  ## Name of the measurement that will be emitted
-  name = "ifcounters"
-
-  ## Origin and path of the subscription
-  ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
-  ##
-  ## origin usually refers to a (YANG) data model implemented by the device
-  ## and path to a specific substructure inside it that should be subscribed to (similar to an XPath)
-  ## YANG models can be found e.g. here: https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
-  origin = "openconfig-interfaces"
-  path = "/interfaces/interface/state/counters"
-
-  # Subscription mode (one of: "target_defined", "sample", "on_change") and interval
-  subscription_mode = "sample"
-  sample_interval = "10s"
-
-  ## Suppress redundant transmissions when measured values are unchanged
-  # suppress_redundant = false
-
-  ## If suppression is enabled, send updates at least every X seconds anyway
-  # heartbeat_interval = "60s"
-
-  #[[inputs.gnmi.subscription]]
-    # name = "descr"
-    # origin = "openconfig-interfaces"
-    # path = "/interfaces/interface/state/description"
-    # subscription_mode = "on_change"
-
-    ## If tag_only is set, the subscription in question will be utilized to maintain a map of
-    ## tags to apply to other measurements emitted by the plugin, by matching path keys
-    ## All fields from the tag-only subscription will be applied as tags to other readings,
-    ## in the format <name>_<fieldBase>.
-    # tag_only = true
-`
-
-// SampleConfig of plugin
-func (c *GNMI) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description of plugin
-func (c *GNMI) Description() string {
-	return "gNMI telemetry input plugin"
 }
 
 // Gather plugin measurements (unused)

@@ -14,6 +14,7 @@ Telegraf minimum version: Telegraf 1.16.0
 ## Configuration
 
 ```toml
+# Accept metrics over InfluxDB 2.x HTTP API
 [[inputs.influxdb_v2_listener]]
   ## Address and port to host InfluxDB listener on
   ## (Double check the port. Could be 9999 if using OSS Beta)
@@ -40,6 +41,11 @@ Telegraf minimum version: Telegraf 1.16.0
   ## Optional token to accept for HTTP authentication.
   ## You probably want to make sure you have TLS configured above for this.
   # token = "some-long-shared-secret-token"
+
+  ## Influx line protocol parser
+  ## 'internal' is the default. 'upstream' is a newer parser that is faster
+  ## and more memory efficient.
+  # parser_type = "internal"
 ```
 
 ## Metrics

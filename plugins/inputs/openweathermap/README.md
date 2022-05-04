@@ -13,6 +13,7 @@ condition ID, icon, and main is at [weather conditions][].
 ## Configuration
 
 ```toml
+# Read current weather and forecasts data from openweathermap.org
 [[inputs.openweathermap]]
   ## OpenWeatherMap API key.
   app_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

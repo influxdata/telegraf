@@ -11,7 +11,10 @@ The example below has two queries are specified, with the following parameters:
 * The name of the measurement
 * A list of the columns to be defined as tags
 
+## Configuration
+
 ```toml
+# Read metrics from one or many postgresql servers
 [[inputs.postgresql_extensible]]
   # specify address via a url matching:
   # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...
@@ -59,7 +62,7 @@ The example below has two queries are specified, with the following parameters:
   #
   # The timestamp field is used to override the data points timestamp value. By
   # default, all rows inserted with current time. By setting a timestamp column,
-  # the row will be inserted with that column's value. 
+  # the row will be inserted with that column's value.
   #
   # Structure :
   # [[inputs.postgresql_extensible.query]]

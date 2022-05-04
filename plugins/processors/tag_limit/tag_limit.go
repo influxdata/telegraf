@@ -1,4 +1,4 @@
-package taglimit
+package tag_limit
 
 import (
 	"fmt"
@@ -7,28 +7,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-const sampleConfig = `
-  ## Maximum number of tags to preserve
-  limit = 10
-
-  ## List of tags to preferentially preserve
-  keep = ["foo", "bar", "baz"]
-`
-
 type TagLimit struct {
 	Limit    int             `toml:"limit"`
 	Keep     []string        `toml:"keep"`
 	Log      telegraf.Logger `toml:"-"`
 	init     bool
 	keepTags map[string]string
-}
-
-func (d *TagLimit) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *TagLimit) Description() string {
-	return "Restricts the number of tags that can pass through this filter and chooses which tags to preserve when over the limit."
 }
 
 func (d *TagLimit) initOnce() error {

@@ -1,10 +1,12 @@
 # Kafka Output Plugin
 
-This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
+This plugin writes to a [Kafka
+Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
 
 ## Configuration
 
 ```toml
+# Configuration for the Kafka server to send metrics to
 [[outputs.kafka]]
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
@@ -106,6 +108,10 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## until the next flush.
   # max_retry = 3
 
+  ## The maximum permitted size of a message. Should be set equal to or
+  ## smaller than the broker's 'message.max.bytes'.
+  # max_message_bytes = 1000000
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -158,8 +164,8 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 This option controls the number of retries before a failure notification is
 displayed for each message when no acknowledgement is received from the
 broker. When the setting is greater than `0`, message latency can be reduced,
-duplicate messages can occur in cases of transient errors, and broker loads
-can increase during downtime.
+duplicate messages can occur in cases of transient errors, and broker loads can
+increase during downtime.
 
 The option is similar to the
 [retries](https://kafka.apache.org/documentation/#producerconfigs) Producer

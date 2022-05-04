@@ -12,6 +12,7 @@ source tag or field is overwritten.
 ## Configuration
 
 ```toml
+# Map enum values according to given table.
 [[processors.enum]]
   [[processors.enum.mapping]]
     ## Name of the field to map. Globs accepted.

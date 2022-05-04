@@ -3,10 +3,11 @@ package directory_monitor
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
@@ -19,12 +20,8 @@ func TestCSVGZImport(t *testing.T) {
 	testCsvGzFile := "test.csv.gz"
 
 	// Establish process directory and finished directory.
-	finishedDirectory, err := os.MkdirTemp("", "finished")
-	require.NoError(t, err)
-	processDirectory, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(processDirectory)
-	defer os.RemoveAll(finishedDirectory)
+	finishedDirectory := t.TempDir()
+	processDirectory := t.TempDir()
 
 	// Init plugin.
 	r := DirectoryMonitor{
@@ -33,7 +30,7 @@ func TestCSVGZImport(t *testing.T) {
 		MaxBufferedMetrics: 1000,
 		FileQueueSize:      100000,
 	}
-	err = r.Init()
+	err := r.Init()
 	require.NoError(t, err)
 
 	r.SetParserFunc(func() (parsers.Parser, error) {
@@ -87,12 +84,8 @@ func TestMultipleJSONFileImports(t *testing.T) {
 	testJSONFile := "test.json"
 
 	// Establish process directory and finished directory.
-	finishedDirectory, err := os.MkdirTemp("", "finished")
-	require.NoError(t, err)
-	processDirectory, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(processDirectory)
-	defer os.RemoveAll(finishedDirectory)
+	finishedDirectory := t.TempDir()
+	processDirectory := t.TempDir()
 
 	// Init plugin.
 	r := DirectoryMonitor{
@@ -101,7 +94,7 @@ func TestMultipleJSONFileImports(t *testing.T) {
 		MaxBufferedMetrics: 1000,
 		FileQueueSize:      1000,
 	}
-	err = r.Init()
+	err := r.Init()
 	require.NoError(t, err)
 
 	parserConfig := parsers.Config{
@@ -139,12 +132,8 @@ func TestFileTag(t *testing.T) {
 	testJSONFile := "test.json"
 
 	// Establish process directory and finished directory.
-	finishedDirectory, err := os.MkdirTemp("", "finished")
-	require.NoError(t, err)
-	processDirectory, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(processDirectory)
-	defer os.RemoveAll(finishedDirectory)
+	finishedDirectory := t.TempDir()
+	processDirectory := t.TempDir()
 
 	// Init plugin.
 	r := DirectoryMonitor{
@@ -154,7 +143,7 @@ func TestFileTag(t *testing.T) {
 		MaxBufferedMetrics: 1000,
 		FileQueueSize:      1000,
 	}
-	err = r.Init()
+	err := r.Init()
 	require.NoError(t, err)
 
 	parserConfig := parsers.Config{
@@ -198,12 +187,8 @@ func TestCSVNoSkipRows(t *testing.T) {
 	testCsvFile := "test.csv"
 
 	// Establish process directory and finished directory.
-	finishedDirectory, err := os.MkdirTemp("", "finished")
-	require.NoError(t, err)
-	processDirectory, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(processDirectory)
-	defer os.RemoveAll(finishedDirectory)
+	finishedDirectory := t.TempDir()
+	processDirectory := t.TempDir()
 
 	// Init plugin.
 	r := DirectoryMonitor{
@@ -212,7 +197,7 @@ func TestCSVNoSkipRows(t *testing.T) {
 		MaxBufferedMetrics: 1000,
 		FileQueueSize:      100000,
 	}
-	err = r.Init()
+	err := r.Init()
 	require.NoError(t, err)
 
 	r.SetParserFunc(func() (parsers.Parser, error) {
@@ -270,12 +255,8 @@ func TestCSVSkipRows(t *testing.T) {
 	testCsvFile := "test.csv"
 
 	// Establish process directory and finished directory.
-	finishedDirectory, err := os.MkdirTemp("", "finished")
-	require.NoError(t, err)
-	processDirectory, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(processDirectory)
-	defer os.RemoveAll(finishedDirectory)
+	finishedDirectory := t.TempDir()
+	processDirectory := t.TempDir()
 
 	// Init plugin.
 	r := DirectoryMonitor{
@@ -284,7 +265,7 @@ func TestCSVSkipRows(t *testing.T) {
 		MaxBufferedMetrics: 1000,
 		FileQueueSize:      100000,
 	}
-	err = r.Init()
+	err := r.Init()
 	require.NoError(t, err)
 
 	r.SetParserFunc(func() (parsers.Parser, error) {
@@ -344,12 +325,8 @@ func TestCSVMultiHeader(t *testing.T) {
 	testCsvFile := "test.csv"
 
 	// Establish process directory and finished directory.
-	finishedDirectory, err := os.MkdirTemp("", "finished")
-	require.NoError(t, err)
-	processDirectory, err := os.MkdirTemp("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(processDirectory)
-	defer os.RemoveAll(finishedDirectory)
+	finishedDirectory := t.TempDir()
+	processDirectory := t.TempDir()
 
 	// Init plugin.
 	r := DirectoryMonitor{
@@ -358,7 +335,7 @@ func TestCSVMultiHeader(t *testing.T) {
 		MaxBufferedMetrics: 1000,
 		FileQueueSize:      100000,
 	}
-	err = r.Init()
+	err := r.Init()
 	require.NoError(t, err)
 
 	r.SetParserFunc(func() (parsers.Parser, error) {

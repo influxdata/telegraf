@@ -22,17 +22,6 @@ type Chrony struct {
 	path      string
 }
 
-func (*Chrony) Description() string {
-	return "Get standard chrony metrics, requires chronyc executable."
-}
-
-func (*Chrony) SampleConfig() string {
-	return `
-  ## If true, chronyc tries to perform a DNS lookup for the time server.
-  # dns_lookup = false
-  `
-}
-
 func (c *Chrony) Init() error {
 	var err error
 	c.path, err = exec.LookPath("chronyc")

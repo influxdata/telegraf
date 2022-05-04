@@ -5,6 +5,7 @@ The MarkLogic Telegraf plugin gathers health status metrics from one or more hos
 ## Configuration
 
 ```toml
+# Retrieves information on a specific host in a MarkLogic Cluster
 [[inputs.marklogic]]
   ## Base URL of the MarkLogic HTTP Server.
   url = "http://localhost:8002"

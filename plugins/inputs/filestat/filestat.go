@@ -11,22 +11,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## Files to gather stats about.
-  ## These accept standard unix glob matching rules, but with the addition of
-  ## ** as a "super asterisk". ie:
-  ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
-  ##   "/var/log/*/*.log" -> find all .log files with a parent dir in /var/log
-  ##   "/var/log/apache.log" -> just tail the apache log file
-  ##
-  ## See https://github.com/gobwas/glob for more examples
-  ##
-  files = ["/var/log/**.log"]
-
-  ## If true, read the entire file and calculate an md5 checksum.
-  md5 = false
-`
-
 type FileStat struct {
 	Md5   bool
 	Files []string
@@ -49,12 +33,6 @@ func NewFileStat() *FileStat {
 		filesWithErrors: make(map[string]bool),
 	}
 }
-
-func (*FileStat) Description() string {
-	return "Read stats about given file(s)"
-}
-
-func (*FileStat) SampleConfig() string { return sampleConfig }
 
 func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 	var err error

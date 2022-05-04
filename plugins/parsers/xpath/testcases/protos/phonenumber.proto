@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package importtest;
+
+enum PhoneType {
+MOBILE = 0;
+HOME = 1;
+WORK = 2;
+}
+
+message PhoneNumber {
+    optional string number = 1;
+    optional PhoneType type = 2;
+}
+
