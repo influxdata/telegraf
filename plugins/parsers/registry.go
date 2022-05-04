@@ -393,7 +393,9 @@ func NewDropwizardParser(
 
 // NewLogFmtParser returns a logfmt parser with the default options.
 func NewLogFmtParser(metricName string, defaultTags map[string]string, tagKeys []string) (Parser, error) {
-	return logfmt.NewParser(metricName, defaultTags, tagKeys), nil
+	parser := logfmt.NewParser(metricName, defaultTags, tagKeys)
+	err := parser.Init()
+	return parser, err
 }
 
 func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {

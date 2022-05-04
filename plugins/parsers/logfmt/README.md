@@ -16,7 +16,7 @@ The `logfmt` data format parses data in [logfmt] format.
   ##   https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "logfmt"
 
-  ## Array of key names which should be collected as tags.
+  ## Array of key names which should be collected as tags. Globs accepted.
   logfmt_tag_keys = ["method","host"]
 ```
 

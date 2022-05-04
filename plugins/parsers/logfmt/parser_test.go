@@ -256,16 +256,38 @@ func TestTags(t *testing.T) {
 			measurement: "testlog",
 			tagKeys:     []string{"lvl"},
 			s:           "lvl=info",
-			wantErr:     true,
+			want: testutil.MustMetric(
+				"testlog",
+				map[string]string{
+					"lvl": "info",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name:        "logfmt parser returns all keys as tag",
+			measurement: "testlog",
+			tagKeys:     []string{"*"},
+			s:           "ts=2018-07-24T19:43:40.275Z lvl=info msg=\"http request\" method=POST",
+			want: testutil.MustMetric(
+				"testlog",
+				map[string]string{
+					"lvl":    "info",
+					"msg":    "http request",
+					"method": "POST",
+					"ts":     "2018-07-24T19:43:40.275Z",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := Parser{
-				MetricName: tt.measurement,
-				TagKeys:    tt.tagKeys,
-				Now:        time.Now,
-			}
+			l := NewParser(tt.measurement, map[string]string{}, tt.tagKeys)
+			assert.NoError(t, l.Init())
+
 			got, err := l.ParseLine(tt.s)
 
 			if tt.wantErr {

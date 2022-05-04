@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-logfmt/logfmt"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -23,6 +23,8 @@ type Parser struct {
 	MetricName  string
 	DefaultTags map[string]string
 	Now         func() time.Time
+
+	tagFilter filter.Filter
 }
 
 // NewParser creates a parser.
@@ -58,7 +60,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 
 			//type conversions
 			value := string(decoder.Value())
-			if choice.Contains(string(decoder.Key()), p.TagKeys) {
+			if p.tagFilter != nil && p.tagFilter.Match(string(decoder.Key())) {
 				tags[string(decoder.Key())] = value
 			} else if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
 				fields[string(decoder.Key())] = iValue
@@ -70,7 +72,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 				fields[string(decoder.Key())] = value
 			}
 		}
-		if len(fields) == 0 {
+		if len(fields) == 0 && len(tags) == 0 {
 			continue
 		}
 
@@ -112,4 +114,15 @@ func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
 			}
 		}
 	}
+}
+
+func (p *Parser) Init() error {
+	var err error
+
+	// Compile tag key patterns
+	if p.tagFilter, err = filter.Compile(p.TagKeys); err != nil {
+		return fmt.Errorf("error compiling tag pattern: %w", err)
+	}
+
+	return nil
 }
