@@ -8,11 +8,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
+	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
-	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
 )
 
 // NewRelic nr structure
@@ -21,35 +22,13 @@ type NewRelic struct {
 	MetricPrefix string          `toml:"metric_prefix"`
 	Timeout      config.Duration `toml:"timeout"`
 	HTTPProxy    string          `toml:"http_proxy"`
+	MetricURL    string          `toml:"metric_url"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
 	savedErrors map[int]interface{}
 	errorCount  int
-	client      http.Client `toml:"-"`
-}
-
-// Description returns a one-sentence description on the Output
-func (nr *NewRelic) Description() string {
-	return "Send metrics to New Relic metrics endpoint"
-}
-
-// SampleConfig : return  default configuration of the Output
-func (nr *NewRelic) SampleConfig() string {
-	return `
-  ## New Relic Insights API key
-  insights_key = "insights api key"
-
-  ## Prefix to add to add to metric name for easy identification.
-  # metric_prefix = ""
-
-  ## Timeout for writes to the New Relic API.
-  # timeout = "15s"
-
-  ## HTTP Proxy override. If unset use values from the standard
-  ## proxy environment variables to determine proxy, if any.
-  # http_proxy = "http://corporate.proxy:3128"
-`
+	client      http.Client
 }
 
 // Connect to the Output
@@ -76,6 +55,9 @@ func (nr *NewRelic) Connect() error {
 				}
 				nr.errorCount++
 				nr.savedErrors[nr.errorCount] = errorString
+			}
+			if nr.MetricURL != "" {
+				cfg.MetricsURLOverride = nr.MetricURL
 			}
 		})
 	if err != nil {

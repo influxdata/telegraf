@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package dpdk
@@ -151,17 +152,6 @@ func Test_validateCommands(t *testing.T) {
 
 		require.Equal(t, 1, len(dpdk.AdditionalCommands))
 		require.NoError(t, err)
-	})
-}
-
-func Test_dpdkPluginDescriber(t *testing.T) {
-	dpdk := dpdk{}
-	t.Run("sampleConfig function should return value from constant", func(t *testing.T) {
-		require.Equal(t, sampleConfig, dpdk.SampleConfig())
-	})
-
-	t.Run("description function should return value from constant", func(t *testing.T) {
-		require.Equal(t, description, dpdk.Description())
 	})
 }
 

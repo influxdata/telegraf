@@ -2,10 +2,11 @@
 
 This plugin will pull Metric Statistics from Amazon CloudWatch.
 
-### Amazon Authentication
+## Amazon Authentication
 
 This plugin uses a credential chain for Authentication with the CloudWatch
 API endpoint. In the following order the plugin will attempt to authenticate.
+
 1. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
 2. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
 3. Shared profile from `profile` attribute
@@ -13,7 +14,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 5. [Shared Credentials](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#shared-credentials-file)
 6. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
-### Configuration:
+## Configuration
 
 ```toml
 # Pull Metric Statistics from Amazon CloudWatch
@@ -23,16 +24,19 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) explicit credentials from 'access_key' and 'secret_key'
-  ## 3) shared profile from 'profile'
-  ## 4) environment variables
-  ## 5) shared credentials file
-  ## 6) EC2 Instance Profile
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
   # access_key = ""
   # secret_key = ""
   # token = ""
   # role_arn = ""
+  # web_identity_token_file = ""
+  # role_session_name = ""
   # profile = ""
   # shared_credential_file = ""
 
@@ -72,8 +76,10 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## Configure the TTL for the internal cache of metrics.
   # cache_ttl = "1h"
 
-  ## Metric Statistic Namespace (required)
-  namespace = "AWS/ELB"
+  ## Metric Statistic Namespaces (required)
+  namespaces = ["AWS/ELB"]
+  # A single metric statistic namespace that will be appended to namespaces on startup
+  # namespace = "AWS/ELB"
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 50 reqs/sec, so if you define multiple namespaces, these should add up to a
@@ -107,7 +113,8 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   #    name = "LoadBalancerName"
   #    value = "p-example"
 ```
-#### Requirements and Terminology
+
+## Requirements and Terminology
 
 Plugin Configuration utilizes [CloudWatch concepts](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_concepts.html) and access pattern to allow monitoring of any CloudWatch Metric.
 
@@ -122,7 +129,8 @@ to be retrieved. If specifying >1 dimension, then the metric must contain *all* 
 wildcard dimension is ignored.
 
 Example:
-```
+
+```toml
 [[inputs.cloudwatch]]
   period = "1m"
   interval = "5m"
@@ -141,13 +149,14 @@ Example:
 ```
 
 If the following ELBs are available:
+
 - name: `p-example`, availabilityZone: `us-east-1a`
 - name: `p-example`, availabilityZone: `us-east-1b`
 - name: `q-example`, availabilityZone: `us-east-1a`
 - name: `q-example`, availabilityZone: `us-east-1b`
 
-
 Then 2 metrics will be output:
+
 - name: `p-example`, availabilityZone: `us-east-1a`
 - name: `p-example`, availabilityZone: `us-east-1b`
 
@@ -156,11 +165,12 @@ would be exported containing the aggregate values of the ELB across availability
 
 To maximize efficiency and savings, consider making fewer requests by increasing `interval` but keeping `period` at the duration you would like metrics to be reported. The above example will request metrics from Cloudwatch every 5 minutes but will output five metrics timestamped one minute apart.
 
-#### Restrictions and Limitations
+## Restrictions and Limitations
+
 - CloudWatch metrics are not available instantly via the CloudWatch API. You should adjust your collection `delay` to account for this lag in metrics availability based on your [monitoring subscription level](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-cloudwatch-new.html)
 - CloudWatch API usage incurs cost - see [GetMetricData Pricing](https://aws.amazon.com/cloudwatch/pricing/)
 
-### Measurements & Fields:
+## Measurements & Fields
 
 Each CloudWatch Namespace monitored records a measurement with fields for each available Metric Statistic.
 Namespace and Metrics are represented in [snake case](https://en.wikipedia.org/wiki/Snake_case)
@@ -172,8 +182,8 @@ Namespace and Metrics are represented in [snake case](https://en.wikipedia.org/w
   - {metric}_maximum     (metric Maximum value)
   - {metric}_sample_count (metric SampleCount value)
 
+## Tags
 
-### Tags:
 Each measurement is tagged with the following identifiers to uniquely identify the associated metric
 Tag Dimension names are represented in [snake case](https://en.wikipedia.org/wiki/Snake_case)
 
@@ -181,17 +191,19 @@ Tag Dimension names are represented in [snake case](https://en.wikipedia.org/wik
   - region           (CloudWatch Region)
   - {dimension-name} (Cloudwatch Dimension value - one for each metric dimension)
 
-### Troubleshooting:
+## Troubleshooting
 
 You can use the aws cli to get a list of available metrics and dimensions:
-```
+
+```shell
 aws cloudwatch list-metrics --namespace AWS/EC2 --region us-east-1
 aws cloudwatch list-metrics --namespace AWS/EC2 --region us-east-1 --metric-name CPUCreditBalance
 ```
 
 If the expected metrics are not returned, you can try getting them manually
 for a short period of time:
-```
+
+```shell
 aws cloudwatch get-metric-data \
   --start-time 2018-07-01T00:00:00Z \
   --end-time 2018-07-01T00:15:00Z \
@@ -217,9 +229,9 @@ aws cloudwatch get-metric-data \
 ]'
 ```
 
-### Example Output:
+## Example
 
-```
+```shell
 $ ./telegraf --config telegraf.conf --input-filter cloudwatch --test
 > cloudwatch_aws_elb,load_balancer_name=p-example,region=us-east-1 latency_average=0.004810798017284538,latency_maximum=0.1100282669067383,latency_minimum=0.0006084442138671875,latency_sample_count=4029,latency_sum=19.382705211639404 1459542420000000000
 ```

@@ -94,8 +94,10 @@ type Service struct {
 	MaxOpen       int
 	MaxLifetime   config.Duration
 	DB            *sql.DB
-	IsPgBouncer   bool
+	IsPgBouncer   bool `toml:"-"`
 }
+
+var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)
 
 // Start starts the ServiceInput's service, whatever that may be
 func (p *Service) Start(telegraf.Accumulator) (err error) {
@@ -105,23 +107,23 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 		p.Address = localhost
 	}
 
-	connectionString := p.Address
+	connConfig, err := pgx.ParseConfig(p.Address)
+	if err != nil {
+		return err
+	}
+
+	// Remove the socket name from the path
+	connConfig.Host = socketRegexp.ReplaceAllLiteralString(connConfig.Host, "")
 
 	// Specific support to make it work with PgBouncer too
 	// See https://github.com/influxdata/telegraf/issues/3253#issuecomment-357505343
 	if p.IsPgBouncer {
 		// Remove DriveConfig and revert it by the ParseConfig method
 		// See https://github.com/influxdata/telegraf/issues/9134
-		d, err := pgx.ParseConfig(p.Address)
-		if err != nil {
-			return err
-		}
-
-		d.PreferSimpleProtocol = true
-
-		connectionString = stdlib.RegisterConnConfig(d)
+		connConfig.PreferSimpleProtocol = true
 	}
 
+	connectionString := stdlib.RegisterConnConfig(connConfig)
 	if p.DB, err = sql.Open("pgx", connectionString); err != nil {
 		return err
 	}
@@ -140,7 +142,7 @@ func (p *Service) Stop() {
 	p.DB.Close()
 }
 
-var kvMatcher, _ = regexp.Compile("(password|sslcert|sslkey|sslmode|sslrootcert)=\\S+ ?")
+var kvMatcher, _ = regexp.Compile(`(password|sslcert|sslkey|sslmode|sslrootcert)=\S+ ?`)
 
 // SanitizedAddress utility function to strip sensitive information from the connection string.
 func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {

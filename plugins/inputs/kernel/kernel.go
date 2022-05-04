@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package kernel
@@ -5,7 +6,6 @@ package kernel
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -28,19 +28,13 @@ type Kernel struct {
 	entropyStatFile string
 }
 
-func (k *Kernel) Description() string {
-	return "Get kernel statistics from /proc/stat"
-}
-
-func (k *Kernel) SampleConfig() string { return "" }
-
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	data, err := k.getProcStat()
 	if err != nil {
 		return err
 	}
 
-	entropyData, err := ioutil.ReadFile(k.entropyStatFile)
+	entropyData, err := os.ReadFile(k.entropyStatFile)
 	if err != nil {
 		return err
 	}
@@ -108,7 +102,7 @@ func (k *Kernel) getProcStat() ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(k.statFile)
+	data, err := os.ReadFile(k.statFile)
 	if err != nil {
 		return nil, err
 	}

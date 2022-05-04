@@ -120,11 +120,10 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 		case "s:":
 			fields["source_type_name"] = rawMetadataFields[i][2:]
 		default:
-			if rawMetadataFields[i][0] == '#' {
-				parseDataDogTags(tags, rawMetadataFields[i][1:])
-			} else {
+			if rawMetadataFields[i][0] != '#' {
 				return fmt.Errorf("unknown metadata type: '%s'", rawMetadataFields[i])
 			}
+			parseDataDogTags(tags, rawMetadataFields[i][1:])
 		}
 	}
 	// Use source tag because host is reserved tag key in Telegraf.

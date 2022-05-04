@@ -26,6 +26,7 @@ For bugs you may want to add `panic`, `regression`, or `upstream` to provide
 further detail.
 
 Summary of Labels:
+
 | Label | Description | Purpose |
 | --- | ----------- | ---|
 | `area/*` | These labels each corresponding to a plugin or group of plugins that can be added to identify the affected plugin or group of plugins | categorization |
@@ -40,9 +41,9 @@ Summary of Labels:
 | `good first issue` | This is a smaller issue suited for getting started in Telegraf, Golang, and contributing to OSS | community |
 | `help wanted` | Request for community participation, code, contribution | community |
 | `need more info` | Issue triaged but outstanding questions remain | community |
-| `performance` | Issues or PRs that address performance issues | categorization| 
+| `performance` | Issues or PRs that address performance issues | categorization|
 | `platform/*` | Issues that only apply to one platform | categorization |
-| `plugin/*` | 1. Request for new * plugins 2. Issues/PRs that are related to * plugins | categorization |
+| `plugin/*` | Request for new plugins and issues/PRs that are related to plugins | categorization |
 | `ready for final review` | Pull request has been reviewed and/or tested by multiple users and is ready for a final review | triage |
 | `rfc` | Request for comment - larger topics of discussion that are looking for feedback | community |
 | `support` |Telegraf questions, may be directed to community site or slack | triage |
@@ -66,7 +67,3 @@ We close issues for the following reasons:
 | `closed/not-reproducible` | Given the information we have we can't reproduce the issue |
 | `closed/out-of-scope` | The feature request is out of scope for Telegraf - highly unlikely to be worked on |
 | `closed/question` | This issue is a support question, directed to community site or slack |
-
-
-
-

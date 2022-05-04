@@ -2,7 +2,7 @@ package encoding
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -66,7 +66,7 @@ func TestDecoder(t *testing.T) {
 			require.NoError(t, err)
 			buf := bytes.NewBuffer(tt.input)
 			r := decoder.Reader(buf)
-			actual, err := ioutil.ReadAll(r)
+			actual, err := io.ReadAll(r)
 			if tt.expectedErr {
 				require.Error(t, err)
 				return

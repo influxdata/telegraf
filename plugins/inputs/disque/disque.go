@@ -21,23 +21,7 @@ type Disque struct {
 	c net.Conn
 }
 
-var sampleConfig = `
-  ## An array of URI to gather stats about. Specify an ip or hostname
-  ## with optional port and password.
-  ## ie disque://localhost, disque://10.10.3.33:18832, 10.0.0.1:10000, etc.
-  ## If no servers are specified, then localhost is used as the host.
-  servers = ["localhost"]
-`
-
 var defaultTimeout = 5 * time.Second
-
-func (d *Disque) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *Disque) Description() string {
-	return "Read metrics from one or many disque servers"
-}
 
 var Tracking = map[string]string{
 	"uptime_in_seconds":          "uptime",
@@ -65,10 +49,10 @@ var ErrProtocolError = errors.New("disque protocol error")
 // Returns one of the errors encountered while gather stats (if any).
 func (d *Disque) Gather(acc telegraf.Accumulator) error {
 	if len(d.Servers) == 0 {
-		url := &url.URL{
+		address := &url.URL{
 			Host: ":7711",
 		}
-		return d.gatherServer(url, acc)
+		return d.gatherServer(address, acc)
 	}
 
 	var wg sync.WaitGroup

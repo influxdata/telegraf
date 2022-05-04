@@ -23,23 +23,6 @@ type ApcUpsd struct {
 	Timeout config.Duration
 }
 
-func (*ApcUpsd) Description() string {
-	return "Monitor APC UPSes connected to apcupsd"
-}
-
-var sampleConfig = `
-  # A list of running apcupsd server to connect to.
-  # If not provided will default to tcp://127.0.0.1:3551
-  servers = ["tcp://127.0.0.1:3551"]
-
-  ## Timeout for dialing server.
-  timeout = "5s"
-`
-
-func (*ApcUpsd) SampleConfig() string {
-	return sampleConfig
-}
-
 func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 

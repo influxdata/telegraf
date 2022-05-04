@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -165,33 +165,6 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 	}
 }
 
-func (c *Cassandra) SampleConfig() string {
-	return `
-  ## DEPRECATED: The cassandra plugin has been deprecated.  Please use the
-  ## jolokia2 plugin instead.
-  ##
-  ## see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2
-
-  context = "/jolokia/read"
-  ## List of cassandra servers exposing jolokia read service
-  servers = ["myuser:mypassword@10.10.10.1:8778","10.10.10.2:8778",":8778"]
-  ## List of metrics collected on above servers
-  ## Each metric consists of a jmx path.
-  ## This will collect all heap memory usage metrics from the jvm and
-  ## ReadLatency metrics for all keyspaces and tables.
-  ## "type=Table" in the query works with Cassandra3.0. Older versions might
-  ## need to use "type=ColumnFamily"
-  metrics  = [
-    "/java.lang:type=Memory/HeapMemoryUsage",
-    "/org.apache.cassandra.metrics:type=Table,keyspace=*,scope=*,name=ReadLatency"
-  ]
-`
-}
-
-func (c *Cassandra) Description() string {
-	return "Read Cassandra metrics through Jolokia"
-}
-
 func (c *Cassandra) getAttr(requestURL *url.URL) (map[string]interface{}, error) {
 	// Create + send request
 	req, err := http.NewRequest("GET", requestURL.String(), nil)
@@ -217,7 +190,7 @@ func (c *Cassandra) getAttr(requestURL *url.URL) (map[string]interface{}, error)
 	}
 
 	// read body
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

@@ -5,13 +5,15 @@ Use the `date` processor to add the metric timestamp as a human readable tag.
 A common use is to add a tag that can be used to group by month or year.
 
 A few example usecases include:
+
 1) consumption data for utilities on per month basis
 2) bandwidth capacity per month
 3) compare energy production or sales on a yearly or monthly basis
 
-### Configuration
+## Configuration
 
 ```toml
+# Dates measurements, tags, and fields that pass through this filter.
 [[processors.date]]
   ## New tag to create
   tag_key = "month"
@@ -37,16 +39,17 @@ A few example usecases include:
   # timezone = "UTC"
 ```
 
-#### timezone
+### timezone
 
 On Windows, only the `Local` and `UTC` zones are available by default.  To use
 other timezones, set the `ZONEINFO` environment variable to the location of
 [`zoneinfo.zip`][zoneinfo]:
-```
+
+```text
 set ZONEINFO=C:\zoneinfo.zip
 ```
 
-### Example
+## Example
 
 ```diff
 - throughput lower=10i,upper=1000i,mean=500i 1560540094000000000

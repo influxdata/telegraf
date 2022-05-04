@@ -7,9 +7,9 @@ The pf plugin retrieves this information by invoking the `pfstat` command. The `
 * Run telegraf as root. This is strongly discouraged.
 * Change the ownership and permissions for /dev/pf such that the user telegraf runs at can read the /dev/pf device file. This is probably not that good of an idea either.
 * Configure sudo to grant telegraf to run `pfctl` as root. This is the most restrictive option, but require sudo setup.
-* Add "telegraf" to the "proxy" group as /dev/pf is owned by root:proxy. 
+* Add "telegraf" to the "proxy" group as /dev/pf is owned by root:proxy.
 
-### Using sudo
+## Using sudo
 
 You may edit your sudo configuration with the following:
 
@@ -17,45 +17,49 @@ You may edit your sudo configuration with the following:
 telegraf ALL=(root) NOPASSWD: /sbin/pfctl -s info
 ```
 
-### Configuration:
+## Configuration
 
 ```toml
-  # use sudo to run pfctl
+# Gather counters from PF
+[[inputs.pf]]
+  ## PF require root access on most systems.
+  ## Setting 'use_sudo' to true will make use of sudo to run pfctl.
+  ## Users must configure sudo to allow telegraf user to run pfctl with no password.
+  ## pfctl can be restricted to only list command "pfctl -s info".
   use_sudo = false
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
+* pf
+  * entries (integer, count)
+  * searches (integer, count)
+  * inserts (integer, count)
+  * removals (integer, count)
+  * match (integer, count)
+  * bad-offset (integer, count)
+  * fragment (integer, count)
+  * short (integer, count)
+  * normalize (integer, count)
+  * memory (integer, count)
+  * bad-timestamp (integer, count)
+  * congestion (integer, count)
+  * ip-option (integer, count)
+  * proto-cksum (integer, count)
+  * state-mismatch (integer, count)
+  * state-insert (integer, count)
+  * state-limit (integer, count)
+  * src-limit (integer, count)
+  * synproxy (integer, count)
 
-- pf
-    - entries (integer, count)
-    - searches (integer, count)
-    - inserts (integer, count)
-    - removals (integer, count)
-    - match (integer, count)
-    - bad-offset (integer, count)
-    - fragment (integer, count)
-    - short (integer, count)
-    - normalize (integer, count)
-    - memory (integer, count)
-    - bad-timestamp (integer, count)
-    - congestion (integer, count)
-    - ip-option (integer, count)
-    - proto-cksum (integer, count)
-    - state-mismatch (integer, count)
-    - state-insert (integer, count)
-    - state-limit (integer, count)
-    - src-limit (integer, count)
-    - synproxy (integer, count)
+## Example Output
 
-### Example Output:
-
-```
+```text
 > pfctl -s info
 Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
 State Table                          Total             Rate
-  current entries                        2               
+  current entries                        2
   searches                           11325            7.2/s
   inserts                                5            0.0/s
   removals                               3            0.0/s
@@ -77,7 +81,7 @@ Counters
   synproxy                               0            0.0/s
 ```
 
-```
+```shell
 > ./telegraf --config telegraf.conf --input-filter pf --test
 * Plugin: inputs.pf, Collection 1
 > pf,host=columbia entries=3i,searches=2668i,inserts=12i,removals=9i 1510941775000000000

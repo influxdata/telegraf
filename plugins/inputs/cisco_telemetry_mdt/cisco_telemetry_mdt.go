@@ -15,11 +15,11 @@ import (
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck // Cannot switch to "google.golang.org/protobuf/proto", "github.com/golang/protobuf/proto" is used by "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Register GRPC gzip decoder to support compressed telemetry
 	"google.golang.org/grpc/peer"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -61,6 +61,9 @@ type CiscoTelemetryMDT struct {
 	mutex           sync.Mutex
 	acc             telegraf.Accumulator
 	wg              sync.WaitGroup
+
+	// Though unused in the code, required by protoc-gen-go-grpc to maintain compatibility
+	dialout.UnimplementedGRPCMdtDialoutServer
 }
 
 type NxPayloadXfromStructure struct {
@@ -353,8 +356,9 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 			}
 		}
 
+		// if the keys and content fields are missing, skip the message as it
+		// does not have parsable data used by Telegraf
 		if keys == nil || content == nil {
-			c.Log.Infof("Message from %s missing keys or content", msg.GetNodeIdStr())
 			continue
 		}
 
@@ -677,44 +681,6 @@ func (c *CiscoTelemetryMDT) Stop() {
 		c.listener.Close()
 	}
 	c.wg.Wait()
-}
-
-const sampleConfig = `
- ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when
- ## using the grpc transport.
- transport = "grpc"
-
- ## Address and port to host telemetry listener
- service_address = ":57000"
-
- ## Enable TLS; grpc transport only.
- # tls_cert = "/etc/telegraf/cert.pem"
- # tls_key = "/etc/telegraf/key.pem"
-
- ## Enable TLS client authentication and define allowed CA certificates; grpc
- ##  transport only.
- # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
- ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
- # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
-
- ## Define aliases to map telemetry encoding paths to simple measurement names
- [inputs.cisco_telemetry_mdt.aliases]
-   ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
- ##Define Property Xformation, please refer README and https://pubhub.devnetcloud.com/media/dme-docs-9-3-3/docs/appendix/ for Model details.
- [inputs.cisco_telemetry_mdt.dmes]
-   ModTs = "ignore"
-   CreateTs = "ignore"
-`
-
-// SampleConfig of plugin
-func (c *CiscoTelemetryMDT) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description of plugin
-func (c *CiscoTelemetryMDT) Description() string {
-	return "Cisco model-driven telemetry (MDT) input plugin for IOS XR, IOS XE and NX-OS platforms"
 }
 
 // Gather plugin measurements (unused)

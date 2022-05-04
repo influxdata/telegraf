@@ -1,25 +1,27 @@
-### Output Plugins
+# Output Plugins
 
 This section is for developers who want to create a new output sink. Outputs
 are created in a similar manner as collection plugins, and their interface has
 similar constructs.
 
-### Output Plugin Guidelines
+## Output Plugin Guidelines
 
 - An output must conform to the [telegraf.Output][] interface.
 - Outputs should call `outputs.Add` in their `init` function to register
   themselves.  See below for a quick example.
 - To be available within Telegraf itself, plugins must add themselves to the
   `github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
-- The `SampleConfig` function should return valid toml that describes how the
-  plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [Sample Config][] page for the latest style guidelines.
-- The `Description` function should say in one line what this output does.
+- Each plugin requires a file called `<plugin_name>_sample_config.go`, where `<plugin_name>` is replaced with the actual plugin name.
+  Copy the [example template](#sample-configuration-template) into this file, also updating `<plugin_name>` were appropriate.
+  This file is automatically updated during the build process to include the sample configuration from the `README.md`.
+  Please consult the [Sample Config][] page for the latest style guidelines.
 - Follow the recommended [Code Style][].
 
-### Output Plugin Example
+## Output Plugin Example
 
 ```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
 package simpleoutput
 
 // simpleoutput.go
@@ -34,19 +36,9 @@ type Simple struct {
     Log telegraf.Logger `toml:"-"`
 }
 
-func (s *Simple) Description() string {
-    return "a demo output"
-}
-
-func (s *Simple) SampleConfig() string {
-    return `
-  ok = true
-`
-}
-
 // Init is for setup, and validating config.
 func (s *Simple) Init() error {
-	return nil
+    return nil
 }
 
 func (s *Simple) Connect() error {
@@ -76,6 +68,19 @@ func init() {
 
 ```
 
+### Sample Configuration Template
+
+```go
+//go:generate go run ../../../tools/generate_plugindata/main.go
+//go:generate go run ../../../tools/generate_plugindata/main.go --clean
+// DON'T EDIT; This file is used as a template by tools/generate_plugindata
+package <plugin_package>
+
+func (k *<plugin_struct>) SampleConfig() string {
+    return `{{ .SampleConfig }}`
+}
+```
+
 ## Data Formats
 
 Some output plugins, such as the [file][] plugin, can write in any supported
@@ -103,6 +108,7 @@ You should also add the following to your `SampleConfig()`:
 ## Flushing Metrics to Outputs
 
 Metrics are flushed to outputs when any of the following events happen:
+
 - `flush_interval + rand(flush_jitter)` has elapsed since start or the last flush interval
 - At least `metric_batch_size` count of metrics are waiting in the buffer
 - The telegraf process has received a SIGUSR1 signal

@@ -1,9 +1,8 @@
-// +build !mips
-// +build !mipsle
-// +build !s390x
-// +build !ppc64le
-// +build !windows
-// +build !freebsd
+//go:build linux && freebsd && darwin && (!mips || !mips64)
+// +build linux
+// +build freebsd
+// +build darwin
+// +build !mips !mips64
 
 package sql
 

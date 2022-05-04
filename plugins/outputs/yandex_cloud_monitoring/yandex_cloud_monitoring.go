@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -62,27 +62,6 @@ const (
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
-
-var sampleConfig = `
-  ## Timeout for HTTP writes.
-  # timeout = "20s"
-
-  ## Yandex.Cloud monitoring API endpoint. Normally should not be changed
-  # endpoint_url = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
-
-  ## All user metrics should be sent with "custom" service specified. Normally should not be changed
-  # service = "custom"
-`
-
-// Description provides a description of the plugin
-func (a *YandexCloudMonitoring) Description() string {
-	return "Send aggregated metrics to Yandex.Cloud Monitoring"
-}
-
-// SampleConfig provides a sample configuration for the plugin
-func (a *YandexCloudMonitoring) SampleConfig() string {
-	return sampleConfig
-}
 
 // Connect initializes the plugin and validates connectivity
 func (a *YandexCloudMonitoring) Connect() error {
@@ -172,7 +151,7 @@ func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error)
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +221,7 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 	}
 	defer resp.Body.Close()
 
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}

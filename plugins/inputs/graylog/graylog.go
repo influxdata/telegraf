@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -30,12 +31,13 @@ type Metric struct {
 }
 
 type GrayLog struct {
-	Servers  []string
-	Metrics  []string
-	Username string
-	Password string
-	tls.ClientConfig
+	Servers  []string        `toml:"servers"`
+	Metrics  []string        `toml:"metrics"`
+	Username string          `toml:"username"`
+	Password string          `toml:"password"`
+	Timeout  config.Duration `toml:"timeout"`
 
+	tls.ClientConfig
 	client HTTPClient
 }
 
@@ -74,50 +76,6 @@ func (c *RealHTTPClient) HTTPClient() *http.Client {
 	return c.client
 }
 
-var sampleConfig = `
-  ## API endpoint, currently supported API:
-  ##
-  ##   - multiple  (Ex http://<host>:12900/system/metrics/multiple)
-  ##   - namespace (Ex http://<host>:12900/system/metrics/namespace/{namespace})
-  ##
-  ## For namespace endpoint, the metrics array will be ignored for that call.
-  ## Endpoint can contain namespace and multiple type calls.
-  ##
-  ## Please check http://[graylog-server-ip]:12900/api-browser for full list
-  ## of endpoints
-  servers = [
-    "http://[graylog-server-ip]:12900/system/metrics/multiple",
-  ]
-
-  ## Metrics list
-  ## List of metrics can be found on Graylog webservice documentation.
-  ## Or by hitting the the web service api at:
-  ##   http://[graylog-host]:12900/system/metrics
-  metrics = [
-    "jvm.cl.loaded",
-    "jvm.memory.pools.Metaspace.committed"
-  ]
-
-  ## Username and password
-  username = ""
-  password = ""
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (h *GrayLog) SampleConfig() string {
-	return sampleConfig
-}
-
-func (h *GrayLog) Description() string {
-	return "Read flattened metrics from one or more GrayLog HTTP endpoints"
-}
-
 // Gathers data for all servers.
 func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
@@ -128,12 +86,12 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: 3 * time.Second,
+			ResponseHeaderTimeout: time.Duration(h.Timeout),
 			TLSClientConfig:       tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   4 * time.Second,
+			Timeout:   time.Duration(h.Timeout),
 		}
 		h.client.SetHTTPClient(client)
 	}
@@ -264,7 +222,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	defer resp.Body.Close()
 	responseTime := time.Since(start).Seconds()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return string(body), responseTime, err
 	}
@@ -285,7 +243,8 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 func init() {
 	inputs.Add("graylog", func() telegraf.Input {
 		return &GrayLog{
-			client: &RealHTTPClient{},
+			client:  &RealHTTPClient{},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }

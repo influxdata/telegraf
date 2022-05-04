@@ -7,17 +7,19 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/stretchr/testify/assert"
+
+	"github.com/influxdata/telegraf/testutil"
+
 	"github.com/stretchr/testify/require"
 )
 
 //compares metrics without comparing time
 func compareMetrics(t *testing.T, expected, actual []telegraf.Metric) {
-	assert.Equal(t, len(expected), len(actual))
-	for i, metric := range actual {
-		require.Equal(t, expected[i].Name(), metric.Name())
-		require.Equal(t, expected[i].Fields(), metric.Fields())
-		require.Equal(t, expected[i].Tags(), metric.Tags())
+	require.Equal(t, len(expected), len(actual))
+	for i, m := range actual {
+		require.Equal(t, expected[i].Name(), m.Name())
+		require.Equal(t, expected[i].Fields(), m.Fields())
+		require.Equal(t, expected[i].Tags(), m.Tags())
 	}
 }
 
@@ -503,6 +505,7 @@ func TestApply(t *testing.T) {
 				ParseFields:  tt.parseFields,
 				DropOriginal: tt.dropOriginal,
 				Merge:        tt.merge,
+				Log:          testutil.Logger{Name: "processor.parser"},
 			}
 
 			output := parser.Apply(tt.input)
@@ -573,6 +576,7 @@ func TestBadApply(t *testing.T) {
 			parser := Parser{
 				Config:      tt.config,
 				ParseFields: tt.parseFields,
+				Log:         testutil.Logger{Name: "processor.parser"},
 			}
 
 			output := parser.Apply(tt.input)
@@ -584,17 +588,17 @@ func TestBadApply(t *testing.T) {
 
 // Benchmarks
 
-func getMetricFields(metric telegraf.Metric) interface{} {
+func getMetricFields(m telegraf.Metric) interface{} {
 	key := "field3"
-	if value, ok := metric.Fields()[key]; ok {
+	if value, ok := m.Fields()[key]; ok {
 		return value
 	}
 	return nil
 }
 
-func getMetricFieldList(metric telegraf.Metric) interface{} {
+func getMetricFieldList(m telegraf.Metric) interface{} {
 	key := "field3"
-	fields := metric.FieldList()
+	fields := m.FieldList()
 	for _, field := range fields {
 		if field.Key == key {
 			return field.Value

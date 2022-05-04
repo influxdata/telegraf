@@ -5,9 +5,10 @@ The `opcua` plugin retrieves data from OPC UA client devices.
 Telegraf minimum version: Telegraf 1.16
 Plugin minimum tested version: 1.16
 
-### Configuration:
+## Configuration
 
 ```toml
+# Retrieve data from OPCUA devices
 [[inputs.opcua]]
   ## Metric name
   # name = "opcua"
@@ -46,6 +47,12 @@ Plugin minimum tested version: 1.16
   ## Password. Required for auth_method = "UserName"
   # password = ""
   #
+  ## Option to select the metric timestamp to use. Valid options are:
+  ##     "gather" -- uses the time of receiving the data in telegraf
+  ##     "server" -- uses the timestamp provided by the server
+  ##     "source" -- uses the timestamp provided by the source
+  # timestamp = "gather"
+  #
   ## Node ID configuration
   ## name              - field name to use in the output
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
@@ -83,25 +90,35 @@ Plugin minimum tested version: 1.16
   #  {name="", namespace="", identifier_type="", identifier=""},
   #  {name="", namespace="", identifier_type="", identifier=""},
   #]
+
+  ## Enable workarounds required by some devices to work correctly
+  # [inputs.opcua.workarounds]
+    ## Set additional valid status codes, StatusOK (0x0) is always considered valid
+    # additional_valid_status_codes = ["0xC0"]
 ```
 
-### Node Configuration
+## Node Configuration
+
 An OPC UA node ID may resemble: "n=3;s=Temperature". In this example:
+
 - n=3 is indicating the `namespace` is 3
 - s=Temperature is indicting that the `identifier_type` is a string and `identifier` value is 'Temperature'
 - This example temperature node has a value of 79.0
 To gather data from this node enter the following line into the 'nodes' property above:
-```
+
+```shell
 {field_name="temp", namespace="3", identifier_type="s", identifier="Temperature"},
 ```
 
 This node configuration produces a metric like this:
-```
+
+```text
 opcua,id=n\=3;s\=Temperature temp=79.0,quality="OK (0x0)" 1597820490000000000
 
 ```
 
-### Group Configuration
+## Group Configuration
+
 Groups can set default values for the namespace, identifier type, and
 tags settings.  The default values apply to all the nodes in the
 group.  If a default is set, a node may omit the setting altogether.
@@ -113,7 +130,8 @@ a tag with the same name is set in both places, the tag value from the
 node is used.
 
 This example group configuration has two groups with two nodes each:
-```
+
+```toml
   [[inputs.opcua.group]]
   name="group1_metric_name"
   namespace="3"
@@ -135,7 +153,8 @@ This example group configuration has two groups with two nodes each:
 ```
 
 It produces metrics like these:
-```
+
+```text
 group1_metric_name,group1_tag=val1,id=ns\=3;i\=1001,node1_tag=val2 name=0,Quality="OK (0x0)" 1606893246000000000
 group1_metric_name,group1_tag=val1,id=ns\=3;i\=1002,node1_tag=val3 name=-1.389117,Quality="OK (0x0)" 1606893246000000000
 group2_metric_name,group2_tag=val3,id=ns\=3;i\=1003,node2_tag=val4 Quality="OK (0x0)",saw=-1.6 1606893246000000000

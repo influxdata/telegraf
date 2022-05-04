@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os/exec"
 	"sync"
 	"sync/atomic"
@@ -187,5 +186,5 @@ func isQuitting(ctx context.Context) bool {
 }
 
 func defaultReadPipe(r io.Reader) {
-	io.Copy(ioutil.Discard, r)
+	_, _ = io.Copy(io.Discard, r)
 }

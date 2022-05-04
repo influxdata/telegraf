@@ -8,16 +8,10 @@ import (
 
 	"github.com/aristanetworks/goarista/lanz"
 	pb "github.com/aristanetworks/goarista/lanz/proto"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
-
-var sampleConfig = `
-  ## URL to Arista LANZ endpoint
-  servers = [
-    "tcp://127.0.0.1:50001"
-  ]
-`
 
 func init() {
 	inputs.Add("lanz", func() telegraf.Input {
@@ -33,14 +27,6 @@ type Lanz struct {
 
 func NewLanz() *Lanz {
 	return &Lanz{}
-}
-
-func (l *Lanz) SampleConfig() string {
-	return sampleConfig
-}
-
-func (l *Lanz) Description() string {
-	return "Read metrics off Arista LANZ, via socket"
 }
 
 func (l *Lanz) Gather(_ telegraf.Accumulator) error {
@@ -85,6 +71,7 @@ func (l *Lanz) Stop() {
 }
 
 func receive(acc telegraf.Accumulator, in <-chan *pb.LanzRecord, deviceURL *url.URL) {
+	//nolint:gosimple // for-select used on purpose
 	for {
 		select {
 		case msg, ok := <-in:

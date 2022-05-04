@@ -29,15 +29,6 @@ const (
 	typeFloat statType = iota
 )
 
-var sampleConfig = `
-  ## An array of address to gather stats about. Specify an ip or hostname
-  ## with port. ie tcp://localhost:11211, tcp://10.0.0.1:11211, etc.
-	servers = ["tcp://localhost:11211", "unix:///var/run/mcrouter.sock"]
-
-	## Timeout for metric collections from all servers.  Minimum timeout is "1s".
-  # timeout = "5s"
-`
-
 var defaultTimeout = 5 * time.Second
 
 var defaultServerURL = url.URL{
@@ -113,16 +104,6 @@ var sendMetrics = map[string]statType{
 	"cmd_lease_set_out_all":                      typeInt,
 }
 
-// SampleConfig returns sample configuration message
-func (m *Mcrouter) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns description of Mcrouter plugin
-func (m *Mcrouter) Description() string {
-	return "Read metrics from one or many mcrouter servers"
-}
-
 // Gather reads stats from all configured servers accumulates stats
 func (m *Mcrouter) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
@@ -146,32 +127,33 @@ func (m *Mcrouter) Gather(acc telegraf.Accumulator) error {
 }
 
 // ParseAddress parses an address string into 'host:port' and 'protocol' parts
-func (m *Mcrouter) ParseAddress(address string) (string, string, error) {
-	var protocol string
+func (m *Mcrouter) ParseAddress(address string) (parsedAddress string, protocol string, err error) {
 	var host string
 	var port string
 
-	u, parseError := url.Parse(address)
+	parsedAddress = address
+
+	u, parseError := url.Parse(parsedAddress)
 
 	if parseError != nil {
-		return "", "", fmt.Errorf("Invalid server address")
+		return "", "", fmt.Errorf("invalid server address")
 	}
 
 	if u.Scheme != "tcp" && u.Scheme != "unix" {
-		return "", "", fmt.Errorf("Invalid server protocol")
+		return "", "", fmt.Errorf("invalid server protocol")
 	}
 
 	protocol = u.Scheme
 
 	if protocol == "unix" {
 		if u.Path == "" {
-			return "", "", fmt.Errorf("Invalid unix socket path")
+			return "", "", fmt.Errorf("invalid unix socket path")
 		}
 
-		address = u.Path
+		parsedAddress = u.Path
 	} else {
 		if u.Host == "" {
-			return "", "", fmt.Errorf("Invalid host")
+			return "", "", fmt.Errorf("invalid host")
 		}
 
 		host = u.Hostname()
@@ -185,10 +167,10 @@ func (m *Mcrouter) ParseAddress(address string) (string, string, error) {
 			port = defaultServerURL.Port()
 		}
 
-		address = host + ":" + port
+		parsedAddress = host + ":" + port
 	}
 
-	return address, protocol, nil
+	return parsedAddress, protocol, nil
 }
 
 func (m *Mcrouter) gatherServer(ctx context.Context, address string, acc telegraf.Accumulator) error {

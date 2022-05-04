@@ -1,7 +1,6 @@
 package leofs
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"runtime"
@@ -132,7 +131,7 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 
 	// Build the fake snmpwalk for test
 	src := os.TempDir() + "/test.go"
-	require.NoError(t, ioutil.WriteFile(src, []byte(code), 0600))
+	require.NoError(t, os.WriteFile(src, []byte(code), 0600))
 	defer os.Remove(src)
 
 	require.NoError(t, exec.Command("go", "build", "-o", executable, src).Run())
@@ -161,17 +160,33 @@ func testMain(t *testing.T, code string, endpoint string, serverType ServerType)
 }
 
 func TestLeoFSManagerMasterMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Manager, "localhost:4020", ServerTypeManagerMaster)
 }
 
 func TestLeoFSManagerSlaveMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Manager, "localhost:4021", ServerTypeManagerSlave)
 }
 
 func TestLeoFSStorageMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Storage, "localhost:4010", ServerTypeStorage)
 }
 
 func TestLeoFSGatewayMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	testMain(t, fakeSNMP4Gateway, "localhost:4000", ServerTypeGateway)
 }

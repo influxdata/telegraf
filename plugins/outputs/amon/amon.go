@@ -22,17 +22,6 @@ type Amon struct {
 	client *http.Client
 }
 
-var sampleConfig = `
-  ## Amon Server Key
-  server_key = "my-server-key" # required.
-
-  ## Amon Instance URL
-  amon_instance = "https://youramoninstance" # required
-
-  ## Connection timeout.
-  # timeout = "5s"
-`
-
 type TimeSeries struct {
 	Series []*Metric `json:"series"`
 }
@@ -106,14 +95,6 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (a *Amon) SampleConfig() string {
-	return sampleConfig
-}
-
-func (a *Amon) Description() string {
-	return "Configuration for Amon Server to send metrics to."
-}
-
 func (a *Amon) authenticatedURL() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
@@ -142,7 +123,7 @@ func (p *Point) setValue(v interface{}) error {
 	case float32:
 		p[1] = float64(d)
 	case float64:
-		p[1] = float64(d)
+		p[1] = d
 	default:
 		return fmt.Errorf("undeterminable type")
 	}

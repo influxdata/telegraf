@@ -20,33 +20,11 @@ type Dovecot struct {
 	Servers []string
 }
 
-func (d *Dovecot) Description() string {
-	return "Read statistics from one or many dovecot servers"
-}
-
-var sampleConfig = `
-  ## specify dovecot servers via an address:port list
-  ##  e.g.
-  ##    localhost:24242
-  ##
-  ## If no servers are specified, then localhost is used as the host.
-  servers = ["localhost:24242"]
-
-  ## Type is one of "user", "domain", "ip", or "global"
-  type = "global"
-
-  ## Wildcard matches like "*.com". An empty string "" is same as "*"
-  ## If type = "ip" filters should be <IP/network>
-  filters = [""]
-`
-
 var defaultTimeout = time.Second * time.Duration(5)
 
 var validQuery = map[string]bool{
 	"user": true, "domain": true, "global": true, "ip": true,
 }
-
-func (d *Dovecot) SampleConfig() string { return sampleConfig }
 
 // Reads stats from all configured servers.
 func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
@@ -93,7 +71,7 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 
 	c, err := net.DialTimeout(proto, addr, defaultTimeout)
 	if err != nil {
-		return fmt.Errorf("enable to connect to dovecot server '%s': %s", addr, err)
+		return fmt.Errorf("unable to connect to dovecot server '%s': %s", addr, err)
 	}
 	defer c.Close()
 
@@ -113,7 +91,12 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	}
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, c); err != nil {
-		return fmt.Errorf("copying message failed for dovecot server '%s': %s", addr, err)
+		// We need to accept the timeout here as reading from the connection will only terminate on EOF
+		// or on a timeout to happen. As EOF for TCP connections will only be sent on connection closing,
+		// the only way to get the whole message is to wait for the timeout to happen.
+		if nerr, ok := err.(net.Error); !ok || !nerr.Timeout() {
+			return fmt.Errorf("copying message failed for dovecot server '%s': %s", addr, err)
+		}
 	}
 
 	var host string

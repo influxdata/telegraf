@@ -2,7 +2,7 @@
 
 This plugin sends metrics to Logz.io over HTTPs.
 
-### Configuration:
+## Configuration
 
 ```toml
 # A plugin that can send metrics over HTTPs to Logz.io
@@ -30,11 +30,11 @@ This plugin sends metrics to Logz.io over HTTPs.
   # url = "https://listener.logz.io:8071"
 ```
 
-### Required parameters:
+### Required parameters
 
 * `token`: Your Logz.io token, which can be found under "settings" in your account.
 
-### Optional parameters:
+### Optional parameters
 
 * `check_disk_space`: Set to true if Logz.io sender checks the disk space before adding metrics to the disk queue.
 * `disk_threshold`: If the queue_dir space crosses this threshold (in % of disk usage), the plugin will start dropping logs.

@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // TODO: Windows - should be enabled for Windows when super asterisk is fixed on Windows
@@ -198,7 +199,7 @@ func TestGetMd5(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "5a7e9b77fa25e7bb411dbd17cf403c1f", md5)
 
-	md5, err = getMd5("/tmp/foo/bar/fooooo")
+	_, err = getMd5("/tmp/foo/bar/fooooo")
 	require.Error(t, err)
 }
 

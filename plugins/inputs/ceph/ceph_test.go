@@ -2,7 +2,6 @@ package ceph
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -113,12 +112,7 @@ func TestGather(t *testing.T) {
 }
 
 func TestFindSockets(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "socktest")
-	require.NoError(t, err)
-	defer func() {
-		err := os.Remove(tmpdir)
-		require.NoError(t, err)
-	}()
+	tmpdir := t.TempDir()
 	c := &Ceph{
 		CephBinary:             "foo",
 		OsdPrefix:              "ceph-osd",
@@ -189,7 +183,7 @@ func createTestFiles(dir string, st *SockTest) error {
 	writeFile := func(prefix string, i int) error {
 		f := sockFile(prefix, i)
 		fpath := filepath.Join(dir, f)
-		return ioutil.WriteFile(fpath, []byte(""), 0777)
+		return os.WriteFile(fpath, []byte(""), 0777)
 	}
 	return tstFileApply(st, writeFile)
 }

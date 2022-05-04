@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -34,7 +33,7 @@ func TestGetExitCode(t *testing.T) {
 				return errors.New("I am not *exec.ExitError")
 			},
 			expCode: 0,
-			expErr:  errors.New("expected *exec.ExitError"),
+			expErr:  errors.New("I am not *exec.ExitError"),
 		},
 	}
 
@@ -178,7 +177,7 @@ func TestTryAddState(t *testing.T) {
 						n("nagios").
 						f("perfdata", 0).b(),
 				}
-				expErr := "exec: get exit code: expected *exec.ExitError"
+				expErr := "exec: get exit code: non parsable error"
 
 				assertEqual(t, exp, metrics)
 				require.Equal(t, expErr, err.Error())
@@ -195,8 +194,8 @@ func TestTryAddState(t *testing.T) {
 }
 
 func assertNagiosState(t *testing.T, m telegraf.Metric, f map[string]interface{}) {
-	assert.Equal(t, map[string]string{}, m.Tags())
-	assert.Equal(t, f, m.Fields())
+	require.Equal(t, map[string]string{}, m.Tags())
+	require.Equal(t, f, m.Fields())
 }
 
 func TestParse(t *testing.T) {
@@ -219,11 +218,11 @@ with three lines
 				require.NoError(t, err)
 				require.Len(t, metrics, 3)
 				// rta
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"unit":     "ms",
 					"perfdata": "rta",
 				}, metrics[0].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value":       float64(0.298),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(4000),
@@ -233,11 +232,11 @@ with three lines
 				}, metrics[0].Fields())
 
 				// pl
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"unit":     "%",
 					"perfdata": "pl",
 				}, metrics[1].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value":       float64(0),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(80),
@@ -260,11 +259,11 @@ with three lines
 				require.NoError(t, err)
 				require.Len(t, metrics, 2)
 				// time
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"unit":     "s",
 					"perfdata": "time",
 				}, metrics[0].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value": float64(0.008457),
 					"min":   float64(0),
 					"max":   float64(10),
@@ -282,10 +281,10 @@ with three lines
 				require.NoError(t, err)
 				require.Len(t, metrics, 2)
 				// time
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"perfdata": "time",
 				}, metrics[0].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value": float64(0.008457),
 				}, metrics[0].Fields())
 
@@ -301,10 +300,10 @@ with three lines
 				require.NoError(t, err)
 				require.Len(t, metrics, 4)
 				// load1
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"perfdata": "load1",
 				}, metrics[0].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value":       float64(0.00),
 					"warning_lt":  MinFloat64,
 					"warning_gt":  float64(4),
@@ -314,10 +313,10 @@ with three lines
 				}, metrics[0].Fields())
 
 				// load5
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"perfdata": "load5",
 				}, metrics[1].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value":       float64(0.01),
 					"warning_gt":  float64(3),
 					"warning_lt":  float64(0),
@@ -327,10 +326,10 @@ with three lines
 				}, metrics[1].Fields())
 
 				// load15
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"perfdata": "load15",
 				}, metrics[2].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value":       float64(0.05),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(2),
@@ -382,11 +381,11 @@ with three lines
 				require.NoError(t, err)
 				require.Len(t, metrics, 5)
 				// /=2643MB;5948;5958;0;5968
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"unit":     "MB",
 					"perfdata": "/",
 				}, metrics[0].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value":       float64(2643),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(5948),
@@ -397,11 +396,11 @@ with three lines
 				}, metrics[0].Fields())
 
 				// /boot=68MB;88;93;0;98
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"unit":     "MB",
 					"perfdata": "/boot",
 				}, metrics[1].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value":       float64(68),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(88),
@@ -412,11 +411,11 @@ with three lines
 				}, metrics[1].Fields())
 
 				// /home=69357MB;253404;253409;0;253414
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"unit":     "MB",
 					"perfdata": "/home",
 				}, metrics[2].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value":       float64(69357),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(253404),
@@ -427,11 +426,11 @@ with three lines
 				}, metrics[2].Fields())
 
 				// /var/log=818MB;970;975;0;980
-				assert.Equal(t, map[string]string{
+				require.Equal(t, map[string]string{
 					"unit":     "MB",
 					"perfdata": "/var/log",
 				}, metrics[3].Tags())
-				assert.Equal(t, map[string]interface{}{
+				require.Equal(t, map[string]interface{}{
 					"value":       float64(818),
 					"warning_lt":  float64(0),
 					"warning_gt":  float64(970),

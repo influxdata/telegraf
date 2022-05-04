@@ -1,9 +1,10 @@
+//go:build linux
 // +build linux
 
 package zfs
 
 import (
-	"io/ioutil"
+	"fmt"
 	"os"
 	"testing"
 
@@ -119,6 +120,16 @@ const poolIoContents = `11 3 0x00 1 80 2225326830828 32953476980628
 nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt
 1884160  6450688  22       978      272187126 2850519036 2263669418655 424226814 2850519036 2263669871823 0        0
 `
+const objsetContents = `36 1 0x01 7 2160 5214787391 74985931356512
+name                            type data
+dataset_name                    7    HOME
+writes                          4    978
+nwritten                        4    6450688
+reads                           4    22
+nread                           4    1884160
+nunlinks                        4    14148
+nunlinked                       4    14147
+`
 const zilContents = `7 1 0x01 14 672 34118481334 437444452158445
 name                            type data
 zil_commit_count                4    77
@@ -191,10 +202,10 @@ func TestZfsPoolMetrics(t *testing.T) {
 	err = os.MkdirAll(testKstatPath+"/HOME", 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/HOME/io", []byte(poolIoContents), 0644)
+	err = os.WriteFile(testKstatPath+"/HOME/io", []byte(poolIoContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
 	require.NoError(t, err)
 
 	poolMetrics := getPoolMetrics()
@@ -219,6 +230,19 @@ func TestZfsPoolMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 
+	err = os.WriteFile(testKstatPath+"/HOME/objset-0x20a", []byte(objsetContents), 0644)
+	require.NoError(t, err)
+
+	acc.Metrics = nil
+
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	tags["dataset"] = "HOME"
+
+	poolMetrics = getPoolMetricsNewFormat()
+	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
+
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
 }
@@ -230,25 +254,25 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = os.MkdirAll(testKstatPath+"/HOME", 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/HOME/io", []byte(""), 0644)
+	err = os.WriteFile(testKstatPath+"/HOME/io", []byte(""), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/arcstats", []byte(arcstatsContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/zfetchstats", []byte(zfetchstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/zfetchstats", []byte(zfetchstatsContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/zil", []byte(zilContents), 0644)
+	err = os.WriteFile(testKstatPath+"/zil", []byte(zilContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/fm", []byte(fmContents), 0644)
+	err = os.WriteFile(testKstatPath+"/fm", []byte(fmContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/dmu_tx", []byte(dmuTxContents), 0644)
+	err = os.WriteFile(testKstatPath+"/dmu_tx", []byte(dmuTxContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/abdstats", []byte(abdstatsContents), 0644)
+	err = os.WriteFile(testKstatPath+"/abdstats", []byte(abdstatsContents), 0644)
 	require.NoError(t, err)
 
 	intMetrics := getKstatMetricsAll()
@@ -271,7 +295,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = os.MkdirAll(testKstatPath+"/STORAGE", 0755)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/STORAGE/io", []byte(""), 0644)
+	err = os.WriteFile(testKstatPath+"/STORAGE/io", []byte(""), 0644)
 	require.NoError(t, err)
 
 	tags = map[string]string{
@@ -298,6 +322,43 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
+}
+
+func TestGetTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		pools    []poolInfo
+		expected map[string]string
+	}{
+		{
+			"no pools",
+			[]poolInfo{},
+			map[string]string{"pools": ""},
+		},
+		{
+			"single pool",
+			[]poolInfo{
+				{"data", "/proc/spl/kstat/zfs/data/objset-0x9288", v2},
+			},
+			map[string]string{"pools": "data"},
+		},
+		{
+			"duplicate pool names",
+			[]poolInfo{
+				{"pool", "/proc/spl/kstat/zfs/pool/objset-0x23ce1", v2},
+				{"pool", "/proc/spl/kstat/zfs/pool/objset-0x2e", v2},
+				{"data", "/proc/spl/kstat/zfs/data/objset-0x9288", v2},
+			},
+			map[string]string{"pools": "pool::data"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+			tags := getTags(tc.pools)
+			require.Equal(t, tc.expected, tags)
+		})
+	}
 }
 
 func getKstatMetricsArcOnly() map[string]interface{} {
@@ -475,5 +536,16 @@ func getPoolMetrics() map[string]interface{} {
 		"rupdate":  int64(2263669871823),
 		"wcnt":     int64(0),
 		"rcnt":     int64(0),
+	}
+}
+
+func getPoolMetricsNewFormat() map[string]interface{} {
+	return map[string]interface{}{
+		"nread":     int64(1884160),
+		"nunlinked": int64(14147),
+		"nunlinks":  int64(14148),
+		"nwritten":  int64(6450688),
+		"reads":     int64(22),
+		"writes":    int64(978),
 	}
 }

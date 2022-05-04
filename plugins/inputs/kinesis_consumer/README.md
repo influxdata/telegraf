@@ -3,26 +3,29 @@
 The [Kinesis][kinesis] consumer plugin reads from a Kinesis data stream
 and creates metrics using one of the supported [input data formats][].
 
-
-### Configuration
+## Configuration
 
 ```toml
+# Configuration for the AWS Kinesis input.
 [[inputs.kinesis_consumer]]
   ## Amazon REGION of kinesis endpoint.
   region = "ap-southeast-2"
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) explicit credentials from 'access_key' and 'secret_key'
-  ## 3) shared profile from 'profile'
-  ## 4) environment variables
-  ## 5) shared credentials file
-  ## 6) EC2 Instance Profile
+  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 2) Assumed credentials via STS if role_arn is specified
+  ## 3) explicit credentials from 'access_key' and 'secret_key'
+  ## 4) shared profile from 'profile'
+  ## 5) environment variables
+  ## 6) shared credentials file
+  ## 7) EC2 Instance Profile
   # access_key = ""
   # secret_key = ""
   # token = ""
   # role_arn = ""
+  # web_identity_token_file = ""
+  # role_session_name = ""
   # profile = ""
   # shared_credential_file = ""
 
@@ -71,29 +74,28 @@ and creates metrics using one of the supported [input data formats][].
     table_name = "default"
 ```
 
-
-#### Required AWS IAM permissions
+### Required AWS IAM permissions
 
 Kinesis:
- - DescribeStream
- - GetRecords
- - GetShardIterator
+
+- DescribeStream
+- GetRecords
+- GetShardIterator
 
 DynamoDB:
- - GetItem
- - PutItem
 
+- GetItem
+- PutItem
 
-#### DynamoDB Checkpoint
+### DynamoDB Checkpoint
 
 The DynamoDB checkpoint stores the last processed record in a DynamoDB. To leverage
 this functionality, create a table with the following string type keys:
 
-```
+```shell
 Partition key: namespace
 Sort key: shard_id
 ```
-
 
 [kinesis]: https://aws.amazon.com/kinesis/
 [input data formats]: /docs/DATA_FORMATS_INPUT.md

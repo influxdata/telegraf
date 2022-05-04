@@ -8,8 +8,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // sampleJSON from fluentd version '0.14.9'
@@ -127,6 +128,8 @@ func Test_Gather(t *testing.T) {
 	}))
 
 	requestURL, err := url.Parse(fluentdTest.Endpoint)
+	require.NoError(t, err)
+	require.NotNil(t, requestURL)
 
 	ts.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
 

@@ -1,9 +1,13 @@
 # SignalFx Output Plugin
 
-The SignalFx output plugin sends metrics to [SignalFx](https://docs.signalfx.com/en/latest/).
+The SignalFx output plugin sends metrics to [SignalFx][docs].
 
-### Configuration
+[docs]: https://docs.signalfx.com/en/latest/
+
+## Configuration
+
 ```toml
+# Send metrics and events to SignalFx
 [[outputs.signalfx]]
   ## SignalFx Org Access Token
   access_token = "my-secret-token"

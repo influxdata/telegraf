@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package sensors
@@ -27,21 +28,6 @@ type Sensors struct {
 	RemoveNumbers bool            `toml:"remove_numbers"`
 	Timeout       config.Duration `toml:"timeout"`
 	path          string
-}
-
-func (*Sensors) Description() string {
-	return "Monitor sensors, requires lm-sensors package"
-}
-
-func (*Sensors) SampleConfig() string {
-	return `
-  ## Remove numbers from field names.
-  ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
-  # remove_numbers = true
-
-  ## Timeout is the maximum amount of time that the sensors command can run.
-  # timeout = "5s"
-`
 }
 
 func (s *Sensors) Gather(acc telegraf.Accumulator) error {

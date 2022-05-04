@@ -2,10 +2,8 @@ package syslog
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sync/atomic"
 	"testing"
@@ -232,7 +230,7 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 	for _, tc := range getTestCasesForRFC5426() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create receiver
-			receiver := newUDPSyslogReceiver(protocol+"://"+address, bestEffort)
+			receiver := newUDPSyslogReceiver(protocol+"://"+address, bestEffort, syslogRFC5424)
 			acc := &testutil.Accumulator{}
 			require.NoError(t, receiver.Start(acc))
 			defer receiver.Stop()
@@ -290,12 +288,11 @@ func TestBestEffort_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir, err := ioutil.TempDir("", "telegraf")
+	sock := testutil.TempSocket(t)
+	f, err := os.Create(sock)
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unixgram.sock")
-	_, err = os.Create(sock)
-	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, f.Close()) })
+
 	testRFC5426(t, "unixgram", sock, true)
 }
 
@@ -304,12 +301,11 @@ func TestStrict_unixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	tmpdir, err := ioutil.TempDir("", "telegraf")
+	sock := testutil.TempSocket(t)
+	f, err := os.Create(sock)
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "syslog.TestStrict_unixgram.sock")
-	_, err = os.Create(sock)
-	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, f.Close()) })
+
 	testRFC5426(t, "unixgram", sock, false)
 }
 
@@ -325,10 +321,11 @@ func TestTimeIncrement_udp(t *testing.T) {
 
 	// Create receiver
 	receiver := &Syslog{
-		Address:    "udp://" + address,
-		now:        getNow,
-		BestEffort: false,
-		Separator:  "_",
+		Address:        "udp://" + address,
+		now:            getNow,
+		BestEffort:     false,
+		SyslogStandard: syslogRFC5424,
+		Separator:      "_",
 	}
 	acc := &testutil.Accumulator{}
 	require.NoError(t, receiver.Start(acc))

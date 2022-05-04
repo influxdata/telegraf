@@ -2,7 +2,6 @@ package udp_listener
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -68,20 +67,6 @@ var dropwarn = "udp_listener message queue full. " +
 var malformedwarn = "udp_listener has received %d malformed packets" +
 	" thus far."
 
-const sampleConfig = `
-  # DEPRECATED: the TCP listener plugin has been deprecated in favor of the
-  # socket_listener plugin
-  # see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener
-`
-
-func (u *UDPListener) SampleConfig() string {
-	return sampleConfig
-}
-
-func (u *UDPListener) Description() string {
-	return "Generic UDP listener"
-}
-
 // All the work is done in the Start() function, so this is just a dummy
 // function.
 func (u *UDPListener) Gather(_ telegraf.Accumulator) error {
@@ -96,7 +81,7 @@ func (u *UDPListener) Start(acc telegraf.Accumulator) error {
 	u.Lock()
 	defer u.Unlock()
 
-	log.Println("W! DEPRECATED: the UDP listener plugin has been deprecated " +
+	u.Log.Warn("DEPRECATED: the UDP listener plugin has been deprecated " +
 		"in favor of the socket_listener plugin " +
 		"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener)")
 
@@ -172,8 +157,7 @@ func (u *UDPListener) udpListenLoop() {
 
 			n, _, err := u.listener.ReadFromUDP(buf)
 			if err != nil {
-				if err, ok := err.(net.Error); ok && err.Timeout() {
-				} else {
+				if err, ok := err.(net.Error); !ok || !err.Timeout() {
 					u.Log.Error(err.Error())
 				}
 				continue

@@ -6,13 +6,12 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"path"
 	"testing"
 	"time"
@@ -284,7 +283,7 @@ func TestHTTP_Write(t *testing.T) {
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.FormValue("db"), "telegraf")
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu value=42")
 				w.WriteHeader(http.StatusNoContent)
@@ -573,7 +572,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 
 				gr, err := gzip.NewReader(r.Body)
 				require.NoError(t, err)
-				body, err := ioutil.ReadAll(gr)
+				body, err := io.ReadAll(gr)
 				require.NoError(t, err)
 
 				require.Contains(t, string(body), "cpu value=42")
@@ -618,11 +617,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 }
 
 func TestHTTP_UnixSocket(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "telegraf-test")
-	if err != nil {
-		require.NoError(t, err)
-	}
-	defer os.RemoveAll(tmpdir)
+	tmpdir := t.TempDir()
 
 	sock := path.Join(tmpdir, "test.sock")
 	listener, err := net.Listen("unix", sock)
@@ -700,7 +695,7 @@ func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
 				r.ParseForm()
 				require.Equal(t, r.Form["db"], []string{"foo"})
 
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu value=42")
 
@@ -835,7 +830,7 @@ func TestDBRPTags(t *testing.T) {
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.FormValue("db"), "telegraf")
 				require.Equal(t, r.FormValue("rp"), "foo")
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu,rp=foo value=42")
 				w.WriteHeader(http.StatusNoContent)
@@ -917,7 +912,7 @@ func TestDBRPTags(t *testing.T) {
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.FormValue("db"), "telegraf")
 				require.Equal(t, r.FormValue("rp"), "foo")
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu value=42")
 				w.WriteHeader(http.StatusNoContent)
@@ -948,7 +943,7 @@ func TestDBRPTags(t *testing.T) {
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.FormValue("db"), "telegraf")
 				require.Equal(t, r.FormValue("rp"), "foo")
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)
 				require.Contains(t, string(body), "cpu,rp=foo value=42")
 				w.WriteHeader(http.StatusNoContent)
@@ -1079,6 +1074,19 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 		handlers: []http.HandlerFunc{
 			func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
+				case "/query":
+					if r.FormValue("q") != `CREATE DATABASE "telegraf"` {
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte(`{"results": [{"error": "error authorizing query"}]}`))
+				default:
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			},
+			func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
 				case "/write":
 					w.WriteHeader(http.StatusNotFound)
 					w.Write([]byte(`{"error": "database not found: \"telegraf\""}`))
@@ -1133,8 +1141,12 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 
 	err = output.Connect()
 	require.NoError(t, err)
+
+	// this write fails, but we're expecting it to drop the metrics and not retry, so no error.
 	err = output.Write(metrics)
 	require.NoError(t, err)
+
+	// expects write to succeed
 	err = output.Write(metrics)
 	require.NoError(t, err)
 

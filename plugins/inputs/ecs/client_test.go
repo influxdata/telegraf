@@ -3,14 +3,14 @@ package ecs
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type pollMock struct {
@@ -80,8 +80,8 @@ func TestEcsClient_PollSync(t *testing.T) {
 				t.Errorf("EcsClient.PollSync() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, tt.want, got, "EcsClient.PollSync() got = %v, want %v", got, tt.want)
-			assert.Equal(t, tt.want1, got1, "EcsClient.PollSync() got1 = %v, want %v", got1, tt.want1)
+			require.Equal(t, tt.want, got, "EcsClient.PollSync() got = %v, want %v", got, tt.want)
+			require.Equal(t, tt.want1, got1, "EcsClient.PollSync() got1 = %v, want %v", got1, tt.want1)
 		})
 	}
 }
@@ -108,7 +108,7 @@ func TestEcsClient_Task(t *testing.T) {
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
-						Body:       ioutil.NopCloser(rc),
+						Body:       io.NopCloser(rc),
 					}, nil
 				},
 			},
@@ -129,7 +129,7 @@ func TestEcsClient_Task(t *testing.T) {
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusInternalServerError,
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
@@ -141,7 +141,7 @@ func TestEcsClient_Task(t *testing.T) {
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
@@ -160,7 +160,7 @@ func TestEcsClient_Task(t *testing.T) {
 				t.Errorf("EcsClient.Task() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, tt.want, got, "EcsClient.Task() = %v, want %v", got, tt.want)
+			require.Equal(t, tt.want, got, "EcsClient.Task() = %v, want %v", got, tt.want)
 		})
 	}
 }
@@ -179,7 +179,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
-						Body:       ioutil.NopCloser(rc),
+						Body:       io.NopCloser(rc),
 					}, nil
 				},
 			},
@@ -201,7 +201,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
@@ -214,7 +214,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusInternalServerError,
-						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
@@ -234,7 +234,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 				t.Errorf("EcsClient.ContainerStats() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.Equal(t, tt.want, got, "EcsClient.ContainerStats() = %v, want %v", got, tt.want)
+			require.Equal(t, tt.want, got, "EcsClient.ContainerStats() = %v, want %v", got, tt.want)
 		})
 	}
 }
@@ -268,10 +268,10 @@ func TestResolveTaskURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			baseURL, err := url.Parse(tt.base)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			act := resolveTaskURL(baseURL, tt.ver)
-			assert.Equal(t, tt.exp, act)
+			require.Equal(t, tt.exp, act)
 		})
 	}
 }
@@ -305,10 +305,10 @@ func TestResolveStatsURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			baseURL, err := url.Parse(tt.base)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			act := resolveStatsURL(baseURL, tt.ver)
-			assert.Equal(t, tt.exp, act)
+			require.Equal(t, tt.exp, act)
 		})
 	}
 }

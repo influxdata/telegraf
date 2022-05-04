@@ -7,11 +7,11 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
-	docker "github.com/docker/docker/client"
+	dockerClient "github.com/docker/docker/client"
 )
 
 var (
-	version        = "1.21" // 1.24 is when server first started returning its version
+	version        = "1.24" // https://docs.docker.com/engine/api/
 	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 )
 
@@ -27,7 +27,7 @@ type Client interface {
 }
 
 func NewEnvClient() (Client, error) {
-	client, err := docker.NewClientWithOpts(docker.FromEnv)
+	client, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -40,11 +40,11 @@ func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
 	}
 	httpClient := &http.Client{Transport: transport}
 
-	client, err := docker.NewClientWithOpts(
-		docker.WithHTTPHeaders(defaultHeaders),
-		docker.WithHTTPClient(httpClient),
-		docker.WithVersion(version),
-		docker.WithHost(host))
+	client, err := dockerClient.NewClientWithOpts(
+		dockerClient.WithHTTPHeaders(defaultHeaders),
+		dockerClient.WithHTTPClient(httpClient),
+		dockerClient.WithVersion(version),
+		dockerClient.WithHost(host))
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
 }
 
 type SocketClient struct {
-	client *docker.Client
+	client *dockerClient.Client
 }
 
 func (c *SocketClient) Info(ctx context.Context) (types.Info, error) {

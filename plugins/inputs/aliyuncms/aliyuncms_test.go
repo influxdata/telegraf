@@ -2,7 +2,7 @@ package aliyuncms
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -132,7 +132,7 @@ func TestPluginInitialize(t *testing.T) {
 
 	httpResp := &http.Response{
 		StatusCode: 200,
-		Body: ioutil.NopCloser(bytes.NewBufferString(
+		Body: io.NopCloser(bytes.NewBufferString(
 			`{
 						"LoadBalancers":
 						 {
@@ -194,6 +194,107 @@ func TestPluginInitialize(t *testing.T) {
 			}
 			if len(tt.regions) == 0 { //Check if set to default
 				require.Equal(t, plugin.Regions, aliyunRegionList)
+			}
+		})
+	}
+}
+
+func TestPluginMetricsInitialize(t *testing.T) {
+	var err error
+
+	plugin := new(AliyunCMS)
+	plugin.Log = testutil.Logger{Name: inputTitle}
+	plugin.Regions = []string{"cn-shanghai"}
+	plugin.dt, err = getDiscoveryTool("acs_slb_dashboard", plugin.Regions)
+	if err != nil {
+		t.Fatalf("Can't create discovery tool object: %v", err)
+	}
+
+	httpResp := &http.Response{
+		StatusCode: 200,
+		Body: io.NopCloser(bytes.NewBufferString(
+			`{
+				"LoadBalancers":
+					{
+						"LoadBalancer": [
+ 							{"LoadBalancerId":"bla"}
+                        ]
+                    },
+				"TotalCount": 1,
+				"PageSize": 1,
+				"PageNumber": 1
+			}`)),
+	}
+	mockCli, err := getMockSdkCli(httpResp)
+	if err != nil {
+		t.Fatalf("Can't create mock sdk cli: %v", err)
+	}
+	plugin.dt.cli = map[string]aliyunSdkClient{plugin.Regions[0]: &mockCli}
+
+	tests := []struct {
+		name                string
+		project             string
+		accessKeyID         string
+		accessKeySecret     string
+		expectedErrorString string
+		regions             []string
+		discoveryRegions    []string
+		metrics             []*Metric
+	}{
+		{
+			name:            "Valid project",
+			project:         "acs_slb_dashboard",
+			regions:         []string{"cn-shanghai"},
+			accessKeyID:     "dummy",
+			accessKeySecret: "dummy",
+			metrics: []*Metric{
+				{
+					MetricNames: []string{},
+					Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
+				},
+			},
+		},
+		{
+			name:            "Valid project",
+			project:         "acs_slb_dashboard",
+			regions:         []string{"cn-shanghai"},
+			accessKeyID:     "dummy",
+			accessKeySecret: "dummy",
+			metrics: []*Metric{
+				{
+					MetricNames: []string{},
+					Dimensions:  `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
+				},
+			},
+		},
+		{
+			name:                "Valid project",
+			project:             "acs_slb_dashboard",
+			regions:             []string{"cn-shanghai"},
+			accessKeyID:         "dummy",
+			accessKeySecret:     "dummy",
+			expectedErrorString: `cannot parse dimensions (neither obj, nor array) "[" :unexpected end of JSON input`,
+			metrics: []*Metric{
+				{
+					MetricNames: []string{},
+					Dimensions:  `[`,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin.Project = tt.project
+			plugin.AccessKeyID = tt.accessKeyID
+			plugin.AccessKeySecret = tt.accessKeySecret
+			plugin.Regions = tt.regions
+			plugin.Metrics = tt.metrics
+
+			if tt.expectedErrorString != "" {
+				require.EqualError(t, plugin.Init(), tt.expectedErrorString)
+			} else {
+				require.Equal(t, nil, plugin.Init())
 			}
 		})
 	}
@@ -359,7 +460,7 @@ func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 			region:  "cn-hongkong",
 			httpResp: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(`{}`)),
+				Body:       io.NopCloser(bytes.NewBufferString(`{}`)),
 			},
 			totalCount:          0,
 			pageSize:            0,
@@ -372,7 +473,7 @@ func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 			region:  "cn-hongkong",
 			httpResp: &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(
+				Body: io.NopCloser(bytes.NewBufferString(
 					`{
 						"LoadBalancers":
 						 {

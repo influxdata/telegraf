@@ -2,9 +2,10 @@
 
 The CouchDB plugin gathers metrics of CouchDB using [_stats] endpoint.
 
-### Configuration
+## Configuration
 
 ```toml
+# Read CouchDB Stats from one or more servers
 [[inputs.couchdb]]
   ## Works with CouchDB stats endpoints out of the box
   ## Multiple Hosts from which to read CouchDB stats:
@@ -15,7 +16,7 @@ The CouchDB plugin gathers metrics of CouchDB using [_stats] endpoint.
   # basic_password = "p@ssw0rd"
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 Statistics specific to the internals of CouchDB:
 
@@ -60,19 +61,21 @@ httpd statistics:
 - httpd_bulk_requests
 - httpd_view_reads
 
-### Tags:
+## Tags
 
 - server (url of the couchdb _stats endpoint)
 
-### Example output:
+## Example
 
-**Post Couchdb 2.0**
-```
+### Post Couchdb 2.0
+
+```shell
 couchdb,server=http://couchdb22:5984/_node/_local/_stats couchdb_auth_cache_hits_value=0,httpd_request_methods_delete_value=0,couchdb_auth_cache_misses_value=0,httpd_request_methods_get_value=42,httpd_status_codes_304_value=0,httpd_status_codes_400_value=0,httpd_request_methods_head_value=0,httpd_status_codes_201_value=0,couchdb_database_reads_value=0,httpd_request_methods_copy_value=0,couchdb_request_time_max=0,httpd_status_codes_200_value=42,httpd_status_codes_301_value=0,couchdb_open_os_files_value=2,httpd_request_methods_put_value=0,httpd_request_methods_post_value=0,httpd_status_codes_202_value=0,httpd_status_codes_403_value=0,httpd_status_codes_409_value=0,couchdb_database_writes_value=0,couchdb_request_time_min=0,httpd_status_codes_412_value=0,httpd_status_codes_500_value=0,httpd_status_codes_401_value=0,httpd_status_codes_404_value=0,httpd_status_codes_405_value=0,couchdb_open_databases_value=0 1536707179000000000
 ```
 
-**Pre Couchdb 2.0**
-```
+### Pre Couchdb 2.0
+
+```shell
 couchdb,server=http://couchdb16:5984/_stats couchdb_request_time_sum=96,httpd_status_codes_200_sum=37,httpd_status_codes_200_min=0,httpd_requests_mean=0.005,httpd_requests_min=0,couchdb_request_time_stddev=3.833,couchdb_request_time_min=1,httpd_request_methods_get_stddev=0.073,httpd_request_methods_get_min=0,httpd_status_codes_200_mean=0.005,httpd_status_codes_200_max=1,httpd_requests_sum=37,couchdb_request_time_current=96,httpd_request_methods_get_sum=37,httpd_request_methods_get_mean=0.005,httpd_request_methods_get_max=1,httpd_status_codes_200_stddev=0.073,couchdb_request_time_mean=2.595,couchdb_request_time_max=25,httpd_request_methods_get_current=37,httpd_status_codes_200_current=37,httpd_requests_current=37,httpd_requests_stddev=0.073,httpd_requests_max=1 1536707179000000000
 ```
 

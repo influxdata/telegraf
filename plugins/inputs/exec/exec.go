@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os/exec"
+	osExec "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/kballard/go-shellquote"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -17,29 +19,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
-	"github.com/kballard/go-shellquote"
 )
-
-const sampleConfig = `
-  ## Commands array
-  commands = [
-    "/tmp/test.sh",
-    "/usr/bin/mycollector --foo=bar",
-    "/tmp/collect_*.sh"
-  ]
-
-  ## Timeout for each command to complete.
-  timeout = "5s"
-
-  ## measurement name suffix (for separating different commands)
-  name_suffix = "_mycollector"
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
 
 const MaxStderrBytes int = 512
 
@@ -76,7 +56,7 @@ func (c CommandRunner) Run(
 		return nil, nil, fmt.Errorf("exec: unable to parse command, %s", err)
 	}
 
-	cmd := exec.Command(splitCmd[0], splitCmd[1:]...)
+	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
 
 	var (
 		out    bytes.Buffer
@@ -163,14 +143,6 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	for _, m := range metrics {
 		acc.AddMetric(m)
 	}
-}
-
-func (e *Exec) SampleConfig() string {
-	return sampleConfig
-}
-
-func (e *Exec) Description() string {
-	return "Read metrics from one or more commands that can output to stdout"
 }
 
 func (e *Exec) SetParser(parser parsers.Parser) {

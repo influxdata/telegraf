@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
@@ -55,20 +55,20 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 	metricsCounted := 0
 
 	for _, metric := range intMetricsPgBouncer {
-		assert.True(t, acc.HasInt64Field("pgbouncer", metric))
+		require.True(t, acc.HasInt64Field("pgbouncer", metric))
 		metricsCounted++
 	}
 
 	for _, metric := range intMetricsPgBouncerPools {
-		assert.True(t, acc.HasInt64Field("pgbouncer_pools", metric))
+		require.True(t, acc.HasInt64Field("pgbouncer_pools", metric))
 		metricsCounted++
 	}
 
 	for _, metric := range int32Metrics {
-		assert.True(t, acc.HasInt32Field("pgbouncer", metric))
+		require.True(t, acc.HasInt32Field("pgbouncer", metric))
 		metricsCounted++
 	}
 
-	assert.True(t, metricsCounted > 0)
-	assert.Equal(t, len(intMetricsPgBouncer)+len(intMetricsPgBouncerPools)+len(int32Metrics), metricsCounted)
+	require.True(t, metricsCounted > 0)
+	require.Equal(t, len(intMetricsPgBouncer)+len(intMetricsPgBouncerPools)+len(int32Metrics), metricsCounted)
 }

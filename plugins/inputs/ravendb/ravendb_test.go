@@ -1,9 +1,9 @@
 package ravendb
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -30,7 +30,7 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 			require.Failf(t, "Cannot handle request for uri %s", r.URL.Path)
 		}
 
-		data, err := ioutil.ReadFile(jsonFilePath)
+		data, err := os.ReadFile(jsonFilePath)
 		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
 
 		_, err = w.Write(data)
@@ -225,7 +225,7 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 			require.Failf(t, "Cannot handle request for uri %s", r.URL.Path)
 		}
 
-		data, err := ioutil.ReadFile(jsonFilePath)
+		data, err := os.ReadFile(jsonFilePath)
 		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
 
 		_, err = w.Write(data)

@@ -29,14 +29,15 @@ type testCaseStream struct {
 	werr           int // how many errors we expect in the strict mode?
 }
 
-func newUDPSyslogReceiver(address string, bestEffort bool) *Syslog {
+func newUDPSyslogReceiver(address string, bestEffort bool, rfc syslogRFC) *Syslog {
 	return &Syslog{
 		Address: address,
 		now: func() time.Time {
 			return defaultTime
 		},
-		BestEffort: bestEffort,
-		Separator:  "_",
+		BestEffort:     bestEffort,
+		SyslogStandard: rfc,
+		Separator:      "_",
 	}
 }
 
@@ -47,10 +48,11 @@ func newTCPSyslogReceiver(address string, keepAlive *config.Duration, maxConn in
 		now: func() time.Time {
 			return defaultTime
 		},
-		Framing:     f,
-		ReadTimeout: &d,
-		BestEffort:  bestEffort,
-		Separator:   "_",
+		Framing:        f,
+		ReadTimeout:    &d,
+		BestEffort:     bestEffort,
+		SyslogStandard: syslogRFC5424,
+		Separator:      "_",
 	}
 	if keepAlive != nil {
 		s.KeepAlivePeriod = keepAlive
