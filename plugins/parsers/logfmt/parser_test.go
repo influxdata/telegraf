@@ -5,17 +5,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
-
-func MustMetric(t *testing.T, m *testutil.Metric) telegraf.Metric {
-	t.Helper()
-	v := metric.New(m.Measurement, m.Tags, m.Fields, m.Time)
-
-	return v
-}
 
 func TestParse(t *testing.T) {
 	tests := []struct {
