@@ -2,7 +2,7 @@ version: '3'
 
 services:
     telegraf:
-        image: golang:1.17
+        image: golang:1.18
         volumes:
           - ./telegraf.conf:/telegraf.conf
           - ../../../../telegraf:/telegraf

@@ -9,7 +9,7 @@ This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage <plugin-name>`.
 
 ```toml
-[[inputs.dnac]]
+[[inputs.cisco_dna_center]]
   ## Specify DNAC Base URL
   dnacbaseurl = "sandboxdnac.cisco.com"
   ## Specify Credentials

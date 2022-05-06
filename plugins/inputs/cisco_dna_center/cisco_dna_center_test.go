@@ -1,11 +1,11 @@
-package dnac_test
+package cisco_dna_center_test
 
 import (
 	"bytes"
 	"encoding/json"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/inputs/dnac"
+	"github.com/influxdata/telegraf/plugins/inputs/cisco_dna_center"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/require"
@@ -14,7 +14,7 @@ import (
 func Test_Gather(t *testing.T) {
 	var err error
 
-	plugin := dnac.NewDnac()
+	plugin := cisco_dna_center.NewDnac()
 
 	plugin.DnacBaseURL = "https://192.168.196.2"
 	plugin.Username = "test"
