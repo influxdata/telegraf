@@ -1,4 +1,4 @@
-package prometheus
+package prometheus_client
 
 import (
 	"fmt"

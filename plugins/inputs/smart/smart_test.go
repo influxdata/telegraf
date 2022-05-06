@@ -313,6 +313,24 @@ func TestGatherNVMe(t *testing.T) {
 		testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
+func TestGatherNVMeWindows(t *testing.T) {
+	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(smartctlNVMeInfoDataWindows), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	sampleSmart.gatherDisk(acc, "nvme0", wg)
+
+	metrics := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, testSmartctlNVMeWindowsAttributes, metrics,
+		testutil.SortMetrics(), testutil.IgnoreTime())
+}
+
 func TestGatherIntelNVMeMetrics(t *testing.T) {
 	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(nvmeIntelInfoDataMetricsFormat), nil
@@ -1118,6 +1136,253 @@ var (
 			},
 			map[string]interface{}{
 				"raw_value": 0,
+			},
+			time.Now(),
+		),
+	}
+
+	testSmartctlNVMeWindowsAttributes = []telegraf.Metric{
+		testutil.MustMetric("smart_device",
+			map[string]string{
+				"device":    "nvme0",
+				"model":     "Samsung SSD 970 EVO 1TB",
+				"serial_no": "xxx",
+			},
+			map[string]interface{}{
+				"exit_status": 0,
+				"health_ok":   true,
+				"temp_c":      47,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"id":        "9",
+				"name":      "Power_On_Hours",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": 1290,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+				"name":      "Unsafe_Shutdowns",
+			},
+			map[string]interface{}{
+				"raw_value": 9,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"id":        "12",
+				"name":      "Power_Cycle_Count",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": 10779,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Media_and_Data_Integrity_Errors",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Error_Information_Log_Entries",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": 979,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Available_Spare",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": 100,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Available_Spare_Threshold",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": 10,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"id":        "194",
+				"name":      "Temperature_Celsius",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": 47,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Critical_Warning",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": int64(0),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Percentage_Used",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": int64(0),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Data_Units_Read",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": int64(16626888),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Data_Units_Written",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": int64(16829004),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Host_Read_Commands",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": int64(205868508),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Host_Write_Commands",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": int64(228472943),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Controller_Busy_Time",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": int64(686),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"name":      "Critical_Temperature_Time",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+			},
+			map[string]interface{}{
+				"raw_value": int64(0),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+				"name":      "Temperature_Sensor_1",
+			},
+			map[string]interface{}{
+				"raw_value": int64(47),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+				"name":      "Temperature_Sensor_2",
+			},
+			map[string]interface{}{
+				"raw_value": int64(68),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    "nvme0",
+				"serial_no": "xxx",
+				"model":     "Samsung SSD 970 EVO 1TB",
+				"name":      "Warning_Temperature_Time",
+			},
+			map[string]interface{}{
+				"raw_value": int64(0),
 			},
 			time.Now(),
 		),
@@ -1954,6 +2219,74 @@ Temperature Sensor 5: 57 C
 Temperature Sensor 6: 50 C
 Temperature Sensor 7: 44 C
 Temperature Sensor 8: 43 C
+`
+
+	smartctlNVMeInfoDataWindows = `smartctl 7.3 2022-02-28 r5338 [x86_64-w64-mingw32-w10-20H2] (sf-7.3-1)
+Copyright (C) 2002-22, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Model Number:                       Samsung SSD 970 EVO 1TB
+Serial Number:                      xxx
+Firmware Version:                   2B2QEXE7
+PCI Vendor/Subsystem ID:            0x144d
+IEEE OUI Identifier:                0x002538
+Total NVM Capacity:                 1 000 204 886 016 [1,00 TB]
+Unallocated NVM Capacity:           0
+Controller ID:                      4
+NVMe Version:                       1.3
+Number of Namespaces:               1
+Namespace 1 Size/Capacity:          1 000 204 886 016 [1,00 TB]
+Namespace 1 Utilization:            732 789 374 976 [732 GB]
+Namespace 1 Formatted LBA Size:     512
+Namespace 1 IEEE EUI-64:            002538 590141cfa4
+Local Time is:                      Wed Mar 30 13:30:12 2022
+Firmware Updates (0x16):            3 Slots, no Reset required
+Optional Admin Commands (0x0017):   Security Format Frmw_DL Self_Test
+Optional NVM Commands (0x005f):     Comp Wr_Unc DS_Mngmt Wr_Zero Sav/Sel_Feat Timestmp
+Log Page Attributes (0x03):         S/H_per_NS Cmd_Eff_Lg
+Maximum Data Transfer Size:         512 Pages
+Warning  Comp. Temp. Threshold:     85 Celsius
+Critical Comp. Temp. Threshold:     85 Celsius
+
+Supported Power States
+St Op     Max   Active     Idle   RL RT WL WT  Ent_Lat  Ex_Lat
+	0 +     6.20W       -        -    0  0  0  0        0       0
+	1 +     4.30W       -        -    1  1  1  1        0       0
+	2 +     2.10W       -        -    2  2  2  2        0       0
+	3 -   0.0400W       -        -    3  3  3  3      210    1200
+	4 -   0.0050W       -        -    4  4  4  4     2000    8000
+
+Supported LBA Sizes (NSID 0x1)
+Id Fmt  Data  Metadt  Rel_Perf
+	0 +     512       0         0
+
+=== START OF SMART DATA SECTION ===
+SMART overall-health self-assessment test result: PASSED
+
+SMART/Health Information (NVMe Log 0x02)
+Critical Warning:                   0x00
+Temperature:                        47 Celsius
+Available Spare:                    100%
+Available Spare Threshold:          10%
+Percentage Used:                    0%
+Data Units Read:                    16,626,888 [8,51 TB]
+Data Units Written:                 16 829 004 [8,61 TB]
+Host Read Commands:                 205 868 508
+Host Write Commands:                228 472 943
+Controller Busy Time:               686
+Power Cycles:                       10�779
+Power On Hours:                     1�290
+Unsafe Shutdowns:                   9
+Media and Data Integrity Errors:    0
+Error Information Log Entries:      979
+Warning  Comp. Temperature Time:    0
+Critical Comp. Temperature Time:    0
+Temperature Sensor 1:               47 Celsius
+Temperature Sensor 2:               68 Celsius
+
+Error Information (NVMe Log 0x01, 16 of 64 entries)
+Num   ErrCount  SQId   CmdId  Status  PELoc          LBA  NSID    VS
+	0        979     0  0x002a  0x4212  0x028            0     -     -
 `
 
 	smartctlNVMeInfoDataWithOverflow = `

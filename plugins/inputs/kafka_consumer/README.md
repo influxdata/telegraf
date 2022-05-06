@@ -9,6 +9,7 @@ and use the old zookeeper connection method.
 ## Configuration
 
 ```toml
+# Read metrics from Kafka topics
 [[inputs.kafka_consumer]]
   ## Kafka brokers.
   brokers = ["localhost:9092"]

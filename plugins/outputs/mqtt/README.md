@@ -1,6 +1,7 @@
 # MQTT Producer Output Plugin
 
-This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt Producer.
+This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt
+Producer.
 
 ## Mosquitto v2.0.12+ and `identifier rejected`
 
@@ -14,6 +15,7 @@ As a reference `eclipse/paho.mqtt.golang` sets the `keep_alive` to 30.
 ## Configuration
 
 ```toml
+# Configuration for MQTT server to send metrics to
 [[outputs.mqtt]]
   ## MQTT Brokers
   ## The list of brokers should only include the hostname or IP address and the

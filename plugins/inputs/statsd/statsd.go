@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -72,13 +73,13 @@ type Statsd struct {
 	DeleteCounters bool
 	DeleteSets     bool
 	DeleteTimings  bool
-	ConvertNames   bool
+	ConvertNames   bool `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
 	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
-	ParseDataDogTags bool // depreciated in 1.10; use datadog_extensions
+	ParseDataDogTags bool `toml:"parse_data_dog_tags" deprecated:"1.10.0;use 'datadog_extensions' instead"`
 
 	// Parses extensions to statsd in the datadog statsd format
 	// currently supports metrics and datadog tags.
@@ -94,9 +95,11 @@ type Statsd struct {
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
 	// see https://github.com/influxdata/telegraf/pull/992
-	UDPPacketSize int `toml:"udp_packet_size"`
+	UDPPacketSize int `toml:"udp_packet_size" deprecated:"0.12.1;2.0.0;option is ignored"`
 
 	ReadBufferSize int `toml:"read_buffer_size"`
+
+	SanitizeNamesMethod string `toml:"sanitize_name_method"`
 
 	sync.Mutex
 	// Lock for preventing a data race during resource cleanup
@@ -216,80 +219,6 @@ type cacheddistributions struct {
 	tags  map[string]string
 }
 
-func (s *Statsd) Description() string {
-	return "Statsd UDP/TCP Server"
-}
-
-const sampleConfig = `
-  ## Protocol, must be "tcp", "udp", "udp4" or "udp6" (default=udp)
-  protocol = "udp"
-
-  ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
-  max_tcp_connections = 250
-
-  ## Enable TCP keep alive probes (default=false)
-  tcp_keep_alive = false
-
-  ## Specifies the keep-alive period for an active network connection.
-  ## Only applies to TCP sockets and will be ignored if tcp_keep_alive is false.
-  ## Defaults to the OS configuration.
-  # tcp_keep_alive_period = "2h"
-
-  ## Address and port to host UDP listener on
-  service_address = ":8125"
-
-  ## The following configuration options control when telegraf clears it's cache
-  ## of previous values. If set to false, then telegraf will only clear it's
-  ## cache when the daemon is restarted.
-  ## Reset gauges every interval (default=true)
-  delete_gauges = true
-  ## Reset counters every interval (default=true)
-  delete_counters = true
-  ## Reset sets every interval (default=true)
-  delete_sets = true
-  ## Reset timings & histograms every interval (default=true)
-  delete_timings = true
-
-  ## Percentiles to calculate for timing & histogram stats
-  percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
-
-  ## separator to use between elements of a statsd metric
-  metric_separator = "_"
-
-  ## Parses tags in the datadog statsd format
-  ## http://docs.datadoghq.com/guides/dogstatsd/
-  parse_data_dog_tags = false
-
-  ## Parses datadog extensions to the statsd format
-  datadog_extensions = false
-
-  ## Parses distributions metric as specified in the datadog statsd format
-  ## https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
-  datadog_distributions = false
-
-  ## Statsd data translation templates, more info can be read here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
-  # templates = [
-  #     "cpu.* measurement*"
-  # ]
-
-  ## Number of UDP messages allowed to queue up, once filled,
-  ## the statsd server will start dropping packets
-  allowed_pending_messages = 10000
-
-  ## Number of timing/histogram values to track per-measurement in the
-  ## calculation of percentiles. Raising this limit increases the accuracy
-  ## of percentiles but also increases the memory usage and cpu time.
-  percentile_limit = 1000
-
-  ## Max duration (TTL) for each metric to stay cached/reported without being updated.
-  #max_ttl = "1000h"
-`
-
-func (s *Statsd) SampleConfig() string {
-	return sampleConfig
-}
-
 func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
@@ -364,7 +293,6 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	if s.ParseDataDogTags {
 		s.DataDogExtensions = true
-		s.Log.Warn("'parse_data_dog_tags' config option is deprecated, please use 'datadog_extensions' instead")
 	}
 
 	s.acc = ac
@@ -404,10 +332,6 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	}
 	for i := 0; i < s.MaxTCPConnections; i++ {
 		s.accept <- true
-	}
-
-	if s.ConvertNames {
-		s.Log.Warn("'convert_names' config option is deprecated, please use 'metric_separator' instead")
 	}
 
 	if s.MetricSeparator == "" {
@@ -763,6 +687,17 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 	}
 
 	name = bucketparts[0]
+	switch s.SanitizeNamesMethod {
+	case "":
+	case "upstream":
+		whitespace := regexp.MustCompile(`\s+`)
+		name = whitespace.ReplaceAllString(name, "_")
+		name = strings.ReplaceAll(name, "/", "-")
+		allowedChars := regexp.MustCompile(`[^a-zA-Z_\-0-9\.;=]`)
+		name = allowedChars.ReplaceAllString(name, "")
+	default:
+		s.Log.Errorf("Unknown sanitizae name method: %s", s.SanitizeNamesMethod)
+	}
 
 	p := s.graphiteParser
 	var err error
@@ -1089,6 +1024,7 @@ func init() {
 			DeleteGauges:           true,
 			DeleteSets:             true,
 			DeleteTimings:          true,
+			SanitizeNamesMethod:    "",
 		}
 	})
 }

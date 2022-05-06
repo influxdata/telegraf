@@ -42,45 +42,6 @@ type OpenWeatherMap struct {
 	baseParsedURL *url.URL
 }
 
-var sampleConfig = `
-  ## OpenWeatherMap API key.
-  app_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-  ## City ID's to collect weather data from.
-  city_id = ["5391959"]
-
-  ## Language of the description field. Can be one of "ar", "bg",
-  ## "ca", "cz", "de", "el", "en", "fa", "fi", "fr", "gl", "hr", "hu",
-  ## "it", "ja", "kr", "la", "lt", "mk", "nl", "pl", "pt", "ro", "ru",
-  ## "se", "sk", "sl", "es", "tr", "ua", "vi", "zh_cn", "zh_tw"
-  # lang = "en"
-
-  ## APIs to fetch; can contain "weather" or "forecast".
-  fetch = ["weather", "forecast"]
-
-  ## OpenWeatherMap base URL
-  # base_url = "https://api.openweathermap.org/"
-
-  ## Timeout for HTTP response.
-  # response_timeout = "5s"
-
-  ## Preferred unit system for temperature and wind speed. Can be one of
-  ## "metric", "imperial", or "standard".
-  # units = "metric"
-
-  ## Query interval; OpenWeatherMap updates their weather data every 10
-  ## minutes.
-  interval = "10m"
-`
-
-func (n *OpenWeatherMap) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *OpenWeatherMap) Description() string {
-	return "Read current weather and forecasts data from openweathermap.org"
-}
-
 func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	var strs []string
@@ -176,6 +137,7 @@ type WeatherEntry struct {
 		Humidity int64   `json:"humidity"`
 		Pressure float64 `json:"pressure"`
 		Temp     float64 `json:"temp"`
+		Feels    float64 `json:"feels_like"`
 	} `json:"main"`
 	Rain struct {
 		Rain1 float64 `json:"1h"`
@@ -246,6 +208,7 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 			"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
 			"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"visibility":   e.Visibility,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
@@ -283,6 +246,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			"pressure":     e.Main.Pressure,
 			"rain":         gatherRain(e),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
 		}

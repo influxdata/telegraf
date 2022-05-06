@@ -20,7 +20,7 @@ type Librato struct {
 	APIUser   string          `toml:"api_user"`
 	APIToken  string          `toml:"api_token"`
 	Debug     bool            `toml:"debug"`
-	SourceTag string          `toml:"source_tag"` // Deprecated, keeping for backward-compatibility
+	SourceTag string          `toml:"source_tag" deprecated:"1.0.0;use 'template' instead"`
 	Timeout   config.Duration `toml:"timeout"`
 	Template  string          `toml:"template"`
 	Log       telegraf.Logger `toml:"-"`
@@ -31,24 +31,6 @@ type Librato struct {
 
 // https://www.librato.com/docs/kb/faq/best_practices/naming_convention_metrics_sources.html#naming-limitations-for-sources-and-metrics
 var reUnacceptedChar = regexp.MustCompile("[^.a-zA-Z0-9_-]")
-
-var sampleConfig = `
-  ## Librato API Docs
-  ## http://dev.librato.com/v1/metrics-authentication
-  ## Librato API user
-  api_user = "telegraf@influxdb.com" # required.
-  ## Librato API token
-  api_token = "my-secret-token" # required.
-  ## Debug
-  # debug = false
-  ## Connection timeout.
-  # timeout = "5s"
-  ## Output source Template (same as graphite buckets)
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
-  ## This template is used in librato's source (not metric's name)
-  template = "host"
-
-`
 
 // LMetrics is the default struct for Librato's API fromat
 type LMetrics struct {
@@ -174,17 +156,6 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 		l.Log.Debugf("Librato response: %v", string(htmlData))
 	}
 	return nil
-}
-
-// SampleConfig is function who return the default configuration for this
-// output
-func (l *Librato) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description is function who return the Description of this output
-func (l *Librato) Description() string {
-	return "Configuration for Librato API to send metrics to."
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {

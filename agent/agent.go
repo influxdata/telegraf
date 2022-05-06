@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -23,9 +24,9 @@ type Agent struct {
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(config *config.Config) (*Agent, error) {
+func NewAgent(cfg *config.Config) (*Agent, error) {
 	a := &Agent{
-		Config: config,
+		Config: cfg,
 	}
 	return a, nil
 }
@@ -186,6 +187,10 @@ func (a *Agent) Run(ctx context.Context) error {
 // initPlugins runs the Init function on plugins.
 func (a *Agent) initPlugins() error {
 	for _, input := range a.Config.Inputs {
+		// Share the snmp translator setting with plugins that need it.
+		if tp, ok := input.Input.(snmp.TranslatorPlugin); ok {
+			tp.SetTranslator(a.Config.Agent.SnmpTranslator)
+		}
 		err := input.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize input %s: %v",

@@ -4,6 +4,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/inputs/netstat"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/v3/net"
@@ -88,7 +89,9 @@ func TestNetStats(t *testing.T) {
 
 	acc.Metrics = nil
 
-	err = (&NetStats{&mps}).Gather(&acc)
+	err = (&netstat.NetStats{
+		PS: &mps,
+	}).Gather(&acc)
 	require.NoError(t, err)
 
 	fields3 := map[string]interface{}{

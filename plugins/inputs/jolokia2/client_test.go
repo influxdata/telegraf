@@ -1,4 +1,4 @@
-package jolokia2
+package jolokia2_test
 
 import (
 	"encoding/json"
@@ -27,7 +27,7 @@ func TestJolokia2_ClientAuthRequest(t *testing.T) {
 	}))
 	defer server.Close()
 
-	plugin := setupPlugin(t, fmt.Sprintf(`
+	plugin := SetupPlugin(t, fmt.Sprintf(`
 		[jolokia2_agent]
 			urls = ["%s/jolokia"]
 			username = "sally"
@@ -64,7 +64,7 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 	}))
 	defer server.Close()
 
-	plugin := setupPlugin(t, fmt.Sprintf(`
+	plugin := SetupPlugin(t, fmt.Sprintf(`
 		[jolokia2_proxy]
 			url = "%s/jolokia"
 			username = "sally"

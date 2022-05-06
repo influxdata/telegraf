@@ -30,7 +30,7 @@ Processes can be selected for monitoring using one of several methods:
   ## Systemd unit name, supports globs when include_systemd_children is set to true
   # systemd_unit = "nginx.service"
   # include_systemd_children = false
-  ## CGroup name or path
+  ## CGroup name or path, supports globs
   # cgroup = "systemd/system.slice/nginx.service"
 
   ## Windows service name

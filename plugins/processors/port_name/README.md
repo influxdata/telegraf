@@ -11,6 +11,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ## Configuration
 
 ```toml
+# Given a tag/field of a TCP or UDP port number, add a tag/field of the service name looked up in the system services file
 [[processors.port_name]]
   ## Name of tag holding the port number
   # tag = "port"

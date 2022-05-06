@@ -11,11 +11,10 @@ import (
 )
 
 func TestFileWriter_NoRotation(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "RotationNo")
-	require.NoError(t, err)
+	tempDir := t.TempDir()
 	writer, err := NewFileWriter(filepath.Join(tempDir, "test"), 0, 0, 0)
 	require.NoError(t, err)
-	defer func() { writer.Close(); os.RemoveAll(tempDir) }()
+	t.Cleanup(func() { require.NoError(t, writer.Close()) })
 
 	_, err = writer.Write([]byte("Hello World"))
 	require.NoError(t, err)
@@ -26,16 +25,15 @@ func TestFileWriter_NoRotation(t *testing.T) {
 }
 
 func TestFileWriter_TimeRotation(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "RotationTime")
-	require.NoError(t, err)
-	interval, _ := time.ParseDuration("1s")
+	tempDir := t.TempDir()
+	interval, _ := time.ParseDuration("10ms")
 	writer, err := NewFileWriter(filepath.Join(tempDir, "test"), interval, 0, -1)
 	require.NoError(t, err)
-	defer func() { writer.Close(); os.RemoveAll(tempDir) }()
+	t.Cleanup(func() { require.NoError(t, writer.Close()) })
 
 	_, err = writer.Write([]byte("Hello World"))
 	require.NoError(t, err)
-	time.Sleep(1 * time.Second)
+	time.Sleep(interval)
 	_, err = writer.Write([]byte("Hello World 2"))
 	require.NoError(t, err)
 	files, _ := os.ReadDir(tempDir)
@@ -43,28 +41,26 @@ func TestFileWriter_TimeRotation(t *testing.T) {
 }
 
 func TestFileWriter_ReopenTimeRotation(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "RotationTime")
-	require.NoError(t, err)
-	interval, _ := time.ParseDuration("1s")
+	tempDir := t.TempDir()
+	interval, _ := time.ParseDuration("10ms")
 	filePath := filepath.Join(tempDir, "test.log")
-	err = os.WriteFile(filePath, []byte("Hello World"), 0644)
-	time.Sleep(1 * time.Second)
+	err := os.WriteFile(filePath, []byte("Hello World"), 0644)
+	time.Sleep(interval)
 	assert.NoError(t, err)
 	writer, err := NewFileWriter(filepath.Join(tempDir, "test.log"), interval, 0, -1)
 	require.NoError(t, err)
-	defer func() { writer.Close(); os.RemoveAll(tempDir) }()
+	t.Cleanup(func() { require.NoError(t, writer.Close()) })
 
 	files, _ := os.ReadDir(tempDir)
 	assert.Equal(t, 2, len(files))
 }
 
 func TestFileWriter_SizeRotation(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "RotationSize")
-	require.NoError(t, err)
+	tempDir := t.TempDir()
 	maxSize := int64(9)
 	writer, err := NewFileWriter(filepath.Join(tempDir, "test.log"), 0, maxSize, -1)
 	require.NoError(t, err)
-	defer func() { writer.Close(); os.RemoveAll(tempDir) }()
+	t.Cleanup(func() { require.NoError(t, writer.Close()) })
 
 	_, err = writer.Write([]byte("Hello World"))
 	require.NoError(t, err)
@@ -75,15 +71,14 @@ func TestFileWriter_SizeRotation(t *testing.T) {
 }
 
 func TestFileWriter_ReopenSizeRotation(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "RotationSize")
-	require.NoError(t, err)
+	tempDir := t.TempDir()
 	maxSize := int64(12)
 	filePath := filepath.Join(tempDir, "test.log")
-	err = os.WriteFile(filePath, []byte("Hello World"), 0644)
+	err := os.WriteFile(filePath, []byte("Hello World"), 0644)
 	assert.NoError(t, err)
 	writer, err := NewFileWriter(filepath.Join(tempDir, "test.log"), 0, maxSize, -1)
 	require.NoError(t, err)
-	defer func() { writer.Close(); os.RemoveAll(tempDir) }()
+	t.Cleanup(func() { require.NoError(t, writer.Close()) })
 
 	_, err = writer.Write([]byte("Hello World Again"))
 	require.NoError(t, err)
@@ -92,12 +87,15 @@ func TestFileWriter_ReopenSizeRotation(t *testing.T) {
 }
 
 func TestFileWriter_DeleteArchives(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "RotationDeleteArchives")
-	require.NoError(t, err)
+	if testing.Short() {
+		t.Skip("Skipping long test in short mode")
+	}
+
+	tempDir := t.TempDir()
 	maxSize := int64(5)
 	writer, err := NewFileWriter(filepath.Join(tempDir, "test.log"), 0, maxSize, 2)
 	require.NoError(t, err)
-	defer func() { writer.Close(); os.RemoveAll(tempDir) }()
+	t.Cleanup(func() { require.NoError(t, writer.Close()) })
 
 	_, err = writer.Write([]byte("First file"))
 	require.NoError(t, err)
@@ -132,14 +130,11 @@ func TestFileWriter_DeleteArchives(t *testing.T) {
 }
 
 func TestFileWriter_CloseRotates(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "RotationClose")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 	maxSize := int64(9)
 	writer, err := NewFileWriter(filepath.Join(tempDir, "test.log"), 0, maxSize, -1)
 	require.NoError(t, err)
-
-	writer.Close()
+	require.NoError(t, writer.Close())
 
 	files, _ := os.ReadDir(tempDir)
 	assert.Equal(t, 1, len(files))

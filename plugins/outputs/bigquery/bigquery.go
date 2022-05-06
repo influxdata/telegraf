@@ -21,23 +21,6 @@ const timeStampFieldName = "timestamp"
 
 var defaultTimeout = config.Duration(5 * time.Second)
 
-const sampleConfig = `
-  ## Credentials File
-  credentials_file = "/path/to/service/account/key.json"
-
-  ## Google Cloud Platform Project
-  project = "my-gcp-project"
-
-  ## The namespace for the metric descriptor
-  dataset = "telegraf"
-
-  ## Timeout for BigQuery operations.
-  # timeout = "5s"
-
-  ## Character to replace hyphens on Metric name
-  # replace_hyphen_to = "_"
-`
-
 type BigQuery struct {
 	CredentialsFile string `toml:"credentials_file"`
 	Project         string `toml:"project"`
@@ -51,16 +34,6 @@ type BigQuery struct {
 	client *bigquery.Client
 
 	warnedOnHyphens map[string]bool
-}
-
-// SampleConfig returns the formatted sample configuration for the plugin.
-func (s *BigQuery) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the human-readable function definition of the plugin.
-func (s *BigQuery) Description() string {
-	return "Configuration for Google Cloud BigQuery to send entries"
 }
 
 func (s *BigQuery) Connect() error {

@@ -17,24 +17,6 @@ type InternetSpeed struct {
 	serverCache        *speedtest.Server
 }
 
-const sampleConfig = `
-  ## Sets if runs file download test
-  # enable_file_download = false
-
-  ## Caches the closest server location
-  # cache = false
-`
-
-// Description returns information about the plugin.
-func (is *InternetSpeed) Description() string {
-	return "Monitors internet speed using speedtest.net service"
-}
-
-// SampleConfig displays configuration instructions.
-func (is *InternetSpeed) SampleConfig() string {
-	return sampleConfig
-}
-
 const measurement = "internet_speed"
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {

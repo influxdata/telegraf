@@ -1,25 +1,31 @@
-# Azure Data Explorer output plugin
+# Azure Data Explorer Output Plugin
 
-This plugin writes data collected by any of the Telegraf input plugins to [Azure Data Explorer](https://azure.microsoft.com/en-au/services/data-explorer/).
-Azure Data Explorer is a distributed, columnar store, purpose built for any type of logs, metrics and time series data.
+This plugin writes data collected by any of the Telegraf input plugins to [Azure
+Data Explorer](https://azure.microsoft.com/en-au/services/data-explorer/).
+Azure Data Explorer is a distributed, columnar store, purpose built for any type
+of logs, metrics and time series data.
 
 ## Pre-requisites
 
-- [Create Azure Data Explorer cluster and database](https://docs.microsoft.com/en-us/azure/data-explorer/create-cluster-database-portal)
-- VM/compute or container to host Telegraf - it could be hosted locally where an app/service to be monitored is deployed or remotely on a dedicated monitoring compute/container.
+- [Create Azure Data Explorer cluster and
+  database](https://docs.microsoft.com/en-us/azure/data-explorer/create-cluster-database-portal)
+- VM/compute or container to host Telegraf - it could be hosted locally where an
+  app/service to be monitored is deployed or remotely on a dedicated monitoring
+  compute/container.
 
 ## Configuration
 
 ```toml
+# Sends metrics to Azure Data Explorer
 [[outputs.azure_data_explorer]]
   ## The URI property of the Azure Data Explorer resource on Azure
-  ## ex: https://myadxresource.australiasoutheast.kusto.windows.net
-  # endpoint_url = ""
+  ## ex: endpoint_url = https://myadxresource.australiasoutheast.kusto.windows.net
+  endpoint_url = ""
 
   ## The Azure Data Explorer database that the metrics will be ingested into.
   ## The plugin will NOT generate this database automatically, it's expected that this database already exists before ingestion.
   ## ex: "exampledatabase"
-  # database = ""
+  database = ""
 
   ## Timeout for Azure Data Explorer operations
   # timeout = "20s"
@@ -39,21 +45,40 @@ Azure Data Explorer is a distributed, columnar store, purpose built for any type
 
 ## Metrics Grouping
 
-Metrics can be grouped in two ways to be sent to Azure Data Explorer. To specify which metric grouping type the plugin should use, the respective value should be given to the `metrics_grouping_type` in the config file. If no value is given to `metrics_grouping_type`, by default, the metrics will be grouped using `TablePerMetric`.
+Metrics can be grouped in two ways to be sent to Azure Data Explorer. To specify
+which metric grouping type the plugin should use, the respective value should be
+given to the `metrics_grouping_type` in the config file. If no value is given to
+`metrics_grouping_type`, by default, the metrics will be grouped using
+`TablePerMetric`.
 
 ### TablePerMetric
 
-The plugin will group the metrics by the metric name, and will send each group of metrics to an Azure Data Explorer table. If the table doesn't exist the plugin will create the table, if the table exists then the plugin will try to merge the Telegraf metric schema to the existing table. For more information about the merge process check the [`.create-merge` documentation](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command).
+The plugin will group the metrics by the metric name, and will send each group
+of metrics to an Azure Data Explorer table. If the table doesn't exist the
+plugin will create the table, if the table exists then the plugin will try to
+merge the Telegraf metric schema to the existing table. For more information
+about the merge process check the [`.create-merge` documentation][create-merge].
 
-The table name will match the `name` property of the metric, this means that the name of the metric should comply with the Azure Data Explorer table naming constraints in case you plan to add a prefix to the metric name.
+The table name will match the `name` property of the metric, this means that the
+name of the metric should comply with the Azure Data Explorer table naming
+constraints in case you plan to add a prefix to the metric name.
+
+[create-merge]: https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command
 
 ### SingleTable
 
-The plugin will send all the metrics received to a single Azure Data Explorer table. The name of the table must be supplied via `table_name` in the config file. If the table doesn't exist the plugin will create the table, if the table exists then the plugin will try to merge the Telegraf metric schema to the existing table. For more information about the merge process check the [`.create-merge` documentation](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/create-merge-table-command).
+The plugin will send all the metrics received to a single Azure Data Explorer
+table. The name of the table must be supplied via `table_name` in the config
+file. If the table doesn't exist the plugin will create the table, if the table
+exists then the plugin will try to merge the Telegraf metric schema to the
+existing table. For more information about the merge process check the
+[`.create-merge` documentation][create-merge].
 
 ## Tables Schema
 
-The schema of the Azure Data Explorer table will match the structure of the Telegraf `Metric` object. The corresponding Azure Data Explorer command generated by the plugin would be like the following:
+The schema of the Azure Data Explorer table will match the structure of the
+Telegraf `Metric` object. The corresponding Azure Data Explorer command
+generated by the plugin would be like the following:
 
 ```text
 .create-merge table ['table-name']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime)
@@ -65,38 +90,51 @@ The corresponding table mapping would be like the following:
 .create-or-alter table ['table-name'] ingestion json mapping 'table-name_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'
 ```
 
-**Note**: This plugin will automatically create Azure Data Explorer tables and corresponding table mapping as per the above mentioned commands.
+**Note**: This plugin will automatically create Azure Data Explorer tables and
+corresponding table mapping as per the above mentioned commands.
 
 ## Authentiation
 
 ### Supported Authentication Methods
 
-This plugin provides several types of authentication. The plugin will check the existence of several specific environment variables, and consequently will choose the right method.
+This plugin provides several types of authentication. The plugin will check the
+existence of several specific environment variables, and consequently will
+choose the right method.
 
 These methods are:
 
 1. AAD Application Tokens (Service Principals with secrets or certificates).
 
-    For guidance on how to create and register an App in Azure Active Directory check [this article](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#register-an-application), and for more information on the Service Principals check [this article](https://docs.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals).
+    For guidance on how to create and register an App in Azure Active Directory
+    check [this article][register], and for more information on the Service
+    Principals check [this article][principal].
 
 2. AAD User Tokens
 
-    - Allows Telegraf to authenticate like a user. This method is mainly used for development purposes only.
+    - Allows Telegraf to authenticate like a user. This method is mainly used
+      for development purposes only.
 
 3. Managed Service Identity (MSI) token
 
-    - If you are running Telegraf from Azure VM or infrastructure, then this is the prefered authentication method.
+    - If you are running Telegraf from Azure VM or infrastructure, then this is
+      the prefered authentication method.
 
-[principal]: https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-application-objects
+[register]: https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#register-an-application
 
-Whichever method, the designated Principal needs to be assigned the `Database User` role on the Database level in the Azure Data Explorer. This role will
-allow the plugin to create the required tables and ingest data into it.
-If `create_tables=false` then the designated principal only needs the `Database Ingestor` role at least.
+[principal]: https://docs.microsoft.com/en-us/azure/active-directory/develop/app-objects-and-service-principals
+
+Whichever method, the designated Principal needs to be assigned the `Database
+User` role on the Database level in the Azure Data Explorer. This role will
+allow the plugin to create the required tables and ingest data into it.  If
+`create_tables=false` then the designated principal only needs the `Database
+Ingestor` role at least.
 
 ### Configurations of the chosen Authentication Method
 
-The plugin will authenticate using the first available of the
-following configurations, **it's important to understand that the assessment, and consequently choosing the authentication method, will happen in order as below**:
+The plugin will authenticate using the first available of the following
+configurations, **it's important to understand that the assessment, and
+consequently choosing the authentication method, will happen in order as
+below**:
 
 1. **Client Credentials**: Azure AD Application ID and Secret.
 
@@ -124,14 +162,16 @@ following configurations, **it's important to understand that the assessment, an
 4. **Azure Managed Service Identity**: Delegate credential management to the
    platform. Requires that code is running in Azure, e.g. on a VM. All
    configuration is handled by Azure. See [Azure Managed Service Identity][msi]
-   for more details. Only available when using the [Azure Resource Manager][arm].
+   for more details. Only available when using the [Azure Resource
+   Manager][arm].
 
 [msi]: https://docs.microsoft.com/en-us/azure/active-directory/msi-overview
 [arm]: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview
 
 ## Querying data collected in Azure Data Explorer
 
-Examples of data transformations and queries that would be useful to gain insights -
+Examples of data transformations and queries that would be useful to gain
+insights -
 
 ### Using SQL input plugin
 
@@ -142,9 +182,12 @@ name | tags | timestamp | fields
 sqlserver_database_io|{"database_name":"azure-sql-db2","file_type":"DATA","host":"adx-vm","logical_filename":"tempdev","measurement_db_type":"AzureSQLDB","physical_filename":"tempdb.mdf","replica_updateability":"READ_WRITE","sql_instance":"adx-sql-server"}|2021-09-09T13:51:20Z|{"current_size_mb":16,"database_id":2,"file_id":1,"read_bytes":2965504,"read_latency_ms":68,"reads":47,"rg_read_stall_ms":42,"rg_write_stall_ms":0,"space_used_mb":0,"write_bytes":1220608,"write_latency_ms":103,"writes":149}
 sqlserver_waitstats|{"database_name":"azure-sql-db2","host":"adx-vm","measurement_db_type":"AzureSQLDB","replica_updateability":"READ_WRITE","sql_instance":"adx-sql-server","wait_category":"Worker Thread","wait_type":"THREADPOOL"}|2021-09-09T13:51:20Z|{"max_wait_time_ms":15,"resource_wait_ms":4469,"signal_wait_time_ms":0,"wait_time_ms":4469,"waiting_tasks_count":1464}
 
-Since collected metrics object is of complex type so "fields" and "tags" are stored as dynamic data type, multiple ways to query this data-
+Since collected metrics object is of complex type so "fields" and "tags" are
+stored as dynamic data type, multiple ways to query this data-
 
-1. Query JSON attributes directly: Azure Data Explorer provides an ability to query JSON data in raw format without parsing it, so JSON attributes can be queried directly in following way:
+1. Query JSON attributes directly: Azure Data Explorer provides an ability to
+   query JSON data in raw format without parsing it, so JSON attributes can be
+   queried directly in following way:
 
   ```text
   Tablename
@@ -156,9 +199,14 @@ Since collected metrics object is of complex type so "fields" and "tags" are sto
   | distinct tostring(tags.database_name)
   ```
 
-  **Note** - This approach could have performance impact in case of large volumes of data, use belwo mentioned approach for such cases.
+  **Note** - This approach could have performance impact in case of large
+  volumes of data, use belwo mentioned approach for such cases.
 
-1. Use [Update policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**: Transform dynamic data type columns using update policy. This is the recommended performant way for querying over large volumes of data compared to querying directly over JSON attributes:
+1. Use [Update
+   policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**:
+   Transform dynamic data type columns using update policy. This is the
+   recommended performant way for querying over large volumes of data compared
+   to querying directly over JSON attributes:
 
   ```json
   // Function to transform data
@@ -185,9 +233,15 @@ name | tags | timestamp | fields
 syslog|{"appname":"azsecmond","facility":"user","host":"adx-linux-vm","hostname":"adx-linux-vm","severity":"info"}|2021-09-20T14:36:44Z|{"facility_code":1,"message":" 2021/09/20 14:36:44.890110 Failed to connect to mdsd: dial unix /var/run/mdsd/default_djson.socket: connect: no such file or directory","procid":"2184","severity_code":6,"timestamp":"1632148604890477000","version":1}
 syslog|{"appname":"CRON","facility":"authpriv","host":"adx-linux-vm","hostname":"adx-linux-vm","severity":"info"}|2021-09-20T14:37:01Z|{"facility_code":10,"message":" pam_unix(cron:session): session opened for user root by (uid=0)","procid":"26446","severity_code":6,"timestamp":"1632148621120781000","version":1}
 
-There are multiple ways to flatten dynamic columns using 'extend' or 'bag_unpack' operator. You can use either of these ways in above mentioned update policy function - 'Transform_TargetTableName()'
+There are multiple ways to flatten dynamic columns using 'extend' or
+'bag_unpack' operator. You can use either of these ways in above mentioned
+update policy function - 'Transform_TargetTableName()'
 
-- Use [extend](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/extendoperator) operator - This is the recommended approach compared to 'bag_unpack' as it is faster and robust. Even if schema changes, it will not break queries or dashboards.
+- Use
+  [extend](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/extendoperator)
+  operator - This is the recommended approach compared to 'bag_unpack' as it is
+  faster and robust. Even if schema changes, it will not break queries or
+  dashboards.
 
   ```text
   Tablenmae
@@ -197,7 +251,10 @@ There are multiple ways to flatten dynamic columns using 'extend' or 'bag_unpack
   | project-away fields, tags
   ```
 
-- Use [bag_unpack plugin](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/bag-unpackplugin) to unpack the dynamic type columns automatically. This method could lead to issues if source schema changes as its dynamically expanding columns.
+- Use [bag_unpack
+  plugin](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/query/bag-unpackplugin)
+  to unpack the dynamic type columns automatically. This method could lead to
+  issues if source schema changes as its dynamically expanding columns.
 
   ```text
   Tablename

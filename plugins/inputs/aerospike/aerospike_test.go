@@ -3,7 +3,7 @@ package aerospike
 import (
 	"testing"
 
-	as "github.com/aerospike/aerospike-client-go"
+	as "github.com/aerospike/aerospike-client-go/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -126,26 +126,26 @@ func TestQuerySetsIntegration(t *testing.T) {
 	// create a set
 	// test is the default namespace from aerospike
 	policy := as.NewClientPolicy()
-	client, err := as.NewClientWithPolicy(policy, testutil.GetLocalHost(), 3000)
-	require.NoError(t, err)
+	client, errAs := as.NewClientWithPolicy(policy, testutil.GetLocalHost(), 3000)
+	require.NoError(t, errAs)
 
-	key, err := as.NewKey("test", "foo", 123)
-	require.NoError(t, err)
+	key, errAs := as.NewKey("test", "foo", 123)
+	require.NoError(t, errAs)
 	bins := as.BinMap{
 		"e":  2,
 		"pi": 3,
 	}
-	err = client.Add(nil, key, bins)
-	require.NoError(t, err)
+	errAs = client.Add(nil, key, bins)
+	require.NoError(t, errAs)
 
-	key, err = as.NewKey("test", "bar", 1234)
-	require.NoError(t, err)
+	key, errAs = as.NewKey("test", "bar", 1234)
+	require.NoError(t, errAs)
 	bins = as.BinMap{
 		"e":  2,
 		"pi": 3,
 	}
-	err = client.Add(nil, key, bins)
-	require.NoError(t, err)
+	errAs = client.Add(nil, key, bins)
+	require.NoError(t, errAs)
 
 	a := &Aerospike{
 		Servers: []string{
@@ -156,7 +156,7 @@ func TestQuerySetsIntegration(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err = acc.GatherError(a.Gather)
+	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
 	require.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/foo"))
@@ -175,26 +175,26 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 	// create a set
 	// test is the default namespace from aerospike
 	policy := as.NewClientPolicy()
-	client, err := as.NewClientWithPolicy(policy, testutil.GetLocalHost(), 3000)
-	require.NoError(t, err)
+	client, errAs := as.NewClientWithPolicy(policy, testutil.GetLocalHost(), 3000)
+	require.NoError(t, errAs)
 
-	key, err := as.NewKey("test", "foo", 123)
-	require.NoError(t, err)
+	key, errAs := as.NewKey("test", "foo", 123)
+	require.NoError(t, errAs)
 	bins := as.BinMap{
 		"e":  2,
 		"pi": 3,
 	}
-	err = client.Add(nil, key, bins)
-	require.NoError(t, err)
+	errAs = client.Add(nil, key, bins)
+	require.NoError(t, errAs)
 
-	key, err = as.NewKey("test", "bar", 1234)
-	require.NoError(t, err)
+	key, errAs = as.NewKey("test", "bar", 1234)
+	require.NoError(t, errAs)
 	bins = as.BinMap{
 		"e":  2,
 		"pi": 3,
 	}
-	err = client.Add(nil, key, bins)
-	require.NoError(t, err)
+	errAs = client.Add(nil, key, bins)
+	require.NoError(t, errAs)
 
 	a := &Aerospike{
 		Servers: []string{
@@ -206,7 +206,7 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err = acc.GatherError(a.Gather)
+	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
 	require.True(t, FindTagValue(&acc, "aerospike_set", "set", "test/foo"))
@@ -316,9 +316,7 @@ func TestParseNodeInfo(t *testing.T) {
 	var acc testutil.Accumulator
 
 	stats := map[string]string{
-		"early_tsvc_from_proxy_error": "0",
-		"cluster_principal":           "BB9020012AC4202",
-		"cluster_is_member":           "true",
+		"statistics": "early_tsvc_from_proxy_error=0;cluster_principal=BB9020012AC4202;cluster_is_member=true",
 	}
 
 	expectedFields := map[string]interface{}{

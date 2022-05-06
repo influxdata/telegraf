@@ -107,6 +107,14 @@ var (
 					Key:   "bool_two",
 					Value: false,
 				},
+				{
+					Key:   "uint64_one",
+					Value: uint64(1000000000),
+				},
+				{
+					Key:   "float64_one",
+					Value: float64(3.1415),
+				},
 			},
 			ts,
 		),
@@ -161,9 +169,7 @@ func TestMysqlIntegration(t *testing.T) {
 	const username = "root"
 
 	password := pwgen(32)
-	outDir, err := os.MkdirTemp("", "tg-mysql-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(outDir)
+	outDir := t.TempDir()
 
 	ctx := context.Background()
 	req := testcontainers.GenericContainerRequest{
@@ -251,9 +257,7 @@ func TestPostgresIntegration(t *testing.T) {
 	const username = "postgres"
 
 	password := pwgen(32)
-	outDir, err := os.MkdirTemp("", "tg-postgres-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(outDir)
+	outDir := t.TempDir()
 
 	ctx := context.Background()
 	req := testcontainers.GenericContainerRequest{
@@ -295,6 +299,9 @@ func TestPostgresIntegration(t *testing.T) {
 	p.Log = testutil.Logger{}
 	p.Driver = "pgx"
 	p.DataSourceName = address
+	p.Convert.Real = "double precision"
+	p.Convert.Unsigned = "bigint"
+	p.Convert.ConversionStyle = "literal"
 
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(
@@ -350,9 +357,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	// default username for clickhouse is default
 	const username = "default"
 
-	outDir, err := os.MkdirTemp("", "tg-clickhouse-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(outDir)
+	outDir := t.TempDir()
 
 	ctx := context.Background()
 	req := testcontainers.GenericContainerRequest{
@@ -396,6 +401,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	p.Convert.Defaultvalue = "String"
 	p.Convert.Unsigned = "UInt64"
 	p.Convert.Bool = "UInt8"
+	p.Convert.ConversionStyle = "literal"
 
 	require.NoError(t, p.Connect())
 

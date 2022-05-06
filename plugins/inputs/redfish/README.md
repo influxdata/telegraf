@@ -7,6 +7,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ## Configuration
 
 ```toml
+# Read CPU, Fans, Powersupply and Voltage metrics of hardware server through redfish APIs
 [[inputs.redfish]]
   ## Redfish API Base URL.
   address = "https://127.0.0.1:5000"

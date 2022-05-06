@@ -157,13 +157,16 @@ func TestWriteTCP(t *testing.T) {
 			wg.Add(1)
 			address := make(chan string, 1)
 			errs := make(chan error)
+			fmt.Println("test: staring TCP server")
 			go TCPServer(t, &wg, tt.tlsServerConfig, address, errs)
 			require.NoError(t, <-errs)
 
 			i := tt.instance
 			i.Servers = []string{fmt.Sprintf("tcp://%s", <-address)}
+			fmt.Println("client: connecting to TCP server")
 			err = i.Connect()
 			require.NoError(t, err)
+			fmt.Println("client: connected")
 			defer i.Close()
 			defer wg.Wait()
 
@@ -175,14 +178,21 @@ func TestWriteTCP(t *testing.T) {
 			// -> the 3rd write fails with error
 			// -> during the 4th write connection is restored and write is successful
 
-			err = i.Write(metrics)
-			require.NoError(t, err)
+			fmt.Println("client: writting packet 1")
 			err = i.Write(metrics)
 			require.NoError(t, err)
 
+			fmt.Println("client: writting packet 2")
+			err = i.Write(metrics)
+			require.NoError(t, err)
+
+			fmt.Println("client: checking for errors")
 			require.NoError(t, <-errs)
 
+			fmt.Println("client: writting packet 3")
 			err = i.Write(metrics)
+
+			fmt.Println("client: writting packet 4")
 			err = i.Write(metrics)
 			require.NoError(t, err)
 		})
@@ -324,6 +334,7 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address 
 		return nil
 	}
 
+	fmt.Println("server: opening connection")
 	conn, err := accept()
 	if err != nil {
 		fmt.Println(err)
@@ -332,27 +343,36 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, address 
 
 	// in TCP scenario only 3 messages are received, the 3rd is lost due to simulated connection break after the 2nd
 
+	fmt.Println("server: receving packet 1")
 	err = recv(conn)
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println("server: receving packet 2")
 	err = recv(conn)
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	fmt.Println("server: closing connection")
 	err = conn.Close()
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	errs <- err
 	if err != nil {
 		return
 	}
+
+	fmt.Println("server: re-opening connection")
 	conn, err = accept()
 	if err != nil {
 		fmt.Println(err)
 	}
 	defer conn.Close()
+
+	fmt.Println("server: receving packet 4")
 	err = recv(conn)
 	if err != nil {
 		fmt.Println(err)

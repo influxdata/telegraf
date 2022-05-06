@@ -28,33 +28,17 @@ type Datadog struct {
 	proxy.HTTPProxy
 }
 
-var sampleConfig = `
-  ## Datadog API key
-  apikey = "my-secret-key"
-
-  ## Connection timeout.
-  # timeout = "5s"
-
-  ## Write URL override; useful for debugging.
-  # url = "https://app.datadoghq.com/api/v1/series"
-
-  ## Set http_proxy (telegraf uses the system wide proxy settings if it isn't set)
-  # http_proxy_url = "http://localhost:8888"
-
-  ## Override the default (none) compression used to send data.
-  ## Supports: "zlib", "none"
-  # compression = "none"
-`
-
 type TimeSeries struct {
 	Series []*Metric `json:"series"`
 }
 
 type Metric struct {
-	Metric string   `json:"metric"`
-	Points [1]Point `json:"points"`
-	Host   string   `json:"host"`
-	Tags   []string `json:"tags,omitempty"`
+	Metric   string   `json:"metric"`
+	Points   [1]Point `json:"points"`
+	Host     string   `json:"host"`
+	Type     string   `json:"type,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+	Interval int64    `json:"interval"`
 }
 
 type Point [2]float64
@@ -103,10 +87,21 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 				} else {
 					dname = m.Name() + "." + fieldName
 				}
+				var tname string
+				switch m.Type() {
+				case telegraf.Counter:
+					tname = "count"
+				case telegraf.Gauge:
+					tname = "gauge"
+				default:
+					tname = ""
+				}
 				metric := &Metric{
-					Metric: dname,
-					Tags:   metricTags,
-					Host:   host,
+					Metric:   dname,
+					Tags:     metricTags,
+					Host:     host,
+					Type:     tname,
+					Interval: 1,
 				}
 				metric.Points[0] = dogM
 				tempSeries = append(tempSeries, metric)
@@ -168,14 +163,6 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
-}
-
-func (d *Datadog) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *Datadog) Description() string {
-	return "Configuration for DataDog API to send metrics to."
 }
 
 func (d *Datadog) authenticatedURL() string {

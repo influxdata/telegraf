@@ -15,14 +15,6 @@ type Synproxy struct {
 	statFile string
 }
 
-func (k *Synproxy) Description() string {
-	return "Get synproxy counter statistics from procfs"
-}
-
-func (k *Synproxy) SampleConfig() string {
-	return ""
-}
-
 func getHostProc() string {
 	procPath := "/proc"
 	if os.Getenv("HOST_PROC") != "" {

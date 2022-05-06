@@ -13,11 +13,51 @@ For supported XPath functions check [the underlying XPath library][xpath lib].
 | [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
 | [JSON][json]                            | `"xpath_json"`        |         |
 | [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
-| [Protocol buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
+| [Protocol-buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
 
-### Protocol buffers additional settings
+### Protocol-buffers additional settings
 
-For using the protocol-buffer format you need to specify a protocol buffer definition file (`.proto`) in `xpath_protobuf_file`, Furthermore, you need to specify which message type you want to use via `xpath_protobuf_type`.
+For using the protocol-buffer format you need to specify additional (*mandatory*) properties for the parser. Those options are described here.
+
+#### `xpath_protobuf_file` (mandatory)
+
+Use this option to specify the name of the protocol-buffer definition file (`.proto`).
+
+#### `xpath_protobuf_type` (mandatory)
+
+This option contains the top-level message file to use for deserializing the data to be parsed. Usually, this is constructed from the `package` name in the protocol-buffer definition file and the `message` name as `<package name>.<message name>`.
+
+#### `xpath_protobuf_import_paths` (optional)
+
+In case you import other protocol-buffer definitions within your `.proto` file (i.e. you use the `import` statement) you can use this option to specify paths to search for the imported definition file(s). By default the imports are only searched in `.` which is the current-working-directory, i.e. usually the directory you are in when starting telegraf.
+
+Imagine you do have multiple protocol-buffer definitions (e.g. `A.proto`, `B.proto` and `C.proto`) in a directory (e.g. `/data/my_proto_files`) where your top-level file (e.g. `A.proto`) imports at least one other definition
+
+```protobuf
+syntax = "proto3";
+
+package foo;
+
+import "B.proto";
+
+message Measurement {
+    ...
+}
+```
+
+You should use the following setting
+
+```toml
+[[inputs.file]]
+  files = ["example.dat"]
+
+  data_format = "xpath_protobuf"
+  xpath_protobuf_file = "A.proto"
+  xpath_protobuf_type = "foo.Measurement"
+  xpath_protobuf_import_paths = [".", "/data/my_proto_files"]
+
+  ...
+```
 
 ## Configuration (explicit)
 
@@ -33,14 +73,16 @@ In this configuration mode, you explicitly specify the field and tags you want t
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "xml"
 
-  ## PROTOCOL BUFFER definitions
-  ## Protocol buffer definition file
+  ## PROTOCOL-BUFFER definitions
+  ## Protocol-buffer definition file
   # xpath_protobuf_file = "sparkplug_b.proto"
-  ## Name of the protocol buffer message type to use in a fully qualified form.
-  # xpath_protobuf_type = ""org.eclipse.tahu.protobuf.Payload""
+  ## Name of the protocol-buffer message type to use in a fully qualified form.
+  # xpath_protobuf_type = "org.eclipse.tahu.protobuf.Payload"
+  ## List of paths to use when looking up imported protocol-buffer definition files.
+  # xpath_protobuf_import_paths = ["."]
 
   ## Print the internal XML document when in debug logging mode.
-  ## This is especially useful when using the parser with non-XML formats like protocol buffers
+  ## This is especially useful when using the parser with non-XML formats like protocol-buffers
   ## to get an idea on the expression necessary to derive fields etc.
   # xpath_print_document = false
 
@@ -97,13 +139,16 @@ metric.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "xml"
 
-  ## Name of the protocol buffer type to use.
-  ## This is only relevant when parsing protocol buffers and must contain the fully qualified
-  ## name of the type e.g. "org.eclipse.tahu.protobuf.Payload".
-  # xpath_protobuf_type = ""
+  ## PROTOCOL-BUFFER definitions
+  ## Protocol-buffer definition file
+  # xpath_protobuf_file = "sparkplug_b.proto"
+  ## Name of the protocol-buffer message type to use in a fully qualified form.
+  # xpath_protobuf_type = "org.eclipse.tahu.protobuf.Payload"
+  ## List of paths to use when looking up imported protocol-buffer definition files.
+  # xpath_protobuf_import_paths = ["."]
 
   ## Print the internal XML document when in debug logging mode.
-  ## This is especially useful when using the parser with non-XML formats like protocol buffers
+  ## This is especially useful when using the parser with non-XML formats like protocol-buffers
   ## to get an idea on the expression necessary to derive fields etc.
   # xpath_print_document = false
 
@@ -135,6 +180,19 @@ metric.
     ## Optional: Expand field names relative to the selected node
     ## This allows to flatten out nodes with non-unique names in the subtree
     # field_name_expansion = false
+
+    ## Tag specifications using a selector.
+    ## tag_selection = "child::*"
+    ## Optional: Queries to specify tag name and value.
+    ## These options are only to be used in combination with 'tag_selection'!
+    ## By default the node name and node content is used if a tag-selection
+    ## is specified.
+    # tag_name  = "name()"
+    # tag_value = "."
+
+    ## Optional: Expand tag names relative to the selected node
+    ## This allows to flatten out nodes with non-unique names in the subtree
+    # tag_name_expansion = false
 
     ## Tag definitions using the given XPath queries.
     [inputs.file.xpath.tags]
@@ -205,6 +263,21 @@ Specifying `field_selection` is optional. This is an alternative way to specify 
 When *true*, field names selected with `field_selection` are expanded to a *path* relative to the *selected node*. This
 is necessary if we e.g. select all leaf nodes as fields and those leaf nodes do not have unique names. That is in case
 you have duplicate names in the fields you select you should set this to `true`.
+
+### tag_selection, tag_name, tag_value (optional)
+
+You can specify a [XPath][xpath] query to select a set of nodes forming the tags of the metric. The specified path can be absolute (starting with `/`) or relative to the currently selected node. Each node selected by `tag_selection` forms a new tag within the metric.
+
+The *name* and the *value* of each tag can be specified using the optional `tag_name` and `tag_value` queries. The queries are relative to the selected tag if not starting with `/`. If not specified the tag's *name* defaults to the node name and the tag's *value* defaults to the content of the selected tag node.
+**NOTE**: `tag_name` and `tag_value` queries are only evaluated if a `tag_selection` is specified.
+
+Specifying `tag_selection` is optional. This is an alternative way to specify tags especially for documents where the node names are not known a priori or if there is a large number of tags to be specified. These options can also be combined with the tag specifications above.
+
+### tag_name_expansion (optional)
+
+When *true*, tag names selected with `tag_selection` are expanded to a *path* relative to the *selected node*. This
+is necessary if we e.g. select all leaf nodes as tags and those leaf nodes do not have unique names. That is in case
+you have duplicate names in the tags you select you should set this to `true`.
 
 ## Examples
 

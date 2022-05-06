@@ -44,7 +44,7 @@ type LogConfig struct {
 }
 
 type LoggerCreator interface {
-	CreateLogger(config LogConfig) (io.Writer, error)
+	CreateLogger(cfg LogConfig) (io.Writer, error)
 }
 
 var loggerRegistry map[string]LoggerCreator
@@ -110,23 +110,23 @@ func newTelegrafWriter(w io.Writer, c LogConfig) (io.Writer, error) {
 }
 
 // SetupLogging configures the logging output.
-func SetupLogging(config LogConfig) {
-	newLogWriter(config)
+func SetupLogging(cfg LogConfig) {
+	newLogWriter(cfg)
 }
 
 type telegrafLogCreator struct {
 }
 
-func (t *telegrafLogCreator) CreateLogger(config LogConfig) (io.Writer, error) {
+func (t *telegrafLogCreator) CreateLogger(cfg LogConfig) (io.Writer, error) {
 	var writer, defaultWriter io.Writer
 	defaultWriter = os.Stderr
 
-	switch config.LogTarget {
+	switch cfg.LogTarget {
 	case LogTargetFile:
-		if config.Logfile != "" {
+		if cfg.Logfile != "" {
 			var err error
-			if writer, err = rotate.NewFileWriter(config.Logfile, time.Duration(config.RotationInterval), int64(config.RotationMaxSize), config.RotationMaxArchives); err != nil {
-				log.Printf("E! Unable to open %s (%s), using stderr", config.Logfile, err)
+			if writer, err = rotate.NewFileWriter(cfg.Logfile, time.Duration(cfg.RotationInterval), int64(cfg.RotationMaxSize), cfg.RotationMaxArchives); err != nil {
+				log.Printf("E! Unable to open %s (%s), using stderr", cfg.Logfile, err)
 				writer = defaultWriter
 			}
 		} else {
@@ -135,34 +135,34 @@ func (t *telegrafLogCreator) CreateLogger(config LogConfig) (io.Writer, error) {
 	case LogTargetStderr, "":
 		writer = defaultWriter
 	default:
-		log.Printf("E! Unsupported logtarget: %s, using stderr", config.LogTarget)
+		log.Printf("E! Unsupported logtarget: %s, using stderr", cfg.LogTarget)
 		writer = defaultWriter
 	}
 
-	return newTelegrafWriter(writer, config)
+	return newTelegrafWriter(writer, cfg)
 }
 
 // Keep track what is actually set as a log output, because log package doesn't provide a getter.
 // It allows closing previous writer if re-set and have possibility to test what is actually set
 var actualLogger io.Writer
 
-func newLogWriter(config LogConfig) io.Writer {
+func newLogWriter(cfg LogConfig) io.Writer {
 	log.SetFlags(0)
-	if config.Debug {
+	if cfg.Debug {
 		wlog.SetLevel(wlog.DEBUG)
 	}
-	if config.Quiet {
+	if cfg.Quiet {
 		wlog.SetLevel(wlog.ERROR)
 	}
-	if !config.Debug && !config.Quiet {
+	if !cfg.Debug && !cfg.Quiet {
 		wlog.SetLevel(wlog.INFO)
 	}
 	var logWriter io.Writer
-	if logCreator, ok := loggerRegistry[config.LogTarget]; ok {
-		logWriter, _ = logCreator.CreateLogger(config)
+	if logCreator, ok := loggerRegistry[cfg.LogTarget]; ok {
+		logWriter, _ = logCreator.CreateLogger(cfg)
 	}
 	if logWriter == nil {
-		logWriter, _ = (&telegrafLogCreator{}).CreateLogger(config)
+		logWriter, _ = (&telegrafLogCreator{}).CreateLogger(cfg)
 	}
 
 	if closer, isCloser := actualLogger.(io.Closer); isCloser {

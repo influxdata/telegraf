@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -17,6 +18,7 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -25,6 +27,8 @@ const (
 	// if the request body is over this size, we will return an HTTP 413 error.
 	defaultMaxBodySize = 32 * 1024 * 1024
 )
+
+var ErrEOF = errors.New("EOF")
 
 // The BadRequestCode constants keep standard error messages
 // see: https://v2.docs.influxdata.com/v2.0/api/#operation/PostWrite
@@ -43,6 +47,7 @@ type InfluxDBV2Listener struct {
 	MaxBodySize config.Size `toml:"max_body_size"`
 	Token       string      `toml:"token"`
 	BucketTag   string      `toml:"bucket_tag"`
+	ParserType  string      `toml:"parser_type"`
 
 	timeFunc influx.TimeFunc
 
@@ -64,42 +69,6 @@ type InfluxDBV2Listener struct {
 	Log telegraf.Logger `toml:"-"`
 
 	mux http.ServeMux
-}
-
-const sampleConfig = `
-  ## Address and port to host InfluxDB listener on
-  ## (Double check the port. Could be 9999 if using OSS Beta)
-  service_address = ":8086"
-
-  ## Maximum allowed HTTP request body size in bytes.
-  ## 0 means to use the default of 32MiB.
-  # max_body_size = "32MiB"
-
-  ## Optional tag to determine the bucket.
-  ## If the write has a bucket in the query string then it will be kept in this tag name.
-  ## This tag can be used in downstream outputs.
-  ## The default value of nothing means it will be off and the database will not be recorded.
-  # bucket_tag = ""
-
-  ## Set one or more allowed client CA certificate file names to
-  ## enable mutually authenticated TLS connections
-  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
-  ## Add service certificate and key
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Optional token to accept for HTTP authentication.
-  ## You probably want to make sure you have TLS configured above for this.
-  # token = "some-long-shared-secret-token"
-`
-
-func (h *InfluxDBV2Listener) SampleConfig() string {
-	return sampleConfig
-}
-
-func (h *InfluxDBV2Listener) Description() string {
-	return "Accept metrics over InfluxDB 2.x HTTP API"
 }
 
 func (h *InfluxDBV2Listener) Gather(_ telegraf.Accumulator) error {
@@ -264,22 +233,35 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			}
 			return
 		}
-		metricHandler := influx.NewMetricHandler()
-		parser := influx.NewParser(metricHandler)
-		parser.SetTimeFunc(h.timeFunc)
 
 		precisionStr := req.URL.Query().Get("precision")
-		if precisionStr != "" {
-			precision := getPrecisionMultiplier(precisionStr)
-			metricHandler.SetTimePrecision(precision)
-		}
 
 		var metrics []telegraf.Metric
 		var err error
+		if h.ParserType == "upstream" {
+			parser := influx_upstream.NewParser()
+			parser.SetTimeFunc(influx_upstream.TimeFunc(h.timeFunc))
 
-		metrics, err = parser.Parse(bytes)
+			if precisionStr != "" {
+				precision := getPrecisionMultiplier(precisionStr)
+				parser.SetTimePrecision(precision)
+			}
 
-		if err != influx.EOF && err != nil {
+			metrics, err = parser.Parse(bytes)
+		} else {
+			metricHandler := influx.NewMetricHandler()
+			parser := influx.NewParser(metricHandler)
+			parser.SetTimeFunc(h.timeFunc)
+
+			if precisionStr != "" {
+				precision := getPrecisionMultiplier(precisionStr)
+				metricHandler.SetTimePrecision(precision)
+			}
+
+			metrics, err = parser.Parse(bytes)
+		}
+
+		if err != ErrEOF && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, Invalid, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)

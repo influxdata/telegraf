@@ -21,25 +21,6 @@ type Bind struct {
 	client http.Client
 }
 
-var sampleConfig = `
-  ## An array of BIND XML statistics URI to gather stats.
-  ## Default is "http://localhost:8053/xml/v3".
-  # urls = ["http://localhost:8053/xml/v3"]
-  # gather_memory_contexts = false
-  # gather_views = false
-
-  ## Timeout for http requests made by bind nameserver
-  # timeout = "4s"
-`
-
-func (b *Bind) Description() string {
-	return "Read BIND nameserver XML statistics"
-}
-
-func (b *Bind) SampleConfig() string {
-	return sampleConfig
-}
-
 func (b *Bind) Init() error {
 	b.client = http.Client{
 		Timeout: time.Duration(b.Timeout),

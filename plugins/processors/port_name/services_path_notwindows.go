@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-package portname
+package port_name
 
 func servicesPath() string {
 	return "/etc/services"

@@ -10,6 +10,7 @@ Tested from 3.5 to 7.*
 ## Configuration
 
 ```toml
+# Read stats from one or more Solr servers or cores
 [[inputs.solr]]
   ## specify a list of one or more Solr servers
   servers = ["http://localhost:8983"]

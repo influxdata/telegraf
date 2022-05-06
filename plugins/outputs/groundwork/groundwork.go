@@ -17,30 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-const sampleConfig = `
-  ## URL of your groundwork instance.
-  url = "https://groundwork.example.com"
-
-  ## Agent uuid for GroundWork API Server.
-  agent_id = ""
-
-  ## Username and password to access GroundWork API.
-  username = ""
-  password = ""
-
-  ## Default display name for the host with services(metrics).
-  # default_host = "telegraf"
-
-  ## Default service state.
-  # default_service_state = "SERVICE_OK"
-
-  ## The name of the tag that contains the hostname.
-  # resource_tag = "host"
-
-  ## The name of the tag that contains the host group name.
-  # group_tag = "group"
-`
-
 type metricMeta struct {
 	group    string
 	resource string
@@ -57,10 +33,6 @@ type Groundwork struct {
 	ResourceTag         string          `toml:"resource_tag"`
 	Log                 telegraf.Logger `toml:"-"`
 	client              clients.GWClient
-}
-
-func (g *Groundwork) SampleConfig() string {
-	return sampleConfig
 }
 
 func (g *Groundwork) Init() error {
@@ -212,10 +184,6 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (g *Groundwork) Description() string {
-	return "Send telegraf metrics to GroundWork Monitor"
-}
-
 func init() {
 	outputs.Add("groundwork", func() telegraf.Output {
 		return &Groundwork{
@@ -280,6 +248,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 		MonitoredInfo: transit.MonitoredInfo{
 			Status:           transit.MonitorStatus(status),
 			LastCheckTime:    lastCheckTime,
+			NextCheckTime:    lastCheckTime, // if not added, GW will make this as LastCheckTime + 5 mins
 			LastPluginOutput: message,
 		},
 		Metrics: nil,

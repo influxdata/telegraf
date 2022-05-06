@@ -23,96 +23,34 @@ import (
 )
 
 type Elasticsearch struct {
-	URLs                []string `toml:"urls"`
-	IndexName           string
-	DefaultTagValue     string
-	TagKeys             []string
-	Username            string
-	Password            string
-	AuthBearerToken     string
-	EnableSniffer       bool
-	Timeout             config.Duration
-	HealthCheckInterval config.Duration
-	EnableGzip          bool
-	ManageTemplate      bool
-	TemplateName        string
-	OverwriteTemplate   bool
-	ForceDocumentID     bool `toml:"force_document_id"`
-	MajorReleaseNumber  int
+	AuthBearerToken     string          `toml:"auth_bearer_token"`
+	DefaultPipeline     string          `toml:"default_pipeline"`
+	DefaultTagValue     string          `toml:"default_tag_value"`
+	EnableGzip          bool            `toml:"enable_gzip"`
+	EnableSniffer       bool            `toml:"enable_sniffer"`
 	FloatHandling       string          `toml:"float_handling"`
 	FloatReplacement    float64         `toml:"float_replacement_value"`
+	ForceDocumentID     bool            `toml:"force_document_id"`
+	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
+	IndexName           string          `toml:"index_name"`
+	ManageTemplate      bool            `toml:"manage_template"`
+	OverwriteTemplate   bool            `toml:"overwrite_template"`
+	Password            string          `toml:"password"`
+	TemplateName        string          `toml:"template_name"`
+	Timeout             config.Duration `toml:"timeout"`
+	URLs                []string        `toml:"urls"`
+	UsePipeline         string          `toml:"use_pipeline"`
+	Username            string          `toml:"username"`
 	Log                 telegraf.Logger `toml:"-"`
+	majorReleaseNumber  int
+	pipelineName        string
+	pipelineTagKeys     []string
+	tagKeys             []string
 	tls.ClientConfig
 
 	Client *elastic.Client
 }
-
-var sampleConfig = `
-  ## The full HTTP endpoint URL for your Elasticsearch instance
-  ## Multiple urls can be specified as part of the same cluster,
-  ## this means that only ONE of the urls will be written to each interval.
-  urls = [ "http://node1.es.example.com:9200" ] # required.
-  ## Elasticsearch client timeout, defaults to "5s" if not set.
-  timeout = "5s"
-  ## Set to true to ask Elasticsearch a list of all cluster nodes,
-  ## thus it is not necessary to list all nodes in the urls config option.
-  enable_sniffer = false
-  ## Set to true to enable gzip compression
-  enable_gzip = false
-  ## Set the interval to check if the Elasticsearch nodes are available
-  ## Setting to "0s" will disable the health check (not recommended in production)
-  health_check_interval = "10s"
-  ## HTTP basic authentication details
-  # username = "telegraf"
-  # password = "mypassword"
-  ## HTTP bearer token authentication details
-  # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-
-  ## Index Config
-  ## The target index for metrics (Elasticsearch will create if it not exists).
-  ## You can use the date specifiers below to create indexes per time frame.
-  ## The metric timestamp will be used to decide the destination index name
-  # %Y - year (2016)
-  # %y - last two digits of year (00..99)
-  # %m - month (01..12)
-  # %d - day of month (e.g., 01)
-  # %H - hour (00..23)
-  # %V - week of the year (ISO week) (01..53)
-  ## Additionally, you can specify a tag name using the notation {{tag_name}}
-  ## which will be used as part of the index name. If the tag does not exist,
-  ## the default tag value will be used.
-  # index_name = "telegraf-{{host}}-%Y.%m.%d"
-  # default_tag_value = "none"
-  index_name = "telegraf-%Y.%m.%d" # required.
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Template Config
-  ## Set to true if you want telegraf to manage its index template.
-  ## If enabled it will create a recommended index template for telegraf indexes
-  manage_template = true
-  ## The template name used for telegraf indexes
-  template_name = "telegraf"
-  ## Set to true if you want telegraf to overwrite an existing template
-  overwrite_template = false
-  ## If set to true a unique ID hash will be sent as sha256(concat(timestamp,measurement,series-hash)) string
-  ## it will enable data resend and update metric points avoiding duplicated metrics with diferent id's
-  force_document_id = false
-
-  ## Specifies the handling of NaN and Inf values.
-  ## This option can have the following values:
-  ##    none    -- do not modify field-values (default); will produce an error if NaNs or infs are encountered
-  ##    drop    -- drop fields containing NaNs or infs
-  ##    replace -- replace with the value in "float_replacement_value" (default: 0.0)
-  ##               NaNs and inf will be replaced with the given number, -inf with the negative of that number
-  # float_handling = "none"
-  # float_replacement_value = 0.0
-`
 
 const telegrafTemplate = `
 {
@@ -232,6 +170,7 @@ func (a *Elasticsearch) Connect() error {
 		elastic.SetScheme(elasticURL.Scheme),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
+		elastic.SetHealthcheckTimeout(time.Duration(a.HealthCheckTimeout)),
 		elastic.SetGzip(a.EnableGzip),
 	)
 
@@ -278,7 +217,7 @@ func (a *Elasticsearch) Connect() error {
 	a.Log.Infof("Elasticsearch version: %q", esVersion)
 
 	a.Client = client
-	a.MajorReleaseNumber = majorReleaseNumber
+	a.majorReleaseNumber = majorReleaseNumber
 
 	if a.ManageTemplate {
 		err := a.manageTemplate(ctx)
@@ -287,7 +226,8 @@ func (a *Elasticsearch) Connect() error {
 		}
 	}
 
-	a.IndexName, a.TagKeys = a.GetTagKeys(a.IndexName)
+	a.IndexName, a.tagKeys = a.GetTagKeys(a.IndexName)
+	a.pipelineName, a.pipelineTagKeys = a.GetTagKeys(a.UsePipeline)
 
 	return nil
 }
@@ -316,7 +256,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
+		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.tagKeys, metric.Tags())
 
 		// Handle NaN and inf field-values
 		fields := make(map[string]interface{})
@@ -351,8 +291,14 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 			br.Id(id)
 		}
 
-		if a.MajorReleaseNumber <= 6 {
+		if a.majorReleaseNumber <= 6 {
 			br.Type("metrics")
+		}
+
+		if a.UsePipeline != "" {
+			if pipelineName := a.getPipelineName(a.pipelineName, a.pipelineTagKeys, metric.Tags()); pipelineName != "" {
+				br.Pipeline(pipelineName)
+			}
 		}
 
 		bulkRequest.Add(br)
@@ -406,7 +352,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
 		tp := templatePart{
 			TemplatePattern: templatePattern + "*",
-			Version:         a.MajorReleaseNumber,
+			Version:         a.majorReleaseNumber,
 		}
 
 		t := template.Must(template.New("template").Parse(telegrafTemplate))
@@ -482,17 +428,27 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 	return fmt.Sprintf(indexName, tagValues...)
 }
 
+func (a *Elasticsearch) getPipelineName(pipelineInput string, tagKeys []string, metricTags map[string]string) string {
+	if !strings.Contains(pipelineInput, "%") || len(tagKeys) == 0 {
+		return pipelineInput
+	}
+
+	var tagValues []interface{}
+
+	for _, key := range tagKeys {
+		if value, ok := metricTags[key]; ok {
+			tagValues = append(tagValues, value)
+			continue
+		}
+		a.Log.Debugf("Tag %s not found, reverting to default pipeline instead.", key)
+		return a.DefaultPipeline
+	}
+	return fmt.Sprintf(pipelineInput, tagValues...)
+}
+
 func getISOWeek(eventTime time.Time) string {
 	_, week := eventTime.ISOWeek()
 	return strconv.Itoa(week)
-}
-
-func (a *Elasticsearch) SampleConfig() string {
-	return sampleConfig
-}
-
-func (a *Elasticsearch) Description() string {
-	return "Configuration for Elasticsearch to send metrics to."
 }
 
 func (a *Elasticsearch) Close() error {
@@ -505,6 +461,7 @@ func init() {
 		return &Elasticsearch{
 			Timeout:             config.Duration(time.Second * 5),
 			HealthCheckInterval: config.Duration(time.Second * 10),
+			HealthCheckTimeout:  config.Duration(time.Second * 1),
 		}
 	})
 }

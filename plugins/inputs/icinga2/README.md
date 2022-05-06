@@ -9,7 +9,7 @@ services and hosts. You can read Icinga2's documentation for their remote API
 ## Configuration
 
 ```toml
-# Description
+# Gather Icinga2 status
 [[inputs.icinga2]]
   ## Required Icinga2 server address
   # server = "https://localhost:5665"

@@ -5,6 +5,7 @@ This plugin receives traces, metrics and logs from [OpenTelemetry](https://opent
 ## Configuration
 
 ```toml
+# Receive OpenTelemetry traces, metrics, and logs over gRPC
 [[inputs.opentelemetry]]
   ## Override the default (0.0.0.0:4317) destination OpenTelemetry gRPC service
   ## address:port
