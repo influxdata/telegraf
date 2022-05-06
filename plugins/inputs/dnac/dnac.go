@@ -1,6 +1,5 @@
 package cisco_dna_center
 
-// dnac.go
 
 import (
 	"net/url"
