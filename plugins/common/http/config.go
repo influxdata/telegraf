@@ -30,12 +30,12 @@ type HTTPClientConfig struct {
 func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger) (*http.Client, error) {
 	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to set TLS config: %w", err)
 	}
 
 	prox, err := h.HTTPProxy.Proxy()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to set proxy: %w", err)
 	}
 
 	transport := &http.Transport{
@@ -58,7 +58,7 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 
 	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create OAuth2 client: %w", err)
 	}
 
 	if h.CookieAuthConfig.URL != "" {
