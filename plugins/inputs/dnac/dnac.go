@@ -1,4 +1,4 @@
-package dnac
+package cisco_dna_center
 
 // dnac.go
 
