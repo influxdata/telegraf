@@ -80,6 +80,7 @@ func (h *HTTP) Connect() error {
 	ctx := context.Background()
 	// TODO: review setting h.URL in this fashion...
 	h.HTTPClientConfig.URL = h.URL
+
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err

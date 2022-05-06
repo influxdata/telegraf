@@ -33,6 +33,7 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 		client = oauthConfig.Client(ctx)
 	}
 
+	// google api auth
 	if o.CredentialsFile != "" {
 		err := o.GetAccessToken(ctx, o.TokenURL)
 		if err != nil {
