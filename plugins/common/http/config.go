@@ -2,9 +2,7 @@ package httpconfig
 
 import (
 	"context"
-	"net/http"
-	"time"
-
+	"fmt"
 	"github.com/benbjohnson/clock"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -12,6 +10,8 @@ import (
 	oauthConfig "github.com/influxdata/telegraf/plugins/common/oauth"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"net/http"
+	"time"
 )
 
 // Common HTTP client struct.
