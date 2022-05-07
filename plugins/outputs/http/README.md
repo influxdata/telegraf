@@ -28,10 +28,8 @@ format by default.
   # token_url = "https://indentityprovider/oauth2/v1/token"
   # scopes = ["urn:opc:idm:__myscopes__"]
 
-  ## OAuth2 Authorization Code Grant
+  ## Goole API Auth
   # credentials_file = "/etc/telegraf/example_secret.json"
-  # token_url = "https://metrics-endpoint-uc.a.run.app"
-  # token_url = "https://indentityprovider/oauth2/v1/token"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

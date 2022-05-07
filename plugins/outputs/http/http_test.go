@@ -3,7 +3,6 @@ package http
 import (
 	"compress/gzip"
 	"fmt"
-	"golang.org/x/oauth2"
 	"io"
 	"net"
 	"net/http"
@@ -574,12 +573,7 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 				URL: u.String() + "/write",
 				HTTPClientConfig: httpconfig.HTTPClientConfig{
 					OAuth2Config: oauth.OAuth2Config{
-						TokenURL:        u.String() + "/token",
 						CredentialsFile: "./testdata/test_key_file.json",
-						AccessToken: &oauth2.Token{
-							AccessToken: token,
-							Expiry:      time.Now().Add(1 * time.Hour),
-						},
 					},
 				},
 			},

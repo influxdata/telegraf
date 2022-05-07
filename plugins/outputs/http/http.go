@@ -26,7 +26,7 @@ const (
 	defaultURL   = "http://127.0.0.1:8080/telegraf"
 )
 
-var sampleConfig = `
+/* 	var sampleConfig = `
   ## URL is the address to send metrics to
   url = "http://127.0.0.1:8080/telegraf"
 
@@ -111,7 +111,7 @@ var sampleConfig = `
   #role_session_name = ""
   #profile = ""
   #shared_credential_file = ""
-`
+` */
 
 const (
 	defaultContentType    = "text/plain; charset=utf-8"
@@ -257,15 +257,15 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	}
 
 	// google api auth
-	if h.CredentialsFile != "" {
+	if h.HTTPClientConfig.OAuth2Config.CredentialsFile != "" {
 		if !h.HTTPClientConfig.OAuth2Config.AccessToken.Valid() {
-			err := h.HTTPClientConfig.GetAccessToken(context.Background(), h.HTTPClientConfig.OAuth2Config.TokenURL)
+			err := h.HTTPClientConfig.OAuth2Config.GetAccessToken(context.Background(), h.URL)
 			if err != nil {
 				return err
 			}
 		}
 
-		h.HTTPClientConfig.AccessToken.SetAuthHeader(req)
+		h.HTTPClientConfig.OAuth2Config.AccessToken.SetAuthHeader(req)
 	}
 
 	req.Header.Set("User-Agent", internal.ProductToken())

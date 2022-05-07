@@ -14,7 +14,7 @@ type OAuth2Config struct {
 	ClientSecret string   `toml:"client_secret"`
 	TokenURL     string   `toml:"token_url"`
 	Scopes       []string `toml:"scopes"`
-
+	// Google API Auth
 	CredentialsFile string `toml:"credentials_file"`
 	AccessToken     *oauth2.Token
 }
@@ -29,14 +29,6 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 		}
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
 		client = oauthConfig.Client(ctx)
-	}
-
-	// google api auth
-	if o.CredentialsFile != "" && o.TokenURL != "" {
-		err := o.GetAccessToken(ctx, o.TokenURL)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return client, nil
