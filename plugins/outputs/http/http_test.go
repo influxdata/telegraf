@@ -3,6 +3,7 @@ package http
 import (
 	"compress/gzip"
 	"fmt"
+	"golang.org/x/oauth2"
 	"io"
 	"net"
 	"net/http"
@@ -540,7 +541,8 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	l, _ := net.Listen("tcp", "localhost:58025")
+	l, err := net.Listen("tcp", "localhost:58025")
+	require.NoError(t, err)
 	ts.Listener = l
 	ts.Start()
 
@@ -574,23 +576,20 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 					OAuth2Config: oauth.OAuth2Config{
 						TokenURL:        u.String() + "/token",
 						CredentialsFile: "./testdata/test_key_file.json",
-						//AccessToken: &oauth2.Token{
-						//	AccessToken: token,
-						//	Expiry:      time.Now().Add(1 * time.Hour),
-						//},
+						AccessToken: &oauth2.Token{
+							AccessToken: token,
+							Expiry:      time.Now().Add(1 * time.Hour),
+						},
 					},
 				},
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				//require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
-				fmt.Printf("request: %+v\n", r)
+				require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
 				w.WriteHeader(http.StatusOK)
 			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				// Need to get example of response from token endpoint...
-				fmt.Printf("%+v\n", r)
-				_, _ = w.Write([]byte(authHeader))
+				_, err = w.Write([]byte(authHeader))
 				require.NoError(t, err)
 			},
 		},

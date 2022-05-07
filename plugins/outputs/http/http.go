@@ -258,8 +258,14 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	// google api auth
 	if h.CredentialsFile != "" {
-		// TODO: un-bork
+		if !h.HTTPClientConfig.OAuth2Config.AccessToken.Valid() {
+			err := h.HTTPClientConfig.GetAccessToken(context.Background(), h.HTTPClientConfig.OAuth2Config.TokenURL)
+			if err != nil {
+				return err
+			}
+		}
 
+		h.HTTPClientConfig.AccessToken.SetAuthHeader(req)
 	}
 
 	req.Header.Set("User-Agent", internal.ProductToken())
