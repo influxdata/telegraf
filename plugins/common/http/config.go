@@ -3,9 +3,6 @@ package httpconfig
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/benbjohnson/clock"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -13,6 +10,8 @@ import (
 	oauthConfig "github.com/influxdata/telegraf/plugins/common/oauth"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"net/http"
+	"time"
 )
 
 // Common HTTP client struct.
@@ -31,12 +30,12 @@ type HTTPClientConfig struct {
 func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger) (*http.Client, error) {
 	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to set TLS config: %w", err)
 	}
 
 	prox, err := h.HTTPProxy.Proxy()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to set proxy: %w", err)
 	}
 
 	transport := &http.Transport{
@@ -57,14 +56,10 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		Timeout:   time.Duration(timeout),
 	}
 
-	h.OAuth2Config.TokenURL = fmt.Sprintf("%v", ctx.Value("url"))
-
 	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create OAuth2 client: %w", err)
 	}
-
-	h.AccessToken = h.OAuth2Config.AccessToken
 
 	if h.CookieAuthConfig.URL != "" {
 		if err := h.CookieAuthConfig.Start(client, log, clock.New()); err != nil {

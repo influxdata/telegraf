@@ -13,7 +13,6 @@ import (
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-	jwtGo "github.com/golang-jwt/jwt/v4"
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/internal"
@@ -118,10 +117,7 @@ const (
 	defaultContentType    = "text/plain; charset=utf-8"
 	defaultMethod         = http.MethodPost
 	defaultUseBatchFormat = true
-	key                   = contextKey("url")
 )
-
-type contextKey string
 
 type HTTP struct {
 	URL                     string            `toml:"url"`
@@ -133,6 +129,7 @@ type HTTP struct {
 	UseBatchFormat          bool              `toml:"use_batch_format"`
 	AwsService              string            `toml:"aws_service"`
 	NonRetryableStatusCodes []int             `toml:"non_retryable_statuscodes"`
+
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
@@ -163,8 +160,7 @@ func (h *HTTP) Connect() error {
 		return fmt.Errorf("invalid method [%s] %s", h.URL, h.Method)
 	}
 
-	ctx := context.WithValue(context.Background(), key, h.TokenURL)
-
+	ctx := context.Background()
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
@@ -260,33 +256,10 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		req.SetBasicAuth(h.Username, h.Password)
 	}
 
-	// Authorization Code Grant
+	// google api auth
 	if h.CredentialsFile != "" {
-		claims := jwtGo.RegisteredClaims{}
-		_, err := jwtGo.ParseWithClaims(h.HTTPClientConfig.AccessToken, &claims, func(token *jwtGo.Token) (interface{}, error) {
-			return nil, nil
-		})
-		if err != nil {
-			return err
-		}
+		// TODO: un-bork
 
-		// Request new token if expired
-		if !claims.VerifyExpiresAt(time.Now(), true) {
-			// token is expired
-			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, time.Duration(h.Timeout))
-			defer cancel()
-
-			err = h.OAuth2Config.GetAccessToken(ctx, h.URL)
-			if err != nil {
-				return err
-			}
-		}
-
-		bearerToken := "Bearer " + h.HTTPClientConfig.AccessToken
-		req.Header.Set("Authorization", bearerToken)
-		req.Header.Set("User-Agent", internal.ProductToken())
-		req.Header.Set("Accept", "application/json")
 	}
 
 	req.Header.Set("User-Agent", internal.ProductToken())

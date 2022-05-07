@@ -2,13 +2,10 @@ package oauth
 
 import (
 	"context"
-	"io/ioutil"
-	"net/http"
-
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
-	"golang.org/x/oauth2/google"
-	"golang.org/x/oauth2/jwt"
+	"google.golang.org/api/idtoken"
+	"net/http"
 )
 
 type OAuth2Config struct {
@@ -19,7 +16,8 @@ type OAuth2Config struct {
 	Scopes       []string `toml:"scopes"`
 
 	CredentialsFile string `toml:"credentials_file"`
-	AccessToken     string
+	//AccessToken     oauth2.Token
+	AccessToken string
 }
 
 func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) (*http.Client, error) {
@@ -34,8 +32,8 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 		client = oauthConfig.Client(ctx)
 	}
 
+	// google api auth
 	if o.CredentialsFile != "" {
-		o.TokenURL = ctx.Value("url").(string)
 		err := o.GetAccessToken(ctx, o.TokenURL)
 		if err != nil {
 			return nil, err
@@ -46,28 +44,16 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 }
 
 func (o *OAuth2Config) GetAccessToken(ctx context.Context, audience string) error {
-	data, err := ioutil.ReadFile(o.CredentialsFile)
+	ts, err := idtoken.NewTokenSource(ctx, audience)
 	if err != nil {
 		return err
 	}
 
-	conf, err := google.JWTConfigFromJSON(data, audience)
+	token, err := ts.Token()
 	if err != nil {
 		return err
 	}
+	o.AccessToken = token.AccessToken
 
-	jwtConfig := &jwt.Config{
-		Email:         conf.Email,
-		TokenURL:      conf.TokenURL,
-		PrivateKey:    conf.PrivateKey,
-		PrivateClaims: map[string]interface{}{"target_audience": audience},
-	}
-
-	token, err := jwtConfig.TokenSource(ctx).Token()
-	if err != nil {
-		return err
-	}
-
-	o.AccessToken = token.Extra("id_token").(string)
 	return nil
 }

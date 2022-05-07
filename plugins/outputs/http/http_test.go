@@ -574,18 +574,24 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 					OAuth2Config: oauth.OAuth2Config{
 						TokenURL:        u.String() + "/token",
 						CredentialsFile: "./testdata/test_key_file.json",
+						//AccessToken: &oauth2.Token{
+						//	AccessToken: token,
+						//	Expiry:      time.Now().Add(1 * time.Hour),
+						//},
 					},
 				},
 			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				//require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
+				fmt.Printf("request: %+v\n", r)
+				w.WriteHeader(http.StatusOK)
+			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
+				// Need to get example of response from token endpoint...
+				fmt.Printf("%+v\n", r)
 				_, _ = w.Write([]byte(authHeader))
 				require.NoError(t, err)
-			},
-			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				fmt.Println("auth header: ", r.Header["Authorization"])
-				require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
-				w.WriteHeader(http.StatusOK)
 			},
 		},
 	}
