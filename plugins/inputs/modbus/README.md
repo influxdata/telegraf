@@ -296,7 +296,7 @@ Each `request` can contain a list of fields to collect from the modbus device.
 
 A field is identified by an `address` that reflects the modbus register address. You can usually find the address values for the different datapoints in the datasheet of your modbus device. This is a mandatory setting.
 
-For *coil* and *discrete input* registers this setting specifies the __bit__ containing the value of the field.
+For _coil_ and _discrete input_ registers this setting specifies the **bit** containing the value of the field.
 
 ##### name
 
