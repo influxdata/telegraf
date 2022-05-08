@@ -2,10 +2,10 @@ package oauth
 
 import (
 	"context"
-	"net/http"
-
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
+	"google.golang.org/api/idtoken"
+	"net/http"
 )
 
 type OAuth2Config struct {
@@ -14,9 +14,12 @@ type OAuth2Config struct {
 	ClientSecret string   `toml:"client_secret"`
 	TokenURL     string   `toml:"token_url"`
 	Scopes       []string `toml:"scopes"`
+	// Google API Auth
+	CredentialsFile string `toml:"credentials_file"`
+	AccessToken     *oauth2.Token
 }
 
-func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) *http.Client {
+func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Client) (*http.Client, error) {
 	if o.ClientID != "" && o.ClientSecret != "" && o.TokenURL != "" {
 		oauthConfig := clientcredentials.Config{
 			ClientID:     o.ClientID,
@@ -28,5 +31,21 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 		client = oauthConfig.Client(ctx)
 	}
 
-	return client
+	return client, nil
+}
+
+func (o *OAuth2Config) GetAccessToken(ctx context.Context, audience string) error {
+	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithCredentialsFile(o.CredentialsFile))
+	if err != nil {
+		return err
+	}
+
+	token, err := ts.Token()
+	if err != nil {
+		return err
+	}
+
+	o.AccessToken = token
+
+	return nil
 }
