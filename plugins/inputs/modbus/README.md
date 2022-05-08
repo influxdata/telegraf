@@ -85,7 +85,8 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   ## data_type   - INT16, UINT16, INT32, UINT32, INT64, UINT64,
   ##               FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
   ##               FLOAT32, FIXED, UFIXED (fixed-point representation on input)
-  ## scale       - the final numeric variable representation
+  ## scale       - the final numeric variable representation will be (scale × variable + shift)
+  ## shift       - the final numeric variable representation will be (scale × variable + shift)
   ## address     - variable address
 
   holding_registers = [
@@ -93,7 +94,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
     { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
     { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
     { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
-    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
+    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1, shift=0.2,  address = [7]},
     { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
   ]
   input_registers = [
@@ -136,6 +137,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
     ## type *1,2      - type of the modbus field, can be INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                  FLOAT32, FLOAT64 (IEEE 754 binary representation)
     ## scale *1,2     - (optional) factor to scale the variable with
+    ## shift *1,2     - (optional) factor to add to the variable
     ## output *1,2    - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
     ##                  "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
     ## measurement *1 - (optional) measurement name, defaults to the setting of the request
@@ -170,7 +172,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
       { address=1, name="current",      type="INT32",   scale=0.001 },
       { address=3, name="power",        type="UINT32",  omit=true   },
       { address=5, name="energy",       type="FLOAT32", scale=0.001, measurement="W" },
-      { address=7, name="frequency",    type="UINT32",  scale=0.1   },
+      { address=7, name="frequency",    type="UINT32",  scale=0.1 , shift=1  },
       { address=8, name="power_factor", type="INT64",   scale=0.01  },
     ]
 
@@ -308,11 +310,11 @@ The `register` setting specifies the datatype of the modbus register and can be 
 
  This setting is ignored if the field's `omit` is set to `true` or if the `register` type is a bit-type (`coil` or `discrete`) and can be omitted in these cases.
 
-##### scaling
+##### scaling and shifting
 
-You can use the `scale` setting to scale the register values, e.g. if the register contains a fix-point values in `UINT32` format with two decimal places for example. To convert the read register value to the actual value you can set the `scale=0.01`. The scale is used as a factor e.g. `field_value * scale`.
+You can use the `scale` and `shift` settings to transform the register values, e.g. if the register contains a fix-point values in `UINT32` format with two decimal places for example. To convert the read register value to the actual value you can set the `scale=0.01`. The scale is used as a multiplicative factor e.g. `field_value × scale`, the shift is used as an additive factor e.g. `field_value + shift`. The scale is applied before the shit resulting in `field_value × scale + shift`
 
-This setting is ignored if the field's `omit` is set to `true` or if the `register` type is a bit-type (`coil` or `discrete`) and can be omitted in these cases.
+These settings are ignored if the field's `omit` is set to `true` or if the `register` type is a bit-type (`coil` or `discrete`) and can be omitted in these cases.
 
 __Please note:__ The resulting field-type will be set to `FLOAT64` if no output format is specified.
 

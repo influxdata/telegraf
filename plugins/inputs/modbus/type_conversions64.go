@@ -32,75 +32,8 @@ func endianessConverter64(byteOrder string) (convert64, error) {
 	return nil, fmt.Errorf("invalid byte-order: %s", byteOrder)
 }
 
-// I64 - no scale
-func determineConverterI64(outType, byteOrder string) (fieldConverterFunc, error) {
-	tohost, err := endianessConverter64(byteOrder)
-	if err != nil {
-		return nil, err
-	}
-
-	switch outType {
-	case "native", "INT64":
-		return func(b []byte) interface{} {
-			return int64(tohost(b))
-		}, nil
-	case "UINT64":
-		return func(b []byte) interface{} {
-			in := int64(tohost(b))
-			return uint64(in)
-		}, nil
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			in := int64(tohost(b))
-			return float64(in)
-		}, nil
-	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
-}
-
-// U64 - no scale
-func determineConverterU64(outType, byteOrder string) (fieldConverterFunc, error) {
-	tohost, err := endianessConverter64(byteOrder)
-	if err != nil {
-		return nil, err
-	}
-
-	switch outType {
-	case "INT64":
-		return func(b []byte) interface{} {
-			return int64(tohost(b))
-		}, nil
-	case "native", "UINT64":
-		return func(b []byte) interface{} {
-			return tohost(b)
-		}, nil
-	case "FLOAT64":
-		return func(b []byte) interface{} {
-			return float64(tohost(b))
-		}, nil
-	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
-}
-
-// F64 - no scale
-func determineConverterF64(outType, byteOrder string) (fieldConverterFunc, error) {
-	tohost, err := endianessConverter64(byteOrder)
-	if err != nil {
-		return nil, err
-	}
-
-	switch outType {
-	case "native", "FLOAT64":
-		return func(b []byte) interface{} {
-			raw := tohost(b)
-			return math.Float64frombits(raw)
-		}, nil
-	}
-	return nil, fmt.Errorf("invalid output data-type: %s", outType)
-}
-
-// I64 - scale
-func determineConverterI64Scale(outType, byteOrder string, scale float64) (fieldConverterFunc, error) {
+// I64
+func determineConverterI64(outType, byteOrder string, scale float64, shift float64) (fieldConverterFunc, error) {
 	tohost, err := endianessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
@@ -110,29 +43,29 @@ func determineConverterI64Scale(outType, byteOrder string, scale float64) (field
 	case "native":
 		return func(b []byte) interface{} {
 			in := int64(tohost(b))
-			return int64(float64(in) * scale)
+			return int64(float64(in)*scale + shift)
 		}, nil
 	case "INT64":
 		return func(b []byte) interface{} {
 			in := int64(tohost(b))
-			return int64(float64(in) * scale)
+			return int64(float64(in)*scale + shift)
 		}, nil
 	case "UINT64":
 		return func(b []byte) interface{} {
 			in := int64(tohost(b))
-			return uint64(float64(in) * scale)
+			return uint64(math.Max(0, float64(in)*scale+shift))
 		}, nil
 	case "FLOAT64":
 		return func(b []byte) interface{} {
 			in := int64(tohost(b))
-			return float64(in) * scale
+			return float64(in)*scale + shift
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
 
-// U64 - scale
-func determineConverterU64Scale(outType, byteOrder string, scale float64) (fieldConverterFunc, error) {
+// U64
+func determineConverterU64(outType, byteOrder string, scale float64, shift float64) (fieldConverterFunc, error) {
 	tohost, err := endianessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
@@ -142,29 +75,29 @@ func determineConverterU64Scale(outType, byteOrder string, scale float64) (field
 	case "native":
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return uint64(float64(in) * scale)
+			return uint64(math.Max(0, float64(in)*scale+shift))
 		}, nil
 	case "INT64":
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return int64(float64(in) * scale)
+			return int64(float64(in)*scale + shift)
 		}, nil
 	case "UINT64":
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return uint64(float64(in) * scale)
+			return uint64(math.Max(0, float64(in)*scale+shift))
 		}, nil
 	case "FLOAT64":
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return float64(in) * scale
+			return float64(in)*scale + shift
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
 
-// F64 - scale
-func determineConverterF64Scale(outType, byteOrder string, scale float64) (fieldConverterFunc, error) {
+// F64
+func determineConverterF64(outType, byteOrder string, scale float64, shift float64) (fieldConverterFunc, error) {
 	tohost, err := endianessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
@@ -175,7 +108,7 @@ func determineConverterF64Scale(outType, byteOrder string, scale float64) (field
 		return func(b []byte) interface{} {
 			raw := tohost(b)
 			in := math.Float64frombits(raw)
-			return in * scale
+			return in*scale + shift
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)

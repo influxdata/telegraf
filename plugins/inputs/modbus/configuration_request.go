@@ -92,6 +92,7 @@ type requestFieldDefinition struct {
 	Name        string  `toml:"name"`
 	InputType   string  `toml:"type"`
 	Scale       float64 `toml:"scale"`
+	Shift       float64 `toml:"shift"`
 	OutputType  string  `toml:"output"`
 	Measurement string  `toml:"measurement"`
 	Omit        bool    `toml:"omit"`
@@ -144,6 +145,11 @@ func (c *ConfigurationPerRequest) Check() error {
 
 		// Check the fields
 		for fidx, f := range def.Fields {
+			// Name is mandatory
+			if f.Name == "" {
+				return fmt.Errorf("empty field name in request for slave %d", def.SlaveID)
+			}
+
 			// Check the input type for all fields except the bit-field ones.
 			// We later need the type (even for omitted fields) to determine the length.
 			if def.RegisterType == cHoldingRegisters || def.RegisterType == cInputRegisters {
@@ -157,11 +163,6 @@ func (c *ConfigurationPerRequest) Check() error {
 			// Other properties don't need to be checked for omitted fields
 			if f.Omit {
 				continue
-			}
-
-			// Name is mandatory
-			if f.Name == "" {
-				return fmt.Errorf("empty field name in request for slave %d", def.SlaveID)
 			}
 
 			// Check fields only relevant for non-bit register types
@@ -316,7 +317,7 @@ func (c *ConfigurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 		return field{}, err
 	}
 
-	f.converter, err = determineConverter(inType, order, outType, def.Scale)
+	f.converter, err = determineConverter(inType, order, outType, def.Scale, def.Shift)
 	if err != nil {
 		return field{}, err
 	}
