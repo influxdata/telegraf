@@ -296,13 +296,13 @@ Each `request` can contain a list of fields to collect from the modbus device.
 
 A field is identified by an `address` that reflects the modbus register address. You can usually find the address values for the different datapoints in the datasheet of your modbus device. This is a mandatory setting.
 
-For _coil_ and _discrete input_ registers this setting specifies the __bit__ containing the value of the field.
+For *coil* and *discrete input* registers this setting specifies the **bit** containing the value of the field.
 
 ##### name
 
 Using the `name` setting you can specify the field-name in the metric as output by the plugin. This setting is ignored if the field's `omit` is set to `true` and can be omitted in this case.
 
-__Please note:__ There cannot be multiple fields with the same `name` in one metric identified by `measurement`, `slave_id` and `register`.
+**Please note:** There cannot be multiple fields with the same `name` in one metric identified by `measurement`, `slave_id` and `register`.
 
 ##### register datatype
 
@@ -316,7 +316,7 @@ You can use the `scale` and `shift` settings to transform the register values, e
 
 These settings are ignored if the field's `omit` is set to `true` or if the `register` type is a bit-type (`coil` or `discrete`) and can be omitted in these cases.
 
-__Please note:__ The resulting field-type will be set to `FLOAT64` if no output format is specified.
+**Please note:** The resulting field-type will be set to `FLOAT64` if no output format is specified.
 
 ##### output datatype
 
@@ -337,7 +337,7 @@ When specifying `omit=true`, the corresponding field will be ignored when collec
 #### Tags definitions
 
 Each `request` can be accompanied by tags valid for this request.
-__Please note:__ These tags take precedence over predefined tags such as `name`, `type` or `slave_id`.
+**Please note:** These tags take precedence over predefined tags such as `name`, `type` or `slave_id`.
 
 ---
 
