@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-var sampleConfig = `
+const sampleConfig = `
   ## The address of the RedisTimeSeries server.
   address = "127.0.0.1:6379"
 
