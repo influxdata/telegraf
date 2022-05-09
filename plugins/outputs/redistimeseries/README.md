@@ -7,7 +7,7 @@ The RedisTimeSeries output plugin writes metrics to the RedisTimeSeries server.
   ## The address of the RedisTimeSeries server.
   address = "127.0.0.1:6379"
 
-  ## password to login Redis
+  ## Password for logging-in to Redis
   # password = ""
 
 ```
