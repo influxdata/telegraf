@@ -53,7 +53,7 @@ func (r *RedisTimeSeries) Close() error {
 }
 
 func (r *RedisTimeSeries) Description() string {
-	return "Configuration for sending metrics to RedisTimeSeries"
+	return "Plugin for sending metrics to RedisTimeSeries"
 }
 
 func (r *RedisTimeSeries) SampleConfig() string {
