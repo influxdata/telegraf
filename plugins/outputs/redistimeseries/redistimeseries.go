@@ -66,8 +66,7 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 
 		var tags []interface{}
 		for k, v := range m.Tags() {
-			tags = append(tags, k)
-			tags = append(tags, v)
+			tags = append(tags, k, v)
 		}
 
 		for fieldName, value := range m.Fields() {
