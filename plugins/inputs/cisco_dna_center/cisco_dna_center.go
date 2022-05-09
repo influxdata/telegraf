@@ -111,17 +111,19 @@ func (d *Dnac) Gather(acc telegraf.Accumulator) error {
 					l1Prefix := clientType.ScoreCategory.ScoreCategory + "_" + clientType.ScoreCategory.Value
 					fields[internal.SnakeCase(l1Prefix+"_client_count")] = clientType.ClientCount
 					fields[internal.SnakeCase(l1Prefix+"_score_value")] = clientType.ScoreValue
-					if clientType.ScoreList != nil {
-						for _, scoreType := range *clientType.ScoreList {
-							l2Prefix := scoreType.ScoreCategory.ScoreCategory + "_" + scoreType.ScoreCategory.Value
-							fields[internal.SnakeCase(l1Prefix+"_"+l2Prefix+"_client_count")] = scoreType.ClientCount
-							if scoreType.ScoreList != nil {
-								for _, rootCause := range *scoreType.ScoreList {
-									if rootCause.ScoreCategory.ScoreCategory == "rootCause" {
-										l3Prefix := rootCause.ScoreCategory.ScoreCategory + "_" + rootCause.ScoreCategory.Value
-										fields[internal.SnakeCase(l1Prefix+"_"+l2Prefix+"_"+l3Prefix+"_client_count")] = rootCause.ClientCount
-									}
-								}
+					if clientType.ScoreList == nil {
+						continue
+					}
+					for _, scoreType := range *clientType.ScoreList {
+						l2Prefix := scoreType.ScoreCategory.ScoreCategory + "_" + scoreType.ScoreCategory.Value
+						fields[internal.SnakeCase(l1Prefix+"_"+l2Prefix+"_client_count")] = scoreType.ClientCount
+						if scoreType.ScoreList == nil {
+							continue
+						}
+						for _, rootCause := range *scoreType.ScoreList {
+							if rootCause.ScoreCategory.ScoreCategory == "rootCause" {
+								l3Prefix := rootCause.ScoreCategory.ScoreCategory + "_" + rootCause.ScoreCategory.Value
+								fields[internal.SnakeCase(l1Prefix+"_"+l2Prefix+"_"+l3Prefix+"_client_count")] = rootCause.ClientCount
 							}
 						}
 					}
