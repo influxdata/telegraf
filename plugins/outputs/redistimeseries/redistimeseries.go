@@ -72,7 +72,7 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 		for fieldName, value := range m.Fields() {
 			key := name + "_" + fieldName
 
-			addSlice := []interface{} {"TS.ADD", key, now, value}
+			addSlice := []interface{}{"TS.ADD", key, now, value}
 			addSlice = append(addSlice, tags...)
 
 			if err := r.client.Do(addSlice...).Err(); err != nil {
