@@ -4,6 +4,8 @@ name: "Semantic PR and Commit Messages"
 on:
   pull_request:
     types: [opened, reopened, synchronize, edited]
+    branches:
+      - master
 
 jobs:
   semantic:
