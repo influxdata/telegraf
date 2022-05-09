@@ -41,8 +41,8 @@ const sampleConfigPartPerRegister = `
   ## address    - variable address
 
   holding_registers = [
-    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", 	scale=0.01,  shift=0.0, address = [8]},
-    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", 	scale=0.1,   shift=0.0, address = [0]},
+    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", 	scale=0.01,  shift=-10.0, address = [8]},
+    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", 	scale=0.1,   shift=1.0, address = [0]},
     { name = "energy",       byte_order = "ABCD", data_type = "FIXED", 	scale=0.001, shift=0.0, address = [5,6]},
     { name = "current",      byte_order = "ABCD", data_type = "FIXED", 	scale=0.001, shift=0.0, address = [1,2]},
     { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,   shift=0.0, address = [7]},
@@ -50,7 +50,7 @@ const sampleConfigPartPerRegister = `
   ]
   input_registers = [
     { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,	shift=0.0, address = [0]},
-    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,	shift=0.0, address = [1]},
+    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,	shift=42.0, address = [1]},
     { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,	shift=0.0, address = [3,4]},
   ]
 `

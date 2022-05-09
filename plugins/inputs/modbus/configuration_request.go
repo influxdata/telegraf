@@ -65,7 +65,7 @@ const sampleConfigPartPerRequest = `
     ## Holding / input example
     ## All of those examples will result in FLOAT64 field outputs
     # fields = [
-    #   { address=0, name="voltage",      type="INT16",   scale=0.1   },
+    #   { address=0, name="voltage",      type="INT16",   scale=0.1, shift=12.0   },
     #   { address=1, name="current",      type="INT32",   scale=0.001 },
     #   { address=3, name="power",        type="UINT32",  omit=true   },
     #   { address=5, name="energy",       type="FLOAT32", scale=0.001, measurement="W" },
