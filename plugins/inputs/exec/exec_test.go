@@ -75,7 +75,7 @@ func newRunnerMock(out []byte, errout []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(_ string, _ time.Duration) ([]byte, []byte, error) {
+func (r runnerMock) Run(_ string, _ []string, _ time.Duration) ([]byte, []byte, error) {
 	return r.out, r.errout, r.err
 }
 
@@ -179,6 +179,23 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
+	e.SetParser(parser)
+
+	var acc testutil.Accumulator
+	err := acc.GatherError(e.Gather)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"value": "metric_value",
+	}
+	acc.AssertContainsFields(t, "metric", fields)
+}
+
+func TestExecCommandWithEnv(t *testing.T) {
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
+	e := NewExec()
+	e.Commands = []string{"/bin/sh -c 'echo ${METRIC_NAME}'"}
+	e.Environment = []string{"METRIC_NAME=metric_value"}
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator

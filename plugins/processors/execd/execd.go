@@ -19,6 +19,7 @@ import (
 
 type Execd struct {
 	Command      []string        `toml:"command"`
+	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger
 
@@ -54,7 +55,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	}
 	e.acc = acc
 
-	e.process, err = process.New(e.Command)
+	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
 	}
