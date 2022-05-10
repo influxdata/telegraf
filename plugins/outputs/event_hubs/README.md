@@ -25,10 +25,10 @@ JSON is probably the easiest to integrate with downstream components.
   ## Client timeout (defaults to 30s)
   # timeout = "30s"
 
-  ## Partition key field
-  ## Metric field name to use for the event partition key. The value of this
-  ## field is set as the key for events if it exists.
-  # partition_key_field = ""
+  ## Partition key
+  ## Metric tag or field name to use for the event partition key. The value of
+  ## this tag or field is set as the key for events if it exists.
+  # partition_key = ""
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
