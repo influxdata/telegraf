@@ -56,30 +56,6 @@ type PowerStat struct {
 	logOnce                            map[string]error
 }
 
-// Description returns a one-sentence description on the plugin.
-func (p *PowerStat) Description() string {
-	return `Intel PowerStat plugin enables monitoring of platform metrics (power, TDP) and Core metrics like temperature, power and utilization.`
-}
-
-// SampleConfig returns the default configuration of the plugin.
-func (p *PowerStat) SampleConfig() string {
-	return `
-  ## Some package metrics are collected by Intel PowerStat plugin by default.
-  ## User can choose which per-Core metrics are monitored by the plugin in package_metrics array.
-  ## No array means default metrics per-Core will be collected by the plugin.
-  ## Empty array means no per-Core metrics will be collected by the plugin.
-  ## User can choose which per-CPU metrics are monitored by the plugin in cpu_metrics array.
-  ## Empty or missing array means no per-CPU specific metrics will be collected by the plugin.
-  # Supported options:
-  #   "current_power_consumption", "current_dram_power_consumption", "thermal_design_power", "max_turbo_frequency"
-  # package_metrics = ["current_power_consumption", "current_dram_power_consumption", "thermal_design_power"]
-  # Supported options:
-  #   "cpu_frequency", "cpu_c0_state_residency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature", "cpu_busy_frequency"
-  # cpu_metrics = []
-  ## ATTENTION: metric cpu_busy_cycles is DEPRECATED - superseded by cpu_c0_state_residency_percent
-`
-}
-
 // Init performs one time setup of the plugin
 func (p *PowerStat) Init() error {
 	p.parsePackageMetricsConfig()
