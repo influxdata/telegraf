@@ -538,7 +538,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 					s.Log.Errorf("Error reading: %s", err.Error())
 					continue
 				}
-				return err
+				return nil
 			}
 			s.UDPPacketsRecv.Incr(1)
 			s.UDPBytesRecv.Incr(int64(n))
