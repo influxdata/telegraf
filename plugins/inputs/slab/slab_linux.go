@@ -63,7 +63,7 @@ func (ss *SlabStats) getSlabStats() (map[string]interface{}, error) {
 			return nil, err
 		}
 
-		fields[cols[0]+"_size_in_bytes"] = numObj * sizObj
+		fields[normalizeName(cols[0])] = numObj * sizObj
 	}
 	return fields, nil
 }
@@ -83,4 +83,8 @@ func (ss *SlabStats) runCmd(cmd string, args []string) ([]byte, error) {
 	}
 
 	return out, nil
+}
+
+func normalizeName(name string) string {
+	return strings.ReplaceAll(strings.ToLower(name), "-", "_") + "_size"
 }

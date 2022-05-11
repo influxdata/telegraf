@@ -21,25 +21,26 @@ equivalent to the `CACHE_SIZE` column of `slabtop` command.
 
 ## Metrics
 
-Metrics include generic ones such as `kmalloc-*` as well as those of kernel
+Metrics include generic ones such as `kmalloc_*` as well as those of kernel
 subsystems and drivers used by the system such as `xfs_inode`.
+Each field with `_size` suffix indicates memory consumption in bytes.
 
 - mem
   - fields:
-    - kmalloc-8_size_in_bytes (integer)
-    - kmalloc-16_size_in_bytes (integer)
-    - kmalloc-32_size_in_bytes (integer)
-    - kmalloc-64_size_in_bytes (integer)
-    - kmalloc-96_size_in_bytes (integer)
-    - kmalloc-128_size_in_bytes (integer)
-    - kmalloc-256_size_in_bytes (integer)
-    - kmalloc-512_size_in_bytes (integer)
-    - xfs_ili_size_in_bytes (integer)
-    - xfs_inode_size_in_bytes (integer)
+    _ kmalloc_8_size (integer)
+    _ kmalloc_16_size (integer)
+    _ kmalloc_32_size (integer)
+    _ kmalloc_64_size (integer)
+    _ kmalloc_96_size (integer)
+    _ kmalloc_128_size (integer)
+    _ kmalloc_256_size (integer)
+    _ kmalloc_512_size (integer)
+    _ xfs_ili_size (integer)
+    _ xfs_inode_size (integer)
 
 ## Example Output
 
 ```shel
 slab
-kmalloc-1024_size_in_bytes=239927296i,kmalloc-512_size_in_bytes=5582848i 1651049129000000000
+kmalloc_1024_size=239927296i,kmalloc_512_size=5582848i 1651049129000000000
 ```
