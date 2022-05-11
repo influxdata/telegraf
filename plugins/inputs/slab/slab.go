@@ -11,7 +11,6 @@ import (
 type SlabStats struct {
 	Log telegraf.Logger `toml:"-"`
 
-	// slab stats filename (proc filesystem)
 	statFile string
 	UseSudo  bool `toml:"use_sudo"`
 }
