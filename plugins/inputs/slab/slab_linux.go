@@ -35,6 +35,10 @@ func (ss *SlabStats) getSlabStats() (map[string]interface{}, error) {
 	fields := map[string]interface{}{}
 
 	out, err := ss.runCmd("/bin/cat", []string{ss.statFile})
+	if err != nil {
+		return nil, err
+	}
+
 	bytesReader := bytes.NewReader(out)
 	scanner := bufio.NewScanner(bytesReader)
 
