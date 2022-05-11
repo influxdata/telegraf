@@ -16,7 +16,7 @@ equivalent to the `CACHE_SIZE` column of `slabtop` command.
 # Get slab statistics from procfs
 [[inputs.slab]]
   ## /proc/slabinfo is usually restricted to read as root user.
-  ## Enable `use_sudo` option if necessary.
+  ## Enable use_sudo option if necessary.
   use_sudo = false
 ```
 
