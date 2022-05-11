@@ -395,7 +395,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	return nil
 }
 
-// tcpListen() starts listening for udp packets on the configured port.
+// tcpListen() starts listening for TCP packets on the configured port.
 func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 	for {
 		select {
@@ -436,7 +436,7 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 	}
 }
 
-// udpListen starts listening for udp packets on the configured port.
+// udpListen starts listening for UDP packets on the configured port.
 func (s *Statsd) udpListen(conn *net.UDPConn) error {
 	if s.ReadBufferSize > 0 {
 		if err := s.UDPlistener.SetReadBuffer(s.ReadBufferSize); err != nil {
