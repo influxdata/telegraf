@@ -28,16 +28,16 @@ Each field with `_size` suffix indicates memory consumption in bytes.
 
 - mem
   - fields:
-    _ kmalloc_8_size (integer)
-    _ kmalloc_16_size (integer)
-    _ kmalloc_32_size (integer)
-    _ kmalloc_64_size (integer)
-    _ kmalloc_96_size (integer)
-    _ kmalloc_128_size (integer)
-    _ kmalloc_256_size (integer)
-    _ kmalloc_512_size (integer)
-    _ xfs_ili_size (integer)
-    _ xfs_inode_size (integer)
+    - kmalloc_8_size (integer)
+    - kmalloc_16_size (integer)
+    - kmalloc_32_size (integer)
+    - kmalloc_64_size (integer)
+    - kmalloc_96_size (integer)
+    - kmalloc_128_size (integer)
+    - kmalloc_256_size (integer)
+    - kmalloc_512_size (integer)
+    - xfs_ili_size (integer)
+    - xfs_inode_size (integer)
 
 ## Example Output
 
