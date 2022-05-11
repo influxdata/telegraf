@@ -13,6 +13,7 @@ type SlabStats struct {
 
 	// slab stats filename (proc filesystem)
 	statFile string
+	UseSudo  bool `toml:"use_sudo"`
 }
 
 func getHostProc() string {

@@ -5,12 +5,16 @@ package slab
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
-	"os"
+	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 )
 
 func (ss *SlabStats) Init() error {
@@ -30,13 +34,9 @@ func (ss *SlabStats) Gather(acc telegraf.Accumulator) error {
 func (ss *SlabStats) getSlabStats() (map[string]interface{}, error) {
 	fields := map[string]interface{}{}
 
-	file, err := os.Open(ss.statFile)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
+	out, err := ss.runCmd("/bin/cat", []string{ss.statFile})
+	bytesReader := bytes.NewReader(out)
+	scanner := bufio.NewScanner(bytesReader)
 
 	// Read header rows
 	scanner.Scan() // for "slabinfo - version: 2.1"
@@ -66,4 +66,21 @@ func (ss *SlabStats) getSlabStats() (map[string]interface{}, error) {
 		fields[cols[0]+"_size_in_bytes"] = numObj * sizObj
 	}
 	return fields, nil
+}
+
+func (ss *SlabStats) runCmd(cmd string, args []string) ([]byte, error) {
+	execCmd := exec.Command(cmd, args...)
+	if ss.UseSudo {
+		execCmd = exec.Command("sudo", append([]string{"-n", cmd}, args...)...)
+	}
+
+	out, err := internal.StdOutputTimeout(execCmd, 5*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to run command %s: %s - %s",
+			strings.Join(execCmd.Args, " "), err, string(out),
+		)
+	}
+
+	return out, nil
 }

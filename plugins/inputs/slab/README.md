@@ -8,12 +8,15 @@ not changed since [Linux v2.6.12 (April 2005)](https://github.com/torvalds/linux
 so it can be regarded as sufficiently stable. The memory usage is
 equivalent to the `CACHE_SIZE` column of `slabtop` command.
 
+**Note: `/proc/slabinfo` is usually restricted to read as root user. Enable `use_sudo` option if necessary.**
+
 ## Configuration
 
 ```toml
 # Get slab statistics from procfs
 [[inputs.slab]]
-  # no configuration
+  ## Use sudo to run LVM commands
+  use_sudo = false
 ```
 
 ## Metrics
