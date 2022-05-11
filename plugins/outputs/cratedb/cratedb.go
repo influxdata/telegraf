@@ -183,7 +183,7 @@ func escapeObject(m map[string]interface{}, keyReplacement string) (string, erro
 // escapeString wraps s in the given quote string and replaces all occurrences
 // of it inside of s with a double quote.
 func escapeString(s string, quote string) string {
-	return quote + strings.Replace(s, quote, quote+quote, -1) + quote
+	return quote + strings.ReplaceAll(s, quote, quote+quote) + quote
 }
 
 // hashID returns a cryptographic hash int64 hash that includes the metric name

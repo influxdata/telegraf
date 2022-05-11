@@ -713,8 +713,8 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 	}
 
 	if s.ConvertNames {
-		name = strings.Replace(name, ".", "_", -1)
-		name = strings.Replace(name, "-", "__", -1)
+		name = strings.ReplaceAll(name, ".", "_")
+		name = strings.ReplaceAll(name, "-", "__")
 	}
 	if field == "" {
 		field = defaultFieldName

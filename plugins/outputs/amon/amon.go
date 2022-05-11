@@ -55,11 +55,11 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	metricCounter := 0
 
 	for _, m := range metrics {
-		mname := strings.Replace(m.Name(), "_", ".", -1)
+		mname := strings.ReplaceAll(m.Name(), "_", ".")
 		if amonPts, err := buildMetrics(m); err == nil {
 			for fieldName, amonPt := range amonPts {
 				metric := &Metric{
-					Metric: mname + "_" + strings.Replace(fieldName, "_", ".", -1),
+					Metric: mname + "_" + strings.ReplaceAll(fieldName, "_", "."),
 				}
 				metric.Points[0] = amonPt
 				tempSeries = append(tempSeries, metric)

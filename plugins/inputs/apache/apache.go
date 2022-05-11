@@ -107,7 +107,7 @@ func (n *Apache) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 		line := sc.Text()
 		if strings.Contains(line, ":") {
 			parts := strings.SplitN(line, ":", 2)
-			key, part := strings.Replace(parts[0], " ", "", -1), strings.TrimSpace(parts[1])
+			key, part := strings.ReplaceAll(parts[0], " ", ""), strings.TrimSpace(parts[1])
 
 			switch key {
 			case "Scoreboard":

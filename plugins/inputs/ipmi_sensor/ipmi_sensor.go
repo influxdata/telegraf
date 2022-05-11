@@ -278,7 +278,7 @@ func trim(s string) string {
 func transform(s string) string {
 	s = trim(s)
 	s = strings.ToLower(s)
-	return strings.Replace(s, " ", "_", -1)
+	return strings.ReplaceAll(s, " ", "_")
 }
 
 func init() {
