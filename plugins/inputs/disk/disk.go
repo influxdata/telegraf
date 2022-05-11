@@ -12,8 +12,7 @@ import (
 type DiskStats struct {
 	ps system.PS
 
-	// Legacy support
-	LegacyMountPoints []string `toml:"mountpoints"`
+	LegacyMountPoints []string `toml:"mountpoints" deprecated:"0.10.2;2.0.0;use 'mount_points' instead"`
 
 	MountPoints []string `toml:"mount_points"`
 	IgnoreFS    []string `toml:"ignore_fs"`
@@ -47,7 +46,7 @@ func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
 		mountOpts := MountOptions(partitions[i].Opts)
 		tags := map[string]string{
 			"path":   du.Path,
-			"device": strings.Replace(partitions[i].Device, "/dev/", "", -1),
+			"device": strings.ReplaceAll(partitions[i].Device, "/dev/", ""),
 			"fstype": du.Fstype,
 			"mode":   mountOpts.Mode(),
 		}

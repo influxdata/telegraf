@@ -162,7 +162,7 @@ func buildValue(v interface{}) (string, error) {
 	case int64:
 		retv = intToString(p)
 	case string:
-		retv = fmt.Sprintf("'%s'", strings.Replace(p, "'", "\\'", -1))
+		retv = fmt.Sprintf("'%s'", strings.ReplaceAll(p, "'", "\\'"))
 	case bool:
 		retv = boolToString(p)
 	case uint64:

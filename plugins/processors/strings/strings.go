@@ -224,7 +224,7 @@ func (s *Strings) initOnce() {
 	for _, c := range s.Replace {
 		c := c
 		c.fn = func(s string) string {
-			newString := strings.Replace(s, c.Old, c.New, -1)
+			newString := strings.ReplaceAll(s, c.Old, c.New)
 			if newString == "" {
 				return s
 			}

@@ -151,7 +151,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		} else {
-			field := strings.Replace(stat, ".", "_", -1)
+			field := strings.ReplaceAll(stat, ".", "_")
 			fields[field] = fieldValue
 		}
 	}

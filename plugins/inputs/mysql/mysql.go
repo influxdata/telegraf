@@ -1875,8 +1875,8 @@ func (m *Mysql) parseValueByDatabaseTypeName(value sql.RawBytes, databaseTypeNam
 func findThreadState(rawCommand, rawState string) string {
 	var (
 		// replace '_' symbol with space
-		command = strings.Replace(strings.ToLower(rawCommand), "_", " ", -1)
-		state   = strings.Replace(strings.ToLower(rawState), "_", " ", -1)
+		command = strings.ReplaceAll(strings.ToLower(rawCommand), "_", " ")
+		state   = strings.ReplaceAll(strings.ToLower(rawState), "_", " ")
 	)
 	// if the state is already valid, then return it
 	if _, ok := generalThreadStates[state]; ok {
@@ -1909,7 +1909,7 @@ func findThreadState(rawCommand, rawState string) string {
 
 // newNamespace can be used to make a namespace
 func newNamespace(words ...string) string {
-	return strings.Replace(strings.Join(words, "_"), " ", "_", -1)
+	return strings.ReplaceAll(strings.Join(words, "_"), " ", "_")
 }
 
 func copyTags(in map[string]string) map[string]string {

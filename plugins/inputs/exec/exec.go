@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	osExec "os/exec"
 	"path/filepath"
 	"runtime"
@@ -24,9 +25,10 @@ import (
 const MaxStderrBytes int = 512
 
 type Exec struct {
-	Commands []string        `toml:"commands"`
-	Command  string          `toml:"command"`
-	Timeout  config.Duration `toml:"timeout"`
+	Commands    []string        `toml:"commands"`
+	Command     string          `toml:"command"`
+	Environment []string        `toml:"environment"`
+	Timeout     config.Duration `toml:"timeout"`
 
 	parser parsers.Parser
 
@@ -42,13 +44,14 @@ func NewExec() *Exec {
 }
 
 type Runner interface {
-	Run(string, time.Duration) ([]byte, []byte, error)
+	Run(string, []string, time.Duration) ([]byte, []byte, error)
 }
 
 type CommandRunner struct{}
 
 func (c CommandRunner) Run(
 	command string,
+	environments []string,
 	timeout time.Duration,
 ) ([]byte, []byte, error) {
 	splitCmd, err := shellquote.Split(command)
@@ -57,6 +60,10 @@ func (c CommandRunner) Run(
 	}
 
 	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
+
+	if len(environments) > 0 {
+		cmd.Env = append(os.Environ(), environments...)
+	}
 
 	var (
 		out    bytes.Buffer
@@ -120,7 +127,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	out, errbuf, runErr := e.runner.Run(command, time.Duration(e.Timeout))
+	out, errbuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
 	if !isNagios && runErr != nil {
 		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
 		acc.AddError(err)

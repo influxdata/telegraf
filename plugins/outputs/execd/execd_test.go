@@ -32,6 +32,7 @@ func TestExternalOutputWorks(t *testing.T) {
 
 	e := &Execd{
 		Command:      []string{exe, "-testoutput"},
+		Environment:  []string{"PLUGINS_OUTPUTS_EXECD_MODE=application", "METRIC_NAME=cpu"},
 		RestartDelay: config.Duration(5 * time.Second),
 		serializer:   influxSerializer,
 		Log:          testutil.Logger{},
@@ -74,7 +75,8 @@ var testoutput = flag.Bool("testoutput", false,
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	if *testoutput {
+	runMode := os.Getenv("PLUGINS_OUTPUTS_EXECD_MODE")
+	if *testoutput && runMode == "application" {
 		runOutputConsumerProgram()
 		os.Exit(0)
 	}
@@ -83,6 +85,7 @@ func TestMain(m *testing.M) {
 }
 
 func runOutputConsumerProgram() {
+	metricName := os.Getenv("METRIC_NAME")
 	parser := influx.NewStreamParser(os.Stdin)
 
 	for {
@@ -103,7 +106,7 @@ func runOutputConsumerProgram() {
 			os.Exit(1)
 		}
 
-		expected := testutil.MustMetric("cpu",
+		expected := testutil.MustMetric(metricName,
 			map[string]string{"name": "cpu1"},
 			map[string]interface{}{"idle": 50, "sys": 30},
 			now,

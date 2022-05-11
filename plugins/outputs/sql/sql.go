@@ -71,12 +71,12 @@ func (p *SQL) Close() error {
 
 // Quote an identifier (table or column name)
 func quoteIdent(name string) string {
-	return `"` + strings.Replace(sanitizeQuoted(name), `"`, `""`, -1) + `"`
+	return `"` + strings.ReplaceAll(sanitizeQuoted(name), `"`, `""`) + `"`
 }
 
 // Quote a string literal
 func quoteStr(name string) string {
-	return "'" + strings.Replace(name, "'", "''", -1) + "'"
+	return "'" + strings.ReplaceAll(name, "'", "''") + "'"
 }
 
 func sanitizeQuoted(in string) string {
@@ -143,10 +143,10 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	}
 
 	query := p.TableTemplate
-	query = strings.Replace(query, "{TABLE}", quoteIdent(metric.Name()), -1)
-	query = strings.Replace(query, "{TABLELITERAL}", quoteStr(metric.Name()), -1)
-	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
-	//query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
+	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
+	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
+	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
+	//query = strings.ReplaceAll(query, "{KEY_COLUMNS}", strings.Join(pk, ","))
 
 	return query
 }
@@ -175,7 +175,7 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 }
 
 func (p *SQL) tableExists(tableName string) bool {
-	stmt := strings.Replace(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName), -1)
+	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
 	return err == nil

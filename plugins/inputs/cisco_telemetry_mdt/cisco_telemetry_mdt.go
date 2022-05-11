@@ -136,7 +136,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	// Fill extra tags
 	c.extraTags = make(map[string]map[string]struct{})
 	for _, tag := range c.EmbeddedTags {
-		dir := strings.Replace(path.Dir(tag), "-", "_", -1)
+		dir := strings.ReplaceAll(path.Dir(tag), "-", "_")
 		if _, hasKey := c.extraTags[dir]; !hasKey {
 			c.extraTags[dir] = make(map[string]struct{})
 		}
@@ -441,7 +441,7 @@ func decodeTag(field *telemetry.TelemetryField) string {
 
 // Recursively parse tag fields
 func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemetry.TelemetryField, prefix string) {
-	localname := strings.Replace(field.Name, "-", "_", -1)
+	localname := strings.ReplaceAll(field.Name, "-", "_")
 	name := localname
 	if len(localname) == 0 {
 		name = prefix
@@ -529,7 +529,7 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 
 func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
-	name := strings.Replace(field.Name, "-", "_", -1)
+	name := strings.ReplaceAll(field.Name, "-", "_")
 
 	if (name == "modTs" || name == "createTs") && decodeValue(field) == "never" {
 		return
@@ -540,7 +540,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		name = prefix + "/" + name
 	}
 
-	extraTags := c.extraTags[strings.Replace(encodingPath, "-", "_", -1)+"/"+name]
+	extraTags := c.extraTags[strings.ReplaceAll(encodingPath, "-", "_")+"/"+name]
 
 	if value := decodeValue(field); value != nil {
 		// Do alias lookup, to shorten measurement names
@@ -571,7 +571,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	if len(extraTags) > 0 {
 		for _, subfield := range field.Fields {
 			if _, isExtraTag := extraTags[subfield.Name]; isExtraTag {
-				tags[name+"/"+strings.Replace(subfield.Name, "-", "_", -1)] = decodeTag(subfield)
+				tags[name+"/"+strings.ReplaceAll(subfield.Name, "-", "_")] = decodeTag(subfield)
 			}
 		}
 	}
