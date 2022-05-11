@@ -233,7 +233,7 @@ func (r *IntelRDT) readData(ctx context.Context, args []string, processesPIDsAss
 
 	if r.UseSudo {
 		// run pqos with `/bin/sh -c "sudo /path/to/pqos ..."`
-		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.Replace(strings.Join(args, " "), ";", "\\;", -1))}
+		args = []string{"-c", fmt.Sprintf("sudo %s %s", r.PqosPath, strings.ReplaceAll(strings.Join(args, " "), ";", "\\;"))}
 		cmd = exec.Command("/bin/sh", args...)
 	}
 

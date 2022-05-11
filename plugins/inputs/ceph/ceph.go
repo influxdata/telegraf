@@ -299,8 +299,8 @@ func (c *Ceph) execute(command string) (string, error) {
 
 	// Ceph doesn't sanitize its output, and may return invalid JSON.  Patch this
 	// up for them, as having some inaccurate data is better than none.
-	output = strings.Replace(output, "-inf", "0", -1)
-	output = strings.Replace(output, "inf", "0", -1)
+	output = strings.ReplaceAll(output, "-inf", "0")
+	output = strings.ReplaceAll(output, "inf", "0")
 
 	return output, nil
 }

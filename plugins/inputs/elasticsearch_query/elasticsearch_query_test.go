@@ -546,9 +546,9 @@ func setupIntegrationTest() error {
 		logline := nginxlog{
 			IPaddress:    parts[0],
 			Timestamp:    time.Now().UTC(),
-			Method:       strings.Replace(parts[5], `"`, "", -1),
+			Method:       strings.ReplaceAll(parts[5], `"`, ""),
 			URI:          parts[6],
-			Httpversion:  strings.Replace(parts[7], `"`, "", -1),
+			Httpversion:  strings.ReplaceAll(parts[7], `"`, ""),
 			Response:     parts[8],
 			Size:         float64(size),
 			ResponseTime: float64(responseTime),

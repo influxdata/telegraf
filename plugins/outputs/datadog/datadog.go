@@ -148,13 +148,13 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
+		return fmt.Errorf("unable to create http.Request, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
+		return fmt.Errorf("error POSTing metrics, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
 	}
 	defer resp.Body.Close()
 

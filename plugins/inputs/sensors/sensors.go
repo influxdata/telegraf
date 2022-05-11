@@ -92,7 +92,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 
 // snake converts string to snake case
 func snake(input string) string {
-	return strings.ToLower(strings.Replace(strings.TrimSpace(input), " ", "_", -1))
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(input), " ", "_"))
 }
 
 func init() {

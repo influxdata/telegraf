@@ -291,7 +291,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 			if len(parts) == 2 {
 				padded := fmt.Sprintf("%-9s", parts[1])
-				nsString := strings.Replace(padded[:9], " ", "0", -1)
+				nsString := strings.ReplaceAll(padded[:9], " ", "0")
 				nanosec, err := strconv.ParseInt(nsString, 10, 64)
 				if err != nil {
 					p.Log.Errorf("Error parsing %s to timestamp: %s", v, err)
@@ -357,7 +357,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case Drop:
 		// goodbye!
 		default:
-			v = strings.Replace(v, ",", ".", -1)
+			v = strings.ReplaceAll(v, ",", ".")
 			ts, err := time.ParseInLocation(t, v, p.loc)
 			if err == nil {
 				if ts.Year() == 0 {

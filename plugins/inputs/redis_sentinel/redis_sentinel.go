@@ -138,7 +138,7 @@ func prepareFieldValues(fields map[string]string, typeMap map[string]configField
 	preparedFields := make(map[string]interface{})
 
 	for key, val := range fields {
-		key = strings.Replace(key, "-", "_", -1)
+		key = strings.ReplaceAll(key, "-", "_")
 
 		valType, ok := typeMap[key]
 		if !ok {

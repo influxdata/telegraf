@@ -141,7 +141,7 @@ func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 			setTagIfUsed(tags, "gpu_id", payload.GpuID)
 			setTagIfUsed(tags, "gpu_unique_id", payload.GpuUniqueID)
 
-			setIfUsed("int", fields, "driver_version", strings.Replace(system["system"].DriverVersion, ".", "", -1))
+			setIfUsed("int", fields, "driver_version", strings.ReplaceAll(system["system"].DriverVersion, ".", ""))
 			setIfUsed("int", fields, "fan_speed", payload.GpuFanSpeedPercentage)
 			setIfUsed("int64", fields, "memory_total", payload.GpuVRAMTotalMemory)
 			setIfUsed("int64", fields, "memory_used", payload.GpuVRAMTotalUsedMemory)

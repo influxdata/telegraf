@@ -227,7 +227,7 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
 		}
 		fields := make(map[string]interface{})
 		for k, v := range stats[pool] {
-			fields[strings.Replace(k, " ", "_", -1)] = v
+			fields[strings.ReplaceAll(k, " ", "_")] = v
 		}
 		acc.AddFields("phpfpm", fields, tags)
 	}
