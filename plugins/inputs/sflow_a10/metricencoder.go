@@ -24,8 +24,8 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 		}
 
 		// this is for 293 and 294
-		// as per A10, each packet of either counter block 293 or 294 is one sample of 293 or 294
-		if sample.SampleCounterData.NeedsIpAndPort() {
+		// as per A10, each packet of either counter block 293 or 294 is just a single sample of 293 or 294
+		if !sample.SampleCounterData.NeedsIpAndPort() {
 			for j := 0; j < len(sample.SampleCounterData.CounterRecords); j++ {
 				counterRecord := sample.SampleCounterData.CounterRecords[j]
 				if counterRecord.CounterData == nil {
@@ -41,6 +41,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 						return nil, err
 					}
 
+					d.debug(fmt.Sprintf("  sending 293 or 294 metric to telegraf %s", m))
 					metrics = append(metrics, m)
 				}
 			}
