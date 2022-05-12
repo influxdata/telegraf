@@ -115,9 +115,11 @@ versioninfo:
 	go run scripts/generate_versioninfo/main.go; \
 	go generate cmd/telegraf/telegraf_windows.go; \
 
+generate_plugins_%:
+	go generate -run="plugindata/main.go$$" ./plugins/$*/...
+
 .PHONY: generate
-generate:
-	go generate -run="plugindata/main.go$$" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+generate: generate_plugins_inputs generate_plugins_outputs generate_plugins_processors generate_plugins_aggregators
 
 .PHONY: generate-clean
 generate-clean:
