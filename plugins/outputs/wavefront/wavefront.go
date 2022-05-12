@@ -242,7 +242,10 @@ func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]strin
 			for k, v := range mTags {
 				if k == s {
 					source = v
-					mTags["telegraf_host"] = mTags["host"]
+					if mTags["host"] != "" {
+						mTags["telegraf_host"] = mTags["host"]
+					}
+
 					sourceTagFound = true
 					delete(mTags, k)
 					break
