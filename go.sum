@@ -2041,8 +2041,8 @@ github.com/shirou/gopsutil/v3 v3.22.3/go.mod h1:D01hZJ4pVHPpCTZ3m3T2+wDF2YAGfd+H
 github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24/go.mod h1:M+9NzErvs504Cn4c5DxATwIqPbtswREoFCre64PpcG4=
 github.com/shopspring/decimal v1.2.0 h1:abSATXmQEYyShuxI4/vyW3tV1MrKAJzCZ/0zLUXYbsQ=
 github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
-github.com/showwin/speedtest-go v1.1.4 h1:pcY1W5LYZu44lH6Fuu80nu/Pj67n//VArlZudbAgR6E=
-github.com/showwin/speedtest-go v1.1.4/go.mod h1:dJugxvC/AQDt4HQQKZ9lKNa2+b1c8nzj9IL0a/F8l1U=
+github.com/showwin/speedtest-go v1.1.5 h1:dud1cS2Qppbm50BrTKzrBj78wY78ORL5LIiRjKexmdY=
+github.com/showwin/speedtest-go v1.1.5/go.mod h1:dJugxvC/AQDt4HQQKZ9lKNa2+b1c8nzj9IL0a/F8l1U=
 github.com/shurcooL/go v0.0.0-20180423040247-9e1955d9fb6e/go.mod h1:TDJrrUr11Vxrven61rcy3hJMUqaf/CLWYhHNPmT14Lk=
 github.com/shurcooL/go-goon v0.0.0-20170922171312-37c2f522c041/go.mod h1:N5mDOmsrJOB+vfqUK+7DmDyjhSLIIBnXo9lvZJj3MWQ=
 github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749/go.mod h1:ZY1cvUeJuFPAdZ/B6v7RHavJWZn2YPVFQ1OSXhCGOkg=
