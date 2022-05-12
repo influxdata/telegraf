@@ -310,8 +310,14 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 
 func stubTCPServer(wg *sync.WaitGroup) {
 	defer wg.Done()
-	tcpAddr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:56789")
-	tcpServer, _ := net.ListenTCP("tcp", tcpAddr)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:56789")
+	if err != nil {
+		fmt.Print(err)
+	}
+	tcpServer, err := net.ListenTCP("tcp", tcpAddr)
+	if err != nil {
+		fmt.Print(err)
+	}
 	defer tcpServer.Close()
 	wg.Done()
 	conn, _ := tcpServer.AcceptTCP()

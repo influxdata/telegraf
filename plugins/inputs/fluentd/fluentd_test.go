@@ -131,7 +131,8 @@ func Test_Gather(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, requestURL)
 
-	ts.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	ts.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	require.NoError(t, err)
 
 	ts.Start()
 
