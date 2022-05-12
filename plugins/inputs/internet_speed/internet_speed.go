@@ -46,14 +46,14 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return fmt.Errorf("fetching user info failed: %v", err)
 		}
-		serverList, err := speedtest.FetchServerList(user)
+		serverList, err := speedtest.FetchServers(user)
 		if err != nil {
 			return fmt.Errorf("fetching server list failed: %v", err)
 		}
-		if len(serverList.Servers) < 1 {
+		if len(serverList) < 1 {
 			return fmt.Errorf("no servers found")
 		}
-		s = serverList.Servers[0]
+		s = serverList[0]
 		is.Log.Debugf("Found server: %v", s)
 		if is.Cache {
 			is.serverCache = s
