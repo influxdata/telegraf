@@ -67,7 +67,6 @@
 
 - [#10462](https://github.com/influxdata/telegraf/pull/10462) `external.psi` Add psi plugin
 
-
 ## v1.22.0
 
 ### Influx Line Protocol Parser
