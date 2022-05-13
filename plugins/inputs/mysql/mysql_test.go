@@ -270,62 +270,12 @@ func TestGatherGlobalVariables(t *testing.T) {
 		{"", fields{{"gtid_mode", "OFF_PERMISSIVE", int64(0), false}}, nil},
 		{"", fields{{"gtid_mode", "ON", int64(1), false}}, nil},
 		{"", fields{{"gtid_mode", "ON_PERMISSIVE", int64(1), false}}, nil},
-
-		// TODO: enable following failing tests by fixing the plugin:
-
-		// {
-		// 	"version tag with many fields", // metrics are sent in packages of 20 fields, so the tags can vary (but should not)
-		// 	fields{
-		// 		{"__test__var01", "text", "text", false},
-		// 		{"__test__var02", "text", "text", false},
-		// 		{"__test__var03", "text", "text", false},
-		// 		{"__test__var04", "text", "text", false},
-		// 		{"__test__var05", "text", "text", false},
-		// 		{"__test__var06", "text", "text", false},
-		// 		{"__test__var07", "text", "text", false},
-		// 		{"__test__var08", "text", "text", false},
-		// 		{"__test__var09", "text", "text", false},
-		// 		{"__test__var10", "text", "text", false},
-		// 		{"__test__var11", "text", "text", false},
-		// 		{"__test__var12", "text", "text", false},
-		// 		{"__test__var13", "text", "text", false},
-		// 		{"__test__var14", "text", "text", false},
-		// 		{"__test__var15", "text", "text", false},
-		// 		{"__test__var16", "text", "text", false},
-		// 		{"__test__var17", "text", "text", false},
-		// 		{"__test__var18", "text", "text", false},
-		// 		{"__test__var19", "text", "text", false},
-		// 		{"__test__var20", "text", "text", false},
-		// 		{"__test__var21", "text", "text", false},
-		// 		{"version", "8.0.27-0ubuntu0.20.04.1", "8.0.27-0ubuntu0.20.04.1", false},
-		// 	},
-		// 	tags{"server": "127.0.0.1:3306", "version": "8.0.27-0ubuntu0.20.04.1"},
-		// },
-		// {
-		// 	"misinterpreted version tags", // e.g. contains("version") also matches "conversion"
-		// 	fields{
-		// 		{"admin_tls_version", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3", false},
-		// 		{"innodb_version", "8.0.27", "8.0.27", false},
-		// 		{"protocol_version", "10", "10", false},
-		// 		{"replica_type_conversions", "", "", false},
-		// 		{"server", "127.0.0.1:3306", "127.0.0.1:3306", false},
-		// 		{"slave_type_conversions", "", "", false},
-		// 		{"tls_version", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3", "TLSv1,TLSv1.1,TLSv1.2,TLSv1.3", false},
-		// 		{"version", "8.0.27-0ubuntu0.20.04.1", "8.0.27-0ubuntu0.20.04.1", false},
-		// 		{"version_comment", "(Ubuntu)", "(Ubuntu)", false},
-		// 		{"version_compile_machine", "x86_64", "x86_64", false},
-		// 		{"version_compile_os", "Linux", "Linux", false},
-		// 		{"version_compile_zlib", "1.2.11", "1.2.11", false},
-		// 	},
-		// 	tags{"server": "127.0.0.1:3306", "version": "8.0.27-0ubuntu0.20.04.1"}, // TODO: Discuss which version tags should be used as tags
-		// },
 	}
 
 	for i, testCase := range testCases {
 		if testCase.name == "" {
 			testCase.name = fmt.Sprintf("#%d", i)
 		}
-
 
 		rows := sqlmock.NewRows(columns)
 		for _, field := range testCase.fields {
