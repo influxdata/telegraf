@@ -2,10 +2,11 @@ package oauth
 
 import (
 	"context"
+	"net/http"
+
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 	"google.golang.org/api/idtoken"
-	"net/http"
 )
 
 type OAuth2Config struct {
