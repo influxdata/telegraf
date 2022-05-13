@@ -28,8 +28,9 @@ The example below has two queries are specified, with the following parameters:
   # to grab metrics for.
   #
   address = "host=localhost user=postgres sslmode=disable"
-  # A list of databases to pull metrics about. If not specified, metrics for all
-  # databases are gathered.
+
+  ## A list of databases to pull metrics about.
+  ## deprecated in 1.22.3; use the sqlquery option to specify database to use
   # databases = ["app_production", "testing"]
 
   ## Whether to use prepared statements when connecting to the database.
@@ -38,20 +39,6 @@ The example below has two queries are specified, with the following parameters:
   prepared_statements = true
 
   # Define the toml config where the sql queries are stored
-  # New queries can be added, if the withdbname is set to true and there is no
-  # databases defined in the 'databases field', the sql query is ended by a 'is
-  # not null' in order to make the query succeed.
-  # Be careful that the sqlquery must contain the where clause with a part of
-  # the filtering, the plugin will add a 'IN (dbname list)' clause if the
-  # withdbname is set to true
-  # Example :
-  # The sqlquery : "SELECT * FROM pg_stat_database where datname" become
-  # "SELECT * FROM pg_stat_database where datname IN ('postgres', 'pgbench')"
-  # because the databases variable was set to ['postgres', 'pgbench' ] and the
-  # withdbname was true.
-  # Be careful that if the withdbname is set to false you don't have to define
-  # the where clause (aka with the dbname)
-  #
   # The script option can be used to specify the .sql file path.
   # If script and sqlquery options specified at same time, sqlquery will be used
   #

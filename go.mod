@@ -28,15 +28,15 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/aws/aws-sdk-go-v2 v1.16.2
-	github.com/aws/aws-sdk-go-v2/config v1.13.1
-	github.com/aws/aws-sdk-go-v2/credentials v1.8.0
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.11.0
+	github.com/aws/aws-sdk-go-v2/config v1.15.3
+	github.com/aws/aws-sdk-go-v2/credentials v1.11.2
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.3
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.7.0
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.13.0
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.4
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.15.3
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.13.0
-	github.com/aws/aws-sdk-go-v2/service/sts v1.14.0
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.3
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.3.2
 	github.com/aws/smithy-go v1.11.2
 	github.com/benbjohnson/clock v1.3.0
@@ -65,6 +65,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/snappy v0.0.4
+	github.com/google/gnxi v0.0.0-20220411075422-cd6b043b7fd0
 	github.com/google/go-cmp v0.5.7
 	github.com/google/go-github/v32 v32.1.0
 	github.com/gopcua/opcua v0.3.3
@@ -78,9 +79,9 @@ require (
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/influxdata/go-syslog/v3 v3.0.0
-	github.com/influxdata/influxdb-observability/common v0.2.17
-	github.com/influxdata/influxdb-observability/influx2otel v0.2.17
-	github.com/influxdata/influxdb-observability/otel2influx v0.2.17
+	github.com/influxdata/influxdb-observability/common v0.2.20
+	github.com/influxdata/influxdb-observability/influx2otel v0.2.20
+	github.com/influxdata/influxdb-observability/otel2influx v0.2.20
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/influxdata/tail v1.0.1-0.20210707231403-b283181d1fa7
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
@@ -104,7 +105,7 @@ require (
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/olivere/elastic v6.2.37+incompatible
-	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
+	github.com/openconfig/gnmi v0.0.0-20200617225440-d2b4e6a45802
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.4.5
 	github.com/openzipkin/zipkin-go v0.2.5
@@ -120,7 +121,7 @@ require (
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/sensu/sensu-go/api/core/v2 v2.13.0
 	github.com/shirou/gopsutil/v3 v3.22.3
-	github.com/showwin/speedtest-go v1.1.4
+	github.com/showwin/speedtest-go v1.1.5
 	github.com/signalfx/golib/v3 v3.3.43
 	github.com/sirupsen/logrus v1.8.1
 	github.com/sleepinggenius2/gosmi v0.4.4
@@ -139,7 +140,7 @@ require (
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.4.1
 	go.mongodb.org/mongo-driver v1.9.0
-	go.opentelemetry.io/collector/model v0.48.0
+	go.opentelemetry.io/collector/pdata v0.51.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.28.0
 	go.opentelemetry.io/otel/metric v0.28.0
 	go.opentelemetry.io/otel/sdk/metric v0.28.0
@@ -153,7 +154,7 @@ require (
 	gonum.org/v1/gonum v0.11.0
 	google.golang.org/api v0.67.0
 	google.golang.org/genproto v0.0.0-20220207164111-0872dc986b00
-	google.golang.org/grpc v1.45.0
+	google.golang.org/grpc v1.46.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
@@ -199,14 +200,14 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.5.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.5 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.4.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.7.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.16.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.9.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.11.3 // indirect
 	github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bitly/go-hostpool v0.1.0 // indirect

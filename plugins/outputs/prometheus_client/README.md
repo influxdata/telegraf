@@ -1,7 +1,7 @@
 # Prometheus Output Plugin
 
-This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes
-all metrics on `/metrics` (default) to be polled by a Prometheus server.
+This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
+metrics on `/metrics` (default) to be polled by a Prometheus server.
 
 ## Configuration
 
@@ -55,6 +55,7 @@ all metrics on `/metrics` (default) to be polled by a Prometheus server.
 
 ## Metrics
 
-Prometheus metrics are produced in the same manner as the [prometheus serializer][].
+Prometheus metrics are produced in the same manner as the [prometheus
+serializer][].
 
 [prometheus serializer]: /plugins/serializers/prometheus/README.md#Metrics

@@ -328,7 +328,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	)
 
 	for _, rawData := range info.DriverStatus {
-		name := strings.ToLower(strings.Replace(rawData[0], " ", "_", -1))
+		name := strings.ToLower(strings.ReplaceAll(rawData[0], " ", "_"))
 		if name == "pool_name" {
 			poolName = rawData[1]
 			continue

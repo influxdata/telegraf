@@ -1,12 +1,14 @@
 # OpenTSDB Output Plugin
 
-This plugin writes to an OpenTSDB instance using either the "telnet" or Http mode.
+This plugin writes to an OpenTSDB instance using either the "telnet" or Http
+mode.
 
 Using the Http API is the recommended way of writing metrics since OpenTSDB 2.0
 To use Http mode, set useHttp to true in config. You can also control how many
 metrics is sent in each http request by setting batchSize in config.
 
-See [the docs](http://opentsdb.net/docs/build/html/api_http/put.html) for details.
+See [the docs](http://opentsdb.net/docs/build/html/api_http/put.html) for
+details.
 
 ## Configuration
 
@@ -47,8 +49,8 @@ The expected input from OpenTSDB is specified in the following way:
 put <metric> <timestamp> <value> <tagk1=tagv1[ tagk2=tagv2 ...tagkN=tagvN]>
 ```
 
-The telegraf output plugin adds an optional prefix to the metric keys so
-that a subamount can be selected.
+The telegraf output plugin adds an optional prefix to the metric keys so that a
+subamount can be selected.
 
 ```text
 put <[prefix.]metric> <timestamp> <value> <tagk1=tagv1[ tagk2=tagv2 ...tagkN=tagvN]>

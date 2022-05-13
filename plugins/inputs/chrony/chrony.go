@@ -82,7 +82,7 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 		if len(stats) < 2 {
 			return nil, nil, fmt.Errorf("unexpected output from chronyc, expected ':' in %s", out)
 		}
-		name := strings.ToLower(strings.Replace(strings.TrimSpace(stats[0]), " ", "_", -1))
+		name := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(stats[0]), " ", "_"))
 		// ignore reference time
 		if strings.Contains(name, "ref_time") {
 			continue

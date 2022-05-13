@@ -1,10 +1,13 @@
 # Graphite Output Plugin
 
-This plugin writes to [Graphite](http://graphite.readthedocs.org/en/latest/index.html)
-via raw TCP.
+This plugin writes to [Graphite][1] via raw TCP.
 
 For details on the translation between Telegraf Metrics and Graphite output,
-see the [Graphite Data Format](../../../docs/DATA_FORMATS_OUTPUT.md)
+see the [Graphite Data Format][2].
+
+[1]: http://graphite.readthedocs.org/en/latest/index.html
+
+[2]: ../../../docs/DATA_FORMATS_OUTPUT.md
 
 ## Configuration
 

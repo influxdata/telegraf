@@ -20,6 +20,12 @@ For better performance, consider execd, which runs continuously.
   ## Command to ingest metrics via stdin.
   command = ["tee", "-a", "/dev/null"]
 
+  ## Environment variables
+  ## Array of "key=value" pairs to pass as environment variables
+  ## e.g. "KEY=value", "USERNAME=John Doe",
+  ## "LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs"
+  # environment = []
+
   ## Timeout for command to complete.
   # timeout = "5s"
 

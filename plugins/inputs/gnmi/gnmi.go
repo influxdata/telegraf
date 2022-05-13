@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/gnxi/utils/xpath"
 	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -57,7 +58,8 @@ type GNMI struct {
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 	// Lookup/device+name/key/value
-	lookup map[string]map[string]map[string]interface{}
+	lookup      map[string]map[string]map[string]interface{}
+	lookupMutex sync.Mutex
 
 	Log telegraf.Logger
 }
@@ -88,7 +90,9 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	var request *gnmiLib.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
+	c.lookupMutex.Lock()
 	c.lookup = make(map[string]map[string]map[string]interface{})
+	c.lookupMutex.Unlock()
 
 	// Validate configuration
 	if request, err = c.newSubscribeRequest(); err != nil {
@@ -142,7 +146,9 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 
 		if subscription.TagOnly {
 			// Create the top-level lookup for this tag
+			c.lookupMutex.Lock()
 			c.lookup[name] = make(map[string]map[string]interface{})
+			c.lookupMutex.Unlock()
 		}
 	}
 	for alias, encodingPath := range c.Aliases {
@@ -310,6 +316,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 
 		// Update tag lookups and discard rest of update
 		subscriptionKey := tags["source"] + "/" + tags["name"]
+		c.lookupMutex.Lock()
 		if _, ok := c.lookup[name]; ok {
 			// We are subscribed to this, so add the fields to the lookup-table
 			if _, ok := c.lookup[name][subscriptionKey]; !ok {
@@ -318,6 +325,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 			for k, v := range fields {
 				c.lookup[name][subscriptionKey][path.Base(k)] = v
 			}
+			c.lookupMutex.Unlock()
 			// Do not process the data further as we only subscribed here for the lookup table
 			continue
 		}
@@ -326,10 +334,11 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 		for subscriptionName, values := range c.lookup {
 			if annotations, ok := values[subscriptionKey]; ok {
 				for k, v := range annotations {
-					tags[subscriptionName+"/"+k] = v.(string)
+					tags[subscriptionName+"/"+k] = fmt.Sprint(v)
 				}
 			}
 		}
+		c.lookupMutex.Unlock()
 
 		// Group metrics
 		for k, v := range fields {
@@ -404,7 +413,7 @@ func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]stri
 		jsondata = val.JsonVal
 	}
 
-	name := strings.Replace(gpath, "-", "_", -1)
+	name := strings.ReplaceAll(gpath, "-", "_")
 	fields := make(map[string]interface{})
 	if value != nil {
 		fields[name] = value
@@ -453,7 +462,7 @@ func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix
 
 		if tags != nil {
 			for key, val := range elem.Key {
-				key = strings.Replace(key, "-", "_", -1)
+				key = strings.ReplaceAll(key, "-", "_")
 
 				// Use short-form of key if possible
 				if _, exists := tags[key]; exists {
@@ -470,66 +479,13 @@ func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix
 
 //ParsePath from XPath-like string to gNMI path structure
 func parsePath(origin string, pathToParse string, target string) (*gnmiLib.Path, error) {
-	var err error
-	gnmiPath := gnmiLib.Path{Origin: origin, Target: target}
-
-	if len(pathToParse) > 0 && pathToParse[0] != '/' {
-		return nil, fmt.Errorf("path does not start with a '/': %s", pathToParse)
-	}
-
-	elem := &gnmiLib.PathElem{}
-	start, name, value, end := 0, -1, -1, -1
-
-	pathToParse = pathToParse + "/"
-
-	for i := 0; i < len(pathToParse); i++ {
-		if pathToParse[i] == '[' {
-			if name >= 0 {
-				break
-			}
-			if end < 0 {
-				end = i
-				elem.Key = make(map[string]string)
-			}
-			name = i + 1
-		} else if pathToParse[i] == '=' {
-			if name <= 0 || value >= 0 {
-				break
-			}
-			value = i + 1
-		} else if pathToParse[i] == ']' {
-			if name <= 0 || value <= name {
-				break
-			}
-			elem.Key[pathToParse[name:value-1]] = strings.Trim(pathToParse[value:i], "'\"")
-			name, value = -1, -1
-		} else if pathToParse[i] == '/' {
-			if name < 0 {
-				if end < 0 {
-					end = i
-				}
-
-				if end > start {
-					elem.Name = pathToParse[start:end]
-					gnmiPath.Elem = append(gnmiPath.Elem, elem)
-					gnmiPath.Element = append(gnmiPath.Element, pathToParse[start:i])
-				}
-
-				start, name, value, end = i+1, -1, -1, -1
-				elem = &gnmiLib.PathElem{}
-			}
-		}
-	}
-
-	if name >= 0 || value >= 0 {
-		err = fmt.Errorf("Invalid gNMI path: %s", pathToParse)
-	}
-
+	gnmiPath, err := xpath.ToGNMIPath(pathToParse)
 	if err != nil {
 		return nil, err
 	}
-
-	return &gnmiPath, nil
+	gnmiPath.Origin = origin
+	gnmiPath.Target = target
+	return gnmiPath, err
 }
 
 // Stop listener and cleanup

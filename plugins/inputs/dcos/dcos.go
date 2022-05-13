@@ -175,7 +175,7 @@ type point struct {
 func (d *DCOS) createPoints(m *Metrics) []*point {
 	points := make(map[string]*point)
 	for _, dp := range m.Datapoints {
-		fieldKey := strings.Replace(dp.Name, ".", "_", -1)
+		fieldKey := strings.ReplaceAll(dp.Name, ".", "_")
 
 		tags := dp.Tags
 		if tags == nil {

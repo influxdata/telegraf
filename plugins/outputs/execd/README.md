@@ -13,6 +13,12 @@ Telegraf minimum version: Telegraf 1.15.0
   ## NOTE: process and each argument should each be their own string
   command = ["my-telegraf-output", "--some-flag", "value"]
 
+  ## Environment variables
+  ## Array of "key=value" pairs to pass as environment variables
+  ## e.g. "KEY=value", "USERNAME=John Doe",
+  ## "LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs"
+  # environment = []
+
   ## Delay before the process is restarted after an unexpected termination
   restart_delay = "10s"
 
@@ -27,4 +33,4 @@ Telegraf minimum version: Telegraf 1.15.0
 
 see [examples][]
 
-[examples]: https://github.com/influxdata/telegraf/blob/master/plugins/outputs/execd/examples/
+[examples]: examples/

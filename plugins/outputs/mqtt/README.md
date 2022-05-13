@@ -1,6 +1,7 @@
 # MQTT Producer Output Plugin
 
-This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt Producer.
+This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt
+Producer.
 
 ## Mosquitto v2.0.12+ and `identifier rejected`
 

@@ -2,6 +2,49 @@
 
 # Changelog
 
+## v1.22.3 [2022-04-28]
+
+### Bugfixes
+
+- [#10961](https://github.com/influxdata/telegraf/pull/10961) Update Go to 1.18.1
+- [#10976](https://github.com/influxdata/telegraf/pull/10976) `inputs.influxdb_listener` Remove duplicate influxdb listener writes with upstream parser
+- [#11024](https://github.com/influxdata/telegraf/pull/11024) `inputs.gnmi` Use external xpath parser for gnmi
+- [#10925](https://github.com/influxdata/telegraf/pull/10925) `inputs.system` Reduce log level in disk plugin back to original level
+
+## v1.22.2 [2022-04-25]
+
+### Bugfixes
+
+- [#11008](https://github.com/influxdata/telegraf/pull/11008) `inputs.gnmi` Add mutex to gnmi lookup map
+- [#11010](https://github.com/influxdata/telegraf/pull/11010) `inputs.gnmi` Use sprint to cast to strings in gnmi
+- [#11001](https://github.com/influxdata/telegraf/pull/11001) `inputs.consul_agent` Use correct auth token with consul_agent
+- [#10486](https://github.com/influxdata/telegraf/pull/10486) `inputs.mysql` Add mariadb_dialect to address the MariaDB differences in INNODB_METRICS
+- [#10923](https://github.com/influxdata/telegraf/pull/10923) `inputs.smart` Correctly parse various numeric forms
+- [#10850](https://github.com/influxdata/telegraf/pull/10850) `inputs.aliyuncms` Ensure aliyuncms metrics accept array, fix discovery
+- [#10930](https://github.com/influxdata/telegraf/pull/10930) `inputs.aerospike` Statistics query bug
+- [#10947](https://github.com/influxdata/telegraf/pull/10947) `inputs.cisco_telemetry_mdt` Align the default value for msg size
+- [#10959](https://github.com/influxdata/telegraf/pull/10959) `inputs.cisco_telemetry_mdt` Remove overly verbose info message from cisco mdt
+- [#10958](https://github.com/influxdata/telegraf/pull/10958) `outputs.influxdb_v2` Improve influxdb_v2 error message
+- [#10932](https://github.com/influxdata/telegraf/pull/10932) `inputs.prometheus` Moved from watcher to informer
+- [#11013](https://github.com/influxdata/telegraf/pull/11013) Also allow 0 outputs when using test-wait parameter
+- [#11015](https://github.com/influxdata/telegraf/pull/11015) Allow Makefile to work on Windows
+
+### Dependency Updates
+
+- [#10966](https://github.com/influxdata/telegraf/pull/10966) Update github.com/Azure/azure-kusto-go from 0.5.0 to 0.60
+- [#10963](https://github.com/influxdata/telegraf/pull/10963) Update opentelemetry from v0.2.10 to v0.2.17
+- [#10984](https://github.com/influxdata/telegraf/pull/10984) Update go.opentelemetry.io/collector/pdata from v0.48.0 to v0.49.0
+- [#10998](https://github.com/influxdata/telegraf/pull/10998) Update github.com/aws/aws-sdk-go-v2/config from 1.13.1 to 1.15.3
+- [#10997](https://github.com/influxdata/telegraf/pull/10997) Update github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs
+- [#10975](https://github.com/influxdata/telegraf/pull/10975) Update github.com/aws/aws-sdk-go-v2/credentials from 1.8.0 to 1.11.2
+- [#10981](https://github.com/influxdata/telegraf/pull/10981) Update github.com/containerd/containerd from v1.5.9 to v1.5.11
+- [#10973](https://github.com/influxdata/telegraf/pull/10973) Update github.com/miekg/dns from 1.1.46 to 1.1.48
+- [#10974](https://github.com/influxdata/telegraf/pull/10974) Update github.com/gopcua/opcua from v0.3.1 to v0.3.3
+- [#10972](https://github.com/influxdata/telegraf/pull/10972) Update github.com/aws/aws-sdk-go-v2/service/dynamodb
+- [#10773](https://github.com/influxdata/telegraf/pull/10773) Update github.com/xdg/scram from 1.0.3 to 1.0.5
+- [#10971](https://github.com/influxdata/telegraf/pull/10971) Update go.mongodb.org/mongo-driver from 1.8.3 to 1.9.0
+- [#10940](https://github.com/influxdata/telegraf/pull/10940) Update starlark 7a1108eaa012->d1966c6b9fcd
+
 ## v1.22.1 [2022-04-06]
 
 ### Bugfixes

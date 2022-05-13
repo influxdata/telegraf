@@ -126,28 +126,39 @@ The Timestream output plugin writes metrics to the [Amazon Timestream] service.
 
 ### Batching
 
-Timestream WriteInputRequest.CommonAttributes are used to efficiently write data to Timestream.
+Timestream WriteInputRequest.CommonAttributes are used to efficiently write data
+to Timestream.
 
 ### Multithreading
 
-Single thread is used to write the data to Timestream, following general plugin design pattern.
+Single thread is used to write the data to Timestream, following general plugin
+design pattern.
 
 ### Errors
 
-In case of an attempt to write an unsupported by Timestream Telegraf Field type, the field is dropped and error is emitted to the logs.
+In case of an attempt to write an unsupported by Timestream Telegraf Field type,
+the field is dropped and error is emitted to the logs.
 
-In case of receiving ThrottlingException or InternalServerException from Timestream, the errors are returned to Telegraf, in which case Telegraf will keep the metrics in buffer and retry writing those metrics on the next flush.
+In case of receiving ThrottlingException or InternalServerException from
+Timestream, the errors are returned to Telegraf, in which case Telegraf will
+keep the metrics in buffer and retry writing those metrics on the next flush.
 
 In case of receiving ResourceNotFoundException:
 
-- If `create_table_if_not_exists` configuration is set to `true`, the plugin will try to create appropriate table and write the records again, if the table creation was successful.
-- If `create_table_if_not_exists` configuration is set to `false`, the records are dropped, and an error is emitted to the logs.
+- If `create_table_if_not_exists` configuration is set to `true`, the plugin
+  will try to create appropriate table and write the records again, if the table
+  creation was successful.
+- If `create_table_if_not_exists` configuration is set to `false`, the records
+  are dropped, and an error is emitted to the logs.
 
-In case of receiving any other AWS error from Timestream, the records are dropped, and an error is emitted to the logs, as retrying such requests isn't likely to succeed.
+In case of receiving any other AWS error from Timestream, the records are
+dropped, and an error is emitted to the logs, as retrying such requests isn't
+likely to succeed.
 
 ### Logging
 
-Turn on debug flag in the Telegraf to turn on detailed logging (including records being written to Timestream).
+Turn on debug flag in the Telegraf to turn on detailed logging (including
+records being written to Timestream).
 
 ### Testing
 

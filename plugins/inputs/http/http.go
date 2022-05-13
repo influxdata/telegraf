@@ -188,6 +188,7 @@ func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) 
 		}
 		return rc, nil
 	}
+
 	return io.NopCloser(reader), nil
 }
 

@@ -1,6 +1,9 @@
-# Riemann Legacy
+# Riemann Legacy Output Plugin
 
-This is a deprecated plugin
+This is a deprecated plugin. Please use the [Riemann Output Plugin][new]
+instead.
+
+[new]: ../riemann/README.md
 
 ## Configuration
 

@@ -522,15 +522,15 @@ func New() *CloudWatch {
 }
 
 func sanitizeMeasurement(namespace string) string {
-	namespace = strings.Replace(namespace, "/", "_", -1)
+	namespace = strings.ReplaceAll(namespace, "/", "_")
 	namespace = snakeCase(namespace)
 	return "cloudwatch_" + namespace
 }
 
 func snakeCase(s string) string {
 	s = internal.SnakeCase(s)
-	s = strings.Replace(s, " ", "_", -1)
-	s = strings.Replace(s, "__", "_", -1)
+	s = strings.ReplaceAll(s, " ", "_")
+	s = strings.ReplaceAll(s, "__", "_")
 	return s
 }
 

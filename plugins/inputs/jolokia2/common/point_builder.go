@@ -143,7 +143,7 @@ func (pb *pointBuilder) formatFieldName(attribute, path string) string {
 	}
 
 	if path != "" {
-		fieldName = fieldName + fieldSeparator + strings.Replace(path, "/", fieldSeparator, -1)
+		fieldName = fieldName + fieldSeparator + strings.ReplaceAll(path, "/", fieldSeparator)
 	}
 
 	return fieldName
@@ -200,7 +200,7 @@ func (pb *pointBuilder) applySubstitutions(mbean string, fieldMap map[string]int
 		substitution := properties[subKey]
 
 		for fieldName, fieldValue := range fieldMap {
-			newFieldName := strings.Replace(fieldName, symbol, substitution, -1)
+			newFieldName := strings.ReplaceAll(fieldName, symbol, substitution)
 			if fieldName != newFieldName {
 				fieldMap[newFieldName] = fieldValue
 				delete(fieldMap, fieldName)

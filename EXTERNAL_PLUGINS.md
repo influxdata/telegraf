@@ -38,3 +38,4 @@ Pull requests welcome.
 ## Processors
 
 - [geoip](https://github.com/a-bali/telegraf-geoip) - Add GeoIP information to IP addresses.
+- [metadata](https://github.com/lawdt/metadata) - Appends metadata gathered from Openstack to metrics.

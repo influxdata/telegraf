@@ -232,7 +232,7 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	if !*fTest && len(c.Outputs) == 0 {
+	if !(*fTest || *fTestWait != 0) && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
 	if *fPlugins == "" && len(c.Inputs) == 0 {
