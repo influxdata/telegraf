@@ -290,15 +290,15 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 	var err error
 	turboRatioLimitGroups := make(map[int]uint64)
 
-	var cpuID = "-1"
-	var model = "-1"
+	var cpuID = ""
+	var model = ""
 	for _, v := range p.cpuInfo {
 		if v.physicalID == socketID {
 			cpuID = v.cpuID
 			model = v.model
 		}
 	}
-	if cpuID == "-1" || model == "-1" {
+	if cpuID == "" || model == "" {
 		p.Log.Debugf("error while reading socket ID")
 		return
 	}
@@ -333,7 +333,7 @@ func (p *PowerStat) addTurboRatioLimit(socketID string, acc telegraf.Accumulator
 		(model != strconv.FormatInt(0x2F, 10)) && // INTEL_FAM6_WESTMERE_EX
 		(model != strconv.FormatInt(0x57, 10)) && // INTEL_FAM6_XEON_PHI_KNL
 		(model != strconv.FormatInt(0x85, 10)) { // INTEL_FAM6_XEON_PHI_KNM
-		coreCounts := uint64(0x0807060504030201)     // default value (counting the number of active cores 1 to 8). May be change in "if" segment below
+		coreCounts := uint64(0x0807060504030201)     // default value (counting the number of active cores 1 to 8). May be changed in "if" segment below
 		if (model == strconv.FormatInt(0x5C, 10)) || // INTEL_FAM6_ATOM_GOLDMONT
 			(model == strconv.FormatInt(0x55, 10)) || // INTEL_FAM6_SKYLAKE_X
 			(model == strconv.FormatInt(0x6C, 10) || model == strconv.FormatInt(0x8F, 10) || model == strconv.FormatInt(0x6A, 10)) || // INTEL_FAM6_ICELAKE_X

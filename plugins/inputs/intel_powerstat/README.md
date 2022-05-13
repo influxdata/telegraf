@@ -11,19 +11,20 @@ to take preventive/corrective actions based on platform busyness, CPU temperatur
 ```toml
 # Intel PowerStat plugin enables monitoring of platform metrics (power, TDP) and per-CPU metrics like temperature, power and utilization.
 [[inputs.intel_powerstat]]
-  ## Some package metrics are collected by Intel PowerStat plugin by default.
-  ## User can choose which per-Core metrics are monitored by the plugin in package_metrics array.
-  ## No array means default metrics per-Core will be collected by the plugin.
-  ## Empty array means no per-Core metrics will be collected by the plugin.
-  ## User can choose which per-CPU metrics are monitored by the plugin in cpu_metrics array.
-  ## Empty or missing array means no per-CPU specific metrics will be collected by the plugin.
-  # Supported options:
-  #   "current_power_consumption", "current_dram_power_consumption", "thermal_design_power", "max_turbo_frequency"
+  ## The user can choose which package metrics are monitored by the plugin with the package_metrics setting:
+  ## - The default, will collect "current_power_consumption", "current_dram_power_consumption" and "thermal_design_power"
+  ## - Setting this value to an empty array means no package metrics will be collected
+  ## - Finally, a user can specify individual metrics to capture from the supported options list
+  ## Supported options:
+  ##   "current_power_consumption", "current_dram_power_consumption", "thermal_design_power", "max_turbo_frequency"
   # package_metrics = ["current_power_consumption", "current_dram_power_consumption", "thermal_design_power"]
-  # Supported options:
-  #   "cpu_frequency", "cpu_c0_state_residency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature", "cpu_busy_frequency"
+
+  ## The user can choose which per-CPU metrics are monitored by the plugin in cpu_metrics array.
+  ## Empty or missing array means no per-CPU specific metrics will be collected by the plugin.
+  ## Supported options:
+  ##   "cpu_frequency", "cpu_c0_state_residency", "cpu_c1_state_residency", "cpu_c6_state_residency", "cpu_busy_cycles", "cpu_temperature", "cpu_busy_frequency"
+  ## ATTENTION: cpu_busy_cycles option is DEPRECATED - superseded by cpu_c0_state_residency
   # cpu_metrics = []
-  ## ATTENTION: metric cpu_busy_cycles is DEPRECATED - superseded by cpu_c0_state_residency_percent
 ```
 
 ## Example: Configuration with no per-CPU telemetry
@@ -43,18 +44,18 @@ This configuration allows getting default processor package specific metrics, no
 [[inputs.intel_powerstat]]
 ```
 
-## Example: Configuration for CPU Temperature and Frequency and processor package metrics
+## Example: Configuration for CPU Temperature and CPU Frequency
 
-This configuration allows getting default processor package specific metrics, plus subset of per-CPU metrics (CPU Temperature and Current Frequency):
+This configuration allows getting default processor package specific metrics, plus subset of per-CPU metrics (CPU Temperature and CPU Frequency):
 
 ```toml
 [[inputs.intel_powerstat]]
   cpu_metrics = ["cpu_frequency", "cpu_temperature"]
 ```
 
-## Example: Configuration for CPU Temperature and Frequency only
+## Example: Configuration for CPU Temperature and CPU Frequency without default package metrics
 
-This configuration allows getting default processor package specific metrics, plus subset of per-CPU metrics (CPU Temperature and Current Frequency):
+This configuration allows getting only a subset of per-CPU metrics (CPU Temperature and CPU Frequency):
 
 ```toml
 [[inputs.intel_powerstat]]
@@ -64,7 +65,7 @@ This configuration allows getting default processor package specific metrics, pl
 
 ## Example: Configuration with all available metrics
 
-This configuration allows getting processor package specific metrics and all per-CPU metrics:
+This configuration allows getting all processor package specific metrics and all per-CPU metrics:
 
 ```toml
 [[inputs.intel_powerstat]]
@@ -236,8 +237,6 @@ When starting to measure metrics, plugin skips first iteration of metrics if the
       | `current_dram_power_consumption_watts` | Current power consumption of processor package DRAM subsystem | Watts |
       | `max_turbo_frequency_mhz`| Maximum reachable turbo frequency for number of cores active | MHz
 
-### Example Output
-
 ### Known issues
 
 From linux kernel version v5.4.77 with [this kernel change](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit/?h=v5.4.77&id=19f6d91bdad42200aac557a683c17b1f65ee6c94)
@@ -251,16 +250,18 @@ For example to give all users permission to all files in `intel-rapl` directory:
 sudo chmod -R a+rx /sys/devices/virtual/powercap/intel-rapl/
 ```
 
+### Example Output
+
 ```shell
 powerstat_package,host=ubuntu,package_id=0 thermal_design_power_watts=160 1606494744000000000
 powerstat_package,host=ubuntu,package_id=0 current_power_consumption_watts=35 1606494744000000000
 powerstat_package,host=ubuntu,package_id=0 current_dram_power_consumption_watts=13.94 1606494744000000000
+powerstat_package,host=ubuntu,package_id=0,active_cores=0 max_turbo_frequency_mhz=3000i 1606494744000000000
+powerstat_package,host=ubuntu,package_id=0,active_cores=1 max_turbo_frequency_mhz=2800i 1606494744000000000
 powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_frequency_mhz=1200.29 1606494744000000000
 powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_temperature_celsius=34i 1606494744000000000
 powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_c6_state_residency_percent=92.52 1606494744000000000
 powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_c1_state_residency_percent=6.68 1606494744000000000
 powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_c0_state_residency_percent=0.8 1606494744000000000
 powerstat_core,core_id=0,cpu_id=0,host=ubuntu,package_id=0 cpu_busy_frequency_mhz=1213.24 1606494744000000000
-powerstat_package,host=ubuntu,package_id=0,active_cores=0 max_turbo_frequency_mhz=3000i 1606494744000000000
-powerstat_package,host=ubuntu,package_id=0,active_cores=1 max_turbo_frequency_mhz=2800i 1606494744000000000
 ```
