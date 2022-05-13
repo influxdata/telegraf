@@ -28,6 +28,9 @@ type (
 		SingleTableName                                    string `toml:"single_table_name"`
 		SingleTableDimensionNameForTelegrafMeasurementName string `toml:"single_table_dimension_name_for_telegraf_measurement_name"`
 
+		UseMultiMeasureRecords            bool   `toml:"use_multi_measure_records"`
+		MeasureNameForMultiMeasureRecords string `toml:"measure_name_for_multi_measure_records"`
+
 		CreateTableIfNotExists                        bool              `toml:"create_table_if_not_exists"`
 		CreateTableMagneticStoreRetentionPeriodInDays int64             `toml:"create_table_magnetic_store_retention_period_in_days"`
 		CreateTableMemoryStoreRetentionPeriodInHours  int64             `toml:"create_table_memory_store_retention_period_in_hours"`
@@ -89,9 +92,13 @@ func (t *Timestream) Connect() error {
 			return fmt.Errorf("in '%s' mapping mode, SingleTableName key is required", MappingModeSingleTable)
 		}
 
-		if t.SingleTableDimensionNameForTelegrafMeasurementName == "" {
+		if t.SingleTableDimensionNameForTelegrafMeasurementName == "" && !t.UseMultiMeasureRecords {
 			return fmt.Errorf("in '%s' mapping mode, SingleTableDimensionNameForTelegrafMeasurementName key is required",
 				MappingModeSingleTable)
+		}
+
+		if t.UseMultiMeasureRecords && t.MeasureNameForMultiMeasureRecords != "" {
+			return fmt.Errorf("in '%s' mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is invalid", MappingModeMultiTable)
 		}
 	}
 
@@ -102,6 +109,10 @@ func (t *Timestream) Connect() error {
 
 		if t.SingleTableDimensionNameForTelegrafMeasurementName != "" {
 			return fmt.Errorf("in '%s' mapping mode, do not specify SingleTableDimensionNameForTelegrafMeasurementName key", MappingModeMultiTable)
+		}
+
+		if t.UseMultiMeasureRecords && t.MeasureNameForMultiMeasureRecords == "" {
+			return fmt.Errorf("in '%s' mapping mode, with multi-measure enabled, key MeasureNameForMultiMeasureRecords is required", MappingModeMultiTable)
 		}
 	}
 
@@ -209,7 +220,6 @@ func (t *Timestream) Write(metrics []telegraf.Metric) error {
 }
 
 func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteRecordsInput, resourceNotFoundRetry bool) error {
-	t.Log.Debugf("Writing to Timestream: '%v' with ResourceNotFoundRetry: '%t'", writeRecordsInput, resourceNotFoundRetry)
 
 	_, err := t.svc.WriteRecords(context.Background(), writeRecordsInput)
 	if err != nil {
@@ -223,6 +233,10 @@ func (t *Timestream) writeToTimestream(writeRecordsInput *timestreamwrite.WriteR
 				return t.createTableAndRetry(writeRecordsInput)
 			}
 			t.logWriteToTimestreamError(notFound, writeRecordsInput.TableName)
+			// log error and return error to telegraf to retry in next flush interval
+			// We need this is to avoid data drop when there are no tables present in the database
+			return fmt.Errorf("Failed to write to Timestream database '%s' table '%s'. Skipping metric! Error: '%s'",
+				t.DatabaseName, *writeRecordsInput.TableName, err)
 		}
 
 		var rejected *types.RejectedRecordsException
@@ -369,7 +383,7 @@ func (t *Timestream) buildDimensions(point telegraf.Metric) []types.Dimension {
 		}
 		dimensions = append(dimensions, dimension)
 	}
-	if t.MappingMode == MappingModeSingleTable {
+	if t.MappingMode == MappingModeSingleTable && !t.UseMultiMeasureRecords {
 		dimension := types.Dimension{
 			Name:  aws.String(t.SingleTableDimensionNameForTelegrafMeasurementName),
 			Value: aws.String(point.Name()),
@@ -384,6 +398,14 @@ func (t *Timestream) buildDimensions(point telegraf.Metric) []types.Dimension {
 // Records with unsupported Metric Field type are skipped.
 // It returns an array of Timestream write records.
 func (t *Timestream) buildWriteRecords(point telegraf.Metric) []types.Record {
+	if t.UseMultiMeasureRecords {
+		return t.buildMultiMeasureWriteRecords(point)
+	} else {
+		return t.buildSingleWriteRecords(point)
+	}
+}
+
+func (t *Timestream) buildSingleWriteRecords(point telegraf.Metric) []types.Record {
 	var records []types.Record
 
 	dimensions := t.buildDimensions(point)
@@ -409,6 +431,53 @@ func (t *Timestream) buildWriteRecords(point telegraf.Metric) []types.Record {
 		}
 		records = append(records, record)
 	}
+	return records
+}
+
+func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []types.Record {
+	var records []types.Record
+	dimensions := t.buildDimensions(point)
+
+	var multiMeasureName = ""
+
+	if t.MappingMode == MappingModeSingleTable {
+		multiMeasureName = point.Name()
+	} else {
+		multiMeasureName = t.MeasureNameForMultiMeasureRecords
+	}
+
+	//list of Multi measure value.
+
+	var multiMeasures []types.MeasureValue
+
+	for fieldName, fieldValue := range point.Fields() {
+		stringFieldValue, stringFieldValueType, ok := convertValue(fieldValue)
+		if !ok {
+			t.Log.Errorf("Skipping field '%s'. The type '%s' is not supported in Timestream as MeasureValue. "+
+				"Supported values are: [int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool]",
+				fieldName, reflect.TypeOf(fieldValue))
+			continue
+		}
+		multiMeasures = append(multiMeasures, types.MeasureValue{
+			Name:  aws.String(fieldName),
+			Type:  stringFieldValueType,
+			Value: aws.String(stringFieldValue),
+		})
+	}
+
+	timeUnit, timeValue := getTimestreamTime(point.Time())
+
+	record := types.Record{
+		MeasureName:      aws.String(multiMeasureName),
+		MeasureValueType: "MULTI",
+		MeasureValues:    multiMeasures,
+		Dimensions:       dimensions,
+		Time:             aws.String(timeValue),
+		TimeUnit:         timeUnit,
+	}
+
+	records = append(records, record)
+
 	return records
 }
 
