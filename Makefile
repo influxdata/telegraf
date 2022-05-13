@@ -115,7 +115,11 @@ versioninfo:
 	go run scripts/generate_versioninfo/main.go; \
 	go generate cmd/telegraf/telegraf_windows.go; \
 
-generate_plugins_%:
+.PHONY: build_generator
+build_generator:
+	go build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
+
+generate_plugins_%: build_generator
 	go generate -run="plugindata/main.go$$" ./plugins/$*/...
 
 .PHONY: generate
@@ -225,6 +229,8 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -rf tools/readme_config_includer/generator
+	rm -rf tools/readme_config_includer/generator.exe
 
 .PHONY: docker-image
 docker-image:
