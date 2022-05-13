@@ -110,7 +110,7 @@ format by default.
 ### Google API Auth
 
 Configuring the `credentials_file` to the path to the json key allows Telegraf's http output plugin to communicate with
-Google Cloud APIs. To learn about creating Google service accounts, consult Google's 
+Google Cloud APIs. To learn about creating Google service accounts, consult Google's
 [oauth2 service account documentation][create_service_account]. An example use case is a metrics proxy deployed to
 Cloud Run. In this example, the service account must have the "run.routes.invoke" permission.
 
