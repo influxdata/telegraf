@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"golang.org/x/oauth2"
@@ -43,7 +44,7 @@ func (o *OAuth2Config) GetAccessToken(ctx context.Context, audience string) erro
 
 	token, err := ts.Token()
 	if err != nil {
-		return err
+		return fmt.Errorf("error fetching oauth2 token: %s", err)
 	}
 
 	o.AccessToken = token
