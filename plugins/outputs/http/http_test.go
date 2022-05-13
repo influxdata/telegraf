@@ -570,7 +570,6 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 				HTTPClientConfig: httpconfig.HTTPClientConfig{
 					OAuth2Config: oauth.OAuth2Config{
 						CredentialsFile: tmpFile.Name(),
-						TokenURL:        u.String() + "/token",
 					},
 				},
 			},
