@@ -39,7 +39,7 @@ func (o *OAuth2Config) CreateOauth2Client(ctx context.Context, client *http.Clie
 func (o *OAuth2Config) GetAccessToken(ctx context.Context, audience string) error {
 	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithCredentialsFile(o.CredentialsFile))
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating oauth2 token source: %s", err)
 	}
 
 	token, err := ts.Token()
