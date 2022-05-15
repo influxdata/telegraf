@@ -18,4 +18,6 @@ The RedisTimeSeries output plugin writes metrics to the RedisTimeSeries server.
 
 ## Optional parameters
 
+* `username`: The username to connect to the RedisTimeSeries server.
 * `password`: The password to connect RedisTimeSeries server.
+* `db`: The redis database (an integer)

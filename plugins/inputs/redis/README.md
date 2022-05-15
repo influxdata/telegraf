@@ -26,7 +26,8 @@
   #   # Can be "string", "integer", or "float"
   #   type = "string"
 
-  ## specify server password
+  ## specify server connection parameters
+  # username = "myuser"
   # password = "s#cr@t%"
 
   ## Optional TLS Config
