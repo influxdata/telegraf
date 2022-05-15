@@ -219,17 +219,15 @@ func (b *burrow) createClient() (*http.Client, error) {
 		return nil, err
 	}
 
-	var transport http.Transport
 	timeout := time.Duration(b.ResponseTimeout)
-	transport.DialContext = (&net.Dialer{
-		Timeout: timeout,
-		DualStack: true,
-	}).DialContext
-	transport.TLSClientConfig = tlsCfg
-	transport.MaxIdleConnsPerHost = b.ConcurrentConnections / 2
-	transport.MaxConnsPerHost = b.ConcurrentConnections
-	transport.ResponseHeaderTimeout = timeout
-	transport.IdleConnTimeout = 90*time.Second
+	transport := http.Transport{
+		DialContext: &net.Dialer{Timeout: timeout, DualStack: true}.DialContext,
+		TLSClientConfig: tlsCfg,
+		MaxIdleConnsPerHost: b.ConcurrentConnections / 2,
+		MaxConnsPerHost: b.ConcurrentConnections,
+		ResponseHeaderTimeout: timeout,
+		IdleConnTimeout: 90*time.Second,
+	}
 
 	client := &http.Client{
 		Transport: &transport,
