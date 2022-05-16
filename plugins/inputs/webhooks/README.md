@@ -63,6 +63,9 @@ sudo service telegraf start
     ## HTTP basic auth
     #username = ""
     #password = ""
+  
+  [inputs.webhooks.artifactory]
+    path = "/artifactory"
 ```
 
 ## Available webhooks
@@ -73,6 +76,7 @@ sudo service telegraf start
 - [Rollbar](rollbar/)
 - [Papertrail](papertrail/)
 - [Particle](particle/)
+- [Artifactory](artifactory/)
 
 ## Adding new webhooks plugin
 
