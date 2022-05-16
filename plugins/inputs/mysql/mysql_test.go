@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -197,11 +196,10 @@ func TestGatherGlobalVariables(t *testing.T) {
 	columns := []string{"Variable_name", "Value"}
 	measurement := "mysql_variables"
 
-	type fields []*struct {
+	type fields []struct {
 		key         string
 		rawValue    string
 		parsedValue interface{}
-		observed    bool
 	}
 	type tags map[string]string
 	testCases := []struct {
@@ -212,64 +210,64 @@ func TestGatherGlobalVariables(t *testing.T) {
 		{
 			"basic variables",
 			fields{
-				{"__test__string_variable", "text", "text", false},
-				{"__test__int_variable", "5", int64(5), false},
-				{"__test__off_variable", "OFF", int64(0), false},
-				{"__test__on_variable", "ON", int64(1), false},
-				{"__test__empty_variable", "", nil, false},
+				{"__test__string_variable", "text", "text"},
+				{"__test__int_variable", "5", int64(5)},
+				{"__test__off_variable", "OFF", int64(0)},
+				{"__test__on_variable", "ON", int64(1)},
+				{"__test__empty_variable", "", nil},
 			},
 			tags{"server": "127.0.0.1:3306"},
 		},
 		{
 			"version tag is present",
 			fields{
-				{"__test__string_variable", "text", "text", false},
-				{"version", "8.0.27-0ubuntu0.20.04.1", "8.0.27-0ubuntu0.20.04.1", false},
+				{"__test__string_variable", "text", "text"},
+				{"version", "8.0.27-0ubuntu0.20.04.1", "8.0.27-0ubuntu0.20.04.1"},
 			},
 			tags{"server": "127.0.0.1:3306", "version": "8.0.27-0ubuntu0.20.04.1"},
 		},
 
-		{"", fields{{"delay_key_write", "OFF", "OFF", false}}, nil},
-		{"", fields{{"delay_key_write", "ON", "ON", false}}, nil},
-		{"", fields{{"delay_key_write", "ALL", "ALL", false}}, nil},
-		{"", fields{{"enforce_gtid_consistency", "OFF", "OFF", false}}, nil},
-		{"", fields{{"enforce_gtid_consistency", "ON", "ON", false}}, nil},
-		{"", fields{{"enforce_gtid_consistency", "WARN", "WARN", false}}, nil},
-		{"", fields{{"event_scheduler", "NO", "NO", false}}, nil},
-		{"", fields{{"event_scheduler", "YES", "YES", false}}, nil},
-		{"", fields{{"event_scheduler", "DISABLED", "DISABLED", false}}, nil},
-		{"", fields{{"have_ssl", "DISABLED", int64(0), false}}, nil},
-		{"", fields{{"have_ssl", "YES", int64(1), false}}, nil},
-		{"", fields{{"have_symlink", "NO", int64(0), false}}, nil},
-		{"", fields{{"have_symlink", "DISABLED", int64(0), false}}, nil},
-		{"", fields{{"have_symlink", "YES", int64(1), false}}, nil},
-		{"", fields{{"session_track_gtids", "OFF", "OFF", false}}, nil},
-		{"", fields{{"session_track_gtids", "OWN_GTID", "OWN_GTID", false}}, nil},
-		{"", fields{{"session_track_gtids", "ALL_GTIDS", "ALL_GTIDS", false}}, nil},
-		{"", fields{{"session_track_transaction_info", "OFF", "OFF", false}}, nil},
-		{"", fields{{"session_track_transaction_info", "STATE", "STATE", false}}, nil},
-		{"", fields{{"session_track_transaction_info", "CHARACTERISTICS", "CHARACTERISTICS", false}}, nil},
-		{"", fields{{"ssl_fips_mode", "0", "0", false}}, nil}, // TODO: map this to OFF or vice versa using integers
-		{"", fields{{"ssl_fips_mode", "1", "1", false}}, nil}, // TODO: map this to ON or vice versa using integers
-		{"", fields{{"ssl_fips_mode", "2", "2", false}}, nil}, // TODO: map this to STRICT or vice versa using integers
-		{"", fields{{"ssl_fips_mode", "OFF", "OFF", false}}, nil},
-		{"", fields{{"ssl_fips_mode", "ON", "ON", false}}, nil},
-		{"", fields{{"ssl_fips_mode", "STRICT", "STRICT", false}}, nil},
-		{"", fields{{"use_secondary_engine", "OFF", "OFF", false}}, nil},
-		{"", fields{{"use_secondary_engine", "ON", "ON", false}}, nil},
-		{"", fields{{"use_secondary_engine", "FORCED", "FORCED", false}}, nil},
-		{"", fields{{"transaction_write_set_extraction", "OFF", "OFF", false}}, nil},
-		{"", fields{{"transaction_write_set_extraction", "MURMUR32", "MURMUR32", false}}, nil},
-		{"", fields{{"transaction_write_set_extraction", "XXHASH64", "XXHASH64", false}}, nil},
-		{"", fields{{"slave_skip_errors", "OFF", "OFF", false}}, nil},
-		{"", fields{{"slave_skip_errors", "0", "0", false}}, nil},
-		{"", fields{{"slave_skip_errors", "1007,1008,1050", "1007,1008,1050", false}}, nil},
-		{"", fields{{"slave_skip_errors", "all", "all", false}}, nil},
-		{"", fields{{"slave_skip_errors", "ddl_exist_errors", "ddl_exist_errors", false}}, nil},
-		{"", fields{{"gtid_mode", "OFF", int64(0), false}}, nil},
-		{"", fields{{"gtid_mode", "OFF_PERMISSIVE", int64(0), false}}, nil},
-		{"", fields{{"gtid_mode", "ON", int64(1), false}}, nil},
-		{"", fields{{"gtid_mode", "ON_PERMISSIVE", int64(1), false}}, nil},
+		{"", fields{{"delay_key_write", "OFF", "OFF"}}, nil},
+		{"", fields{{"delay_key_write", "ON", "ON"}}, nil},
+		{"", fields{{"delay_key_write", "ALL", "ALL"}}, nil},
+		{"", fields{{"enforce_gtid_consistency", "OFF", "OFF"}}, nil},
+		{"", fields{{"enforce_gtid_consistency", "ON", "ON"}}, nil},
+		{"", fields{{"enforce_gtid_consistency", "WARN", "WARN"}}, nil},
+		{"", fields{{"event_scheduler", "NO", "NO"}}, nil},
+		{"", fields{{"event_scheduler", "YES", "YES"}}, nil},
+		{"", fields{{"event_scheduler", "DISABLED", "DISABLED"}}, nil},
+		{"", fields{{"have_ssl", "DISABLED", int64(0)}}, nil},
+		{"", fields{{"have_ssl", "YES", int64(1)}}, nil},
+		{"", fields{{"have_symlink", "NO", int64(0)}}, nil},
+		{"", fields{{"have_symlink", "DISABLED", int64(0)}}, nil},
+		{"", fields{{"have_symlink", "YES", int64(1)}}, nil},
+		{"", fields{{"session_track_gtids", "OFF", "OFF"}}, nil},
+		{"", fields{{"session_track_gtids", "OWN_GTID", "OWN_GTID"}}, nil},
+		{"", fields{{"session_track_gtids", "ALL_GTIDS", "ALL_GTIDS"}}, nil},
+		{"", fields{{"session_track_transaction_info", "OFF", "OFF"}}, nil},
+		{"", fields{{"session_track_transaction_info", "STATE", "STATE"}}, nil},
+		{"", fields{{"session_track_transaction_info", "CHARACTERISTICS", "CHARACTERISTICS"}}, nil},
+		{"", fields{{"ssl_fips_mode", "0", "0"}}, nil}, // TODO: map this to OFF or vice versa using integers
+		{"", fields{{"ssl_fips_mode", "1", "1"}}, nil}, // TODO: map this to ON or vice versa using integers
+		{"", fields{{"ssl_fips_mode", "2", "2"}}, nil}, // TODO: map this to STRICT or vice versa using integers
+		{"", fields{{"ssl_fips_mode", "OFF", "OFF"}}, nil},
+		{"", fields{{"ssl_fips_mode", "ON", "ON"}}, nil},
+		{"", fields{{"ssl_fips_mode", "STRICT", "STRICT"}}, nil},
+		{"", fields{{"use_secondary_engine", "OFF", "OFF"}}, nil},
+		{"", fields{{"use_secondary_engine", "ON", "ON"}}, nil},
+		{"", fields{{"use_secondary_engine", "FORCED", "FORCED"}}, nil},
+		{"", fields{{"transaction_write_set_extraction", "OFF", "OFF"}}, nil},
+		{"", fields{{"transaction_write_set_extraction", "MURMUR32", "MURMUR32"}}, nil},
+		{"", fields{{"transaction_write_set_extraction", "XXHASH64", "XXHASH64"}}, nil},
+		{"", fields{{"slave_skip_errors", "OFF", "OFF"}}, nil},
+		{"", fields{{"slave_skip_errors", "0", "0"}}, nil},
+		{"", fields{{"slave_skip_errors", "1007,1008,1050", "1007,1008,1050"}}, nil},
+		{"", fields{{"slave_skip_errors", "all", "all"}}, nil},
+		{"", fields{{"slave_skip_errors", "ddl_exist_errors", "ddl_exist_errors"}}, nil},
+		{"", fields{{"gtid_mode", "OFF", int64(0)}}, nil},
+		{"", fields{{"gtid_mode", "OFF_PERMISSIVE", int64(0)}}, nil},
+		{"", fields{{"gtid_mode", "ON", int64(1)}}, nil},
+		{"", fields{{"gtid_mode", "ON_PERMISSIVE", int64(1)}}, nil},
 	}
 
 	for i, testCase := range testCases {
@@ -277,49 +275,46 @@ func TestGatherGlobalVariables(t *testing.T) {
 			testCase.name = fmt.Sprintf("#%d", i)
 		}
 
-		rows := sqlmock.NewRows(columns)
-		for _, field := range testCase.fields {
-			rows.AddRow(field.key, field.rawValue)
-		}
-
-		mock.ExpectQuery(globalVariablesQuery).WillReturnRows(rows).RowsWillBeClosed()
-
-		acc := &testutil.Accumulator{}
-
-		err = m.gatherGlobalVariables(db, "test", acc)
-		if !assert.NoErrorf(t, err, "err on gatherGlobalVariables (test case %q)", testCase.name) {
-			continue
-		}
-
-		for _, metric := range acc.Metrics {
-			assert.Equalf(t, measurement, metric.Measurement, "wrong measurement (test case %q)", testCase.name)
-
-			if testCase.tags != nil {
-				assert.Equalf(t, testCase.tags, tags(metric.Tags), "wrong tags (test case %q)", testCase.name)
+		t.Run(testCase.name, func(t *testing.T) {
+			rows := sqlmock.NewRows(columns)
+			for _, field := range testCase.fields {
+				rows.AddRow(field.key, field.rawValue)
 			}
 
-			for key, value := range metric.Fields {
-				foundField := false
+			mock.ExpectQuery(globalVariablesQuery).WillReturnRows(rows).RowsWillBeClosed()
 
-				for _, field := range testCase.fields {
-					if field.key == key {
-						assert.Falsef(t, field.observed, "field %s observed multiple times (test case %q)", key, testCase.name)
-						assert.Equalf(t, field.parsedValue, value, "wrong value for field %s (test case %q)", key, testCase.name)
-						field.observed = true
-						foundField = true
-						break
+			acc := &testutil.Accumulator{}
+
+			err = m.gatherGlobalVariables(db, "test", acc)
+			require.NoErrorf(t, err, "err on gatherGlobalVariables (test case %q)", testCase.name)
+
+			foundFields := map[string]bool{}
+
+			for _, metric := range acc.Metrics {
+				require.Equalf(t, measurement, metric.Measurement, "wrong measurement (test case %q)", testCase.name)
+
+				if testCase.tags != nil {
+					require.Equalf(t, testCase.tags, tags(metric.Tags), "wrong tags (test case %q)", testCase.name)
+				}
+
+				for key, value := range metric.Fields {
+					for _, field := range testCase.fields {
+						if field.key == key {
+							require.Falsef(t, foundFields[key], "field %s observed multiple times (test case %q)", key, testCase.name)
+							require.Equalf(t, field.parsedValue, value, "wrong value for field %s (test case %q)", key, testCase.name)
+							foundFields[key] = true
+							break
+						}
 					}
-				}
 
-				if !assert.Truef(t, foundField, "unexpected field %s=%v (test case %q)", key, value, testCase.name) {
-					continue
+					require.Truef(t, foundFields[key], "unexpected field %s=%v (test case %q)", key, value, testCase.name)
 				}
 			}
-		}
 
-		for _, field := range testCase.fields {
-			assert.Truef(t, field.observed, "missing field %s=%v (test case %q)", field.key, field.parsedValue, testCase.name)
-		}
+			for _, field := range testCase.fields {
+				require.Truef(t, foundFields[field.key], "missing field %s=%v (test case %q)", field.key, field.parsedValue, testCase.name)
+			}
+		})
 	}
 }
 
