@@ -170,14 +170,11 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	// google api auth
 	if h.HTTPClientConfig.OAuth2Config.CredentialsFile != "" {
-		if !h.HTTPClientConfig.OAuth2Config.AccessToken.Valid() {
-			err := h.HTTPClientConfig.OAuth2Config.GetAccessToken(context.Background(), h.URL)
-			if err != nil {
-				return err
-			}
+		token, err := h.HTTPClientConfig.OAuth2Config.GetAccessToken(context.Background(), h.URL)
+		if err != nil {
+			return err
 		}
-
-		h.HTTPClientConfig.OAuth2Config.AccessToken.SetAuthHeader(req)
+		token.SetAuthHeader(req)
 	}
 
 	req.Header.Set("User-Agent", internal.ProductToken())
