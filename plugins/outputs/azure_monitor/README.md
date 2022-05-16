@@ -1,7 +1,7 @@
 # Azure Monitor Output Plugin
 
-__The Azure Monitor custom metrics service is currently in preview and not
-available in a subset of Azure regions.__
+**The Azure Monitor custom metrics service is currently in preview and not
+available in a subset of Azure regions.**
 
 This plugin will send custom metrics to Azure Monitor. Azure Monitor has a
 metric resolution of one minute. To handle this in Telegraf, the Azure Monitor
