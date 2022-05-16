@@ -2,6 +2,7 @@ package modbus
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"testing"
 	"time"
@@ -13,6 +14,435 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestDetermineConverterI16(t *testing.T) {
+	var f fieldConverterFunc
+	f, _ = determineConverterI16("native", "ABCD", value_gain{}.check(), value_offset{}.check())
+	var message = []byte{0x00, 0x0A}
+	var res = f(message)
+	var ref16 int16 = int16(10)
+	if res.(int16) != ref16 {
+		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
+	}
+
+	f, _ = determineConverterI16("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x05}
+	res = f(message)
+	ref16 = int16(6)
+	if res.(int16) != ref16 {
+		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
+	}
+
+	f, _ = determineConverterI16("native", "ABCD", value_gain{int64(-10)}, value_offset{float64(1)})
+	message = []byte{0x00, 0x05}
+	res = f(message)
+	ref16 = int16(-49)
+	if res.(int16) != ref16 {
+		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
+	}
+
+	f, _ = determineConverterI16("native", "ABCD", value_gain{int64(2)}, value_offset{float64(1)})
+	message = []byte{0x7F, 0xFF}
+	res = f(message)
+	ref16 = math.MaxInt16
+	if res.(int16) != ref16 {
+		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
+	}
+
+	f, _ = determineConverterI16("native", "ABCD", value_gain{int64(-2)}, value_offset{float64(1)})
+	message = []byte{0x7F, 0xFF}
+	res = f(message)
+	ref16 = -math.MaxInt16 - 1
+	if res.(int16) != ref16 {
+		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
+	}
+
+	f, _ = determineConverterI16("UINT64", "ABCD", value_gain{int64(math.MaxInt16)}, value_offset{int64(math.MaxInt64)})
+	message = []byte{0x7F, 0xFF}
+	res = f(message)
+	var refu64 uint64 = math.MaxInt64 + (math.MaxInt16 * math.MaxInt16)
+	if res.(uint64) != refu64 {
+		t.Fatalf(`INT16 to UINT64 conversion did not work %v != %v`, res, refu64)
+	}
+
+	f, _ = determineConverterI16("UINT64", "ABCD", value_gain{float64(math.MaxInt16)}, value_offset{int64(math.MaxInt64)})
+	message = []byte{0x7F, 0xFF}
+	res = f(message)
+	refu64 = math.MaxInt64 + (math.MaxInt16 * math.MaxInt16)
+	if res.(uint64) != refu64 {
+		t.Fatalf(`INT16 to UINT64 conversion did not work %v != %v`, res, refu64)
+	}
+
+	f, _ = determineConverterI16("FLOAT64", "ABCD", value_gain{float64(math.MaxInt16)}, value_offset{int64(math.MaxInt64)})
+	message = []byte{0x7F, 0xFF}
+	res = f(message)
+	var reff float64 = float64(math.MaxInt64 + (math.MaxInt16 * math.MaxInt16))
+	if res.(float64) != reff {
+		t.Fatalf(`INT16 to FLOAT64 conversion did not work %v != %v`, res, refu64)
+	}
+}
+
+func TestDetermineConverterU16(t *testing.T) {
+	var f fieldConverterFunc
+	f, _ = determineConverterU16("native", "ABCD", value_gain{}, value_offset{})
+	var message = []byte{0x00, 0x0A}
+	var res = f(message)
+	var refu16 uint16 = uint16(10)
+	if res.(uint16) != refu16 {
+		t.Fatalf(`UINT16 type conversion did not work %v != %v`, res, refu16)
+	}
+
+	f, _ = determineConverterU16("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x05}
+	res = f(message)
+	refu16 = uint16(6)
+	if res.(uint16) != refu16 {
+		t.Fatalf(`UINT16 type conversion did not work %v != %v`, res, refu16)
+	}
+
+	f, _ = determineConverterU16("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x05}
+	res = f(message)
+	refu16 = uint16(0)
+	if res.(uint16) != refu16 {
+		t.Fatalf(`UINT16 type conversion did not work %v != %v`, res, refu16)
+	}
+
+	f, _ = determineConverterU16("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x7F, 0xFF}
+	res = f(message)
+	refu16 = math.MaxUint16
+	if res.(uint16) != refu16 {
+		t.Fatalf(`UINT16 type conversion did not work %v != %v`, res, refu16)
+	}
+
+	f, _ = determineConverterU16("INT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x7F, 0xFF}
+	res = f(message)
+	var refi64 int64 = math.MaxInt16*2 + 1
+	if res.(int64) != refi64 {
+		t.Fatalf(`UINT16 to INT64 conversion did not work %v != %v`, res, refi64)
+	}
+
+	f, _ = determineConverterU16("UINT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x7F, 0xFF}
+	res = f(message)
+	var refu64 uint64 = math.MaxInt16*2 + 1
+	if res.(uint64) != refu64 {
+		t.Fatalf(`UINT16 to UINT64 conversion did not work %v != %v`, res, refu64)
+	}
+
+	f, _ = determineConverterU16("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x7F, 0xFF}
+	res = f(message)
+	var reff64 float64 = math.MaxInt16*2 + 1
+	if res.(float64) != reff64 {
+		t.Fatalf(`UINT16 to FLOAT64 conversion did not work %v != %v`, res, reff64)
+	}
+}
+
+func TestDetermineConverterI32(t *testing.T) {
+	var f fieldConverterFunc
+	f, _ = determineConverterI32("native", "ABCD", value_gain{}, value_offset{})
+	var message = []byte{0x00, 0x00, 0x00, 0x0A}
+	var res = f(message)
+	var ref int32 = int32(10)
+	if res.(int32) != ref {
+		t.Fatalf(`INT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterI32("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x05}
+	res = f(message)
+	ref = int32(6)
+	if res.(int32) != ref {
+		t.Fatalf(`INT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterI32("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x05}
+	res = f(message)
+	ref = int32(-49)
+	if res.(int32) != ref {
+		t.Fatalf(`INT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterI32("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x7F, 0xFF}
+	res = f(message)
+	ref = math.MaxUint16
+	if res.(int32) != ref {
+		t.Fatalf(`INT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterI32("INT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x7F, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var refi64 int64 = math.MaxInt32*2 + 1
+	if res.(int64) != refi64 {
+		t.Fatalf(`INT32 to INT64 conversion did not work %v != %v`, res, refi64)
+	}
+
+	f, _ = determineConverterI32("UINT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x7F, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var refu64 uint64 = math.MaxInt32*2 + 1
+	if res.(uint64) != refu64 {
+		t.Fatalf(`INT32 to UINT64 conversion did not work %v != %v`, res, refu64)
+	}
+	f, _ = determineConverterI32("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x7F, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var reff64 float64 = math.MaxInt32*2 + 1
+	if res.(float64) != reff64 {
+		t.Fatalf(`INT32 to FLOAT64 conversion did not work %v != %v`, res, reff64)
+	}
+}
+
+func TestDetermineConverterU32(t *testing.T) {
+	var f fieldConverterFunc
+	f, _ = determineConverterU32("native", "ABCD", value_gain{}, value_offset{})
+	var message = []byte{0x00, 0x00, 0x00, 0x0A}
+	var res = f(message)
+	var ref uint32 = uint32(10)
+	if res.(uint32) != ref {
+		t.Fatalf(`UINT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterU32("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x05}
+	res = f(message)
+	ref = uint32(6)
+	if res.(uint32) != ref {
+		t.Fatalf(`UINT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterU32("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x05}
+	res = f(message)
+	ref = uint32(0)
+	if res.(uint32) != ref {
+		t.Fatalf(`UINT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterU32("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0xFF, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	ref = math.MaxUint32
+	if res.(uint32) != ref {
+		t.Fatalf(`UINT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterU32("INT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0xFF, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var refi64 int64 = math.MaxUint32*2 + 1
+	if res.(int64) != refi64 {
+		t.Fatalf(`UINT32 to INT64 conversion did not work %v != %v`, res, refi64)
+	}
+
+	f, _ = determineConverterU32("UINT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0xFF, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var refu64 uint64 = math.MaxUint32*2 + 1
+	if res.(uint64) != refu64 {
+		t.Fatalf(`UINT32 to UINT64 conversion did not work %v != %v`, res, refu64)
+	}
+	f, _ = determineConverterU32("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0xFF, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var reff64 float64 = math.MaxUint32*2 + 1
+	if res.(float64) != reff64 {
+		t.Fatalf(`UINT32 to FLOAT64 conversion did not work %v != %v`, res, reff64)
+	}
+}
+
+func TestDetermineConverterF32(t *testing.T) {
+	var f fieldConverterFunc
+	f, _ = determineConverterF32("native", "ABCD", value_gain{}.check(), value_offset{}.check())
+	var message = []byte{0x41, 0x10, 0x00, 0x00}
+	var res = f(message)
+	var ref float32 = float32(9)
+	if res.(float32) != ref {
+		t.Fatalf(`FLOAT32 type conversion did not work %v != %v`, res.(float32), ref)
+	}
+
+	f, _ = determineConverterF32("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	message = []byte{0x41, 0x10, 0x00, 0x00}
+	res = f(message)
+	ref = float32(10)
+	if res.(float32) != ref {
+		t.Fatalf(`FLOAT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterF32("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	message = []byte{0x41, 0x10, 0x00, 0x00}
+	res = f(message)
+	ref = float32(-89)
+	if res.(float32) != ref {
+		t.Fatalf(`FLOAT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterF32("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x4F, 0x80, 0x00, 0x00}
+	res = f(message)
+	ref = math.MaxUint32*2 + 1
+	if res.(float32) != ref {
+		t.Fatalf(`FLOAT32 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterF32("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x4F, 0x80, 0x00, 0x00}
+	res = f(message)
+	var reff64 float64 = math.MaxUint32*2 + 1
+	if math.Abs(res.(float64)-reff64) < 1e-9 {
+		t.Fatalf(`FLOAT32 to FLOAT64 conversion did not work %v != %v`, res, reff64)
+	}
+}
+
+func TestDetermineConverterI64(t *testing.T) {
+	var f fieldConverterFunc
+	f, _ = determineConverterI64("native", "ABCD", value_gain{}, value_offset{})
+	var message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
+	var res = f(message)
+	var ref int64 = int64(10)
+	if res.(int64) != ref {
+		t.Fatalf(`INT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterI64("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05}
+	res = f(message)
+	ref = int64(6)
+	if res.(int64) != ref {
+		t.Fatalf(`INT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterI64("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05}
+	res = f(message)
+	ref = int64(-49)
+	if res.(int64) != ref {
+		t.Fatalf(`INT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterI64("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF}
+	res = f(message)
+	ref = math.MaxUint16
+	if res.(int64) != ref {
+		t.Fatalf(`INT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterI64("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var refi64 int64 = math.MaxInt32*2 + 1
+	if res.(int64) != refi64 {
+		t.Fatalf(`INT64 to INT64 conversion did not work %v != %v`, res, refi64)
+	}
+
+	f, _ = determineConverterI64("UINT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var refu64 uint64 = math.MaxInt32*2 + 1
+	if res.(uint64) != refu64 {
+		t.Fatalf(`INT64 to UINT64 conversion did not work %v != %v`, res, refu64)
+	}
+	f, _ = determineConverterI64("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var reff64 float64 = math.MaxInt32*2 + 1
+	if res.(float64) != reff64 {
+		t.Fatalf(`INT64 to FLOAT64 conversion did not work %v != %v`, res, reff64)
+	}
+}
+
+func TestDetermineConverterU64(t *testing.T) {
+	var f fieldConverterFunc
+	f, _ = determineConverterU64("native", "ABCD", value_gain{}, value_offset{})
+	var message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
+	var res = f(message)
+	var ref uint64 = uint64(10)
+	if res.(uint64) != ref {
+		t.Fatalf(`UINT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterU64("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05}
+	res = f(message)
+	ref = uint64(6)
+	if res.(uint64) != ref {
+		t.Fatalf(`UINT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterU64("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05}
+	res = f(message)
+	ref = uint64(0)
+	if res.(uint64) != ref {
+		t.Fatalf(`UINT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterU64("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	ref = math.MaxUint64
+	if res.(uint64) != ref {
+		t.Fatalf(`UINT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterU64("INT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var refi64 int64 = math.MaxUint32*2 + 1
+	if res.(int64) != refi64 {
+		t.Fatalf(`UINT64 to INT64 conversion did not work %v != %v`, res, refi64)
+	}
+
+	f, _ = determineConverterU64("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF}
+	res = f(message)
+	var reff64 float64 = math.MaxUint32*2 + 1
+	if res.(float64) != reff64 {
+		t.Fatalf(`UINT64 to FLOAT64 conversion did not work %v != %v`, res, reff64)
+	}
+}
+
+func TestDetermineConverterF64(t *testing.T) {
+	var f fieldConverterFunc
+	f, _ = determineConverterF64("native", "ABCD", value_gain{}, value_offset{})
+	var message = []byte{0x40, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
+	var res = f(message)
+	var ref float64 = float64(9)
+	if math.Abs(res.(float64)-ref) > 1e-9 {
+		t.Fatalf(`FLOAT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterF64("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	message = []byte{0x40, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
+	res = f(message)
+	ref = float64(10)
+	if math.Abs(res.(float64)-ref) > 1e-9 {
+		t.Fatalf(`FLOAT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterF64("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	message = []byte{0x40, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
+	res = f(message)
+	ref = float64(-89)
+	if math.Abs(res.(float64)-ref) > 1e-9 {
+		t.Fatalf(`FLOAT64 type conversion did not work %v != %v`, res, ref)
+	}
+
+	f, _ = determineConverterF64("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	message = []byte{0x41, 0xEF, 0xFF, 0xFF, 0xFF, 0xE0, 0x00, 0x00}
+	res = f(message)
+	var reff64 float64 = math.MaxUint32*2 + 1
+	if math.Abs(res.(float64)-ref) < 1e-9 {
+		t.Fatalf(`FLOAT64 to FLOAT64 conversion did not work %v != %v`, res, reff64)
+	}
+}
 
 func TestCoils(t *testing.T) {
 	var coilTests = []struct {
@@ -650,416 +1080,6 @@ func TestHoldingRegisters(t *testing.T) {
 					ByteOrder: hrt.byteOrder,
 					DataType:  hrt.dataType,
 					Scale:     hrt.scale,
-					Address:   hrt.address,
-				},
-			}
-
-			expected := []telegraf.Metric{
-				testutil.MustMetric(
-					"modbus",
-					map[string]string{
-						"type":     cHoldingRegisters,
-						"slave_id": strconv.Itoa(int(modbus.SlaveID)),
-						"name":     modbus.Name,
-					},
-					map[string]interface{}{hrt.name: hrt.read},
-					time.Unix(0, 0),
-				),
-			}
-
-			var acc testutil.Accumulator
-			require.NoError(t, modbus.Init())
-			require.NotEmpty(t, modbus.requests)
-			require.NoError(t, modbus.Gather(&acc))
-			acc.Wait(len(expected))
-
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
-		})
-	}
-}
-
-func TestHoldingRegistersScaleShift(t *testing.T) {
-	var holdingRegisterTests = []struct {
-		name      string
-		address   []uint16
-		quantity  uint16
-		byteOrder string
-		dataType  string
-		scale     float64
-		shift     float64
-		write     []byte
-		read      interface{}
-	}{
-		{
-			name:      "register0_ab_float32_scale",
-			address:   []uint16{0},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "FLOAT32",
-			scale:     0.1,
-			write:     []byte{0x08, 0x98},
-			read:      float64(220),
-		},
-		{
-			name:      "register0_ab_float32_shift",
-			address:   []uint16{0},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "FLOAT32",
-			shift:     10.,
-			write:     []byte{0x08, 0x98},
-			read:      float64(2210),
-		},
-		{
-			name:      "register0_ab_float32_scale_shift",
-			address:   []uint16{0},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "FLOAT32",
-			scale:     10.0,
-			shift:     500.0,
-			write:     []byte{0x08, 0x98},
-			read:      float64(22500),
-		},
-		{
-			name:      "register0_ab_float_scale",
-			address:   []uint16{0},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "FIXED",
-			scale:     0.1,
-			write:     []byte{0xFF, 0xD6},
-			read:      float64(-4.2),
-		},
-		{
-			name:      "register0_ab_float_shift",
-			address:   []uint16{0},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "FIXED",
-			shift:     0.1,
-			write:     []byte{0xFF, 0xD6},
-			read:      float64(-41.9),
-		},
-		{
-			name:      "register0_ab_float_scale_shift",
-			address:   []uint16{0},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "FIXED",
-			scale:     0.1,
-			shift:     0.2,
-			write:     []byte{0xFF, 0xD6},
-			read:      float64(-4.0),
-		},
-		{
-			name:      "register1_ba_ufloat_scale",
-			address:   []uint16{1},
-			quantity:  1,
-			byteOrder: "BA",
-			dataType:  "UFIXED",
-			scale:     0.1,
-			write:     []byte{0xD8, 0xFF},
-			read:      float64(6549.6),
-		},
-		{
-			name:      "register1_ba_ufloat_shift",
-			address:   []uint16{1},
-			quantity:  1,
-			byteOrder: "BA",
-			dataType:  "UFIXED",
-			shift:     10.,
-			write:     []byte{0xD8, 0xFF},
-			read:      float64(65506),
-		},
-		{
-			name:      "register1_ba_ufloat_scale_shift",
-			address:   []uint16{1},
-			quantity:  1,
-			byteOrder: "BA",
-			dataType:  "UFIXED",
-			scale:     0.1,
-			shift:     -1.0,
-			write:     []byte{0xD8, 0xFF},
-			read:      float64(6548.6),
-		},
-		{
-			name:      "register10_ab_uint16_scale",
-			address:   []uint16{10},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "UINT16",
-			scale:     0.1,
-			write:     []byte{0xAB, 0xCD},
-			read:      uint16(4398),
-		},
-		{
-			name:      "register10_ab_uint16_shift",
-			address:   []uint16{10},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "UINT16",
-			shift:     -50000.0,
-			write:     []byte{0xAB, 0xCD},
-			read:      uint16(0),
-		},
-		{
-			name:      "register10_ab_uint16_scale_shift",
-			address:   []uint16{10},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "UINT16",
-			scale:     1,
-			shift:     12.0,
-			write:     []byte{0xAB, 0xCD},
-			read:      uint16(43993),
-		},
-		{
-			name:      "register30_ab_int16_scale",
-			address:   []uint16{30},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "INT16",
-			scale:     0.2,
-			write:     []byte{0xAB, 0xCD},
-			read:      int16(-4311),
-		},
-		{
-			name:      "register30_ab_int16_shift",
-			address:   []uint16{30},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "INT16",
-			shift:     20000,
-			write:     []byte{0xAB, 0xCD},
-			read:      int16(-1555),
-		},
-		{
-			name:      "register30_ab_int16_scale_shift",
-			address:   []uint16{30},
-			quantity:  1,
-			byteOrder: "AB",
-			dataType:  "INT16",
-			scale:     0.2,
-			shift:     4312,
-			write:     []byte{0xAB, 0xCD},
-			read:      int16(1),
-		},
-		{
-			name:      "register50_register51_abcd_int32_scale",
-			address:   []uint16{50, 51},
-			quantity:  2,
-			byteOrder: "ABCD",
-			dataType:  "INT32",
-			scale:     10,
-			write:     []byte{0x00, 0x00, 0xAB, 0xCD},
-			read:      int32(439810),
-		},
-		{
-			name:      "register50_register51_abcd_int32_shift",
-			address:   []uint16{50, 51},
-			quantity:  2,
-			byteOrder: "ABCD",
-			dataType:  "INT32",
-			shift:     10,
-			write:     []byte{0x00, 0x00, 0xAB, 0xCD},
-			read:      int32(43991),
-		},
-		{
-			name:      "register50_register51_abcd_int32_scale_shift",
-			address:   []uint16{50, 51},
-			quantity:  2,
-			byteOrder: "ABCD",
-			dataType:  "INT32",
-			scale:     10,
-			shift:     10,
-			write:     []byte{0x00, 0x00, 0xAB, 0xCD},
-			read:      int32(439820),
-		},
-		{
-			name:      "register90_register91_abcd_uint32_scale",
-			address:   []uint16{90, 91},
-			quantity:  2,
-			byteOrder: "ABCD",
-			dataType:  "UINT32",
-			scale:     1. / 11.,
-			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      uint32(260403127),
-		},
-		{
-			name:      "register90_register91_abcd_uint32_shift",
-			address:   []uint16{90, 91},
-			quantity:  2,
-			byteOrder: "ABCD",
-			dataType:  "UINT32",
-			shift:     1,
-			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      uint32(2864434398),
-		},
-		{
-			name:      "register90_register91_abcd_uint32_scale_shift",
-			address:   []uint16{90, 91},
-			quantity:  2,
-			byteOrder: "ABCD",
-			dataType:  "UINT32",
-			scale:     1,
-			shift:     -2864434398,
-			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      uint32(0),
-		},
-		{
-			name:      "register130_register131_abcd_float32_ieee_scale",
-			address:   []uint16{130, 131},
-			quantity:  2,
-			byteOrder: "ABCD",
-			dataType:  "FLOAT32-IEEE",
-			scale:     2,
-			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      float32(-6.672005e-13),
-		},
-		{
-			name:      "register130_register131_abcd_float32_ieee_shift",
-			address:   []uint16{130, 131},
-			quantity:  2,
-			byteOrder: "ABCD",
-			dataType:  "FLOAT32-IEEE",
-			shift:     1e-13,
-			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      float32(-2.3360025e-13),
-		},
-		{
-			name:      "register130_register131_abcd_float32_ieee_scale_shift",
-			address:   []uint16{130, 131},
-			quantity:  2,
-			byteOrder: "ABCD",
-			dataType:  "FLOAT32-IEEE",
-			scale:     1e13,
-			shift:     1,
-			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
-			read:      float32(-2.3360025),
-		},
-		{
-			name:      "register140_to_register143_abcdefgh_int64_scale",
-			address:   []uint16{140, 141, 142, 143},
-			quantity:  4,
-			byteOrder: "ABCDEFGH",
-			dataType:  "INT64",
-			scale:     10,
-			write:     []byte{0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xAB, 0xCD},
-			read:      int64(10995116717570),
-		},
-		{
-			name:      "register140_to_register143_abcdefgh_int64_shift",
-			address:   []uint16{140, 141, 142, 143},
-			quantity:  4,
-			byteOrder: "ABCDEFGH",
-			dataType:  "INT64",
-			shift:     10,
-			write:     []byte{0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xAB, 0xCD},
-			read:      int64(1099511671767),
-		},
-		{
-			name:      "register140_to_register143_abcdefgh_int64_scale_shift",
-			address:   []uint16{140, 141, 142, 143},
-			quantity:  4,
-			byteOrder: "ABCDEFGH",
-			dataType:  "INT64",
-			scale:     10,
-			shift:     -1,
-			write:     []byte{0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xAB, 0xCD},
-			read:      int64(10995116717569),
-		},
-		{
-			name:      "register180_to_register183_abcdefgh_uint64_scale",
-			address:   []uint16{180, 181, 182, 183},
-			quantity:  4,
-			byteOrder: "ABCDEFGH",
-			dataType:  "UINT64",
-			scale:     100,
-			write:     []byte{0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xAB, 0xCD},
-			read:      uint64(109951167175700),
-		},
-		{
-			name:      "register180_to_register183_abcdefgh_uint64_shift",
-			address:   []uint16{180, 181, 182, 183},
-			quantity:  4,
-			byteOrder: "ABCDEFGH",
-			dataType:  "UINT64",
-			shift:     10,
-			write:     []byte{0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xAB, 0xCD},
-			read:      uint64(1099511671767),
-		},
-		{
-			name:      "register180_to_register183_abcdefgh_uint64_scale_shift",
-			address:   []uint16{180, 181, 182, 183},
-			quantity:  4,
-			byteOrder: "ABCDEFGH",
-			dataType:  "UINT64",
-			scale:     10,
-			shift:     0.1,
-			write:     []byte{0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xAB, 0xCD},
-			read:      uint64(10995116717570),
-		},
-		{
-			name:      "register214_to_register217_abcdefgh_float64_ieee_scale",
-			address:   []uint16{214, 215, 216, 217},
-			quantity:  4,
-			byteOrder: "ABCDEFGH",
-			dataType:  "FLOAT64-IEEE",
-			scale:     2,
-			write:     []byte{0xBF, 0x9C, 0x6A, 0x40, 0xC3, 0x47, 0x8F, 0x55},
-			read:      float64(-0.05549814590247474),
-		},
-		{
-			name:      "register214_to_register217_abcdefgh_float64_ieee_shift",
-			address:   []uint16{214, 215, 216, 217},
-			quantity:  4,
-			byteOrder: "ABCDEFGH",
-			dataType:  "FLOAT64-IEEE",
-			shift:     -1,
-			write:     []byte{0xBF, 0x9C, 0x6A, 0x40, 0xC3, 0x47, 0x8F, 0x55},
-			read:      float64(-1.02774907295123737),
-		},
-		{
-			name:      "register214_to_register217_abcdefgh_float64_ieee_scale_shift",
-			address:   []uint16{214, 215, 216, 217},
-			quantity:  4,
-			byteOrder: "ABCDEFGH",
-			dataType:  "FLOAT64-IEEE",
-			scale:     2,
-			shift:     -1,
-			write:     []byte{0xBF, 0x9C, 0x6A, 0x40, 0xC3, 0x47, 0x8F, 0x55},
-			read:      float64(-1.0554981459024748),
-		},
-	}
-
-	serv := mbserver.NewServer()
-	require.NoError(t, serv.ListenTCP("localhost:1502"))
-	defer serv.Close()
-
-	handler := mb.NewTCPClientHandler("localhost:1502")
-	require.NoError(t, handler.Connect())
-	defer handler.Close()
-	client := mb.NewClient(handler)
-
-	for _, hrt := range holdingRegisterTests {
-		t.Run(hrt.name, func(t *testing.T) {
-			_, err := client.WriteMultipleRegisters(hrt.address[0], hrt.quantity, hrt.write)
-			require.NoError(t, err)
-
-			modbus := Modbus{
-				Name:       "TestHoldingRegisters",
-				Controller: "tcp://localhost:1502",
-				Log:        testutil.Logger{},
-			}
-			modbus.SlaveID = 1
-			modbus.HoldingRegisters = []fieldDefinition{
-				{
-					Name:      hrt.name,
-					ByteOrder: hrt.byteOrder,
-					DataType:  hrt.dataType,
-					Scale:     hrt.scale,
-					Shift:     hrt.shift,
 					Address:   hrt.address,
 				},
 			}
@@ -2266,4 +2286,45 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 			require.Empty(t, plugin.requests)
 		})
 	}
+}
+
+func TestConfigurationPerRequestWithValueOffset(t *testing.T) {
+	var config ConfigurationPerRequest
+	config.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+				{
+					Name:        "holding-1",
+					Address:     uint16(1),
+					InputType:   "UINT16",
+					ValueOffset: int64(-1),
+				},
+				{
+					Name:        "holding-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					ValueOffset: float64(325.0),
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+		},
+	}
+
+	require.NoError(t, (&config).Check())
+	res, _ := config.Requests[0].Fields[0].SetValueOffset.asBigFloat().Float64()
+	require.EqualValues(t, 0.0, res)
+	res, _ = config.Requests[0].Fields[1].SetValueOffset.asBigFloat().Float64()
+	require.EqualValues(t, -1.0, res)
+	res, _ = config.Requests[0].Fields[2].SetValueOffset.asBigFloat().Float64()
+	require.EqualValues(t, 325.0, res)
 }

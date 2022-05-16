@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"math/big"
 )
 
 type convert64 func([]byte) uint64
@@ -32,72 +33,81 @@ func endianessConverter64(byteOrder string) (convert64, error) {
 	return nil, fmt.Errorf("invalid byte-order: %s", byteOrder)
 }
 
+func rescaleI64AsBigFloat(in int64, value_gain value_gain, value_offset value_offset) *big.Float {
+	var t *big.Float = big.NewFloat(0.0)
+	t.Mul(big.NewFloat(float64(in)), value_gain.asBigFloat())
+	t.Add(t, value_offset.asBigFloat())
+	return t
+}
+func rescaleU64AsBigFloat(in uint64, value_gain value_gain, value_offset value_offset) *big.Float {
+	var t *big.Float = big.NewFloat(0.0)
+	t.Mul(big.NewFloat(float64(in)), value_gain.asBigFloat())
+	t.Add(t, value_offset.asBigFloat())
+	return t
+}
+func rescaleF64AsBigFloat(in float64, value_gain value_gain, value_offset value_offset) *big.Float {
+	var t *big.Float = big.NewFloat(0.0)
+	t.Mul(big.NewFloat(float64(in)), value_gain.asBigFloat())
+	t.Add(t, value_offset.asBigFloat())
+	return t
+}
+
 // I64
-func determineConverterI64(outType, byteOrder string, scale float64, shift float64) (fieldConverterFunc, error) {
+func determineConverterI64(outType, byteOrder string, value_gain value_gain, value_offset value_offset) (fieldConverterFunc, error) {
 	tohost, err := endianessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
 	}
 
 	switch outType {
-	case "native":
+	case "native": // I64
 		return func(b []byte) interface{} {
 			in := int64(tohost(b))
-			return int64(float64(in)*scale + shift)
-		}, nil
-	case "INT64":
-		return func(b []byte) interface{} {
-			in := int64(tohost(b))
-			return int64(float64(in)*scale + shift)
+			return int64(forceIntToMinMax(rescaleI64AsBigFloat(in, value_gain, value_offset), "INT64").Int64())
 		}, nil
 	case "UINT64":
 		return func(b []byte) interface{} {
 			in := int64(tohost(b))
-			return uint64(math.Max(0, float64(in)*scale+shift))
+			return forceIntToMinMax(rescaleI64AsBigFloat(in, value_gain, value_offset), "UINT64").Uint64()
 		}, nil
 	case "FLOAT64":
 		return func(b []byte) interface{} {
 			in := int64(tohost(b))
-			return float64(in)*scale + shift
+			return forceFloat64ToMinMax(rescaleI64AsBigFloat(in, value_gain, value_offset))
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
 
 // U64
-func determineConverterU64(outType, byteOrder string, scale float64, shift float64) (fieldConverterFunc, error) {
+func determineConverterU64(outType, byteOrder string, value_gain value_gain, value_offset value_offset) (fieldConverterFunc, error) {
 	tohost, err := endianessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
 	}
 
 	switch outType {
-	case "native":
+	case "native": // U64
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return uint64(math.Max(0, float64(in)*scale+shift))
+			return forceIntToMinMax(rescaleU64AsBigFloat(in, value_gain, value_offset), "UINT64").Uint64()
 		}, nil
 	case "INT64":
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return int64(float64(in)*scale + shift)
-		}, nil
-	case "UINT64":
-		return func(b []byte) interface{} {
-			in := tohost(b)
-			return uint64(math.Max(0, float64(in)*scale+shift))
+			return forceIntToMinMax(rescaleU64AsBigFloat(in, value_gain, value_offset), "INT64").Int64()
 		}, nil
 	case "FLOAT64":
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return float64(in)*scale + shift
+			return forceFloat64ToMinMax(rescaleU64AsBigFloat(in, value_gain, value_offset))
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
 
 // F64
-func determineConverterF64(outType, byteOrder string, scale float64, shift float64) (fieldConverterFunc, error) {
+func determineConverterF64(outType, byteOrder string, value_gain value_gain, value_offset value_offset) (fieldConverterFunc, error) {
 	tohost, err := endianessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
@@ -106,9 +116,8 @@ func determineConverterF64(outType, byteOrder string, scale float64, shift float
 	switch outType {
 	case "native", "FLOAT64":
 		return func(b []byte) interface{} {
-			raw := tohost(b)
-			in := math.Float64frombits(raw)
-			return in*scale + shift
+			in := math.Float64frombits(tohost(b))
+			return forceFloat64ToMinMax(rescaleF64AsBigFloat(in, value_gain, value_offset))
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)

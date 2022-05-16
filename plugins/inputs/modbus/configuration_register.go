@@ -36,22 +36,21 @@ const sampleConfigPartPerRegister = `
   ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64,
   ##              FLOAT32-IEEE, FLOAT64-IEEE (the IEEE 754 binary representation)
   ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
-  ## scale      - the final numeric variable representation is value × scale + shift
-  ## shift      - the final numeric variable representation is value × scale + shift
+  ## scale      - the final numeric variable representation
   ## address    - variable address
 
   holding_registers = [
-    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", 	scale=0.01,  shift=-10.0, address = [8]},
-    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", 	scale=0.1,   shift=1.0, address = [0]},
-    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", 	scale=0.001, shift=0.0, address = [5,6]},
-    { name = "current",      byte_order = "ABCD", data_type = "FIXED", 	scale=0.001, shift=0.0, address = [1,2]},
-    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,   shift=0.0, address = [7]},
-    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,   shift=0.0, address = [3,4]},
+    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
+    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
+    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
+    { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
+    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
+    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
   ]
   input_registers = [
-    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,	shift=0.0, address = [0]},
-    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,	shift=42.0, address = [1]},
-    { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,	shift=0.0, address = [3,4]},
+    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
+    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
+    { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
   ]
 `
 
@@ -61,7 +60,6 @@ type fieldDefinition struct {
 	ByteOrder   string   `toml:"byte_order"`
 	DataType    string   `toml:"data_type"`
 	Scale       float64  `toml:"scale"`
-	Shift       float64  `toml:"shift"`
 	Address     []uint16 `toml:"address"`
 }
 
@@ -177,7 +175,7 @@ func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition) (fie
 			return f, err
 		}
 
-		f.converter, err = determineConverter(inType, byteOrder, outType, def.Scale, def.Shift)
+		f.converter, err = determineConverter(inType, byteOrder, outType, value_gain{def.Scale}, value_offset{0.0})
 		if err != nil {
 			return f, err
 		}
@@ -218,7 +216,7 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 
 			// check scale
 			if item.Scale == 0.0 {
-				// return fmt.Errorf("invalid scale '%f' in '%s' - '%s'", item.Scale, registerType, item.Name)
+				return fmt.Errorf("invalid scale '%f' in '%s' - '%s'", item.Scale, registerType, item.Name)
 			}
 		}
 

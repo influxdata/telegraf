@@ -38,15 +38,15 @@ const sampleConfigPartPerRequest = `
     ## type *1,2      - type of the modbus field, can be INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                  FLOAT32, FLOAT64 (IEEE 754 binary representation)
     ## scale *1,2     - (optional) factor to scale the variable with
-    ## output *1,2    - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
-    ##                  "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
+    ## value_offset *1,2 - (optional) factor to offset the variable with: output = scale × variable + value_offset
+    ## output *1,2    - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Otherwise defaults to the input data type
     ## measurement *1 - (optional) measurement name, defaults to the setting of the request
     ## omit           - (optional) omit this field. Useful to leave out single values when querying many registers
     ##                  with a single request. Defaults to "false".
     ##
     ## *1: Those fields are ignored if field is omitted ("omit"=true)
     ##
-    ## *2: Thise fields are ignored for both "coil" and "discrete"-input type of registers. For those register types
+    ## *2: Those fields are ignored for both "coil" and "discrete"-input type of registers. For those register types
     ##     the fields are output as zero or one in UINT64 format by default.
 
     ## Coil / discrete input example
@@ -65,7 +65,7 @@ const sampleConfigPartPerRequest = `
     ## Holding / input example
     ## All of those examples will result in FLOAT64 field outputs
     # fields = [
-    #   { address=0, name="voltage",      type="INT16",   scale=0.1, shift=12.0   },
+    #   { address=0, name="voltage",      type="INT16",   scale=0.1, value_offset=12.0   },
     #   { address=1, name="current",      type="INT32",   scale=0.001 },
     #   { address=3, name="power",        type="UINT32",  omit=true   },
     #   { address=5, name="energy",       type="FLOAT32", scale=0.001, measurement="W" },
@@ -76,9 +76,9 @@ const sampleConfigPartPerRequest = `
     ## Holding / input example with type conversions
     # fields = [
     #   { address=0, name="rpm",         type="INT16"                   },  # will result in INT64 field
-    #   { address=1, name="temperature", type="INT16", scale=0.1        },  # will result in FLOAT64 field
+    #   { address=1, name="temperature", type="INT16", scale=0.1        },  # will result in INT64 field (rounding will happen)
     #   { address=2, name="force",       type="INT32", output="FLOAT64" },  # will result in FLOAT64 field
-    #   { address=4, name="hours",       type="UINT32"                  },  # will result in UIN64 field
+    #   { address=4, name="hours",       type="UINT32"                  },  # will result in UINT32 field
     # ]
 
     ## Per-request tags
@@ -88,14 +88,17 @@ const sampleConfigPartPerRequest = `
 `
 
 type requestFieldDefinition struct {
-	Address     uint16  `toml:"address"`
-	Name        string  `toml:"name"`
-	InputType   string  `toml:"type"`
-	Scale       float64 `toml:"scale"`
-	Shift       float64 `toml:"shift"`
-	OutputType  string  `toml:"output"`
-	Measurement string  `toml:"measurement"`
-	Omit        bool    `toml:"omit"`
+	Address     uint16      `toml:"address"`
+	Name        string      `toml:"name"`
+	InputType   string      `toml:"type"`
+	Scale       interface{} `toml:"scale"`
+	ValueOffset interface{} `toml:"value_offset"`
+	OutputType  string      `toml:"output"`
+	Measurement string      `toml:"measurement"`
+	Omit        bool        `toml:"omit"`
+	// TypeSet
+	SetValueGain   value_gain
+	SetValueOffset value_offset
 }
 
 type requestDefinition struct {
@@ -179,8 +182,13 @@ func (c *ConfigurationPerRequest) Check() error {
 			if f.Measurement == "" {
 				f.Measurement = def.Measurement
 			}
-			def.Fields[fidx] = f
 
+			// Set value_gain
+			f.SetValueGain = value_gain{f.Scale}.check()
+			// Set value_offset
+			f.SetValueOffset = value_offset{f.ValueOffset}.check()
+
+			def.Fields[fidx] = f
 			// Check for duplicate field definitions
 			id, err := c.fieldID(seed, def.SlaveID, def.RegisterType, def.Measurement, f.Name)
 			if err != nil {
@@ -222,7 +230,6 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 				input:    []request{},
 			}
 		}
-
 		switch def.RegisterType {
 		case "coil":
 			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils)
@@ -317,7 +324,7 @@ func (c *ConfigurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 		return field{}, err
 	}
 
-	f.converter, err = determineConverter(inType, order, outType, def.Scale, def.Shift)
+	f.converter, err = determineConverter(inType, order, outType, def.SetValueGain, def.SetValueOffset)
 	if err != nil {
 		return field{}, err
 	}
