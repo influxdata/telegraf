@@ -328,7 +328,9 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
 		for {
 			resp, err := c.client.ListMetrics(context.Background(), params)
 			if err != nil {
-				return nil, fmt.Errorf("failed to list metrics with params per namespace: %v", err)
+				c.Log.Errorf("failed to list metrics with namespace %s: %v", namespace, err)
+				// skip problem namespace on error and continue to next namespace
+				break
 			}
 
 			metrics = append(metrics, resp.Metrics...)
