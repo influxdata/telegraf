@@ -1154,7 +1154,7 @@ func TestEmptySelection(t *testing.T) {
 
 			_, err := parser.Parse([]byte(tt.input))
 			require.Error(t, err)
-			require.Equal(t, err.Error(), "cannot parse with empty selection node")
+			require.Equal(t, "cannot parse with empty selection node", err.Error())
 		})
 	}
 }
