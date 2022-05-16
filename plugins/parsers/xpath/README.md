@@ -156,6 +156,10 @@ metric.
   ## to get an idea on the expression necessary to derive fields etc.
   # xpath_print_document = false
 
+  ## Allow the results of one of the parsing sections to be empty.
+  ## Useful when not all selected files have the exact same structure.
+  # xpath_allow_empty_selection = false
+
   ## Multiple parsing sections are allowed
   [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
