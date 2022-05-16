@@ -188,6 +188,7 @@ type Config struct {
 	XPathProtobufFile        string   `toml:"xpath_protobuf_file"`
 	XPathProtobufType        string   `toml:"xpath_protobuf_type"`
 	XPathProtobufImportPaths []string `toml:"xpath_protobuf_import_paths"`
+	XPathAllowEmptySelection bool     `toml:"xpath_allow_empty_selection"`
 	XPathConfig              []XPathConfig
 
 	// JSONPath configuration
@@ -284,6 +285,7 @@ func NewParser(config *Config) (Parser, error) {
 			ProtobufImportPaths: config.XPathProtobufImportPaths,
 			PrintDocument:       config.XPathPrintDocument,
 			DefaultTags:         config.DefaultTags,
+			AllowEmptySelection: config.XPathAllowEmptySelection,
 			Configs:             NewXPathParserConfigs(config.MetricName, config.XPathConfig),
 		}
 	case "json_v2":

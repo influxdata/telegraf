@@ -29,6 +29,7 @@ type Parser struct {
 	ProtobufMessageType string
 	ProtobufImportPaths []string
 	PrintDocument       bool
+	AllowEmptySelection bool
 	Configs             []Config
 	DefaultTags         map[string]string
 	Log                 telegraf.Logger
@@ -108,7 +109,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 		if len(selectedNodes) < 1 || selectedNodes[0] == nil {
 			p.debugEmptyQuery("metric selection", doc, config.Selection)
-			return nil, fmt.Errorf("cannot parse with empty selection node")
+			if !p.AllowEmptySelection {
+				return metrics, fmt.Errorf("cannot parse with empty selection node")
+			}
 		}
 		p.Log.Debugf("Number of selected metric nodes: %d", len(selectedNodes))
 
