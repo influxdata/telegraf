@@ -17,7 +17,7 @@ import (
 
 func TestDetermineConverterI16(t *testing.T) {
 	var f fieldConverterFunc
-	f, _ = determineConverterI16("native", "ABCD", value_gain{}.check(), value_offset{}.check())
+	f, _ = determineConverterI16("native", "ABCD", valueGain{}.check(), valueOffset{}.check())
 	var message = []byte{0x00, 0x0A}
 	var res = f(message)
 	var ref16 int16 = int16(10)
@@ -25,7 +25,7 @@ func TestDetermineConverterI16(t *testing.T) {
 		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
 	}
 
-	f, _ = determineConverterI16("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	f, _ = determineConverterI16("native", "ABCD", valueGain{int64(1)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x05}
 	res = f(message)
 	ref16 = int16(6)
@@ -33,7 +33,7 @@ func TestDetermineConverterI16(t *testing.T) {
 		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
 	}
 
-	f, _ = determineConverterI16("native", "ABCD", value_gain{int64(-10)}, value_offset{float64(1)})
+	f, _ = determineConverterI16("native", "ABCD", valueGain{int64(-10)}, valueOffset{float64(1)})
 	message = []byte{0x00, 0x05}
 	res = f(message)
 	ref16 = int16(-49)
@@ -41,7 +41,7 @@ func TestDetermineConverterI16(t *testing.T) {
 		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
 	}
 
-	f, _ = determineConverterI16("native", "ABCD", value_gain{int64(2)}, value_offset{float64(1)})
+	f, _ = determineConverterI16("native", "ABCD", valueGain{int64(2)}, valueOffset{float64(1)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
 	ref16 = math.MaxInt16
@@ -49,7 +49,7 @@ func TestDetermineConverterI16(t *testing.T) {
 		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
 	}
 
-	f, _ = determineConverterI16("native", "ABCD", value_gain{int64(-2)}, value_offset{float64(1)})
+	f, _ = determineConverterI16("native", "ABCD", valueGain{int64(-2)}, valueOffset{float64(1)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
 	ref16 = -math.MaxInt16 - 1
@@ -57,7 +57,7 @@ func TestDetermineConverterI16(t *testing.T) {
 		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
 	}
 
-	f, _ = determineConverterI16("UINT64", "ABCD", value_gain{int64(math.MaxInt16)}, value_offset{int64(math.MaxInt64)})
+	f, _ = determineConverterI16("UINT64", "ABCD", valueGain{int64(math.MaxInt16)}, valueOffset{int64(math.MaxInt64)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
 	var refu64 uint64 = math.MaxInt64 + (math.MaxInt16 * math.MaxInt16)
@@ -65,7 +65,7 @@ func TestDetermineConverterI16(t *testing.T) {
 		t.Fatalf(`INT16 to UINT64 conversion did not work %v != %v`, res, refu64)
 	}
 
-	f, _ = determineConverterI16("UINT64", "ABCD", value_gain{float64(math.MaxInt16)}, value_offset{int64(math.MaxInt64)})
+	f, _ = determineConverterI16("UINT64", "ABCD", valueGain{float64(math.MaxInt16)}, valueOffset{int64(math.MaxInt64)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
 	refu64 = math.MaxInt64 + (math.MaxInt16 * math.MaxInt16)
@@ -73,7 +73,7 @@ func TestDetermineConverterI16(t *testing.T) {
 		t.Fatalf(`INT16 to UINT64 conversion did not work %v != %v`, res, refu64)
 	}
 
-	f, _ = determineConverterI16("FLOAT64", "ABCD", value_gain{float64(math.MaxInt16)}, value_offset{int64(math.MaxInt64)})
+	f, _ = determineConverterI16("FLOAT64", "ABCD", valueGain{float64(math.MaxInt16)}, valueOffset{int64(math.MaxInt64)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
 	var reff float64 = float64(math.MaxInt64 + (math.MaxInt16 * math.MaxInt16))
@@ -84,7 +84,7 @@ func TestDetermineConverterI16(t *testing.T) {
 
 func TestDetermineConverterU16(t *testing.T) {
 	var f fieldConverterFunc
-	f, _ = determineConverterU16("native", "ABCD", value_gain{}, value_offset{})
+	f, _ = determineConverterU16("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x0A}
 	var res = f(message)
 	var refu16 uint16 = uint16(10)
@@ -92,7 +92,7 @@ func TestDetermineConverterU16(t *testing.T) {
 		t.Fatalf(`UINT16 type conversion did not work %v != %v`, res, refu16)
 	}
 
-	f, _ = determineConverterU16("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	f, _ = determineConverterU16("native", "ABCD", valueGain{int64(1)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x05}
 	res = f(message)
 	refu16 = uint16(6)
@@ -100,7 +100,7 @@ func TestDetermineConverterU16(t *testing.T) {
 		t.Fatalf(`UINT16 type conversion did not work %v != %v`, res, refu16)
 	}
 
-	f, _ = determineConverterU16("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	f, _ = determineConverterU16("native", "ABCD", valueGain{int64(-10)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x05}
 	res = f(message)
 	refu16 = uint16(0)
@@ -108,7 +108,7 @@ func TestDetermineConverterU16(t *testing.T) {
 		t.Fatalf(`UINT16 type conversion did not work %v != %v`, res, refu16)
 	}
 
-	f, _ = determineConverterU16("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU16("native", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
 	refu16 = math.MaxUint16
@@ -116,7 +116,7 @@ func TestDetermineConverterU16(t *testing.T) {
 		t.Fatalf(`UINT16 type conversion did not work %v != %v`, res, refu16)
 	}
 
-	f, _ = determineConverterU16("INT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU16("INT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
 	var refi64 int64 = math.MaxInt16*2 + 1
@@ -124,7 +124,7 @@ func TestDetermineConverterU16(t *testing.T) {
 		t.Fatalf(`UINT16 to INT64 conversion did not work %v != %v`, res, refi64)
 	}
 
-	f, _ = determineConverterU16("UINT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU16("UINT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
 	var refu64 uint64 = math.MaxInt16*2 + 1
@@ -132,7 +132,7 @@ func TestDetermineConverterU16(t *testing.T) {
 		t.Fatalf(`UINT16 to UINT64 conversion did not work %v != %v`, res, refu64)
 	}
 
-	f, _ = determineConverterU16("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU16("FLOAT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
 	var reff64 float64 = math.MaxInt16*2 + 1
@@ -143,7 +143,7 @@ func TestDetermineConverterU16(t *testing.T) {
 
 func TestDetermineConverterI32(t *testing.T) {
 	var f fieldConverterFunc
-	f, _ = determineConverterI32("native", "ABCD", value_gain{}, value_offset{})
+	f, _ = determineConverterI32("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
 	var ref int32 = int32(10)
@@ -151,7 +151,7 @@ func TestDetermineConverterI32(t *testing.T) {
 		t.Fatalf(`INT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterI32("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	f, _ = determineConverterI32("native", "ABCD", valueGain{int64(1)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x05}
 	res = f(message)
 	ref = int32(6)
@@ -159,7 +159,7 @@ func TestDetermineConverterI32(t *testing.T) {
 		t.Fatalf(`INT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterI32("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	f, _ = determineConverterI32("native", "ABCD", valueGain{int64(-10)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x05}
 	res = f(message)
 	ref = int32(-49)
@@ -167,7 +167,7 @@ func TestDetermineConverterI32(t *testing.T) {
 		t.Fatalf(`INT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterI32("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterI32("native", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x7F, 0xFF}
 	res = f(message)
 	ref = math.MaxUint16
@@ -175,7 +175,7 @@ func TestDetermineConverterI32(t *testing.T) {
 		t.Fatalf(`INT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterI32("INT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterI32("INT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x7F, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var refi64 int64 = math.MaxInt32*2 + 1
@@ -183,14 +183,14 @@ func TestDetermineConverterI32(t *testing.T) {
 		t.Fatalf(`INT32 to INT64 conversion did not work %v != %v`, res, refi64)
 	}
 
-	f, _ = determineConverterI32("UINT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterI32("UINT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x7F, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var refu64 uint64 = math.MaxInt32*2 + 1
 	if res.(uint64) != refu64 {
 		t.Fatalf(`INT32 to UINT64 conversion did not work %v != %v`, res, refu64)
 	}
-	f, _ = determineConverterI32("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterI32("FLOAT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x7F, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var reff64 float64 = math.MaxInt32*2 + 1
@@ -201,7 +201,7 @@ func TestDetermineConverterI32(t *testing.T) {
 
 func TestDetermineConverterU32(t *testing.T) {
 	var f fieldConverterFunc
-	f, _ = determineConverterU32("native", "ABCD", value_gain{}, value_offset{})
+	f, _ = determineConverterU32("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
 	var ref uint32 = uint32(10)
@@ -209,7 +209,7 @@ func TestDetermineConverterU32(t *testing.T) {
 		t.Fatalf(`UINT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterU32("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	f, _ = determineConverterU32("native", "ABCD", valueGain{int64(1)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x05}
 	res = f(message)
 	ref = uint32(6)
@@ -217,7 +217,7 @@ func TestDetermineConverterU32(t *testing.T) {
 		t.Fatalf(`UINT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterU32("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	f, _ = determineConverterU32("native", "ABCD", valueGain{int64(-10)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x05}
 	res = f(message)
 	ref = uint32(0)
@@ -225,7 +225,7 @@ func TestDetermineConverterU32(t *testing.T) {
 		t.Fatalf(`UINT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterU32("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU32("native", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0xFF, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	ref = math.MaxUint32
@@ -233,7 +233,7 @@ func TestDetermineConverterU32(t *testing.T) {
 		t.Fatalf(`UINT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterU32("INT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU32("INT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0xFF, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var refi64 int64 = math.MaxUint32*2 + 1
@@ -241,14 +241,14 @@ func TestDetermineConverterU32(t *testing.T) {
 		t.Fatalf(`UINT32 to INT64 conversion did not work %v != %v`, res, refi64)
 	}
 
-	f, _ = determineConverterU32("UINT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU32("UINT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0xFF, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var refu64 uint64 = math.MaxUint32*2 + 1
 	if res.(uint64) != refu64 {
 		t.Fatalf(`UINT32 to UINT64 conversion did not work %v != %v`, res, refu64)
 	}
-	f, _ = determineConverterU32("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU32("FLOAT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0xFF, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var reff64 float64 = math.MaxUint32*2 + 1
@@ -259,7 +259,7 @@ func TestDetermineConverterU32(t *testing.T) {
 
 func TestDetermineConverterF32(t *testing.T) {
 	var f fieldConverterFunc
-	f, _ = determineConverterF32("native", "ABCD", value_gain{}.check(), value_offset{}.check())
+	f, _ = determineConverterF32("native", "ABCD", valueGain{}.check(), valueOffset{}.check())
 	var message = []byte{0x41, 0x10, 0x00, 0x00}
 	var res = f(message)
 	var ref float32 = float32(9)
@@ -267,7 +267,7 @@ func TestDetermineConverterF32(t *testing.T) {
 		t.Fatalf(`FLOAT32 type conversion did not work %v != %v`, res.(float32), ref)
 	}
 
-	f, _ = determineConverterF32("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	f, _ = determineConverterF32("native", "ABCD", valueGain{int64(1)}, valueOffset{int64(1)})
 	message = []byte{0x41, 0x10, 0x00, 0x00}
 	res = f(message)
 	ref = float32(10)
@@ -275,7 +275,7 @@ func TestDetermineConverterF32(t *testing.T) {
 		t.Fatalf(`FLOAT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterF32("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	f, _ = determineConverterF32("native", "ABCD", valueGain{int64(-10)}, valueOffset{int64(1)})
 	message = []byte{0x41, 0x10, 0x00, 0x00}
 	res = f(message)
 	ref = float32(-89)
@@ -283,7 +283,7 @@ func TestDetermineConverterF32(t *testing.T) {
 		t.Fatalf(`FLOAT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterF32("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterF32("native", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x4F, 0x80, 0x00, 0x00}
 	res = f(message)
 	ref = math.MaxUint32*2 + 1
@@ -291,7 +291,7 @@ func TestDetermineConverterF32(t *testing.T) {
 		t.Fatalf(`FLOAT32 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterF32("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterF32("FLOAT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x4F, 0x80, 0x00, 0x00}
 	res = f(message)
 	var reff64 float64 = math.MaxUint32*2 + 1
@@ -302,7 +302,7 @@ func TestDetermineConverterF32(t *testing.T) {
 
 func TestDetermineConverterI64(t *testing.T) {
 	var f fieldConverterFunc
-	f, _ = determineConverterI64("native", "ABCD", value_gain{}, value_offset{})
+	f, _ = determineConverterI64("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
 	var ref int64 = int64(10)
@@ -310,7 +310,7 @@ func TestDetermineConverterI64(t *testing.T) {
 		t.Fatalf(`INT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterI64("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	f, _ = determineConverterI64("native", "ABCD", valueGain{int64(1)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05}
 	res = f(message)
 	ref = int64(6)
@@ -318,7 +318,7 @@ func TestDetermineConverterI64(t *testing.T) {
 		t.Fatalf(`INT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterI64("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	f, _ = determineConverterI64("native", "ABCD", valueGain{int64(-10)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05}
 	res = f(message)
 	ref = int64(-49)
@@ -326,7 +326,7 @@ func TestDetermineConverterI64(t *testing.T) {
 		t.Fatalf(`INT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterI64("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterI64("native", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF}
 	res = f(message)
 	ref = math.MaxUint16
@@ -334,7 +334,7 @@ func TestDetermineConverterI64(t *testing.T) {
 		t.Fatalf(`INT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterI64("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterI64("native", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var refi64 int64 = math.MaxInt32*2 + 1
@@ -342,14 +342,14 @@ func TestDetermineConverterI64(t *testing.T) {
 		t.Fatalf(`INT64 to INT64 conversion did not work %v != %v`, res, refi64)
 	}
 
-	f, _ = determineConverterI64("UINT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterI64("UINT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var refu64 uint64 = math.MaxInt32*2 + 1
 	if res.(uint64) != refu64 {
 		t.Fatalf(`INT64 to UINT64 conversion did not work %v != %v`, res, refu64)
 	}
-	f, _ = determineConverterI64("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterI64("FLOAT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var reff64 float64 = math.MaxInt32*2 + 1
@@ -360,7 +360,7 @@ func TestDetermineConverterI64(t *testing.T) {
 
 func TestDetermineConverterU64(t *testing.T) {
 	var f fieldConverterFunc
-	f, _ = determineConverterU64("native", "ABCD", value_gain{}, value_offset{})
+	f, _ = determineConverterU64("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
 	var ref uint64 = uint64(10)
@@ -368,7 +368,7 @@ func TestDetermineConverterU64(t *testing.T) {
 		t.Fatalf(`UINT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterU64("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	f, _ = determineConverterU64("native", "ABCD", valueGain{int64(1)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05}
 	res = f(message)
 	ref = uint64(6)
@@ -376,7 +376,7 @@ func TestDetermineConverterU64(t *testing.T) {
 		t.Fatalf(`UINT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterU64("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	f, _ = determineConverterU64("native", "ABCD", valueGain{int64(-10)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05}
 	res = f(message)
 	ref = uint64(0)
@@ -384,7 +384,7 @@ func TestDetermineConverterU64(t *testing.T) {
 		t.Fatalf(`UINT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterU64("native", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU64("native", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	ref = math.MaxUint64
@@ -392,7 +392,7 @@ func TestDetermineConverterU64(t *testing.T) {
 		t.Fatalf(`UINT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterU64("INT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU64("INT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var refi64 int64 = math.MaxUint32*2 + 1
@@ -400,7 +400,7 @@ func TestDetermineConverterU64(t *testing.T) {
 		t.Fatalf(`UINT64 to INT64 conversion did not work %v != %v`, res, refi64)
 	}
 
-	f, _ = determineConverterU64("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterU64("FLOAT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF}
 	res = f(message)
 	var reff64 float64 = math.MaxUint32*2 + 1
@@ -411,7 +411,7 @@ func TestDetermineConverterU64(t *testing.T) {
 
 func TestDetermineConverterF64(t *testing.T) {
 	var f fieldConverterFunc
-	f, _ = determineConverterF64("native", "ABCD", value_gain{}, value_offset{})
+	f, _ = determineConverterF64("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x40, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
 	var ref float64 = float64(9)
@@ -419,7 +419,7 @@ func TestDetermineConverterF64(t *testing.T) {
 		t.Fatalf(`FLOAT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterF64("native", "ABCD", value_gain{int64(1)}, value_offset{int64(1)})
+	f, _ = determineConverterF64("native", "ABCD", valueGain{int64(1)}, valueOffset{int64(1)})
 	message = []byte{0x40, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
 	res = f(message)
 	ref = float64(10)
@@ -427,7 +427,7 @@ func TestDetermineConverterF64(t *testing.T) {
 		t.Fatalf(`FLOAT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterF64("native", "ABCD", value_gain{int64(-10)}, value_offset{int64(1)})
+	f, _ = determineConverterF64("native", "ABCD", valueGain{int64(-10)}, valueOffset{int64(1)})
 	message = []byte{0x40, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
 	res = f(message)
 	ref = float64(-89)
@@ -435,7 +435,7 @@ func TestDetermineConverterF64(t *testing.T) {
 		t.Fatalf(`FLOAT64 type conversion did not work %v != %v`, res, ref)
 	}
 
-	f, _ = determineConverterF64("FLOAT64", "ABCD", value_gain{int64(2)}, value_offset{int64(1)})
+	f, _ = determineConverterF64("FLOAT64", "ABCD", valueGain{int64(2)}, valueOffset{int64(1)})
 	message = []byte{0x41, 0xEF, 0xFF, 0xFF, 0xFF, 0xE0, 0x00, 0x00}
 	res = f(message)
 	var reff64 float64 = math.MaxUint32*2 + 1

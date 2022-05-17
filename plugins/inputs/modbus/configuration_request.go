@@ -97,8 +97,8 @@ type requestFieldDefinition struct {
 	Measurement string      `toml:"measurement"`
 	Omit        bool        `toml:"omit"`
 	// TypeSet
-	SetValueGain   value_gain
-	SetValueOffset value_offset
+	SetValueGain   valueGain
+	SetValueOffset valueOffset
 }
 
 type requestDefinition struct {
@@ -183,10 +183,10 @@ func (c *ConfigurationPerRequest) Check() error {
 				f.Measurement = def.Measurement
 			}
 
-			// Set value_gain
-			f.SetValueGain = value_gain{f.Scale}.check()
-			// Set value_offset
-			f.SetValueOffset = value_offset{f.ValueOffset}.check()
+			// Set valueGain
+			f.SetValueGain = valueGain{f.Scale}.check()
+			// Set valueOffset
+			f.SetValueOffset = valueOffset{f.ValueOffset}.check()
 
 			def.Fields[fidx] = f
 			// Check for duplicate field definitions

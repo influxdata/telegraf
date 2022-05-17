@@ -5,21 +5,21 @@ import (
 	"math/big"
 )
 
-type value_offset struct {
+type valueOffset struct {
 	Val interface{}
 }
 
-func (v_o value_offset) check() value_offset {
+func (v_o valueOffset) check() valueOffset {
 	switch (v_o.Val).(type) {
 	case int64, float64:
 	default:
-		fmt.Printf("value_offset (%v) is not a valid int64 or float64, it has been set to 0.0\n", v_o.Val)
+		fmt.Printf("valueOffset (%v) is not a valid int64 or float64, it has been set to 0.0\n", v_o.Val)
 		v_o.Val = 0.0
 	}
 	return v_o
 }
 
-func (v_o value_offset) asBigFloat() *big.Float {
+func (v_o valueOffset) asBigFloat() *big.Float {
 	v_o.check()
 	switch o := (v_o.Val).(type) {
 	case int64:
@@ -33,11 +33,11 @@ func (v_o value_offset) asBigFloat() *big.Float {
 	}
 }
 
-type value_gain struct {
+type valueGain struct {
 	Val interface{}
 }
 
-func (v_g value_gain) check() value_gain {
+func (v_g valueGain) check() valueGain {
 	switch (v_g.Val).(type) {
 	case int64, float64:
 	default:
@@ -47,7 +47,7 @@ func (v_g value_gain) check() value_gain {
 	return v_g
 }
 
-func (v_g value_gain) asBigFloat() *big.Float {
+func (v_g valueGain) asBigFloat() *big.Float {
 	v_g.check()
 	switch g := (v_g.Val).(type) {
 	case int64:

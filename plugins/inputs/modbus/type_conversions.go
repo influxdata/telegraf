@@ -6,7 +6,7 @@ import (
 	"math/big"
 )
 
-func determineConverter(inType, byteOrder, outType string, gain value_gain, offset value_offset) (fieldConverterFunc, error) {
+func determineConverter(inType, byteOrder, outType string, gain valueGain, offset valueOffset) (fieldConverterFunc, error) {
 	switch inType {
 	case "INT16":
 		return determineConverterI16(outType, byteOrder, gain, offset)

@@ -175,7 +175,7 @@ func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition) (fie
 			return f, err
 		}
 
-		f.converter, err = determineConverter(inType, byteOrder, outType, value_gain{def.Scale}, value_offset{0.0})
+		f.converter, err = determineConverter(inType, byteOrder, outType, valueGain{def.Scale}, valueOffset{0.0})
 		if err != nil {
 			return f, err
 		}

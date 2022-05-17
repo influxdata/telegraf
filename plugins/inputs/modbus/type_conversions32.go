@@ -32,27 +32,27 @@ func endianessConverter32(byteOrder string) (convert32, error) {
 	}
 	return nil, fmt.Errorf("invalid byte-order: %s", byteOrder)
 }
-func rescaleI32AsBigFloat(in int32, value_gain value_gain, value_offset value_offset) *big.Float {
-	var t *big.Float = big.NewFloat(0.0)
-	t.Mul(big.NewFloat(float64(in)), value_gain.asBigFloat())
-	t.Add(t, value_offset.asBigFloat())
+func rescaleI32AsBigFloat(in int32, valueGain valueGain, valueOffset valueOffset) *big.Float {
+	t := big.NewFloat(0.0)
+	t.Mul(big.NewFloat(float64(in)), valueGain.asBigFloat())
+	t.Add(t, valueOffset.asBigFloat())
 	return t
 }
-func rescaleU32AsBigFloat(in uint32, value_gain value_gain, value_offset value_offset) *big.Float {
-	var t *big.Float = big.NewFloat(0.0)
-	t.Mul(big.NewFloat(float64(in)), value_gain.asBigFloat())
-	t.Add(t, value_offset.asBigFloat())
+func rescaleU32AsBigFloat(in uint32, valueGain valueGain, valueOffset valueOffset) *big.Float {
+	t := big.NewFloat(0.0)
+	t.Mul(big.NewFloat(float64(in)), valueGain.asBigFloat())
+	t.Add(t, valueOffset.asBigFloat())
 	return t
 }
-func rescaleF32AsBigFloat(in float32, value_gain value_gain, value_offset value_offset) *big.Float {
-	var t *big.Float = big.NewFloat(0.0)
-	t.Mul(big.NewFloat(float64(in)), value_gain.asBigFloat())
-	t.Add(t, value_offset.asBigFloat())
+func rescaleF32AsBigFloat(in float32, valueGain valueGain, valueOffset valueOffset) *big.Float {
+	t := big.NewFloat(0.0)
+	t.Mul(big.NewFloat(float64(in)), valueGain.asBigFloat())
+	t.Add(t, valueOffset.asBigFloat())
 	return t
 }
 
 // I32
-func determineConverterI32(outType, byteOrder string, value_gain value_gain, value_offset value_offset) (fieldConverterFunc, error) {
+func determineConverterI32(outType, byteOrder string, valueGain valueGain, valueOffset valueOffset) (fieldConverterFunc, error) {
 	tohost, err := endianessConverter32(byteOrder)
 	if err != nil {
 		return nil, err
@@ -62,29 +62,29 @@ func determineConverterI32(outType, byteOrder string, value_gain value_gain, val
 	case "native": // I32
 		return func(b []byte) interface{} {
 			in := int32(tohost(b))
-			return int32(forceIntToMinMax(rescaleI32AsBigFloat(in, value_gain, value_offset), "INT32").Int64())
+			return int32(forceIntToMinMax(rescaleI32AsBigFloat(in, valueGain, valueOffset), "INT32").Int64())
 		}, nil
 	case "INT64":
 		return func(b []byte) interface{} {
 			in := int32(tohost(b))
-			return forceIntToMinMax(rescaleI32AsBigFloat(in, value_gain, value_offset), "INT64").Int64()
+			return forceIntToMinMax(rescaleI32AsBigFloat(in, valueGain, valueOffset), "INT64").Int64()
 		}, nil
 	case "UINT64":
 		return func(b []byte) interface{} {
 			in := int32(tohost(b))
-			return forceIntToMinMax(rescaleI32AsBigFloat(in, value_gain, value_offset), "UINT64").Uint64()
+			return forceIntToMinMax(rescaleI32AsBigFloat(in, valueGain, valueOffset), "UINT64").Uint64()
 		}, nil
 	case "FLOAT64":
 		return func(b []byte) interface{} {
 			in := int32(tohost(b))
-			return forceFloat64ToMinMax(rescaleI32AsBigFloat(in, value_gain, value_offset))
+			return forceFloat64ToMinMax(rescaleI32AsBigFloat(in, valueGain, valueOffset))
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
 
 // U32
-func determineConverterU32(outType, byteOrder string, value_gain value_gain, value_offset value_offset) (fieldConverterFunc, error) {
+func determineConverterU32(outType, byteOrder string, valueGain valueGain, valueOffset valueOffset) (fieldConverterFunc, error) {
 	tohost, err := endianessConverter32(byteOrder)
 	if err != nil {
 		return nil, err
@@ -93,29 +93,29 @@ func determineConverterU32(outType, byteOrder string, value_gain value_gain, val
 	case "native": // U32
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return uint32(forceIntToMinMax(rescaleU32AsBigFloat(in, value_gain, value_offset), "UINT32").Int64())
+			return uint32(forceIntToMinMax(rescaleU32AsBigFloat(in, valueGain, valueOffset), "UINT32").Int64())
 		}, nil
 	case "INT64":
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return forceIntToMinMax(rescaleU32AsBigFloat(in, value_gain, value_offset), "INT64").Int64()
+			return forceIntToMinMax(rescaleU32AsBigFloat(in, valueGain, valueOffset), "INT64").Int64()
 		}, nil
 	case "UINT64":
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return forceIntToMinMax(rescaleU32AsBigFloat(in, value_gain, value_offset), "UINT64").Uint64()
+			return forceIntToMinMax(rescaleU32AsBigFloat(in, valueGain, valueOffset), "UINT64").Uint64()
 		}, nil
 	case "FLOAT64":
 		return func(b []byte) interface{} {
 			in := tohost(b)
-			return forceFloat64ToMinMax(rescaleU32AsBigFloat(in, value_gain, value_offset))
+			return forceFloat64ToMinMax(rescaleU32AsBigFloat(in, valueGain, valueOffset))
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
 
 // F32
-func determineConverterF32(outType, byteOrder string, value_gain value_gain, value_offset value_offset) (fieldConverterFunc, error) {
+func determineConverterF32(outType, byteOrder string, valueGain valueGain, valueOffset valueOffset) (fieldConverterFunc, error) {
 	tohost, err := endianessConverter32(byteOrder)
 	if err != nil {
 		return nil, err
@@ -125,15 +125,13 @@ func determineConverterF32(outType, byteOrder string, value_gain value_gain, val
 	case "native":
 		return func(b []byte) interface{} {
 			in := math.Float32frombits(tohost(b))
-			fmt.Printf("%v\t%v\n", in, rescaleF32AsBigFloat(in, value_gain, value_offset))
-			return forceFloat32ToMinMax(rescaleF32AsBigFloat(in, value_gain, value_offset))
-
+			fmt.Printf("%v\t%v\n", in, rescaleF32AsBigFloat(in, valueGain, valueOffset))
+			return forceFloat32ToMinMax(rescaleF32AsBigFloat(in, valueGain, valueOffset))
 		}, nil
 	case "FLOAT64":
 		return func(b []byte) interface{} {
 			in := math.Float32frombits(tohost(b))
-			return forceFloat64ToMinMax(rescaleF32AsBigFloat(in, value_gain, value_offset))
-
+			return forceFloat64ToMinMax(rescaleF32AsBigFloat(in, valueGain, valueOffset))
 		}, nil
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
