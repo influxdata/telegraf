@@ -65,7 +65,7 @@ func TestMariaDB(t *testing.T) {
 					"MYSQL_DATABASE":      database,
 				},
 				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
+					"/docker-entrypoint-initdb.d": testdata,
 				},
 				ExposedPorts: []string{"3306/tcp"},
 				WaitingFor:   wait.ForListeningPort("3306/tcp"),
@@ -184,7 +184,7 @@ func TestPostgreSQL(t *testing.T) {
 					"POSTGRES_DB":       database,
 				},
 				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
+					"/docker-entrypoint-initdb.d": testdata,
 				},
 				ExposedPorts: []string{"5432/tcp"},
 				WaitingFor:   wait.ForListeningPort("5432/tcp"),
@@ -295,7 +295,7 @@ func TestClickHouse(t *testing.T) {
 			ContainerRequest: testcontainers.ContainerRequest{
 				Image: "yandex/clickhouse-server",
 				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
+					"/docker-entrypoint-initdb.d": testdata,
 				},
 				ExposedPorts: []string{"9000/tcp", "8123/tcp"},
 				WaitingFor:   wait.NewHTTPStrategy("/").WithPort("8123/tcp"),
