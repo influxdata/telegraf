@@ -127,9 +127,9 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	out, errbuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
+	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
 	if !isNagios && runErr != nil {
-		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
+		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errBuf))
 		acc.AddError(err)
 		return
 	}
@@ -141,10 +141,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	}
 
 	if isNagios {
-		metrics, err = nagios.TryAddState(runErr, metrics)
-		if err != nil {
-			e.Log.Errorf("Failed to add nagios state: %s", err)
-		}
+		metrics = nagios.AddState(runErr, errBuf, metrics)
 	}
 
 	for _, m := range metrics {

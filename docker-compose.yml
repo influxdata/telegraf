@@ -40,7 +40,7 @@ services:
       - MYSQL_ALLOW_EMPTY_PASSWORD=yes
     ports:
       - "3306:3306"
-    # removes warning "mbind operation not permitted" enables you to see the docker logs 
+    # removes warning "mbind operation not permitted" enables you to see the docker logs
     cap_add:
     - SYS_NICE  # CAP_SYS_NICE
   memcached:
@@ -82,10 +82,6 @@ services:
     image: open62541/open62541
     ports:
       - "4840:4840"
-  riemann:
-    image: stealthly/docker-riemann
-    ports:
-      - "5555:5555"
   nats:
     image: nats
     ports:
