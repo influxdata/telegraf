@@ -223,7 +223,9 @@ func (b *burrow) createClient() (*http.Client, error) {
 	transport := http.Transport{
 		DialContext: &net.Dialer{Timeout: timeout, DualStack: true}.DialContext,
 		TLSClientConfig: tlsCfg,
+		// If b.ConcurrentConnections <= 1, then DefaultMaxIdleConnsPerHost is used (=2)
 		MaxIdleConnsPerHost: b.ConcurrentConnections / 2,
+		// If b.ConcurrentConnections == 0, then it is treated as "no limits"
 		MaxConnsPerHost: b.ConcurrentConnections,
 		ResponseHeaderTimeout: timeout,
 		IdleConnTimeout: 90*time.Second,
