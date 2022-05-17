@@ -15,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+// unknownExitCode is the nagios unknown status code
+// the exit code should be used if an error occurs or something unexpected happens
+const unknownExitCode = 3
+
 // getExitCode get the exit code from an error value which is the result
 // of running a command through exec package api.
 func getExitCode(err error) (int, error) {
@@ -24,7 +28,7 @@ func getExitCode(err error) (int, error) {
 
 	ee, ok := err.(*exec.ExitError)
 	if !ok {
-		return 3, err
+		return unknownExitCode, err
 	}
 
 	ws, ok := ee.Sys().(syscall.WaitStatus)
@@ -43,15 +47,15 @@ func AddState(runErr error, errMessage []byte, metrics []telegraf.Metric) []tele
 	// This will ensure that in every error case the valid nagios state 'unknown' will be returned.
 	// No error needs to be thrown because the output will contain the error information.
 	// Description found at 'Plugin Return Codes' https://nagios-plugins.org/doc/guidelines.html
-	if exitErr != nil || state < 0 || state > 3 {
-		state = 3
+	if exitErr != nil || state < 0 || state > unknownExitCode {
+		state = unknownExitCode
 	}
 
 	for _, m := range metrics {
 		if m.Name() == "nagios_state" {
 			m.AddField("state", state)
 
-			if state == 3 {
+			if state == unknownExitCode {
 				errorMessage := string(errMessage)
 				if exitErr != nil && exitErr.Error() != "" {
 					errorMessage = exitErr.Error()
