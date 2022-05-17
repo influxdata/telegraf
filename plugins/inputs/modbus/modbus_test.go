@@ -20,7 +20,7 @@ func TestDetermineConverterI16(t *testing.T) {
 	f, _ = determineConverterI16("native", "ABCD", valueGain{}.check(), valueOffset{}.check())
 	var message = []byte{0x00, 0x0A}
 	var res = f(message)
-	var ref16 int16 = int16(10)
+	ref16 := int16(10)
 	if res.(int16) != ref16 {
 		t.Fatalf(`INT16 type conversion did not work %v != %v`, res, ref16)
 	}
@@ -76,7 +76,7 @@ func TestDetermineConverterI16(t *testing.T) {
 	f, _ = determineConverterI16("FLOAT64", "ABCD", valueGain{float64(math.MaxInt16)}, valueOffset{int64(math.MaxInt64)})
 	message = []byte{0x7F, 0xFF}
 	res = f(message)
-	var reff float64 = float64(math.MaxInt64 + (math.MaxInt16 * math.MaxInt16))
+	reff := float64(math.MaxInt64 + (math.MaxInt16 * math.MaxInt16))
 	if res.(float64) != reff {
 		t.Fatalf(`INT16 to FLOAT64 conversion did not work %v != %v`, res, refu64)
 	}
@@ -87,7 +87,7 @@ func TestDetermineConverterU16(t *testing.T) {
 	f, _ = determineConverterU16("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x0A}
 	var res = f(message)
-	var refu16 uint16 = uint16(10)
+	refu16 := uint16(10)
 	if res.(uint16) != refu16 {
 		t.Fatalf(`UINT16 type conversion did not work %v != %v`, res, refu16)
 	}
@@ -146,7 +146,7 @@ func TestDetermineConverterI32(t *testing.T) {
 	f, _ = determineConverterI32("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
-	var ref int32 = int32(10)
+	ref := int32(10)
 	if res.(int32) != ref {
 		t.Fatalf(`INT32 type conversion did not work %v != %v`, res, ref)
 	}
@@ -204,7 +204,7 @@ func TestDetermineConverterU32(t *testing.T) {
 	f, _ = determineConverterU32("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
-	var ref uint32 = uint32(10)
+	ref := uint32(10)
 	if res.(uint32) != ref {
 		t.Fatalf(`UINT32 type conversion did not work %v != %v`, res, ref)
 	}
@@ -262,7 +262,7 @@ func TestDetermineConverterF32(t *testing.T) {
 	f, _ = determineConverterF32("native", "ABCD", valueGain{}.check(), valueOffset{}.check())
 	var message = []byte{0x41, 0x10, 0x00, 0x00}
 	var res = f(message)
-	var ref float32 = float32(9)
+	ref := float32(9)
 	if res.(float32) != ref {
 		t.Fatalf(`FLOAT32 type conversion did not work %v != %v`, res.(float32), ref)
 	}

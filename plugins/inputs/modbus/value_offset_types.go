@@ -9,21 +9,21 @@ type valueOffset struct {
 	Val interface{}
 }
 
-func (v_o valueOffset) check() valueOffset {
-	switch (v_o.Val).(type) {
+func (in valueOffset) check() valueOffset {
+	out := in
+	switch (in.Val).(type) {
 	case int64, float64:
 	default:
-		fmt.Printf("valueOffset (%v) is not a valid int64 or float64, it has been set to 0.0\n", v_o.Val)
-		v_o.Val = 0.0
+		fmt.Printf("valueOffset (%v) is not a valid int64 or float64, it has been set to 0.0\n", in.Val)
+		out.Val = 0.0
 	}
-	return v_o
+	return out
 }
 
-func (v_o valueOffset) asBigFloat() *big.Float {
-	v_o.check()
-	switch o := (v_o.Val).(type) {
+func (in valueOffset) asBigFloat() *big.Float {
+	switch o := (in.Val).(type) {
 	case int64:
-		var i *big.Int = big.NewInt(o)
+		i := big.NewInt(o)
 		return new(big.Float).SetInt(i)
 
 	case float64:
@@ -37,21 +37,21 @@ type valueGain struct {
 	Val interface{}
 }
 
-func (v_g valueGain) check() valueGain {
-	switch (v_g.Val).(type) {
+func (in valueGain) check() valueGain {
+	out := in
+	switch (in.Val).(type) {
 	case int64, float64:
 	default:
-		fmt.Printf("scale (%v) is not a valid int64 or float64, it has been set to 1.0\n", v_g.Val)
-		v_g.Val = 1.0
+		fmt.Printf("scale (%v) is not a valid int64 or float64, it has been set to 1.0\n", in.Val)
+		out.Val = 1.0
 	}
-	return v_g
+	return out
 }
 
-func (v_g valueGain) asBigFloat() *big.Float {
-	v_g.check()
-	switch g := (v_g.Val).(type) {
+func (in valueGain) asBigFloat() *big.Float {
+	switch g := (in.Val).(type) {
 	case int64:
-		var i *big.Int = big.NewInt(g)
+		i := big.NewInt(g)
 		return new(big.Float).SetInt(i)
 	case float64:
 		return big.NewFloat(g)
