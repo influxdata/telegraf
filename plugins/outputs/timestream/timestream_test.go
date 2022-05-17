@@ -416,7 +416,6 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 
 	require.True(t, arrayContains(result, expectedResultSingleTable), "Expected that the list of requests to Timestream: %+v\n "+
 		"will contain request: %+v\n\n", result, expectedResultSingleTable)
-
 }
 
 func buildExpectedMultiRecords(multiMeasureName string, tableName string) *timestreamwrite.WriteRecordsInput {
@@ -1337,7 +1336,6 @@ func buildMultiRecords(inputs []SimpleInput, multiMeasureName string, measureTyp
 			Time:             aws.String(input.t),
 			TimeUnit:         timeUnit,
 		})
-
 	}
 
 	return tsRecords

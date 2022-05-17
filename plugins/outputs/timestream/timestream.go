@@ -400,9 +400,8 @@ func (t *Timestream) buildDimensions(point telegraf.Metric) []types.Dimension {
 func (t *Timestream) buildWriteRecords(point telegraf.Metric) []types.Record {
 	if t.UseMultiMeasureRecords {
 		return t.buildMultiMeasureWriteRecords(point)
-	} else {
-		return t.buildSingleWriteRecords(point)
 	}
+	return t.buildSingleWriteRecords(point)
 }
 
 func (t *Timestream) buildSingleWriteRecords(point telegraf.Metric) []types.Record {
@@ -438,7 +437,7 @@ func (t *Timestream) buildMultiMeasureWriteRecords(point telegraf.Metric) []type
 	var records []types.Record
 	dimensions := t.buildDimensions(point)
 
-	var multiMeasureName = ""
+	var multiMeasureName string
 
 	if t.MappingMode == MappingModeSingleTable {
 		multiMeasureName = point.Name()
