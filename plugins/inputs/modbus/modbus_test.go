@@ -305,7 +305,7 @@ func TestDetermineConverterI64(t *testing.T) {
 	f, _ = determineConverterI64("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
-	var ref int64 = int64(10)
+	ref := int64(10)
 	if res.(int64) != ref {
 		t.Fatalf(`INT64 type conversion did not work %v != %v`, res, ref)
 	}
@@ -363,7 +363,7 @@ func TestDetermineConverterU64(t *testing.T) {
 	f, _ = determineConverterU64("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
-	var ref uint64 = uint64(10)
+	ref := uint64(10)
 	if res.(uint64) != ref {
 		t.Fatalf(`UINT64 type conversion did not work %v != %v`, res, ref)
 	}
@@ -414,7 +414,7 @@ func TestDetermineConverterF64(t *testing.T) {
 	f, _ = determineConverterF64("native", "ABCD", valueGain{}, valueOffset{})
 	var message = []byte{0x40, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A}
 	var res = f(message)
-	var ref float64 = float64(9)
+	ref := float64(9)
 	if math.Abs(res.(float64)-ref) > 1e-9 {
 		t.Fatalf(`FLOAT64 type conversion did not work %v != %v`, res, ref)
 	}
