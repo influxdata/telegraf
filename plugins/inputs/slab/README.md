@@ -7,6 +7,7 @@ file, only Linux is supported. The specification of `/proc/slabinfo` has
 not changed since [Linux v2.6.12 (April 2005)](https://github.com/torvalds/linux/blob/1da177e4/mm/slab.c#L2848-L2861),
 so it can be regarded as sufficiently stable. The memory usage is
 equivalent to the `CACHE_SIZE` column of `slabtop` command.
+If the HOST_PROC environment variable is set, Telegraf will use its value instead of `/proc`
 
 **Note: `/proc/slabinfo` is usually restricted to read as root user. Make sure telegraf can execute `sudo` without password.**
 
