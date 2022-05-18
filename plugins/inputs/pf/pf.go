@@ -208,7 +208,7 @@ func (pf *PF) buildPfctlCmd() (string, []string, error) {
 
 func init() {
 	inputs.Add("pf", func() telegraf.Input {
-		pf := new(PF)
+		pf := &PF{}
 		pf.infoFunc = pf.callPfctl
 		return pf
 	})
