@@ -1,4 +1,5 @@
 #!/bin/sh
+set -eux
 
 mkdir certs certs_by_serial private &&
 chmod 700 private &&
@@ -30,7 +31,7 @@ commonName = supplied
 basicConstraints = CA:false
 
 [ req ]
-default_bits = 1024
+default_bits = 2048
 default_keyfile = ./private/cakey.pem
 default_md = sha256
 prompt = yes
