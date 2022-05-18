@@ -123,7 +123,7 @@ type chainLister func(table, chain string) (string, error)
 
 func init() {
 	inputs.Add("iptables", func() telegraf.Input {
-		ipt := new(Iptables)
+		ipt := &Iptables{}
 		ipt.lister = ipt.chainList
 		return ipt
 	})
