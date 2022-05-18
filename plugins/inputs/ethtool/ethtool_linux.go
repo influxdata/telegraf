@@ -5,7 +5,6 @@
 package ethtool
 
 import (
-	_ "embed"
 	"net"
 	"regexp"
 	"strings"
@@ -19,16 +18,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
-//go:embed sample.conf
-var sampleConfig string
-
 type CommandEthtool struct {
 	ethtool *ethtoolLib.Ethtool
-}
-
-func (*Ethtool) SampleConfig() string {
-	return sampleConfig
 }
 
 func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
