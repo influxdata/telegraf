@@ -42,18 +42,25 @@ func (b *includeBlock) extractBlockBorders(node *ast.FencedCodeBlock) {
 	}
 }
 
-func insertInclude(buf *bytes.Buffer, b includeBlock) error {
+func insertInclude(buf *bytes.Buffer, include string) error {
+	file, err := os.Open(include)
+	if err != nil {
+		return fmt.Errorf("opening include %q failed: %v", include, err)
+	}
+	defer file.Close()
+
+	// Write the include and make sure we get a newline
+	if _, err := io.Copy(buf, file); err != nil {
+		return fmt.Errorf("inserting include %q failed: %v", include, err)
+	}
+	return nil
+}
+
+func insertIncludes(buf *bytes.Buffer, b includeBlock) error {
 	// Insert all includes in the order they occured
 	for _, include := range b.Includes {
-		file, err := os.Open(include)
-		if err != nil {
-			return fmt.Errorf("opening include %q failed: %v", include, err)
-		}
-		defer file.Close()
-
-		// Write the include and make sure we get a newline
-		if _, err := io.Copy(buf, file); err != nil {
-			return fmt.Errorf("inserting include %q failed: %v", include, err)
+		if err := insertInclude(buf, include); err != nil {
+			return err
 		}
 	}
 	// Make sure we add a trailing newline
@@ -138,12 +145,14 @@ func main() {
 			log.Fatalf("Writing non-replaced content failed: %v", err)
 		}
 		if !bytes.HasSuffix(output.Bytes(), []byte("\n")) {
-			output.Write([]byte("\n"))
+			if _, err := output.Write([]byte("\n")); err != nil {
+				log.Fatalf("Writing failed: %v", err)
+			}
 		}
 		offset = b.Stop
 
 		// Insert the include file
-		if err := insertInclude(&output, b); err != nil {
+		if err := insertIncludes(&output, b); err != nil {
 			log.Fatal(err)
 		}
 	}
