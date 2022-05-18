@@ -90,7 +90,10 @@ func (ss *SlabStats) getSlabStats() (map[string]interface{}, error) {
 }
 
 func (ss *SlabStats) runCmd(cmd string, args []string) ([]byte, error) {
-	execCmd := exec.Command("sudo", append([]string{"-n", cmd}, args...)...)
+	execCmd := exec.Command(cmd, args...)
+	if os.Geteuid() != 0 {
+		execCmd = exec.Command("sudo", append([]string{"-n", cmd}, args...)...)
+	}
 
 	out, err := internal.StdOutputTimeout(execCmd, 5*time.Second)
 	if err != nil {
