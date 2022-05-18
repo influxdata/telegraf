@@ -549,12 +549,12 @@ func (p *PowerStat) addCPUC0StateResidencyMetric(cpuID string, acc telegraf.Accu
 
 func (p *PowerStat) parsePackageMetricsConfig() {
 	if p.PackageMetrics == nil {
+		// if Package Metric config is empty, use the default settings.
+		p.packageCurrentPowerConsumption = true
+		p.packageCurrentDramPowerConsumption = true
+		p.packageThermalDesignPower = true
 		return
 	}
-	// if Package Metric config is empty, use the default settings. If not, no metric name provide means not displaying it
-	p.packageCurrentPowerConsumption = false
-	p.packageCurrentDramPowerConsumption = false
-	p.packageThermalDesignPower = false
 
 	if contains(p.PackageMetrics, packageTurboLimit) {
 		p.packageTurboLimit = true
@@ -683,9 +683,9 @@ func newPowerStat(fs fileService) *PowerStat {
 		cpuTemperature:                     false,
 		cpuBusyFrequency:                   false,
 		packageTurboLimit:                  false,
-		packageCurrentPowerConsumption:     true,
-		packageCurrentDramPowerConsumption: true,
-		packageThermalDesignPower:          true,
+		packageCurrentPowerConsumption:     false,
+		packageCurrentDramPowerConsumption: false,
+		packageThermalDesignPower:          false,
 		skipFirstIteration:                 true,
 		fs:                                 fs,
 		logOnce:                            make(map[string]error),

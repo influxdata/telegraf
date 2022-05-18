@@ -573,12 +573,13 @@ func getPowerWithMockedServices() (*PowerStat, *MockServices) {
 	mockServices.fs = &mockFileService{}
 	mockServices.msr = &mockMsrService{}
 	mockServices.rapl = &mockRaplService{}
-	logger := testutil.Logger{Name: "PowerPluginTest"}
 	p := newPowerStat(mockServices.fs)
-	p.Log = logger
-	p.fs = mockServices.fs
+	p.Log = testutil.Logger{Name: "PowerPluginTest"}
 	p.rapl = mockServices.rapl
 	p.msr = mockServices.msr
+	p.packageCurrentPowerConsumption = true
+	p.packageCurrentDramPowerConsumption = true
+	p.packageThermalDesignPower = true
 
 	return p, &mockServices
 }
