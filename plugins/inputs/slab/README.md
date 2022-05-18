@@ -18,12 +18,14 @@ If the HOST_PROC environment variable is set, Telegraf will use its value instea
 [[inputs.slab]]
   # no configuration
 ```
+
 ## Sudo configuration
 
 Since the slabinfo file is only readable by root, the plugin runs `sudo /bin/cat` to read the file.
 
 Sudo can be configured to allow telegraf to run just the command needed to read the slabinfo file. For example, if telegraf is running as the user 'telegraf' and HOST_PROC is not used, add this to the sudoers file:
 `telegraf ALL = (root) NOPASSWD: /bin/cat /proc/slabinfo`
+
 ## Metrics
 
 Metrics include generic ones such as `kmalloc_*` as well as those of kernel
