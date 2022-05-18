@@ -30,6 +30,26 @@ type Sensors struct {
 	path          string
 }
 
+const cmd = "sensors"
+
+func (s *Sensors) Init() error {
+	// Set defaults
+	if s.path == "" {
+		path, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		s.path = path
+	}
+
+	// Check parameters
+	if s.path == "" {
+		return fmt.Errorf("no path specified for %q", cmd)
+	}
+
+	return nil
+}
+
 func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 	if len(s.path) == 0 {
 		return errors.New("sensors not found: verify that lm-sensors package is installed and that sensors is in your PATH")
@@ -96,15 +116,10 @@ func snake(input string) string {
 }
 
 func init() {
-	s := Sensors{
-		RemoveNumbers: true,
-		Timeout:       defaultTimeout,
-	}
-	path, _ := exec.LookPath("sensors")
-	if len(path) > 0 {
-		s.path = path
-	}
 	inputs.Add("sensors", func() telegraf.Input {
-		return &s
+		return &Sensors{
+			RemoveNumbers: true,
+			Timeout:       defaultTimeout,
+		}
 	})
 }
