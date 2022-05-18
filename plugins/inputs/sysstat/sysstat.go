@@ -292,11 +292,10 @@ func escape(dirty string) string {
 }
 
 func init() {
-	s := Sysstat{
-		Group:      true,
-		Activities: dfltActivities,
-	}
 	inputs.Add("sysstat", func() telegraf.Input {
-		return &s
+		return &Sysstat{
+			Group:      true,
+			Activities: dfltActivities,
+		}
 	})
 }
