@@ -42,6 +42,29 @@ type Ipmi struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+const cmd = "ipmitool"
+
+func (m *Ipmi) Init() error {
+	// Set defaults
+	if m.Path == "" {
+		path, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		m.Path = path
+	}
+	if m.CachePath == "" {
+		m.CachePath = os.TempDir()
+	}
+
+	// Check parameters
+	if m.Path == "" {
+		return fmt.Errorf("no path for %q specified", cmd)
+	}
+
+	return nil
+}
+
 // Gather is the main execution function for the plugin
 func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 	if len(m.Path) == 0 {
@@ -282,16 +305,7 @@ func transform(s string) string {
 }
 
 func init() {
-	m := Ipmi{}
-	path, _ := exec.LookPath("ipmitool")
-	if len(path) > 0 {
-		m.Path = path
-	}
-	m.Timeout = config.Duration(time.Second * 20)
-	m.UseCache = false
-	m.CachePath = os.TempDir()
 	inputs.Add("ipmi_sensor", func() telegraf.Input {
-		m := m
-		return &m
+		return &Ipmi{Timeout: config.Duration(20 * time.Second)}
 	})
 }

@@ -28,10 +28,8 @@ func TestGather(t *testing.T) {
 	execCommand = fakeExecCommand
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(i.Gather)
-
-	require.NoError(t, err)
-
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
 	require.EqualValues(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
 
 	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
@@ -132,8 +130,8 @@ func TestGather(t *testing.T) {
 		Log:     testutil.Logger{},
 	}
 
-	err = acc.GatherError(i.Gather)
-	require.NoError(t, err)
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}
@@ -404,9 +402,8 @@ func TestGatherV2(t *testing.T) {
 	execCommand = fakeExecCommandV2
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(i.Gather)
-
-	require.NoError(t, err)
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
 
 	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
 	require.EqualValues(t, "USERID", conn.Username)
@@ -443,8 +440,8 @@ func TestGatherV2(t *testing.T) {
 		Log:           testutil.Logger{},
 	}
 
-	err = acc.GatherError(i.Gather)
-	require.NoError(t, err)
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}
