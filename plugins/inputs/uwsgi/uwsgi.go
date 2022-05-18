@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // Package uwsgi implements a telegraf plugin for collecting uwsgi stats from
 // the uwsgi stats server.
 package uwsgi

@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux && (386 || amd64 || arm || arm64)
 // +build linux
 // +build 386 amd64 arm arm64

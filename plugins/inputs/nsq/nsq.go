@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // The MIT License (MIT)
 //
 // Copyright (c) 2015 Jeff Nickoloff (jeff@allingeek.com)

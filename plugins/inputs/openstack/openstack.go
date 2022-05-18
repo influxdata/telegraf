@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // Package openstack implements an OpenStack input plugin for Telegraf
 //
 // The OpenStack input plug is a simple two phase metric collector.  In the first

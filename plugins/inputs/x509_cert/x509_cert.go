@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // Package x509_cert reports metrics from an SSL certificate.
 package x509_cert
 

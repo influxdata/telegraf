@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cisco_telemetry_mdt
 
 import (

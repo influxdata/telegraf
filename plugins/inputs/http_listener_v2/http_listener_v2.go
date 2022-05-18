@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package http_listener_v2
 
 import (

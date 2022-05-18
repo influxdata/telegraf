@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // Package neptune_apex implements an input plugin for the Neptune Apex
 // aquarium controller.
 package neptune_apex

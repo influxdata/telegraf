@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package linux_sysctl_fs
 
 import (
