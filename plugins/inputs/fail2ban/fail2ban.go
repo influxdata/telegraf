@@ -35,6 +35,26 @@ var metricsTargets = []struct {
 	},
 }
 
+const cmd = "fail2ban-client"
+
+func (f *Fail2ban) Init() error {
+	// Set defaults
+	if f.path == "" {
+		path, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		f.path = path
+	}
+
+	// Check parameters
+	if f.path == "" {
+		return fmt.Errorf("%q not found", cmd)
+	}
+
+	return nil
+}
+
 func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 	if len(f.path) == 0 {
 		return errors.New("fail2ban-client not found: verify that fail2ban is installed and that fail2ban-client is in your PATH")
@@ -106,13 +126,7 @@ func extractCount(line string) (string, int) {
 }
 
 func init() {
-	f := Fail2ban{}
-	path, _ := exec.LookPath("fail2ban-client")
-	if len(path) > 0 {
-		f.path = path
-	}
 	inputs.Add("fail2ban", func() telegraf.Input {
-		f := f
-		return &f
+		return &Fail2ban{}
 	})
 }
