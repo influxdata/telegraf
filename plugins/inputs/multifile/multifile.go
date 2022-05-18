@@ -17,8 +17,6 @@ type MultiFile struct {
 	BaseDir   string
 	FailEarly bool
 	Files     []File `toml:"file"`
-
-	initialized bool
 }
 
 type File struct {
@@ -27,11 +25,7 @@ type File struct {
 	Conversion string
 }
 
-func (m *MultiFile) init() {
-	if m.initialized {
-		return
-	}
-
+func (m *MultiFile) Init() error {
 	for i, file := range m.Files {
 		if m.BaseDir != "" {
 			m.Files[i].Name = path.Join(m.BaseDir, file.Name)
@@ -40,12 +34,10 @@ func (m *MultiFile) init() {
 			m.Files[i].Dest = path.Base(file.Name)
 		}
 	}
-
-	m.initialized = true
+	return nil
 }
 
 func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
-	m.init()
 	now := time.Now()
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
