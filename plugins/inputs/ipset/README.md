@@ -29,7 +29,7 @@ AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
 You will need the following in your telegraf config:
 
-```toml @sample.conf
+```toml
 [[inputs.ipset]]
   use_sudo = true
 ```
@@ -46,7 +46,7 @@ Defaults!IPSETSAVE !logfile, !syslog, !pam_session
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather packets and bytes counters from Linux ipsets
   [[inputs.ipset]]
     ## By default, we only show sets which have already matched at least 1 packet.
