@@ -70,6 +70,25 @@ type Sysstat struct {
 	Log telegraf.Logger
 }
 
+const cmd = "sadf"
+
+func (s *Sysstat) Init() error {
+	// Set defaults
+	if s.Sadf == "" {
+		sadf, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		s.Sadf = sadf
+	}
+
+	if s.Sadf == "" {
+		return fmt.Errorf("no path specified for %q", cmd)
+	}
+
+	return nil
+}
+
 func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 	if time.Duration(s.SadcInterval) != 0 {
 		// Collect interval is calculated as interval - parseInterval
@@ -276,10 +295,6 @@ func init() {
 	s := Sysstat{
 		Group:      true,
 		Activities: dfltActivities,
-	}
-	sadf, _ := exec.LookPath("sadf")
-	if len(sadf) > 0 {
-		s.Sadf = sadf
 	}
 	inputs.Add("sysstat", func() telegraf.Input {
 		return &s
