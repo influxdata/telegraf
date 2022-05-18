@@ -32,7 +32,6 @@ type SlabStats struct {
 	Log telegraf.Logger `toml:"-"`
 
 	statFile string
-	UseSudo  bool `toml:"use_sudo"`
 }
 
 func (ss *SlabStats) Init() error {
@@ -91,10 +90,7 @@ func (ss *SlabStats) getSlabStats() (map[string]interface{}, error) {
 }
 
 func (ss *SlabStats) runCmd(cmd string, args []string) ([]byte, error) {
-	execCmd := exec.Command(cmd, args...)
-	if ss.UseSudo {
-		execCmd = exec.Command("sudo", append([]string{"-n", cmd}, args...)...)
-	}
+	execCmd := exec.Command("sudo", append([]string{"-n", cmd}, args...)...)
 
 	out, err := internal.StdOutputTimeout(execCmd, 5*time.Second)
 	if err != nil {

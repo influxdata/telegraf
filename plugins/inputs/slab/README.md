@@ -8,16 +8,14 @@ not changed since [Linux v2.6.12 (April 2005)](https://github.com/torvalds/linux
 so it can be regarded as sufficiently stable. The memory usage is
 equivalent to the `CACHE_SIZE` column of `slabtop` command.
 
-**Note: `/proc/slabinfo` is usually restricted to read as root user. Enable `use_sudo` option if necessary.**
+**Note: `/proc/slabinfo` is usually restricted to read as root user. Make sure telegraf can execute `sudo` without password.**
 
 ## Configuration
 
 ```toml
 # Get slab statistics from procfs
 [[inputs.slab]]
-  ## /proc/slabinfo is usually restricted to read as root user.
-  ## Enable use_sudo option if necessary.
-  use_sudo = false
+  # no configuration
 ```
 
 ## Metrics
