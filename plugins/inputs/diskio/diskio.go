@@ -27,7 +27,6 @@ type DiskIO struct {
 
 	infoCache    map[string]diskInfoCache
 	deviceFilter filter.Filter
-	initialized  bool
 }
 
 // hasMeta reports whether s contains any special glob characters.
@@ -35,7 +34,7 @@ func hasMeta(s string) bool {
 	return strings.ContainsAny(s, "*?[")
 }
 
-func (d *DiskIO) init() error {
+func (d *DiskIO) Init() error {
 	for _, device := range d.Devices {
 		if hasMeta(device) {
 			deviceFilter, err := filter.Compile(d.Devices)
@@ -45,18 +44,10 @@ func (d *DiskIO) init() error {
 			d.deviceFilter = deviceFilter
 		}
 	}
-	d.initialized = true
 	return nil
 }
 
 func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
-	if !d.initialized {
-		err := d.init()
-		if err != nil {
-			return err
-		}
-	}
-
 	devices := []string{}
 	if d.deviceFilter == nil {
 		devices = d.Devices
