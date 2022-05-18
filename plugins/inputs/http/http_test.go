@@ -94,6 +94,40 @@ func TestHTTPHeaders(t *testing.T) {
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
+func TestHTTPContentLengthHeader(t *testing.T) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/endpoint" {
+			if r.Header.Get("Content-Length") != "" {
+				_, _ = w.Write([]byte(simpleJSON))
+			} else {
+				w.WriteHeader(http.StatusForbidden)
+			}
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer fakeServer.Close()
+
+	address := fakeServer.URL + "/endpoint"
+	plugin := &httpplugin.HTTP{
+		URLs:    []string{address},
+		Headers: map[string]string{},
+		Body:    "{}",
+		Log:     testutil.Logger{},
+	}
+
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		return parsers.NewParser(&parsers.Config{
+			DataFormat: "json",
+			MetricName: "metricName",
+		})
+	})
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Init())
+	require.NoError(t, acc.GatherError(plugin.Gather))
+}
+
 func TestInvalidStatusCode(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
