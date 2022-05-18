@@ -70,7 +70,7 @@ smartctl --scan -d nvme
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from storage devices supporting S.M.A.R.T.
 [[inputs.smart]]
     ## Optionally specify the path to the smartctl executable

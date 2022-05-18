@@ -34,7 +34,7 @@ avoid cardinality issues:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from the kubernetes kubelet api
 [[inputs.kubernetes]]
   ## URL for the kubelet

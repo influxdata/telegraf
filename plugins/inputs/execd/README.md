@@ -15,7 +15,7 @@ STDERR from the process will be relayed to Telegraf as errors in the logs.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Run executable as long-running input plugin
 [[inputs.execd]]
   ## One program to run as daemon.

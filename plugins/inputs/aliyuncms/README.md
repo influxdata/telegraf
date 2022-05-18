@@ -19,7 +19,7 @@ In the following order the plugin will attempt to authenticate.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Pull Metric Statistics from Aliyun CMS
 [[inputs.aliyuncms]]
   ## Aliyun Credentials

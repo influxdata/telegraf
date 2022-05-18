@@ -15,7 +15,7 @@ Currently it is known to break on 7.x or greater versions.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Derive metrics from aggregating Elasticsearch query results
 [[inputs.elasticsearch_query]]
   ## The full HTTP endpoint URL for your Elasticsearch instance

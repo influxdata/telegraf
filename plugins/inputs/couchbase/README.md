@@ -5,7 +5,7 @@ This plugin gets metrics for each Couchbase node, as well as detailed metrics fo
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read per-node and per-bucket metrics from Couchbase
 [[inputs.couchbase]]
   ## specify servers via a url matching:

@@ -2,7 +2,7 @@
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many redis servers
 [[inputs.redis]]
   ## specify servers via a url matching:

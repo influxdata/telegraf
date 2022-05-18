@@ -11,7 +11,7 @@ path onto the global path variable
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Retrieves SNMP values from remote agents
 [[inputs.snmp]]
   ## Agent addresses to retrieve values from.

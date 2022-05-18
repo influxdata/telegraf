@@ -7,7 +7,7 @@ If `fullstat` is set, a great deal of additional metrics are collected, detailed
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read per-mount NFS client metrics from /proc/self/mountstats
 [[inputs.nfsclient]]
   ## Read more low-level metrics (optional, defaults to false)

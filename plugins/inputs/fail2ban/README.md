@@ -11,7 +11,7 @@ Acquiring the required permissions can be done using several methods:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from fail2ban.
 [[inputs.fail2ban]]
   ## Use sudo to run fail2ban-client

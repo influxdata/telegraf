@@ -7,7 +7,7 @@ based on its main usage cases and the evolution of the OpenTracing standard.*
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
 [[inputs.zipkin]]
   # path = "/api/v1/spans" # URL path for span data

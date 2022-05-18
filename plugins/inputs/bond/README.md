@@ -6,7 +6,7 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collect bond interface status, slaves statuses and failures count
 [[inputs.bond]]
   ## Sets 'proc' directory path

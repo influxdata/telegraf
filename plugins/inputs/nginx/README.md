@@ -2,7 +2,7 @@
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Nginx's basic status information (ngx_http_stub_status_module)
 [[inputs.nginx]]
   ## An array of Nginx stub_status URI to gather stats.

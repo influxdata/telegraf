@@ -4,7 +4,7 @@ Reports the number and total size of files in specified directories.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Count files in a directory
 [[inputs.filecount]]
   ## Directories to gather stats about.

@@ -7,7 +7,7 @@ The use of synproxy is documented in `man iptables-extensions` under the SYNPROX
 
 The synproxy plugin does not need any configuration
 
-```toml
+```toml @sample.conf
 # Get synproxy counter statistics from procfs
 [[inputs.synproxy]]
   # no configuration

@@ -5,7 +5,7 @@ the NATS [monitoring http server](https://www.nats.io/documentation/server/gnats
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Provides metrics about the state of a NATS server
 [[inputs.nats]]
   ## The address of the monitoring endpoint of the NATS server

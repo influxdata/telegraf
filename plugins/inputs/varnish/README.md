@@ -4,7 +4,7 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin to collect stats from Varnish HTTP Cache
 [[inputs.varnish]]
   ## If running as a restricted user you can prepend sudo for additional access:

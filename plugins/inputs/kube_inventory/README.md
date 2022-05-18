@@ -33,7 +33,7 @@ avoid cardinality issues:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from the Kubernetes api
 [[inputs.kube_inventory]]
   ## URL for the Kubernetes API

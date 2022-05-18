@@ -4,7 +4,7 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read formatted metrics from one or more HTTP endpoints
 [[inputs.http]]
   ## One or more URLs from which to read formatted metrics

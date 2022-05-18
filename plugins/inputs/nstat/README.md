@@ -29,7 +29,7 @@ So if nothing is given, no paths in config and in env vars, the plugin takes the
 
 The sample config file
 
-```toml
+```toml @sample.conf
 # Collect kernel snmp counters and network interface statistics
 [[inputs.nstat]]
   ## file paths for proc files. If empty default paths will be used:

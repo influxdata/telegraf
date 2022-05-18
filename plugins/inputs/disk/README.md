@@ -8,7 +8,7 @@ Note that `used_percent` is calculated by doing `used / (used + free)`, _not_
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about disk usage by mount point
 [[inputs.disk]]
   ## By default stats will be gathered for all mount points.

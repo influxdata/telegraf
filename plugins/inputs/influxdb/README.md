@@ -9,7 +9,7 @@ InfluxDB-formatted endpoints. See below for more information.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read InfluxDB-formatted JSON metrics from one or more HTTP endpoints
 [[inputs.influxdb]]
   ## Works with InfluxDB debug endpoints out of the box,

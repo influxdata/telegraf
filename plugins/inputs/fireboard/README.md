@@ -6,7 +6,7 @@ the [Fireboard REST API](https://docs.fireboard.io/reference/restapi.html).
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read real time temps from fireboard.io servers
 [[inputs.fireboard]]
   ## Specify auth token for your account

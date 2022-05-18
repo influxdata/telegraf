@@ -29,7 +29,7 @@ AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
 You will need the following in your telegraf config:
 
-```toml
+```toml @sample.conf
 [[inputs.ipset]]
   use_sudo = true
 ```

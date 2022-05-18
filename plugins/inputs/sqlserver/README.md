@@ -81,7 +81,7 @@ GO
 
 Remove User Id and Password keywords from the connection string in your config file to use windows authentication.
 
-```toml
+```toml @sample.conf
 [[inputs.sqlserver]]
   servers = ["Server=192.168.1.10;Port=1433;app name=telegraf;log=1;",]
 ```

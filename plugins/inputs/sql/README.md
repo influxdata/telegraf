@@ -10,7 +10,7 @@ Please check the list of [supported SQL drivers](../../../docs/SQL_DRIVERS_INPUT
 This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage <plugin-name>`.
 
-```toml
+```toml @sample.conf
 # Read metrics from SQL queries
 [[inputs.sql]]
   ## Database Driver

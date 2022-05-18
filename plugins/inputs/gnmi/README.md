@@ -8,7 +8,7 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # gNMI telemetry input plugin
 [[inputs.gnmi]]
   ## Address and port of the gNMI GRPC server

@@ -30,7 +30,7 @@ Since telegraf will fork a process to run iptables, `AmbientCapabilities` is req
 
 You will need the following in your telegraf config:
 
-```toml
+```toml @sample.conf
 [[inputs.iptables]]
   use_sudo = true
 ```

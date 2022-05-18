@@ -225,7 +225,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # # Input plugin to counterPath Performance Counters on Windows operating systems
 # [[inputs.win_perf_counters]]
 #   ## By default this plugin returns basic CPU and Disk statistics.

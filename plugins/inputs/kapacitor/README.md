@@ -4,7 +4,7 @@ The Kapacitor plugin collects metrics from the given Kapacitor instances.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Kapacitor-formatted JSON metrics from one or more HTTP endpoints
 [[inputs.kapacitor]]
   ## Multiple URLs from which to read Kapacitor-formatted JSON

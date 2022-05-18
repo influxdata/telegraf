@@ -30,7 +30,7 @@ For deployments with only a small number of VMs and hosts, a small polling inter
 
 Also, consider polling OpenStack services at different intervals depending on your requirements. This will help with load and cardinality as well.
 
-```toml
+```toml @sample.conf
 [[inputs.openstack]]
   interval = 5m
   ....

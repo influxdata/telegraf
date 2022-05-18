@@ -6,7 +6,7 @@ For monitoring recommendations reference [Monitoring your Aurora cluster](https:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather metrics from Apache Aurora schedulers
 [[inputs.aurora]]
   ## Schedulers are the base addresses of your Aurora Schedulers

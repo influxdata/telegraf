@@ -12,7 +12,7 @@ condition ID, icon, and main is at [weather conditions][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read current weather and forecasts data from openweathermap.org
 [[inputs.openweathermap]]
   ## OpenWeatherMap API key.

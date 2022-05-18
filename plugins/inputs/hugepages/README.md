@@ -8,7 +8,7 @@ Consult <https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html>
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gathers huge pages measurements.
 [[inputs.hugepages]]
   ## Supported huge page types:

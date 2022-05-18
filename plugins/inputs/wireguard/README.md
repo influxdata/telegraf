@@ -6,7 +6,7 @@ reports gauge metrics for Wireguard interface device(s) and its peers.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collect Wireguard server interface and peer statistics
 [[inputs.wireguard]]
   ## Optional list of Wireguard device/interface names to query.

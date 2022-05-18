@@ -5,7 +5,7 @@ This plugin reads Juniper Networks implementation of OpenConfig telemetry data f
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Subscribe and receive OpenConfig Telemetry data using JTI
 [[inputs.jti_openconfig_telemetry]]
   ## List of device addresses to collect telemetry from
