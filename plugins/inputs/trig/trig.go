@@ -1,15 +1,24 @@
 package trig
 
 import (
+	_ "embed"
 	"math"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Trig struct {
 	x         float64
 	Amplitude float64
+}
+
+func (*Trig) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Trig) Gather(acc telegraf.Accumulator) error {

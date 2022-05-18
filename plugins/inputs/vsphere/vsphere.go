@@ -2,15 +2,21 @@ package vsphere
 
 import (
 	"context"
+	_ "embed"
 	"sync"
 	"time"
+
+	"github.com/vmware/govmomi/vim25/soap"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/vmware/govmomi/vim25/soap"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // VSphere is the top level type for the vSphere input plugin. It contains all the configuration
 // and a list of connected vSphere endpoints
@@ -71,6 +77,10 @@ type VSphere struct {
 	tls.ClientConfig
 
 	Log telegraf.Logger
+}
+
+func (*VSphere) SampleConfig() string {
+	return sampleConfig
 }
 
 // Start is called from telegraf core when a plugin is started and allows it to

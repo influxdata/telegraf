@@ -1,12 +1,17 @@
 package mailchimp
 
 import (
+	_ "embed"
 	"fmt"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type MailChimp struct {
 	api *ChimpAPI
@@ -16,6 +21,10 @@ type MailChimp struct {
 	CampaignID string `toml:"campaign_id"`
 
 	Log telegraf.Logger `toml:"-"`
+}
+
+func (*MailChimp) SampleConfig() string {
+	return sampleConfig
 }
 
 func (m *MailChimp) Init() error {

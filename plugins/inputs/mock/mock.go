@@ -1,6 +1,7 @@
 package mock
 
 import (
+	_ "embed"
 	"math"
 	"math/rand"
 	"time"
@@ -8,6 +9,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Mock struct {
 	counter int64
@@ -47,6 +52,10 @@ type stock struct {
 	Name       string  `toml:"name"`
 	Price      float64 `toml:"price"`
 	Volatility float64 `toml:"volatility"`
+}
+
+func (*Mock) SampleConfig() string {
+	return sampleConfig
 }
 
 func (m *Mock) Init() error {

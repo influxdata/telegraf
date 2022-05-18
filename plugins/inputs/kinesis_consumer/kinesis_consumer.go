@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"math/big"
@@ -22,6 +23,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type (
 	DynamoDB struct {
@@ -72,6 +77,10 @@ type processContent func([]byte) ([]byte, error)
 
 // this is the largest sequence number allowed - https://docs.aws.amazon.com/kinesis/latest/APIReference/API_SequenceNumberRange.html
 var maxSeq = strToBint(strings.Repeat("9", 129))
+
+func (*KinesisConsumer) SampleConfig() string {
+	return sampleConfig
+}
 
 func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 	k.parser = parser

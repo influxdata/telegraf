@@ -1,6 +1,7 @@
 package consul_agent
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // consul_agent configuration object
 type ConsulAgent struct {
@@ -37,6 +42,10 @@ func init() {
 			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
+}
+
+func (*ConsulAgent) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *ConsulAgent) Init() error {

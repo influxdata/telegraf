@@ -3,6 +3,7 @@
 package uwsgi
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,12 +20,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // Uwsgi server struct
 type Uwsgi struct {
 	Servers []string        `toml:"servers"`
 	Timeout config.Duration `toml:"timeout"`
 
 	client *http.Client
+}
+
+func (*Uwsgi) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather collect data from uWSGI Server

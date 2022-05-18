@@ -3,6 +3,7 @@ package ipmi_sensor
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	execCommand          = exec.Command // execCommand is used to mock commands in tests.
@@ -43,6 +48,10 @@ type Ipmi struct {
 }
 
 const cmd = "ipmitool"
+
+func (*Ipmi) SampleConfig() string {
+	return sampleConfig
+}
 
 func (m *Ipmi) Init() error {
 	// Set defaults

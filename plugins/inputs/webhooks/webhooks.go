@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -18,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/particle"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Webhook interface {
 	Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger)
@@ -45,6 +50,10 @@ type Webhooks struct {
 
 func NewWebhooks() *Webhooks {
 	return &Webhooks{}
+}
+
+func (*Webhooks) SampleConfig() string {
+	return sampleConfig
 }
 
 func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {

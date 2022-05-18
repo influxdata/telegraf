@@ -2,6 +2,7 @@ package filestat
 
 import (
 	"crypto/md5"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +11,10 @@ import (
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type FileStat struct {
 	Md5   bool
@@ -32,6 +37,10 @@ func NewFileStat() *FileStat {
 		missingFiles:    make(map[string]bool),
 		filesWithErrors: make(map[string]bool),
 	}
+}
+
+func (*FileStat) SampleConfig() string {
+	return sampleConfig
 }
 
 func (f *FileStat) Gather(acc telegraf.Accumulator) error {

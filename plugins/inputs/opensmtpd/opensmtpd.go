@@ -3,6 +3,7 @@ package opensmtpd
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -15,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type runner func(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error)
 
@@ -54,6 +59,10 @@ func opensmtpdRunner(cmdName string, timeout config.Duration, useSudo bool) (*by
 // Gather collects the configured stats from smtpctl and adds them to the
 // Accumulator
 //
+func (*Opensmtpd) SampleConfig() string {
+	return sampleConfig
+}
+
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 	// Always exclude uptime.human statistics

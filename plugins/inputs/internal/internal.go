@@ -1,6 +1,7 @@
 package internal
 
 import (
+	_ "embed"
 	"runtime"
 	"strings"
 
@@ -10,6 +11,10 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Self struct {
 	CollectMemstats bool
 }
@@ -18,6 +23,10 @@ func NewSelf() telegraf.Input {
 	return &Self{
 		CollectMemstats: true,
 	}
+}
+
+func (*Self) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Self) Gather(acc telegraf.Accumulator) error {

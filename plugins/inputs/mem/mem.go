@@ -1,6 +1,7 @@
 package mem
 
 import (
+	_ "embed"
 	"fmt"
 	"runtime"
 
@@ -9,9 +10,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type MemStats struct {
 	ps       system.PS
 	platform string
+}
+
+func (*MemStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ms *MemStats) Init() error {

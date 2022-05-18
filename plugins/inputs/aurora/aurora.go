@@ -2,6 +2,7 @@ package aurora
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type RoleType int
 
@@ -52,6 +57,10 @@ type Aurora struct {
 
 	client *http.Client
 	urls   []*url.URL
+}
+
+func (*Aurora) SampleConfig() string {
+	return sampleConfig
 }
 
 func (a *Aurora) Gather(acc telegraf.Accumulator) error {

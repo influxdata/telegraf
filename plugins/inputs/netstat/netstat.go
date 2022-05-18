@@ -1,6 +1,7 @@
 package netstat
 
 import (
+	_ "embed"
 	"fmt"
 	"syscall"
 
@@ -9,8 +10,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type NetStats struct {
 	PS system.PS
+}
+
+func (*NetStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ns *NetStats) Gather(acc telegraf.Accumulator) error {

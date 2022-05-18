@@ -1,19 +1,24 @@
 package snmp_trap
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/gosnmp/gosnmp"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type translator interface {
 	lookup(oid string) (snmp.MibEntry, error)
@@ -47,6 +52,10 @@ type SnmpTrap struct {
 	Log telegraf.Logger `toml:"-"`
 
 	translator translator //nolint:revive
+}
+
+func (*SnmpTrap) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *SnmpTrap) Gather(_ telegraf.Accumulator) error {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"net"
 	"regexp"
@@ -16,6 +17,10 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w[\w\.\-]*)\s+([\w\.\-]+)`)
 
@@ -44,6 +49,10 @@ func (z *Zookeeper) dial(ctx context.Context, addr string) (net.Conn, error) {
 		return tls.DialWithDialer(&dialer, "tcp", addr, z.tlsConfig)
 	}
 	return dialer.DialContext(ctx, "tcp", addr)
+}
+
+func (*Zookeeper) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather reads stats from all configured servers accumulates stats

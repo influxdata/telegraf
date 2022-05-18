@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
+	_ "embed"
 	"errors"
 	"io"
 	"net"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang/snappy"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
@@ -21,6 +23,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // defaultMaxBodySize is the default maximum request body size, in bytes.
 // if the request body is over this size, we will return an HTTP 413 error.
@@ -65,6 +71,10 @@ type HTTPListenerV2 struct {
 
 	parsers.Parser
 	acc telegraf.Accumulator
+}
+
+func (*HTTPListenerV2) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *HTTPListenerV2) Gather(_ telegraf.Accumulator) error {

@@ -5,6 +5,7 @@ package hugepages
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -14,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// path to root huge page control directory
@@ -70,6 +75,10 @@ type Hugepages struct {
 	rootHugepagePath string
 	numaNodePath     string
 	meminfoPath      string
+}
+
+func (*Hugepages) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *Hugepages) Init() error {

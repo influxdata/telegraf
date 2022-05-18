@@ -4,6 +4,7 @@
 package intel_powerstat
 
 import (
+	_ "embed"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -14,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	cpuFrequency                       = "cpu_frequency"
@@ -54,6 +59,10 @@ type PowerStat struct {
 	cpuInfo                            map[string]*cpuInfo
 	skipFirstIteration                 bool
 	logOnce                            map[string]error
+}
+
+func (*PowerStat) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init performs one time setup of the plugin

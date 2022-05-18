@@ -2,6 +2,7 @@ package powerdns_recursor
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -16,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type PowerdnsRecursor struct {
 	UnixSockets []string `toml:"unix_sockets"`
 	SocketDir   string   `toml:"socket_dir"`
@@ -27,6 +32,10 @@ type PowerdnsRecursor struct {
 }
 
 var defaultTimeout = 5 * time.Second
+
+func (*PowerdnsRecursor) SampleConfig() string {
+	return sampleConfig
+}
 
 func (p *PowerdnsRecursor) Init() error {
 	if p.SocketMode != "" {

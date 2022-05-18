@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	_ "embed"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -22,6 +23,10 @@ import (
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
@@ -252,6 +257,10 @@ func (c *X509Cert) collectCertURLs() ([]*url.URL, error) {
 	}
 
 	return urls, nil
+}
+
+func (*X509Cert) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather adds metrics into the accumulator.

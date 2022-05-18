@@ -1,12 +1,17 @@
 package hddtemp
 
 import (
+	_ "embed"
 	"net"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	gohddtemp "github.com/influxdata/telegraf/plugins/inputs/hddtemp/go-hddtemp"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const defaultAddress = "127.0.0.1:7634"
 
@@ -31,6 +36,10 @@ var hddtempSampleConfig = `
   # address = "127.0.0.1:7634"
   # devices = ["sda", "*"]
 `
+
+func (*HDDTemp) SampleConfig() string {
+	return sampleConfig
+}
 
 func (h *HDDTemp) Gather(acc telegraf.Accumulator) error {
 	if h.fetcher == nil {

@@ -1,6 +1,7 @@
 package mesos
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -17,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Role string
 
@@ -112,6 +117,10 @@ func (m *Mesos) initialize() error {
 	m.client = client
 
 	return nil
+}
+
+func (*Mesos) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather() metrics from given list of Mesos Masters

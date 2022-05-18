@@ -2,6 +2,7 @@ package net_response
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"net"
 	"net/textproto"
@@ -12,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ResultType uint64
 
@@ -31,6 +36,10 @@ type NetResponse struct {
 	Send        string
 	Expect      string
 	Protocol    string
+}
+
+func (*NetResponse) SampleConfig() string {
+	return sampleConfig
 }
 
 // TCPGather will execute if there are TCP tests defined in the configuration.

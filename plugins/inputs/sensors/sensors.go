@@ -4,6 +4,7 @@
 package sensors
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -18,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 var (
 	execCommand    = exec.Command // execCommand is used to mock commands in tests.
 	numberRegp     = regexp.MustCompile("[0-9]+")
@@ -31,6 +36,10 @@ type Sensors struct {
 }
 
 const cmd = "sensors"
+
+func (*Sensors) SampleConfig() string {
+	return sampleConfig
+}
 
 func (s *Sensors) Init() error {
 	// Set defaults

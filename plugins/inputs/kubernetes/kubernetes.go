@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Kubernetes represents the config object for the plugin
 type Kubernetes struct {
@@ -47,6 +52,10 @@ func init() {
 			LabelExclude: []string{"*"},
 		}
 	})
+}
+
+func (*Kubernetes) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *Kubernetes) Init() error {

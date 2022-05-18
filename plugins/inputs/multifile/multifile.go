@@ -2,6 +2,7 @@ package multifile
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"math"
 	"os"
@@ -13,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type MultiFile struct {
 	BaseDir   string
 	FailEarly bool
@@ -23,6 +28,10 @@ type File struct {
 	Name       string `toml:"file"`
 	Dest       string
 	Conversion string
+}
+
+func (*MultiFile) SampleConfig() string {
+	return sampleConfig
 }
 
 func (m *MultiFile) Init() error {

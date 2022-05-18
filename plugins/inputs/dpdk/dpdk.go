@@ -4,6 +4,7 @@
 package dpdk
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -15,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultPathToSocket        = "/var/run/dpdk/rte/dpdk_telemetry.v2"
@@ -53,6 +58,10 @@ func init() {
 		}
 		return dpdk
 	})
+}
+
+func (*dpdk) SampleConfig() string {
+	return sampleConfig
 }
 
 // Performs validation of all parameters from configuration

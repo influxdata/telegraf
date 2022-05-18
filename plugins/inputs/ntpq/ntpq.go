@@ -3,6 +3,7 @@ package ntpq
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -12,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Mapping of ntpq header names to tag keys
 var tagHeaders = map[string]string{
@@ -28,6 +33,10 @@ type NTPQ struct {
 	intI   map[string]int
 
 	DNSLookup bool `toml:"dns_lookup"`
+}
+
+func (*NTPQ) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NTPQ) Gather(acc telegraf.Accumulator) error {

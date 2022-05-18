@@ -2,6 +2,7 @@ package exec
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -21,6 +22,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const MaxStderrBytes int = 512
 
@@ -121,6 +126,10 @@ func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 		}
 	}
 	return b
+}
+
+func (*Exec) SampleConfig() string {
+	return sampleConfig
 }
 
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {

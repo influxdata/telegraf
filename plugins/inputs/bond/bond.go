@@ -2,6 +2,7 @@ package bond
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // default host proc path
 const defaultHostProc = "/proc"
@@ -32,6 +37,10 @@ type sysFiles struct {
 	ModeFile    string
 	SlaveFile   string
 	ADPortsFile string
+}
+
+func (*Bond) SampleConfig() string {
+	return sampleConfig
 }
 
 func (bond *Bond) Gather(acc telegraf.Accumulator) error {

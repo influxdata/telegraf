@@ -1,6 +1,7 @@
 package burrow
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -17,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultBurrowPrefix          = "/v3/kafka"
@@ -90,6 +95,10 @@ func init() {
 	inputs.Add("burrow", func() telegraf.Input {
 		return &burrow{}
 	})
+}
+
+func (*burrow) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *burrow) Gather(acc telegraf.Accumulator) error {

@@ -2,6 +2,7 @@ package sqlserver
 
 import (
 	"database/sql"
+	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
@@ -15,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // SQLServer struct
 type SQLServer struct {
@@ -177,6 +182,10 @@ func (s *SQLServer) initQueries() error {
 	s.Log.Infof("Config: Effective Queries: %#v\n", querylist)
 
 	return nil
+}
+
+func (*SQLServer) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather collect data from SQL Server

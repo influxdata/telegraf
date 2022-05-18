@@ -1,6 +1,7 @@
 package wireguard
 
 import (
+	_ "embed"
 	"fmt"
 
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -9,6 +10,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	measurementDevice = "wireguard_device"
@@ -30,6 +35,10 @@ type Wireguard struct {
 	Log     telegraf.Logger `toml:"-"`
 
 	client *wgctrl.Client
+}
+
+func (*Wireguard) SampleConfig() string {
+	return sampleConfig
 }
 
 func (wg *Wireguard) Init() error {

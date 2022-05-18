@@ -1,16 +1,20 @@
 package fail2ban
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os/exec"
-	"strings"
-
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	execCommand = exec.Command // execCommand is used to mock commands in tests.
@@ -36,6 +40,10 @@ var metricsTargets = []struct {
 }
 
 const cmd = "fail2ban-client"
+
+func (*Fail2ban) SampleConfig() string {
+	return sampleConfig
+}
 
 func (f *Fail2ban) Init() error {
 	// Set defaults

@@ -19,6 +19,7 @@
 package mdstat
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"regexp"
@@ -29,6 +30,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultHostProc = "/proc"
@@ -171,6 +176,10 @@ func evalComponentDevices(deviceFields []string) string {
 	// Ensure no churn on tag ordering change
 	sort.Strings(mdComponentDevices)
 	return strings.Join(mdComponentDevices, ",")
+}
+
+func (*MdstatConf) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {

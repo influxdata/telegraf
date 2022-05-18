@@ -6,17 +6,22 @@ package ras
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite" //to register SQLite driver
+	_ "modernc.org/sqlite"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Ras plugin gathers and counts errors provided by RASDaemon
 type Ras struct {
@@ -67,6 +72,10 @@ const (
 	microcodeROMParity     = "microcode_rom_parity_errors"
 	unclassifiedMCEBase    = "unclassified_mce_errors"
 )
+
+func (*Ras) SampleConfig() string {
+	return sampleConfig
+}
 
 // Start initializes connection to DB, metrics are gathered in Gather
 func (r *Ras) Start(telegraf.Accumulator) error {

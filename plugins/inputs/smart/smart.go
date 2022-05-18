@@ -2,6 +2,7 @@ package smart
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const intelVID = "0x8086"
 
@@ -352,6 +357,10 @@ func newSmart() *Smart {
 		Timeout:    config.Duration(time.Second * 30),
 		ReadMethod: "concurrent",
 	}
+}
+
+func (*Smart) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init performs one time setup of the plugin and returns an error if the configuration is invalid.

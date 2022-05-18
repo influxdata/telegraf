@@ -1,6 +1,7 @@
 package swap
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
@@ -8,8 +9,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type SwapStats struct {
 	ps system.PS
+}
+
+func (*SwapStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ss *SwapStats) Gather(acc telegraf.Accumulator) error {

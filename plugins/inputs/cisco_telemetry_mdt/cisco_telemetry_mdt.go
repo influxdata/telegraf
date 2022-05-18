@@ -2,6 +2,7 @@ package cisco_telemetry_mdt
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -17,7 +18,7 @@ import (
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	_ "google.golang.org/grpc/encoding/gzip" // Register GRPC gzip decoder to support compressed telemetry
+	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
@@ -26,6 +27,10 @@ import (
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// Maximum telemetry payload size (in bytes) to accept for GRPC dialout transport
@@ -72,6 +77,10 @@ type NxPayloadXfromStructure struct {
 		Key   string `json:"Key"`
 		Value string `json:"Value"`
 	} `json:"prop"`
+}
+
+func (*CiscoTelemetryMDT) SampleConfig() string {
+	return sampleConfig
 }
 
 // Start the Cisco MDT service

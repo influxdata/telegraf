@@ -2,6 +2,7 @@ package leofs
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -13,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const oid = ".1.3.6.1.4.1.35450"
 
@@ -144,6 +149,10 @@ var serverTypeMapping = map[string]ServerType{
 	"4013": ServerTypeStorage,
 	"4000": ServerTypeGateway,
 	"4001": ServerTypeGateway,
+}
+
+func (*LeoFS) SampleConfig() string {
+	return sampleConfig
 }
 
 func (l *LeoFS) Gather(acc telegraf.Accumulator) error {

@@ -2,19 +2,24 @@ package postgresql_extensible
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
 
-	_ "github.com/jackc/pgx/v4/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
+	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Postgresql struct {
 	postgresql.Service
@@ -39,6 +44,10 @@ type query []struct {
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
+
+func (*Postgresql) SampleConfig() string {
+	return sampleConfig
+}
 
 func (p *Postgresql) Init() error {
 	var err error

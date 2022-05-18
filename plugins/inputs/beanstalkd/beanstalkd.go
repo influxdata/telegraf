@@ -1,19 +1,29 @@
 package beanstalkd
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"net/textproto"
 	"sync"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"gopkg.in/yaml.v2"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Beanstalkd struct {
 	Server string   `toml:"server"`
 	Tubes  []string `toml:"tubes"`
+}
+
+func (*Beanstalkd) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *Beanstalkd) Gather(acc telegraf.Accumulator) error {

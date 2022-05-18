@@ -2,6 +2,7 @@ package clickhouse
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var defaultTimeout = 5 * time.Second
 
@@ -51,6 +56,10 @@ type ClickHouse struct {
 	Timeout        config.Duration `toml:"timeout"`
 	HTTPClient     http.Client
 	tls.ClientConfig
+}
+
+func (*ClickHouse) SampleConfig() string {
+	return sampleConfig
 }
 
 // Start ClickHouse input service

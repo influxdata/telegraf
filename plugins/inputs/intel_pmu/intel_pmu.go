@@ -4,6 +4,7 @@
 package intel_pmu
 
 import (
+	_ "embed"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -13,10 +14,15 @@ import (
 	"strings"
 	"syscall"
 
+	ia "github.com/intel/iaevents"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	ia "github.com/intel/iaevents"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Linux availability: https://www.kernel.org/doc/Documentation/sysctl/fs.txt
 const fileMaxPath = "/proc/sys/fs/file-max"
@@ -115,6 +121,10 @@ type eventWithQuals struct {
 // Necessary initialization and config checking are done in Init.
 func (IntelPMU) Start(_ telegraf.Accumulator) error {
 	return nil
+}
+
+func (*IntelPMU) SampleConfig() string {
+	return sampleConfig
 }
 
 func (i *IntelPMU) Init() error {

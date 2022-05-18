@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +24,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parserV2 "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
 
@@ -89,6 +94,10 @@ type Prometheus struct {
 
 	// List of consul services to scrape
 	consulServices map[string]URLAndAddress
+}
+
+func (*Prometheus) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Prometheus) Init() error {

@@ -4,6 +4,7 @@
 package win_perf_counters
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Win_PerfCounters struct {
 	PrintValid                 bool `toml:"PrintValid"`
@@ -127,6 +132,10 @@ func newCounter(counterHandle PDH_HCOUNTER, counterPath string, objectName strin
 	}
 	return &counter{counterPath, objectName, newCounterName, instance, measurementName,
 		includeTotal, useRawValue, counterHandle}
+}
+
+func (*Win_PerfCounters) SampleConfig() string {
+	return sampleConfig
 }
 
 func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool, useRawValue bool) error {

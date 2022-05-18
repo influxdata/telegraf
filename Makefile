@@ -123,11 +123,11 @@ generate_plugins_%: build_generator
 	go generate -run="plugindata/main.go$$" ./plugins/$*/...
 
 .PHONY: generate
-generate: generate_plugins_inputs generate_plugins_outputs generate_plugins_processors generate_plugins_aggregators
+generate: generate_plugins_outputs generate_plugins_processors generate_plugins_aggregators
 
 .PHONY: generate-clean
 generate-clean:
-	go generate -run="plugindata/main.go --clean" ./plugins/inputs/... ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+	go generate -run="plugindata/main.go --clean" ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
 
 .PHONY: build
 build:

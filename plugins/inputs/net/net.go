@@ -1,6 +1,7 @@
 package net
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"strings"
@@ -11,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type NetIOStats struct {
 	filter filter.Filter
 	ps     system.PS
@@ -18,6 +23,10 @@ type NetIOStats struct {
 	skipChecks          bool
 	IgnoreProtocolStats bool
 	Interfaces          []string
+}
+
+func (*NetIOStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {

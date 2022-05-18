@@ -2,14 +2,20 @@ package nsq_consumer
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"sync"
+
+	nsq "github.com/nsqio/go-nsq"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	nsq "github.com/nsqio/go-nsq"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultMaxUndeliveredMessages = 1000
@@ -47,6 +53,10 @@ type NSQConsumer struct {
 	messages map[telegraf.TrackingID]*nsq.Message
 	wg       sync.WaitGroup
 	cancel   context.CancelFunc
+}
+
+func (*NSQConsumer) SampleConfig() string {
+	return sampleConfig
 }
 
 // SetParser takes the data_format from the config and finds the right parser for that format

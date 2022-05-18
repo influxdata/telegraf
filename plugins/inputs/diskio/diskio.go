@@ -1,6 +1,7 @@
 package diskio
 
 import (
+	_ "embed"
 	"fmt"
 	"regexp"
 	"strings"
@@ -10,6 +11,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
@@ -32,6 +37,10 @@ type DiskIO struct {
 // hasMeta reports whether s contains any special glob characters.
 func hasMeta(s string) bool {
 	return strings.ContainsAny(s, "*?[")
+}
+
+func (*DiskIO) SampleConfig() string {
+	return sampleConfig
 }
 
 func (d *DiskIO) Init() error {

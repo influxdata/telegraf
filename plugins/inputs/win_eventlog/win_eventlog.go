@@ -8,6 +8,7 @@ package win_eventlog
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"path/filepath"
@@ -16,10 +17,15 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/windows"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/sys/windows"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // WinEventLog config
 type WinEventLog struct {
@@ -43,6 +49,10 @@ type WinEventLog struct {
 var bufferSize = 1 << 14
 
 var description = "Input plugin to collect Windows Event Log messages"
+
+func (*WinEventLog) SampleConfig() string {
+	return sampleConfig
+}
 
 // Gather Windows Event Log entries
 func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {

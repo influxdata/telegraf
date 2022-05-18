@@ -2,6 +2,7 @@ package apcupsd
 
 import (
 	"context"
+	_ "embed"
 	"net/url"
 	"strconv"
 	"strings"
@@ -14,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const defaultAddress = "tcp://127.0.0.1:3551"
 
 var defaultTimeout = config.Duration(5 * time.Second)
@@ -21,6 +26,10 @@ var defaultTimeout = config.Duration(5 * time.Second)
 type ApcUpsd struct {
 	Servers []string
 	Timeout config.Duration
+}
+
+func (*ApcUpsd) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {

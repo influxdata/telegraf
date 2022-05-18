@@ -1,6 +1,7 @@
 package jti_openconfig_telemetry
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"regexp"
@@ -21,6 +22,10 @@ import (
 	authentication "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
 	telemetry "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type OpenConfigTelemetry struct {
 	Servers         []string        `toml:"servers"`
@@ -45,6 +50,10 @@ var (
 	// Regex to match and extract data points from path value in received key
 	keyPathRegex = regexp.MustCompile(`/([^/]*)\[([A-Za-z0-9\-/]*=[^\[]*)]`)
 )
+
+func (*OpenConfigTelemetry) SampleConfig() string {
+	return sampleConfig
+}
 
 func (m *OpenConfigTelemetry) Gather(_ telegraf.Accumulator) error {
 	return nil

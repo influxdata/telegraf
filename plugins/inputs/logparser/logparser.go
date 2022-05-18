@@ -4,17 +4,23 @@
 package logparser
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/influxdata/tail"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultWatchMethod = "inotify"
@@ -74,6 +80,10 @@ func NewLogParser() *LogParserPlugin {
 		WatchMethod: defaultWatchMethod,
 		offsets:     offsetsCopy,
 	}
+}
+
+func (*LogParserPlugin) SampleConfig() string {
+	return sampleConfig
 }
 
 func (l *LogParserPlugin) Init() error {

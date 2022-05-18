@@ -5,6 +5,7 @@ package sysstat
 
 import (
 	"bufio"
+	_ "embed"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -20,6 +21,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	firstTimestamp time.Time
@@ -71,6 +76,10 @@ type Sysstat struct {
 }
 
 const cmd = "sadf"
+
+func (*Sysstat) SampleConfig() string {
+	return sampleConfig
+}
 
 func (s *Sysstat) Init() error {
 	// Set defaults

@@ -10,6 +10,7 @@ package openstack
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"regexp"
 	"sort"
@@ -35,11 +36,16 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/openstack/orchestration/v1/stacks"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	typePort    = regexp.MustCompile(`_rx$|_rx_drop$|_rx_errors$|_rx_packets$|_tx$|_tx_drop$|_tx_errors$|_tx_packets$`)
@@ -103,6 +109,10 @@ func (o *OpenStack) convertTimeFormat(t time.Time) interface{} {
 		return t.Format("2006-01-02T15:04:05.999999999Z07:00")
 	}
 	return t.UnixNano()
+}
+
+func (*OpenStack) SampleConfig() string {
+	return sampleConfig
 }
 
 // initialize performs any necessary initialization functions

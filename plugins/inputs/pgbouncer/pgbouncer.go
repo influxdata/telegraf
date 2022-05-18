@@ -2,14 +2,20 @@ package pgbouncer
 
 import (
 	"bytes"
+	_ "embed"
 	"strconv"
+
+	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
-	_ "github.com/jackc/pgx/v4/stdlib" // register driver
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type PgBouncer struct {
 	postgresql.Service
@@ -17,6 +23,10 @@ type PgBouncer struct {
 
 var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode": true,
 	"avg_req": true, "avg_recv": true, "avg_sent": true, "avg_query": true,
+}
+
+func (*PgBouncer) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {

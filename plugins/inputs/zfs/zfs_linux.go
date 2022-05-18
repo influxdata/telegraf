@@ -169,7 +169,7 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	case v2:
 		fields, gatherErr = gatherV2(lines, tags)
 	case unknown:
-		return errors.New("Unknown metrics version detected")
+		return errors.New("unknown metrics version detected")
 	}
 
 	if gatherErr != nil {

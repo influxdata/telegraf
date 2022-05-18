@@ -3,6 +3,7 @@ package statsd
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"net"
 	"regexp"
@@ -21,6 +22,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// UDPMaxPacketSize is the UDP packet limit, see
@@ -217,6 +222,10 @@ type cacheddistributions struct {
 	name  string
 	value float64
 	tags  map[string]string
+}
+
+func (*Statsd) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Statsd) Gather(acc telegraf.Accumulator) error {

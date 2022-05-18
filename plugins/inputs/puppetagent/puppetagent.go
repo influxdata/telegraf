@@ -1,6 +1,7 @@
 package puppetagent
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"reflect"
@@ -11,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // PuppetAgent is a PuppetAgent plugin
 type PuppetAgent struct {
@@ -75,6 +80,10 @@ type time struct {
 type version struct {
 	ConfigString string `yaml:"config"`
 	Puppet       string `yaml:"puppet"`
+}
+
+func (*PuppetAgent) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather reads stats from all configured servers accumulates stats

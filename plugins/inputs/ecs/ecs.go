@@ -1,6 +1,7 @@
 package ecs
 
 import (
+	_ "embed"
 	"os"
 	"strings"
 	"time"
@@ -10,6 +11,10 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Ecs config object
 type Ecs struct {
@@ -44,6 +49,10 @@ const (
 
 	v2Endpoint = "http://169.254.170.2"
 )
+
+func (*Ecs) SampleConfig() string {
+	return sampleConfig
+}
 
 // Gather is the entrypoint for telegraf metrics collection
 func (ecs *Ecs) Gather(acc telegraf.Accumulator) error {

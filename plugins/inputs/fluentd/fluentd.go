@@ -1,6 +1,7 @@
 package fluentd
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const measurement = "fluentd"
 
@@ -62,6 +67,10 @@ func parse(data []byte) (datapointArray []pluginData, err error) {
 
 	datapointArray = append(datapointArray, endpointData.Payload...)
 	return datapointArray, err
+}
+
+func (*Fluentd) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather - Main code responsible for gathering, processing and creating metrics

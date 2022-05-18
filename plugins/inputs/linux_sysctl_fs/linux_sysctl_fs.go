@@ -2,15 +2,19 @@ package linux_sysctl_fs
 
 import (
 	"bytes"
+	_ "embed"
 	"errors"
 	"os"
-	"strconv"
-
 	"path"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // https://www.kernel.org/doc/Documentation/sysctl/fs.txt
 type SysctlFS struct {
@@ -66,6 +70,10 @@ func (sfs *SysctlFS) gatherOne(name string, fields map[string]interface{}) error
 
 	fields[name] = v
 	return nil
+}
+
+func (*SysctlFS) SampleConfig() string {
+	return sampleConfig
 }
 
 func (sfs *SysctlFS) Gather(acc telegraf.Accumulator) error {

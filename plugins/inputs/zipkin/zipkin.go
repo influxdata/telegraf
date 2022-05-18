@@ -2,6 +2,7 @@ package zipkin
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -14,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// DefaultPort is the default port zipkin listens on, which zipkin implementations
@@ -61,6 +66,10 @@ type Zipkin struct {
 	handler   Handler
 	server    *http.Server
 	waitGroup *sync.WaitGroup
+}
+
+func (*Zipkin) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather is empty for the zipkin plugin; all gathering is done through

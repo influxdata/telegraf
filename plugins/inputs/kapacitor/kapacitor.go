@@ -1,6 +1,7 @@
 package kapacitor
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const (
 	defaultURL = "http://localhost:9092/kapacitor/v1/debug/vars"
 )
@@ -23,6 +28,10 @@ type Kapacitor struct {
 	tls.ClientConfig
 
 	client *http.Client
+}
+
+func (*Kapacitor) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {

@@ -1,6 +1,7 @@
 package lanz
 
 import (
+	_ "embed"
 	"net/url"
 	"strconv"
 	"sync"
@@ -12,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 func init() {
 	inputs.Add("lanz", func() telegraf.Input {
@@ -27,6 +32,10 @@ type Lanz struct {
 
 func NewLanz() *Lanz {
 	return &Lanz{}
+}
+
+func (*Lanz) SampleConfig() string {
+	return sampleConfig
 }
 
 func (l *Lanz) Gather(_ telegraf.Accumulator) error {

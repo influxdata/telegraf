@@ -1,13 +1,19 @@
 package internet_speed
 
 import (
+	_ "embed"
 	"fmt"
 	"time"
 
+	"github.com/showwin/speedtest-go/speedtest"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/showwin/speedtest-go/speedtest"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // InternetSpeed is used to store configuration values.
 type InternetSpeed struct {
@@ -18,6 +24,10 @@ type InternetSpeed struct {
 }
 
 const measurement = "internet_speed"
+
+func (*InternetSpeed) SampleConfig() string {
+	return sampleConfig
+}
 
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 
