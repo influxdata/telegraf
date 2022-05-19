@@ -29,7 +29,7 @@ format by default.
   # scopes = ["urn:opc:idm:__myscopes__"]
 
   ## Goole API Auth
-  # credentials_file = "/etc/telegraf/example_secret.json"
+  # google_application_credentials = "/etc/telegraf/example_secret.json"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

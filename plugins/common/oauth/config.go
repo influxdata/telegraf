@@ -17,7 +17,7 @@ type OAuth2Config struct {
 	TokenURL     string   `toml:"token_url"`
 	Scopes       []string `toml:"scopes"`
 	// Google API Auth
-	CredentialsFile string `toml:"credentials_file"`
+	CredentialsFile string `toml:"google_application_credentials"`
 	oauth2Token     *oauth2.Token
 }
 
