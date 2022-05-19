@@ -24,7 +24,7 @@ func (p *Parser) Init() (err error) {
 		return fmt.Errorf("could not create parser: %v", err)
 	}
 
-	return err
+	return nil
 }
 
 func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
