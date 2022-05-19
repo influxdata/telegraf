@@ -122,7 +122,7 @@ func (s *Sysstat) collect(tempfile string) error {
 	collectInterval := s.interval - parseInterval
 
 	// If true, interval is not defined yet and Gather is run for the first time.
-	if collectInterval < 0 {
+	if collectInterval <= 0 {
 		collectInterval = 1 // In that case we only collect for 1 second.
 	}
 
