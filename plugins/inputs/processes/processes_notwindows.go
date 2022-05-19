@@ -6,7 +6,6 @@ package processes
 
 import (
 	"bytes"
-	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,10 +19,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/linux_sysctl_fs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
-//go:embed sample.conf
-var sampleConfig string
-
 type Processes struct {
 	execPS       func() ([]byte, error)
 	readProcFile func(filename string) ([]byte, error)
@@ -32,10 +27,6 @@ type Processes struct {
 
 	forcePS   bool
 	forceProc bool
-}
-
-func (*Processes) SampleConfig() string {
-	return sampleConfig
 }
 
 func (p *Processes) Gather(acc telegraf.Accumulator) error {
@@ -161,7 +152,7 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 
 		stats := bytes.Fields(data)
 		if len(stats) < 3 {
-			return fmt.Errorf("Something is terribly wrong with %s", filename)
+			return fmt.Errorf("something is terribly wrong with %s", filename)
 		}
 		switch stats[0][0] {
 		case 'R':
