@@ -566,6 +566,8 @@ type snmpConnection interface {
 	//BulkWalkAll(string) ([]gosnmp.SnmpPDU, error)
 	Walk(string, gosnmp.WalkFunc) error
 	Get(oids []string) (*gosnmp.SnmpPacket, error)
+
+	Reconnect() error
 }
 
 // getConnection creates a snmpConnection (*gosnmp.GoSNMP) object and caches the
@@ -574,6 +576,10 @@ type snmpConnection interface {
 // more than one goroutine.
 func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	if gs := s.connectionCache[idx]; gs != nil {
+		if err := gs.Reconnect(); err != nil {
+			return gs, fmt.Errorf("reconnecting: %w", err)
+		}
+
 		return gs, nil
 	}
 
@@ -591,13 +597,13 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 		return nil, err
 	}
 
-	s.connectionCache[idx] = gs
+	s.connectionCache[idx] = &gs
 
 	if err := gs.Connect(); err != nil {
 		return nil, fmt.Errorf("setting up connection: %w", err)
 	}
 
-	return gs, nil
+	return &gs, nil
 }
 
 // fieldConvert converts from any type according to the conv specification
