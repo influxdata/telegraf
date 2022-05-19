@@ -16,7 +16,8 @@ If the HOST_PROC environment variable is set, Telegraf will use its value instea
 ```toml
 # Get slab statistics from procfs
 [[inputs.slab]]
-  # no configuration
+  # no configuration - please see the plugin's README for steps to configure
+  # sudo properly
 ```
 
 ## Sudo configuration
