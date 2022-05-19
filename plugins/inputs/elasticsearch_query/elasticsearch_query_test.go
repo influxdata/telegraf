@@ -568,8 +568,13 @@ func setupIntegrationTest() error {
 		return err
 	}
 
-	// wait 5s (default) for Elasticsearch to index, so results are consistent
-	time.Sleep(time.Second * 5)
+	// force elastic to refresh indexes to get new batch data
+	ctx := context.Background()
+	_, err = e.esClient.Refresh().Do(ctx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
