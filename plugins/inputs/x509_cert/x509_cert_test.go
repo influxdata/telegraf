@@ -200,7 +200,7 @@ func TestTags(t *testing.T) {
 	require.True(t, acc.HasMeasurement("x509_cert"))
 
 	require.True(t, acc.HasTag("x509_cert", "common_name"))
-	require.Equal(t, "server.localdomain", acc.TagValue("x509_cert", "common_name"))
+	require.Equal(t, "localhost", acc.TagValue("x509_cert", "common_name"))
 
 	require.True(t, acc.HasTag("x509_cert", "signature_algorithm"))
 	require.Equal(t, "SHA256-RSA", acc.TagValue("x509_cert", "signature_algorithm"))
