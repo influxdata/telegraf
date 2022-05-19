@@ -206,7 +206,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 
 ## Notes
 
-You can debug Modbus connection issues by enabling `debug_connection`. To see those debug messages, Telegraf has to be started with debugging enabled (i.e. with the `--debug` option). Please be aware that connection tracing will produce a lot of messages and should **NOT** be used in production environments.
+You can debug Modbus connection issues by enabling `debug_connection`. To see those debug messages, Telegraf has to be started with debugging enabled (i.e. with the `--debug` option). Please be aware that connection tracing will produce a lot of messages and should __NOT__ be used in production environments.
 
 Please use `pause_between_requests` with care. Ensure the total gather time, including the pause(s), does not exceed the configured collection interval. Note that pauses add up if multiple requests are sent!
 

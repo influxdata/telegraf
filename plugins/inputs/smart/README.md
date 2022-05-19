@@ -208,9 +208,9 @@ smartctl or nvme-cli.
 
 ## Device Names
 
-Device names, e.g., `/dev/sda`, are *not persistent*, and may be
+Device names, e.g., `/dev/sda`, are _not persistent_, and may be
 subject to change across reboots or system changes. Instead, you can use the
-*World Wide Name* (WWN) or serial number to identify devices. On Linux block
+_World Wide Name_ (WWN) or serial number to identify devices. On Linux block
 devices can be referenced by the WWN in the following location:
 `/dev/disk/by-id/`.
 

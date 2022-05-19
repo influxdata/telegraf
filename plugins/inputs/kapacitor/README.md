@@ -356,7 +356,7 @@ The number of events collected by Kapacitor topics.
 
 ---
 
-*Note:* The Kapacitor variables `host`, `cluster_id`, and `server_id`
+__Note:__ The Kapacitor variables `host`, `cluster_id`, and `server_id`
 are currently not recorded due to the potential high cardinality of
 these values.
 

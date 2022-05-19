@@ -1,6 +1,6 @@
 # Defaults Processor
 
-The *Defaults* processor allows you to ensure certain fields will always exist with a specified default value on your metric(s).
+The _Defaults_ processor allows you to ensure certain fields will always exist with a specified default value on your metric(s).
 
 There are three cases where this processor will insert a configured default field.
 
