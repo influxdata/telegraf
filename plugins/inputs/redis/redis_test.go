@@ -28,6 +28,10 @@ func (t *testClient) Do(_ string, _ ...interface{}) (interface{}, error) {
 	return 2, nil
 }
 
+func (t *testClient) Close() error {
+	return nil
+}
+
 func TestRedisConnectIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
