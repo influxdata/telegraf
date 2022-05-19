@@ -86,6 +86,10 @@ In this configuration mode, you explicitly specify the field and tags you want t
   ## to get an idea on the expression necessary to derive fields etc.
   # xpath_print_document = false
 
+  ## Allow the results of one of the parsing sections to be empty.
+  ## Useful when not all selected files have the exact same structure.
+  # xpath_allow_empty_selection = false
+
   ## Multiple parsing sections are allowed
   [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
@@ -152,6 +156,10 @@ metric.
   ## to get an idea on the expression necessary to derive fields etc.
   # xpath_print_document = false
 
+  ## Allow the results of one of the parsing sections to be empty.
+  ## Useful when not all selected files have the exact same structure.
+  # xpath_allow_empty_selection = false
+
   ## Multiple parsing sections are allowed
   [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
@@ -201,7 +209,7 @@ metric.
 
 ```
 
-*Please note*: The resulting fields are _always_ of type string!
+**Please note**: The resulting fields are *always* of type string!
 
 It is also possible to specify a mixture of the two alternative ways of specifying fields.
 
