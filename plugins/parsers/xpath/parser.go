@@ -29,6 +29,7 @@ type Parser struct {
 	ProtobufMessageType string
 	ProtobufImportPaths []string
 	PrintDocument       bool
+	AllowEmptySelection bool
 	Configs             []Config
 	DefaultTags         map[string]string
 	Log                 telegraf.Logger
@@ -108,7 +109,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 		if len(selectedNodes) < 1 || selectedNodes[0] == nil {
 			p.debugEmptyQuery("metric selection", doc, config.Selection)
-			return nil, fmt.Errorf("cannot parse with empty selection node")
+			if !p.AllowEmptySelection {
+				return metrics, fmt.Errorf("cannot parse with empty selection node")
+			}
 		}
 		p.Log.Debugf("Number of selected metric nodes: %d", len(selectedNodes))
 
@@ -126,37 +129,20 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	t := time.Now()
 
-	switch len(p.Configs) {
+	metrics, err := p.Parse([]byte(line))
+	if err != nil {
+		return nil, err
+	}
+
+	switch len(metrics) {
 	case 0:
 		return nil, nil
 	case 1:
-		config := p.Configs[0]
-
-		doc, err := p.document.Parse([]byte(line))
-		if err != nil {
-			return nil, err
-		}
-
-		selected := doc
-		if len(config.Selection) > 0 {
-			selectedNodes, err := p.document.QueryAll(doc, config.Selection)
-			if err != nil {
-				return nil, err
-			}
-			if len(selectedNodes) < 1 || selectedNodes[0] == nil {
-				p.debugEmptyQuery("metric selection", doc, config.Selection)
-				return nil, fmt.Errorf("cannot parse line with empty selection")
-			} else if len(selectedNodes) != 1 {
-				return nil, fmt.Errorf("cannot parse line with multiple selected nodes (%d)", len(selectedNodes))
-			}
-			selected = selectedNodes[0]
-		}
-
-		return p.parseQuery(t, doc, selected, config)
+		return metrics[0], nil
+	default:
+		return metrics[0], fmt.Errorf("cannot parse line with multiple (%d) metrics", len(metrics))
 	}
-	return nil, fmt.Errorf("cannot parse line with multiple (%d) configurations", len(p.Configs))
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {

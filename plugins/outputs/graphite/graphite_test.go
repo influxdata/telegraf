@@ -495,7 +495,8 @@ func TCPServer1(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()
@@ -511,7 +512,8 @@ func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer1WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -525,7 +527,8 @@ func TCPServer1WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()
@@ -541,7 +544,8 @@ func TCPServer2WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer1WithTags(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -555,7 +559,8 @@ func TCPServer1WithTags(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2WithTags(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()
@@ -571,7 +576,8 @@ func TCPServer2WithTags(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer1WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn, _ := (tcpServer).Accept()
@@ -585,7 +591,8 @@ func TCPServer1WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
 }
 
 func TCPServer2WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, _ := net.Listen("tcp", "127.0.0.1:12003")
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
 	go func() {
 		defer wg.Done()
 		conn2, _ := (tcpServer).Accept()

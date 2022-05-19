@@ -25,6 +25,8 @@ from `sysctl`, 'zfs' and `zpool` on FreeBSD.
   # poolMetrics = false
 
   ## By default, don't gather dataset stats
+  ## On FreeBSD, if the user has enabled listsnapshots in the pool property,
+  ## telegraf may not be able to correctly parse the output.
   # datasetMetrics = false
 ```
 

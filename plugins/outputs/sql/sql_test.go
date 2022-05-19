@@ -179,8 +179,8 @@ func TestMysqlIntegration(t *testing.T) {
 				"MARIADB_ROOT_PASSWORD": password,
 			},
 			BindMounts: map[string]string{
-				initdb: "/docker-entrypoint-initdb.d",
-				outDir: "/out",
+				"/docker-entrypoint-initdb.d": initdb,
+				"/out":                        outDir,
 			},
 			ExposedPorts: []string{"3306/tcp"},
 			WaitingFor:   wait.ForListeningPort("3306/tcp"),
@@ -267,8 +267,8 @@ func TestPostgresIntegration(t *testing.T) {
 				"POSTGRES_PASSWORD": password,
 			},
 			BindMounts: map[string]string{
-				initdb: "/docker-entrypoint-initdb.d",
-				outDir: "/out",
+				"/docker-entrypoint-initdb.d": initdb,
+				"/out":                        outDir,
 			},
 			ExposedPorts: []string{"5432/tcp"},
 			WaitingFor:   wait.ForListeningPort("5432/tcp"),
@@ -364,8 +364,8 @@ func TestClickHouseIntegration(t *testing.T) {
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image: "yandex/clickhouse-server",
 			BindMounts: map[string]string{
-				initdb: "/docker-entrypoint-initdb.d",
-				outDir: "/out",
+				"/docker-entrypoint-initdb.d": initdb,
+				"/out":                        outDir,
 			},
 			ExposedPorts: []string{"9000/tcp", "8123/tcp"},
 			WaitingFor:   wait.NewHTTPStrategy("/").WithPort("8123/tcp"),

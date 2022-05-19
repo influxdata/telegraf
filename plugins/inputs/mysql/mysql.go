@@ -629,7 +629,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 				continue
 			}
 
-			if colValue == nil || len(colValue) == 0 {
+			if len(colValue) == 0 {
 				continue
 			}
 

@@ -1,9 +1,11 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -95,9 +97,6 @@ func (h *HTTP) gatherURL(
 	if err != nil {
 		return err
 	}
-	if body != nil {
-		defer body.Close()
-	}
 
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
@@ -175,7 +174,7 @@ func (h *HTTP) gatherURL(
 	return nil
 }
 
-func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) {
+func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
 	if body == "" {
 		return nil, nil
 	}
@@ -186,10 +185,14 @@ func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) 
 		if err != nil {
 			return nil, err
 		}
-		return rc, nil
+		data, err := ioutil.ReadAll(rc)
+		if err != nil {
+			return nil, err
+		}
+		return bytes.NewReader(data), nil
 	}
 
-	return io.NopCloser(reader), nil
+	return reader, nil
 }
 
 func init() {

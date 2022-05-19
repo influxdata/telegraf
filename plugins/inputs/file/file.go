@@ -59,11 +59,11 @@ func (f *File) refreshFilePaths() error {
 	for _, file := range f.Files {
 		g, err := globpath.Compile(file)
 		if err != nil {
-			return fmt.Errorf("could not compile glob %v: %v", file, err)
+			return fmt.Errorf("could not compile glob %q: %w", file, err)
 		}
 		files := g.Match()
 		if len(files) <= 0 {
-			return fmt.Errorf("could not find file: %v", file)
+			return fmt.Errorf("could not find file(s): %v", file)
 		}
 		allFiles = append(allFiles, files...)
 	}
@@ -82,13 +82,17 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	r, _ := utfbom.Skip(f.decoder.Reader(file))
 	fileContents, err := io.ReadAll(r)
 	if err != nil {
-		return nil, fmt.Errorf("could not read %q: %s", filename, err)
+		return nil, fmt.Errorf("could not read %q: %w", filename, err)
 	}
 	parser, err := f.parserFunc()
 	if err != nil {
-		return nil, fmt.Errorf("could not instantiate parser: %s", err)
+		return nil, fmt.Errorf("could not instantiate parser: %w", err)
 	}
-	return parser.Parse(fileContents)
+	metrics, err := parser.Parse(fileContents)
+	if err != nil {
+		return metrics, fmt.Errorf("could not parse %q: %w", filename, err)
+	}
+	return metrics, err
 }
 
 func init() {
