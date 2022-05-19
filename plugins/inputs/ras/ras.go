@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	// Required for SQL framework driver
 	_ "modernc.org/sqlite"
 
 	"github.com/influxdata/telegraf"

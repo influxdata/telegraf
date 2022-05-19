@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	// Required for SQL framework driver
 	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
