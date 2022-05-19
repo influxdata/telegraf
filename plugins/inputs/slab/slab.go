@@ -84,7 +84,7 @@ func (ss *SlabStats) getSlabStats() (map[string]interface{}, error) {
 
 func (ss *SlabStats) runCmd(cmd string, args []string) ([]byte, error) {
 	execCmd := exec.Command(cmd, args...)
-	if ss.useSudo {
+	if os.Geteuid() != 0 && ss.useSudo {
 		execCmd = exec.Command("sudo", append([]string{"-n", cmd}, args...)...)
 	}
 
