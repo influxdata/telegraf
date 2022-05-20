@@ -74,9 +74,6 @@ func insertIncludes(buf *bytes.Buffer, b includeBlock) error {
 }
 
 func main() {
-	goPackage := os.Getenv("GOPACKAGE")
-	_ = goPackage
-
 	// Finds all TOML sections of the form `toml @includefile` and extracts the `includefile` part
 	tomlIncludesEx := regexp.MustCompile(`^toml\s+(@.+)+$`)
 	tomlIncludeMatch := regexp.MustCompile(`(?:@([^\s]+))+`)
