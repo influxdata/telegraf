@@ -142,11 +142,11 @@ vm_metric_exclude = [ "*" ]
   # cluster_instances = false ## false by default
 
   ## Resource Pools
-  # datastore_include = [ "/*/host/**"] # Inventory path to datastores to collect (by default all are collected)
-  # datastore_exclude = [] # Inventory paths to exclude
-  # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
-  # datastore_metric_exclude = [] ## Nothing excluded by default
-  # datastore_instances = false ## false by default
+  # resourcepool_include = [ "/*/host/**"] # Inventory path to datastores to collect (by default all are collected)
+  # resourcepool_exclude = [] # Inventory paths to exclude
+  # resourcepool_metric_include = [] ## if omitted or empty, all metrics are collected
+  # resourcepool_metric_exclude = [] ## Nothing excluded by default
+  # resourcepool_instances = false ## false by default
 
     ## Datastores
   # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
