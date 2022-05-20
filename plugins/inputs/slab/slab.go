@@ -20,18 +20,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-func init() {
-	inputs.Add("slab", func() telegraf.Input {
-		return &SlabStats{
-			statFile: path.Join(getHostProc(), "/slabinfo"),
-		}
-	})
-}
-
 type SlabStats struct {
 	Log telegraf.Logger `toml:"-"`
 
 	statFile string
+	useSudo  bool
 }
 
 func (ss *SlabStats) Init() error {
@@ -91,16 +84,13 @@ func (ss *SlabStats) getSlabStats() (map[string]interface{}, error) {
 
 func (ss *SlabStats) runCmd(cmd string, args []string) ([]byte, error) {
 	execCmd := exec.Command(cmd, args...)
-	if os.Geteuid() != 0 {
+	if os.Geteuid() != 0 && ss.useSudo {
 		execCmd = exec.Command("sudo", append([]string{"-n", cmd}, args...)...)
 	}
 
 	out, err := internal.StdOutputTimeout(execCmd, 5*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to run command %s: %s - %s",
-			strings.Join(execCmd.Args, " "), err, string(out),
-		)
+		return nil, fmt.Errorf("failed to run command %s: %s - %v", execCmd.Args, err, out)
 	}
 
 	return out, nil
@@ -116,4 +106,13 @@ func getHostProc() string {
 
 func normalizeName(name string) string {
 	return strings.ReplaceAll(strings.ToLower(name), "-", "_") + "_size"
+}
+
+func init() {
+	inputs.Add("slab", func() telegraf.Input {
+		return &SlabStats{
+			statFile: path.Join(getHostProc(), "slabinfo"),
+			useSudo:  true,
+		}
+	})
 }
