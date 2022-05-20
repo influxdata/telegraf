@@ -566,12 +566,8 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 		{
 			name: "success",
 			plugin: &HTTP{
-				URL: u.String() + "/write",
-				HTTPClientConfig: httpconfig.HTTPClientConfig{
-					OAuth2Config: oauth.OAuth2Config{
-						CredentialsFile: tmpFile.Name(),
-					},
-				},
+				URL:             u.String() + "/write",
+				CredentialsFile: tmpFile.Name(),
 			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)

@@ -58,10 +58,7 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		Timeout:   time.Duration(timeout),
 	}
 
-	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OAuth2 client: %w", err)
-	}
+	client = h.OAuth2Config.CreateOauth2Client(ctx, client)
 
 	if h.CookieAuthConfig.URL != "" {
 		if err := h.CookieAuthConfig.Start(client, log, clock.New()); err != nil {
