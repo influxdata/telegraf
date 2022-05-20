@@ -34,15 +34,6 @@ services:
     - xpack.security.enabled=false
     ports:
       - "9200:9200"
-  mysql:
-    image: mysql
-    environment:
-      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
-    ports:
-      - "3306:3306"
-    # removes warning "mbind operation not permitted" enables you to see the docker logs
-    cap_add:
-    - SYS_NICE  # CAP_SYS_NICE
   memcached:
     image: memcached
     ports:
