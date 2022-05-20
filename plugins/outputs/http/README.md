@@ -109,7 +109,7 @@ format by default.
 
 ### Google API Auth
 
-The `credentials_file` setting is used with Google Cloud APIs. It specifies the json key file. To learn about creating Google service accounts, consult Google's
+The `google_application_credentials` setting is used with Google Cloud APIs. It specifies the json key file. To learn about creating Google service accounts, consult Google's
 [oauth2 service account documentation][create_service_account]. An example use case is a metrics proxy deployed to
 Cloud Run. In this example, the service account must have the "run.routes.invoke" permission.
 
