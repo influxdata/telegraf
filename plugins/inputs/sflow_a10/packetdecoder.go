@@ -251,6 +251,8 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 		// plus, we are not getting any IP and PORT information
 		cr.NeedsIpAndPort = tag != 293 && tag != 294
 
+		cr.IsEthernetCounters = tag == 294
+
 		d.debug(fmt.Sprintf("  tag %x for sourceID %x needs ip and and port: %t", tag, sourceID, cr.NeedsIpAndPort))
 		d.debug(fmt.Sprintf("  tag %x for sourceID %x found on xml file list. Gonna decode counter record", tag, sourceID))
 

@@ -52,9 +52,10 @@ func (c *CounterSample) NeedsIpAndPort() bool {
 type CounterFormatType uint32
 
 type CounterRecord struct {
-	CounterFormat  CounterFormatType
-	CounterData    *CounterData
-	NeedsIpAndPort bool
+	CounterFormat      CounterFormatType
+	CounterData        *CounterData
+	NeedsIpAndPort     bool
+	IsEthernetCounters bool
 }
 
 type CounterData struct {

@@ -158,6 +158,7 @@ func (s *SFlow_A10) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	// start the UDP server
 	conn, err := listenUDP(u.Scheme, u.Host)
 	if err != nil {
 		return err
