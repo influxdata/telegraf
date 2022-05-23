@@ -56,10 +56,6 @@ services:
     ports:
       - "15672:15672"
       - "5672:5672"
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
   nsq:
     image: nsqio/nsq
     ports:
