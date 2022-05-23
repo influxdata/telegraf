@@ -17,7 +17,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "nats",
-		ExposedPorts: []string{"4222", "6222"},
+		ExposedPorts: []string{"4222"},
 		WaitingFor:   wait.ForLog("Server is ready"),
 	}
 	err := container.Start()
