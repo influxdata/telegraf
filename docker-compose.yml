@@ -34,10 +34,6 @@ services:
     - xpack.security.enabled=false
     ports:
       - "9200:9200"
-  memcached:
-    image: memcached
-    ports:
-      - "11211:11211"
   pgbouncer:
     image: z9pascal/pgbouncer-container:1.15-latest
     environment:
