@@ -301,7 +301,7 @@ func (d *IfName) makeTableNoMock(oid string) (*si.Table, error) {
 func (d *IfName) buildMap(gs snmp.GosnmpWrapper, tab *si.Table) (nameMap, error) {
 	var err error
 
-	rtab, err := tab.Build(gs, true, d.translator)
+	rtab, err := tab.Build(&gs, true, d.translator)
 	if err != nil {
 		//Build already wraps
 		return nil, err
