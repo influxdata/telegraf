@@ -169,7 +169,6 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 }
 
 func (gs *GosnmpWrapper) Reconnect() error {
-
 	if gs.Conn == nil {
 		return gs.Connect()
 	}
