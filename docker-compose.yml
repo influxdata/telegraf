@@ -57,10 +57,6 @@ services:
     ports:
       - "4150:4150"
     command: "/nsqd"
-  opcua:
-    image: open62541/open62541
-    ports:
-      - "4840:4840"
   openldap:
     image: cobaugh/openldap-alpine
     environment:
