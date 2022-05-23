@@ -65,10 +65,6 @@ services:
     ports:
       - "4150:4150"
     command: "/nsqd"
-  mqtt:
-    image: ncarlier/mqtt
-    ports:
-      - "1883:1883"
   opcua:
     image: open62541/open62541
     ports:
