@@ -40,7 +40,8 @@ func NewSystemPS() *SystemPS {
 
 type SystemPS struct {
 	PSDiskDeps
-	Log telegraf.Logger `toml:"-"`
+	Log   telegraf.Logger `toml:"-"`
+	Trace bool            `toml:"-"`
 }
 
 type SystemPSDisk struct{}
@@ -131,18 +132,27 @@ partitionRange:
 
 		for _, o := range p.Opts {
 			if !mountOptFilterSet.empty() && mountOptFilterSet.has(o) {
+				if s.Trace && s.Log != nil {
+					s.Log.Debugf("[SystemPS] => dropped by mount option: %q", o)
+				}
 				continue partitionRange
 			}
 		}
 		// If there is a filter set and if the mount point is not a
 		// member of the filter set, don't gather info on it.
 		if !mountPointFilterSet.empty() && !mountPointFilterSet.has(p.Mountpoint) {
+			if s.Trace && s.Log != nil {
+				s.Log.Debugf("[SystemPS] => dropped by mount point: %q", p.Mountpoint)
+			}
 			continue
 		}
 
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
 		if fstypeExcludeSet.has(p.Fstype) {
+			if s.Trace && s.Log != nil {
+				s.Log.Debugf("[SystemPS] => dropped by fs type: %q", p.Fstype)
+			}
 			continue
 		}
 

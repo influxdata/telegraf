@@ -23,6 +23,7 @@ type DiskStats struct {
 	MountPoints     []string `toml:"mount_points"`
 	IgnoreFS        []string `toml:"ignore_fs"`
 	IgnoreMountOpts []string `toml:"ignore_mount_opts"`
+	TraceFilters    bool     `toml:"trace_filters"`
 
 	Log telegraf.Logger `toml:"-"`
 }
@@ -39,6 +40,7 @@ func (ds *DiskStats) Init() error {
 
 	ps := system.NewSystemPS()
 	ps.Log = ds.Log
+	ps.Trace = ds.TraceFilters
 	ds.ps = ps
 
 	return nil

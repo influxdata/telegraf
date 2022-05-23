@@ -22,6 +22,11 @@ Note that `used_percent` is calculated by doing `used / (used + free)`, _not_
   ## The 'mount' command reports options of all mounts in parathesis.
   ## Bind mounts can be ignored with the special 'bind' option.
   # ignore_mount_opts = []
+
+  ## Trace why mount-points are ignored.
+  ## This option is useful when debugging why mount-points are getting dropped.
+  ## ONLY WORKS WITH DEBUG ENABLED!
+  # trace_filters = false
 ```
 
 ### Docker container
