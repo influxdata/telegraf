@@ -1,13 +1,6 @@
 version: '3'
 
 services:
-  aerospike:
-    image: aerospike/aerospike-server:4.9.0.11
-    ports:
-      - "3000:3000"
-      - "3001:3001"
-      - "3002:3002"
-      - "3003:3003"
   zookeeper:
     image: wurstmeister/zookeeper
     environment:
