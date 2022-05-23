@@ -73,10 +73,6 @@ services:
     image: open62541/open62541
     ports:
       - "4840:4840"
-  nats:
-    image: nats
-    ports:
-      - "4222:4222"
   openldap:
     image: cobaugh/openldap-alpine
     environment:
