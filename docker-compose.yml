@@ -45,11 +45,3 @@ services:
     ports:
       - "15672:15672"
       - "5672:5672"
-  openldap:
-    image: cobaugh/openldap-alpine
-    environment:
-      - SLAPD_CONFIG_ROOTDN="cn=manager,cn=config"
-      - SLAPD_CONFIG_ROOTPW="secret"
-    ports:
-      - "389:389"
-      - "636:636"
