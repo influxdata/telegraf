@@ -14,6 +14,7 @@ import (
 
 type Container struct {
 	Image        string
+	Entrypoint   []string
 	Env          map[string]string
 	ExposedPorts []string
 	WaitingFor   wait.Strategy
@@ -34,6 +35,7 @@ func (c *Container) Start() error {
 			Env:          c.Env,
 			ExposedPorts: c.ExposedPorts,
 			WaitingFor:   c.WaitingFor,
+			Entrypoint:   c.Entrypoint,
 		},
 		Started: true,
 	}
