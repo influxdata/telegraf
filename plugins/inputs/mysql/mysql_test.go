@@ -6,6 +6,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -15,12 +16,27 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	container := testutil.Container{
+		Image: "mysql",
+		Env: map[string]string{
+			"MYSQL_ALLOW_EMPTY_PASSWORD": "yes",
+		},
+		ExposedPorts: []string{"3306"},
+		WaitingFor:   wait.ForListeningPort("3306"),
+	}
+
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	m := &Mysql{
-		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
+		Servers: []string{fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Port)},
 	}
 
 	var acc testutil.Accumulator
-	err := m.Gather(&acc)
+	err = m.Gather(&acc)
 	require.NoError(t, err)
 	require.Empty(t, acc.Errors)
 
@@ -33,7 +49,23 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	testServer := "root@tcp(127.0.0.1:3306)/?tls=false"
+
+	container := testutil.Container{
+		Image: "mysql",
+		Env: map[string]string{
+			"MYSQL_ALLOW_EMPTY_PASSWORD": "yes",
+		},
+		ExposedPorts: []string{"3306"},
+		WaitingFor:   wait.ForListeningPort("3306/tcp"),
+	}
+
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	testServer := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Port)
 	m := &Mysql{
 		Servers:          []string{testServer},
 		IntervalSlow:     "30s",
@@ -42,7 +74,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 	}
 
 	var acc, acc2 testutil.Accumulator
-	err := m.Gather(&acc)
+	err = m.Gather(&acc)
 	require.NoError(t, err)
 	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("mysql"))
