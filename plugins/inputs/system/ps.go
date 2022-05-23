@@ -133,7 +133,7 @@ partitionRange:
 		for _, o := range p.Opts {
 			if !mountOptFilterSet.empty() && mountOptFilterSet.has(o) {
 				if s.Trace && s.Log != nil {
-					s.Log.Debugf("[SystemPS] => dropped by mount option: %q", o)
+					s.Log.Debugf("[SystemPS] => dropped %q by mount option: %q", p.Mountpoint, o)
 				}
 				continue partitionRange
 			}
@@ -142,7 +142,7 @@ partitionRange:
 		// member of the filter set, don't gather info on it.
 		if !mountPointFilterSet.empty() && !mountPointFilterSet.has(p.Mountpoint) {
 			if s.Trace && s.Log != nil {
-				s.Log.Debugf("[SystemPS] => dropped by mount point: %q", p.Mountpoint)
+				s.Log.Debugf("[SystemPS] => dropped %q by mount point", p.Mountpoint)
 			}
 			continue
 		}
@@ -151,7 +151,7 @@ partitionRange:
 		// don't gather info on it.
 		if fstypeExcludeSet.has(p.Fstype) {
 			if s.Trace && s.Log != nil {
-				s.Log.Debugf("[SystemPS] => dropped by fs type: %q", p.Fstype)
+				s.Log.Debugf("[SystemPS] => dropped %q by fs type: %q", p.Mountpoint, p.Fstype)
 			}
 			continue
 		}
@@ -166,7 +166,7 @@ partitionRange:
 			// Exclude conflicting paths
 			if paths.has(mountpoint) {
 				if s.Log != nil {
-					s.Log.Debugf("[SystemPS] => dropped by mount prefix (%q): %q", mountpoint, hostMountPrefix)
+					s.Log.Debugf("[SystemPS] => dropped %q by mount prefix (%q): %q", p.Mountpoint, mountpoint, hostMountPrefix)
 				}
 				continue
 			}
