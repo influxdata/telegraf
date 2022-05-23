@@ -28,6 +28,10 @@ const (
 	throttleTemperatureLocation        = 0x1A2
 	temperatureLocation                = 0x19C
 	timestampCounterLocation           = 0x10
+	turboRatioLimitLocation            = 0x1AD
+	turboRatioLimit1Location           = 0x1AE
+	turboRatioLimit2Location           = 0x1AF
+	atomCoreTurboRatiosLocation        = 0x66C
 )
 
 // msrService is responsible for interactions with MSR.
@@ -35,6 +39,7 @@ type msrService interface {
 	getCPUCoresData() map[string]*msrData
 	retrieveCPUFrequencyForCore(core string) (float64, error)
 	openAndReadMsr(core string) error
+	readSingleMsr(core string, msr string) (uint64, error)
 }
 
 type msrServiceImpl struct {
@@ -50,6 +55,10 @@ func (m *msrServiceImpl) getCPUCoresData() map[string]*msrData {
 
 func (m *msrServiceImpl) retrieveCPUFrequencyForCore(core string) (float64, error) {
 	cpuFreqPath := fmt.Sprintf(cpuCurrentFreqPartialPath, core)
+	err := checkFile(cpuFreqPath)
+	if err != nil {
+		return 0, err
+	}
 	cpuFreqFile, err := os.Open(cpuFreqPath)
 	if err != nil {
 		return 0, fmt.Errorf("error opening scaling_cur_freq file on path %s, err: %v", cpuFreqPath, err)
@@ -62,6 +71,10 @@ func (m *msrServiceImpl) retrieveCPUFrequencyForCore(core string) (float64, erro
 
 func (m *msrServiceImpl) openAndReadMsr(core string) error {
 	path := fmt.Sprintf(msrPartialPath, core)
+	err := checkFile(path)
+	if err != nil {
+		return err
+	}
 	msrFile, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("error opening MSR file on path %s, err: %v", path, err)
@@ -73,6 +86,40 @@ func (m *msrServiceImpl) openAndReadMsr(core string) error {
 		return fmt.Errorf("error reading data from MSR for core %s, err: %v", core, err)
 	}
 	return nil
+}
+
+func (m *msrServiceImpl) readSingleMsr(core string, msr string) (uint64, error) {
+	path := fmt.Sprintf(msrPartialPath, core)
+	err := checkFile(path)
+	if err != nil {
+		return 0, err
+	}
+	msrFile, err := os.Open(path)
+	if err != nil {
+		return 0, fmt.Errorf("error opening MSR file on path %s, err: %v", path, err)
+	}
+	defer msrFile.Close()
+
+	var msrAddress int64
+	switch msr {
+	case "MSR_TURBO_RATIO_LIMIT":
+		msrAddress = turboRatioLimitLocation
+	case "MSR_TURBO_RATIO_LIMIT1":
+		msrAddress = turboRatioLimit1Location
+	case "MSR_TURBO_RATIO_LIMIT2":
+		msrAddress = turboRatioLimit2Location
+	case "MSR_ATOM_CORE_TURBO_RATIOS":
+		msrAddress = atomCoreTurboRatiosLocation
+	default:
+		return 0, fmt.Errorf("incorect name of MSR %s", msr)
+	}
+
+	value, err := m.fs.readFileAtOffsetToUint64(msrFile, msrAddress)
+	if err != nil {
+		return 0, err
+	}
+
+	return value, nil
 }
 
 func (m *msrServiceImpl) readDataFromMsr(core string, reader io.ReaderAt) error {
@@ -128,9 +175,9 @@ func (m *msrServiceImpl) readDataFromMsr(core string, reader io.ReaderAt) error 
 	m.cpuCoresData[core].aperf = newAperf
 	m.cpuCoresData[core].timeStampCounter = newTsc
 	// MSR (1A2h) IA32_TEMPERATURE_TARGET bits 23:16.
-	m.cpuCoresData[core].throttleTemp = (newThrottleTemp >> 16) & 0xFF
+	m.cpuCoresData[core].throttleTemp = int64((newThrottleTemp >> 16) & 0xFF)
 	// MSR (19Ch) IA32_THERM_STATUS bits 22:16.
-	m.cpuCoresData[core].temp = (newTemp >> 16) & 0x7F
+	m.cpuCoresData[core].temp = int64((newTemp >> 16) & 0x7F)
 
 	return nil
 }

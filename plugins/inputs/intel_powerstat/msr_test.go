@@ -109,8 +109,8 @@ func verifyCPUCoresData(cores []string, t *testing.T, msr *msrServiceImpl, expec
 		require.Equal(t, expectedValue, msr.cpuCoresData[core].mperf)
 		require.Equal(t, expectedValue, msr.cpuCoresData[core].aperf)
 		require.Equal(t, expectedValue, msr.cpuCoresData[core].timeStampCounter)
-		require.Equal(t, (expectedValue>>16)&0xFF, msr.cpuCoresData[core].throttleTemp)
-		require.Equal(t, (expectedValue>>16)&0x7F, msr.cpuCoresData[core].temp)
+		require.Equal(t, int64((expectedValue>>16)&0xFF), msr.cpuCoresData[core].throttleTemp)
+		require.Equal(t, int64((expectedValue>>16)&0x7F), msr.cpuCoresData[core].temp)
 
 		if verifyDelta {
 			require.Equal(t, delta, msr.cpuCoresData[core].c3Delta)
