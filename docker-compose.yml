@@ -85,15 +85,3 @@ services:
     ports:
       - "389:389"
       - "636:636"
-  crate:
-    image: crate/crate
-    ports:
-      - "4200:4200"
-      - "4230:4230"
-      - "6543:5432"
-    command:
-      - crate
-      - -Cnetwork.host=0.0.0.0
-      - -Ctransport.host=localhost
-    environment:
-      - CRATE_HEAP_SIZE=128m
