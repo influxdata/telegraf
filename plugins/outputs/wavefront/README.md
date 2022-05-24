@@ -15,6 +15,9 @@ Wavefront data format over TCP.
   ## Authentication Token for Wavefront. Only required if using Direct Ingestion
   #token = "DUMMY_TOKEN"
 
+  ## Number of metrics to send per batch for Direct Ingestion. Ignored unless 'url' is set. Default is 10,000. Values higher than 40,000 are not recommended.
+  # http_batch_size = 10000
+
   ## DNS name of the wavefront proxy server. Do not use if url is specified
   #host = "wavefront.example.com"
 

@@ -29,6 +29,7 @@ type Wavefront struct {
 	MetricSeparator string                          `toml:"metric_separator"`
 	ConvertPaths    bool                            `toml:"convert_paths"`
 	ConvertBool     bool                            `toml:"convert_bool"`
+	HTTPBatchSize   int                             `toml:"http_batch_size"`
 	UseRegex        bool                            `toml:"use_regex"`
 	UseStrict       bool                            `toml:"use_strict"`
 	TruncateTags    bool                            `toml:"truncate_tags"`
@@ -87,6 +88,7 @@ func (w *Wavefront) Connect() error {
 			Server:               w.URL,
 			Token:                w.Token,
 			FlushIntervalSeconds: flushSeconds,
+			BatchSize:            w.HTTPBatchSize,
 		})
 		if err != nil {
 			return fmt.Errorf("could not create Wavefront Sender for Url: %s", w.URL)
@@ -298,6 +300,7 @@ func init() {
 			ConvertBool:     true,
 			TruncateTags:    false,
 			ImmediateFlush:  true,
+			HTTPBatchSize:   10000,
 		}
 	})
 }
