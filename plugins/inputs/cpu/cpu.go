@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cpu
 
 import (
+	_ "embed"
 	"fmt"
 	"time"
 
@@ -10,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type CPUStats struct {
 	ps         system.PS
@@ -33,6 +39,10 @@ func NewCPUStats(ps system.PS) *CPUStats {
 		CollectCPUTime: true,
 		ReportActive:   true,
 	}
+}
+
+func (*CPUStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *CPUStats) Gather(acc telegraf.Accumulator) error {

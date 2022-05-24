@@ -8,7 +8,7 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about docker containers
 [[inputs.docker]]
   ## Docker Endpoint

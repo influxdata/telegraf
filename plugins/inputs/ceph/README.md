@@ -43,7 +43,7 @@ the cluster.  The currently supported commands are:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collects performance metrics from the MON, OSD, MDS and RGW nodes in a Ceph storage cluster.
 [[inputs.ceph]]
   ## This is the recommended interval to poll.  Too frequent and you will lose

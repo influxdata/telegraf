@@ -10,7 +10,7 @@ Example output:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Provides Linux sysctl fs metrics
 [[inputs.linux_sysctl_fs]]
   # no configuration

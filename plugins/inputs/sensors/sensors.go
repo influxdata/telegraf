@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
 package sensors
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 var (
 	execCommand    = exec.Command // execCommand is used to mock commands in tests.
 	numberRegp     = regexp.MustCompile("[0-9]+")
@@ -28,6 +34,30 @@ type Sensors struct {
 	RemoveNumbers bool            `toml:"remove_numbers"`
 	Timeout       config.Duration `toml:"timeout"`
 	path          string
+}
+
+const cmd = "sensors"
+
+func (*Sensors) SampleConfig() string {
+	return sampleConfig
+}
+
+func (s *Sensors) Init() error {
+	// Set defaults
+	if s.path == "" {
+		path, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		s.path = path
+	}
+
+	// Check parameters
+	if s.path == "" {
+		return fmt.Errorf("no path specified for %q", cmd)
+	}
+
+	return nil
 }
 
 func (s *Sensors) Gather(acc telegraf.Accumulator) error {
@@ -96,15 +126,10 @@ func snake(input string) string {
 }
 
 func init() {
-	s := Sensors{
-		RemoveNumbers: true,
-		Timeout:       defaultTimeout,
-	}
-	path, _ := exec.LookPath("sensors")
-	if len(path) > 0 {
-		s.path = path
-	}
 	inputs.Add("sensors", func() telegraf.Input {
-		return &s
+		return &Sensors{
+			RemoveNumbers: true,
+			Timeout:       defaultTimeout,
+		}
 	})
 }

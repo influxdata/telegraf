@@ -16,7 +16,7 @@ Processes can be selected for monitoring using one of several methods:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Monitor process cpu and memory usage
 [[inputs.procstat]]
   ## PID file to monitor process

@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mcrouter
 
 import (
 	"bufio"
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/url"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Mcrouter is a mcrouter plugin
 type Mcrouter struct {
@@ -102,6 +108,10 @@ var sendMetrics = map[string]statType{
 	"cmd_other_count":                            typeInt,
 	"cmd_delete_out_all":                         typeInt,
 	"cmd_lease_set_out_all":                      typeInt,
+}
+
+func (*Mcrouter) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather reads stats from all configured servers accumulates stats

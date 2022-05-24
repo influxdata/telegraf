@@ -50,7 +50,7 @@ Also, consider polling OpenStack services at different intervals depending on yo
 
 ### Configuration
 
-```toml
+```toml @sample.conf
 # Collects performance metrics from OpenStack services
 [[inputs.openstack]]
   ## The recommended interval to poll is '30m'

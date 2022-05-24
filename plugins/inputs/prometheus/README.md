@@ -5,7 +5,7 @@ in Prometheus format.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many prometheus clients
 [[inputs.prometheus]]
   ## An array of urls to scrape metrics from.

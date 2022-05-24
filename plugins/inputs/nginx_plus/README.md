@@ -7,7 +7,7 @@ Structures for Nginx Plus have been built based on history of
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Nginx Plus' advanced status information
 [[inputs.nginx_plus]]
   ## An array of Nginx status URIs to gather stats.

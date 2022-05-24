@@ -40,7 +40,7 @@ All measurements have the `path` tag.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read specific statistics per cgroup
 [[inputs.cgroup]]
   ## Directories in which to look for files, globs are supported.

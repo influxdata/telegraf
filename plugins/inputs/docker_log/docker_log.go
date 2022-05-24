@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package docker_log
 
 import (
@@ -5,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"io"
 	"strings"
@@ -23,6 +25,10 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultEndpoint = "unix:///var/run/docker.sock"
@@ -59,6 +65,10 @@ type DockerLogs struct {
 	wg              sync.WaitGroup
 	mu              sync.Mutex
 	containerList   map[string]context.CancelFunc
+}
+
+func (*DockerLogs) SampleConfig() string {
+	return sampleConfig
 }
 
 func (d *DockerLogs) Init() error {

@@ -8,7 +8,7 @@ to take preventive/corrective actions based on platform busyness, CPU temperatur
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Intel PowerStat plugin enables monitoring of platform metrics (power, TDP) and per-CPU metrics like temperature, power and utilization.
 [[inputs.intel_powerstat]]
   ## The user can choose which package metrics are monitored by the plugin with the package_metrics setting:

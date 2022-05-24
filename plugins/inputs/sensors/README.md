@@ -7,7 +7,7 @@ This plugin collects sensor metrics with the `sensors` executable from the lm-se
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Monitor sensors, requires lm-sensors package
 [[inputs.sensors]]
   ## Remove numbers from field names.

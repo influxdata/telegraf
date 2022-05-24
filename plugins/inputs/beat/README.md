@@ -5,7 +5,7 @@ known to work with Filebeat and Kafkabeat.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics exposed by Beat
 [[inputs.beat]]
   ## An URL from which to read Beat-formatted JSON

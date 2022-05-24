@@ -6,7 +6,7 @@ See the [Tomcat documentation](https://tomcat.apache.org/tomcat-9.0-doc/manager-
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather metrics from the Tomcat server status page.
 [[inputs.tomcat]]
   ## URL of the Tomcat server status

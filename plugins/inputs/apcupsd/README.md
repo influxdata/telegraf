@@ -8,7 +8,7 @@ apcupsd should be installed and it's daemon should be running.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Monitor APC UPSes connected to apcupsd
 [[inputs.apcupsd]]
   # A list of running apcupsd server to connect to.

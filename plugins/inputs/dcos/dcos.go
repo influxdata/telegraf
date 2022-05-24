@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package dcos
 
 import (
 	"context"
+	_ "embed"
 	"net/url"
 	"os"
 	"sort"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultMaxConnections  = 10
@@ -67,6 +73,10 @@ type DCOS struct {
 	nodeFilter      filter.Filter
 	containerFilter filter.Filter
 	appFilter       filter.Filter
+}
+
+func (*DCOS) SampleConfig() string {
+	return sampleConfig
 }
 
 func (d *DCOS) Gather(acc telegraf.Accumulator) error {

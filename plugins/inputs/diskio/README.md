@@ -4,7 +4,7 @@ The diskio input plugin gathers metrics about disk traffic and timing.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about disk IO by device
 [[inputs.diskio]]
   ## By default, telegraf will gather stats for all devices including

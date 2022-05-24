@@ -20,7 +20,7 @@ your database.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Input plugin for DC/OS metrics
 [[inputs.dcos]]
   ## The DC/OS cluster URL.

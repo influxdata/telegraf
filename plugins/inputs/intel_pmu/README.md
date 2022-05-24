@@ -11,7 +11,7 @@ They form a basis for profiling applications to trace dynamic control flow and i
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Intel Performance Monitoring Unit plugin exposes Intel PMU metrics available through Linux Perf subsystem
 [[inputs.intel_pmu]]
   ## List of filesystem locations of JSON files that contain PMU event definitions.

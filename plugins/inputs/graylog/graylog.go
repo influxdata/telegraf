@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package graylog
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ResponseMetrics struct {
 	Metrics []Metric `json:"metrics"`
@@ -74,6 +80,10 @@ func (c *RealHTTPClient) SetHTTPClient(client *http.Client) {
 
 func (c *RealHTTPClient) HTTPClient() *http.Client {
 	return c.client
+}
+
+func (*GrayLog) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gathers data for all servers.

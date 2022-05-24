@@ -4,7 +4,7 @@ The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from a LeoFS Server via SNMP
 [[inputs.leofs]]
   ## An array of URLs of the form:

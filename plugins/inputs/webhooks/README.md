@@ -15,7 +15,7 @@ sudo service telegraf start
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A Webhooks Event collector
 [[inputs.webhooks]]
   ## Address and port to host Webhook listener on

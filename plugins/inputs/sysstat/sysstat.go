@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
@@ -5,6 +6,7 @@ package sysstat
 
 import (
 	"bufio"
+	_ "embed"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -20,6 +22,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	firstTimestamp time.Time
@@ -68,6 +74,29 @@ type Sysstat struct {
 	interval   int
 
 	Log telegraf.Logger
+}
+
+const cmd = "sadf"
+
+func (*Sysstat) SampleConfig() string {
+	return sampleConfig
+}
+
+func (s *Sysstat) Init() error {
+	// Set defaults
+	if s.Sadf == "" {
+		sadf, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		s.Sadf = sadf
+	}
+
+	if s.Sadf == "" {
+		return fmt.Errorf("no path specified for %q", cmd)
+	}
+
+	return nil
 }
 
 func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
@@ -273,15 +302,10 @@ func escape(dirty string) string {
 }
 
 func init() {
-	s := Sysstat{
-		Group:      true,
-		Activities: dfltActivities,
-	}
-	sadf, _ := exec.LookPath("sadf")
-	if len(sadf) > 0 {
-		s.Sadf = sadf
-	}
 	inputs.Add("sysstat", func() telegraf.Input {
-		return &s
+		return &Sysstat{
+			Group:      true,
+			Activities: dfltActivities,
+		}
 	})
 }

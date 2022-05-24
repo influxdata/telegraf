@@ -24,7 +24,7 @@ native Go by the Telegraf process, eliminating the need to execute the system
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Ping given url(s) and return statistics
 [[inputs.ping]]
   ## Hosts to send ping packets to.

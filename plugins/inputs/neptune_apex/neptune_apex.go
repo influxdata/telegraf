@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // Package neptune_apex implements an input plugin for the Neptune Apex
 // aquarium controller.
 package neptune_apex
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Measurement is constant across all metrics.
 const Measurement = "neptune_apex"
@@ -53,6 +59,10 @@ type NeptuneApex struct {
 	Servers         []string
 	ResponseTimeout config.Duration
 	httpClient      *http.Client
+}
+
+func (*NeptuneApex) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather implements telegraf.Input.Gather

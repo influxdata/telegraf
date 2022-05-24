@@ -7,7 +7,7 @@ or [HTTP statistics page](https://cbonte.github.io/haproxy-dconv/1.9/management.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics of HAProxy, via socket or HTTP stats page
 [[inputs.haproxy]]
   ## An array of address to gather stats about. Specify an ip on hostname

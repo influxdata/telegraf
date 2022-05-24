@@ -8,7 +8,7 @@ It can also report for triggered Suricata IDS/IPS alerts.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Suricata stats and alerts plugin
 [[inputs.suricata]]
   ## Data sink for Suricata stats log.

@@ -4,7 +4,7 @@ The Kapacitor plugin collects metrics from the given Kapacitor instances.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Kapacitor-formatted JSON metrics from one or more HTTP endpoints
 [[inputs.kapacitor]]
   ## Multiple URLs from which to read Kapacitor-formatted JSON
@@ -356,7 +356,7 @@ The number of events collected by Kapacitor topics.
 
 ---
 
-*Note:* The Kapacitor variables `host`, `cluster_id`, and `server_id`
+__Note:__ The Kapacitor variables `host`, `cluster_id`, and `server_id`
 are currently not recorded due to the potential high cardinality of
 these values.
 

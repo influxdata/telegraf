@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package disk
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
 
@@ -8,6 +10,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type DiskStats struct {
 	ps system.PS
@@ -19,6 +25,10 @@ type DiskStats struct {
 	IgnoreMountOpts []string `toml:"ignore_mount_opts"`
 
 	Log telegraf.Logger `toml:"-"`
+}
+
+func (*DiskStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ds *DiskStats) Init() error {

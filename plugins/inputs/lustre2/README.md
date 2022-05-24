@@ -7,7 +7,7 @@ This plugin monitors the Lustre file system using its entries in the proc filesy
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from local Lustre service on OST, MDS
 [[inputs.lustre2]]
   ## An array of /proc globs to search for Lustre stats

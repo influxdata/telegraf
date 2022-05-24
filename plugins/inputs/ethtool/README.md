@@ -4,7 +4,7 @@ The ethtool input plugin pulls ethernet device stats. Fields pulled will depend 
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Returns ethtool statistics for given interfaces
 [[inputs.ethtool]]
   ## List of interfaces to pull metrics for

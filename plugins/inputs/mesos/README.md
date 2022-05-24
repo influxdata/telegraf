@@ -5,7 +5,7 @@ For more information, please check the [Mesos Observability Metrics](http://meso
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Telegraf plugin for gathering metrics from N Mesos masters
 [[inputs.mesos]]
   ## Timeout, in ms.

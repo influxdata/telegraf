@@ -1,17 +1,22 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package postgresql
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"strings"
 
-	// register in driver.
 	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Postgresql struct {
 	Service
@@ -21,6 +26,10 @@ type Postgresql struct {
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
+
+func (*Postgresql) SampleConfig() string {
+	return sampleConfig
+}
 
 func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns

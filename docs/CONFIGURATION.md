@@ -539,7 +539,7 @@ The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
 
 > NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be
-defined at the *_end_* of the plugin definition, otherwise subsequent plugin config
+defined at the **end** of the plugin definition, otherwise subsequent plugin config
 options will be interpreted as part of the tagpass/tagdrop tables.
 
 ### Modifiers

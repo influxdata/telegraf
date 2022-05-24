@@ -8,7 +8,7 @@ The `ss` command does not require specific privileges.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather indicators from established connections, using iproute2's ss command.
 [[inputs.socketstat]]
   ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets

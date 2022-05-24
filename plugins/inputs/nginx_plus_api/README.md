@@ -4,7 +4,7 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Nginx Plus API advanced status information
 [[inputs.nginx_plus_api]]
   ## An array of Nginx API URIs to gather stats.

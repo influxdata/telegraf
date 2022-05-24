@@ -4,7 +4,7 @@ The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wi
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Query given DNS server and gives statistics
 [[inputs.dns_query]]
   ## servers to query

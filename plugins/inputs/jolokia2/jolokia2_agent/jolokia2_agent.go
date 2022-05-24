@@ -1,6 +1,9 @@
+//go:generate ../../../../tools/readme_config_includer/generator
 package jolokia2_agent
 
 import (
+	_ "embed"
+
 	"fmt"
 	"sync"
 	"time"
@@ -10,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/common"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type JolokiaAgent struct {
 	DefaultFieldPrefix    string
@@ -26,6 +33,10 @@ type JolokiaAgent struct {
 	Metrics  []common.MetricConfig `toml:"metric"`
 	gatherer *common.Gatherer
 	clients  []*common.Client
+}
+
+func (*JolokiaAgent) SampleConfig() string {
+	return sampleConfig
 }
 
 func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {

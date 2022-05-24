@@ -21,7 +21,7 @@ The plugin expects messages in one of the
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Parse the new lines appended to a file
 [[inputs.tail]]
   ## File names or a pattern to tail.

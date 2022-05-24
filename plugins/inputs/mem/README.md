@@ -7,7 +7,7 @@ For a more complete explanation of the difference between *used* and
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about memory usage
 [[inputs.mem]]
   # no configuration

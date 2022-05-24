@@ -55,7 +55,7 @@ cache_readaheads
 
 Using this configuration:
 
-```toml
+```toml @sample.conf
 # Read metrics of bcache from stats_total and dirty_data
 [[inputs.bcache]]
   ## Bcache sets path

@@ -4,7 +4,7 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many ClickHouse servers
 [[inputs.clickhouse]]
   ## Username for authorization on ClickHouse server

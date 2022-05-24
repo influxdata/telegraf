@@ -7,7 +7,7 @@ This plugin is intended to read files that are moved or copied to the monitored 
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Ingests files in a directory and then moves them to a target directory.
 [[inputs.directory_monitor]]
   ## The directory to monitor and read files from.

@@ -11,7 +11,7 @@ Syslog messages should be formatted according to
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 [[inputs.syslog]]
   ## Protocol, address and port to host the syslog receiver.
   ## If no host is specified, then localhost is used.

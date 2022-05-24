@@ -4,7 +4,7 @@ The `cpu` plugin gather metrics on the system CPUs.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about cpu usage
 [[inputs.cpu]]
   ## Whether to report per-cpu stats or not

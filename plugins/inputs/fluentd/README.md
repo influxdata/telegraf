@@ -18,7 +18,7 @@ example configuration with `@id` parameter for http plugin:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics exposed by fluentd in_monitor plugin
 [[inputs.fluentd]]
   ## This plugin reads information exposed by fluentd (using /api/plugins.json endpoint).

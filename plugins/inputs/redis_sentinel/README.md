@@ -5,7 +5,7 @@ monitoring multiple Redis servers and replicas.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many redis-sentinel servers
 [[inputs.redis_sentinel]]
   ## specify servers via a url matching:

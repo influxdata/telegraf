@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package activemq
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ActiveMQ struct {
 	Server          string          `toml:"server" deprecated:"1.11.0;use 'url' instead"`
@@ -96,6 +102,10 @@ func (a *ActiveMQ) createHTTPClient() (*http.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (*ActiveMQ) SampleConfig() string {
+	return sampleConfig
 }
 
 func (a *ActiveMQ) Init() error {
