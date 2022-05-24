@@ -45,11 +45,6 @@ services:
     ports:
       - "15672:15672"
       - "5672:5672"
-  nsq:
-    image: nsqio/nsq
-    ports:
-      - "4150:4150"
-    command: "/nsqd"
   openldap:
     image: cobaugh/openldap-alpine
     environment:

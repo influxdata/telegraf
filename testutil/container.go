@@ -34,8 +34,8 @@ func (c *Container) Start() error {
 			Image:        c.Image,
 			Env:          c.Env,
 			ExposedPorts: c.ExposedPorts,
-			WaitingFor:   c.WaitingFor,
 			Entrypoint:   c.Entrypoint,
+			WaitingFor:   c.WaitingFor,
 		},
 		Started: true,
 	}
