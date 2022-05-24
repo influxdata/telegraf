@@ -27,7 +27,8 @@ JSON is probably the easiest to integrate with downstream components.
 
   ## Partition key
   ## Metric tag or field name to use for the event partition key. The value of
-  ## this tag or field is set as the key for events if it exists.
+  ## this tag or field is set as the key for events if it exists. If both, tag
+  ## and field, exist the tag is preferred.
   # partition_key = ""
 
   ## Data format to output.
