@@ -4,7 +4,7 @@ This plugin writes telegraf metrics to files
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send telegraf metrics to file(s)
 [[outputs.file]]
   ## Files to write to, "stdout" is a specially handled file.

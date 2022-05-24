@@ -5,7 +5,7 @@ This plugin writes to the [Datadog Metrics API][metrics] and requires an
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for DataDog API to send metrics to.
 [[outputs.datadog]]
   ## Datadog API key

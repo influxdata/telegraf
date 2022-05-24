@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package loki
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,6 +22,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultEndpoint      = "/loki/api/v1/push"
@@ -70,6 +76,10 @@ func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (*Loki) SampleConfig() string {
+	return sampleConfig
 }
 
 func (l *Loki) Connect() (err error) {

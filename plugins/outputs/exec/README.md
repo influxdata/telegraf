@@ -14,7 +14,7 @@ For better performance, consider execd, which runs continuously.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send metrics to command as input over stdin
 [[outputs.exec]]
   ## Command to ingest metrics via stdin.

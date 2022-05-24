@@ -17,7 +17,7 @@ Currently, the plugin does not send any associated Point Tags.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Librato API to send metrics to.
 [[outputs.librato]]
   ## Librato API Docs

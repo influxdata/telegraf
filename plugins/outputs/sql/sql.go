@@ -1,20 +1,25 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package sql
 
 import (
 	gosql "database/sql"
+	_ "embed"
 	"fmt"
 	"strings"
 
-	//Register sql drivers
-	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
-	_ "github.com/denisenkom/go-mssqldb"    // mssql (sql server)
-	_ "github.com/go-sql-driver/mysql"      // mysql
-	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)
-	_ "github.com/snowflakedb/gosnowflake"  // snowflake
+	_ "github.com/ClickHouse/clickhouse-go"
+	_ "github.com/denisenkom/go-mssqldb"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/snowflakedb/gosnowflake"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ConvertStruct struct {
 	Integer         string
@@ -39,6 +44,10 @@ type SQL struct {
 	db     *gosql.DB
 	Log    telegraf.Logger `toml:"-"`
 	tables map[string]bool
+}
+
+func (*SQL) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *SQL) Connect() error {

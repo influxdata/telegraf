@@ -7,7 +7,7 @@ GW8+
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send telegraf metrics to GroundWork Monitor
 [[outputs.groundwork]]
   ## URL of your groundwork instance.

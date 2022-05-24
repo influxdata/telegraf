@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package socket_writer
 
 import (
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"net"
 	"strings"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type SocketWriter struct {
 	ContentEncoding string `toml:"content_encoding"`
 	Address         string
@@ -27,6 +33,10 @@ type SocketWriter struct {
 	encoder internal.ContentEncoder
 
 	net.Conn
+}
+
+func (*SocketWriter) SampleConfig() string {
+	return sampleConfig
 }
 
 func (sw *SocketWriter) SetSerializer(s serializers.Serializer) {

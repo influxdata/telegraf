@@ -8,7 +8,7 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send metrics to New Relic metrics endpoint
 [[outputs.newrelic]]
   ## The 'insights_key' parameter requires a NR license key.

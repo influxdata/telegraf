@@ -1,11 +1,12 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package logzio
 
 import (
 	"bytes"
 	"compress/gzip"
+	_ "embed"
 	"encoding/json"
 	"fmt"
-
 	"net/http"
 	"time"
 
@@ -14,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultLogzioURL = "https://listener.logz.io:8071"
@@ -41,6 +46,10 @@ type Metric struct {
 	Dimensions map[string]string      `json:"dimensions"`
 	Time       time.Time              `json:"@timestamp"`
 	Type       string                 `json:"type"`
+}
+
+func (*Logzio) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect to the Output

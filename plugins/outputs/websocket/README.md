@@ -8,7 +8,7 @@ It can output data in any of the [supported output formats][formats].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can transmit metrics over WebSocket.
 [[outputs.websocket]]
   ## URL is the address to send metrics to. Make sure ws or wss scheme is used.

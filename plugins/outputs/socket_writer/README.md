@@ -8,7 +8,7 @@ It can output data in any of the [supported output formats][formats].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Generic socket writer capable of handling multiple socket types.
 [[outputs.socket_writer]]
   ## URL to connect to

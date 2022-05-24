@@ -6,7 +6,7 @@ The SignalFx output plugin sends metrics to [SignalFx][docs].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send metrics and events to SignalFx
 [[outputs.signalfx]]
   ## SignalFx Org Access Token

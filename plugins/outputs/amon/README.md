@@ -11,7 +11,7 @@ Metrics are grouped by converting any `_` characters to `.` in the Point Name.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Amon Server to send metrics to.
 [[outputs.amon]]
   ## Amon Server Key

@@ -11,7 +11,7 @@ used if the metric comes in as a counter through `[[input.statsd]]`.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for sending metrics to an Instrumental project
 [[outputs.instrumental]]
   ## Project API Token (required)
