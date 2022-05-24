@@ -209,9 +209,7 @@ metric.
 
 ```
 
-**Please note**: The resulting fields are *always* of type string!
 __Please note__: The resulting fields are _always_ of type string!
-_Please note_: The resulting fields are _always_ of type string!
 
 It is also possible to specify a mixture of the two alternative ways of specifying fields.
 
