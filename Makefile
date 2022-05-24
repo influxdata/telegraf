@@ -126,7 +126,7 @@ generate_plugins_%: build_generator
 	go generate -run="plugindata/main.go$$" ./plugins/$*/...
 
 .PHONY: generate
-generate: insert_config_to_readme_inputs insert_config_to_readme_inputs generate_plugins_processors generate_plugins_aggregators
+generate: insert_config_to_readme_inputs insert_config_to_readme_outputs generate_plugins_processors generate_plugins_aggregators
 
 .PHONY: generate-clean
 generate-clean:
