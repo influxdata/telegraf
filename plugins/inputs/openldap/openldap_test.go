@@ -343,5 +343,5 @@ func TestOpenldapReverseMetricsIntegration(t *testing.T) {
 	var acc testutil.Accumulator
 	err = o.Gather(&acc)
 	require.NoError(t, err)
-	require.True(t, acc.HasField("openldap", "connections_total"), "Has an integer field called connections_total")
+	require.True(t, acc.HasInt64Field("openldap", "connections_total"), "Has an integer field called connections_total")
 }
