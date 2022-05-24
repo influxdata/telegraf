@@ -36,7 +36,6 @@ func (c *Container) Start() error {
 			ExposedPorts: c.ExposedPorts,
 			Entrypoint:   c.Entrypoint,
 			WaitingFor:   c.WaitingFor,
-			Entrypoint:   c.Entrypoint,
 		},
 		Started: true,
 	}
