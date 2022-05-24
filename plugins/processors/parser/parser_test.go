@@ -13,16 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//compares metrics without comparing time
-func compareMetrics(t *testing.T, expected, actual []telegraf.Metric) {
-	require.Equal(t, len(expected), len(actual))
-	for i, m := range actual {
-		require.Equal(t, expected[i].Name(), m.Name())
-		require.Equal(t, expected[i].Fields(), m.Fields())
-		require.Equal(t, expected[i].Tags(), m.Tags())
-	}
-}
-
 func TestApply(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -508,9 +498,10 @@ func TestApply(t *testing.T) {
 				Log:          testutil.Logger{Name: "processor.parser"},
 			}
 
+			require.NoError(t, parser.Init())
+
 			output := parser.Apply(tt.input)
-			t.Logf("Testing: %s", tt.name)
-			compareMetrics(t, tt.expected, output)
+			testutil.RequireMetricsEqual(t, tt.expected, output, testutil.IgnoreTime())
 		})
 	}
 }
@@ -579,9 +570,10 @@ func TestBadApply(t *testing.T) {
 				Log:         testutil.Logger{Name: "processor.parser"},
 			}
 
-			output := parser.Apply(tt.input)
+			require.NoError(t, parser.Init())
 
-			compareMetrics(t, output, tt.expected)
+			output := parser.Apply(tt.input)
+			testutil.RequireMetricsEqual(t, tt.expected, output)
 		})
 	}
 }

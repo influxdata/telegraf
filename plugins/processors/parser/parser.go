@@ -1,8 +1,9 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
@@ -16,17 +17,17 @@ type Parser struct {
 	parser       telegraf.Parser
 }
 
-func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	if p.parser == nil {
-		var err error
-		p.parser, err = parsers.NewParser(&p.Config)
-		if err != nil {
-			p.Log.Errorf("could not create parser: %v", err)
-			return metrics
-		}
-		models.SetLoggerOnPlugin(p.parser, p.Log)
+func (p *Parser) Init() (err error) {
+	// Initialise parser
+	p.parser, err = parsers.NewParser(&p.Config)
+	if err != nil {
+		return fmt.Errorf("could not create parser: %v", err)
 	}
 
+	return nil
+}
+
+func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	results := []telegraf.Metric{}
 
 	for _, metric := range metrics {
