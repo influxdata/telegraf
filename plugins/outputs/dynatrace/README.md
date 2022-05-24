@@ -50,7 +50,7 @@ Note: The name and identifier of the host running Telegraf will be added as a
 dimension to every metric. If this is undesirable, then the output plugin may be
 used in standalone mode using the directions below.
 
-```toml @sample.conf
+```toml
 [[outputs.dynatrace]]
   ## No options are required. By default, metrics will be exported via the OneAgent on the local host.
 ```
@@ -93,7 +93,7 @@ You can learn more about how to use the Dynatrace API
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send telegraf metrics to a Dynatrace environment
 [[outputs.dynatrace]]
   ## For usage with the Dynatrace OneAgent you can omit any configuration,
