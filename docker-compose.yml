@@ -1,13 +1,6 @@
 version: '3'
 
 services:
-  aerospike:
-    image: aerospike/aerospike-server:4.9.0.11
-    ports:
-      - "3000:3000"
-      - "3001:3001"
-      - "3002:3002"
-      - "3003:3003"
   zookeeper:
     image: wurstmeister/zookeeper
     environment:
@@ -47,20 +40,3 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=trust
     ports:
       - "5432:5432"
-  nsq:
-    image: nsqio/nsq
-    ports:
-      - "4150:4150"
-    command: "/nsqd"
-  opcua:
-    image: open62541/open62541
-    ports:
-      - "4840:4840"
-  openldap:
-    image: cobaugh/openldap-alpine
-    environment:
-      - SLAPD_CONFIG_ROOTDN="cn=manager,cn=config"
-      - SLAPD_CONFIG_ROOTPW="secret"
-    ports:
-      - "389:389"
-      - "636:636"
