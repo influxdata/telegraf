@@ -8,7 +8,7 @@ plugin instead.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Parse a complete file each interval
 [[inputs.file]]
   ## Files to parse each interval.  Accept standard unix glob matching rules,

@@ -4,7 +4,7 @@ This plugin gathers statistics data from a Memcached server.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many memcached servers.
 [[inputs.memcached]]
   # An array of address to gather stats about. Specify an ip on hostname

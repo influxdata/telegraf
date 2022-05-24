@@ -7,7 +7,7 @@ Plugin minimum tested version: 1.16
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Retrieve data from OPCUA devices
 [[inputs.opcua]]
   ## Metric name

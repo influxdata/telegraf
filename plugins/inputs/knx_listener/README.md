@@ -9,7 +9,7 @@ underlying "knx-go" project site (<https://github.com/vapourismo/knx-go>).
 
 This is a sample config for the plugin.
 
-```toml
+```toml @sample.conf
 # Listener capable of handling KNX bus messages provided through a KNX-IP Interface.
 [[inputs.knx_listener]]
   ## Type of KNX-IP interface.

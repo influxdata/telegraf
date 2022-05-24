@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package elasticsearch
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // mask for masking username/password from error messages
 var mask = regexp.MustCompile(`https?:\/\/\S+:\S+@`)
@@ -154,6 +160,10 @@ func mapShardStatusToCode(s string) int {
 		return 4
 	}
 	return 0
+}
+
+func (*Elasticsearch) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init the plugin.

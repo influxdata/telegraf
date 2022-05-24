@@ -4,7 +4,7 @@ The wireless plugin gathers metrics about wireless link quality by reading the `
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Monitor wifi signal strength and quality
 [[inputs.wireless]]
   ## Sets 'proc' directory path

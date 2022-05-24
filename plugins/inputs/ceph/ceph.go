@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ceph
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	measurement = "ceph"
@@ -40,6 +46,10 @@ type Ceph struct {
 	GatherClusterStats     bool   `toml:"gather_cluster_stats"`
 
 	Log telegraf.Logger `toml:"-"`
+}
+
+func (*Ceph) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *Ceph) Gather(acc telegraf.Accumulator) error {
@@ -110,21 +120,21 @@ func (c *Ceph) gatherClusterStats(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	c := Ceph{
-		CephBinary:             "/usr/bin/ceph",
-		OsdPrefix:              osdPrefix,
-		MonPrefix:              monPrefix,
-		MdsPrefix:              mdsPrefix,
-		RgwPrefix:              rgwPrefix,
-		SocketDir:              "/var/run/ceph",
-		SocketSuffix:           sockSuffix,
-		CephUser:               "client.admin",
-		CephConfig:             "/etc/ceph/ceph.conf",
-		GatherAdminSocketStats: true,
-		GatherClusterStats:     false,
-	}
-
-	inputs.Add(measurement, func() telegraf.Input { return &c })
+	inputs.Add(measurement, func() telegraf.Input {
+		return &Ceph{
+			CephBinary:             "/usr/bin/ceph",
+			OsdPrefix:              osdPrefix,
+			MonPrefix:              monPrefix,
+			MdsPrefix:              mdsPrefix,
+			RgwPrefix:              rgwPrefix,
+			SocketDir:              "/var/run/ceph",
+			SocketSuffix:           sockSuffix,
+			CephUser:               "client.admin",
+			CephConfig:             "/etc/ceph/ceph.conf",
+			GatherAdminSocketStats: true,
+			GatherClusterStats:     false,
+		}
+	})
 }
 
 var perfDump = func(binary string, socket *socket) (string, error) {

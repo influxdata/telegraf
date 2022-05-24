@@ -4,7 +4,7 @@ This plugin gathers metrics about network interface and protocol usage (Linux on
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather metrics about network interfaces
 [[inputs.net]]
   ## By default, telegraf gathers stats from any up interface (excluding loopback)

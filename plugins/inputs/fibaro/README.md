@@ -5,7 +5,7 @@ Those values could be true (1) or false (0) for switches, percentage for dimmers
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read devices value(s) from a Fibaro controller
 [[inputs.fibaro]]
   ## Required Fibaro controller address/hostname.

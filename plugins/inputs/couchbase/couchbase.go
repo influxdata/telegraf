@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package couchbase
 
 import (
+	_ "embed"
 	"encoding/json"
 	"net/http"
 	"regexp"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Couchbase struct {
 	Servers []string
 
@@ -27,6 +33,10 @@ type Couchbase struct {
 }
 
 var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
+
+func (*Couchbase) SampleConfig() string {
+	return sampleConfig
+}
 
 // Reads stats from all configured clusters. Accumulates stats.
 // Returns one of the errors encountered while gathering stats (if any).

@@ -10,7 +10,7 @@ Stat collection based on Prometheus' mdstat collection library at <https://githu
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get kernel statistics from /proc/mdstat
 [[inputs.mdstat]]
   ## Sets file path

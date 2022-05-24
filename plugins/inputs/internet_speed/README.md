@@ -4,9 +4,14 @@ The `Internet Speed Monitor` collects data about the internet speed on the syste
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Monitors internet speed using speedtest.net service
 [[inputs.internet_speed]]
+  ## This plugin downloads many MB of data each time it is run. As such
+  ## consider setting a higher interval for this plugin to reduce the
+  ## demand on your internet connection.
+  # interval = "60m"
+
   ## Sets if runs file download test
   # enable_file_download = false
 

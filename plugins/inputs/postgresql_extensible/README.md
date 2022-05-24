@@ -13,7 +13,7 @@ The example below has two queries are specified, with the following parameters:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many postgresql servers
 [[inputs.postgresql_extensible]]
   # specify address via a url matching:

@@ -4,7 +4,7 @@ The filestat plugin gathers metrics about file existence, size, and other stats.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read stats about given file(s)
 [[inputs.filestat]]
   ## Files to gather stats about.

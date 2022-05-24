@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cloudwatch
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -24,6 +26,10 @@ import (
 	internalProxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	StatisticAverage     = "Average"
@@ -88,6 +94,10 @@ type metricCache struct {
 type cloudwatchClient interface {
 	ListMetrics(context.Context, *cwClient.ListMetricsInput, ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error)
 	GetMetricData(context.Context, *cwClient.GetMetricDataInput, ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error)
+}
+
+func (*CloudWatch) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *CloudWatch) Init() error {
@@ -328,7 +338,9 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, error) {
 		for {
 			resp, err := c.client.ListMetrics(context.Background(), params)
 			if err != nil {
-				return nil, fmt.Errorf("failed to list metrics with params per namespace: %v", err)
+				c.Log.Errorf("failed to list metrics with namespace %s: %v", namespace, err)
+				// skip problem namespace on error and continue to next namespace
+				break
 			}
 
 			metrics = append(metrics, resp.Metrics...)

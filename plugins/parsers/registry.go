@@ -196,6 +196,9 @@ type Config struct {
 
 	// Influx configuration
 	InfluxParserType string `toml:"influx_parser_type"`
+
+	// LogFmt configuration
+	LogFmtTagKeys []string `toml:"logfmt_tag_keys"`
 }
 
 type XPathConfig xpath.Config
@@ -263,7 +266,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
 	case "logfmt":
-		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
+		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags, config.LogFmtTagKeys)
 	case "form_urlencoded":
 		parser, err = NewFormUrlencodedParser(
 			config.MetricName,
@@ -391,8 +394,10 @@ func NewDropwizardParser(
 }
 
 // NewLogFmtParser returns a logfmt parser with the default options.
-func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, error) {
-	return logfmt.NewParser(metricName, defaultTags), nil
+func NewLogFmtParser(metricName string, defaultTags map[string]string, tagKeys []string) (Parser, error) {
+	parser := logfmt.NewParser(metricName, defaultTags, tagKeys)
+	err := parser.Init()
+	return parser, err
 }
 
 func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {

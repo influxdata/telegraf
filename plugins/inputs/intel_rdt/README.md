@@ -84,7 +84,7 @@ More about Intel RDT: <https://www.intel.com/content/www/us/en/architecture-and-
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Intel RDT metrics
 [[inputs.intel_rdt]]
   ## Optionally set sampling interval to Nx100ms. 

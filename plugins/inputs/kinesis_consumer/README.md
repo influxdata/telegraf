@@ -5,7 +5,7 @@ and creates metrics using one of the supported [input data formats][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the AWS Kinesis input.
 [[inputs.kinesis_consumer]]
   ## Amazon REGION of kinesis endpoint.

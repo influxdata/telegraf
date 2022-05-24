@@ -1,24 +1,35 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
 package ipvs
 
 import (
+	_ "embed"
 	"fmt"
 	"math/bits"
 	"strconv"
 	"syscall"
 
+	"github.com/moby/ipvs"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/logrus"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/moby/ipvs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // IPVS holds the state for this input plugin
 type IPVS struct {
 	handle *ipvs.Handle
 	Log    telegraf.Logger
+}
+
+func (*IPVS) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather gathers the stats

@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package influxdb_listener
 
 import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -19,6 +21,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// defaultMaxBodySize is the default maximum request body size, in bytes.
@@ -61,6 +67,10 @@ type InfluxDBListener struct {
 	Log telegraf.Logger `toml:"-"`
 
 	mux http.ServeMux
+}
+
+func (*InfluxDBListener) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {

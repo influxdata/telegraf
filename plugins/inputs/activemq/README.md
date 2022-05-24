@@ -4,7 +4,7 @@ This plugin gather queues, topics & subscribers metrics using ActiveMQ Console A
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather ActiveMQ metrics
 [[inputs.activemq]]
   ## ActiveMQ WebConsole URL

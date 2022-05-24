@@ -25,6 +25,7 @@ func TestGatherDefault(t *testing.T) {
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
+	require.NoError(t, s.Init())
 	require.NoError(t, s.Gather(&acc))
 
 	var tests = []struct {
@@ -163,6 +164,7 @@ func TestGatherNotRemoveNumbers(t *testing.T) {
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
+	require.NoError(t, s.Init())
 	require.NoError(t, s.Gather(&acc))
 
 	var tests = []struct {

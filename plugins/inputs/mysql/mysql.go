@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mysql
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,6 +18,10 @@ import (
 	v1 "github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
 	v2 "github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Mysql struct {
 	Servers                             []string `toml:"servers"`
@@ -60,6 +66,10 @@ const (
 )
 
 const localhost = ""
+
+func (*Mysql) SampleConfig() string {
+	return sampleConfig
+}
 
 func (m *Mysql) InitMysql() {
 	if len(m.IntervalSlow) > 0 {
@@ -629,7 +639,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 				continue
 			}
 
-			if colValue == nil || len(colValue) == 0 {
+			if len(colValue) == 0 {
 				continue
 			}
 

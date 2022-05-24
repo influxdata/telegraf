@@ -7,7 +7,7 @@ When using a UDP address as a certificate source, the server must support [DTLS]
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Reads metrics from a SSL certificate
 [[inputs.x509_cert]]
   ## List certificate sources, support wildcard expands for files

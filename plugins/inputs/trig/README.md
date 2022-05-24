@@ -4,7 +4,7 @@ The `trig` plugin is for demonstration purposes and inserts sine and cosine
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Inserts sine and cosine waves for demonstration purposes
 [[inputs.trig]]
   ## Set the amplitude

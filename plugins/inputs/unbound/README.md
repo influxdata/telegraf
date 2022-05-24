@@ -5,7 +5,7 @@ a validating, recursive, and caching DNS resolver.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin to collect stats from the Unbound DNS resolver
 [[inputs.unbound]]
   ## Address of server to connect to, read from unbound conf default, optionally ':port'

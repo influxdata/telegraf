@@ -41,7 +41,7 @@ Number of forks since boot.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get kernel statistics from /proc/stat
 [[inputs.kernel]]
   # no configuration

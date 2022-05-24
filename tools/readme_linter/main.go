@@ -20,11 +20,17 @@ func main() {
 	flag.Parse()
 
 	var err error
+	pass := true
 	for _, filename := range flag.Args() {
-		err = checkFile(filename, guessPluginType(filename), *sourceFlag)
+		var filePass bool
+		filePass, err = checkFile(filename, guessPluginType(filename), *sourceFlag)
 		if err != nil {
 			panic(err)
 		}
+		pass = pass && filePass
+	}
+	if !pass {
+		os.Exit(1)
 	}
 }
 
@@ -57,10 +63,10 @@ func init() {
 	rules[pluginInput] = append(rules[pluginInput], inputRules...)
 }
 
-func checkFile(filename string, pluginType plugin, sourceFlag bool) error {
+func checkFile(filename string, pluginType plugin, sourceFlag bool) (bool, error) {
 	md, err := os.ReadFile(filename)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// Goldmark returns locations as offsets. We want line
@@ -107,10 +113,10 @@ func checkFile(filename string, pluginType plugin, sourceFlag bool) error {
 	for _, rule := range rules {
 		err = rule(&tester, root)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 	tester.printPassFail()
 
-	return nil
+	return tester.pass(), nil
 }

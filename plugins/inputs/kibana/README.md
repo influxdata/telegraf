@@ -9,7 +9,7 @@ The `kibana` plugin queries the [Kibana][] API to obtain the service status.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read status information from one or more Kibana servers
 [[inputs.kibana]]
   ## Specify a list of one or more Kibana servers

@@ -4,7 +4,7 @@ The XPath data format parser parses different formats into metric fields using [
 
 For supported XPath functions check [the underlying XPath library][xpath lib].
 
-**NOTE:** The type of fields are specified using [XPath functions][xpath lib]. The only exception are *integer* fields that need to be specified in a `fields_int` section.
+__NOTE:__ The type of fields are specified using [XPath functions][xpath lib]. The only exception are _integer_ fields that need to be specified in a `fields_int` section.
 
 ## Supported data formats
 
@@ -17,7 +17,7 @@ For supported XPath functions check [the underlying XPath library][xpath lib].
 
 ### Protocol-buffers additional settings
 
-For using the protocol-buffer format you need to specify additional (*mandatory*) properties for the parser. Those options are described here.
+For using the protocol-buffer format you need to specify additional (_mandatory_) properties for the parser. Those options are described here.
 
 #### `xpath_protobuf_file` (mandatory)
 
@@ -124,7 +124,7 @@ In this configuration mode, you explicitly specify the field and tags you want t
       ok          = "Mode != 'ok'"
 ```
 
-A configuration can contain muliple *xpath* subsections for e.g. the file plugin to process the xml-string multiple times. Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries. Consider using an XPath tester such as [xpather.com][xpather] or [Code Beautify's XPath Tester][xpath tester] for help developing and debugging
+A configuration can contain muliple _xpath_ subsections for e.g. the file plugin to process the xml-string multiple times. Consult the [XPath syntax][xpath] and the [underlying library's functions][xpath lib] for details and help regarding XPath queries. Consider using an XPath tester such as [xpather.com][xpather] or [Code Beautify's XPath Tester][xpath tester] for help developing and debugging
 your query.
 
 ## Configuration (batch)
@@ -210,6 +210,8 @@ metric.
 ```
 
 **Please note**: The resulting fields are *always* of type string!
+__Please note__: The resulting fields are _always_ of type string!
+_Please note_: The resulting fields are _always_ of type string!
 
 It is also possible to specify a mixture of the two alternative ways of specifying fields.
 
@@ -238,13 +240,13 @@ If `timestamp_format` is omitted `unix` format is assumed as result of the `time
 
 [XPath][xpath] queries in the `tag name = query` format to add tags to the metrics. The specified path can be absolute (starting with `/`) or relative. Relative paths use the currently selected node as reference.
 
-**NOTE:** Results of tag-queries will always be converted to strings.
+__NOTE:__ Results of tag-queries will always be converted to strings.
 
 ### fields_int sub-section
 
 [XPath][xpath] queries in the `field name = query` format to add integer typed fields to the metrics. The specified path can be absolute (starting with `/`) or relative. Relative paths use the currently selected node as reference.
 
-**NOTE:** Results of field_int-queries will always be converted to **int64**. The conversion will fail in case the query result is not convertible!
+__NOTE:__ Results of field_int-queries will always be converted to __int64__. The conversion will fail in case the query result is not convertible!
 
 ### fields sub-section
 
@@ -253,22 +255,22 @@ If `timestamp_format` is omitted `unix` format is assumed as result of the `time
 The type of the field is specified in the [XPath][xpath] query using the type conversion functions of XPath such as `number()`, `boolean()` or `string()`
 If no conversion is performed in the query the field will be of type string.
 
-**NOTE: Path conversion functions will always succeed even if you convert a text to float!**
+__NOTE: Path conversion functions will always succeed even if you convert a text to float!__
 
 ### field_selection, field_name, field_value (optional)
 
 You can specify a [XPath][xpath] query to select a set of nodes forming the fields of the metric. The specified path can be absolute (starting with `/`) or relative to the currently selected node. Each node selected by `field_selection` forms a new field within the metric.
 
-The *name* and the *value* of each field can be specified using the optional `field_name` and `field_value` queries. The queries are relative to the selected field if not starting with `/`. If not specified the field's *name* defaults to the node name and the field's *value* defaults to the content of the selected field node.
-**NOTE**: `field_name` and `field_value` queries are only evaluated if a `field_selection` is specified.
+The _name_ and the _value_ of each field can be specified using the optional `field_name` and `field_value` queries. The queries are relative to the selected field if not starting with `/`. If not specified the field's _name_ defaults to the node name and the field's _value_ defaults to the content of the selected field node.
+__NOTE__: `field_name` and `field_value` queries are only evaluated if a `field_selection` is specified.
 
 Specifying `field_selection` is optional. This is an alternative way to specify fields especially for documents where the node names are not known a priori or if there is a large number of fields to be specified. These options can also be combined with the field specifications above.
 
-**NOTE: Path conversion functions will always succeed even if you convert a text to float!**
+__NOTE: Path conversion functions will always succeed even if you convert a text to float!__
 
 ### field_name_expansion (optional)
 
-When *true*, field names selected with `field_selection` are expanded to a *path* relative to the *selected node*. This
+When _true_, field names selected with `field_selection` are expanded to a _path_ relative to the _selected node_. This
 is necessary if we e.g. select all leaf nodes as fields and those leaf nodes do not have unique names. That is in case
 you have duplicate names in the fields you select you should set this to `true`.
 
@@ -276,14 +278,14 @@ you have duplicate names in the fields you select you should set this to `true`.
 
 You can specify a [XPath][xpath] query to select a set of nodes forming the tags of the metric. The specified path can be absolute (starting with `/`) or relative to the currently selected node. Each node selected by `tag_selection` forms a new tag within the metric.
 
-The *name* and the *value* of each tag can be specified using the optional `tag_name` and `tag_value` queries. The queries are relative to the selected tag if not starting with `/`. If not specified the tag's *name* defaults to the node name and the tag's *value* defaults to the content of the selected tag node.
-**NOTE**: `tag_name` and `tag_value` queries are only evaluated if a `tag_selection` is specified.
+The _name_ and the _value_ of each tag can be specified using the optional `tag_name` and `tag_value` queries. The queries are relative to the selected tag if not starting with `/`. If not specified the tag's _name_ defaults to the node name and the tag's _value_ defaults to the content of the selected tag node.
+__NOTE__: `tag_name` and `tag_value` queries are only evaluated if a `tag_selection` is specified.
 
 Specifying `tag_selection` is optional. This is an alternative way to specify tags especially for documents where the node names are not known a priori or if there is a large number of tags to be specified. These options can also be combined with the tag specifications above.
 
 ### tag_name_expansion (optional)
 
-When *true*, tag names selected with `tag_selection` are expanded to a *path* relative to the *selected node*. This
+When _true_, tag names selected with `tag_selection` are expanded to a _path_ relative to the _selected node_. This
 is necessary if we e.g. select all leaf nodes as tags and those leaf nodes do not have unique names. That is in case
 you have duplicate names in the tags you select you should set this to `true`.
 
@@ -353,8 +355,8 @@ Output:
 file,gateway=Main,host=Hugin seqnr=12i,ok=true 1598610830000000000
 ```
 
-In the *tags* definition the XPath function `substring-before()` is used to only extract the sub-string before the space. To get the integer value of `/Gateway/Sequence` we have to use the *fields_int* section as there is no XPath expression to convert node values to integers (only float).
-The `ok` field is filled with a boolean by specifying a query comparing the query result of `/Gateway/Status` with the string *ok*. Use the type conversions available in the XPath syntax to specify field types.
+In the _tags_ definition the XPath function `substring-before()` is used to only extract the sub-string before the space. To get the integer value of `/Gateway/Sequence` we have to use the _fields_int_ section as there is no XPath expression to convert node values to integers (only float).
+The `ok` field is filled with a boolean by specifying a query comparing the query result of `/Gateway/Status` with the string _ok_. Use the type conversions available in the XPath syntax to specify field types.
 
 ### Time and metric names
 
@@ -390,7 +392,7 @@ Additionally to the basic parsing example, the metric name is defined as the nam
 
 ### Multi-node selection
 
-For XML documents containing metrics for e.g. multiple devices (like `Sensor`s in the *example.xml*), multiple metrics can be generated using node selection. This example shows how to generate a metric for each *Sensor* in the example.
+For XML documents containing metrics for e.g. multiple devices (like `Sensor`s in the _example.xml_), multiple metrics can be generated using node selection. This example shows how to generate a metric for each _Sensor_ in the example.
 
 Config:
 
@@ -433,7 +435,7 @@ Using the `metric_selection` option we select all `Sensor` nodes in the XML docu
 
 ### Batch field processing with multi-node selection
 
-For XML documents containing metrics with a large number of fields or where the fields are not known before (e.g. an unknown set of `Variable` nodes in the *example.xml*), field selectors can be used. This example shows how to generate a metric for each *Sensor* in the example with fields derived from the *Variable* nodes.
+For XML documents containing metrics with a large number of fields or where the fields are not known before (e.g. an unknown set of `Variable` nodes in the _example.xml_), field selectors can be used. This example shows how to generate a metric for each _Sensor_ in the example with fields derived from the _Variable_ nodes.
 
 Config:
 
@@ -465,8 +467,8 @@ sensors,host=Hugin,name=Facility\ B consumers=1,frequency=49.78,power=14.3,tempe
 sensors,host=Hugin,name=Facility\ C consumers=0,frequency=49.78,power=0.02,temperature=19.7 1596294243000000000
 ```
 
-Using the `metric_selection` option we select all `Sensor` nodes in the XML document. For each *Sensor* we then use `field_selection` to select all child nodes of the sensor as *field-nodes* Please note that the field selection is relative to the selected nodes.
-For each selected *field-node* we use `field_name` and `field_value` to determining the field's name and value, respectively. The `field_name` derives the name of the first attribute of the node, while `field_value` derives the value of the first attribute  and converts the result to a number.
+Using the `metric_selection` option we select all `Sensor` nodes in the XML document. For each _Sensor_ we then use `field_selection` to select all child nodes of the sensor as _field-nodes_ Please note that the field selection is relative to the selected nodes.
+For each selected _field-node_ we use `field_name` and `field_value` to determining the field's name and value, respectively. The `field_name` derives the name of the first attribute of the node, while `field_value` derives the value of the first attribute  and converts the result to a number.
 
 [xpath lib]:    https://github.com/antchfx/xpath
 [json]:         https://www.json.org/

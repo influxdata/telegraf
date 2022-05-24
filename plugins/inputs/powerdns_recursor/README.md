@@ -5,7 +5,7 @@ the unix controlsocket.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many PowerDNS Recursor servers
 [[inputs.powerdns_recursor]]
   ## Path to the Recursor control socket.

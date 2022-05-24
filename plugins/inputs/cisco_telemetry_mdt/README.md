@@ -11,7 +11,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Cisco model-driven telemetry (MDT) input plugin for IOS XR, IOS XE and NX-OS platforms
 [[inputs.cisco_telemetry_mdt]]
  ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when

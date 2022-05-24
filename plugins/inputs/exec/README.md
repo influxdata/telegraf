@@ -7,7 +7,7 @@ This plugin can be used to poll for custom metrics from any source.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or more commands that can output to stdout
 [[inputs.exec]]
   ## Commands array

@@ -4,7 +4,7 @@ Get phpfpm stats using either HTTP status page or fpm socket.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics of phpfpm, via HTTP status page or socket
 [[inputs.phpfpm]]
   ## An array of addresses to gather stats about. Specify an ip or hostname

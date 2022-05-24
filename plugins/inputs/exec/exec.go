@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package exec
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -21,6 +23,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const MaxStderrBytes int = 512
 
@@ -123,13 +129,17 @@ func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 	return b
 }
 
+func (*Exec) SampleConfig() string {
+	return sampleConfig
+}
+
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	out, errbuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
+	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
 	if !isNagios && runErr != nil {
-		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
+		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errBuf))
 		acc.AddError(err)
 		return
 	}
@@ -141,10 +151,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	}
 
 	if isNagios {
-		metrics, err = nagios.TryAddState(runErr, metrics)
-		if err != nil {
-			e.Log.Errorf("Failed to add nagios state: %s", err)
-		}
+		metrics = nagios.AddState(runErr, errBuf, metrics)
 	}
 
 	for _, m := range metrics {

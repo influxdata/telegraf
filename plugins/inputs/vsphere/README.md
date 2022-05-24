@@ -19,7 +19,7 @@ Compatibility information was found [here](https://github.com/vmware/govmomi/tre
 NOTE: To disable collection of a specific resource type, simply exclude all metrics using the XX_metric_exclude.
 For example, to disable collection of VMs, add this:
 
-```toml
+```toml @sample.conf
 vm_metric_exclude = [ "*" ]
 ```
 

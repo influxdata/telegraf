@@ -4,7 +4,7 @@
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read JMX metrics through Jolokia
 [[inputs.jolokia]]
   ## This is the context root used to compose the jolokia url

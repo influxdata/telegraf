@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package sql
 
 import (
 	"context"
 	dbsql "database/sql"
+	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const magicIdleCount int = (-int(^uint(0) >> 1))
 
@@ -208,6 +214,10 @@ type SQL struct {
 
 	driverName string
 	db         *dbsql.DB
+}
+
+func (*SQL) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *SQL) Init() error {

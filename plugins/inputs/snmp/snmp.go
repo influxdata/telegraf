@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package snmp
 
 import (
+	_ "embed"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Translator interface {
 	SnmpTranslate(oid string) (
@@ -61,6 +67,10 @@ type Snmp struct {
 
 func (s *Snmp) SetTranslator(name string) {
 	s.Translator = name
+}
+
+func (*Snmp) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Snmp) Init() error {
@@ -289,22 +299,6 @@ func (e *walkError) Error() string {
 
 func (e *walkError) Unwrap() error {
 	return e.err
-}
-
-func init() {
-	inputs.Add("snmp", func() telegraf.Input {
-		return &Snmp{
-			Name: "snmp",
-			ClientConfig: snmp.ClientConfig{
-				Retries:        3,
-				MaxRepetitions: 10,
-				Timeout:        config.Duration(5 * time.Second),
-				Version:        2,
-				Path:           []string{"/usr/share/snmp/mibs"},
-				Community:      "public",
-			},
-		}
-	})
 }
 
 // Gather retrieves all the configured fields and tables.
@@ -755,4 +749,20 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 	}
 
 	return nil, fmt.Errorf("invalid conversion type '%s'", conv)
+}
+
+func init() {
+	inputs.Add("snmp", func() telegraf.Input {
+		return &Snmp{
+			Name: "snmp",
+			ClientConfig: snmp.ClientConfig{
+				Retries:        3,
+				MaxRepetitions: 10,
+				Timeout:        config.Duration(5 * time.Second),
+				Version:        2,
+				Path:           []string{"/usr/share/snmp/mibs"},
+				Community:      "public",
+			},
+		}
+	})
 }

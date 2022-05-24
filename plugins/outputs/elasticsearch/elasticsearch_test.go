@@ -159,35 +159,63 @@ func TestConnectAndWriteMetricWithNaNValueReplacement(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	tests := []struct {
+		floatHandle      string
+		floatReplacement float64
+		expectError      bool
+	}{
+		{
+			"none",
+			0.0,
+			true,
+		},
+		{
+			"drop",
+			0.0,
+			false,
+		},
+		{
+			"replace",
+			0.0,
+			false,
+		},
+	}
+
 	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
 
-	e := &Elasticsearch{
-		URLs:                urls,
-		IndexName:           "test-%Y.%m.%d",
-		Timeout:             config.Duration(time.Second * 5),
-		ManageTemplate:      true,
-		TemplateName:        "telegraf",
-		OverwriteTemplate:   false,
-		HealthCheckInterval: config.Duration(time.Second * 10),
-		HealthCheckTimeout:  config.Duration(time.Second * 1),
-		FloatHandling:       "3.1415",
-		Log:                 testutil.Logger{},
-	}
+	for _, test := range tests {
+		e := &Elasticsearch{
+			URLs:                urls,
+			IndexName:           "test-%Y.%m.%d",
+			Timeout:             config.Duration(time.Second * 5),
+			ManageTemplate:      true,
+			TemplateName:        "telegraf",
+			OverwriteTemplate:   false,
+			HealthCheckInterval: config.Duration(time.Second * 10),
+			HealthCheckTimeout:  config.Duration(time.Second * 1),
+			FloatHandling:       test.floatHandle,
+			FloatReplacement:    test.floatReplacement,
+			Log:                 testutil.Logger{},
+		}
 
-	metrics := []telegraf.Metric{
-		testutil.TestMetric(math.NaN()),
-		testutil.TestMetric(math.Inf(1)),
-		testutil.TestMetric(math.Inf(-1)),
-	}
+		metrics := []telegraf.Metric{
+			testutil.TestMetric(math.NaN()),
+			testutil.TestMetric(math.Inf(1)),
+			testutil.TestMetric(math.Inf(-1)),
+		}
 
-	// Verify that we can connect to Elasticsearch
-	err := e.Connect()
-	require.NoError(t, err)
-
-	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
-	for _, m := range metrics {
-		err = e.Write([]telegraf.Metric{m})
+		err := e.Connect()
 		require.NoError(t, err)
+
+		for _, m := range metrics {
+			err = e.Write([]telegraf.Metric{m})
+
+			if test.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		}
 	}
 }
 

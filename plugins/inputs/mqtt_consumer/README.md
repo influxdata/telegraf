@@ -5,7 +5,7 @@ and creates metrics using one of the supported [input data formats][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from MQTT topic(s)
 [[inputs.mqtt_consumer]]
   ## Broker URLs for the MQTT server or cluster.  To connect to multiple

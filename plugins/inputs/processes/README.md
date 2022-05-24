@@ -10,7 +10,7 @@ it requires access to execute `ps`.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get the number of processes and group them by status
 [[inputs.processes]]
   # no configuration

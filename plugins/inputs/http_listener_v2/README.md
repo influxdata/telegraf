@@ -13,7 +13,7 @@ InfluxDB it is recommended to use [`influxdb_listener`][influxdb_listener] or [`
 
 This is a sample configuration for the plugin.
 
-```toml
+```toml @sample.conf
 # Generic HTTP write listener
 [[inputs.http_listener_v2]]
   ## Address and port to host HTTP listener on

@@ -13,7 +13,7 @@ Note: if namespace end point specified metrics array will be ignored for that ca
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read flattened metrics from one or more GrayLog HTTP endpoints
 [[inputs.graylog]]
   ## API endpoint, currently supported API:
