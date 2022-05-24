@@ -10,13 +10,13 @@ The RedisTimeSeries output plugin writes metrics to the RedisTimeSeries server.
   password = ""
 
   ## username (optional)
-  username = ""
+  # username = ""
   # redis database number (optional, must be an integer)
-  database = 0
+  # database = 0
 
   ## optional TLS configurations
-  tls_ca = "/etc/telegraf/ca.pem
-  tls_cert = "/etc/telegraf/cert.pem"
-  tls_key = "/etc/telegraf/key.pem"
-  insecure_skip_verify = false
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  # insecure_skip_verify = false
 ```
