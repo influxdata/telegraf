@@ -1,24 +1,29 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package opentelemetry
 
 import (
 	"context"
-	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
-	"google.golang.org/grpc/credentials/insecure"
+	_ "embed"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/influx2otel"
+	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
+	_ "google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
-	// This causes the gRPC library to register gzip compression.
-	_ "google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/grpc/metadata"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type OpenTelemetry struct {
 	ServiceAddress string `toml:"service_address"`
@@ -35,6 +40,10 @@ type OpenTelemetry struct {
 	grpcClientConn       *grpc.ClientConn
 	metricsServiceClient pmetricotlp.Client
 	callOptions          []grpc.CallOption
+}
+
+func (*OpenTelemetry) SampleConfig() string {
+	return sampleConfig
 }
 
 func (o *OpenTelemetry) Connect() error {

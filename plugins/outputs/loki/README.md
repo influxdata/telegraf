@@ -8,7 +8,7 @@ Logs within each stream are sorted by timestamp before being sent to Loki.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can transmit logs to Loki
 [[outputs.loki]]
   ## The domain of Loki

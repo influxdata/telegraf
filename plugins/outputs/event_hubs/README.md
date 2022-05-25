@@ -15,7 +15,7 @@ JSON is probably the easiest to integrate with downstream components.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Event Hubs output plugin
 [[outputs.event_hubs]]
   ## The full connection string to the Event Hub (required)

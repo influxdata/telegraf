@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package syslog
 
 import (
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"net"
 	"strconv"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Syslog struct {
 	Address             string
 	KeepAlivePeriod     *config.Duration
@@ -33,6 +39,10 @@ type Syslog struct {
 	net.Conn
 	tlsint.ClientConfig
 	mapper *SyslogMapper
+}
+
+func (*Syslog) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Syslog) Connect() error {

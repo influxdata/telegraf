@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package azure_monitor
 
 import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	_ "embed"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -24,6 +26,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // AzureMonitor allows publishing of metrics to the Azure Monitor custom metrics
 // service
@@ -102,6 +108,10 @@ const (
 	urlOverrideTemplate        = "%s%s/metrics"
 	maxRequestBodySize         = 4000000
 )
+
+func (*AzureMonitor) SampleConfig() string {
+	return sampleConfig
+}
 
 // Connect initializes the plugin and validates connectivity
 func (a *AzureMonitor) Connect() error {

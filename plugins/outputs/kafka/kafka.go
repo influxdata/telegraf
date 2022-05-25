@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kafka
 
 import (
+	_ "embed"
 	"fmt"
 	"log"
 	"strings"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var ValidTopicSuffixMethods = []string{
 	"",
@@ -87,6 +93,10 @@ func ValidateTopicSuffixMethod(method string) error {
 		}
 	}
 	return fmt.Errorf("unknown topic suffix method provided: %s", method)
+}
+
+func (*Kafka) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {

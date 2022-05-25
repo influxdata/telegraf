@@ -5,7 +5,7 @@ Monitoring](https://cloud.yandex.com/services/monitoring).
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send aggregated metrics to Yandex.Cloud Monitoring
 [[outputs.yandex_cloud_monitoring]]
   ## Timeout for HTTP writes.

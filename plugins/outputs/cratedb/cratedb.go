@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cratedb
 
 import (
 	"context"
 	"crypto/sha512"
 	"database/sql"
+	_ "embed"
 	"encoding/binary"
 	"fmt"
 	"sort"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const MaxInt64 = int64(^uint64(0) >> 1)
 
 type CrateDB struct {
@@ -27,6 +33,10 @@ type CrateDB struct {
 	TableCreate  bool   `toml:"table_create"`
 	KeySeparator string `toml:"key_separator"`
 	DB           *sql.DB
+}
+
+func (*CrateDB) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *CrateDB) Connect() error {

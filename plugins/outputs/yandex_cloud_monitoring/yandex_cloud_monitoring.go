@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package yandex_cloud_monitoring
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // YandexCloudMonitoring allows publishing of metrics to the Yandex Cloud Monitoring custom metrics
 // service
@@ -62,6 +68,10 @@ const (
 	defaultMetadataTokenURL  = "http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token"
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
+
+func (*YandexCloudMonitoring) SampleConfig() string {
+	return sampleConfig
+}
 
 // Connect initializes the plugin and validates connectivity
 func (a *YandexCloudMonitoring) Connect() error {

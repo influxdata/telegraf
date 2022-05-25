@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package sql
 
 import (
 	gosql "database/sql"
+	_ "embed"
 	"fmt"
 	"strings"
 
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ConvertStruct struct {
 	Integer         string
@@ -39,6 +45,10 @@ type SQL struct {
 	db     *gosql.DB
 	Log    telegraf.Logger `toml:"-"`
 	tables map[string]bool
+}
+
+func (*SQL) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *SQL) Connect() error {

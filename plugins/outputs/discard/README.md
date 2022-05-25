@@ -5,7 +5,7 @@ meant to be used for testing purposes.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send metrics to nowhere at all
 [[outputs.discard]]
   # no configuration

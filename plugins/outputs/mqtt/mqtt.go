@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mqtt
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
 	"sync"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultKeepAlive = 0
@@ -41,6 +47,10 @@ type MQTT struct {
 	serializer serializers.Serializer
 
 	sync.Mutex
+}
+
+func (*MQTT) SampleConfig() string {
+	return sampleConfig
 }
 
 func (m *MQTT) Connect() error {

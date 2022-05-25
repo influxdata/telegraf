@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package file
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type File struct {
 	Files               []string        `toml:"files"`
 	RotationInterval    config.Duration `toml:"rotation_interval"`
@@ -24,6 +30,10 @@ type File struct {
 	writer     io.Writer
 	closers    []io.Closer
 	serializer serializers.Serializer
+}
+
+func (*File) SampleConfig() string {
+	return sampleConfig
 }
 
 func (f *File) SetSerializer(serializer serializers.Serializer) {

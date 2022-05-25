@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cloudwatch
 
 import (
 	"context"
+	_ "embed"
 	"math"
 	"sort"
 	"strings"
@@ -15,6 +17,10 @@ import (
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type CloudWatch struct {
 	Namespace             string `toml:"namespace"` // CloudWatch Metrics Namespace
@@ -146,6 +152,10 @@ func (f *valueField) buildDatum() []types.MetricDatum {
 			StorageResolution: aws.Int32(int32(f.storageResolution)),
 		},
 	}
+}
+
+func (*CloudWatch) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *CloudWatch) Connect() error {

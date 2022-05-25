@@ -4,7 +4,7 @@ This plugin writes to a (list of) specified NATS instance(s).
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send telegraf measurements to NATS
 [[outputs.nats]]
   ## URLs of NATS servers

@@ -6,7 +6,7 @@ format by default.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can transmit metrics over HTTP
 [[outputs.http]]
   ## URL is the address to send metrics to

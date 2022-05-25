@@ -15,7 +15,7 @@ of logs, metrics and time series data.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Sends metrics to Azure Data Explorer
 [[outputs.azure_data_explorer]]
   ## The URI property of the Azure Data Explorer resource on Azure

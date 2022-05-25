@@ -16,7 +16,7 @@ dimension on each Azure Monitor metric.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send aggregate metrics to Azure Monitor
 [[outputs.azure_monitor]]
   ## Timeout for HTTP writes.

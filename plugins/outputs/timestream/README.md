@@ -4,7 +4,7 @@ The Timestream output plugin writes metrics to the [Amazon Timestream] service.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for sending metrics to Amazon Timestream.
 [[outputs.timestream]]
   ## Amazon Region

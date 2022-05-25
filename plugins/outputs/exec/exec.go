@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package exec
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const maxStderrBytes = 512
 
 // Exec defines the exec output plugin.
@@ -27,6 +33,10 @@ type Exec struct {
 
 	runner     Runner
 	serializer serializers.Serializer
+}
+
+func (*Exec) SampleConfig() string {
+	return sampleConfig
 }
 
 func (e *Exec) Init() error {
