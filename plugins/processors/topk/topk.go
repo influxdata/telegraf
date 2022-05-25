@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package topk
 
 import (
+	_ "embed"
 	"fmt"
 	"math"
 	"sort"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type TopK struct {
 	Period             config.Duration `toml:"period"`
@@ -69,6 +75,10 @@ func sortMetrics(metrics []MetricAggregation, field string, reverse bool) {
 	} else {
 		sort.SliceStable(metrics, func(i, j int) bool { return !less(i, j) })
 	}
+}
+
+func (*TopK) SampleConfig() string {
+	return sampleConfig
 }
 
 func (t *TopK) Reset() {

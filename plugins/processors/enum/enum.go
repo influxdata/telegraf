@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package enum
 
 import (
+	_ "embed"
 	"fmt"
 	"strconv"
 
@@ -8,6 +10,10 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type EnumMapper struct {
 	Mappings []Mapping `toml:"mapping"`
@@ -22,6 +28,10 @@ type Mapping struct {
 	Dest          string
 	Default       interface{}
 	ValueMappings map[string]interface{}
+}
+
+func (*EnumMapper) SampleConfig() string {
+	return sampleConfig
 }
 
 func (mapper *EnumMapper) Init() error {

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package template
 
 import (
+	_ "embed"
 	"strings"
 	"text/template"
 
@@ -8,11 +10,19 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type TemplateProcessor struct {
 	Tag      string          `toml:"tag"`
 	Template string          `toml:"template"`
 	Log      telegraf.Logger `toml:"-"`
 	tmpl     *template.Template
+}
+
+func (*TemplateProcessor) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {

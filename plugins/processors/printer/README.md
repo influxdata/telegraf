@@ -4,7 +4,7 @@ The printer processor plugin simple prints every metric passing through it.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Print all metrics that pass through this filter.
 [[processors.printer]]
 ```

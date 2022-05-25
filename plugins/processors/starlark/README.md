@@ -16,7 +16,7 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Process metrics using a Starlark script
 [[processors.starlark]]
   ## The Starlark source can be set as a string in this configuration file, or

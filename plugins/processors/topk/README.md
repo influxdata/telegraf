@@ -17,7 +17,7 @@ Notes:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Print all metrics that pass through this filter.
 [[processors.topk]]
   ## How many seconds between aggregations

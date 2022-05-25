@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package strings
 
 import (
+	_ "embed"
 	"encoding/base64"
 	"strings"
 	"unicode"
@@ -9,6 +11,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Strings struct {
 	Lowercase    []converter `toml:"lowercase"`
@@ -265,6 +271,10 @@ func (s *Strings) initOnce() {
 	}
 
 	s.init = true
+}
+
+func (*Strings) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Strings) Apply(in ...telegraf.Metric) []telegraf.Metric {
