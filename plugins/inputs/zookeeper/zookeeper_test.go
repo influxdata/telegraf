@@ -57,6 +57,7 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 		require.True(t, acc.HasInt64Field("zookeeper", metric), metric)
 	}
 
-	// see #8863
+	// Currently we output floats as strings (see #8863), but the desired behavior is to have floats
 	require.True(t, acc.HasStringField("zookeeper", "avg_latency"), "avg_latency")
+	// require.True(t, acc.HasFloat64Field("zookeeper", "avg_latency"), "avg_latency")
 }
