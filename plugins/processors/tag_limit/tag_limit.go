@@ -1,11 +1,17 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package tag_limit
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type TagLimit struct {
 	Limit    int             `toml:"limit"`
@@ -29,6 +35,10 @@ func (d *TagLimit) initOnce() error {
 	}
 	d.init = true
 	return nil
+}
+
+func (*TagLimit) SampleConfig() string {
+	return sampleConfig
 }
 
 func (d *TagLimit) Apply(in ...telegraf.Metric) []telegraf.Metric {

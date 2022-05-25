@@ -24,7 +24,7 @@ having several hosts (modifying ``host`` tag).
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Apply metric modifications using override semantics.
 [[processors.clone]]
   ## All modifications on inputs and aggregators can be overridden:

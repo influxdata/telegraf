@@ -12,7 +12,7 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 ## Set default fields on your metric(s) when they are nil or empty
 [[processors.defaults]]
   ## Ensures a set of fields always exists on your metric(s) with their

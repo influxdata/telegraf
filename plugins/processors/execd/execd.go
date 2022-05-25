@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package execd
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Execd struct {
 	Command      []string        `toml:"command"`
@@ -41,6 +47,10 @@ func New() *Execd {
 			DataFormat: "influx",
 		},
 	}
+}
+
+func (*Execd) SampleConfig() string {
+	return sampleConfig
 }
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
