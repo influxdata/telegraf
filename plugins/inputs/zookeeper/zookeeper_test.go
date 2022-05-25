@@ -1,9 +1,11 @@
 package zookeeper
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -13,8 +15,24 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	container := testutil.Container{
+		Image:        "zookeeper",
+		ExposedPorts: []string{"2181"},
+		Env: map[string]string{
+			"ZOO_4LW_COMMANDS_WHITELIST": "mntr",
+		},
+		WaitingFor: wait.ForListeningPort("2181"),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	z := &Zookeeper{
-		Servers: []string{testutil.GetLocalHost() + ":2181"},
+		Servers: []string{
+			fmt.Sprintf("%s:%s", container.Address, container.Port),
+		},
 	}
 
 	var acc testutil.Accumulator
@@ -22,7 +40,6 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	require.NoError(t, acc.GatherError(z.Gather))
 
 	intMetrics := []string{
-		"avg_latency",
 		"max_latency",
 		"min_latency",
 		"packets_received",
@@ -39,4 +56,8 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 	for _, metric := range intMetrics {
 		require.True(t, acc.HasInt64Field("zookeeper", metric), metric)
 	}
+
+	// Currently we output floats as strings (see #8863), but the desired behavior is to have floats
+	require.True(t, acc.HasStringField("zookeeper", "avg_latency"), "avg_latency")
+	// require.True(t, acc.HasFloat64Field("zookeeper", "avg_latency"), "avg_latency")
 }
