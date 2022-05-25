@@ -1,7 +1,9 @@
+//go:generate ../../../../tools/readme_config_includer/generator
 package ec2
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
@@ -19,6 +21,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type AwsEc2Processor struct {
 	ImdsTags         []string        `toml:"imds_tags"`
@@ -55,6 +61,10 @@ var allowedImdsTags = map[string]struct{}{
 	"ramdiskId":        {},
 	"region":           {},
 	"version":          {},
+}
+
+func (*AwsEc2Processor) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
