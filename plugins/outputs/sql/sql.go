@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"strings"
 
-	_ "github.com/ClickHouse/clickhouse-go"
-	_ "github.com/denisenkom/go-mssqldb"
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/jackc/pgx/v4/stdlib"
-	_ "github.com/snowflakedb/gosnowflake"
+	//Register sql drivers
+	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
+	_ "github.com/denisenkom/go-mssqldb"    // mssql (sql server)
+	_ "github.com/go-sql-driver/mysql"      // mysql
+	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)
+	_ "github.com/snowflakedb/gosnowflake"  // snowflake
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
