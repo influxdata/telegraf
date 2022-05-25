@@ -1,4 +1,4 @@
-# Cisco NETCONF telemetry
+# Cisco Model-Driven Telemetry (MDT) NETCONF Input Plugin
 
 Cisco NETCONF telemetry is an input plugin that can consume telemetry data from a [stream of NETCONF notifications](https://tools.ietf.org/html/rfc5277) or from polling. The plugin offers three ways to receive data:
 
@@ -8,9 +8,10 @@ Cisco NETCONF telemetry is an input plugin that can consume telemetry data from 
 
 The plugin requires the [netgonf library](github.com/cisco-ie/netgonf).
 
-## Sample Configuration
-```bash
-[[inputs.cisco_telemetry_mdt_netconf_dialin]]
+## Configuration
+
+```toml @sample.conf
+[[inputs.cisco_telemetry_mdt_netconf]]
 
   ## NETCONF over SSH connection
   # Address and port
@@ -38,7 +39,7 @@ The plugin requires the [netgonf library](github.com/cisco-ie/netgonf).
 
   ## Telemetry streaming
   # IOS-XE Subscription - periodic
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.subscription]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/if:interfaces-state/interface"
     update_trigger = "periodic"
     period = "10s"
@@ -48,58 +49,54 @@ The plugin requires the [netgonf library](github.com/cisco-ie/netgonf).
     keys = ["/if:interfaces-state/interface/name"]
 
   # IOS-XE Subscription - periodic
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.subscription]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/mdt-oper:mdt-oper-data/mdt-subscriptions"
     update_trigger = "periodic"
     period = "10s"
     keys = ["/mdt-oper:mdt-oper-data/mdt-subscriptions/subscription-id"]
 
   # IOS-XE Subscription - periodic
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.subscription]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/memory-ios-xe-oper:memory-statistics/memory-ios-xe-oper:memory-statistic"
     update_trigger = "periodic"
     period = "10s"
     keys = ["/memory-ios-xe-oper:memory-statistics/memory-ios-xe-oper:memory-statistic/memory-ios-xe-oper:name"]
 
   # IOS-XE Subscription - Xpath union for multiple subtrees
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.subscription]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/interfaces-ios-xe-oper:interfaces/interface/statistics/in-octets|/interfaces-ios-xe-oper:interfaces/interface/statistics/out-octets"
     update_trigger = "periodic"
     period = "5s"
     keys = ["/interfaces-ios-xe-oper:interfaces/interface/name"]
 
   # IOS-XE Subscription - on-change
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.subscription]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/cdp-ios-xe-oper:cdp-neighbor-details/cdp-neighbor-detail"
     update_trigger = "on-change"
     period = "0s"
 
   ## Get operations
   # IOS-XE Get Request with filter
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.get_service.get]]
+  [[inputs.cisco_telemetry_mdt_netconf.get_service.get]]
     xpath_filter = "/interfaces-state/interface[name='GigabitEthernet1']/oper-status"
     period = "10s"
     keys = ["/interfaces-state/interface/name"]
 
   # IOS-XE Get Request with filter and multiple keys
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.get_service.get]]
+  [[inputs.cisco_telemetry_mdt_netconf.get_service.get]]
     xpath_filter = "/interfaces-state/interface[name='GigabitEthernet2']"
     period = "10s"
     keys = ["/interfaces-state/interface/name", "/interfaces-state/interface/if-index"]
 
   # IOS-XE Get Request without filter
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.get_service.get]]
+  [[inputs.cisco_telemetry_mdt_netconf.get_service.get]]
     xpath_filter = "/memory-statistics/memory-statistic"
     period = "10s"
     keys = ["/memory-statistics/memory-statistic/name"]
 
   ## Event notification subscription
   # NSO Event notfication subscription with a key
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.notification]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.notification]]
     stream = "ncs-alarms"
     keys = ["alarm-notification/alarm-class"]
-
-[outputs.influxdb]
-  url = "http://localhost:8086"
-  database = "cisco_mdt_netconf"
 ```

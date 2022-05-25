@@ -1,4 +1,4 @@
-package cisco_telemetry_mdt_netconf_dialin
+package cisco_telemetry_mdt_netconf
 
 import (
 	"context"
@@ -47,7 +47,7 @@ const sampleConfig = `
 
   ### Telemetry streaming
   ## IOS-XE Subscription - periodic
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription]]
     xpath_filter = "/memory-ios-xe-oper:memory-statistics/memory-statistic"
     update_trigger = "periodic"
     period = "2s"
@@ -57,46 +57,46 @@ const sampleConfig = `
     keys = ["/memory-ios-xe-oper:memory-statistics/memory-statistic/name"]
 
   ## IOS-XE Subscription - periodic
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.subscription]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/mdt-oper:mdt-oper-data/mdt-subscriptions"
     update_trigger = "periodic"
 	period = "1s"
     keys = ["/mdt-oper:mdt-oper-data/mdt-subscriptions/subscription-id"]
 
   ## IOS-XE Subscription - Xpath union for multiple subtrees
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.subscription]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
     xpath_filter = "/interfaces-ios-xe-oper:interfaces/interface/statistics/in-octets|/interfaces-ios-xe-oper:interfaces/interface/statistics/out-octets"
     update_trigger = "periodic"
     period = "5s"
     keys = ["/interfaces-ios-xe-oper:interfaces/interface/name"]
 
   ## IOS-XE Subscription - on-change
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.subscription]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.subscription]]
 	xpath_filter = "/cdp-ios-xe-oper:cdp-neighbor-details/cdp-neighbor-detail"
     update_trigger = "on-change"
     period = "0s"
 
   ### Get operations
   ## IOS-XE Get Request with filter
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.get_service.get]]
+  [[inputs.cisco_telemetry_mdt_netconf.get_service.get]]
     xpath_filter = "/interfaces-state/interface[name='GigabitEthernet1']/oper-status"
     period = "10s"
     keys = ["/interfaces-state/interface/name"]
 
   ## IOS-XE Get Request with filter and multiple keys
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.get_service.get]]
+  [[inputs.cisco_telemetry_mdt_netconf.get_service.get]]
     xpath_filter = "/interfaces-state/interface[name='GigabitEthernet2']"
     period = "10s"
     keys = ["/interfaces-state/interface/name", "/interfaces-state/interface/if-index"]
 
   ### Event notification subscription
   # NSO Event notfication subscription with a key
-  [[inputs.cisco_telemetry_mdt_netconf_dialin.subscription_service.notification]]
+  [[inputs.cisco_telemetry_mdt_netconf.subscription_service.notification]]
     stream = "ncs-alarms"
     keys = ["alarm-notification/alarm-class"]
  `
 
-const pluginName = "[inputs.cisco_telemetry_mdt_netconf_dialin]"
+const pluginName = "[inputs.cisco_telemetry_mdt_netconf]"
 
 // Flags that track the state of a service
 const (
@@ -987,7 +987,7 @@ func (c *CiscoTelemetryNETCONF) Gather(_ telegraf.Accumulator) error {
 
 // Initialization function for plugin
 func init() {
-	inputs.Add("cisco_telemetry_mdt_netconf_dialin", func() telegraf.Input {
+	inputs.Add("cisco_telemetry_mdt_netconf", func() telegraf.Input {
 		return &CiscoTelemetryNETCONF{
 			Redial: config.Duration(10 * time.Second),
 		}

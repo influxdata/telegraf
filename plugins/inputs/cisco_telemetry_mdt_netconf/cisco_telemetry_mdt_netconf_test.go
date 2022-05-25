@@ -1,4 +1,4 @@
-package cisco_telemetry_mdt_netconf_dialin
+package cisco_telemetry_mdt_netconf
 
 import (
 	"context"

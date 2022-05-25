@@ -22,7 +22,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/cgroup"
 	_ "github.com/influxdata/telegraf/plugins/inputs/chrony"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt"
-	_ "github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt_netconf_dialin"
+	_ "github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt_netconf"
 	_ "github.com/influxdata/telegraf/plugins/inputs/clickhouse"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cloud_pubsub"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cloud_pubsub_push"
