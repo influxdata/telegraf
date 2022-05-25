@@ -1,12 +1,18 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package basicstats
 
 import (
+	_ "embed"
 	"math"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type BasicStats struct {
 	Stats []string `toml:"stats"`
@@ -55,6 +61,10 @@ type basicstats struct {
 	M2       float64   //intermediate value for variance/stdev
 	LAST     float64   //intermediate value for diff
 	TIME     time.Time //intermediate value for rate
+}
+
+func (*BasicStats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *BasicStats) Add(in telegraf.Metric) {

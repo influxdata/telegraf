@@ -1,11 +1,17 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package valuecounter
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type aggregate struct {
 	name       string
@@ -25,6 +31,10 @@ func NewValueCounter() telegraf.Aggregator {
 	vc := &ValueCounter{}
 	vc.Reset()
 	return vc
+}
+
+func (*ValueCounter) SampleConfig() string {
+	return sampleConfig
 }
 
 // Add is run on every metric which passes the plugin
