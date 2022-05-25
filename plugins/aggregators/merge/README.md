@@ -9,7 +9,7 @@ be handled more efficiently by the output.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Merge metrics into multifield metrics by series key
 [[aggregators.merge]]
   ## If true, the original metric will be dropped by the

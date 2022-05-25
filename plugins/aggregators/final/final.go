@@ -1,12 +1,18 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package final
 
 import (
+	_ "embed"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Final struct {
 	SeriesTimeout config.Duration `toml:"series_timeout"`
@@ -20,6 +26,10 @@ func NewFinal() *Final {
 		SeriesTimeout: config.Duration(5 * time.Minute),
 		metricCache:   make(map[uint64]telegraf.Metric),
 	}
+}
+
+func (*Final) SampleConfig() string {
+	return sampleConfig
 }
 
 func (m *Final) Add(in telegraf.Metric) {

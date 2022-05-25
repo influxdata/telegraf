@@ -26,7 +26,7 @@ of the algorithm which is implemented in the Prometheus
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for aggregate histogram metrics
 [[aggregators.histogram]]
   ## The period in which to flush the aggregator.
