@@ -37,7 +37,7 @@ type Redis struct {
 	Password string
 	tls.ClientConfig
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
 	clients   []Client
 	connected bool
@@ -47,6 +47,7 @@ type Client interface {
 	Do(returnType string, args ...interface{}) (interface{}, error)
 	Info() *redis.StringCmd
 	BaseTags() map[string]string
+	Close() error
 }
 
 type RedisClient struct {
@@ -190,6 +191,10 @@ func (r *RedisClient) BaseTags() map[string]string {
 		tags[k] = v
 	}
 	return tags
+}
+
+func (r *RedisClient) Close() error {
+	return r.client.Close()
 }
 
 var replicationSlaveMetricPrefix = regexp.MustCompile(`^slave\d+`)
@@ -696,4 +701,18 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		panic(fmt.Sprintf("unhandled source type %T", sourceType))
 	}
 	return reflect.ValueOf(value)
+}
+
+func (r *Redis) Start(telegraf.Accumulator) error {
+	return nil
+}
+
+//Stop close the client through ServiceInput interface Start/Stop methods impl.
+func (r *Redis) Stop() {
+	for _, c := range r.clients {
+		err := c.Close()
+		if err != nil {
+			r.Log.Errorf("error closing client: %v", err)
+		}
+	}
 }
