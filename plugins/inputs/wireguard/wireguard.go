@@ -1,14 +1,20 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package wireguard
 
 import (
+	_ "embed"
 	"fmt"
-	"log"
+
+	"golang.zx2c4.com/wireguard/wgctrl"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.zx2c4.com/wireguard/wgctrl"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	measurementDevice = "wireguard_device"
@@ -26,21 +32,14 @@ var (
 // Wireguard is an input that enumerates all Wireguard interfaces/devices on
 // the host, and reports gauge metrics for the device itself and its peers.
 type Wireguard struct {
-	Devices []string `toml:"devices"`
+	Devices []string        `toml:"devices"`
+	Log     telegraf.Logger `toml:"-"`
 
 	client *wgctrl.Client
 }
 
-func (wg *Wireguard) Description() string {
-	return "Collect Wireguard server interface and peer statistics"
-}
-
-func (wg *Wireguard) SampleConfig() string {
-	return `
-  ## Optional list of Wireguard device/interface names to query.
-  ## If omitted, all Wireguard interfaces are queried.
-  # devices = ["wg0"]
-`
+func (*Wireguard) SampleConfig() string {
+	return sampleConfig
 }
 
 func (wg *Wireguard) Init() error {
@@ -81,7 +80,7 @@ func (wg *Wireguard) enumerateDevices() ([]*wgtypes.Device, error) {
 	for _, name := range wg.Devices {
 		dev, err := wg.client.Device(name)
 		if err != nil {
-			log.Printf("W! [inputs.wireguard] No Wireguard device found with name %s", name)
+			wg.Log.Warnf("No Wireguard device found with name %s", name)
 			continue
 		}
 

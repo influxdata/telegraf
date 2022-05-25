@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
@@ -5,6 +6,7 @@ package kernel_vmstat
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"strconv"
@@ -13,16 +15,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type KernelVmstat struct {
 	statFile string
 }
 
-func (k *KernelVmstat) Description() string {
-	return "Get kernel statistics from /proc/vmstat"
-}
-
-func (k *KernelVmstat) SampleConfig() string {
-	return ""
+func (*KernelVmstat) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {

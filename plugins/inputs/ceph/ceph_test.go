@@ -112,12 +112,7 @@ func TestGather(t *testing.T) {
 }
 
 func TestFindSockets(t *testing.T) {
-	tmpdir, err := os.MkdirTemp("", "socktest")
-	require.NoError(t, err)
-	defer func() {
-		err := os.Remove(tmpdir)
-		require.NoError(t, err)
-	}()
+	tmpdir := t.TempDir()
 	c := &Ceph{
 		CephBinary:             "foo",
 		OsdPrefix:              "ceph-osd",

@@ -6,27 +6,38 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
 type GithubWebhook struct {
 	Path   string
 	Secret string
 	acc    telegraf.Accumulator
+	log    telegraf.Logger
+	auth.BasicAuth
 }
 
-func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
+func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(gh.Path, gh.eventHandler).Methods("POST")
-	log.Printf("I! Started the webhooks_github on %s\n", gh.Path)
+
+	gh.log = log
+	gh.log.Infof("Started the webhooks_github on %s", gh.Path)
 	gh.acc = acc
 }
 
 func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	if !gh.Verify(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	eventType := r.Header.Get("X-Github-Event")
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -35,12 +46,12 @@ func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if gh.Secret != "" && !checkSignature(gh.Secret, data, r.Header.Get("X-Hub-Signature")) {
-		log.Printf("E! Fail to check the github webhook signature\n")
+		gh.log.Error("Fail to check the github webhook signature")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	e, err := NewEvent(data, eventType)
+	e, err := gh.NewEvent(data, eventType)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -69,8 +80,8 @@ func (e *newEventError) Error() string {
 	return e.s
 }
 
-func NewEvent(data []byte, name string) (Event, error) {
-	log.Printf("D! New %v event received", name)
+func (gh *GithubWebhook) NewEvent(data []byte, name string) (Event, error) {
+	gh.log.Debugf("New %v event received", name)
 	switch name {
 	case "commit_comment":
 		return generateEvent(data, &CommitCommentEvent{})

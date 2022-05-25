@@ -6,11 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestExec(t *testing.T) {
@@ -59,8 +60,7 @@ func TestExec(t *testing.T) {
 			s, _ := serializers.NewInfluxSerializer()
 			e.SetSerializer(s)
 
-			e.Connect()
-
+			require.NoError(t, e.Connect())
 			require.Equal(t, tt.err, e.Write(tt.metrics) != nil)
 		})
 	}
@@ -94,7 +94,6 @@ func TestTruncate(t *testing.T) {
 
 func TestExecDocs(t *testing.T) {
 	e := &Exec{}
-	e.Description()
 	e.SampleConfig()
 	require.NoError(t, e.Close())
 

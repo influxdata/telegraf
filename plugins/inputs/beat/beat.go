@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package beat
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,41 +17,9 @@ import (
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
-const sampleConfig = `
-  ## An URL from which to read Beat-formatted JSON
-  ## Default is "http://127.0.0.1:5066".
-  url = "http://127.0.0.1:5066"
-
-  ## Enable collection of the listed stats
-  ## An empty list means collect all. Available options are currently
-  ## "beat", "libbeat", "system" and "filebeat".
-  # include = ["beat", "libbeat", "filebeat"]
-
-  ## HTTP method
-  # method = "GET"
-
-  ## Optional HTTP headers
-  # headers = {"X-Special-Header" = "Special-Value"}
-
-  ## Override HTTP "Host" header
-  # host_header = "logstash.example.com"
-
-  ## Timeout for HTTP requests
-  # timeout = "5s"
-
-  ## Optional HTTP Basic Auth credentials
-  # username = "username"
-  # password = "pa$$word"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-const description = "Read metrics exposed by Beat"
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const suffixInfo = "/"
 const suffixStats = "/stats"
@@ -95,6 +65,10 @@ func NewBeat() *Beat {
 	}
 }
 
+func (*Beat) SampleConfig() string {
+	return sampleConfig
+}
+
 func (beat *Beat) Init() error {
 	availableStats := []string{"beat", "libbeat", "system", "filebeat"}
 
@@ -111,14 +85,6 @@ func (beat *Beat) Init() error {
 	}
 
 	return nil
-}
-
-func (beat *Beat) Description() string {
-	return description
-}
-
-func (beat *Beat) SampleConfig() string {
-	return sampleConfig
 }
 
 // createHTTPClient create a clients to access API

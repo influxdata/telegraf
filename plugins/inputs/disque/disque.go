@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package disque
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"net"
@@ -15,29 +17,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Disque struct {
 	Servers []string
 
 	c net.Conn
 }
 
-var sampleConfig = `
-  ## An array of URI to gather stats about. Specify an ip or hostname
-  ## with optional port and password.
-  ## ie disque://localhost, disque://10.10.3.33:18832, 10.0.0.1:10000, etc.
-  ## If no servers are specified, then localhost is used as the host.
-  servers = ["localhost"]
-`
-
 var defaultTimeout = 5 * time.Second
-
-func (d *Disque) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *Disque) Description() string {
-	return "Read metrics from one or many disque servers"
-}
 
 var Tracking = map[string]string{
 	"uptime_in_seconds":          "uptime",
@@ -60,6 +50,10 @@ var Tracking = map[string]string{
 }
 
 var ErrProtocolError = errors.New("disque protocol error")
+
+func (*Disque) SampleConfig() string {
+	return sampleConfig
+}
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).

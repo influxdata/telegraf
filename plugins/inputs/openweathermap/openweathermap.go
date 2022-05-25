@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package openweathermap
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,16 +19,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const (
 	// https://openweathermap.org/current#severalid
 	// Call for several city IDs
 	// The limit of locations is 20.
 	owmRequestSeveralCityID int = 20
 
-	defaultBaseURL                       = "https://api.openweathermap.org/"
-	defaultResponseTimeout time.Duration = time.Second * 5
-	defaultUnits           string        = "metric"
-	defaultLang            string        = "en"
+	defaultBaseURL         = "https://api.openweathermap.org/"
+	defaultResponseTimeout = time.Second * 5
+	defaultUnits           = "metric"
+	defaultLang            = "en"
 )
 
 type OpenWeatherMap struct {
@@ -38,47 +44,12 @@ type OpenWeatherMap struct {
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	Units           string          `toml:"units"`
 
-	client  *http.Client
-	baseURL *url.URL
+	client        *http.Client
+	baseParsedURL *url.URL
 }
 
-var sampleConfig = `
-  ## OpenWeatherMap API key.
-  app_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-  ## City ID's to collect weather data from.
-  city_id = ["5391959"]
-
-  ## Language of the description field. Can be one of "ar", "bg",
-  ## "ca", "cz", "de", "el", "en", "fa", "fi", "fr", "gl", "hr", "hu",
-  ## "it", "ja", "kr", "la", "lt", "mk", "nl", "pl", "pt", "ro", "ru",
-  ## "se", "sk", "sl", "es", "tr", "ua", "vi", "zh_cn", "zh_tw"
-  # lang = "en"
-
-  ## APIs to fetch; can contain "weather" or "forecast".
-  fetch = ["weather", "forecast"]
-
-  ## OpenWeatherMap base URL
-  # base_url = "https://api.openweathermap.org/"
-
-  ## Timeout for HTTP response.
-  # response_timeout = "5s"
-
-  ## Preferred unit system for temperature and wind speed. Can be one of
-  ## "metric", "imperial", or "standard".
-  # units = "metric"
-
-  ## Query interval; OpenWeatherMap updates their weather data every 10
-  ## minutes.
-  interval = "10m"
-`
-
-func (n *OpenWeatherMap) SampleConfig() string {
+func (*OpenWeatherMap) SampleConfig() string {
 	return sampleConfig
-}
-
-func (n *OpenWeatherMap) Description() string {
-	return "Read current weather and forecasts data from openweathermap.org"
 }
 
 func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
@@ -176,6 +147,7 @@ type WeatherEntry struct {
 		Humidity int64   `json:"humidity"`
 		Pressure float64 `json:"pressure"`
 		Temp     float64 `json:"temp"`
+		Feels    float64 `json:"feels_like"`
 	} `json:"main"`
 	Rain struct {
 		Rain1 float64 `json:"1h"`
@@ -246,6 +218,7 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 			"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
 			"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"visibility":   e.Visibility,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
@@ -283,6 +256,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			"pressure":     e.Main.Pressure,
 			"rain":         gatherRain(e),
 			"temperature":  e.Main.Temp,
+			"feels_like":   e.Main.Feels,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
 		}
@@ -309,7 +283,7 @@ func init() {
 
 func (n *OpenWeatherMap) Init() error {
 	var err error
-	n.baseURL, err = url.Parse(n.BaseURL)
+	n.baseParsedURL, err = url.Parse(n.BaseURL)
 	if err != nil {
 		return err
 	}
@@ -353,5 +327,5 @@ func (n *OpenWeatherMap) formatURL(path string, city string) string {
 		RawQuery: v.Encode(),
 	}
 
-	return n.baseURL.ResolveReference(relative).String()
+	return n.baseParsedURL.ResolveReference(relative).String()
 }

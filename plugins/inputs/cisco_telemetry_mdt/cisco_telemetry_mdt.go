@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cisco_telemetry_mdt
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -15,17 +17,21 @@ import (
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck // Cannot switch to "google.golang.org/protobuf/proto", "github.com/golang/protobuf/proto" is used by "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	_ "google.golang.org/grpc/encoding/gzip" // Register GRPC gzip decoder to support compressed telemetry
+	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding
 	"google.golang.org/grpc/peer"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// Maximum telemetry payload size (in bytes) to accept for GRPC dialout transport
@@ -61,6 +67,9 @@ type CiscoTelemetryMDT struct {
 	mutex           sync.Mutex
 	acc             telegraf.Accumulator
 	wg              sync.WaitGroup
+
+	// Though unused in the code, required by protoc-gen-go-grpc to maintain compatibility
+	dialout.UnimplementedGRPCMdtDialoutServer
 }
 
 type NxPayloadXfromStructure struct {
@@ -69,6 +78,10 @@ type NxPayloadXfromStructure struct {
 		Key   string `json:"Key"`
 		Value string `json:"Value"`
 	} `json:"prop"`
+}
+
+func (*CiscoTelemetryMDT) SampleConfig() string {
+	return sampleConfig
 }
 
 // Start the Cisco MDT service
@@ -133,7 +146,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	// Fill extra tags
 	c.extraTags = make(map[string]map[string]struct{})
 	for _, tag := range c.EmbeddedTags {
-		dir := strings.Replace(path.Dir(tag), "-", "_", -1)
+		dir := strings.ReplaceAll(path.Dir(tag), "-", "_")
 		if _, hasKey := c.extraTags[dir]; !hasKey {
 			c.extraTags[dir] = make(map[string]struct{})
 		}
@@ -353,8 +366,9 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 			}
 		}
 
+		// if the keys and content fields are missing, skip the message as it
+		// does not have parsable data used by Telegraf
 		if keys == nil || content == nil {
-			c.Log.Infof("Message from %s missing keys or content", msg.GetNodeIdStr())
 			continue
 		}
 
@@ -437,7 +451,7 @@ func decodeTag(field *telemetry.TelemetryField) string {
 
 // Recursively parse tag fields
 func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemetry.TelemetryField, prefix string) {
-	localname := strings.Replace(field.Name, "-", "_", -1)
+	localname := strings.ReplaceAll(field.Name, "-", "_")
 	name := localname
 	if len(localname) == 0 {
 		name = prefix
@@ -525,7 +539,7 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 
 func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
-	name := strings.Replace(field.Name, "-", "_", -1)
+	name := strings.ReplaceAll(field.Name, "-", "_")
 
 	if (name == "modTs" || name == "createTs") && decodeValue(field) == "never" {
 		return
@@ -536,7 +550,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		name = prefix + "/" + name
 	}
 
-	extraTags := c.extraTags[strings.Replace(encodingPath, "-", "_", -1)+"/"+name]
+	extraTags := c.extraTags[strings.ReplaceAll(encodingPath, "-", "_")+"/"+name]
 
 	if value := decodeValue(field); value != nil {
 		// Do alias lookup, to shorten measurement names
@@ -567,7 +581,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	if len(extraTags) > 0 {
 		for _, subfield := range field.Fields {
 			if _, isExtraTag := extraTags[subfield.Name]; isExtraTag {
-				tags[name+"/"+strings.Replace(subfield.Name, "-", "_", -1)] = decodeTag(subfield)
+				tags[name+"/"+strings.ReplaceAll(subfield.Name, "-", "_")] = decodeTag(subfield)
 			}
 		}
 	}
@@ -677,44 +691,6 @@ func (c *CiscoTelemetryMDT) Stop() {
 		c.listener.Close()
 	}
 	c.wg.Wait()
-}
-
-const sampleConfig = `
- ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when
- ## using the grpc transport.
- transport = "grpc"
-
- ## Address and port to host telemetry listener
- service_address = ":57000"
-
- ## Enable TLS; grpc transport only.
- # tls_cert = "/etc/telegraf/cert.pem"
- # tls_key = "/etc/telegraf/key.pem"
-
- ## Enable TLS client authentication and define allowed CA certificates; grpc
- ##  transport only.
- # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
- ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
- # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
-
- ## Define aliases to map telemetry encoding paths to simple measurement names
- [inputs.cisco_telemetry_mdt.aliases]
-   ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
- ##Define Property Xformation, please refer README and https://pubhub.devnetcloud.com/media/dme-docs-9-3-3/docs/appendix/ for Model details.
- [inputs.cisco_telemetry_mdt.dmes]
-   ModTs = "ignore"
-   CreateTs = "ignore"
-`
-
-// SampleConfig of plugin
-func (c *CiscoTelemetryMDT) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description of plugin
-func (c *CiscoTelemetryMDT) Description() string {
-	return "Cisco model-driven telemetry (MDT) input plugin for IOS XR, IOS XE and NX-OS platforms"
 }
 
 // Gather plugin measurements (unused)

@@ -1,8 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package infiniband
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Stores the configuration values for the infiniband plugin - as there are no
 // config values, this is intentionally empty
@@ -10,13 +18,11 @@ type Infiniband struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-// Sample configuration for plugin
-var InfinibandConfig = ``
-
-func (i *Infiniband) SampleConfig() string {
-	return InfinibandConfig
+func (*Infiniband) SampleConfig() string {
+	return sampleConfig
 }
 
-func (i *Infiniband) Description() string {
-	return "Gets counters from all InfiniBand cards and ports installed"
+// Initialise plugin
+func init() {
+	inputs.Add("infiniband", func() telegraf.Input { return &Infiniband{} })
 }

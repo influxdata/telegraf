@@ -4,7 +4,7 @@ The "value" data format translates single values into Telegraf metrics. This
 is done by assigning a measurement name and setting a single field ("value")
 as the parsed metric.
 
-### Configuration
+## Configuration
 
 You **must** tell Telegraf what type of metric to collect by using the
 `data_type` configuration option. Available options are:
@@ -26,6 +26,9 @@ name of the plugin.
   ## override the default metric name of "exec"
   name_override = "entropy_available"
 
+  ## override the field name of "value"
+  # value_field_name = "value"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -33,4 +36,3 @@ name of the plugin.
   data_format = "value"
   data_type = "integer" # required
 ```
-

@@ -1,12 +1,14 @@
 package cloudwatch
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	cwClient "github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	cwClient "github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
@@ -18,13 +20,13 @@ import (
 
 type mockGatherCloudWatchClient struct{}
 
-func (m *mockGatherCloudWatchClient) ListMetrics(params *cwClient.ListMetricsInput) (*cwClient.ListMetricsOutput, error) {
+func (m *mockGatherCloudWatchClient) ListMetrics(_ context.Context, params *cwClient.ListMetricsInput, _ ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error) {
 	return &cwClient.ListMetricsOutput{
-		Metrics: []*cwClient.Metric{
+		Metrics: []types.Metric{
 			{
 				Namespace:  params.Namespace,
 				MetricName: aws.String("Latency"),
-				Dimensions: []*cwClient.Dimension{
+				Dimensions: []types.Dimension{
 					{
 						Name:  aws.String("LoadBalancerName"),
 						Value: aws.String("p-example"),
@@ -35,63 +37,53 @@ func (m *mockGatherCloudWatchClient) ListMetrics(params *cwClient.ListMetricsInp
 	}, nil
 }
 
-func (m *mockGatherCloudWatchClient) GetMetricData(params *cwClient.GetMetricDataInput) (*cwClient.GetMetricDataOutput, error) {
+func (m *mockGatherCloudWatchClient) GetMetricData(_ context.Context, params *cwClient.GetMetricDataInput, _ ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error) {
 	return &cwClient.GetMetricDataOutput{
-		MetricDataResults: []*cwClient.MetricDataResult{
+		MetricDataResults: []types.MetricDataResult{
 			{
 				Id:         aws.String("minimum_0_0"),
 				Label:      aws.String("latency_minimum"),
-				StatusCode: aws.String("completed"),
-				Timestamps: []*time.Time{
-					params.EndTime,
+				StatusCode: types.StatusCodeComplete,
+				Timestamps: []time.Time{
+					*params.EndTime,
 				},
-				Values: []*float64{
-					aws.Float64(0.1),
-				},
+				Values: []float64{0.1},
 			},
 			{
 				Id:         aws.String("maximum_0_0"),
 				Label:      aws.String("latency_maximum"),
-				StatusCode: aws.String("completed"),
-				Timestamps: []*time.Time{
-					params.EndTime,
+				StatusCode: types.StatusCodeComplete,
+				Timestamps: []time.Time{
+					*params.EndTime,
 				},
-				Values: []*float64{
-					aws.Float64(0.3),
-				},
+				Values: []float64{0.3},
 			},
 			{
 				Id:         aws.String("average_0_0"),
 				Label:      aws.String("latency_average"),
-				StatusCode: aws.String("completed"),
-				Timestamps: []*time.Time{
-					params.EndTime,
+				StatusCode: types.StatusCodeComplete,
+				Timestamps: []time.Time{
+					*params.EndTime,
 				},
-				Values: []*float64{
-					aws.Float64(0.2),
-				},
+				Values: []float64{0.2},
 			},
 			{
 				Id:         aws.String("sum_0_0"),
 				Label:      aws.String("latency_sum"),
-				StatusCode: aws.String("completed"),
-				Timestamps: []*time.Time{
-					params.EndTime,
+				StatusCode: types.StatusCodeComplete,
+				Timestamps: []time.Time{
+					*params.EndTime,
 				},
-				Values: []*float64{
-					aws.Float64(123),
-				},
+				Values: []float64{123},
 			},
 			{
 				Id:         aws.String("sample_count_0_0"),
 				Label:      aws.String("latency_sample_count"),
-				StatusCode: aws.String("completed"),
-				Timestamps: []*time.Time{
-					params.EndTime,
+				StatusCode: types.StatusCodeComplete,
+				Timestamps: []time.Time{
+					*params.EndTime,
 				},
-				Values: []*float64{
-					aws.Float64(100),
-				},
+				Values: []float64{100},
 			},
 		},
 	}, nil
@@ -158,8 +150,8 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 
 type mockSelectMetricsCloudWatchClient struct{}
 
-func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cwClient.ListMetricsInput) (*cwClient.ListMetricsOutput, error) {
-	metrics := []*cwClient.Metric{}
+func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ context.Context, params *cwClient.ListMetricsInput, _ ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error) {
+	metrics := []types.Metric{}
 	// 4 metrics are available
 	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
 	// for 3 ELBs
@@ -169,10 +161,10 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cwClient.ListMetricsI
 	for _, m := range metricNames {
 		for _, lb := range loadBalancers {
 			// For each metric/ELB pair, we get an aggregate value across all AZs.
-			metrics = append(metrics, &cwClient.Metric{
+			metrics = append(metrics, types.Metric{
 				Namespace:  aws.String("AWS/ELB"),
 				MetricName: aws.String(m),
-				Dimensions: []*cwClient.Dimension{
+				Dimensions: []types.Dimension{
 					{
 						Name:  aws.String("LoadBalancerName"),
 						Value: aws.String(lb),
@@ -181,10 +173,10 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cwClient.ListMetricsI
 			})
 			for _, az := range availabilityZones {
 				// We get a metric for each metric/ELB/AZ triplet.
-				metrics = append(metrics, &cwClient.Metric{
+				metrics = append(metrics, types.Metric{
 					Namespace:  aws.String("AWS/ELB"),
 					MetricName: aws.String(m),
-					Dimensions: []*cwClient.Dimension{
+					Dimensions: []types.Dimension{
 						{
 							Name:  aws.String("LoadBalancerName"),
 							Value: aws.String(lb),
@@ -205,7 +197,7 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(_ *cwClient.ListMetricsI
 	return result, nil
 }
 
-func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ *cwClient.GetMetricDataInput) (*cwClient.GetMetricDataOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) GetMetricData(_ context.Context, params *cwClient.GetMetricDataInput, _ ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error) {
 	return nil, nil
 }
 
@@ -246,16 +238,16 @@ func TestSelectMetrics(t *testing.T) {
 }
 
 func TestGenerateStatisticsInputParams(t *testing.T) {
-	d := &cwClient.Dimension{
+	d := types.Dimension{
 		Name:  aws.String("LoadBalancerName"),
 		Value: aws.String("p-example"),
 	}
 
 	namespace := "AWS/ELB"
-	m := &cwClient.Metric{
+	m := types.Metric{
 		MetricName: aws.String("Latency"),
-		Dimensions: []*cwClient.Dimension{d},
-		Namespace:  &namespace,
+		Dimensions: []types.Dimension{d},
+		Namespace:  aws.String(namespace),
 	}
 
 	duration, _ := time.ParseDuration("1m")
@@ -274,7 +266,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter(nil, nil)
-	queries := c.getDataQueries([]filteredMetric{{metrics: []*cwClient.Metric{m}, statFilter: statFilter}})
+	queries := c.getDataQueries([]filteredMetric{{metrics: []types.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries[namespace])
 
 	require.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
@@ -285,16 +277,16 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 }
 
 func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
-	d := &cwClient.Dimension{
+	d := types.Dimension{
 		Name:  aws.String("LoadBalancerName"),
 		Value: aws.String("p-example"),
 	}
 
 	namespace := "AWS/ELB"
-	m := &cwClient.Metric{
+	m := types.Metric{
 		MetricName: aws.String("Latency"),
-		Dimensions: []*cwClient.Dimension{d},
-		Namespace:  &namespace,
+		Dimensions: []types.Dimension{d},
+		Namespace:  aws.String(namespace),
 	}
 
 	duration, _ := time.ParseDuration("1m")
@@ -313,7 +305,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
-	queries := c.getDataQueries([]filteredMetric{{metrics: []*cwClient.Metric{m}, statFilter: statFilter}})
+	queries := c.getDataQueries([]filteredMetric{{metrics: []types.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries[namespace])
 
 	require.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))

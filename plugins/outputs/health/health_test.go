@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs/health"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
@@ -119,6 +120,7 @@ func TestHealth(t *testing.T) {
 
 			resp, err := http.Get(output.Origin())
 			require.NoError(t, err)
+			defer resp.Body.Close()
 			require.Equal(t, tt.expectedCode, resp.StatusCode)
 
 			_, err = io.ReadAll(resp.Body)

@@ -3,15 +3,12 @@ package nsd
 import (
 	"bytes"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
-
-var TestTimeout = config.Duration(time.Second)
 
 func NSDControl(output string) func(string, config.Duration, bool, string, string) (*bytes.Buffer, error) {
 	return func(string, config.Duration, bool, string, string) (*bytes.Buffer, error) {
@@ -26,13 +23,13 @@ func TestParseFullOutput(t *testing.T) {
 	}
 	err := v.Gather(acc)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.True(t, acc.HasMeasurement("nsd"))
-	assert.True(t, acc.HasMeasurement("nsd_servers"))
+	require.True(t, acc.HasMeasurement("nsd"))
+	require.True(t, acc.HasMeasurement("nsd_servers"))
 
-	assert.Len(t, acc.Metrics, 2)
-	assert.Equal(t, 99, acc.NFields())
+	require.Len(t, acc.Metrics, 2)
+	require.Equal(t, 99, acc.NFields())
 
 	acc.AssertContainsFields(t, "nsd", parsedFullOutput)
 	acc.AssertContainsFields(t, "nsd_servers", parsedFullOutputServerAsTag)

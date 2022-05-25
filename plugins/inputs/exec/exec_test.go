@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const validJSON = `
@@ -75,7 +75,7 @@ func newRunnerMock(out []byte, errout []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(_ string, _ time.Duration) ([]byte, []byte, error) {
+func (r runnerMock) Run(_ string, _ []string, _ time.Duration) ([]byte, []byte, error) {
 	return r.out, r.errout, r.err
 }
 
@@ -94,7 +94,7 @@ func TestExec(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
-	assert.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
+	require.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
 
 	fields := map[string]interface{}{
 		"num_processes": float64(82),
@@ -123,7 +123,7 @@ func TestExecMalformed(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	assert.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
 }
 
 func TestCommandError(t *testing.T) {
@@ -140,7 +140,7 @@ func TestCommandError(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	assert.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
@@ -179,6 +179,23 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
+	e.SetParser(parser)
+
+	var acc testutil.Accumulator
+	err := acc.GatherError(e.Gather)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"value": "metric_value",
+	}
+	acc.AssertContainsFields(t, "metric", fields)
+}
+
+func TestExecCommandWithEnv(t *testing.T) {
+	parser, _ := parsers.NewValueParser("metric", "string", "", nil)
+	e := NewExec()
+	e.Commands = []string{"/bin/sh -c 'echo ${METRIC_NAME}'"}
+	e.Environment = []string{"METRIC_NAME=metric_value"}
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator
@@ -263,14 +280,14 @@ func TestRemoveCarriageReturns(t *testing.T) {
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
 			out := removeWindowsCarriageReturns(*b)
-			assert.True(t, bytes.Equal(test.output, out.Bytes()))
+			require.True(t, bytes.Equal(test.output, out.Bytes()))
 		}
 	} else {
 		// Test that the buffer is returned unaltered
 		for _, test := range crTests {
 			b := bytes.NewBuffer(test.input)
 			out := removeWindowsCarriageReturns(*b)
-			assert.True(t, bytes.Equal(test.input, out.Bytes()))
+			require.True(t, bytes.Equal(test.input, out.Bytes()))
 		}
 	}
 }

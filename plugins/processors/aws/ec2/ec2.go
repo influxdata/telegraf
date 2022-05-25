@@ -26,62 +26,14 @@ type AwsEc2Processor struct {
 	Timeout          config.Duration `toml:"timeout"`
 	Ordered          bool            `toml:"ordered"`
 	MaxParallelCalls int             `toml:"max_parallel_calls"`
+	Log              telegraf.Logger `toml:"-"`
 
-	Log        telegraf.Logger     `toml:"-"`
-	imdsClient *imds.Client        `toml:"-"`
-	imdsTags   map[string]struct{} `toml:"-"`
-	ec2Client  *ec2.Client         `toml:"-"`
-	parallel   parallel.Parallel   `toml:"-"`
-	instanceID string              `toml:"-"`
+	imdsClient  *imds.Client
+	imdsTagsMap map[string]struct{}
+	ec2Client   *ec2.Client
+	parallel    parallel.Parallel
+	instanceID  string
 }
-
-const sampleConfig = `
-  ## Instance identity document tags to attach to metrics.
-  ## For more information see:
-  ## https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
-  ##
-  ## Available tags:
-  ## * accountId
-  ## * architecture
-  ## * availabilityZone
-  ## * billingProducts
-  ## * imageId
-  ## * instanceId
-  ## * instanceType
-  ## * kernelId
-  ## * pendingTime
-  ## * privateIp
-  ## * ramdiskId
-  ## * region
-  ## * version
-  imds_tags = []
-
-  ## EC2 instance tags retrieved with DescribeTags action.
-  ## In case tag is empty upon retrieval it's omitted when tagging metrics.
-  ## Note that in order for this to work, role attached to EC2 instance or AWS
-  ## credentials available from the environment must have a policy attached, that
-  ## allows ec2:DescribeTags.
-  ##
-  ## For more information see:
-  ## https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeTags.html
-  ec2_tags = []
-
-  ## Timeout for http requests made by against aws ec2 metadata endpoint.
-  timeout = "10s"
-
-  ## ordered controls whether or not the metrics need to stay in the same order
-  ## this plugin received them in. If false, this plugin will change the order
-  ## with requests hitting cached results moving through immediately and not
-  ## waiting on slower lookups. This may cause issues for you if you are
-  ## depending on the order of metrics staying the same. If so, set this to true.
-  ## Keeping the metrics ordered may be slightly slower.
-  ordered = false
-
-  ## max_parallel_calls is the maximum number of AWS API calls to be in flight
-  ## at the same time.
-  ## It's probably best to keep this number fairly low.
-  max_parallel_calls = 10
-`
 
 const (
 	DefaultMaxOrderedQueueSize = 10_000
@@ -105,14 +57,6 @@ var allowedImdsTags = map[string]struct{}{
 	"version":          {},
 }
 
-func (r *AwsEc2Processor) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *AwsEc2Processor) Description() string {
-	return "Attach AWS EC2 metadata to metrics"
-}
-
 func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
 	r.parallel.Enqueue(metric)
 	return nil
@@ -128,9 +72,9 @@ func (r *AwsEc2Processor) Init() error {
 		if len(tag) == 0 || !isImdsTagAllowed(tag) {
 			return fmt.Errorf("not allowed metadata tag specified in configuration: %s", tag)
 		}
-		r.imdsTags[tag] = struct{}{}
+		r.imdsTagsMap[tag] = struct{}{}
 	}
-	if len(r.imdsTags) == 0 && len(r.EC2Tags) == 0 {
+	if len(r.imdsTagsMap) == 0 && len(r.EC2Tags) == 0 {
 		return errors.New("no allowed metadata tags specified in configuration")
 	}
 
@@ -186,7 +130,7 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 
 func (r *AwsEc2Processor) Stop() error {
 	if r.parallel == nil {
-		return errors.New("Trying to stop unstarted AWS EC2 Processor")
+		return errors.New("trying to stop unstarted AWS EC2 Processor")
 	}
 	r.parallel.Stop()
 	return nil
@@ -197,7 +141,7 @@ func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
 	defer cancel()
 
 	// Add IMDS Instance Identity Document tags.
-	if len(r.imdsTags) > 0 {
+	if len(r.imdsTagsMap) > 0 {
 		iido, err := r.imdsClient.GetInstanceIdentityDocument(
 			ctx,
 			&imds.GetInstanceIdentityDocumentInput{},
@@ -207,7 +151,7 @@ func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
 			return []telegraf.Metric{metric}
 		}
 
-		for tag := range r.imdsTags {
+		for tag := range r.imdsTagsMap {
 			if v := getTagFromInstanceIdentityDocument(iido, tag); v != "" {
 				metric.AddTag(tag, v)
 			}
@@ -244,7 +188,7 @@ func newAwsEc2Processor() *AwsEc2Processor {
 	return &AwsEc2Processor{
 		MaxParallelCalls: DefaultMaxParallelCalls,
 		Timeout:          config.Duration(DefaultTimeout),
-		imdsTags:         make(map[string]struct{}),
+		imdsTagsMap:      make(map[string]struct{}),
 	}
 }
 

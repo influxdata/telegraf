@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nfsclient
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os"
 	"regexp"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type NFSClient struct {
 	Fullstat          bool            `toml:"fullstat"`
 	IncludeMounts     []string        `toml:"include_mounts"`
@@ -23,42 +29,6 @@ type NFSClient struct {
 	nfs3Ops           map[string]bool
 	nfs4Ops           map[string]bool
 	mountstatsPath    string
-}
-
-const sampleConfig = `
-  ## Read more low-level metrics (optional, defaults to false)
-  # fullstat = false
-
-  ## List of mounts to explictly include or exclude (optional)
-  ## The pattern (Go regexp) is matched against the mount point (not the
-  ## device being mounted).  If include_mounts is set, all mounts are ignored
-  ## unless present in the list. If a mount is listed in both include_mounts
-  ## and exclude_mounts, it is excluded.  Go regexp patterns can be used.
-  # include_mounts = []
-  # exclude_mounts = []
-
-  ## List of operations to include or exclude from collecting.  This applies
-  ## only when fullstat=true.  Symantics are similar to {include,exclude}_mounts:
-  ## the default is to collect everything; when include_operations is set, only
-  ## those OPs are collected; when exclude_operations is set, all are collected
-  ## except those listed.  If include and exclude are set, the OP is excluded.
-  ## See /proc/self/mountstats for a list of valid operations; note that
-  ## NFSv3 and NFSv4 have different lists.  While it is not possible to
-  ## have different include/exclude lists for NFSv3/4, unused elements
-  ## in the list should be okay.  It is possible to have different lists
-  ## for different mountpoints:  use mulitple [[input.nfsclient]] stanzas,
-  ## with their own lists.  See "include_mounts" above, and be careful of
-  ## duplicate metrics.
-  # include_operations = []
-  # exclude_operations = []
-`
-
-func (n *NFSClient) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *NFSClient) Description() string {
-	return "Read per-mount NFS client metrics from /proc/self/mountstats"
 }
 
 func convertToUint64(line []string) ([]uint64, error) {
@@ -190,6 +160,10 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 		fields["bytes"] = nline[3] + nline[4]
 		fields["rtt"] = nline[6]
 		fields["exe"] = nline[7]
+		fields["rtt_per_op"] = 0.0
+		if nline[0] > 0 {
+			fields["rtt_per_op"] = float64(nline[6]) / float64(nline[0])
+		}
 		tags["operation"] = first
 		acc.AddFields("nfsstat", fields, tags)
 	}
@@ -315,6 +289,10 @@ func (n *NFSClient) getMountStatsPath() string {
 	}
 	n.Log.Debugf("using [%s] for mountstats", path)
 	return path
+}
+
+func (*NFSClient) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {

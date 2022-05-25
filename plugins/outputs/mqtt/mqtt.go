@@ -2,12 +2,12 @@ package mqtt
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	paho "github.com/eclipse/paho.mqtt.golang"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -16,51 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-var sampleConfig = `
-  servers = ["localhost:1883"] # required.
-
-  ## MQTT outputs send metrics to this topic format
-  ##    "<topic_prefix>/<hostname>/<pluginname>/"
-  ##   ex: prefix/web01.example.com/mem
-  topic_prefix = "telegraf"
-
-  ## QoS policy for messages
-  ##   0 = at most once
-  ##   1 = at least once
-  ##   2 = exactly once
-  # qos = 2
-
-  ## username and password to connect MQTT server.
-  # username = "telegraf"
-  # password = "metricsmetricsmetricsmetrics"
-
-  ## client ID, if not set a random ID is generated
-  # client_id = ""
-
-  ## Timeout for write operations. default: 5s
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## When true, metrics will be sent in one MQTT message per flush.  Otherwise,
-  ## metrics are written one metric per MQTT message.
-  # batch = false
-
-  ## When true, metric will have RETAIN flag set, making broker cache entries until someone
-  ## actually reads it
-  # retain = false
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
-`
+const (
+	defaultKeepAlive = 0
+)
 
 type MQTT struct {
 	Servers     []string `toml:"servers"`
@@ -72,8 +30,10 @@ type MQTT struct {
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
-	BatchMessage bool `toml:"batch"`
-	Retain       bool `toml:"retain"`
+	BatchMessage bool            `toml:"batch"`
+	Retain       bool            `toml:"retain"`
+	KeepAlive    int64           `toml:"keep_alive"`
+	Log          telegraf.Logger `toml:"-"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -115,14 +75,6 @@ func (m *MQTT) Close() error {
 	return nil
 }
 
-func (m *MQTT) SampleConfig() string {
-	return sampleConfig
-}
-
-func (m *MQTT) Description() string {
-	return "Configuration for MQTT server to send metrics to"
-}
-
 func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	m.Lock()
 	defer m.Unlock()
@@ -153,13 +105,13 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		} else {
 			buf, err := m.serializer.Serialize(metric)
 			if err != nil {
-				log.Printf("D! [outputs.mqtt] Could not serialize metric: %v", err)
+				m.Log.Debugf("Could not serialize metric: %v", err)
 				continue
 			}
 
 			err = m.publish(topic, buf)
 			if err != nil {
-				return fmt.Errorf("Could not write to MQTT server, %s", err)
+				return fmt.Errorf("could not write to MQTT server, %s", err)
 			}
 		}
 	}
@@ -172,7 +124,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		}
 		publisherr := m.publish(key, buf)
 		if publisherr != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", publisherr)
+			return fmt.Errorf("could not write to MQTT server, %s", publisherr)
 		}
 	}
 
@@ -190,7 +142,7 @@ func (m *MQTT) publish(topic string, body []byte) error {
 
 func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
-	opts.KeepAlive = 0
+	opts.KeepAlive = m.KeepAlive
 
 	if m.Timeout < config.Duration(time.Second) {
 		m.Timeout = config.Duration(5 * time.Second)
@@ -237,6 +189,8 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 
 func init() {
 	outputs.Add("mqtt", func() telegraf.Output {
-		return &MQTT{}
+		return &MQTT{
+			KeepAlive: defaultKeepAlive,
+		}
 	})
 }

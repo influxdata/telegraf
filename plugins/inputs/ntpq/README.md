@@ -24,36 +24,36 @@ the remote peer or server (RMS, milliseconds);
 - jitter – Mean deviation (jitter) in the time reported for that remote peer or
 server (RMS of difference of multiple time samples, milliseconds);
 
-### Configuration:
+## Configuration
 
-```toml
-# Get standard NTP query metrics, requires ntpq executable
+```toml @sample.conf
+# Get standard NTP query metrics, requires ntpq executable.
 [[inputs.ntpq]]
-  ## If false, add -n for ntpq command. Can reduce metric gather times.
+  ## If false, set the -n ntpq flag. Can reduce metric gather time.
   dns_lookup = true
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - ntpq
-    - delay (float, milliseconds)
-    - jitter (float, milliseconds)
-    - offset (float, milliseconds)
-    - poll (int, seconds)
-    - reach (int)
-    - when (int, seconds)
+  - delay (float, milliseconds)
+  - jitter (float, milliseconds)
+  - offset (float, milliseconds)
+  - poll (int, seconds)
+  - reach (int)
+  - when (int, seconds)
 
-### Tags:
+## Tags
 
 - All measurements have the following tags:
-    - refid
-    - remote
-    - type
-    - stratum
+  - refid
+  - remote
+  - type
+  - stratum
 
-### Example Output:
+## Example Output
 
-```
+```shell
 $ telegraf --config ~/ws/telegraf.conf --input-filter ntpq --test
 * Plugin: ntpq, Collection 1
 > ntpq,refid=.GPSs.,remote=*time.apple.com,stratum=1,type=u delay=91.797,jitter=3.735,offset=12.841,poll=64i,reach=377i,when=35i 1457960478909556134

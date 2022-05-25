@@ -14,35 +14,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-const sampleConfig = `
-  ## Program to run as daemon
-  command = ["my-telegraf-output", "--some-flag", "value"]
-
-  ## Delay before the process is restarted after an unexpected termination
-  restart_delay = "10s"
-
-  ## Data format to export.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
-`
-
 type Execd struct {
 	Command      []string        `toml:"command"`
+	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger
 
 	process    *process.Process
 	serializer serializers.Serializer
-}
-
-func (e *Execd) SampleConfig() string {
-	return sampleConfig
-}
-
-func (e *Execd) Description() string {
-	return "Run executable as long-running output plugin"
 }
 
 func (e *Execd) SetSerializer(s serializers.Serializer) {
@@ -56,7 +35,7 @@ func (e *Execd) Init() error {
 
 	var err error
 
-	e.process, err = process.New(e.Command)
+	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating process %s: %w", e.Command, err)
 	}

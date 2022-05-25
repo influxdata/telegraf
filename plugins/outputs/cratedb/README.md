@@ -1,11 +1,11 @@
-# CrateDB Output Plugin for Telegraf
+# CrateDB Output Plugin
 
-This plugin writes to [CrateDB](https://crate.io/) via its [PostgreSQL protocol](https://crate.io/docs/crate/reference/protocols/postgres.html).
+This plugin writes to [CrateDB](https://crate.io/) via its [PostgreSQL
+protocol](https://crate.io/docs/crate/reference/protocols/postgres.html).
 
 ## Table Schema
 
 The plugin requires a table with the following schema.
-
 
 ```sql
 CREATE TABLE my_metrics (

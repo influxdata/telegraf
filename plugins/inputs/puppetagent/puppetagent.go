@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package puppetagent
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"reflect"
@@ -12,15 +14,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // PuppetAgent is a PuppetAgent plugin
 type PuppetAgent struct {
 	Location string
 }
-
-var sampleConfig = `
-  ## Location of puppet last run summary file
-  location = "/var/lib/puppet/state/last_run_summary.yaml"
-`
 
 type State struct {
 	Events    event
@@ -82,14 +83,8 @@ type version struct {
 	Puppet       string `yaml:"puppet"`
 }
 
-// SampleConfig returns sample configuration message
-func (pa *PuppetAgent) SampleConfig() string {
+func (*PuppetAgent) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description returns description of PuppetAgent plugin
-func (pa *PuppetAgent) Description() string {
-	return `Reads last_run_summary.yaml file and converts to measurements`
 }
 
 // Gather reads stats from all configured servers accumulates stats

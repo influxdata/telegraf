@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package rabbitmq
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // DefaultUsername will set a default value that corresponds to the default
 // value used by Rabbitmq
@@ -36,7 +42,7 @@ const DefaultClientTimeout = 4
 // see the sample config for further details
 type RabbitMQ struct {
 	URL      string `toml:"url"`
-	Name     string `toml:"name"`
+	Name     string `toml:"name" deprecated:"1.3.0;use 'tags' instead"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 	tls.ClientConfig
@@ -45,7 +51,7 @@ type RabbitMQ struct {
 	ClientTimeout         config.Duration `toml:"client_timeout"`
 
 	Nodes     []string `toml:"nodes"`
-	Queues    []string `toml:"queues"`
+	Queues    []string `toml:"queues" deprecated:"1.6.0;use 'queue_name_include' instead"`
 	Exchanges []string `toml:"exchanges"`
 
 	MetricInclude             []string `toml:"metric_include"`
@@ -269,65 +275,6 @@ var gatherFunctions = map[string]gatherFunc{
 	"queue":      gatherQueues,
 }
 
-var sampleConfig = `
-  ## Management Plugin url. (default: http://localhost:15672)
-  # url = "http://localhost:15672"
-  ## Tag added to rabbitmq_overview series; deprecated: use tags
-  # name = "rmq-server-1"
-  ## Credentials
-  # username = "guest"
-  # password = "guest"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Optional request timeouts
-  ##
-  ## ResponseHeaderTimeout, if non-zero, specifies the amount of time to wait
-  ## for a server's response headers after fully writing the request.
-  # header_timeout = "3s"
-  ##
-  ## client_timeout specifies a time limit for requests made by this client.
-  ## Includes connection time, any redirects, and reading the response body.
-  # client_timeout = "4s"
-
-  ## A list of nodes to gather as the rabbitmq_node measurement. If not
-  ## specified, metrics for all nodes are gathered.
-  # nodes = ["rabbit@node1", "rabbit@node2"]
-
-  ## A list of queues to gather as the rabbitmq_queue measurement. If not
-  ## specified, metrics for all queues are gathered.
-  # queues = ["telegraf"]
-
-  ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
-  ## specified, metrics for all exchanges are gathered.
-  # exchanges = ["telegraf"]
-
-  ## Metrics to include and exclude. Globs accepted.
-  ## Note that an empty array for both will include all metrics
-  ## Currently the following metrics are supported: "exchange", "federation", "node", "overview", "queue"
-  # metric_include = []
-  # metric_exclude = []
-
-  ## Queues to include and exclude. Globs accepted.
-  ## Note that an empty array for both will include all queues
-  queue_name_include = []
-  queue_name_exclude = []
-
-  ## Federation upstreams include and exclude when gathering the rabbitmq_federation measurement.
-  ## If neither are specified, metrics for all federation upstreams are gathered.
-  ## Federation link metrics will only be gathered for queues and exchanges
-  ## whose non-federation metrics will be collected (e.g a queue excluded
-  ## by the 'queue_name_exclude' option will also be excluded from federation).
-  ## Globs accepted.
-  # federation_upstream_include = ["dataCentre-*"]
-  # federation_upstream_exclude = []
-`
-
 func boolToInt(b bool) int64 {
 	if b {
 		return 1
@@ -335,14 +282,8 @@ func boolToInt(b bool) int64 {
 	return 0
 }
 
-// SampleConfig ...
-func (r *RabbitMQ) SampleConfig() string {
+func (*RabbitMQ) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description ...
-func (r *RabbitMQ) Description() string {
-	return "Reads metrics from RabbitMQ servers via the Management Plugin"
 }
 
 func (r *RabbitMQ) Init() error {

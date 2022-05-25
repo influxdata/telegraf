@@ -34,7 +34,8 @@ func TestInputShimStdinSignalingWorks(t *testing.T) {
 
 	metricProcessed, exited := runInputPlugin(t, 40*time.Second, stdinReader, stdoutWriter, nil)
 
-	stdinWriter.Write([]byte("\n"))
+	_, err := stdinWriter.Write([]byte("\n"))
+	require.NoError(t, err)
 
 	<-metricProcessed
 
@@ -43,7 +44,8 @@ func TestInputShimStdinSignalingWorks(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
-	stdinWriter.Close()
+	err = stdinWriter.Close()
+	require.NoError(t, err)
 	go func() {
 		_, _ = io.ReadAll(r)
 	}()
@@ -68,7 +70,8 @@ func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdou
 	if stderr != nil {
 		shim.stderr = stderr
 	}
-	shim.AddInput(inp)
+	err := shim.AddInput(inp)
+	require.NoError(t, err)
 	go func() {
 		err := shim.Run(interval)
 		require.NoError(t, err)

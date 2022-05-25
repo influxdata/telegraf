@@ -15,6 +15,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coreos/go-systemd/daemon"
+
+	"github.com/fatih/color"
+
 	"github.com/influxdata/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
@@ -27,6 +31,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	"gopkg.in/tomb.v1"
 )
@@ -60,6 +65,8 @@ var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fDeprecationList = flag.Bool("deprecation-list", false,
+	"print all deprecated plugins or plugin options.")
 var fSectionFilters = flag.String("section-filter", "",
 	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
 var fInputFilters = flag.String("input-filter", "",
@@ -88,6 +95,14 @@ var fServiceName = flag.String("service-name", "telegraf",
 //nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service",
 	"service display name (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceAutoRestart = flag.Bool("service-auto-restart", false,
+	"auto restart service on failure (windows only)")
+
+//nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
+var fServiceRestartDelay = flag.String("service-restart-delay", "5m",
+	"delay before service auto restart, default is 5m (windows only)")
 
 //nolint:varcheck,unused // False positive - this var is used for non-default build tag: windows
 var fRunAsConsole = flag.Bool("console", false,
@@ -191,8 +206,6 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	log.Printf("I! Starting Telegraf %s", version)
-
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
@@ -219,7 +232,7 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	if !*fTest && len(c.Outputs) == 0 {
+	if !(*fTest || *fTestWait != 0) && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
 	if *fPlugins == "" && len(c.Inputs) == 0 {
@@ -234,25 +247,55 @@ func runAgent(ctx context.Context,
 		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.Interval)
 	}
 
+	// Setup logging as configured.
+	telegraf.Debug = c.Agent.Debug || *fDebug
+	logConfig := logger.LogConfig{
+		Debug:               telegraf.Debug,
+		Quiet:               c.Agent.Quiet || *fQuiet,
+		LogTarget:           c.Agent.LogTarget,
+		Logfile:             c.Agent.Logfile,
+		RotationInterval:    c.Agent.LogfileRotationInterval,
+		RotationMaxSize:     c.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: c.Agent.LogfileRotationMaxArchives,
+		LogWithTimezone:     c.Agent.LogWithTimezone,
+	}
+
+	logger.SetupLogging(logConfig)
+
+	log.Printf("I! Starting Telegraf %s", version)
+	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
+	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
+	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
+	if !*fRunOnce && (*fTest || *fTestWait != 0) {
+		log.Print("W! " + color.RedString("Outputs are not used in testing mode!"))
+	} else {
+		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+	}
+	log.Printf("I! Tags enabled: %s", c.ListTags())
+
+	if count, found := c.Deprecations["inputs"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated inputs: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["aggregators"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated aggregators: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["processors"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated processors: %d and %d options", count[0], count[1])
+	}
+	if count, found := c.Deprecations["outputs"]; found && (count[0] > 0 || count[1] > 0) {
+		log.Printf("W! Deprecated outputs: %d and %d options", count[0], count[1])
+	}
+
 	ag, err := agent.NewAgent(c)
 	if err != nil {
 		return err
 	}
 
-	// Setup logging as configured.
-	telegraf.Debug = ag.Config.Agent.Debug || *fDebug
-	logConfig := logger.LogConfig{
-		Debug:               telegraf.Debug,
-		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
-		LogTarget:           ag.Config.Agent.LogTarget,
-		Logfile:             ag.Config.Agent.Logfile,
-		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
-		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
-		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
-		LogWithTimezone:     ag.Config.Agent.LogWithTimezone,
-	}
-
-	logger.SetupLogging(logConfig)
+	// Notify systemd that telegraf is ready
+	// SdNotify() only tries to notify if the NOTIFY_SOCKET environment is set, so it's safe to call when systemd isn't present.
+	// Ignore the return values here because they're not valid for platforms that don't use systemd.
+	// For platforms that use systemd, telegraf doesn't log if the notification failed.
+	_, _ = daemon.SdNotify(false, daemon.SdNotifyReady)
 
 	if *fRunOnce {
 		wait := time.Duration(*fTestWait) * time.Second
@@ -263,12 +306,6 @@ func runAgent(ctx context.Context,
 		wait := time.Duration(*fTestWait) * time.Second
 		return ag.Test(ctx, wait)
 	}
-
-	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
-	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
-	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
-	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-	log.Printf("I! Tags enabled: %s", c.ListTags())
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -348,6 +385,11 @@ func main() {
 
 	logger.SetupLogging(logger.LogConfig{})
 
+	// Configure version
+	if err := internal.SetVersion(version); err != nil {
+		log.Println("Telegraf version already configured to: " + internal.Version())
+	}
+
 	// Load external plugins, if requested.
 	if *fPlugins != "" {
 		log.Printf("I! Loading external plugins from: %s", *fPlugins)
@@ -392,6 +434,27 @@ func main() {
 
 	// switch for flags which just do something and exit immediately
 	switch {
+	case *fDeprecationList:
+		c := config.NewConfig()
+		infos := c.CollectDeprecationInfos(
+			inputFilters,
+			outputFilters,
+			aggregatorFilters,
+			processorFilters,
+		)
+		//nolint:revive // We will notice if Println fails
+		fmt.Println("Deprecated Input Plugins: ")
+		c.PrintDeprecationList(infos["inputs"])
+		//nolint:revive // We will notice if Println fails
+		fmt.Println("Deprecated Output Plugins: ")
+		c.PrintDeprecationList(infos["outputs"])
+		//nolint:revive // We will notice if Println fails
+		fmt.Println("Deprecated Processor Plugins: ")
+		c.PrintDeprecationList(infos["processors"])
+		//nolint:revive // We will notice if Println fails
+		fmt.Println("Deprecated Aggregator Plugins: ")
+		c.PrintDeprecationList(infos["aggregators"])
+		return
 	case *fOutputList:
 		fmt.Println("Available Output Plugins: ")
 		names := make([]string, 0, len(outputs.Outputs))
@@ -433,16 +496,6 @@ func main() {
 			log.Fatalf("E! %s and %s", err, err2)
 		}
 		return
-	}
-
-	shortVersion := version
-	if shortVersion == "" {
-		shortVersion = "unknown"
-	}
-
-	// Configure version
-	if err := internal.SetVersion(shortVersion); err != nil {
-		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
 	run(

@@ -1,10 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package powerdns
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -14,24 +15,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Powerdns struct {
 	UnixSockets []string
-}
 
-var sampleConfig = `
-  ## An array of sockets to gather stats about.
-  ## Specify a path to unix socket.
-  unix_sockets = ["/var/run/pdns.controlsocket"]
-`
+	Log telegraf.Logger `toml:"-"`
+}
 
 var defaultTimeout = 5 * time.Second
 
-func (p *Powerdns) SampleConfig() string {
+func (*Powerdns) SampleConfig() string {
 	return sampleConfig
-}
-
-func (p *Powerdns) Description() string {
-	return "Read metrics from one or many PowerDNS servers"
 }
 
 func (p *Powerdns) Gather(acc telegraf.Accumulator) error {
@@ -89,7 +86,7 @@ func (p *Powerdns) gatherServer(address string, acc telegraf.Accumulator) error 
 	metrics := string(buf)
 
 	// Process data
-	fields := parseResponse(metrics)
+	fields := p.parseResponse(metrics)
 
 	// Add server socket as a tag
 	tags := map[string]string{"server": address}
@@ -99,7 +96,7 @@ func (p *Powerdns) gatherServer(address string, acc telegraf.Accumulator) error 
 	return nil
 }
 
-func parseResponse(metrics string) map[string]interface{} {
+func (p *Powerdns) parseResponse(metrics string) map[string]interface{} {
 	values := make(map[string]interface{})
 
 	s := strings.Split(metrics, ",")
@@ -112,8 +109,7 @@ func parseResponse(metrics string) map[string]interface{} {
 
 		i, err := strconv.ParseInt(m[1], 10, 64)
 		if err != nil {
-			log.Printf("E! [inputs.powerdns] error parsing integer for metric %q: %s",
-				metric, err.Error())
+			p.Log.Errorf("error parsing integer for metric %q: %s", metric, err.Error())
 			continue
 		}
 		values[m[0]] = i

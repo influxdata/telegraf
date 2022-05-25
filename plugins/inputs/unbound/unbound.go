@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package unbound
 
 import (
 	"bufio"
 	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"os/exec"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type runner func(unbound Unbound) (*bytes.Buffer, error)
 
@@ -34,41 +40,6 @@ type Unbound struct {
 
 var defaultBinary = "/usr/sbin/unbound-control"
 var defaultTimeout = config.Duration(time.Second)
-
-var sampleConfig = `
-  ## Address of server to connect to, read from unbound conf default, optionally ':port'
-  ## Will lookup IP if given a hostname
-  server = "127.0.0.1:8953"
-
-  ## If running as a restricted user you can prepend sudo for additional access:
-  # use_sudo = false
-
-  ## The default location of the unbound-control binary can be overridden with:
-  # binary = "/usr/sbin/unbound-control"
-
-  ## The default location of the unbound config file can be overridden with:
-  # config_file = "/etc/unbound/unbound.conf"
-
-  ## The default timeout of 1s can be overridden with:
-  # timeout = "1s"
-
-  ## When set to true, thread metrics are tagged with the thread id.
-  ##
-  ## The default is false for backwards compatibility, and will be changed to
-  ## true in a future version.  It is recommended to set to true on new
-  ## deployments.
-  thread_as_tag = false
-`
-
-// Description displays what this plugin is about
-func (s *Unbound) Description() string {
-	return "A plugin to collect stats from the Unbound DNS resolver"
-}
-
-// SampleConfig displays configuration instructions
-func (s *Unbound) SampleConfig() string {
-	return sampleConfig
-}
 
 // Shell out to unbound_stat and return the output
 func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {
@@ -123,6 +94,10 @@ func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {
 
 // Gather collects stats from unbound-control and adds them to the Accumulator
 //
+func (*Unbound) SampleConfig() string {
+	return sampleConfig
+}
+
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 	// Always exclude histogram statistics
@@ -186,7 +161,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		} else {
-			field := strings.Replace(stat, ".", "_", -1)
+			field := strings.ReplaceAll(stat, ".", "_")
 			fields[field] = fieldValue
 		}
 	}

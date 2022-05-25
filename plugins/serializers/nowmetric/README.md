@@ -7,8 +7,8 @@ If you're using the HTTP output, this serializer knows how to batch the metrics 
 
 [ServiceNow-format]: https://docs.servicenow.com/bundle/london-it-operations-management/page/product/event-management/reference/mid-POST-metrics.html
 
-
 An example event looks like:
+
 ```javascript
 [{
     "metric_type": "Disk C: % Free Space",
@@ -22,6 +22,7 @@ An example event looks like:
     "source": “Telegraf”
 }]
 ```
+
 ## Using with the HTTP output
 
 To send this data to a ServiceNow MID Server with Web Server extension activated, you can use the HTTP output, there are some custom headers that you need to add to manage the MID Web Server authorization, here's a sample config for an HTTP output:
@@ -53,7 +54,7 @@ To send this data to a ServiceNow MID Server with Web Server extension activated
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "nowmetric"
-  
+
   ## Additional HTTP headers
   [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
@@ -61,13 +62,13 @@ To send this data to a ServiceNow MID Server with Web Server extension activated
   Accept = "application/json"
 ```
 
-Starting with the London release, you also need to explicitly create event rule to allow binding of metric events to host CIs.
-
-https://docs.servicenow.com/bundle/london-it-operations-management/page/product/event-management/task/event-rule-bind-metrics-to-host.html
+Starting with the [London release](https://docs.servicenow.com/bundle/london-it-operations-management/page/product/event-management/task/event-rule-bind-metrics-to-host.html
+),
+you also need to explicitly create event rule to allow binding of metric events to host CIs.
 
 ## Using with the File output
 
-You can use the file output to output the payload in a file. 
+You can use the file output to output the payload in a file.
 In this case, just add the following section to your telegraf config file
 
 ```toml

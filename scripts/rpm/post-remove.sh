@@ -28,6 +28,13 @@ if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
             disable_chkconfig
         fi
     fi
+    if [[ $1 -ge 1 ]]; then
+        # Package upgrade, not uninstall
+
+        if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+            systemctl try-restart telegraf.service >/dev/null 2>&1 || :
+        fi
+    fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
     if [[ "$ID" = "amzn" ]] && [[ "$1" = "0" ]]; then

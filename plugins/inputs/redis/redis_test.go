@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type testClient struct {
@@ -33,7 +34,18 @@ func TestRedisConnectIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	addr := fmt.Sprintf(testutil.GetLocalHost() + ":6379")
+	container := testutil.Container{
+		Image:        "redis:alpine",
+		ExposedPorts: []string{"6379"},
+		WaitingFor:   wait.ForListeningPort("6379/tcp"),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	addr := fmt.Sprintf("%s:%s", container.Address, container.Port)
 
 	r := &Redis{
 		Log:     testutil.Logger{},
@@ -42,7 +54,7 @@ func TestRedisConnectIntegration(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(r.Gather)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 }
 
@@ -165,7 +177,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"total_writes_processed":          int64(17),
 		"lazyfree_pending_objects":        int64(0),
 		"maxmemory":                       int64(0),
-		"maxmemory_policy":                string("noeviction"),
+		"maxmemory_policy":                "noeviction",
 		"mem_aof_buffer":                  int64(0),
 		"mem_clients_normal":              int64(17440),
 		"mem_clients_slaves":              int64(0),
@@ -202,7 +214,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 			}
 		}
 	}
-	assert.InDelta(t,
+	require.InDelta(t,
 		time.Now().Unix()-fields["rdb_last_save_time"].(int64),
 		fields["rdb_last_save_time_elapsed"].(int64),
 		2) // allow for 2 seconds worth of offset

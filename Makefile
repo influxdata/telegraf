@@ -1,5 +1,11 @@
-next_version :=  $(shell cat build_version.txt)
-tag := $(shell git describe --exact-match --tags 2>git_describe_error.tmp; rm -f git_describe_error.tmp)
+ifeq ($(OS),Windows_NT)
+	next_version := $(shell type build_version.txt)
+	tag := $(shell git describe --exact-match --tags 2> nul)
+else
+	next_version := $(shell cat build_version.txt)
+	tag := $(shell git describe --exact-match --tags 2>/dev/null)
+endif
+
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
 glibc_version := 2.17
@@ -44,6 +50,8 @@ HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
 ifneq ($(tag),)
 	LDFLAGS += -X main.version=$(version)
+else
+	LDFLAGS += -X main.version=$(version)-$(commit)
 endif
 
 # Go built-in race detector works only for 64 bits architectures.
@@ -97,9 +105,39 @@ help:
 deps:
 	go mod download -x
 
-.PHONY: telegraf
-telegraf:
+.PHONY: version
+version:
+	@echo $(version)-$(commit)
+
+.PHONY: versioninfo
+versioninfo:
+	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0; \
+	go run scripts/generate_versioninfo/main.go; \
+	go generate cmd/telegraf/telegraf_windows.go; \
+
+.PHONY: build_generator
+build_generator:
+	go build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
+
+insert_config_to_readme_%: build_generator
+	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+
+generate_plugins_%: build_generator
+	go generate -run="plugindata/main.go$$" ./plugins/$*/...
+
+.PHONY: generate
+generate: insert_config_to_readme_inputs generate_plugins_outputs generate_plugins_processors generate_plugins_aggregators
+
+.PHONY: generate-clean
+generate-clean:
+	go generate -run="plugindata/main.go --clean" ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+
+.PHONY: build
+build:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+
+.PHONY: telegraf
+telegraf: generate build generate-clean
 
 # Used by dockerfile builds
 .PHONY: go-install
@@ -140,24 +178,32 @@ vet:
 
 .PHONY: lint-install
 lint-install:
+	@echo "Installing golangci-lint"
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
 
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.1
+	@echo "Installing markdownlint"
+	npm install -g markdownlint-cli
 
 .PHONY: lint
 lint:
-ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please run: make lint-install)
-	exit 1
-endif
-
+	@which golangci-lint >/dev/null 2>&1 || { \
+		echo "golangci-lint not found, please run: make lint-install"; \
+		exit 1; \
+	}
 	golangci-lint run
+
+	@which markdownlint >/dev/null 2>&1 || { \
+		echo "markdownlint not found, please run: make lint-install"; \
+		exit 1; \
+	}
+	markdownlint .
 
 .PHONY: lint-branch
 lint-branch:
-ifeq (, $(shell which golangci-lint))
-	$(info golangci-lint can't be found, please run: make lint-install)
-	exit 1
-endif
+	@which golangci-lint >/dev/null 2>&1 || { \
+		echo "golangci-lint not found, please run: make lint-install"; \
+		exit 1; \
+	}
 
 	golangci-lint run --new-from-rev master
 
@@ -186,6 +232,8 @@ clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 	rm -rf build
+	rm -rf tools/readme_config_includer/generator
+	rm -rf tools/readme_config_includer/generator.exe
 
 .PHONY: docker-image
 docker-image:
@@ -199,15 +247,10 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
-.PHONY: ci-1.16
-ci-1.16:
-	docker build -t quay.io/influxdb/telegraf-ci:1.16.7 - < scripts/ci-1.16.docker
-	docker push quay.io/influxdb/telegraf-ci:1.16.7
-
-.PHONY: ci-1.17
-ci-1.17:
-	docker build -t quay.io/influxdb/telegraf-ci:1.17.0 - < scripts/ci-1.17.docker
-	docker push quay.io/influxdb/telegraf-ci:1.17.0
+.PHONY: ci
+ci:
+	docker build -t quay.io/influxdb/telegraf-ci:1.18.1 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.18.1
 
 .PHONY: install
 install: $(buildbin)
@@ -230,6 +273,7 @@ install: $(buildbin)
 # the bin between deb/rpm/tar packages over building directly into the package
 # directory.
 $(buildbin):
+	echo $(GOOS)
 	@mkdir -pv $(dir $@)
 	go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
@@ -264,6 +308,10 @@ armhf += linux_armhf.tar.gz freebsd_armv7.tar.gz armhf.deb armv6hl.rpm
 armhf:
 	@ echo $(armhf)
 s390x += linux_s390x.tar.gz s390x.deb s390x.rpm
+.PHONY: riscv64
+riscv64:
+	@ echo $(riscv64)
+riscv64 += linux_riscv64.tar.gz riscv64.rpm riscv64.deb
 .PHONY: s390x
 s390x:
 	@ echo $(s390x)
@@ -271,7 +319,7 @@ ppc64le += linux_ppc64le.tar.gz ppc64le.rpm ppc64el.deb
 .PHONY: ppc64le
 ppc64le:
 	@ echo $(ppc64le)
-i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gzi386.rpm
+i386 += freebsd_i386.tar.gz i386.deb linux_i386.tar.gz i386.rpm
 .PHONY: i386
 i386:
 	@ echo $(i386)
@@ -279,15 +327,20 @@ windows += windows_i386.zip windows_amd64.zip
 .PHONY: windows
 windows:
 	@ echo $(windows)
-darwin += darwin_amd64.tar.gz
-.PHONY: darwin
-darwin:
-	@ echo $(darwin)
+darwin-amd64 += darwin_amd64.tar.gz
+.PHONY: darwin-amd64
+darwin-amd64:
+	@ echo $(darwin-amd64)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin)
+darwin-arm64 += darwin_arm64.tar.gz
+.PHONY: darwin-arm64
+darwin-arm64:
+	@ echo $(darwin-arm64)
+
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: $(include_packages)
+package: generate $(include_packages) generate-clean
 
 .PHONY: $(include_packages)
 $(include_packages):
@@ -312,6 +365,7 @@ $(include_packages):
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
 			--depends coreutils \
 			--depends shadow-utils \
+			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
 			--name telegraf \
 			--version $(version) \
@@ -373,6 +427,9 @@ mips.deb linux_mips.tar.gz: export GOARCH := mips
 mipsel.deb linux_mipsel.tar.gz: export GOOS := linux
 mipsel.deb linux_mipsel.tar.gz: export GOARCH := mipsle
 
+riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOOS := linux
+riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOARCH := riscv64
+
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOOS := linux
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOARCH := s390x
 
@@ -394,6 +451,9 @@ windows_amd64.zip: export GOARCH := amd64
 
 darwin_amd64.tar.gz: export GOOS := darwin
 darwin_amd64.tar.gz: export GOARCH := amd64
+
+darwin_arm64.tar.gz: export GOOS := darwin
+darwin_arm64.tar.gz: export GOARCH := arm64
 
 windows_i386.zip: export GOOS := windows
 windows_i386.zip: export GOARCH := 386

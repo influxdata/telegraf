@@ -23,7 +23,7 @@ type client struct {
 func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tlsConfig tls.ClientConfig) (*client, error) {
 	c, err := kubernetes.NewForConfig(&rest.Config{
 		TLSClientConfig: rest.TLSClientConfig{
-			ServerName: baseURL,
+			ServerName: tlsConfig.ServerName,
 			Insecure:   tlsConfig.InsecureSkipVerify,
 			CAFile:     tlsConfig.TLSCA,
 			CertFile:   tlsConfig.TLSCert,

@@ -122,14 +122,14 @@ func (w *MultilineMatchWhichLine) UnmarshalText(data []byte) (err error) {
 	switch strings.ToUpper(s) {
 	case `PREVIOUS`, `"PREVIOUS"`, `'PREVIOUS'`:
 		*w = Previous
-		return
+		return nil
 
 	case `NEXT`, `"NEXT"`, `'NEXT'`:
 		*w = Next
-		return
+		return nil
 	}
 	*w = -1
-	return fmt.Errorf("E! [inputs.tail] unknown multiline MatchWhichLine")
+	return fmt.Errorf("unknown multiline MatchWhichLine")
 }
 
 // MarshalText implements encoding.TextMarshaler
@@ -138,5 +138,5 @@ func (w MultilineMatchWhichLine) MarshalText() ([]byte, error) {
 	if s != "" {
 		return []byte(s), nil
 	}
-	return nil, fmt.Errorf("E! [inputs.tail] unknown multiline MatchWhichLine")
+	return nil, fmt.Errorf("unknown multiline MatchWhichLine")
 }

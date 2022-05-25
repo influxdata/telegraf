@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package fluentd
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,24 +14,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const (
-	measurement  = "fluentd"
-	description  = "Read metrics exposed by fluentd in_monitor plugin"
-	sampleConfig = `
-  ## This plugin reads information exposed by fluentd (using /api/plugins.json endpoint).
-  ##
-  ## Endpoint:
-  ## - only one URI is allowed
-  ## - https is not supported
-  endpoint = "http://localhost:24220/api/plugins.json"
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
-  ## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
-  exclude = [
-	  "monitor_agent",
-	  "dummy",
-  ]
-`
-)
+const measurement = "fluentd"
 
 // Fluentd - plugin main structure
 type Fluentd struct {
@@ -43,12 +32,23 @@ type endpointInfo struct {
 }
 
 type pluginData struct {
-	PluginID              string   `json:"plugin_id"`
-	PluginType            string   `json:"type"`
-	PluginCategory        string   `json:"plugin_category"`
-	RetryCount            *float64 `json:"retry_count"`
-	BufferQueueLength     *float64 `json:"buffer_queue_length"`
-	BufferTotalQueuedSize *float64 `json:"buffer_total_queued_size"`
+	PluginID               string   `json:"plugin_id"`
+	PluginType             string   `json:"type"`
+	PluginCategory         string   `json:"plugin_category"`
+	RetryCount             *float64 `json:"retry_count"`
+	BufferQueueLength      *float64 `json:"buffer_queue_length"`
+	BufferTotalQueuedSize  *float64 `json:"buffer_total_queued_size"`
+	RollbackCount          *float64 `json:"rollback_count"`
+	EmitRecords            *float64 `json:"emit_records"`
+	EmitSize               *float64 `json:"emit_size"`
+	EmitCount              *float64 `json:"emit_count"`
+	WriteCount             *float64 `json:"write_count"`
+	SlowFlushCount         *float64 `json:"slow_flush_count"`
+	FlushTimeCount         *float64 `json:"flush_time_count"`
+	BufferStageLength      *float64 `json:"buffer_stage_length"`
+	BufferStageByteSize    *float64 `json:"buffer_stage_byte_size"`
+	BufferQueueByteSize    *float64 `json:"buffer_queue_byte_size"`
+	AvailBufferSpaceRatios *float64 `json:"buffer_available_buffer_space_ratios"`
 }
 
 // parse JSON from fluentd Endpoint
@@ -70,11 +70,9 @@ func parse(data []byte) (datapointArray []pluginData, err error) {
 	return datapointArray, err
 }
 
-// Description - display description
-func (h *Fluentd) Description() string { return description }
-
-// SampleConfig - generate configuration
-func (h *Fluentd) SampleConfig() string { return sampleConfig }
+func (*Fluentd) SampleConfig() string {
+	return sampleConfig
+}
 
 // Gather - Main code responsible for gathering, processing and creating metrics
 func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
@@ -144,6 +142,7 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 			if p.BufferQueueLength != nil {
 				tmpFields["buffer_queue_length"] = *p.BufferQueueLength
 			}
+
 			if p.RetryCount != nil {
 				tmpFields["retry_count"] = *p.RetryCount
 			}
@@ -152,7 +151,64 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 				tmpFields["buffer_total_queued_size"] = *p.BufferTotalQueuedSize
 			}
 
-			if !((p.BufferQueueLength == nil) && (p.RetryCount == nil) && (p.BufferTotalQueuedSize == nil)) {
+			if p.RollbackCount != nil {
+				tmpFields["rollback_count"] = *p.RollbackCount
+			}
+
+			if p.EmitRecords != nil {
+				tmpFields["emit_records"] = *p.EmitRecords
+			}
+
+			if p.EmitCount != nil {
+				tmpFields["emit_count"] = *p.EmitCount
+			}
+
+			if p.EmitSize != nil {
+				tmpFields["emit_size"] = *p.EmitSize
+			}
+
+			if p.WriteCount != nil {
+				tmpFields["write_count"] = *p.WriteCount
+			}
+
+			if p.SlowFlushCount != nil {
+				tmpFields["slow_flush_count"] = *p.SlowFlushCount
+			}
+
+			if p.FlushTimeCount != nil {
+				tmpFields["flush_time_count"] = *p.FlushTimeCount
+			}
+
+			if p.BufferStageLength != nil {
+				tmpFields["buffer_stage_length"] = *p.BufferStageLength
+			}
+
+			if p.BufferStageByteSize != nil {
+				tmpFields["buffer_stage_byte_size"] = *p.BufferStageByteSize
+			}
+
+			if p.BufferQueueByteSize != nil {
+				tmpFields["buffer_queue_byte_size"] = *p.BufferQueueByteSize
+			}
+
+			if p.AvailBufferSpaceRatios != nil {
+				tmpFields["buffer_available_buffer_space_ratios"] = *p.AvailBufferSpaceRatios
+			}
+
+			if !((p.BufferQueueLength == nil) &&
+				(p.RetryCount == nil) &&
+				(p.BufferTotalQueuedSize == nil) &&
+				(p.EmitCount == nil) &&
+				(p.EmitRecords == nil) &&
+				(p.EmitSize == nil) &&
+				(p.WriteCount == nil) &&
+				(p.FlushTimeCount == nil) &&
+				(p.SlowFlushCount == nil) &&
+				(p.RollbackCount == nil) &&
+				(p.BufferStageLength == nil) &&
+				(p.BufferStageByteSize == nil) &&
+				(p.BufferQueueByteSize == nil) &&
+				(p.AvailBufferSpaceRatios == nil)) {
 				acc.AddFields(measurement, tmpFields, tmpTags)
 			}
 		}

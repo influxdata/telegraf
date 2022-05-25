@@ -3,7 +3,12 @@
 /telegraf
 /telegraf.exe
 /telegraf.gz
+/tools/readme_config_includer/generator
 /vendor
 .DS_Store
 process.yml
 /.vscode
+/*.toml
+/*.conf
+resource.syso
+versioninfo.json

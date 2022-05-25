@@ -49,11 +49,11 @@ func addError(acc telegraf.Accumulator, err error) {
 }
 
 func (n *NginxPlusAPI) gatherURL(addr *url.URL, path string) ([]byte, error) {
-	url := fmt.Sprintf("%s/%d/%s", addr.String(), n.APIVersion, path)
-	resp, err := n.client.Get(url)
+	address := fmt.Sprintf("%s/%d/%s", addr.String(), n.APIVersion, path)
+	resp, err := n.client.Get(address)
 
 	if err != nil {
-		return nil, fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return nil, fmt.Errorf("error making HTTP request to %s: %s", address, err)
 	}
 	defer resp.Body.Close()
 
@@ -64,7 +64,7 @@ func (n *NginxPlusAPI) gatherURL(addr *url.URL, path string) ([]byte, error) {
 		// features are either optional, or only available in some versions
 		return nil, errNotFound
 	default:
-		return nil, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
+		return nil, fmt.Errorf("%s returned HTTP status %s", address, resp.Status)
 	}
 
 	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
@@ -77,7 +77,7 @@ func (n *NginxPlusAPI) gatherURL(addr *url.URL, path string) ([]byte, error) {
 
 		return body, nil
 	default:
-		return nil, fmt.Errorf("%s returned unexpected content type %s", url, contentType)
+		return nil, fmt.Errorf("%s returned unexpected content type %s", address, contentType)
 	}
 }
 

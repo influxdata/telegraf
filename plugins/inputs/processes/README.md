@@ -8,9 +8,9 @@ it requires access to execute `ps`.
 
 **Supported Platforms**: Linux, FreeBSD, Darwin
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
 # Get the number of processes and group them by status
 [[inputs.processes]]
   # no configuration
@@ -21,7 +21,7 @@ Using the environment variable `HOST_PROC` the plugin will retrieve process info
 
 `docker run -v /proc:/rootfs/proc:ro -e HOST_PROC=/rootfs/proc`
 
-### Metrics
+## Metrics
 
 - processes
   - fields:
@@ -38,13 +38,13 @@ Using the environment variable `HOST_PROC` the plugin will retrieve process info
     - parked (linux only)
     - total_threads (linux only)
 
-### Process State Mappings
+## Process State Mappings
 
 Different OSes use slightly different State codes for their processes, these
 state codes are documented in `man ps`, and I will give a mapping of what major
 OS state codes correspond to in telegraf metrics:
 
-```
+```sh
 Linux  FreeBSD  Darwin  meaning
   R       R       R     running
   S       S       S     sleeping
@@ -56,8 +56,8 @@ Linux  FreeBSD  Darwin  meaning
   W       W      none   paging (linux kernel < 2.6 only), wait (freebsd)
 ```
 
-### Example Output
+## Example Output
 
-```
+```shell
 processes blocked=8i,running=1i,sleeping=265i,stopped=0i,total=274i,zombie=0i,dead=0i,paging=0i,total_threads=687i 1457478636980905042
 ```

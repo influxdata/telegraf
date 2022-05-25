@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
@@ -5,6 +6,7 @@ package kernel
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"strconv"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // /proc/stat file line prefixes to gather stats on:
 var (
@@ -28,11 +34,9 @@ type Kernel struct {
 	entropyStatFile string
 }
 
-func (k *Kernel) Description() string {
-	return "Get kernel statistics from /proc/stat"
+func (*Kernel) SampleConfig() string {
+	return sampleConfig
 }
-
-func (k *Kernel) SampleConfig() string { return "" }
 
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	data, err := k.getProcStat()

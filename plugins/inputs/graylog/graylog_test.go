@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const validJSON = `
@@ -172,8 +172,8 @@ func TestHttpJson500(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(graylog[0].Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	require.Error(t, err)
+	require.Equal(t, 0, acc.NFields())
 }
 
 // Test response to malformed JSON
@@ -183,8 +183,8 @@ func TestHttpJsonBadJson(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(graylog[0].Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	require.Error(t, err)
+	require.Equal(t, 0, acc.NFields())
 }
 
 // Test response to empty string as response objectgT
@@ -194,6 +194,6 @@ func TestHttpJsonEmptyResponse(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(graylog[0].Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	require.Error(t, err)
+	require.Equal(t, 0, acc.NFields())
 }

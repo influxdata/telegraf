@@ -2,11 +2,11 @@
 
 [Disque](https://github.com/antirez/disque) is an ongoing experiment to build a distributed, in-memory, message broker.
 
+## Configuration
 
-### Configuration:
-
-```toml
-[[inputs.disque]]  
+```toml @sample.conf
+# Read metrics from one or many disque servers
+[[inputs.disque]]
   ## An array of URI to gather stats about. Specify an ip or hostname
   ## with optional port and password.
   ## ie disque://localhost, disque://10.10.3.33:18832, 10.0.0.1:10000, etc.
@@ -14,8 +14,7 @@
   servers = ["localhost"]
 ```
 
-### Metrics
-
+## Metrics
 
 - disque
   - disque_host

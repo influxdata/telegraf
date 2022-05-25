@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package chrony
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 var (
 	execCommand = exec.Command // execCommand is used to mock commands in tests.
 )
@@ -22,15 +28,8 @@ type Chrony struct {
 	path      string
 }
 
-func (*Chrony) Description() string {
-	return "Get standard chrony metrics, requires chronyc executable."
-}
-
 func (*Chrony) SampleConfig() string {
-	return `
-  ## If true, chronyc tries to perform a DNS lookup for the time server.
-  # dns_lookup = false
-  `
+	return sampleConfig
 }
 
 func (c *Chrony) Init() error {
@@ -93,7 +92,7 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 		if len(stats) < 2 {
 			return nil, nil, fmt.Errorf("unexpected output from chronyc, expected ':' in %s", out)
 		}
-		name := strings.ToLower(strings.Replace(strings.TrimSpace(stats[0]), " ", "_", -1))
+		name := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(stats[0]), " ", "_"))
 		// ignore reference time
 		if strings.Contains(name, "ref_time") {
 			continue

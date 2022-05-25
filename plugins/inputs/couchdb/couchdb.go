@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package couchdb
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type (
 	metaData struct {
@@ -88,20 +94,8 @@ type (
 	}
 )
 
-func (*CouchDB) Description() string {
-	return "Read CouchDB Stats from one or more servers"
-}
-
 func (*CouchDB) SampleConfig() string {
-	return `
-  ## Works with CouchDB stats endpoints out of the box
-  ## Multiple Hosts from which to read CouchDB stats:
-  hosts = ["http://localhost:8086/_stats"]
-
-  ## Use HTTP Basic Authentication.
-  # basic_username = "telegraf"
-  # basic_password = "p@ssw0rd"
-`
+	return sampleConfig
 }
 
 func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {

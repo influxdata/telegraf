@@ -1,0 +1,74 @@
+name: Bug Report
+description: Create a bug report to help us improve
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking time to fill out this bug report! We reserve Telegraf issues for bugs for reproducible problems.
+        Please redirect any questions about Telegraf usage to our [Community Slack](https://influxdata.com/slack) or [Community Page](https://community.influxdata.com/) we have a lot of talented community members there who could help answer your question more quickly.
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant telegraf.conf
+      description: Place config in the toml code section. This will be automatically formatted into toml, so no need for backticks.
+      render: toml
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs from Telegraf
+      description: Please include the Telegraf logs, ideally with `--debug` used.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: system-info
+    attributes:
+      label: System info
+      description: Include Telegraf version, operating system, and other relevant details
+      placeholder: ex. Telegraf 1.20.0, Ubuntu 20.04, Docker 20.10.8
+    validations:
+      required: true
+  - type: textarea
+    id: docker
+    attributes:
+      label: Docker
+      description: If your bug involves third party dependencies or services, it can be very helpful to provide a Dockerfile or docker-compose.yml that reproduces the environment you're testing against.
+    validations:
+      required: false
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Describe the steps to reproduce the bug.
+      value: |
+        1.
+        2.
+        3.
+        ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Describe what you expected to happen when you performed the above steps.
+    validations:
+      required: true
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: Describe what actually happened when you performed the above steps.
+    validations:
+      required: true
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional info
+      description: Include gist of relevant config, logs, etc.
+    validations:
+      required: false
+

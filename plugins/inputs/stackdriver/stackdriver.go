@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package stackdriver
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"math"
 	"strconv"
@@ -9,102 +11,28 @@ import (
 	"sync"
 	"time"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3"
-	googlepbduration "github.com/golang/protobuf/ptypes/duration"
-	googlepbts "github.com/golang/protobuf/ptypes/timestamp"
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
+	"google.golang.org/api/iterator"
+	distributionpb "google.golang.org/genproto/googleapis/api/distribution"
+	metricpb "google.golang.org/genproto/googleapis/api/metric"
+	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs" // Imports the Stackdriver Monitoring client package.
 	"github.com/influxdata/telegraf/selfstat"
-	"google.golang.org/api/iterator"
-	distributionpb "google.golang.org/genproto/googleapis/api/distribution"
-	metricpb "google.golang.org/genproto/googleapis/api/metric"
-	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultRateLimit = 14
-	description      = "Gather timeseries from Google Cloud Platform v3 monitoring API"
-	sampleConfig     = `
-  ## GCP Project
-  project = "erudite-bloom-151019"
-
-  ## Include timeseries that start with the given metric type.
-  metric_type_prefix_include = [
-    "compute.googleapis.com/",
-  ]
-
-  ## Exclude timeseries that start with the given metric type.
-  # metric_type_prefix_exclude = []
-
-  ## Many metrics are updated once per minute; it is recommended to override
-  ## the agent level interval with a value of 1m or greater.
-  interval = "1m"
-
-  ## Maximum number of API calls to make per second.  The quota for accounts
-  ## varies, it can be viewed on the API dashboard:
-  ##   https://cloud.google.com/monitoring/quotas#quotas_and_limits
-  # rate_limit = 14
-
-  ## The delay and window options control the number of points selected on
-  ## each gather.  When set, metrics are gathered between:
-  ##   start: now() - delay - window
-  ##   end:   now() - delay
-  #
-  ## Collection delay; if set too low metrics may not yet be available.
-  # delay = "5m"
-  #
-  ## If unset, the window will start at 1m and be updated dynamically to span
-  ## the time between calls (approximately the length of the plugin interval).
-  # window = "1m"
-
-  ## TTL for cached list of metric types.  This is the maximum amount of time
-  ## it may take to discover new metrics.
-  # cache_ttl = "1h"
-
-  ## If true, raw bucket counts are collected for distribution value types.
-  ## For a more lightweight collection, you may wish to disable and use
-  ## distribution_aggregation_aligners instead.
-  # gather_raw_distribution_buckets = true
-
-  ## Aggregate functions to be used for metrics whose value type is
-  ## distribution.  These aggregate values are recorded in in addition to raw
-  ## bucket counts; if they are enabled.
-  ##
-  ## For a list of aligner strings see:
-  ##   https://cloud.google.com/monitoring/api/ref_v3/rpc/google.monitoring.v3#aligner
-  # distribution_aggregation_aligners = [
-  # 	"ALIGN_PERCENTILE_99",
-  # 	"ALIGN_PERCENTILE_95",
-  # 	"ALIGN_PERCENTILE_50",
-  # ]
-
-  ## Filters can be added to reduce the number of time series matched.  All
-  ## functions are supported: starts_with, ends_with, has_substring, and
-  ## one_of.  Only the '=' operator is supported.
-  ##
-  ## The logical operators when combining filters are defined statically using
-  ## the following values:
-  ##   filter ::= <resource_labels> {AND <metric_labels>}
-  ##   resource_labels ::= <resource_labels> {OR <resource_label>}
-  ##   metric_labels ::= <metric_labels> {OR <metric_label>}
-  ##
-  ## For more details, see https://cloud.google.com/monitoring/api/v3/filters
-  #
-  ## Resource labels refine the time series selection with the following expression:
-  ##   resource.labels.<key> = <value>
-  # [[inputs.stackdriver.filter.resource_labels]]
-  #   key = "instance_name"
-  #   value = 'starts_with("localhost")'
-  #
-  ## Metric labels refine the time series selection with the following expression:
-  ##   metric.labels.<key> = <value>
-  #  [[inputs.stackdriver.filter.metric_labels]]
-  #  	 key = "device_name"
-  #  	 value = 'one_of("sda", "sdb")'
-`
 )
 
 var (
@@ -263,13 +191,7 @@ func (smc *stackdriverMetricClient) Close() error {
 	return smc.conn.Close()
 }
 
-// Description implements telegraf.Input interface
-func (s *Stackdriver) Description() string {
-	return description
-}
-
-// SampleConfig implements telegraf.Input interface
-func (s *Stackdriver) SampleConfig() string {
+func (*Stackdriver) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -312,8 +234,8 @@ func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 	}
 	wg.Wait()
 
-	for _, metric := range grouper.Metrics() {
-		acc.AddMetric(metric)
+	for _, groupedMetric := range grouper.Metrics() {
+		acc.AddMetric(groupedMetric)
 	}
 
 	return nil
@@ -393,11 +315,11 @@ func (s *Stackdriver) newTimeSeriesConf(
 ) *timeSeriesConf {
 	filter := s.newListTimeSeriesFilter(metricType)
 	interval := &monitoringpb.TimeInterval{
-		EndTime:   &googlepbts.Timestamp{Seconds: endTime.Unix()},
-		StartTime: &googlepbts.Timestamp{Seconds: startTime.Unix()},
+		EndTime:   &timestamppb.Timestamp{Seconds: endTime.Unix()},
+		StartTime: &timestamppb.Timestamp{Seconds: startTime.Unix()},
 	}
 	tsReq := &monitoringpb.ListTimeSeriesRequest{
-		Name:     monitoring.MetricProjectPath(s.Project),
+		Name:     fmt.Sprintf("projects/%s", s.Project),
 		Filter:   filter,
 		Interval: interval,
 	}
@@ -432,7 +354,7 @@ func (t *timeSeriesConf) initForAggregate(alignerStr string) {
 	}
 	aligner := monitoringpb.Aggregation_Aligner(alignerInt)
 	agg := &monitoringpb.Aggregation{
-		AlignmentPeriod:  &googlepbduration.Duration{Seconds: 60},
+		AlignmentPeriod:  &durationpb.Duration{Seconds: 60},
 		PerSeriesAligner: aligner,
 	}
 	t.fieldKey = t.fieldKey + "_" + strings.ToLower(alignerStr)
@@ -522,8 +444,8 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 	if s.timeSeriesConfCache != nil && s.timeSeriesConfCache.IsValid() {
 		// Update interval for timeseries requests in timeseries cache
 		interval := &monitoringpb.TimeInterval{
-			EndTime:   &googlepbts.Timestamp{Seconds: endTime.Unix()},
-			StartTime: &googlepbts.Timestamp{Seconds: startTime.Unix()},
+			EndTime:   &timestamppb.Timestamp{Seconds: endTime.Unix()},
+			StartTime: &timestamppb.Timestamp{Seconds: startTime.Unix()},
 		}
 		for _, timeSeriesConf := range s.timeSeriesConfCache.TimeSeriesConfs {
 			timeSeriesConf.listTimeSeriesRequest.Interval = interval
@@ -533,7 +455,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 
 	ret := []*timeSeriesConf{}
 	req := &monitoringpb.ListMetricDescriptorsRequest{
-		Name: monitoring.MetricProjectPath(s.Project),
+		Name: fmt.Sprintf("projects/%s", s.Project),
 	}
 
 	filters := s.newListMetricDescriptorsFilters()
@@ -643,35 +565,34 @@ func (s *Stackdriver) gatherTimeSeries(
 }
 
 // AddDistribution adds metrics from a distribution value type.
-func (s *Stackdriver) addDistribution(
-	metric *distributionpb.Distribution,
-	tags map[string]string, ts time.Time, grouper *lockedSeriesGrouper, tsConf *timeSeriesConf,
+func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags map[string]string, ts time.Time,
+	grouper *lockedSeriesGrouper, tsConf *timeSeriesConf,
 ) error {
 	field := tsConf.fieldKey
 	name := tsConf.measurement
 
-	if err := grouper.Add(name, tags, ts, field+"_count", metric.Count); err != nil {
+	if err := grouper.Add(name, tags, ts, field+"_count", dist.Count); err != nil {
 		return err
 	}
-	if err := grouper.Add(name, tags, ts, field+"_mean", metric.Mean); err != nil {
+	if err := grouper.Add(name, tags, ts, field+"_mean", dist.Mean); err != nil {
 		return err
 	}
-	if err := grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", metric.SumOfSquaredDeviation); err != nil {
+	if err := grouper.Add(name, tags, ts, field+"_sum_of_squared_deviation", dist.SumOfSquaredDeviation); err != nil {
 		return err
 	}
 
-	if metric.Range != nil {
-		if err := grouper.Add(name, tags, ts, field+"_range_min", metric.Range.Min); err != nil {
+	if dist.Range != nil {
+		if err := grouper.Add(name, tags, ts, field+"_range_min", dist.Range.Min); err != nil {
 			return err
 		}
-		if err := grouper.Add(name, tags, ts, field+"_range_max", metric.Range.Max); err != nil {
+		if err := grouper.Add(name, tags, ts, field+"_range_max", dist.Range.Max); err != nil {
 			return err
 		}
 	}
 
-	linearBuckets := metric.BucketOptions.GetLinearBuckets()
-	exponentialBuckets := metric.BucketOptions.GetExponentialBuckets()
-	explicitBuckets := metric.BucketOptions.GetExplicitBuckets()
+	linearBuckets := dist.BucketOptions.GetLinearBuckets()
+	exponentialBuckets := dist.BucketOptions.GetExponentialBuckets()
+	explicitBuckets := dist.BucketOptions.GetExplicitBuckets()
 
 	var numBuckets int32
 	if linearBuckets != nil {
@@ -704,8 +625,8 @@ func (s *Stackdriver) addDistribution(
 
 		// Add to the cumulative count; trailing buckets with value 0 are
 		// omitted from the response.
-		if i < int32(len(metric.BucketCounts)) {
-			count += metric.BucketCounts[i]
+		if i < int32(len(dist.BucketCounts)) {
+			count += dist.BucketCounts[i]
 		}
 		if err := grouper.Add(name, tags, ts, field+"_bucket", count); err != nil {
 			return err
@@ -716,7 +637,7 @@ func (s *Stackdriver) addDistribution(
 }
 
 func init() {
-	f := func() telegraf.Input {
+	inputs.Add("stackdriver", func() telegraf.Input {
 		return &Stackdriver{
 			CacheTTL:                        defaultCacheTTL,
 			RateLimit:                       defaultRateLimit,
@@ -724,7 +645,5 @@ func init() {
 			GatherRawDistributionBuckets:    true,
 			DistributionAggregationAligners: []string{},
 		}
-	}
-
-	inputs.Add("stackdriver", f)
+	})
 }

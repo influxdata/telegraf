@@ -514,6 +514,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "UnixDate",
 			timestamp: "Mon Jan 2 15:04:05 MST 2006",
 			expected:  unixdate("Mon Jan 2 15:04:05 MST 2006"),
+			location:  "Local",
 		},
 
 		{
@@ -521,6 +522,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RubyDate",
 			timestamp: "Mon Jan 02 15:04:05 -0700 2006",
 			expected:  rubydate("Mon Jan 02 15:04:05 -0700 2006"),
+			location:  "Local",
 		},
 
 		{
@@ -528,6 +530,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC822",
 			timestamp: "02 Jan 06 15:04 MST",
 			expected:  rfc822("02 Jan 06 15:04 MST"),
+			location:  "Local",
 		},
 
 		{
@@ -535,6 +538,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC822Z",
 			timestamp: "02 Jan 06 15:04 -0700",
 			expected:  rfc822z("02 Jan 06 15:04 -0700"),
+			location:  "Local",
 		},
 
 		{
@@ -542,6 +546,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC850",
 			timestamp: "Monday, 02-Jan-06 15:04:05 MST",
 			expected:  rfc850("Monday, 02-Jan-06 15:04:05 MST"),
+			location:  "Local",
 		},
 
 		{
@@ -549,6 +554,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC1123",
 			timestamp: "Mon, 02 Jan 2006 15:04:05 MST",
 			expected:  rfc1123("Mon, 02 Jan 2006 15:04:05 MST"),
+			location:  "Local",
 		},
 
 		{
@@ -556,6 +562,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC1123Z",
 			timestamp: "Mon, 02 Jan 2006 15:04:05 -0700",
 			expected:  rfc1123z("Mon, 02 Jan 2006 15:04:05 -0700"),
+			location:  "Local",
 		},
 
 		{
@@ -563,6 +570,7 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "RFC3339Nano",
 			timestamp: "2006-01-02T15:04:05.999999999-07:00",
 			expected:  rfc3339nano("2006-01-02T15:04:05.999999999-07:00"),
+			location:  "Local",
 		},
 
 		{

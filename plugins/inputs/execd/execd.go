@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package execd
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -14,34 +16,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
-const sampleConfig = `
-  ## Program to run as daemon
-  command = ["telegraf-smartctl", "-d", "/dev/sda"]
-
-  ## Define how the process is signaled on each collection interval.
-  ## Valid values are:
-  ##   "none"   : Do not signal anything.
-  ##              The process must output metrics by itself.
-  ##   "STDIN"   : Send a newline on STDIN.
-  ##   "SIGHUP"  : Send a HUP signal. Not available on Windows.
-  ##   "SIGUSR1" : Send a USR1 signal. Not available on Windows.
-  ##   "SIGUSR2" : Send a USR2 signal. Not available on Windows.
-  signal = "none"
-
-  ## Delay before the process is restarted after an unexpected termination
-  restart_delay = "10s"
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Execd struct {
 	Command      []string        `toml:"command"`
+	Environment  []string        `toml:"environment"`
 	Signal       string          `toml:"signal"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger `toml:"-"`
@@ -51,12 +35,8 @@ type Execd struct {
 	parser  parsers.Parser
 }
 
-func (e *Execd) SampleConfig() string {
+func (*Execd) SampleConfig() string {
 	return sampleConfig
-}
-
-func (e *Execd) Description() string {
-	return "Run executable as long-running input plugin"
 }
 
 func (e *Execd) SetParser(parser parsers.Parser) {
@@ -66,7 +46,7 @@ func (e *Execd) SetParser(parser parsers.Parser) {
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
 	var err error
-	e.process, err = process.New(e.Command)
+	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
 	}
@@ -100,10 +80,17 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 		return
 	}
 
+	_, isPrometheus := e.parser.(*prometheus.Parser)
+
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		metrics, err := e.parser.Parse(scanner.Bytes())
+		data := scanner.Bytes()
+		if isPrometheus {
+			data = append(data, []byte("\n")...)
+		}
+
+		metrics, err := e.parser.Parse(data)
 		if err != nil {
 			e.acc.AddError(fmt.Errorf("parse error: %w", err))
 		}

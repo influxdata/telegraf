@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package procstat
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,10 +13,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shirou/gopsutil/v3/process"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/shirou/gopsutil/process"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	defaultPIDFinder = NewPgrep
@@ -48,64 +55,14 @@ type Procstat struct {
 	createProcess   func(PID) (Process, error)
 }
 
-var sampleConfig = `
-  ## PID file to monitor process
-  pid_file = "/var/run/nginx.pid"
-  ## executable name (ie, pgrep <exe>)
-  # exe = "nginx"
-  ## pattern as argument for pgrep (ie, pgrep -f <pattern>)
-  # pattern = "nginx"
-  ## user as argument for pgrep (ie, pgrep -u <user>)
-  # user = "nginx"
-  ## Systemd unit name, supports globs when include_systemd_children is set to true
-  # systemd_unit = "nginx.service"
-  # include_systemd_children = false
-  ## CGroup name or path, supports globs
-  # cgroup = "systemd/system.slice/nginx.service"
-
-  ## Windows service name
-  # win_service = ""
-
-  ## override for process_name
-  ## This is optional; default is sourced from /proc/<pid>/status
-  # process_name = "bar"
-
-  ## Field name prefix
-  # prefix = ""
-
-  ## When true add the full cmdline as a tag.
-  # cmdline_tag = false
-
-  ## Mode to use when calculating CPU usage. Can be one of 'solaris' or 'irix'.
-  # mode = "irix"
-
-  ## Add the PID as a tag instead of as a field.  When collecting multiple
-  ## processes with otherwise matching tags this setting should be enabled to
-  ## ensure each process has a unique identity.
-  ##
-  ## Enabling this option may result in a large number of series, especially
-  ## when processes have a short lifetime.
-  # pid_tag = false
-
-  ## Method to use when finding process IDs.  Can be one of 'pgrep', or
-  ## 'native'.  The pgrep finder calls the pgrep executable in the PATH while
-  ## the native finder performs the search directly in a manor dependent on the
-  ## platform.  Default is 'pgrep'
-  # pid_finder = "pgrep"
-`
-
-func (p *Procstat) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Procstat) Description() string {
-	return "Monitor process cpu and memory usage"
-}
-
 type PidsTags struct {
 	PIDS []PID
 	Tags map[string]string
 	Err  error
+}
+
+func (*Procstat) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
@@ -155,9 +112,15 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	p.procs = newProcs
-
 	for _, proc := range p.procs {
 		p.addMetric(proc, acc, now)
+	}
+
+	tags := make(map[string]string)
+	for _, pidTag := range pidTags {
+		for key, value := range pidTag.Tags {
+			tags[key] = value
+		}
 	}
 
 	fields := map[string]interface{}{
@@ -165,7 +128,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		"running":     len(p.procs),
 		"result_code": 0,
 	}
-	tags := make(map[string]string)
+
 	tags["pid_finder"] = p.PidFinder
 	tags["result"] = "success"
 	acc.AddFields("procstat_lookup", fields, tags, now)
@@ -473,7 +436,7 @@ func (p *Procstat) simpleSystemdUnitPIDs() ([]PID, error) {
 		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
 			return nil, nil
 		}
-		pid, err := strconv.Atoi(string(kv[1]))
+		pid, err := strconv.ParseInt(string(kv[1]), 10, 32)
 		if err != nil {
 			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
 		}

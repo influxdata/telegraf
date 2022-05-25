@@ -4,9 +4,10 @@ The `ifname` plugin looks up network interface names using SNMP.
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Configuration:
+## Configuration
 
 ```toml
+# Add a tag of the network interface name looked up over SNMP by interface number
 [[processors.ifname]]
   ## Name of tag holding the interface number
   # tag = "ifIndex"
@@ -66,7 +67,7 @@ Telegraf minimum version: Telegraf 1.15.0
   # cache_ttl = "8h"
 ```
 
-### Example processing:
+## Example
 
 Example config:
 

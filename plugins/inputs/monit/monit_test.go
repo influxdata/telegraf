@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type transportMock struct {
@@ -632,7 +632,7 @@ func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
 	require.NoError(t, r.Init())
 
 	err := r.Gather(&acc)
-	assert.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
+	require.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
 }
 
 func TestInvalidXMLAndInvalidTypes(t *testing.T) {

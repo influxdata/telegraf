@@ -2,12 +2,13 @@
 
 Collect metrics from [RethinkDB](https://www.rethinkdb.com/).
 
-### Configuration
+## Configuration
 
 This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage rethinkdb`.
 
-```toml
+```toml @sample.conf
+# Read metrics from one or many RethinkDB servers
 [[inputs.rethinkdb]]
   ## An array of URI to gather stats about. Specify an ip or hostname
   ## with optional port add password. ie,
@@ -25,7 +26,7 @@ generate it using `telegraf --usage rethinkdb`.
   # servers = ["rethinkdb://username:auth_key@127.0.0.1:28015"]
 ```
 
-### Metrics
+## Metrics
 
 - rethinkdb
   - tags:
@@ -44,7 +45,7 @@ generate it using `telegraf --usage rethinkdb`.
     - disk_usage_metadata_bytes (integer, bytes)
     - disk_usage_preallocated_bytes (integer, bytes)
 
-+ rethinkdb_engine
+- rethinkdb_engine
   - tags:
     - type
     - ns

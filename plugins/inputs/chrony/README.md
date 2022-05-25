@@ -51,43 +51,39 @@ Dispersion is due to system clock resolution, statistical measurement variations
 - Leap status - This is the leap status, which can be Normal, Insert second,
 Delete second or Not synchronised.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Get standard chrony metrics, requires chronyc executable.
 [[inputs.chrony]]
   ## If true, chronyc tries to perform a DNS lookup for the time server.
   # dns_lookup = false
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - chrony
-    - system_time (float, seconds)
-    - last_offset (float, seconds)
-    - rms_offset (float, seconds)
-    - frequency (float, ppm)
-    - residual_freq (float, ppm)
-    - skew (float, ppm)
-    - root_delay (float, seconds)
-    - root_dispersion (float, seconds)
-    - update_interval (float, seconds)
+  - system_time (float, seconds)
+  - last_offset (float, seconds)
+  - rms_offset (float, seconds)
+  - frequency (float, ppm)
+  - residual_freq (float, ppm)
+  - skew (float, ppm)
+  - root_delay (float, seconds)
+  - root_dispersion (float, seconds)
+  - update_interval (float, seconds)
 
-### Tags:
+### Tags
 
 - All measurements have the following tags:
-    - reference_id
-    - stratum
-    - leap_status
+  - reference_id
+  - stratum
+  - leap_status
 
-### Example Output:
+### Example Output
 
-```
+```shell
 $ telegraf --config telegraf.conf --input-filter chrony --test
 * Plugin: chrony, Collection 1
 > chrony,leap_status=normal,reference_id=192.168.1.1,stratum=3 frequency=-35.657,system_time=0.000027073,last_offset=-0.000013616,residual_freq=-0,rms_offset=0.000027073,root_delay=0.000644,root_dispersion=0.003444,skew=0.001,update_interval=1031.2 1463750789687639161
 ```
-
-
-
-

@@ -9,6 +9,7 @@ import (
 	path "github.com/antchfx/xpath"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -26,7 +27,9 @@ type Parser struct {
 	Format              string
 	ProtobufMessageDef  string
 	ProtobufMessageType string
+	ProtobufImportPaths []string
 	PrintDocument       bool
+	AllowEmptySelection bool
 	Configs             []Config
 	DefaultTags         map[string]string
 	Log                 telegraf.Logger
@@ -48,6 +51,11 @@ type Config struct {
 	FieldNameQuery  string `toml:"field_name"`
 	FieldValueQuery string `toml:"field_value"`
 	FieldNameExpand bool   `toml:"field_name_expansion"`
+
+	TagSelection  string `toml:"tag_selection"`
+	TagNameQuery  string `toml:"tag_name"`
+	TagValueQuery string `toml:"tag_value"`
+	TagNameExpand bool   `toml:"tag_name_expansion"`
 }
 
 func (p *Parser) Init() error {
@@ -62,6 +70,7 @@ func (p *Parser) Init() error {
 		pbdoc := protobufDocument{
 			MessageDefinition: p.ProtobufMessageDef,
 			MessageType:       p.ProtobufMessageType,
+			ImportPaths:       p.ProtobufImportPaths,
 			Log:               p.Log,
 		}
 		if err := pbdoc.Init(); err != nil {
@@ -89,6 +98,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	// Queries
 	metrics := make([]telegraf.Metric, 0)
+	p.Log.Debugf("Number of configs: %d", len(p.Configs))
 	for _, config := range p.Configs {
 		if len(config.Selection) == 0 {
 			config.Selection = "/"
@@ -99,7 +109,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 		if len(selectedNodes) < 1 || selectedNodes[0] == nil {
 			p.debugEmptyQuery("metric selection", doc, config.Selection)
-			return nil, fmt.Errorf("cannot parse with empty selection node")
+			if !p.AllowEmptySelection {
+				return metrics, fmt.Errorf("cannot parse with empty selection node")
+			}
 		}
 		p.Log.Debugf("Number of selected metric nodes: %d", len(selectedNodes))
 
@@ -117,37 +129,20 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	t := time.Now()
 
-	switch len(p.Configs) {
+	metrics, err := p.Parse([]byte(line))
+	if err != nil {
+		return nil, err
+	}
+
+	switch len(metrics) {
 	case 0:
 		return nil, nil
 	case 1:
-		config := p.Configs[0]
-
-		doc, err := p.document.Parse([]byte(line))
-		if err != nil {
-			return nil, err
-		}
-
-		selected := doc
-		if len(config.Selection) > 0 {
-			selectedNodes, err := p.document.QueryAll(doc, config.Selection)
-			if err != nil {
-				return nil, err
-			}
-			if len(selectedNodes) < 1 || selectedNodes[0] == nil {
-				p.debugEmptyQuery("metric selection", doc, config.Selection)
-				return nil, fmt.Errorf("cannot parse line with empty selection")
-			} else if len(selectedNodes) != 1 {
-				return nil, fmt.Errorf("cannot parse line with multiple selected nodes (%d)", len(selectedNodes))
-			}
-			selected = selectedNodes[0]
-		}
-
-		return p.parseQuery(t, doc, selected, config)
+		return metrics[0], nil
+	default:
+		return metrics[0], fmt.Errorf("cannot parse line with multiple (%d) metrics", len(metrics))
 	}
-	return nil, fmt.Errorf("cannot parse line with multiple (%d) configurations", len(p.Configs))
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
@@ -243,6 +238,69 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 			return nil, fmt.Errorf("unknown format '%T' for tag '%s'", v, name)
 		}
 	}
+
+	// Handle the tag batch definitions if any.
+	if len(config.TagSelection) > 0 {
+		tagnamequery := "name()"
+		tagvaluequery := "."
+		if len(config.TagNameQuery) > 0 {
+			tagnamequery = config.TagNameQuery
+		}
+		if len(config.TagValueQuery) > 0 {
+			tagvaluequery = config.TagValueQuery
+		}
+
+		// Query all tags
+		selectedTagNodes, err := p.document.QueryAll(selected, config.TagSelection)
+		if err != nil {
+			return nil, err
+		}
+		p.Log.Debugf("Number of selected tag nodes: %d", len(selectedTagNodes))
+		if len(selectedTagNodes) > 0 && selectedTagNodes[0] != nil {
+			for _, selectedtag := range selectedTagNodes {
+				n, err := p.executeQuery(doc, selectedtag, tagnamequery)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query tag name with query '%s': %v", tagnamequery, err)
+				}
+				name, ok := n.(string)
+				if !ok {
+					return nil, fmt.Errorf("failed to query tag name with query '%s': result is not a string (%v)", tagnamequery, n)
+				}
+				v, err := p.executeQuery(doc, selectedtag, tagvaluequery)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query tag value for '%s': %v", name, err)
+				}
+
+				if config.TagNameExpand {
+					p := p.document.GetNodePath(selectedtag, selected, "_")
+					if len(p) > 0 {
+						name = p + "_" + name
+					}
+				}
+
+				// Check if field name already exists and if so, append an index number.
+				if _, ok := tags[name]; ok {
+					for i := 1; ; i++ {
+						p := name + "_" + strconv.Itoa(i)
+						if _, ok := tags[p]; !ok {
+							name = p
+							break
+						}
+					}
+				}
+
+				// Convert the tag to be a string
+				s, err := internal.ToString(v)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query tag value for '%s': result is not a string (%v)", name, v)
+				}
+				tags[name] = s
+			}
+		} else {
+			p.debugEmptyQuery("tag selection", selected, config.TagSelection)
+		}
+	}
+
 	for name, v := range p.DefaultTags {
 		tags[name] = v
 	}
@@ -315,26 +373,26 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				if err != nil {
 					return nil, fmt.Errorf("failed to query field value for '%s': %v", name, err)
 				}
-				path := name
+
 				if config.FieldNameExpand {
 					p := p.document.GetNodePath(selectedfield, selected, "_")
 					if len(p) > 0 {
-						path = p + "_" + name
+						name = p + "_" + name
 					}
 				}
 
 				// Check if field name already exists and if so, append an index number.
-				if _, ok := fields[path]; ok {
+				if _, ok := fields[name]; ok {
 					for i := 1; ; i++ {
-						p := path + "_" + strconv.Itoa(i)
+						p := name + "_" + strconv.Itoa(i)
 						if _, ok := fields[p]; !ok {
-							path = p
+							name = p
 							break
 						}
 					}
 				}
 
-				fields[path] = v
+				fields[name] = v
 			}
 		} else {
 			p.debugEmptyQuery("field selection", selected, config.FieldSelection)

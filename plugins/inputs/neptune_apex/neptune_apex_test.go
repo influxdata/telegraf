@@ -1,4 +1,4 @@
-package neptuneapex
+package neptune_apex
 
 import (
 	"context"

@@ -17,17 +17,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-const sampleConfig = `
-	## Program to run as daemon
-	## eg: command = ["/path/to/your_program", "arg1", "arg2"]
-	command = ["cat"]
-
-  ## Delay before the process is restarted after an unexpected termination
-  restart_delay = "10s"
-`
-
 type Execd struct {
 	Command      []string        `toml:"command"`
+	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger
 
@@ -51,14 +43,6 @@ func New() *Execd {
 	}
 }
 
-func (e *Execd) SampleConfig() string {
-	return sampleConfig
-}
-
-func (e *Execd) Description() string {
-	return "Run executable as long-running processor plugin"
-}
-
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	var err error
 	e.parser, err = parsers.NewParser(e.parserConfig)
@@ -71,7 +55,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	}
 	e.acc = acc
 
-	e.process, err = process.New(e.Command)
+	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
 	}

@@ -4,9 +4,9 @@ The Apache plugin collects server performance information using the [`mod_status
 
 Typically, the `mod_status` module is configured to expose a page at the `/server-status?auto` location of the Apache server.  The [ExtendedStatus](https://httpd.apache.org/docs/2.4/mod/core.html#extendedstatus) option must be enabled in order to collect all available fields.  For information about how to configure your server reference the [module documentation](https://httpd.apache.org/docs/2.4/mod/mod_status.html#enable).
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Read Apache status information (mod_status)
 [[inputs.apache]]
   ## An array of URLs to gather from, must be directed at the machine
@@ -29,7 +29,7 @@ Typically, the `mod_status` module is configured to expose a page at the `/serve
   # insecure_skip_verify = false
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - apache
   - BusyWorkers (float)
@@ -71,14 +71,14 @@ The following fields are collected from the `Scoreboard`, and represent the numb
   - scboard_starting (float)
   - scboard_waiting (float)
 
-### Tags:
+## Tags
 
 - All measurements have the following tags:
-    - port
-    - server
+  - port
+  - server
 
-### Example Output:
+## Example Output
 
-```
+```shell
 apache,port=80,server=debian-stretch-apache BusyWorkers=1,BytesPerReq=0,BytesPerSec=0,CPUChildrenSystem=0,CPUChildrenUser=0,CPULoad=0.00995025,CPUSystem=0.01,CPUUser=0.01,ConnsAsyncClosing=0,ConnsAsyncKeepAlive=0,ConnsAsyncWriting=0,ConnsTotal=0,IdleWorkers=49,Load1=0.01,Load15=0,Load5=0,ParentServerConfigGeneration=3,ParentServerMPMGeneration=2,ReqPerSec=0.00497512,ServerUptimeSeconds=201,TotalAccesses=1,TotalkBytes=0,Uptime=201,scboard_closing=0,scboard_dnslookup=0,scboard_finishing=0,scboard_idle_cleanup=0,scboard_keepalive=0,scboard_logging=0,scboard_open=100,scboard_reading=0,scboard_sending=1,scboard_starting=0,scboard_waiting=49 1502489900000000000
 ```
