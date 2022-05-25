@@ -566,7 +566,6 @@ type snmpConnection interface {
 	//BulkWalkAll(string) ([]gosnmp.SnmpPDU, error)
 	Walk(string, gosnmp.WalkFunc) error
 	Get(oids []string) (*gosnmp.SnmpPacket, error)
-
 	Reconnect() error
 }
 
