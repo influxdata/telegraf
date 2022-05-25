@@ -50,7 +50,8 @@ func (eh *eventHub) SendBatch(ctx context.Context, iterator eventhub.BatchIterat
 type EventHubs struct {
 	Log              telegraf.Logger `toml:"-"`
 	ConnectionString string          `toml:"connection_string"`
-	Timeout          config.Duration
+	Timeout          config.Duration `toml:"timeout"`
+	PartitionKey     string          `toml:"partition_key"`
 
 	Hub        EventHubInterface
 	serializer serializers.Serializer
@@ -102,7 +103,18 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 			continue
 		}
 
-		events = append(events, eventhub.NewEvent(payload))
+		event := eventhub.NewEvent(payload)
+		if e.PartitionKey != "" {
+			if key, ok := metric.GetTag(e.PartitionKey); ok {
+				event.PartitionKey = &key
+			} else if key, ok := metric.GetField(e.PartitionKey); ok {
+				if strKey, ok := key.(string); ok {
+					event.PartitionKey = &strKey
+				}
+			}
+		}
+
+		events = append(events, event)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))

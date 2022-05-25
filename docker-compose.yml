@@ -1,13 +1,6 @@
 version: '3'
 
 services:
-  aerospike:
-    image: aerospike/aerospike-server:4.9.0.11
-    ports:
-      - "3000:3000"
-      - "3001:3001"
-      - "3002:3002"
-      - "3003:3003"
   zookeeper:
     image: wurstmeister/zookeeper
     environment:
@@ -34,10 +27,6 @@ services:
     - xpack.security.enabled=false
     ports:
       - "9200:9200"
-  memcached:
-    image: memcached
-    ports:
-      - "11211:11211"
   pgbouncer:
     image: z9pascal/pgbouncer-container:1.15-latest
     environment:
@@ -56,44 +45,3 @@ services:
     ports:
       - "15672:15672"
       - "5672:5672"
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-  nsq:
-    image: nsqio/nsq
-    ports:
-      - "4150:4150"
-    command: "/nsqd"
-  mqtt:
-    image: ncarlier/mqtt
-    ports:
-      - "1883:1883"
-  opcua:
-    image: open62541/open62541
-    ports:
-      - "4840:4840"
-  nats:
-    image: nats
-    ports:
-      - "4222:4222"
-  openldap:
-    image: cobaugh/openldap-alpine
-    environment:
-      - SLAPD_CONFIG_ROOTDN="cn=manager,cn=config"
-      - SLAPD_CONFIG_ROOTPW="secret"
-    ports:
-      - "389:389"
-      - "636:636"
-  crate:
-    image: crate/crate
-    ports:
-      - "4200:4200"
-      - "4230:4230"
-      - "6543:5432"
-    command:
-      - crate
-      - -Cnetwork.host=0.0.0.0
-      - -Ctransport.host=localhost
-    environment:
-      - CRATE_HEAP_SIZE=128m

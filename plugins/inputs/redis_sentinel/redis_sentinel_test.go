@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +22,18 @@ func TestRedisSentinelConnect(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	addr := fmt.Sprintf("tcp://" + testutil.GetLocalHost() + ":26379")
+	container := testutil.Container{
+		Image:        "redis:alpine",
+		ExposedPorts: []string{"6379"},
+		WaitingFor:   wait.ForListeningPort("6379/tcp"),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	addr := fmt.Sprintf("tcp://%s:%s", container.Address, container.Port)
 
 	r := &RedisSentinel{
 		Servers: []string{addr},
@@ -29,7 +41,7 @@ func TestRedisSentinelConnect(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(r.Gather)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 }
 

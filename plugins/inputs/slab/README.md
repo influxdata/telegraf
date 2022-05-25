@@ -13,7 +13,7 @@ If the HOST_PROC environment variable is set, Telegraf will use its value instea
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get slab statistics from procfs
 [[inputs.slab]]
   # no configuration - please see the plugin's README for steps to configure
