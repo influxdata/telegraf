@@ -8,7 +8,7 @@ report those stats already using StatsD protocol if needed.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather health check statuses from services registered in Consul
 [[inputs.consul]]
   ## Consul server address

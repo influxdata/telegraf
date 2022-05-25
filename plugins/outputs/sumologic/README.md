@@ -16,7 +16,7 @@ by Sumologic HTTP Source:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can send metrics to Sumo Logic HTTP metric collector.
 [[outputs.sumologic]]
   ## Unique URL generated for your HTTP Metrics Source.

@@ -29,7 +29,7 @@ The IAM user needs only the `cloudwatch:PutMetricData` permission.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for AWS CloudWatch output.
 [[outputs.cloudwatch]]
   ## Amazon REGION

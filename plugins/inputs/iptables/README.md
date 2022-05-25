@@ -51,7 +51,7 @@ Defining multiple instances of this plugin in telegraf.conf can lead to concurre
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather packets and bytes throughput from iptables
 [[inputs.iptables]]
   ## iptables require root access on most systems.

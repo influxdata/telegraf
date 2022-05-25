@@ -4,7 +4,7 @@ This input plugin checks HTTP/HTTPS connections.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # HTTP/HTTPS request given an address a method and a timeout
 [[inputs.http_response]]
   ## List of urls to query.

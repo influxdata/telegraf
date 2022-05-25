@@ -1,14 +1,9 @@
 package tcp_listener
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -255,30 +250,22 @@ func TestRunParser(t *testing.T) {
 	)
 }
 
-func TestRunParserInvalidMsg(_ *testing.T) {
+func TestRunParserInvalidMsg(t *testing.T) {
 	var testmsg = []byte("cpu_load_short")
 
 	listener, in := newTestTCPListener()
-	acc := testutil.Accumulator{}
-	listener.acc = &acc
-	defer close(listener.done)
+	listener.Log = &testutil.CaptureLogger{}
+	listener.acc = &testutil.Accumulator{}
 
 	listener.parser, _ = parsers.NewInfluxParser()
 	listener.wg.Add(1)
 
-	buf := bytes.NewBuffer(nil)
-	log.SetOutput(buf)
-	defer log.SetOutput(os.Stderr)
-
 	go listener.tcpParser()
 	in <- testmsg
 
-	scnr := bufio.NewScanner(buf)
-	for scnr.Scan() {
-		if strings.Contains(scnr.Text(), "tcp_listener has received 1 malformed packets thus far.") {
-			break
-		}
-	}
+	listener.Stop()
+	errmsg := listener.Log.(*testutil.CaptureLogger).LastError
+	require.Contains(t, errmsg, "tcp_listener has received 1 malformed packets thus far.")
 }
 
 func TestRunParserGraphiteMsg(t *testing.T) {

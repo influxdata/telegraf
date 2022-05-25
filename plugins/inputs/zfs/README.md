@@ -6,7 +6,7 @@ from `sysctl`, 'zfs' and `zpool` on FreeBSD.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics of ZFS from arcstats, zfetchstats, vdev_cache_stats, pools and datasets
 [[inputs.zfs]]
   ## ZFS kstat path. Ignored on FreeBSD
@@ -25,6 +25,8 @@ from `sysctl`, 'zfs' and `zpool` on FreeBSD.
   # poolMetrics = false
 
   ## By default, don't gather dataset stats
+  ## On FreeBSD, if the user has enabled listsnapshots in the pool property,
+  ## telegraf may not be able to correctly parse the output.
   # datasetMetrics = false
 ```
 

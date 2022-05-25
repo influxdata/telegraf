@@ -1,6 +1,6 @@
 # Defaults Processor
 
-The *Defaults* processor allows you to ensure certain fields will always exist with a specified default value on your metric(s).
+The _Defaults_ processor allows you to ensure certain fields will always exist with a specified default value on your metric(s).
 
 There are three cases where this processor will insert a configured default field.
 
@@ -12,7 +12,7 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 ## Set default fields on your metric(s) when they are nil or empty
 [[processors.defaults]]
   ## Ensures a set of fields always exists on your metric(s) with their

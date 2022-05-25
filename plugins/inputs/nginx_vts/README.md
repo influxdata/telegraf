@@ -5,7 +5,7 @@ For module configuration details please see its [documentation](https://github.c
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Nginx virtual host traffic status module information (nginx-module-vts)
 [[inputs.nginx_vts]]
   ## An array of ngx_http_status_module or status URI to gather stats.

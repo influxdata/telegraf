@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package redis_sentinel
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/url"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type RedisSentinel struct {
 	Servers []string `toml:"servers"`
@@ -37,6 +43,10 @@ func init() {
 	inputs.Add("redis_sentinel", func() telegraf.Input {
 		return &RedisSentinel{}
 	})
+}
+
+func (*RedisSentinel) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *RedisSentinel) Init() error {
@@ -138,7 +148,7 @@ func prepareFieldValues(fields map[string]string, typeMap map[string]configField
 	preparedFields := make(map[string]interface{})
 
 	for key, val := range fields {
-		key = strings.Replace(key, "-", "_", -1)
+		key = strings.ReplaceAll(key, "-", "_")
 
 		valType, ok := typeMap[key]
 		if !ok {

@@ -9,7 +9,7 @@ More information about the meaning of these metrics can be found in the
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many pgbouncer servers
 [[inputs.pgbouncer]]
   ## specify address via a url matching:

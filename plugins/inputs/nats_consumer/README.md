@@ -8,7 +8,7 @@ instances of telegraf can read from a NATS cluster in parallel.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from NATS subject(s)
 [[inputs.nats_consumer]]
   ## urls of NATS servers

@@ -4,7 +4,7 @@ This plugin gathers statistics data from a Mcrouter server.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many mcrouter servers.
 [[inputs.mcrouter]]
   ## An array of address to gather stats about. Specify an ip or hostname

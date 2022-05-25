@@ -14,7 +14,7 @@ see `systemctl list-units --all --type help` for possible options.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather systemd units state
 [[inputs.systemd_units]]
   ## Set timeout for systemctl execution

@@ -2,7 +2,6 @@ package sql
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"testing"
 	"time"
@@ -31,8 +30,6 @@ func pwgen(n int) string {
 	return string(buffer)
 }
 
-var spinup = flag.Bool("spinup", false, "Spin-up the required test containers")
-
 func TestMariaDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -45,46 +42,44 @@ func TestMariaDB(t *testing.T) {
 	passwd := ""
 	database := "foo"
 
-	if *spinup {
-		logger.Infof("Spinning up container...")
+	logger.Infof("Spinning up container...")
 
-		// Generate a random password
-		passwd = pwgen(32)
+	// Generate a random password
+	passwd = pwgen(32)
 
-		// Determine the test-data mountpoint
-		testdata, err := filepath.Abs("testdata/mariadb")
-		require.NoError(t, err, "determining absolute path of test-data failed")
+	// Determine the test-data mountpoint
+	testdata, err := filepath.Abs("testdata/mariadb")
+	require.NoError(t, err, "determining absolute path of test-data failed")
 
-		// Spin-up the container
-		ctx := context.Background()
-		req := testcontainers.GenericContainerRequest{
-			ContainerRequest: testcontainers.ContainerRequest{
-				Image: "mariadb",
-				Env: map[string]string{
-					"MYSQL_ROOT_PASSWORD": passwd,
-					"MYSQL_DATABASE":      database,
-				},
-				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
-				},
-				ExposedPorts: []string{"3306/tcp"},
-				WaitingFor:   wait.ForListeningPort("3306/tcp"),
+	// Spin-up the container
+	ctx := context.Background()
+	req := testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image: "mariadb",
+			Env: map[string]string{
+				"MYSQL_ROOT_PASSWORD": passwd,
+				"MYSQL_DATABASE":      database,
 			},
-			Started: true,
-		}
-		container, err := testcontainers.GenericContainer(ctx, req)
-		require.NoError(t, err, "starting container failed")
-		defer func() {
-			require.NoError(t, container.Terminate(ctx), "terminating container failed")
-		}()
-
-		// Get the connection details from the container
-		addr, err = container.Host(ctx)
-		require.NoError(t, err, "getting container host address failed")
-		p, err := container.MappedPort(ctx, "3306/tcp")
-		require.NoError(t, err, "getting container host port failed")
-		port = p.Port()
+			BindMounts: map[string]string{
+				"/docker-entrypoint-initdb.d": testdata,
+			},
+			ExposedPorts: []string{"3306/tcp"},
+			WaitingFor:   wait.ForListeningPort("3306/tcp"),
+		},
+		Started: true,
 	}
+	container, err := testcontainers.GenericContainer(ctx, req)
+	require.NoError(t, err, "starting container failed")
+	defer func() {
+		require.NoError(t, container.Terminate(ctx), "terminating container failed")
+	}()
+
+	// Get the connection details from the container
+	addr, err = container.Host(ctx)
+	require.NoError(t, err, "getting container host address failed")
+	p, err := container.MappedPort(ctx, "3306/tcp")
+	require.NoError(t, err, "getting container host port failed")
+	port = p.Port()
 
 	// Define the testset
 	var testset = []struct {
@@ -164,46 +159,44 @@ func TestPostgreSQL(t *testing.T) {
 	passwd := ""
 	database := "foo"
 
-	if *spinup {
-		logger.Infof("Spinning up container...")
+	logger.Infof("Spinning up container...")
 
-		// Generate a random password
-		passwd = pwgen(32)
+	// Generate a random password
+	passwd = pwgen(32)
 
-		// Determine the test-data mountpoint
-		testdata, err := filepath.Abs("testdata/postgres")
-		require.NoError(t, err, "determining absolute path of test-data failed")
+	// Determine the test-data mountpoint
+	testdata, err := filepath.Abs("testdata/postgres")
+	require.NoError(t, err, "determining absolute path of test-data failed")
 
-		// Spin-up the container
-		ctx := context.Background()
-		req := testcontainers.GenericContainerRequest{
-			ContainerRequest: testcontainers.ContainerRequest{
-				Image: "postgres",
-				Env: map[string]string{
-					"POSTGRES_PASSWORD": passwd,
-					"POSTGRES_DB":       database,
-				},
-				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
-				},
-				ExposedPorts: []string{"5432/tcp"},
-				WaitingFor:   wait.ForListeningPort("5432/tcp"),
+	// Spin-up the container
+	ctx := context.Background()
+	req := testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image: "postgres",
+			Env: map[string]string{
+				"POSTGRES_PASSWORD": passwd,
+				"POSTGRES_DB":       database,
 			},
-			Started: true,
-		}
-		container, err := testcontainers.GenericContainer(ctx, req)
-		require.NoError(t, err, "starting container failed")
-		defer func() {
-			require.NoError(t, container.Terminate(ctx), "terminating container failed")
-		}()
-
-		// Get the connection details from the container
-		addr, err = container.Host(ctx)
-		require.NoError(t, err, "getting container host address failed")
-		p, err := container.MappedPort(ctx, "5432/tcp")
-		require.NoError(t, err, "getting container host port failed")
-		port = p.Port()
+			BindMounts: map[string]string{
+				"/docker-entrypoint-initdb.d": testdata,
+			},
+			ExposedPorts: []string{"5432/tcp"},
+			WaitingFor:   wait.ForListeningPort("5432/tcp"),
+		},
+		Started: true,
 	}
+	container, err := testcontainers.GenericContainer(ctx, req)
+	require.NoError(t, err, "starting container failed")
+	defer func() {
+		require.NoError(t, container.Terminate(ctx), "terminating container failed")
+	}()
+
+	// Get the connection details from the container
+	addr, err = container.Host(ctx)
+	require.NoError(t, err, "getting container host address failed")
+	p, err := container.MappedPort(ctx, "5432/tcp")
+	require.NoError(t, err, "getting container host port failed")
+	port = p.Port()
 
 	// Define the testset
 	var testset = []struct {
@@ -282,39 +275,37 @@ func TestClickHouse(t *testing.T) {
 	port := "9000"
 	user := "default"
 
-	if *spinup {
-		logger.Infof("Spinning up container...")
+	logger.Infof("Spinning up container...")
 
-		// Determine the test-data mountpoint
-		testdata, err := filepath.Abs("testdata/clickhouse")
-		require.NoError(t, err, "determining absolute path of test-data failed")
+	// Determine the test-data mountpoint
+	testdata, err := filepath.Abs("testdata/clickhouse")
+	require.NoError(t, err, "determining absolute path of test-data failed")
 
-		// Spin-up the container
-		ctx := context.Background()
-		req := testcontainers.GenericContainerRequest{
-			ContainerRequest: testcontainers.ContainerRequest{
-				Image: "yandex/clickhouse-server",
-				BindMounts: map[string]string{
-					testdata: "/docker-entrypoint-initdb.d",
-				},
-				ExposedPorts: []string{"9000/tcp", "8123/tcp"},
-				WaitingFor:   wait.NewHTTPStrategy("/").WithPort("8123/tcp"),
+	// Spin-up the container
+	ctx := context.Background()
+	req := testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image: "yandex/clickhouse-server",
+			BindMounts: map[string]string{
+				"/docker-entrypoint-initdb.d": testdata,
 			},
-			Started: true,
-		}
-		container, err := testcontainers.GenericContainer(ctx, req)
-		require.NoError(t, err, "starting container failed")
-		defer func() {
-			require.NoError(t, container.Terminate(ctx), "terminating container failed")
-		}()
-
-		// Get the connection details from the container
-		addr, err = container.Host(ctx)
-		require.NoError(t, err, "getting container host address failed")
-		p, err := container.MappedPort(ctx, "9000/tcp")
-		require.NoError(t, err, "getting container host port failed")
-		port = p.Port()
+			ExposedPorts: []string{"9000/tcp", "8123/tcp"},
+			WaitingFor:   wait.NewHTTPStrategy("/").WithPort("8123/tcp"),
+		},
+		Started: true,
 	}
+	container, err := testcontainers.GenericContainer(ctx, req)
+	require.NoError(t, err, "starting container failed")
+	defer func() {
+		require.NoError(t, container.Terminate(ctx), "terminating container failed")
+	}()
+
+	// Get the connection details from the container
+	addr, err = container.Host(ctx)
+	require.NoError(t, err, "getting container host address failed")
+	p, err := container.MappedPort(ctx, "9000/tcp")
+	require.NoError(t, err, "getting container host port failed")
+	port = p.Port()
 
 	// Define the testset
 	var testset = []struct {

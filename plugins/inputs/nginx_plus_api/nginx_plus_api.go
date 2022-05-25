@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nginx_plus_api
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type NginxPlusAPI struct {
 	Urls            []string        `toml:"urls"`
@@ -42,6 +48,10 @@ const (
 	streamServerZonesPath = "stream/server_zones"
 	streamUpstreamsPath   = "stream/upstreams"
 )
+
+func (*NginxPlusAPI) SampleConfig() string {
+	return sampleConfig
+}
 
 func (n *NginxPlusAPI) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package smart
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const intelVID = "0x8086"
 
@@ -352,6 +358,10 @@ func newSmart() *Smart {
 		Timeout:    config.Duration(time.Second * 30),
 		ReadMethod: "concurrent",
 	}
+}
+
+func (*Smart) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init performs one time setup of the plugin and returns an error if the configuration is invalid.
@@ -730,12 +740,12 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 
 		wwn := wwnInfo.FindStringSubmatch(line)
 		if len(wwn) > 1 {
-			deviceTags["wwn"] = strings.Replace(wwn[1], " ", "", -1)
+			deviceTags["wwn"] = strings.ReplaceAll(wwn[1], " ", "")
 		}
 
 		capacity := userCapacityInfo.FindStringSubmatch(line)
 		if len(capacity) > 1 {
-			deviceTags["capacity"] = strings.Replace(capacity[1], ",", "", -1)
+			deviceTags["capacity"] = strings.ReplaceAll(capacity[1], ",", "")
 		}
 
 		enabled := smartEnabledInfo.FindStringSubmatch(line)
@@ -1004,7 +1014,7 @@ func parseDataUnits(fields, deviceFields map[string]interface{}, str string) err
 }
 
 func parseCommaSeparatedIntWithAccumulator(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
-	i, err := strconv.ParseInt(strings.Replace(str, ",", "", -1), 10, 64)
+	i, err := strconv.ParseInt(strings.ReplaceAll(str, ",", ""), 10, 64)
 	if err != nil {
 		return err
 	}

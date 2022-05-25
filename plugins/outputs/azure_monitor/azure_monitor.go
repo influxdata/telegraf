@@ -1,14 +1,18 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package azure_monitor
 
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
+	_ "embed"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -22,6 +26,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // AzureMonitor allows publishing of metrics to the Azure Monitor custom metrics
 // service
@@ -101,6 +109,10 @@ const (
 	maxRequestBodySize         = 4000000
 )
 
+func (*AzureMonitor) SampleConfig() string {
+	return sampleConfig
+}
+
 // Connect initializes the plugin and validates connectivity
 func (a *AzureMonitor) Connect() error {
 	a.cache = make(map[time.Time]map[uint64]*aggregate, 36)
@@ -109,12 +121,7 @@ func (a *AzureMonitor) Connect() error {
 		a.Timeout = config.Duration(defaultRequestTimeout)
 	}
 
-	a.client = &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-		},
-		Timeout: time.Duration(a.Timeout),
-	}
+	a.initHTTPClient()
 
 	var err error
 	var region string
@@ -166,6 +173,15 @@ func (a *AzureMonitor) Connect() error {
 	a.MetricOutsideWindow = selfstat.Register("azure_monitor", "metric_outside_window", tags)
 
 	return nil
+}
+
+func (a *AzureMonitor) initHTTPClient() {
+	a.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+		Timeout: time.Duration(a.Timeout),
+	}
 }
 
 // vmMetadata retrieves metadata about the current Azure VM
@@ -313,6 +329,10 @@ func (a *AzureMonitor) send(body []byte) error {
 
 	resp, err := a.client.Do(req)
 	if err != nil {
+		if err.(*url.Error).Unwrap() == context.DeadlineExceeded {
+			a.initHTTPClient()
+		}
+
 		return err
 	}
 	defer resp.Body.Close()

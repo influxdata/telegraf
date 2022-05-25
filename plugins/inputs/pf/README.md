@@ -19,7 +19,7 @@ telegraf ALL=(root) NOPASSWD: /sbin/pfctl -s info
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather counters from PF
 [[inputs.pf]]
   ## PF require root access on most systems.

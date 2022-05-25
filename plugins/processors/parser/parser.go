@@ -1,11 +1,18 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package parser
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Parser struct {
 	parsers.Config
@@ -14,6 +21,10 @@ type Parser struct {
 	ParseFields  []string        `toml:"parse_fields"`
 	Log          telegraf.Logger `toml:"-"`
 	parser       telegraf.Parser
+}
+
+func (*Parser) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {

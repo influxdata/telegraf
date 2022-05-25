@@ -5,7 +5,7 @@ verify text in the response.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collect response time of a TCP or UDP connection
 [[inputs.net_response]]
   ## Protocol, must be "tcp" or "udp"

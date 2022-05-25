@@ -25,6 +25,7 @@ func TestSettingConfigWorks(t *testing.T) {
 	cfg := `
 	[[inputs.execd]]
 		command = ["a", "b", "c"]
+		environment = ["d=e", "f=1"]
 		restart_delay = "1m"
 		signal = "SIGHUP"
 	`
@@ -35,6 +36,7 @@ func TestSettingConfigWorks(t *testing.T) {
 	inp, ok := conf.Inputs[0].Input.(*Execd)
 	require.True(t, ok)
 	require.EqualValues(t, []string{"a", "b", "c"}, inp.Command)
+	require.EqualValues(t, []string{"d=e", "f=1"}, inp.Environment)
 	require.EqualValues(t, 1*time.Minute, inp.RestartDelay)
 	require.EqualValues(t, "SIGHUP", inp.Signal)
 }
@@ -48,6 +50,7 @@ func TestExternalInputWorks(t *testing.T) {
 
 	e := &Execd{
 		Command:      []string{exe, "-counter"},
+		Environment:  []string{"PLUGINS_INPUTS_EXECD_MODE=application", "METRIC_NAME=counter"},
 		RestartDelay: config.Duration(5 * time.Second),
 		parser:       influxParser,
 		Signal:       "STDIN",
@@ -152,7 +155,8 @@ var counter = flag.Bool("counter", false,
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	if *counter {
+	runMode := os.Getenv("PLUGINS_INPUTS_EXECD_MODE")
+	if *counter && runMode == "application" {
 		if err := runCounterProgram(); err != nil {
 			os.Exit(1)
 		}
@@ -163,6 +167,7 @@ func TestMain(m *testing.M) {
 }
 
 func runCounterProgram() error {
+	envMetricName := os.Getenv("METRIC_NAME")
 	i := 0
 	serializer, err := serializers.NewInfluxSerializer()
 	if err != nil {
@@ -173,7 +178,7 @@ func runCounterProgram() error {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		m := metric.New("counter",
+		m := metric.New(envMetricName,
 			map[string]string{},
 			map[string]interface{}{
 				"count": i,

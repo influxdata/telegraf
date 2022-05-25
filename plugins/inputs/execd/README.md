@@ -15,12 +15,18 @@ STDERR from the process will be relayed to Telegraf as errors in the logs.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Run executable as long-running input plugin
 [[inputs.execd]]
   ## One program to run as daemon.
   ## NOTE: process and each argument should each be their own string
   command = ["telegraf-smartctl", "-d", "/dev/sda"]
+
+  ## Environment variables
+  ## Array of "key=value" pairs to pass as environment variables
+  ## e.g. "KEY=value", "USERNAME=John Doe",
+  ## "LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs"
+  # environment = []
 
   ## Define how the process is signaled on each collection interval.
   ## Valid values are:

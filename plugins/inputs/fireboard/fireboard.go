@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package fireboard
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Fireboard gathers statistics from the fireboard.io servers
 type Fireboard struct {
@@ -43,6 +49,10 @@ type fireboardStats struct {
 	Title       string `json:"title"`
 	UUID        string `json:"uuid"`
 	Latesttemps []RTT  `json:"latest_temps"`
+}
+
+func (*Fireboard) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init the things

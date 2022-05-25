@@ -6,7 +6,7 @@ Typically, the `mod_status` module is configured to expose a page at the `/serve
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Apache status information (mod_status)
 [[inputs.apache]]
   ## An array of URLs to gather from, must be directed at the machine

@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cratedb
 
 import (
 	"context"
 	"crypto/sha512"
 	"database/sql"
+	_ "embed"
 	"encoding/binary"
 	"fmt"
 	"sort"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const MaxInt64 = int64(^uint64(0) >> 1)
 
 type CrateDB struct {
@@ -27,6 +33,10 @@ type CrateDB struct {
 	TableCreate  bool   `toml:"table_create"`
 	KeySeparator string `toml:"key_separator"`
 	DB           *sql.DB
+}
+
+func (*CrateDB) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *CrateDB) Connect() error {
@@ -183,7 +193,7 @@ func escapeObject(m map[string]interface{}, keyReplacement string) (string, erro
 // escapeString wraps s in the given quote string and replaces all occurrences
 // of it inside of s with a double quote.
 func escapeString(s string, quote string) string {
-	return quote + strings.Replace(s, quote, quote+quote, -1) + quote
+	return quote + strings.ReplaceAll(s, quote, quote+quote) + quote
 }
 
 // hashID returns a cryptographic hash int64 hash that includes the metric name

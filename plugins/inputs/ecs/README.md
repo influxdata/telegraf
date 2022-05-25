@@ -16,7 +16,7 @@ present in the metadata/stats endpoints.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about ECS containers
 [[inputs.ecs]]
   ## ECS metadata url.

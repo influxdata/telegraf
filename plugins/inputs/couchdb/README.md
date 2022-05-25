@@ -4,7 +4,7 @@ The CouchDB plugin gathers metrics of CouchDB using [_stats] endpoint.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read CouchDB Stats from one or more servers
 [[inputs.couchdb]]
   ## Works with CouchDB stats endpoints out of the box

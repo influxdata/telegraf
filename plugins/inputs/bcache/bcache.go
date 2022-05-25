@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -6,6 +7,7 @@
 package bcache
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Bcache struct {
 	BcachePath string
@@ -92,6 +98,10 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	}
 	acc.AddFields("bcache", fields, tags)
 	return nil
+}
+
+func (*Bcache) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *Bcache) Gather(acc telegraf.Accumulator) error {

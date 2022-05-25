@@ -23,7 +23,7 @@ are adhered to irrespective of input plugin configurations, e.g. by
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Apply metric modifications using override semantics.
 [[processors.override]]
   ## All modifications on inputs and aggregators can be overridden:

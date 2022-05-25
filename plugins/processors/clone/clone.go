@@ -1,15 +1,26 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package clone
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Clone struct {
 	NameOverride string
 	NamePrefix   string
 	NameSuffix   string
 	Tags         map[string]string
+}
+
+func (*Clone) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *Clone) Apply(in ...telegraf.Metric) []telegraf.Metric {

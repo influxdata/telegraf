@@ -8,7 +8,7 @@ Requires RavenDB Server 5.2+.
 
 The following is an example config for RavenDB. **Note:** The client certificate used should have `Operator` permissions on the cluster.
 
-```toml
+```toml @sample.conf
 # Reads metrics from RavenDB servers via the Monitoring Endpoints
 [[inputs.ravendb]]
   ## Node URL and port that RavenDB is listening on. By default,

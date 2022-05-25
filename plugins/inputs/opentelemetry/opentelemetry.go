@@ -1,21 +1,28 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package opentelemetry
 
 import (
+	_ "embed"
 	"fmt"
-	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
-	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
-	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	"net"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
+	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
+	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type OpenTelemetry struct {
 	ServiceAddress string `toml:"service_address"`
@@ -30,6 +37,10 @@ type OpenTelemetry struct {
 	grpcServer *grpc.Server
 
 	wg sync.WaitGroup
+}
+
+func (*OpenTelemetry) SampleConfig() string {
+	return sampleConfig
 }
 
 func (o *OpenTelemetry) Gather(_ telegraf.Accumulator) error {

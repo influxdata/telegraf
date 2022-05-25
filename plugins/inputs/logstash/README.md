@@ -7,7 +7,7 @@ Logstash 5 and later is supported.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics exposed by Logstash
 [[inputs.logstash]]
   ## The URL of the exposed Logstash API endpoint.

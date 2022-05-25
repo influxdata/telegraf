@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mysql
 
 import (
 	"database/sql"
+	_ "embed"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,6 +18,10 @@ import (
 	v1 "github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
 	v2 "github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Mysql struct {
 	Servers                             []string `toml:"servers"`
@@ -60,6 +66,10 @@ const (
 )
 
 const localhost = ""
+
+func (*Mysql) SampleConfig() string {
+	return sampleConfig
+}
 
 func (m *Mysql) InitMysql() {
 	if len(m.IntervalSlow) > 0 {
@@ -629,7 +639,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 				continue
 			}
 
-			if colValue == nil || len(colValue) == 0 {
+			if len(colValue) == 0 {
 				continue
 			}
 
@@ -1875,8 +1885,8 @@ func (m *Mysql) parseValueByDatabaseTypeName(value sql.RawBytes, databaseTypeNam
 func findThreadState(rawCommand, rawState string) string {
 	var (
 		// replace '_' symbol with space
-		command = strings.Replace(strings.ToLower(rawCommand), "_", " ", -1)
-		state   = strings.Replace(strings.ToLower(rawState), "_", " ", -1)
+		command = strings.ReplaceAll(strings.ToLower(rawCommand), "_", " ")
+		state   = strings.ReplaceAll(strings.ToLower(rawState), "_", " ")
 	)
 	// if the state is already valid, then return it
 	if _, ok := generalThreadStates[state]; ok {
@@ -1909,7 +1919,7 @@ func findThreadState(rawCommand, rawState string) string {
 
 // newNamespace can be used to make a namespace
 func newNamespace(words ...string) string {
-	return strings.Replace(strings.Join(words, "_"), " ", "_", -1)
+	return strings.ReplaceAll(strings.Join(words, "_"), " ", "_")
 }
 
 func copyTags(in map[string]string) map[string]string {

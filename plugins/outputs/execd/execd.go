@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package execd
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"strings"
@@ -14,13 +16,22 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Execd struct {
 	Command      []string        `toml:"command"`
+	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
 	Log          telegraf.Logger
 
 	process    *process.Process
 	serializer serializers.Serializer
+}
+
+func (*Execd) SampleConfig() string {
+	return sampleConfig
 }
 
 func (e *Execd) SetSerializer(s serializers.Serializer) {
@@ -34,7 +45,7 @@ func (e *Execd) Init() error {
 
 	var err error
 
-	e.process, err = process.New(e.Command)
+	e.process, err = process.New(e.Command, e.Environment)
 	if err != nil {
 		return fmt.Errorf("error creating process %s: %w", e.Command, err)
 	}

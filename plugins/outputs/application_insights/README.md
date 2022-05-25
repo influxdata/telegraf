@@ -5,7 +5,7 @@ Insights](https://azure.microsoft.com/en-us/services/application-insights/).
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send metrics to Azure Application Insights
 [[outputs.application_insights]]
   ## Instrumentation key of the Application Insights resource.

@@ -4,7 +4,7 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Pulls statistics from nvidia GPUs attached to the host
 [[inputs.nvidia_smi]]
   ## Optional: path to nvidia-smi binary, defaults "/usr/bin/nvidia-smi"

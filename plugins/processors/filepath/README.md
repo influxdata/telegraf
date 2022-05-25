@@ -28,7 +28,7 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Performs file path manipulations on tags and fields
 [[processors.filepath]]
   ## Treat the tag value as a path and convert it to its last element, storing the result in a new tag

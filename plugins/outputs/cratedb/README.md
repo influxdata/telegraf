@@ -23,7 +23,7 @@ config option, see below.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for CrateDB to send metrics to.
 [[outputs.cratedb]]
   # A github.com/jackc/pgx/v4 connection string.

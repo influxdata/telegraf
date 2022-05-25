@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ipset
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Ipsets is a telegraf plugin to gather packets and bytes counters from ipset
 type Ipset struct {
@@ -28,6 +34,10 @@ type setLister func(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error
 const measurement = "ipset"
 
 var defaultTimeout = config.Duration(time.Second)
+
+func (*Ipset) SampleConfig() string {
+	return sampleConfig
+}
 
 func (i *Ipset) Init() error {
 	_, err := exec.LookPath("ipset")

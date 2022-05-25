@@ -10,7 +10,7 @@ The plugin expects messages in the
 
 This is a sample configuration for the plugin.
 
-```toml
+```toml @sample.conf
 # Generic socket listener capable of handling multiple socket types.
 [[inputs.socket_listener]]
   ## URL to listen on

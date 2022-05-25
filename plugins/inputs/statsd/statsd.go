@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package statsd
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"net"
 	"regexp"
@@ -21,6 +23,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// UDPMaxPacketSize is the UDP packet limit, see
@@ -219,6 +225,10 @@ type cacheddistributions struct {
 	tags  map[string]string
 }
 
+func (*Statsd) SampleConfig() string {
+	return sampleConfig
+}
+
 func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
@@ -395,7 +405,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	return nil
 }
 
-// tcpListen() starts listening for udp packets on the configured port.
+// tcpListen() starts listening for TCP packets on the configured port.
 func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 	for {
 		select {
@@ -436,7 +446,7 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 	}
 }
 
-// udpListen starts listening for udp packets on the configured port.
+// udpListen starts listening for UDP packets on the configured port.
 func (s *Statsd) udpListen(conn *net.UDPConn) error {
 	if s.ReadBufferSize > 0 {
 		if err := s.UDPlistener.SetReadBuffer(s.ReadBufferSize); err != nil {
@@ -456,7 +466,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 					s.Log.Errorf("Error reading: %s", err.Error())
 					continue
 				}
-				return err
+				return nil
 			}
 			s.UDPPacketsRecv.Incr(1)
 			s.UDPBytesRecv.Incr(int64(n))
@@ -713,8 +723,8 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 	}
 
 	if s.ConvertNames {
-		name = strings.Replace(name, ".", "_", -1)
-		name = strings.Replace(name, "-", "__", -1)
+		name = strings.ReplaceAll(name, ".", "_")
+		name = strings.ReplaceAll(name, "-", "__")
 	}
 	if field == "" {
 		field = defaultFieldName

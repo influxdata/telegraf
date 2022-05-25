@@ -15,7 +15,7 @@ For an introduction to AMQP see:
 
 The following defaults are known to work with RabbitMQ:
 
-```toml
+```toml @sample.conf
 # AMQP consumer plugin
 [[inputs.amqp_consumer]]
   ## Brokers to consume from.  If multiple brokers are specified a random broker

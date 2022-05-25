@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package udp_listener
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"sync"
@@ -11,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // UDPListener main struct for the collector
 type UDPListener struct {
@@ -66,6 +72,10 @@ var dropwarn = "udp_listener message queue full. " +
 
 var malformedwarn = "udp_listener has received %d malformed packets" +
 	" thus far."
+
+func (*UDPListener) SampleConfig() string {
+	return sampleConfig
+}
 
 // All the work is done in the Start() function, so this is just a dummy
 // function.

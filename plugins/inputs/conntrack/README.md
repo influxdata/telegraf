@@ -20,7 +20,7 @@ For more information on conntrack-tools, see the
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collects conntrack stats from the configured directories and files.
 [[inputs.conntrack]]
   ## The following defaults would work with multiple versions of conntrack.

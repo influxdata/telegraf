@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package aerospike
 
 import (
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"math"
 	"strconv"
@@ -15,6 +17,10 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Aerospike struct {
 	Servers []string `toml:"servers"`
@@ -48,6 +54,10 @@ var protectedHexFields = map[string]bool{
 	"node_name":       true,
 	"cluster_key":     true,
 	"paxos_principal": true,
+}
+
+func (*Aerospike) SampleConfig() string {
+	return sampleConfig
 }
 
 func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
@@ -201,7 +211,7 @@ func (a *Aerospike) parseNodeInfo(acc telegraf.Accumulator, stats map[string]str
 		if len(parts) < 2 {
 			continue
 		}
-		key := strings.Replace(parts[0], "-", "_", -1)
+		key := strings.ReplaceAll(parts[0], "-", "_")
 		nFields[key] = parseAerospikeValue(key, parts[1])
 	}
 	acc.AddFields("aerospike_node", nFields, nTags, time.Now())
@@ -244,7 +254,7 @@ func (a *Aerospike) parseNamespaceInfo(acc telegraf.Accumulator, stats map[strin
 		if len(parts) < 2 {
 			continue
 		}
-		key := strings.Replace(parts[0], "-", "_", -1)
+		key := strings.ReplaceAll(parts[0], "-", "_")
 		nFields[key] = parseAerospikeValue(key, parts[1])
 	}
 	acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
@@ -311,7 +321,7 @@ func (a *Aerospike) parseSetInfo(acc telegraf.Accumulator, stats map[string]stri
 			continue
 		}
 
-		key := strings.Replace(pieces[0], "-", "_", -1)
+		key := strings.ReplaceAll(pieces[0], "-", "_")
 		nFields[key] = parseAerospikeValue(key, pieces[1])
 	}
 	acc.AddFields("aerospike_set", nFields, nTags, time.Now())
@@ -403,7 +413,7 @@ func (a *Aerospike) parseHistogram(acc telegraf.Accumulator, stats map[string]st
 		}
 	}
 
-	acc.AddFields(fmt.Sprintf("aerospike_histogram_%v", strings.Replace(histogramType, "-", "_", -1)), nFields, nTags, time.Now())
+	acc.AddFields(fmt.Sprintf("aerospike_histogram_%v", strings.ReplaceAll(histogramType, "-", "_")), nFields, nTags, time.Now())
 }
 
 func splitNamespaceSet(namespaceSet string) (namespace string, set string) {

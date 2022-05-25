@@ -5,7 +5,7 @@ and agents via gRPC.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send OpenTelemetry metrics over gRPC
 [[outputs.opentelemetry]]
   ## Override the default (localhost:4317) OpenTelemetry gRPC service

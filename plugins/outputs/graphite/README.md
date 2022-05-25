@@ -11,7 +11,7 @@ see the [Graphite Data Format][2].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Graphite server to send metrics to
 [[outputs.graphite]]
   ## TCP endpoint for your graphite instance.

@@ -14,7 +14,7 @@ Minimum Version of Monit tested with is 5.16.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics and status information about processes managed by Monit
 [[inputs.monit]]
   ## Monit HTTPD address

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kafka_consumer
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
 	"sync"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultMaxUndeliveredMessages = 1000
@@ -65,6 +71,10 @@ type SaramaCreator struct{}
 
 func (*SaramaCreator) Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error) {
 	return sarama.NewConsumerGroup(brokers, group, cfg)
+}
+
+func (*KafkaConsumer) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *KafkaConsumer) SetParser(parser parsers.Parser) {

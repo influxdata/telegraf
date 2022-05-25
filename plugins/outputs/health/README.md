@@ -9,7 +9,7 @@ must fail in order for the resource to enter the failed state.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configurable HTTP health check resource based on metrics
 [[outputs.health]]
   ## Address and port to listen on.

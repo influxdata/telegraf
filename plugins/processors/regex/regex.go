@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package regex
 
 import (
+	_ "embed"
 	"fmt"
 	"regexp"
 
@@ -8,6 +10,10 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Regex struct {
 	Tags         []converter     `toml:"tags"`
@@ -25,6 +31,10 @@ type converter struct {
 	Replacement string `toml:"replacement"`
 	ResultKey   string `toml:"result_key"`
 	Append      bool   `toml:"append"`
+}
+
+func (*Regex) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *Regex) Init() error {

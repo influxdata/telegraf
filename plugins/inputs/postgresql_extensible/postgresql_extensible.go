@@ -1,14 +1,17 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package postgresql_extensible
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
 
-	_ "github.com/jackc/pgx/v4/stdlib" //to register stdlib from PostgreSQL Driver and Toolkit
+	// Required for SQL framework driver
+	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -16,9 +19,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Postgresql struct {
 	postgresql.Service
-	Databases          []string
+	Databases          []string `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	AdditionalTags     []string
 	Timestamp          string
 	Query              query
@@ -32,13 +39,17 @@ type query []struct {
 	Sqlquery    string
 	Script      string
 	Version     int
-	Withdbname  bool
+	Withdbname  bool `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Tagvalue    string
 	Measurement string
 	Timestamp   string
 }
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
+
+func (*Postgresql) SampleConfig() string {
+	return sampleConfig
+}
 
 func (p *Postgresql) Init() error {
 	var err error

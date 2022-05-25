@@ -1,9 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package rename
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Replace struct {
 	Measurement string `toml:"measurement"`
@@ -14,6 +21,10 @@ type Replace struct {
 
 type Rename struct {
 	Replaces []Replace `toml:"replace"`
+}
+
+func (*Rename) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *Rename) Apply(in ...telegraf.Metric) []telegraf.Metric {

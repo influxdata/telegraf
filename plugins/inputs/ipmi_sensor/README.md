@@ -29,7 +29,7 @@ Any of the following parameters will be added to the aformentioned query if they
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from the bare metal servers via IPMI
 [[inputs.ipmi_sensor]]
   ## optionally specify the path to the ipmitool executable

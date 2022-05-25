@@ -6,7 +6,7 @@ The Vault plugin could grab metrics from every Vault agent of the cluster. Teleg
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from the Vault API
 [[inputs.vault]]
   ## URL for the Vault agent

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nginx_vts
 
 import (
 	"bufio"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -17,12 +19,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type NginxVTS struct {
 	Urls            []string        `toml:"urls"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	tls.ClientConfig
 
 	client *http.Client
+}
+
+func (*NginxVTS) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NginxVTS) Gather(acc telegraf.Accumulator) error {

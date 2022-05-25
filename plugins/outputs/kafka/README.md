@@ -5,7 +5,7 @@ Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the Kafka server to send metrics to
 [[outputs.kafka]]
   ## URLs of kafka brokers

@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -8,6 +9,7 @@
 package lustre2
 
 import (
+	_ "embed"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type tags struct {
 	name, job, client string
@@ -339,6 +345,10 @@ var wantedMdtJobstatsFields = []*mapping{
 		field:    3,
 		reportAs: "jobstats_crossdir_rename",
 	},
+}
+
+func (*Lustre2) SampleConfig() string {
+	return sampleConfig
 }
 
 func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping) error {

@@ -11,7 +11,7 @@ All metrics are attempted to be cast to integers, then booleans, then strings.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read stats from aerospike server(s)
 [[inputs.aerospike]]
   ## Aerospike servers to connect to (with port)

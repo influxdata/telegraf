@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package aliyuncms
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -11,14 +13,19 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
+	"github.com/jmespath/go-jmespath"
+	"github.com/pkg/errors"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/jmespath/go-jmespath"
-	"github.com/pkg/errors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type (
 	// AliyunCMS is aliyun cms config info.
@@ -101,6 +108,10 @@ var aliyunRegionList = []string{
 	"eu-central-1",
 	"eu-west-1",
 	"me-east-1",
+}
+
+func (*AliyunCMS) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init perform checks of plugin inputs and initialize internals
@@ -473,14 +484,14 @@ func formatField(metricName string, statistic string) string {
 }
 
 func formatMeasurement(project string) string {
-	project = strings.Replace(project, "/", "_", -1)
+	project = strings.ReplaceAll(project, "/", "_")
 	project = snakeCase(project)
 	return fmt.Sprintf("aliyuncms_%s", project)
 }
 
 func snakeCase(s string) string {
 	s = internal.SnakeCase(s)
-	s = strings.Replace(s, "__", "_", -1)
+	s = strings.ReplaceAll(s, "__", "_")
 	return s
 }
 

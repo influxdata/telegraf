@@ -11,29 +11,39 @@ similar constructs.
   themselves.  See below for a quick example.
 - To be available within Telegraf itself, plugins must add themselves to the
   `github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
-- Each plugin requires a file called `<plugin_name>_sample_config.go`, where `<plugin_name>` is replaced with the actual plugin name.
-  Copy the [example template](#sample-configuration-template) into this file, also updating `<plugin_name>` were appropriate.
-  This file is automatically updated during the build process to include the sample configuration from the `README.md`.
+- Each plugin requires a file called `sample.conf` containing the sample
+  configuration  for the plugin in TOML format.
   Please consult the [Sample Config][] page for the latest style guidelines.
+- Each plugin `README.md` file should include the `sample.conf` file in a section
+  describing the configuration by specifying a `toml` section in the form `toml @sample.conf`. The specified file(s) are then injected automatically into the Readme.
 - Follow the recommended [Code Style][].
 
 ## Output Plugin Example
 
 ```go
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
+//go:generate ../../../tools/readme_config_includer/generator
 package simpleoutput
 
 // simpleoutput.go
 
 import (
+    _ "embed"
+
     "github.com/influxdata/telegraf"
     "github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Simple struct {
     Ok  bool            `toml:"ok"`
     Log telegraf.Logger `toml:"-"`
+}
+
+func (*Simple) SampleConfig() string {
+    return sampleConfig
 }
 
 // Init is for setup, and validating config.
@@ -66,19 +76,6 @@ func init() {
     outputs.Add("simpleoutput", func() telegraf.Output { return &Simple{} })
 }
 
-```
-
-### Sample Configuration Template
-
-```go
-//go:generate go run ../../../tools/generate_plugindata/main.go
-//go:generate go run ../../../tools/generate_plugindata/main.go --clean
-// DON'T EDIT; This file is used as a template by tools/generate_plugindata
-package <plugin_package>
-
-func (k *<plugin_struct>) SampleConfig() string {
-    return `{{ .SampleConfig }}`
-}
 ```
 
 ## Data Formats

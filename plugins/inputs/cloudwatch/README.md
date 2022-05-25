@@ -16,7 +16,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Pull Metric Statistics from Amazon CloudWatch
 [[inputs.cloudwatch]]
   ## Amazon Region

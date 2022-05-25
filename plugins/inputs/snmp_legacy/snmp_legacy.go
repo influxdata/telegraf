@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package snmp_legacy
 
 import (
+	_ "embed"
 	"log"
 	"net"
 	"os"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Snmp is a snmp plugin
 type Snmp struct {
@@ -162,6 +168,10 @@ func findNodeName(node Node, ids []string) (oidName string, instance string) {
 	}
 	// return an empty node name
 	return node.name, ""
+}
+
+func (*Snmp) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Snmp) Gather(acc telegraf.Accumulator) error {

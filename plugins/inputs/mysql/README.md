@@ -20,7 +20,7 @@ This plugin gathers the statistic data from MySQL server
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many mysql servers
 [[inputs.mysql]]
   ## specify servers via a url matching:

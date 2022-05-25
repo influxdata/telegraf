@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package dns_query
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"strconv"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ResultType uint64
 
@@ -39,6 +45,10 @@ type DNSQuery struct {
 
 	// Dns query timeout in seconds. 0 means no timeout
 	Timeout int
+}
+
+func (*DNSQuery) SampleConfig() string {
+	return sampleConfig
 }
 
 func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {

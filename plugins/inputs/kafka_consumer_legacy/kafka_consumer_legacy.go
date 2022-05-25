@@ -1,17 +1,23 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package kafka_consumer_legacy
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
 	"sync"
 
+	"github.com/Shopify/sarama"
+	"github.com/wvanbergen/kafka/consumergroup"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-
-	"github.com/Shopify/sarama"
-	"github.com/wvanbergen/kafka/consumergroup"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Kafka struct {
 	ConsumerGroup   string
@@ -45,6 +51,10 @@ type Kafka struct {
 	// doNotCommitMsgs tells the parser not to call CommitUpTo on the consumer
 	// this is mostly for test purposes, but there may be a use-case for it later.
 	doNotCommitMsgs bool
+}
+
+func (*Kafka) SampleConfig() string {
+	return sampleConfig
 }
 
 func (k *Kafka) SetParser(parser parsers.Parser) {

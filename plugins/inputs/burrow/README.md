@@ -7,7 +7,7 @@ Supported Burrow version: `1.x`
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collect Kafka topics and consumers status from Burrow HTTP API.
 [[inputs.burrow]]
   ## Burrow API endpoints in format "schema://host:port".

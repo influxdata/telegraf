@@ -2,6 +2,21 @@
 
 # Changelog
 
+## v1.22.4 [2022-05-16]
+
+### Bugfixes
+
+- [#11045](https://github.com/influxdata/telegraf/pull/11045) `inputs.couchbase` Do not assume metrics will all be of the same length
+- [#11043](https://github.com/influxdata/telegraf/pull/11043) `inputs.statsd` Do not error when closing statsd network connection
+- [#11030](https://github.com/influxdata/telegraf/pull/11030) `outputs.azure_monitor` Re-init azure monitor http client on context deadline error
+- [#11078](https://github.com/influxdata/telegraf/pull/11078) `outputs.wavefront` If no "host" tag is provided do not add "telegraf.host" tag
+- [#11042](https://github.com/influxdata/telegraf/pull/11042) Have telegraf service wait for network up in systemd packaging
+
+### Dependency Updates
+
+- [#10722](https://github.com/influxdata/telegraf/pull/10722) `inputs.internet_speed` Update github.com/showwin/speedtest-go from 1.1.4 to 1.1.5
+- [#11085](https://github.com/influxdata/telegraf/pull/11085) Update OpenTelemetry plugins to v0.51.0
+
 ## v1.22.3 [2022-04-28]
 
 ### Bugfixes
@@ -66,7 +81,6 @@
 ### New External Plugins
 
 - [#10462](https://github.com/influxdata/telegraf/pull/10462) `external.psi` Add psi plugin
-
 
 ## v1.22.0
 

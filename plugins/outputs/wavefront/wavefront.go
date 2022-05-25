@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package wavefront
 
 import (
+	_ "embed"
 	"fmt"
 	"regexp"
 	"strings"
@@ -10,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const maxTagLength = 254
 
@@ -64,6 +70,10 @@ type MetricPoint struct {
 	Timestamp int64
 	Source    string
 	Tags      map[string]string
+}
+
+func (*Wavefront) SampleConfig() string {
+	return sampleConfig
 }
 
 func (w *Wavefront) Connect() error {
@@ -190,7 +200,10 @@ func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]strin
 			for k, v := range mTags {
 				if k == s {
 					source = v
-					mTags["telegraf_host"] = mTags["host"]
+					if mTags["host"] != "" {
+						mTags["telegraf_host"] = mTags["host"]
+					}
+
 					sourceTagFound = true
 					delete(mTags, k)
 					break

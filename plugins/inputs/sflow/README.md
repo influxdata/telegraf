@@ -20,7 +20,7 @@ avoid cardinality issues:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # SFlow V5 Protocol Listener
 [[inputs.sflow]]
   ## Address to listen for sFlow packets.

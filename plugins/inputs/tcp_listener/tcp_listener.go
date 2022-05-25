@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package tcp_listener
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"net"
 	"sync"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type TCPListener struct {
 	ServiceAddress         string
@@ -57,6 +63,10 @@ var dropwarn = "tcp_listener message queue full. " +
 
 var malformedwarn = "tcp_listener has received %d malformed packets" +
 	" thus far."
+
+func (*TCPListener) SampleConfig() string {
+	return sampleConfig
+}
 
 // All the work is done in the Start() function, so this is just a dummy
 // function.

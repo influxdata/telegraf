@@ -12,7 +12,7 @@ details.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for OpenTSDB server to send metrics to
 [[outputs.opentsdb]]
   ## prefix for metrics keys

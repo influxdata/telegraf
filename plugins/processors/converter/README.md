@@ -13,7 +13,7 @@ will overwrite one another.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Convert values to another metric value type
 [[processors.converter]]
   ## Tags to convert

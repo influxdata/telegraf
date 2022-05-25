@@ -5,7 +5,7 @@ It fetches its data from the [limits endpoint](https://developer.salesforce.com/
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read API usage and limits for a Salesforce organisation
 [[inputs.salesforce]]
   ## specify your credentials

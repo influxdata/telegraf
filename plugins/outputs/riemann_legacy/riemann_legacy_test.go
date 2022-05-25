@@ -8,6 +8,7 @@ import (
 )
 
 func TestConnectAndWrite(t *testing.T) {
+	// if this needs to run use: `docker run stealthly/docker-riemann`
 	t.Skip("Skipping legacy integration test")
 
 	url := testutil.GetLocalHost() + ":5555"
@@ -15,6 +16,7 @@ func TestConnectAndWrite(t *testing.T) {
 	r := &Riemann{
 		URL:       url,
 		Transport: "tcp",
+		Log:       testutil.Logger{},
 	}
 
 	err := r.Connect()
