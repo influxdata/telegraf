@@ -29,7 +29,7 @@ Below is a sample config to generate one of each of the four types:
   ## One or more mock data fields *must* be defined.
   ##
   ## [[inputs.mock.constant]]
-  ##   name = "rand"
+  ##   name = "constant"
   ##   value = value_of_any_type
   ## [[inputs.mock.random]]
   ##   name = "rand"
