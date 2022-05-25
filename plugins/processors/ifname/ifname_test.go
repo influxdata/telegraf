@@ -36,7 +36,7 @@ func TestTable(t *testing.T) {
 	require.NoError(t, err)
 
 	// Could use ifIndex but oid index is always the same
-	m, err := d.buildMap(gs, tab)
+	m, err := d.buildMap(&gs, tab)
 	require.NoError(t, err)
 	require.NotEmpty(t, m)
 }

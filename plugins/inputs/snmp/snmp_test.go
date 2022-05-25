@@ -57,6 +57,9 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 	}
 	return nil
 }
+func (tsc *testSNMPConnection) Reconnect() error {
+	return nil
+}
 
 var tsc = &testSNMPConnection{
 	host: "tsc",
@@ -261,7 +264,7 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(snmp.GosnmpWrapper)
+	gs := gsc.(*snmp.GosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 567, gs.Port)
 	assert.Equal(t, gosnmp.Version2c, gs.Version)
@@ -270,14 +273,14 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 
 	gsc, err = s.getConnection(1)
 	require.NoError(t, err)
-	gs = gsc.(snmp.GosnmpWrapper)
+	gs = gsc.(*snmp.GosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
 
 	gsc, err = s.getConnection(2)
 	require.NoError(t, err)
-	gs = gsc.(snmp.GosnmpWrapper)
+	gs = gsc.(*snmp.GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
@@ -301,7 +304,7 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 	wg.Add(1)
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(snmp.GosnmpWrapper)
+	gs := gsc.(*snmp.GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 56789, gs.Port)
 	assert.Equal(t, "tcp", gs.Transport)
@@ -348,7 +351,7 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(snmp.GosnmpWrapper)
+	gs := gsc.(*snmp.GosnmpWrapper)
 	assert.Equal(t, gs.Version, gosnmp.Version3)
 	sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
 	assert.Equal(t, "1.2.3.4", gsc.Host())
@@ -469,7 +472,7 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 
 			gsc, err := s.getConnection(0)
 			require.NoError(t, err)
-			gs := gsc.(snmp.GosnmpWrapper)
+			gs := gsc.(*snmp.GosnmpWrapper)
 			assert.Equal(t, gs.Version, gosnmp.Version3)
 			sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
 			assert.Equal(t, "1.2.3.4", gsc.Host())
