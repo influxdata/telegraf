@@ -139,7 +139,7 @@ cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014
 You can use the pivot processor to rotate single
 valued metrics into a multi field metric.
 For more info check out the pivot processors 
-[here](https://github.com/influxdata/telegraf/tree/master/plugins/processors/pivot).
+[here][1].
 
 For this example these are the topics:
 
@@ -180,6 +180,7 @@ Result:
 sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 ```
 
+[1]: <https://github.com/influxdata/telegraf/tree/master/plugins/processors/pivot> "Pivot Processor"
 ## Example Output
 
 ```
