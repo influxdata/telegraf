@@ -1,4 +1,4 @@
-// This is a tool to embedd configuration files into the README.md of all plugins
+// This is a tool to embed configuration files into the README.md of all plugins
 // It searches for TOML sections in the plugins' README.md and detects includes specified in the form
 //     ```toml [@includeA.conf[ @includeB[ @...]]
 //         Whatever is in here gets replaced.
