@@ -512,6 +512,30 @@ func TestTopicTag(t *testing.T) {
 				),
 			},
 		},
+		{
+			name:  "topic parsing: found topics with # shorter than given topic",
+			topic: "telegraf/testing",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			expectedErrorAfterInit: fmt.Errorf("config error topic parsing: found topic is shorter than parse topic length"),
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic: "telegraf/testing/#",
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"45",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
