@@ -23,6 +23,10 @@ func TestEmptyContainer(t *testing.T) {
 }
 
 func TestMappedPortLookup(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	cases := []struct {
 		name     string
 		port     string
