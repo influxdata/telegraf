@@ -174,7 +174,7 @@ The config:
     value_key = "value"
 ```
 
-Result:
+Will result in the following metric:
 
 ```text
 sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
