@@ -290,13 +290,11 @@ func (m *MQTTConsumer) recvMessage(_ mqtt.Client, msg mqtt.Message) {
 
 // compareTopics is used to support the mqtt wild card `+` which allows for one topic of any value
 func compareTopics(expected []string, incoming []string) bool {
-	if len(expected) != len(incoming) {
-		for i := range expected {
-			if strings.Contains(expected[i], "#") {
-				return true
-			}
-		}
+	if len(expected) > len(incoming) {
 		return false
+	}
+	if len(expected) < len(incoming) {
+		return choice.Contains("#", expected)
 	}
 
 	for i, expected := range expected {
