@@ -96,7 +96,7 @@ store the information provided in the topic in a meaningful way.
 An `_` denotes an ignored entry in the topic path.
 Please see the following example.
 
-## Example Configuration for topic parsing
+### Topic Parsing Example
 
 ```toml
 [[inputs.mqtt_consumer]]
