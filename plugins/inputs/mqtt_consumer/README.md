@@ -92,8 +92,9 @@ and creates metrics using one of the supported [input data formats][].
 The MQTT topic as a whole is stored as a tag, but this can be far too coarse
 to be easily used when utilizing the data further down the line. This
 change allows tag values to be extracted from the MQTT topic letting you
-store the information provided in the topic in a meaningful way. An `_` denotes an
-ignored entry in the topic path. Please see the following example.
+store the information provided in the topic in a meaningful way.
+An `_` denotes an ignored entry in the topic path. 
+Please see the following example.
 
 ## Example Configuration for topic parsing
 
@@ -133,12 +134,12 @@ Result:
 cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
 ```
 
-### Field Pivoting
+### Field Pivoting with Eaxmple
 
-You can use the pivot processor to rotate single valued metrics into a multi field metric.
-For more info check out the pivot processors [here](https://github.com/influxdata/telegraf/tree/master/plugins/processors/pivot).
-
-#### Example of Field Pivoting
+You can use the pivot processor to rotate single
+valued metrics into a multi field metric.
+For more info check out the pivot processors 
+[here](https://github.com/influxdata/telegraf/tree/master/plugins/processors/pivot).
 
 For this example these are the topics:
 
@@ -151,7 +152,7 @@ For this example these are the topics:
 
 And these are the metrics:
 
-```shell
+```text
 sensors,site=CLE,version=v1,device_name=device5,field=temp value=390
 sensors,site=CLE,version=v1,device_name=device5,field=rpm value=45.0
 sensors,site=CLE,version=v1,device_name=device5,field=ph value=1.45
@@ -175,11 +176,17 @@ The config:
 
 Result:
 
-```shell
+```text
 sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 ```
 
-### Metrics
+## Example Outputs
+```
+mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=45i 1653579140440951943
+mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=100i 1653579153147395661
+```
+
+## Metrics
 
 - All measurements are tagged with the incoming topic, ie
 `topic=telegraf/host01/cpu`
