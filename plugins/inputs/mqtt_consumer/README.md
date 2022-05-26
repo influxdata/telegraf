@@ -180,7 +180,8 @@ Result:
 sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 ```
 
-## Example Outputs
+## Example Output
+
 ```
 mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=45i 1653579140440951943
 mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=100i 1653579153147395661
