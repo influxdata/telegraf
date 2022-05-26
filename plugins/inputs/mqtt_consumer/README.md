@@ -134,7 +134,7 @@ Result:
 cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014942460689291
 ```
 
-### Field Pivoting with Eaxmple
+## Field Pivoting Example
 
 You can use the pivot processor to rotate single
 valued metrics into a multi field metric.
