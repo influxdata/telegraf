@@ -168,7 +168,7 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 	return nil
 }
 
-func (gs *GosnmpWrapper) Reconnect() error {
+func (gs GosnmpWrapper) Reconnect() error {
 	if gs.Conn == nil {
 		return gs.Connect()
 	}
