@@ -21,7 +21,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -126,8 +126,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	md := pmetricotlp.NewRequest()
-	md.SetMetrics(batch.GetMetrics())
+	md := pmetricotlp.NewRequestFromMetrics(batch.GetMetrics())
 	if md.Metrics().ResourceMetrics().Len() == 0 {
 		return nil
 	}
