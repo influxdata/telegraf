@@ -93,7 +93,7 @@ The MQTT topic as a whole is stored as a tag, but this can be far too coarse
 to be easily used when utilizing the data further down the line. This
 change allows tag values to be extracted from the MQTT topic letting you
 store the information provided in the topic in a meaningful way.
-An `_` denotes an ignored entry in the topic path. 
+An `_` denotes an ignored entry in the topic path.
 Please see the following example.
 
 ## Example Configuration for topic parsing
@@ -138,7 +138,7 @@ cpu,host=pop-os,tag=telegraf,topic=telegraf/one/cpu/23 value=45,test=23i 1637014
 
 You can use the pivot processor to rotate single
 valued metrics into a multi field metric.
-For more info check out the pivot processors 
+For more info check out the pivot processors
 [here][1].
 
 For this example these are the topics:
@@ -181,9 +181,10 @@ sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 ```
 
 [1]: <https://github.com/influxdata/telegraf/tree/master/plugins/processors/pivot> "Pivot Processor"
+
 ## Example Output
 
-```
+```text
 mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=45i 1653579140440951943
 mqtt_consumer,host=pop-os,topic=telegraf/host01/cpu value=100i 1653579153147395661
 ```
