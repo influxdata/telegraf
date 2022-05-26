@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -16,9 +17,12 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	postgresServicePort := "5432"
+	pgBouncerServicePort := "6432"
+
 	backend := testutil.Container{
 		Image:        "postgres:alpine",
-		ExposedPorts: []string{"5432"},
+		ExposedPorts: []string{postgresServicePort},
 		Env: map[string]string{
 			"POSTGRES_HOST_AUTH_METHOD": "trust",
 		},
@@ -32,12 +36,12 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 
 	container := testutil.Container{
 		Image:        "z9pascal/pgbouncer-container:1.17.0-latest",
-		ExposedPorts: []string{"6432"},
+		ExposedPorts: []string{pgBouncerServicePort},
 		Env: map[string]string{
 			"PG_ENV_POSTGRESQL_USER": "pgbouncer",
 			"PG_ENV_POSTGRESQL_PASS": "pgbouncer",
 		},
-		WaitingFor: wait.ForListeningPort("6432"),
+		WaitingFor: wait.ForListeningPort(nat.Port(pgBouncerServicePort)),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -50,7 +54,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 			Address: fmt.Sprintf(
 				"host=%s user=pgbouncer password=pgbouncer dbname=pgbouncer port=%s sslmode=disable",
 				container.Address,
-				container.Port,
+				container.Ports[pgBouncerServicePort],
 			),
 			IsPgBouncer: true,
 		},

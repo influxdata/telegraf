@@ -12,10 +12,12 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+const servicePort = "3000"
+
 func launchTestServer(t *testing.T) testutil.Container {
 	container := testutil.Container{
 		Image:        "aerospike:ce-6.0.0.1",
-		ExposedPorts: []string{"3000"},
+		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForLog("migrations: complete"),
 	}
 	err := container.Start()
@@ -35,7 +37,7 @@ func TestAerospikeStatisticsIntegration(t *testing.T) {
 	}()
 
 	a := &Aerospike{
-		Servers: []string{fmt.Sprintf("%s:%s", container.Address, container.Port)},
+		Servers: []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])},
 	}
 
 	var acc testutil.Accumulator
@@ -65,7 +67,7 @@ func TestAerospikeStatisticsPartialErrIntegration(t *testing.T) {
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", container.Address, container.Port),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 			testutil.GetLocalHost() + ":9999",
 		},
 	}
@@ -94,7 +96,7 @@ func TestSelectNamespacesIntegration(t *testing.T) {
 
 	// Select nonexistent namespace
 	a := &Aerospike{
-		Servers:    []string{fmt.Sprintf("%s:%s", container.Address, container.Port)},
+		Servers:    []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])},
 		Namespaces: []string{"notTest"},
 	}
 
@@ -133,7 +135,7 @@ func TestDisableQueryNamespacesIntegration(t *testing.T) {
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", container.Address, container.Port),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		DisableQueryNamespaces: true,
 	}
@@ -163,7 +165,7 @@ func TestQuerySetsIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	portInt, err := strconv.Atoi(container.Port)
+	portInt, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
 
 	// create a set
@@ -192,7 +194,7 @@ func TestQuerySetsIntegration(t *testing.T) {
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", container.Address, container.Port),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		QuerySets:              true,
 		DisableQueryNamespaces: true,
@@ -220,7 +222,7 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	portInt, err := strconv.Atoi(container.Port)
+	portInt, err := strconv.Atoi(container.Ports[servicePort])
 	require.NoError(t, err)
 
 	// create a set
@@ -249,7 +251,7 @@ func TestSelectQuerySetsIntegration(t *testing.T) {
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", container.Address, container.Port),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		QuerySets:              true,
 		Sets:                   []string{"test/foo"},
@@ -280,7 +282,7 @@ func TestDisableTTLHistogramIntegration(t *testing.T) {
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", container.Address, container.Port),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		QuerySets:          true,
 		EnableTTLHistogram: false,
@@ -307,7 +309,7 @@ func TestDisableObjectSizeLinearHistogramIntegration(t *testing.T) {
 
 	a := &Aerospike{
 		Servers: []string{
-			fmt.Sprintf("%s:%s", container.Address, container.Port),
+			fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 		},
 		QuerySets:                       true,
 		EnableObjectSizeLinearHistogram: false,

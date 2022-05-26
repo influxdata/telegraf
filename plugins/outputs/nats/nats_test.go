@@ -15,9 +15,10 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	servicePort := "4222"
 	container := testutil.Container{
 		Image:        "nats",
-		ExposedPorts: []string{"4222"},
+		ExposedPorts: []string{servicePort},
 		WaitingFor:   wait.ForLog("Server is ready"),
 	}
 	err := container.Start()
@@ -26,7 +27,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	server := []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Port)}
+	server := []string{fmt.Sprintf("nats://%s:%s", container.Address, container.Ports[servicePort])}
 	s, _ := serializers.NewInfluxSerializer()
 	n := &NATS{
 		Servers:    server,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -16,10 +17,11 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	servicePort := "1883"
 	container := testutil.Container{
 		Image:        "ncarlier/mqtt",
-		ExposedPorts: []string{"1883"},
-		WaitingFor:   wait.ForListeningPort("1883/tcp"),
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -27,7 +29,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	var url = fmt.Sprintf("%s:%s", container.Address, container.Port)
+	var url = fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
 	s, _ := serializers.NewInfluxSerializer()
 	m := &MQTT{
 		Servers:    []string{url},
