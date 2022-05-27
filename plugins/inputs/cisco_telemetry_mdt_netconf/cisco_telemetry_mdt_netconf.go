@@ -147,6 +147,23 @@ type CiscoTelemetryNETCONF struct {
 	waitgroup sync.WaitGroup
 }
 
+// Init ensures the plugin is configured correctly.
+func (c *CiscoTelemetryNETCONF) Init() error {
+	if c.ServerAddress == "" {
+		return fmt.Errorf("server address cannot be empty")
+	}
+	if c.Username == "" || c.Password == "" {
+		return fmt.Errorf("ssh credentials cannot be empty")
+	}
+	if !c.IgnoreServerAuthenticity && c.ServerPublicKey == "" {
+		return fmt.Errorf("public key must exist when ignore server authenticity is enabled")
+	}
+	if c.Redial < 1 {
+		return fmt.Errorf("redial must be greater than or equal to 1")
+	}
+	return nil
+}
+
 // createService calls functionalities for the dial-in subscriptions service
 func (dsrs *dialinSubscriptionRequestsService) createService(
 	ctx context.Context, c *CiscoTelemetryNETCONF) {
