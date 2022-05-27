@@ -1,6 +1,7 @@
-# Internet Speed Monitor
+# Internet Speed Monitor Input Plugin
 
-The `Internet Speed Monitor` collects data about the internet speed on the system.
+The `Internet Speed Monitor` collects data about the internet speed on the
+system.
 
 ## Configuration
 
