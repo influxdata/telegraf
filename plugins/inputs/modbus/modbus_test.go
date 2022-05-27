@@ -1885,7 +1885,7 @@ func TestRequestsStartingWithOmits(t *testing.T) {
 				{
 					Name:      "holding-2",
 					Address:   uint16(2),
-					InputType: "INT64",
+					InputType: "INT16",
 				},
 			},
 		},
@@ -1894,4 +1894,34 @@ func TestRequestsStartingWithOmits(t *testing.T) {
 	require.NotEmpty(t, modbus.requests)
 	require.NotNil(t, modbus.requests[1])
 	require.Equal(t, uint16(0), modbus.requests[1].holding[0].address)
+
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+	_, err := client.WriteMultipleRegisters(uint16(0), 3, []byte{0x00, 0x01, 0x00, 0x02, 0x00, 0x03})
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cHoldingRegisters,
+				"slave_id": strconv.Itoa(int(modbus.Requests[0].SlaveID)),
+				"name":     modbus.Name,
+			},
+			map[string]interface{}{"holding-2": int16(3)},
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
 }
