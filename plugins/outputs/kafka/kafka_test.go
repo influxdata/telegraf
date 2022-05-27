@@ -28,7 +28,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	networkName := "new-network"
+	networkName := "kafka-test-network"
 	net, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
 		NetworkRequest: testcontainers.NetworkRequest{
 			Name:           networkName,
