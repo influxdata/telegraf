@@ -18,20 +18,20 @@ The `json_template` output data format converts metrics into JSON documents usin
   ## The template to use for the output using Golang templates.
   ## See https://pkg.go.dev/text/template for details.
   template = '''
- 	[
+  [
 {{- range $idx, $metric := . -}}
-		{
-			"name":  "{{ $metric.Name }}",
-			"fields": {
-				{{ template "fields" $metric }}
-			},
-			"tags": {
-				{{ template "tags" $metric }}
-			},
-			"timestamp":   {{ $metric.Time.Unix }}
-		}{{- if not (last $idx $metrics)}},{{- end }}
+    {
+      "name":  "{{ $metric.Name }}",
+      "fields": {
+        {{ template "fields" $metric }}
+      },
+      "tags": {
+        {{ template "tags" $metric }}
+      },
+      "timestamp":   {{ $metric.Time.Unix }}
+    }{{- if not (last $idx $metrics)}},{{- end }}
 {{- end -}}
-	]
+  ]
   '''
 
   ## The output style for the resulting JSON.
