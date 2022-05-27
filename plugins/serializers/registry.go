@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/plugins/serializers/json_template"
 	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
@@ -75,11 +76,14 @@ type Config struct {
 	// Support unsigned integer output; influx format only
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 
+	// Style to use for formatting the JSON output
+	JSONTemplateStyle string `toml:"json_custom_style"`
+
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string `toml:"prefix"`
 
-	// Template for converting telegraf metrics into Graphite
-	// only supports Graphite
+	// Template for converting telegraf metrics into Graphite or JSON
+	// only supports Graphite and JSON-Template
 	Template string `toml:"template"`
 
 	// Templates same Template, but multiple
@@ -130,6 +134,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
 		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat)
+	case "json_custom":
+		serializer, err = NewJSONTemplateSerializer(config.Template, config.JSONTemplateStyle)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
 	case "nowmetric":
@@ -196,6 +202,10 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 
 func NewJSONSerializer(timestampUnits time.Duration, timestampFormat string) (Serializer, error) {
 	return json.NewSerializer(timestampUnits, timestampFormat)
+}
+
+func NewJSONTemplateSerializer(template, style string) (Serializer, error) {
+	return json_template.NewSerializer(template, style)
 }
 
 func NewCarbon2Serializer(carbon2format string, carbon2SanitizeReplaceChar string) (Serializer, error) {

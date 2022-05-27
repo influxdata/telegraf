@@ -8,6 +8,7 @@ plugins.
 1. [Carbon2](/plugins/serializers/carbon2)
 1. [Graphite](/plugins/serializers/graphite)
 1. [JSON](/plugins/serializers/json)
+1. [JSON Template](/plugins/serializers/json_template)
 1. [MessagePack](/plugins/serializers/msgpack)
 1. [Prometheus](/plugins/serializers/prometheus)
 1. [Prometheus Remote Write](/plugins/serializers/prometheusremotewrite)
