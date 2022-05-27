@@ -1893,7 +1893,7 @@ func TestFilterOutEmptyRequests(t *testing.T) {
 	for address := uint16(3); address < 2*maxQuantityHoldingRegisters; address++ {
 		newField := requestFieldDefinition{
 			Name:      "holding-0",
-			Address:   uint16(address),
+			Address:   address,
 			InputType: "INT16",
 			Omit:      true,
 		}
