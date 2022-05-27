@@ -89,8 +89,8 @@ DynamoDB:
 
 ### DynamoDB Checkpoint
 
-The DynamoDB checkpoint stores the last processed record in a DynamoDB. To leverage
-this functionality, create a table with the following string type keys:
+The DynamoDB checkpoint stores the last processed record in a DynamoDB. To
+leverage this functionality, create a table with the following string type keys:
 
 ```shell
 Partition key: namespace

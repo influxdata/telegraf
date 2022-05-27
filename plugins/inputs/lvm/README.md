@@ -5,15 +5,15 @@ physical volumes, volume groups, and logical volumes.
 
 ## Configuration
 
-The `lvm` command requires elevated permissions. If the user has configured
-sudo with the ability to run these commands, then set the `use_sudo` to true.
-
 ```toml @sample.conf
 # Read metrics about LVM physical volumes, volume groups, logical volumes.
 [[inputs.lvm]]
   ## Use sudo to run LVM commands
   use_sudo = false
 ```
+
+The `lvm` command requires elevated permissions. If the user has configured sudo
+with the ability to run these commands, then set the `use_sudo` to true.
 
 ### Using sudo
 
