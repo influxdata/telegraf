@@ -1,4 +1,4 @@
-# filestat Input Plugin
+# Filestat Input Plugin
 
 The filestat plugin gathers metrics about file existence, size, and other stats.
 
