@@ -590,13 +590,13 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 		return nil, err
 	}
 
-	s.connectionCache[idx] = &gs
+	s.connectionCache[idx] = gs
 
 	if err := gs.Connect(); err != nil {
 		return nil, fmt.Errorf("setting up connection: %w", err)
 	}
 
-	return &gs, nil
+	return gs, nil
 }
 
 // fieldConvert converts from any type according to the conv specification
