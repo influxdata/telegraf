@@ -1857,3 +1857,51 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterOutEmptyRequests(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{SlaveID: 1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-2",
+					Address:   uint16(2),
+					InputType: "INT64",
+				},
+			},
+		},
+	}
+	for address := uint16(3); address < 2*maxQuantityHoldingRegisters; address++ {
+		newField := requestFieldDefinition{
+			Name:      "holding-0",
+			Address:   uint16(address),
+			InputType: "INT16",
+			Omit:      true,
+		}
+		modbus.Requests[0].Fields = append(modbus.Requests[0].Fields, newField)
+	}
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NotNil(t, modbus.requests[1])
+	require.Len(t, modbus.requests[1].holding, 1)
+	require.Equal(t, uint16(0), modbus.requests[1].holding[0].address)
+}
