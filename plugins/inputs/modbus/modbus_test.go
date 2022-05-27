@@ -1858,7 +1858,7 @@ func TestConfigurationPerRequestFail(t *testing.T) {
 	}
 }
 
-func TestFilterOutEmptyRequests(t *testing.T) {
+func TestRequestsStartingWithOmits(t *testing.T) {
 	modbus := Modbus{
 		Name:              "Test",
 		Controller:        "tcp://localhost:1502",
@@ -1890,18 +1890,8 @@ func TestFilterOutEmptyRequests(t *testing.T) {
 			},
 		},
 	}
-	for address := uint16(3); address < 2*maxQuantityHoldingRegisters; address++ {
-		newField := requestFieldDefinition{
-			Name:      "holding-0",
-			Address:   address,
-			InputType: "INT16",
-			Omit:      true,
-		}
-		modbus.Requests[0].Fields = append(modbus.Requests[0].Fields, newField)
-	}
 	require.NoError(t, modbus.Init())
 	require.NotEmpty(t, modbus.requests)
 	require.NotNil(t, modbus.requests[1])
-	require.Len(t, modbus.requests[1].holding, 1)
 	require.Equal(t, uint16(0), modbus.requests[1].holding[0].address)
 }

@@ -13,11 +13,8 @@ func newRequest(f field, tags map[string]string) request {
 	r := request{
 		address: f.address,
 		length:  f.length,
-		fields:  []field{},
+		fields:  []field{f},
 		tags:    map[string]string{},
-	}
-	if !f.omit {
-		r.fields = append(r.fields, f)
 	}
 	// Copy the tags
 	for k, v := range tags {
@@ -72,6 +69,5 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 			nonEmptyRequests = append(nonEmptyRequests, request)
 		}
 	}
-	requests = nonEmptyRequests
-	return requests
+	return nonEmptyRequests
 }
