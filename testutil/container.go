@@ -13,14 +13,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-type LogConsumer struct {
-	Msgs []string
-}
-
-func (g *LogConsumer) Accept(l testcontainers.Log) {
-	g.Msgs = append(g.Msgs, string(l.Content))
-}
-
 type Container struct {
 	BindMounts   map[string]string
 	Entrypoint   []string
@@ -33,7 +25,6 @@ type Container struct {
 
 	Address string
 	Ports   map[string]string
-	Logs    LogConsumer
 
 	container testcontainers.Container
 	ctx       context.Context
@@ -62,19 +53,7 @@ func (c *Container) Start() error {
 	}
 	c.container = container
 
-	err = c.container.StartLogProducer(c.ctx)
-	if err != nil {
-		_ = c.Terminate()
-		return fmt.Errorf("log producer failed to start: %s", err)
-	}
-	c.Logs = LogConsumer{}
-	c.container.FollowOutput(&c.Logs)
-
-	c.Address, err = c.container.Host(c.ctx)
-	if err != nil {
-		_ = c.Terminate()
-		return fmt.Errorf("address lookup failed: %s", err)
-	}
+	c.Address = "localhost"
 
 	err = c.LookupMappedPorts()
 	if err != nil {
@@ -117,23 +96,8 @@ func (c *Container) LookupMappedPorts() error {
 	return nil
 }
 
-func (c *Container) PrintLogs() {
-	fmt.Println("--- container logs start ---")
-	for _, line := range c.Logs.Msgs {
-		fmt.Print(line)
-	}
-	fmt.Println("--- container logs end ---")
-}
-
 func (c *Container) Terminate() error {
-	err := c.container.StopLogProducer()
-	if err != nil {
-		fmt.Printf("failed to stop log producer: %s\n", err)
-	}
-
-	c.PrintLogs()
-
-	err = c.container.Terminate(c.ctx)
+	err := c.container.Terminate(c.ctx)
 	if err != nil {
 		return fmt.Errorf("failed to terminate the container: %s", err)
 	}
