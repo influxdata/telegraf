@@ -5,11 +5,14 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/testutil"
 )
+
+const servicePort = "3306"
 
 func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 	if testing.Short() {
@@ -21,8 +24,8 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 		Env: map[string]string{
 			"MYSQL_ALLOW_EMPTY_PASSWORD": "yes",
 		},
-		ExposedPorts: []string{"3306"},
-		WaitingFor:   wait.ForListeningPort("3306"),
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 	}
 
 	err := container.Start()
@@ -32,7 +35,7 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 	}()
 
 	m := &Mysql{
-		Servers: []string{fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Port)},
+		Servers: []string{fmt.Sprintf("root@tcp(%s:%s)/", container.Address, container.Ports[servicePort])},
 	}
 
 	var acc testutil.Accumulator
@@ -55,8 +58,8 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 		Env: map[string]string{
 			"MYSQL_ALLOW_EMPTY_PASSWORD": "yes",
 		},
-		ExposedPorts: []string{"3306"},
-		WaitingFor:   wait.ForListeningPort("3306/tcp"),
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 	}
 
 	err := container.Start()
@@ -65,7 +68,7 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	testServer := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Port)
+	testServer := fmt.Sprintf("root@tcp(%s:%s)/?tls=false", container.Address, container.Ports[servicePort])
 	m := &Mysql{
 		Servers:          []string{testServer},
 		IntervalSlow:     "30s",

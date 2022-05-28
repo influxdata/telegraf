@@ -6,7 +6,7 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Run executable as long-running output plugin
 [[outputs.execd]]
   ## One program to run as daemon.

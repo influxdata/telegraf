@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package datadog
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Datadog struct {
 	Apikey      string          `toml:"apikey"`
@@ -44,6 +50,10 @@ type Metric struct {
 type Point [2]float64
 
 const datadogAPI = "https://app.datadoghq.com/api/v1/series"
+
+func (*Datadog) SampleConfig() string {
+	return sampleConfig
+}
 
 func (d *Datadog) Connect() error {
 	if d.Apikey == "" {

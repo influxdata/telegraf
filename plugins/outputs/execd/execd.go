@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package execd
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"strings"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Execd struct {
 	Command      []string        `toml:"command"`
 	Environment  []string        `toml:"environment"`
@@ -22,6 +28,10 @@ type Execd struct {
 
 	process    *process.Process
 	serializer serializers.Serializer
+}
+
+func (*Execd) SampleConfig() string {
+	return sampleConfig
 }
 
 func (e *Execd) SetSerializer(s serializers.Serializer) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -15,11 +16,12 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	servicePort := "4150"
 	container := testutil.Container{
 		Image:        "nsqio/nsq",
-		ExposedPorts: []string{"4150"},
+		ExposedPorts: []string{servicePort},
 		Entrypoint:   []string{"/nsqd"},
-		WaitingFor:   wait.ForListeningPort("4150/tcp"),
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -27,7 +29,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	server := []string{fmt.Sprintf("%s:%s", container.Address, container.Port)}
+	server := []string{fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])}
 	s, _ := serializers.NewInfluxSerializer()
 	n := &NSQ{
 		Server:     server[0],

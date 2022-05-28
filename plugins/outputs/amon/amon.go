@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package amon
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Amon struct {
 	ServerKey    string          `toml:"server_key"`
@@ -32,6 +38,10 @@ type Metric struct {
 }
 
 type Point [2]float64
+
+func (*Amon) SampleConfig() string {
+	return sampleConfig
+}
 
 func (a *Amon) Connect() error {
 	if a.ServerKey == "" || a.AmonInstance == "" {

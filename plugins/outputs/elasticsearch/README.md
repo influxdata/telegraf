@@ -197,7 +197,7 @@ POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Elasticsearch to send metrics to.
 [[outputs.elasticsearch]]
   ## The full HTTP endpoint URL for your Elasticsearch instance

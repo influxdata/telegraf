@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -29,15 +30,20 @@ func (t *testClient) Do(_ string, _ ...interface{}) (interface{}, error) {
 	return 2, nil
 }
 
+func (t *testClient) Close() error {
+	return nil
+}
+
 func TestRedisConnectIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	servicePort := "6379"
 	container := testutil.Container{
 		Image:        "redis:alpine",
-		ExposedPorts: []string{"6379"},
-		WaitingFor:   wait.ForListeningPort("6379/tcp"),
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
@@ -45,7 +51,7 @@ func TestRedisConnectIntegration(t *testing.T) {
 		require.NoError(t, container.Terminate(), "terminating container failed")
 	}()
 
-	addr := fmt.Sprintf("%s:%s", container.Address, container.Port)
+	addr := fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort])
 
 	r := &Redis{
 		Log:     testutil.Logger{},

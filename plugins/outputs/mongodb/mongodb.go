@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mongodb
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -18,6 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 func (s *MongoDB) getCollections(ctx context.Context) error {
 	s.collections = map[string]bson.M{}
@@ -59,6 +65,10 @@ type MongoDB struct {
 	clientOptions       *options.ClientOptions
 	collections         map[string]bson.M
 	tls.ClientConfig
+}
+
+func (*MongoDB) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *MongoDB) Init() error {

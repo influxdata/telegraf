@@ -5,7 +5,7 @@ Wavefront data format over TCP.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Wavefront server to send metrics to
 [[outputs.wavefront]]
   ## Url for Wavefront Direct Ingestion. For Wavefront Proxy Ingestion, see

@@ -10,7 +10,7 @@ To perform the reverse operation use the [unpivot] processor.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Rotate a single valued metric into a multi field metric
 [[processors.pivot]]
   ## Tag to use for naming the new field.

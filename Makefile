@@ -119,25 +119,18 @@ versioninfo:
 build_generator:
 	go build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
 
-insert_config_to_readme_%: build_generator
+embed_readme_%: build_generator
 	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
 
-generate_plugins_%: build_generator
-	go generate -run="plugindata/main.go$$" ./plugins/$*/...
-
 .PHONY: generate
-generate: insert_config_to_readme_inputs generate_plugins_outputs generate_plugins_processors generate_plugins_aggregators
-
-.PHONY: generate-clean
-generate-clean:
-	go generate -run="plugindata/main.go --clean" ./plugins/outputs/... ./plugins/processors/... ./plugins/aggregators/...
+generate: embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators
 
 .PHONY: build
 build:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
-telegraf: generate build generate-clean
+telegraf: generate build
 
 # Used by dockerfile builds
 .PHONY: go-install
@@ -179,7 +172,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -340,7 +333,7 @@ darwin-arm64:
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: generate $(include_packages) generate-clean
+package: generate $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):

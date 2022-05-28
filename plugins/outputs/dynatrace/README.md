@@ -93,7 +93,7 @@ You can learn more about how to use the Dynatrace API
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send telegraf metrics to a Dynatrace environment
 [[outputs.dynatrace]]
   ## For usage with the Dynatrace OneAgent you can omit any configuration,

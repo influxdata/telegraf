@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package librato
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Librato structure for configuration and client
 type Librato struct {
@@ -53,6 +59,10 @@ func NewLibrato(apiURL string) *Librato {
 		APIUrl:   apiURL,
 		Template: "host",
 	}
+}
+
+func (*Librato) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect is the default output plugin connection function who make sure it

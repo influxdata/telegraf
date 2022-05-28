@@ -23,7 +23,7 @@ the field name.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send telegraf metrics to graylog
 [[outputs.graylog]]
   ## Endpoints for your graylog instances.

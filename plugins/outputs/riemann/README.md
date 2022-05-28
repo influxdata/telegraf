@@ -4,7 +4,7 @@ This plugin writes to [Riemann](http://riemann.io/) via TCP or UDP.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Riemann to send metrics to
 [[outputs.riemann]]
   ## The full TCP or UDP URL of the Riemann server

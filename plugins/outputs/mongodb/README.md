@@ -6,7 +6,7 @@ Requires MongoDB 5.0+ for Time Series Collections
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can transmit logs to mongodb
 [[outputs.mongodb]]
   # connection string examples for mongodb

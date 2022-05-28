@@ -11,7 +11,7 @@ Syslog messages are formatted according to [RFC
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Syslog server to send metrics to
 [[outputs.syslog]]
   ## URL to connect to

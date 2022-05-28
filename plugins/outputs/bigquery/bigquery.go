@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package bigquery
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"reflect"
 	"strings"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const timeStampFieldName = "timestamp"
 
@@ -34,6 +40,10 @@ type BigQuery struct {
 	client *bigquery.Client
 
 	warnedOnHyphens map[string]bool
+}
+
+func (*BigQuery) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *BigQuery) Connect() error {

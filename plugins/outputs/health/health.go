@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package health
 
 import (
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"errors"
 	"net"
 	"net/http"
@@ -16,6 +18,10 @@ import (
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultServiceAddress = "tcp://:8080"
@@ -50,6 +56,10 @@ type Health struct {
 
 	mu      sync.Mutex
 	healthy bool
+}
+
+func (*Health) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *Health) Init() error {

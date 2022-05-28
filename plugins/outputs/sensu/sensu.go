@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package sensu
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,6 +22,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultURL           = "http://127.0.0.1:3031"
@@ -115,6 +121,10 @@ func (s *Sensu) createClient() (*http.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (*Sensu) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Sensu) Connect() error {

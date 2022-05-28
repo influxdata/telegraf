@@ -27,21 +27,9 @@ services:
     - xpack.security.enabled=false
     ports:
       - "9200:9200"
-  pgbouncer:
-    image: z9pascal/pgbouncer-container:1.15-latest
-    environment:
-      - PG_ENV_POSTGRESQL_USER=pgbouncer
-      - PG_ENV_POSTGRESQL_PASS=pgbouncer
-    ports:
-      - "6432:6432"
   postgres:
     image: postgres:alpine
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
     ports:
       - "5432:5432"
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "15672:15672"
-      - "5672:5672"

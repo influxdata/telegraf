@@ -18,7 +18,7 @@ functions.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Aggregate metrics using a Starlark script
 [[aggregators.starlark]]
   ## The Starlark source can be set as a string in this configuration file, or

@@ -60,7 +60,7 @@ convert settings.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Save metrics to an SQL Database
 [[outputs.sql]]
   ## Database driver

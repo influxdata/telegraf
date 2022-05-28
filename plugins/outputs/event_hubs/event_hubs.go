@@ -1,15 +1,22 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package event_hubs
 
 import (
 	"context"
+	_ "embed"
 	"time"
 
 	eventhub "github.com/Azure/azure-event-hubs-go/v3"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 /*
 ** Wrapper interface for eventhub.Hub
@@ -60,6 +67,10 @@ type EventHubs struct {
 const (
 	defaultRequestTimeout = time.Second * 30
 )
+
+func (*EventHubs) SampleConfig() string {
+	return sampleConfig
+}
 
 func (e *EventHubs) Init() error {
 	err := e.Hub.GetHub(e.ConnectionString)

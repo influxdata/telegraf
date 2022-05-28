@@ -20,7 +20,7 @@ the required `project_id` label is always set to the `project` variable.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Google Cloud Stackdriver to send metrics to
 [[outputs.stackdriver]]
   ## GCP Project

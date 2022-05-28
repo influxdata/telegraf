@@ -10,7 +10,7 @@ Be aware that this plugin accesses APIs that are
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for Google Cloud BigQuery to send entries
 [[outputs.bigquery]]
   ## Credentials File

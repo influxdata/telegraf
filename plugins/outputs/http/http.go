@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package http
 
 import (
@@ -5,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +15,7 @@ import (
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/internal"
@@ -22,6 +25,10 @@ import (
 	"golang.org/x/oauth2"
 	"google.golang.org/api/idtoken"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	maxErrMsgLen = 1024
@@ -56,6 +63,10 @@ type HTTP struct {
 	// Google API Auth
 	CredentialsFile string `toml:"google_application_credentials"`
 	oauth2Token     *oauth2.Token
+}
+
+func (*HTTP) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *HTTP) SetSerializer(serializer serializers.Serializer) {

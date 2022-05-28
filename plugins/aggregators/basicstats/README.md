@@ -5,7 +5,7 @@ emitting the aggregate every `period` seconds.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Keep the aggregate basicstats of each metric passing through.
 [[aggregators.basicstats]]
   ## The period on which to flush & clear the aggregator.
