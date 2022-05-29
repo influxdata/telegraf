@@ -210,7 +210,6 @@ SET @SqlStatement = '
 SELECT
 	 ''sqlserver_server_properties'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-	,@@SPID AS [sql_processId]
 	,si.[cpu_count]
 	,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
 	,SERVERPROPERTY(''Edition'') AS [sku]
