@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/jolokia2/common"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 

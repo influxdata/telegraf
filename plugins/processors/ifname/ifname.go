@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -258,11 +258,11 @@ func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
 	//try ifXtable and ifName first.  if that fails, fall back to
 	//ifTable and ifDescr
 	var m nameMap
-	if m, err = d.buildMap(&gs, d.ifXTable); err == nil {
+	if m, err = d.buildMap(gs, d.ifXTable); err == nil {
 		return m, nil
 	}
 
-	if m, err = d.buildMap(&gs, d.ifTable); err == nil {
+	if m, err = d.buildMap(gs, d.ifTable); err == nil {
 		return m, nil
 	}
 
@@ -308,7 +308,7 @@ func (d *IfName) makeTableNoMock(oid string) (*si.Table, error) {
 	return &tab, nil
 }
 
-func (d *IfName) buildMap(gs *snmp.GosnmpWrapper, tab *si.Table) (nameMap, error) {
+func (d *IfName) buildMap(gs snmp.GosnmpWrapper, tab *si.Table) (nameMap, error) {
 	var err error
 
 	rtab, err := tab.Build(gs, true, d.translator)

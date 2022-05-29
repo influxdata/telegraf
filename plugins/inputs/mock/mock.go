@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embedd the sampleConfig data.
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
 //go:embed sample.conf
 var sampleConfig string
 
@@ -21,10 +21,16 @@ type Mock struct {
 	MetricName string            `toml:"metric_name"`
 	Tags       map[string]string `toml:"tags"`
 
+	Constant []*constant `toml:"constant"`
 	Random   []*random   `toml:"random"`
 	Step     []*step     `toml:"step"`
 	Stock    []*stock    `toml:"stock"`
 	SineWave []*sineWave `toml:"sine_wave"`
+}
+
+type constant struct {
+	Name  string      `toml:"name"`
+	Value interface{} `toml:"value"`
 }
 
 type random struct {
@@ -70,6 +76,10 @@ func (m *Mock) Gather(acc telegraf.Accumulator) error {
 	m.generateStockPrice(fields)
 	m.generateSineWave(fields)
 	m.generateStep(fields)
+
+	for _, c := range m.Constant {
+		fields[c.Name] = c.Value
+	}
 
 	tags := make(map[string]string)
 	for key, value := range m.Tags {
