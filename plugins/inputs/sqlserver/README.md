@@ -69,7 +69,8 @@ CREATE USER [telegraf] FOR LOGIN telegraf;
 
 For Service SID authentication to SQL Server (Windows service installations
 only).
-[More information about using service SIDs to grant permissions in SQL Server](https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server)
+
+- [More information about using service SIDs to grant permissions in SQL Server](https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server)
 
 In an administrative command prompt configure the telegraf service for use
 with a service SID
@@ -253,7 +254,9 @@ credential/role management, and can eliminate the need to include passwords
 in a connection string.
 
 To enable support for AAD authentication, we leverage the existing AAD
-authentication support in the [SQL Server driver for Go](https://github.com/denisenkom/go-mssqldb#azure-active-directory-authentication---preview)
+authentication support.
+
+- Please see [SQL Server driver for Go](https://github.com/denisenkom/go-mssqldb#azure-active-directory-authentication---preview)
 
 ### How to use AAD Auth with MSI
 
