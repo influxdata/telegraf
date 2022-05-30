@@ -1,7 +1,8 @@
 # SQL Server Input Plugin
 
 The `sqlserver` plugin provides metrics for your SQL Server instance.
-Recorded metrics are lightweight and use Dynamic Management Views supplied by SQL Server.
+Recorded metrics are lightweight and use Dynamic Management Views
+supplied by SQL Server.
 
 ## The SQL Server plugin supports the following editions/versions of SQL Server
 
