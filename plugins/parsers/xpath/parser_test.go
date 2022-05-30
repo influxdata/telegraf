@@ -149,8 +149,7 @@ func TestInvalidTypeQueriesFail(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					FieldsInt: map[string]string{
 						"a": "/Device_1/value_string",
 					},
@@ -186,8 +185,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"a": "number(/Device_1/value_string)",
 					},
@@ -208,8 +206,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"a": "boolean(/Device_1/value_string)",
 					},
@@ -229,7 +226,12 @@ func TestInvalidTypeQueries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "test",
+				Configs:           tt.configs,
+				DefaultTags:       tt.defaultTags,
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
@@ -253,8 +255,7 @@ func TestParseTimestamps(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 				},
 			},
 			defaultTags: map[string]string{},
@@ -270,9 +271,8 @@ func TestParseTimestamps(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
-					TimestampFmt:      "unix",
+					Timestamp:    "/Device_1/Timestamp_unix",
+					TimestampFmt: "unix",
 				},
 			},
 			defaultTags: map[string]string{},
@@ -288,9 +288,8 @@ func TestParseTimestamps(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix_ms",
-					TimestampFmt:      "unix_ms",
+					Timestamp:    "/Device_1/Timestamp_unix_ms",
+					TimestampFmt: "unix_ms",
 				},
 			},
 			defaultTags: map[string]string{},
@@ -306,9 +305,8 @@ func TestParseTimestamps(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix_us",
-					TimestampFmt:      "unix_us",
+					Timestamp:    "/Device_1/Timestamp_unix_us",
+					TimestampFmt: "unix_us",
 				},
 			},
 			defaultTags: map[string]string{},
@@ -324,9 +322,8 @@ func TestParseTimestamps(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix_ns",
-					TimestampFmt:      "unix_ns",
+					Timestamp:    "/Device_1/Timestamp_unix_ns",
+					TimestampFmt: "unix_ns",
 				},
 			},
 			defaultTags: map[string]string{},
@@ -342,9 +339,8 @@ func TestParseTimestamps(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_iso",
-					TimestampFmt:      "2006-01-02T15:04:05Z",
+					Timestamp:    "/Device_1/Timestamp_iso",
+					TimestampFmt: "2006-01-02T15:04:05Z",
 				},
 			},
 			defaultTags: map[string]string{},
@@ -359,7 +355,12 @@ func TestParseTimestamps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "test",
+				Configs:           tt.configs,
+				DefaultTags:       tt.defaultTags,
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
@@ -383,8 +384,7 @@ func TestParseSingleValues(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"a": "/Device_1/value_int",
 						"b": "/Device_1/value_float",
@@ -411,8 +411,7 @@ func TestParseSingleValues(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"a": "number(Device_1/value_int)",
 						"b": "number(/Device_1/value_float)",
@@ -439,8 +438,7 @@ func TestParseSingleValues(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"b": "number(/Device_1/value_float)",
 						"c": "boolean(/Device_1/value_bool)",
@@ -469,8 +467,7 @@ func TestParseSingleValues(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"x": "substring-before(/Device_1/value_position, ';')",
 						"y": "substring-after(/Device_1/value_position, ';')",
@@ -493,8 +490,7 @@ func TestParseSingleValues(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"x": "number(substring-before(/Device_1/value_position, ';'))",
 						"y": "number(substring-after(/Device_1/value_position, ';'))",
@@ -517,8 +513,7 @@ func TestParseSingleValues(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					FieldsInt: map[string]string{
 						"x": "substring-before(/Device_1/value_position, ';')",
 						"y": "substring-after(/Device_1/value_position, ';')",
@@ -541,8 +536,7 @@ func TestParseSingleValues(t *testing.T) {
 			input: singleMetricValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					Timestamp: "/Device_1/Timestamp_unix",
 					Tags: map[string]string{
 						"state": "/Device_1/State",
 						"name":  "substring-after(/Device_1/Name, ' ')",
@@ -564,7 +558,12 @@ func TestParseSingleValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "test",
+				Configs:           tt.configs,
+				DefaultTags:       tt.defaultTags,
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
@@ -588,8 +587,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			input: singleMetricAttributesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix/@value",
+					Timestamp: "/Device_1/Timestamp_unix/@value",
 				},
 			},
 			defaultTags: map[string]string{},
@@ -605,9 +603,8 @@ func TestParseSingleAttributes(t *testing.T) {
 			input: singleMetricAttributesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_iso/@value",
-					TimestampFmt:      "2006-01-02T15:04:05Z",
+					Timestamp:    "/Device_1/Timestamp_iso/@value",
+					TimestampFmt: "2006-01-02T15:04:05Z",
 				},
 			},
 			defaultTags: map[string]string{},
@@ -623,8 +620,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			input: singleMetricAttributesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix/@value",
+					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
 						"a": "/Device_1/attr_int/@_",
 						"b": "/Device_1/attr_float/@_",
@@ -651,8 +647,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			input: singleMetricAttributesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix/@value",
+					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
 						"a": "number(/Device_1/attr_int/@_)",
 						"b": "number(/Device_1/attr_float/@_)",
@@ -679,8 +674,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			input: singleMetricAttributesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix/@value",
+					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
 						"b": "number(/Device_1/attr_float/@_)",
 						"c": "boolean(/Device_1/attr_bool/@_)",
@@ -709,8 +703,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			input: singleMetricAttributesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix/@value",
+					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
 						"name": "substring-after(/Device_1/Name/@value, ' ')",
 					},
@@ -731,8 +724,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			input: singleMetricAttributesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix/@value",
+					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Tags: map[string]string{
 						"state": "/Device_1/State/@_",
 						"name":  "substring-after(/Device_1/Name/@value, ' ')",
@@ -755,8 +747,7 @@ func TestParseSingleAttributes(t *testing.T) {
 			input: singleMetricAttributesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Device_1/Timestamp_unix/@value",
+					Timestamp: "/Device_1/Timestamp_unix/@value",
 					Fields: map[string]string{
 						"a": "/Device_1/attr_bool_numeric/@_ = 1",
 					},
@@ -776,7 +767,12 @@ func TestParseSingleAttributes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "test",
+				Configs:           tt.configs,
+				DefaultTags:       tt.defaultTags,
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
@@ -800,8 +796,7 @@ func TestParseMultiValues(t *testing.T) {
 			input: singleMetricMultiValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Timestamp/@value",
+					Timestamp: "/Timestamp/@value",
 					Fields: map[string]string{
 						"a": "number(/Device/Value[1])",
 						"b": "number(/Device/Value[2])",
@@ -832,8 +827,7 @@ func TestParseMultiValues(t *testing.T) {
 			input: singleMetricMultiValuesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Timestamp:         "/Timestamp/@value",
+					Timestamp: "/Timestamp/@value",
 					FieldsInt: map[string]string{
 						"a": "/Device/Value[1]",
 						"b": "/Device/Value[2]",
@@ -863,7 +857,12 @@ func TestParseMultiValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "test",
+				Configs:           tt.configs,
+				DefaultTags:       tt.defaultTags,
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
@@ -887,9 +886,8 @@ func TestParseMultiNodes(t *testing.T) {
 			input: multipleNodesXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					Selection:         "/Device",
-					Timestamp:         "/Timestamp/@value",
+					Selection: "/Device",
+					Timestamp: "/Timestamp/@value",
 					Fields: map[string]string{
 						"value":  "number(Value)",
 						"active": "Active = 1",
@@ -976,7 +974,12 @@ func TestParseMultiNodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "test",
+				Configs:           tt.configs,
+				DefaultTags:       tt.defaultTags,
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			actual, err := parser.Parse([]byte(tt.input))
@@ -1000,9 +1003,8 @@ func TestParseMetricQuery(t *testing.T) {
 			input: metricNameQueryXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					MetricQuery:       "name(/Device_1/Metric/@*[1])",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					MetricQuery: "name(/Device_1/Metric/@*[1])",
+					Timestamp:   "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"value": "/Device_1/Metric/@*[1]",
 					},
@@ -1023,9 +1025,8 @@ func TestParseMetricQuery(t *testing.T) {
 			input: metricNameQueryXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					MetricQuery:       "'the_metric'",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					MetricQuery: "'the_metric'",
+					Timestamp:   "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"value": "/Device_1/Metric/@*[1]",
 					},
@@ -1045,7 +1046,12 @@ func TestParseMetricQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "test",
+				Configs:           tt.configs,
+				DefaultTags:       tt.defaultTags,
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			actual, err := parser.ParseLine(tt.input)
@@ -1068,9 +1074,8 @@ func TestParseErrors(t *testing.T) {
 			input: metricNameQueryXML,
 			configs: []Config{
 				{
-					MetricDefaultName: "test",
-					MetricQuery:       "arbitrary",
-					Timestamp:         "/Device_1/Timestamp_unix",
+					MetricQuery: "arbitrary",
+					Timestamp:   "/Device_1/Timestamp_unix",
 					Fields: map[string]string{
 						"value": "/Device_1/Metric/@*[1]",
 					},
@@ -1082,7 +1087,12 @@ func TestParseErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: map[string]string{}, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "test",
+				Configs:           tt.configs,
+				DefaultTags:       map[string]string{},
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			_, err := parser.ParseLine(tt.input)
@@ -1150,79 +1160,17 @@ func TestEmptySelection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: map[string]string{}, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "test",
+				Configs:           tt.configs,
+				DefaultTags:       map[string]string{},
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			_, err := parser.Parse([]byte(tt.input))
 			require.Error(t, err)
-			require.Equal(t, "cannot parse with empty selection node", err.Error())
-		})
-	}
-}
-
-func TestEmptySelectionAllowed(t *testing.T) {
-	var tests = []struct {
-		name    string
-		input   string
-		configs []Config
-	}{
-		{
-			name:  "empty path",
-			input: multipleNodesXML,
-			configs: []Config{
-				{
-					Selection: "/Device/NonExisting",
-					Fields:    map[string]string{"value": "number(Value)"},
-					FieldsInt: map[string]string{"mode": "Value/@mode"},
-					Tags:      map[string]string{},
-				},
-			},
-		},
-		{
-			name:  "empty pattern",
-			input: multipleNodesXML,
-			configs: []Config{
-				{
-					Selection: "//NonExisting",
-					Fields:    map[string]string{"value": "number(Value)"},
-					FieldsInt: map[string]string{"mode": "Value/@mode"},
-					Tags:      map[string]string{},
-				},
-			},
-		},
-		{
-			name:  "empty axis",
-			input: multipleNodesXML,
-			configs: []Config{
-				{
-					Selection: "/Device/child::NonExisting",
-					Fields:    map[string]string{"value": "number(Value)"},
-					FieldsInt: map[string]string{"mode": "Value/@mode"},
-					Tags:      map[string]string{},
-				},
-			},
-		},
-		{
-			name:  "empty predicate",
-			input: multipleNodesXML,
-			configs: []Config{
-				{
-					Selection: "/Device[@NonExisting=true]",
-					Fields:    map[string]string{"value": "number(Value)"},
-					FieldsInt: map[string]string{"mode": "Value/@mode"},
-					Tags:      map[string]string{},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, AllowEmptySelection: true, DefaultTags: map[string]string{}, Log: testutil.Logger{Name: "parsers.xml"}}
-			require.NoError(t, parser.Init())
-
-			_, err := parser.Parse([]byte(tt.input))
-			require.NoError(t, err)
+			require.Equal(t, err.Error(), "cannot parse with empty selection node")
 		})
 	}
 }
@@ -1277,7 +1225,6 @@ func TestTestCases(t *testing.T) {
 			filename := filepath.FromSlash(tt.filename)
 			cfg, header, err := loadTestConfiguration(filename)
 			require.NoError(t, err)
-			cfg.MetricDefaultName = "xml"
 
 			// Load the xml-content
 			input, err := testutil.ParseRawLinesFrom(header, "File:")

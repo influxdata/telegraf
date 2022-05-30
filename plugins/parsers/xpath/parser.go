@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type dataNode interface{}
@@ -24,39 +25,25 @@ type dataDocument interface {
 }
 
 type Parser struct {
-	Format              string
-	ProtobufMessageDef  string
-	ProtobufMessageType string
-	ProtobufImportPaths []string
-	PrintDocument       bool
-	AllowEmptySelection bool
-	Configs             []Config
-	DefaultTags         map[string]string
-	Log                 telegraf.Logger
+	Format              string            `toml:"-"`
+	ProtobufMessageDef  string            `toml:"xpath_protobuf_file"`
+	ProtobufMessageType string            `toml:"xpath_protobuf_type"`
+	ProtobufImportPaths []string          `toml:"xpath_protobuf_import_paths"`
+	PrintDocument       bool              `toml:"xpath_print_document"`
+	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
+	Configs             []Config          `toml:"xpath"`
+	DefaultMetricName   string            `toml:"-"`
+	DefaultTags         map[string]string `toml:"-"`
+	Log                 telegraf.Logger   `toml:"-"`
 
 	document dataDocument
 }
 
-type Config struct {
-	MetricDefaultName string            `toml:"-"`
-	MetricQuery       string            `toml:"metric_name"`
-	Selection         string            `toml:"metric_selection"`
-	Timestamp         string            `toml:"timestamp"`
-	TimestampFmt      string            `toml:"timestamp_format"`
-	Tags              map[string]string `toml:"tags"`
-	Fields            map[string]string `toml:"fields"`
-	FieldsInt         map[string]string `toml:"fields_int"`
-
-	FieldSelection  string `toml:"field_selection"`
-	FieldNameQuery  string `toml:"field_name"`
-	FieldValueQuery string `toml:"field_value"`
-	FieldNameExpand bool   `toml:"field_name_expansion"`
-
-	TagSelection  string `toml:"tag_selection"`
-	TagNameQuery  string `toml:"tag_name"`
-	TagValueQuery string `toml:"tag_value"`
-	TagNameExpand bool   `toml:"tag_name_expansion"`
-}
+// Config definition
+// This should be replaced by the actual definition once
+// the compatibitlity-code is removed.
+// Please check plugins/parsers/registry.go for now.
+type Config parsers.XPathConfig
 
 func (p *Parser) Init() error {
 	switch p.Format {
@@ -79,6 +66,14 @@ func (p *Parser) Init() error {
 		p.document = &pbdoc
 	default:
 		return fmt.Errorf("unknown data-format %q for xpath parser", p.Format)
+	}
+
+	// Make sure we do have a metric name
+	if p.DefaultMetricName == "" {
+		p.DefaultMetricName = p.Format
+		if p.Format == "" {
+			p.DefaultMetricName = "xml"
+		}
 	}
 
 	return nil
@@ -129,7 +124,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-
 	metrics, err := p.Parse([]byte(line))
 	if err != nil {
 		return nil, err
@@ -155,7 +149,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 
 	// Determine the metric name. If a query was specified, use the result of this query and the default metric name
 	// otherwise.
-	metricname = config.MetricDefaultName
+	metricname = p.DefaultMetricName
 	if len(config.MetricQuery) > 0 {
 		v, err := p.executeQuery(doc, selected, config.MetricQuery)
 		if err != nil {
@@ -511,4 +505,63 @@ func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery s
 			query = parts[0]
 		}
 	}
+}
+
+func init() {
+	// Register all variants
+	parsers.Add("xml",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xml",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+	parsers.Add("xpath_json",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xpath_json",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+	parsers.Add("xpath_msgpack",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xpath_msgpack",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+	parsers.Add("xpath_protobuf",
+		func(defaultMetricName string) telegraf.Parser {
+			return &Parser{
+				Format:            "xpath_protobuf",
+				DefaultMetricName: defaultMetricName,
+			}
+		},
+	)
+}
+
+// InitFromConfig is a compatibitlity function to construct the parser the old way
+func (p *Parser) InitFromConfig(config *parsers.Config) error {
+	p.Format = config.DataFormat
+	if p.Format == "xpath_protobuf" {
+		p.ProtobufMessageDef = config.XPathProtobufFile
+		p.ProtobufMessageType = config.XPathProtobufType
+	}
+	p.PrintDocument = config.XPathPrintDocument
+	p.DefaultMetricName = config.MetricName
+	p.DefaultTags = config.DefaultTags
+
+	// Convert the config formats which is a one-to-one copy
+	if len(config.XPathConfig) > 0 {
+		p.Configs = make([]Config, 0, len(config.XPathConfig))
+		for _, cfg := range config.XPathConfig {
+			config := Config(cfg)
+			p.Configs = append(p.Configs, config)
+		}
+	}
+
+	return p.Init()
 }
