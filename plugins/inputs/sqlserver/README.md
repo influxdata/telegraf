@@ -39,9 +39,11 @@ GRANT VIEW DATABASE STATE TO [telegraf];
 GO
 ```
 
-For Azure SQL Elastic Pool, please follow the following instructions to collect metrics.
+For Azure SQL Elastic Pool, please follow the following instructions
+to collect metrics.
 
-On master logical database, create an SQL login 'telegraf' and assign it to the server-level role ##MS_ServerStateReader##.
+On master logical database, create an SQL login 'telegraf' and assign
+it to the server-level role ##MS_ServerStateReader##.
 
 ```sql
 CREATE LOGIN [telegraf] WITH PASSWORD = N'mystrongpassword';
@@ -51,8 +53,10 @@ ALTER SERVER ROLE ##MS_ServerStateReader##
 GO
 ```
 
-Elastic pool metrics can be collected from any database in the pool if a user for the `telegraf` login is created in that database.
-For collection to work, this database must remain in the pool, and must not be renamed. If you plan to add/remove databases from this pool,
+Elastic pool metrics can be collected from any database in the pool
+if a user for the `telegraf` login is created in that database.
+For collection to work, this database must remain in the pool, and
+must not be renamed. If you plan to add/remove databases from this pool,
 create a separate database for monitoring purposes that will remain in the pool.
 
 > Note: To avoid duplicate monitoring data, do not collect elastic pool metrics from more than one database in the same pool.
