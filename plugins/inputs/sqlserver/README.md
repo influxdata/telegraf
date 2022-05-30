@@ -68,7 +68,8 @@ CREATE USER [telegraf] FOR LOGIN telegraf;
 ```
 
 For Service SID authentication to SQL Server (Windows service installations
-only).[More information about using service SIDs to grant permissions in SQL Server](https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server)
+only).
+[More information about using service SIDs to grant permissions in SQL Server](https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server)
 
 In an administrative command prompt configure the telegraf service for use
 with a service SID
@@ -244,7 +245,9 @@ config file to use windows authentication.
 
 ## Support for Azure Active Directory (AAD) authentication using [Managed Identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
 
-Azure SQL Database supports 2 main methods of authentication: [SQL authentication and AAD authentication](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication). The recommended practice is to [use AAD authentication when possible](https://docs.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-overview).
+Azure SQL Database supports 2 main methods of authentication:
+[SQL authentication and AAD authentication](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication).
+The recommended practice is to [use AAD authentication when possible](https://docs.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-overview).
 
 AAD is a more modern authentication protocol, allows for easier
 credential/role management, and can eliminate the need to include passwords
@@ -497,8 +500,7 @@ gathered.
 
 [cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality
 
-### Output Measures
-
+### Example Output
 
 ```
 sqlserver_cpu_other_process_cpu{host="servername",measurement_db_type="SQLServer",sql_instance="SERVERNAME:INST"} 9
