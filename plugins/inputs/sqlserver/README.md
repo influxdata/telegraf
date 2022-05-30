@@ -15,7 +15,8 @@ supplied by SQL Server.
 
 ## Additional Setup
 
-You have to create a login on every SQL Server instance or Azure SQL Managed instance you want to monitor, with following script:
+You have to create a login on every SQL Server instance or Azure SQL
+Managed instance you want to monitor, with following script:
 
 ```sql
 USE master;
@@ -28,7 +29,8 @@ GRANT VIEW ANY DEFINITION TO [telegraf];
 GO
 ```
 
-For Azure SQL Database, you require the View Database State permission and can create a user with a password directly in the database.
+For Azure SQL Database, you require the View Database State permission
+and can create a user with a password directly in the database.
 
 ```sql
 CREATE USER [telegraf] WITH PASSWORD = N'mystrongpassword';
@@ -49,7 +51,9 @@ ALTER SERVER ROLE ##MS_ServerStateReader##
 GO
 ```
 
-Elastic pool metrics can be collected from any database in the pool if a user for the `telegraf` login is created in that database. For collection to work, this database must remain in the pool, and must not be renamed. If you plan to add/remove databases from this pool, create a separate database for monitoring purposes that will remain in the pool.
+Elastic pool metrics can be collected from any database in the pool if a user for the `telegraf` login is created in that database.
+For collection to work, this database must remain in the pool, and must not be renamed. If you plan to add/remove databases from this pool,
+create a separate database for monitoring purposes that will remain in the pool.
 
 > Note: To avoid duplicate monitoring data, do not collect elastic pool metrics from more than one database in the same pool.
 
@@ -80,7 +84,8 @@ GRANT VIEW ANY DEFINITION TO [NT SERVICE\telegraf];
 GO
 ```
 
-Remove User Id and Password keywords from the connection string in your config file to use windows authentication.
+Remove User Id and Password keywords from the connection string in your
+config file to use windows authentication.
 
 ```toml
 [[inputs.sqlserver]]
@@ -235,7 +240,8 @@ Remove User Id and Password keywords from the connection string in your config f
 
 Azure SQL Database supports 2 main methods of authentication: [SQL authentication and AAD authentication](https://docs.microsoft.com/en-us/azure/azure-sql/database/security-overview#authentication). The recommended practice is to [use AAD authentication when possible](https://docs.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-overview).
 
-AAD is a more modern authentication protocol, allows for easier credential/role management, and can eliminate the need to include passwords in a connection string.
+AAD is a more modern authentication protocol, allows for easier credential/role management,
+and can eliminate the need to include passwords in a connection string.
 
 To enable support for AAD authentication, we leverage the existing AAD authentication support in the [SQL Server driver for Go](https://github.com/denisenkom/go-mssqldb#azure-active-directory-authentication---preview)
 
@@ -269,7 +275,9 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
 
 To provide backwards compatibility, this plugin support two versions of metrics queries.
 
-**Note**: Version 2 queries are not backwards compatible with the old queries. Any dashboards or queries based on the old query format will not work with the new format. The version 2 queries only report raw metrics, no math has been done to calculate deltas. To graph this data you must calculate deltas in your dashboarding software.
+**Note**: Version 2 queries are not backwards compatible with the old queries. Any dashboards
+or queries based on the old query format will not work with the new format. The version 2 queries
+only report raw metrics, no math has been done to calculate deltas. To graph this data you must calculate deltas in your dashboarding software.
 
 ### Version 1 (query_version=1): This is Deprecated in 1.6, all future development will be under configuration option database_type
 
@@ -388,7 +396,8 @@ These are metrics for Azure SQL to monitor resources usage at Elastic Pool level
 
 ### Output Measures
 
-The guiding principal is that all data collected from the same primary DMV ends up in the same measure irrespective of database_type.
+The guiding principal is that all data collected from the same primary DMV ends up
+in the same measure irrespective of database_type.
 
 - `sqlserver_database_io` - Used by  AzureSQLDBDatabaseIO, AzureSQLMIDatabaseIO, SQLServerDatabaseIO, DatabaseIO given the data is from `sys.dm_io_virtual_file_stats`
 - `sqlserver_waitstats` - Used by  WaitStatsCategorized,AzureSQLDBOsWaitstats,AzureSQLMIOsWaitstats
@@ -441,9 +450,13 @@ Version 2 queries have the following tags:
 
 ### Health Metric
 
-All collection versions (version 1, version 2, and database_type) support an optional plugin health metric called `sqlserver_telegraf_health`. This metric tracks if connections to SQL Server are succeeding or failing. Users can leverage this metric to detect if their SQL Server monitoring is not working as intended.
+All collection versions (version 1, version 2, and database_type) support an optional plugin health
+metric called `sqlserver_telegraf_health`. This metric tracks if connections to SQL Server are succeeding or failing.
+Users can leverage this metric to detect if their SQL Server monitoring is not working as intended.
 
-In the configuration file, toggling `health_metric` to `true` will enable collection of this metric. By default, this value is set to `false` and the metric is not collected. The health metric emits one record for each connection specified by `servers` in the configuration file.
+In the configuration file, toggling `health_metric` to `true` will enable collection of this metric.
+By default, this value is set to `false` and the metric is not collected. The health metric emits one
+record for each connection specified by `servers` in the configuration file.
 
 The health metric emits the following tags:
 
@@ -456,6 +469,8 @@ The health metric emits the following fields:
 - `successful_queries` - Number of queries that completed successfully for this connection
 - `database_type` - Type of database as specified by `database_type`. If `database_type` is empty, the `QueryVersion` and `AzureDB` fields are concatenated instead
 
-If `attempted_queries` and `successful_queries` are not equal for a given connection, some metrics were not successfully gathered for that connection. If `successful_queries` is 0, no metrics were successfully gathered.
+If `attempted_queries` and `successful_queries` are not equal for a given connection,
+some metrics were not successfully gathered for that connection. If `successful_queries` is 0,
+no metrics were successfully gathered.
 
 [cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality
