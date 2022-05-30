@@ -504,7 +504,7 @@ gathered.
 
 ## Example Output
 
-```
+```shell
 sqlserver_cpu_other_process_cpu{host="servername",measurement_db_type="SQLServer",sql_instance="SERVERNAME:INST"} 9
 sqlserver_performance{counter="Log File(s) Size (KB)",counter_type="65792",host="servername",instance="instance_name",measurement_db_type="SQLServer",object="MSSQL$INSTANCE_NAME:Databases",sql_instance="SERVERNAME:INSTANCE_NAME"} 1.048568e+06
 ```
