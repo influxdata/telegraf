@@ -130,7 +130,7 @@ func (k *KafkaConsumer) Init() error {
 
 	if k.FetchMessageBytes != 0 {
 		cfg.Consumer.Fetch.Default = k.FetchMessageBytes
-	}	
+	}
 
 	k.config = cfg
 	return nil
