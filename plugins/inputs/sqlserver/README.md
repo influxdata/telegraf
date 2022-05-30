@@ -67,10 +67,11 @@ GO
 CREATE USER [telegraf] FOR LOGIN telegraf;
 ```
 
-For Service SID authentication to SQL Server (Windows service installations only).
-[More information about using service SIDs to grant permissions in SQL Server](https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server)
+For Service SID authentication to SQL Server (Windows service installations
+only).[More information about using service SIDs to grant permissions in SQL Server](https://docs.microsoft.com/en-us/sql/relational-databases/security/using-service-sids-to-grant-permissions-to-services-in-sql-server)
 
-In an administrative command prompt configure the telegraf service for use with a service SID
+In an administrative command prompt configure the telegraf service for use
+with a service SID
 
 ```Batchfile
 sc.exe sidtype "telegraf" unrestricted
@@ -280,7 +281,8 @@ EXECUTE ('GRANT VIEW DATABASE STATE TO [<Monitoring_VM_Name>]')
 
 ## Metrics
 
-To provide backwards compatibility, this plugin support two versions of metrics queries.
+To provide backwards compatibility, this plugin support two versions of
+metrics queries.
 
 **Note**: Version 2 queries are not backwards compatible with the old queries.
 Any dashboards or queries based on the old query format will not work with
@@ -494,3 +496,11 @@ that connection. If `successful_queries` is 0, no metrics were successfully
 gathered.
 
 [cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality
+
+### Output Measures
+
+
+```
+sqlserver_cpu_other_process_cpu{host="servername",measurement_db_type="SQLServer",sql_instance="SERVERNAME:INST"} 9
+sqlserver_performance{counter="Log File(s) Size (KB)",counter_type="65792",host="servername",instance="instance_name",measurement_db_type="SQLServer",object="MSSQL$INSTANCE_NAME:Databases",sql_instance="SERVERNAME:INSTANCE_NAME"} 1.048568e+06
+```
