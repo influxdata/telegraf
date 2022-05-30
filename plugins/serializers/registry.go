@@ -77,7 +77,7 @@ type Config struct {
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 
 	// Style to use for formatting the JSON output
-	JSONTemplateStyle string `toml:"json_custom_style"`
+	JSONTemplateStyle string `toml:"json_template_style"`
 
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string `toml:"prefix"`
@@ -134,7 +134,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteTagSanitizeMode, config.GraphiteSeparator, config.Templates)
 	case "json":
 		serializer, err = NewJSONSerializer(config.TimestampUnits, config.TimestampFormat)
-	case "json_custom":
+	case "json_template":
 		serializer, err = NewJSONTemplateSerializer(config.Template, config.JSONTemplateStyle)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
