@@ -11,7 +11,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
-	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -233,21 +232,6 @@ func NewParser(config *Config) (Parser, error) {
 	var err error
 	var parser Parser
 	switch config.DataFormat {
-	case "json":
-		parser, err = json.New(
-			&json.Config{
-				MetricName:   config.MetricName,
-				TagKeys:      config.TagKeys,
-				NameKey:      config.JSONNameKey,
-				StringFields: config.JSONStringFields,
-				Query:        config.JSONQuery,
-				TimeKey:      config.JSONTimeKey,
-				TimeFormat:   config.JSONTimeFormat,
-				Timezone:     config.JSONTimezone,
-				DefaultTags:  config.DefaultTags,
-				Strict:       config.JSONStrict,
-			},
-		)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.ValueFieldName, config.DefaultTags)
