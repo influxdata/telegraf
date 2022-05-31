@@ -171,6 +171,9 @@ partitionRange:
 				continue
 			}
 		}
+		if s.Trace && s.Log != nil {
+			s.Log.Debugf("[SystemPS] => kept %q (%q)", p.Mountpoint, mountpoint)
+		}
 
 		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
