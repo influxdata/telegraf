@@ -13,9 +13,10 @@ import (
 )
 
 type PacketDecoder struct {
-	onPacket      func(p *V5Format)
-	Log           telegraf.Logger
-	CounterBlocks map[uint32]CounterBlock
+	onPacket         func(p *V5Format)
+	Log              telegraf.Logger
+	CounterBlocks    map[uint32]CounterBlock
+	IgnoreZeroValues bool
 
 	IPMap   *hm.HashMap
 	PortMap *hm.HashMap
@@ -23,9 +24,10 @@ type PacketDecoder struct {
 
 func NewDecoder() *PacketDecoder {
 	return &PacketDecoder{
-		IPMap:         &hm.HashMap{},
-		PortMap:       &hm.HashMap{},
-		CounterBlocks: make(map[uint32]CounterBlock),
+		IPMap:            &hm.HashMap{},
+		PortMap:          &hm.HashMap{},
+		CounterBlocks:    make(map[uint32]CounterBlock),
+		IgnoreZeroValues: true,
 	}
 }
 
@@ -197,11 +199,6 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 				d.PortMap.Set(key, portDimensions)
 			}
 
-			// d.debug(fmt.Sprintf("  got 260 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
-			// if val.PortDimensions == nil {
-			// 	val.PortDimensions = portDimensions
-			// }
-			// d.debug(fmt.Sprintf("  got 260 - assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			continue
 		} else if tag == 271 { // hex 10F - contains IPv4 information
 			ipDimensions, err := d.decode271(r)
@@ -215,11 +212,6 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 				d.IPMap.Set(key, ipDimensions)
 			}
 
-			// d.debug(fmt.Sprintf("  got 271 - before assigning ipdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
-			// if val.IPDimensions == nil {
-			// 	val.IPDimensions = ipDimensions // TODO: append in a set instead of overwriting
-			// }
-			// d.debug(fmt.Sprintf("  got 271 - assigning ipdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			continue
 		} else if tag == 272 { // hex 110 - contains IPv6 information
 			ipDimensions, err := d.decode272(r)
@@ -233,11 +225,6 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 				d.IPMap.Set(key, ipDimensions)
 			}
 
-			// d.debug(fmt.Sprintf("  got 272 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
-			// if val.IPDimensions == nil {
-			// 	val.IPDimensions = ipDimensions
-			// }
-			// d.debug(fmt.Sprintf("  got 272 - assigning portdimensions fo2r sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			continue
 		}
 
@@ -314,7 +301,7 @@ func (d *PacketDecoder) decodeCounterRecord(r io.Reader, cr *CounterRecord, tag 
 			continue
 		}
 
-		if counterValue != uint64(0) { // no point in returning 0 value for metric
+		if counterValue != uint64(0) || (counterValue == uint64(0) && !d.IgnoreZeroValues) {
 			//d.debug(fmt.Sprintf("    getting non-zero counter %s with value hex %x %#v %T for sourceID %x", counter.FieldName, counterValue, counterValue, counterValue, sourceID))
 			cr.CounterData.CounterFields[counter.FieldName] = counterValue
 		}

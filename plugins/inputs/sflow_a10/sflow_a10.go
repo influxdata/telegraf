@@ -31,6 +31,10 @@ const sampleConfig = `
 
   # XML file containing counter definitions, according to A10 specification
   a10_definitions_file = "/path/to/xml_file.xml"
+
+  # if true, metrics with zero values will not be sent to the output
+  # this is to lighten the load on the metrics database backend
+  ignore_zero_values = true
 `
 
 const (
@@ -45,6 +49,7 @@ type SFlow_A10 struct {
 	ServiceAddress     string        `toml:"service_address"`
 	ReadBufferSize     internal.Size `toml:"read_buffer_size"`
 	A10DefinitionsFile string        `toml:"a10_definitions_file"`
+	IgnoreZeroValues   bool          `toml:"ignore_zero_values"`
 
 	sync.Mutex
 
@@ -115,6 +120,7 @@ func (s *SFlow_A10) initInternal(xmlData []byte) error {
 		return err
 	}
 	s.decoder.CounterBlocks = counterBlocks
+	s.decoder.IgnoreZeroValues = s.IgnoreZeroValues
 
 	return nil
 }

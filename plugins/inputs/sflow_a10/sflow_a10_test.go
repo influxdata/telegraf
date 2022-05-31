@@ -15,8 +15,9 @@ import (
 
 func TestSFlow_A10(t *testing.T) {
 	sflow := &SFlow_A10{
-		ServiceAddress: "udp://127.0.0.1:0",
-		Log:            testutil.Logger{},
+		ServiceAddress:   "udp://127.0.0.1:0",
+		Log:              testutil.Logger{},
+		IgnoreZeroValues: true,
 	}
 
 	data, err := ioutil.ReadFile("sflow_3_2_t2.xml")
