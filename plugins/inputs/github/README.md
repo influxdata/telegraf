@@ -7,7 +7,7 @@ alternative method for collecting repository information.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather repository information from GitHub hosted repositories.
 [[inputs.github]]
   ## List of repositories to monitor

@@ -1,22 +1,28 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package dynatrace
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
+	dtMetric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
+	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-
-	dtMetric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
-	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
-	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
@@ -36,6 +42,10 @@ type Dynatrace struct {
 	client *http.Client
 
 	loggedMetrics map[string]bool // New empty set
+}
+
+func (*Dynatrace) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream

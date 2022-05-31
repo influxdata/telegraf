@@ -6,7 +6,7 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read jobs and cluster metrics from Jenkins instances
 [[inputs.jenkins]]
   ## The Jenkins URL in the format "schema://host:port"

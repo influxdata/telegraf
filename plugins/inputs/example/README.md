@@ -12,7 +12,7 @@ Plugin minimum tested version: x.x
 This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage <plugin-name>`.
 
-```toml
+```toml @sample.conf
 # This is an example plugin
 [[inputs.example]]
   example_option = "example_value"

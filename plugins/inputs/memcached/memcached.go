@@ -1,19 +1,26 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package memcached
 
 import (
 	"bufio"
 	"bytes"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"net"
 	"strconv"
 	"time"
 
+	"golang.org/x/net/proxy"
+
 	"github.com/influxdata/telegraf"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/net/proxy"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Memcached is a memcached plugin
 type Memcached struct {
@@ -74,6 +81,10 @@ var sendMetrics = []string{
 	"touch_hits",
 	"touch_misses",
 	"uptime",
+}
+
+func (*Memcached) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather reads stats from all configured servers accumulates stats

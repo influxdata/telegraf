@@ -1,10 +1,11 @@
 # Kafka Output Plugin
 
-This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
+This plugin writes to a [Kafka
+Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the Kafka server to send metrics to
 [[outputs.kafka]]
   ## URLs of kafka brokers
@@ -163,8 +164,8 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 This option controls the number of retries before a failure notification is
 displayed for each message when no acknowledgement is received from the
 broker. When the setting is greater than `0`, message latency can be reduced,
-duplicate messages can occur in cases of transient errors, and broker loads
-can increase during downtime.
+duplicate messages can occur in cases of transient errors, and broker loads can
+increase during downtime.
 
 The option is similar to the
 [retries](https://kafka.apache.org/documentation/#producerconfigs) Producer

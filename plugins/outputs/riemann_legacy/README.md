@@ -1,10 +1,13 @@
-# Riemann Legacy
+# Riemann Legacy Output Plugin
 
-This is a deprecated plugin
+This is a deprecated plugin. Please use the [Riemann Output Plugin][new]
+instead.
+
+[new]: ../riemann/README.md
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for the Riemann server to send metrics to
 [[outputs.riemann_legacy]]
   ## URL of server

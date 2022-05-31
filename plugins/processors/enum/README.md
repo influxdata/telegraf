@@ -11,7 +11,7 @@ source tag or field is overwritten.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Map enum values according to given table.
 [[processors.enum]]
   [[processors.enum.mapping]]

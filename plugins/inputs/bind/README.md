@@ -16,7 +16,7 @@ not enable support for JSON statistics in their BIND packages.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read BIND nameserver XML statistics
 [[inputs.bind]]
   ## An array of BIND XML statistics URI to gather stats.

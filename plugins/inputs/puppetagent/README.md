@@ -79,7 +79,7 @@ jcross@pit-devops-02 ~ >sudo ./telegraf_linux_amd64 --input-filter puppetagent -
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Reads last_run_summary.yaml file and converts to measurements
 [[inputs.puppetagent]]
   ## Location of puppet last run summary file

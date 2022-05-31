@@ -1,11 +1,11 @@
 # NSQ Output Plugin
 
-This plugin writes to a specified NSQD instance, usually local to the producer. It requires
-a `server` name and a `topic` name.
+This plugin writes to a specified NSQD instance, usually local to the
+producer. It requires a `server` name and a `topic` name.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Send telegraf measurements to NSQD
 [[outputs.nsq]]
   ## Location of nsqd instance listening on TCP

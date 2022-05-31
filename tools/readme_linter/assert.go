@@ -140,3 +140,7 @@ func (t *T) assertHeadingLevel(expected int, n ast.Node) {
 
 	t.printFailedAssertf(n, "expected header level %d, have %d", expected, h.Level)
 }
+
+func (t *T) pass() bool {
+	return t.fails == 0
+}

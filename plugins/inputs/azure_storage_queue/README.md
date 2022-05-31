@@ -4,7 +4,7 @@ This plugin gathers sizes of Azure Storage Queues.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather Azure Storage Queue metrics
 [[inputs.azure_storage_queue]]
   ## Required Azure Storage Account name

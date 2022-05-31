@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package modbus
 
 import (
+	_ "embed"
 	"fmt"
 	"net"
 	"net/url"
@@ -14,6 +16,14 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample_general_begin.conf
+var sampleConfigStart string
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample_general_end.conf
+var sampleConfigEnd string
 
 type ModbusWorkarounds struct {
 	PollPause        config.Duration `toml:"pause_between_requests"`
@@ -73,6 +83,22 @@ const (
 	cHoldingRegisters = "holding_register"
 	cInputRegisters   = "input_register"
 )
+
+// SampleConfig returns a basic configuration for the plugin
+func (m *Modbus) SampleConfig() string {
+	configs := []Configuration{}
+	cfgOriginal := m.ConfigurationOriginal
+	cfgPerRequest := m.ConfigurationPerRequest
+	configs = append(configs, &cfgOriginal, &cfgPerRequest)
+
+	totalConfig := sampleConfigStart
+	for _, c := range configs {
+		totalConfig += c.SampleConfigPart() + "\n"
+	}
+	totalConfig += "\n"
+	totalConfig += sampleConfigEnd
+	return totalConfig
+}
 
 func (m *Modbus) Init() error {
 	//check device name

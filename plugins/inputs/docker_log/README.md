@@ -14,7 +14,7 @@ The docker plugin uses the [Official Docker Client][] to gather logs from the
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read logging output from the Docker engine
 [[inputs.docker_log]]
   ## Docker Endpoint

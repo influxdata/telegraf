@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package instrumental
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"net"
@@ -15,6 +17,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	ValueIncludesBadChar = regexp.MustCompile("[^[:digit:].]")
@@ -42,6 +48,10 @@ const (
 	AuthFormat      = "authenticate %s\n"
 	HandshakeFormat = HelloMessage + AuthFormat
 )
+
+func (*Instrumental) SampleConfig() string {
+	return sampleConfig
+}
 
 func (i *Instrumental) Connect() error {
 	connection, err := net.DialTimeout("tcp", i.Host+":8000", time.Duration(i.Timeout))

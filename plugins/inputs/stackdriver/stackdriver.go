@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package stackdriver
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"math"
 	"strconv"
@@ -24,6 +26,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs" // Imports the Stackdriver Monitoring client package.
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultRateLimit = 14
@@ -183,6 +189,10 @@ func (smc *stackdriverMetricClient) ListTimeSeries(
 // Close implements metricClient interface
 func (smc *stackdriverMetricClient) Close() error {
 	return smc.conn.Close()
+}
+
+func (*Stackdriver) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather implements telegraf.Input interface
@@ -627,7 +637,7 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 }
 
 func init() {
-	f := func() telegraf.Input {
+	inputs.Add("stackdriver", func() telegraf.Input {
 		return &Stackdriver{
 			CacheTTL:                        defaultCacheTTL,
 			RateLimit:                       defaultRateLimit,
@@ -635,7 +645,5 @@ func init() {
 			GatherRawDistributionBuckets:    true,
 			DistributionAggregationAligners: []string{},
 		}
-	}
-
-	inputs.Add("stackdriver", f)
+	})
 }

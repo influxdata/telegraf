@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
 package iptables
 
 import (
+	_ "embed"
 	"errors"
 	"os/exec"
 	"regexp"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // Iptables is a telegraf plugin to gather packets and bytes throughput from Linux's iptables packet filter.
 type Iptables struct {
 	UseSudo bool
@@ -22,6 +28,10 @@ type Iptables struct {
 	Table   string
 	Chains  []string
 	lister  chainLister
+}
+
+func (*Iptables) SampleConfig() string {
+	return sampleConfig
 }
 
 // Gather gathers iptables packets and bytes throughput from the configured tables and chains.
@@ -123,7 +133,7 @@ type chainLister func(table, chain string) (string, error)
 
 func init() {
 	inputs.Add("iptables", func() telegraf.Input {
-		ipt := new(Iptables)
+		ipt := &Iptables{}
 		ipt.lister = ipt.chainList
 		return ipt
 	})

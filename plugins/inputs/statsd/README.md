@@ -2,7 +2,7 @@
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Statsd Server
 [[inputs.statsd]]
   ## Protocol, must be "tcp", "udp4", "udp6" or "udp" (default=udp)

@@ -23,7 +23,7 @@ Note that specific statistics information can change between Elasticsearch versi
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read stats from one or more Elasticsearch servers or clusters
 [[inputs.elasticsearch]]
   ## specify a list of one or more Elasticsearch servers

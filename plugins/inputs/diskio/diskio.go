@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package diskio
 
 import (
+	_ "embed"
 	"fmt"
 	"regexp"
 	"strings"
@@ -10,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
@@ -27,7 +33,6 @@ type DiskIO struct {
 
 	infoCache    map[string]diskInfoCache
 	deviceFilter filter.Filter
-	initialized  bool
 }
 
 // hasMeta reports whether s contains any special glob characters.
@@ -35,7 +40,11 @@ func hasMeta(s string) bool {
 	return strings.ContainsAny(s, "*?[")
 }
 
-func (d *DiskIO) init() error {
+func (*DiskIO) SampleConfig() string {
+	return sampleConfig
+}
+
+func (d *DiskIO) Init() error {
 	for _, device := range d.Devices {
 		if hasMeta(device) {
 			deviceFilter, err := filter.Compile(d.Devices)
@@ -45,18 +54,10 @@ func (d *DiskIO) init() error {
 			d.deviceFilter = deviceFilter
 		}
 	}
-	d.initialized = true
 	return nil
 }
 
 func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
-	if !d.initialized {
-		err := d.init()
-		if err != nil {
-			return err
-		}
-	}
-
 	devices := []string{}
 	if d.deviceFilter == nil {
 		devices = d.Devices
@@ -182,6 +183,10 @@ func (d *DiskIO) diskTags(devName string) map[string]string {
 func init() {
 	ps := system.NewSystemPS()
 	inputs.Add("diskio", func() telegraf.Input {
+		return &DiskIO{ps: ps, SkipSerialNumber: true}
+	})
+	// Backwards compatible alias
+	inputs.Add("io", func() telegraf.Input {
 		return &DiskIO{ps: ps, SkipSerialNumber: true}
 	})
 }

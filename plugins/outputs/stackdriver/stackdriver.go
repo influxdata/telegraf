@@ -1,14 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package stackdriver
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"hash/fnv"
 	"path"
 	"sort"
 	"strings"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3/v2" // Imports the Stackdriver Monitoring client package.
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
@@ -19,6 +21,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
@@ -50,6 +56,10 @@ const (
 	errStringPointsTooOld      = "data points cannot be written more than 24h in the past"
 	errStringPointsTooFrequent = "one or more points were written more frequently than the maximum sampling period configured for the metric"
 )
+
+func (*Stackdriver) SampleConfig() string {
+	return sampleConfig
+}
 
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {

@@ -6,7 +6,7 @@ For more information on what swap memory is, read [All about Linux swap space](h
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about swap memory usage
 [[inputs.swap]]
   # no configuration

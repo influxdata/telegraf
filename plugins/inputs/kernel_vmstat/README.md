@@ -110,7 +110,7 @@ nr_bounce 0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get kernel statistics from /proc/vmstat
 [[inputs.kernel_vmstat]]
   # no configuration

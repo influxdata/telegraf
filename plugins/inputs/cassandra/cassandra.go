@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package cassandra
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type JolokiaClient interface {
 	MakeRequest(req *http.Request) (*http.Response, error)
@@ -226,6 +232,10 @@ func parseServerTokens(server string) map[string]string {
 		serverTokens["passwd"] = userTokens[1]
 	}
 	return serverTokens
+}
+
+func (*Cassandra) SampleConfig() string {
+	return sampleConfig
 }
 
 func (c *Cassandra) Start(_ telegraf.Accumulator) error {

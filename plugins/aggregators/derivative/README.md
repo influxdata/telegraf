@@ -137,7 +137,7 @@ Using `max_roll_over` with a value greater 0 may be important, if you need to de
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Calculates a derivative for every field.
 [[aggregators.derivative]]
   ## Specific Derivative Aggregator Arguments:

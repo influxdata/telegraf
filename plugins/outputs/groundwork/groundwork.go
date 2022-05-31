@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package groundwork
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +18,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type metricMeta struct {
 	group    string
@@ -33,6 +39,10 @@ type Groundwork struct {
 	ResourceTag         string          `toml:"resource_tag"`
 	Log                 telegraf.Logger `toml:"-"`
 	client              clients.GWClient
+}
+
+func (*Groundwork) SampleConfig() string {
+	return sampleConfig
 }
 
 func (g *Groundwork) Init() error {

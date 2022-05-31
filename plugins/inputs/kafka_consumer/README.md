@@ -8,7 +8,7 @@ and use the old zookeeper connection method.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from Kafka topics
 [[inputs.kafka_consumer]]
   ## Kafka brokers.

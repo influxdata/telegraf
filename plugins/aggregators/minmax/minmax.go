@@ -1,9 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package minmax
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type MinMax struct {
 	cache map[uint64]aggregate
@@ -24,6 +31,10 @@ type aggregate struct {
 type minmax struct {
 	min float64
 	max float64
+}
+
+func (*MinMax) SampleConfig() string {
+	return sampleConfig
 }
 
 func (m *MinMax) Add(in telegraf.Metric) {

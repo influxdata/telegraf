@@ -32,7 +32,7 @@ More information about the meaning of these metrics can be found in the [Postgre
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many postgresql servers
 [[inputs.postgresql]]
   ## specify address via a url matching:

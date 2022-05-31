@@ -53,7 +53,7 @@ Delete second or Not synchronised.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Get standard chrony metrics, requires chronyc executable.
 [[inputs.chrony]]
   ## If true, chronyc tries to perform a DNS lookup for the time server.

@@ -5,7 +5,7 @@
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Generic TCP listener
 [[inputs.tcp_listener]]
   # socket_listener plugin

@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package http
 
 import (
@@ -5,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,13 +15,20 @@ import (
 
 	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/internal"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/idtoken"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	maxErrMsgLen = 1024
@@ -50,6 +59,14 @@ type HTTP struct {
 
 	awsCfg *awsV2.Config
 	internalaws.CredentialConfig
+
+	// Google API Auth
+	CredentialsFile string `toml:"google_application_credentials"`
+	oauth2Token     *oauth2.Token
+}
+
+func (*HTTP) SampleConfig() string {
+	return sampleConfig
 }
 
 func (h *HTTP) SetSerializer(serializer serializers.Serializer) {
@@ -168,6 +185,15 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		req.SetBasicAuth(h.Username, h.Password)
 	}
 
+	// google api auth
+	if h.CredentialsFile != "" {
+		token, err := h.getAccessToken(context.Background(), h.URL)
+		if err != nil {
+			return err
+		}
+		token.SetAuthHeader(req)
+	}
+
 	req.Header.Set("User-Agent", internal.ProductToken())
 	req.Header.Set("Content-Type", defaultContentType)
 	if h.ContentEncoding == "gzip" {
@@ -219,4 +245,24 @@ func init() {
 			UseBatchFormat: defaultUseBatchFormat,
 		}
 	})
+}
+
+func (h *HTTP) getAccessToken(ctx context.Context, audience string) (*oauth2.Token, error) {
+	if h.oauth2Token.Valid() {
+		return h.oauth2Token, nil
+	}
+
+	ts, err := idtoken.NewTokenSource(ctx, audience, idtoken.WithCredentialsFile(h.CredentialsFile))
+	if err != nil {
+		return nil, fmt.Errorf("error creating oauth2 token source: %s", err)
+	}
+
+	token, err := ts.Token()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching oauth2 token: %s", err)
+	}
+
+	h.oauth2Token = token
+
+	return token, nil
 }

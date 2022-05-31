@@ -5,7 +5,7 @@ and creates metrics using one of the supported [input data formats][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from Google PubSub
 [[inputs.cloud_pubsub]]
   ## Required. Name of Google Cloud Platform (GCP) Project that owns

@@ -5,7 +5,7 @@ emitting the aggrate every `period` seconds.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Keep the aggregate min/max of each metric passing through.
 [[aggregators.minmax]]
   ## General Aggregator Arguments:

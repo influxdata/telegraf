@@ -8,8 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +23,19 @@ func TestRedisSentinelConnect(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	addr := fmt.Sprintf("tcp://" + testutil.GetLocalHost() + ":26379")
+	servicePort := "6379"
+	container := testutil.Container{
+		Image:        "redis:alpine",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	addr := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
 
 	r := &RedisSentinel{
 		Servers: []string{addr},
@@ -29,7 +43,7 @@ func TestRedisSentinelConnect(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(r.Gather)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 }
 

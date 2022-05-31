@@ -11,7 +11,7 @@ The [Jolokia](http://jolokia.org) _agent_ and _proxy_ input plugins collect JMX 
 
 The `jolokia2_agent` input plugin reads JMX metrics from one or more [Jolokia agent](https://jolokia.org/agent/jvm.html) REST endpoints.
 
-```toml
+```toml @sample.conf
 [[inputs.jolokia2_agent]]
   urls = ["http://agent:8080/jolokia"]
 

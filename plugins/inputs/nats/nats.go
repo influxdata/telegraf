@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !freebsd || (freebsd && cgo)
 // +build !freebsd freebsd,cgo
 
 package nats
 
 import (
+	_ "embed"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -18,11 +20,19 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Nats struct {
 	Server          string
 	ResponseTimeout config.Duration
 
 	client *http.Client
+}
+
+func (*Nats) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *Nats) Gather(acc telegraf.Accumulator) error {

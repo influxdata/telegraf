@@ -4,7 +4,7 @@ The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and `/p
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # This plugin gathers interrupts data from /proc/interrupts and /proc/softirqs.
 [[inputs.interrupts]]
   ## When set to true, cpu metrics are tagged with the cpu.  Otherwise cpu is

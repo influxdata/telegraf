@@ -7,7 +7,7 @@ plugin.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Collect statistics about itself
 [[inputs.internal]]
   ## If true, collect telegraf memory stats.

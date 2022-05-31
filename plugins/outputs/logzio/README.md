@@ -4,7 +4,7 @@ This plugin sends metrics to Logz.io over HTTPs.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can send metrics over HTTPs to Logz.io
 [[outputs.logzio]]
   ## Set to true if Logz.io sender checks the disk space before adding metrics to the disk queue.

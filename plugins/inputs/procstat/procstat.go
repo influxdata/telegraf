@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package procstat
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,10 +13,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shirou/gopsutil/v3/process"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/shirou/gopsutil/v3/process"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	defaultPIDFinder = NewPgrep
@@ -52,6 +59,10 @@ type PidsTags struct {
 	PIDS []PID
 	Tags map[string]string
 	Err  error
+}
+
+func (*Procstat) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {

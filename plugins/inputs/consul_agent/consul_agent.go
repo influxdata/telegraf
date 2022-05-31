@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package consul_agent
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // consul_agent configuration object
 type ConsulAgent struct {
@@ -37,6 +43,10 @@ func init() {
 			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
+}
+
+func (*ConsulAgent) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *ConsulAgent) Init() error {
@@ -86,7 +96,7 @@ func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "X-Consul-Token "+n.Token)
+	req.Header.Add("X-Consul-Token", n.Token)
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := n.roundTripper.RoundTrip(req)

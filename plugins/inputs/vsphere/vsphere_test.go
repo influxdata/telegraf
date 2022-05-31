@@ -137,12 +137,17 @@ func defaultVSphere() *VSphere {
 		DatastoreMetricInclude: []string{
 			"disk.used.*",
 			"disk.provisioned.*"},
-		DatastoreMetricExclude:  nil,
-		DatastoreInclude:        []string{"/**"},
-		DatacenterMetricInclude: nil,
-		DatacenterMetricExclude: nil,
-		DatacenterInclude:       []string{"/**"},
-		ClientConfig:            itls.ClientConfig{InsecureSkipVerify: true},
+		DatastoreMetricExclude: nil,
+		DatastoreInclude:       []string{"/**"},
+		ResourcePoolMetricInclude: []string{
+			"cpu.capacity.*",
+			"mem.capacity.*"},
+		ResourcePoolMetricExclude: nil,
+		ResourcePoolInclude:       []string{"/**"},
+		DatacenterMetricInclude:   nil,
+		DatacenterMetricExclude:   nil,
+		DatacenterInclude:         []string{"/**"},
+		ClientConfig:              itls.ClientConfig{InsecureSkipVerify: true},
 
 		MaxQueryObjects:         256,
 		MaxQueryMetrics:         256,
@@ -327,6 +332,12 @@ func TestFinder(t *testing.T) {
 
 	host = []mo.HostSystem{}
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0", &host)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(host))
+	require.Equal(t, "DC0_C0_H0", host[0].Name)
+
+	var resourcepool = []mo.ResourcePool{}
+	err = f.Find(ctx, "ResourcePool", "/DC0/host/DC0_C0/Resources/DC0_C0_RP0", &resourcepool)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(host))
 	require.Equal(t, "DC0_C0_H0", host[0].Name)

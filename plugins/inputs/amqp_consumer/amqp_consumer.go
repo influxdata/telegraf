@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package amqp_consumer
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -9,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -17,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultMaxUndeliveredMessages = 1000
@@ -87,6 +93,10 @@ const (
 
 	DefaultPrefetchCount = 50
 )
+
+func (*AMQPConsumer) SampleConfig() string {
+	return sampleConfig
+}
 
 func (a *AMQPConsumer) SetParser(parser parsers.Parser) {
 	a.parser = parser

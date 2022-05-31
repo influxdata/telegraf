@@ -1,17 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package file
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
 	"github.com/dimchansky/utfbom"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type File struct {
 	Files             []string `toml:"files"`
@@ -21,6 +28,10 @@ type File struct {
 	parserFunc telegraf.ParserFunc
 	filenames  []string
 	decoder    *encoding.Decoder
+}
+
+func (*File) SampleConfig() string {
+	return sampleConfig
 }
 
 func (f *File) Init() error {
@@ -59,11 +70,11 @@ func (f *File) refreshFilePaths() error {
 	for _, file := range f.Files {
 		g, err := globpath.Compile(file)
 		if err != nil {
-			return fmt.Errorf("could not compile glob %v: %v", file, err)
+			return fmt.Errorf("could not compile glob %q: %w", file, err)
 		}
 		files := g.Match()
 		if len(files) <= 0 {
-			return fmt.Errorf("could not find file: %v", file)
+			return fmt.Errorf("could not find file(s): %v", file)
 		}
 		allFiles = append(allFiles, files...)
 	}
@@ -82,13 +93,17 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	r, _ := utfbom.Skip(f.decoder.Reader(file))
 	fileContents, err := io.ReadAll(r)
 	if err != nil {
-		return nil, fmt.Errorf("could not read %q: %s", filename, err)
+		return nil, fmt.Errorf("could not read %q: %w", filename, err)
 	}
 	parser, err := f.parserFunc()
 	if err != nil {
-		return nil, fmt.Errorf("could not instantiate parser: %s", err)
+		return nil, fmt.Errorf("could not instantiate parser: %w", err)
 	}
-	return parser.Parse(fileContents)
+	metrics, err := parser.Parse(fileContents)
+	if err != nil {
+		return metrics, fmt.Errorf("could not parse %q: %w", filename, err)
+	}
+	return metrics, err
 }
 
 func init() {

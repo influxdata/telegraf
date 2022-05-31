@@ -1,13 +1,20 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package internet_speed
 
 import (
+	_ "embed"
 	"fmt"
 	"time"
 
+	"github.com/showwin/speedtest-go/speedtest"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/showwin/speedtest-go/speedtest"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // InternetSpeed is used to store configuration values.
 type InternetSpeed struct {
@@ -19,6 +26,10 @@ type InternetSpeed struct {
 
 const measurement = "internet_speed"
 
+func (*InternetSpeed) SampleConfig() string {
+	return sampleConfig
+}
+
 func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 
 	// Get closest server
@@ -28,14 +39,14 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return fmt.Errorf("fetching user info failed: %v", err)
 		}
-		serverList, err := speedtest.FetchServerList(user)
+		serverList, err := speedtest.FetchServers(user)
 		if err != nil {
 			return fmt.Errorf("fetching server list failed: %v", err)
 		}
-		if len(serverList.Servers) < 1 {
+		if len(serverList) < 1 {
 			return fmt.Errorf("no servers found")
 		}
-		s = serverList.Servers[0]
+		s = serverList[0]
 		is.Log.Debugf("Found server: %v", s)
 		if is.Cache {
 			is.serverCache = s

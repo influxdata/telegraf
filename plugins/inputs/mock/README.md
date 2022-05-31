@@ -16,7 +16,7 @@ The mock plugin only requires that:
 
 Below is a sample config to generate one of each of the four types:
 
-```toml
+```toml @sample.conf
 # Generate metrics for test and demonstration purposes
 [[inputs.mock]]
   ## Set the metric name to use for reporting
@@ -28,6 +28,9 @@ Below is a sample config to generate one of each of the four types:
 
   ## One or more mock data fields *must* be defined.
   ##
+  ## [[inputs.mock.constant]]
+  ##   name = "constant"
+  ##   value = value_of_any_type
   ## [[inputs.mock.random]]
   ##   name = "rand"
   ##   min = 1.0
@@ -50,6 +53,7 @@ Below is a sample config to generate one of each of the four types:
 
 The available algorithms for generating mock data include:
 
+* Constant - generate a field with the given value of type string, float, int or bool
 * Random Float - generate a random float, inclusive of min and max
 * Sine Wave - produce a sine wave with a certain amplitude and period
 * Step - always add the step value, negative values accepted

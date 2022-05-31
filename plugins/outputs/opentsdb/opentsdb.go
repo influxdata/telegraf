@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package opentsdb
 
 import (
+	_ "embed"
 	"fmt"
 	"math"
 	"net"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-_./\p{L}]`)
@@ -51,6 +57,10 @@ func ToLineFormat(tags map[string]string) string {
 	}
 	sort.Strings(tagsArray)
 	return strings.Join(tagsArray, " ")
+}
+
+func (*OpenTSDB) SampleConfig() string {
+	return sampleConfig
 }
 
 func (o *OpenTSDB) Connect() error {

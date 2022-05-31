@@ -18,7 +18,7 @@ You will need to configure LANZ and enable streaming LANZ data.
 - <https://www.arista.com/en/um-eos/eos-section-44-3-configuring-lanz>
 - <https://www.arista.com/en/um-eos/eos-section-44-3-configuring-lanz#ww1149292>
 
-```toml
+```toml @sample.conf
 # Read metrics off Arista LANZ, via socket
 [[inputs.lanz]]
   ## URL to Arista LANZ endpoint

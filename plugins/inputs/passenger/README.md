@@ -22,7 +22,7 @@ manage your series cardinality:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics of passenger using passenger-status
 [[inputs.passenger]]
   ## Path of passenger-status.

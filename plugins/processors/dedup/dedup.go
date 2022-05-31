@@ -1,12 +1,18 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package dedup
 
 import (
+	_ "embed"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Dedup struct {
 	DedupInterval config.Duration `toml:"dedup_interval"`
@@ -34,6 +40,10 @@ func (d *Dedup) cleanup() {
 func (d *Dedup) save(metric telegraf.Metric, id uint64) {
 	d.Cache[id] = metric.Copy()
 	d.Cache[id].Accept()
+}
+
+func (*Dedup) SampleConfig() string {
+	return sampleConfig
 }
 
 // main processing method

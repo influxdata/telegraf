@@ -1,15 +1,22 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package noise
 
 import (
+	_ "embed"
 	"fmt"
 	"math"
 	"reflect"
 
+	"gonum.org/v1/gonum/stat/distuv"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"gonum.org/v1/gonum/stat/distuv"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultScale     = 1.0
@@ -77,6 +84,10 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 		p.Log.Debugf("Value (%v) type invalid: [%v] is not an int, uint or float", v, reflect.TypeOf(value))
 	}
 	return value
+}
+
+func (*Noise) SampleConfig() string {
+	return sampleConfig
 }
 
 // Creates a filter for Include and Exclude fields and sets the desired noise

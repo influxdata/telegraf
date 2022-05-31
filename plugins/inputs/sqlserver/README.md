@@ -88,7 +88,7 @@ Remove User Id and Password keywords from the connection string in your config f
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from Microsoft SQL Server
 [[inputs.sqlserver]]
   ## Specify instances to monitor with a list of connection strings.

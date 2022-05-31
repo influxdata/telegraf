@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package raindrops
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,9 +17,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Raindrops struct {
 	Urls       []string
 	httpClient *http.Client
+}
+
+func (*Raindrops) SampleConfig() string {
+	return sampleConfig
 }
 
 func (r *Raindrops) Gather(acc telegraf.Accumulator) error {

@@ -20,7 +20,7 @@ Cassandra plugin produces one or more measurements for each metric configured, a
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Cassandra metrics through Jolokia
 [[inputs.cassandra]]
   ## DEPRECATED: The cassandra plugin has been deprecated.  Please use the

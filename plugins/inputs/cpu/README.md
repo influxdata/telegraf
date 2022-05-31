@@ -4,7 +4,7 @@ The `cpu` plugin gather metrics on the system CPUs.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about cpu usage
 [[inputs.cpu]]
   ## Whether to report per-cpu stats or not
@@ -15,6 +15,8 @@ The `cpu` plugin gather metrics on the system CPUs.
   collect_cpu_time = false
   ## If true, compute and report the sum of all non-idle CPU states
   report_active = false
+  ## If true and the info is available then add core_id and physical_id tags
+  core_tags = false
 ```
 
 ## Metrics
@@ -52,6 +54,7 @@ On Linux, consult `man proc` for details on the meanings of these values.
 
 On Linux systems the `/proc/stat` file is used to gather CPU times.
 Percentages are based on the last 2 samples.
+Tags core_id and physical_id are read from `/proc/cpuinfo` on Linux systems
 
 ## Example Output
 

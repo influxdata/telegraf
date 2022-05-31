@@ -8,7 +8,7 @@ the created binary data file with the `sadf` utility.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Sysstat metrics collector
 [[inputs.sysstat]]
   ## Path to the sadc command.

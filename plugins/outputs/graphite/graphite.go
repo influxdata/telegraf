@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package graphite
 
 import (
 	"crypto/tls"
+	_ "embed"
 	"errors"
 	"io"
 	"math/rand"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Graphite struct {
 	GraphiteTagSupport      bool   `toml:"graphite_tag_support"`
@@ -28,6 +34,10 @@ type Graphite struct {
 
 	conns []net.Conn
 	tlsint.ClientConfig
+}
+
+func (*Graphite) SampleConfig() string {
+	return sampleConfig
 }
 
 func (g *Graphite) Connect() error {

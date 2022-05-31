@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package marklogic
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Marklogic configuration toml
 type Marklogic struct {
@@ -80,6 +86,10 @@ type MlHost struct {
 			} `json:"status-detail"`
 		} `json:"status-properties"`
 	} `json:"host-status"`
+}
+
+func (*Marklogic) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init parse all source URLs and place on the Marklogic struct

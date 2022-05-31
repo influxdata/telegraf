@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // The MIT License (MIT)
 //
 // Copyright (c) 2015 Jeff Nickoloff (jeff@allingeek.com)
@@ -23,6 +24,7 @@
 package nsq
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -36,6 +38,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Might add Lookupd endpoints for cluster discovery
 type NSQ struct {
@@ -56,6 +62,10 @@ func init() {
 
 func New() *NSQ {
 	return &NSQ{}
+}
+
+func (*NSQ) SampleConfig() string {
+	return sampleConfig
 }
 
 func (n *NSQ) Gather(acc telegraf.Accumulator) error {

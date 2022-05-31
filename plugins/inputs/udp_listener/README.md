@@ -5,7 +5,7 @@
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Generic UDP listener
 [[inputs.udp_listener]]
   # see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/socket_listener

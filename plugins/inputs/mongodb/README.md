@@ -4,7 +4,7 @@ All MongoDB server versions from 2.6 and higher are supported.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many MongoDB servers
 [[inputs.mongodb]]
   ## An array of URLs of the form:

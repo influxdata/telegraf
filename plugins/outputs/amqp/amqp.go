@@ -1,11 +1,13 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package amqp
 
 import (
 	"bytes"
+	_ "embed"
 	"strings"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	DefaultURL             = "amqp://localhost:5672/influxdb"
@@ -69,6 +75,10 @@ type AMQP struct {
 type Client interface {
 	Publish(key string, body []byte) error
 	Close() error
+}
+
+func (*AMQP) SampleConfig() string {
+	return sampleConfig
 }
 
 func (q *AMQP) SetSerializer(serializer serializers.Serializer) {

@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package directory_monitor
 
 import (
 	"bufio"
 	"compress/gzip"
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +25,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	defaultFilesToMonitor             = []string{}
@@ -57,6 +63,10 @@ type DirectoryMonitor struct {
 	fileRegexesToMatch  []*regexp.Regexp
 	fileRegexesToIgnore []*regexp.Regexp
 	filesToProcess      chan string
+}
+
+func (*DirectoryMonitor) SampleConfig() string {
+	return sampleConfig
 }
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
