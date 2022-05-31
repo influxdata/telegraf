@@ -65,12 +65,5 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 		current = newRequest(f, tags)
 	}
 	requests = append(requests, current)
-	// Filter out completely empty requests
-	nonEmptyRequests := make([]request, 0, len(requests))
-	for _, request := range requests {
-		if len(request.fields) != 0 {
-			nonEmptyRequests = append(nonEmptyRequests, request)
-		}
-	}
-	return nonEmptyRequests
+	return requests
 }
