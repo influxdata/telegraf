@@ -23,11 +23,12 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 	{"id":"","timestamp":1510254469274,"message":"{\"bob\":\"CWL CONTROL MESSAGE: Checking health of destination Firehose.\", \"timestamp\":\"2021-02-22T22:15:26.794854Z\"},"},
 	{"id":"","timestamp":1510254469274,"message":"{\"bob\":\"CWL CONTROL MESSAGE: Checking health of destination Firehose.\", \"timestamp\":\"2021-02-22T22:15:26.794854Z\"}"}
 ]}`)
-	parser, _ := json.New(&json.Config{
+	parser := &json.Parser{
 		MetricName:   "json_test",
 		Query:        "logEvents",
 		StringFields: []string{"message"},
-	})
+	}
+	require.NoError(t, parser.Init())
 
 	type fields struct {
 		ContentEncoding string

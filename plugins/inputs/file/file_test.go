@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -43,16 +44,15 @@ func TestFileTag(t *testing.T) {
 		Files:   []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
 		FileTag: "filename",
 	}
-	err = r.Init()
-	require.NoError(t, err)
+	require.NoError(t, r.Init())
 
-	parserConfig := parsers.Config{
-		DataFormat: "json",
-	}
-	r.SetParserFunc(func() (telegraf.Parser, error) { return parsers.NewParser(&parserConfig) })
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &json.Parser{}
+		err := p.Init()
+		return p, err
+	})
 
-	err = r.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, r.Gather(&acc))
 
 	for _, m := range acc.Metrics {
 		for key, value := range m.Tags {
@@ -68,13 +68,13 @@ func TestJSONParserCompile(t *testing.T) {
 	r := File{
 		Files: []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
 	}
-	err := r.Init()
-	require.NoError(t, err)
-	parserConfig := parsers.Config{
-		DataFormat: "json",
-		TagKeys:    []string{"parent_ignored_child"},
-	}
-	r.SetParserFunc(func() (telegraf.Parser, error) { return parsers.NewParser(&parserConfig) })
+	require.NoError(t, r.Init())
+
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &json.Parser{TagKeys: []string{"parent_ignored_child"}}
+		err := p.Init()
+		return p, err
+	})
 
 	require.NoError(t, r.Gather(&acc))
 	require.Equal(t, map[string]string{"parent_ignored_child": "hi"}, acc.Metrics[0].Tags)

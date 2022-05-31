@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -45,7 +46,9 @@ func BenchmarkTCP(b *testing.B) {
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(b, err)
 	acc := &testutil.Accumulator{Discard: true}
 
 	// send multiple messages to socket
@@ -75,7 +78,9 @@ func TestHighTrafficTCP(t *testing.T) {
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
 
 	// send multiple messages to socket
@@ -103,7 +108,9 @@ func TestConnectTCP(t *testing.T) {
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -143,13 +150,15 @@ func TestConcurrentConns(t *testing.T) {
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	_, err := net.Dial("tcp", "127.0.0.1:8195")
+	_, err = net.Dial("tcp", "127.0.0.1:8195")
 	require.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8195")
 	require.NoError(t, err)
@@ -180,13 +189,15 @@ func TestConcurrentConns1(t *testing.T) {
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      1,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	_, err := net.Dial("tcp", "127.0.0.1:8196")
+	_, err = net.Dial("tcp", "127.0.0.1:8196")
 	require.NoError(t, err)
 
 	// Connection over the limit:
@@ -215,12 +226,14 @@ func TestCloseConcurrentConns(t *testing.T) {
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 
-	_, err := net.Dial("tcp", "127.0.0.1:8195")
+	_, err = net.Dial("tcp", "127.0.0.1:8195")
 	require.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8195")
 	require.NoError(t, err)
@@ -236,7 +249,9 @@ func TestRunParser(t *testing.T) {
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
@@ -257,7 +272,9 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	listener.Log = &testutil.CaptureLogger{}
 	listener.acc = &testutil.Accumulator{}
 
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 	listener.wg.Add(1)
 
 	go listener.tcpParser()
@@ -276,7 +293,9 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewGraphiteParser("_", []string{}, nil)
+	var err error
+	listener.parser, err = parsers.NewGraphiteParser("_", []string{}, nil)
+	require.NoError(t, err)
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
@@ -296,10 +315,10 @@ func TestRunParserJSONMsg(t *testing.T) {
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewParser(&parsers.Config{
-		DataFormat: "json",
-		MetricName: "udp_json_test",
-	})
+	parser := &json.Parser{MetricName: "udp_json_test"}
+	require.NoError(t, parser.Init())
+	listener.parser = parser
+
 	listener.wg.Add(1)
 	go listener.tcpParser()
 
