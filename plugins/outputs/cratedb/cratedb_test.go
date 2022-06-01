@@ -18,7 +18,7 @@ import (
 
 const servicePort = "5432"
 
-func createTestContainer(t *testing.T) testutil.Container {
+func createTestContainer(t *testing.T) *testutil.Container {
 	container := testutil.Container{
 		Image:        "crate",
 		ExposedPorts: []string{servicePort},
@@ -34,7 +34,7 @@ func createTestContainer(t *testing.T) testutil.Container {
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
 
-	return container
+	return &container
 }
 
 func TestConnectAndWriteIntegration(t *testing.T) {
