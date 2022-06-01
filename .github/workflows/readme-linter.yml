@@ -20,4 +20,5 @@ jobs:
           base_sha: ${{ github.event.pull_request.base.sha }}
           files: plugins/**/README.md
       - name: Run readme linter on changed files
+        if: steps.changed-files.outputs.any_changed == 'true'
         run: go run ./tools/readme_linter ${{ steps.changed-files.outputs.all_changed_files }}
