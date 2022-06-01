@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -197,7 +198,7 @@ func TestInvalidTypeQueries(t *testing.T) {
 				"test",
 				map[string]string{},
 				map[string]interface{}{
-					"a": float64(0),
+					"a": math.NaN(),
 				},
 				time.Unix(1577923199, 0),
 			),
