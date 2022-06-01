@@ -11,6 +11,19 @@ type Connections struct {
 	Idle     int64 `json:"idle"`
 }
 
+type Slabs map[string]struct {
+	Pages struct {
+		Used int64 `json:"used"`
+		Free int64 `json:"free"`
+	} `json:"pages"`
+	Slots map[string]struct {
+		Used  int64 `json:"used"`
+		Free  int64 `json:"free"`
+		Reqs  int64 `json:"reqs"`
+		Fails int64 `json:"fails"`
+	} `json:"slots"`
+}
+
 type Ssl struct { // added in version 6
 	Handshakes       int64 `json:"handshakes"`
 	HandshakesFailed int64 `json:"handshakes_failed"`
