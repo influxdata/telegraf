@@ -23,7 +23,7 @@ require (
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.1.5
 	github.com/antchfx/xmlquery v1.3.9
-	github.com/antchfx/xpath v1.2.0
+	github.com/antchfx/xpath v1.2.1
 	github.com/apache/thrift v0.15.0
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
