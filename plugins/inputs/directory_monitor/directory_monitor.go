@@ -20,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
@@ -36,6 +37,7 @@ var (
 	defaultMaxBufferedMetrics         = 10000
 	defaultDirectoryDurationThreshold = config.Duration(0 * time.Millisecond)
 	defaultFileQueueSize              = 100000
+	defaultParseMethod                = "line-by-line"
 )
 
 type DirectoryMonitor struct {
@@ -50,6 +52,7 @@ type DirectoryMonitor struct {
 	DirectoryDurationThreshold config.Duration `toml:"directory_duration_threshold"`
 	Log                        telegraf.Logger `toml:"-"`
 	FileQueueSize              int             `toml:"file_queue_size"`
+	ParseMethod                string          `toml:"parse_method"`
 
 	filesInUse          sync.Map
 	cancel              context.CancelFunc
@@ -200,7 +203,7 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 
 	parser, err := monitor.parserFunc()
 	if err != nil {
-		return fmt.Errorf("E! Creating parser: %s", err.Error())
+		return fmt.Errorf("creating parser: %w", err)
 	}
 
 	// Handle gzipped files.
@@ -219,6 +222,19 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
 	scanner := bufio.NewScanner(reader)
+
+	switch monitor.ParseMethod {
+	case "complete-file":
+		scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+			if atEOF && len(data) != 0 {
+				return len(data), data, nil
+			}
+			return 0, nil, nil
+		})
+	case "line-by-line":
+		scanner.Split(bufio.ScanLines)
+	}
+
 	for scanner.Scan() {
 		metrics, err := monitor.parseLine(parser, scanner.Bytes())
 		if err != nil {
@@ -357,6 +373,10 @@ func (monitor *DirectoryMonitor) Init() error {
 		monitor.fileRegexesToIgnore = append(monitor.fileRegexesToIgnore, regex)
 	}
 
+	if err := choice.Check(monitor.ParseMethod, []string{"line-by-line", "complete-file"}); err != nil {
+		return fmt.Errorf("config option parse_method: %w", err)
+	}
+
 	return nil
 }
 
@@ -368,6 +388,7 @@ func init() {
 			MaxBufferedMetrics:         defaultMaxBufferedMetrics,
 			DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 			FileQueueSize:              defaultFileQueueSize,
+			ParseMethod:                defaultParseMethod,
 		}
 	})
 }
