@@ -235,11 +235,6 @@ docker-image:
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
-.PHONY: plugin-%
-plugin-%:
-	@echo "Starting dev environment for $${$(@)} input plugin..."
-	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
-
 .PHONY: ci
 ci:
 	docker build -t quay.io/influxdb/telegraf-ci:1.18.1 - < scripts/ci.docker
