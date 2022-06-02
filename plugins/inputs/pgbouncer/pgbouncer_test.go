@@ -41,7 +41,10 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 			"PG_ENV_POSTGRESQL_USER": "pgbouncer",
 			"PG_ENV_POSTGRESQL_PASS": "pgbouncer",
 		},
-		WaitingFor: wait.ForListeningPort(nat.Port(pgBouncerServicePort)),
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(pgBouncerServicePort)),
+			wait.ForLog("LOG process up"),
+		),
 	}
 	err = container.Start()
 	require.NoError(t, err, "failed to start container")

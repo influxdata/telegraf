@@ -505,7 +505,7 @@ var testEsAggregationData = []esAggregationQueryTest{
 	},
 }
 
-func setupIntegrationTest(t *testing.T) (testutil.Container, error) {
+func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 	type nginxlog struct {
 		IPaddress    string    `json:"IP"`
 		Timestamp    time.Time `json:"@timestamp"`
@@ -542,7 +542,7 @@ func setupIntegrationTest(t *testing.T) (testutil.Container, error) {
 
 	err = e.connectToES()
 	if err != nil {
-		return container, err
+		return &container, err
 	}
 
 	bulkRequest := e.esClient.Bulk()
@@ -550,7 +550,7 @@ func setupIntegrationTest(t *testing.T) (testutil.Container, error) {
 	// populate elasticsearch with nginx_logs test data file
 	file, err := os.Open("testdata/nginx_logs")
 	if err != nil {
-		return container, err
+		return &container, err
 	}
 
 	defer file.Close()
@@ -579,22 +579,22 @@ func setupIntegrationTest(t *testing.T) (testutil.Container, error) {
 			Doc(logline))
 	}
 	if scanner.Err() != nil {
-		return container, err
+		return &container, err
 	}
 
 	_, err = bulkRequest.Do(context.Background())
 	if err != nil {
-		return container, err
+		return &container, err
 	}
 
 	// force elastic to refresh indexes to get new batch data
 	ctx := context.Background()
 	_, err = e.esClient.Refresh().Do(ctx)
 	if err != nil {
-		return container, err
+		return &container, err
 	}
 
-	return container, nil
+	return &container, nil
 }
 
 func TestElasticsearchQuery(t *testing.T) {

@@ -23,7 +23,10 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 		Env: map[string]string{
 			"ZOO_4LW_COMMANDS_WHITELIST": "mntr",
 		},
-		WaitingFor: wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("ZooKeeper audit is disabled."),
+		),
 	}
 	err := container.Start()
 	require.NoError(t, err, "failed to start container")
