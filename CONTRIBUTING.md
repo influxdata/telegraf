@@ -80,13 +80,6 @@ make test
 
 (Optional)
 
-Running the integration tests requires several docker containers to be
-running.  You can start the containers with:
-
-```shell
-docker-compose up
-```
-
 To run only the integration tests use:
 
 ```shell
@@ -98,8 +91,6 @@ To run the full test suite use:
 ```shell
 make test-all
 ```
-
-Use `make docker-kill` to stop the containers.
 
 ### For more developer resources
 
