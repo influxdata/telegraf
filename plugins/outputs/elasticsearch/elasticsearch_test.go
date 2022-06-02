@@ -2,6 +2,7 @@ package elasticsearch
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -9,18 +10,47 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+const servicePort = "9200"
+
+func launchTestContainer(t *testing.T) *testutil.Container {
+	container := testutil.Container{
+		Image:        "elasticsearch:6.8.23",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"discovery.type": "single-node",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("] mode [basic] - valid"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+
+	return &container
+}
 
 func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
 
 	e := &Elasticsearch{
 		URLs:                urls,
@@ -49,7 +79,14 @@ func TestConnectAndWriteMetricWithNaNValueEmpty(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
 
 	e := &Elasticsearch{
 		URLs:                urls,
@@ -85,7 +122,14 @@ func TestConnectAndWriteMetricWithNaNValueNone(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
 
 	e := &Elasticsearch{
 		URLs:                urls,
@@ -122,7 +166,14 @@ func TestConnectAndWriteMetricWithNaNValueDrop(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
 
 	e := &Elasticsearch{
 		URLs:                urls,
@@ -181,7 +232,14 @@ func TestConnectAndWriteMetricWithNaNValueReplacement(t *testing.T) {
 		},
 	}
 
-	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
 
 	for _, test := range tests {
 		e := &Elasticsearch{
@@ -224,7 +282,14 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
 
 	ctx := context.Background()
 
@@ -248,7 +313,14 @@ func TestTemplateManagementIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
 
 	e := &Elasticsearch{
 		URLs:              urls,
@@ -276,7 +348,14 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
 
 	e := &Elasticsearch{
 		URLs:              urls,
