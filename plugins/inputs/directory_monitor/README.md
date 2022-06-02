@@ -54,6 +54,5 @@ This plugin is intended to read files that are moved or copied to the monitored 
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  ## NOTE: We currently only support parsing newline-delimited JSON. See the format here: https://github.com/ndjson/ndjson-spec
   data_format = "influx"
 ```
