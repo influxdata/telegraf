@@ -789,6 +789,26 @@ message SegNet {
   double timestamp = 4;
 }
 
+message PPCorrection {
+  message Fields {
+    string initialized = 1;
+    string dynamic_key = 2;
+    string SPARTN_correction = 3;
+    string RTCM_correction = 4;
+    string GNSS_data = 5;
+  }
+
+  message Tags {
+    string host = 1;
+    string url = 2;
+  }
+
+  Fields fields = 1;
+  string name = 2;
+  Tags tags = 3;
+  double timestamp = 4;
+}
+
 message Able {
 
   message Fields {
@@ -865,6 +885,7 @@ message Influx {
   repeated Uploader uploader = 27;
   repeated UploaderStats uploader_stats = 28;
   repeated Wireless wireless = 29;
+  repeated PPCorrection ppCorrection = 30;
 }
 
 

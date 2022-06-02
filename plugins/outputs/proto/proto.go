@@ -225,6 +225,12 @@ func (f *Proto) Write(metrics []telegraf.Metric) error {
 				return errors.Wrap(err, "build gps")
 			}
 			influx.Gps = append(influx.Gps, &m)
+		case "pp_correction_metrics":
+			m := PPCorrection{}
+			if err := json.Unmarshal(b, &m); err != nil {
+				return errors.Wrap(err, "build PPCorrection")
+			}
+			influx.PpCorrection = append(influx.PpCorrection, &m)
 		case "able_metrics":
 			m := Able{}
 			if err := json.Unmarshal(b, &m); err != nil {
