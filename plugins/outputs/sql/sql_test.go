@@ -16,19 +16,19 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func TestSqlQuote(t *testing.T) {
+func TestSqlQuoteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 }
 
-func TestSqlCreateStatement(t *testing.T) {
+func TestSqlCreateStatementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 }
 
-func TestSqlInsertStatement(t *testing.T) {
+func TestSqlInsertStatementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

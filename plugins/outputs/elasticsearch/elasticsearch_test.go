@@ -74,7 +74,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestConnectAndWriteMetricWithNaNValueEmpty(t *testing.T) {
+func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -117,7 +117,7 @@ func TestConnectAndWriteMetricWithNaNValueEmpty(t *testing.T) {
 	}
 }
 
-func TestConnectAndWriteMetricWithNaNValueNone(t *testing.T) {
+func TestConnectAndWriteMetricWithNaNValueNoneIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -161,7 +161,7 @@ func TestConnectAndWriteMetricWithNaNValueNone(t *testing.T) {
 	}
 }
 
-func TestConnectAndWriteMetricWithNaNValueDrop(t *testing.T) {
+func TestConnectAndWriteMetricWithNaNValueDropIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -205,7 +205,7 @@ func TestConnectAndWriteMetricWithNaNValueDrop(t *testing.T) {
 	}
 }
 
-func TestConnectAndWriteMetricWithNaNValueReplacement(t *testing.T) {
+func TestConnectAndWriteMetricWithNaNValueReplacementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

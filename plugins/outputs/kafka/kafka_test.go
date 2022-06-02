@@ -95,7 +95,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	k.Close()
 }
 
-func TestTopicSuffixesIntegration(t *testing.T) {
+func TestTopicSuffixes(t *testing.T) {
 	topic := "Test"
 
 	m := testutil.TestMetric(1)
@@ -138,7 +138,7 @@ func TestTopicSuffixesIntegration(t *testing.T) {
 	}
 }
 
-func TestValidateTopicSuffixMethodIntegration(t *testing.T) {
+func TestValidateTopicSuffixMethod(t *testing.T) {
 	err := ValidateTopicSuffixMethod("invalid_topic_suffix_method")
 	require.Error(t, err, "Topic suffix method used should be invalid.")
 
