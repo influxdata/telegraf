@@ -22,6 +22,7 @@ type CommonTags struct {
 
 type HECTimeSeries struct {
 	Time   float64                `json:"time"`
+	Event  string                 `json:"event"`
 	Host   string                 `json:"host,omitempty"`
 	Index  string                 `json:"index,omitempty"`
 	Source string                 `json:"source,omitempty"`
@@ -65,6 +66,7 @@ func (s *serializer) createMulti(metric telegraf.Metric, dataGroup HECTimeSeries
 	var metricJSON []byte
 
 	// Set the event data from the commonTags above.
+	dataGroup.Event = "metric"
 	dataGroup.Time = commonTags.Time
 	dataGroup.Host = commonTags.Host
 	dataGroup.Index = commonTags.Index
@@ -121,6 +123,7 @@ func (s *serializer) createSingle(metric telegraf.Metric, dataGroup HECTimeSerie
 		dataGroup.Time = commonTags.Time
 
 		// Apply the common tags from above to every record.
+		dataGroup.Event = "metric"
 		dataGroup.Host = commonTags.Host
 		dataGroup.Index = commonTags.Index
 		dataGroup.Source = commonTags.Source
