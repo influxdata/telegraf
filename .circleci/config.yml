@@ -212,6 +212,7 @@ jobs:
     executor:
         name: win/default
         shell: bash.exe
+        size: xlarge
     steps:
       - test-go:
           os: windows
