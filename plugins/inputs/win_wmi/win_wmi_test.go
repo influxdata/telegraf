@@ -18,13 +18,11 @@ var sysDrive = fmt.Sprintf(`%s\`, os.Getenv("SystemDrive")) // C:\
 var logger = new(testutil.Logger)
 var acc = new(testutil.Accumulator)
 var testQuery Query = Query{
-	Query:      "", // this is filled in by CompileInputs()
-	Namespace:  "ROOT\\cimv2",
-	ClassName:  "Win32_Volume",
-	Properties: []string{"Name", "FreeSpace"},
-	Filter: fmt.Sprintf(
-		`NOT Name LIKE "\\\\?\\%%" AND Name LIKE "%s"`,
-		regexp.QuoteMeta(sysDrive)),
+	Query:                "", // this is filled in by CompileInputs()
+	Namespace:            "ROOT\\cimv2",
+	ClassName:            "Win32_Volume",
+	Properties:           []string{"Name", "FreeSpace"},
+	Filter:               fmt.Sprintf(`NOT Name LIKE "\\\\?\\%%" AND Name LIKE "%s"`, regexp.QuoteMeta(sysDrive)),
 	TagPropertiesInclude: []string{"Name"},
 	tagFilter:            nil, // this is filled in by CompileInputs()
 }
