@@ -4,21 +4,50 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/testutil"
 )
+
+const servicePort = "5432"
+
+func launchTestContainer(t *testing.T) *testutil.Container {
+	container := testutil.Container{
+		Image:        "postgres:alpine",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"POSTGRES_HOST_AUTH_METHOD": "trust",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("database system is ready to accept connections"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
+	}
+
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+
+	return &container
+}
 
 func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	p := &Postgresql{
 		Service: Service{
 			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
+				"host=%s port=%s user=postgres sslmode=disable",
+				container.Address,
+				container.Ports[servicePort],
 			),
 			IsPgBouncer: false,
 		},
@@ -99,11 +128,17 @@ func TestPostgresqlTagsMetricsWithDatabaseNameIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	p := &Postgresql{
 		Service: Service{
 			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
+				"host=%s port=%s user=postgres sslmode=disable",
+				container.Address,
+				container.Ports[servicePort],
 			),
 		},
 		Databases: []string{"postgres"},
@@ -125,11 +160,17 @@ func TestPostgresqlDefaultsToAllDatabasesIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	p := &Postgresql{
 		Service: Service{
 			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
+				"host=%s port=%s user=postgres sslmode=disable",
+				container.Address,
+				container.Ports[servicePort],
 			),
 		},
 	}
@@ -158,11 +199,17 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	p := &Postgresql{
 		Service: Service{
 			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
+				"host=%s port=%s user=postgres sslmode=disable",
+				container.Address,
+				container.Ports[servicePort],
 			),
 		},
 	}
@@ -181,11 +228,17 @@ func TestPostgresqlDatabaseWhitelistTestIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	p := &Postgresql{
 		Service: Service{
 			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
+				"host=%s port=%s user=postgres sslmode=disable",
+				container.Address,
+				container.Ports[servicePort],
 			),
 		},
 		Databases: []string{"template0"},
@@ -221,11 +274,17 @@ func TestPostgresqlDatabaseBlacklistTestIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	container := launchTestContainer(t)
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	p := &Postgresql{
 		Service: Service{
 			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
+				"host=%s port=%s user=postgres sslmode=disable",
+				container.Address,
+				container.Ports[servicePort],
 			),
 		},
 		IgnoredDatabases: []string{"template0"},
