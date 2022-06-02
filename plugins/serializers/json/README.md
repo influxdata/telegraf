@@ -84,3 +84,36 @@ reference the documentation for the specific plugin.
     ]
 }
 ```
+
+Since Logstash has problems dealing with the metrics array there is an option (json\_logstash\_support) to use another format of batch that works better with logstash.
+
+```json
+[
+    {
+        "fields": {
+            "field_1": 30,
+            "field_2": 4,
+            "field_N": 59,
+            "n_images": 660
+        },
+        "name": "docker",
+        "tags": {
+            "host": "raynor"
+        },
+        "timestamp": 1458229140
+    },
+    {
+        "fields": {
+            "field_1": 30,
+            "field_2": 4,
+            "field_N": 59,
+            "n_images": 660
+        },
+        "name": "docker",
+        "tags": {
+            "host": "raynor"
+        },
+        "timestamp": 1458229140
+    }
+]
+```

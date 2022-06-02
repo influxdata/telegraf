@@ -54,6 +54,10 @@ format by default.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 
+  ## Use logstash flavor of batch serialization.
+  ## Example of the different formats can be found in the [JSON](/plugins/serializers/json) documentation
+  # json_logstash_support = false
+
   ## Use batch serialization format (default) instead of line based format.
   ## Batch format is more efficient and should be used unless line based
   ## format is really needed.
