@@ -39,36 +39,41 @@ This document presents the input plugin to read WMI classes on Windows operating
 an administrator is enabled to capture and filter virtually any configuration or metric value exposed through the
 Windows Management Instrumentation service.
 
-If a WMI class property's value is a string, then the string is included with the metric as a tag. If a WMI class
-property's value is an integer, then the integer is used as a metric field.
+If a WMI class property's value is a string, then the string is included with
+the metric as a tag. If a WMI class property's value is an integer, then the
+integer is used as a metric field.
 
-If telegraf is configured with a logfile and the plugin's configuration contains an invalid namespace, class, or
-property, an error is logged.
+If telegraf is configured with a logfile and the plugin's configuration
+contains an invalid namespace, class, or property, an error is logged.
 
 ## Basics
 
-The examples contained in this file have been utilized and exercised in Windows environments. There are many other
-useful classes to monitor if you know what to look for.
+The examples contained in this file have been utilized and exercised in Windows
+environments. There are many other useful classes to monitor if you know what
+to look for.
 
 ### Namespace
 
-A string representing the WMI namespace to be queried. For example, `root\\cimv2`.
+A string representing the WMI namespace to be queried. For example,
+`root\\cimv2`.
 
 ### ClassName
 
-A string representing the WMI class to be queried. For example, `Win32_Processor`.
+A string representing the WMI class to be queried. For example,
+`Win32_Processor`.
 
 ### Properties
 
-An array of strings representing the properties of the WMI class to be queried. By default, the `Name` property is
-included in the query. However, some classes do not contain a `Name` property, in which cases the `ExcludeNameKey`
+An array of strings representing the properties of the WMI class to be queried.
+By default, the `Name` property is included in the query. However, some classes
+do not contain a `Name` property, in which cases the `ExcludeNameKey`
 configuration should be utilized.
 
 ### ExcludeNameKey
 
-By default, a WMI class's `Name` property is included as a tag value in order for each metric to have a unique
-identifier. However, some WMI classes do not have a `Name` property. In such cases, ExcludeNameKey should be set to
-`True`.
+By default, a WMI class's `Name` property is included as a tag value in order
+for each metric to have a unique identifier. However, some WMI classes do not
+have a `Name` property. In such cases, ExcludeNameKey should be set to `True`.
 
 ## Configuration
 
@@ -83,7 +88,8 @@ identifier. However, some WMI classes do not have a `Name` property. In such cas
   ##     TagPropertiesInclude = ["Name"]
   ## By default, this plugin returns no results.
   ## Uncomment the example below or write your own as you see fit.
-  ## The "Name" property of a WMI class is automatically included unless excludenamekey is true.
+  ## The "Name" property of a WMI class is automatically included unless
+  ## excludenamekey is true.
   ## If the WMI property's value is a string, then it is used as a tag.
   ## If the WMI property's value is a type of int, then it is used as a field.
   ## [[inputs.win_wmi]]
@@ -152,8 +158,9 @@ the manufacturer, part number, and device locator of each device.
   name_prefix = "win_wmi_"
 ```
 
-This query provides metrics for the number of cores in each physical processor. Since the Name property of the
-WMI class is included by default, the metrics will also contain a tag value describing the model of each CPU.
+This query provides metrics for the number of cores in each physical processor.
+Since the Name property of the WMI class is included by default, the metrics
+will also contain a tag value describing the model of each CPU.
 
 ```toml
 [[inputs.win_wmi]]
@@ -165,8 +172,9 @@ WMI class is included by default, the metrics will also contain a tag value desc
   name_prefix = "win_wmi_"
 ```
 
-This query provides metrics for the number of socketted processors, number of logical cores on each processor, and the
-total physical memory in the computer. The metrics include tag values for the domain, manufacturer, and model of the
+This query provides metrics for the number of socketted processors, number of
+logical cores on each processor, and the total physical memory in the computer.
+The metrics include tag values for the domain, manufacturer, and model of the
 computer.
 
 ```toml
@@ -222,9 +230,10 @@ tagged value to describe whether the installation is 32-bit or 64-bit.
   name_prefix = "win_wmi_"
 ```
 
-This query provides metrics for the paging file's free space, the operating system's free virtual memory, the operating
-system SKU installed on the computer, and the Windows product type. The OS architecture is included as a tagged value to
-describe whether the installation is 32-bit or 64-bit.
+This query provides metrics for the paging file's free space, the operating
+system's free virtual memory, the operating system SKU installed on the
+computer, and the Windows product type. The OS architecture is included as a
+tagged value to describe whether the installation is 32-bit or 64-bit.
 
 ```toml
 [[inputs.win_wmi]]
