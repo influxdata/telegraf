@@ -441,6 +441,7 @@ func TestParseCompleteFile(t *testing.T) {
 	acc.Wait(1)
 	r.Stop()
 
+	require.NoError(t, acc.FirstError())
 	require.Len(t, acc.Metrics, 1)
-	testutil.RequireMetricEqual(t, testutil.TestMetric(100.1), testutil.FromTestMetric(acc.Metrics[0]), testutil.IgnoreTime())
+	testutil.RequireMetricEqual(t, testutil.TestMetric(100.1), acc.GetTelegrafMetrics()[0], testutil.IgnoreTime())
 }
