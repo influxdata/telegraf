@@ -205,6 +205,13 @@ Get-WmiObject -Namespace root\cimv2 -Class Win32_Volume -Property Capacity, Free
 Get-CimInstance -Namespace root\cimv2 -ClassName Win32_Volume -Property Capacity, FreeSpace, Name -Filter 'NOT Name LIKE "\\\\?\\%"'
 ```
 
+## Metrics
+
+Fields and tags are dynamically generated based on the structure of the queried
+WMI class. If the WMI class property's value is a string, then the name and
+value will be used as a metric tag. If the WMI class property's value is an
+integer, then the name and value will be used as a metric field.
+
 ## Example Output
 
 Some values are changed for anonymity.
