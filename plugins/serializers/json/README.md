@@ -156,7 +156,7 @@ It is also possible to do arithmetics or renaming
 }
 ```
 
-will result in 
+will result in
 
 ```json
 {
@@ -233,7 +233,7 @@ metrics.{
 
 ```
 
-resulting in 
+resulting in
 
 ```json
 [
@@ -272,7 +272,7 @@ However, the more interesting use-case is to restructure and **combine** the met
 }
 ```
 
-resulting in 
+resulting in
 
 ```json
 {
