@@ -174,6 +174,8 @@ require (
 	modernc.org/sqlite v1.17.3
 )
 
+require github.com/blues/jsonata-go v1.5.4
+
 require (
 	cloud.google.com/go v0.102.1 // indirect
 	cloud.google.com/go/compute v1.6.1 // indirect
