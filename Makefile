@@ -70,7 +70,7 @@ localstatedir ?= $(prefix)/var
 pkgdir ?= build/dist
 
 .PHONY: all
-all:
+all: docs
 	@$(MAKE) deps
 	@$(MAKE) telegraf
 
@@ -79,6 +79,7 @@ help:
 	@echo 'Targets:'
 	@echo '  all          - download dependencies and compile telegraf binary'
 	@echo '  deps         - download dependencies'
+	@echo '  docs         - generate documentation and embed sample-configurations'
 	@echo '  telegraf     - compile telegraf binary'
 	@echo '  test         - run short unit tests'
 	@echo '  fmt          - format source files'
@@ -115,22 +116,22 @@ versioninfo:
 	go run scripts/generate_versioninfo/main.go; \
 	go generate cmd/telegraf/telegraf_windows.go; \
 
-.PHONY: build_generator
-build_generator:
-	go build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
+.PHONY: build_tools
+build_tools:
+	$(HOSTGO) build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
 
-embed_readme_%: build_generator
+embed_readme_%:
 	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
 
-.PHONY: generate
-generate: embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators
+.PHONY: docs
+docs: build_tools embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators
 
 .PHONY: build
 build:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: telegraf
-telegraf: generate build
+telegraf: build
 
 # Used by dockerfile builds
 .PHONY: go-install
