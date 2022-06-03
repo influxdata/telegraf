@@ -14,9 +14,10 @@ functions.
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
+# Process metrics using a Starlark script
 [[processors.starlark]]
   ## The Starlark source can be set as a string in this configuration file, or
   ## by referencing a file containing the script.  Only one source or script
@@ -25,7 +26,7 @@ Telegraf minimum version: Telegraf 1.15.0
   ## Source of the Starlark script.
   source = '''
 def apply(metric):
-	return metric
+  return metric
 '''
 
   ## File containing a Starlark script.
@@ -39,7 +40,7 @@ def apply(metric):
   #   debug_mode = true
 ```
 
-### Usage
+## Usage
 
 The Starlark code should contain a function called `apply` that takes a metric as
 its single argument.  The function will be called with each metric, and can
@@ -47,7 +48,7 @@ return `None`, a single metric, or a list of metrics.
 
 ```python
 def apply(metric):
-	return metric
+    return metric
 ```
 
 For a list of available types and functions that can be used in the code, see
@@ -90,7 +91,8 @@ While Starlark is similar to Python, there are important differences to note:
 - It is not possible to open files or sockets.
 
 - These common keywords are **not supported** in the Starlark grammar:
-  ```
+
+  ```text
   as             finally        nonlocal
   assert         from           raise
   class          global         try
@@ -102,8 +104,10 @@ While Starlark is similar to Python, there are important differences to note:
 
 The ability to load external scripts other than your own is pretty limited. The following libraries are available for loading:
 
-* json: `load("json.star", "json")` provides the following functions: `json.encode()`, `json.decode()`, `json.indent()`. See [json.star](/plugins/processors/starlark/testdata/json.star) for an example.
-* log: `load("logging.star", "log")` provides the following functions: `log.debug()`, `log.info()`, `log.warn()`, `log.error()`. See [logging.star](/plugins/processors/starlark/testdata/logging.star) for an example.
+- json: `load("json.star", "json")` provides the following functions: `json.encode()`, `json.decode()`, `json.indent()`. See [json.star](/plugins/processors/starlark/testdata/json.star) for an example. For more details about the functions, please refer to [the documentation of this library](https://pkg.go.dev/go.starlark.net/lib/json).
+- log: `load("logging.star", "log")` provides the following functions: `log.debug()`, `log.info()`, `log.warn()`, `log.error()`. See [logging.star](/plugins/processors/starlark/testdata/logging.star) for an example.
+- math: `load("math.star", "math")` provides [the following functions and constants](https://pkg.go.dev/go.starlark.net/lib/math). See [math.star](/plugins/processors/starlark/testdata/math.star) for an example.
+- time: `load("time.star", "time")` provides the following functions: `time.from_timestamp()`, `time.is_valid_timezone()`, `time.now()`, `time.parse_duration()`, `time.parseTime()`, `time.time()`. See [time_date.star](/plugins/processors/starlark/testdata/time_date.star), [time_duration.star](/plugins/processors/starlark/testdata/time_duration.star) and/or [time_timestamp.star](/plugins/processors/starlark/testdata/time_timestamp.star) for an example. For more details about the functions, please refer to [the documentation of this library](https://pkg.go.dev/go.starlark.net/lib/time).
 
 If you would like to see support for something else here, please open an issue.
 
@@ -165,7 +169,7 @@ def apply(metric):
 
 **How can I save values across multiple calls to the script?**
 
-Telegraf freezes the global scope, which prevents it from being modified, except for a special shared global dictionary 
+Telegraf freezes the global scope, which prevents it from being modified, except for a special shared global dictionary
 named `state`, this can be used by the `apply` function.
 See an example of this in [compare with previous metric](/plugins/processors/starlark/testdata/compare_metrics.star)
 
@@ -192,6 +196,7 @@ def apply(metric):
 def failing(metric):
     json.decode("non-json-content")
 ```
+
 **How to reuse the same script but with different parameters?**
 
 In case you have a generic script that you would like to reuse for different instances of the plugin, you can use constants as input parameters of your script.
@@ -232,6 +237,7 @@ def apply(metric):
 - [time duration](/plugins/processors/starlark/testdata/time_duration.star) - Parse a duration and convert it into a total amount of seconds.
 - [time timestamp](/plugins/processors/starlark/testdata/time_timestamp.star) - Filter metrics based on the timestamp in seconds.
 - [time timestamp nanoseconds](/plugins/processors/starlark/testdata/time_timestamp_nanos.star) - Filter metrics based on the timestamp with nanoseconds.
+- [time timestamp current](/plugins/processors/starlark/testdata/time_set_timestamp.star) - Setting the metric timestamp to the current/local time.
 - [value filter](/plugins/processors/starlark/testdata/value_filter.star) - Remove a metric based on a field value.
 - [logging](/plugins/processors/starlark/testdata/logging.star) - Log messages with the logger of Telegraf
 - [multiple metrics](/plugins/processors/starlark/testdata/multiple_metrics.star) - Return multiple metrics by using [a list](https://docs.bazel.build/versions/master/skylark/lib/list.html) of metrics.
@@ -244,6 +250,6 @@ def apply(metric):
 
 Open a Pull Request to add any other useful Starlark examples.
 
-[Starlark specification]: https://github.com/google/starlark-go/blob/master/doc/spec.md
-[string]: https://github.com/google/starlark-go/blob/master/doc/spec.md#strings
-[dict]: https://github.com/google/starlark-go/blob/master/doc/spec.md#dictionaries
+[Starlark specification]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md
+[string]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md#strings
+[dict]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md#dictionaries

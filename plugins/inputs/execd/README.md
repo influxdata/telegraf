@@ -1,7 +1,7 @@
 # Execd Input Plugin
 
-The `execd` plugin runs an external program as a long-running daemon. 
-The programs must output metrics in any one of the accepted 
+The `execd` plugin runs an external program as a long-running daemon.
+The programs must output metrics in any one of the accepted
 [Input Data Formats][] on the process's STDOUT, and is expected to
 stay running. If you'd instead like the process to collect metrics and then exit,
 check out the [inputs.exec][] plugin.
@@ -13,13 +13,20 @@ new line to the process's STDIN.
 
 STDERR from the process will be relayed to Telegraf as errors in the logs.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# Run executable as long-running input plugin
 [[inputs.execd]]
   ## One program to run as daemon.
   ## NOTE: process and each argument should each be their own string
   command = ["telegraf-smartctl", "-d", "/dev/sda"]
+
+  ## Environment variables
+  ## Array of "key=value" pairs to pass as environment variables
+  ## e.g. "KEY=value", "USERNAME=John Doe",
+  ## "LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs"
+  # environment = []
 
   ## Define how the process is signaled on each collection interval.
   ## Valid values are:
@@ -41,9 +48,9 @@ STDERR from the process will be relayed to Telegraf as errors in the logs.
   data_format = "influx"
 ```
 
-### Example
+## Example
 
-##### Daemon written in bash using STDIN signaling
+### Daemon written in bash using STDIN signaling
 
 ```bash
 #!/bin/bash
@@ -62,7 +69,7 @@ done
   signal = "STDIN"
 ```
 
-##### Go daemon using SIGHUP
+### Go daemon using SIGHUP
 
 ```go
 package main
@@ -96,7 +103,7 @@ func main() {
   signal = "SIGHUP"
 ```
 
-##### Ruby daemon running standalone
+### Ruby daemon running standalone
 
 ```ruby
 #!/usr/bin/env ruby

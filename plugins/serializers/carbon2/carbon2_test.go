@@ -5,19 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
-
-func MustMetric(v telegraf.Metric, err error) telegraf.Metric {
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
 
 func TestSerializeMetricFloat(t *testing.T) {
 	now := time.Now()
@@ -27,8 +19,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := metric.New("cpu", tags, fields, now)
-	require.NoError(t, err)
+	m := metric.New("cpu", tags, fields, now)
 
 	testcases := []struct {
 		format   format
@@ -52,7 +43,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -65,8 +56,7 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": float64(91.5),
 	}
-	m, err := metric.New("cpu", tags, fields, now)
-	require.NoError(t, err)
+	m := metric.New("cpu", tags, fields, now)
 
 	testcases := []struct {
 		format   format
@@ -90,7 +80,7 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -103,8 +93,7 @@ func TestSerializeWithSpaces(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle 1": float64(91.5),
 	}
-	m, err := metric.New("cpu metric", tags, fields, now)
-	require.NoError(t, err)
+	m := metric.New("cpu metric", tags, fields, now)
 
 	testcases := []struct {
 		format   format
@@ -128,7 +117,7 @@ func TestSerializeWithSpaces(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -141,8 +130,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": int64(90),
 	}
-	m, err := metric.New("cpu", tags, fields, now)
-	require.NoError(t, err)
+	m := metric.New("cpu", tags, fields, now)
 
 	testcases := []struct {
 		format   format
@@ -166,7 +154,7 @@ func TestSerializeMetricInt(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -179,8 +167,7 @@ func TestSerializeMetricString(t *testing.T) {
 	fields := map[string]interface{}{
 		"usage_idle": "foobar",
 	}
-	m, err := metric.New("cpu", tags, fields, now)
-	assert.NoError(t, err)
+	m := metric.New("cpu", tags, fields, now)
 
 	testcases := []struct {
 		format   format
@@ -204,7 +191,7 @@ func TestSerializeMetricString(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -218,8 +205,7 @@ func TestSerializeMetricBool(t *testing.T) {
 			"java_lang_GarbageCollector_Valid": value,
 		}
 
-		m, err := metric.New("cpu", tags, fields, tim)
-		require.NoError(t, err)
+		m := metric.New("cpu", tags, fields, tim)
 
 		return m
 	}
@@ -261,21 +247,19 @@ func TestSerializeMetricBool(t *testing.T) {
 			buf, err := s.Serialize(tc.metric)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
 
 func TestSerializeBatch(t *testing.T) {
-	m := MustMetric(
-		metric.New(
-			"cpu",
-			map[string]string{},
-			map[string]interface{}{
-				"value": 42,
-			},
-			time.Unix(0, 0),
-		),
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42,
+		},
+		time.Unix(0, 0),
 	)
 
 	metrics := []telegraf.Metric{m, m}
@@ -306,7 +290,7 @@ metric=cpu_value  42 0
 			buf, err := s.SerializeBatch(metrics)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }
@@ -315,14 +299,14 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 	now := time.Now()
 
 	testcases := []struct {
-		metricFunc  func() (telegraf.Metric, error)
+		metricFunc  func() telegraf.Metric
 		format      format
 		expected    string
 		replaceChar string
 		expectedErr bool
 	}{
 		{
-			metricFunc: func() (telegraf.Metric, error) {
+			metricFunc: func() telegraf.Metric {
 				fields := map[string]interface{}{
 					"usage_idle": float64(91.5),
 				}
@@ -333,7 +317,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 			replaceChar: DefaultSanitizeReplaceChar,
 		},
 		{
-			metricFunc: func() (telegraf.Metric, error) {
+			metricFunc: func() telegraf.Metric {
 				fields := map[string]interface{}{
 					"usage_idle": float64(91.5),
 				}
@@ -344,7 +328,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 			replaceChar: "_",
 		},
 		{
-			metricFunc: func() (telegraf.Metric, error) {
+			metricFunc: func() telegraf.Metric {
 				fields := map[string]interface{}{
 					"usage_idle": float64(91.5),
 				}
@@ -355,7 +339,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 			replaceChar: DefaultSanitizeReplaceChar,
 		},
 		{
-			metricFunc: func() (telegraf.Metric, error) {
+			metricFunc: func() telegraf.Metric {
 				fields := map[string]interface{}{
 					"usage_idle": float64(91.5),
 				}
@@ -366,7 +350,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 			replaceChar: DefaultSanitizeReplaceChar,
 		},
 		{
-			metricFunc: func() (telegraf.Metric, error) {
+			metricFunc: func() telegraf.Metric {
 				fields := map[string]interface{}{
 					"usage_idle": float64(91.5),
 				}
@@ -377,7 +361,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 			replaceChar: DefaultSanitizeReplaceChar,
 		},
 		{
-			metricFunc: func() (telegraf.Metric, error) {
+			metricFunc: func() telegraf.Metric {
 				fields := map[string]interface{}{
 					"usage_idle": float64(91.5),
 				}
@@ -388,7 +372,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 			replaceChar: "_",
 		},
 		{
-			metricFunc: func() (telegraf.Metric, error) {
+			metricFunc: func() telegraf.Metric {
 				fields := map[string]interface{}{
 					"usage_idle": float64(91.5),
 				}
@@ -402,8 +386,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(string(tc.format), func(t *testing.T) {
-			m, err := tc.metricFunc()
-			require.NoError(t, err)
+			m := tc.metricFunc()
 
 			s, err := NewSerializer(string(tc.format), tc.replaceChar)
 			if tc.expectedErr {
@@ -416,7 +399,7 @@ func TestSerializeMetricIsProperlySanitized(t *testing.T) {
 			buf, err := s.Serialize(m)
 			require.NoError(t, err)
 
-			assert.Equal(t, tc.expected, string(buf))
+			require.Equal(t, tc.expected, string(buf))
 		})
 	}
 }

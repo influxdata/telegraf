@@ -4,7 +4,7 @@ The `influx` data format outputs metrics into [InfluxDB Line Protocol][line
 protocol].  This is the recommended format unless another format is required
 for interoperability.
 
-### Configuration
+## Configuration
 
 ```toml
 [[outputs.file]]
@@ -32,10 +32,11 @@ for interoperability.
   influx_uint_support = false
 ```
 
-### Metrics
+## Metrics
 
 Conversion is direct taking into account some limitations of the Line Protocol
 format:
+
 - Float fields that are `NaN` or `Inf` are skipped.
 - Trailing backslash `\` characters are removed from tag keys and values.
 - Tags with a key or value that is the empty string are skipped.

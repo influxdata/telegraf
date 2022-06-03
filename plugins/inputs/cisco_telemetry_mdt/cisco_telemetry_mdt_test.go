@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"io"
 	"net"
 	"testing"
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
-	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
-	"github.com/golang/protobuf/proto"
-	"github.com/influxdata/telegraf/testutil"
+	telemetryBis "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestHandleTelemetryTwoSimple(t *testing.T) {
@@ -22,55 +24,55 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-	telemetry := &telemetry.Telemetry{
+	telemetry := &telemetryBis.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "type:model/some/path",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
 			{
-				Fields: []*telemetry.TelemetryField{
+				Fields: []*telemetryBis.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "name",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "str"},
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "str"},
 							},
 							{
 								Name:        "uint64",
-								ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 1234},
+								ValueByType: &telemetryBis.TelemetryField_Uint64Value{Uint64Value: 1234},
 							},
 						},
 					},
 					{
 						Name: "content",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "bool",
-								ValueByType: &telemetry.TelemetryField_BoolValue{BoolValue: true},
+								ValueByType: &telemetryBis.TelemetryField_BoolValue{BoolValue: true},
 							},
 						},
 					},
 				},
 			},
 			{
-				Fields: []*telemetry.TelemetryField{
+				Fields: []*telemetryBis.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "name",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "str2"},
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "str2"},
 							},
 						},
 					},
 					{
 						Name: "content",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "bool",
-								ValueByType: &telemetry.TelemetryField_BoolValue{BoolValue: false},
+								ValueByType: &telemetryBis.TelemetryField_BoolValue{BoolValue: false},
 							},
 						},
 					},
@@ -78,7 +80,8 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -99,26 +102,26 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-	telemetry := &telemetry.Telemetry{
+	telemetry := &telemetryBis.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "type:model/nested/path",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
 			{
-				Fields: []*telemetry.TelemetryField{
+				Fields: []*telemetryBis.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name: "nested",
-								Fields: []*telemetry.TelemetryField{
+								Fields: []*telemetryBis.TelemetryField{
 									{
 										Name: "key",
-										Fields: []*telemetry.TelemetryField{
+										Fields: []*telemetryBis.TelemetryField{
 											{
 												Name:        "level",
-												ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 3},
+												ValueByType: &telemetryBis.TelemetryField_DoubleValue{DoubleValue: 3},
 											},
 										},
 									},
@@ -128,16 +131,16 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 					},
 					{
 						Name: "content",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name: "nested",
-								Fields: []*telemetry.TelemetryField{
+								Fields: []*telemetryBis.TelemetryField{
 									{
 										Name: "value",
-										Fields: []*telemetry.TelemetryField{
+										Fields: []*telemetryBis.TelemetryField{
 											{
 												Name:        "foo",
-												ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+												ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar"},
 											},
 										},
 									},
@@ -149,7 +152,8 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -166,49 +170,49 @@ func TestHandleEmbeddedTags(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-	telemetry := &telemetry.Telemetry{
+	telemetry := &telemetryBis.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "type:model/extra",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
 			{
-				Fields: []*telemetry.TelemetryField{
+				Fields: []*telemetryBis.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar"},
 							},
 						},
 					},
 					{
 						Name: "content",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name: "list",
-								Fields: []*telemetry.TelemetryField{
+								Fields: []*telemetryBis.TelemetryField{
 									{
 										Name:        "name",
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "entry1"},
+										ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "entry1"},
 									},
 									{
 										Name:        "test",
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
+										ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "foo"},
 									},
 								},
 							},
 							{
 								Name: "list",
-								Fields: []*telemetry.TelemetryField{
+								Fields: []*telemetryBis.TelemetryField{
 									{
 										Name:        "name",
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "entry2"},
+										ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "entry2"},
 									},
 									{
 										Name:        "test",
-										ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+										ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar"},
 									},
 								},
 							},
@@ -218,7 +222,8 @@ func TestHandleEmbeddedTags(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -238,57 +243,57 @@ func TestHandleNXAPI(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-	telemetry := &telemetry.Telemetry{
+	telemetry := &telemetryBis.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "show nxapi",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
 			{
-				Fields: []*telemetry.TelemetryField{
+				Fields: []*telemetryBis.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar"},
 							},
 						},
 					},
 					{
 						Name: "content",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
-								Fields: []*telemetry.TelemetryField{
+								Fields: []*telemetryBis.TelemetryField{
 									{
 										Name: "TABLE_nxapi",
-										Fields: []*telemetry.TelemetryField{
+										Fields: []*telemetryBis.TelemetryField{
 											{
-												Fields: []*telemetry.TelemetryField{
+												Fields: []*telemetryBis.TelemetryField{
 													{
 														Name: "ROW_nxapi",
-														Fields: []*telemetry.TelemetryField{
+														Fields: []*telemetryBis.TelemetryField{
 															{
-																Fields: []*telemetry.TelemetryField{
+																Fields: []*telemetryBis.TelemetryField{
 																	{
 																		Name:        "index",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "i1"},
+																		ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "i1"},
 																	},
 																	{
 																		Name:        "value",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
+																		ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "foo"},
 																	},
 																},
 															},
 															{
-																Fields: []*telemetry.TelemetryField{
+																Fields: []*telemetryBis.TelemetryField{
 																	{
 																		Name:        "index",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "i2"},
+																		ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "i2"},
 																	},
 																	{
 																		Name:        "value",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+																		ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar"},
 																	},
 																},
 															},
@@ -306,7 +311,8 @@ func TestHandleNXAPI(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -326,45 +332,45 @@ func TestHandleNXAPIXformNXAPI(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-	telemetry := &telemetry.Telemetry{
+	telemetry := &telemetryBis.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "show processes cpu",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
 			{
-				Fields: []*telemetry.TelemetryField{
+				Fields: []*telemetryBis.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar"},
 							},
 						},
 					},
 					{
 						Name: "content",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
-								Fields: []*telemetry.TelemetryField{
+								Fields: []*telemetryBis.TelemetryField{
 									{
 										Name: "TABLE_process_cpu",
-										Fields: []*telemetry.TelemetryField{
+										Fields: []*telemetryBis.TelemetryField{
 											{
-												Fields: []*telemetry.TelemetryField{
+												Fields: []*telemetryBis.TelemetryField{
 													{
 														Name: "ROW_process_cpu",
-														Fields: []*telemetry.TelemetryField{
+														Fields: []*telemetryBis.TelemetryField{
 															{
-																Fields: []*telemetry.TelemetryField{
+																Fields: []*telemetryBis.TelemetryField{
 																	{
 																		Name:        "index",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "i1"},
+																		ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "i1"},
 																	},
 																	{
 																		Name:        "value",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
+																		ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "foo"},
 																	},
 																},
 															},
@@ -382,7 +388,8 @@ func TestHandleNXAPIXformNXAPI(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -399,57 +406,57 @@ func TestHandleNXXformMulti(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-	telemetry := &telemetry.Telemetry{
+	telemetry := &telemetryBis.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "sys/lldp",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
 			{
-				Fields: []*telemetry.TelemetryField{
+				Fields: []*telemetryBis.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar"},
 							},
 						},
 					},
 					{
 						Name: "content",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
-								Fields: []*telemetry.TelemetryField{
+								Fields: []*telemetryBis.TelemetryField{
 									{
 										Name: "fooEntity",
-										Fields: []*telemetry.TelemetryField{
+										Fields: []*telemetryBis.TelemetryField{
 											{
-												Fields: []*telemetry.TelemetryField{
+												Fields: []*telemetryBis.TelemetryField{
 													{
 														Name: "attributes",
-														Fields: []*telemetry.TelemetryField{
+														Fields: []*telemetryBis.TelemetryField{
 															{
-																Fields: []*telemetry.TelemetryField{
+																Fields: []*telemetryBis.TelemetryField{
 																	{
 																		Name:        "rn",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "some-rn"},
+																		ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "some-rn"},
 																	},
 																	{
 																		Name:        "portIdV",
-																		ValueByType: &telemetry.TelemetryField_Uint32Value{Uint32Value: 12},
+																		ValueByType: &telemetryBis.TelemetryField_Uint32Value{Uint32Value: 12},
 																	},
 																	{
 																		Name:        "portDesc",
-																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 100},
+																		ValueByType: &telemetryBis.TelemetryField_Uint64Value{Uint64Value: 100},
 																	},
 																	{
 																		Name:        "test",
-																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 281474976710655},
+																		ValueByType: &telemetryBis.TelemetryField_Uint64Value{Uint64Value: 281474976710655},
 																	},
 																	{
 																		Name:        "subscriptionId",
-																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 2814749767106551},
+																		ValueByType: &telemetryBis.TelemetryField_Uint64Value{Uint64Value: 2814749767106551},
 																	},
 																},
 															},
@@ -467,7 +474,8 @@ func TestHandleNXXformMulti(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -483,45 +491,45 @@ func TestHandleNXDME(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-	telemetry := &telemetry.Telemetry{
+	telemetry := &telemetryBis.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "sys/dme",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
 			{
-				Fields: []*telemetry.TelemetryField{
+				Fields: []*telemetryBis.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "foo",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "bar"},
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar"},
 							},
 						},
 					},
 					{
 						Name: "content",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
-								Fields: []*telemetry.TelemetryField{
+								Fields: []*telemetryBis.TelemetryField{
 									{
 										Name: "fooEntity",
-										Fields: []*telemetry.TelemetryField{
+										Fields: []*telemetryBis.TelemetryField{
 											{
-												Fields: []*telemetry.TelemetryField{
+												Fields: []*telemetryBis.TelemetryField{
 													{
 														Name: "attributes",
-														Fields: []*telemetry.TelemetryField{
+														Fields: []*telemetryBis.TelemetryField{
 															{
-																Fields: []*telemetry.TelemetryField{
+																Fields: []*telemetryBis.TelemetryField{
 																	{
 																		Name:        "rn",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "some-rn"},
+																		ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "some-rn"},
 																	},
 																	{
 																		Name:        "value",
-																		ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "foo"},
+																		ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "foo"},
 																	},
 																},
 															},
@@ -539,7 +547,8 @@ func TestHandleNXDME(t *testing.T) {
 			},
 		},
 	}
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
@@ -566,39 +575,40 @@ func TestTCPDialoutOverflow(t *testing.T) {
 	addr := c.Address()
 	conn, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
-	binary.Write(conn, binary.BigEndian, hdr)
-	conn.Read([]byte{0})
-	conn.Close()
+	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
+	_, err = conn.Read([]byte{0})
+	require.True(t, err == nil || err == io.EOF)
+	require.NoError(t, conn.Close())
 
 	c.Stop()
 
 	require.Contains(t, acc.Errors, errors.New("dialout packet too long: 1000000000"))
 }
 
-func mockTelemetryMessage() *telemetry.Telemetry {
-	return &telemetry.Telemetry{
+func mockTelemetryMessage() *telemetryBis.Telemetry {
+	return &telemetryBis.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "type:model/some/path",
-		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetry.TelemetryField{
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
 			{
-				Fields: []*telemetry.TelemetryField{
+				Fields: []*telemetryBis.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "name",
-								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "str"},
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "str"},
 							},
 						},
 					},
 					{
 						Name: "content",
-						Fields: []*telemetry.TelemetryField{
+						Fields: []*telemetryBis.TelemetryField{
 							{
 								Name:        "value",
-								ValueByType: &telemetry.TelemetryField_Sint64Value{Sint64Value: -1},
+								ValueByType: &telemetryBis.TelemetryField_Sint64Value{Sint64Value: -1},
 							},
 						},
 					},
@@ -629,32 +639,42 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	conn, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
 
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 	hdr.MsgLen = uint32(len(data))
-	binary.Write(conn, binary.BigEndian, hdr)
-	conn.Write(data)
+	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
+	_, err = conn.Write(data)
+	require.NoError(t, err)
 
 	conn2, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
 
 	telemetry.EncodingPath = "type:model/parallel/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	hdr.MsgLen = uint32(len(data))
-	binary.Write(conn2, binary.BigEndian, hdr)
-	conn2.Write(data)
-	conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
-	conn2.Read([]byte{0})
-	conn2.Close()
+	require.NoError(t, binary.Write(conn2, binary.BigEndian, hdr))
+	_, err = conn2.Write(data)
+	require.NoError(t, err)
+	_, err = conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
+	require.NoError(t, err)
+	_, err = conn2.Read([]byte{0})
+	require.True(t, err == nil || err == io.EOF)
+	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	hdr.MsgLen = uint32(len(data))
-	binary.Write(conn, binary.BigEndian, hdr)
-	conn.Write(data)
-	conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
-	conn.Read([]byte{0})
+	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
+	_, err = conn.Write(data)
+	require.NoError(t, err)
+	_, err = conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
+	require.NoError(t, err)
+	_, err = conn.Read([]byte{0})
+	require.True(t, err == nil || err == io.EOF)
 	c.Stop()
-	conn.Close()
+	require.NoError(t, conn.Close())
 
 	// We use the invalid dialout flags to let the server close the connection
 	require.Equal(t, acc.Errors, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")})
@@ -679,15 +699,18 @@ func TestGRPCDialoutError(t *testing.T) {
 	require.NoError(t, err)
 
 	addr := c.Address()
-	conn, _ := grpc.Dial(addr.String(), grpc.WithInsecure())
+	conn, err := grpc.Dial(addr.String(), grpc.WithInsecure())
+	require.NoError(t, err)
 	client := dialout.NewGRPCMdtDialoutClient(conn)
-	stream, _ := client.MdtDialout(context.Background())
+	stream, err := client.MdtDialout(context.Background())
+	require.NoError(t, err)
 
 	args := &dialout.MdtDialoutArgs{Errors: "foobar"}
-	stream.Send(args)
+	require.NoError(t, stream.Send(args))
 
 	// Wait for the server to close
-	stream.Recv()
+	_, err = stream.Recv()
+	require.True(t, err == nil || err == io.EOF)
 	c.Stop()
 
 	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: foobar")})
@@ -702,35 +725,44 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	telemetry := mockTelemetryMessage()
 
 	addr := c.Address()
-	conn, _ := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	require.NoError(t, err)
 	client := dialout.NewGRPCMdtDialoutClient(conn)
-	stream, _ := client.MdtDialout(context.TODO())
+	stream, err := client.MdtDialout(context.TODO())
+	require.NoError(t, err)
 
-	data, _ := proto.Marshal(telemetry)
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
 	args := &dialout.MdtDialoutArgs{Data: data, ReqId: 456}
-	stream.Send(args)
+	require.NoError(t, stream.Send(args))
 
-	conn2, _ := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	conn2, err := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
+	require.NoError(t, err)
 	client2 := dialout.NewGRPCMdtDialoutClient(conn2)
-	stream2, _ := client2.MdtDialout(context.TODO())
+	stream2, err := client2.MdtDialout(context.TODO())
+	require.NoError(t, err)
 
 	telemetry.EncodingPath = "type:model/parallel/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	args = &dialout.MdtDialoutArgs{Data: data}
-	stream2.Send(args)
-	stream2.Send(&dialout.MdtDialoutArgs{Errors: "testclose"})
-	stream2.Recv()
-	conn2.Close()
+	require.NoError(t, stream2.Send(args))
+	require.NoError(t, stream2.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
+	_, err = stream2.Recv()
+	require.True(t, err == nil || err == io.EOF)
+	require.NoError(t, conn2.Close())
 
 	telemetry.EncodingPath = "type:model/other/path"
-	data, _ = proto.Marshal(telemetry)
+	data, err = proto.Marshal(telemetry)
+	require.NoError(t, err)
 	args = &dialout.MdtDialoutArgs{Data: data}
-	stream.Send(args)
-	stream.Send(&dialout.MdtDialoutArgs{Errors: "testclose"})
-	stream.Recv()
+	require.NoError(t, stream.Send(args))
+	require.NoError(t, stream.Send(&dialout.MdtDialoutArgs{Errors: "testclose"}))
+	_, err = stream.Recv()
+	require.True(t, err == nil || err == io.EOF)
 
 	c.Stop()
-	conn.Close()
+	require.NoError(t, conn.Close())
 
 	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
 

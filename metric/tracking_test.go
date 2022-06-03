@@ -16,10 +16,7 @@ func mustMetric(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
-	m, err := New(name, tags, fields, tm, tp...)
-	if err != nil {
-		panic("mustMetric")
-	}
+	m := New(name, tags, fields, tm, tp...)
 	return m
 }
 

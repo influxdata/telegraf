@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package phpfpm
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,13 +12,18 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	PfPool               = "pool"
@@ -39,51 +46,14 @@ type poolStat map[string]metric
 
 type phpfpm struct {
 	Urls    []string
-	Timeout internal.Duration
+	Timeout config.Duration
 	tls.ClientConfig
 
 	client *http.Client
 }
 
-var sampleConfig = `
-  ## An array of addresses to gather stats about. Specify an ip or hostname
-  ## with optional port and path
-  ##
-  ## Plugin can be configured in three modes (either can be used):
-  ##   - http: the URL must start with http:// or https://, ie:
-  ##       "http://localhost/status"
-  ##       "http://192.168.130.1/status?full"
-  ##
-  ##   - unixsocket: path to fpm socket, ie:
-  ##       "/var/run/php5-fpm.sock"
-  ##      or using a custom fpm status path:
-  ##       "/var/run/php5-fpm.sock:fpm-custom-status-path"
-  ##
-  ##   - fcgi: the URL must start with fcgi:// or cgi://, and port must be present, ie:
-  ##       "fcgi://10.0.0.12:9000/status"
-  ##       "cgi://10.0.10.12:9001/status"
-  ##
-  ## Example of multiple gathering from local socket and remote host
-  ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
-  urls = ["http://localhost/status"]
-
-  ## Duration allowed to complete HTTP requests.
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (p *phpfpm) SampleConfig() string {
+func (*phpfpm) SampleConfig() string {
 	return sampleConfig
-}
-
-func (p *phpfpm) Description() string {
-	return "Read metrics of phpfpm, via HTTP status page or socket"
 }
 
 func (p *phpfpm) Init() error {
@@ -96,7 +66,7 @@ func (p *phpfpm) Init() error {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: p.Timeout.Duration,
+		Timeout: time.Duration(p.Timeout),
 	}
 	return nil
 }
@@ -267,7 +237,7 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
 		}
 		fields := make(map[string]interface{})
 		for k, v := range stats[pool] {
-			fields[strings.Replace(k, " ", "_", -1)] = v
+			fields[strings.ReplaceAll(k, " ", "_")] = v
 		}
 		acc.AddFields("phpfpm", fields, tags)
 	}
@@ -275,12 +245,12 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) {
 
 func expandUrls(urls []string) ([]string, error) {
 	addrs := make([]string, 0, len(urls))
-	for _, url := range urls {
-		if isNetworkURL(url) {
-			addrs = append(addrs, url)
+	for _, address := range urls {
+		if isNetworkURL(address) {
+			addrs = append(addrs, address)
 			continue
 		}
-		paths, err := globUnixSocket(url)
+		paths, err := globUnixSocket(address)
 		if err != nil {
 			return nil, err
 		}
@@ -289,8 +259,8 @@ func expandUrls(urls []string) ([]string, error) {
 	return addrs, nil
 }
 
-func globUnixSocket(url string) ([]string, error) {
-	pattern, status := unixSocketPaths(url)
+func globUnixSocket(address string) ([]string, error) {
+	pattern, status := unixSocketPaths(address)
 	glob, err := globpath.Compile(pattern)
 	if err != nil {
 		return nil, fmt.Errorf("could not compile glob %q: %v", pattern, err)
@@ -311,9 +281,7 @@ func globUnixSocket(url string) ([]string, error) {
 	return addresses, nil
 }
 
-func unixSocketPaths(addr string) (string, string) {
-	var socketPath, statusPath string
-
+func unixSocketPaths(addr string) (socketPath string, statusPath string) {
 	socketAddr := strings.Split(addr, ":")
 	if len(socketAddr) >= 2 {
 		socketPath = socketAddr[0]

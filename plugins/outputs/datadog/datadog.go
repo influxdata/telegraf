@@ -1,64 +1,75 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package datadog
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Datadog struct {
-	Apikey  string            `toml:"apikey"`
-	Timeout internal.Duration `toml:"timeout"`
-	URL     string            `toml:"url"`
-	Log     telegraf.Logger   `toml:"-"`
+	Apikey      string          `toml:"apikey"`
+	Timeout     config.Duration `toml:"timeout"`
+	URL         string          `toml:"url"`
+	Compression string          `toml:"compression"`
+	Log         telegraf.Logger `toml:"-"`
 
 	client *http.Client
+	proxy.HTTPProxy
 }
-
-var sampleConfig = `
-  ## Datadog API key
-  apikey = "my-secret-key"
-
-  ## Connection timeout.
-  # timeout = "5s"
-
-  ## Write URL override; useful for debugging.
-  # url = "https://app.datadoghq.com/api/v1/series"
-`
 
 type TimeSeries struct {
 	Series []*Metric `json:"series"`
 }
 
 type Metric struct {
-	Metric string   `json:"metric"`
-	Points [1]Point `json:"points"`
-	Host   string   `json:"host"`
-	Tags   []string `json:"tags,omitempty"`
+	Metric   string   `json:"metric"`
+	Points   [1]Point `json:"points"`
+	Host     string   `json:"host"`
+	Type     string   `json:"type,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+	Interval int64    `json:"interval"`
 }
 
 type Point [2]float64
 
 const datadogAPI = "https://app.datadoghq.com/api/v1/series"
 
+func (*Datadog) SampleConfig() string {
+	return sampleConfig
+}
+
 func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
 		return fmt.Errorf("apikey is a required field for datadog output")
 	}
 
+	proxyFunc, err := d.Proxy()
+	if err != nil {
+		return err
+	}
+
 	d.client = &http.Client{
 		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
+			Proxy: proxyFunc,
 		},
-		Timeout: d.Timeout.Duration,
+		Timeout: time.Duration(d.Timeout),
 	}
 	return nil
 }
@@ -86,10 +97,21 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 				} else {
 					dname = m.Name() + "." + fieldName
 				}
+				var tname string
+				switch m.Type() {
+				case telegraf.Counter:
+					tname = "count"
+				case telegraf.Gauge:
+					tname = "gauge"
+				default:
+					tname = ""
+				}
 				metric := &Metric{
-					Metric: dname,
-					Tags:   metricTags,
-					Host:   host,
+					Metric:   dname,
+					Tags:     metricTags,
+					Host:     host,
+					Type:     tname,
+					Interval: 1,
 				}
 				metric.Points[0] = dogM
 				tempSeries = append(tempSeries, metric)
@@ -111,15 +133,38 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return fmt.Errorf("unable to marshal TimeSeries, %s", err.Error())
 	}
-	req, err := http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(tsBytes))
+
+	var req *http.Request
+	c := strings.ToLower(d.Compression)
+	switch c {
+	case "zlib":
+		encoder, err := internal.NewContentEncoder(c)
+		if err != nil {
+			return err
+		}
+		buf, err := encoder.Encode(tsBytes)
+		if err != nil {
+			return err
+		}
+		req, err = http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(buf))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Encoding", "deflate")
+	case "none":
+		fallthrough
+	default:
+		req, err = http.NewRequest("POST", d.authenticatedURL(), bytes.NewBuffer(tsBytes))
+	}
+
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
+		return fmt.Errorf("unable to create http.Request, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s", strings.Replace(err.Error(), d.Apikey, redactedAPIKey, -1))
+		return fmt.Errorf("error POSTing metrics, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
 	}
 	defer resp.Body.Close()
 
@@ -128,14 +173,6 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
-}
-
-func (d *Datadog) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *Datadog) Description() string {
-	return "Configuration for DataDog API to send metrics to."
 }
 
 func (d *Datadog) authenticatedURL() string {
@@ -189,7 +226,7 @@ func (p *Point) setValue(v interface{}) error {
 	case uint64:
 		p[1] = float64(d)
 	case float64:
-		p[1] = float64(d)
+		p[1] = d
 	case bool:
 		p[1] = float64(0)
 		if d {
@@ -208,7 +245,8 @@ func (d *Datadog) Close() error {
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
 		return &Datadog{
-			URL: datadogAPI,
+			URL:         datadogAPI,
+			Compression: "none",
 		}
 	})
 }

@@ -1,10 +1,11 @@
 # Couchbase Input Plugin
+
 Couchbase is a distributed NoSQL database.
 This plugin gets metrics for each Couchbase node, as well as detailed metrics for each bucket, for a given couchbase server.
 
-## Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Read per-node and per-bucket metrics from Couchbase
 [[inputs.couchbase]]
   ## specify servers via a url matching:
@@ -20,27 +21,39 @@ This plugin gets metrics for each Couchbase node, as well as detailed metrics fo
 
   ## Filter bucket fields to include only here.
   # bucket_stats_included = ["quota_percent_used", "ops_per_sec", "disk_fetches", "item_count", "disk_used", "data_used", "mem_used"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification (defaults to false)
+  ## If set to false, tls_cert and tls_key are required
+  # insecure_skip_verify = false
 ```
 
-## Measurements:
+## Measurements
 
 ### couchbase_node
 
 Tags:
+
 - cluster: sanitized string from `servers` configuration field e.g.: `http://user:password@couchbase-0.example.com:8091/endpoint` -> `http://couchbase-0.example.com:8091/endpoint`
 - hostname: Couchbase's name for the node and port, e.g., `172.16.10.187:8091`
 
 Fields:
+
 - memory_free (unit: bytes, example: 23181365248.0)
 - memory_total (unit: bytes, example: 64424656896.0)
 
 ### couchbase_bucket
 
 Tags:
+
 - cluster: whatever you called it in `servers` in the configuration, e.g.: `http://couchbase-0.example.com/`)
 - bucket: the name of the couchbase bucket, e.g., `blastro-df`
 
 Default bucket fields:
+
 - quota_percent_used (unit: percent, example: 68.85424936294555)
 - ops_per_sec (unit: count, example: 5686.789686789687)
 - disk_fetches (unit: count, example: 0.0)
@@ -50,7 +63,8 @@ Default bucket fields:
 - mem_used (unit: bytes, example: 202156957464.0)
 
 Additional fields that can be configured with the `bucket_stats_included` option:
-- couch_total_disk_size                    
+
+- couch_total_disk_size
 - couch_docs_fragmentation
 - couch_views_fragmentation
 - hit_ratio
@@ -266,10 +280,9 @@ Additional fields that can be configured with the `bucket_stats_included` option
 - swap_total
 - swap_used
 
-
 ## Example output
 
-```
+```shell
 couchbase_node,cluster=http://localhost:8091/,hostname=172.17.0.2:8091 memory_free=7705575424,memory_total=16558182400 1547829754000000000
 couchbase_bucket,bucket=beer-sample,cluster=http://localhost:8091/ quota_percent_used=27.09285736083984,ops_per_sec=0,disk_fetches=0,item_count=7303,disk_used=21662946,data_used=9325087,mem_used=28408920 1547829754000000000
 ```

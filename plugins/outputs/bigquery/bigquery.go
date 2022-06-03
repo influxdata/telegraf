@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package bigquery
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"reflect"
 	"strings"
@@ -13,38 +15,25 @@ import (
 	"google.golang.org/api/option"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const timeStampFieldName = "timestamp"
 
-var defaultTimeout = internal.Duration{Duration: 5 * time.Second}
-
-const sampleConfig = `	
-  ## Credentials File
-  credentials_file = "/path/to/service/account/key.json"
-
-  ## Google Cloud Platform Project
-  project = "my-gcp-project"
-
-  ## The namespace for the metric descriptor
-  dataset = "telegraf"
-
-  ## Timeout for BigQuery operations.
-  # timeout = "5s"
-
-  ## Character to replace hyphens on Metric name
-  # replace_hyphen_to = "_"
-`
+var defaultTimeout = config.Duration(5 * time.Second)
 
 type BigQuery struct {
 	CredentialsFile string `toml:"credentials_file"`
 	Project         string `toml:"project"`
 	Dataset         string `toml:"dataset"`
 
-	Timeout         internal.Duration `toml:"timeout"`
-	ReplaceHyphenTo string            `toml:"replace_hyphen_to"`
+	Timeout         config.Duration `toml:"timeout"`
+	ReplaceHyphenTo string          `toml:"replace_hyphen_to"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -53,14 +42,8 @@ type BigQuery struct {
 	warnedOnHyphens map[string]bool
 }
 
-// SampleConfig returns the formatted sample configuration for the plugin.
-func (s *BigQuery) SampleConfig() string {
+func (*BigQuery) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description returns the human-readable function definition of the plugin.
-func (s *BigQuery) Description() string {
-	return "Configuration for Google Cloud BigQuery to send entries"
 }
 
 func (s *BigQuery) Connect() error {
@@ -85,7 +68,7 @@ func (s *BigQuery) setUpDefaultClient() error {
 	var credentialsOption option.ClientOption
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, s.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
 	defer cancel()
 
 	if s.CredentialsFile != "" {
@@ -205,7 +188,7 @@ func valueToBqType(v interface{}) bigquery.FieldType {
 
 func (s *BigQuery) insertToTable(metricName string, metrics []bigquery.ValueSaver) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, s.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.Timeout))
 	defer cancel()
 
 	tableName := s.metricToTable(metricName)

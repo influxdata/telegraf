@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var oneSecondDuration = internal.Duration{Duration: time.Second}
+var tenMillisecondsDuration = config.Duration(10 * time.Millisecond)
 
 // Key, value pair that represents a telegraf.Metric Field
 type field struct {
@@ -122,7 +122,7 @@ func equalSets(l1 []telegraf.Metric, l2 []telegraf.Metric) bool {
 func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metric, testID string, t *testing.T) {
 	// Sleep for `period`, otherwise the processor will only
 	// cache the metrics, but it will not process them
-	time.Sleep(topk.Period.Duration)
+	time.Sleep(time.Duration(topk.Period))
 
 	// Run the processor
 	ret := topk.Apply(metrics...)
@@ -139,7 +139,7 @@ func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metr
 func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
 
@@ -160,7 +160,7 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 func TestTopkMeanAddAggregateFields(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.Aggregation = "mean"
 	topk.AddAggregateFields = []string{"a"}
 	topk.Fields = []string{"a"}
@@ -188,7 +188,7 @@ func TestTopkMeanAddAggregateFields(t *testing.T) {
 func TestTopkSumAddAggregateFields(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.Aggregation = "sum"
 	topk.AddAggregateFields = []string{"a"}
 	topk.Fields = []string{"a"}
@@ -216,7 +216,7 @@ func TestTopkSumAddAggregateFields(t *testing.T) {
 func TestTopkMaxAddAggregateFields(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.Aggregation = "max"
 	topk.AddAggregateFields = []string{"a"}
 	topk.Fields = []string{"a"}
@@ -244,7 +244,7 @@ func TestTopkMaxAddAggregateFields(t *testing.T) {
 func TestTopkMinAddAggregateFields(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.Aggregation = "min"
 	topk.AddAggregateFields = []string{"a"}
 	topk.Fields = []string{"a"}
@@ -272,7 +272,7 @@ func TestTopkMinAddAggregateFields(t *testing.T) {
 func TestTopkGroupby1(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.K = 3
 	topk.Aggregation = "sum"
 	topk.AddAggregateFields = []string{"value"}
@@ -296,7 +296,7 @@ func TestTopkGroupby1(t *testing.T) {
 func TestTopkGroupby2(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.K = 3
 	topk.Aggregation = "mean"
 	topk.AddAggregateFields = []string{"value"}
@@ -324,7 +324,7 @@ func TestTopkGroupby2(t *testing.T) {
 func TestTopkGroupby3(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.K = 1
 	topk.Aggregation = "min"
 	topk.AddAggregateFields = []string{"value"}
@@ -349,7 +349,7 @@ func TestTopkGroupby3(t *testing.T) {
 func TestTopkGroupbyFields1(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.K = 4 // This settings generate less than 3 groups
 	topk.Aggregation = "mean"
 	topk.AddAggregateFields = []string{"A"}
@@ -375,7 +375,7 @@ func TestTopkGroupbyFields1(t *testing.T) {
 func TestTopkGroupbyFields2(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.K = 2
 	topk.Aggregation = "sum"
 	topk.AddAggregateFields = []string{"B", "C"}
@@ -402,7 +402,7 @@ func TestTopkGroupbyFields2(t *testing.T) {
 func TestTopkGroupbyMetricName1(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.K = 1
 	topk.Aggregation = "sum"
 	topk.AddAggregateFields = []string{"value"}
@@ -427,7 +427,7 @@ func TestTopkGroupbyMetricName1(t *testing.T) {
 func TestTopkGroupbyMetricName2(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.K = 2
 	topk.Aggregation = "sum"
 	topk.AddAggregateFields = []string{"A", "value"}
@@ -454,7 +454,7 @@ func TestTopkGroupbyMetricName2(t *testing.T) {
 func TestTopkBottomk(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.K = 3
 	topk.Aggregation = "sum"
 	topk.GroupBy = []string{"tag1", "tag3"}
@@ -479,7 +479,7 @@ func TestTopkBottomk(t *testing.T) {
 func TestTopkGroupByKeyTag(t *testing.T) {
 	// Build the processor
 	topk := *New()
-	topk.Period = oneSecondDuration
+	topk.Period = tenMillisecondsDuration
 	topk.K = 3
 	topk.Aggregation = "sum"
 	topk.GroupBy = []string{"tag1", "tag3"}

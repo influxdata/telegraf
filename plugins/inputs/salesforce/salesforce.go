@@ -1,12 +1,13 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package salesforce
 
 import (
+	_ "embed"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,24 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var sampleConfig = `
-  ## specify your credentials
-  ##
-  username = "your_username"
-  password = "your_password"
-  ##
-  ## (optional) security token
-  # security_token = "your_security_token"
-  ##
-  ## (optional) environment type (sandbox or production)
-  ## default is: production
-  ##
-  # environment = "production"
-  ##
-  ## (optional) API version (default: "39.0")
-  ##
-  # version = "39.0"
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type limit struct {
 	Max       int
@@ -74,12 +60,8 @@ func NewSalesforce() *Salesforce {
 		Environment: defaultEnvironment}
 }
 
-func (s *Salesforce) SampleConfig() string {
+func (*Salesforce) SampleConfig() string {
 	return sampleConfig
-}
-
-func (s *Salesforce) Description() string {
-	return "Read API usage and limits for a Salesforce organisation"
 }
 
 // Reads limits values from Salesforce API
@@ -203,11 +185,11 @@ func (s *Salesforce) login() error {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
-		body, _ := ioutil.ReadAll(io.LimitReader(resp.Body, 200))
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return fmt.Errorf("%s returned HTTP status %s: %q", loginEndpoint, resp.Status, body)
 	}
 
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

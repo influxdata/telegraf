@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nginx
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -12,41 +14,26 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Nginx struct {
 	Urls            []string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	tls.ClientConfig
 
 	// HTTP client
 	client *http.Client
 }
 
-var sampleConfig = `
-  # An array of Nginx stub_status URI to gather stats.
-  urls = ["http://localhost/server_status"]
-
-  ## Optional TLS Config
-  tls_ca = "/etc/telegraf/ca.pem"
-  tls_cert = "/etc/telegraf/cert.cer"
-  tls_key = "/etc/telegraf/key.key"
-  ## Use TLS but skip chain & host verification
-  insecure_skip_verify = false
-
-  # HTTP response timeout (default: 5s)
-  response_timeout = "5s"
-`
-
-func (n *Nginx) SampleConfig() string {
+func (*Nginx) SampleConfig() string {
 	return sampleConfig
-}
-
-func (n *Nginx) Description() string {
-	return "Read Nginx's basic status information (ngx_http_stub_status_module)"
 }
 
 func (n *Nginx) Gather(acc telegraf.Accumulator) error {
@@ -86,15 +73,15 @@ func (n *Nginx) createHTTPClient() (*http.Client, error) {
 		return nil, err
 	}
 
-	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = time.Second * 5
+	if n.ResponseTimeout < config.Duration(time.Second) {
+		n.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: n.ResponseTimeout.Duration,
+		Timeout: time.Duration(n.ResponseTimeout),
 	}
 
 	return client, nil

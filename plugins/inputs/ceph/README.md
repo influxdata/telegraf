@@ -2,9 +2,9 @@
 
 Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.
 
-Ceph has introduced a Telegraf and Influx plugin in the 13.x Mimic release. The Telegraf module sends to a Telegraf configured with a socket_listener. [Learn more in their docs](http://docs.ceph.com/docs/mimic/mgr/telegraf/)
+Ceph has introduced a Telegraf and Influx plugin in the 13.x Mimic release. The Telegraf module sends to a Telegraf configured with a socket_listener. [Learn more in their docs](https://docs.ceph.com/en/latest/mgr/telegraf/)
 
-*Admin Socket Stats*
+## Admin Socket Stats
 
 This gatherer works by scanning the configured SocketDir for OSD, MON, MDS and RGW socket files.  When it finds
 a MON socket, it runs **ceph --admin-daemon $file perfcounters_dump**. For OSDs it runs **ceph --admin-daemon $file perf dump**
@@ -26,26 +26,25 @@ used as collection tags, and all sub-keys are flattened. For example:
 
 Would be parsed into the following metrics, all of which would be tagged with collection=paxos:
 
- - refresh = 9363435
- - refresh_latency.avgcount: 9363435
- - refresh_latency.sum: 5378.794002000
+- refresh = 9363435
+- refresh_latency.avgcount: 9363435
+- refresh_latency.sum: 5378.794002000
 
-
-*Cluster Stats*
+## Cluster Stats
 
 This gatherer works by invoking ceph commands against the cluster thus only requires the ceph client, valid
 ceph configuration and an access key to function (the ceph_config and ceph_user configuration variables work
 in conjunction to specify these prerequisites). It may be run on any server you wish which has access to
 the cluster.  The currently supported commands are:
 
-* ceph status
-* ceph df
-* ceph osd pool stats
+- ceph status
+- ceph df
+- ceph osd pool stats
 
-### Configuration:
+## Configuration
 
-```toml
-# Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster.
+```toml @sample.conf
+# Collects performance metrics from the MON, OSD, MDS and RGW nodes in a Ceph storage cluster.
 [[inputs.ceph]]
   ## This is the recommended interval to poll.  Too frequent and you will lose
   ## data points due to timeouts during rebalancing and recovery
@@ -89,9 +88,9 @@ the cluster.  The currently supported commands are:
   gather_cluster_stats = false
 ```
 
-### Metrics:
+## Metrics
 
-*Admin Socket Stats*
+### Admin Socket
 
 All fields are collected under the **ceph** measurement and stored as float64s. For a full list of fields, see the sample perf dumps in ceph_test.go.
 
@@ -167,9 +166,9 @@ All admin measurements will have the following tags:
     - throttle-objecter_ops
     - throttle-rgw_async_rados_ops
 
-*Cluster Stats*
+## Cluster
 
-+ ceph_health
+- ceph_health
   - fields:
     - status
     - overall_status
@@ -184,7 +183,7 @@ All admin measurements will have the following tags:
     - nearfull (bool)
     - num_remapped_pgs (float)
 
-+ ceph_pgmap
+- ceph_pgmap
   - fields:
     - version (float)
     - num_pgs (float)
@@ -204,7 +203,7 @@ All admin measurements will have the following tags:
   - fields:
     - count (float)
 
-+ ceph_usage
+- ceph_usage
   - fields:
     - total_bytes (float)
     - total_used_bytes (float)
@@ -223,7 +222,7 @@ All admin measurements will have the following tags:
     - percent_used (float)
     - max_avail (float)
 
-+ ceph_pool_stats
+- ceph_pool_stats
   - tags:
     - name
   - fields:
@@ -236,12 +235,11 @@ All admin measurements will have the following tags:
     - recovering_bytes_per_sec (float)
     - recovering_keys_per_sec (float)
 
+## Example
 
-### Example Output:
+Below is an example of a custer stats:
 
-*Cluster Stats*
-
-```
+```shell
 ceph_health,host=stefanmon1 overall_status="",status="HEALTH_WARN" 1587118504000000000
 ceph_osdmap,host=stefanmon1 epoch=203,full=false,nearfull=false,num_in_osds=8,num_osds=9,num_remapped_pgs=0,num_up_osds=8 1587118504000000000
 ceph_pgmap,host=stefanmon1 bytes_avail=849879302144,bytes_total=858959904768,bytes_used=9080602624,data_bytes=5055,num_pgs=504,read_bytes_sec=0,read_op_per_sec=0,version=0,write_bytes_sec=0,write_op_per_sec=0 1587118504000000000
@@ -251,9 +249,9 @@ ceph_pool_usage,host=stefanmon1,name=cephfs_data bytes_used=0,kb_used=0,max_avai
 ceph_pool_stats,host=stefanmon1,name=cephfs_data read_bytes_sec=0,read_op_per_sec=0,recovering_bytes_per_sec=0,recovering_keys_per_sec=0,recovering_objects_per_sec=0,write_bytes_sec=0,write_op_per_sec=0 1587118506000000000
 ```
 
-*Admin Socket Stats*
+Below is an example of admin socket stats:
 
-```
+```shell
 > ceph,collection=cct,host=stefanmon1,id=stefanmon1,type=monitor total_workers=0,unhealthy_workers=0 1587117563000000000
 > ceph,collection=mempool,host=stefanmon1,id=stefanmon1,type=monitor bloom_filter_bytes=0,bloom_filter_items=0,bluefs_bytes=0,bluefs_items=0,bluestore_alloc_bytes=0,bluestore_alloc_items=0,bluestore_cache_data_bytes=0,bluestore_cache_data_items=0,bluestore_cache_onode_bytes=0,bluestore_cache_onode_items=0,bluestore_cache_other_bytes=0,bluestore_cache_other_items=0,bluestore_fsck_bytes=0,bluestore_fsck_items=0,bluestore_txc_bytes=0,bluestore_txc_items=0,bluestore_writing_bytes=0,bluestore_writing_deferred_bytes=0,bluestore_writing_deferred_items=0,bluestore_writing_items=0,buffer_anon_bytes=719152,buffer_anon_items=192,buffer_meta_bytes=352,buffer_meta_items=4,mds_co_bytes=0,mds_co_items=0,osd_bytes=0,osd_items=0,osd_mapbl_bytes=0,osd_mapbl_items=0,osd_pglog_bytes=0,osd_pglog_items=0,osdmap_bytes=15872,osdmap_items=138,osdmap_mapping_bytes=63112,osdmap_mapping_items=7626,pgmap_bytes=38680,pgmap_items=477,unittest_1_bytes=0,unittest_1_items=0,unittest_2_bytes=0,unittest_2_items=0 1587117563000000000
 > ceph,collection=throttle-mon_client_bytes,host=stefanmon1,id=stefanmon1,type=monitor get=1041157,get_or_fail_fail=0,get_or_fail_success=1041157,get_started=0,get_sum=64928901,max=104857600,put=1041157,put_sum=64928901,take=0,take_sum=0,val=0,wait.avgcount=0,wait.avgtime=0,wait.sum=0 1587117563000000000

@@ -2,10 +2,10 @@
 # Assumes there is only one field as is the case for prometheus remote write. 
 #
 # Example Input:
-# prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1614889298859000000
+# prometheus_remote_write,instance=localhost:9090,job=prometheus,quantile=0.99 go_gc_duration_seconds=4.63 1618488000000000999
 #
 # Example Output:
-# go_gc_duration_seconds,instance=localhost:9090,job=prometheus,quantile=0.99 value=4.63 1614889299000000000
+# go_gc_duration_seconds,instance=localhost:9090,job=prometheus,quantile=0.99 value=4.63 1618488000000000999
 
 def apply(metric):
    if metric.name == "prometheus_remote_write":

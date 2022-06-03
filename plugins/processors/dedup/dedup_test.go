@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 )
 
 const metricName = "m1"
 
 func createMetric(value int64, when time.Time) telegraf.Metric {
-	m, _ := metric.New(metricName,
+	m := metric.New(metricName,
 		map[string]string{"tag": "tag_value"},
 		map[string]interface{}{"value": value},
 		when,
@@ -24,7 +24,7 @@ func createMetric(value int64, when time.Time) telegraf.Metric {
 
 func createDedup(initTime time.Time) Dedup {
 	return Dedup{
-		DedupInterval: internal.Duration{Duration: 10 * time.Minute},
+		DedupInterval: config.Duration(10 * time.Minute),
 		FlushTime:     initTime,
 		Cache:         make(map[uint64]telegraf.Metric),
 	}
@@ -77,6 +77,7 @@ func assertMetricPassed(t *testing.T, target []telegraf.Metric, source telegraf.
 	tValue, present := target[0].GetField("value")
 	require.True(t, present)
 	sValue, present := source.GetField("value")
+	require.True(t, present)
 	require.Equal(t, tValue, sValue)
 	// target metric has proper timestamp
 	require.Equal(t, target[0].Time(), source.Time())
@@ -100,9 +101,9 @@ func TestSuppressRepeatedValue(t *testing.T) {
 	deduplicate := createDedup(time.Now())
 	// Create metric in the past
 	source := createMetric(1, time.Now().Add(-1*time.Second))
-	target := deduplicate.Apply(source)
+	_ = deduplicate.Apply(source)
 	source = createMetric(1, time.Now())
-	target = deduplicate.Apply(source)
+	target := deduplicate.Apply(source)
 
 	assertCacheHit(t, &deduplicate, source)
 	assertMetricSuppressed(t, target)
@@ -113,9 +114,10 @@ func TestPassUpdatedValue(t *testing.T) {
 	// Create metric in the past
 	source := createMetric(1, time.Now().Add(-1*time.Second))
 	target := deduplicate.Apply(source)
+	assertMetricPassed(t, target, source)
+
 	source = createMetric(2, time.Now())
 	target = deduplicate.Apply(source)
-
 	assertCacheRefresh(t, &deduplicate, source)
 	assertMetricPassed(t, target, source)
 }
@@ -125,9 +127,10 @@ func TestPassAfterCacheExpire(t *testing.T) {
 	// Create metric in the past
 	source := createMetric(1, time.Now().Add(-1*time.Hour))
 	target := deduplicate.Apply(source)
+	assertMetricPassed(t, target, source)
+
 	source = createMetric(1, time.Now())
 	target = deduplicate.Apply(source)
-
 	assertCacheRefresh(t, &deduplicate, source)
 	assertMetricPassed(t, target, source)
 }
@@ -162,7 +165,7 @@ func TestSameTimestamp(t *testing.T) {
 	var in telegraf.Metric
 	var out []telegraf.Metric
 
-	in, _ = metric.New("metric",
+	in = metric.New("metric",
 		map[string]string{"tag": "value"},
 		map[string]interface{}{"foo": 1}, // field
 		now,
@@ -170,7 +173,7 @@ func TestSameTimestamp(t *testing.T) {
 	out = dedup.Apply(in)
 	require.Equal(t, []telegraf.Metric{in}, out) // pass
 
-	in, _ = metric.New("metric",
+	in = metric.New("metric",
 		map[string]string{"tag": "value"},
 		map[string]interface{}{"bar": 1}, // different field
 		now,
@@ -178,7 +181,7 @@ func TestSameTimestamp(t *testing.T) {
 	out = dedup.Apply(in)
 	require.Equal(t, []telegraf.Metric{in}, out) // pass
 
-	in, _ = metric.New("metric",
+	in = metric.New("metric",
 		map[string]string{"tag": "value"},
 		map[string]interface{}{"bar": 2}, // same field different value
 		now,
@@ -186,11 +189,23 @@ func TestSameTimestamp(t *testing.T) {
 	out = dedup.Apply(in)
 	require.Equal(t, []telegraf.Metric{in}, out) // pass
 
-	in, _ = metric.New("metric",
+	in = metric.New("metric",
 		map[string]string{"tag": "value"},
 		map[string]interface{}{"bar": 2}, // same field same value
 		now,
 	)
 	out = dedup.Apply(in)
 	require.Equal(t, []telegraf.Metric{}, out) // drop
+}
+
+func TestSuppressMultipleRepeatedValue(t *testing.T) {
+	deduplicate := createDedup(time.Now())
+	// Create metric in the past
+	source := createMetric(1, time.Now().Add(-1*time.Second))
+	_ = deduplicate.Apply(source)
+	source = createMetric(1, time.Now())
+	target := deduplicate.Apply(source, source, source, source)
+
+	assertCacheHit(t, &deduplicate, source)
+	assertMetricSuppressed(t, target)
 }

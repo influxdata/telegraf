@@ -3,9 +3,9 @@
 The Fibaro plugin makes HTTP calls to the Fibaro controller API to gather values of hooked devices.
 Those values could be true (1) or false (0) for switches, percentage for dimmers, temperature, etc.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Read devices value(s) from a Fibaro controller
 [[inputs.fibaro]]
   ## Required Fibaro controller address/hostname.
@@ -20,7 +20,7 @@ Those values could be true (1) or false (0) for switches, percentage for dimmers
   # timeout = "5s"
 ```
 
-### Metrics:
+## Metrics
 
 - fibaro
   - tags:
@@ -36,10 +36,9 @@ Those values could be true (1) or false (0) for switches, percentage for dimmers
     - value (float)
     - value2 (float, when available from device)
 
+## Example Output
 
-### Example Output:
-
-```
+```shell
 fibaro,deviceId=9,host=vm1,name=Fenêtre\ haute,room=Cuisine,section=Cuisine,type=com.fibaro.FGRM222 energy=2.04,power=0.7,value=99,value2=99 1529996807000000000
 fibaro,deviceId=10,host=vm1,name=Escaliers,room=Dégagement,section=Pièces\ communes,type=com.fibaro.binarySwitch value=0 1529996807000000000
 fibaro,deviceId=13,host=vm1,name=Porte\ fenêtre,room=Salon,section=Pièces\ communes,type=com.fibaro.FGRM222 energy=4.33,power=0.7,value=99,value2=99 1529996807000000000

@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package net_response
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"net"
 	"net/textproto"
@@ -9,64 +11,34 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ResultType uint64
 
 const (
 	Success          ResultType = 0
-	Timeout                     = 1
-	ConnectionFailed            = 2
-	ReadFailed                  = 3
-	StringMismatch              = 4
+	Timeout          ResultType = 1
+	ConnectionFailed ResultType = 2
+	ReadFailed       ResultType = 3
+	StringMismatch   ResultType = 4
 )
 
 // NetResponse struct
 type NetResponse struct {
 	Address     string
-	Timeout     internal.Duration
-	ReadTimeout internal.Duration
+	Timeout     config.Duration
+	ReadTimeout config.Duration
 	Send        string
 	Expect      string
 	Protocol    string
 }
 
-var description = "Collect response time of a TCP or UDP connection"
-
-// Description will return a short string to explain what the plugin does.
-func (*NetResponse) Description() string {
-	return description
-}
-
-var sampleConfig = `
-  ## Protocol, must be "tcp" or "udp"
-  ## NOTE: because the "udp" protocol does not respond to requests, it requires
-  ## a send/expect string pair (see below).
-  protocol = "tcp"
-  ## Server address (default localhost)
-  address = "localhost:80"
-
-  ## Set timeout
-  # timeout = "1s"
-
-  ## Set read timeout (only used if expecting a response)
-  # read_timeout = "1s"
-
-  ## The following options are required for UDP checks. For TCP, they are
-  ## optional. The plugin will send the given string to the server and then
-  ## expect to receive the given 'expect' string back.
-  ## string sent to the server
-  # send = "ssh"
-  ## expected string in answer
-  # expect = "ssh"
-
-  ## Uncomment to remove deprecated fields
-  # fielddrop = ["result_type", "string_found"]
-`
-
-// SampleConfig will return a complete configuration example with details about each field.
 func (*NetResponse) SampleConfig() string {
 	return sampleConfig
 }
@@ -80,7 +52,7 @@ func (n *NetResponse) TCPGather() (map[string]string, map[string]interface{}, er
 	// Start Timer
 	start := time.Now()
 	// Connecting
-	conn, err := net.DialTimeout("tcp", n.Address, n.Timeout.Duration)
+	conn, err := net.DialTimeout("tcp", n.Address, time.Duration(n.Timeout))
 	// Stop timer
 	responseTime := time.Since(start).Seconds()
 	// Handle error
@@ -105,7 +77,7 @@ func (n *NetResponse) TCPGather() (map[string]string, map[string]interface{}, er
 	// Read string if needed
 	if n.Expect != "" {
 		// Set read timeout
-		if gerr := conn.SetReadDeadline(time.Now().Add(n.ReadTimeout.Duration)); gerr != nil {
+		if gerr := conn.SetReadDeadline(time.Now().Add(time.Duration(n.ReadTimeout))); gerr != nil {
 			return nil, nil, gerr
 		}
 		// Prepare reader
@@ -120,8 +92,8 @@ func (n *NetResponse) TCPGather() (map[string]string, map[string]interface{}, er
 			setResult(ReadFailed, fields, tags, n.Expect)
 		} else {
 			// Looking for string in answer
-			RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
-			find := RegEx.FindString(data)
+			regEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
+			find := regEx.FindString(data)
 			if find != "" {
 				setResult(Success, fields, tags, n.Expect)
 			} else {
@@ -169,7 +141,7 @@ func (n *NetResponse) UDPGather() (map[string]string, map[string]interface{}, er
 	}
 	// Read string
 	// Set read timeout
-	if gerr := conn.SetReadDeadline(time.Now().Add(n.ReadTimeout.Duration)); gerr != nil {
+	if gerr := conn.SetReadDeadline(time.Now().Add(time.Duration(n.ReadTimeout))); gerr != nil {
 		return nil, nil, gerr
 	}
 	// Read
@@ -186,8 +158,8 @@ func (n *NetResponse) UDPGather() (map[string]string, map[string]interface{}, er
 	}
 
 	// Looking for string in answer
-	RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
-	find := RegEx.FindString(string(buf))
+	regEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
+	find := regEx.FindString(string(buf))
 	if find != "" {
 		setResult(Success, fields, tags, n.Expect)
 	} else {
@@ -204,11 +176,11 @@ func (n *NetResponse) UDPGather() (map[string]string, map[string]interface{}, er
 // also fill an Accumulator that is supplied.
 func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	// Set default values
-	if n.Timeout.Duration == 0 {
-		n.Timeout.Duration = time.Second
+	if n.Timeout == 0 {
+		n.Timeout = config.Duration(time.Second)
 	}
-	if n.ReadTimeout.Duration == 0 {
-		n.ReadTimeout.Duration = time.Second
+	if n.ReadTimeout == 0 {
+		n.ReadTimeout = config.Duration(time.Second)
 	}
 	// Check send and expected string
 	if n.Protocol == "udp" && n.Send == "" {
@@ -232,22 +204,25 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	tags := map[string]string{"server": host, "port": port}
 	var fields map[string]interface{}
 	var returnTags map[string]string
+
 	// Gather data
-	if n.Protocol == "tcp" {
+	switch n.Protocol {
+	case "tcp":
 		returnTags, fields, err = n.TCPGather()
 		if err != nil {
 			return err
 		}
 		tags["protocol"] = "tcp"
-	} else if n.Protocol == "udp" {
+	case "udp":
 		returnTags, fields, err = n.UDPGather()
 		if err != nil {
 			return err
 		}
 		tags["protocol"] = "udp"
-	} else {
+	default:
 		return errors.New("bad protocol")
 	}
+
 	// Merge the tags
 	for k, v := range returnTags {
 		tags[k] = v

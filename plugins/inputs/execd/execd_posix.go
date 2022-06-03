@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package execd
@@ -23,17 +24,19 @@ func (e *Execd) Gather(_ telegraf.Accumulator) error {
 	}
 	switch e.Signal {
 	case "SIGHUP":
-		osProcess.Signal(syscall.SIGHUP)
+		return osProcess.Signal(syscall.SIGHUP)
 	case "SIGUSR1":
-		osProcess.Signal(syscall.SIGUSR1)
+		return osProcess.Signal(syscall.SIGUSR1)
 	case "SIGUSR2":
-		osProcess.Signal(syscall.SIGUSR2)
+		return osProcess.Signal(syscall.SIGUSR2)
 	case "STDIN":
 		if osStdin, ok := e.process.Stdin.(*os.File); ok {
-			osStdin.SetWriteDeadline(time.Now().Add(1 * time.Second))
+			if err := osStdin.SetWriteDeadline(time.Now().Add(1 * time.Second)); err != nil {
+				return fmt.Errorf("setting write deadline failed: %s", err)
+			}
 		}
 		if _, err := io.WriteString(e.process.Stdin, "\n"); err != nil {
-			return fmt.Errorf("Error writing to stdin: %s", err)
+			return fmt.Errorf("writing to stdin failed: %s", err)
 		}
 	case "none":
 	default:

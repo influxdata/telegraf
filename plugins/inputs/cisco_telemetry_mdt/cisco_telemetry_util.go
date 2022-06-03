@@ -1,9 +1,10 @@
 package cisco_telemetry_mdt
 
 import (
-	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"strconv"
 	"strings"
+
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 )
 
 //xform Field to string
@@ -139,6 +140,7 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 		return nil
 	//Xformation supported is only from String
 	case "float":
+		//nolint:revive // switch needed for `.(type)`
 		switch val := field.ValueByType.(type) {
 		case *telemetry.TelemetryField_StringValue:
 			if valf, err := strconv.ParseFloat(val.StringValue, 64); err == nil {

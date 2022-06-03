@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package csgo
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"strconv"
@@ -8,10 +10,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/james4k/rcon"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/james4k/rcon"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type statsData struct {
 	CPU           float64 `json:"cpu"`
@@ -30,22 +37,7 @@ type CSGO struct {
 	Servers [][]string `toml:"servers"`
 }
 
-func (_ *CSGO) Description() string {
-	return "Fetch metrics from a CSGO SRCDS"
-}
-
-var sampleConfig = `
-  ## Specify servers using the following format:
-  ##    servers = [
-  ##      ["ip1:port1", "rcon_password1"],
-  ##      ["ip2:port2", "rcon_password2"],
-  ##    ]
-  #
-  ## If no servers are specified, no data will be collected
-  servers = []
-`
-
-func (_ *CSGO) SampleConfig() string {
+func (*CSGO) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -57,7 +49,7 @@ func (s *CSGO) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(ss []string) {
 			defer wg.Done()
-			acc.AddError(s.gatherServer(ss, requestServer, acc))
+			acc.AddError(s.gatherServer(acc, ss, requestServer))
 		}(server)
 	}
 
@@ -72,9 +64,9 @@ func init() {
 }
 
 func (s *CSGO) gatherServer(
+	acc telegraf.Accumulator,
 	server []string,
 	request func(string, string) (string, error),
-	acc telegraf.Accumulator,
 ) error {
 	if len(server) != 2 {
 		return errors.New("incorrect server config")

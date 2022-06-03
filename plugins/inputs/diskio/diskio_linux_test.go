@@ -1,13 +1,12 @@
+//go:build linux
 // +build linux
 
 package diskio
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,8 +18,8 @@ S:foo/bar/devlink1
 `)
 
 // setupNullDisk sets up fake udev info as if /dev/null were a disk.
-func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() error {
-	td, err := ioutil.TempFile("", ".telegraf.DiskInfoTest")
+func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() {
+	td, err := os.CreateTemp("", ".telegraf.DiskInfoTest")
 	require.NoError(t, err)
 
 	if s.infoCache == nil {
@@ -37,9 +36,10 @@ func setupNullDisk(t *testing.T, s *DiskIO, devName string) func() error {
 	}
 	origUdevPath := ic.udevDataPath
 
-	cleanFunc := func() error {
+	cleanFunc := func() {
 		ic.udevDataPath = origUdevPath
-		return os.Remove(td.Name())
+		//nolint:errcheck,revive // we cannot do anything if file cannot be removed
+		os.Remove(td.Name())
 	}
 
 	ic.udevDataPath = td.Name()
@@ -58,19 +58,18 @@ func TestDiskInfo(t *testing.T) {
 	defer clean()
 	di, err := s.diskInfo("null")
 	require.NoError(t, err)
-	assert.Equal(t, "myval1", di["MY_PARAM_1"])
-	assert.Equal(t, "myval2", di["MY_PARAM_2"])
-	assert.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
+	require.Equal(t, "myval1", di["MY_PARAM_1"])
+	require.Equal(t, "myval2", di["MY_PARAM_2"])
+	require.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
 
 	// test that data is cached
-	err = clean()
-	require.NoError(t, err)
+	clean()
 
 	di, err = s.diskInfo("null")
 	require.NoError(t, err)
-	assert.Equal(t, "myval1", di["MY_PARAM_1"])
-	assert.Equal(t, "myval2", di["MY_PARAM_2"])
-	assert.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
+	require.Equal(t, "myval1", di["MY_PARAM_1"])
+	require.Equal(t, "myval2", di["MY_PARAM_2"])
+	require.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
 	// unfortunately we can't adjust mtime on /dev/null to test cache invalidation
 }
 
@@ -93,12 +92,14 @@ func TestDiskIOStats_diskName(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		s := DiskIO{
-			NameTemplates: tc.templates,
-		}
-		defer setupNullDisk(t, &s, "null")()
-		name, _ := s.diskName("null")
-		assert.Equal(t, tc.expected, name, "Templates: %#v", tc.templates)
+		func() {
+			s := DiskIO{
+				NameTemplates: tc.templates,
+			}
+			defer setupNullDisk(t, &s, "null")() //nolint:revive // done on purpose, cleaning will be executed properly
+			name, _ := s.diskName("null")
+			require.Equal(t, tc.expected, name, "Templates: %#v", tc.templates)
+		}()
 	}
 }
 
@@ -108,7 +109,7 @@ func TestDiskIOStats_diskTags(t *testing.T) {
 	s := &DiskIO{
 		DeviceTags: []string{"MY_PARAM_2"},
 	}
-	defer setupNullDisk(t, s, "null")()
+	defer setupNullDisk(t, s, "null")() //nolint:revive // done on purpose, cleaning will be executed properly
 	dt := s.diskTags("null")
-	assert.Equal(t, map[string]string{"MY_PARAM_2": "myval2"}, dt)
+	require.Equal(t, map[string]string{"MY_PARAM_2": "myval2"}, dt)
 }

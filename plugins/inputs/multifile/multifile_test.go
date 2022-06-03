@@ -5,9 +5,9 @@ import (
 	"path"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestFileTypes(t *testing.T) {
@@ -29,11 +29,10 @@ func TestFileTypes(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := m.Gather(&acc)
-
-	require.NoError(t, err)
-	assert.Equal(t, map[string]string{"exampletag": "test"}, acc.Metrics[0].Tags)
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, m.Init())
+	require.NoError(t, m.Gather(&acc))
+	require.Equal(t, map[string]string{"exampletag": "test"}, acc.Metrics[0].Tags)
+	require.Equal(t, map[string]interface{}{
 		"examplebool":   true,
 		"examplestring": "hello world",
 		"exampleint":    int64(123456),
@@ -57,10 +56,11 @@ func FailEarly(failEarly bool, t *testing.T) error {
 
 	var acc testutil.Accumulator
 
+	require.NoError(t, m.Init())
 	err := m.Gather(&acc)
 
 	if err == nil {
-		assert.Equal(t, map[string]interface{}{
+		require.Equal(t, map[string]interface{}{
 			"exampleint": int64(123456),
 		}, acc.Metrics[0].Fields)
 	}

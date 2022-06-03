@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package redis
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/url"
@@ -13,10 +15,15 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type RedisCommand struct {
 	Command []interface{}
@@ -30,16 +37,17 @@ type Redis struct {
 	Password string
 	tls.ClientConfig
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
-	clients     []Client
-	initialized bool
+	clients   []Client
+	connected bool
 }
 
 type Client interface {
 	Do(returnType string, args ...interface{}) (interface{}, error)
 	Info() *redis.StringCmd
 	BaseTags() map[string]string
+	Close() error
 }
 
 type RedisClient struct {
@@ -185,44 +193,11 @@ func (r *RedisClient) BaseTags() map[string]string {
 	return tags
 }
 
+func (r *RedisClient) Close() error {
+	return r.client.Close()
+}
+
 var replicationSlaveMetricPrefix = regexp.MustCompile(`^slave\d+`)
-
-var sampleConfig = `
-  ## specify servers via a url matching:
-  ##  [protocol://][:password]@address[:port]
-  ##  e.g.
-  ##    tcp://localhost:6379
-  ##    tcp://:password@192.168.99.100
-  ##    unix:///var/run/redis.sock
-  ##
-  ## If no servers are specified, then localhost is used as the host.
-  ## If no port is specified, 6379 is used
-  servers = ["tcp://localhost:6379"]
-
-  ## Optional. Specify redis commands to retrieve values
-  # [[inputs.redis.commands]]
-  # command = ["get", "sample-key"]
-  # field = "sample-key-value"
-  # type = "string"
-
-  ## specify server password
-  # password = "s#cr@t%"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = true
-`
-
-func (r *Redis) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Redis) Description() string {
-	return "Read metrics from one or many redis servers"
-}
 
 var Tracking = map[string]string{
 	"uptime_in_seconds": "uptime",
@@ -230,8 +205,22 @@ var Tracking = map[string]string{
 	"role":              "replication_role",
 }
 
-func (r *Redis) init() error {
-	if r.initialized {
+func (*Redis) SampleConfig() string {
+	return sampleConfig
+}
+
+func (r *Redis) Init() error {
+	for _, command := range r.Commands {
+		if command.Type != "string" && command.Type != "integer" && command.Type != "float" {
+			return fmt.Errorf(`unknown result type: expected one of "string", "integer", "float"; got %q`, command.Type)
+		}
+	}
+
+	return nil
+}
+
+func (r *Redis) connect() error {
+	if r.connected {
 		return nil
 	}
 
@@ -299,15 +288,15 @@ func (r *Redis) init() error {
 		}
 	}
 
-	r.initialized = true
+	r.connected = true
 	return nil
 }
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (r *Redis) Gather(acc telegraf.Accumulator) error {
-	if !r.initialized {
-		err := r.init()
+	if !r.connected {
+		err := r.connect()
 		if err != nil {
 			return err
 		}
@@ -333,6 +322,10 @@ func (r *Redis) gatherCommandValues(client Client, acc telegraf.Accumulator) err
 	for _, command := range r.Commands {
 		val, err := client.Do(command.Type, command.Command...)
 		if err != nil {
+			if strings.Contains(err.Error(), "unexpected type=") {
+				return fmt.Errorf("could not get command result: %s", err)
+			}
+
 			return err
 		}
 
@@ -708,4 +701,18 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		panic(fmt.Sprintf("unhandled source type %T", sourceType))
 	}
 	return reflect.ValueOf(value)
+}
+
+func (r *Redis) Start(telegraf.Accumulator) error {
+	return nil
+}
+
+//Stop close the client through ServiceInput interface Start/Stop methods impl.
+func (r *Redis) Stop() {
+	for _, c := range r.clients {
+		err := c.Close()
+		if err != nil {
+			r.Log.Errorf("error closing client: %v", err)
+		}
+	}
 }

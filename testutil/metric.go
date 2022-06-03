@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
+	telegrafMetric "github.com/influxdata/telegraf/metric"
 )
 
 type metricDiff struct {
@@ -177,7 +177,7 @@ func RequireMetricsEqual(t *testing.T, expected, actual []telegraf.Metric, opts 
 	}
 }
 
-// Metric creates a new metric or panics on error.
+// MustMetric creates a new metric.
 func MustMetric(
 	name string,
 	tags map[string]string,
@@ -185,17 +185,11 @@ func MustMetric(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
-	m, err := metric.New(name, tags, fields, tm, tp...)
-	if err != nil {
-		panic("MustMetric")
-	}
+	m := telegrafMetric.New(name, tags, fields, tm, tp...)
 	return m
 }
 
 func FromTestMetric(met *Metric) telegraf.Metric {
-	m, err := metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
-	if err != nil {
-		panic("MustMetric")
-	}
+	m := telegrafMetric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 	return m
 }

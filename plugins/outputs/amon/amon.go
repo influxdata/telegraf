@@ -1,36 +1,32 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package amon
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Amon struct {
-	ServerKey    string            `toml:"server_key"`
-	AmonInstance string            `toml:"amon_instance"`
-	Timeout      internal.Duration `toml:"timeout"`
-	Log          telegraf.Logger   `toml:"-"`
+	ServerKey    string          `toml:"server_key"`
+	AmonInstance string          `toml:"amon_instance"`
+	Timeout      config.Duration `toml:"timeout"`
+	Log          telegraf.Logger `toml:"-"`
 
 	client *http.Client
 }
-
-var sampleConfig = `
-  ## Amon Server Key
-  server_key = "my-server-key" # required.
-
-  ## Amon Instance URL
-  amon_instance = "https://youramoninstance" # required
-
-  ## Connection timeout.
-  # timeout = "5s"
-`
 
 type TimeSeries struct {
 	Series []*Metric `json:"series"`
@@ -43,6 +39,10 @@ type Metric struct {
 
 type Point [2]float64
 
+func (*Amon) SampleConfig() string {
+	return sampleConfig
+}
+
 func (a *Amon) Connect() error {
 	if a.ServerKey == "" || a.AmonInstance == "" {
 		return fmt.Errorf("serverkey and amon_instance are required fields for amon output")
@@ -51,7 +51,7 @@ func (a *Amon) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: a.Timeout.Duration,
+		Timeout: time.Duration(a.Timeout),
 	}
 	return nil
 }
@@ -65,11 +65,11 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	metricCounter := 0
 
 	for _, m := range metrics {
-		mname := strings.Replace(m.Name(), "_", ".", -1)
+		mname := strings.ReplaceAll(m.Name(), "_", ".")
 		if amonPts, err := buildMetrics(m); err == nil {
 			for fieldName, amonPt := range amonPts {
 				metric := &Metric{
-					Metric: mname + "_" + strings.Replace(fieldName, "_", ".", -1),
+					Metric: mname + "_" + strings.ReplaceAll(fieldName, "_", "."),
 				}
 				metric.Points[0] = amonPt
 				tempSeries = append(tempSeries, metric)
@@ -105,14 +105,6 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (a *Amon) SampleConfig() string {
-	return sampleConfig
-}
-
-func (a *Amon) Description() string {
-	return "Configuration for Amon Server to send metrics to."
-}
-
 func (a *Amon) authenticatedURL() string {
 	return fmt.Sprintf("%s/api/system/%s", a.AmonInstance, a.ServerKey)
 }
@@ -141,7 +133,7 @@ func (p *Point) setValue(v interface{}) error {
 	case float32:
 		p[1] = float64(d)
 	case float64:
-		p[1] = float64(d)
+		p[1] = d
 	default:
 		return fmt.Errorf("undeterminable type")
 	}

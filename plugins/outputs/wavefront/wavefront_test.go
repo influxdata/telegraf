@@ -1,14 +1,15 @@
 package wavefront
 
 import (
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 // default config used by Tests
@@ -32,7 +33,7 @@ func TestBuildMetrics(t *testing.T) {
 
 	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 
-	testMetric1, _ := metric.New(
+	testMetric1 := metric.New(
 		"test.simple.metric",
 		map[string]string{"tag1": "value1", "host": "testHost"},
 		map[string]interface{}{"value": 123},
@@ -121,7 +122,7 @@ func TestBuildMetricsWithSimpleFields(t *testing.T) {
 
 	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 
-	testMetric1, _ := metric.New(
+	testMetric1 := metric.New(
 		"test.simple.metric",
 		map[string]string{"tag1": "value1"},
 		map[string]interface{}{"value": 123},
@@ -241,6 +242,11 @@ func TestBuildTagsWithSource(t *testing.T) {
 			map[string]string{"something": "abc", "host": "r*@l\"Ho/st"},
 			"r-@l\"Ho/st",
 			map[string]string{"something": "abc"},
+		},
+		{
+			map[string]string{"hostagent": "realHost", "env": "qa", "tag": "val"},
+			"realHost",
+			map[string]string{"env": "qa", "tag": "val"},
 		},
 	}
 

@@ -14,22 +14,20 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/influxdata/telegraf/filter"
-
 	"github.com/influxdata/telegraf"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
+
+	"github.com/influxdata/telegraf/filter"
 )
 
-var isolateLUN = regexp.MustCompile(".*/([^/]+)/?$")
+var isolateLUN = regexp.MustCompile(`.*/([^/]+)/?$`)
 
-var isIPv4 = regexp.MustCompile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")
+var isIPv4 = regexp.MustCompile(`^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$`)
 
-var isIPv6 = regexp.MustCompile("^(?:[A-Fa-f0-9]{0,4}:){1,7}[A-Fa-f0-9]{1,4}$")
-
-const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
+var isIPv6 = regexp.MustCompile(`^(?:[A-Fa-f0-9]{0,4}:){1,7}[A-Fa-f0-9]{1,4}$`)
 
 const maxSampleConst = 10 // Absolute maximum number of samples regardless of period
 
@@ -102,6 +100,7 @@ type objectRef struct {
 	parentRef    *types.ManagedObjectReference //Pointer because it must be nillable
 	guest        string
 	dcname       string
+	rpname       string
 	customValues map[string]string
 	lookup       map[string]string
 }
@@ -117,14 +116,14 @@ func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, boo
 
 // NewEndpoint returns a new connection to a vCenter based on the URL and configuration passed
 // as parameters.
-func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL, log telegraf.Logger) (*Endpoint, error) {
+func NewEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log telegraf.Logger) (*Endpoint, error) {
 	e := Endpoint{
-		URL:               url,
+		URL:               address,
 		Parent:            parent,
-		hwMarks:           NewTSCache(hwMarkTTL),
+		hwMarks:           NewTSCache(hwMarkTTL, log),
 		lun2ds:            make(map[string]string),
 		initialized:       false,
-		clientFactory:     NewClientFactory(url, parent),
+		clientFactory:     NewClientFactory(address, parent),
 		customAttrFilter:  newFilterOrPanic(parent.CustomAttributeInclude, parent.CustomAttributeExclude),
 		customAttrEnabled: anythingEnabled(parent.CustomAttributeExclude),
 		log:               log,
@@ -138,7 +137,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL, log telegra
 			parentTag:        "",
 			enabled:          anythingEnabled(parent.DatacenterMetricExclude),
 			realTime:         false,
-			sampling:         300,
+			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
 			paths:            parent.DatacenterInclude,
@@ -156,7 +155,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL, log telegra
 			parentTag:        "dcname",
 			enabled:          anythingEnabled(parent.ClusterMetricExclude),
 			realTime:         false,
-			sampling:         300,
+			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
 			paths:            parent.ClusterInclude,
@@ -166,6 +165,24 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL, log telegra
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
+		},
+		"resourcepool": {
+			name:             "resourcepool",
+			vcName:           "ResourcePool",
+			pKey:             "rpname",
+			parentTag:        "clustername",
+			enabled:          anythingEnabled(parent.ResourcePoolMetricExclude),
+			realTime:         false,
+			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
+			objects:          make(objectMap),
+			filters:          newFilterOrPanic(parent.ResourcePoolMetricInclude, parent.ResourcePoolMetricExclude),
+			paths:            parent.ResourcePoolInclude,
+			excludePaths:     parent.ResourcePoolExclude,
+			simple:           isSimple(parent.ResourcePoolMetricInclude, parent.ResourcePoolMetricExclude),
+			include:          parent.ResourcePoolMetricInclude,
+			collectInstances: parent.ResourcePoolInstances,
+			getObjects:       getResourcePools,
+			parent:           "cluster",
 		},
 		"host": {
 			name:             "host",
@@ -209,7 +226,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL, log telegra
 			pKey:             "dsname",
 			enabled:          anythingEnabled(parent.DatastoreMetricExclude),
 			realTime:         false,
-			sampling:         300,
+			sampling:         int32(time.Duration(parent.HistoricalInterval).Seconds()),
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
 			paths:            parent.DatastoreInclude,
@@ -258,7 +275,7 @@ func isSimple(include []string, exclude []string) bool {
 }
 
 func (e *Endpoint) startDiscovery(ctx context.Context) {
-	e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
+	e.discoveryTicker = time.NewTicker(time.Duration(e.Parent.ObjectDiscoveryInterval))
 	go func() {
 		for {
 			select {
@@ -300,7 +317,7 @@ func (e *Endpoint) init(ctx context.Context) error {
 		}
 	}
 
-	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
+	if time.Duration(e.Parent.ObjectDiscoveryInterval) > 0 {
 		e.Parent.Log.Debug("Running initial discovery")
 		e.initalDiscovery(ctx)
 	}
@@ -339,7 +356,7 @@ func (e *Endpoint) getMetadata(ctx context.Context, obj *objectRef, sampling int
 		return nil, err
 	}
 
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
 	metrics, err := client.Perf.AvailableMetric(ctx1, obj.ref.Reference(), sampling)
 	if err != nil {
@@ -367,7 +384,7 @@ func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resource
 			path = append(path, here.Reference().String())
 			o := object.NewCommon(client.Client.Client, r)
 			var result mo.ManagedEntity
-			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 			defer cancel1()
 			err := o.Properties(ctx1, here, []string{"parent", "name"}, &result)
 			if err != nil {
@@ -429,7 +446,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				paths:        res.paths,
 				excludePaths: res.excludePaths}
 
-			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 			objects, err := res.getObjects(ctx1, e, &rf)
 			cancel1()
 			if err != nil {
@@ -458,9 +475,6 @@ func (e *Endpoint) discover(ctx context.Context) error {
 
 			SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
 			numRes += int64(len(objects))
-		}
-		if err != nil {
-			e.log.Error(err)
 		}
 	}
 
@@ -586,11 +600,11 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	te.Wait()
 }
 
-func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
+func getDatacenters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datacenter
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
-	err := filter.FindAll(ctx1, &resources)
+	err := resourceFilter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -607,11 +621,11 @@ func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (o
 	return m, nil
 }
 
-func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
+func getClusters(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
-	err := filter.FindAll(ctx1, &resources)
+	err := resourceFilter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -623,7 +637,7 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 			// We're not interested in the immediate parent (a folder), but the data center.
 			p, ok := cache[r.Parent.Value]
 			if !ok {
-				ctx2, cancel2 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+				ctx2, cancel2 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 				defer cancel2()
 				client, err := e.clientFactory.GetClient(ctx2)
 				if err != nil {
@@ -631,7 +645,7 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 				}
 				o := object.NewFolder(client.Client.Client, *r.Parent)
 				var folder mo.Folder
-				ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+				ctx3, cancel3 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 				defer cancel3()
 				err = o.Properties(ctx3, *r.Parent, []string{"parent"}, &folder)
 				if err != nil {
@@ -659,9 +673,9 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 }
 
 //noinspection GoUnusedParameter
-func getHosts(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
-	var resources []mo.HostSystem
-	err := filter.FindAll(ctx, &resources)
+func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
+	var resources []mo.ResourcePool
+	err := resourceFilter.FindAll(ctx, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -677,15 +691,58 @@ func getHosts(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectM
 	return m, nil
 }
 
-func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
-	var resources []mo.VirtualMachine
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel1()
-	err := filter.FindAll(ctx1, &resources)
+func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string {
+	//Loop through the Resource Pools objectmap to find the corresponding one
+	for _, r := range rps {
+		if r.ref == rp {
+			return r.name
+		}
+	}
+	return "Resources" //Default value
+}
+
+//noinspection GoUnusedParameter
+func getHosts(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
+	var resources []mo.HostSystem
+	err := resourceFilter.FindAll(ctx, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
+	for _, r := range resources {
+		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
+			name:         r.Name,
+			ref:          r.ExtensibleManagedObject.Reference(),
+			parentRef:    r.Parent,
+			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+		}
+	}
+	return m, nil
+}
+
+func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
+	var resources []mo.VirtualMachine
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
+	defer cancel1()
+	err := resourceFilter.FindAll(ctx1, &resources)
+	if err != nil {
+		return nil, err
+	}
+	m := make(objectMap)
+	client, err := e.clientFactory.GetClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	//Create a ResourcePool Filter and get the list of Resource Pools
+	rprf := ResourceFilter{
+		finder:       &Finder{client},
+		resType:      "ResourcePool",
+		paths:        []string{"/*/host/**"},
+		excludePaths: nil}
+	resourcePools, err := getResourcePools(ctx, e, &rprf)
+	if err != nil {
+		return nil, err
+	}
 	for _, r := range resources {
 		if r.Runtime.PowerState != "poweredOn" {
 			continue
@@ -693,6 +750,8 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 		guest := "unknown"
 		uuid := ""
 		lookup := make(map[string]string)
+		// Get the name of the VM resource pool
+		rpname := getResourcePoolName(*r.ResourcePool, resourcePools)
 
 		// Extract host name
 		if r.Guest != nil && r.Guest.HostName != "" {
@@ -760,6 +819,7 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 			parentRef:    r.Runtime.Host,
 			guest:        guest,
 			altID:        uuid,
+			rpname:       rpname,
 			customValues: e.loadCustomAttributes(&r.ManagedEntity),
 			lookup:       lookup,
 		}
@@ -767,11 +827,11 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 	return m, nil
 }
 
-func getDatastores(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
+func getDatastores(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datastore
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	ctx1, cancel1 := context.WithTimeout(ctx, time.Duration(e.Parent.Timeout))
 	defer cancel1()
-	err := filter.FindAll(ctx1, &resources)
+	err := resourceFilter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -840,7 +900,7 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 	}
 
 	// If discovery interval is disabled (0), discover on each collection cycle
-	if e.Parent.ObjectDiscoveryInterval.Duration == 0 {
+	if time.Duration(e.Parent.ObjectDiscoveryInterval) == 0 {
 		err := e.discover(ctx)
 		if err != nil {
 			return err
@@ -890,18 +950,18 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 	pqs := make(queryChunk, 0, e.Parent.MaxQueryObjects)
 	numQs := 0
 
-	for _, object := range res.objects {
+	for _, obj := range res.objects {
 		timeBuckets := make(map[int64]*types.PerfQuerySpec)
 		for metricIdx, metric := range res.metrics {
 			// Determine time of last successful collection
 			metricName := e.getMetricNameForID(metric.CounterId)
 			if metricName == "" {
-				e.log.Infof("Unable to find metric name for id %d. Skipping!", metric.CounterId)
+				e.log.Debugf("Unable to find metric name for id %d. Skipping!", metric.CounterId)
 				continue
 			}
-			start, ok := e.hwMarks.Get(object.ref.Value, metricName)
+			start, ok := e.hwMarks.Get(obj.ref.Value, metricName)
 			if !ok {
-				start = latest.Add(time.Duration(-res.sampling) * time.Second * (metricLookback - 1))
+				start = latest.Add(time.Duration(-res.sampling) * time.Second * (time.Duration(e.Parent.MetricLookback) - 1))
 			}
 			start = start.Truncate(20 * time.Second) // Truncate to maximum resolution
 
@@ -909,7 +969,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			bucket, ok := timeBuckets[start.Unix()]
 			if !ok {
 				bucket = &types.PerfQuerySpec{
-					Entity:     object.ref,
+					Entity:     obj.ref,
 					MaxSample:  maxSampleConst,
 					MetricId:   make([]types.PerfMetricId, 0),
 					IntervalId: res.sampling,
@@ -1196,6 +1256,9 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	if resourceType == "vm" && objectRef.altID != "" {
 		t["uuid"] = objectRef.altID
 	}
+	if resourceType == "vm" && objectRef.rpname != "" {
+		t["rpname"] = objectRef.rpname
+	}
 
 	// Map parent reference
 	parent, found := e.getParent(objectRef, resource)
@@ -1274,7 +1337,7 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 }
 
-func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (string, string) {
+func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (metricName string, fieldName string) {
 	parts := strings.Split(metric, ".")
 	if len(parts) == 1 {
 		return prefix, parts[0]

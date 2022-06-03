@@ -3,9 +3,9 @@
 This plugin gathers stats from [Unbound](https://www.unbound.net/) -
 a validating, recursive, and caching DNS resolver.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin to collect stats from the Unbound DNS resolver
 [[inputs.unbound]]
   ## Address of server to connect to, read from unbound conf default, optionally ':port'
@@ -32,12 +32,13 @@ a validating, recursive, and caching DNS resolver.
   thread_as_tag = false
 ```
 
-#### Permissions:
+### Permissions
 
 It's important to note that this plugin references unbound-control, which may require additional permissions to execute successfully.
 Depending on the user/group permissions of the telegraf user executing this plugin, you may need to alter the group membership, set facls, or use sudo.
 
 **Group membership (Recommended)**:
+
 ```bash
 $ groups telegraf
 telegraf : telegraf
@@ -50,12 +51,14 @@ telegraf : telegraf unbound
 
 **Sudo privileges**:
 If you use this method, you will need the following in your telegraf config:
+
 ```toml
 [[inputs.unbound]]
   use_sudo = true
 ```
 
 You will also need to update your sudoers file:
+
 ```bash
 $ visudo
 # Add the following line:
@@ -66,13 +69,13 @@ Defaults!UNBOUNDCTL !logfile, !syslog, !pam_session
 
 Please use the solution you see as most appropriate.
 
-### Metrics:
+## Metrics
 
 This is the full list of stats provided by unbound-control and potentially collected
 depending of your unbound configuration.  Histogram related statistics will never be collected,
 extended statistics can also be imported ("extended-statistics: yes" in unbound configuration).
 In the output, the dots in the unbound-control stat name are replaced by underscores(see
-https://www.unbound.net/documentation/unbound-control.html for details).
+<https://www.unbound.net/documentation/unbound-control.html> for details).
 
 Shown metrics are with `thread_as_tag` enabled.
 
@@ -147,8 +150,9 @@ Shown metrics are with `thread_as_tag` enabled.
     - recursion_time_avg
     - recursion_time_median
 
-### Example Output:
-```
+## Example Output
+
+```shell
 unbound,host=localhost total_requestlist_avg=0,total_requestlist_exceeded=0,total_requestlist_overwritten=0,total_requestlist_current_user=0,total_recursion_time_avg=0.029186,total_tcpusage=0,total_num_queries=51,total_num_queries_ip_ratelimited=0,total_num_recursivereplies=6,total_requestlist_max=0,time_now=1522804978.784814,time_elapsed=310.435217,total_num_cachemiss=6,total_num_zero_ttl=0,time_up=310.435217,total_num_cachehits=45,total_num_prefetch=0,total_requestlist_current_all=0,total_recursion_time_median=0.016384 1522804979000000000
 unbound_threads,host=localhost,thread=0 num_queries_ip_ratelimited=0,requestlist_current_user=0,recursion_time_avg=0.029186,num_prefetch=0,requestlist_overwritten=0,requestlist_exceeded=0,requestlist_current_all=0,tcpusage=0,num_cachehits=37,num_cachemiss=6,num_recursivereplies=6,requestlist_avg=0,num_queries=43,num_zero_ttl=0,requestlist_max=0,recursion_time_median=0.032768 1522804979000000000
 unbound_threads,host=localhost,thread=1 num_zero_ttl=0,recursion_time_avg=0,num_queries_ip_ratelimited=0,num_cachehits=8,num_prefetch=0,requestlist_exceeded=0,recursion_time_median=0,tcpusage=0,num_cachemiss=0,num_recursivereplies=0,requestlist_max=0,requestlist_overwritten=0,requestlist_current_user=0,num_queries=8,requestlist_avg=0,requestlist_current_all=0 1522804979000000000

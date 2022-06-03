@@ -7,12 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -54,19 +52,19 @@ func TestConcurrentConns(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 250)
 	_, err := net.Dial("tcp", "127.0.0.1:8125")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8125")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Connection over the limit:
 	conn, err := net.Dial("tcp", "127.0.0.1:8125")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8125")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = conn.Write([]byte(testMsg))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	time.Sleep(time.Millisecond * 100)
-	assert.Zero(t, acc.NFields())
+	require.Zero(t, acc.NFields())
 }
 
 // Test that MaxTCPConnections is respected when max==1
@@ -85,17 +83,17 @@ func TestConcurrentConns1(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 250)
 	_, err := net.Dial("tcp", "127.0.0.1:8125")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Connection over the limit:
 	conn, err := net.Dial("tcp", "127.0.0.1:8125")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8125")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = conn.Write([]byte(testMsg))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	time.Sleep(time.Millisecond * 100)
-	assert.Zero(t, acc.NFields())
+	require.Zero(t, acc.NFields())
 }
 
 // Test that MaxTCPConnections is respected
@@ -113,9 +111,9 @@ func TestCloseConcurrentConns(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 250)
 	_, err := net.Dial("tcp", "127.0.0.1:8125")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8125")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	listener.Stop()
 }
@@ -157,7 +155,7 @@ func sendRequests(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for i := 0; i < 25000; i++ {
 		//nolint:errcheck,revive
-		fmt.Fprintf(conn, testMsg)
+		fmt.Fprint(conn, testMsg)
 	}
 }
 
@@ -398,7 +396,7 @@ func TestParse_Counters(t *testing.T) {
 // Tests low-level functionality of timings
 func TestParse_Timings(t *testing.T) {
 	s := NewTestStatsd()
-	s.Percentiles = []internal.Number{{Value: 90.0}}
+	s.Percentiles = []Number{90.0}
 	acc := &testutil.Accumulator{}
 
 	// Test that timings work
@@ -477,7 +475,7 @@ func TestParse_Distributions(t *testing.T) {
 	parseMetrics()
 	for key, value := range validMeasurementMap {
 		field := map[string]interface{}{
-			"value": float64(value),
+			"value": value,
 		}
 		acc.AssertContainsFields(t, key, field)
 	}
@@ -1187,7 +1185,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 	s := NewTestStatsd()
 	s.Templates = []string{"measurement.field"}
-	s.Percentiles = []internal.Number{{Value: 90.0}}
+	s.Percentiles = []Number{90.0}
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
@@ -1235,7 +1233,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 	s := NewTestStatsd()
 	s.Templates = []string{}
-	s.Percentiles = []internal.Number{{Value: 90.0}}
+	s.Percentiles = []Number{90.0}
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
@@ -1571,7 +1569,7 @@ func testValidateGauge(
 	}
 
 	if valueExpected != valueActual {
-		return fmt.Errorf("Measurement: %s, expected %f, actual %f", name, valueExpected, valueActual)
+		return fmt.Errorf("measurement: %s, expected %f, actual %f", name, valueExpected, valueActual)
 	}
 	return nil
 }
@@ -1591,6 +1589,8 @@ func TestTCP(t *testing.T) {
 	addr := statsd.TCPlistener.Addr().String()
 
 	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+
 	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
 	require.NoError(t, err)
 	require.NoError(t, conn.Close())
@@ -1664,4 +1664,104 @@ func TestUdp(t *testing.T) {
 		acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime(),
 	)
+}
+
+func TestParse_Ints(t *testing.T) {
+	s := NewTestStatsd()
+	s.Percentiles = []Number{90}
+	acc := &testutil.Accumulator{}
+
+	require.NoError(t, s.Gather(acc))
+	require.Equal(t, s.Percentiles, []Number{90.0})
+}
+
+func TestParse_KeyValue(t *testing.T) {
+	type output struct {
+		key string
+		val string
+	}
+
+	validLines := []struct {
+		input  string
+		output output
+	}{
+		{"", output{"", ""}},
+		{"only value", output{"", "only value"}},
+		{"key=value", output{"key", "value"}},
+		{"url=/api/querystring?key1=val1&key2=value", output{"url", "/api/querystring?key1=val1&key2=value"}},
+	}
+
+	for _, line := range validLines {
+		key, val := parseKeyValue(line.input)
+		if key != line.output.key {
+			t.Errorf("line: %s,  key expected %s, actual %s", line, line.output.key, key)
+		}
+		if val != line.output.val {
+			t.Errorf("line: %s,  val expected %s, actual %s", line, line.output.val, val)
+		}
+	}
+}
+
+func TestParseSanitize(t *testing.T) {
+	s := NewTestStatsd()
+	s.SanitizeNamesMethod = "upstream"
+
+	tests := []struct {
+		inName  string
+		outName string
+	}{
+		{
+			"regex.ARP flood stats",
+			"regex_ARP_flood_stats",
+		},
+		{
+			"regex./dev/null",
+			"regex_-dev-null",
+		},
+		{
+			"regex.wow!!!",
+			"regex_wow",
+		},
+		{
+			"regex.all*things",
+			"regex_allthings",
+		},
+	}
+
+	for _, test := range tests {
+		name, _, _ := s.parseName(test.inName)
+		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
+	}
+}
+
+func TestParseNoSanitize(t *testing.T) {
+	s := NewTestStatsd()
+	s.SanitizeNamesMethod = ""
+
+	tests := []struct {
+		inName  string
+		outName string
+	}{
+		{
+			"regex.ARP flood stats",
+			"regex_ARP",
+		},
+		{
+			"regex./dev/null",
+			"regex_/dev/null",
+		},
+		{
+			"regex.wow!!!",
+			"regex_wow!!!",
+		},
+		{
+			"regex.all*things",
+			"regex_all*things",
+		},
+	}
+
+	for _, test := range tests {
+		name, _, _ := s.parseName(test.inName)
+		require.Equalf(t, name, test.outName, "Expected: %s, got %s", test.outName, name)
+	}
 }

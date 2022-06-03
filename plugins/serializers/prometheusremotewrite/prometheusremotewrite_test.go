@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
@@ -615,6 +614,28 @@ rpc_duration_seconds_count 2693
 rpc_duration_seconds_sum 17560473
 `),
 		},
+		{
+			name: "empty label string value",
+			config: FormatConfig{
+				MetricSortOrder: SortMetrics,
+				StringHandling:  StringAsLabel,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{
+						"cpu": "",
+					},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+			time_idle 42
+`),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -642,7 +663,7 @@ func prompbToText(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	var req prompb.WriteRequest
-	err = proto.Unmarshal(protobuff, &req)
+	err = req.Unmarshal(protobuff)
 	if err != nil {
 		return nil, err
 	}

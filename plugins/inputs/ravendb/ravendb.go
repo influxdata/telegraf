@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ravendb
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,11 +12,15 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // defaultURL will set a default value that corresponds to the default value
 // used by RavenDB
@@ -28,7 +34,7 @@ type RavenDB struct {
 	URL  string `toml:"url"`
 	Name string `toml:"name"`
 
-	Timeout internal.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 
 	StatsInclude       []string `toml:"stats_include"`
 	DbStatsDbs         []string `toml:"db_stats_dbs"`
@@ -46,46 +52,8 @@ type RavenDB struct {
 	requestURLCollection string
 }
 
-var sampleConfig = `
-  ## Node URL and port that RavenDB is listening on
-  url = "https://localhost:8080"
-
-  ## RavenDB X509 client certificate setup
-  # tls_cert = "/etc/telegraf/raven.crt"
-  # tls_key = "/etc/telegraf/raven.key"
-
-  ## Optional request timeout
-  ##
-  ## Timeout, specifies the amount of time to wait
-  ## for a server's response headers after fully writing the request and 
-  ## time limit for requests made by this client
-  # timeout = "5s"
-
-  ## List of statistics which are collected
-  # At least one is required
-  # Allowed values: server, databases, indexes, collections
-  #
-  # stats_include = ["server", "databases", "indexes", "collections"]
-
-  ## List of db where database stats are collected
-  ## If empty, all db are concerned
-  # db_stats_dbs = []
-
-  ## List of db where index status are collected
-  ## If empty, all indexes from all db are concerned
-  # index_stats_dbs = []
-
-  ## List of db where collection status are collected
-  ## If empty, all collections from all db are concerned
-  # collection_stats_dbs = []
-`
-
-func (r *RavenDB) SampleConfig() string {
+func (*RavenDB) SampleConfig() string {
 	return sampleConfig
-}
-
-func (r *RavenDB) Description() string {
-	return "Reads metrics from RavenDB servers via the Monitoring Endpoints"
 }
 
 func (r *RavenDB) Gather(acc telegraf.Accumulator) error {
@@ -133,12 +101,12 @@ func (r *RavenDB) ensureClient() error {
 		return err
 	}
 	tr := &http.Transport{
-		ResponseHeaderTimeout: r.Timeout.Duration,
+		ResponseHeaderTimeout: time.Duration(r.Timeout),
 		TLSClientConfig:       tlsCfg,
 	}
 	r.client = &http.Client{
 		Transport: tr,
-		Timeout:   r.Timeout.Duration,
+		Timeout:   time.Duration(r.Timeout),
 	}
 
 	return nil
@@ -418,7 +386,7 @@ func (r *RavenDB) Init() error {
 func init() {
 	inputs.Add("ravendb", func() telegraf.Input {
 		return &RavenDB{
-			Timeout:      internal.Duration{Duration: defaultTimeout * time.Second},
+			Timeout:      config.Duration(defaultTimeout * time.Second),
 			StatsInclude: []string{"server", "databases", "indexes", "collections"},
 		}
 	})

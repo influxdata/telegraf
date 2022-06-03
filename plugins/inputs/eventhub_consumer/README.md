@@ -2,24 +2,23 @@
 
 This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
 
-### IoT Hub Setup
+## IoT Hub Setup
 
 The main focus for development of this plugin is Azure IoT hub:
 
-1. Create an Azure IoT Hub by following any of the guides provided here: https://docs.microsoft.com/en-us/azure/iot-hub/
+1. Create an Azure IoT Hub by following any of the guides provided here: [Azure IoT Hub](https://docs.microsoft.com/en-us/azure/iot-hub/)
 2. Create a device, for example a [simulated Raspberry Pi](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-raspberry-pi-web-simulator-get-started)
 3. The connection string needed for the plugin is located under *Shared access policies*, both the *iothubowner* and *service* policies should work
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
+# Azure Event Hubs service input plugin
 [[inputs.eventhub_consumer]]
   ## The default behavior is to create a new Event Hub client from environment variables.
   ## This requires one of the following sets of environment variables to be set:
   ##
   ## 1) Expected Environment Variables:
-  ##    - "EVENTHUB_NAMESPACE"
-  ##    - "EVENTHUB_NAME"
   ##    - "EVENTHUB_CONNECTION_STRING"
   ##
   ## 2) Expected Environment Variables:
@@ -28,8 +27,17 @@ The main focus for development of this plugin is Azure IoT hub:
   ##    - "EVENTHUB_KEY_NAME"
   ##    - "EVENTHUB_KEY_VALUE"
 
+  ## 3) Expected Environment Variables:
+  ##    - "EVENTHUB_NAMESPACE"
+  ##    - "EVENTHUB_NAME"
+  ##    - "AZURE_TENANT_ID"
+  ##    - "AZURE_CLIENT_ID"
+  ##    - "AZURE_CLIENT_SECRET"
+
   ## Uncommenting the option below will create an Event Hub client based solely on the connection string.
   ## This can either be the associated environment variable or hard coded directly.
+  ## If this option is uncommented, environment variables will be ignored.
+  ## Connection string should contain EventHubName (EntityPath)
   # connection_string = ""
 
   ## Set persistence directory to a valid folder to use a file persister instead of an in-memory persister
@@ -91,7 +99,7 @@ The main focus for development of this plugin is Azure IoT hub:
   data_format = "influx"
 ```
 
-#### Environment Variables
+### Environment Variables
 
 [Full documentation of the available environment variables][envvar].
 

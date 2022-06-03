@@ -1,9 +1,9 @@
-package jolokia2
+package jolokia2_test
 
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,14 +20,14 @@ func TestJolokia2_ClientAuthRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, _ = r.BasicAuth()
 
-		body, _ := ioutil.ReadAll(r.Body)
+		body, _ := io.ReadAll(r.Body)
 		require.NoError(t, json.Unmarshal(body, &requests))
 
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
-	plugin := setupPlugin(t, fmt.Sprintf(`
+	plugin := SetupPlugin(t, fmt.Sprintf(`
 		[jolokia2_agent]
 			urls = ["%s/jolokia"]
 			username = "sally"
@@ -56,7 +56,7 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, _ = r.BasicAuth()
 
-		body, _ := ioutil.ReadAll(r.Body)
+		body, _ := io.ReadAll(r.Body)
 		require.NoError(t, json.Unmarshal(body, &requests))
 		w.WriteHeader(http.StatusOK)
 		_, err := fmt.Fprintf(w, "[]")
@@ -64,7 +64,7 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 	}))
 	defer server.Close()
 
-	plugin := setupPlugin(t, fmt.Sprintf(`
+	plugin := SetupPlugin(t, fmt.Sprintf(`
 		[jolokia2_proxy]
 			url = "%s/jolokia"
 			username = "sally"

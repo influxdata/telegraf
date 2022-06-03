@@ -2,7 +2,7 @@ package aliyuncms
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -12,12 +12,13 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cms"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const inputTitle = "inputs.aliyuncms"
@@ -34,11 +35,11 @@ func (m *mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetr
 		resp.Period = "60"
 		resp.Datapoints = `
 		[{
-			"timestamp": 1490152860000, 
-			"Maximum": 200, 
-			"userId": "1234567898765432", 
-			"Minimum": 100, 
-			"instanceId": "i-abcdefgh123456", 
+			"timestamp": 1490152860000,
+			"Maximum": 200,
+			"userId": "1234567898765432",
+			"Minimum": 100,
+			"instanceId": "i-abcdefgh123456",
 			"Average": 150,
 			"Value": 300
 		}]`
@@ -50,11 +51,11 @@ func (m *mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetr
 		resp.Period = "60"
 		resp.Datapoints = `
 		[{
-			"timestamp": 1490152860000, 
-			"Maximum": 200, 
-			"userId": "1234567898765432", 
-			"Minimum": 100, 
-			"instanceId": "i-abcdefgh123456", 
+			"timestamp": 1490152860000,
+			"Maximum": 200,
+			"userId": "1234567898765432",
+			"Minimum": 100,
+			"instanceId": "i-abcdefgh123456",
 			"Average": 150,
 		}]`
 	case "EmptyDatapoint":
@@ -95,7 +96,7 @@ func getDiscoveryTool(project string, discoverRegions []string) (*discoveryTool,
 		return nil, errors.Errorf("failed to retrieve credential: %v", err)
 	}
 
-	dt, err := NewDiscoveryTool(discoverRegions, project, testutil.Logger{Name: inputTitle}, credential, 1, time.Minute*2)
+	dt, err := newDiscoveryTool(discoverRegions, project, testutil.Logger{Name: inputTitle}, credential, 1, time.Minute*2)
 
 	if err != nil {
 		return nil, errors.Errorf("Can't create discovery tool object: %v", err)
@@ -113,7 +114,7 @@ func getMockSdkCli(httpResp *http.Response) (mockAliyunSDKCli, error) {
 
 func TestPluginDefaults(t *testing.T) {
 	require.Equal(t, &AliyunCMS{RateLimit: 200,
-		DiscoveryInterval: internal.Duration{Duration: time.Minute},
+		DiscoveryInterval: config.Duration(time.Minute),
 		dimensionKey:      "instanceId",
 	}, inputs.Inputs["aliyuncms"]())
 }
@@ -122,21 +123,20 @@ func TestPluginInitialize(t *testing.T) {
 	var err error
 
 	plugin := new(AliyunCMS)
-	plugin.DiscoveryRegions = []string{"cn-shanghai"}
-	plugin.dt, err = getDiscoveryTool("acs_slb_dashboard", plugin.DiscoveryRegions)
+	plugin.Log = testutil.Logger{Name: inputTitle}
+	plugin.Regions = []string{"cn-shanghai"}
+	plugin.dt, err = getDiscoveryTool("acs_slb_dashboard", plugin.Regions)
 	if err != nil {
 		t.Fatalf("Can't create discovery tool object: %v", err)
 	}
 
-	plugin.Log = testutil.Logger{Name: inputTitle}
-
 	httpResp := &http.Response{
 		StatusCode: 200,
-		Body: ioutil.NopCloser(bytes.NewBufferString(
+		Body: io.NopCloser(bytes.NewBufferString(
 			`{
 						"LoadBalancers":
 						 {
-						  "LoadBalancer": [ 
+						  "LoadBalancer": [
  							 {"LoadBalancerId":"bla"}
                            ]
                          },
@@ -149,7 +149,7 @@ func TestPluginInitialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create mock sdk cli: %v", err)
 	}
-	plugin.dt.cli = map[string]aliyunSdkClient{plugin.DiscoveryRegions[0]: &mockCli}
+	plugin.dt.cli = map[string]aliyunSdkClient{plugin.Regions[0]: &mockCli}
 
 	tests := []struct {
 		name                string
@@ -157,13 +157,23 @@ func TestPluginInitialize(t *testing.T) {
 		accessKeyID         string
 		accessKeySecret     string
 		expectedErrorString string
+		regions             []string
+		discoveryRegions    []string
 	}{
 		{
 			name:                "Empty project",
 			expectedErrorString: "project is not set",
+			regions:             []string{"cn-shanghai"},
 		},
 		{
 			name:            "Valid project",
+			project:         "acs_slb_dashboard",
+			regions:         []string{"cn-shanghai"},
+			accessKeyID:     "dummy",
+			accessKeySecret: "dummy",
+		},
+		{
+			name:            "'regions' is not set",
 			project:         "acs_slb_dashboard",
 			accessKeyID:     "dummy",
 			accessKeySecret: "dummy",
@@ -175,6 +185,111 @@ func TestPluginInitialize(t *testing.T) {
 			plugin.Project = tt.project
 			plugin.AccessKeyID = tt.accessKeyID
 			plugin.AccessKeySecret = tt.accessKeySecret
+			plugin.Regions = tt.regions
+
+			if tt.expectedErrorString != "" {
+				require.EqualError(t, plugin.Init(), tt.expectedErrorString)
+			} else {
+				require.Equal(t, nil, plugin.Init())
+			}
+			if len(tt.regions) == 0 { //Check if set to default
+				require.Equal(t, plugin.Regions, aliyunRegionList)
+			}
+		})
+	}
+}
+
+func TestPluginMetricsInitialize(t *testing.T) {
+	var err error
+
+	plugin := new(AliyunCMS)
+	plugin.Log = testutil.Logger{Name: inputTitle}
+	plugin.Regions = []string{"cn-shanghai"}
+	plugin.dt, err = getDiscoveryTool("acs_slb_dashboard", plugin.Regions)
+	if err != nil {
+		t.Fatalf("Can't create discovery tool object: %v", err)
+	}
+
+	httpResp := &http.Response{
+		StatusCode: 200,
+		Body: io.NopCloser(bytes.NewBufferString(
+			`{
+				"LoadBalancers":
+					{
+						"LoadBalancer": [
+ 							{"LoadBalancerId":"bla"}
+                        ]
+                    },
+				"TotalCount": 1,
+				"PageSize": 1,
+				"PageNumber": 1
+			}`)),
+	}
+	mockCli, err := getMockSdkCli(httpResp)
+	if err != nil {
+		t.Fatalf("Can't create mock sdk cli: %v", err)
+	}
+	plugin.dt.cli = map[string]aliyunSdkClient{plugin.Regions[0]: &mockCli}
+
+	tests := []struct {
+		name                string
+		project             string
+		accessKeyID         string
+		accessKeySecret     string
+		expectedErrorString string
+		regions             []string
+		discoveryRegions    []string
+		metrics             []*Metric
+	}{
+		{
+			name:            "Valid project",
+			project:         "acs_slb_dashboard",
+			regions:         []string{"cn-shanghai"},
+			accessKeyID:     "dummy",
+			accessKeySecret: "dummy",
+			metrics: []*Metric{
+				{
+					MetricNames: []string{},
+					Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
+				},
+			},
+		},
+		{
+			name:            "Valid project",
+			project:         "acs_slb_dashboard",
+			regions:         []string{"cn-shanghai"},
+			accessKeyID:     "dummy",
+			accessKeySecret: "dummy",
+			metrics: []*Metric{
+				{
+					MetricNames: []string{},
+					Dimensions:  `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
+				},
+			},
+		},
+		{
+			name:                "Valid project",
+			project:             "acs_slb_dashboard",
+			regions:             []string{"cn-shanghai"},
+			accessKeyID:         "dummy",
+			accessKeySecret:     "dummy",
+			expectedErrorString: `cannot parse dimensions (neither obj, nor array) "[" :unexpected end of JSON input`,
+			metrics: []*Metric{
+				{
+					MetricNames: []string{},
+					Dimensions:  `[`,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin.Project = tt.project
+			plugin.AccessKeyID = tt.accessKeyID
+			plugin.AccessKeySecret = tt.accessKeySecret
+			plugin.Regions = tt.regions
+			plugin.Metrics = tt.metrics
 
 			if tt.expectedErrorString != "" {
 				require.EqualError(t, plugin.Init(), tt.expectedErrorString)
@@ -187,9 +302,7 @@ func TestPluginInitialize(t *testing.T) {
 
 func TestUpdateWindow(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
-	internalDuration := internal.Duration{
-		Duration: duration,
-	}
+	internalDuration := config.Duration(duration)
 
 	plugin := &AliyunCMS{
 		Project: "acs_slb_dashboard",
@@ -208,14 +321,14 @@ func TestUpdateWindow(t *testing.T) {
 	newStartTime := plugin.windowEnd
 
 	// initial window just has a single period
-	require.EqualValues(t, plugin.windowEnd, now.Add(-plugin.Delay.Duration))
-	require.EqualValues(t, plugin.windowStart, now.Add(-plugin.Delay.Duration).Add(-plugin.Period.Duration))
+	require.EqualValues(t, plugin.windowEnd, now.Add(-time.Duration(plugin.Delay)))
+	require.EqualValues(t, plugin.windowStart, now.Add(-time.Duration(plugin.Delay)).Add(-time.Duration(plugin.Period)))
 
 	now = time.Now()
 	plugin.updateWindow(now)
 
 	// subsequent window uses previous end time as start time
-	require.EqualValues(t, plugin.windowEnd, now.Add(-plugin.Delay.Duration))
+	require.EqualValues(t, plugin.windowEnd, now.Add(-time.Duration(plugin.Delay)))
 	require.EqualValues(t, plugin.windowStart, newStartTime)
 }
 
@@ -225,6 +338,7 @@ func TestGatherMetric(t *testing.T) {
 		client:      new(mockGatherAliyunCMSClient),
 		measurement: formatMeasurement("acs_slb_dashboard"),
 		Log:         testutil.Logger{Name: inputTitle},
+		Regions:     []string{"cn-shanghai"},
 	}
 
 	metric := &Metric{
@@ -263,15 +377,15 @@ func TestGather(t *testing.T) {
 		Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 	}
 	plugin := &AliyunCMS{
-		AccessKeyID:      "my_access_key_id",
-		AccessKeySecret:  "my_access_key_secret",
-		Project:          "acs_slb_dashboard",
-		Metrics:          []*Metric{metric},
-		RateLimit:        200,
-		measurement:      formatMeasurement("acs_slb_dashboard"),
-		DiscoveryRegions: []string{"cn-shanghai"},
-		client:           new(mockGatherAliyunCMSClient),
-		Log:              testutil.Logger{Name: inputTitle},
+		AccessKeyID:     "my_access_key_id",
+		AccessKeySecret: "my_access_key_secret",
+		Project:         "acs_slb_dashboard",
+		Metrics:         []*Metric{metric},
+		RateLimit:       200,
+		measurement:     formatMeasurement("acs_slb_dashboard"),
+		Regions:         []string{"cn-shanghai"},
+		client:          new(mockGatherAliyunCMSClient),
+		Log:             testutil.Logger{Name: inputTitle},
 	}
 
 	//test table:
@@ -327,7 +441,7 @@ func TestGather(t *testing.T) {
 	}
 }
 
-func TestGetDiscoveryDataAllRegions(t *testing.T) {
+func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
 	//test table:
 	tests := []struct {
 		name                string
@@ -346,7 +460,7 @@ func TestGetDiscoveryDataAllRegions(t *testing.T) {
 			region:  "cn-hongkong",
 			httpResp: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewBufferString(`{}`)),
+				Body:       io.NopCloser(bytes.NewBufferString(`{}`)),
 			},
 			totalCount:          0,
 			pageSize:            0,
@@ -359,11 +473,11 @@ func TestGetDiscoveryDataAllRegions(t *testing.T) {
 			region:  "cn-hongkong",
 			httpResp: &http.Response{
 				StatusCode: 200,
-				Body: ioutil.NopCloser(bytes.NewBufferString(
+				Body: io.NopCloser(bytes.NewBufferString(
 					`{
 						"LoadBalancers":
 						 {
-						  "LoadBalancer": [ 
+						  "LoadBalancer": [
  							 {"LoadBalancerId":"bla"}
                            ]
                          },
@@ -392,7 +506,7 @@ func TestGetDiscoveryDataAllRegions(t *testing.T) {
 				t.Fatalf("Can't create mock sdk cli: %v", err)
 			}
 			dt.cli = map[string]aliyunSdkClient{tt.region: &mockCli}
-			data, err := dt.getDiscoveryDataAllRegions(nil)
+			data, err := dt.getDiscoveryDataAcrossRegions(nil)
 
 			require.Equal(t, tt.discData, data)
 			if err != nil {

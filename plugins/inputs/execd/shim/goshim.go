@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
@@ -57,8 +56,7 @@ var (
 
 // New creates a new shim interface
 func New() *Shim {
-	fmt.Fprintf(os.Stderr, "%s is deprecated; please change your import to %s\n",
-		oldpkg, newpkg)
+	_, _ = fmt.Fprintf(os.Stderr, "%s is deprecated; please change your import to %s\n", oldpkg, newpkg)
 	return &Shim{
 		stdin:  os.Stdin,
 		stdout: os.Stdout,
@@ -155,7 +153,9 @@ loop:
 				return fmt.Errorf("failed to serialize metric: %s", err)
 			}
 			// Write this to stdout
-			fmt.Fprint(s.stdout, string(b))
+			if _, err := fmt.Fprint(s.stdout, string(b)); err != nil {
+				return fmt.Errorf("failed to write %q to stdout: %s", string(b), err)
+			}
 		}
 	}
 
@@ -232,11 +232,17 @@ func (s *Shim) startGathering(ctx context.Context, input telegraf.Input, acc tel
 			return
 		case <-gatherPromptCh:
 			if err := input.Gather(acc); err != nil {
-				fmt.Fprintf(s.stderr, "failed to gather metrics: %s", err)
+				if _, perr := fmt.Fprintf(s.stderr, "failed to gather metrics: %s", err); perr != nil {
+					acc.AddError(err)
+					acc.AddError(perr)
+				}
 			}
 		case <-t.C:
 			if err := input.Gather(acc); err != nil {
-				fmt.Fprintf(s.stderr, "failed to gather metrics: %s", err)
+				if _, perr := fmt.Fprintf(s.stderr, "failed to gather metrics: %s", err); perr != nil {
+					acc.AddError(err)
+					acc.AddError(perr)
+				}
 			}
 		}
 	}
@@ -267,7 +273,7 @@ func LoadConfig(filePath *string) ([]telegraf.Input, error) {
 		return DefaultImportedPlugins()
 	}
 
-	b, err := ioutil.ReadFile(*filePath)
+	b, err := os.ReadFile(*filePath)
 	if err != nil {
 		return nil, err
 	}

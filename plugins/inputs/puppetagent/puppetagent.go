@@ -1,26 +1,27 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package puppetagent
 
 import (
+	_ "embed"
 	"fmt"
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // PuppetAgent is a PuppetAgent plugin
 type PuppetAgent struct {
 	Location string
 }
-
-var sampleConfig = `
-  ## Location of puppet last run summary file
-  location = "/var/lib/puppet/state/last_run_summary.yaml"
-`
 
 type State struct {
 	Events    event
@@ -32,19 +33,21 @@ type State struct {
 
 type event struct {
 	Failure int64 `yaml:"failure"`
+	Noop    int64 `yaml:"noop"`
 	Total   int64 `yaml:"total"`
 	Success int64 `yaml:"success"`
 }
 
 type resource struct {
-	Failed          int64 `yaml:"failed"`
-	Scheduled       int64 `yaml:"scheduled"`
-	Changed         int64 `yaml:"changed"`
-	Skipped         int64 `yaml:"skipped"`
-	Total           int64 `yaml:"total"`
-	FailedToRestart int64 `yaml:"failed_to_restart"`
-	Restarted       int64 `yaml:"restarted"`
-	OutOfSync       int64 `yaml:"out_of_sync"`
+	Changed          int64 `yaml:"changed"`
+	CorrectiveChange int64 `yaml:"corrective_change"`
+	Failed           int64 `yaml:"failed"`
+	FailedToRestart  int64 `yaml:"failed_to_restart"`
+	OutOfSync        int64 `yaml:"out_of_sync"`
+	Restarted        int64 `yaml:"restarted"`
+	Scheduled        int64 `yaml:"scheduled"`
+	Skipped          int64 `yaml:"skipped"`
+	Total            int64 `yaml:"total"`
 }
 
 type change struct {
@@ -52,19 +55,27 @@ type change struct {
 }
 
 type time struct {
-	User             float64 `yaml:"user"`
-	Schedule         float64 `yaml:"schedule"`
-	FileBucket       float64 `yaml:"filebucket"`
-	File             float64 `yaml:"file"`
-	Exec             float64 `yaml:"exec"`
-	Anchor           float64 `yaml:"anchor"`
-	SSHAuthorizedKey float64 `yaml:"ssh_authorized_key"`
-	Service          float64 `yaml:"service"`
-	Package          float64 `yaml:"package"`
-	Total            float64 `yaml:"total"`
-	ConfigRetrieval  float64 `yaml:"config_retrieval"`
-	LastRun          int64   `yaml:"last_run"`
-	Cron             float64 `yaml:"cron"`
+	Anchor                float64 `yaml:"anchor"`
+	CataLogApplication    float64 `yaml:"catalog_application"`
+	ConfigRetrieval       float64 `yaml:"config_retrieval"`
+	ConvertCatalog        float64 `yaml:"convert_catalog"`
+	Cron                  float64 `yaml:"cron"`
+	Exec                  float64 `yaml:"exec"`
+	FactGeneration        float64 `yaml:"fact_generation"`
+	File                  float64 `yaml:"file"`
+	FileBucket            float64 `yaml:"filebucket"`
+	Group                 float64 `yaml:"group"`
+	LastRun               int64   `yaml:"last_run"`
+	NodeRetrieval         float64 `yaml:"node_retrieval"`
+	Notify                float64 `yaml:"notify"`
+	Package               float64 `yaml:"package"`
+	PluginSync            float64 `yaml:"plugin_sync"`
+	Schedule              float64 `yaml:"schedule"`
+	Service               float64 `yaml:"service"`
+	SSHAuthorizedKey      float64 `yaml:"ssh_authorized_key"`
+	Total                 float64 `yaml:"total"`
+	TransactionEvaluation float64 `yaml:"transaction_evaluation"`
+	User                  float64 `yaml:"user"`
 }
 
 type version struct {
@@ -72,14 +83,8 @@ type version struct {
 	Puppet       string `yaml:"puppet"`
 }
 
-// SampleConfig returns sample configuration message
-func (pa *PuppetAgent) SampleConfig() string {
+func (*PuppetAgent) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description returns description of PuppetAgent plugin
-func (pa *PuppetAgent) Description() string {
-	return `Reads last_run_summary.yaml file and converts to measurements`
 }
 
 // Gather reads stats from all configured servers accumulates stats
@@ -92,7 +97,7 @@ func (pa *PuppetAgent) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("%s", err)
 	}
 
-	fh, err := ioutil.ReadFile(pa.Location)
+	fh, err := os.ReadFile(pa.Location)
 	if err != nil {
 		return fmt.Errorf("%s", err)
 	}

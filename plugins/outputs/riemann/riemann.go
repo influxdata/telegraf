@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package riemann
 
 import (
+	_ "embed"
 	"fmt"
 	"net/url"
 	"os"
@@ -9,58 +11,34 @@ import (
 	"time"
 
 	"github.com/amir/raidman"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Riemann struct {
-	URL                    string            `toml:"url"`
-	TTL                    float32           `toml:"ttl"`
-	Separator              string            `toml:"separator"`
-	MeasurementAsAttribute bool              `toml:"measurement_as_attribute"`
-	StringAsState          bool              `toml:"string_as_state"`
-	TagKeys                []string          `toml:"tag_keys"`
-	Tags                   []string          `toml:"tags"`
-	DescriptionText        string            `toml:"description_text"`
-	Timeout                internal.Duration `toml:"timeout"`
-	Log                    telegraf.Logger   `toml:"-"`
+	URL                    string          `toml:"url"`
+	TTL                    float32         `toml:"ttl"`
+	Separator              string          `toml:"separator"`
+	MeasurementAsAttribute bool            `toml:"measurement_as_attribute"`
+	StringAsState          bool            `toml:"string_as_state"`
+	TagKeys                []string        `toml:"tag_keys"`
+	Tags                   []string        `toml:"tags"`
+	DescriptionText        string          `toml:"description_text"`
+	Timeout                config.Duration `toml:"timeout"`
+	Log                    telegraf.Logger `toml:"-"`
 
 	client *raidman.Client
 }
 
-var sampleConfig = `
-  ## The full TCP or UDP URL of the Riemann server
-  url = "tcp://localhost:5555"
-
-  ## Riemann event TTL, floating-point time in seconds.
-  ## Defines how long that an event is considered valid for in Riemann
-  # ttl = 30.0
-
-  ## Separator to use between measurement and field name in Riemann service name
-  ## This does not have any effect if 'measurement_as_attribute' is set to 'true'
-  separator = "/"
-
-  ## Set measurement name as Riemann attribute 'measurement', instead of prepending it to the Riemann service name
-  # measurement_as_attribute = false
-
-  ## Send string metrics as Riemann event states.
-  ## Unless enabled all string metrics will be ignored
-  # string_as_state = false
-
-  ## A list of tag keys whose values get sent as Riemann tags.
-  ## If empty, all Telegraf tag values will be sent as tags
-  # tag_keys = ["telegraf","custom_tag"]
-
-  ## Additional Riemann tags to send.
-  # tags = ["telegraf-output"]
-
-  ## Description for Riemann event
-  # description_text = "metrics collected from telegraf"
-
-  ## Riemann client write timeout, defaults to "5s" if not set.
-  # timeout = "5s"
-`
+func (*Riemann) SampleConfig() string {
+	return sampleConfig
+}
 
 func (r *Riemann) Connect() error {
 	parsedURL, err := url.Parse(r.URL)
@@ -68,7 +46,7 @@ func (r *Riemann) Connect() error {
 		return err
 	}
 
-	client, err := raidman.DialWithTimeout(parsedURL.Scheme, parsedURL.Host, r.Timeout.Duration)
+	client, err := raidman.DialWithTimeout(parsedURL.Scheme, parsedURL.Host, time.Duration(r.Timeout))
 	if err != nil {
 		r.client = nil
 		return err
@@ -78,20 +56,12 @@ func (r *Riemann) Connect() error {
 	return nil
 }
 
-func (r *Riemann) Close() error {
+func (r *Riemann) Close() (err error) {
 	if r.client != nil {
-		r.client.Close()
+		err = r.client.Close()
 		r.client = nil
 	}
-	return nil
-}
-
-func (r *Riemann) SampleConfig() string {
-	return sampleConfig
-}
-
-func (r *Riemann) Description() string {
-	return "Configuration for the Riemann server to send metrics to"
+	return err
 }
 
 func (r *Riemann) Write(metrics []telegraf.Metric) error {
@@ -113,7 +83,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 	}
 
 	if err := r.client.SendMulti(events); err != nil {
-		r.Close()
+		r.Close() //nolint:revive // There is another error which will be returned here
 		return fmt.Errorf("failed to send riemann message: %s", err)
 	}
 	return nil
@@ -217,7 +187,7 @@ func (r *Riemann) tags(tags map[string]string) []string {
 func init() {
 	outputs.Add("riemann", func() telegraf.Output {
 		return &Riemann{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }

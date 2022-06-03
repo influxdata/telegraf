@@ -2,14 +2,16 @@ package opensmtpd
 
 import (
 	"bytes"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
-func SMTPCTL(output string) func(string, internal.Duration, bool) (*bytes.Buffer, error) {
-	return func(string, internal.Duration, bool) (*bytes.Buffer, error) {
+func SMTPCTL(output string) func(string, config.Duration, bool) (*bytes.Buffer, error) {
+	return func(string, config.Duration, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -21,11 +23,11 @@ func TestFilterSomeStats(t *testing.T) {
 	}
 	err := v.Gather(acc)
 
-	assert.NoError(t, err)
-	assert.True(t, acc.HasMeasurement("opensmtpd"))
-	assert.Equal(t, acc.NMetrics(), uint64(1))
+	require.NoError(t, err)
+	require.True(t, acc.HasMeasurement("opensmtpd"))
+	require.Equal(t, acc.NMetrics(), uint64(1))
 
-	assert.Equal(t, acc.NFields(), 36)
+	require.Equal(t, acc.NFields(), 36)
 	acc.AssertContainsFields(t, "opensmtpd", parsedFullOutput)
 }
 

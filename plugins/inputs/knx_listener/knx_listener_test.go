@@ -6,14 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"github.com/vapourismo/knx-go/knx"
 	"github.com/vapourismo/knx-go/knx/cemi"
 	"github.com/vapourismo/knx-go/knx/dpt"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const epsilon = 1e-3
@@ -38,13 +36,31 @@ func setValue(data dpt.DatapointValue, value interface{}) error {
 	return nil
 }
 
+type TestMessage struct {
+	address string
+	dpt     string
+	value   interface{}
+}
+
+func ProduceKnxEvent(t *testing.T, address string, datapoint string, value interface{}) *knx.GroupEvent {
+	addr, err := cemi.NewGroupAddrString(address)
+	require.NoError(t, err)
+
+	data, ok := dpt.Produce(datapoint)
+	require.True(t, ok)
+	err = setValue(data, value)
+	require.NoError(t, err)
+
+	return &knx.GroupEvent{
+		Command:     knx.GroupWrite,
+		Destination: addr,
+		Data:        data.Pack(),
+	}
+}
+
 func TestRegularReceives_DPT(t *testing.T) {
 	// Define the test-cases
-	var testcases = []struct {
-		address string
-		dpt     string
-		value   interface{}
-	}{
+	var testcases = []TestMessage{
 		{"1/0/1", "1.001", true},
 		{"1/0/2", "1.002", false},
 		{"1/0/3", "1.003", true},
@@ -95,19 +111,8 @@ func TestRegularReceives_DPT(t *testing.T) {
 
 	// Send the defined test data
 	for _, testcase := range testcases {
-		addr, err := cemi.NewGroupAddrString(testcase.address)
-		require.NoError(t, err)
-
-		data, ok := dpt.Produce(testcase.dpt)
-		require.True(t, ok)
-		err = setValue(data, testcase.value)
-		require.NoError(t, err)
-
-		client.Send(knx.GroupEvent{
-			Command:     knx.GroupWrite,
-			Destination: addr,
-			Data:        data.Pack(),
-		})
+		event := ProduceKnxEvent(t, testcase.address, testcase.dpt, testcase.value)
+		client.Send(*event)
 	}
 
 	// Give the accumulator some time to collect the data
@@ -120,16 +125,64 @@ func TestRegularReceives_DPT(t *testing.T) {
 	// Check if we got what we expected
 	require.Len(t, acc.Metrics, len(testcases))
 	for i, m := range acc.Metrics {
-		assert.Equal(t, "test", m.Measurement)
-		assert.Equal(t, testcases[i].address, m.Tags["groupaddress"])
-		assert.Len(t, m.Fields, 1)
+		require.Equal(t, "test", m.Measurement)
+		require.Equal(t, testcases[i].address, m.Tags["groupaddress"])
+		require.Len(t, m.Fields, 1)
 		switch v := testcases[i].value.(type) {
 		case bool, int64, uint64:
-			assert.Equal(t, v, m.Fields["value"])
+			require.Equal(t, v, m.Fields["value"])
 		case float64:
-			assert.InDelta(t, v, m.Fields["value"], epsilon)
+			require.InDelta(t, v, m.Fields["value"], epsilon)
 		}
-		assert.True(t, !tstop.Before(m.Time))
-		assert.True(t, !tstart.After(m.Time))
+		require.True(t, !tstop.Before(m.Time))
+		require.True(t, !tstart.After(m.Time))
 	}
+}
+
+func TestRegularReceives_MultipleMessages(t *testing.T) {
+	listener := KNXListener{
+		ServiceType: "dummy",
+		Measurements: []Measurement{
+			{"temperature", "1.001", []string{"1/1/1"}},
+		},
+		Log: testutil.Logger{Name: "knx_listener"},
+	}
+
+	acc := &testutil.Accumulator{}
+
+	// Setup the listener to test
+	err := listener.Start(acc)
+	require.NoError(t, err)
+	client := listener.client.(*KNXDummyInterface)
+
+	testMessages := []TestMessage{
+		{"1/1/1", "1.001", true},
+		{"1/1/1", "1.001", false},
+		{"1/1/2", "1.001", false},
+		{"1/1/2", "1.001", true},
+	}
+
+	for _, testcase := range testMessages {
+		event := ProduceKnxEvent(t, testcase.address, testcase.dpt, testcase.value)
+		client.Send(*event)
+	}
+
+	// Give the accumulator some time to collect the data
+	acc.Wait(2)
+
+	// Stop the listener
+	listener.Stop()
+
+	// Check if we got what we expected
+	require.Len(t, acc.Metrics, 2)
+
+	require.Equal(t, "temperature", acc.Metrics[0].Measurement)
+	require.Equal(t, "1/1/1", acc.Metrics[0].Tags["groupaddress"])
+	require.Len(t, acc.Metrics[0].Fields, 1)
+	require.Equal(t, true, acc.Metrics[0].Fields["value"])
+
+	require.Equal(t, "temperature", acc.Metrics[1].Measurement)
+	require.Equal(t, "1/1/1", acc.Metrics[1].Tags["groupaddress"])
+	require.Len(t, acc.Metrics[1].Fields, 1)
+	require.Equal(t, false, acc.Metrics[1].Fields["value"])
 }

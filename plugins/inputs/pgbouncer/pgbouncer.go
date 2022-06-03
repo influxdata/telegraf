@@ -1,15 +1,23 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package pgbouncer
 
 import (
 	"bytes"
+	_ "embed"
 	"strconv"
 
+	// Required for SQL framework driver
+	_ "github.com/jackc/pgx/v4/stdlib"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
-	_ "github.com/jackc/pgx/stdlib" // register driver
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type PgBouncer struct {
 	postgresql.Service
@@ -19,24 +27,8 @@ var ignoredColumns = map[string]bool{"user": true, "database": true, "pool_mode"
 	"avg_req": true, "avg_recv": true, "avg_sent": true, "avg_query": true,
 }
 
-var sampleConfig = `
-  ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
-  ##       ?sslmode=[disable|verify-ca|verify-full]
-  ## or a simple string:
-  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
-  ##
-  ## All connection parameters are optional.
-  ##
-  address = "host=localhost user=pgbouncer sslmode=disable"
-`
-
-func (p *PgBouncer) SampleConfig() string {
+func (*PgBouncer) SampleConfig() string {
 	return sampleConfig
-}
-
-func (p *PgBouncer) Description() string {
-	return "Read metrics from one or many pgbouncer servers"
 }
 
 func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
@@ -193,11 +185,9 @@ func init() {
 	inputs.Add("pgbouncer", func() telegraf.Input {
 		return &PgBouncer{
 			Service: postgresql.Service{
-				MaxIdle: 1,
-				MaxOpen: 1,
-				MaxLifetime: internal.Duration{
-					Duration: 0,
-				},
+				MaxIdle:     1,
+				MaxOpen:     1,
+				MaxLifetime: config.Duration(0),
 				IsPgBouncer: true,
 			},
 		}

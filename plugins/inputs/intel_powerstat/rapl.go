@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package intel_powerstat
@@ -35,6 +36,7 @@ type raplServiceImpl struct {
 	data        map[string]*raplData
 	dramFolders map[string]string
 	fs          fileService
+	logOnce     map[string]error
 }
 
 // initializeRaplData looks for RAPL folders and initializes data map with fetched information.
@@ -50,6 +52,10 @@ func (r *raplServiceImpl) getRaplData() map[string]*raplData {
 func (r *raplServiceImpl) retrieveAndCalculateData(socketID string) error {
 	socketRaplPath := fmt.Sprintf(intelRaplSocketPartialPath, intelRaplPath, socketID)
 	socketEnergyUjPath := fmt.Sprintf(energyUjPartialPath, socketRaplPath)
+	err := checkFile(socketEnergyUjPath)
+	if err != nil {
+		return err
+	}
 	socketEnergyUjFile, err := os.Open(socketEnergyUjPath)
 	if err != nil {
 		return fmt.Errorf("error opening socket energy_uj file on path %s, err: %v", socketEnergyUjPath, err)
@@ -58,6 +64,10 @@ func (r *raplServiceImpl) retrieveAndCalculateData(socketID string) error {
 
 	dramRaplPath := fmt.Sprintf(intelRaplDramPartialPath, intelRaplPath, socketID, r.dramFolders[socketID])
 	dramEnergyUjPath := fmt.Sprintf(energyUjPartialPath, dramRaplPath)
+	err = checkFile(dramEnergyUjPath)
+	if err != nil {
+		return err
+	}
 	dramEnergyUjFile, err := os.Open(dramEnergyUjPath)
 	if err != nil {
 		return fmt.Errorf("error opening dram energy_uj file on path %s, err: %v", dramEnergyUjPath, err)
@@ -65,6 +75,10 @@ func (r *raplServiceImpl) retrieveAndCalculateData(socketID string) error {
 	defer dramEnergyUjFile.Close()
 
 	socketMaxEnergyUjPath := fmt.Sprintf(maxEnergyRangeUjPartialPath, socketRaplPath)
+	err = checkFile(socketMaxEnergyUjPath)
+	if err != nil {
+		return err
+	}
 	socketMaxEnergyUjFile, err := os.Open(socketMaxEnergyUjPath)
 	if err != nil {
 		return fmt.Errorf("error opening socket max_energy_range_uj file on path %s, err: %v", socketMaxEnergyUjPath, err)
@@ -72,6 +86,10 @@ func (r *raplServiceImpl) retrieveAndCalculateData(socketID string) error {
 	defer socketMaxEnergyUjFile.Close()
 
 	dramMaxEnergyUjPath := fmt.Sprintf(maxEnergyRangeUjPartialPath, dramRaplPath)
+	err = checkFile(dramMaxEnergyUjPath)
+	if err != nil {
+		return err
+	}
 	dramMaxEnergyUjFile, err := os.Open(dramMaxEnergyUjPath)
 	if err != nil {
 		return fmt.Errorf("error opening dram max_energy_range_uj file on path %s, err: %v", dramMaxEnergyUjPath, err)
@@ -84,6 +102,10 @@ func (r *raplServiceImpl) retrieveAndCalculateData(socketID string) error {
 func (r *raplServiceImpl) getConstraintMaxPowerWatts(socketID string) (float64, error) {
 	socketRaplPath := fmt.Sprintf(intelRaplSocketPartialPath, intelRaplPath, socketID)
 	socketMaxPowerPath := fmt.Sprintf(maxPowerUwPartialPath, socketRaplPath)
+	err := checkFile(socketMaxPowerPath)
+	if err != nil {
+		return 0, err
+	}
 	socketMaxPowerFile, err := os.Open(socketMaxPowerPath)
 	if err != nil {
 		return 0, fmt.Errorf("error opening constraint_0_max_power_uw file on path %s, err: %v", socketMaxPowerPath, err)
@@ -155,15 +177,22 @@ func (r *raplServiceImpl) findDramFolders() {
 }
 
 func (r *raplServiceImpl) findDramFolder(raplFolders []string, socketID string) {
+	if r.logOnce == nil {
+		r.logOnce = make(map[string]error)
+	}
+
 	for _, raplFolder := range raplFolders {
 		potentialDramPath := fmt.Sprintf(intelRaplDramPartialPath, intelRaplPath, socketID, raplFolder)
 		nameFilePath := fmt.Sprintf(intelRaplDramNamePartialPath, potentialDramPath)
 		read, err := r.fs.readFile(nameFilePath)
 		if err != nil {
-			r.log.Errorf("error reading file on path: %s, err: %v", nameFilePath, err)
+			if val := r.logOnce[nameFilePath]; val == nil || val.Error() != err.Error() {
+				r.log.Errorf("error reading file on path: %s, err: %v", nameFilePath, err)
+				r.logOnce[nameFilePath] = err
+			}
 			continue
 		}
-
+		r.logOnce[nameFilePath] = nil
 		// Remove new line character
 		trimmedString := strings.TrimRight(string(read), "\n")
 		if trimmedString == "dram" {
@@ -193,7 +222,7 @@ func (r *raplServiceImpl) calculateData(socketID string, socketEnergyUjFile io.R
 		return fmt.Errorf("interval between last two Telegraf cycles is 0")
 	}
 
-	if newSocketEnergy > r.data[socketID].socketEnergy {
+	if newSocketEnergy >= r.data[socketID].socketEnergy {
 		r.data[socketID].socketCurrentEnergy = (newSocketEnergy - r.data[socketID].socketEnergy) / interval
 	} else {
 		socketMaxEnergy, _, err := r.readEnergyInJoules(socketMaxEnergyUjFile)
@@ -205,7 +234,7 @@ func (r *raplServiceImpl) calculateData(socketID string, socketEnergyUjFile io.R
 		r.data[socketID].socketCurrentEnergy = (socketMaxEnergy - r.data[socketID].socketEnergy + newSocketEnergy) / interval
 	}
 
-	if newDramEnergy > r.data[socketID].dramEnergy {
+	if newDramEnergy >= r.data[socketID].dramEnergy {
 		r.data[socketID].dramCurrentEnergy = (newDramEnergy - r.data[socketID].dramEnergy) / interval
 	} else {
 		dramMaxEnergy, _, err := r.readEnergyInJoules(dramMaxEnergyUjFile)

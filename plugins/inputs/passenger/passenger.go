@@ -1,17 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package passenger
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
 
+	"golang.org/x/net/html/charset"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/net/html/charset"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type passenger struct {
 	Command string
@@ -125,24 +132,8 @@ func (p *process) getUptime() int64 {
 	return uptime
 }
 
-var sampleConfig = `
-  ## Path of passenger-status.
-  ##
-  ## Plugin gather metric via parsing XML output of passenger-status
-  ## More information about the tool:
-  ##   https://www.phusionpassenger.com/library/admin/apache/overall_status_report.html
-  ##
-  ## If no path is specified, then the plugin simply execute passenger-status
-  ## hopefully it can be found in your PATH
-  command = "passenger-status -v --show=xml"
-`
-
-func (p *passenger) SampleConfig() string {
+func (*passenger) SampleConfig() string {
 	return sampleConfig
-}
-
-func (p *passenger) Description() string {
-	return "Read metrics of passenger using passenger-status"
 }
 
 func (p *passenger) Gather(acc telegraf.Accumulator) error {

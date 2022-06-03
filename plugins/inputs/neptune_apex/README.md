@@ -6,10 +6,10 @@ in the telegraf.conf configuration file.
 
 The [Neptune Apex](https://www.neptunesystems.com/) input plugin collects real-time data from the Apex's status.xml page.
 
+## Configuration
 
-### Configuration
-
-```toml
+```toml @sample.conf
+# Neptune Apex data collector
 [[inputs.neptune_apex]]
   ## The Neptune Apex plugin reads the publicly available status.xml data from a local Apex.
   ## Measurements will be logged under "apex".
@@ -25,7 +25,7 @@ The [Neptune Apex](https://www.neptunesystems.com/) input plugin collects real-t
 
 ```
 
-### Metrics
+## Metrics
 
 The Neptune Apex controller family allows an aquarium hobbyist to monitor and control
 their tanks based on various probes. The data is taken directly from the /cgi-bin/status.xml at the interval specified
@@ -62,38 +62,42 @@ programming. These tags are clearly marked in the list below and should be consi
     - power_failed (int64, Unix epoch in ns) when the controller last lost power. Omitted if the apex reports it as "none"
     - power_restored (int64, Unix epoch in ns) when the controller last powered on. Omitted if the apex reports it as "none"
     - serial (string, serial number)
-   - time:
-     - The time used for the metric is parsed from the status.xml page. This helps when cross-referencing events with
+  - time:
+    - The time used for the metric is parsed from the status.xml page. This helps when cross-referencing events with
      the local system of Apex Fusion. Since the Apex uses NTP, this should not matter in most scenarios.
 
-
-### Sample Queries
-
+## Sample Queries
 
 Get the max, mean, and min for the temperature in the last hour:
+
 ```sql
 SELECT mean("value") FROM "neptune_apex" WHERE ("probe_type" = 'Temp') AND time >= now() - 6h GROUP BY time(20s)
 ```
 
-### Troubleshooting
+## Troubleshooting
 
-#### sendRequest failure
+### sendRequest failure
+
 This indicates a problem communicating with the local Apex controller. If on Mac/Linux, try curl:
+
 ```sh
-$ curl apex.local/cgi-bin/status.xml
+curl apex.local/cgi-bin/status.xml
 ```
+
 to isolate the problem.
 
-#### parseXML errors
+### parseXML errors
+
 Ensure the XML being returned is valid. If you get valid XML back, open a bug request.
 
-#### Missing fields/data
+### Missing fields/data
+
 The neptune_apex plugin is strict on its input to prevent any conversion errors. If you have fields in the status.xml
 output that are not converted to a metric, open a feature request and paste your whole status.xml
 
-### Example Output
+## Example Output
 
-```
+```text
 neptune_apex,hardware=1.0,host=ubuntu,software=5.04_7A18,source=apex,type=controller power_failed=1544814000000000000i,power_restored=1544833875000000000i,serial="AC5:12345" 1545978278000000000
 neptune_apex,device_id=base_Var1,hardware=1.0,host=ubuntu,name=VarSpd1_I1,output_id=0,output_type=variable,software=5.04_7A18,source=apex,type=output state="PF1" 1545978278000000000
 neptune_apex,device_id=base_Var2,hardware=1.0,host=ubuntu,name=VarSpd2_I2,output_id=1,output_type=variable,software=5.04_7A18,source=apex,type=output state="PF2" 1545978278000000000
@@ -138,7 +142,7 @@ neptune_apex,hardware=1.0,host=ubuntu,name=Volt_4,software=5.04_7A18,source=apex
 
 ```
 
-### Contributing
+## Contributing
 
 This plugin is used for mission-critical aquatic life support. A bug could very well result in the death of animals.
 Neptune does not publish a schema file and as such, we have made this plugin very strict on input with no provisions for

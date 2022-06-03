@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package filestat
 
 import (
 	"crypto/md5"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -11,21 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## Files to gather stats about.
-  ## These accept standard unix glob matching rules, but with the addition of
-  ## ** as a "super asterisk". ie:
-  ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
-  ##   "/var/log/*/*.log" -> find all .log files with a parent dir in /var/log
-  ##   "/var/log/apache.log" -> just tail the apache log file
-  ##
-  ## See https://github.com/gobwas/glob for more examples
-  ##
-  files = ["/var/log/**.log"]
-
-  ## If true, read the entire file and calculate an md5 checksum.
-  md5 = false
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type FileStat struct {
 	Md5   bool
@@ -50,11 +40,9 @@ func NewFileStat() *FileStat {
 	}
 }
 
-func (*FileStat) Description() string {
-	return "Read stats about given file(s)"
+func (*FileStat) SampleConfig() string {
+	return sampleConfig
 }
-
-func (*FileStat) SampleConfig() string { return sampleConfig }
 
 func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 	var err error
@@ -114,11 +102,11 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if f.Md5 {
-				md5, err := getMd5(fileName)
+				md5Hash, err := getMd5(fileName)
 				if err != nil {
 					acc.AddError(err)
 				} else {
-					fields["md5_sum"] = md5
+					fields["md5_sum"] = md5Hash
 				}
 			}
 

@@ -1,25 +1,31 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package yandex_cloud_monitoring
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // YandexCloudMonitoring allows publishing of metrics to the Yandex Cloud Monitoring custom metrics
 // service
 type YandexCloudMonitoring struct {
-	Timeout     internal.Duration `toml:"timeout"`
-	EndpointURL string            `toml:"endpoint_url"`
-	Service     string            `toml:"service"`
+	Timeout     config.Duration `toml:"timeout"`
+	EndpointURL string          `toml:"endpoint_url"`
+	Service     string          `toml:"service"`
 
 	Log telegraf.Logger
 
@@ -63,31 +69,14 @@ const (
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
 
-var sampleConfig = `
-  ## Timeout for HTTP writes.
-  # timeout = "20s"
-
-  ## Yandex.Cloud monitoring API endpoint. Normally should not be changed
-  # endpoint_url = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
-
-  ## All user metrics should be sent with "custom" service specified. Normally should not be changed
-  # service = "custom"
-`
-
-// Description provides a description of the plugin
-func (a *YandexCloudMonitoring) Description() string {
-	return "Send aggregated metrics to Yandex.Cloud Monitoring"
-}
-
-// SampleConfig provides a sample configuration for the plugin
-func (a *YandexCloudMonitoring) SampleConfig() string {
+func (*YandexCloudMonitoring) SampleConfig() string {
 	return sampleConfig
 }
 
 // Connect initializes the plugin and validates connectivity
 func (a *YandexCloudMonitoring) Connect() error {
-	if a.Timeout.Duration <= 0 {
-		a.Timeout.Duration = defaultRequestTimeout
+	if a.Timeout <= 0 {
+		a.Timeout = config.Duration(defaultRequestTimeout)
 	}
 	if a.EndpointURL == "" {
 		a.EndpointURL = defaultEndpointURL
@@ -106,7 +95,7 @@ func (a *YandexCloudMonitoring) Connect() error {
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: a.Timeout.Duration,
+		Timeout: time.Duration(a.Timeout),
 	}
 
 	var err error
@@ -172,7 +161,7 @@ func getResponseFromMetadata(c *http.Client, metadataURL string) ([]byte, error)
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +231,7 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 	}
 	defer resp.Body.Close()
 
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}

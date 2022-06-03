@@ -6,23 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestSample(t *testing.T) {
-	c := &NetResponse{}
-	output := c.SampleConfig()
-	require.Equal(t, output, sampleConfig, "Sample config doesn't match")
-}
-
-func TestDescription(t *testing.T) {
-	c := &NetResponse{}
-	output := c.Description()
-	require.Equal(t, output, description, "Description output is not correct")
-}
 func TestBadProtocol(t *testing.T) {
 	var acc testutil.Accumulator
 	// Init plugin
@@ -86,7 +75,7 @@ func TestTCPError(t *testing.T) {
 	c := NetResponse{
 		Protocol: "tcp",
 		Address:  ":9999",
-		Timeout:  internal.Duration{Duration: time.Second * 30},
+		Timeout:  config.Duration(time.Second * 30),
 	}
 	// Gather
 	require.NoError(t, c.Gather(&acc))
@@ -113,8 +102,8 @@ func TestTCPOK1(t *testing.T) {
 		Address:     "127.0.0.1:2004",
 		Send:        "test",
 		Expect:      "test",
-		ReadTimeout: internal.Duration{Duration: time.Second * 3},
-		Timeout:     internal.Duration{Duration: time.Second},
+		ReadTimeout: config.Duration(time.Second * 3),
+		Timeout:     config.Duration(time.Second),
 		Protocol:    "tcp",
 	}
 	// Start TCP server
@@ -157,8 +146,8 @@ func TestTCPOK2(t *testing.T) {
 		Address:     "127.0.0.1:2004",
 		Send:        "test",
 		Expect:      "test2",
-		ReadTimeout: internal.Duration{Duration: time.Second * 3},
-		Timeout:     internal.Duration{Duration: time.Second},
+		ReadTimeout: config.Duration(time.Second * 3),
+		Timeout:     config.Duration(time.Second),
 		Protocol:    "tcp",
 	}
 	// Start TCP server
@@ -237,8 +226,8 @@ func TestUDPOK1(t *testing.T) {
 		Address:     "127.0.0.1:2004",
 		Send:        "test",
 		Expect:      "test",
-		ReadTimeout: internal.Duration{Duration: time.Second * 3},
-		Timeout:     internal.Duration{Duration: time.Second},
+		ReadTimeout: config.Duration(time.Second * 3),
+		Timeout:     config.Duration(time.Second),
 		Protocol:    "udp",
 	}
 	// Start UDP server
@@ -276,24 +265,29 @@ func TestUDPOK1(t *testing.T) {
 
 func UDPServer(t *testing.T, wg *sync.WaitGroup) {
 	defer wg.Done()
-	udpAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:2004")
-	conn, _ := net.ListenUDP("udp", udpAddr)
+	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2004")
+	require.NoError(t, err)
+	conn, err := net.ListenUDP("udp", udpAddr)
+	require.NoError(t, err)
 	wg.Done()
 	buf := make([]byte, 1024)
 	_, remoteaddr, _ := conn.ReadFromUDP(buf)
-	_, err := conn.WriteToUDP(buf, remoteaddr)
+	_, err = conn.WriteToUDP(buf, remoteaddr)
 	require.NoError(t, err)
 	require.NoError(t, conn.Close())
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	defer wg.Done()
-	tcpAddr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:2004")
-	tcpServer, _ := net.ListenTCP("tcp", tcpAddr)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:2004")
+	require.NoError(t, err)
+	tcpServer, err := net.ListenTCP("tcp", tcpAddr)
+	require.NoError(t, err)
 	wg.Done()
-	conn, _ := tcpServer.AcceptTCP()
+	conn, err := tcpServer.AcceptTCP()
+	require.NoError(t, err)
 	buf := make([]byte, 1024)
-	_, err := conn.Read(buf)
+	_, err = conn.Read(buf)
 	require.NoError(t, err)
 	_, err = conn.Write(buf)
 	require.NoError(t, err)

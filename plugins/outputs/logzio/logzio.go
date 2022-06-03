@@ -1,19 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package logzio
 
 import (
 	"bytes"
 	"compress/gzip"
+	_ "embed"
 	"encoding/json"
 	"fmt"
-
 	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultLogzioURL = "https://listener.logz.io:8071"
@@ -22,27 +27,11 @@ const (
 	logzioType        = "telegraf"
 )
 
-var sampleConfig = `
-  ## Connection timeout, defaults to "5s" if not set.
-  timeout = "5s"
-  
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Logz.io account token
-  token = "your logz.io token" # required
-
-  ## Use your listener URL for your Logz.io account region.
-  # url = "https://listener.logz.io:8071"
-`
-
 type Logzio struct {
-	Log     telegraf.Logger   `toml:"-"`
-	Timeout internal.Duration `toml:"timeout"`
-	Token   string            `toml:"token"`
-	URL     string            `toml:"url"`
+	Log     telegraf.Logger `toml:"-"`
+	Timeout config.Duration `toml:"timeout"`
+	Token   string          `toml:"token"`
+	URL     string          `toml:"url"`
 
 	tls.ClientConfig
 	client *http.Client
@@ -57,6 +46,10 @@ type Metric struct {
 	Dimensions map[string]string      `json:"dimensions"`
 	Time       time.Time              `json:"@timestamp"`
 	Type       string                 `json:"type"`
+}
+
+func (*Logzio) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect to the Output
@@ -77,7 +70,7 @@ func (l *Logzio) Connect() error {
 			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: l.Timeout.Duration,
+		Timeout: time.Duration(l.Timeout),
 	}
 
 	return nil
@@ -87,16 +80,6 @@ func (l *Logzio) Connect() error {
 func (l *Logzio) Close() error {
 	l.Log.Debug("Closing logz.io output")
 	return nil
-}
-
-// Description returns a one-sentence description on the Output
-func (l *Logzio) Description() string {
-	return logzioDescription
-}
-
-// SampleConfig returns the default configuration of the Output
-func (l *Logzio) SampleConfig() string {
-	return sampleConfig
 }
 
 // Write takes in group of points to be written to the Output
@@ -169,7 +152,7 @@ func init() {
 	outputs.Add("logzio", func() telegraf.Output {
 		return &Logzio{
 			URL:     defaultLogzioURL,
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }

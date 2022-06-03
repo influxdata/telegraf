@@ -7,13 +7,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/signalfx/golib/v3/datapoint"
+	"github.com/signalfx/golib/v3/event"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/signalfx/golib/v3/datapoint"
-	"github.com/signalfx/golib/v3/event"
-	"github.com/stretchr/testify/require"
 )
 
 type sink struct {
@@ -429,18 +430,17 @@ func TestSignalFx_SignalFx(t *testing.T) {
 			measurements := []telegraf.Metric{}
 
 			for _, measurement := range tt.measurements {
-				m, err := metric.New(
+				m := metric.New(
 					measurement.name, measurement.tags, measurement.fields, measurement.time, measurement.tp,
 				)
-				if err != nil {
-					t.Errorf("Error creating measurement %v", measurement)
-				}
+
 				measurements = append(measurements, m)
 			}
 
-			s.Write(measurements)
-			require.Eventually(t, func() bool { return len(s.client.(*sink).dps) == len(tt.want.datapoints) }, 5*time.Second, 100*time.Millisecond)
-			require.Eventually(t, func() bool { return len(s.client.(*sink).evs) == len(tt.want.events) }, 5*time.Second, 100*time.Millisecond)
+			err := s.Write(measurements)
+			require.NoError(t, err)
+			require.Eventually(t, func() bool { return len(s.client.(*sink).dps) == len(tt.want.datapoints) }, 5*time.Second, 10*time.Millisecond)
+			require.Eventually(t, func() bool { return len(s.client.(*sink).evs) == len(tt.want.events) }, 5*time.Second, 10*time.Millisecond)
 
 			if !reflect.DeepEqual(s.client.(*sink).dps, tt.want.datapoints) {
 				t.Errorf("Collected datapoints do not match desired.  Collected: %v Desired: %v", s.client.(*sink).dps, tt.want.datapoints)
@@ -594,13 +594,12 @@ func TestSignalFx_Errors(t *testing.T) {
 			}
 
 			for _, measurement := range tt.measurements {
-				m, err := metric.New(
+				m := metric.New(
 					measurement.name, measurement.tags, measurement.fields, measurement.time, measurement.tp,
 				)
-				if err != nil {
-					t.Errorf("Error creating measurement %v", measurement)
-				}
-				s.Write([]telegraf.Metric{m})
+
+				err := s.Write([]telegraf.Metric{m})
+				require.Error(t, err)
 			}
 			for !(len(s.client.(*errorsink).dps) == len(tt.want.datapoints) && len(s.client.(*errorsink).evs) == len(tt.want.events)) {
 				time.Sleep(1 * time.Second)
@@ -610,48 +609,6 @@ func TestSignalFx_Errors(t *testing.T) {
 			}
 			if !reflect.DeepEqual(s.client.(*errorsink).evs, tt.want.events) {
 				t.Errorf("Collected events do not match desired.  Collected: %v Desired: %v", s.client.(*errorsink).evs, tt.want.events)
-			}
-		})
-	}
-}
-
-// this is really just for complete code coverage
-func TestSignalFx_Description(t *testing.T) {
-	tests := []struct {
-		name string
-		want string
-	}{
-		{
-			name: "verify description is correct",
-			want: "Send metrics and events to SignalFx",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &SignalFx{}
-			if got := s.Description(); got != tt.want {
-				t.Errorf("SignalFx.Description() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-// this is also just for complete code coverage
-func TestSignalFx_SampleConfig(t *testing.T) {
-	tests := []struct {
-		name string
-		want string
-	}{
-		{
-			name: "verify sample config is returned",
-			want: sampleConfig,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &SignalFx{}
-			if got := s.SampleConfig(); got != tt.want {
-				t.Errorf("SignalFx.SampleConfig() = %v, want %v", got, tt.want)
 			}
 		})
 	}

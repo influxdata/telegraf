@@ -9,10 +9,9 @@ import (
 
 var (
 	ErrEOF              = errors.New("EOF")
-	ErrInvalidTimestamp = errors.New("Invalid timestamp")
+	ErrInvalidTimestamp = errors.New("invalid timestamp")
 )
 
-// Interface for parsing line elements.
 type ElementParser interface {
 	parse(p *PointParser, pt *Point) error
 }
@@ -116,11 +115,10 @@ func setTimestamp(pt *Point, ts int64, numDigits int) error {
 		ts = ts / 1e3
 	} else if numDigits != 10 {
 		// must be in seconds, return error if not 0
-		if ts == 0 {
-			ts = getCurrentTime()
-		} else {
+		if ts != 0 {
 			return ErrInvalidTimestamp
 		}
+		ts = getCurrentTime()
 	}
 	pt.Timestamp = ts
 	return nil

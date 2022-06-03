@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
 )
 
 func TestShimSetsUpLogger(t *testing.T) {
@@ -18,7 +19,8 @@ func TestShimSetsUpLogger(t *testing.T) {
 
 	runErroringInputPlugin(t, 40*time.Second, stdinReader, nil, stderrWriter)
 
-	stdinWriter.Write([]byte("\n"))
+	_, err := stdinWriter.Write([]byte("\n"))
+	require.NoError(t, err)
 
 	// <-metricProcessed
 
@@ -27,7 +29,8 @@ func TestShimSetsUpLogger(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, out, "Error in plugin: intentional")
 
-	stdinWriter.Close()
+	err = stdinWriter.Close()
+	require.NoError(t, err)
 }
 
 func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (metricProcessed chan bool, exited chan bool) {
@@ -46,7 +49,8 @@ func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reade
 		shim.stderr = stderr
 		log.SetOutput(stderr)
 	}
-	shim.AddInput(inp)
+	err := shim.AddInput(inp)
+	require.NoError(t, err)
 	go func() {
 		err := shim.Run(interval)
 		require.NoError(t, err)
@@ -59,10 +63,6 @@ type erroringInput struct {
 }
 
 func (i *erroringInput) SampleConfig() string {
-	return ""
-}
-
-func (i *erroringInput) Description() string {
 	return ""
 }
 

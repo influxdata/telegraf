@@ -57,9 +57,7 @@ type Metric interface {
 	Time() time.Time
 
 	// Type returns a general type for the entire metric that describes how you
-	// might interpret, aggregate the values.
-	//
-	// This method may be removed in the future and its use is discouraged.
+	// might interpret, aggregate the values. Used by prometheus and statsd.
 	Type() ValueType
 
 	// SetName sets the metric name.

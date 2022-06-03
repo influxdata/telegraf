@@ -12,7 +12,7 @@ By default bucket counts are not reset between periods and will be non-strictly
 increasing while Telegraf is running. This behavior can be changed by setting the
 `reset` parameter to true.
 
-#### Design
+## Design
 
 Each metric is passed to the aggregator and this aggregator searches
 histogram buckets for those fields, which have been specified in the
@@ -24,9 +24,9 @@ The algorithm of hit counting to buckets was implemented on the base
 of the algorithm which is implemented in the Prometheus
 [client](https://github.com/prometheus/client_golang/blob/master/prometheus/histogram.go).
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
 # Configuration for aggregate histogram metrics
 [[aggregators.histogram]]
   ## The period in which to flush the aggregator.
@@ -43,6 +43,14 @@ of the algorithm which is implemented in the Prometheus
   ## Whether bucket values should be accumulated. If set to false, "gt" tag will be added.
   ## Defaults to true.
   cumulative = true
+
+  ## Expiration interval for each histogram. The histogram will be expired if
+  ## there are no changes in any buckets for this time interval. 0 == no expiration.
+  # expiration_interval = "0m"
+
+  ## If true, aggregated histogram are pushed to output only if it was updated since
+  ## previous push. Defaults to false.
+  # push_only_on_update = false
 
   ## Example config that aggregates all fields of the metric.
   # [[aggregators.histogram.config]]
@@ -73,40 +81,39 @@ boundaries.  Each float value defines the inclusive upper (right) bound of the b
 The `+Inf` bucket is added automatically and does not need to be defined.
 (For left boundaries, these specified bucket borders and `-Inf` will be used).
 
-### Measurements & Fields:
+## Measurements & Fields
 
 The postfix `bucket` will be added to each field key.
 
 - measurement1
-    - field1_bucket
-    - field2_bucket
+  - field1_bucket
+  - field2_bucket
 
-### Tags:
+### Tags
 
-* `cumulative = true` (default):
-  * `le`: Right bucket border. It means that the metric value is less than or
+- `cumulative = true` (default):
+  - `le`: Right bucket border. It means that the metric value is less than or
     equal to the value of this tag. If a metric value is sorted into a bucket,
     it is also sorted into all larger buckets. As a result, the value of
     `<field>_bucket` is rising with rising `le` value. When `le` is `+Inf`,
     the bucket value is the count of all metrics, because all metric values are
     less than or equal to positive infinity.
-* `cumulative = false`:
-  * `gt`: Left bucket border. It means that the metric value is greater than
+- `cumulative = false`:
+  - `gt`: Left bucket border. It means that the metric value is greater than
     (and not equal to) the value of this tag.
-  * `le`: Right bucket border. It means that the metric value is less than or
+  - `le`: Right bucket border. It means that the metric value is less than or
     equal to the value of this tag.
-  * As both `gt` and `le` are present, each metric is sorted in only exactly
-    one bucket. 
+  - As both `gt` and `le` are present, each metric is sorted in only exactly
+    one bucket.
 
-
-### Example Output:
+## Example Output
 
 Let assume we have the buckets [0, 10, 50, 100] and the following field values
 for `usage_idle`: [50, 7, 99, 12]
 
 With `cumulative = true`:
 
-```
+```text
 cpu,cpu=cpu1,host=localhost,le=0.0 usage_idle_bucket=0i 1486998330000000000  # none
 cpu,cpu=cpu1,host=localhost,le=10.0 usage_idle_bucket=1i 1486998330000000000  # 7
 cpu,cpu=cpu1,host=localhost,le=50.0 usage_idle_bucket=2i 1486998330000000000  # 7, 12
@@ -116,7 +123,7 @@ cpu,cpu=cpu1,host=localhost,le=+Inf usage_idle_bucket=4i 1486998330000000000  # 
 
 With `cumulative = false`:
 
-```
+```text
 cpu,cpu=cpu1,host=localhost,gt=-Inf,le=0.0 usage_idle_bucket=0i 1486998330000000000  # none
 cpu,cpu=cpu1,host=localhost,gt=0.0,le=10.0 usage_idle_bucket=1i 1486998330000000000  # 7
 cpu,cpu=cpu1,host=localhost,gt=10.0,le=50.0 usage_idle_bucket=1i 1486998330000000000  # 12

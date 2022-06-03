@@ -1,8 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package burrow
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -11,11 +14,15 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultBurrowPrefix          = "/v3/kafka"
@@ -24,48 +31,6 @@ const (
 	defaultServer                = "http://localhost:8000"
 )
 
-const configSample = `
-  ## Burrow API endpoints in format "schema://host:port".
-  ## Default is "http://localhost:8000".
-  servers = ["http://localhost:8000"]
-
-  ## Override Burrow API prefix.
-  ## Useful when Burrow is behind reverse-proxy.
-  # api_prefix = "/v3/kafka"
-
-  ## Maximum time to receive response.
-  # response_timeout = "5s"
-
-  ## Limit per-server concurrent connections.
-  ## Useful in case of large number of topics or consumer groups.
-  # concurrent_connections = 20
-
-  ## Filter clusters, default is no filtering.
-  ## Values can be specified as glob patterns.
-  # clusters_include = []
-  # clusters_exclude = []
-
-  ## Filter consumer groups, default is no filtering.
-  ## Values can be specified as glob patterns.
-  # groups_include = []
-  # groups_exclude = []
-
-  ## Filter topics, default is no filtering.
-  ## Values can be specified as glob patterns.
-  # topics_include = []
-  # topics_exclude = []
-
-  ## Credentials for basic HTTP authentication.
-  # username = ""
-  # password = ""
-
-  ## Optional SSL config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  # insecure_skip_verify = false
-`
-
 type (
 	burrow struct {
 		tls.ClientConfig
@@ -73,7 +38,7 @@ type (
 		Servers               []string
 		Username              string
 		Password              string
-		ResponseTimeout       internal.Duration
+		ResponseTimeout       config.Duration
 		ConcurrentConnections int
 
 		APIPrefix       string `toml:"api_prefix"`
@@ -133,12 +98,8 @@ func init() {
 	})
 }
 
-func (b *burrow) SampleConfig() string {
-	return configSample
-}
-
-func (b *burrow) Description() string {
-	return "Collect Kafka topics and consumers status from Burrow HTTP API."
+func (*burrow) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *burrow) Gather(acc telegraf.Accumulator) error {
@@ -188,10 +149,8 @@ func (b *burrow) setDefaults() {
 	if b.ConcurrentConnections < 1 {
 		b.ConcurrentConnections = defaultConcurrentConnections
 	}
-	if b.ResponseTimeout.Duration < time.Second {
-		b.ResponseTimeout = internal.Duration{
-			Duration: defaultResponseTimeout,
-		}
+	if time.Duration(b.ResponseTimeout) < time.Second {
+		b.ResponseTimeout = config.Duration(defaultResponseTimeout)
 	}
 }
 
@@ -220,11 +179,22 @@ func (b *burrow) createClient() (*http.Client, error) {
 		return nil, err
 	}
 
+	timeout := time.Duration(b.ResponseTimeout)
+	dialContext := net.Dialer{Timeout: timeout, DualStack: true}
+	transport := http.Transport{
+		DialContext:     dialContext.DialContext,
+		TLSClientConfig: tlsCfg,
+		// If b.ConcurrentConnections <= 1, then DefaultMaxIdleConnsPerHost is used (=2)
+		MaxIdleConnsPerHost: b.ConcurrentConnections / 2,
+		// If b.ConcurrentConnections == 0, then it is treated as "no limits"
+		MaxConnsPerHost:       b.ConcurrentConnections,
+		ResponseHeaderTimeout: timeout,
+		IdleConnTimeout:       90 * time.Second,
+	}
+
 	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-		},
-		Timeout: b.ResponseTimeout.Duration,
+		Transport: &transport,
+		Timeout:   timeout,
 	}
 
 	return client, nil

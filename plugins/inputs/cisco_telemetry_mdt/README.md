@@ -1,4 +1,4 @@
-# Cisco model-driven telemetry (MDT)
+# Cisco Model-Driven Telemetry (MDT) Input Plugin
 
 Cisco model-driven telemetry (MDT) is an input plugin that consumes
 telemetry data from Cisco IOS XR, IOS XE and NX-OS platforms. It supports TCP & GRPC dialout transports.
@@ -9,10 +9,10 @@ The GRPC dialout transport is supported on various IOS XR (64-bit) 6.1.x and lat
 
 The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and later.
 
+## Configuration
 
-### Configuration:
-
-```toml
+```toml @sample.conf
+# Cisco model-driven telemetry (MDT) input plugin for IOS XR, IOS XE and NX-OS platforms
 [[inputs.cisco_telemetry_mdt]]
  ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when
  ## using the grpc transport.
@@ -22,7 +22,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  service_address = ":57000"
 
  ## Grpc Maximum Message Size, default is 4MB, increase the size.
- max_msg_size = 20000000
+ max_msg_size = 4000000
 
  ## Enable TLS; grpc transport only.
  # tls_cert = "/etc/telegraf/cert.pem"
@@ -38,6 +38,7 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
+ ## Define Property Xformation, please refer README and https://pubhub.devnetcloud.com/media/dme-docs-9-3-3/docs/appendix/ for Model details.
  [inputs.cisco_telemetry_mdt.dmes]
 #    Global Property Xformation.
 #    prop1 = "uint64 to int"
@@ -53,14 +54,16 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
 #    dnpath3 = '{"Name": "show processes memory physical","prop": [{"Key": "processname","Value": "string"}]}'
 ```
 
-### Example Output:
-```
+## Example Output
+
+```shell
 ifstats,path=ietf-interfaces:interfaces-state/interface/statistics,host=linux,name=GigabitEthernet2,source=csr1kv,subscription=101 in-unicast-pkts=27i,in-multicast-pkts=0i,discontinuity-time="2019-05-23T07:40:23.000362+00:00",in-octets=5233i,in-errors=0i,out-multicast-pkts=0i,out-discards=0i,in-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,out-unicast-pkts=0i,out-broadcast-pkts=0i,out-octets=0i,out-errors=0i 1559150462624000000
 ifstats,path=ietf-interfaces:interfaces-state/interface/statistics,host=linux,name=GigabitEthernet1,source=csr1kv,subscription=101 in-octets=3394770806i,in-broadcast-pkts=0i,in-multicast-pkts=0i,out-broadcast-pkts=0i,in-unknown-protos=0i,out-octets=350212i,in-unicast-pkts=9477273i,in-discards=0i,out-unicast-pkts=2726i,out-discards=0i,discontinuity-time="2019-05-23T07:40:23.000363+00:00",in-errors=30i,out-multicast-pkts=0i,out-errors=0i 1559150462624000000
 ```
 
-### NX-OS Configuration Example:
-```
+### NX-OS Configuration Example
+
+```text
 Requirement      DATA-SOURCE   Configuration
 -----------------------------------------
 Environment      DME           path sys/ch query-condition query-target=subtree&target-subtree-class=eqptPsuSlot,eqptFtSlot,eqptSupCSlot,eqptPsu,eqptFt,eqptSensor,eqptLCSlot
@@ -92,13 +95,11 @@ multicast igmp   NXAPI         show ip igmp snooping groups
 multicast igmp   NXAPI         show ip igmp snooping groups detail
 multicast igmp   NXAPI         show ip igmp snooping groups summary
 multicast igmp   NXAPI         show ip igmp snooping mrouter
-multicast igmp   NXAPI         show ip igmp snooping statistics        
+multicast igmp   NXAPI         show ip igmp snooping statistics
 multicast pim    NXAPI         show ip pim interface vrf all
 multicast pim    NXAPI         show ip pim neighbor vrf all
 multicast pim    NXAPI         show ip pim route vrf all
 multicast pim    NXAPI         show ip pim rp vrf all
 multicast pim    NXAPI         show ip pim statistics vrf all
 multicast pim    NXAPI         show ip pim vrf all
-
-
 ```

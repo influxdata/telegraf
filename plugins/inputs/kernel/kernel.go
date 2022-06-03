@@ -1,11 +1,13 @@
+//go:generate ../../../tools/readme_config_includer/generator
+//go:build linux
 // +build linux
 
 package kernel
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // /proc/stat file line prefixes to gather stats on:
 var (
@@ -28,11 +34,9 @@ type Kernel struct {
 	entropyStatFile string
 }
 
-func (k *Kernel) Description() string {
-	return "Get kernel statistics from /proc/stat"
+func (*Kernel) SampleConfig() string {
+	return sampleConfig
 }
-
-func (k *Kernel) SampleConfig() string { return "" }
 
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	data, err := k.getProcStat()
@@ -40,7 +44,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	entropyData, err := ioutil.ReadFile(k.entropyStatFile)
+	entropyData, err := os.ReadFile(k.entropyStatFile)
 	if err != nil {
 		return err
 	}
@@ -108,7 +112,7 @@ func (k *Kernel) getProcStat() ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(k.statFile)
+	data, err := os.ReadFile(k.statFile)
 	if err != nil {
 		return nil, err
 	}

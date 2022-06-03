@@ -1,7 +1,12 @@
 package dovecot
 
 import (
+	"bufio"
 	"bytes"
+	"io"
+	"net"
+	"net/textproto"
+	"os"
 	"testing"
 	"time"
 
@@ -42,11 +47,49 @@ func TestDovecotIntegration(t *testing.T) {
 
 	var acc testutil.Accumulator
 
+	// Test type=global server=unix
+	addr := "/tmp/socket"
+	wait := make(chan int)
+	go func() {
+		defer close(wait)
+
+		la, err := net.ResolveUnixAddr("unix", addr)
+		require.NoError(t, err)
+
+		l, err := net.ListenUnix("unix", la)
+		require.NoError(t, err)
+		defer l.Close()
+		defer os.Remove(addr)
+
+		wait <- 0
+		conn, err := l.Accept()
+		require.NoError(t, err)
+		defer conn.Close()
+
+		readertp := textproto.NewReader(bufio.NewReader(conn))
+		_, err = readertp.ReadLine()
+		require.NoError(t, err)
+
+		buf := bytes.NewBufferString(sampleGlobal)
+		_, err = io.Copy(conn, buf)
+		require.NoError(t, err)
+	}()
+
+	// Wait for server to start
+	<-wait
+
+	d := &Dovecot{Servers: []string{addr}, Type: "global"}
+	err := d.Gather(&acc)
+	require.NoError(t, err)
+
+	tags := map[string]string{"server": addr, "type": "global"}
+	acc.AssertContainsTaggedFields(t, "dovecot", fields, tags)
+
 	// Test type=global
-	tags := map[string]string{"server": "dovecot.test", "type": "global"}
+	tags = map[string]string{"server": "dovecot.test", "type": "global"}
 	buf := bytes.NewBufferString(sampleGlobal)
 
-	err := gatherStats(buf, &acc, "dovecot.test", "global")
+	err = gatherStats(buf, &acc, "dovecot.test", "global")
 	require.NoError(t, err)
 
 	acc.AssertContainsTaggedFields(t, "dovecot", fields, tags)

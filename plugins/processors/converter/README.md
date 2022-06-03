@@ -9,8 +9,11 @@ Values that cannot be converted are dropped.
 uniquely identifiable.  Fields with the same series key (measurement + tags)
 will overwrite one another.
 
-### Configuration
-```toml
+**Note on large strings being converted to numeric types:** When converting a string value to a numeric type, precision may be lost if the number is too large. The largest numeric type this plugin supports is `float64`, and if a string 'number' exceeds its size limit, accuracy may be lost.
+
+## Configuration
+
+```toml @sample.conf
 # Convert values to another metric value type
 [[processors.converter]]
   ## Tags to convert
@@ -44,6 +47,7 @@ will overwrite one another.
 ### Example
 
 Convert `port` tag to a string field:
+
 ```toml
 [[processors.converter]]
   [processors.converter.tags]
@@ -56,6 +60,7 @@ Convert `port` tag to a string field:
 ```
 
 Convert all `scboard_*` fields to an integer:
+
 ```toml
 [[processors.converter]]
   [processors.converter.fields]
@@ -68,6 +73,7 @@ Convert all `scboard_*` fields to an integer:
 ```
 
 Rename the measurement from a tag value:
+
 ```toml
 [[processors.converter]]
   [processors.converter.tags]

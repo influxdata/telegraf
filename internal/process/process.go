@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"sync"
 	"sync/atomic"
@@ -27,13 +27,14 @@ type Process struct {
 
 	name       string
 	args       []string
+	envs       []string
 	pid        int32
 	cancel     context.CancelFunc
 	mainLoopWg sync.WaitGroup
 }
 
 // New creates a new process wrapper
-func New(command []string) (*Process, error) {
+func New(command []string, envs []string) (*Process, error) {
 	if len(command) == 0 {
 		return nil, errors.New("no command")
 	}
@@ -42,6 +43,7 @@ func New(command []string) (*Process, error) {
 		RestartDelay: 5 * time.Second,
 		name:         command[0],
 		args:         []string{},
+		envs:         envs,
 	}
 
 	if len(command) > 1 {
@@ -85,6 +87,10 @@ func (p *Process) Stop() {
 
 func (p *Process) cmdStart() error {
 	p.Cmd = exec.Command(p.name, p.args...)
+
+	if len(p.envs) > 0 {
+		p.Cmd.Env = append(os.Environ(), p.envs...)
+	}
 
 	var err error
 	p.Stdin, err = p.Cmd.StdinPipe()
@@ -187,5 +193,5 @@ func isQuitting(ctx context.Context) bool {
 }
 
 func defaultReadPipe(r io.Reader) {
-	io.Copy(ioutil.Discard, r)
+	_, _ = io.Copy(io.Discard, r)
 }

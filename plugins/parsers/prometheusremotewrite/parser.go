@@ -8,7 +8,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
 )
@@ -22,7 +21,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var metrics []telegraf.Metric
 	var req prompb.WriteRequest
 
-	if err := proto.Unmarshal(buf, &req); err != nil {
+	if err := req.Unmarshal(buf); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal request body: %s", err)
 	}
 
@@ -55,10 +54,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				if s.Timestamp > 0 {
 					t = time.Unix(0, s.Timestamp*1000000)
 				}
-				m, err := metric.New("prometheus_remote_write", tags, fields, t)
-				if err != nil {
-					return nil, fmt.Errorf("unable to convert to telegraf metric: %s", err)
-				}
+				m := metric.New("prometheus_remote_write", tags, fields, t)
 				metrics = append(metrics, m)
 			}
 		}

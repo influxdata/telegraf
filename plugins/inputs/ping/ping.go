@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ping
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"math"
@@ -13,9 +15,18 @@ import (
 	"time"
 
 	"github.com/go-ping/ping"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+)
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
+const (
+	defaultPingDataBytesSize = 56
 )
 
 // HostPinger is a function that runs the "ping" function using a list of
@@ -73,59 +84,24 @@ type Ping struct {
 
 	// Calculate the given percentiles when using native method
 	Percentiles []int
+
+	// Packet size
+	Size *int
 }
 
-func (*Ping) Description() string {
-	return "Ping given url(s) and return statistics"
+type roundTripTimeStats struct {
+	min    float64
+	avg    float64
+	max    float64
+	stddev float64
 }
 
-const sampleConfig = `
-  ## Hosts to send ping packets to.
-  urls = ["example.org"]
-
-  ## Method used for sending pings, can be either "exec" or "native".  When set
-  ## to "exec" the systems ping command will be executed.  When set to "native"
-  ## the plugin will send pings directly.
-  ##
-  ## While the default is "exec" for backwards compatibility, new deployments
-  ## are encouraged to use the "native" method for improved compatibility and
-  ## performance.
-  # method = "exec"
-
-  ## Number of ping packets to send per interval.  Corresponds to the "-c"
-  ## option of the ping command.
-  # count = 1
-
-  ## Time to wait between sending ping packets in seconds.  Operates like the
-  ## "-i" option of the ping command.
-  # ping_interval = 1.0
-
-  ## If set, the time to wait for a ping response in seconds.  Operates like
-  ## the "-W" option of the ping command.
-  # timeout = 1.0
-
-  ## If set, the total ping deadline, in seconds.  Operates like the -w option
-  ## of the ping command.
-  # deadline = 10
-
-  ## Interface or source address to send ping from.  Operates like the -I or -S
-  ## option of the ping command.
-  # interface = ""
-
-  ## Percentiles to calculate. This only works with the native method.
-  # percentiles = [50, 95, 99]
-
-  ## Specify the ping executable binary.
-  # binary = "ping"
-
-  ## Arguments for ping command. When arguments is not empty, the command from
-  ## the binary option will be used and other options (ping_interval, timeout,
-  ## etc) will be ignored.
-  # arguments = ["-c", "3"]
-
-  ## Use only IPv6 addresses when resolving a hostname.
-  # ipv6 = false
-`
+type stats struct {
+	trans int
+	recv  int
+	ttl   int
+	roundTripTimeStats
+}
 
 func (*Ping) SampleConfig() string {
 	return sampleConfig
@@ -170,6 +146,13 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	if p.IPv6 {
 		pinger.SetNetwork("ip6")
+	}
+
+	if p.Method == "native" {
+		pinger.Size = defaultPingDataBytesSize
+		if p.Size != nil {
+			pinger.Size = *p.Size
+		}
 	}
 
 	pinger.Source = p.sourceAddress
@@ -244,7 +227,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 
 	sort.Sort(durationSlice(stats.Rtts))
 	for _, perc := range p.Percentiles {
-		var value = percentile(durationSlice(stats.Rtts), perc)
+		var value = percentile(stats.Rtts, perc)
 		var field = fmt.Sprintf("percentile%v_ms", perc)
 		fields[field] = float64(value.Nanoseconds()) / float64(time.Millisecond)
 	}
@@ -255,6 +238,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		fields["ttl"] = stats.ttl
 	}
 
+	//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
 	fields["percent_packet_loss"] = float64(stats.PacketLoss)
 	fields["minimum_response_ms"] = float64(stats.MinRtt) / float64(time.Millisecond)
 	fields["average_response_ms"] = float64(stats.AvgRtt) / float64(time.Millisecond)

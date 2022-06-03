@@ -4,7 +4,7 @@ The tail plugin "tails" a logfile and parses each log message.
 
 By default, the tail plugin acts like the following unix tail command:
 
-```
+```shell
 tail -F --lines=0 myfile.log
 ```
 
@@ -14,14 +14,15 @@ inaccessible files.
 - `--lines=0` means that it will start at the end of the file (unless
 the `from_beginning` option is set).
 
-see http://man7.org/linux/man-pages/man1/tail.1.html for more details.
+see <http://man7.org/linux/man-pages/man1/tail.1.html> for more details.
 
 The plugin expects messages in one of the
 [Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
+# Parse the new lines appended to a file
 [[inputs.tail]]
   ## File names or a pattern to tail.
   ## These accept standard unix glob matching rules, but with the addition of
@@ -67,6 +68,10 @@ The plugin expects messages in one of the
   ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
   # path_tag = "path"
 
+  ## Filters to apply to files before generating metrics
+  ## "ansi_color" removes ANSI colors
+  # filters = []
+
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
   #[inputs.tail.multiline]
@@ -77,7 +82,7 @@ The plugin expects messages in one of the
     ## multi-line event.
     #match_which_line = "previous"
 
-    ## The invert_match can be true or false (defaults to false). 
+    ## The invert_match can be true or false (defaults to false).
     ## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
     #invert_match = false
 
@@ -85,7 +90,7 @@ The plugin expects messages in one of the
     #timeout = 5s
 ```
 
-### Metrics
+## Metrics
 
 Metrics are produced according to the `data_format` option.  Additionally a
 tag labeled `path` is added to the metric containing the filename being tailed.

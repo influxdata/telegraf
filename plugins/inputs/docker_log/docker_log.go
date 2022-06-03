@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package docker_log
 
 import (
@@ -5,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"io"
 	"strings"
@@ -15,52 +17,18 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/pkg/stdcopy"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/docker"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var sampleConfig = `
-  ## Docker Endpoint
-  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
-  # endpoint = "unix:///var/run/docker.sock"
-
-  ## When true, container logs are read from the beginning; otherwise
-  ## reading begins at the end of the log.
-  # from_beginning = false
-
-  ## Timeout for Docker API calls.
-  # timeout = "5s"
-
-  ## Containers to include and exclude. Globs accepted.
-  ## Note that an empty array for both will include all containers
-  # container_name_include = []
-  # container_name_exclude = []
-
-  ## Container states to include and exclude. Globs accepted.
-  ## When empty only containers in the "running" state will be captured.
-  # container_state_include = []
-  # container_state_exclude = []
-
-  ## docker labels to include and exclude as tags.  Globs accepted.
-  ## Note that an empty array for both will include all labels as tags
-  # docker_label_include = []
-  # docker_label_exclude = []
-
-  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
-  source_tag = false
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultEndpoint = "unix:///var/run/docker.sock"
@@ -73,16 +41,16 @@ var (
 )
 
 type DockerLogs struct {
-	Endpoint              string            `toml:"endpoint"`
-	FromBeginning         bool              `toml:"from_beginning"`
-	Timeout               internal.Duration `toml:"timeout"`
-	LabelInclude          []string          `toml:"docker_label_include"`
-	LabelExclude          []string          `toml:"docker_label_exclude"`
-	ContainerInclude      []string          `toml:"container_name_include"`
-	ContainerExclude      []string          `toml:"container_name_exclude"`
-	ContainerStateInclude []string          `toml:"container_state_include"`
-	ContainerStateExclude []string          `toml:"container_state_exclude"`
-	IncludeSourceTag      bool              `toml:"source_tag"`
+	Endpoint              string          `toml:"endpoint"`
+	FromBeginning         bool            `toml:"from_beginning"`
+	Timeout               config.Duration `toml:"timeout"`
+	LabelInclude          []string        `toml:"docker_label_include"`
+	LabelExclude          []string        `toml:"docker_label_exclude"`
+	ContainerInclude      []string        `toml:"container_name_include"`
+	ContainerExclude      []string        `toml:"container_name_exclude"`
+	ContainerStateInclude []string        `toml:"container_state_include"`
+	ContainerStateExclude []string        `toml:"container_state_exclude"`
+	IncludeSourceTag      bool            `toml:"source_tag"`
 
 	tlsint.ClientConfig
 
@@ -99,11 +67,7 @@ type DockerLogs struct {
 	containerList   map[string]context.CancelFunc
 }
 
-func (d *DockerLogs) Description() string {
-	return "Read logging output from the Docker engine"
-}
-
-func (d *DockerLogs) SampleConfig() string {
+func (*DockerLogs) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -199,7 +163,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 	acc.SetPrecision(time.Nanosecond)
 
-	ctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
 	containers, err := d.client.ContainerList(ctx, d.opts)
 	if err != nil {
@@ -235,7 +199,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *DockerLogs) hasTTY(ctx context.Context, container types.Container) (bool, error) {
-	ctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
 	c, err := d.client.ContainerInspect(ctx, container.ID)
 	if err != nil {
@@ -307,8 +271,7 @@ func (d *DockerLogs) tailContainerLogs(
 func parseLine(line []byte) (time.Time, string, error) {
 	parts := bytes.SplitN(line, []byte(" "), 2)
 
-	switch len(parts) {
-	case 1:
+	if len(parts) == 1 {
 		parts = append(parts, []byte(""))
 	}
 
@@ -398,8 +361,11 @@ func tailMultiplexed(
 	}()
 
 	_, err := stdcopy.StdCopy(outWriter, errWriter, src)
+	//nolint:errcheck,revive // we cannot do anything if the closing fails
 	outWriter.Close()
+	//nolint:errcheck,revive // we cannot do anything if the closing fails
 	errWriter.Close()
+	//nolint:errcheck,revive // we cannot do anything if the closing fails
 	src.Close()
 	wg.Wait()
 	return err
@@ -418,20 +384,20 @@ func (d *DockerLogs) Stop() {
 
 // Following few functions have been inherited from telegraf docker input plugin
 func (d *DockerLogs) createContainerFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
+	containerFilter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
 	if err != nil {
 		return err
 	}
-	d.containerFilter = filter
+	d.containerFilter = containerFilter
 	return nil
 }
 
 func (d *DockerLogs) createLabelFilters() error {
-	filter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
+	labelFilter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
 	if err != nil {
 		return err
 	}
-	d.labelFilter = filter
+	d.labelFilter = labelFilter
 	return nil
 }
 
@@ -439,18 +405,18 @@ func (d *DockerLogs) createContainerStateFilters() error {
 	if len(d.ContainerStateInclude) == 0 && len(d.ContainerStateExclude) == 0 {
 		d.ContainerStateInclude = []string{"running"}
 	}
-	filter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
+	stateFilter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
 	if err != nil {
 		return err
 	}
-	d.stateFilter = filter
+	d.stateFilter = stateFilter
 	return nil
 }
 
 func init() {
 	inputs.Add("docker_log", func() telegraf.Input {
 		return &DockerLogs{
-			Timeout:       internal.Duration{Duration: time.Second * 5},
+			Timeout:       config.Duration(time.Second * 5),
 			Endpoint:      defaultEndpoint,
 			newEnvClient:  NewEnvClient,
 			newClient:     NewClient,

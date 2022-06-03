@@ -9,12 +9,12 @@ Enable TLS by specifying the file names of a service TLS certificate and key.
 
 Enable mutually authenticated TLS and authorize client connections by signing certificate authority by including a list of allowed CA certificate file names in `tls_allowed_cacerts`.
 
-
-### Configuration:
+## Configuration
 
 This is a sample configuration for the plugin.
 
-```toml
+```toml @sample.conf
+# Google Cloud Pub/Sub Push HTTP listener
 [[inputs.cloud_pubsub_push]]
   ## Address and port to host HTTP listener on
   service_address = ":8080"

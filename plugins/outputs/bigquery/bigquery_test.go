@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
@@ -21,7 +21,7 @@ const (
 )
 
 var testingHost string
-var testDuration = internal.Duration{Duration: 5 * time.Second}
+var testDuration = config.Duration(5 * time.Second)
 var receivedBody map[string]json.RawMessage
 
 type Row struct {

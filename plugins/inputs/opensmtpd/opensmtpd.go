@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package opensmtpd
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -10,59 +12,44 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error)
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
+type runner func(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error)
 
 // Opensmtpd is used to store configuration values
 type Opensmtpd struct {
 	Binary  string
-	Timeout internal.Duration
+	Timeout config.Duration
 	UseSudo bool
 
 	run runner
 }
 
 var defaultBinary = "/usr/sbin/smtpctl"
-var defaultTimeout = internal.Duration{Duration: time.Second}
-
-var sampleConfig = `
-  ## If running as a restricted user you can prepend sudo for additional access:
-  #use_sudo = false
-
-  ## The default location of the smtpctl binary can be overridden with:
-  binary = "/usr/sbin/smtpctl"
-
-  ## The default timeout of 1000ms can be overridden with (in milliseconds):
-  timeout = 1000
-`
-
-func (s *Opensmtpd) Description() string {
-	return "A plugin to collect stats from Opensmtpd - a validating, recursive, and caching DNS resolver "
-}
-
-// SampleConfig displays configuration instructions
-func (s *Opensmtpd) SampleConfig() string {
-	return sampleConfig
-}
+var defaultTimeout = config.Duration(time.Second)
 
 // Shell out to opensmtpd_stat and return the output
-func opensmtpdRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error) {
+func opensmtpdRunner(cmdName string, timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
 	cmdArgs := []string{"show", "stats"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
-	if UseSudo {
+	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
 		cmd = exec.Command("sudo", cmdArgs...)
 	}
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, time.Duration(timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running smtpctl: %s", err)
 	}
@@ -73,6 +60,10 @@ func opensmtpdRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*
 // Gather collects the configured stats from smtpctl and adds them to the
 // Accumulator
 //
+func (*Opensmtpd) SampleConfig() string {
+	return sampleConfig
+}
+
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 	// Always exclude uptime.human statistics
@@ -106,7 +97,7 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		field := strings.Replace(stat, ".", "_", -1)
+		field := strings.ReplaceAll(stat, ".", "_")
 
 		fields[field], err = strconv.ParseFloat(value, 64)
 		if err != nil {

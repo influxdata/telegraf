@@ -1,18 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package snmp_legacy
 
 import (
-	"io/ioutil"
+	_ "embed"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/soniah/gosnmp"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Snmp is a snmp plugin
 type Snmp struct {
@@ -46,9 +52,9 @@ type Host struct {
 	// Table
 	Table []HostTable
 	// Oids
-	getOids  []Data
-	bulkOids []Data
-	tables   []HostTable
+	internalGetOids []Data
+	bulkOids        []Data
+	tables          []HostTable
 	// array of processed oids
 	// to skip oid duplication
 	processedOids []string
@@ -102,7 +108,7 @@ type Data struct {
 	// Unit
 	Unit string
 	//  SNMP getbulk max repetition
-	MaxRepetition uint8 `toml:"max_repetition"`
+	MaxRepetition uint32 `toml:"max_repetition"`
 	// SNMP Instance (default 0)
 	// (only used with  GET request and if
 	//  OID is a name from snmptranslate file)
@@ -115,119 +121,6 @@ type Node struct {
 	id       string
 	name     string
 	subnodes map[string]Node
-}
-
-var sampleConfig = `
-  ## Use 'oids.txt' file to translate oids to names
-  ## To generate 'oids.txt' you need to run:
-  ##   snmptranslate -m all -Tz -On | sed -e 's/"//g' > /tmp/oids.txt
-  ## Or if you have an other MIB folder with custom MIBs
-  ##   snmptranslate -M /mycustommibfolder -Tz -On -m all | sed -e 's/"//g' > oids.txt
-  snmptranslate_file = "/tmp/oids.txt"
-  [[inputs.snmp.host]]
-    address = "192.168.2.2:161"
-    # SNMP community
-    community = "public" # default public
-    # SNMP version (1, 2 or 3)
-    # Version 3 not supported yet
-    version = 2 # default 2
-    # SNMP response timeout
-    timeout = 2.0 # default 2.0
-    # SNMP request retries
-    retries = 2 # default 2
-    # Which get/bulk do you want to collect for this host
-    collect = ["mybulk", "sysservices", "sysdescr"]
-    # Simple list of OIDs to get, in addition to "collect"
-    get_oids = []
-
-  [[inputs.snmp.host]]
-    address = "192.168.2.3:161"
-    community = "public"
-    version = 2
-    timeout = 2.0
-    retries = 2
-    collect = ["mybulk"]
-    get_oids = [
-        "ifNumber",
-        ".1.3.6.1.2.1.1.3.0",
-    ]
-
-  [[inputs.snmp.get]]
-    name = "ifnumber"
-    oid = "ifNumber"
-
-  [[inputs.snmp.get]]
-    name = "interface_speed"
-    oid = "ifSpeed"
-    instance = "0"
-
-  [[inputs.snmp.get]]
-    name = "sysuptime"
-    oid = ".1.3.6.1.2.1.1.3.0"
-    unit = "second"
-
-  [[inputs.snmp.bulk]]
-    name = "mybulk"
-    max_repetition = 127
-    oid = ".1.3.6.1.2.1.1"
-
-  [[inputs.snmp.bulk]]
-    name = "ifoutoctets"
-    max_repetition = 127
-    oid = "ifOutOctets"
-
-  [[inputs.snmp.host]]
-    address = "192.168.2.13:161"
-    #address = "127.0.0.1:161"
-    community = "public"
-    version = 2
-    timeout = 2.0
-    retries = 2
-    #collect = ["mybulk", "sysservices", "sysdescr", "systype"]
-    collect = ["sysuptime" ]
-    [[inputs.snmp.host.table]]
-      name = "iftable3"
-      include_instances = ["enp5s0", "eth1"]
-
-  # SNMP TABLEs
-  # table without mapping neither subtables
-  [[inputs.snmp.table]]
-    name = "iftable1"
-    oid = ".1.3.6.1.2.1.31.1.1.1"
-
-  # table without mapping but with subtables
-  [[inputs.snmp.table]]
-    name = "iftable2"
-    oid = ".1.3.6.1.2.1.31.1.1.1"
-    sub_tables = [".1.3.6.1.2.1.2.2.1.13"]
-
-  # table with mapping but without subtables
-  [[inputs.snmp.table]]
-    name = "iftable3"
-    oid = ".1.3.6.1.2.1.31.1.1.1"
-    # if empty. get all instances
-    mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
-    # if empty, get all subtables
-
-  # table with both mapping and subtables
-  [[inputs.snmp.table]]
-    name = "iftable4"
-    oid = ".1.3.6.1.2.1.31.1.1.1"
-    # if empty get all instances
-    mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
-    # if empty get all subtables
-    # sub_tables could be not "real subtables"
-    sub_tables=[".1.3.6.1.2.1.2.2.1.13", "bytes_recv", "bytes_send"]
-`
-
-// SampleConfig returns sample configuration message
-func (s *Snmp) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns description of Zookeeper plugin
-func (s *Snmp) Description() string {
-	return `DEPRECATED! PLEASE USE inputs.snmp INSTEAD.`
 }
 
 func fillnode(parentNode Node, oidName string, ids []string) {
@@ -250,7 +143,7 @@ func fillnode(parentNode Node, oidName string, ids []string) {
 	}
 }
 
-func findnodename(node Node, ids []string) (string, string) {
+func findNodeName(node Node, ids []string) (oidName string, instance string) {
 	// ids = ["1", "3", "6", ...]
 	if len(ids) == 1 {
 		return node.name, ids[0]
@@ -259,7 +152,7 @@ func findnodename(node Node, ids []string) (string, string) {
 	// Get node
 	subnode, ok := node.subnodes[id]
 	if ok {
-		return findnodename(subnode, ids)
+		return findNodeName(subnode, ids)
 	}
 	// We got a node
 	// Get node name
@@ -275,6 +168,10 @@ func findnodename(node Node, ids []string) (string, string) {
 	}
 	// return an empty node name
 	return node.name, ""
+}
+
+func (*Snmp) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Snmp) Gather(acc telegraf.Accumulator) error {
@@ -296,7 +193,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			subnodes: make(map[string]Node),
 		}
 
-		data, err := ioutil.ReadFile(s.SnmptranslateFile)
+		data, err := os.ReadFile(s.SnmptranslateFile)
 		if err != nil {
 			s.Log.Errorf("Reading SNMPtranslate file error: %s", err.Error())
 			return err
@@ -345,7 +242,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 					oid.rawOid = oidstring
 				}
 			}
-			host.getOids = append(host.getOids, oid)
+			host.internalGetOids = append(host.internalGetOids, oid)
 		}
 
 		for _, oidName := range host.Collect {
@@ -362,7 +259,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 					} else {
 						oid.rawOid = oid.Oid
 					}
-					host.getOids = append(host.getOids, oid)
+					host.internalGetOids = append(host.internalGetOids, oid)
 				}
 			}
 			// Get GETBULK oids
@@ -463,7 +360,7 @@ func (h *Host) SNMPMap(
 					}
 					// TODO check oid validity
 
-					// Add the new oid to getOids list
+					// Add the new oid to bulkOids list
 					h.bulkOids = append(h.bulkOids, oid)
 				}
 			}
@@ -476,7 +373,7 @@ func (h *Host) SNMPMap(
 			oidNext := oidAsked
 			needMoreRequests := true
 			// Set max repetition
-			maxRepetition := uint8(32)
+			maxRepetition := uint32(32)
 			// Launch requests
 			for needMoreRequests {
 				// Launch request
@@ -569,8 +466,8 @@ func (h *Host) SNMPMap(
 									}
 									// TODO check oid validity
 
-									// Add the new oid to getOids list
-									h.getOids = append(h.getOids, oid)
+									// Add the new oid to internalGetOids list
+									h.internalGetOids = append(h.internalGetOids, oid)
 								}
 							}
 						default:
@@ -606,7 +503,7 @@ func (h *Host) SNMPGet(acc telegraf.Accumulator, initNode Node) error {
 	defer snmpClient.Conn.Close()
 	// Prepare OIDs
 	oidsList := make(map[string]Data)
-	for _, oid := range h.getOids {
+	for _, oid := range h.internalGetOids {
 		oidsList[oid.rawOid] = oid
 	}
 	oidsNameList := make([]string, 0, len(oidsList))
@@ -701,7 +598,7 @@ func (h *Host) GetSNMPClient() (*gosnmp.GoSNMP, error) {
 	// Prepare host and port
 	host, portStr, err := net.SplitHostPort(h.Address)
 	if err != nil {
-		portStr = string("161")
+		portStr = "161"
 	}
 	// convert port_str to port in uint16
 	port64, err := strconv.ParseUint(portStr, 10, 16)
@@ -763,7 +660,7 @@ func (h *Host) HandleResponse(
 					var oidName string
 					var instance string
 					// Get oidname and instance from translate file
-					oidName, instance = findnodename(initNode,
+					oidName, instance = findNodeName(initNode,
 						strings.Split(variable.Name[1:], "."))
 					// Set instance tag
 					// From mapping table

@@ -2,21 +2,21 @@ package burrow
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // remap uri to json file, eg: /v3/kafka -> ./testdata/v3_kafka.json
 func getResponseJSON(requestURI string) ([]byte, int) {
 	uri := strings.TrimLeft(requestURI, "/")
-	mappedFile := strings.Replace(uri, "/", "_", -1)
+	mappedFile := strings.ReplaceAll(uri, "/", "_")
 	jsonFile := fmt.Sprintf("./testdata/%s.json", mappedFile)
 
 	code := 200
@@ -27,7 +27,7 @@ func getResponseJSON(requestURI string) ([]byte, int) {
 	}
 
 	// respond with file
-	b, _ := ioutil.ReadFile(jsonFile)
+	b, _ := os.ReadFile(jsonFile)
 	return b, code
 }
 
@@ -49,7 +49,7 @@ func getHTTPServerBasicAuth() *httptest.Server {
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
 		username, password, authOK := r.BasicAuth()
-		if authOK == false {
+		if !authOK {
 			http.Error(w, "Not authorized", 401)
 			return
 		}

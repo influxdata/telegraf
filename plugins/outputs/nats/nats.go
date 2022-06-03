@@ -1,16 +1,22 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nats
 
 import (
+	_ "embed"
 	"fmt"
-	"log"
 	"strings"
+
+	"github.com/nats-io/nats.go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/nats-io/nats.go"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type NATS struct {
 	Servers     []string `toml:"servers"`
@@ -23,43 +29,15 @@ type NATS struct {
 
 	tls.ClientConfig
 
+	Log telegraf.Logger `toml:"-"`
+
 	conn       *nats.Conn
 	serializer serializers.Serializer
 }
 
-var sampleConfig = `
-  ## URLs of NATS servers
-  servers = ["nats://localhost:4222"]
-
-  ## Optional client name
-  # name = ""
-
-  ## Optional credentials
-  # username = ""
-  # password = ""
-
-  ## Optional NATS 2.0 and NATS NGS compatible user credentials
-  # credentials = "/etc/telegraf/nats.creds"
-
-  ## NATS subject for producer messages
-  subject = "telegraf"
-
-  ## Use Transport Layer Security
-  # secure = false
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
-`
+func (*NATS) SampleConfig() string {
+	return sampleConfig
+}
 
 func (n *NATS) SetSerializer(serializer serializers.Serializer) {
 	n.serializer = serializer
@@ -105,14 +83,6 @@ func (n *NATS) Close() error {
 	return nil
 }
 
-func (n *NATS) SampleConfig() string {
-	return sampleConfig
-}
-
-func (n *NATS) Description() string {
-	return "Send telegraf measurements to NATS"
-}
-
 func (n *NATS) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
@@ -121,7 +91,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
-			log.Printf("D! [outputs.nats] Could not serialize metric: %v", err)
+			n.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 

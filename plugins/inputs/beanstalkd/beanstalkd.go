@@ -1,35 +1,29 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package beanstalkd
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"net/textproto"
 	"sync"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"gopkg.in/yaml.v2"
 )
 
-const sampleConfig = `
-  ## Server to collect data from
-  server = "localhost:11300"
-
-  ## List of tubes to gather stats about.
-  ## If no tubes specified then data gathered for each tube on server reported by list-tubes command
-  tubes = ["notifications"]
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Beanstalkd struct {
 	Server string   `toml:"server"`
 	Tubes  []string `toml:"tubes"`
 }
 
-func (b *Beanstalkd) Description() string {
-	return "Collects Beanstalkd server and tubes stats"
-}
-
-func (b *Beanstalkd) SampleConfig() string {
+func (*Beanstalkd) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -62,7 +56,10 @@ func (b *Beanstalkd) Gather(acc telegraf.Accumulator) error {
 	for _, tube := range tubes {
 		wg.Add(1)
 		go func(tube string) {
-			b.gatherTubeStats(connection, tube, acc)
+			err := b.gatherTubeStats(connection, tube, acc)
+			if err != nil {
+				acc.AddError(err)
+			}
 			wg.Done()
 		}(tube)
 	}

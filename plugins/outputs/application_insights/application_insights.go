@@ -1,16 +1,23 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package application_insights
 
 import (
+	_ "embed"
 	"fmt"
 	"math"
 	"time"
 	"unsafe"
 
-	"github.com/Microsoft/ApplicationInsights-Go/appinsights"
+	"github.com/microsoft/ApplicationInsights-Go/appinsights"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type TelemetryTransmitter interface {
 	Track(appinsights.Telemetry)
@@ -24,7 +31,7 @@ type DiagnosticsMessageSubscriber interface {
 type ApplicationInsights struct {
 	InstrumentationKey      string            `toml:"instrumentation_key"`
 	EndpointURL             string            `toml:"endpoint_url"`
-	Timeout                 internal.Duration `toml:"timeout"`
+	Timeout                 config.Duration   `toml:"timeout"`
 	EnableDiagnosticLogging bool              `toml:"enable_diagnostic_logging"`
 	ContextTagSources       map[string]string `toml:"context_tag_sources"`
 	Log                     telegraf.Logger   `toml:"-"`
@@ -35,37 +42,12 @@ type ApplicationInsights struct {
 }
 
 var (
-	sampleConfig = `
-  ## Instrumentation key of the Application Insights resource.
-  instrumentation_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
-  
-  ## Regions that require endpoint modification https://docs.microsoft.com/en-us/azure/azure-monitor/app/custom-endpoints
-  # endpoint_url = "https://dc.services.visualstudio.com/v2/track"
-
-  ## Timeout for closing (default: 5s).
-  # timeout = "5s"
-
-  ## Enable additional diagnostic logging.
-  # enable_diagnostic_logging = false
-
-  ## Context Tag Sources add Application Insights context tags to a tag value.
-  ##
-  ## For list of allowed context tag keys see:
-  ## https://github.com/Microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
-  # [outputs.application_insights.context_tag_sources]
-  #   "ai.cloud.role" = "kubernetes_container_name"
-  #   "ai.cloud.roleInstance" = "kubernetes_pod_name"
-`
 	is32Bit        bool
 	is32BitChecked bool
 )
 
-func (a *ApplicationInsights) SampleConfig() string {
+func (*ApplicationInsights) SampleConfig() string {
 	return sampleConfig
-}
-
-func (a *ApplicationInsights) Description() string {
-	return "Send metrics to Azure Application Insights"
 }
 
 func (a *ApplicationInsights) Connect() error {
@@ -112,8 +94,8 @@ func (a *ApplicationInsights) Close() error {
 	select {
 	case <-a.transmitter.Close():
 		a.Log.Info("Closed")
-	case <-time.After(a.Timeout.Duration):
-		a.Log.Warnf("Close operation timed out after %v", a.Timeout.Duration)
+	case <-time.After(time.Duration(a.Timeout)):
+		a.Log.Warnf("Close operation timed out after %v", time.Duration(a.Timeout))
 	}
 
 	return nil
@@ -337,7 +319,7 @@ func toInt(value interface{}) (int, error) {
 func init() {
 	outputs.Add("application_insights", func() telegraf.Output {
 		return &ApplicationInsights{
-			Timeout:           internal.Duration{Duration: time.Second * 5},
+			Timeout:           config.Duration(time.Second * 5),
 			diagMsgSubscriber: diagnosticsMessageSubscriber{},
 			// It is very common to set Cloud.RoleName and Cloud.RoleInstance context properties, hence initial capacity of two
 			ContextTagSources: make(map[string]string, 2),

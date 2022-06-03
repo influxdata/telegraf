@@ -1,6 +1,7 @@
 linters:
   disable-all: true
   enable:
+    # - telegraflinter
     - bodyclose
     - dogsled
     - errcheck
@@ -45,7 +46,7 @@ linters-settings:
       - name: error-return
       - name: error-strings
       - name: errorf
-      - name: flag-parameter
+#      - name: flag-parameter #disable for now
       - name: function-result-limit
         arguments: [ 3 ]
       - name: identical-branches
@@ -70,6 +71,7 @@ linters-settings:
       - name: unconditional-recursion
       - name: unexported-naming
       - name: unhandled-error
+        arguments: ["fmt.Printf", "fmt.Println", "fmt.Print"]
       - name: unnecessary-stmt
       - name: unreachable-code
       # - name: unused-parameter
@@ -123,6 +125,11 @@ issues:
 
     - path: _test\.go
       text: "parameter.*seems to be a control flag, avoid control coupling"
+
+    - path: (^agent/|^cmd/|^config/|^filter/|^internal/|^logger/|^metric/|^models/|^selfstat/|^testutil/|^plugins/serializers/)
+      text: "imports-blacklist: should not use the following blacklisted import: \"log\""
+      linters:
+        - revive
 
 output:
   format: tab

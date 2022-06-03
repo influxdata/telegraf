@@ -8,13 +8,13 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
-	"github.com/jackc/pgx"
-	"github.com/jackc/pgx/pgtype"
-	"github.com/jackc/pgx/stdlib"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 )
 
 // pulled from lib/pq
@@ -89,13 +89,15 @@ func parseURL(uri string) (string, error) {
 // packages.
 type Service struct {
 	Address       string
-	Outputaddress string
+	OutputAddress string
 	MaxIdle       int
 	MaxOpen       int
-	MaxLifetime   internal.Duration
+	MaxLifetime   config.Duration
 	DB            *sql.DB
-	IsPgBouncer   bool
+	IsPgBouncer   bool `toml:"-"`
 }
+
+var socketRegexp = regexp.MustCompile(`/\.s\.PGSQL\.\d+$`)
 
 // Start starts the ServiceInput's service, whatever that may be
 func (p *Service) Start(telegraf.Accumulator) (err error) {
@@ -105,47 +107,30 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 		p.Address = localhost
 	}
 
-	connectionString := p.Address
+	connConfig, err := pgx.ParseConfig(p.Address)
+	if err != nil {
+		return err
+	}
+
+	// Remove the socket name from the path
+	connConfig.Host = socketRegexp.ReplaceAllLiteralString(connConfig.Host, "")
 
 	// Specific support to make it work with PgBouncer too
 	// See https://github.com/influxdata/telegraf/issues/3253#issuecomment-357505343
 	if p.IsPgBouncer {
-		d := &stdlib.DriverConfig{
-			ConnConfig: pgx.ConnConfig{
-				PreferSimpleProtocol: true,
-				RuntimeParams: map[string]string{
-					"client_encoding": "UTF8",
-				},
-				CustomConnInfo: func(c *pgx.Conn) (*pgtype.ConnInfo, error) {
-					info := c.ConnInfo.DeepCopy()
-					info.RegisterDataType(pgtype.DataType{
-						Value: &pgtype.OIDValue{},
-						Name:  "int8OID",
-						OID:   pgtype.Int8OID,
-					})
-					// Newer versions of pgbouncer need this defined. See the discussion here:
-					// https://github.com/jackc/pgx/issues/649
-					info.RegisterDataType(pgtype.DataType{
-						Value: &pgtype.OIDValue{},
-						Name:  "numericOID",
-						OID:   pgtype.NumericOID,
-					})
-
-					return info, nil
-				},
-			},
-		}
-		stdlib.RegisterDriverConfig(d)
-		connectionString = d.ConnectionString(p.Address)
+		// Remove DriveConfig and revert it by the ParseConfig method
+		// See https://github.com/influxdata/telegraf/issues/9134
+		connConfig.PreferSimpleProtocol = true
 	}
 
+	connectionString := stdlib.RegisterConnConfig(connConfig)
 	if p.DB, err = sql.Open("pgx", connectionString); err != nil {
 		return err
 	}
 
 	p.DB.SetMaxOpenConns(p.MaxOpen)
 	p.DB.SetMaxIdleConns(p.MaxIdle)
-	p.DB.SetConnMaxLifetime(p.MaxLifetime.Duration)
+	p.DB.SetConnMaxLifetime(time.Duration(p.MaxLifetime))
 
 	return nil
 }
@@ -157,7 +142,7 @@ func (p *Service) Stop() {
 	p.DB.Close()
 }
 
-var kvMatcher, _ = regexp.Compile("(password|sslcert|sslkey|sslmode|sslrootcert)=\\S+ ?")
+var kvMatcher, _ = regexp.Compile(`(password|sslcert|sslkey|sslmode|sslrootcert)=\S+ ?`)
 
 // SanitizedAddress utility function to strip sensitive information from the connection string.
 func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
@@ -165,8 +150,8 @@ func (p *Service) SanitizedAddress() (sanitizedAddress string, err error) {
 		canonicalizedAddress string
 	)
 
-	if p.Outputaddress != "" {
-		return p.Outputaddress, nil
+	if p.OutputAddress != "" {
+		return p.OutputAddress, nil
 	}
 
 	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {

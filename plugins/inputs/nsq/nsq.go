@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // The MIT License (MIT)
 //
 // Copyright (c) 2015 Jeff Nickoloff (jeff@allingeek.com)
@@ -23,9 +24,10 @@
 package nsq
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -37,24 +39,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // Might add Lookupd endpoints for cluster discovery
 type NSQ struct {
 	Endpoints []string
 	tls.ClientConfig
 	httpClient *http.Client
 }
-
-var sampleConfig = `
-  ## An array of NSQD HTTP API endpoints
-  endpoints  = ["http://localhost:4151"]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
 
 const (
 	requestPattern = `%s/stats?format=json`
@@ -70,12 +64,8 @@ func New() *NSQ {
 	return &NSQ{}
 }
 
-func (n *NSQ) SampleConfig() string {
+func (*NSQ) SampleConfig() string {
 	return sampleConfig
-}
-
-func (n *NSQ) Description() string {
-	return "Read NSQ topic and channel statistics."
 }
 
 func (n *NSQ) Gather(acc telegraf.Accumulator) error {
@@ -131,7 +121,7 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 		return fmt.Errorf("%s returned HTTP status %s", u.String(), r.Status)
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return fmt.Errorf(`error reading body: %s`, err)
 	}
