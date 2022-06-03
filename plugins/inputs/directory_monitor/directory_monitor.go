@@ -238,12 +238,13 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 	}
 
 	scanner := bufio.NewScanner(reader)
+	/* To be used when we add a new scanner based parse method
 	switch monitor.ParseMethod {
 	case "line-by-line":
 		scanner.Split(bufio.ScanLines)
 	case "future-split-type":
 		scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) { return })
-	}
+	} */
 
 	for scanner.Scan() {
 		metrics, err := monitor.parseMetrics(parser, scanner.Bytes(), fileName)
@@ -279,7 +280,7 @@ func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte
 		}
 	}
 
-	return
+	return metrics, err
 }
 
 func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
