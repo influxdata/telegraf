@@ -1,8 +1,7 @@
 # Logstash Input Plugin
 
 This plugin reads metrics exposed by
-[Logstash Monitoring API]
-(https://www.elastic.co/guide/en/logstash/current/monitoring-logstash.html).
+[Logstash Monitoring API](https://www.elastic.co/guide/en/logstash/current/monitoring-logstash.html).
 
 Logstash 5 and later is supported.
 
