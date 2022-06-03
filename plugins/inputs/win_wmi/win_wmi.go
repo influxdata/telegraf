@@ -29,9 +29,9 @@ func oleInt64(item *ole.IDispatch, prop string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer v.Clear()
+	defer func() { _ = v.Clear() }()
 
-	i := int64(v.Val)
+	i := v.Val
 	return i, nil
 }
 
@@ -56,6 +56,52 @@ func (s *Wmi) SampleConfig() string {
   ##   excludenamekey = false
   ##   name_prefix = "win_wmi_"
 `
+}
+
+func BuildWmiQuery(s *Wmi) (string, error) {
+	// build a WMI query
+	var query string
+	var b bytes.Buffer
+	_, err := b.WriteString("SELECT ")
+	if err != nil {
+		return query, err
+	}
+
+	if !s.ExcludeNameKey {
+		_, err := b.WriteString("Name, ")
+		if err != nil {
+			return query, err
+		}
+	}
+
+	_, err = b.WriteString(strings.Join(s.Properties, ", "))
+	if err != nil {
+		return query, err
+	}
+
+	_, err = b.WriteString(" FROM ")
+	if err != nil {
+		return query, err
+	}
+
+	_, err = b.WriteString(s.ClassName)
+	if err != nil {
+		return query, err
+	}
+
+	if len(s.Filter) > 0 {
+		_, err = b.WriteString(" WHERE ")
+		if err != nil {
+			return query, err
+		}
+
+		_, err = b.WriteString(s.Filter)
+		if err != nil {
+			return query, err
+		}
+	}
+	query = b.String()
+	return query, nil
 }
 
 // Gather function
@@ -90,22 +136,12 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	service := serviceRaw.ToIDispatch()
-	defer serviceRaw.Clear()
+	defer func() { _ = serviceRaw.Clear() }()
 
-	// build a WMI query
-	var b bytes.Buffer
-	b.WriteString("SELECT ")
-	if !s.ExcludeNameKey {
-		b.WriteString("Name, ")
+	query, err := BuildWmiQuery(s)
+	if err != nil {
+		return err
 	}
-	b.WriteString(strings.Join(s.Properties, ", "))
-	b.WriteString(" FROM ")
-	b.WriteString(s.ClassName)
-	if len(s.Filter) > 0 {
-		b.WriteString(" WHERE ")
-		b.WriteString(s.Filter)
-	}
-	query := b.String()
 
 	// result is a SWBemObjectSet
 	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", query)
@@ -113,7 +149,7 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	result := resultRaw.ToIDispatch()
-	defer resultRaw.Clear()
+	defer func() { _ = resultRaw.Clear() }()
 
 	count, err := oleInt64(result, "Count")
 	if err != nil {
@@ -127,42 +163,56 @@ func (s *Wmi) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		item := itemRaw.ToIDispatch()
-		defer item.Release()
-
 		tags := map[string]string{}
 		fields := map[string]interface{}{}
 
-		if !s.ExcludeNameKey {
-			prop, err := oleutil.GetProperty(item, "Name")
-			if err != nil {
-				return err
-			}
-			tags["Name"] = prop.ToString()
-			defer prop.Clear()
-		}
+		e1 := func() error {
+			item := itemRaw.ToIDispatch()
+			defer item.Release()
 
-		for _, wmiProperty := range s.Properties {
-			prop, err := oleutil.GetProperty(item, wmiProperty)
-			if err != nil {
-				return err
-			}
-			defer prop.Clear()
-
-			// Skip Name if it was provided by the user because we already query for it by default.
-			if wmiProperty == "Name" && s.ExcludeNameKey {
-				continue
+			if !s.ExcludeNameKey {
+				prop, err := oleutil.GetProperty(item, "Name")
+				if err != nil {
+					return err
+				}
+				tags["Name"] = prop.ToString()
+				defer func() { _ = prop.Clear() }()
 			}
 
-			// if the property's value is an int, then it is a field.
-			// if the property's value is a string, then it is a tag.
-			valStr := fmt.Sprintf("%v", prop.Value())
-			valInt, err := strconv.ParseInt(valStr, 10, 64)
-			if err != nil {
-				tags[wmiProperty] = valStr
-			} else {
-				fields[wmiProperty] = valInt
+			for _, wmiProperty := range s.Properties {
+				// Skip Name if it was provided by the user because we already query for it by default.
+				if wmiProperty == "Name" && s.ExcludeNameKey {
+					continue
+				}
+
+				e2 := func() error {
+					prop, err := oleutil.GetProperty(item, wmiProperty)
+					if err != nil {
+						return err
+					}
+					defer func() { _ = prop.Clear() }()
+
+					// if the property's value is an int, then it is a field.
+					// if the property's value is a string, then it is a tag.
+					valStr := fmt.Sprintf("%v", prop.Value())
+					valInt, err := strconv.ParseInt(valStr, 10, 64)
+					if err != nil {
+						tags[wmiProperty] = valStr
+					} else {
+						fields[wmiProperty] = valInt
+					}
+					return nil
+				}()
+
+				if e2 != nil {
+					return e2
+				}
 			}
+			return nil
+		}()
+
+		if e1 != nil {
+			return e1
 		}
 
 		acc.AddFields(s.ClassName, fields, tags)
