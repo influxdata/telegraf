@@ -209,8 +209,6 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - restore_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
       - check-changed-files-or-halt
       - run: 'make deps'
       - run: 'make test-integration'
