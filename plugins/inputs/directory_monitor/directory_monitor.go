@@ -221,30 +221,15 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 }
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
-	scanner := bufio.NewScanner(reader)
-
-	switch monitor.ParseMethod {
-	case "complete-file":
-		scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-			if atEOF && len(data) != 0 {
-				return len(data), data, nil
-			}
-			return 0, nil, nil
-		})
-	case "line-by-line":
-		scanner.Split(bufio.ScanLines)
-	}
-
-	for scanner.Scan() {
-		metrics, err := monitor.parseLine(parser, scanner.Bytes())
+	if monitor.ParseMethod == "complete-file" {
+		bytes, err := io.ReadAll(reader)
 		if err != nil {
 			return err
 		}
 
-		if monitor.FileTag != "" {
-			for _, m := range metrics {
-				m.AddTag(monitor.FileTag, filepath.Base(fileName))
-			}
+		metrics, err := monitor.parseMetrics(parser, bytes, fileName)
+		if err != nil {
+			return err
 		}
 
 		if err := monitor.sendMetrics(metrics); err != nil {
@@ -252,23 +237,49 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 		}
 	}
 
-	return nil
+	scanner := bufio.NewScanner(reader)
+	switch monitor.ParseMethod {
+	case "line-by-line":
+		scanner.Split(bufio.ScanLines)
+	case "future-split-type":
+		scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) { return })
+	}
+
+	for scanner.Scan() {
+		metrics, err := monitor.parseMetrics(parser, scanner.Bytes(), fileName)
+		if err != nil {
+			return err
+		}
+
+		if err := monitor.sendMetrics(metrics); err != nil {
+			return err
+		}
+	}
+
+	return scanner.Err()
 }
 
-func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte) ([]telegraf.Metric, error) {
+func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
 	switch parser.(type) {
 	case *csv.Parser:
-		m, err := parser.Parse(line)
+		metrics, err = parser.Parse(line)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return nil, nil
 			}
 			return nil, err
 		}
-		return m, err
 	default:
-		return parser.Parse(line)
+		metrics, err = parser.Parse(line)
 	}
+
+	if monitor.FileTag != "" {
+		for _, m := range metrics {
+			m.AddTag(monitor.FileTag, filepath.Base(fileName))
+		}
+	}
+
+	return
 }
 
 func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
