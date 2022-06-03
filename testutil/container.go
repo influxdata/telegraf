@@ -114,6 +114,10 @@ func (c *Container) LookupMappedPorts() error {
 	return nil
 }
 
+func (c *Container) Exec(cmds []string) (int, error) {
+	return c.container.Exec(c.ctx, cmds)
+}
+
 func (c *Container) PrintLogs() {
 	fmt.Println("--- Container Logs Start ---")
 	for _, msg := range c.Logs.Msgs {
@@ -123,15 +127,17 @@ func (c *Container) PrintLogs() {
 }
 
 func (c *Container) Terminate() error {
-	err := c.container.Terminate(c.ctx)
+	err := c.container.StopLogProducer()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = c.container.Terminate(c.ctx)
 	if err != nil {
 		fmt.Printf("failed to terminate the container: %s", err)
 	}
 
-	// this needs to happen after the container is terminated otherwise there
-	// is a huge time penalty on the order of 50% increase in test time
-	_ = c.container.StopLogProducer()
 	c.PrintLogs()
 
-	return err
+	return nil
 }
