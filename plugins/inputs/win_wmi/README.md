@@ -375,6 +375,10 @@ Get-CimInstance -Namespace root\cimv2 -ClassName Win32_Volume -Property Capacity
 ## Metrics
 
 All WMI class properties are fields unless specified in `TagPropertiesInclude`.
+Fields and tags are dynamically generated based on the structure of the queried
+WMI class. If the WMI class property's value is a string, then the name and
+value will be used as a metric tag. If the WMI class property's value is an
+integer, then the name and value will be used as a metric field.
 
 ## Example Output
 
