@@ -116,7 +116,6 @@ versioninfo:
 	go run scripts/generate_versioninfo/main.go; \
 	go generate cmd/telegraf/telegraf_windows.go; \
 
-.PHONY: build_tools
 build_tools:
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator ./tools/readme_config_includer/generator.go
 
