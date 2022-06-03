@@ -29,7 +29,7 @@ func pwgen(n int) string {
 	return string(buffer)
 }
 
-func TestMariaDB(t *testing.T) {
+func TestMariaDBIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -136,7 +136,7 @@ func TestMariaDB(t *testing.T) {
 	}
 }
 
-func TestPostgreSQL(t *testing.T) {
+func TestPostgreSQLIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -243,7 +243,7 @@ func TestPostgreSQL(t *testing.T) {
 	}
 }
 
-func TestClickHouse(t *testing.T) {
+func TestClickHouseIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

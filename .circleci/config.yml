@@ -203,6 +203,17 @@ jobs:
       - run: 'GOARCH=386 make check'
       - test-go:
           arch: "386"
+  test-integration:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large
+    steps:
+      - checkout
+      - restore_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+      - check-changed-files-or-halt
+      - run: 'make deps'
+      - run: 'make test-integration'
   test-go-mac:
     executor: mac
     steps:
@@ -489,6 +500,10 @@ workflows:
             tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-integration':
           filters:
             tags:
               only: /.*/

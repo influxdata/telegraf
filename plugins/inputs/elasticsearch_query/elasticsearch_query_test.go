@@ -597,7 +597,7 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 	return &container, nil
 }
 
-func TestElasticsearchQuery(t *testing.T) {
+func TestElasticsearchQueryIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -658,7 +658,7 @@ func TestElasticsearchQuery(t *testing.T) {
 	}
 }
 
-func TestElasticsearchQuery_getMetricFields(t *testing.T) {
+func TestElasticsearchQueryIntegration_getMetricFields(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
