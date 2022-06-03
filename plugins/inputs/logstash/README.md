@@ -43,8 +43,7 @@ Logstash 5 and later is supported.
 
 ## Metrics
 
-Additional plugin stats may be collected 
-(because logstash doesn't consistently expose all stats)
+Additional plugin stats may be collected(because logstash doesn't consistently expose all stats)
 
 - logstash_jvm
   - tags:
