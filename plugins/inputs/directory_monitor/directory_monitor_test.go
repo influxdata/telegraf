@@ -423,7 +423,7 @@ func TestParseCompleteFile(t *testing.T) {
 		return parsers.NewParser(&parserConfig)
 	})
 
-	testJson := `{
+	testJSON := `{
 		"name": "test1",
 		"value": 100.1,
 		"tag1": "value1"
@@ -431,8 +431,8 @@ func TestParseCompleteFile(t *testing.T) {
 
 	// Write json file to process into the 'process' directory.
 	f, _ := os.CreateTemp(processDirectory, "test.json")
-	f.WriteString(testJson)
-	f.Close()
+	_, _ = f.WriteString(testJSON)
+	_ = f.Close()
 
 	err = r.Start(&acc)
 	require.NoError(t, err)
