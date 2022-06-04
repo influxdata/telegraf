@@ -1,7 +1,18 @@
 # EXTR
 
-The `extr` output data format converts metrics into JSON documents, combining those sequential metrics matching name, tags, and timestamps into a single JSON metric, combining the fields of each metric into an array of fields.
+The `extr` output data format converts metrics into JSON documents, performing the following operatins on batched metrics:
+   - Combines sequential metrics matching name, tags, and timestamps into a single JSON metric, combining the fields of each metric into an array of fields.
+   - Groups metric fields appended with _min, _max, _avg
+        usage_min=1,usage_max=100,usage_avg-50
+        --> "usage":{"avg":50,"max":100,"min":1}
+   - Groups metric fields appended with _key.
+       ifIndex_key=1, name_key="1:2"
+       --> "key":{ifIndex:1, name:"1:2:}
+   - Groups like metric names into a toplevel map. Name of group is same as name, but with first char lowercase
+       "fanStats" :[{grouped_FanStats_Metric1}, {grouped_FanStats_Metric2} ]
 
+*extr serializer batches metrics by default.
+   
 ### Configuration
 
 ```toml
@@ -39,31 +50,196 @@ The `extr` output data format converts metrics into JSON documents, combining th
 The following Telegraf batched metrics
    
 ```text
-StatsCpu,node=NODE1  cpu=0,min=20,max=30,avg=25,interval=1,samplePeriod=10 1556813561098000000
-StatsCpu,node=NODE1  cpu=1,min=31,max=42,avg=76,interval=1,samplePeriod=10 1556813561098000000
-StatsCpu,node=NODE1  cpu=2,min=22,max=52,avg=11,interval=1,samplePeriod=10 1556813561098000000
-EventInterfaceStatus,node=NODE2  ifIndex="1001",port="1:1",adminStatus=1,operStatus=1 1557813561098000000
-EventInterfaceStatus,node=NODE2  ifIndex="1002",port="1:2",adminStatus=0,operStatus=0 1557813561098000000
+CpuStats,serialnum=XYZ-1234 core_key=0i,usage_min=35.1,usage_max=99.1,usage_avg=35.1
+CpuStats,serialnum=XYZ-1234 core_key=1i,usage_min=50.1,usage_max=88.1,usage_avg=51.1
+FanStats,serialnum=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=10i,rpm_min=4101,rpm_max=5001,rpm_avg=4201,pwm_min=31,pwm_max=41,pwm_avg=31
+FanStats,serialnum=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=11i,rpm_min=4001,rpm_max=4991,rpm_avg=4001,pwm_min=41,pwm_max=51,pwm_avg=41
+FanStats,serialnum=XYZ-1234 slot_key=2i,tray_key=3i,fan_key=9i,rpm_min=2101,rpm_max=3211,rpm_avg=2201,pwm_min=11,pwm_max=41,pwm_avg=11
+CpuStats,serialnum=XYZ-1234 core_key=0i,usage_min=10.2,usage_max=91.2,usage_avg=44.2
+CpuStats,serialnum=XYZ-1234 core_key=1i,usage_min=22.2,usage_max=89.2,usage_avg=41.2
+CpuStats,serialnum=XYZ-1234 core_key=2i,usage_min=33.2,usage_max=79.2,usage_avg=47.2
+FanStats,serialnum=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=10i,rpm_min=4112,rpm_max=5012,rpm_avg=4212,pwm_min=32,pwm_max=52,pwm_avg=32
+FanStats,serialnum=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=11i,rpm_min=5002,rpm_max=5092,rpm_avg=4102,pwm_min=52,pwm_max=62,pwm_avg=52
 ```
 
 will serialize into the following extr JSON ouput
    
 ```json
-[{
-   "fields": [
-      {"avg":25,"cpu":0,"interval":1,"max":30,"min":20,"samplePeriod":10},
-      {"avg":76,"cpu":1,"interval":1,"max":42,"min":31,"samplePeriod":10},
-      {"avg":11,"cpu":2,"interval":1,"max":52,"min":22,"samplePeriod":10}
-   ],
-   "name":"StatsCpu",
-   "tags":{"node":"NODE1"},
-   "timestamp":1556813561
-},
 {
-   "fields":[
-      {"adminStatus":1,"ifIndex":"1001","operStatus":1,"port":"1:1"},
-      {"adminStatus":0,"ifIndex":"1002","operStatus":0,"port":"1:2"}],
-   "name":"EventInterfaceStatus",
-   "tags":{"node":"NODE2"},
-   "timestamp":1557899561}]
+  "cpuStats": [
+    {
+      "device": {
+        "serialnum": "XYZ-1234"
+      },
+      "items": [
+        {
+          "keys": {
+            "core": 0
+          },
+          "usage": {
+            "avg": 35.1,
+            "max": 99.1,
+            "min": 35.1
+          }
+        },
+        {
+          "keys": {
+            "core": 1
+          },
+          "usage": {
+            "avg": 51.1,
+            "max": 88.1,
+            "min": 50.1
+          }
+        }
+      ],
+      "name": "CpuStats",
+      "ts": 1654306730
+    },
+    {
+      "device": {
+        "serialnum": "XYZ-1234"
+      },
+      "items": [
+        {
+          "keys": {
+            "core": 0
+          },
+          "usage": {
+            "avg": 44.2,
+            "max": 91.2,
+            "min": 10.2
+          }
+        },
+        {
+          "keys": {
+            "core": 1
+          },
+          "usage": {
+            "avg": 41.2,
+            "max": 89.2,
+            "min": 22.2
+          }
+        },
+        {
+          "keys": {
+            "core": 2
+          },
+          "usage": {
+            "avg": 47.2,
+            "max": 79.2,
+            "min": 33.2
+          }
+        }
+      ],
+      "name": "CpuStats",
+      "ts": 1654306730
+    }
+  ],
+  "fanStats": [
+    {
+      "device": {
+        "serialnum": "XYZ-1234"
+      },
+      "items": [
+        {
+          "keys": {
+            "fan": 10,
+            "slot": 1,
+            "tray": 2
+          },
+          "pwm": {
+            "avg": 31,
+            "max": 41,
+            "min": 31
+          },
+          "rpm": {
+            "avg": 4201,
+            "max": 5001,
+            "min": 4101
+          }
+        },
+        {
+          "keys": {
+            "fan": 11,
+            "slot": 1,
+            "tray": 2
+          },
+          "pwm": {
+            "avg": 41,
+            "max": 51,
+            "min": 41
+          },
+          "rpm": {
+            "avg": 4001,
+            "max": 4991,
+            "min": 4001
+          }
+        },
+        {
+          "keys": {
+            "fan": 9,
+            "slot": 2,
+            "tray": 3
+          },
+          "pwm": {
+            "avg": 11,
+            "max": 41,
+            "min": 11
+          },
+          "rpm": {
+            "avg": 2201,
+            "max": 3211,
+            "min": 2101
+          }
+        }
+      ],
+      "name": "FanStats",
+      "ts": 1654306730
+    },
+    {
+      "device": {
+        "serialnum": "XYZ-1234"
+      },
+      "items": [
+        {
+          "keys": {
+            "fan": 10,
+            "slot": 1,
+            "tray": 2
+          },
+          "pwm": {
+            "avg": 32,
+            "max": 52,
+            "min": 32
+          },
+          "rpm": {
+            "avg": 4212,
+            "max": 5012,
+            "min": 4112
+          }
+        },
+        {
+          "keys": {
+            "fan": 11,
+            "slot": 1,
+            "tray": 2
+          },
+          "pwm": {
+            "avg": 52,
+            "max": 62,
+            "min": 52
+          },
+          "rpm": {
+            "avg": 4102,
+            "max": 5092,
+            "min": 5002
+          }
+        }
+      ],
+      "name": "FanStats",
+      "ts": 1654306730
+    }
+  ]
+}
 ```
