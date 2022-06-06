@@ -1,6 +1,6 @@
 # Contributing to Telegraf
 
-There are many ways to get involved in the Telegraf project! From opening issues, creating pull requests, to joining the conversation in Slack. We would to see you contribute your expertise and join our community. To get started review this document to learn best practices.
+There are many ways to get involved in the Telegraf project! From opening issues, creating pull requests, to joining the conversation in Slack. We would love to see you contribute your expertise and join our community. To get started review this document to learn best practices.
 
 ![tiger](assets/GopherAndTiger.png "tiger")
 
