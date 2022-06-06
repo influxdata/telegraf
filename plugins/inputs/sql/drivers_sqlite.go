@@ -1,5 +1,5 @@
-//go:build !arm && !mips && !mips64
-// +build !arm,!mips,!mips64
+//go:build !arm && !mips && !mipsle && !mips64 && !mips64le
+// +build !arm,!mips,!mipsle,!mips64,!mips64le
 
 package sql
 
