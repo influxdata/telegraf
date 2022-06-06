@@ -1,4 +1,4 @@
-# Pivot Processor
+# Pivot Processor Plugin
 
 You can use the `pivot` processor to rotate single valued metrics into a multi
 field metric.  This transformation often results in data that is more easily

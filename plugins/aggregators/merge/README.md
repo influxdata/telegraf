@@ -1,4 +1,4 @@
-# Merge Aggregator
+# Merge Aggregator Plugin
 
 Merge metrics together into a metric with multiple fields into the most memory
 and network transfer efficient form.
