@@ -316,7 +316,7 @@ func (monitor *DirectoryMonitor) Init() error {
 
 	// Finished directory can be created if not exists for convenience.
 	if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
-		err = os.Mkdir(monitor.FinishedDirectory, 0777)
+		err = os.Mkdir(monitor.FinishedDirectory, 0755)
 		if err != nil {
 			return err
 		}
@@ -328,7 +328,7 @@ func (monitor *DirectoryMonitor) Init() error {
 	// If an error directory should be used but has not been configured yet, create one ourselves.
 	if monitor.ErrorDirectory != "" {
 		if _, err := os.Stat(monitor.ErrorDirectory); os.IsNotExist(err) {
-			err := os.Mkdir(monitor.ErrorDirectory, 0777)
+			err := os.Mkdir(monitor.ErrorDirectory, 0755)
 			if err != nil {
 				return err
 			}
