@@ -65,7 +65,7 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Considerations
 
-### Clean
+### Clean Automatic Invocation
 
 Even though `clean` is provided a standalone function, it is also invoked when
 using the `rel` and `dirname` functions, so there is no need to use it along
@@ -89,7 +89,7 @@ Is equivalent to:
      tag = "path"
  ```
 
-### ToSlash
+### ToSlash Platform-specific Behavior
 
 The effects of this function are only noticeable on Windows platforms, because
 of the underlying golang implementation.
