@@ -12,8 +12,8 @@ aggregators:
 * name_suffix
 * tags
 
-Select the metrics to modify using the standard [measurement
-filtering](../../../docs/CONFIGURATION.md#measurement-filtering) options.
+Select the metrics to modify using the standard [metric
+filtering](../../../docs/CONFIGURATION.md#metric-filtering) options.
 
 Values of *name_override*, *name_prefix*, *name_suffix* and already present
 *tags* with conflicting keys will be overwritten. Absent *tags* will be
