@@ -2,15 +2,12 @@ package extr
 
 import (
 	"fmt"
-	"math"
-	"testing"
-	"time"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 )
 
 func MustMetric(v telegraf.Metric, err error) telegraf.Metric {
@@ -20,21 +17,114 @@ func MustMetric(v telegraf.Metric, err error) telegraf.Metric {
 	return v
 }
 
-func TestSerializeMetricFloat(t *testing.T) {
+func TestSerializeBatchMetricFloat(t *testing.T) {
 	now := time.Now()
+
 	tags := map[string]string{
-		"cpu": "cpu0",
+		"serialnum": "ABC-123",
 	}
-	fields := map[string]interface{}{
+	field1 := map[string]interface{}{
+		"core_key":   0,
 		"usage_idle": float64(91.5),
 	}
-	m := metric.New("cpu", tags, fields, now)
+	field2 := map[string]interface{}{
+		"core_key":   1,
+		"usage_idle": float64(0.9999),
+	}
+	m1 := metric.New("CpuStats", tags, field1, now)
+	m2 := metric.New("CpuStats", tags, field2, now)
+
+	metrics := []telegraf.Metric{m1, m2}
 
 	s, _ := NewSerializer(0)
 	var buf []byte
-	buf, err := s.Serialize(m)
+	buf, err := s.SerializeBatch(metrics)
 	assert.NoError(t, err)
-	expS := []byte(fmt.Sprintf(`{"fields":[{"usage_idle":91.5}],"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"usage_idle":91.5},{"keys":{"core":1},"usage_idle":0.9999}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
+	assert.Equal(t, string(expS), string(buf))
+}
+
+func TestSerializeBatchMetricBool(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnum": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"core_key": 0,
+		"mybool1":  true,
+	}
+	field2 := map[string]interface{}{
+		"core_key": 1,
+		"mybool1":  false,
+	}
+	m1 := metric.New("CpuStats", tags, field1, now)
+	m2 := metric.New("CpuStats", tags, field2, now)
+
+	metrics := []telegraf.Metric{m1, m2}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"mybool1":true},{"keys":{"core":1},"mybool1":false}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
+	assert.Equal(t, string(expS), string(buf))
+}
+
+func TestSerializeBatchMetricInt(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnum": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"core_key":   0,
+		"usage_idle": int64(91),
+	}
+	field2 := map[string]interface{}{
+		"core_key":   1,
+		"usage_idle": int64(90),
+	}
+	m1 := metric.New("CpuStats", tags, field1, now)
+	m2 := metric.New("CpuStats", tags, field2, now)
+
+	metrics := []telegraf.Metric{m1, m2}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"usage_idle":91},{"keys":{"core":1},"usage_idle":90}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
+	assert.Equal(t, string(expS), string(buf))
+}
+
+func TestSerializeBatchMetricString(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnum": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"core_key":   0,
+		"usage_idle": "foobar1",
+	}
+	field2 := map[string]interface{}{
+		"core_key":   1,
+		"usage_idle": "barfoo1",
+	}
+	m1 := metric.New("CpuStats", tags, field1, now)
+	m2 := metric.New("CpuStats", tags, field2, now)
+
+	metrics := []telegraf.Metric{m1, m2}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"usage_idle":"foobar1"},{"keys":{"core":1},"usage_idle":"barfoo1"}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -47,391 +137,228 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 		{
 			name:           "default of 1s",
 			timestampUnits: 0,
-			expected:       `{"fields":[{"value":42}],"name":"cpu","tags":{},"timestamp":1525478795}`,
+			expected:       `{"cpuStats":[{"device":{},"items":[{"keys":{"core":1},"value":42}],"name":"CpuStats","ts":1525478795},{"device":{},"items":[{"keys":{"core":2},"value":43}],"name":"CpuStats","ts":1527778795}]}`,
 		},
 		{
 			name:           "1ns",
 			timestampUnits: 1 * time.Nanosecond,
-			expected:       `{"fields":[{"value":42}],"name":"cpu","tags":{},"timestamp":1525478795123456789}`,
+			expected:       `{"cpuStats":[{"device":{},"items":[{"keys":{"core":1},"value":42}],"name":"CpuStats","ts":1525478795123456789},{"device":{},"items":[{"keys":{"core":2},"value":43}],"name":"CpuStats","ts":1527778795127756789}]}`,
 		},
 		{
 			name:           "1ms",
 			timestampUnits: 1 * time.Millisecond,
-			expected:       `{"fields":[{"value":42}],"name":"cpu","tags":{},"timestamp":1525478795123}`,
+			expected:       `{"cpuStats":[{"device":{},"items":[{"keys":{"core":1},"value":42}],"name":"CpuStats","ts":1525478795123},{"device":{},"items":[{"keys":{"core":2},"value":43}],"name":"CpuStats","ts":1527778795127}]}`,
 		},
 		{
 			name:           "10ms",
 			timestampUnits: 10 * time.Millisecond,
-			expected:       `{"fields":[{"value":42}],"name":"cpu","tags":{},"timestamp":152547879512}`,
+			expected:       `{"cpuStats":[{"device":{},"items":[{"keys":{"core":1},"value":42}],"name":"CpuStats","ts":152547879512},{"device":{},"items":[{"keys":{"core":2},"value":43}],"name":"CpuStats","ts":152777879512}]}`,
 		},
 		{
 			name:           "15ms is reduced to 10ms",
 			timestampUnits: 15 * time.Millisecond,
-			expected:       `{"fields":[{"value":42}],"name":"cpu","tags":{},"timestamp":152547879512}`,
+			expected:       `{"cpuStats":[{"device":{},"items":[{"keys":{"core":1},"value":42}],"name":"CpuStats","ts":152547879512},{"device":{},"items":[{"keys":{"core":2},"value":43}],"name":"CpuStats","ts":152777879512}]}`,
 		},
 		{
 			name:           "65ms is reduced to 10ms",
 			timestampUnits: 65 * time.Millisecond,
-			expected:       `{"fields":[{"value":42}],"name":"cpu","tags":{},"timestamp":152547879512}`,
+			expected:       `{"cpuStats":[{"device":{},"items":[{"keys":{"core":1},"value":42}],"name":"CpuStats","ts":152547879512},{"device":{},"items":[{"keys":{"core":2},"value":43}],"name":"CpuStats","ts":152777879512}]}`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := metric.New(
-				"cpu",
+			m1 := metric.New(
+				"CpuStats",
 				map[string]string{},
 				map[string]interface{}{
-					"value": 42.0,
+					"core_key": 1,
+					"value":    42.0,
 				},
 				time.Unix(1525478795, 123456789),
 			)
+			m2 := metric.New(
+				"CpuStats",
+				map[string]string{},
+				map[string]interface{}{
+					"core_key": 2,
+					"value":    43.0,
+				},
+				time.Unix(1527778795, 127756789),
+			)
 			s, _ := NewSerializer(tt.timestampUnits)
-			actual, err := s.Serialize(m)
+			metrics := []telegraf.Metric{m1, m2}
+			actual, err := s.SerializeBatch(metrics)
 			require.NoError(t, err)
-			require.Equal(t, tt.expected+"\n", string(actual))
+			require.Equal(t, tt.expected, string(actual))
 		})
 	}
 }
 
-func TestSerializeMetricInt(t *testing.T) {
+func TestSerializeBatchSingleMetric(t *testing.T) {
 	now := time.Now()
+
 	tags := map[string]string{
-		"cpu": "cpu0",
+		"serialnum": "ABC-123",
 	}
-	fields := map[string]interface{}{
-		"usage_idle": int64(90),
+	field1 := map[string]interface{}{
+		"core_key":  0,
+		"usage_min": int64(2),
+		"usage_max": 100,
+		"usage_avg": 52.1,
+		"mystring":  "Elon Musk was here",
 	}
-	m := metric.New("cpu", tags, fields, now)
+	m1 := metric.New("CpuStats", tags, field1, now)
+
+	metrics := []telegraf.Metric{m1}
 
 	s, _ := NewSerializer(0)
 	var buf []byte
-	buf, err := s.Serialize(m)
-	assert.NoError(t, err)
-
-	expS := []byte(fmt.Sprintf(`{"fields":[{"usage_idle":90}],"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
-	assert.Equal(t, string(expS), string(buf))
-}
-
-func TestSerializeMetricString(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"usage_idle": "foobar",
-	}
-	m := metric.New("cpu", tags, fields, now)
-
-	s, _ := NewSerializer(0)
-	var buf []byte
-	buf, err := s.Serialize(m)
-	assert.NoError(t, err)
-
-	expS := []byte(fmt.Sprintf(`{"fields":[{"usage_idle":"foobar"}],"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
-	assert.Equal(t, string(expS), string(buf))
-}
-
-func TestSerializeMultiFields(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"usage_idle":  int64(90),
-		"usage_total": 8559615,
-	}
-	m := metric.New("cpu", tags, fields, now)
-
-	s, _ := NewSerializer(0)
-	var buf []byte
-	buf, err := s.Serialize(m)
-	assert.NoError(t, err)
-
-	expS := []byte(fmt.Sprintf(`{"fields":[{"usage_idle":90,"usage_total":8559615}],"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
-	assert.Equal(t, string(expS), string(buf))
-}
-
-func TestSerializeMetricWithEscapes(t *testing.T) {
-	now := time.Now()
-	tags := map[string]string{
-		"cpu tag": "cpu0",
-	}
-	fields := map[string]interface{}{
-		"U,age=Idle": int64(90),
-	}
-	m := metric.New("My CPU", tags, fields, now)
-
-	s, _ := NewSerializer(0)
-	buf, err := s.Serialize(m)
-	assert.NoError(t, err)
-
-	expS := []byte(fmt.Sprintf(`{"fields":[{"U,age=Idle":90}],"name":"My CPU","tags":{"cpu tag":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
-	assert.Equal(t, string(expS), string(buf))
-}
-
-func TestSerializeBatch(t *testing.T) {
-	m := metric.New(
-		"cpu",
-		map[string]string{},
-		map[string]interface{}{
-			"value": 42.0,
-		},
-		time.Unix(0, 0),
-	)
-
-	metrics := []telegraf.Metric{m, m}
-	s, _ := NewSerializer(0)
 	buf, err := s.SerializeBatch(metrics)
-	require.NoError(t, err)
-	require.Equal(t, []byte(`[{"fields":[{"value":42},{"value":42}],"name":"cpu","tags":{},"timestamp":0}]`), buf)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"mystring":"Elon Musk was here","usage":{"avg":52.1,"max":100,"min":2}}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
+
+	assert.Equal(t, string(expS), string(buf))
 }
 
-func TestSerializeBatchNameDiff(t *testing.T) {
-	m1 := metric.New(
-		"StatsCpu",
-		map[string]string{},
-		map[string]interface{}{
-			"cpu": 0,
-			"min": 20,
-			"max": 30,
-			"avg": 25,
-		},
-		time.Unix(0, 0),
-	)
+func TestSerializeBatchSingleMetricWithEscapes(t *testing.T) {
+	now := time.Now()
 
-	m2 := metric.New(
-		"StatsCpu",
-		map[string]string{},
-		map[string]interface{}{
-			"cpu": 1,
-			"min": 34,
-			"max": 55,
-			"avg": 40,
-		},
-		time.Unix(0, 0),
-	)
-	m3 := metric.New(
-		"EventInterfaceStatus",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"ifIndex":     1001,
-			"port":        "1:1",
-			"adminStatus": 1,
-			"operStatus":  1,
-		},
-		time.Unix(0, 0),
-	)
-	m4 := metric.New(
-		"EventInterfaceStatus",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"ifIndex":     1002,
-			"port":        "1:2",
-			"adminStatus": 1,
-			"operStatus":  0,
-		},
-		time.Unix(0, 0),
-	)
+	tags := map[string]string{
+		"serialnum": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"core_key":         0,
+		"usage_min":        int64(2),
+		"usage_max":        100,
+		"usage_avg":        52.1,
+		"field with space": 99,
+		"field with,comma": 38,
+		"mystring":         "Elon Musk was here",
+	}
+	m1 := metric.New("Cpu Stats", tags, field1, now)
+
+	metrics := []telegraf.Metric{m1}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"cpu Stats":[{"device":{"serialnum":"ABC-123"},"items":[{"field with space":99,"field with,comma":38,"keys":{"core":0},"mystring":"Elon Musk was here","usage":{"avg":52.1,"max":100,"min":2}}],"name":"Cpu Stats","ts":%d}]}`, now.Unix()))
+
+	assert.Equal(t, string(expS), string(buf))
+}
+
+func TestSerializeBatchMultiFields(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnum": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"core_key":  0,
+		"usage_min": int64(2),
+		"usage_max": 100,
+		"usage_avg": 52.1,
+		"mystring":  "Elon Musk was here",
+	}
+	field2 := map[string]interface{}{
+		"core_key":  1,
+		"usage_min": int64(10),
+		"usage_max": 98,
+		"usage_avg": 49.9998,
+		"mystring":  "Jeff Bezos was here",
+	}
+	m1 := metric.New("CpuStats", tags, field1, now)
+	m2 := metric.New("CpuStats", tags, field2, now)
+
+	metrics := []telegraf.Metric{m1, m2}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"mystring":"Elon Musk was here","usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"mystring":"Jeff Bezos was here","usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
+
+	assert.Equal(t, string(expS), string(buf))
+}
+
+func TestSerializeBatchMultiGroups(t *testing.T) {
+	now := time.Now()
+
+	tags := map[string]string{
+		"serialnum": "ABC-123",
+	}
+	field1 := map[string]interface{}{
+		"core_key":  0,
+		"usage_min": int64(2),
+		"usage_max": 100,
+		"usage_avg": 52.1,
+		"mystring":  "Elon Musk was here",
+	}
+	field2 := map[string]interface{}{
+		"core_key":  1,
+		"usage_min": int64(10),
+		"usage_max": 98,
+		"usage_avg": 49.9998,
+		"mystring":  "Jeff Bezos was here",
+	}
+	m1 := metric.New("CpuStats", tags, field1, time.Unix(0, 0))
+	m2 := metric.New("CpuStats", tags, field2, time.Unix(0, 0))
+	m3 := metric.New("CpuStats", tags, field1, now)
+	m4 := metric.New("CpuStats", tags, field2, now)
 
 	metrics := []telegraf.Metric{m1, m2, m3, m4}
-	s, _ := NewSerializer(0)
-	buf, err := s.SerializeBatch(metrics)
-	require.NoError(t, err)
-	require.Equal(t, []byte(`[{"fields":[{"avg":25,"cpu":0,"max":30,"min":20},{"avg":40,"cpu":1,"max":55,"min":34}],"name":"StatsCpu","tags":{},"timestamp":0},{"fields":[{"adminStatus":1,"ifIndex":1001,"operStatus":1,"port":"1:1"},{"adminStatus":1,"ifIndex":1002,"operStatus":0,"port":"1:2"}],"name":"EventInterfaceStatus","tags":{"node":"NODE1"},"timestamp":0}]`), buf)
 
+	s, _ := NewSerializer(0)
+	var buf []byte
+	buf, err := s.SerializeBatch(metrics)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"mystring":"Elon Musk was here","usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"mystring":"Jeff Bezos was here","usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":0},{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"mystring":"Elon Musk was here","usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"mystring":"Jeff Bezos was here","usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":%d}]}`, now.Unix()))
+
+	assert.Equal(t, string(expS), string(buf))
 }
 
-func TestSerializeBatchTagDiff(t *testing.T) {
-	m1 := metric.New(
-		"StatsCpu",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"cpu": 0,
-			"min": 20,
-			"max": 30,
-			"avg": 25,
-		},
-		time.Unix(0, 0),
-	)
+func TestSerializeBatchMultiMetricTypesMultiGroups(t *testing.T) {
+	now := time.Now()
 
-	m2 := metric.New(
-		"StatsCpu",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"cpu": 1,
-			"min": 34,
-			"max": 55,
-			"avg": 40,
-		},
-		time.Unix(0, 0),
-	)
-	m3 := metric.New(
-		"StatsCpu",
-		map[string]string{
-			"node": "NODE2",
-		},
-		map[string]interface{}{
-			"cpu": 0,
-			"min": 31,
-			"max": 99,
-			"avg": 59,
-		},
-		time.Unix(0, 0),
-	)
-	m4 := metric.New(
-		"EventInterfaceStatus",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"ifIndex":     1001,
-			"port":        "1:1",
-			"adminStatus": 1,
-			"operStatus":  1,
-		},
-		time.Unix(0, 0),
-	)
-	m5 := metric.New(
-		"EventInterfaceStatus",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"ifIndex":     1002,
-			"port":        "1:2",
-			"adminStatus": 1,
-			"operStatus":  0,
-		},
-		time.Unix(0, 0),
-	)
-
-	metrics := []telegraf.Metric{m1, m2, m3, m4, m5}
-	s, _ := NewSerializer(0)
-	buf, err := s.SerializeBatch(metrics)
-	require.NoError(t, err)
-	require.Equal(t, []byte(`[{"fields":[{"avg":25,"cpu":0,"max":30,"min":20},{"avg":40,"cpu":1,"max":55,"min":34}],"name":"StatsCpu","tags":{"node":"NODE1"},"timestamp":0},{"fields":[{"avg":59,"cpu":0,"max":99,"min":31}],"name":"StatsCpu","tags":{"node":"NODE2"},"timestamp":0},{"fields":[{"adminStatus":1,"ifIndex":1001,"operStatus":1,"port":"1:1"},{"adminStatus":1,"ifIndex":1002,"operStatus":0,"port":"1:2"}],"name":"EventInterfaceStatus","tags":{"node":"NODE1"},"timestamp":0}]`), buf)
-
-}
-
-func TestSerializeBatchTimestampDiff(t *testing.T) {
-	m1 := metric.New(
-		"StatsCpu",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"cpu": 0,
-			"min": 20,
-			"max": 30,
-			"avg": 25,
-		},
-		time.Unix(1525478795, 123456789),
-	)
-
-	m2 := metric.New(
-		"StatsCpu",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"cpu": 1,
-			"min": 34,
-			"max": 55,
-			"avg": 40,
-		},
-		time.Unix(2525478795, 123456789),
-	)
-	m3 := metric.New(
-		"StatsCpu",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"cpu": 2,
-			"min": 31,
-			"max": 99,
-			"avg": 59,
-		},
-		time.Unix(2525478795, 123456789),
-	)
-	m4 := metric.New(
-		"EventInterfaceStatus",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"ifIndex":     1001,
-			"port":        "1:1",
-			"adminStatus": 1,
-			"operStatus":  1,
-		},
-		time.Unix(3525478795, 123456789),
-	)
-	m5 := metric.New(
-		"EventInterfaceStatus",
-		map[string]string{
-			"node": "NODE1",
-		},
-		map[string]interface{}{
-			"ifIndex":     1002,
-			"port":        "1:2",
-			"adminStatus": 1,
-			"operStatus":  0,
-		},
-		time.Unix(4525478795, 123456789),
-	)
-
-	metrics := []telegraf.Metric{m1, m2, m3, m4, m5}
-	s, _ := NewSerializer(0)
-	buf, err := s.SerializeBatch(metrics)
-	require.NoError(t, err)
-	require.Equal(t, []byte(`[{"fields":[{"avg":25,"cpu":0,"max":30,"min":20}],"name":"StatsCpu","tags":{"node":"NODE1"},"timestamp":1525478795},{"fields":[{"avg":40,"cpu":1,"max":55,"min":34},{"avg":59,"cpu":2,"max":99,"min":31}],"name":"StatsCpu","tags":{"node":"NODE1"},"timestamp":2525478795},{"fields":[{"adminStatus":1,"ifIndex":1001,"operStatus":1,"port":"1:1"}],"name":"EventInterfaceStatus","tags":{"node":"NODE1"},"timestamp":3525478795},{"fields":[{"adminStatus":1,"ifIndex":1002,"operStatus":0,"port":"1:2"}],"name":"EventInterfaceStatus","tags":{"node":"NODE1"},"timestamp":4525478795}]`), buf)
-
-}
-
-func TestSerializeBatchSkipInf(t *testing.T) {
-	metrics := []telegraf.Metric{
-		testutil.MustMetric(
-			"cpu",
-			map[string]string{},
-			map[string]interface{}{
-				"inf":       math.Inf(1),
-				"time_idle": 42,
-			},
-			time.Unix(0, 0),
-		),
+	tags := map[string]string{
+		"serialnum": "ABC-123",
 	}
-
-	s, err := NewSerializer(0)
-	require.NoError(t, err)
-	buf, err := s.SerializeBatch(metrics)
-	require.NoError(t, err)
-	require.Equal(t, []byte(`[{"fields":[{"time_idle":42}],"name":"cpu","tags":{},"timestamp":0}]`), buf)
-}
-
-func TestSerializeBatchSkipInfAllFields(t *testing.T) {
-	metrics := []telegraf.Metric{
-		testutil.MustMetric(
-			"cpu",
-			map[string]string{},
-			map[string]interface{}{
-				"inf": math.Inf(1),
-			},
-			time.Unix(0, 0),
-		),
+	field1 := map[string]interface{}{
+		"core_key":  0,
+		"usage_min": int64(2),
+		"usage_max": 100,
+		"usage_avg": 52.1,
 	}
+	field2 := map[string]interface{}{
+		"core_key":  1,
+		"usage_min": int64(10),
+		"usage_max": 98,
+		"usage_avg": 49.9998,
+	}
+	m1 := metric.New("CpuStats", tags, field1, time.Unix(0, 0))
+	m2 := metric.New("CpuStats", tags, field2, time.Unix(0, 0))
+	m3 := metric.New("CpuStats", tags, field1, time.Unix(100000000, 0))
+	m4 := metric.New("CpuStats", tags, field2, time.Unix(100000000, 0))
+	m5 := metric.New("MemoryStats", tags, field1, time.Unix(20000000, 0))
+	m6 := metric.New("MemoryStats", tags, field2, time.Unix(20000000, 0))
+	m7 := metric.New("CpuStats", tags, field1, time.Unix(550000000, 0))
+	m8 := metric.New("CpuStats", tags, field2, time.Unix(550000000, 0))
+	m9 := metric.New("MemoryStats", tags, field1, now)
+	m10 := metric.New("CpuStats", tags, field2, now)
 
-	s, err := NewSerializer(0)
-	require.NoError(t, err)
+	metrics := []telegraf.Metric{m1, m2, m3, m4, m5, m6, m7, m8, m9, m10}
+
+	s, _ := NewSerializer(0)
+	var buf []byte
 	buf, err := s.SerializeBatch(metrics)
-	require.NoError(t, err)
-	require.Equal(t, []byte(`[{"fields":[{}],"name":"cpu","tags":{},"timestamp":0}]`), buf)
+	assert.NoError(t, err)
+
+	expS := []byte(fmt.Sprintf(`{"cpuStats":[{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":0},{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":100000000},{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":550000000},{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":1},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"CpuStats","ts":%d}],"memoryStats":[{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}},{"keys":{"core":1},"usage":{"avg":49.9998,"max":98,"min":10}}],"name":"MemoryStats","ts":20000000},{"device":{"serialnum":"ABC-123"},"items":[{"keys":{"core":0},"usage":{"avg":52.1,"max":100,"min":2}}],"name":"MemoryStats","ts":%d}]}`, now.Unix(), now.Unix()))
+
+	assert.Equal(t, string(expS), string(buf))
 }
