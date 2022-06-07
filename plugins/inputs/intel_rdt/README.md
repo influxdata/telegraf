@@ -87,9 +87,9 @@ process availability.
 
 ## Useful links
 
-* Pqos installation process: <https://github.com/intel/intel-cmt-cat/blob/master/INSTALL>
-* Enabling OS interface: <https://github.com/intel/intel-cmt-cat/wiki>, <https://github.com/intel/intel-cmt-cat/wiki/resctrl>
-* More about Intel RDT: <https://www.intel.com/content/www/us/en/architecture-and-technology/resource-director-technology.html>
+- Pqos installation process: <https://github.com/intel/intel-cmt-cat/blob/master/INSTALL>
+- Enabling OS interface: <https://github.com/intel/intel-cmt-cat/wiki>, <https://github.com/intel/intel-cmt-cat/wiki/resctrl>
+- More about Intel RDT: <https://www.intel.com/content/www/us/en/architecture-and-technology/resource-director-technology.html>
 
 ## Configuration
 
