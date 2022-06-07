@@ -77,6 +77,16 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
     ## All fields from the tag-only subscription will be applied as tags to other readings,
     ## in the format <name>_<fieldBase>.
     # tag_only = true
+
+  #[[inputs.gnmi.subscription]]
+    # name = "ifsummary"
+    # origin = "Cisco-IOS-XR-pfi-im-cmd-oper"
+    # path = "/interfaces/interface-summary"
+    # subscription_mode = "sample"
+    # sample_interval = "60s"
+
+    ## Define (for certain nested telemetry measurements with embedded tags) which additional fields are tags
+    # embedded_tags = ["Cisco-IOS-XR-pfi-im-cmd-oper:/interfaces/interface-summary/interface-type/interface-type-name"]
 ```
 
 ## Example Output

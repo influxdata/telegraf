@@ -12,6 +12,7 @@ import (
 	"math"
 	"net"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -39,6 +40,7 @@ type GNMI struct {
 	Addresses     []string          `toml:"addresses"`
 	Subscriptions []Subscription    `toml:"subscription"`
 	Aliases       map[string]string `toml:"aliases"`
+	EmbeddedTags  []string          `toml:"embedded_tags"`
 
 	// Optional subscription configuration
 	Encoding    string
@@ -60,6 +62,7 @@ type GNMI struct {
 
 	// Internal state
 	internalAliases map[string]string
+	extraTags       map[string]map[string]struct{}
 	acc             telegraf.Accumulator
 	cancel          context.CancelFunc
 	wg              sync.WaitGroup
@@ -135,11 +138,11 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		longPath, _, err := c.handlePath(gnmiLongPath, nil, "")
+		longPath, _, err := c.handlePath(gnmiLongPath, nil, "", true)
 		if err != nil {
 			return fmt.Errorf("handling long-path failed: %v", err)
 		}
-		shortPath, _, err := c.handlePath(gnmiShortPath, nil, "")
+		shortPath, _, err := c.handlePath(gnmiShortPath, nil, "", true)
 		if err != nil {
 			return fmt.Errorf("handling short-path failed: %v", err)
 		}
@@ -163,6 +166,16 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	}
 	for alias, encodingPath := range c.Aliases {
 		c.internalAliases[encodingPath] = alias
+	}
+
+	// Fill extra tags
+	c.extraTags = make(map[string]map[string]struct{})
+	for _, tag := range c.EmbeddedTags {
+		dir := strings.Replace(path.Dir(tag), "-", "_", -1)
+		if _, hasKey := c.extraTags[dir]; !hasKey {
+			c.extraTags[dir] = make(map[string]struct{})
+		}
+		c.extraTags[dir][path.Base(tag)] = struct{}{}
 	}
 
 	// Create a goroutine for each device, dial and subscribe
@@ -292,22 +305,65 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 
 	if response.Update.Prefix != nil {
 		var err error
-		if prefix, prefixAliasPath, err = c.handlePath(response.Update.Prefix, prefixTags, ""); err != nil {
+		if prefix, prefixAliasPath, err = c.handlePath(response.Update.Prefix, prefixTags, "", true); err != nil {
 			c.Log.Errorf("handling path %q failed: %v", response.Update.Prefix, err)
 		}
 	}
 	prefixTags["source"], _, _ = net.SplitHostPort(address)
 	prefixTags["path"] = prefix
 
+	// Prepare tags from prefix
+	tags := make(map[string]string, len(prefixTags))
+	for key, val := range prefixTags {
+		tags[key] = val
+	}
+
 	// Parse individual Update message and create measurements
 	var name, lastAliasPath string
-	for _, update := range response.Update.Update {
-		// Prepare tags from prefix
-		tags := make(map[string]string, len(prefixTags))
-		for key, val := range prefixTags {
-			tags[key] = val
+	var aliasPath string
+
+	tagsPerUpdate := make(map[int]map[string]string)
+	fieldsPerUpdate := make(map[int]map[string]interface{})
+
+	// Extract the tags and embedded tags first
+	assumeExtraTags := false
+	for i, update := range response.Update.Update {
+		tagsPerUpdate[i] = make(map[string]string)
+
+		var hasExtraTags bool
+		_, _, hasExtraTags = c.handleTelemetryField(update, tagsPerUpdate[i], prefix, true)
+		if hasExtraTags {
+			assumeExtraTags = true
 		}
-		aliasPath, fields := c.handleTelemetryField(update, tags, prefix)
+	}
+
+	// If there were no tags specified with the response,
+	// copy the embedded tags, if any, into tags
+	if assumeExtraTags {
+		for _, t := range tagsPerUpdate {
+			for k, v := range t {
+				tags[k] = v
+			}
+		}
+	} else {
+		// Copy the global tags into the tags for this update
+		for _, t := range tagsPerUpdate {
+			for k, v := range tags {
+				t[k] = v
+			}
+		}
+	}
+
+	// Extract the fields and add them to the grouper together with the tags
+	for i, update := range response.Update.Update {
+		fieldsPerUpdate[i] = make(map[string]interface{})
+
+		if assumeExtraTags {
+			// If we assume there are extra tags, then store them in tags
+			aliasPath, fieldsPerUpdate[i], _ = c.handleTelemetryField(update, tags, prefix, false)
+		} else {
+			aliasPath, fieldsPerUpdate[i], _ = c.handleTelemetryField(update, tagsPerUpdate[i], prefix, false)
+		}
 
 		// Inherent valid alias from prefix parsing
 		if len(prefixAliasPath) > 0 && len(aliasPath) == 0 {
@@ -332,7 +388,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 			if _, ok := c.lookup[name][subscriptionKey]; !ok {
 				c.lookup[name][subscriptionKey] = make(map[string]interface{})
 			}
-			for k, v := range fields {
+			for k, v := range fieldsPerUpdate[i] {
 				c.lookup[name][subscriptionKey][path.Base(k)] = v
 			}
 			c.lookupMutex.Unlock()
@@ -351,7 +407,7 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 		c.lookupMutex.Unlock()
 
 		// Group metrics
-		for k, v := range fields {
+		for k, v := range fieldsPerUpdate[i] {
 			key := k
 			if len(aliasPath) < len(key) && len(aliasPath) != 0 {
 				// This may not be an exact prefix, due to naming style
@@ -370,8 +426,18 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 				}
 			}
 
-			if err := grouper.Add(name, tags, timestamp, key, v); err != nil {
-				c.Log.Errorf("cannot add to grouper: %v", err)
+			if assumeExtraTags {
+				if len(tagsPerUpdate[i]) == 0 {
+					// Assume all fields have the same tags
+					if err := grouper.Add(name, tags, timestamp, key, v); err != nil {
+						c.Log.Errorf("cannot add to grouper: %v", err)
+					}
+				}
+			} else {
+				// Assume each field has a separate set of tags
+				if err := grouper.Add(name, tagsPerUpdate[i], timestamp, key, v); err != nil {
+					c.Log.Errorf("cannot add to grouper: %v", err)
+				}
 			}
 		}
 
@@ -385,10 +451,22 @@ func (c *GNMI) handleSubscribeResponseUpdate(address string, response *gnmiLib.S
 }
 
 // HandleTelemetryField and add it to a measurement
-func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
-	gpath, aliasPath, err := c.handlePath(update.Path, tags, prefix)
+func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]string, prefix string, updateTags bool) (string, map[string]interface{}, bool) {
+	// Tracks if there are tags sent in the update.
+	// If not, then the update is a simple field and
+	// we must search embedded tags in subsequent updates
+	lacksTagsPerUpdate := false
+	lengthTagsBeforeUpdate := len(tags)
+
+	gPath, aliasPath, err := c.handlePath(update.Path, tags, prefix, updateTags)
 	if err != nil {
 		c.Log.Errorf("handling path %q failed: %v", update.Path, err)
+	}
+
+	lengthTagsAfterUpdate := len(tags)
+
+	if lengthTagsBeforeUpdate == lengthTagsAfterUpdate {
+		lacksTagsPerUpdate = true
 	}
 
 	var value interface{}
@@ -396,8 +474,8 @@ func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]stri
 
 	// Make sure a value is actually set
 	if update.Val == nil || update.Val.Value == nil {
-		c.Log.Infof("Discarded empty or legacy type value with path: %q", gpath)
-		return aliasPath, nil
+		c.Log.Infof("Discarded empty or legacy type value with path: %q", gPath)
+		return aliasPath, nil, false
 	}
 
 	switch val := update.Val.Value.(type) {
@@ -423,8 +501,28 @@ func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]stri
 		jsondata = val.JsonVal
 	}
 
-	name := strings.ReplaceAll(gpath, "-", "_")
+	name := strings.ReplaceAll(gPath, "-", "_")
 	fields := make(map[string]interface{})
+
+	if value != nil || jsondata != nil {
+		// Search for embedded tags
+		if len(c.extraTags) > 0 {
+			for parent, children := range c.extraTags {
+				for tag := range children {
+					formattedTag := strings.Replace(tag, "-", "_", -1)
+					complete := parent + "/" + formattedTag
+					if complete == name {
+						tags[formattedTag] = decodeTag(update)
+						if lacksTagsPerUpdate {
+							return aliasPath, nil, true
+						}
+						return aliasPath, nil, false
+					}
+				}
+			}
+		}
+	}
+
 	if value != nil {
 		fields[name] = value
 	} else if jsondata != nil {
@@ -437,11 +535,44 @@ func (c *GNMI) handleTelemetryField(update *gnmiLib.Update, tags map[string]stri
 			}
 		}
 	}
-	return aliasPath, fields
+
+	return aliasPath, fields, false
+}
+
+func decodeTag(update *gnmiLib.Update) string {
+	switch val := update.Val.Value.(type) {
+	case *gnmiLib.TypedValue_AsciiVal:
+		return val.AsciiVal
+	case *gnmiLib.TypedValue_BoolVal:
+		if val.BoolVal {
+			return "true"
+		}
+		return "false"
+	case *gnmiLib.TypedValue_BytesVal:
+		return string(val.BytesVal)
+	case *gnmiLib.TypedValue_DecimalVal:
+		return strconv.FormatFloat(float64(val.DecimalVal.Digits)/math.Pow(10,
+			float64(val.DecimalVal.Precision)), 'f',
+			-1, 64)
+	case *gnmiLib.TypedValue_FloatVal:
+		strconv.FormatFloat(float64(val.FloatVal), 'f', -1, 32)
+	case *gnmiLib.TypedValue_IntVal:
+		return strconv.FormatInt(val.IntVal, 10)
+	case *gnmiLib.TypedValue_StringVal:
+		return val.StringVal
+	case *gnmiLib.TypedValue_UintVal:
+		return strconv.FormatUint(val.UintVal, 10)
+	case *gnmiLib.TypedValue_JsonIetfVal:
+		return string(val.JsonIetfVal)
+	case *gnmiLib.TypedValue_JsonVal:
+		return string(val.JsonVal)
+	}
+	return ""
 }
 
 // Parse path to path-buffer and tag-field
-func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix string) (pathBuffer string, aliasPath string, err error) {
+func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix string, updateTags bool) (pathBuffer string, aliasPath string, err error) {
+
 	builder := bytes.NewBufferString(prefix)
 
 	// Prefix with origin
@@ -470,7 +601,7 @@ func (c *GNMI) handlePath(gnmiPath *gnmiLib.Path, tags map[string]string, prefix
 			aliasPath = name
 		}
 
-		if tags != nil {
+		if updateTags && tags != nil {
 			for key, val := range elem.Key {
 				key = strings.ReplaceAll(key, "-", "_")
 
@@ -502,6 +633,11 @@ func parsePath(origin string, pathToParse string, target string) (*gnmiLib.Path,
 func (c *GNMI) Stop() {
 	c.cancel()
 	c.wg.Wait()
+}
+
+// Description of plugin
+func (c *GNMI) Description() string {
+	return "gNMI telemetry input plugin"
 }
 
 // Gather plugin measurements (unused)
