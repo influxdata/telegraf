@@ -78,7 +78,6 @@ and to explore the exposed metrics.
 This plugin offers multiple configuration options, please review examples below
 for additional usage information.
 
-
 ### Example: Minimal Configuration for NIC metrics
 
 This configuration allows getting metrics for all devices reported via
