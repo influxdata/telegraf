@@ -6,25 +6,48 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func queryRunner(t *testing.T, q query) *testutil.Accumulator {
+	servicePort := "5432"
+	container := testutil.Container{
+		Image:        "postgres:alpine",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"POSTGRES_HOST_AUTH_METHOD": "trust",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("database system is ready to accept connections"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
+	}
+
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	p := &Postgresql{
 		Log: testutil.Logger{},
 		Service: postgresql.Service{
 			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
+				"host=%s port=%s user=postgres sslmode=disable",
+				container.Address,
+				container.Ports[servicePort],
 			),
 			IsPgBouncer: false,
 		},
 		Databases: []string{"postgres"},
 		Query:     q,
 	}
+
 	var acc testutil.Accumulator
 	require.NoError(t, p.Init())
 	require.NoError(t, p.Start(&acc))

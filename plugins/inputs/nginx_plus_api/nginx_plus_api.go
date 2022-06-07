@@ -35,6 +35,7 @@ const (
 	// Paths
 	processesPath   = "processes"
 	connectionsPath = "connections"
+	slabsPath       = "slabs"
 	sslPath         = "ssl"
 
 	httpRequestsPath      = "http/requests"

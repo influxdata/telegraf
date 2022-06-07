@@ -4,25 +4,29 @@ The histogram aggregator plugin creates histograms containing the counts of
 field values within a range.
 
 If `cumulative` is set to true, values added to a bucket are also added to the
-larger buckets in the distribution. This creates a [cumulative histogram](https://en.wikipedia.org/wiki/Histogram#/media/File:Cumulative_vs_normal_histogram.svg).
-Otherwise, values are added to only one bucket, which creates an [ordinary histogram](https://en.wikipedia.org/wiki/Histogram#/media/File:Cumulative_vs_normal_histogram.svg)
+larger buckets in the distribution. This creates a [cumulative histogram][1].
+Otherwise, values are added to only one bucket, which creates an [ordinary
+histogram][1]
 
 Like other Telegraf aggregators, the metric is emitted every `period` seconds.
 By default bucket counts are not reset between periods and will be non-strictly
-increasing while Telegraf is running. This behavior can be changed by setting the
-`reset` parameter to true.
+increasing while Telegraf is running. This behavior can be changed by setting
+the `reset` parameter to true.
+
+[1]: https://en.wikipedia.org/wiki/Histogram#/media/File:Cumulative_vs_normal_histogram.svg
 
 ## Design
 
-Each metric is passed to the aggregator and this aggregator searches
-histogram buckets for those fields, which have been specified in the
-config. If buckets are found, the aggregator will increment +1 to the appropriate
+Each metric is passed to the aggregator and this aggregator searches histogram
+buckets for those fields, which have been specified in the config. If buckets
+are found, the aggregator will increment +1 to the appropriate
 bucket. Otherwise, it will be added to the `+Inf` bucket.  Every `period`
 seconds this data will be forwarded to the outputs.
 
-The algorithm of hit counting to buckets was implemented on the base
-of the algorithm which is implemented in the Prometheus
-[client](https://github.com/prometheus/client_golang/blob/master/prometheus/histogram.go).
+The algorithm of hit counting to buckets was implemented on the base of the
+algorithm which is implemented in the Prometheus [client][2].
+
+[2]: https://github.com/prometheus/client_golang/blob/master/prometheus/histogram.go
 
 ## Configuration
 
@@ -77,9 +81,10 @@ option.  Optionally, if `fields` is set only the fields listed will be
 aggregated.  If `fields` is not set all fields are aggregated.
 
 The `buckets` option contains a list of floats which specify the bucket
-boundaries.  Each float value defines the inclusive upper (right) bound of the bucket.
-The `+Inf` bucket is added automatically and does not need to be defined.
-(For left boundaries, these specified bucket borders and `-Inf` will be used).
+boundaries.  Each float value defines the inclusive upper (right) bound of the
+bucket.  The `+Inf` bucket is added automatically and does not need to be
+defined.  (For left boundaries, these specified bucket borders and `-Inf` will
+be used).
 
 ## Measurements & Fields
 

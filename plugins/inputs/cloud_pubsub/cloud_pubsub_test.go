@@ -197,11 +197,6 @@ func TestRunOverlongMessages(t *testing.T) {
 }
 
 func TestRunErrorInSubscriber(t *testing.T) {
-	// hard-coded retry in seconds
-	if testing.Short() {
-		t.Skip("Skipping long test in short mode")
-	}
-
 	subID := "sub-unexpected-error"
 
 	acc := &testutil.Accumulator{}

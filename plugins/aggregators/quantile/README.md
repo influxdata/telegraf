@@ -1,7 +1,7 @@
 # Quantile Aggregator Plugin
 
-The quantile aggregator plugin aggregates specified quantiles for each numeric field
-per metric it sees and emits the quantiles every `period`.
+The quantile aggregator plugin aggregates specified quantiles for each numeric
+field per metric it sees and emits the quantiles every `period`.
 
 ## Configuration
 
@@ -52,14 +52,15 @@ For implementation details see the underlying [golang library][tdigest_lib].
 
 ### exact R7 and R8
 
-These algorithms compute quantiles as described in [Hyndman & Fan (1996)][hyndman_fan].
-The R7 variant is used in Excel and NumPy.  The R8 variant is recommended
-by Hyndman & Fan due to its independence of the underlying sample distribution.
+These algorithms compute quantiles as described in [Hyndman & Fan
+(1996)][hyndman_fan].  The R7 variant is used in Excel and NumPy.  The R8
+variant is recommended by Hyndman & Fan due to its independence of the
+underlying sample distribution.
 
-These algorithms save all data for the aggregation `period`.  They require
-a lot of memory when used with a large number of series or a
-large number of samples. They are slower than the `t-digest`
-algorithm and are recommended only to be used with a small number of samples and series.
+These algorithms save all data for the aggregation `period`.  They require a lot
+of memory when used with a large number of series or a large number of
+samples. They are slower than the `t-digest` algorithm and are recommended only
+to be used with a small number of samples and series.
 
 ## Benchmark (linux/amd64)
 
@@ -108,8 +109,9 @@ and the default setting for `quantiles` you get the following *output*
   - maximum_response_ms_050 (float64)
   - maximum_response_ms_075 (float64)
 
-The `status` and `ok` fields are dropped because they are not numeric.  Note that the
-number of resulting fields scales with the number of `quantiles` specified.
+The `status` and `ok` fields are dropped because they are not numeric.  Note
+that the number of resulting fields scales with the number of `quantiles`
+specified.
 
 ### Tags
 

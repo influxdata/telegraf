@@ -22,6 +22,7 @@ var (
 func (n *NginxPlusAPI) gatherMetrics(addr *url.URL, acc telegraf.Accumulator) {
 	addError(acc, n.gatherProcessesMetrics(addr, acc))
 	addError(acc, n.gatherConnectionsMetrics(addr, acc))
+	addError(acc, n.gatherSlabsMetrics(addr, acc))
 	addError(acc, n.gatherSslMetrics(addr, acc))
 	addError(acc, n.gatherHTTPRequestsMetrics(addr, acc))
 	addError(acc, n.gatherHTTPServerZonesMetrics(addr, acc))
@@ -126,6 +127,59 @@ func (n *NginxPlusAPI) gatherConnectionsMetrics(addr *url.URL, acc telegraf.Accu
 		},
 		getTags(addr),
 	)
+
+	return nil
+}
+
+func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherURL(addr, slabsPath)
+	if err != nil {
+		return err
+	}
+
+	var slabs Slabs
+
+	if err := json.Unmarshal(body, &slabs); err != nil {
+		return err
+	}
+
+	tags := getTags(addr)
+
+	for zoneName, slab := range slabs {
+		slabTags := map[string]string{}
+		for k, v := range tags {
+			slabTags[k] = v
+		}
+		slabTags["zone"] = zoneName
+
+		acc.AddFields(
+			"nginx_plus_api_slabs_pages",
+			map[string]interface{}{
+				"used": slab.Pages.Used,
+				"free": slab.Pages.Free,
+			},
+			slabTags,
+		)
+
+		for slotID, slot := range slab.Slots {
+			slotTags := map[string]string{}
+			for k, v := range slabTags {
+				slotTags[k] = v
+			}
+			slotTags["slot"] = slotID
+
+			acc.AddFields(
+				"nginx_plus_api_slabs_slots",
+				map[string]interface{}{
+					"used":  slot.Used,
+					"free":  slot.Free,
+					"reqs":  slot.Reqs,
+					"fails": slot.Fails,
+				},
+				slotTags,
+			)
+		}
+	}
 
 	return nil
 }
