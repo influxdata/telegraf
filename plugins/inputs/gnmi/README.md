@@ -39,18 +39,14 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
   # prefix = ""
   # target = ""
 
+  ## Define (for certain nested telemetry measurements with embedded tags) which additional fields are tags
+  # embedded_tags = ["Cisco-IOS-XR-pfi-im-cmd-oper:/interfaces/interface-summary/interface-type/interface-type-name"]
+
   ## Define additional aliases to map telemetry encoding paths to simple measurement names
   # [inputs.gnmi.aliases]
   #   ifcounters = "openconfig:/interfaces/interface/state/counters"
 
   [[inputs.gnmi.subscription]]
-    ## Define (for certain nested telemetry measurements with embedded tags) which additional fields are tags
-    # embedded_tags = ["Cisco-IOS-XR-pfi-im-cmd-oper:/interfaces/interface-summary/interface-type/interface-type-name"]
-
-  ## Define (for certain nested telemetry measurements with embedded tags) which additional fields are tags
-  # embedded_tags = ["Cisco-IOS-XR-pfi-im-cmd-oper:/interfaces/interface-summary/interface-type/interface-type-name"]
-
-  [[inputs.cisco_telemetry_gnmi.subscription]]
     ## Name of the measurement that will be emitted
     name = "ifcounters"
 
@@ -73,13 +69,6 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
     ## If suppression is enabled, send updates at least every X seconds anyway
     # heartbeat_interval = "60s"
 
-  [[inputs.cisco_telemetry_gnmi.subscription]]
-    origin = "Cisco-IOS-XR-pfi-im-cmd-oper"
-    path = "/interfaces/interface-summary"
-    subscription_mode = "sample"
-    sample_interval = "60s"
-```
-
   #[[inputs.gnmi.subscription]]
     # name = "descr"
     # origin = "openconfig-interfaces"
@@ -92,25 +81,18 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
     ## in the format <name>_<fieldBase>.
     # tag_only = true
 
+   ## Uses embedded_tags defined previously
   #[[inputs.gnmi.subscription]]
-    # name = "ifsummary"
-    # origin = "Cisco-IOS-XR-pfi-im-cmd-oper"
-    # path = "/interfaces/interface-summary"
-    # subscription_mode = "sample"
-    # sample_interval = "60s"
+   # name = "ifsummary"
+   # origin = "Cisco-IOS-XR-pfi-im-cmd-oper"
+   # path = "/interfaces/interface-summary"
+   # subscription_mode = "sample"
+   # sample_interval = "60s"
 
-    ## Define (for certain nested telemetry measurements with embedded tags) which additional fields are tags
-    # embedded_tags = ["Cisco-IOS-XR-pfi-im-cmd-oper:/interfaces/interface-summary/interface-type/interface-type-name"]
-  [[inputs.gnmi.subscription]]
-    origin = "Cisco-IOS-XR-pfi-im-cmd-oper"
-    path = "/interfaces/interface-summary"
-    subscription_mode = "sample"
-    sample_interval = "60s"
 ```
-
 ## Example Output
 
-```shell
+```bash
 ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=MgmtEth0/RP0/CPU0/0,source=10.49.234.115,descr/description=Foo in-multicast-pkts=0i,out-multicast-pkts=0i,out-errors=0i,out-discards=0i,in-broadcast-pkts=0i,out-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,in-errors=0i,out-unicast-pkts=0i,in-octets=0i,out-octets=0i,last-clear="2019-05-22T16:53:21Z",in-unicast-pkts=0i 1559145777425000000
 ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=GigabitEthernet0/0/0/0,source=10.49.234.115,descr/description=Bar out-multicast-pkts=0i,out-broadcast-pkts=0i,in-errors=0i,out-errors=0i,in-discards=0i,out-octets=0i,in-unknown-protos=0i,in-unicast-pkts=0i,in-octets=0i,in-multicast-pkts=0i,in-broadcast-pkts=0i,last-clear="2019-05-22T16:54:50Z",out-unicast-pkts=0i,out-discards=0i 1559145777425000000
 ```
