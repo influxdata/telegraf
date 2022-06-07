@@ -57,7 +57,7 @@ All measurements have the `path` tag.
   # files = ["memory.*usage*", "memory.limit_in_bytes"]
 ```
 
-## Example Output
+## Example Configurations
 
 ```toml
 # [[inputs.cgroup]]
