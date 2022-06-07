@@ -126,7 +126,12 @@ func TestParseInvalidXML(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "xml",
+				Configs:           tt.configs,
+				DefaultTags:       tt.defaultTags,
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			_, err := parser.ParseLine(tt.input)
@@ -162,7 +167,12 @@ func TestInvalidTypeQueriesFail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parser := &Parser{Configs: tt.configs, DefaultTags: tt.defaultTags, Log: testutil.Logger{Name: "parsers.xml"}}
+			parser := &Parser{
+				DefaultMetricName: "xml",
+				Configs:           tt.configs,
+				DefaultTags:       tt.defaultTags,
+				Log:               testutil.Logger{Name: "parsers.xml"},
+			}
 			require.NoError(t, parser.Init())
 
 			_, err := parser.ParseLine(tt.input)
@@ -1234,6 +1244,7 @@ func TestEmptySelectionAllowed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := &Parser{
+				DefaultMetricName:   "xml",
 				Configs:             tt.configs,
 				AllowEmptySelection: true,
 				DefaultTags:         map[string]string{},
@@ -1334,7 +1345,12 @@ func TestTestCases(t *testing.T) {
 			expectedErrors, _ := testutil.ParseRawLinesFrom(header, "Expected Error:")
 
 			// Setup the parser and run it.
+			metricName := "xml"
+			if fileformat != "" {
+				metricName = fileformat
+			}
 			parser := &Parser{
+				DefaultMetricName:   metricName,
 				Format:              fileformat,
 				ProtobufMessageDef:  pbmsgdef,
 				ProtobufMessageType: pbmsgtype,
@@ -1359,6 +1375,7 @@ func TestTestCases(t *testing.T) {
 func TestProtobufImporting(t *testing.T) {
 	// Setup the parser and run it.
 	parser := &Parser{
+		DefaultMetricName:   "xpath_protobuf",
 		Format:              "xpath_protobuf",
 		ProtobufMessageDef:  "person.proto",
 		ProtobufMessageType: "importtest.Person",

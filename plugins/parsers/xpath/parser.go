@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -70,10 +71,7 @@ func (p *Parser) Init() error {
 
 	// Make sure we do have a metric name
 	if p.DefaultMetricName == "" {
-		p.DefaultMetricName = p.Format
-		if p.Format == "" {
-			p.DefaultMetricName = "xml"
-		}
+		return errors.New("missing default metric name")
 	}
 
 	return nil
