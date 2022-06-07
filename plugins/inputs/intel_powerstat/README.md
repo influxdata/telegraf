@@ -6,8 +6,6 @@ presence of Linux based OS.
 Main use cases are power saving and workload migration. Telemetry frameworks
 allow users to monitor critical platform level metrics. Key source of platform
 telemetry is power domain that is beneficial for MANO Monitoring&Analytics
-allow users to monitor critical platform level metrics.  Key source of platform
-telemetry is power domain that is beneficial for MANO/Monitoring&Analytics
 systems to take preventive/corrective actions based on platform busyness, CPU
 temperature, actual CPU utilization and power statistics.
 
@@ -87,7 +85,6 @@ per-CPU metrics:
 
 Plugin is based on Linux Kernel modules that expose specific metrics over
 `sysfs` or `devfs` interfaces. The following dependencies are expected by
-`sysfs` or `devfs` interfaces.  The following dependencies are expected by
 plugin:
 
 - _intel-rapl_ module which exposes Intel Runtime Power Limiting metrics over `sysfs` (`/sys/devices/virtual/powercap/intel-rapl`),
@@ -102,7 +99,6 @@ for `uncore_frequency` metrics `intel-uncore-frequency` module is required
 Please make sure that kernel modules are loaded and running (cpufreq is
 integrated in kernel). Modules might have to be manually enabled by using
 `modprobe`. Depending on the kernel version, run commands:
-`modprobe`.  Depending on the kernel version, run commands:
 
 ```sh
 # kernel 5.x.x:
@@ -145,7 +141,6 @@ OS, user can detect supported processor features reading `/proc/cpuinfo` file.
 Plugin assumes crucial properties are the same for all CPU cores in the system.
 The following processor properties are examined in more detail in this section:
 processor _cpu family_, _model_ and _flags_. The following processor properties
-processor _cpu family_, _model_ and _flags_.  The following processor properties
 are required by the plugin:
 
 - Processor _cpu family_ must be Intel (0x6) - since data used by the plugin assumes Intel specific
@@ -214,8 +209,6 @@ and _powerstat\_core.cpu\_c6\_state\_residency_ metrics:
 All metrics collected by Intel PowerStat plugin are collected in fixed
 intervals. Metrics that reports processor C-state residency or power are
 calculated over elapsed intervals. When starting to measure metrics, plugin
-intervals.  Metrics that reports processor C-state residency or power are
-calculated over elapsed intervals.  When starting to measure metrics, plugin
 skips first iteration of metrics if they are based on deltas with previous
 value.
 
@@ -280,7 +273,6 @@ security reasons, so this plugin needs root privileges to work properly.
 If such strict security restrictions are not relevant, reading permissions to
 files in `/sys/devices/virtual/powercap/intel-rapl/` directory can be manually
 changed for example with `chmod` command with custom parameters. For example to
-changed for example with `chmod` command with custom parameters.  For example to
 give all users permission to all files in `intel-rapl` directory:
 
 ```bash
