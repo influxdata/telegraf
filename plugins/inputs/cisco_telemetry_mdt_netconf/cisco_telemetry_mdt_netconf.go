@@ -156,10 +156,10 @@ func (c *CiscoTelemetryNETCONF) Init() error {
 		return fmt.Errorf("ssh credentials cannot be empty")
 	}
 	if !c.IgnoreServerAuthenticity && c.ServerPublicKey == "" {
-		return fmt.Errorf("public key must exist when ignore server authenticity is enabled")
+		return fmt.Errorf("public key must exist when ignore server authenticity is disabled")
 	}
-	if c.Redial < 1 {
-		return fmt.Errorf("redial must be greater than or equal to 1")
+	if time.Duration(c.Redial).Seconds() < 1 {
+		return fmt.Errorf("redial must be greater than or equal to 1s")
 	}
 	return nil
 }
