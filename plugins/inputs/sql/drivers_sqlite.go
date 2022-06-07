@@ -1,8 +1,5 @@
-//go:build linux && freebsd && darwin && (!mips || !mips64)
-// +build linux
-// +build freebsd
-// +build darwin
-// +build !mips !mips64
+//go:build !arm && !mips && !mipsle && !mips64 && !mips64le
+// +build !arm,!mips,!mipsle,!mips64,!mips64le
 
 package sql
 

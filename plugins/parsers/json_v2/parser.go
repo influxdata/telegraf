@@ -212,7 +212,8 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 				map[string]interface{}{},
 				timestamp,
 			),
-			Result: result,
+			Result:      result,
+			ParentIndex: result.Index,
 		}
 
 		// Expand all array's and nested arrays into separate metrics
@@ -296,9 +297,10 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 			)
 			if val.IsObject() {
 				n := result
-				n.ParentIndex += val.Index
 				n.Metric = m
 				n.Result = val
+				n.Index = val.Index - result.Index
+				n.ParentIndex = n.Index + result.ParentIndex
 				r, err := p.combineObject(n, timestamp)
 				if err != nil {
 					return false
@@ -315,9 +317,10 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 
 			mergeMetric(result.Metric, m)
 			n := result
-			n.ParentIndex += val.Index
 			n.Metric = m
 			n.Result = val
+			n.Index = val.Index - result.Index
+			n.ParentIndex = n.Index + result.ParentIndex
 			r, err := p.expandArray(n, timestamp)
 			if err != nil {
 				return false
@@ -454,15 +457,16 @@ func (p *Parser) processObjects(input []byte, objects []JSONObject, timestamp ti
 		}
 
 		rootObject := MetricNode{
-			ParentIndex: 0,
 			Metric: metric.New(
 				p.measurementName,
 				map[string]string{},
 				map[string]interface{}{},
 				timestamp,
 			),
-			Result: result,
+			Result:      result,
+			ParentIndex: 0,
 		}
+
 		metrics, err := p.expandArray(rootObject, timestamp)
 		if err != nil {
 			return nil, err
@@ -534,6 +538,8 @@ func (p *Parser) combineObject(result MetricNode, timestamp time.Time) ([]telegr
 					return false
 				}
 			} else {
+				arrayNode.Index -= result.Index
+				arrayNode.ParentIndex -= result.Index
 				r, err := p.expandArray(arrayNode, timestamp)
 				if err != nil {
 					return false

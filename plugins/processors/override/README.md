@@ -8,10 +8,9 @@ supported by input plugins and aggregators:
 * name_suffix
 * tags
 
-All metrics passing through this processor will be modified accordingly.
-Select the metrics to modify using the standard
-[measurement filtering](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#measurement-filtering)
-options.
+All metrics passing through this processor will be modified accordingly.  Select
+the metrics to modify using the standard [metric
+filtering](../../../docs/CONFIGURATION.md#metric-filtering) options.
 
 Values of *name_override*, *name_prefix*, *name_suffix* and already present
 *tags* with conflicting keys will be overwritten. Absent *tags* will be

@@ -1,13 +1,13 @@
 # Enum Processor Plugin
 
-The Enum Processor allows the configuration of value mappings for metric tags or fields.
-The main use-case for this is to rewrite status codes such as _red_, _amber_ and
-_green_ by numeric values such as 0, 1, 2. The plugin supports string, int, float64 and bool
-types for the field values. Multiple tags or fields can be configured with separate
-value mappings for each. Default mapping values can be configured to be
-used for all values, which are not contained in the value_mappings. The
-processor supports explicit configuration of a destination tag or field. By default the
-source tag or field is overwritten.
+The Enum Processor allows the configuration of value mappings for metric tags or
+fields.  The main use-case for this is to rewrite status codes such as _red_,
+_amber_ and _green_ by numeric values such as 0, 1, 2. The plugin supports
+string, int, float64 and bool types for the field values. Multiple tags or
+fields can be configured with separate value mappings for each. Default mapping
+values can be configured to be used for all values, which are not contained in
+the value_mappings. The processor supports explicit configuration of a
+destination tag or field. By default the source tag or field is overwritten.
 
 ## Configuration
 
