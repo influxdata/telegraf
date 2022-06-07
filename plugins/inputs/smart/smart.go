@@ -707,6 +707,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", m.Nocheck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
+	fmt.Printf("running '%s %v'\n", m.PathSmartctl, args)
 	out, e := runCmd(m.Timeout, m.UseSudo, m.PathSmartctl, args...)
 	outStr := string(out)
 
@@ -754,6 +755,12 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 		}
 
 		health := smartOverallHealth.FindStringSubmatch(line)
+		if len(health) > 0 {
+			fmt.Printf("found health match in: '%s'\n", line)
+			for index, item := range health {
+				fmt.Printf("%d: '%s'\n", index, item)
+			}
+		}
 		if len(health) > 2 {
 			deviceFields["health_ok"] = health[2] == "PASSED" || health[2] == "OK"
 		}
@@ -812,9 +819,13 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 
 			// If the attribute matches on the one in deviceFieldIds
 			// save the raw value to a field.
+			fmt.Printf("looking at field id: %s\n", attr[1])
 			if field, ok := deviceFieldIds[attr[1]]; ok {
+				fmt.Printf("found %s parsing '%s'", field, attr[8])
 				if val, err := parseRawValue(attr[8]); err == nil {
 					deviceFields[field] = val
+				} else {
+					fmt.Println(err)
 				}
 			}
 		} else {
