@@ -79,7 +79,7 @@ help:
 	@echo 'Targets:'
 	@echo '  all          - download dependencies and compile telegraf binary'
 	@echo '  deps         - download dependencies'
-	@echo '  docs         - generate documentation and embed sample-configurations'
+	@echo '  docs         - generate documentation and embed sample-configurations into READMEs'
 	@echo '  telegraf     - compile telegraf binary'
 	@echo '  test         - run short unit tests'
 	@echo '  fmt          - format source files'
