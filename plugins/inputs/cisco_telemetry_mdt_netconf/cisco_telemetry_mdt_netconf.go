@@ -74,23 +74,23 @@ type getRequestsService struct {
 
 // dialinSubscriptionRequest given as input to the plugin
 type dialinSubscriptionRequest struct {
-	XPathFilter   string `toml:"xpath_filter"`
-	UpdateTrigger string `toml:"update_trigger"`
-	Period        config.Duration
-	Keys          []string
+	XPathFilter   string          `toml:"xpath_filter"`
+	UpdateTrigger string          `toml:"update_trigger"`
+	Period        config.Duration `toml:"period"`
+	Keys          []string        `toml:"keys"`
 }
 
 // notificationSubscriptionRequest given as input to the plugin
 type notificationSubscriptionRequest struct {
-	Stream string `toml:"stream"`
-	Keys   []string
+	Stream string   `toml:"stream"`
+	Keys   []string `toml:"keys"`
 }
 
 // getRequest given as input to the plugin
 type getRequest struct {
-	SelectFilter string `toml:"xpath_filter"`
-	Period       config.Duration
-	Keys         []string
+	SelectFilter string          `toml:"xpath_filter"`
+	Period       config.Duration `toml:"period"`
+	Keys         []string        `toml:"keys"`
 }
 
 // netconfSubscriptionRequest sent through NETCONF, as per specification
@@ -127,18 +127,18 @@ type CiscoTelemetryNETCONF struct {
 	Grs  *getRequestsService                `toml:"get_service"`
 
 	// SSH connection - credentials
-	Username string
-	Password string
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 
 	// SSH connection - security
-	IgnoreServerAuthenticity bool
-	ServerPublicKey          string
+	IgnoreServerAuthenticity bool   `toml:"ignore_server_authenticity"`
+	ServerPublicKey          string `toml:"server_public_key"`
 
 	// Xpaths and keys of all operations
 	userXpaths map[string]interface{}
 	userKeys   map[string]interface{}
 
-	Redial config.Duration
+	Redial config.Duration `toml:"redial"`
 
 	acc    telegraf.Accumulator
 	cancel context.CancelFunc
