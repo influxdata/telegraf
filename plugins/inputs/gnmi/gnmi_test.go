@@ -567,7 +567,9 @@ func TestNotification(t *testing.T) {
 							},
 						},
 					}
-					server.Send(response)
+					if err := server.Send(response); err != nil {
+						return err
+					}
 					return nil
 				},
 			},
