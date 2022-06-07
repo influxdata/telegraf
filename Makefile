@@ -328,7 +328,7 @@ darwin-arm64:
 include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(static) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
-package: generate $(include_packages)
+package: docs $(include_packages)
 
 .PHONY: $(include_packages)
 $(include_packages):
