@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package loki
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,45 +13,24 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultEndpoint      = "/loki/api/v1/push"
 	defaultClientTimeout = 5 * time.Second
 )
-
-var sampleConfig = `
-  ## The domain of Loki
-  domain = "https://loki.domain.tld"
-
-  ## Endpoint to write api
-  # endpoint = "/loki/api/v1/push"
-
-  ## Connection timeout, defaults to "5s" if not set.
-  # timeout = "5s"
-
-  ## Basic auth credential
-  # username = "loki"
-  # password = "pass"
-
-  ## Additional HTTP headers
-  # http_headers = {"X-Scope-OrgID" = "1"}
-
-  ## If the request must be gzip encoded
-  # gzip_request = false
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-`
 
 type Loki struct {
 	Domain       string            `toml:"domain"`
@@ -57,7 +38,7 @@ type Loki struct {
 	Timeout      config.Duration   `toml:"timeout"`
 	Username     string            `toml:"username"`
 	Password     string            `toml:"password"`
-	Headers      map[string]string `toml:"headers"`
+	Headers      map[string]string `toml:"http_headers"`
 	ClientID     string            `toml:"client_id"`
 	ClientSecret string            `toml:"client_secret"`
 	TokenURL     string            `toml:"token_url"`
@@ -67,14 +48,6 @@ type Loki struct {
 	url    string
 	client *http.Client
 	tls.ClientConfig
-}
-
-func (l *Loki) SampleConfig() string {
-	return sampleConfig
-}
-
-func (l *Loki) Description() string {
-	return "Send logs to Loki"
 }
 
 func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
@@ -105,6 +78,10 @@ func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
 	return client, nil
 }
 
+func (*Loki) SampleConfig() string {
+	return sampleConfig
+}
+
 func (l *Loki) Connect() (err error) {
 	if l.Domain == "" {
 		return fmt.Errorf("domain is required")
@@ -126,7 +103,7 @@ func (l *Loki) Connect() (err error) {
 		return fmt.Errorf("http client fail: %w", err)
 	}
 
-	return
+	return nil
 }
 
 func (l *Loki) Close() error {
@@ -143,6 +120,8 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 	})
 
 	for _, m := range metrics {
+		m.AddTag("__name", m.Name())
+
 		tags := m.TagList()
 		var line string
 
@@ -153,10 +132,10 @@ func (l *Loki) Write(metrics []telegraf.Metric) error {
 		s.insertLog(tags, Log{fmt.Sprintf("%d", m.Time().UnixNano()), line})
 	}
 
-	return l.write(s)
+	return l.writeMetrics(s)
 }
 
-func (l *Loki) write(s Streams) error {
+func (l *Loki) writeMetrics(s Streams) error {
 	bs, err := json.Marshal(s)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)

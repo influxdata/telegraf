@@ -5,9 +5,10 @@ their output in any one of the accepted [Input Data Formats](https://github.com/
 
 This plugin can be used to poll for custom metrics from any source.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from one or more commands that can output to stdout
 [[inputs.exec]]
   ## Commands array
   commands = [
@@ -15,6 +16,12 @@ This plugin can be used to poll for custom metrics from any source.
     "/usr/bin/mycollector --foo=bar",
     "/tmp/collect_*.sh"
   ]
+
+  ## Environment variables
+  ## Array of "key=value" pairs to pass as environment variables
+  ## e.g. "KEY=value", "USERNAME=John Doe",
+  ## "LD_LIBRARY_PATH=/opt/custom/lib64:/usr/local/libs"
+  # environment = []
 
   ## Timeout for each command to complete.
   timeout = "5s"
@@ -32,15 +39,17 @@ This plugin can be used to poll for custom metrics from any source.
 Glob patterns in the `command` option are matched on every run, so adding new
 scripts that match the pattern will cause them to be picked up immediately.
 
-### Example:
+## Example
 
 This script produces static values, since no timestamp is specified the values are at the current time.
+
 ```sh
 #!/bin/sh
 echo 'example,tag1=a,tag2=b i=42i,j=43i,k=44i'
 ```
 
 It can be paired with the following configuration and will be run at the `interval` of the agent.
+
 ```toml
 [[inputs.exec]]
   commands = ["sh /tmp/test.sh"]
@@ -48,18 +57,19 @@ It can be paired with the following configuration and will be run at the `interv
   data_format = "influx"
 ```
 
-### Common Issues:
+## Common Issues
 
-#### My script works when I run it by hand, but not when Telegraf is running as a service.
+### My script works when I run it by hand, but not when Telegraf is running as a service
 
-This may be related to the Telegraf service running as a different user.  The
+This may be related to the Telegraf service running as a different user. The
 official packages run Telegraf as the `telegraf` user and group on Linux
 systems.
 
-#### With a PowerShell on Windows, the output of the script appears to be truncated.
+### With a PowerShell on Windows, the output of the script appears to be truncated
 
 You may need to set a variable in your script to increase the number of columns
 available for output:
-```
+
+```shell
 $host.UI.RawUI.BufferSize = new-object System.Management.Automation.Host.Size(1024,50)
 ```

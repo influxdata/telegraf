@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package mailchimp
 
 import (
+	_ "embed"
 	"fmt"
 	"time"
 
@@ -8,39 +10,31 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type MailChimp struct {
 	api *ChimpAPI
 
 	APIKey     string `toml:"api_key"`
 	DaysOld    int    `toml:"days_old"`
 	CampaignID string `toml:"campaign_id"`
+
+	Log telegraf.Logger `toml:"-"`
 }
 
-var sampleConfig = `
-  ## MailChimp API key
-  ## get from https://admin.mailchimp.com/account/api/
-  api_key = "" # required
-  ## Reports for campaigns sent more than days_old ago will not be collected.
-  ## 0 means collect all.
-  days_old = 0
-  ## Campaign ID to get, if empty gets all campaigns, this option overrides days_old
-  # campaign_id = ""
-`
-
-func (m *MailChimp) SampleConfig() string {
+func (*MailChimp) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *MailChimp) Description() string {
-	return "Gathers metrics from the /3.0/reports MailChimp API"
+func (m *MailChimp) Init() error {
+	m.api = NewChimpAPI(m.APIKey, m.Log)
+
+	return nil
 }
 
 func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
-	if m.api == nil {
-		m.api = NewChimpAPI(m.APIKey)
-	}
-	m.api.Debug = false
-
 	if m.CampaignID == "" {
 		since := ""
 		if m.DaysOld > 0 {

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package logstash
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,37 +19,9 @@ import (
 	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
-const sampleConfig = `
-  ## The URL of the exposed Logstash API endpoint.
-  url = "http://127.0.0.1:9600"
-
-  ## Use Logstash 5 single pipeline API, set to true when monitoring
-  ## Logstash 5.
-  # single_pipeline = false
-
-  ## Enable optional collection components.  Can contain
-  ## "pipelines", "process", and "jvm".
-  # collect = ["pipelines", "process", "jvm"]
-
-  ## Timeout for HTTP requests.
-  # timeout = "5s"
-
-  ## Optional HTTP Basic Auth credentials.
-  # username = "username"
-  # password = "pa$$word"
-
-  ## Optional TLS Config.
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Use TLS but skip chain & host verification.
-  # insecure_skip_verify = false
-
-  ## Optional HTTP headers.
-  # [inputs.logstash.headers]
-  #   "X-Special-Header" = "Special-Value"
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Logstash struct {
 	URL string `toml:"url"`
@@ -73,16 +47,6 @@ func NewLogstash() *Logstash {
 		Headers:        make(map[string]string),
 		Timeout:        config.Duration(time.Second * 5),
 	}
-}
-
-// Description returns short info about plugin
-func (logstash *Logstash) Description() string {
-	return "Read metrics exposed by Logstash"
-}
-
-// SampleConfig returns details how to configure plugin
-func (logstash *Logstash) SampleConfig() string {
-	return sampleConfig
 }
 
 type ProcessStats struct {
@@ -153,6 +117,10 @@ const processStats = "/_node/stats/process"
 const pipelinesStats = "/_node/stats/pipelines"
 const pipelineStats = "/_node/stats/pipeline"
 
+func (*Logstash) SampleConfig() string {
+	return sampleConfig
+}
+
 func (logstash *Logstash) Init() error {
 	err := choice.CheckSlice(logstash.Collect, []string{"pipelines", "process", "jvm"})
 	if err != nil {
@@ -179,8 +147,8 @@ func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 }
 
 // gatherJSONData query the data source and parse the response JSON
-func (logstash *Logstash) gatherJSONData(url string, value interface{}) error {
-	request, err := http.NewRequest("GET", url, nil)
+func (logstash *Logstash) gatherJSONData(address string, value interface{}) error {
+	request, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err
 	}
@@ -206,7 +174,7 @@ func (logstash *Logstash) gatherJSONData(url string, value interface{}) error {
 	if response.StatusCode != http.StatusOK {
 		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
 		body, _ := io.ReadAll(io.LimitReader(response.Body, 200))
-		return fmt.Errorf("%s returned HTTP status %s: %q", url, response.Status, body)
+		return fmt.Errorf("%s returned HTTP status %s: %q", address, response.Status, body)
 	}
 
 	err = json.NewDecoder(response.Body).Decode(value)
@@ -218,10 +186,10 @@ func (logstash *Logstash) gatherJSONData(url string, value interface{}) error {
 }
 
 // gatherJVMStats gather the JVM metrics and add results to the accumulator
-func (logstash *Logstash) gatherJVMStats(url string, accumulator telegraf.Accumulator) error {
+func (logstash *Logstash) gatherJVMStats(address string, accumulator telegraf.Accumulator) error {
 	jvmStats := &JVMStats{}
 
-	err := logstash.gatherJSONData(url, jvmStats)
+	err := logstash.gatherJSONData(address, jvmStats)
 	if err != nil {
 		return err
 	}
@@ -244,10 +212,10 @@ func (logstash *Logstash) gatherJVMStats(url string, accumulator telegraf.Accumu
 }
 
 // gatherJVMStats gather the Process metrics and add results to the accumulator
-func (logstash *Logstash) gatherProcessStats(url string, accumulator telegraf.Accumulator) error {
+func (logstash *Logstash) gatherProcessStats(address string, accumulator telegraf.Accumulator) error {
 	processStats := &ProcessStats{}
 
-	err := logstash.gatherJSONData(url, processStats)
+	err := logstash.gatherJSONData(address, processStats)
 	if err != nil {
 		return err
 	}
@@ -403,10 +371,10 @@ func (logstash *Logstash) gatherQueueStats(
 }
 
 // gatherJVMStats gather the Pipeline metrics and add results to the accumulator (for Logstash < 6)
-func (logstash *Logstash) gatherPipelineStats(url string, accumulator telegraf.Accumulator) error {
+func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegraf.Accumulator) error {
 	pipelineStats := &PipelineStats{}
 
-	err := logstash.gatherJSONData(url, pipelineStats)
+	err := logstash.gatherJSONData(address, pipelineStats)
 	if err != nil {
 		return err
 	}
@@ -447,10 +415,10 @@ func (logstash *Logstash) gatherPipelineStats(url string, accumulator telegraf.A
 }
 
 // gatherJVMStats gather the Pipelines metrics and add results to the accumulator (for Logstash >= 6)
-func (logstash *Logstash) gatherPipelinesStats(url string, accumulator telegraf.Accumulator) error {
+func (logstash *Logstash) gatherPipelinesStats(address string, accumulator telegraf.Accumulator) error {
 	pipelinesStats := &PipelinesStats{}
 
-	err := logstash.gatherJSONData(url, pipelinesStats)
+	err := logstash.gatherJSONData(address, pipelinesStats)
 	if err != nil {
 		return err
 	}

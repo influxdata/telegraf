@@ -7,8 +7,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
 type TestingHandler struct {
@@ -1950,7 +1951,10 @@ type MockHandler struct {
 }
 
 func (h *MockHandler) SetMeasurement(name []byte) error {
-	h.TestingHandler.SetMeasurement(name)
+	err := h.TestingHandler.SetMeasurement(name)
+	if err != nil {
+		return err
+	}
 	return h.SetMeasurementF(name)
 }
 
@@ -1963,8 +1967,7 @@ func (h *MockHandler) AddInt(name, value []byte) error {
 	if err != nil {
 		return err
 	}
-	h.TestingHandler.AddInt(name, value)
-	return nil
+	return h.TestingHandler.AddInt(name, value)
 }
 
 func (h *MockHandler) AddUint(name, value []byte) error {
@@ -1972,8 +1975,7 @@ func (h *MockHandler) AddUint(name, value []byte) error {
 	if err != nil {
 		return err
 	}
-	h.TestingHandler.AddUint(name, value)
-	return nil
+	return h.TestingHandler.AddUint(name, value)
 }
 
 func (h *MockHandler) AddFloat(name, value []byte) error {

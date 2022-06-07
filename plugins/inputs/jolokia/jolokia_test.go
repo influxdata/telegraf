@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	_ "github.com/stretchr/testify/require"
 )
 
 const validThreeLevelMultiValueJSON = `
@@ -143,8 +143,8 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(acc.Metrics))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_init":      67108864.0,
@@ -167,8 +167,8 @@ func TestHttpJsonBulkResponse(t *testing.T) {
 	var acc testutil.Accumulator
 	err := jolokia.Gather(&acc)
 
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(acc.Metrics))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_init":          67108864.0,
@@ -195,8 +195,8 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(acc.Metrics))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
 		"heap_memory_usage_java.lang:type=Memory_ObjectPendingFinalizationCount": 0.0,
@@ -228,9 +228,9 @@ func TestHttp404(t *testing.T) {
 	acc.SetDebug(true)
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, len(acc.Metrics))
-	assert.Contains(t, err.Error(), "has status code 404")
+	require.Error(t, err)
+	require.Equal(t, 0, len(acc.Metrics))
+	require.Contains(t, err.Error(), "has status code 404")
 }
 
 // Test that the proper values are ignored or collected
@@ -241,7 +241,7 @@ func TestHttpInvalidJson(t *testing.T) {
 	acc.SetDebug(true)
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.Error(t, err)
-	assert.Equal(t, 0, len(acc.Metrics))
-	assert.Contains(t, err.Error(), "error decoding JSON response")
+	require.Error(t, err)
+	require.Equal(t, 0, len(acc.Metrics))
+	require.Contains(t, err.Error(), "error decoding JSON response")
 }

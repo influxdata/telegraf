@@ -4,9 +4,9 @@ The Tomcat plugin collects statistics available from the tomcat manager status p
 
 See the [Tomcat documentation](https://tomcat.apache.org/tomcat-9.0-doc/manager-howto.html#Server_Status) for details of these statistics.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Gather metrics from the Tomcat server status page.
 [[inputs.tomcat]]
   ## URL of the Tomcat server status
@@ -27,7 +27,7 @@ See the [Tomcat documentation](https://tomcat.apache.org/tomcat-9.0-doc/manager-
   # insecure_skip_verify = false
 ```
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - tomcat_jvm_memory
   - free
@@ -54,7 +54,7 @@ See the [Tomcat documentation](https://tomcat.apache.org/tomcat-9.0-doc/manager-
   - bytes_received
   - bytes_sent
 
-### Tags:
+## Tags
 
 - tomcat_jvm_memorypool has the following tags:
   - name
@@ -62,9 +62,9 @@ See the [Tomcat documentation](https://tomcat.apache.org/tomcat-9.0-doc/manager-
 - tomcat_connector
   - name
 
-### Example Output:
+## Example Output
 
-```
+```shell
 tomcat_jvm_memory,host=N8-MBP free=20014352i,max=127729664i,total=41459712i 1474663361000000000
 tomcat_jvm_memorypool,host=N8-MBP,name=Eden\ Space,type=Heap\ memory committed=11534336i,init=2228224i,max=35258368i,used=1941200i 1474663361000000000
 tomcat_jvm_memorypool,host=N8-MBP,name=Survivor\ Space,type=Heap\ memory committed=1376256i,init=262144i,max=4390912i,used=1376248i 1474663361000000000

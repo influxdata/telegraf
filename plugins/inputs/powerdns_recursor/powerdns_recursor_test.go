@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var metrics = "all-outqueries\t3591637\nanswers-slow\t36451\nanswers0-1\t177297\nanswers1-10\t1209328\n" +
@@ -183,12 +183,16 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 		"x-ourtime2-4", "x-ourtime4-8", "x-ourtime8-16"}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasInt64Field("powerdns_recursor", metric), metric)
+		require.True(t, acc.HasInt64Field("powerdns_recursor", metric), metric)
 	}
 }
 
 func TestPowerdnsRecursorParseMetrics(t *testing.T) {
-	values := parseResponse(metrics)
+	p := &PowerdnsRecursor{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(metrics)
 
 	tests := []struct {
 		key   string
@@ -302,15 +306,17 @@ func TestPowerdnsRecursorParseMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		value, ok := values[test.key]
-		if !assert.Truef(t, ok, "Did not find key for metric %s in values", test.key) {
-			continue
-		}
+		require.Truef(t, ok, "Did not find key for metric %s in values", test.key)
 		require.EqualValuesf(t, value, test.value, "Metric: %s, Expected: %d, actual: %d", test.key, test.value, value)
 	}
 }
 
 func TestPowerdnsRecursorParseCorruptMetrics(t *testing.T) {
-	values := parseResponse(corruptMetrics)
+	p := &PowerdnsRecursor{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(corruptMetrics)
 
 	tests := []struct {
 		key   string
@@ -423,15 +429,17 @@ func TestPowerdnsRecursorParseCorruptMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		value, ok := values[test.key]
-		if !assert.Truef(t, ok, "Did not find key for metric %s in values", test.key) {
-			continue
-		}
+		require.Truef(t, ok, "Did not find key for metric %s in values", test.key)
 		require.EqualValuesf(t, value, test.value, "Metric: %s, Expected: %d, actual: %d", test.key, test.value, value)
 	}
 }
 
 func TestPowerdnsRecursorParseIntOverflowMetrics(t *testing.T) {
-	values := parseResponse(intOverflowMetrics)
+	p := &PowerdnsRecursor{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(intOverflowMetrics)
 
 	tests := []struct {
 		key   string
@@ -544,9 +552,7 @@ func TestPowerdnsRecursorParseIntOverflowMetrics(t *testing.T) {
 
 	for _, test := range tests {
 		value, ok := values[test.key]
-		if !assert.Truef(t, ok, "Did not find key for metric %s in values", test.key) {
-			continue
-		}
+		require.Truef(t, ok, "Did not find key for metric %s in values", test.key)
 		require.EqualValuesf(t, value, test.value, "Metric: %s, Expected: %d, actual: %d", test.key, test.value, value)
 	}
 }

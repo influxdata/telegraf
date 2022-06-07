@@ -6,9 +6,10 @@ and much more. It provides a socket for the Suricata log output to write JSON
 stats output to, and processes the incoming data to fit Telegraf's format.
 It can also report for triggered Suricata IDS/IPS alerts.
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
+# Suricata stats and alerts plugin
 [[inputs.suricata]]
   ## Data sink for Suricata stats log.
   # This is expected to be a filename of a
@@ -19,18 +20,19 @@ It can also report for triggered Suricata IDS/IPS alerts.
   # becomes "detect_alert" when delimiter is "_".
   delimiter = "_"
 
-  # Detect alert logs 
+  # Detect alert logs
   alerts = false
 ```
 
-### Metrics
+## Metrics
 
 Fields in the 'suricata' measurement follow the JSON format used by Suricata's
 stats output.
-See http://suricata.readthedocs.io/en/latest/performance/statistics.html for
+See <http://suricata.readthedocs.io/en/latest/performance/statistics.html> for
 more information.
 
 All fields for Suricata stats are numeric.
+
 - suricata
   - tags:
     - thread: `Global` for global statistics (if enabled), thread IDs (e.g. `W#03-enp0s31f6`) for thread-specific statistics
@@ -98,7 +100,7 @@ All fields for Suricata stats are numeric.
     - tcp_synack
     - ...
 
-Some fields of the Suricata alerts are strings, for example the signatures. See https://suricata.readthedocs.io/en/suricata-6.0.0/output/eve/eve-json-format.html?highlight=priority#event-type-alert for more information.
+Some fields of the Suricata alerts are strings, for example the signatures. See <https://suricata.readthedocs.io/en/suricata-6.0.0/output/eve/eve-json-format.html?highlight=priority#event-type-alert> for more information.
 
 - suricata_alert
   - fields:
@@ -112,7 +114,7 @@ Some fields of the Suricata alerts are strings, for example the signatures. See 
     - target_port
     - ...
 
-#### Suricata configuration
+### Suricata configuration
 
 Suricata needs to deliver the 'stats' event type to a given unix socket for
 this plugin to pick up. This can be done, for example, by creating an additional
@@ -128,11 +130,10 @@ output in the Suricata configuration file:
          threads: yes
 ```
 
-#### FreeBSD tuning
+### FreeBSD tuning
 
-
-Under FreeBSD it is necessary to increase the localhost buffer space to at least 16384, default is 8192 
-otherwise messages from Suricata are truncated as they exceed the default available buffer space, 
+Under FreeBSD it is necessary to increase the localhost buffer space to at least 16384, default is 8192
+otherwise messages from Suricata are truncated as they exceed the default available buffer space,
 consequently no statistics are processed by the plugin.
 
 ```text
@@ -140,8 +141,7 @@ sysctl -w net.local.stream.recvspace=16384
 sysctl -w net.local.stream.sendspace=16384
 ```
 
-
-### Example Output
+## Example Output
 
 ```text
 suricata,host=myhost,thread=FM#01 flow_mgr_rows_empty=0,flow_mgr_rows_checked=65536,flow_mgr_closed_pruned=0,flow_emerg_mode_over=0,flow_mgr_flows_timeout_inuse=0,flow_mgr_rows_skipped=65535,flow_mgr_bypassed_pruned=0,flow_mgr_flows_removed=0,flow_mgr_est_pruned=0,flow_mgr_flows_notimeout=1,flow_mgr_flows_checked=1,flow_mgr_rows_busy=0,flow_spare=10000,flow_mgr_rows_maxlen=1,flow_mgr_new_pruned=0,flow_emerg_mode_entered=0,flow_tcp_reuse=0,flow_mgr_flows_timeout=0 1568368562545197545

@@ -2,18 +2,28 @@
 
 Nginx Plus is a commercial version of the open source web server Nginx. The use this plugin you will need a license. For more information about the differences between Nginx (F/OSS) and Nginx Plus, [click here](https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/).
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Read Nginx Plus API advanced status information
 [[inputs.nginx_plus_api]]
   ## An array of Nginx API URIs to gather stats.
   urls = ["http://localhost/api"]
   # Nginx API version, default: 3
   # api_version = 3
+
+  # HTTP response timeout (default: 5s)
+  response_timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
-### Migration from Nginx Plus (Status) input plugin
+## Migration from Nginx Plus (Status) input plugin
 
 | Nginx Plus                      | Nginx Plus API                       |
 |---------------------------------|--------------------------------------|
@@ -29,7 +39,7 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
 | nginx_plus_stream_upstream_peer | nginx_plus_api_stream_upstream_peers |
 | nginx.stream.zone               | nginx_plus_api_stream_server_zones   |
 
-### Measurements by API version
+## Measurements by API version
 
 | Measurement                          | API version (api_version) |
 |--------------------------------------|---------------------------|
@@ -47,7 +57,7 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
 | nginx_plus_api_http_location_zones   | >= 5                      |
 | nginx_plus_api_resolver_zones        | >= 5                      |
 
-### Measurements & Fields:
+## Measurements & Fields
 
 - nginx_plus_api_processes
   - respawned
@@ -171,7 +181,7 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
   - timedout
   - unknown
 
-### Tags:
+## Tags
 
 - nginx_plus_api_processes, nginx_plus_api_connections, nginx_plus_api_ssl, nginx_plus_api_http_requests
   - source
@@ -198,9 +208,10 @@ Nginx Plus is a commercial version of the open source web server Nginx. The use 
   - source
   - port
 
-### Example Output:
+## Example Output
 
 Using this configuration:
+
 ```toml
 [[inputs.nginx_plus_api]]
   ## An array of Nginx Plus API URIs to gather stats.
@@ -208,12 +219,14 @@ Using this configuration:
 ```
 
 When run with:
+
 ```sh
 ./telegraf -config telegraf.conf -input-filter nginx_plus_api -test
 ```
 
 It produces:
-```
+
+```text
 > nginx_plus_api_processes,port=80,source=demo.nginx.com respawned=0i 1570696321000000000
 > nginx_plus_api_connections,port=80,source=demo.nginx.com accepted=68998606i,active=7i,dropped=0i,idle=57i 1570696322000000000
 > nginx_plus_api_ssl,port=80,source=demo.nginx.com handshakes=9398978i,handshakes_failed=289353i,session_reuses=1004389i 1570696322000000000

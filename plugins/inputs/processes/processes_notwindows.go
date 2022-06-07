@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -151,7 +152,7 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 
 		stats := bytes.Fields(data)
 		if len(stats) < 3 {
-			return fmt.Errorf("Something is terribly wrong with %s", filename)
+			return fmt.Errorf("something is terribly wrong with %s", filename)
 		}
 		switch stats[0][0] {
 		case 'R':

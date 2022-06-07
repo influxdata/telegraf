@@ -1,0 +1,2 @@
+26 1 259:4 / / rw,relatime shared:1 - ext4 /dev/nvme0n1p4 rw
+39 26 0:32 / /tmp rw,nosuid,nodev shared:17 - tmpfs tmpfs rw,size=16427752k,nr_inodes=409600,inode64

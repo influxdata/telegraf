@@ -1,10 +1,12 @@
 # OpenTelemetry Output Plugin
 
-This plugin sends metrics to [OpenTelemetry](https://opentelemetry.io) servers and agents via gRPC.
+This plugin sends metrics to [OpenTelemetry](https://opentelemetry.io) servers
+and agents via gRPC.
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
+# Send OpenTelemetry metrics over gRPC
 [[outputs.opentelemetry]]
   ## Override the default (localhost:4317) OpenTelemetry gRPC service
   ## address:port
@@ -39,21 +41,28 @@ This plugin sends metrics to [OpenTelemetry](https://opentelemetry.io) servers a
   # key1 = "value1"
 ```
 
-#### Schema
+### Schema
 
-The InfluxDB->OpenTelemetry conversion [schema](https://github.com/influxdata/influxdb-observability/blob/main/docs/index.md)
-and [implementation](https://github.com/influxdata/influxdb-observability/tree/main/influx2otel)
-are hosted at https://github.com/influxdata/influxdb-observability .
+The InfluxDB->OpenTelemetry conversion [schema][] and [implementation][] are
+hosted on [GitHub][repo].
 
-For metrics, two input schemata exist.
-Line protocol with measurement name `prometheus` is assumed to have a schema
-matching [Prometheus input plugin](../../inputs/prometheus/README.md) when `metric_version = 2`.
-Line protocol with other measurement names is assumed to have schema
-matching [Prometheus input plugin](../../inputs/prometheus/README.md) when `metric_version = 1`.
-If both schema assumptions fail, then the line protocol data is interpreted as:
+For metrics, two input schemata exist.  Line protocol with measurement name
+`prometheus` is assumed to have a schema matching [Prometheus input
+plugin](../../inputs/prometheus/README.md) when `metric_version = 2`.  Line
+protocol with other measurement names is assumed to have schema matching
+[Prometheus input plugin](../../inputs/prometheus/README.md) when
+`metric_version = 1`.  If both schema assumptions fail, then the line protocol
+data is interpreted as:
+
 - Metric type = gauge (or counter, if indicated by the input plugin)
 - Metric name = `[measurement]_[field key]`
 - Metric value = line protocol field value, cast to float
 - Metric labels = line protocol tags
 
 Also see the [OpenTelemetry input plugin](../../inputs/opentelemetry/README.md).
+
+[schema]: https://github.com/influxdata/influxdb-observability/blob/main/docs/index.md
+
+[implementation]: https://github.com/influxdata/influxdb-observability/tree/main/influx2otel
+
+[repo]: https://github.com/influxdata/influxdb-observability

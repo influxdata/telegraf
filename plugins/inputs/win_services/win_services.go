@@ -1,18 +1,25 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build windows
 // +build windows
 
 package win_services
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
+
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type ServiceErr struct {
 	Message string
@@ -79,23 +86,13 @@ func (rmr *MgProvider) Connect() (WinServiceManager, error) {
 	}
 }
 
-var sampleConfig = `
-  ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted.
-  service_names = [
-    "LanmanServer",
-	"TermService",
-	"Win*",
-  ]
-`
-
-var description = "Input plugin to report Windows services info."
-
 //WinServices is an implementation if telegraf.Input interface, providing info about Windows Services
 type WinServices struct {
 	Log telegraf.Logger
 
-	ServiceNames []string `toml:"service_names"`
-	mgrProvider  ManagerProvider
+	ServiceNames         []string `toml:"service_names"`
+	ServiceNamesExcluded []string `toml:"excluded_service_names"`
+	mgrProvider          ManagerProvider
 
 	servicesFilter filter.Filter
 }
@@ -107,22 +104,18 @@ type ServiceInfo struct {
 	StartUpMode int
 }
 
+func (*WinServices) SampleConfig() string {
+	return sampleConfig
+}
+
 func (m *WinServices) Init() error {
 	var err error
-	m.servicesFilter, err = filter.NewIncludeExcludeFilter(m.ServiceNames, nil)
+	m.servicesFilter, err = filter.NewIncludeExcludeFilter(m.ServiceNames, m.ServiceNamesExcluded)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (m *WinServices) Description() string {
-	return description
-}
-
-func (m *WinServices) SampleConfig() string {
-	return sampleConfig
 }
 
 func (m *WinServices) Gather(acc telegraf.Accumulator) error {

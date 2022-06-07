@@ -65,7 +65,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var batch bytes.Buffer
 	for _, metric := range metrics {
-		batch.Write(s.createObject(metric))
+		batch.Write(s.createObject(metric)) //nolint:revive // from buffer.go: "err is always nil"
 	}
 	return batch.Bytes(), nil
 }
@@ -83,31 +83,27 @@ func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 
 		switch metricsFormat {
 		case Carbon2FormatFieldSeparate:
-			m.WriteString(serializeMetricFieldSeparate(
-				name, fieldName,
-			))
+			m.WriteString(serializeMetricFieldSeparate(name, fieldName)) //nolint:revive // from buffer.go: "err is always nil"
 
 		case Carbon2FormatMetricIncludesField:
-			m.WriteString(serializeMetricIncludeField(
-				name, fieldName,
-			))
+			m.WriteString(serializeMetricIncludeField(name, fieldName)) //nolint:revive // from buffer.go: "err is always nil"
 		}
 
 		for _, tag := range metric.TagList() {
-			m.WriteString(strings.Replace(tag.Key, " ", "_", -1))
-			m.WriteString("=")
+			m.WriteString(strings.ReplaceAll(tag.Key, " ", "_")) //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString("=")                                   //nolint:revive // from buffer.go: "err is always nil"
 			value := tag.Value
 			if len(value) == 0 {
 				value = "null"
 			}
-			m.WriteString(strings.Replace(value, " ", "_", -1))
-			m.WriteString(" ")
+			m.WriteString(strings.ReplaceAll(value, " ", "_")) //nolint:revive // from buffer.go: "err is always nil"
+			m.WriteString(" ")                                 //nolint:revive // from buffer.go: "err is always nil"
 		}
-		m.WriteString(" ")
-		m.WriteString(formatValue(fieldValue))
-		m.WriteString(" ")
-		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10))
-		m.WriteString("\n")
+		m.WriteString(" ")                                         //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString(formatValue(fieldValue))                     //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString(" ")                                         //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString(strconv.FormatInt(metric.Time().Unix(), 10)) //nolint:revive // from buffer.go: "err is always nil"
+		m.WriteString("\n")                                        //nolint:revive // from buffer.go: "err is always nil"
 	}
 	return m.Bytes()
 }
@@ -126,15 +122,15 @@ func (s *Serializer) IsMetricsFormatUnset() bool {
 
 func serializeMetricFieldSeparate(name, fieldName string) string {
 	return fmt.Sprintf("metric=%s field=%s ",
-		strings.Replace(name, " ", "_", -1),
-		strings.Replace(fieldName, " ", "_", -1),
+		strings.ReplaceAll(name, " ", "_"),
+		strings.ReplaceAll(fieldName, " ", "_"),
 	)
 }
 
 func serializeMetricIncludeField(name, fieldName string) string {
 	return fmt.Sprintf("metric=%s_%s ",
-		strings.Replace(name, " ", "_", -1),
-		strings.Replace(fieldName, " ", "_", -1),
+		strings.ReplaceAll(name, " ", "_"),
+		strings.ReplaceAll(fieldName, " ", "_"),
 	)
 }
 

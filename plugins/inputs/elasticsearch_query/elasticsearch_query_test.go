@@ -484,6 +484,23 @@ var testEsAggregationData = []esAggregationQueryTest{
 		false,
 		false,
 	},
+	{
+		"query 14 - non-existing custom date/time format",
+		esAggregation{
+			Index:           testindex,
+			MeasurementName: "measurement14",
+			DateField:       "@timestamp",
+			DateFieldFormat: "yyyy",
+			QueryPeriod:     queryPeriod,
+			Tags:            []string{},
+			mapMetricFields: map[string]string{},
+		},
+		nil,
+		nil,
+		false,
+		false,
+		true,
+	},
 }
 
 func setupIntegrationTest() error {
@@ -529,9 +546,9 @@ func setupIntegrationTest() error {
 		logline := nginxlog{
 			IPaddress:    parts[0],
 			Timestamp:    time.Now().UTC(),
-			Method:       strings.Replace(parts[5], `"`, "", -1),
+			Method:       strings.ReplaceAll(parts[5], `"`, ""),
 			URI:          parts[6],
-			Httpversion:  strings.Replace(parts[7], `"`, "", -1),
+			Httpversion:  strings.ReplaceAll(parts[7], `"`, ""),
 			Response:     parts[8],
 			Size:         float64(size),
 			ResponseTime: float64(responseTime),
@@ -551,8 +568,13 @@ func setupIntegrationTest() error {
 		return err
 	}
 
-	// wait 5s (default) for Elasticsearch to index, so results are consistent
-	time.Sleep(time.Second * 5)
+	// force elastic to refresh indexes to get new batch data
+	ctx := context.Background()
+	_, err = e.esClient.Refresh().Do(ctx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

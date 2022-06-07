@@ -1,60 +1,136 @@
 # SNMP Legacy Input Plugin
 
+## Deprecated in version 1.0. Use [SNMP input plugin][]
+
 The SNMP input plugin gathers metrics from SNMP agents
 
-### Configuration:
-
-
-#### Very simple example
+## Configuration
 
 In this example, the plugin will gather value of OIDS:
 
- - `.1.3.6.1.2.1.2.2.1.4.1`
+- `.1.3.6.1.2.1.2.2.1.4.1`
 
-```toml
-# Very Simple Example
-[[inputs.snmp]]
-
+```toml @sample.conf
+# DEPRECATED! PLEASE USE inputs.snmp INSTEAD.
+[[inputs.snmp_legacy]]
+  ## Use 'oids.txt' file to translate oids to names
+  ## To generate 'oids.txt' you need to run:
+  ##   snmptranslate -m all -Tz -On | sed -e 's/"//g' > /tmp/oids.txt
+  ## Or if you have an other MIB folder with custom MIBs
+  ##   snmptranslate -M /mycustommibfolder -Tz -On -m all | sed -e 's/"//g' > oids.txt
+  snmptranslate_file = "/tmp/oids.txt"
   [[inputs.snmp.host]]
-    address = "127.0.0.1:161"
+    address = "192.168.2.2:161"
     # SNMP community
     community = "public" # default public
     # SNMP version (1, 2 or 3)
     # Version 3 not supported yet
     version = 2 # default 2
+    # SNMP response timeout
+    timeout = 2.0 # default 2.0
+    # SNMP request retries
+    retries = 2 # default 2
+    # Which get/bulk do you want to collect for this host
+    collect = ["mybulk", "sysservices", "sysdescr"]
     # Simple list of OIDs to get, in addition to "collect"
-    get_oids = [".1.3.6.1.2.1.2.2.1.4.1"]
+    get_oids = []
+  [[inputs.snmp.host]]
+    address = "192.168.2.3:161"
+    community = "public"
+    version = 2
+    timeout = 2.0
+    retries = 2
+    collect = ["mybulk"]
+    get_oids = [
+        "ifNumber",
+        ".1.3.6.1.2.1.1.3.0",
+    ]
+  [[inputs.snmp.get]]
+    name = "ifnumber"
+    oid = "ifNumber"
+  [[inputs.snmp.get]]
+    name = "interface_speed"
+    oid = "ifSpeed"
+    instance = "0"
+  [[inputs.snmp.get]]
+    name = "sysuptime"
+    oid = ".1.3.6.1.2.1.1.3.0"
+    unit = "second"
+  [[inputs.snmp.bulk]]
+    name = "mybulk"
+    max_repetition = 127
+    oid = ".1.3.6.1.2.1.1"
+  [[inputs.snmp.bulk]]
+    name = "ifoutoctets"
+    max_repetition = 127
+    oid = "ifOutOctets"
+  [[inputs.snmp.host]]
+    address = "192.168.2.13:161"
+    #address = "127.0.0.1:161"
+    community = "public"
+    version = 2
+    timeout = 2.0
+    retries = 2
+    #collect = ["mybulk", "sysservices", "sysdescr", "systype"]
+    collect = ["sysuptime" ]
+    [[inputs.snmp.host.table]]
+      name = "iftable3"
+      include_instances = ["enp5s0", "eth1"]
+  # SNMP TABLEs
+  # table without mapping neither subtables
+  [[inputs.snmp.table]]
+    name = "iftable1"
+    oid = ".1.3.6.1.2.1.31.1.1.1"
+  # table without mapping but with subtables
+  [[inputs.snmp.table]]
+    name = "iftable2"
+    oid = ".1.3.6.1.2.1.31.1.1.1"
+    sub_tables = [".1.3.6.1.2.1.2.2.1.13"]
+  # table with mapping but without subtables
+  [[inputs.snmp.table]]
+    name = "iftable3"
+    oid = ".1.3.6.1.2.1.31.1.1.1"
+    # if empty. get all instances
+    mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
+    # if empty, get all subtables
+  # table with both mapping and subtables
+  [[inputs.snmp.table]]
+    name = "iftable4"
+    oid = ".1.3.6.1.2.1.31.1.1.1"
+    # if empty get all instances
+    mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
+    # if empty get all subtables
+    # sub_tables could be not "real subtables"
+    sub_tables=[".1.3.6.1.2.1.2.2.1.13", "bytes_recv", "bytes_send"]
 ```
 
-
-#### Simple example
+### Simple example
 
 In this example, Telegraf gathers value of OIDS:
 
- - named **ifnumber**
- - named **interface_speed**
+- named **ifnumber**
+- named **interface_speed**
 
 With **inputs.snmp.get** section the plugin gets the oid number:
 
- - **ifnumber** => `.1.3.6.1.2.1.2.1.0`
- - **interface_speed** => *ifSpeed*
+- **ifnumber** => `.1.3.6.1.2.1.2.1.0`
+- **interface_speed** => *ifSpeed*
 
 As you can see *ifSpeed* is not a valid OID. In order to get
 the valid OID, the plugin uses `snmptranslate_file` to match the OID:
 
- - **ifnumber** => `.1.3.6.1.2.1.2.1.0`
- - **interface_speed** => *ifSpeed* => `.1.3.6.1.2.1.2.2.1.5`
+- **ifnumber** => `.1.3.6.1.2.1.2.1.0`
+- **interface_speed** => *ifSpeed* => `.1.3.6.1.2.1.2.2.1.5`
 
 Also as the plugin will append `instance` to the corresponding OID:
 
- - **ifnumber** => `.1.3.6.1.2.1.2.1.0`
- - **interface_speed** => *ifSpeed* => `.1.3.6.1.2.1.2.2.1.5.1`
+- **ifnumber** => `.1.3.6.1.2.1.2.1.0`
+- **interface_speed** => *ifSpeed* => `.1.3.6.1.2.1.2.2.1.5.1`
 
 In this example, the plugin will gather value of OIDS:
 
 - `.1.3.6.1.2.1.2.1.0`
 - `.1.3.6.1.2.1.2.2.1.5.1`
-
 
 ```toml
 # Simple example
@@ -86,36 +162,35 @@ In this example, the plugin will gather value of OIDS:
 
 ```
 
-
-#### Simple bulk example
+### Simple bulk example
 
 In this example, Telegraf gathers value of OIDS:
 
- - named **ifnumber**
- - named **interface_speed**
- - named **if_out_octets**
+- named **ifnumber**
+- named **interface_speed**
+- named **if_out_octets**
 
 With **inputs.snmp.get** section the plugin gets oid number:
 
- - **ifnumber** => `.1.3.6.1.2.1.2.1.0`
- - **interface_speed** => *ifSpeed*
+- **ifnumber** => `.1.3.6.1.2.1.2.1.0`
+- **interface_speed** => *ifSpeed*
 
 With **inputs.snmp.bulk** section the plugin gets the oid number:
 
- - **if_out_octets** => *ifOutOctets*
+- **if_out_octets** => *ifOutOctets*
 
 As you can see *ifSpeed* and *ifOutOctets* are not a valid OID.
 In order to get the valid OID, the plugin uses `snmptranslate_file`
 to match the OID:
 
- - **ifnumber** => `.1.3.6.1.2.1.2.1.0`
- - **interface_speed** => *ifSpeed* => `.1.3.6.1.2.1.2.2.1.5`
- - **if_out_octets** => *ifOutOctets*  => `.1.3.6.1.2.1.2.2.1.16`
+- **ifnumber** => `.1.3.6.1.2.1.2.1.0`
+- **interface_speed** => *ifSpeed* => `.1.3.6.1.2.1.2.2.1.5`
+- **if_out_octets** => *ifOutOctets*  => `.1.3.6.1.2.1.2.2.1.16`
 
 Also, the plugin will append `instance` to the corresponding OID:
 
- - **ifnumber** => `.1.3.6.1.2.1.2.1.0`
- - **interface_speed** => *ifSpeed* => `.1.3.6.1.2.1.2.2.1.5.1`
+- **ifnumber** => `.1.3.6.1.2.1.2.1.0`
+- **interface_speed** => *ifSpeed* => `.1.3.6.1.2.1.2.2.1.5.1`
 
 And **if_out_octets** is a bulk request, the plugin will gathers all
 OIDS in the table.
@@ -137,7 +212,6 @@ In this example, the plugin will gather value of OIDS:
 - `.1.3.6.1.2.1.2.2.1.16.4`
 - `.1.3.6.1.2.1.2.2.1.16.5`
 - `...`
-
 
 ```toml
 # Simple bulk example
@@ -172,8 +246,7 @@ In this example, the plugin will gather value of OIDS:
     oid = "ifOutOctets"
 ```
 
-
-#### Table example
+### Table example
 
 In this example, we remove collect attribute to the host section,
 but you can still use it in combination of the following part.
@@ -183,11 +256,11 @@ other configuration
 
 Telegraf gathers value of OIDS of the table:
 
- - named **iftable1**
+- named **iftable1**
 
 With **inputs.snmp.table** section the plugin gets oid number:
 
- - **iftable1** => `.1.3.6.1.2.1.31.1.1.1`
+- **iftable1** => `.1.3.6.1.2.1.31.1.1.1`
 
 Also **iftable1** is a table, the plugin will gathers all
 OIDS in the table and in the subtables
@@ -237,8 +310,7 @@ OIDS in the table and in the subtables
     oid = ".1.3.6.1.2.1.31.1.1.1"
 ```
 
-
-#### Table with subtable example
+### Table with subtable example
 
 In this example, we remove collect attribute to the host section,
 but you can still use it in combination of the following part.
@@ -248,12 +320,12 @@ other configuration
 
 Telegraf gathers value of OIDS of the table:
 
- - named **iftable2**
+- named **iftable2**
 
 With **inputs.snmp.table** section *AND* **sub_tables** attribute,
 the plugin will get OIDS from subtables:
 
- - **iftable2** => `.1.3.6.1.2.1.2.2.1.13`
+- **iftable2** => `.1.3.6.1.2.1.2.2.1.13`
 
 Also **iftable2** is a table, the plugin will gathers all
 OIDS in subtables:
@@ -263,7 +335,6 @@ OIDS in subtables:
 - `.1.3.6.1.2.1.2.2.1.13.3`
 - `.1.3.6.1.2.1.2.2.1.13.4`
 - `.1.3.6.1.2.1.2.2.1.13....`
-
 
 ```toml
 # Table with subtable example
@@ -293,19 +364,18 @@ OIDS in subtables:
     # oid attribute is useless
 ```
 
-
-#### Table with mapping example
+### Table with mapping example
 
 In this example, we remove collect attribute to the host section,
 but you can still use it in combination of the following part.
 
 Telegraf gathers value of OIDS of the table:
 
- - named **iftable3**
+- named **iftable3**
 
 With **inputs.snmp.table** section the plugin gets oid number:
 
- - **iftable3** => `.1.3.6.1.2.1.31.1.1.1`
+- **iftable3** => `.1.3.6.1.2.1.31.1.1.1`
 
 Also **iftable2** is a table, the plugin will gathers all
 OIDS in the table and in the subtables
@@ -332,11 +402,12 @@ will be gathered; As you see, there is an other attribute, `mapping_table`.
 `include_instances` and `mapping_table` permit to build a hash table
 to filter only OIDS you want.
 Let's say, we have the following data on SNMP server:
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.1` has as value: `enp5s0`
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.2` has as value: `enp5s1`
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.3` has as value: `enp5s2`
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.4` has as value: `eth0`
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.5` has as value: `eth1`
+
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.1` has as value: `enp5s0`
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.2` has as value: `enp5s1`
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.3` has as value: `enp5s2`
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.4` has as value: `eth0`
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.5` has as value: `eth1`
 
 The plugin will build the following hash table:
 
@@ -397,20 +468,19 @@ Note: the plugin will add instance name as tag *instance*
     # if empty, get all subtables
 ```
 
-
-#### Table with both mapping and subtable example
+### Table with both mapping and subtable example
 
 In this example, we remove collect attribute to the host section,
 but you can still use it in combination of the following part.
 
 Telegraf gathers value of OIDS of the table:
 
- - named **iftable4**
+- named **iftable4**
 
 With **inputs.snmp.table** section *AND* **sub_tables** attribute,
 the plugin will get OIDS from subtables:
 
- - **iftable4** => `.1.3.6.1.2.1.31.1.1.1`
+- **iftable4** => `.1.3.6.1.2.1.31.1.1.1`
 
 Also **iftable2** is a table, the plugin will gathers all
 OIDS in the table and in the subtables
@@ -431,11 +501,12 @@ will be gathered; As you see, there is an other attribute, `mapping_table`.
 `include_instances` and `mapping_table` permit to build a hash table
 to filter only OIDS you want.
 Let's say, we have the following data on SNMP server:
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.1` has as value: `enp5s0`
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.2` has as value: `enp5s1`
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.3` has as value: `enp5s2`
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.4` has as value: `eth0`
- - OID: `.1.3.6.1.2.1.31.1.1.1.1.5` has as value: `eth1`
+
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.1` has as value: `enp5s0`
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.2` has as value: `enp5s1`
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.3` has as value: `enp5s2`
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.4` has as value: `eth0`
+- OID: `.1.3.6.1.2.1.31.1.1.1.1.5` has as value: `eth1`
 
 The plugin will build the following hash table:
 
@@ -456,8 +527,6 @@ the following OIDS:
 - `.1.3.6.1.2.1.31.1.1.1.10.5`
 
 Note: the plugin will add instance name as tag *instance*
-
-
 
 ```toml
 # Table with both mapping and subtable example
@@ -486,7 +555,7 @@ Note: the plugin will add instance name as tag *instance*
     # if empty get all instances
     mapping_table = ".1.3.6.1.2.1.31.1.1.1.1"
     # if empty get all subtables
-    # sub_tables could be not "real subtables"  
+    # sub_tables could be not "real subtables"
     sub_tables=[".1.3.6.1.2.1.2.2.1.13", "bytes_recv", "bytes_send"]
     # note
     # oid attribute is useless
@@ -503,7 +572,7 @@ Note: the plugin will add instance name as tag *instance*
     unit = "octets"
 ```
 
-#### Configuration notes
+### Configuration notes
 
 - In **inputs.snmp.table** section, the `oid` attribute is useless if
   the `sub_tables` attributes is defined
@@ -511,39 +580,41 @@ Note: the plugin will add instance name as tag *instance*
 - In **inputs.snmp.subtable** section, you can put a name from `snmptranslate_file`
   as `oid` attribute instead of a valid OID
 
-### Measurements & Fields:
+## Measurements & Fields
 
 With the last example (Table with both mapping and subtable example):
 
 - ifHCOutOctets
-    - ifHCOutOctets
+  - ifHCOutOctets
 - ifInDiscards
-    - ifInDiscards
+  - ifInDiscards
 - ifHCInOctets
-    - ifHCInOctets
+  - ifHCInOctets
 
-### Tags:
+## Tags
 
 With the last example (Table with both mapping and subtable example):
 
 - ifHCOutOctets
-    - host
-    - instance
-    - unit
+  - host
+  - instance
+  - unit
 - ifInDiscards
-    - host
-    - instance
+  - host
+  - instance
 - ifHCInOctets
-    - host
-    - instance
-    - unit
+  - host
+  - instance
+  - unit
 
-### Example Output:
+## Example Output
 
 With the last example (Table with both mapping and subtable example):
 
-```
+```shell
 ifHCOutOctets,host=127.0.0.1,instance=enp5s0,unit=octets ifHCOutOctets=10565628i 1456878706044462901
 ifInDiscards,host=127.0.0.1,instance=enp5s0 ifInDiscards=0i 1456878706044510264
 ifHCInOctets,host=127.0.0.1,instance=enp5s0,unit=octets ifHCInOctets=76351777i 1456878706044531312
 ```
+
+[SNMP input plugin]: /plugins/inputs/snmp

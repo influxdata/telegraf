@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package internal
 
 import (
+	_ "embed"
 	"runtime"
 	"strings"
 
@@ -9,6 +11,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Self struct {
 	CollectMemstats bool
@@ -20,16 +26,7 @@ func NewSelf() telegraf.Input {
 	}
 }
 
-var sampleConfig = `
-  ## If true, collect telegraf memory stats.
-  # collect_memstats = true
-`
-
-func (s *Self) Description() string {
-	return "Collect statistics about itself"
-}
-
-func (s *Self) SampleConfig() string {
+func (*Self) SampleConfig() string {
 	return sampleConfig
 }
 

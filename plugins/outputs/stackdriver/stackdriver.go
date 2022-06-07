@@ -1,33 +1,41 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package stackdriver
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"hash/fnv"
-	"log"
 	"path"
 	"sort"
 	"strings"
 
-	monitoring "cloud.google.com/go/monitoring/apiv3" // Imports the Stackdriver Monitoring client package.
-	googlepb "github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	Project        string
-	Namespace      string
+	Project        string            `toml:"project"`
+	Namespace      string            `toml:"namespace"`
 	ResourceType   string            `toml:"resource_type"`
 	ResourceLabels map[string]string `toml:"resource_labels"`
+	Log            telegraf.Logger   `toml:"-"`
 
-	client *monitoring.MetricClient
+	client       *monitoring.MetricClient
+	counterCache *counterCache
 }
 
 const (
@@ -41,32 +49,17 @@ const (
 	// to string length for label value.
 	QuotaStringLengthForLabelValue = 1024
 
-	// StartTime for cumulative metrics.
-	StartTime = int64(1)
 	// MaxInt is the max int64 value.
 	MaxInt = int(^uint(0) >> 1)
 
-	errStringPointsOutOfOrder  = "One or more of the points specified had an older end time than the most recent point"
-	errStringPointsTooOld      = "Data points cannot be written more than 24h in the past"
-	errStringPointsTooFrequent = "One or more points were written more frequently than the maximum sampling period configured for the metric"
+	errStringPointsOutOfOrder  = "one or more of the points specified had an older end time than the most recent point"
+	errStringPointsTooOld      = "data points cannot be written more than 24h in the past"
+	errStringPointsTooFrequent = "one or more points were written more frequently than the maximum sampling period configured for the metric"
 )
 
-var sampleConfig = `
-  ## GCP Project
-  project = "erudite-bloom-151019"
-
-  ## The namespace for the metric descriptor
-  namespace = "telegraf"
-
-  ## Custom resource type
-  # resource_type = "generic_node"
-
-  ## Additional resource labels
-  # [outputs.stackdriver.resource_labels]
-  #   node_id = "$HOSTNAME"
-  #   namespace = "myapp"
-  #   location = "eu-north0"
-`
+func (*Stackdriver) SampleConfig() string {
+	return sampleConfig
+}
 
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {
@@ -84,6 +77,10 @@ func (s *Stackdriver) Connect() error {
 
 	if s.ResourceLabels == nil {
 		s.ResourceLabels = make(map[string]string, 1)
+	}
+
+	if s.counterCache == nil {
+		s.counterCache = NewCounterCache(s.Log)
 	}
 
 	s.ResourceLabels["project_id"] = s.Project
@@ -118,15 +115,15 @@ type timeSeriesBuckets map[uint64][]*monitoringpb.TimeSeries
 
 func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f *telegraf.Field, ts *monitoringpb.TimeSeries) {
 	h := fnv.New64a()
-	h.Write([]byte(m.Name()))
-	h.Write([]byte{'\n'})
-	h.Write([]byte(f.Key))
-	h.Write([]byte{'\n'})
+	h.Write([]byte(m.Name())) //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte{'\n'})     //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte(f.Key))    //nolint:revive // from hash.go: "It never returns an error"
+	h.Write([]byte{'\n'})     //nolint:revive // from hash.go: "It never returns an error"
 	for key, value := range m.Tags() {
-		h.Write([]byte(key))
-		h.Write([]byte{'\n'})
-		h.Write([]byte(value))
-		h.Write([]byte{'\n'})
+		h.Write([]byte(key))   //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte{'\n'})  //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte(value)) //nolint:revive // from hash.go: "It never returns an error"
+		h.Write([]byte{'\n'})  //nolint:revive // from hash.go: "It never returns an error"
 	}
 	k := h.Sum64()
 
@@ -145,7 +142,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		for _, f := range m.FieldList() {
 			value, err := getStackdriverTypedValue(f.Value)
 			if err != nil {
-				log.Printf("E! [outputs.stackdriver] get type failed: %s", err)
+				s.Log.Errorf("Get type failed: %q", err)
 				continue
 			}
 
@@ -155,13 +152,15 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 			metricKind, err := getStackdriverMetricKind(m.Type())
 			if err != nil {
-				log.Printf("E! [outputs.stackdriver] get metric failed: %s", err)
+				s.Log.Errorf("Get kind for metric %q (%T) field %q failed: %s", m.Name(), m.Type(), f, err)
 				continue
 			}
 
-			timeInterval, err := getStackdriverTimeInterval(metricKind, StartTime, m.Time().Unix())
+			startTime, endTime := getStackdriverIntervalEndpoints(metricKind, value, m, f, s.counterCache)
+
+			timeInterval, err := getStackdriverTimeInterval(metricKind, startTime, endTime)
 			if err != nil {
-				log.Printf("E! [outputs.stackdriver] get time interval failed: %s", err)
+				s.Log.Errorf("Get time interval failed: %s", err)
 				continue
 			}
 
@@ -175,7 +174,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 			timeSeries := &monitoringpb.TimeSeries{
 				Metric: &metricpb.Metric{
 					Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), f.Key),
-					Labels: getStackdriverLabels(m.TagList()),
+					Labels: s.getStackdriverLabels(m.TagList()),
 				},
 				MetricKind: metricKind,
 				Resource: &monitoredrespb.MonitoredResource{
@@ -218,7 +217,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 		// Prepare time series request.
 		timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
-			Name:       monitoring.MetricProjectPath(s.Project),
+			Name:       fmt.Sprintf("projects/%s", s.Project),
 			TimeSeries: timeSeries,
 		}
 
@@ -228,10 +227,10 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 			if strings.Contains(err.Error(), errStringPointsOutOfOrder) ||
 				strings.Contains(err.Error(), errStringPointsTooOld) ||
 				strings.Contains(err.Error(), errStringPointsTooFrequent) {
-				log.Printf("D! [outputs.stackdriver] unable to write to Stackdriver: %s", err)
+				s.Log.Debugf("Unable to write to Stackdriver: %s", err)
 				return nil
 			}
-			log.Printf("E! [outputs.stackdriver] unable to write to Stackdriver: %s", err)
+			s.Log.Errorf("Unable to write to Stackdriver: %s", err)
 			return err
 		}
 	}
@@ -239,26 +238,38 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+func getStackdriverIntervalEndpoints(
+	kind metricpb.MetricDescriptor_MetricKind,
+	value *monitoringpb.TypedValue,
+	m telegraf.Metric,
+	f *telegraf.Field,
+	cc *counterCache,
+) (*timestamppb.Timestamp, *timestamppb.Timestamp) {
+	endTime := timestamppb.New(m.Time())
+	var startTime *timestamppb.Timestamp
+	if kind == metricpb.MetricDescriptor_CUMULATIVE {
+		// Interval starts for stackdriver CUMULATIVE metrics must reset any time
+		// the counter resets, so we keep a cache of the start times and last
+		// observed values for each counter in the batch.
+		startTime = cc.GetStartTime(GetCounterCacheKey(m, f), value, endTime)
+	}
+	return startTime, endTime
+}
+
 func getStackdriverTimeInterval(
 	m metricpb.MetricDescriptor_MetricKind,
-	start int64,
-	end int64,
+	startTime *timestamppb.Timestamp,
+	endTime *timestamppb.Timestamp,
 ) (*monitoringpb.TimeInterval, error) {
 	switch m {
 	case metricpb.MetricDescriptor_GAUGE:
 		return &monitoringpb.TimeInterval{
-			EndTime: &googlepb.Timestamp{
-				Seconds: end,
-			},
+			EndTime: endTime,
 		}, nil
 	case metricpb.MetricDescriptor_CUMULATIVE:
 		return &monitoringpb.TimeInterval{
-			StartTime: &googlepb.Timestamp{
-				Seconds: start,
-			},
-			EndTime: &googlepb.Timestamp{
-				Seconds: end,
-			},
+			StartTime: startTime,
+			EndTime:   endTime,
 		}, nil
 	case metricpb.MetricDescriptor_DELTA, metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED:
 		fallthrough
@@ -278,7 +289,7 @@ func getStackdriverMetricKind(vt telegraf.ValueType) (metricpb.MetricDescriptor_
 	case telegraf.Histogram, telegraf.Summary:
 		fallthrough
 	default:
-		return metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("unsupported telegraf value type")
+		return metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("unsupported telegraf value type: %T", vt)
 	}
 }
 
@@ -306,7 +317,7 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	case float64:
 		return &monitoringpb.TypedValue{
 			Value: &monitoringpb.TypedValue_DoubleValue{
-				DoubleValue: float64(v),
+				DoubleValue: v,
 			},
 		}, nil
 	case bool:
@@ -323,39 +334,26 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	}
 }
 
-func getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
+func (s *Stackdriver) getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
 	labels := make(map[string]string)
 	for _, t := range tags {
 		labels[t.Key] = t.Value
 	}
 	for k, v := range labels {
 		if len(k) > QuotaStringLengthForLabelKey {
-			log.Printf(
-				"W! [outputs.stackdriver] removing tag [%s] key exceeds string length for label key [%d]",
-				k,
-				QuotaStringLengthForLabelKey,
-			)
+			s.Log.Warnf("Removing tag %q key exceeds string length for label key [%d]", k, QuotaStringLengthForLabelKey)
 			delete(labels, k)
 			continue
 		}
 		if len(v) > QuotaStringLengthForLabelValue {
-			log.Printf(
-				"W! [outputs.stackdriver] removing tag [%s] value exceeds string length for label value [%d]",
-				k,
-				QuotaStringLengthForLabelValue,
-			)
+			s.Log.Warnf("Removing tag %q value exceeds string length for label value [%d]", k, QuotaStringLengthForLabelValue)
 			delete(labels, k)
 			continue
 		}
 	}
 	if len(labels) > QuotaLabelsPerMetricDescriptor {
 		excess := len(labels) - QuotaLabelsPerMetricDescriptor
-		log.Printf(
-			"W! [outputs.stackdriver] tag count [%d] exceeds quota for stackdriver labels [%d] removing [%d] random tags",
-			len(labels),
-			QuotaLabelsPerMetricDescriptor,
-			excess,
-		)
+		s.Log.Warnf("Tag count [%d] exceeds quota for stackdriver labels [%d] removing [%d] random tags", len(labels), QuotaLabelsPerMetricDescriptor, excess)
 		for k := range labels {
 			if excess == 0 {
 				break
@@ -371,16 +369,6 @@ func getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
 // Close will terminate the session to the backend, returning error if an issue arises.
 func (s *Stackdriver) Close() error {
 	return s.client.Close()
-}
-
-// SampleConfig returns the formatted sample configuration for the plugin.
-func (s *Stackdriver) SampleConfig() string {
-	return sampleConfig
-}
-
-// Description returns the human-readable function definition of the plugin.
-func (s *Stackdriver) Description() string {
-	return "Configuration for Google Cloud Stackdriver to send metrics to"
 }
 
 func newStackdriver() *Stackdriver {

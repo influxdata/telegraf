@@ -51,6 +51,19 @@ func TestDuration(t *testing.T) {
 	d = config.Duration(0)
 	require.NoError(t, d.UnmarshalTOML([]byte(`1.5`)))
 	require.Equal(t, time.Second, time.Duration(d))
+
+	d = config.Duration(0)
+	require.NoError(t, d.UnmarshalTOML([]byte(``)))
+	require.Equal(t, 0*time.Second, time.Duration(d))
+
+	d = config.Duration(0)
+	require.NoError(t, d.UnmarshalTOML([]byte(`""`)))
+	require.Equal(t, 0*time.Second, time.Duration(d))
+
+	require.Error(t, d.UnmarshalTOML([]byte(`"1"`)))  // string missing unit
+	require.Error(t, d.UnmarshalTOML([]byte(`'2'`)))  // string missing unit
+	require.Error(t, d.UnmarshalTOML([]byte(`'ns'`))) // string missing time
+	require.Error(t, d.UnmarshalTOML([]byte(`'us'`))) // string missing time
 }
 
 func TestSize(t *testing.T) {

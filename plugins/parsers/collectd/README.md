@@ -17,7 +17,7 @@ Additional information including client setup can be found
 You can also change the path to the typesdb or add additional typesdb using
 `collectd_typesdb`.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.socket_listener]]
@@ -43,9 +43,9 @@ You can also change the path to the typesdb or add additional typesdb using
   collectd_parse_multivalue = "split"
 ```
 
-### Example Output
+## Example Output
 
-```
+```text
 memory,type=memory,type_instance=buffered value=2520051712 1560455990829955922
 memory,type=memory,type_instance=used value=3710791680 1560455990829955922
 memory,type=memory,type_instance=buffered value=2520047616 1560455980830417318

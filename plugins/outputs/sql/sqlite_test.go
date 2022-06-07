@@ -7,7 +7,6 @@ package sql
 
 import (
 	gosql "database/sql"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -17,9 +16,7 @@ import (
 )
 
 func TestSqlite(t *testing.T) {
-	outDir, err := os.MkdirTemp("", "tg-sqlite-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(outDir)
+	outDir := t.TempDir()
 
 	dbfile := filepath.Join(outDir, "db")
 

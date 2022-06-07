@@ -1,28 +1,36 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package sql
 
 import (
 	gosql "database/sql"
+	_ "embed"
 	"fmt"
 	"strings"
 
 	//Register sql drivers
-	_ "github.com/denisenkom/go-mssqldb"   // mssql (sql server)
-	_ "github.com/go-sql-driver/mysql"     // mysql
-	_ "github.com/jackc/pgx/v4/stdlib"     // pgx (postgres)
-	_ "github.com/snowflakedb/gosnowflake" // snowflake
+	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
+	_ "github.com/denisenkom/go-mssqldb"    // mssql (sql server)
+	_ "github.com/go-sql-driver/mysql"      // mysql
+	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)
+	_ "github.com/snowflakedb/gosnowflake"  // snowflake
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type ConvertStruct struct {
-	Integer      string
-	Real         string
-	Text         string
-	Timestamp    string
-	Defaultvalue string
-	Unsigned     string
-	Bool         string
+	Integer         string
+	Real            string
+	Text            string
+	Timestamp       string
+	Defaultvalue    string
+	Unsigned        string
+	Bool            string
+	ConversionStyle string
 }
 
 type SQL struct {
@@ -37,6 +45,10 @@ type SQL struct {
 	db     *gosql.DB
 	Log    telegraf.Logger `toml:"-"`
 	tables map[string]bool
+}
+
+func (*SQL) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *SQL) Connect() error {
@@ -69,12 +81,12 @@ func (p *SQL) Close() error {
 
 // Quote an identifier (table or column name)
 func quoteIdent(name string) string {
-	return `"` + strings.Replace(sanitizeQuoted(name), `"`, `""`, -1) + `"`
+	return `"` + strings.ReplaceAll(sanitizeQuoted(name), `"`, `""`) + `"`
 }
 
 // Quote a string literal
 func quoteStr(name string) string {
-	return "'" + strings.Replace(name, "'", "''", -1) + "'"
+	return "'" + strings.ReplaceAll(name, "'", "''") + "'"
 }
 
 func sanitizeQuoted(in string) string {
@@ -99,7 +111,13 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 	case int64:
 		datatype = p.Convert.Integer
 	case uint64:
-		datatype = fmt.Sprintf("%s %s", p.Convert.Integer, p.Convert.Unsigned)
+		if p.Convert.ConversionStyle == "unsigned_suffix" {
+			datatype = fmt.Sprintf("%s %s", p.Convert.Integer, p.Convert.Unsigned)
+		} else if p.Convert.ConversionStyle == "literal" {
+			datatype = p.Convert.Unsigned
+		} else {
+			p.Log.Errorf("unknown converstaion style: %s", p.Convert.ConversionStyle)
+		}
 	case float64:
 		datatype = p.Convert.Real
 	case string:
@@ -112,48 +130,6 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 	}
 	return datatype
 }
-
-var sampleConfig = `
-  ## Database driver
-  ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
-  ##  sqlite (SQLite3), snowflake (snowflake.com)
-  # driver = ""
-
-  ## Data source name
-  ## The format of the data source name is different for each database driver.
-  ## See the plugin readme for details.
-  # data_source_name = ""
-
-  ## Timestamp column name
-  # timestamp_column = "timestamp"
-
-  ## Table creation template
-  ## Available template variables:
-  ##  {TABLE} - table name as a quoted identifier
-  ##  {TABLELITERAL} - table name as a quoted string literal
-  ##  {COLUMNS} - column definitions (list of quoted identifiers and types)
-  # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
-
-  ## Table existence check template
-  ## Available template variables:
-  ##  {TABLE} - tablename as a quoted identifier
-  # table_exists_template = "SELECT 1 FROM {TABLE} LIMIT 1"
-
-  ## Initialization SQL
-  # init_sql = ""
-
-  ## Metric type to SQL type conversion
-  #[outputs.sql.convert]
-  #  integer              = "INT"
-  #  real                 = "DOUBLE"
-  #  text                 = "TEXT"
-  #  timestamp            = "TIMESTAMP"
-  #  defaultvalue         = "TEXT"
-  #  unsigned             = "UNSIGNED"
-`
-
-func (p *SQL) SampleConfig() string { return sampleConfig }
-func (p *SQL) Description() string  { return "Send metrics to SQL Database" }
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	var columns []string
@@ -177,10 +153,10 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	}
 
 	query := p.TableTemplate
-	query = strings.Replace(query, "{TABLE}", quoteIdent(metric.Name()), -1)
-	query = strings.Replace(query, "{TABLELITERAL}", quoteStr(metric.Name()), -1)
-	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
-	//query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
+	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
+	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
+	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
+	//query = strings.ReplaceAll(query, "{KEY_COLUMNS}", strings.Join(pk, ","))
 
 	return query
 }
@@ -209,13 +185,15 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 }
 
 func (p *SQL) tableExists(tableName string) bool {
-	stmt := strings.Replace(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName), -1)
+	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
 	return err == nil
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
+	var err error
+
 	for _, metric := range metrics {
 		tablename := metric.Name()
 
@@ -248,12 +226,33 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		}
 
 		sql := p.generateInsert(tablename, columns)
-		_, err := p.db.Exec(sql, values...)
 
-		if err != nil {
-			// check if insert error was caused by column mismatch
-			p.Log.Errorf("Error during insert: %v, %v", err, sql)
-			return err
+		switch p.Driver {
+		case "clickhouse":
+			// ClickHouse needs to batch inserts with prepared statements
+			tx, err := p.db.Begin()
+			if err != nil {
+				return fmt.Errorf("begin failed: %v", err)
+			}
+			stmt, err := tx.Prepare(sql)
+			if err != nil {
+				return fmt.Errorf("prepare failed: %v", err)
+			}
+			defer stmt.Close() //nolint:revive // We cannot do anything about a failing close.
+
+			_, err = stmt.Exec(values...)
+			if err != nil {
+				return fmt.Errorf("execution failed: %v", err)
+			}
+			err = tx.Commit()
+			if err != nil {
+				return fmt.Errorf("commit failed: %v", err)
+			}
+		default:
+			_, err = p.db.Exec(sql, values...)
+			if err != nil {
+				return fmt.Errorf("execution failed: %v", err)
+			}
 		}
 	}
 	return nil
@@ -269,13 +268,14 @@ func newSQL() *SQL {
 		TableExistsTemplate: "SELECT 1 FROM {TABLE} LIMIT 1",
 		TimestampColumn:     "timestamp",
 		Convert: ConvertStruct{
-			Integer:      "INT",
-			Real:         "DOUBLE",
-			Text:         "TEXT",
-			Timestamp:    "TIMESTAMP",
-			Defaultvalue: "TEXT",
-			Unsigned:     "UNSIGNED",
-			Bool:         "BOOL",
+			Integer:         "INT",
+			Real:            "DOUBLE",
+			Text:            "TEXT",
+			Timestamp:       "TIMESTAMP",
+			Defaultvalue:    "TEXT",
+			Unsigned:        "UNSIGNED",
+			Bool:            "BOOL",
+			ConversionStyle: "unsigned_suffix",
 		},
 	}
 }

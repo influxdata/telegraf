@@ -1,33 +1,24 @@
-package taglimit
+//go:generate ../../../tools/readme_config_includer/generator
+package tag_limit
 
 import (
+	_ "embed"
 	"fmt"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"log"
 )
 
-const sampleConfig = `
-  ## Maximum number of tags to preserve
-  limit = 10
-
-  ## List of tags to preferentially preserve
-  keep = ["foo", "bar", "baz"]
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type TagLimit struct {
-	Limit    int      `toml:"limit"`
-	Keep     []string `toml:"keep"`
+	Limit    int             `toml:"limit"`
+	Keep     []string        `toml:"keep"`
+	Log      telegraf.Logger `toml:"-"`
 	init     bool
 	keepTags map[string]string
-}
-
-func (d *TagLimit) SampleConfig() string {
-	return sampleConfig
-}
-
-func (d *TagLimit) Description() string {
-	return "Restricts the number of tags that can pass through this filter and chooses which tags to preserve when over the limit."
 }
 
 func (d *TagLimit) initOnce() error {
@@ -46,10 +37,14 @@ func (d *TagLimit) initOnce() error {
 	return nil
 }
 
+func (*TagLimit) SampleConfig() string {
+	return sampleConfig
+}
+
 func (d *TagLimit) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	err := d.initOnce()
 	if err != nil {
-		log.Printf("E! [processors.tag_limit] could not create tag_limit processor: %v", err)
+		d.Log.Errorf("Could not create tag_limit processor: %v", err)
 		return in
 	}
 	for _, point := range in {

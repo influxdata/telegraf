@@ -22,9 +22,9 @@ created.
 A typical use-case is gathering metrics once and cloning them to simulate
 having several hosts (modifying ``host`` tag).
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Apply metric modifications using override semantics.
 [[processors.clone]]
   ## All modifications on inputs and aggregators can be overridden:

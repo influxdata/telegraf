@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package health
 
 import (
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"errors"
 	"net"
 	"net/http"
@@ -17,50 +19,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const (
 	defaultServiceAddress = "tcp://:8080"
 	defaultReadTimeout    = 5 * time.Second
 	defaultWriteTimeout   = 5 * time.Second
 )
-
-var sampleConfig = `
-  ## Address and port to listen on.
-  ##   ex: service_address = "http://localhost:8080"
-  ##       service_address = "unix:///var/run/telegraf-health.sock"
-  # service_address = "http://:8080"
-
-  ## The maximum duration for reading the entire request.
-  # read_timeout = "5s"
-  ## The maximum duration for writing the entire response.
-  # write_timeout = "5s"
-
-  ## Username and password to accept for HTTP basic authentication.
-  # basic_username = "user1"
-  # basic_password = "secret"
-
-  ## Allowed CA certificates for client certificates.
-  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
-  ## TLS server certificate and private key.
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## One or more check sub-tables should be defined, it is also recommended to
-  ## use metric filtering to limit the metrics that flow into this output.
-  ##
-  ## When using the default buffer sizes, this example will fail when the
-  ## metric buffer is half full.
-  ##
-  ## namepass = ["internal_write"]
-  ## tagpass = { output = ["influxdb"] }
-  ##
-  ## [[outputs.health.compares]]
-  ##   field = "buffer_size"
-  ##   lt = 5000.0
-  ##
-  ## [[outputs.health.contains]]
-  ##   field = "buffer_size"
-`
 
 type Checker interface {
 	// Check returns true if the metrics meet its criteria.
@@ -91,12 +58,8 @@ type Health struct {
 	healthy bool
 }
 
-func (h *Health) SampleConfig() string {
+func (*Health) SampleConfig() string {
 	return sampleConfig
-}
-
-func (h *Health) Description() string {
-	return "Configurable HTTP health check resource based on metrics"
 }
 
 func (h *Health) Init() error {
@@ -208,9 +171,9 @@ func (h *Health) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	h.server.Shutdown(ctx)
+	err := h.server.Shutdown(ctx)
 	h.wg.Wait()
-	return nil
+	return err
 }
 
 // Origin returns the URL of the HTTP server.

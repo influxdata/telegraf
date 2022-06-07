@@ -727,8 +727,7 @@ const mBeansSolr3MainResponse = `{
       }
     }
   ]
-}
-`
+}`
 
 var solr3CoreExpected = map[string]interface{}{
 	"num_docs":     int64(117166),

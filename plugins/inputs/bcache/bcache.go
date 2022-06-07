@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !windows
 // +build !windows
 
@@ -6,6 +7,7 @@
 package bcache
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -17,28 +19,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type Bcache struct {
 	BcachePath string
 	BcacheDevs []string
-}
-
-var sampleConfig = `
-  ## Bcache sets path
-  ## If not specified, then default is:
-  bcachePath = "/sys/fs/bcache"
-
-  ## By default, Telegraf gather stats for all bcache devices
-  ## Setting devices will restrict the stats to the specified
-  ## bcache devices.
-  bcacheDevs = ["bcache0"]
-`
-
-func (b *Bcache) SampleConfig() string {
-	return sampleConfig
-}
-
-func (b *Bcache) Description() string {
-	return "Read metrics of bcache from stats_total and dirty_data"
 }
 
 func getTags(bdev string) map[string]string {
@@ -111,6 +98,10 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	}
 	acc.AddFields("bcache", fields, tags)
 	return nil
+}
+
+func (*Bcache) SampleConfig() string {
+	return sampleConfig
 }
 
 func (b *Bcache) Gather(acc telegraf.Accumulator) error {

@@ -21,9 +21,9 @@ Use-case of this plugin encompass ensuring certain tags or naming conventions
 are adhered to irrespective of input plugin configurations, e.g. by
 `taginclude`.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # Apply metric modifications using override semantics.
 [[processors.override]]
   ## All modifications on inputs and aggregators can be overridden:

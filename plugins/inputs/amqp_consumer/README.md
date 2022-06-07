@@ -7,17 +7,17 @@ Metrics are read from a topic exchange using the configured queue and binding_ke
 Message payload should be formatted in one of the [Telegraf Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
 
 For an introduction to AMQP see:
-- https://www.rabbitmq.com/tutorials/amqp-concepts.html
-- https://www.rabbitmq.com/getstarted.html
+
+- [amqp - concepts](https://www.rabbitmq.com/tutorials/amqp-concepts.html)
+- [rabbitmq: getting started](https://www.rabbitmq.com/getstarted.html)
+
+## Configuration
 
 The following defaults are known to work with RabbitMQ:
 
-```toml
+```toml @sample.conf
+# AMQP consumer plugin
 [[inputs.amqp_consumer]]
-  ## Broker to consume from.
-  ##   deprecated in 1.7; use the brokers option
-  # url = "amqp://localhost:5672/influxdb"
-
   ## Brokers to consume from.  If multiple brokers are specified a random broker
   ## will be selected anytime a connection is established.  This can be
   ## helpful for load balancing when not using a dedicated load balancer.

@@ -5,9 +5,10 @@ IPs in them.
 
 Telegraf minimum version: Telegraf 1.15.0
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# ReverseDNS does a reverse lookup on IP addresses to retrieve the DNS name
 [[processors.reverse_dns]]
   ## For optimal performance, you may want to limit which metrics are passed to this
   ## processor. eg:
@@ -55,9 +56,7 @@ Telegraf minimum version: Telegraf 1.15.0
     ## processors.converter after this one, specifying the order attribute.
 ```
 
-
-
-### Example processing:
+## Example
 
 example config:
 

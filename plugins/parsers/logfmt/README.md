@@ -4,7 +4,7 @@ The `logfmt` data format parses data in [logfmt] format.
 
 [logfmt]: https://brandur.org/logfmt
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.file]]
@@ -15,16 +15,19 @@ The `logfmt` data format parses data in [logfmt] format.
   ## more about them here:
   ##   https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "logfmt"
+
+  ## Array of key names which should be collected as tags. Globs accepted.
+  logfmt_tag_keys = ["method","host"]
 ```
 
-### Metrics
+## Metrics
 
 Each key/value pair in the line is added to a new metric as a field.  The type
 of the field is automatically determined based on the contents of the value.
 
-### Examples
+## Examples
 
-```
+```text
 - method=GET host=example.org ts=2018-07-24T19:43:40.275Z connect=4ms service=8ms status=200 bytes=1653
-+ logfmt method="GET",host="example.org",ts="2018-07-24T19:43:40.275Z",connect="4ms",service="8ms",status=200i,bytes=1653i
++ logfmt,host=example.org,method=GET ts="2018-07-24T19:43:40.275Z",connect="4ms",service="8ms",status=200i,bytes=1653i
 ```
