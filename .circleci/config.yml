@@ -4,11 +4,11 @@ orbs:
   aws-cli: circleci/aws-cli@1.4.0
 
 executors:
-  go-1_17:
+  telegraf-ci:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.18.1'
+      - image: 'quay.io/influxdb/telegraf-ci:1.18.3'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -171,7 +171,7 @@ commands:
             - 'dist'
 jobs:
   test-go-linux:
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - checkout
       - restore_cache:
@@ -192,7 +192,7 @@ jobs:
           paths:
             - '*'
   test-go-linux-386:
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - checkout
       - restore_cache:
@@ -203,6 +203,15 @@ jobs:
       - run: 'GOARCH=386 make check'
       - test-go:
           arch: "386"
+  test-integration:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - run: 'make deps'
+      - run: 'make test-integration'
   test-go-mac:
     executor: mac
     steps:
@@ -212,6 +221,7 @@ jobs:
     executor:
         name: win/default
         shell: bash.exe
+        size: xlarge
     steps:
       - test-go:
           os: windows
@@ -222,7 +232,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: windows
@@ -232,7 +242,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: darwin-amd64
@@ -242,7 +252,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: darwin-arm64
@@ -252,7 +262,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: i386
@@ -262,7 +272,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: ppc64le
@@ -272,7 +282,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: riscv64
@@ -282,7 +292,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: s390x
@@ -292,7 +302,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: armel
@@ -302,7 +312,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: amd64
@@ -312,7 +322,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: arm64
@@ -322,7 +332,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: mipsel
@@ -332,7 +342,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: mips
@@ -342,7 +352,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: static
@@ -352,13 +362,13 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - package-build:
           type: armhf
           nightly: << parameters.nightly >>
   nightly:
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - attach_workspace:
           at: '/build'
@@ -460,7 +470,7 @@ jobs:
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
             curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
   generate-config:
-    executor: go-1_17
+    executor: telegraf-ci
     steps:
       - generate-config
   generate-config-win:
@@ -488,6 +498,10 @@ workflows:
             tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'test-go-windows':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-integration':
           filters:
             tags:
               only: /.*/
@@ -752,3 +766,4 @@ workflows:
             branches:
               only:
                 - master
+
