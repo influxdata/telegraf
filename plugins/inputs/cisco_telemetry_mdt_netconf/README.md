@@ -1,10 +1,19 @@
 # Cisco Model-Driven Telemetry (MDT) NETCONF Input Plugin
 
-Cisco NETCONF telemetry is an input plugin that can consume telemetry data from a [stream of NETCONF notifications](https://tools.ietf.org/html/rfc5277) or from polling. The plugin offers three ways to receive data:
+Cisco NETCONF telemetry is an input plugin that can consume telemetry data 
+from a [stream of NETCONF notifications](
+    https://tools.ietf.org/html/rfc5277) 
+or from polling. The plugin offers three ways to receive data:
 
-1. Subscription-based, periodic model-driven telemetry streaming through `ietf-yang-push` notifications (see [draft-ietf-netconf-yang-push-25](https://tools.ietf.org/html/draft-ietf-netconf-yang-push-25))
-2. Subscription-based, event notification streaming through `notification`s (see [RFC5277](https://tools.ietf.org/html/rfc5277#page-9))
-3. Periodic polling with `<get>` requests (see [rfc6241 - Network Configuration Protocol (NETCONF), section 7.7](https://tools.ietf.org/html/rfc6241))
+1. Subscription-based, periodic model-driven telemetry streaming through 
+   `ietf-yang-push` notifications (see [draft-ietf-netconf-yang-push-25](
+       https://tools.ietf.org/html/draft-ietf-netconf-yang-push-25))
+2. Subscription-based, event notification streaming through `notification`s (
+   see [RFC5277](
+       https://tools.ietf.org/html/rfc5277#page-9))
+3. Periodic polling with `<get>` requests (see 
+   [rfc6241 - Network Configuration Protocol (NETCONF), section 7.7](
+       https://tools.ietf.org/html/rfc6241))
 
 The plugin requires the [netgonf library](github.com/cisco-ie/netgonf).
 
@@ -100,3 +109,7 @@ The plugin requires the [netgonf library](github.com/cisco-ie/netgonf).
     stream = "ncs-alarms"
     keys = ["alarm-notification/alarm-class"]
 ```
+
+## Example Output
+
+## Metrics
