@@ -1,5 +1,7 @@
 # StatsD Input Plugin
 
+The StatsD input plugin gathers metrics from a Statsd server.
+
 ## Configuration
 
 ```toml @sample.conf
@@ -91,7 +93,8 @@ The statsd plugin is a special type of plugin which runs a backgrounded statsd
 listener service while telegraf is running.
 
 The format of the statsd messages was based on the format described in the
-original [etsy statsd](https://github.com/etsy/statsd/blob/master/docs/metric_types.md)
+original [etsy
+statsd](https://github.com/etsy/statsd/blob/master/docs/metric_types.md)
 implementation. In short, the telegraf statsd listener will accept:
 
 - Gauges
@@ -144,9 +147,11 @@ users.current,service=payroll,region=us-west:32|g
 
 ```
 current.users,service=payroll,server=host01:west=10,east=10,central=2,south=10|g
-``` -->
+```
 
-## Measurements
+-->
+
+## Metrics
 
 Meta:
 
@@ -222,8 +227,8 @@ measurements and tags.
 The plugin supports specifying templates for transforming statsd buckets into
 InfluxDB measurement names and tags. The templates have a _measurement_ keyword,
 which can be used to specify parts of the bucket that are to be used in the
-measurement name. Other words in the template are used as tag names. For example,
-the following template:
+measurement name. Other words in the template are used as tag names. For
+example, the following template:
 
 ```toml
 templates = [
