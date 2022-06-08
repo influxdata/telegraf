@@ -19,6 +19,7 @@ for target in ${targets}; do
 		*) continue;;
 	esac
 
+	echo "${target%%/*}/${target##*/}"
 	GOOS=${target%%/*} GOARCH=${target##*/} \
 		go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./cmd/telegraf/ >> "${tmpdir}/golist"
 done
