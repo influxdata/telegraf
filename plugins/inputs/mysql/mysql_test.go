@@ -25,7 +25,10 @@ func TestMysqlDefaultsToLocalIntegration(t *testing.T) {
 			"MYSQL_ALLOW_EMPTY_PASSWORD": "yes",
 		},
 		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("/usr/sbin/mysqld: ready for connections"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
 	}
 
 	err := container.Start()
@@ -59,7 +62,10 @@ func TestMysqlMultipleInstancesIntegration(t *testing.T) {
 			"MYSQL_ALLOW_EMPTY_PASSWORD": "yes",
 		},
 		ExposedPorts: []string{servicePort},
-		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("/usr/sbin/mysqld: ready for connections"),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
 	}
 
 	err := container.Start()

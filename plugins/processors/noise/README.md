@@ -1,11 +1,12 @@
-# Noise Processor
+# Noise Processor Plugin
 
-The _Noise_ processor is used to add noise to numerical field values. For each field a noise is generated using a defined probability densitiy function and added to the value. The function type can be configured as _Laplace_, _Gaussian_ or _Uniform_.
-Depending on the function, various parameters need to be configured:
+The _Noise_ processor is used to add noise to numerical field values. For each
+field a noise is generated using a defined probability densitiy function and
+added to the value. The function type can be configured as _Laplace_, _Gaussian_
+or _Uniform_.  Depending on the function, various parameters need to be
+configured:
 
 ## Configuration
-
-Depending on the choice of the distribution function, the respective parameters must be set. Default settings are `noise_type = "laplacian"` with `mu = 0.0` and `scale = 1.0`:
 
 ```toml @sample.conf
 # Adds noise to numerical fields
@@ -31,8 +32,13 @@ Depending on the choice of the distribution function, the respective parameters 
   # exclude_fields = []
 ```
 
-Using the `include_fields` and `exclude_fields` options a filter can be configured to apply noise only to numeric fields matching it.
-The following distribution functions are available.
+Depending on the choice of the distribution function, the respective parameters
+must be set. Default settings are `noise_type = "laplacian"` with `mu = 0.0` and
+`scale = 1.0`:
+
+Using the `include_fields` and `exclude_fields` options a filter can be
+configured to apply noise only to numeric fields matching it.  The following
+distribution functions are available.
 
 ### Laplacian
 
@@ -54,7 +60,9 @@ The following distribution functions are available.
 
 ## Example
 
-Add noise to each value the _inputs.cpu_ plugin generates, except for the _usage\_steal_, _usage\_user_, _uptime\_format_, _usage\_idle_ field and all fields of the metrics _swap_, _disk_ and _net_:
+Add noise to each value the _inputs.cpu_ plugin generates, except for the
+_usage\_steal_, _usage\_user_, _uptime\_format_, _usage\_idle_ field and all
+fields of the metrics _swap_, _disk_ and _net_:
 
 ```toml
 [[inputs.cpu]]

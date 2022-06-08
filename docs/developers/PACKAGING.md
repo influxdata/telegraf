@@ -13,7 +13,7 @@ Telegraf will be built using the latest version of Go whenever possible.
 Incrementing the version is maintained by the core Telegraf team because it requires access to an internal docker repository that hosts the docker CI images. When a new version is released, the following process is followed:
 
 1. Within the `Makefile` and `.circleci\config.yml` update the Go versions to the new version number
-2. Run `make ci-<latest version>` where `<latest version>` refers to the new Go version number (this requires internal permissions)
+2. Run `make ci`, this requires quay.io internal permissions
 3. The files `scripts\installgo_mac.sh` and `scripts\installgo_windows.sh` need to be updated as well with the new Go version and SHA
 4. Create a pull request with these new changes, and verify the CI passes and uses the new docker image
 

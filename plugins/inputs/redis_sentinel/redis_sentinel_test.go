@@ -18,7 +18,7 @@ import (
 
 const masterName = "mymaster"
 
-func TestRedisSentinelConnect(t *testing.T) {
+func TestRedisSentinelConnectIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

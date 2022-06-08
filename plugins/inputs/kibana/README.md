@@ -63,10 +63,17 @@ Requires the following tools:
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
-From the root of this project execute the following script: `./plugins/inputs/kibana/test_environment/run_test_env.sh`
+From the root of this project execute the following script:
+`./plugins/inputs/kibana/test_environment/run_test_env.sh`
 
-This will build the latest Telegraf and then start up Kibana and Elasticsearch, Telegraf will begin monitoring Kibana's status and write its results to the file `/tmp/metrics.out` in the Telegraf container.
+This will build the latest Telegraf and then start up Kibana and Elasticsearch,
+Telegraf will begin monitoring Kibana's status and write its results to the file
+`/tmp/metrics.out` in the Telegraf container.
 
-Then you can attach to the telegraf container to inspect the file `/tmp/metrics.out` to see if the status is being reported.
+Then you can attach to the telegraf container to inspect the file
+`/tmp/metrics.out` to see if the status is being reported.
 
-The Visual Studio Code [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension provides an easy user interface to attach to the running container.
+The Visual Studio Code [Remote - Containers][remote] extension provides an easy
+user interface to attach to the running container.
+
+[remote]: https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers

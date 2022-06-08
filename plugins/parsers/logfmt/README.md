@@ -1,4 +1,4 @@
-# Logfmt
+# Logfmt Parser Plugin
 
 The `logfmt` data format parses data in [logfmt] format.
 

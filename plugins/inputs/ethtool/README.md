@@ -1,6 +1,7 @@
 # Ethtool Input Plugin
 
-The ethtool input plugin pulls ethernet device stats. Fields pulled will depend on the network device and driver.
+The ethtool input plugin pulls ethernet device stats. Fields pulled will depend
+on the network device and driver.
 
 ## Configuration
 

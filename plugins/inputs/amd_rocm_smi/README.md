@@ -1,6 +1,9 @@
 # AMD ROCm System Management Interface (SMI) Input Plugin
 
-This plugin uses a query on the [`rocm-smi`](https://github.com/RadeonOpenCompute/rocm_smi_lib/tree/master/python_smi_tools) binary to pull GPU stats including memory and GPU usage, temperatures and other.
+This plugin uses a query on the [`rocm-smi`][1] binary to pull GPU stats
+including memory and GPU usage, temperatures and other.
+
+[1]: https://github.com/RadeonOpenCompute/rocm_smi_lib/tree/master/python_smi_tools
 
 ## Configuration
 
@@ -47,9 +50,10 @@ Linux:
 rocm-smi rocm-smi -o -l -m -M  -g -c -t -u -i -f -p -P -s -S -v --showreplaycount --showpids --showdriverversion --showmemvendor --showfwinfo --showproductname --showserial --showuniqueid --showbus --showpendingpages --showpagesinfo --showretiredpages --showunreservablepages --showmemuse --showvoltage --showtopo --showtopoweight --showtopohops --showtopotype --showtoponuma --showmeminfo all --json
 ```
 
-Please include the output of this command if opening a GitHub issue, together with ROCm version.
+Please include the output of this command if opening a GitHub issue, together
+with ROCm version.
 
-### Example Output
+## Example Output
 
 ```shell
 amd_rocm_smi,gpu_id=0x6861,gpu_unique_id=0x2150e7d042a1124,host=ali47xl,name=card0 clocks_current_memory=167i,clocks_current_sm=852i,driver_version=51114i,fan_speed=14i,memory_free=17145282560i,memory_total=17163091968i,memory_used=17809408i,power_draw=7,temperature_sensor_edge=28,temperature_sensor_junction=29,temperature_sensor_memory=92,utilization_gpu=0i 1630572551000000000
@@ -57,10 +61,14 @@ amd_rocm_smi,gpu_id=0x6861,gpu_unique_id=0x2150e7d042a1124,host=ali47xl,name=car
 amd_rocm_smi,gpu_id=0x6861,gpu_unique_id=0x2150e7d042a1124,host=ali47xl,name=card0 clocks_current_memory=167i,clocks_current_sm=852i,driver_version=51114i,fan_speed=14i,memory_free=17145282560i,memory_total=17163091968i,memory_used=17809408i,power_draw=7,temperature_sensor_edge=29,temperature_sensor_junction=29,temperature_sensor_memory=92,utilization_gpu=0i 1630572749000000000
 ```
 
-### Limitations and notices
+## Limitations and notices
 
-Please notice that this plugin has been developed and tested on a limited number of versions and small set of GPUs. Currently the latest ROCm version tested is 4.3.0.
-Notice that depending on the device and driver versions the amount of information provided by `rocm-smi` can vary so that some fields would start/stop appearing in the metrics upon updates.
-The `rocm-smi` JSON output is not perfectly homogeneous and is possibly changing in the future, hence parsing and unmarshaling can start failing upon updating ROCm.
+Please notice that this plugin has been developed and tested on a limited number
+of versions and small set of GPUs. Currently the latest ROCm version tested is
+4.3.0.  Notice that depending on the device and driver versions the amount of
+information provided by `rocm-smi` can vary so that some fields would start/stop
+appearing in the metrics upon updates.  The `rocm-smi` JSON output is not
+perfectly homogeneous and is possibly changing in the future, hence parsing and
+unmarshaling can start failing upon updating ROCm.
 
 Inspired by the current state of the art of the `nvidia-smi` plugin.
