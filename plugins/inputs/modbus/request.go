@@ -194,12 +194,7 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 			if len(g.fields) > 0 {
 				total.fields = append(total.fields, g.fields...)
 			}
-		requests = optimizeGroup(total, maxBatchSize)
-			if len(g.fields) == 0 {
-				total.fields = append(total.fields, g.fields...)
-			}
-				requests = append(requests, splitMaxBatchSize(g, maxBatchSize)...)
-			}
+			requests = optimizeGroup(total, maxBatchSize)
 		}
 	}
 
