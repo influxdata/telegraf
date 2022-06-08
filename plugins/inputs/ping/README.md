@@ -1,6 +1,7 @@
 # Ping Input Plugin
 
-Sends a ping message by executing the system ping command and reports the results.
+Sends a ping message by executing the system ping command and reports the
+results.
 
 This plugin has two main methods of operation: `exec` and `native`.  The
 recommended method is `native`, which has greater system compatibility and
@@ -110,8 +111,9 @@ systemctl restart telegraf
 
 ### Linux Permissions
 
-When using `method = "native"`, Telegraf will attempt to use privileged raw
-ICMP sockets.  On most systems, doing so requires `CAP_NET_RAW` capabilities or for Telegraf to be run as root.
+When using `method = "native"`, Telegraf will attempt to use privileged raw ICMP
+sockets.  On most systems, doing so requires `CAP_NET_RAW` capabilities or for
+Telegraf to be run as root.
 
 With systemd:
 
@@ -142,7 +144,8 @@ setting capabilities.
 
 ### Other OS Permissions
 
-When using `method = "native"`, you will need permissions similar to the executable ping program for your OS.
+When using `method = "native"`, you will need permissions similar to the
+executable ping program for your OS.
 
 ## Metrics
 
@@ -166,7 +169,8 @@ When using `method = "native"`, you will need permissions similar to the executa
 
 ### reply_received vs packets_received
 
-On Windows systems with `method = "exec"`, the "Destination net unreachable" reply will increment `packets_received` but not `reply_received`*.
+On Windows systems with `method = "exec"`, the "Destination net unreachable"
+reply will increment `packets_received` but not `reply_received`*.
 
 ### ttl
 

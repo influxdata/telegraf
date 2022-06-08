@@ -1,11 +1,15 @@
 # Solr Input Plugin
 
-The [solr](http://lucene.apache.org/solr/) plugin collects stats via the
-[MBean Request Handler](https://cwiki.apache.org/confluence/display/solr/MBean+Request+Handler)
+The [solr](http://lucene.apache.org/solr/) plugin collects stats via the [MBean
+Request Handler][1].
 
-More about [performance statistics](https://cwiki.apache.org/confluence/display/solr/Performance+Statistics+Reference)
+More about [performance statistics][2].
 
 Tested from 3.5 to 7.*
+
+[1]: https://cwiki.apache.org/confluence/display/solr/MBean+Request+Handler
+
+[2]: https://cwiki.apache.org/confluence/display/solr/Performance+Statistics+Reference
 
 ## Configuration
 

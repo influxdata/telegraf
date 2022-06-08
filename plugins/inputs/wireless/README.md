@@ -1,6 +1,7 @@
 # Wireless Input Plugin
 
-The wireless plugin gathers metrics about wireless link quality by reading the `/proc/net/wireless` file. This plugin currently supports linux only.
+The wireless plugin gathers metrics about wireless link quality by reading the
+`/proc/net/wireless` file. This plugin currently supports linux only.
 
 ## Configuration
 

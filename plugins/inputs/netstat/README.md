@@ -1,6 +1,7 @@
 # Netstat Input Plugin
 
-This plugin collects TCP connections state and UDP socket counts by using `lsof`.
+This plugin collects TCP connections state and UDP socket counts by using
+`lsof`.
 
 ## Configuration
 
@@ -10,7 +11,7 @@ This plugin collects TCP connections state and UDP socket counts by using `lsof`
   # no configuration
 ```
 
-## Measurements
+## Metrics
 
 Supported TCP Connection states are follows.
 
