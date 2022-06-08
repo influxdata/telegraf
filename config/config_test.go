@@ -406,7 +406,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	}
 
 	override := map[string]struct {
-		cfg   *parsers.Config
 		param map[string]interface{}
 		mask  []string
 	}{
@@ -420,11 +419,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 			mask: []string{"Now"},
 		},
 		"xpath_protobuf": {
-			cfg: &parsers.Config{
-				MetricName:        "parser_test_new",
-				XPathProtobufFile: "testdata/addressbook.proto",
-				XPathProtobufType: "addressbook.AddressBook",
-			},
 			param: map[string]interface{}{
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
 				"ProtobufMessageType": "addressbook.AddressBook",
@@ -435,10 +429,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
 		formatCfg := &cfg
-		settings, hasOverride := override[format]
-		if hasOverride && settings.cfg != nil {
-			formatCfg = settings.cfg
-		}
 		formatCfg.DataFormat = format
 
 		logger := models.NewLogger("parsers", format, cfg.MetricName)
@@ -555,7 +545,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	}
 
 	override := map[string]struct {
-		cfg   *parsers.Config
 		param map[string]interface{}
 		mask  []string
 	}{
@@ -569,11 +558,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 			mask: []string{"Now"},
 		},
 		"xpath_protobuf": {
-			cfg: &parsers.Config{
-				MetricName:        "parser_test_new",
-				XPathProtobufFile: "testdata/addressbook.proto",
-				XPathProtobufType: "addressbook.AddressBook",
-			},
 			param: map[string]interface{}{
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
 				"ProtobufMessageType": "addressbook.AddressBook",
@@ -584,10 +568,6 @@ func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
 		formatCfg := &cfg
-		settings, hasOverride := override[format]
-		if hasOverride && settings.cfg != nil {
-			formatCfg = settings.cfg
-		}
 		formatCfg.DataFormat = format
 
 		logger := models.NewLogger("parsers", format, cfg.MetricName)

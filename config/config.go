@@ -1842,9 +1842,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"prefix", "prometheus_export_timestamp", "prometheus_ignore_timestamp", "prometheus_sort_metrics", "prometheus_string_as_label",
 		"separator", "splunkmetric_hec_routing", "splunkmetric_multimetric", "tag_keys",
 		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "template", "templates",
-		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "wavefront_disable_prefix_conversion",
-		"xml", "xpath", "xpath_json", "xpath_msgpack", "xpath_protobuf", "xpath_print_document",
-		"xpath_protobuf_file", "xpath_protobuf_type", "xpath_protobuf_import_paths":
+		"value_field_name", "wavefront_source_override", "wavefront_use_strict", "wavefront_disable_prefix_conversion":
 
 		// ignore fields that are common to all plugins.
 	default:
