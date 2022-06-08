@@ -138,6 +138,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## Can be overriden by the individual field definitions. Defaults to "modbus"
     # measurement = "modbus"
 
+    ## Request optimization algorithm.
+    ##  |---none       -- Do not perform any optimization and use the given layout(default)
+    ##  |---shrink     -- Shrink requests to actually requested fields
+    ##  |                 by stripping leading and trailing omits
+    ##  |---rearrange  -- Rearrange request boundaries within consecutive address ranges
+    ##  |                 to reduce the number of requested registers by keeping
+    ##  |                 the number of requests.
+    ##  |---aggressive -- Rearrange request boundaries similar to "rearrange" but
+    ##                    allow to request registers not specified by the user to
+    ##                    fill gaps. This usually reduces the number of requests at the
+    ##                    cost of more requested registers.
+    # optimization = "none"
+
     ## Field definitions
     ## Analog Variables, Input Registers and Holding Registers
     ## address        - address of the register to query. For coil and discrete inputs this is the bit address.
@@ -320,6 +333,41 @@ You can specify the name of the measurement for the following field definitions
 using the `measurement` setting. If the setting is omitted `modbus` is
 used. Furthermore, the measurement value can be overridden by each field
 individually.
+
+#### Optimization setting
+
+__Please only use request optimization if you do understand the implications!__
+The `optimization` setting can be used to optimize the actual requests sent to the device.
+The following algorithms are available
+
+##### `none` (_default_)
+
+Do not perform any optimization. Please note that the requests are still obeying the maximum
+request sizes. Furthermore, completely empty requests, i.e. all fields specify `omit=true`,
+are removed. Otherwise, the requests are sent as specified by the user including request
+of omitted fields. This setting should be used if you want full control over the requests
+e.g. to accommodate for device constraints.
+
+##### `shrink`
+
+This optimization allows to remove leading and trailing fields from requests if those fields
+are omitted. This can shrink the request number and sizes in cases where you specify large
+amounts of omitted fields, e.g. for documentation purposes.
+
+##### `rearrange`
+
+Requests are processed similar to `shrink` but the request boundaries are rearranged such
+that usually less registers are being read while keeping the number of requests. This
+optimization algorithm only works on consecutive address ranges and respects user-defined
+gaps in the field addresses.
+
+##### `aggressive`
+
+Requests are processed similar to `rearrange` but user-defined gaps in the field
+addresses are filled automatically. This usually reduces the number of requests, but
+will increase the number of registers read due to larger requests.
+This algorithm might be usefull if you only want to specify the fields you are
+interested in but want to minimize the number of requests sent to the device.
 
 #### Field definitions
 
