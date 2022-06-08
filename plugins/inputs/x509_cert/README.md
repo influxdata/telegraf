@@ -3,7 +3,8 @@
 This plugin provides information about X509 certificate accessible via local
 file, tcp, udp, https or smtp protocol.
 
-When using a UDP address as a certificate source, the server must support [DTLS](https://en.wikipedia.org/wiki/Datagram_Transport_Layer_Security).
+When using a UDP address as a certificate source, the server must support
+[DTLS](https://en.wikipedia.org/wiki/Datagram_Transport_Layer_Security).
 
 ## Configuration
 
@@ -58,7 +59,7 @@ When using a UDP address as a certificate source, the server must support [DTLS]
     - startdate (int, seconds)
     - enddate (int, seconds)
 
-## Example output
+## Example Output
 
 ```shell
 x509_cert,common_name=ubuntu,source=/etc/ssl/certs/ssl-cert-snakeoil.pem,verification=valid age=7693222i,enddate=1871249033i,expiry=307666777i,startdate=1555889033i,verification_code=0i 1563582256000000000
