@@ -916,11 +916,6 @@ func (c *CiscoTelemetryNETCONF) Stop() {
 	)
 }
 
-// Description of plugin
-func (c *CiscoTelemetryNETCONF) Description() string {
-	return "Cisco dial-in NETCONF telemetry input plugin"
-}
-
 // SampleConfig of plugin
 func (c *CiscoTelemetryNETCONF) SampleConfig() string {
 	return sampleConfig
