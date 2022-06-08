@@ -70,9 +70,7 @@ localstatedir ?= $(prefix)/var
 pkgdir ?= build/dist
 
 .PHONY: all
-all: docs
-	@$(MAKE) deps
-	@$(MAKE) telegraf
+all: deps docs telegraf
 
 .PHONY: help
 help:
