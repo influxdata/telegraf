@@ -197,7 +197,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 			return nil, err
 		}
 
-		smtpConn.Hello(c.tlsCfg.ServerName)
+		err = smtpConn.Hello(c.tlsCfg.ServerName)
 		if err != nil {
 			return nil, err
 		}
