@@ -365,6 +365,29 @@ address ranges and respects user-defined gaps in the field addresses.
 
 __Please note:__ This optimization might take long in case of many
 non-consecutive, non-omitted fields!
+The `optimization` setting can be used to optimize the actual requests sent to the device.
+The following algorithms are available
+
+##### `none` (_default_)
+
+Do not perform any optimization. Please note that the requests are still obeying the maximum
+request sizes. Furthermore, completely empty requests, i.e. all fields specify `omit=true`,
+are removed. Otherwise, the requests are sent as specified by the user including request
+of omitted fields. This setting should be used if you want full control over the requests
+e.g. to accommodate for device constraints.
+
+##### `shrink`
+
+This optimization allows to remove leading and trailing fields from requests if those fields
+are omitted. This can shrink the request number and sizes in cases where you specify large
+amounts of omitted fields, e.g. for documentation purposes.
+
+##### `rearrange`
+
+Requests are processed similar to `shrink` but the request boundaries are rearranged such
+that usually less registers are being read while keeping the number of requests. This
+optimization algorithm only works on consecutive address ranges and respects user-defined
+gaps in the field addresses.
 
 ##### `aggressive`
 
@@ -376,6 +399,11 @@ interested in but want to minimize the number of requests sent to the device.
 
 __Please note:__ This optimization might take long in case of many
 non-consecutive, non-omitted fields!
+
+addresses are filled automatically. This usually reduces the number of requests, but
+will increase the number of registers read due to larger requests.
+This algorithm might be usefull if you only want to specify the fields you are
+interested in but want to minimize the number of requests sent to the device.
 
 #### Field definitions
 
