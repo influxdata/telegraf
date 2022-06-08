@@ -48,7 +48,6 @@ Requires RavenDB Server 5.2+.
 **Note:** The client certificate used should have `Operator` permissions on the
 cluster.
 
-
 ## Metrics
 
 - ravendb_server

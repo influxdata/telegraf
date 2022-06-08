@@ -104,8 +104,6 @@ In the previous example, the plugin will gather value of OIDS:
 
 - `.1.3.6.1.2.1.2.2.1.4.1`
 
-
-
 ### Simple example
 
 In this example, Telegraf gathers value of OIDS:
