@@ -2,7 +2,7 @@
 
 This plugin monitors a single directory (without looking at sub-directories),
 and takes in each file placed in the directory.  The plugin will gather all
-files in the directory at the configured interval, and parse the ones that 
+files in the directory at the configured interval, and parse the ones that
 haven't been picked up yet.
 
 This plugin is intended to read files that are moved or copied to the monitored
@@ -64,3 +64,8 @@ be guaranteed to finish writing before the `directory_duration_threshold`.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
+
+## Metrics
+
+The format of metrics produced by this plugin depends on the content and data
+format of the file.
