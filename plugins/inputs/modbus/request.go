@@ -191,7 +191,7 @@ func groupFieldsToRequests(fields []field, tags map[string]string, maxBatchSize 
 		// This might reduce the number of requests at the cost of more registers being touched.
 		var total request
 		for _, g := range groups {
-			if len(g.fields) == 0 {
+			if len(g.fields) > 0 {
 				total.fields = append(total.fields, g.fields...)
 			}
 		}
