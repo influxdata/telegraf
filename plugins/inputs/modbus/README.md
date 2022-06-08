@@ -361,6 +361,8 @@ that usually less registers are being read while keeping the number of requests.
 optimization algorithm only works on consecutive address ranges and respects user-defined
 gaps in the field addresses.
 
+__Please note:__ This optimization might take long in case of many non-consecutive, non-ommitted fields!
+
 ##### `aggressive`
 
 Requests are processed similar to `rearrange` but user-defined gaps in the field
@@ -368,6 +370,8 @@ addresses are filled automatically. This usually reduces the number of requests,
 will increase the number of registers read due to larger requests.
 This algorithm might be usefull if you only want to specify the fields you are
 interested in but want to minimize the number of requests sent to the device.
+
+__Please note:__ This optimization might take long in case of many non-consecutive, non-ommitted fields!
 
 #### Field definitions
 
