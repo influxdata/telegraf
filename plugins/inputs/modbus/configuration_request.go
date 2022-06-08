@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"hash/maphash"
+
+	"github.com/influxdata/telegraf/internal/choice"
 )
 
 //go:embed sample_request.conf
@@ -25,6 +27,7 @@ type requestDefinition struct {
 	ByteOrder    string                   `toml:"byte_order"`
 	RegisterType string                   `toml:"register"`
 	Measurement  string                   `toml:"measurement"`
+	Optimization string                   `toml:"optimization"`
 	Fields       []requestFieldDefinition `toml:"fields"`
 	Tags         map[string]string        `toml:"tags"`
 }
@@ -42,6 +45,12 @@ func (c *ConfigurationPerRequest) Check() error {
 	seenFields := make(map[uint64]bool)
 
 	for _, def := range c.Requests {
+		// Check for valid optimization
+		validOptimizations := []string{"", "none", "shrink", "rearrange", "aggressive"}
+		if !choice.Contains(def.Optimization, validOptimizations) {
+			return fmt.Errorf("unknown optimization %q", def.Optimization)
+		}
+
 		// Check byte order of the data
 		switch def.ByteOrder {
 		case "":
@@ -153,16 +162,16 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 
 		switch def.RegisterType {
 		case "coil":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityCoils, def.Optimization)
 			set.coil = append(set.coil, requests...)
 		case "discrete":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityDiscreteInput)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityDiscreteInput, def.Optimization)
 			set.discrete = append(set.discrete, requests...)
 		case "holding":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityHoldingRegisters)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityHoldingRegisters, def.Optimization)
 			set.holding = append(set.holding, requests...)
 		case "input":
-			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityInputRegisters)
+			requests := groupFieldsToRequests(fields, def.Tags, maxQuantityInputRegisters, def.Optimization)
 			set.input = append(set.input, requests...)
 		default:
 			return nil, fmt.Errorf("unknown register type %q", def.RegisterType)
