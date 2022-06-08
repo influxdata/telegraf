@@ -26,12 +26,12 @@ Note that `used_percent` is calculated by doing `used / (used + free)`, _not_
 
 ### Docker container
 
-To monitor the Docker engine host from within a container you will need to
-mount the host's filesystem into the container and set the `HOST_PROC`
-environment variable to the location of the `/proc` filesystem.  If desired, you can
-also set the `HOST_MOUNT_PREFIX` environment variable to the prefix containing
-the `/proc` directory, when present this variable is stripped from the
-reported `path` tag.
+To monitor the Docker engine host from within a container you will need to mount
+the host's filesystem into the container and set the `HOST_PROC` environment
+variable to the location of the `/proc` filesystem.  If desired, you can also
+set the `HOST_MOUNT_PREFIX` environment variable to the prefix containing the
+`/proc` directory, when present this variable is stripped from the reported
+`path` tag.
 
 ```shell
 docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_PROC=/hostfs/proc telegraf
@@ -72,7 +72,7 @@ It may be desired to use POSIX ACLs to provide additional access:
 sudo setfacl -R -m u:telegraf:X /var/lib/docker/volumes/
 ```
 
-## Example
+## Example Output
 
 ```shell
 disk,fstype=hfs,mode=ro,path=/ free=398407520256i,inodes_free=97267461i,inodes_total=121847806i,inodes_used=24580345i,total=499088621568i,used=100418957312i,used_percent=20.131039916242397 1453832006274071563
