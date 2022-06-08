@@ -24,7 +24,7 @@ for target in ${targets}; do
 		go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./cmd/telegraf/ >> "${tmpdir}/golist"
 done
 
-for dep in $(LC_ALL=C sort -u "${tmpdir}/golist"); do
+LC_ALL=C sort -u < "${tmpdir}/golist" | while IFS= read -r dep; do
 	case "${dep}" in
 		# ignore ourselves
 		github.com/influxdata/telegraf) continue;;
