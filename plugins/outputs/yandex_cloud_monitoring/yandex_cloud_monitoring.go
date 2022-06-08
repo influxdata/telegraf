@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package yandex_cloud_monitoring
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // YandexCloudMonitoring allows publishing of metrics to the Yandex Cloud Monitoring custom metrics
 // service
@@ -63,24 +69,7 @@ const (
 	defaultMetadataFolderURL = "http://169.254.169.254/computeMetadata/v1/yandex/folder-id"
 )
 
-var sampleConfig = `
-  ## Timeout for HTTP writes.
-  # timeout = "20s"
-
-  ## Yandex.Cloud monitoring API endpoint. Normally should not be changed
-  # endpoint_url = "https://monitoring.api.cloud.yandex.net/monitoring/v2/data/write"
-
-  ## All user metrics should be sent with "custom" service specified. Normally should not be changed
-  # service = "custom"
-`
-
-// Description provides a description of the plugin
-func (a *YandexCloudMonitoring) Description() string {
-	return "Send aggregated metrics to Yandex.Cloud Monitoring"
-}
-
-// SampleConfig provides a sample configuration for the plugin
-func (a *YandexCloudMonitoring) SampleConfig() string {
+func (*YandexCloudMonitoring) SampleConfig() string {
 	return sampleConfig
 }
 

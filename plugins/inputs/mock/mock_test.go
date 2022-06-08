@@ -8,6 +8,22 @@ import (
 )
 
 func TestGather(t *testing.T) {
+	testConstantString := &constant{
+		Name:  "constant_string",
+		Value: "a string",
+	}
+	testConstantFloat := &constant{
+		Name:  "constant_float",
+		Value: 3.1415,
+	}
+	testConstantInt := &constant{
+		Name:  "constant_int",
+		Value: 42,
+	}
+	testConstantBool := &constant{
+		Name:  "constant_bool",
+		Value: true,
+	}
 	testRandom := &random{
 		Name: "random",
 		Min:  1.0,
@@ -38,6 +54,7 @@ func TestGather(t *testing.T) {
 		MetricName: "test",
 		Tags:       tags,
 
+		Constant: []*constant{testConstantString, testConstantFloat, testConstantInt, testConstantBool},
 		Random:   []*random{testRandom},
 		SineWave: []*sineWave{testSineWave},
 		Step:     []*step{testStep},
@@ -56,6 +73,14 @@ func TestGather(t *testing.T) {
 		switch k {
 		case "abc":
 			require.Equal(t, 50.0, v)
+		case "constant_string":
+			require.Equal(t, testConstantString.Value, v)
+		case "constant_float":
+			require.Equal(t, testConstantFloat.Value, v)
+		case "constant_int":
+			require.Equal(t, testConstantInt.Value, v)
+		case "constant_bool":
+			require.Equal(t, testConstantBool.Value, v)
 		case "random":
 			require.GreaterOrEqual(t, 6.0, v)
 			require.LessOrEqual(t, 1.0, v)

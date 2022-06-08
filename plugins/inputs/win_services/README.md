@@ -6,7 +6,8 @@ Monitoring some services may require running Telegraf with administrator privile
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Input plugin to report Windows services info.
 [[inputs.win_services]]
   ## Names of the services to monitor. Leave empty to monitor all the available services on the host. Globs accepted. Case sensitive.
   service_names = [

@@ -2,12 +2,12 @@
 
 This plugin uses the Teamspeak 3 ServerQuery interface of the Teamspeak server to collect statistics of one or more
 virtual servers. If you are querying an external Teamspeak server, make sure to add the host which is running Telegraf
-to query_ip_whitelist.txt in the Teamspeak Server directory. For information about how to configure the server take a look
+to query_ip_allowlist.txt in the Teamspeak Server directory. For information about how to configure the server take a look
 the [Teamspeak 3 ServerQuery Manual](http://media.teamspeak.com/ts3_literature/TeamSpeak%203%20Server%20Query%20Manual.pdf)
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Reads metrics from a Teamspeak 3 Server via ServerQuery
 [[inputs.teamspeak]]
   ## Server address for Teamspeak 3 ServerQuery
@@ -16,6 +16,8 @@ the [Teamspeak 3 ServerQuery Manual](http://media.teamspeak.com/ts3_literature/T
   username = "serverqueryuser"
   ## Password for ServerQuery
   password = "secret"
+  ## Nickname of the ServerQuery client
+  nickname = "telegraf"
   ## Array of virtual servers
   # virtual_servers = [1]
 ```

@@ -4,44 +4,45 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# A plugin to collect stats from Varnish HTTP Cache
 [[inputs.varnish]]
-## If running as a restricted user you can prepend sudo for additional access:
-#use_sudo = false
+  ## If running as a restricted user you can prepend sudo for additional access:
+  #use_sudo = false
 
-## The default location of the varnishstat binary can be overridden with:
-binary = "/usr/bin/varnishstat"
+  ## The default location of the varnishstat binary can be overridden with:
+  binary = "/usr/bin/varnishstat"
 
-## Additional custom arguments for the varnishstat command
-# binary_args = ["-f", "MAIN.*"]
+  ## Additional custom arguments for the varnishstat command
+  # binary_args = ["-f", "MAIN.*"]
 
-## The default location of the varnishadm binary can be overridden with:
-adm_binary = "/usr/bin/varnishadm"
+  ## The default location of the varnishadm binary can be overridden with:
+  adm_binary = "/usr/bin/varnishadm"
 
-## Custom arguments for the varnishadm command 
-# adm_binary_args = [""] 
+  ## Custom arguments for the varnishadm command
+  # adm_binary_args = [""]
 
-## Metric version defaults to metric_version=1, use metric_version=2 for removal of nonactive vcls
-## Varnish 6.0.2 and newer is required for metric_version=2.
-metric_version = 1
+  ## Metric version defaults to metric_version=1, use metric_version=2 for removal of nonactive vcls
+  ## Varnish 6.0.2 and newer is required for metric_version=2.
+  metric_version = 1
 
-## Additional regexps to override builtin conversion of varnish metrics into telegraf metrics. 
-## Regexp group "_vcl" is used for extracting the VCL name. Metrics that contain nonactive VCL's are skipped.  
-## Regexp group "_field" overrides the field name. Other named regexp groups are used as tags.
-# regexps = ['^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<group>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
+  ## Additional regexps to override builtin conversion of varnish metrics into telegraf metrics.
+  ## Regexp group "_vcl" is used for extracting the VCL name. Metrics that contain nonactive VCL's are skipped.
+  ## Regexp group "_field" overrides the field name. Other named regexp groups are used as tags.
+  # regexps = ['^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<group>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val']
 
-## By default, telegraf gather stats for 3 metric points.
-## Setting stats will override the defaults shown below.
-## Glob matching can be used, ie, stats = ["MAIN.*"]
-## stats may also be set to ["*"], which will collect all stats
-stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
+  ## By default, telegraf gather stats for 3 metric points.
+  ## Setting stats will override the defaults shown below.
+  ## Glob matching can be used, ie, stats = ["MAIN.*"]
+  ## stats may also be set to ["*"], which will collect all stats
+  stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
 
-## Optional name for the varnish instance (or working directory) to query
-## Usually append after -n in varnish cli
-# instance_name = instanceName
+  ## Optional name for the varnish instance (or working directory) to query
+  ## Usually append after -n in varnish cli
+  # instance_name = instanceName
 
-## Timeout for varnishstat command
-# timeout = "1s"
+  ## Timeout for varnishstat command
+  # timeout = "1s"
 ```
 
 ### Measurements & Fields (metric_version=1)
@@ -367,7 +368,7 @@ are excluded from monitoring.
 ### Requirements
 
 - Varnish 6.0.2+ is required (older versions do not support JSON output from CLI tools)
-  
+
 #### Examples
 
 Varnish counter:

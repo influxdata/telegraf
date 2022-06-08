@@ -2,15 +2,16 @@
 
 This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
 
-*Please Note: This plugin is experimental; Its data schema may be subject to change
-based on its main usage cases and the evolution of the OpenTracing standard.*
+__Please Note:__ This plugin is experimental; Its data schema may be subject to change
+based on its main usage cases and the evolution of the OpenTracing standard.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
 [[inputs.zipkin]]
-    path = "/api/v1/spans" # URL path for span data
-    port = 9411 # Port on which Telegraf listens
+  # path = "/api/v1/spans" # URL path for span data
+  # port = 9411 # Port on which Telegraf listens
 ```
 
 The plugin accepts spans in `JSON` or `thrift` if the `Content-Type` is `application/json` or `application/x-thrift`, respectively.
@@ -25,7 +26,7 @@ Traces are built by collecting all Spans that share a traceId.
 
 - __SPAN:__ is a set of Annotations and BinaryAnnotations that correspond to a particular RPC.
 
-- __Annotations:__ for each annotation & binary annotation of a span a metric is output. *Records an occurrence in time at the beginning and end of a request.*
+- __Annotations:__ for each annotation & binary annotation of a span a metric is output. _Records an occurrence in time at the beginning and end of a request._
 
   Annotations may have the following values:
 

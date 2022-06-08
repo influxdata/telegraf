@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package wavefront
 
 import (
+	_ "embed"
 	"fmt"
 	"regexp"
 	"strings"
@@ -10,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const maxTagLength = 254
 
@@ -28,7 +34,7 @@ type Wavefront struct {
 	TruncateTags    bool                            `toml:"truncate_tags"`
 	ImmediateFlush  bool                            `toml:"immediate_flush"`
 	SourceOverride  []string                        `toml:"source_override"`
-	StringToNumber  map[string][]map[string]float64 `toml:"string_to_number"`
+	StringToNumber  map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
 
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
@@ -58,65 +64,6 @@ var tagValueReplacer = strings.NewReplacer("*", "-")
 
 var pathReplacer = strings.NewReplacer("_", "_")
 
-var sampleConfig = `
-  ## Url for Wavefront Direct Ingestion or using HTTP with Wavefront Proxy
-  ## If using Wavefront Proxy, also specify port. example: http://proxyserver:2878
-  url = "https://metrics.wavefront.com"
-
-  ## Authentication Token for Wavefront. Only required if using Direct Ingestion
-  #token = "DUMMY_TOKEN"  
-  
-  ## DNS name of the wavefront proxy server. Do not use if url is specified
-  #host = "wavefront.example.com"
-
-  ## Port that the Wavefront proxy server listens on. Do not use if url is specified
-  #port = 2878
-
-  ## prefix for metrics keys
-  #prefix = "my.specific.prefix."
-
-  ## whether to use "value" for name of simple fields. default is false
-  #simple_fields = false
-
-  ## character to use between metric and field name.  default is . (dot)
-  #metric_separator = "."
-
-  ## Convert metric name paths to use metricSeparator character
-  ## When true will convert all _ (underscore) characters in final metric name. default is true
-  #convert_paths = true
-
-  ## Use Strict rules to sanitize metric and tag names from invalid characters
-  ## When enabled forward slash (/) and comma (,) will be accepted
-  #use_strict = false
-
-  ## Use Regex to sanitize metric and tag names from invalid characters
-  ## Regex is more thorough, but significantly slower. default is false
-  #use_regex = false
-
-  ## point tags to use as the source name for Wavefront (if none found, host will be used)
-  #source_override = ["hostname", "address", "agent_host", "node_host"]
-
-  ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0. default is true
-  #convert_bool = true
-
-  ## Truncate metric tags to a total of 254 characters for the tag name value. Wavefront will reject any 
-  ## data point exceeding this limit if not truncated. Defaults to 'false' to provide backwards compatibility.
-  #truncate_tags = false
-
-  ## Flush the internal buffers after each batch. This effectively bypasses the background sending of metrics
-  ## normally done by the Wavefront SDK. This can be used if you are experiencing buffer overruns. The sending 
-  ## of metrics will block for a longer time, but this will be handled gracefully by the internal buffering in
-  ## Telegraf.
-  #immediate_flush = true
-
-  ## Define a mapping, namespaced by metric prefix, from string values to numeric values
-  ##   deprecated in 1.9; use the enum processor plugin
-  #[[outputs.wavefront.string_to_number.elasticsearch]]
-  #  green = 1.0
-  #  yellow = 0.5
-  #  red = 0.0
-`
-
 type MetricPoint struct {
 	Metric    string
 	Value     float64
@@ -125,11 +72,11 @@ type MetricPoint struct {
 	Tags      map[string]string
 }
 
-func (w *Wavefront) Connect() error {
-	if len(w.StringToNumber) > 0 {
-		w.Log.Warn("The string_to_number option is deprecated; please use the enum processor instead")
-	}
+func (*Wavefront) SampleConfig() string {
+	return sampleConfig
+}
 
+func (w *Wavefront) Connect() error {
 	flushSeconds := 5
 	if w.ImmediateFlush {
 		flushSeconds = 86400 // Set a very long flush interval if we're flushing directly
@@ -253,7 +200,10 @@ func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]strin
 			for k, v := range mTags {
 				if k == s {
 					source = v
-					mTags["telegraf_host"] = mTags["host"]
+					if mTags["host"] != "" {
+						mTags["telegraf_host"] = mTags["host"]
+					}
+
 					sourceTagFound = true
 					delete(mTags, k)
 					break
@@ -332,14 +282,6 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 		return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	}
 	return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
-}
-
-func (w *Wavefront) SampleConfig() string {
-	return sampleConfig
-}
-
-func (w *Wavefront) Description() string {
-	return "Configuration for Wavefront server to send metrics to"
 }
 
 func (w *Wavefront) Close() error {

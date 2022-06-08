@@ -50,7 +50,9 @@ Also, consider polling OpenStack services at different intervals depending on yo
 
 ### Configuration
 
-```toml
+```toml @sample.conf
+# Collects performance metrics from OpenStack services
+[[inputs.openstack]]
   ## The recommended interval to poll is '30m'
 
   ## The identity endpoint to authenticate against and get the service catalog from.
@@ -66,7 +68,7 @@ Also, consider polling OpenStack services at different intervals depending on yo
   username = "admin"
   password = "password"
 
-  ## Available services are: 
+  ## Available services are:
   ## "agents", "aggregates", "flavors", "hypervisors", "networks", "nova_services",
   ## "ports", "projects", "servers", "services", "stacks", "storage_pools", "subnets", "volumes"
   # enabled_services = ["services", "projects", "hypervisors", "flavors", "networks", "volumes"]
@@ -90,7 +92,7 @@ Also, consider polling OpenStack services at different intervals depending on yo
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Options for tags received from Openstack 
+  ## Options for tags received from Openstack
   # tag_prefix = "openstack_tag_"
   # tag_value = "true"
 

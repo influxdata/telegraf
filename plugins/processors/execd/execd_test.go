@@ -24,6 +24,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(exe)
 	e.Command = []string{exe, "-countmultiplier"}
+	e.Environment = []string{"PLUGINS_PROCESSORS_EXECD_MODE=application", "FIELD_NAME=count"}
 	e.RestartDelay = config.Duration(5 * time.Second)
 
 	acc := &testutil.Accumulator{}
@@ -84,6 +85,7 @@ func TestParseLinesWithNewLines(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(exe)
 	e.Command = []string{exe, "-countmultiplier"}
+	e.Environment = []string{"PLUGINS_PROCESSORS_EXECD_MODE=application", "FIELD_NAME=count"}
 	e.RestartDelay = config.Duration(5 * time.Second)
 
 	acc := &testutil.Accumulator{}
@@ -129,7 +131,8 @@ var countmultiplier = flag.Bool("countmultiplier", false,
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	if *countmultiplier {
+	runMode := os.Getenv("PLUGINS_PROCESSORS_EXECD_MODE")
+	if *countmultiplier && runMode == "application" {
 		runCountMultiplierProgram()
 		os.Exit(0)
 	}
@@ -138,6 +141,7 @@ func TestMain(m *testing.M) {
 }
 
 func runCountMultiplierProgram() {
+	fieldName := os.Getenv("FIELD_NAME")
 	parser := influx.NewStreamParser(os.Stdin)
 	serializer, _ := serializers.NewInfluxSerializer()
 
@@ -159,23 +163,23 @@ func runCountMultiplierProgram() {
 			os.Exit(1)
 		}
 
-		c, found := m.GetField("count")
+		c, found := m.GetField(fieldName)
 		if !found {
 			//nolint:errcheck,revive // Test will fail anyway
-			fmt.Fprintf(os.Stderr, "metric has no count field\n")
+			fmt.Fprintf(os.Stderr, "metric has no %s field\n", fieldName)
 			//nolint:revive // os.Exit called intentionally
 			os.Exit(1)
 		}
 		switch t := c.(type) {
 		case float64:
 			t *= 2
-			m.AddField("count", t)
+			m.AddField(fieldName, t)
 		case int64:
 			t *= 2
-			m.AddField("count", t)
+			m.AddField(fieldName, t)
 		default:
 			//nolint:errcheck,revive // Test will fail anyway
-			fmt.Fprintf(os.Stderr, "count is not an unknown type, it's a %T\n", c)
+			fmt.Fprintf(os.Stderr, "%s is not an unknown type, it's a %T\n", fieldName, c)
 			//nolint:revive // os.Exit called intentionally
 			os.Exit(1)
 		}

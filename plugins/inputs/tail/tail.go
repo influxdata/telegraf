@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build !solaris
 // +build !solaris
 
@@ -6,6 +7,7 @@ package tail
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"errors"
 	"io"
 	"strings"
@@ -14,6 +16,8 @@ import (
 
 	"github.com/dimchansky/utfbom"
 	"github.com/influxdata/tail"
+	"github.com/pborman/ansi"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
@@ -21,6 +25,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultWatchMethod = "inotify"
@@ -42,6 +50,9 @@ type Tail struct {
 	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
 	CharacterEncoding   string   `toml:"character_encoding"`
 	PathTag             string   `toml:"path_tag"`
+
+	Filters      []string `toml:"filters"`
+	filterColors bool
 
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
@@ -76,79 +87,8 @@ func NewTail() *Tail {
 	}
 }
 
-const sampleConfig = `
-  ## File names or a pattern to tail.
-  ## These accept standard unix glob matching rules, but with the addition of
-  ## ** as a "super asterisk". ie:
-  ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
-  ##   "/var/log/*/*.log" -> find all .log files with a parent dir in /var/log
-  ##   "/var/log/apache.log" -> just tail the apache log file
-  ##   "/var/log/log[!1-2]*  -> tail files without 1-2
-  ##   "/var/log/log[^1-2]*  -> identical behavior as above
-  ## See https://github.com/gobwas/glob for more examples
-  ##
-  files = ["/var/mymetrics.out"]
-
-  ## Read file from beginning.
-  # from_beginning = false
-
-  ## Whether file is a named pipe
-  # pipe = false
-
-  ## Method used to watch for file updates.  Can be either "inotify" or "poll".
-  # watch_method = "inotify"
-
-  ## Maximum lines of the file to process that have not yet be written by the
-  ## output.  For best throughput set based on the number of metrics on each
-  ## line and the size of the output's metric_batch_size.
-  # max_undelivered_lines = 1000
-
-  ## Character encoding to use when interpreting the file contents.  Invalid
-  ## characters are replaced using the unicode replacement character.  When set
-  ## to the empty string the data is not decoded to text.
-  ##   ex: character_encoding = "utf-8"
-  ##       character_encoding = "utf-16le"
-  ##       character_encoding = "utf-16be"
-  ##       character_encoding = ""
-  # character_encoding = ""
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
-
-  ## Set the tag that will contain the path of the tailed file. If you don't want this tag, set it to an empty string.
-  # path_tag = "path"
-
-  ## multiline parser/codec
-  ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
-  #[inputs.tail.multiline]
-    ## The pattern should be a regexp which matches what you believe to be an
-	## indicator that the field is part of an event consisting of multiple lines of log data.
-    #pattern = "^\s"
-
-    ## This field must be either "previous" or "next".
-	## If a line matches the pattern, "previous" indicates that it belongs to the previous line,
-	## whereas "next" indicates that the line belongs to the next one.
-    #match_which_line = "previous"
-
-    ## The invert_match field can be true or false (defaults to false).
-    ## If true, a message not matching the pattern will constitute a match of the multiline
-	## filter and the what will be applied. (vice-versa is also true)
-    #invert_match = false
-
-    ## After the specified timeout, this plugin sends a multiline event even if no new pattern
-	## is found to start a new event. The default timeout is 5s.
-    #timeout = 5s
-`
-
-func (t *Tail) SampleConfig() string {
+func (*Tail) SampleConfig() string {
 	return sampleConfig
-}
-
-func (t *Tail) Description() string {
-	return "Parse the new lines appended to a file"
 }
 
 func (t *Tail) Init() error {
@@ -156,6 +96,12 @@ func (t *Tail) Init() error {
 		return errors.New("max_undelivered_lines must be positive")
 	}
 	t.sem = make(semaphore, t.MaxUndeliveredLines)
+
+	for _, filter := range t.Filters {
+		if filter == "ansi_color" {
+			t.filterColors = true
+		}
+	}
 
 	var err error
 	t.decoder, err = encoding.NewDecoder(t.CharacterEncoding)
@@ -366,6 +312,14 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		if line != nil && line.Err != nil {
 			t.Log.Errorf("Tailing %q: %s", tailer.Filename, line.Err.Error())
 			continue
+		}
+
+		if t.filterColors {
+			out, err := ansi.Strip([]byte(text))
+			if err != nil {
+				t.Log.Errorf("Cannot strip ansi colors from %s: %s", text, err)
+			}
+			text = string(out)
 		}
 
 		metrics, err := parseLine(parser, text)

@@ -10,7 +10,9 @@ checks. This information can be exported in JSON format and parsed by this input
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Read nginx_upstream_check module status information (https://github.com/yaoweibin/nginx_upstream_check_module)
+[[inputs.nginx_upstream_check]]
   ## An URL where Nginx Upstream check module is enabled
   ## It should be set to return a JSON formatted response
   url = "http://127.0.0.1/status?format=json"

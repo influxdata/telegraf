@@ -6,7 +6,8 @@ The Nomad plugin must grab metrics from every Nomad agent of the cluster. Telegr
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from the Nomad API
 [[inputs.nomad]]
   ## URL for the Nomad agent
   # url = "http://127.0.0.1:4646"

@@ -32,35 +32,8 @@ More information about the meaning of these metrics can be found in the [Postgre
 
 ## Configuration
 
-Specify address via a postgresql connection string:
-
-  `host=localhost port=5432 user=telegraf database=telegraf`
-
-Or via an url matching:
-
-  `postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]`
-
-All connection parameters are optional. Without the dbname parameter, the driver will default to a database with the same name as the user. This dbname is just for instantiating a connection with the server and doesn't restrict the databases we are trying to grab metrics for.
-
-A  list of databases to explicitly ignore.  If not specified, metrics for all databases are gathered.  Do NOT use with the 'databases' option.
-
-  `ignored_databases = ["postgres", "template0", "template1"]`
-
-A list of databases to pull metrics about. If not specified, metrics for all databases are gathered.  Do NOT use with the 'ignored_databases' option.
-
-  `databases = ["app_production", "testing"]`
-
-### TLS Configuration
-
-Add the `sslkey`, `sslcert` and `sslrootcert` options to your DSN:
-
-```shell
-host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/telegraf/key.pem sslcert=/etc/telegraf/cert.pem sslrootcert=/etc/telegraf/ca.pem
-```
-
-### Configuration example
-
-```toml
+```toml @sample.conf
+# Read metrics from one or many postgresql servers
 [[inputs.postgresql]]
   ## specify address via a url matching:
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
@@ -97,4 +70,30 @@ host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/te
   ## This should be set to false when connecting through a PgBouncer instance
   ## with pool_mode set to transaction.
   prepared_statements = true
+```
+
+Specify address via a postgresql connection string:
+
+  `host=localhost port=5432 user=telegraf database=telegraf`
+
+Or via an url matching:
+
+  `postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]`
+
+All connection parameters are optional. Without the dbname parameter, the driver will default to a database with the same name as the user. This dbname is just for instantiating a connection with the server and doesn't restrict the databases we are trying to grab metrics for.
+
+A  list of databases to explicitly ignore.  If not specified, metrics for all databases are gathered.  Do NOT use with the 'databases' option.
+
+  `ignored_databases = ["postgres", "template0", "template1"]`
+
+A list of databases to pull metrics about. If not specified, metrics for all databases are gathered.  Do NOT use with the 'ignored_databases' option.
+
+  `databases = ["app_production", "testing"]`
+
+### TLS Configuration
+
+Add the `sslkey`, `sslcert` and `sslrootcert` options to your DSN:
+
+```shell
+host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/telegraf/key.pem sslcert=/etc/telegraf/cert.pem sslrootcert=/etc/telegraf/ca.pem
 ```

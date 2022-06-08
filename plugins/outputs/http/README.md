@@ -1,12 +1,12 @@
 # HTTP Output Plugin
 
-This plugin sends metrics in a HTTP message encoded using one of the output
-data formats. For data_formats that support batching, metrics are sent in
-batch format by default.
+This plugin sends metrics in a HTTP message encoded using one of the output data
+formats. For data_formats that support batching, metrics are sent in batch
+format by default.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # A plugin that can transmit metrics over HTTP
 [[outputs.http]]
   ## URL is the address to send metrics to
@@ -28,6 +28,9 @@ batch format by default.
   # token_url = "https://indentityprovider/oauth2/v1/token"
   # scopes = ["urn:opc:idm:__myscopes__"]
 
+  ## Goole API Auth
+  # google_application_credentials = "/etc/telegraf/example_secret.json"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -40,6 +43,7 @@ batch format by default.
   # cookie_auth_method = "POST"
   # cookie_auth_username = "username"
   # cookie_auth_password = "pa$$word"
+  # cookie_auth_headers = '{"Content-Type": "application/json", "X-MY-HEADER":"hello"}'
   # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
   ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
   # cookie_auth_renewal = "5m"
@@ -63,6 +67,15 @@ batch format by default.
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
+
+  ## MaxIdleConns controls the maximum number of idle (keep-alive)
+  ## connections across all hosts. Zero means no limit.
+  # max_idle_conn = 0
+
+  ## MaxIdleConnsPerHost, if non-zero, controls the maximum idle
+  ## (keep-alive) connections to keep per-host. If zero,
+  ## DefaultMaxIdleConnsPerHost is used(2).
+  # max_idle_conn_per_host = 2
 
   ## Idle (keep-alive) connection timeout.
   ## Maximum amount of time before idle connection is closed.
@@ -94,6 +107,21 @@ batch format by default.
   # non_retryable_statuscodes = [409, 413]
 ```
 
+### Google API Auth
+
+The `google_application_credentials` setting is used with Google Cloud APIs. It specifies the json key file. To learn about creating Google service accounts, consult Google's
+[oauth2 service account documentation][create_service_account]. An example use case is a metrics proxy deployed to
+Cloud Run. In this example, the service account must have the "run.routes.invoke" permission.
+
+[create_service_account]: https://cloud.google.com/docs/authentication/production#create_service_account
+
 ### Optional Cookie Authentication Settings
 
-The optional Cookie Authentication Settings will retrieve a cookie from the given authorization endpoint, and use it in subsequent API requests.  This is useful for services that do not provide OAuth or Basic Auth authentication, e.g. the [Tesla Powerwall API](https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network), which uses a Cookie Auth Body to retrieve an authorization cookie.  The Cookie Auth Renewal interval will renew the authorization by retrieving a new cookie at the given interval.
+The optional Cookie Authentication Settings will retrieve a cookie from the
+given authorization endpoint, and use it in subsequent API requests.  This is
+useful for services that do not provide OAuth or Basic Auth authentication,
+e.g. the [Tesla Powerwall API][powerwall], which uses a Cookie Auth Body to
+retrieve an authorization cookie.  The Cookie Auth Renewal interval will renew
+the authorization by retrieving a new cookie at the given interval.
+
+[powerwall]: https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network

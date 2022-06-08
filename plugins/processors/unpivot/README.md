@@ -1,12 +1,15 @@
-# Unpivot Processor
+# Unpivot Processor Plugin
 
-You can use the `unpivot` processor to rotate a multi field series into single valued metrics.  This transformation often results in data that is more easy to aggregate across fields.
+You can use the `unpivot` processor to rotate a multi field series into single
+valued metrics.  This transformation often results in data that is more easy to
+aggregate across fields.
 
 To perform the reverse operation use the [pivot] processor.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Rotate multi field metric into several single field metrics
 [[processors.unpivot]]
   ## Tag to use for the name.
   tag_key = "name"

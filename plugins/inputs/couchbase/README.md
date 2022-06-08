@@ -1,11 +1,12 @@
 # Couchbase Input Plugin
 
-Couchbase is a distributed NoSQL database.
-This plugin gets metrics for each Couchbase node, as well as detailed metrics for each bucket, for a given couchbase server.
+Couchbase is a distributed NoSQL database.  This plugin gets metrics for each
+Couchbase node, as well as detailed metrics for each bucket, for a given
+couchbase server.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read per-node and per-bucket metrics from Couchbase
 [[inputs.couchbase]]
   ## specify servers via a url matching:
@@ -31,7 +32,7 @@ This plugin gets metrics for each Couchbase node, as well as detailed metrics fo
   # insecure_skip_verify = false
 ```
 
-## Measurements
+## Metrics
 
 ### couchbase_node
 
@@ -62,7 +63,8 @@ Default bucket fields:
 - data_used (unit: bytes, example: 212179309111.0)
 - mem_used (unit: bytes, example: 202156957464.0)
 
-Additional fields that can be configured with the `bucket_stats_included` option:
+Additional fields that can be configured with the `bucket_stats_included`
+option:
 
 - couch_total_disk_size
 - couch_docs_fragmentation
@@ -280,7 +282,7 @@ Additional fields that can be configured with the `bucket_stats_included` option
 - swap_total
 - swap_used
 
-## Example output
+## Example Output
 
 ```shell
 couchbase_node,cluster=http://localhost:8091/,hostname=172.17.0.2:8091 memory_free=7705575424,memory_total=16558182400 1547829754000000000

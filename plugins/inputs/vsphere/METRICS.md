@@ -5,7 +5,7 @@ and the set of available metrics may vary depending hardware, as well as what pl
 are installed. Therefore, providing a definitive list of available metrics is difficult. The metrics listed
 below are the most commonly available as of vSphere 6.5.
 
-For a complete list of metrics available from vSphere and the units they measure in, please reference the [VMWare vCenter Converter API Reference](https://www.vmware.com/support/developer/converter-sdk/conv60_apireference/vim.PerformanceManager.html).
+For a complete list of metrics available from vSphere and the units they measure in, please reference the [VMWare Product Documentation](https://docs.vmware.com/en/VMware-vSphere/7.0/com.vmware.vsphere.monitoring.doc/GUID-FF7F87C7-91E7-4A2D-88B5-E3E04A76F51B.html) or the [VMWare Performance Manager Documentation](https://vdc-repo.vmware.com/vmwb-repository/dcr-public/eda658cb-b729-480e-99bc-d3c961055a38/dc769ba5-3cfa-44b1-a5f9-ad807521af19/doc/vim.PerformanceManager.html)
 
 To list the exact set in your environment, please use the govc tool available [here](https://github.com/vmware/govmomi/tree/master/govc)
 
@@ -191,6 +191,59 @@ vmop.numChangeHostDS.latest
 vmop.numVMotion.latest
 vmop.numSVMotion.latest
 vmop.numXVMotion.latest
+```
+
+## Resource Pool Metrics
+
+```metrics
+cpu.usagemhz.average
+cpu.cpuentitlement.latest
+cpu.usagemhz.minimum
+cpu.usagemhz.maximum
+cpu.capacity.entitlement.average
+cpu.capacity.usage.average
+cpu.capacity.demand.average
+cpu.capacity.contention.average
+cpu.corecount.provisioned.average
+cpu.corecount.contention.average
+disk.throughput.usage.average
+disk.throughput.contention.average
+mem.capacity.contention.average
+mem.overhead.average
+mem.consumed.average
+mem.granted.average
+mem.active.average
+mem.shared.average
+mem.zero.average
+mem.swapped.average
+mem.vmmemctl.average
+mem.capacity.provisioned.average
+mem.capacity.entitlement.average
+mem.capacity.usage.average
+mem.mementitlement.latest
+mem.compressed.average
+mem.compressionRate.average
+mem.decompressionRate.average
+mem.overhead.minimum
+mem.consumed.minimum
+mem.granted.minimum
+mem.active.minimum
+mem.shared.minimum
+mem.zero.minimum
+mem.swapped.minimum
+mem.vmmemctl.maximum
+mem.overhead.maximum
+mem.consumed.maximum
+mem.granted.maximum
+mem.active.maximum
+mem.shared.maximum
+mem.zero.maximum
+mem.swapped.maximum
+mem.vmmemctl.minimum
+net.throughput.usage.average
+net.throughput.contention.summation
+power.power.average
+power.energy.summation
 ```
 
 ## Cluster Metrics

@@ -2,8 +2,8 @@
 
 ## Configuration
 
-```toml
-# Read Redis's basic status information
+```toml @sample.conf
+# Read metrics from one or many redis servers
 [[inputs.redis]]
   ## specify servers via a url matching:
   ##  [protocol://][:password]@address[:port]
@@ -18,7 +18,7 @@
 
   ## Optional. Specify redis commands to retrieve values
   # [[inputs.redis.commands]]
-  #   # The command to run where each argument is a separate element 
+  #   # The command to run where each argument is a separate element
   #   command = ["get", "sample-key"]
   #   # The field to store the result in
   #   field = "sample-key-value"

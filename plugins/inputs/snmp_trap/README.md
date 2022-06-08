@@ -13,7 +13,8 @@ path onto the global path variable
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Receive SNMP traps
 [[inputs.snmp_trap]]
   ## Transport, local address, and port to listen on.  Transport must
   ## be "udp://".  Omit local address to listen on all interfaces.
@@ -25,6 +26,8 @@ path onto the global path variable
   # service_address = "udp://:162"
   ##
   ## Path to mib files
+  ## Used by the gosmi translator.
+  ## To add paths when translating with netsnmp, use the MIBDIRS environment variable
   # path = ["/usr/share/snmp/mibs"]
   ##
   ## Deprecated in 1.20.0; no longer running snmptranslate

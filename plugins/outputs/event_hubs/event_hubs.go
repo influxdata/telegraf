@@ -1,15 +1,22 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package event_hubs
 
 import (
 	"context"
+	_ "embed"
 	"time"
 
 	eventhub "github.com/Azure/azure-event-hubs-go/v3"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 /*
 ** Wrapper interface for eventhub.Hub
@@ -50,7 +57,8 @@ func (eh *eventHub) SendBatch(ctx context.Context, iterator eventhub.BatchIterat
 type EventHubs struct {
 	Log              telegraf.Logger `toml:"-"`
 	ConnectionString string          `toml:"connection_string"`
-	Timeout          config.Duration
+	Timeout          config.Duration `toml:"timeout"`
+	PartitionKey     string          `toml:"partition_key"`
 
 	Hub        EventHubInterface
 	serializer serializers.Serializer
@@ -60,25 +68,8 @@ const (
 	defaultRequestTimeout = time.Second * 30
 )
 
-func (e *EventHubs) Description() string {
-	return "Configuration for Event Hubs output plugin"
-}
-
-func (e *EventHubs) SampleConfig() string {
-	return `
-  ## The full connection string to the Event Hub (required)
-  ## The shared access key must have "Send" permissions on the target Event Hub.
-  connection_string = "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=superSecret1234=;EntityPath=hubName"
-  
-  ## Client timeout (defaults to 30s)
-  # timeout = "30s"
-  
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "json"
-`
+func (*EventHubs) SampleConfig() string {
+	return sampleConfig
 }
 
 func (e *EventHubs) Init() error {
@@ -123,7 +114,18 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 			continue
 		}
 
-		events = append(events, eventhub.NewEvent(payload))
+		event := eventhub.NewEvent(payload)
+		if e.PartitionKey != "" {
+			if key, ok := metric.GetTag(e.PartitionKey); ok {
+				event.PartitionKey = &key
+			} else if key, ok := metric.GetField(e.PartitionKey); ok {
+				if strKey, ok := key.(string); ok {
+					event.PartitionKey = &strKey
+				}
+			}
+		}
+
+		events = append(events, event)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))

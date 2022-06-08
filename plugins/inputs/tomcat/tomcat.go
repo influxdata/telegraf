@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package tomcat
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -13,6 +15,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type TomcatStatus struct {
 	TomcatJvm        TomcatJvm         `xml:"jvm"`
@@ -70,31 +76,8 @@ type Tomcat struct {
 	request *http.Request
 }
 
-var sampleconfig = `
-  ## URL of the Tomcat server status
-  # url = "http://127.0.0.1:8080/manager/status/all?XML=true"
-
-  ## HTTP Basic Auth Credentials
-  # username = "tomcat"
-  # password = "s3cret"
-
-  ## Request timeout
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (s *Tomcat) Description() string {
-	return "Gather metrics from the Tomcat server status page."
-}
-
-func (s *Tomcat) SampleConfig() string {
-	return sampleconfig
+func (*Tomcat) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Tomcat) Gather(acc telegraf.Accumulator) error {

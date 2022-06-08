@@ -5,17 +5,24 @@ It fetches its data from the [limits endpoint](https://developer.salesforce.com/
 
 ## Configuration
 
-```toml
-# Gather Metrics about Salesforce limits and remaining usage
+```toml @sample.conf
+# Read API usage and limits for a Salesforce organisation
 [[inputs.salesforce]]
+  ## specify your credentials
+  ##
   username = "your_username"
   password = "your_password"
-  ## (Optional) security token
-  security_token = "your_security_token"
-  ## (Optional) environment type (sandbox or production)
+  ##
+  ## (optional) security token
+  # security_token = "your_security_token"
+  ##
+  ## (optional) environment type (sandbox or production)
   ## default is: production
+  ##
   # environment = "production"
-  ## (Optional) API version (default: "39.0")
+  ##
+  ## (optional) API version (default: "39.0")
+  ##
   # version = "39.0"
 ```
 

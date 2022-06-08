@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -43,7 +42,7 @@ func TestOpenTelemetry(t *testing.T) {
 
 	pusher := controller.New(
 		processor.NewFactory(
-			simple.NewWithExactDistribution(),
+			simple.NewWithHistogramDistribution(),
 			metricExporter,
 		),
 		controller.WithExporter(metricExporter),
@@ -56,9 +55,10 @@ func TestOpenTelemetry(t *testing.T) {
 	global.SetMeterProvider(pusher)
 
 	// write metrics
-	meter := global.Meter("library-name")
-	counter := metric.Must(meter).NewInt64Counter("measurement-counter")
-	meter.RecordBatch(context.Background(), nil, counter.Measurement(7))
+	meter := global.MeterProvider().Meter("library-name")
+	counter, err := meter.SyncInt64().Counter("measurement-counter")
+	require.NoError(t, err)
+	counter.Add(context.Background(), 7)
 
 	err = pusher.Stop(context.Background())
 	require.NoError(t, err)

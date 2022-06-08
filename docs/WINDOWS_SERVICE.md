@@ -61,6 +61,10 @@ on a single system, you can install the service with the `--service-name` and
 > C:\"Program Files"\Telegraf\telegraf.exe --service install --service-name telegraf-2 --service-display-name "Telegraf 2"
 ```
 
+## Auto restart and restart delay
+
+By default the service will not automatically restart on failure. Providing the `--service-auto-restart` flag during installation will always restart the service with a default delay of 5 minutes. To modify this to for example 3 minutes, provide the additional flag `--service-restart-delay 3m`. The delay can be any valid `time.Duration` string.
+
 ## Troubleshooting
 
 When Telegraf runs as a Windows service, Telegraf logs messages to Windows events log before configuration file with logging settings is loaded.

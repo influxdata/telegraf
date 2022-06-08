@@ -5,9 +5,10 @@ specified raindops [middleware](http://raindrops.bogomips.org/Raindrops/Middlewa
 
 ## Configuration
 
-```toml
-# Read raindrops stats
+```toml @sample.conf
+# Read raindrops stats (raindrops - real-time stats for preforking Rack servers)
 [[inputs.raindrops]]
+  ## An array of raindrops middleware URI to gather stats.
   urls = ["http://localhost:8080/_raindrops"]
 ```
 

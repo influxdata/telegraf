@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package ipset
 
 import (
 	"bufio"
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Ipsets is a telegraf plugin to gather packets and bytes counters from ipset
 type Ipset struct {
@@ -29,22 +35,17 @@ const measurement = "ipset"
 
 var defaultTimeout = config.Duration(time.Second)
 
-// Description returns a short description of the plugin
-func (i *Ipset) Description() string {
-	return "Gather packets and bytes counters from Linux ipsets"
+func (*Ipset) SampleConfig() string {
+	return sampleConfig
 }
 
-// SampleConfig returns sample configuration options.
-func (i *Ipset) SampleConfig() string {
-	return `
-  ## By default, we only show sets which have already matched at least 1 packet.
-  ## set include_unmatched_sets = true to gather them all.
-  include_unmatched_sets = false
-  ## Adjust your sudo settings appropriately if using this option ("sudo ipset save")
-  use_sudo = false
-  ## The default timeout of 1s for ipset execution can be overridden here:
-  # timeout = "1s"
-`
+func (i *Ipset) Init() error {
+	_, err := exec.LookPath("ipset")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (i *Ipset) Gather(acc telegraf.Accumulator) error {

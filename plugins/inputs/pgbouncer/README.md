@@ -7,9 +7,10 @@ More information about the meaning of these metrics can be found in the
 
 - PgBouncer minimum tested version: 1.5
 
-## Configuration example
+## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from one or many pgbouncer servers
 [[inputs.pgbouncer]]
   ## specify address via a url matching:
   ##   postgres://[pqgotest[:password]]@host:port[/dbname]\

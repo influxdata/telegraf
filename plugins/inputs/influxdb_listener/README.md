@@ -20,7 +20,8 @@ submits data to InfluxDB determines the destination database.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Accept metrics over InfluxDB 1.x HTTP API
 [[inputs.influxdb_listener]]
   ## Address and port to host HTTP listener on
   service_address = ":8186"
@@ -62,6 +63,11 @@ submits data to InfluxDB determines the destination database.
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"
   # basic_password = "barfoo"
+
+  ## Influx line protocol parser
+  ## 'internal' is the default. 'upstream' is a newer parser that is faster
+  ## and more memory efficient.
+  # parser_type = "internal"
 ```
 
 ## Metrics

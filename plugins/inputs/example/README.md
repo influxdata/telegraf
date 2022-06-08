@@ -4,32 +4,32 @@ The `example` plugin gathers metrics about example things.  This description
 explains at a high level what the plugin does and provides links to where
 additional information can be found.
 
-Telegraf minimum version: Telegraf x.x
-Plugin minimum tested version: x.x
+Telegraf minimum version: Telegraf x.x Plugin minimum tested version: x.x
 
 ## Configuration
 
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage <plugin-name>`.
-
-```toml
+```toml @sample.conf
+# This is an example plugin
 [[inputs.example]]
   example_option = "example_value"
 ```
 
+Running `telegraf --usage <plugin-name>` also gives the sample TOML
+configuration.
+
 ### example_option
 
-A more in depth description of an option can be provided here, but only do so
-if the option cannot be fully described in the sample config.
+A more in depth description of an option can be provided here, but only do so if
+the option cannot be fully described in the sample config.
 
 ## Metrics
 
-Here you should add an optional description and links to where the user can
-get more information about the measurements.
+Here you should add an optional description and links to where the user can get
+more information about the measurements.
 
-If the output is determined dynamically based on the input source, or there
-are more metrics than can reasonably be listed, describe how the input is
-mapped to the output.
+If the output is determined dynamically based on the input source, or there are
+more metrics than can reasonably be listed, describe how the input is mapped to
+the output.
 
 - measurement1
   - tags:

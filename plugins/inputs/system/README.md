@@ -7,7 +7,7 @@ Number of CPUs is obtained from the /proc/cpuinfo file.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics about system load & uptime
 [[inputs.system]]
   # no configuration

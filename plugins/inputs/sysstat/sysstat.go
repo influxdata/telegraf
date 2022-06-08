@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 //go:build linux
 // +build linux
 
@@ -5,6 +6,7 @@ package sysstat
 
 import (
 	"bufio"
+	_ "embed"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -20,6 +22,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 var (
 	firstTimestamp time.Time
@@ -70,68 +76,27 @@ type Sysstat struct {
 	Log telegraf.Logger
 }
 
-func (*Sysstat) Description() string {
-	return "Sysstat metrics collector"
-}
-
-var sampleConfig = `
-  ## Path to the sadc command.
-  #
-  ## Common Defaults:
-  ##   Debian/Ubuntu: /usr/lib/sysstat/sadc
-  ##   Arch:          /usr/lib/sa/sadc
-  ##   RHEL/CentOS:   /usr/lib64/sa/sadc
-  sadc_path = "/usr/lib/sa/sadc" # required
-
-  ## Path to the sadf command, if it is not in PATH
-  # sadf_path = "/usr/bin/sadf"
-
-  ## Activities is a list of activities, that are passed as argument to the
-  ## sadc collector utility (e.g: DISK, SNMP etc...)
-  ## The more activities that are added, the more data is collected.
-  # activities = ["DISK"]
-
-  ## Group metrics to measurements.
-  ##
-  ## If group is false each metric will be prefixed with a description
-  ## and represents itself a measurement.
-  ##
-  ## If Group is true, corresponding metrics are grouped to a single measurement.
-  # group = true
-
-  ## Options for the sadf command. The values on the left represent the sadf
-  ## options and the values on the right their description (which are used for
-  ## grouping and prefixing metrics).
-  ##
-  ## Run 'sar -h' or 'man sar' to find out the supported options for your
-  ## sysstat version.
-  [inputs.sysstat.options]
-    -C = "cpu"
-    -B = "paging"
-    -b = "io"
-    -d = "disk"             # requires DISK activity
-    "-n ALL" = "network"
-    "-P ALL" = "per_cpu"
-    -q = "queue"
-    -R = "mem"
-    -r = "mem_util"
-    -S = "swap_util"
-    -u = "cpu_util"
-    -v = "inode"
-    -W = "swap"
-    -w = "task"
-  #  -H = "hugepages"        # only available for newer linux distributions
-  #  "-I ALL" = "interrupts" # requires INT activity
-
-  ## Device tags can be used to add additional tags for devices.
-  ## For example the configuration below adds a tag vg with value rootvg for
-  ## all metrics with sda devices.
-  # [[inputs.sysstat.device_tags.sda]]
-  #  vg = "rootvg"
-`
+const cmd = "sadf"
 
 func (*Sysstat) SampleConfig() string {
 	return sampleConfig
+}
+
+func (s *Sysstat) Init() error {
+	// Set defaults
+	if s.Sadf == "" {
+		sadf, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		s.Sadf = sadf
+	}
+
+	if s.Sadf == "" {
+		return fmt.Errorf("no path specified for %q", cmd)
+	}
+
+	return nil
 }
 
 func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
@@ -186,7 +151,7 @@ func (s *Sysstat) collect(tempfile string) error {
 	collectInterval := s.interval - parseInterval
 
 	// If true, interval is not defined yet and Gather is run for the first time.
-	if collectInterval < 0 {
+	if collectInterval <= 0 {
 		collectInterval = 1 // In that case we only collect for 1 second.
 	}
 
@@ -337,15 +302,10 @@ func escape(dirty string) string {
 }
 
 func init() {
-	s := Sysstat{
-		Group:      true,
-		Activities: dfltActivities,
-	}
-	sadf, _ := exec.LookPath("sadf")
-	if len(sadf) > 0 {
-		s.Sadf = sadf
-	}
 	inputs.Add("sysstat", func() telegraf.Input {
-		return &s
+		return &Sysstat{
+			Group:      true,
+			Activities: dfltActivities,
+		}
 	})
 }

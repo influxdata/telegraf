@@ -1,14 +1,17 @@
 # Consul Input Plugin
 
 This plugin will collect statistics about all health checks registered in the
-Consul. It uses [Consul API](https://www.consul.io/docs/agent/http/health.html#health_state)
-to query the data. It will not report the
-[telemetry](https://www.consul.io/docs/agent/telemetry.html) but Consul can
-report those stats already using StatsD protocol if needed.
+Consul. It uses [Consul API][1] to query the data. It will not report the
+[telemetry][2] but Consul can report those stats already using StatsD protocol
+if needed.
+
+[1]: https://www.consul.io/docs/agent/http/health.html#health_state
+
+[2]: https://www.consul.io/docs/agent/telemetry.html
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Gather health check statuses from services registered in Consul
 [[inputs.consul]]
   ## Consul server address
@@ -81,10 +84,11 @@ report those stats already using StatsD protocol if needed.
     - warning (integer)
 
 `passing`, `critical`, and `warning` are integer representations of the health
-check state. A value of `1` represents that the status was the state of the
-the health check at this sample. `status` is string representation of the same state.
+check state. A value of `1` represents that the status was the state of the the
+health check at this sample. `status` is string representation of the same
+state.
 
-## Example output
+## Example Output
 
 ```shell
 consul_health_checks,host=wolfpit,node=consul-server-node,check_id="serfHealth" check_name="Serf Health Status",service_id="",status="passing",passing=1i,critical=0i,warning=0i 1464698464486439902

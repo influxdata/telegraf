@@ -15,11 +15,11 @@ and submit new inputs.
   themselves.  See below for a quick example.
 - Input Plugins must be added to the
   `github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
-- The `SampleConfig` function should return valid toml that describes how the
-  plugin can be configured. This is included in `telegraf config`.  Please
-  consult the [Sample Config][] page for the latest style
-  guidelines.
-- The `Description` function should say in one line what this plugin does.
+- Each plugin requires a file called `sample.conf` containing the sample
+  configuration  for the plugin in TOML format.
+  Please consult the [Sample Config][] page for the latest style guidelines.
+- Each plugin `README.md` file should include the `sample.conf` file in a section
+  describing the configuration by specifying a `toml` section in the form `toml @sample.conf`. The specified file(s) are then injected automatically into the Readme.
 - Follow the recommended [Code Style][].
 
 Let's say you've written a plugin that emits metrics about processes on the
@@ -28,29 +28,27 @@ current host.
 ## Input Plugin Example
 
 ```go
+//go:generate ../../../tools/readme_config_includer/generator
 package simple
 
-// simple.go
-
 import (
+    _ "embed"
+
     "github.com/influxdata/telegraf"
     "github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Simple struct {
     Ok  bool            `toml:"ok"`
     Log telegraf.Logger `toml:"-"`
 }
 
-func (s *Simple) Description() string {
-    return "a demo plugin"
-}
-
-func (s *Simple) SampleConfig() string {
-    return `
-  ## Indicate if everything is fine
-  ok = true
-`
+func (*Simple) SampleConfig() string {
+    return sampleConfig
 }
 
 // Init is for setup, and validating config.
@@ -101,7 +99,7 @@ You can then utilize the parser internally in your plugin, parsing data as you
 see fit. Telegraf's configuration layer will take care of instantiating and
 creating the `Parser` object.
 
-Add the following to the `SampleConfig()`:
+Add the following to the sample configuration in the README.md:
 
 ```toml
   ## Data format to consume.

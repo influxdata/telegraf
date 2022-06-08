@@ -15,7 +15,8 @@ sudo service telegraf start
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# A Webhooks Event collector
 [[inputs.webhooks]]
   ## Address and port to host Webhook listener on
   service_address = ":1619"
@@ -23,21 +24,48 @@ sudo service telegraf start
   [inputs.webhooks.filestack]
     path = "/filestack"
 
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
+
   [inputs.webhooks.github]
     path = "/github"
     # secret = ""
 
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
+
   [inputs.webhooks.mandrill]
     path = "/mandrill"
+
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
 
   [inputs.webhooks.rollbar]
     path = "/rollbar"
 
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
+
   [inputs.webhooks.papertrail]
     path = "/papertrail"
 
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
+
   [inputs.webhooks.particle]
     path = "/particle"
+
+    ## HTTP basic auth
+    #username = ""
+    #password = ""
+  
+  [inputs.webhooks.artifactory]
+    path = "/artifactory"
 ```
 
 ## Available webhooks
@@ -48,6 +76,7 @@ sudo service telegraf start
 - [Rollbar](rollbar/)
 - [Papertrail](papertrail/)
 - [Particle](particle/)
+- [Artifactory](artifactory/)
 
 ## Adding new webhooks plugin
 

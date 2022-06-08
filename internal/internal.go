@@ -185,7 +185,7 @@ func AlignTime(tm time.Time, interval time.Duration) time.Time {
 	return truncated.Add(interval)
 }
 
-// Exit status takes the error from exec.Command
+// ExitStatus takes the error from exec.Command
 // and returns the exit status and true
 // if error is not exit status, will return 0 and false
 func ExitStatus(err error) (int, bool) {

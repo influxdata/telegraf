@@ -4,8 +4,8 @@ The Riak plugin gathers metrics from one or more riak instances.
 
 ## Configuration
 
-```toml
-# Description
+```toml @sample.conf
+# Read metrics one or many Riak servers
 [[inputs.riak]]
   # Specify a list of one or more riak http servers
   servers = ["http://localhost:8098"]

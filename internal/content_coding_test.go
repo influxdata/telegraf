@@ -46,6 +46,21 @@ func TestGzipReuse(t *testing.T) {
 	require.Equal(t, "doody", string(actual))
 }
 
+func TestZlibEncodeDecode(t *testing.T) {
+	enc, err := NewZlibEncoder()
+	require.NoError(t, err)
+	dec, err := NewZlibDecoder()
+	require.NoError(t, err)
+
+	payload, err := enc.Encode([]byte("howdy"))
+	require.NoError(t, err)
+
+	actual, err := dec.Decode(payload)
+	require.NoError(t, err)
+
+	require.Equal(t, "howdy", string(actual))
+}
+
 func TestIdentityEncodeDecode(t *testing.T) {
 	enc := NewIdentityEncoder()
 	dec := NewIdentityDecoder()

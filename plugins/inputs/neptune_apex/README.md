@@ -8,7 +8,8 @@ The [Neptune Apex](https://www.neptunesystems.com/) input plugin collects real-t
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Neptune Apex data collector
 [[inputs.neptune_apex]]
   ## The Neptune Apex plugin reads the publicly available status.xml data from a local Apex.
   ## Measurements will be logged under "apex".

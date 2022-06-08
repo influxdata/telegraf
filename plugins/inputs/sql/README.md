@@ -10,7 +10,8 @@ Please check the list of [supported SQL drivers](../../../docs/SQL_DRIVERS_INPUT
 This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage <plugin-name>`.
 
-```toml
+```toml @sample.conf
+# Read metrics from SQL queries
 [[inputs.sql]]
   ## Database Driver
   ## See https://github.com/influxdata/telegraf/blob/master/docs/SQL_DRIVERS_INPUT.md for
@@ -73,13 +74,13 @@ generate it using `telegraf --usage <plugin-name>`.
 
     ## Column names containing fields (explicit types)
     ## Convert the given columns to the corresponding type. Explicit type conversions take precedence over
-  ## the automatic (driver-based) conversion below.
-  ## NOTE: Columns should not be specified for multiple types or the resulting type is undefined.
+    ## the automatic (driver-based) conversion below.
+    ## NOTE: Columns should not be specified for multiple types or the resulting type is undefined.
     # field_columns_float = []
     # field_columns_int = []
-  # field_columns_uint = []
-  # field_columns_bool = []
-  # field_columns_string = []
+    # field_columns_uint = []
+    # field_columns_bool = []
+    # field_columns_string = []
 
     ## Column names containing fields (automatic types)
     ## An empty include list is equivalent to '[*]' and all returned columns will be accepted. An empty
@@ -151,8 +152,8 @@ configuration
   [[inputs.sql.query]]
     query="SELECT * FROM guests"
     measurement = "nation"
-    tag_cols_include = ["name"]
-    field_cols_exclude = ["name"]
+    tag_columns_include = ["name"]
+    field_columns_exclude = ["name"]
 ```
 
 Telegraf will output the following metrics

@@ -152,3 +152,22 @@ func (fs *fileServiceImpl) readFileAtOffsetToUint64(reader io.ReaderAt, offset i
 func newFileService() *fileServiceImpl {
 	return &fileServiceImpl{}
 }
+
+func checkFile(path string) error {
+	if path == "" {
+		return fmt.Errorf("empty path given")
+	}
+
+	lInfo, err := os.Lstat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file `%s` doesn't exist", path)
+		}
+		return fmt.Errorf("cannot obtain file info of `%s`: %v", path, err)
+	}
+	mode := lInfo.Mode()
+	if mode&os.ModeSymlink != 0 {
+		return fmt.Errorf("file `%s` is a symlink", path)
+	}
+	return nil
+}

@@ -9,7 +9,8 @@ useful creating custom metrics from the `/sys` or `/proc` filesystems.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Aggregates the contents of multiple files into a single point
 [[inputs.multifile]]
   ## Base directory where telegraf will look for files.
   ## Omit this option to use absolute paths.

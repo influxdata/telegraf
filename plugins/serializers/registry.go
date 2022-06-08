@@ -47,7 +47,7 @@ type Serializer interface {
 // Config is a struct that covers the data types needed for all serializer types,
 // and can be used to instantiate _any_ of the serializers.
 type Config struct {
-	// Dataformat can be one of the serializer types listed in NewSerializer.
+	// DataFormat can be one of the serializer types listed in NewSerializer.
 	DataFormat string `toml:"data_format"`
 
 	// Carbon2 metric format.

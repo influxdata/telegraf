@@ -188,6 +188,11 @@ The agent table configures Telegraf and the defaults used across all plugins.
   This can be used to avoid many plugins querying things like sysfs at the
   same time, which can have a measurable effect on the system.
 
+- **collection_offset**:
+  Collection offset is used to shift the collection by the given [interval][].
+  This can be be used to avoid many plugins querying constraint devices
+  at the same time by manually scheduling them in time.
+
 - **flush_interval**:
   Default flushing [interval][] for all outputs. Maximum flush_interval will be
   flush_interval + flush_jitter.
@@ -237,8 +242,14 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **hostname**:
   Override default hostname, if empty use os.Hostname()
+
 - **omit_hostname**:
   If set to true, do no set the "host" tag in the telegraf agent.
+
+- **snmp_translator**:
+  Method of translating SNMP objects. Can be "netsnmp" which
+  translates by calling external programs snmptranslate and snmptable,
+  or "gosmi" which translates using the built-in gosmi library.
 
 ## Plugins
 
@@ -279,6 +290,11 @@ Parameters that can be used with any input plugin:
 - **collection_jitter**:
   Overrides the `collection_jitter` setting of the [agent][Agent] for the
   plugin.  Collection jitter is used to jitter the collection by a random
+  [interval][].
+
+- **collection_offset**:
+  Overrides the `collection_offset` setting of the [agent][Agent] for the
+  plugin. Collection offset is used to shift the collection by the given
   [interval][].
 
 - **name_override**: Override the base name of the measurement.  (Default is
@@ -523,7 +539,7 @@ The inverse of `tagpass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `tagpass` test.
 
 > NOTE: Due to the way TOML is parsed, `tagpass` and `tagdrop` parameters must be
-defined at the *_end_* of the plugin definition, otherwise subsequent plugin config
+defined at the **end** of the plugin definition, otherwise subsequent plugin config
 options will be interpreted as part of the tagpass/tagdrop tables.
 
 ### Modifiers

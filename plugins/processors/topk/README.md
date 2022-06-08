@@ -1,6 +1,8 @@
 # TopK Processor Plugin
 
-The TopK processor plugin is a filter designed to get the top series over a period of time. It can be tweaked to calculate the top metrics via different aggregation functions.
+The TopK processor plugin is a filter designed to get the top series over a
+period of time. It can be tweaked to calculate the top metrics via different
+aggregation functions.
 
 This processor goes through these steps when processing a batch of metrics:
 
@@ -17,45 +19,59 @@ Notes:
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Print all metrics that pass through this filter.
 [[processors.topk]]
   ## How many seconds between aggregations
   # period = 10
 
-  ## How many top buckets to return
+  ## How many top buckets to return per field
+  ## Every field specified to aggregate over will return k number of results.
+  ## For example, 1 field with k of 10 will return 10 buckets. While 2 fields
+  ## with k of 3 will return 6 buckets.
   # k = 10
 
-  ## Based on which tags should the buckets be computed. Globs can be specified.
-  ## If set to an empty list tags are not considered when creating the buckets
+  ## Over which tags should the aggregation be done. Globs can be specified, in
+  ## which case any tag matching the glob will aggregated over. If set to an
+  ## empty list is no aggregation over tags is done
   # group_by = ['*']
 
-  ## Over which fields is the aggregation done
+  ## The field(s) to aggregate
+  ## Each field defined is used to create an independent aggregation. Each
+  ## aggregation will return k buckets. If a metric does not have a defined
+  ## field the metric will be dropped from the aggregation. Considering using
+  ## the defaults processor plugin to ensure fields are set if required.
   # fields = ["value"]
 
   ## What aggregation function to use. Options: sum, mean, min, max
   # aggregation = "mean"
 
-  ## Instead of the top k buckets, return the bottom k buckets
+  ## Instead of the top k largest metrics, return the bottom k lowest metrics
   # bottomk = false
 
-  ## This setting provides a way to know wich metrics where group together.
-  ## Add a tag (which name will be the value of this setting) to each metric.
-  ## The value will be the tags used to pick its bucket.
+  ## The plugin assigns each metric a GroupBy tag generated from its name and
+  ## tags. If this setting is different than "" the plugin will add a
+  ## tag (which name will be the value of this setting) to each metric with
+  ## the value of the calculated GroupBy tag. Useful for debugging
   # add_groupby_tag = ""
 
-  ## This setting provides a way to know the position of each metric's bucket in the top k
-  ## If the list is non empty, a field will be added to each and every metric
-  ## for each string present in this setting. This field will contain the ranking
-  ## of the bucket that the metric belonged to when aggregated over that field.
+  ## These settings provide a way to know the position of each metric in
+  ## the top k. The 'add_rank_field' setting allows to specify for which
+  ## fields the position is required. If the list is non empty, then a field
+  ## will be added to each and every metric for each string present in this
+  ## setting. This field will contain the ranking of the group that
+  ## the metric belonged to when aggregated over that field.
   ## The name of the field will be set to the name of the aggregation field,
   ## suffixed with the string '_topk_rank'
   # add_rank_fields = []
 
   ## These settings provide a way to know what values the plugin is generating
-  ## when aggregating metrics. If the list is non empty, then a field will be
-  ## added to each every metric for each field present in this setting.
-  ## This field will contain the computed aggregation for the bucket that the
-  ## metric belonged to when aggregated over that field.
+  ## when aggregating metrics. The 'add_aggregate_field' setting allows to
+  ## specify for which fields the final aggregation value is required. If the
+  ## list is non empty, then a field will be added to each every metric for
+  ## each field present in this setting. This field will contain
+  ## the computed aggregation for the group that the metric belonged to when
+  ## aggregated over that field.
   ## The name of the field will be set to the name of the aggregation field,
   ## suffixed with the string '_topk_aggregate'
   # add_aggregate_fields = []
@@ -63,11 +79,14 @@ Notes:
 
 ### Tags
 
-This processor does not add tags by default. But the setting `add_groupby_tag` will add a tag if set to anything other than ""
+This processor does not add tags by default. But the setting `add_groupby_tag`
+will add a tag if set to anything other than ""
 
 ### Fields
 
-This processor does not add fields by default. But the settings `add_rank_fields` and `add_aggregation_fields` will add one or several fields if set to anything other than ""
+This processor does not add fields by default. But the settings
+`add_rank_fields` and `add_aggregation_fields` will add one or several fields if
+set to anything other than ""
 
 ### Example
 

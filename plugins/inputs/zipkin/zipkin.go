@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package zipkin
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
 	"net/http"
@@ -14,6 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	// DefaultPort is the default port zipkin listens on, which zipkin implementations
@@ -47,11 +53,6 @@ type Handler interface {
 	Register(router *mux.Router, recorder Recorder) error
 }
 
-const sampleConfig = `
-  # path = "/api/v1/spans" # URL path for span data
-  # port = 9411            # Port on which Telegraf listens
-`
-
 // Zipkin is a telegraf configuration structure for the zipkin input plugin,
 // but it also contains fields for the management of a separate, concurrent
 // zipkin http server
@@ -68,13 +69,7 @@ type Zipkin struct {
 	waitGroup *sync.WaitGroup
 }
 
-// Description is a necessary method implementation from telegraf.ServiceInput
-func (z Zipkin) Description() string {
-	return "This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures."
-}
-
-// SampleConfig is a  necessary  method implementation from telegraf.ServiceInput
-func (z Zipkin) SampleConfig() string {
+func (*Zipkin) SampleConfig() string {
 	return sampleConfig
 }
 

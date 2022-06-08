@@ -11,11 +11,12 @@ path onto the global path variable
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Retrieves SNMP values from remote agents
 [[inputs.snmp]]
   ## Agent addresses to retrieve values from.
   ##   format:  agents = ["<scheme://><hostname>:<port>"]
-  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.  
+  ##   scheme:  optional, either udp, udp4, udp6, tcp, tcp4, tcp6.
   ##            default is udp
   ##   port:    optional
   ##   example: agents = ["udp://127.0.0.1:161"]
@@ -30,6 +31,8 @@ path onto the global path variable
   # version = 2
 
   ## Path to mib files
+  ## Used by the gosmi translator.
+  ## To add paths when translating with netsnmp, use the MIBDIRS environment variable
   # path = ["/usr/share/snmp/mibs"]
 
   ## SNMP community string.
@@ -57,7 +60,7 @@ path onto the global path variable
   ## Context Name.
   # context_name = ""
   ## Privacy protocol used for encrypted messages; one of "DES", "AES", "AES192", "AES192C", "AES256", "AES256C", or "".
-  ### Protocols "AES192", "AES192", "AES256", and "AES256C" require the underlying net-snmp tools 
+  ### Protocols "AES192", "AES192", "AES256", and "AES256C" require the underlying net-snmp tools
   ### to be compiled with --enable-blumenthal-aes (http://www.net-snmp.org/docs/INSTALL.html)
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
@@ -129,7 +132,7 @@ option operate similar to the `snmpget` utility.
     ##                or hextoint:BigEndian:uint32. Valid options for the Endian are:
     ##                BigEndian and LittleEndian. For the bit size: uint16, uint32
     ##                and uint64.
-    ##                      
+    ##
     # conversion = ""
 ```
 
@@ -196,17 +199,17 @@ One [metric][] is created for each row of the SNMP table.
       ## Specifies if the value of given field should be snmptranslated
       ## by default no field values are translated
       # translate = true
-  
+
       ## Secondary index table allows to merge data from two tables with
       ## different index that this filed will be used to join them. There can
       ## be only one secondary index table.
       # secondary_index_table = false
-      
+
       ## This field is using secondary index, and will be later merged with
       ## primary index using SecondaryIndexTable. SecondaryIndexTable and
       ## SecondaryIndexUse are exclusive.
       # secondary_index_use = false
-      
+
       ## Controls if entries from secondary table should be added or not
       ## if joining index is present or not. I set to true, means that join
       ## is outer, and index is prepended with "Secondary." for missing values

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package strings
 
 import (
+	_ "embed"
 	"encoding/base64"
 	"strings"
 	"unicode"
@@ -9,6 +11,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Strings struct {
 	Lowercase    []converter `toml:"lowercase"`
@@ -46,74 +52,6 @@ type converter struct {
 	Replacement string
 
 	fn ConvertFunc
-}
-
-const sampleConfig = `
-  ## Convert a tag value to uppercase
-  # [[processors.strings.uppercase]]
-  #   tag = "method"
-
-  ## Convert a field value to lowercase and store in a new field
-  # [[processors.strings.lowercase]]
-  #   field = "uri_stem"
-  #   dest = "uri_stem_normalised"
-
-  ## Convert a field value to titlecase
-  # [[processors.strings.titlecase]]
-  #   field = "status"
-
-  ## Trim leading and trailing whitespace using the default cutset
-  # [[processors.strings.trim]]
-  #   field = "message"
-
-  ## Trim leading characters in cutset
-  # [[processors.strings.trim_left]]
-  #   field = "message"
-  #   cutset = "\t"
-
-  ## Trim trailing characters in cutset
-  # [[processors.strings.trim_right]]
-  #   field = "message"
-  #   cutset = "\r\n"
-
-  ## Trim the given prefix from the field
-  # [[processors.strings.trim_prefix]]
-  #   field = "my_value"
-  #   prefix = "my_"
-
-  ## Trim the given suffix from the field
-  # [[processors.strings.trim_suffix]]
-  #   field = "read_count"
-  #   suffix = "_count"
-
-  ## Replace all non-overlapping instances of old with new
-  # [[processors.strings.replace]]
-  #   measurement = "*"
-  #   old = ":"
-  #   new = "_"
-
-  ## Trims strings based on width
-  # [[processors.strings.left]]
-  #   field = "message"
-  #   width = 10
-
-  ## Decode a base64 encoded utf-8 string
-  # [[processors.strings.base64decode]]
-  #   field = "message"
-
-  ## Sanitize a string to ensure it is a valid utf-8 string
-  ## Each run of invalid UTF-8 byte sequences is replaced by the replacement string, which may be empty
-  # [[processors.strings.valid_utf8]]
-  #   field = "message"
-  #   replacement = ""
-`
-
-func (s *Strings) SampleConfig() string {
-	return sampleConfig
-}
-
-func (s *Strings) Description() string {
-	return "Perform string processing on tags, fields, and measurements"
 }
 
 func (c *converter) convertTag(metric telegraf.Metric) {
@@ -292,7 +230,7 @@ func (s *Strings) initOnce() {
 	for _, c := range s.Replace {
 		c := c
 		c.fn = func(s string) string {
-			newString := strings.Replace(s, c.Old, c.New, -1)
+			newString := strings.ReplaceAll(s, c.Old, c.New)
 			if newString == "" {
 				return s
 			}
@@ -333,6 +271,10 @@ func (s *Strings) initOnce() {
 	}
 
 	s.init = true
+}
+
+func (*Strings) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Strings) Apply(in ...telegraf.Metric) []telegraf.Metric {

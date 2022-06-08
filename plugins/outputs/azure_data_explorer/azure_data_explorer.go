@@ -1,8 +1,10 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package azure_data_explorer
 
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -13,12 +15,17 @@ import (
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
 	"github.com/Azure/azure-kusto-go/kusto/unsafe"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type AzureDataExplorer struct {
 	Endpoint        string          `toml:"endpoint_url"`
@@ -37,6 +44,9 @@ type AzureDataExplorer struct {
 const (
 	tablePerMetric = "tablepermetric"
 	singleTable    = "singletable"
+	// These control the amount of memory we use when ingesting blobs
+	bufferSize = 1 << 20 // 1 MiB
+	maxBuffers = 5
 )
 
 type localIngestor interface {
@@ -52,36 +62,8 @@ type ingestorFactory func(localClient, string, string) (localIngestor, error)
 const createTableCommand = `.create-merge table ['%s']  (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
 const createTableMappingCommand = `.create-or-alter table ['%s'] ingestion json mapping '%s_mapping' '[{"column":"fields", "Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", "Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
 
-func (adx *AzureDataExplorer) Description() string {
-	return "Sends metrics to Azure Data Explorer"
-}
-
-func (adx *AzureDataExplorer) SampleConfig() string {
-	return `
-  ## Azure Data Explorer cluster endpoint
-  ## ex: endpoint_url = "https://clustername.australiasoutheast.kusto.windows.net"
-  endpoint_url = ""
-  
-  ## The Azure Data Explorer database that the metrics will be ingested into.
-  ## The plugin will NOT generate this database automatically, it's expected that this database already exists before ingestion.
-  ## ex: "exampledatabase"
-  database = ""
-
-  ## Timeout for Azure Data Explorer operations
-  # timeout = "20s"
-
-  ## Type of metrics grouping used when pushing to Azure Data Explorer. 
-  ## Default is "TablePerMetric" for one table per different metric. 
-  ## For more information, please check the plugin README.
-  # metrics_grouping_type = "TablePerMetric"
-
-  ## Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable").
-  # table_name = ""
-
-  ## Creates tables and relevant mapping if set to true(default). 
-  ## Skips table and mapping creation if set to false, this is useful for running Telegraf with the lowest possible permissions i.e. table ingestor role.
-  # create_tables = true
-`
+func (*AzureDataExplorer) SampleConfig() string {
+	return sampleConfig
 }
 
 func (adx *AzureDataExplorer) Connect() error {
@@ -238,7 +220,7 @@ func (adx *AzureDataExplorer) Init() error {
 		return errors.New("Metrics grouping type is not valid")
 	}
 
-	serializer, err := json.NewSerializer(time.Second, "") // FIXME: get the json.TimestampFormat from the config file
+	serializer, err := json.NewSerializer(time.Nanosecond, time.RFC3339Nano)
 	if err != nil {
 		return err
 	}
@@ -256,7 +238,7 @@ func init() {
 }
 
 func createRealIngestor(client localClient, database string, tableName string) (localIngestor, error) {
-	ingestor, err := ingest.New(client.(*kusto.Client), database, tableName)
+	ingestor, err := ingest.New(client.(*kusto.Client), database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
 	if ingestor != nil {
 		return ingestor, nil
 	}

@@ -1,15 +1,16 @@
 # InfluxDB Input Plugin
 
 The InfluxDB plugin will collect metrics on the given InfluxDB servers. Read our
-[documentation](https://docs.influxdata.com/platform/monitoring/influxdata-platform/tools/measurements-internal/)
-for detailed information about `influxdb` metrics.
+[documentation][1] for detailed information about `influxdb` metrics.
 
 This plugin can also gather metrics from endpoints that expose
 InfluxDB-formatted endpoints. See below for more information.
 
+[1]: https://docs.influxdata.com/platform/monitoring/influxdata-platform/tools/measurements-internal/
+
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read InfluxDB-formatted JSON metrics from one or more HTTP endpoints
 [[inputs.influxdb]]
   ## Works with InfluxDB debug endpoints out of the box,
@@ -39,7 +40,8 @@ InfluxDB-formatted endpoints. See below for more information.
 
 ## Measurements & Fields
 
-**Note:** The measurements and fields included in this plugin are dynamically built from the InfluxDB source, and may vary between versions:
+**Note:** The measurements and fields included in this plugin are dynamically
+built from the InfluxDB source, and may vary between versions:
 
 - **influxdb_ae** _(Enterprise Only)_ : Statistics related to the Anti-Entropy (AE) engine in InfluxDB Enterprise clusters.
   - **bytesRx**: Number of bytes received by the data node.
@@ -52,6 +54,8 @@ InfluxDB-formatted endpoints. See below for more information.
   - **expandSourcesReq**: Number of remote node requests made to find measurements on this node that match a particular regular expression.
   - **fieldDimensionsReq**: Number of remote node requests for information about the fields and associated types, and tag keys of measurements on this data node.
   - **iteratorCostReq**: Number of internal requests for iterator cost.
+  - **openConnections**: Tracks the number of open connections being handled by the data node
+    (including logical connections multiplexed onto a single yamux connection).
   - **removeShardReq**: Number of internal requests to delete a shard from this data node. Exclusively incremented by use of the influxd-ctl remove shard command.
   - **writeShardFail**: Total number of internal write requests from a remote node that failed.
   - **writeShardPointsReq**: Number of points in every internal write request from any remote node, regardless of success.

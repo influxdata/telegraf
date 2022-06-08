@@ -4,7 +4,7 @@ The `twemproxy` plugin gathers statistics from [Twemproxy](https://github.com/tw
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read Twemproxy stats data
 [[inputs.twemproxy]]
   ## Twemproxy stats address and port (no scheme)

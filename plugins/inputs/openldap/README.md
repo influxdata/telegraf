@@ -6,7 +6,8 @@ This plugin gathers metrics from OpenLDAP's cn=Monitor backend.
 
 To use this plugin you must enable the [slapd monitoring](https://www.openldap.org/devel/admin/monitoringslapd.html) backend.
 
-```toml
+```toml @sample.conf
+# OpenLDAP cn=Monitor plugin
 [[inputs.openldap]]
   host = "localhost"
   port = 389
@@ -25,7 +26,7 @@ To use this plugin you must enable the [slapd monitoring](https://www.openldap.o
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""
   bind_password = ""
-  
+
   # reverse metric names so they sort more naturally
   # Defaults to false if unset, but is set to true when generating a new config
   reverse_metric_names = true

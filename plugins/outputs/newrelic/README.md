@@ -1,4 +1,4 @@
-# New Relic output plugin
+# New Relic Output Plugin
 
 This plugins writes to New Relic Insights using the [Metrics API][].
 
@@ -8,12 +8,17 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Send metrics to New Relic metrics endpoint
 [[outputs.newrelic]]
-  ## New Relic Insights API key
-  insights_key = "insights api key"
+  ## The 'insights_key' parameter requires a NR license key.
+  ## New Relic recommends you create one
+  ## with a convenient name such as TELEGRAF_INSERT_KEY.
+  ## reference: https://docs.newrelic.com/docs/apis/intro-apis/new-relic-api-keys/#ingest-license-key
+  # insights_key = "New Relic License Key Here"
 
   ## Prefix to add to add to metric name for easy identification.
+  ## This is very useful if your metric names are ambiguous.
   # metric_prefix = ""
 
   ## Timeout for writes to the New Relic API.
@@ -29,4 +34,5 @@ Telegraf minimum version: Telegraf 1.15.0
 ```
 
 [Metrics API]: https://docs.newrelic.com/docs/data-ingest-apis/get-data-new-relic/metric-api/introduction-metric-api
+
 [Insights API Key]: https://docs.newrelic.com/docs/apis/get-started/intro-apis/types-new-relic-api-keys#user-api-key

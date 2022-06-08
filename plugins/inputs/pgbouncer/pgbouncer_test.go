@@ -4,20 +4,60 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
-	t.Skip("Skipping test, connection refused")
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	postgresServicePort := "5432"
+	pgBouncerServicePort := "6432"
+
+	backend := testutil.Container{
+		Image:        "postgres:alpine",
+		ExposedPorts: []string{postgresServicePort},
+		Env: map[string]string{
+			"POSTGRES_HOST_AUTH_METHOD": "trust",
+		},
+		WaitingFor: wait.ForLog("database system is ready to accept connections"),
+	}
+	err := backend.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, backend.Terminate(), "terminating container failed")
+	}()
+
+	container := testutil.Container{
+		Image:        "z9pascal/pgbouncer-container:1.17.0-latest",
+		ExposedPorts: []string{pgBouncerServicePort},
+		Env: map[string]string{
+			"PG_ENV_POSTGRESQL_USER": "pgbouncer",
+			"PG_ENV_POSTGRESQL_PASS": "pgbouncer",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(pgBouncerServicePort)),
+			wait.ForLog("LOG process up"),
+		),
+	}
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
 
 	p := &PgBouncer{
 		Service: postgresql.Service{
 			Address: fmt.Sprintf(
-				"host=%s user=pgbouncer password=pgbouncer dbname=pgbouncer port=6432 sslmode=disable",
-				testutil.GetLocalHost(),
+				"host=%s user=pgbouncer password=pgbouncer dbname=pgbouncer port=%s sslmode=disable",
+				container.Address,
+				container.Ports[pgBouncerServicePort],
 			),
 			IsPgBouncer: true,
 		},

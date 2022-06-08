@@ -5,19 +5,15 @@ in Prometheus format.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Read metrics from one or many prometheus clients
 [[inputs.prometheus]]
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
   
-  ## Metric version controls the mapping from Prometheus metrics into
-  ## Telegraf metrics.  When using the prometheus_client output, use the same
-  ## value in both plugins to ensure metrics are round-tripped without
-  ## modification.
-  ##
-  ##   example: metric_version = 1; 
-  ##            metric_version = 2; recommended version
+  ## Metric version controls the mapping from Prometheus metrics into Telegraf metrics.
+  ## See "Metric Format Configuration" in plugins/inputs/prometheus/README.md for details.
+  ## Valid options: 1, 2
   # metric_version = 1
   
   ## Url tag name (tag containing scrapped url. optional, default is "url")
@@ -63,6 +59,10 @@ in Prometheus format.
   # eg. To scrape pods on a specific node
   # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
 
+  # cache refresh interval to set the interval for re-sync of pods list. 
+  # Default is 60 minutes.
+  # cache_refresh_interval = 60
+
   ## Scrape Services available in Consul Catalog
   # [inputs.prometheus.consul]
   #   enabled = true
@@ -99,6 +99,35 @@ in Prometheus format.
 ```
 
 `urls` can contain a unix socket as well. If a different path is required (default is `/metrics` for both http[s] and unix) for a unix socket, add `path` as a query parameter as follows: `unix:///var/run/prometheus.sock?path=/custom/metrics`
+
+### Metric Format Configuration
+
+The `metric_version` setting controls how telegraf translates prometheus format
+metrics to telegraf metrics. There are two options.
+
+With `metric_version = 1`, the prometheus metric name becomes the telegraf
+metric name. Prometheus labels become telegraf tags. Prometheus values become
+telegraf field values. The fields have generic keys based on the type of the
+prometheus metric. This option produces metrics that are dense (not
+sparse). Denseness is a useful property for some outputs, including those that
+are more efficient with row-oriented data.
+
+`metric_version = 2` differs in a few ways. The prometheus metric name becomes a
+telegraf field key. Metrics hold more than one value and the field keys aren't
+generic. The resulting metrics are sparse, but for some outputs they may be
+easier to process or query, including those that are more efficient with
+column-oriented data. The telegraf metric name is the same for all metrics in
+the input instance. It can be set with the `name_override` setting and defaults
+to "prometheus". To have multiple metric names, you can use multiple instances
+of the plugin, each with its own `name_override`.
+
+`metric_version = 2` uses the same histogram format as the [histogram
+aggregator](../../aggregators/histogram/README.md)
+
+The Example Outputs sections shows examples for both options.
+
+When using this plugin along with the prometheus_client output, use the same
+option in both to ensure metrics are round-tripped without modification.
 
 ### Kubernetes Service Discovery
 

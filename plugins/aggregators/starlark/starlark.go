@@ -1,47 +1,26 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package starlark
 
 import (
+	_ "embed"
+
+	"go.starlark.net/starlark"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	common "github.com/influxdata/telegraf/plugins/common/starlark"
-	"go.starlark.net/starlark"
 )
 
-const (
-	description  = "Aggregate metrics using a Starlark script"
-	sampleConfig = `
-  ## The Starlark source can be set as a string in this configuration file, or
-  ## by referencing a file containing the script.  Only one source or script
-  ## should be set at once.
-  ##
-  ## Source of the Starlark script.
-  source = '''
-state = {}
-
-def add(metric):
-  state["last"] = metric
-
-def push():
-  return state.get("last")
-
-def reset():
-  state.clear()
-'''
-
-  ## File containing a Starlark script.
-  # script = "/usr/local/bin/myscript.star"
-
-  ## The constants of the Starlark script.
-  # [aggregators.starlark.constants]
-  #   max_size = 10
-  #   threshold = 0.75
-  #   default_name = "Julia"
-  #   debug_mode = true
-`
-)
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type Starlark struct {
 	common.StarlarkCommon
+}
+
+func (*Starlark) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Starlark) Init() error {
@@ -70,14 +49,6 @@ func (s *Starlark) Init() error {
 	}
 
 	return nil
-}
-
-func (s *Starlark) SampleConfig() string {
-	return sampleConfig
-}
-
-func (s *Starlark) Description() string {
-	return description
 }
 
 func (s *Starlark) Add(metric telegraf.Metric) {

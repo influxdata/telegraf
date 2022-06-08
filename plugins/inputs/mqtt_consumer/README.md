@@ -5,7 +5,8 @@ and creates metrics using one of the supported [input data formats][].
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from MQTT topic(s)
 [[inputs.mqtt_consumer]]
   ## Broker URLs for the MQTT server or cluster.  To connect to multiple
   ## clusters or standalone servers, use a separate plugin instance.
@@ -75,7 +76,7 @@ and creates metrics using one of the supported [input data formats][].
   data_format = "influx"
 
   ## Enable extracting tag values from MQTT topics
-  ## _ denotes an ignored entry in the topic path 
+  ## _ denotes an ignored entry in the topic path
   # [[inputs.mqtt_consumer.topic_parsing]]
   #   topic = ""
   #   measurement = ""

@@ -6,9 +6,10 @@ The Vault plugin could grab metrics from every Vault agent of the cluster. Teleg
 
 ## Configuration
 
-```toml
+```toml @sample.conf
+# Read metrics from the Vault API
 [[inputs.vault]]
-  ## URL for the vault agent
+  ## URL for the Vault agent
   # url = "http://127.0.0.1:8200"
 
   ## Use Vault token for authorization.

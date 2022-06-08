@@ -2,7 +2,7 @@
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Statsd Server
 [[inputs.statsd]]
   ## Protocol, must be "tcp", "udp4", "udp6" or "udp" (default=udp)
@@ -75,6 +75,14 @@
 
   ## Max duration (TTL) for each metric to stay cached/reported without being updated.
   # max_ttl = "10h"
+
+  ## Sanitize name method
+  ## By default, telegraf will pass names directly as they are received.
+  ## However, upstream statsd now does sanitization of names which can be
+  ## enabled by using the "upstream" method option. This option will a) replace
+  ## white space with '_', replace '/' with '-', and remove charachters not
+  ## matching 'a-zA-Z_\-0-9\.;='.
+  #sanitize_name_method = ""
 ```
 
 ## Description

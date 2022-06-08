@@ -31,8 +31,8 @@ go_gc_duration_seconds_count 7
 go_goroutines 15
 # HELP test_metric An untyped metric with a timestamp
 # TYPE test_metric untyped
-test_metric{label="value"} 1.0 1490802350000
-`
+test_metric{label="value"} 1.0 1490802350000`
+
 const sampleSummaryTextFormat = `# HELP go_gc_duration_seconds A summary of the GC invocation durations.
 # TYPE go_gc_duration_seconds summary
 go_gc_duration_seconds{quantile="0"} 0.00010425500000000001
@@ -41,13 +41,12 @@ go_gc_duration_seconds{quantile="0.5"} 0.00015749400000000002
 go_gc_duration_seconds{quantile="0.75"} 0.000331463
 go_gc_duration_seconds{quantile="1"} 0.000667154
 go_gc_duration_seconds_sum 0.0018183950000000002
-go_gc_duration_seconds_count 7
-`
+go_gc_duration_seconds_count 7`
+
 const sampleGaugeTextFormat = `
 # HELP go_goroutines Number of goroutines that currently exist.
 # TYPE go_goroutines gauge
-go_goroutines 15 1490802350000
-`
+go_goroutines 15 1490802350000`
 
 func TestPrometheusGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -161,8 +160,8 @@ func TestSummaryMayContainNaN(t *testing.T) {
 go_gc_duration_seconds{quantile="0"} NaN
 go_gc_duration_seconds{quantile="1"} NaN
 go_gc_duration_seconds_sum 42.0
-go_gc_duration_seconds_count 42
-`
+go_gc_duration_seconds_count 42`
+
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := fmt.Fprintln(w, data)
 		require.NoError(t, err)
