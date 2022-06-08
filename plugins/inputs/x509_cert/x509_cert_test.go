@@ -355,12 +355,12 @@ func TestGatherCertMustNotTimeout(t *testing.T) {
 
 func TestSourcesToURLs(t *testing.T) {
 	m := &X509Cert{
-		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
+		Sources: []string{"https://www.influxdata.com:443", "tcp://influxdata.com:443", "smtp://influxdata.com:25", "file:///dummy_test_path_file.pem", "/tmp/dummy_test_path_glob*.pem"},
 	}
 	require.NoError(t, m.Init())
 
 	require.Equal(t, len(m.globpaths), 2)
-	require.Equal(t, len(m.locations), 2)
+	require.Equal(t, len(m.locations), 3)
 }
 
 func TestServerName(t *testing.T) {
