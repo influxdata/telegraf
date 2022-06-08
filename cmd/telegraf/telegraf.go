@@ -37,18 +37,6 @@ import (
 	"gopkg.in/tomb.v1"
 )
 
-type sliceFlags []string
-
-func (i *sliceFlags) String() string {
-	s := strings.Join(*i, " ")
-	return "[" + s + "]"
-}
-
-func (i *sliceFlags) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
 // If you update these, update usage.go and usage_windows.go
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
@@ -59,8 +47,8 @@ var fQuiet = flag.Bool("quiet", false,
 var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs")
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 
-var fConfigs sliceFlags
-var fConfigDirs sliceFlags
+var fConfigs []string
+var fConfigDirs []string
 var fWatchConfig = flag.String("watch-config", "", "Monitoring config changes [notify, poll]")
 var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
@@ -134,9 +122,12 @@ func reloadLoop(
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
 		if *fWatchConfig != "" {
-			watchConfigs := make(sliceFlags, len(fConfigs))
+			// watch any --config-file passed
+			watchConfigs := make([]string, len(fConfigs))
 			copy(watchConfigs, fConfigs)
-			watchConfigs = append(watchConfigs, configDirFiles()...)
+			// also watch any files within any --config-dir passed
+			configsFromDirs := configDirFiles()
+			watchConfigs = append(watchConfigs, configsFromDirs...)
 			for _, fConfig := range watchConfigs {
 				if _, err := os.Stat(fConfig); err == nil {
 					go watchLocalConfig(signals, fConfig)
@@ -166,10 +157,10 @@ func reloadLoop(
 	}
 }
 
-// configDirFiles returns a slice made up of filepaths correspoding
+// configDirFiles returns a slice made up of filepaths corresponding
 // to config files defined in any of the config directories.
-func configDirFiles() sliceFlags {
-	configs := make(sliceFlags, 0)
+func configDirFiles() ([]string) {
+	configs := make([]string, 0)
 	for _, dir := range fConfigDirs {
 		walkfn := func(thispath string, info os.FileInfo, _ error) error {
 			if info == nil {
@@ -178,15 +169,12 @@ func configDirFiles() sliceFlags {
 			}
 
 			if info.IsDir() {
-				// skip Kubernetes mounts, preventing loading the same config twice
-				if strings.HasPrefix(info.Name(), "..") {
-					return filepath.SkipDir
-				}
-				return nil
+				return filepath.SkipDir
 			}
 
 			name := info.Name()
 			if len(name) < 6 || name[len(name)-5:] != ".conf" {
+				log.Printf("W! %s is not a valid Telegraf .conf file", name)
 				return nil
 			}
 
@@ -195,7 +183,9 @@ func configDirFiles() sliceFlags {
 			return nil
 		}
 
-		filepath.Walk(dir, walkfn)
+		if err := filepath.Walk(dir, walkfn); err != nil {
+			log.Printf("W! Telegraf could not read dir %s", dir)
+		}
 	}
 	return configs
 }
