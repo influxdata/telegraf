@@ -634,5 +634,5 @@ vsphere_host_disk,clustername=DC0_C0,disk=/var/folders/rf/txwdm4pj409f70wnkdlp7s
 vsphere_host_mem,clustername=DC0_C0,esxhostname=DC0_C0_H0,host=host.example.com,moid=host-30,os=Mac,source=DC0_C0_H0,vcenter=localhost:8989 usage_average=116.21 1535660339000000000
 vsphere_host_net,clustername=DC0_C0,esxhostname=DC0_C0_H0,host=host.example.com,moid=host-30,os=Mac,source=DC0_C0_H0,vcenter=localhost:8989 bytesRx_average=726i,bytesTx_average=643i,usage_average=1504i 1535660339000000000
 vsphere_host_mem,clustername=DC0_C0,esxhostname=DC0_C0_H0,host=host.example.com,moid=host-30,os=Mac,source=DC0_C0_H0,vcenter=localhost:8989 usage_average=116.21 1535660339000000000
-vspyhere_host_net,clustername=DC0_C0,esxhostname=DC0_C0_H0,host=host.example.com,moid=host-30,os=Mac,source=DC0_C0_H0,vcenter=localhost:8989 bytesRx_average=726i,bytesTx_average=643i,usage_average=1504i 1535660339000000000
+vsphere_host_net,clustername=DC0_C0,esxhostname=DC0_C0_H0,host=host.example.com,moid=host-30,os=Mac,source=DC0_C0_H0,vcenter=localhost:8989 bytesRx_average=726i,bytesTx_average=643i,usage_average=1504i 1535660339000000000
 ```
