@@ -6,7 +6,7 @@ return only xml data).
 
 See the [Tomcat documentation][1] for details of these statistics.
 
-[1]: https://tomcat.apache.org/tomcat-9.0-doc/manager-howto.html#Server_Status)
+[1]: https://tomcat.apache.org/tomcat-9.0-doc/manager-howto.html#Server_Status
 
 ## Configuration
 
