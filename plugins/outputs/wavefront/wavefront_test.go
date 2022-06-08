@@ -357,7 +357,7 @@ func TestTagLimits(t *testing.T) {
 
 func TestDefaults(t *testing.T) {
 	defaultWavefront := outputs.Outputs["wavefront"]().(*Wavefront)
-	require.Equal(t, 10000, defaultWavefront.HTTPBatchSize)
+	require.Equal(t, 10000, defaultWavefront.HTTPMaximumBatchSize)
 }
 
 // Benchmarks to test performance of string replacement via Regex and Replacer
