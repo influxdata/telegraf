@@ -153,7 +153,11 @@ with only occasional changes.
 ## Configuration
 
 ```toml @sample.conf
-# Calculates a derivative for every field.
+```
+
+To calculate a derivative for every field use
+
+```toml
 [[aggregators.derivative]]
   ## Specific Derivative Aggregator Arguments:
 
