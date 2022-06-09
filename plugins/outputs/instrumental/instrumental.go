@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
@@ -177,9 +178,7 @@ func (i *Instrumental) authenticate(conn net.Conn) error {
 	}
 
 	if string(responses)[:6] != "ok\nok\n" {
-		escapedResponses := strings.Replace(string(responses), "\n", "", -1)
-		escapedResponses = strings.Replace(escapedResponses, "\r", "", -1)
-		return fmt.Errorf("authentication failed: %s", escapedResponses)
+		return fmt.Errorf("authentication failed: %s", internal.SanitizeInput(string(responses)))
 	}
 
 	i.conn = conn

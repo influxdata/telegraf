@@ -12,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -223,7 +224,7 @@ func (a *YandexCloudMonitoring) send(body []byte) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+a.IAMToken)
 
-	a.Log.Debugf("sending metrics to %s", req.URL.String())
+	a.Log.Debugf("sending metrics to %s", internal.SanitizeInput(req.URL.String()))
 	a.Log.Debugf("body: %s", body)
 	resp, err := a.client.Do(req)
 	if err != nil {

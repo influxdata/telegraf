@@ -8,10 +8,10 @@ import (
 	"io"
 	"math/rand"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -107,9 +107,7 @@ func (g *Graphite) checkEOF(conn net.Conn) {
 	}
 	// just in case i misunderstand something or the remote behaves badly
 	if num != 0 {
-		escapedBuffer := strings.Replace(string(b[:num]), "\n", "", -1)
-		escapedBuffer = strings.Replace(escapedBuffer, "\r", "", -1)
-		g.Log.Infof("conn %s .conn.Read data? did not expect that. data: %s", conn, escapedBuffer)
+		g.Log.Infof("conn %s .conn.Read data? did not expect that. data: %s", conn, internal.SanitizeInput(string(b[:num])))
 	}
 	// Log non-timeout errors or close.
 	if e, ok := err.(net.Error); !(ok && e.Timeout()) {

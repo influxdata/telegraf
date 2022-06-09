@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 )
 
 type ArtifactoryWebhook struct {
@@ -71,7 +72,7 @@ func (e *newEventError) Error() string {
 }
 
 func (awh *ArtifactoryWebhook) NewEvent(data []byte, et string, ed string) (Event, error) {
-	awh.log.Debugf("New %v domain %v event received", ed, et)
+	awh.log.Debugf("New %v domain %v event received", internal.SanitizeInput(ed), internal.SanitizeInput(et))
 	switch ed {
 	case "artifact":
 		if et == "deployed" || et == "deleted" {

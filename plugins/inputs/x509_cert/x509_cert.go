@@ -145,7 +145,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		c.tlsCfg.ServerName = serverName
 
-		c.tlsCfg.InsecureSkipVerify = true
+		c.tlsCfg.InsecureSkipVerify = false
 		conn := tls.Client(ipConn, c.tlsCfg)
 		defer conn.Close()
 
