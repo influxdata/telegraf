@@ -177,7 +177,9 @@ func (i *Instrumental) authenticate(conn net.Conn) error {
 	}
 
 	if string(responses)[:6] != "ok\nok\n" {
-		return fmt.Errorf("authentication failed: %s", responses)
+		escapedResponses := strings.Replace(string(responses), "\n", "", -1)
+		escapedResponses = strings.Replace(escapedResponses, "\r", "", -1)
+		return fmt.Errorf("authentication failed: %s", escapedResponses)
 	}
 
 	i.conn = conn
