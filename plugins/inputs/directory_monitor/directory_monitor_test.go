@@ -407,7 +407,7 @@ func TestParseCompleteFile(t *testing.T) {
 		FinishedDirectory:  finishedDirectory,
 		MaxBufferedMetrics: defaultMaxBufferedMetrics,
 		FileQueueSize:      defaultFileQueueSize,
-		ParseMethod:        "complete-file",
+		ParseMethod:        "at-once",
 	}
 	err := r.Init()
 	require.NoError(t, err)

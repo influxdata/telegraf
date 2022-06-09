@@ -55,7 +55,7 @@ be guaranteed to finish writing before the `directory_duration_threshold`.
   # file_tag = ""
   #
   ## Specify if the file can be read completely at once or if it needs to be read line by line (default).
-  ## Possible values: line-by-line, complete-file
+  ## Possible values: "line-by-line", "at-once"
   # parse_method = "line-by-line" 
   #
   ## The dataformat to be read from the files.

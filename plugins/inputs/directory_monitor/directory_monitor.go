@@ -221,7 +221,7 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 }
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
-	if monitor.ParseMethod == "complete-file" {
+	if monitor.ParseMethod == "at-once" {
 		bytes, err := io.ReadAll(reader)
 		if err != nil {
 			return err
@@ -383,7 +383,7 @@ func (monitor *DirectoryMonitor) Init() error {
 		monitor.fileRegexesToIgnore = append(monitor.fileRegexesToIgnore, regex)
 	}
 
-	if err := choice.Check(monitor.ParseMethod, []string{"line-by-line", "complete-file"}); err != nil {
+	if err := choice.Check(monitor.ParseMethod, []string{"line-by-line", "at-once"}); err != nil {
 		return fmt.Errorf("config option parse_method: %w", err)
 	}
 
