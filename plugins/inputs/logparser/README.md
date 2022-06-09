@@ -49,7 +49,6 @@ Migration Example:
 ## Configuration
 
 ```toml @sample.conf
-## DEPRECATED: The 'logparser' plugin is deprecated in version 1.15.0, use 'inputs.tail' with 'grok' data format instead.
 # Read metrics off Arista LANZ, via socket
 [[inputs.logparser]]
   ## Log files to parse.
