@@ -99,7 +99,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 
 		dtlsCfg := &dtls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: false,
 			Certificates:       c.tlsCfg.Certificates,
 			RootCAs:            c.tlsCfg.RootCAs,
 			ServerName:         serverName,

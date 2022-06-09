@@ -91,7 +91,9 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 			result := gjson.GetBytes(input, c.TimestampPath)
 
 			if result.Type == gjson.Null {
-				p.Log.Debugf("Message: %s", input)
+				escapedInput := strings.Replace(string(input), "\n", "", -1)
+				escapedInput = strings.Replace(escapedInput, "\r", "", -1)
+				p.Log.Debugf("Message: %s", escapedInput)
 				return nil, fmt.Errorf("The timestamp path %s returned NULL", c.TimestampPath)
 			}
 			if !result.IsArray() && !result.IsObject() {
