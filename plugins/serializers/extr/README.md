@@ -3,16 +3,16 @@
 The `extr` output data format converts metrics into JSON documents, performing the following operatins on batched metrics:
    - Combines sequential metrics matching name, tags, and timestamps into a single JSON metric, combining the fields of each metric into an array of fields.
    - Groups metric fields appended with _min, _max, _avg or _old, _new
-        usage_min=1,usage_max=100,usage_avg-50
+        usage_min=1,usage_max=100,usage_avg=50
         --> "usage":{"avg":50,"max":100,"min":1}
         ifAdminStatus_old=1,ifAdminStatus_new=1
-        --> "ifAdminStatus":{"old":1,"new":0}
+        --> "ifAdminStatus":{"old":"Up","new":"Down"}
    - Groups metric fields appended with _key.
         ifIndex_key=1, name_key="1:2"
-        --> "key":{ifIndex:1, name:"1:2:}
+        --> "key":{ifIndex:1, name:"1:2"}
    - Groups metric fields appended with _tag.
         partNumber_tag="1647G-00129 800751-00-01", revision_tag="01"
-        --> "tags":{ifIndex:"1647G-00129 800751-00-01", revision:"01"}
+        --> "tags":{partNumber:"1647G-00129 800751-00-01", revision:"01"}
    - Groups like metric names into a toplevel map. Name of group is same as name, but with first char lowercase
         "fanStats" :[{grouped_FanStats_Metric1}, {grouped_FanStats_Metric2} ]
 
@@ -57,18 +57,18 @@ The following Telegraf batched metrics
 ```text
 CpuStats,serialnumber=XYZ-1234 core_key=0i,usage_min=35.1,usage_max=99.1,usage_avg=35.1
 CpuStats,serialnumber=XYZ-1234 core_key=1i,usage_min=50.1,usage_max=88.1,usage_avg=51.1
-FanStateChanged,serialnumber=XYZ-1234 slot_key=2i,tray_key=4i,fan_key=1i,partNumber_tag="1647G-00129 800751-00-01",revision_tag="01",airFlowDirection_tag="FrontToBack",state_old="Ok",state_new="Failed"
-FanStateChanged,serialnumber=XYZ-1234 slot_key=2i,tray_key=4i,fan_key=2i,partNumber_tag="1647G-00129 800751-00-01",revision_tag="01",airFlowDirection_tag="FrontToBack",state_old="Failed",state_new="Ok"
-FanStats,serialnumber=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=10i,rpm_min=4101,rpm_max=5001,rpm_avg=4201,pwm_min=31,pwm_max=41,pwm_avg=31
-FanStats,serialnumber=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=11i,rpm_min=4001,rpm_max=4991,rpm_avg=4001,pwm_min=41,pwm_max=51,pwm_avg=41
-FanStats,serialnumber=XYZ-1234 slot_key=2i,tray_key=3i,fan_key=9i,rpm_min=2101,rpm_max=3211,rpm_avg=2201,pwm_min=11,pwm_max=41,pwm_avg=11
+FanStateChanged,serialnumber=XYZ-1234 tray_key=4i,fan_key=1i,partNumber_tag="1647G-00129 800751-00-01",revision_tag="01",airFlowDirection_tag="FrontToBack",state_old="Ok",state_new="Failed"
+FanStateChanged,serialnumber=XYZ-1234 tray_key=4i,fan_key=2i,partNumber_tag="1647G-00129 800751-00-01",revision_tag="01",airFlowDirection_tag="FrontToBack",state_old="Failed",state_new="Ok"
+FanStats,serialnumber=XYZ-1234 tray_key=2i,fan_key=10i,rpm_min=4101,rpm_max=5001,rpm_avg=4201,pwm_min=31,pwm_max=41,pwm_avg=31
+FanStats,serialnumber=XYZ-1234 tray_key=2i,fan_key=11i,rpm_min=4001,rpm_max=4991,rpm_avg=4001,pwm_min=41,pwm_max=51,pwm_avg=41
+FanStats,serialnumber=XYZ-1234 tray_key=3i,fan_key=9i,rpm_min=2101,rpm_max=3211,rpm_avg=2201,pwm_min=11,pwm_max=41,pwm_avg=11
 InterfaceStateChanged,serialnumber=XYZ-1234 ifIndex_key=1001,name_key="1:1",adminStatus_old="Down",adminStatus_new="Up",operStatus_old="Down",operStatus_new="Up"
 InterfaceStateChanged,serialnumber=XYZ-1234 ifIndex_key=1002,name_key="1:2",adminStatus_old="Down",adminStatus_new="Up",operStatus_old="Down",operStatus_new="Up"
 CpuStats,serialnumber=XYZ-1234 core_key=0i,usage_min=10.2,usage_max=91.2,usage_avg=44.2
 CpuStats,serialnumber=XYZ-1234 core_key=1i,usage_min=22.2,usage_max=89.2,usage_avg=41.2
 CpuStats,serialnumber=XYZ-1234 core_key=2i,usage_min=33.2,usage_max=79.2,usage_avg=47.2
-FanStats,serialnumber=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=10i,rpm_min=4112,rpm_max=5012,rpm_avg=4212,pwm_min=32,pwm_max=52,pwm_avg=32
-FanStats,serialnumber=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=11i,rpm_min=5002,rpm_max=5092,rpm_avg=4102,pwm_min=52,pwm_max=62,pwm_avg=52
+FanStats,serialnumber=XYZ-1234 tray_key=2i,fan_key=10i,rpm_min=4112,rpm_max=5012,rpm_avg=4212,pwm_min=32,pwm_max=52,pwm_avg=32
+FanStats,serialnumber=XYZ-1234 tray_key=2i,fan_key=11i,rpm_min=5002,rpm_max=5092,rpm_avg=4102,pwm_min=52,pwm_max=62,pwm_avg=52
 ```
 
 will serialize into the following extr JSON ouput
@@ -154,7 +154,6 @@ will serialize into the following extr JSON ouput
         {
           "keys": {
             "fan": 1,
-            "slot": 2,
             "tray": 4
           },
           "state": {
@@ -170,7 +169,6 @@ will serialize into the following extr JSON ouput
         {
           "keys": {
             "fan": 2,
-            "slot": 2,
             "tray": 4
           },
           "state": {
@@ -197,7 +195,6 @@ will serialize into the following extr JSON ouput
         {
           "keys": {
             "fan": 10,
-            "slot": 1,
             "tray": 2
           },
           "pwm": {
@@ -214,7 +211,6 @@ will serialize into the following extr JSON ouput
         {
           "keys": {
             "fan": 11,
-            "slot": 1,
             "tray": 2
           },
           "pwm": {
@@ -231,7 +227,6 @@ will serialize into the following extr JSON ouput
         {
           "keys": {
             "fan": 9,
-            "slot": 2,
             "tray": 3
           },
           "pwm": {
@@ -257,7 +252,6 @@ will serialize into the following extr JSON ouput
         {
           "keys": {
             "fan": 10,
-            "slot": 1,
             "tray": 2
           },
           "pwm": {
@@ -274,7 +268,6 @@ will serialize into the following extr JSON ouput
         {
           "keys": {
             "fan": 11,
-            "slot": 1,
             "tray": 2
           },
           "pwm": {
