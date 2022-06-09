@@ -1,14 +1,12 @@
 # SQL Input Plugin
 
-This plugin reads metrics from performing SQL queries against a SQL server. Different server
-types are supported and their settings might differ (especially the connection parameters).
-Please check the list of [supported SQL drivers](../../../docs/SQL_DRIVERS_INPUT.md) for the
-`driver` name and options for the data-source-name (`dsn`) options.
+This plugin reads metrics from performing SQL queries against a SQL
+server. Different server types are supported and their settings might differ
+(especially the connection parameters).  Please check the list of [supported SQL
+drivers](../../../docs/SQL_DRIVERS_INPUT.md) for the `driver` name and options
+for the data-source-name (`dsn`) options.
 
 ## Configuration
-
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage <plugin-name>`.
 
 ```toml @sample.conf
 # Read metrics from SQL queries
@@ -94,28 +92,34 @@ generate it using `telegraf --usage <plugin-name>`.
 
 ### Driver
 
-The `driver` and `dsn` options specify how to connect to the database. As especially the `dsn` format and
-values vary with the `driver` refer to the list of [supported SQL drivers](../../../docs/SQL_DRIVERS_INPUT.md) for possible values and more details.
+The `driver` and `dsn` options specify how to connect to the database. As
+especially the `dsn` format and values vary with the `driver` refer to the list
+of [supported SQL drivers](../../../docs/SQL_DRIVERS_INPUT.md) for possible
+values and more details.
 
 ### Connection limits
 
-With these options you can limit the number of connections kept open by this plugin. Details about the exact
-workings can be found in the [golang sql documentation](https://golang.org/pkg/database/sql/#DB.SetConnMaxIdleTime).
+With these options you can limit the number of connections kept open by this
+plugin. Details about the exact workings can be found in the [golang sql
+documentation](https://golang.org/pkg/database/sql/#DB.SetConnMaxIdleTime).
 
 ### Query sections
 
-Multiple `query` sections can be specified for this plugin. Each specified query will first be prepared on the server
-and then executed in every interval using the column mappings specified. Please note that `tag` and `field` columns
-are not exclusive, i.e. a column can be added to both. When using both `include` and `exclude` lists, the `exclude`
-list takes precedence over the `include` list. I.e. given you specify `foo` in both lists, `foo` will _never_ pass
-the filter. In case any the columns specified in `measurement_col` or `time_col` are _not_ returned by the query,
-the plugin falls-back to the documented defaults. Fields or tags specified in the includes of the options but missing
-in the returned query are silently ignored.
+Multiple `query` sections can be specified for this plugin. Each specified query
+will first be prepared on the server and then executed in every interval using
+the column mappings specified. Please note that `tag` and `field` columns are
+not exclusive, i.e. a column can be added to both. When using both `include` and
+`exclude` lists, the `exclude` list takes precedence over the `include`
+list. I.e. given you specify `foo` in both lists, `foo` will _never_ pass the
+filter. In case any the columns specified in `measurement_col` or `time_col` are
+_not_ returned by the query, the plugin falls-back to the documented
+defaults. Fields or tags specified in the includes of the options but missing in
+the returned query are silently ignored.
 
 ## Types
 
-This plugin relies on the driver to do the type conversion. For the different properties of the metric the following
-types are accepted.
+This plugin relies on the driver to do the type conversion. For the different
+properties of the metric the following types are accepted.
 
 ### Measurement
 
@@ -123,26 +127,31 @@ Only columns of type `string`  are accepted.
 
 ### Time
 
-For the metric time columns of type `time` are accepted directly. For numeric columns, `time_format` should be set
-to any of `unix`, `unix_ms`, `unix_ns` or `unix_us` accordingly. By default the a timestamp in `unix` format is
-expected. For string columns, please specify the `time_format` accordingly.
-See the [golang time documentation](https://golang.org/pkg/time/#Time.Format) for details.
+For the metric time columns of type `time` are accepted directly. For numeric
+columns, `time_format` should be set to any of `unix`, `unix_ms`, `unix_ns` or
+`unix_us` accordingly. By default the a timestamp in `unix` format is
+expected. For string columns, please specify the `time_format` accordingly.  See
+the [golang time documentation](https://golang.org/pkg/time/#Time.Format) for
+details.
 
 ### Tags
 
-For tags columns with textual values (`string` and `bytes`), signed and unsigned integers (8, 16, 32 and 64 bit),
-floating-point (32 and 64 bit), `boolean` and `time` values are accepted. Those values will be converted to string.
+For tags columns with textual values (`string` and `bytes`), signed and unsigned
+integers (8, 16, 32 and 64 bit), floating-point (32 and 64 bit), `boolean` and
+`time` values are accepted. Those values will be converted to string.
 
 ### Fields
 
-For fields columns with textual values (`string` and `bytes`), signed and unsigned integers (8, 16, 32 and 64 bit),
-floating-point (32 and 64 bit), `boolean` and `time` values are accepted. Here `bytes` will be converted to `string`,
-signed and unsigned integer values will be converted to `int64` or `uint64` respectively. Floating-point values are converted to `float64` and `time` is converted to a nanosecond timestamp of type `int64`.
+For fields columns with textual values (`string` and `bytes`), signed and
+unsigned integers (8, 16, 32 and 64 bit), floating-point (32 and 64 bit),
+`boolean` and `time` values are accepted. Here `bytes` will be converted to
+`string`, signed and unsigned integer values will be converted to `int64` or
+`uint64` respectively. Floating-point values are converted to `float64` and
+`time` is converted to a nanosecond timestamp of type `int64`.
 
 ## Example Output
 
-Using the [MariaDB sample database](https://www.mariadbtutorial.com/getting-started/mariadb-sample-database) and the
-configuration
+Using the [MariaDB sample database][maria-sample] and the configuration
 
 ```toml
 [[inputs.sql]]
@@ -165,3 +174,5 @@ nation,host=Hugin,name=Jean guest_id=3i 1611332164000000000
 nation,host=Hugin,name=Storm guest_id=4i 1611332164000000000
 nation,host=Hugin,name=Beast guest_id=5i 1611332164000000000
 ```
+
+[maria-sample]: https://www.mariadbtutorial.com/getting-started/mariadb-sample-database

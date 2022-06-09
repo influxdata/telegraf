@@ -1,10 +1,12 @@
 # Neptune Apex Input Plugin
 
-The Neptune Apex controller family allows an aquarium hobbyist to monitor and control
-their tanks based on various probes. The data is taken directly from the `/cgi-bin/status.xml` at the interval specified
-in the telegraf.conf configuration file.
+The Neptune Apex controller family allows an aquarium hobbyist to monitor and
+control their tanks based on various probes. The data is taken directly from the
+`/cgi-bin/status.xml` at the interval specified in the telegraf.conf
+configuration file.
 
-The [Neptune Apex](https://www.neptunesystems.com/) input plugin collects real-time data from the Apex's status.xml page.
+The [Neptune Apex](https://www.neptunesystems.com/) input plugin collects
+real-time data from the Apex's status.xml page.
 
 ## Configuration
 
@@ -27,13 +29,16 @@ The [Neptune Apex](https://www.neptunesystems.com/) input plugin collects real-t
 
 ## Metrics
 
-The Neptune Apex controller family allows an aquarium hobbyist to monitor and control
-their tanks based on various probes. The data is taken directly from the /cgi-bin/status.xml at the interval specified
-in the telegraf.conf configuration file.
+The Neptune Apex controller family allows an aquarium hobbyist to monitor and
+control their tanks based on various probes. The data is taken directly from the
+/cgi-bin/status.xml at the interval specified in the telegraf.conf configuration
+file.
 
-No manipulation is done on any of the fields to ensure future changes to the status.xml do not introduce conversion bugs
-to this plugin. When reasonable and predictable, some tags are derived to make graphing easier and without front-end
-programming. These tags are clearly marked in the list below and should be considered a convenience rather than authoritative.
+No manipulation is done on any of the fields to ensure future changes to the
+status.xml do not introduce conversion bugs to this plugin. When reasonable and
+predictable, some tags are derived to make graphing easier and without front-end
+programming. These tags are clearly marked in the list below and should be
+considered a convenience rather than authoritative.
 
 - neptune_apex (All metrics have this measurement name)
   - tags:
@@ -78,7 +83,8 @@ SELECT mean("value") FROM "neptune_apex" WHERE ("probe_type" = 'Temp') AND time 
 
 ### sendRequest failure
 
-This indicates a problem communicating with the local Apex controller. If on Mac/Linux, try curl:
+This indicates a problem communicating with the local Apex controller. If on
+Mac/Linux, try curl:
 
 ```sh
 curl apex.local/cgi-bin/status.xml
@@ -88,12 +94,14 @@ to isolate the problem.
 
 ### parseXML errors
 
-Ensure the XML being returned is valid. If you get valid XML back, open a bug request.
+Ensure the XML being returned is valid. If you get valid XML back, open a bug
+request.
 
 ### Missing fields/data
 
-The neptune_apex plugin is strict on its input to prevent any conversion errors. If you have fields in the status.xml
-output that are not converted to a metric, open a feature request and paste your whole status.xml
+The neptune_apex plugin is strict on its input to prevent any conversion
+errors. If you have fields in the status.xml output that are not converted to a
+metric, open a feature request and paste your whole status.xml
 
 ## Example Output
 
@@ -144,10 +152,11 @@ neptune_apex,hardware=1.0,host=ubuntu,name=Volt_4,software=5.04_7A18,source=apex
 
 ## Contributing
 
-This plugin is used for mission-critical aquatic life support. A bug could very well result in the death of animals.
-Neptune does not publish a schema file and as such, we have made this plugin very strict on input with no provisions for
-automatically adding fields. We are also careful to not add default values when none are presented to prevent automation
-errors.
+This plugin is used for mission-critical aquatic life support. A bug could very
+well result in the death of animals. Neptune does not publish a schema file and
+as such, we have made this plugin very strict on input with no provisions for
+automatically adding fields. We are also careful to not add default values when
+none are presented to prevent automation errors.
 
-When writing unit tests, use actual Apex output to run tests. It's acceptable to abridge the number of repeated fields
-but never inner fields or parameters.
+When writing unit tests, use actual Apex output to run tests. It's acceptable to
+abridge the number of repeated fields but never inner fields or parameters.

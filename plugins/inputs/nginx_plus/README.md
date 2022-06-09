@@ -1,9 +1,15 @@
 # Nginx Plus Input Plugin
 
-Nginx Plus is a commercial version of the open source web server Nginx. The use this plugin you will need a license. For more information about the differences between Nginx (F/OSS) and Nginx Plus, [click here](https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/).
+Nginx Plus is a commercial version of the open source web server Nginx. The use
+this plugin you will need a license. For more information about the differences
+between Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff-doc].
 
-Structures for Nginx Plus have been built based on history of
-[status module documentation](http://nginx.org/en/docs/http/ngx_http_status_module.html)
+Structures for Nginx Plus have been built based on history of [status module
+documentation][status-mod].
+
+[diff-doc]: https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/
+
+[status-mod]: http://nginx.org/en/docs/http/ngx_http_status_module.html
 
 ## Configuration
 
@@ -24,7 +30,7 @@ Structures for Nginx Plus have been built based on history of
   # insecure_skip_verify = false
 ```
 
-## Measurements & Fields
+## Metrics
 
 - nginx_plus_processes
   - respawned
@@ -69,7 +75,7 @@ Structures for Nginx Plus have been built based on history of
   - fails
   - downtime
 
-## Tags
+### Tags
 
 - nginx_plus_processes, nginx_plus_connections, nginx_plus_ssl, nginx_plus_requests
   - server

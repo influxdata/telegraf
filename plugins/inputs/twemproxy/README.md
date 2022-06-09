@@ -1,6 +1,7 @@
 # Twemproxy Input Plugin
 
-The `twemproxy` plugin gathers statistics from [Twemproxy](https://github.com/twitter/twemproxy) servers.
+The `twemproxy` plugin gathers statistics from
+[Twemproxy](https://github.com/twitter/twemproxy) servers.
 
 ## Configuration
 
