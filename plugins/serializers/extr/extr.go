@@ -13,13 +13,18 @@ import (
 var deviceStr string = "device"
 var itemsStr string = "items"
 var tsStr string = "ts"
-var keysStr string = "keys"
 var nameStr string = "name"
+var keysStr string = "keys"
+var tagsStr string = "tags"
 
+// Special appended grouping identifiers
 var keyStr string = "key"
+var tagStr string = "tag"
 var minStr string = "min"
 var maxStr string = "max"
 var avgStr string = "avg"
+var newStr string = "new"
+var oldStr string = "old"
 
 type serializer struct {
 	TimestampUnits  time.Duration
@@ -194,10 +199,12 @@ func createItem(metric telegraf.Metric) map[string]interface{} {
 		//      --> "keys":{"ifIndex":1,"name":"2:1"}
 		// ex. {"pwm_avg":26.7} {"pwm_max":99.9} {"pwm_min":21.1}
 		//      --> "pwm":{"avg":26.7,"max":99.9,"min":21.1}
+		// ex. {"ifAdminStatus_old":0} {"ifAdminStatus_new":1}
+		//      --> "ifAdminStatus":{"old":0,"new":1}
 
-		id, key, value := splitMetricFieldId(field.Key, field.Value)
+		id, fKey, fValue := splitMetricFieldId(field.Key, field.Value)
 
-		if id == "key" {
+		if id == keyStr {
 
 			// Found a "_key" field.  Group this metric field under "keys" map.
 
@@ -210,26 +217,41 @@ func createItem(metric telegraf.Metric) map[string]interface{} {
 
 			mType = item[keysStr].(map[string]interface{})
 
-			mType[key] = value
+			mType[fKey] = fValue
 
-		} else if id == minStr || id == maxStr || id == avgStr {
+		} else if id == tagStr {
 
-			// Found _min,_max,_avg field. Do grouping.
+			// Found a "_tag" field.  Group this metric field under "tags" map.
+
+			var mType map[string]interface{}
+
+			// Check if tags[tag] exists
+			if _, found := item[tagsStr]; !found {
+				item[tagsStr] = make(map[string]interface{})
+			}
+
+			mType = item[tagsStr].(map[string]interface{})
+
+			mType[fKey] = fValue
+
+		} else if id == minStr || id == maxStr || id == avgStr || id == oldStr || id == newStr {
+
+			// Found _min,_max,_avg or _old,_newfield. Do grouping.
 
 			var mType map[string]interface{}
 
 			// Check if name[key] exists
-			if _, found := item[key]; !found {
-				item[key] = make(map[string]interface{})
+			if _, found := item[fKey]; !found {
+				item[fKey] = make(map[string]interface{})
 			}
 
-			mType = item[key].(map[string]interface{})
-			mType[id] = value
+			mType = item[fKey].(map[string]interface{})
+			mType[id] = fValue
 
 		} else {
 
-			// Not a key or min/max/avg field.
-			item[key] = value
+			// Not a key or min/max/avg old/new field.
+			item[fKey] = fValue
 		}
 	}
 
@@ -252,12 +274,12 @@ func truncateDuration(units time.Duration) time.Duration {
 	}
 }
 
-// Takes a Field entry and looks for special identifiers, min,max,avg or key as
+// Takes a Field entry and looks for special identifiers, min,max,avg or key or old,new as
 // last _ seperated element
 // i.e. usage_max, core_key
 //
 // Parameter:
-//     fKey  (i.e. usage_max | core_key | etc.)
+//     fKey  (i.e. usage_max | core_key | ifAdminStatus_old etc.)
 //     fValue
 // Returns:
 //     id    - special field identifier or nil. (i.e. "max", "key", nil)
@@ -269,10 +291,10 @@ func splitMetricFieldId(fKey string, fValue interface{}) (id string, key string,
 
 	s := strings.Split(fKey, "_")
 
-	// If last element matches "min","max","avg" or "key" string
+	// If last element matches "min","max","avg" or "key" or "old","new" string
 	lastElem := s[len(s)-1]
 
-	if lastElem == minStr || lastElem == maxStr || lastElem == avgStr || lastElem == keyStr {
+	if lastElem == minStr || lastElem == maxStr || lastElem == avgStr || lastElem == keyStr || lastElem == oldStr || lastElem == newStr || lastElem == tagStr {
 		id = lastElem
 		mcut = "_" + lastElem
 		key = strings.Replace(fKey, mcut, "", -1)
