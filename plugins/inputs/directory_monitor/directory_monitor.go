@@ -232,11 +232,7 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 			return err
 		}
 
-		if err := monitor.sendMetrics(metrics); err != nil {
-			return err
-		}
-
-		return nil
+		return monitor.sendMetrics(metrics)
 	}
 
 	scanner := bufio.NewScanner(reader)
