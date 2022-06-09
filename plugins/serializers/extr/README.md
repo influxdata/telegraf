@@ -62,8 +62,8 @@ FanStateChanged,serialnumber=XYZ-1234 slot_key=2i,tray_key=4i,fan_key=2i,partNum
 FanStats,serialnumber=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=10i,rpm_min=4101,rpm_max=5001,rpm_avg=4201,pwm_min=31,pwm_max=41,pwm_avg=31
 FanStats,serialnumber=XYZ-1234 slot_key=1i,tray_key=2i,fan_key=11i,rpm_min=4001,rpm_max=4991,rpm_avg=4001,pwm_min=41,pwm_max=51,pwm_avg=41
 FanStats,serialnumber=XYZ-1234 slot_key=2i,tray_key=3i,fan_key=9i,rpm_min=2101,rpm_max=3211,rpm_avg=2201,pwm_min=11,pwm_max=41,pwm_avg=11
-InterfaceStateChanged,serialnumber=XYZ-1234 ifIndex_key=1001,name_key="1:1",adminStatus_old=0,adminStatus_new=1,operStatus_old=0,operStatus_new=1
-InterfaceStateChanged,serialnumber=XYZ-1234 ifIndex_key=1002,name_key="1:2",adminStatus_old=0,adminStatus_new=1,operStatus_old=0,operStatus_new=1
+InterfaceStateChanged,serialnumber=XYZ-1234 ifIndex_key=1001,name_key="1:1",adminStatus_old="Down",adminStatus_new="Up",operStatus_old="Down",operStatus_new="Up"
+InterfaceStateChanged,serialnumber=XYZ-1234 ifIndex_key=1002,name_key="1:2",adminStatus_old="Down",adminStatus_new="Up",operStatus_old="Down",operStatus_new="Up"
 CpuStats,serialnumber=XYZ-1234 core_key=0i,usage_min=10.2,usage_max=91.2,usage_avg=44.2
 CpuStats,serialnumber=XYZ-1234 core_key=1i,usage_min=22.2,usage_max=89.2,usage_avg=41.2
 CpuStats,serialnumber=XYZ-1234 core_key=2i,usage_min=33.2,usage_max=79.2,usage_avg=47.2
@@ -103,7 +103,7 @@ will serialize into the following extr JSON ouput
         }
       ],
       "name": "CpuStats",
-      "ts": 1654732590
+      "ts": 1654791970
     },
     {
       "device": {
@@ -142,7 +142,7 @@ will serialize into the following extr JSON ouput
         }
       ],
       "name": "CpuStats",
-      "ts": 1654732590
+      "ts": 1654791970
     }
   ],
   "fanStateChanged": [
@@ -185,7 +185,7 @@ will serialize into the following extr JSON ouput
         }
       ],
       "name": "FanStateChanged",
-      "ts": 1654732590
+      "ts": 1654791970
     }
   ],
   "fanStats": [
@@ -247,7 +247,7 @@ will serialize into the following extr JSON ouput
         }
       ],
       "name": "FanStats",
-      "ts": 1654732590
+      "ts": 1654791970
     },
     {
       "device": {
@@ -290,7 +290,7 @@ will serialize into the following extr JSON ouput
         }
       ],
       "name": "FanStats",
-      "ts": 1654732590
+      "ts": 1654791970
     }
   ],
   "interfaceStateChanged": [
@@ -301,35 +301,35 @@ will serialize into the following extr JSON ouput
       "items": [
         {
           "adminStatus": {
-            "new": 1,
-            "old": 0
+            "new": "Up",
+            "old": "Down"
           },
           "keys": {
             "ifIndex": 1001,
             "name": "1:1"
           },
           "operStatus": {
-            "new": 1,
-            "old": 0
+            "new": "Up",
+            "old": "Down"
           }
         },
         {
           "adminStatus": {
-            "new": 1,
-            "old": 0
+            "new": "Up",
+            "old": "Down"
           },
           "keys": {
             "ifIndex": 1002,
             "name": "1:2"
           },
           "operStatus": {
-            "new": 1,
-            "old": 0
+            "new": "Up",
+            "old": "Down"
           }
         }
       ],
       "name": "InterfaceStateChanged",
-      "ts": 1654732590
+      "ts": 1654791970
     }
   ]
 }
