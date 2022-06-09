@@ -5,7 +5,7 @@ The `extr` output data format converts metrics into JSON documents, performing t
    - Groups metric fields appended with _min, _max, _avg or _old, _new
         usage_min=1,usage_max=100,usage_avg=50
         --> "usage":{"avg":50,"max":100,"min":1}
-        ifAdminStatus_old=1,ifAdminStatus_new=1
+        ifAdminStatus_old="Up",ifAdminStatus_new="Down"
         --> "ifAdminStatus":{"old":"Up","new":"Down"}
    - Groups metric fields appended with _key.
         ifIndex_key=1, name_key="1:2"
