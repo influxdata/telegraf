@@ -116,7 +116,7 @@ telegraf config > telegraf.conf
 ### Generate config with only cpu input & influxdb output plugins defined
 
 ```shell
-telegraf --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb config
+telegraf config --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb
 ```
 
 ### Run a single telegraf collection, outputting metrics to stdout

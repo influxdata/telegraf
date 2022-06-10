@@ -49,7 +49,7 @@ telegraf [flags]
 
 **Generate config with only cpu input & influxdb output plugins defined:**
 
-`telegraf --input-filter cpu --output-filter influxdb config`
+`telegraf config --input-filter cpu --output-filter influxdb`
 
 **Run a single telegraf collection, outputting metrics to stdout:**
 
