@@ -37,7 +37,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.13.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.14.0
-	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.3.2
+	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.13.6
 	github.com/aws/smithy-go v1.11.3
 	github.com/benbjohnson/clock v1.3.0
 	github.com/bmatcuk/doublestar/v3 v3.0.0
@@ -212,11 +212,11 @@ require (
 	github.com/alecthomas/participle v0.4.1 // indirect
 	github.com/aws/aws-sdk-go v1.38.3 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.2.0 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.5 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.3.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.12 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.6 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.8.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.6.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.7.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.16.0 // indirect
