@@ -2,7 +2,6 @@
 
 set -eux
 
-ARCH=$(uname -m)
 GO_VERSION="1.18.3"
 GO_ARCH="linux-amd64"
 # from https://golang.org/dl
@@ -19,7 +18,7 @@ setup_go () {
 
     sudo tar -C /usr/local -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
 
-    echo $PATH
+    echo "$PATH"
     which go
     go version
 }
