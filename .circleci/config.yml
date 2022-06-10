@@ -210,6 +210,7 @@ jobs:
     steps:
       - checkout
       - check-changed-files-or-halt
+      - run: 'sh ./scripts/installgo_linux.sh'
       - run: 'make deps'
       - run: 'make test-integration'
   test-go-mac:
