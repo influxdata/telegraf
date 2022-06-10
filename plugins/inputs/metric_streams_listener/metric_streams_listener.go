@@ -1,8 +1,7 @@
-package metric_streams
+package metric_streams_listener
 
 import (
 	"compress/gzip"
-	"crypto/subtle"
 	"crypto/tls"
 	_ "embed"
 	"encoding/base64"
@@ -33,16 +32,13 @@ var sampleConfig string
 // 500 MB
 const defaultMaxBodySize = 500 * 1024 * 1024
 
-type MetricStreams struct {
+type MetricStreamsListener struct {
 	ServiceAddress string          `toml:"service_address"`
-	Port           int             `toml:"port"`
-	Path           string          `toml:"path"`
 	Paths          []string        `toml:"paths"`
 	MaxBodySize    config.Size     `toml:"max_body_size"`
 	ReadTimeout    config.Duration `toml:"read_timeout"`
 	WriteTimeout   config.Duration `toml:"write_timeout"`
-	BasicUsername  string          `toml:"basic_username"`
-	BasicPassword  string          `toml:"basic_password"`
+	AccessKey      string          `toml:"access_key"`
 
 	requestsReceived selfstat.Stat
 	writesServed     selfstat.Stat
@@ -89,7 +85,7 @@ type age struct {
 	min time.Duration
 }
 
-func (*MetricStreams) SampleConfig() string {
+func (*MetricStreamsListener) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -111,34 +107,35 @@ func (a *age) SubmitMin(stat selfstat.Stat) {
 	stat.Incr(a.min.Nanoseconds())
 }
 
-func (ms *MetricStreams) Description() string {
+func (ms *MetricStreamsListener) Description() string {
 	return "HTTP listener & parser for AWS Metric Streams"
 }
 
-func (ms *MetricStreams) Gather(_ telegraf.Accumulator) error {
+func (ms *MetricStreamsListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
 // Start starts the http listener service.
-func (ms *MetricStreams) Start(acc telegraf.Accumulator) error {
-	if ms.MaxBodySize == 0 {
-		ms.MaxBodySize = config.Size(defaultMaxBodySize)
-	}
-
-	if ms.ReadTimeout < config.Duration(time.Second) {
-		ms.ReadTimeout = config.Duration(time.Second * 10)
-	}
-	if ms.WriteTimeout < config.Duration(time.Second) {
-		ms.WriteTimeout = config.Duration(time.Second * 10)
-	}
-
-	// Append ms.Path to ms.Paths
-	if ms.Path != "" && !choice.Contains(ms.Path, ms.Paths) {
-		ms.Paths = append(ms.Paths, ms.Path)
-	}
-
+func (ms *MetricStreamsListener) Start(acc telegraf.Accumulator) error {
 	ms.acc = acc
 	server := ms.createHTTPServer()
+
+	tlsConf, err := ms.ServerConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	var listener net.Listener
+	if tlsConf != nil {
+		listener, err = tls.Listen("tcp", ms.ServiceAddress, tlsConf)
+	} else {
+		listener, err = net.Listen("tcp", ms.ServiceAddress)
+	}
+	if err != nil {
+		return err
+	}
+	ms.tlsConf = tlsConf
+	ms.listener = listener
 
 	ms.wg.Add(1)
 	go func() {
@@ -156,7 +153,7 @@ func (ms *MetricStreams) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (ms *MetricStreams) createHTTPServer() *http.Server {
+func (ms *MetricStreamsListener) createHTTPServer() *http.Server {
 	return &http.Server{
 		Addr:         ms.ServiceAddress,
 		Handler:      ms,
@@ -166,7 +163,7 @@ func (ms *MetricStreams) createHTTPServer() *http.Server {
 	}
 }
 
-func (ms *MetricStreams) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+func (ms *MetricStreamsListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	ms.requestsReceived.Incr(1)
 	start := time.Now()
 	defer ms.recordRequestTime(start)
@@ -180,12 +177,12 @@ func (ms *MetricStreams) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	ms.authenticateIfSet(handler, res, req)
 }
 
-func (ms *MetricStreams) recordRequestTime(start time.Time) {
+func (ms *MetricStreamsListener) recordRequestTime(start time.Time) {
 	elapsed := time.Since(start)
 	ms.requestTime.Incr(elapsed.Nanoseconds())
 }
 
-func (ms *MetricStreams) serveWrite(res http.ResponseWriter, req *http.Request) {
+func (ms *MetricStreamsListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	select {
 	case <-ms.close:
 		res.WriteHeader(http.StatusGone)
@@ -305,7 +302,7 @@ func (ms *MetricStreams) serveWrite(res http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (ms *MetricStreams) composeMetrics(data Data) {
+func (ms *MetricStreamsListener) composeMetrics(data Data) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 	timestamp := time.Unix(data.Timestamp/1000, 0)
@@ -332,7 +329,7 @@ func tooLarge(res http.ResponseWriter) error {
 	tags := map[string]string{
 		"status_code": strconv.Itoa(http.StatusRequestEntityTooLarge),
 	}
-	selfstat.Register("metric_streams", "bad_requests", tags).Incr(1)
+	selfstat.Register("metric_streams_listener", "bad_requests", tags).Incr(1)
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
 	_, err := res.Write([]byte(`{"error":"http: request body too large"}`))
@@ -343,7 +340,7 @@ func methodNotAllowed(res http.ResponseWriter) error {
 	tags := map[string]string{
 		"status_code": strconv.Itoa(http.StatusMethodNotAllowed),
 	}
-	selfstat.Register("metric_streams", "bad_requests", tags).Incr(1)
+	selfstat.Register("metric_streams_listener", "bad_requests", tags).Incr(1)
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusMethodNotAllowed)
 	_, err := res.Write([]byte(`{"error":"http: method not allowed"}`))
@@ -354,19 +351,17 @@ func badRequest(res http.ResponseWriter) error {
 	tags := map[string]string{
 		"status_code": strconv.Itoa(http.StatusBadRequest),
 	}
-	selfstat.Register("metric_streams", "bad_requests", tags).Incr(1)
+	selfstat.Register("metric_streams_listener", "bad_requests", tags).Incr(1)
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusBadRequest)
 	_, err := res.Write([]byte(`{"error":"http: bad request"}`))
 	return err
 }
 
-func (ms *MetricStreams) authenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
-	if ms.BasicUsername != "" && ms.BasicPassword != "" {
-		reqUsername, reqPassword, ok := req.BasicAuth()
-		if !ok ||
-			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(ms.BasicUsername)) != 1 ||
-			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(ms.BasicPassword)) != 1 {
+func (ms *MetricStreamsListener) authenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
+	if ms.AccessKey != "" {
+		auth := req.Header.Get("X-Amz-Firehose-Access-Key")
+		if auth == "" || auth != ms.AccessKey {
 			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
@@ -377,7 +372,7 @@ func (ms *MetricStreams) authenticateIfSet(handler http.HandlerFunc, res http.Re
 }
 
 // Stop cleans up all resources
-func (ms *MetricStreams) Stop() {
+func (ms *MetricStreamsListener) Stop() {
 	if ms.listener != nil {
 		// Ignore the returned error as we cannot do anything about it anyway
 		//nolint:errcheck,revive
@@ -386,40 +381,34 @@ func (ms *MetricStreams) Stop() {
 	ms.wg.Wait()
 }
 
-func (ms *MetricStreams) Init() error {
+func (ms *MetricStreamsListener) Init() error {
 	tags := map[string]string{
 		"address": ms.ServiceAddress,
 	}
-	ms.requestsReceived = selfstat.Register("metric_streams", "requests_received", tags)
-	ms.writesServed = selfstat.Register("metric_streams", "writes_served", tags)
-	ms.requestTime = selfstat.Register("metric_streams", "request_time", tags)
-	ms.ageMax = selfstat.Register("metric_streams", "age_max", tags)
-	ms.ageMin = selfstat.Register("metric_streams", "age_min", tags)
+	ms.requestsReceived = selfstat.Register("metric_streams_listener", "requests_received", tags)
+	ms.writesServed = selfstat.Register("metric_streams_listener", "writes_served", tags)
+	ms.requestTime = selfstat.Register("metric_streams_listener", "request_time", tags)
+	ms.ageMax = selfstat.Register("metric_streams_listener", "age_max", tags)
+	ms.ageMin = selfstat.Register("metric_streams_listener", "age_min", tags)
 
-	tlsConf, err := ms.ServerConfig.TLSConfig()
-	if err != nil {
-		return err
+	if ms.MaxBodySize == 0 {
+		ms.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
-	var listener net.Listener
-	if tlsConf != nil {
-		listener, err = tls.Listen("tcp", ms.ServiceAddress, tlsConf)
-	} else {
-		listener, err = net.Listen("tcp", ms.ServiceAddress)
+	if ms.ReadTimeout < config.Duration(time.Second) {
+		ms.ReadTimeout = config.Duration(time.Second * 10)
 	}
-	if err != nil {
-		return err
+
+	if ms.WriteTimeout < config.Duration(time.Second) {
+		ms.WriteTimeout = config.Duration(time.Second * 10)
 	}
-	ms.tlsConf = tlsConf
-	ms.listener = listener
-	ms.Port = listener.Addr().(*net.TCPAddr).Port
 
 	return nil
 }
 
 func init() {
-	inputs.Add("metric_streams", func() telegraf.Input {
-		return &MetricStreams{
+	inputs.Add("metric_streams_listener", func() telegraf.Input {
+		return &MetricStreamsListener{
 			ServiceAddress: ":443",
 			Paths:          []string{"/telegraf"},
 		}

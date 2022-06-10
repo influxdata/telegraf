@@ -1,4 +1,4 @@
-package metric_streams
+package metric_streams_listener
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,42 +16,37 @@ import (
 )
 
 const (
-	badMsg        = "blahblahblah: 42\n"
-	emptyMsg      = ""
-	basicUsername = "test-username-please-ignore"
-	basicPassword = "super-secure-password!"
+	badMsg       = "blahblahblah: 42\n"
+	emptyMsg     = ""
+	accessKey    = "super-secure-password!"
+	badAccessKey = "super-insecure-password!"
+	maxBodySize  = 524288000
 )
 
 var (
 	pki = testutil.NewPKI("../../../testutil/pki")
 )
 
-func newTestMetricStreams() *MetricStreams {
-	metricStream := &MetricStreams{
+func newTestMetricStreamsListener() *MetricStreamsListener {
+	metricStream := &MetricStreamsListener{
 		Log:            testutil.Logger{},
-		ServiceAddress: "localhost:0",
-		Path:           "/write",
-		MaxBodySize:    config.Size(524288000),
+		ServiceAddress: "localhost:8080",
+		Paths:          []string{"/write"},
+		MaxBodySize:    config.Size(maxBodySize),
 		close:          make(chan struct{}),
 	}
 	return metricStream
 }
 
-func newTestHTTPAuthListener() *MetricStreams {
-	metricStream := newTestMetricStreams()
-	metricStream.BasicUsername = basicUsername
-	metricStream.BasicPassword = basicPassword
+func newTestHTTPAuthListener() *MetricStreamsListener {
+	metricStream := newTestMetricStreamsListener()
+	metricStream.AccessKey = accessKey
 	return metricStream
 }
 
-func newTestHTTPSListenerV2() *MetricStreams {
-	metricStream := &MetricStreams{
-		Log:            testutil.Logger{},
-		ServiceAddress: "localhost:0",
-		Path:           "/write",
-		ServerConfig:   *pki.TLSServerConfig(),
-		close:          make(chan struct{}),
-	}
+func newTestHTTPSListener() *MetricStreamsListener {
+	metricStream := newTestMetricStreamsListener()
+	metricStream.ServerConfig = *pki.TLSServerConfig()
 
 	return metricStream
 }
@@ -69,10 +63,10 @@ func getHTTPSClient() *http.Client {
 	}
 }
 
-func createURL(metricStream *MetricStreams, scheme string, path string, rawquery string) string {
+func createURL(metricStream *MetricStreamsListener, scheme string, path string, rawquery string) string {
 	u := url.URL{
 		Scheme:   scheme,
-		Host:     "localhost:" + strconv.Itoa(metricStream.Port),
+		Host:     "localhost:8080",
 		Path:     path,
 		RawQuery: rawquery,
 	}
@@ -80,22 +74,18 @@ func createURL(metricStream *MetricStreams, scheme string, path string, rawquery
 }
 
 func TestInvalidListenerConfig(t *testing.T) {
-	metricStream := &MetricStreams{
-		Log:            testutil.Logger{},
-		ServiceAddress: "address_without_port",
-		Path:           "/write",
-		MaxBodySize:    config.Size(70000),
-		close:          make(chan struct{}),
-	}
+	metricStream := newTestMetricStreamsListener()
+	metricStream.ServiceAddress = "address_without_port"
 
-	require.Error(t, metricStream.Init())
+	acc := &testutil.Accumulator{}
+	require.Error(t, metricStream.Start(acc))
 
 	// Stop is called when any ServiceInput fails to start; it must succeed regardless of state
 	metricStream.Stop()
 }
 
 func TestWriteHTTPSNoClientAuth(t *testing.T) {
-	metricStream := newTestHTTPSListenerV2()
+	metricStream := newTestHTTPSListener()
 	metricStream.TLSAllowedCACerts = nil
 
 	acc := &testutil.Accumulator{}
@@ -114,14 +104,14 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	}
 
 	// post single message to the metric stream listener
-	resp, err := noClientAuthClient.Post(createURL(metricStream, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(record)))
+	resp, err := noClientAuthClient.Post(createURL(metricStream, "https", "/write", ""), "", bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
 }
 
 func TestWriteHTTPSWithClientAuth(t *testing.T) {
-	metricStream := newTestHTTPSListenerV2()
+	metricStream := newTestHTTPSListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -129,13 +119,13 @@ func TestWriteHTTPSWithClientAuth(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post single message to the metric stream listener
-	resp, err := getHTTPSClient().Post(createURL(metricStream, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(record)))
+	resp, err := getHTTPSClient().Post(createURL(metricStream, "https", "/write", ""), "", bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
 }
 
-func TestWriteHTTPBasicAuth(t *testing.T) {
+func TestWriteHTTPSuccessfulAuth(t *testing.T) {
 	metricStream := newTestHTTPAuthListener()
 
 	acc := &testutil.Accumulator{}
@@ -145,9 +135,9 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", createURL(metricStream, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(record)))
+	req, err := http.NewRequest("POST", createURL(metricStream, "http", "/write", ""), bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
-	req.SetBasicAuth(basicUsername, basicPassword)
+	req.Header.Set("X-Amz-Firehose-Access-Key", accessKey)
 
 	// post single message to the metric stream listener
 	resp, err := client.Do(req)
@@ -156,8 +146,29 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 	require.EqualValues(t, http.StatusOK, resp.StatusCode)
 }
 
+func TestWriteHTTPFailedAuth(t *testing.T) {
+	metricStream := newTestHTTPAuthListener()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, metricStream.Init())
+	require.NoError(t, metricStream.Start(acc))
+	defer metricStream.Stop()
+
+	client := &http.Client{}
+
+	req, err := http.NewRequest("POST", createURL(metricStream, "http", "/write", ""), bytes.NewBuffer([]byte(record)))
+	require.NoError(t, err)
+	req.Header.Set("X-Amz-Firehose-Access-Key", badAccessKey)
+
+	// post single message to the metric stream listener
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
 func TestWriteHTTP(t *testing.T) {
-	metricStream := newTestMetricStreams()
+	metricStream := newTestMetricStreamsListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -165,14 +176,14 @@ func TestWriteHTTP(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post single message to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(record)))
+	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(record)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
 }
 
 func TestWriteHTTPMultipleRecords(t *testing.T) {
-	metricStream := newTestMetricStreams()
+	metricStream := newTestMetricStreamsListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -180,20 +191,15 @@ func TestWriteHTTPMultipleRecords(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post multiple records to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(records)))
+	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(records)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
 }
 
 func TestWriteHTTPExactMaxBodySize(t *testing.T) {
-	metricStream := &MetricStreams{
-		Log:            testutil.Logger{},
-		ServiceAddress: "localhost:0",
-		Path:           "/write",
-		MaxBodySize:    config.Size(len(record)),
-		close:          make(chan struct{}),
-	}
+	metricStream := newTestMetricStreamsListener()
+	metricStream.MaxBodySize = config.Size(len(record))
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -208,13 +214,8 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 }
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
-	metricStream := &MetricStreams{
-		Log:            testutil.Logger{},
-		ServiceAddress: "localhost:0",
-		Path:           "/write",
-		MaxBodySize:    config.Size(512),
-		close:          make(chan struct{}),
-	}
+	metricStream := newTestMetricStreamsListener()
+	metricStream.MaxBodySize = config.Size(512)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -229,7 +230,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 }
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
-	metricStream := newTestMetricStreams()
+	metricStream := newTestMetricStreamsListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -244,7 +245,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 }
 
 func TestWriteHTTPInvalid(t *testing.T) {
-	metricStream := newTestMetricStreams()
+	metricStream := newTestMetricStreamsListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -252,14 +253,14 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post a badly formatted message to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(badMsg)))
+	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(badMsg)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)
 }
 
 func TestWriteHTTPEmpty(t *testing.T) {
-	metricStream := newTestMetricStreams()
+	metricStream := newTestMetricStreamsListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -267,14 +268,14 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post empty message to the metric stream listener
-	resp, err := http.Post(createURL(metricStream, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.Post(createURL(metricStream, "http", "/write", ""), "", bytes.NewBuffer([]byte(emptyMsg)))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)
 }
 
 func TestComposeMetrics(t *testing.T) {
-	metricStream := newTestMetricStreams()
+	metricStream := newTestMetricStreamsListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
@@ -306,7 +307,7 @@ func TestComposeMetrics(t *testing.T) {
 
 // post GZIP encoded data to the metric stream listener
 func TestWriteHTTPGzippedData(t *testing.T) {
-	metricStream := newTestMetricStreams()
+	metricStream := newTestMetricStreamsListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, metricStream.Init())
