@@ -766,4 +766,3 @@ workflows:
             branches:
               only:
                 - master
-
