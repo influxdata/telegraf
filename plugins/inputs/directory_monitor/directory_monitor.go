@@ -221,28 +221,20 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 }
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
-	if monitor.ParseMethod == "at-once" {
-		bytes, err := io.ReadAll(reader)
-		if err != nil {
-			return err
-		}
+	var splitter bufio.SplitFunc
 
-		metrics, err := monitor.parseMetrics(parser, bytes, fileName)
-		if err != nil {
-			return err
-		}
-
-		return monitor.sendMetrics(metrics)
+	// Decide on how to split the file
+	switch monitor.ParseMethod {
+	case "at-once":
+		return monitor.parseAtOnce(parser, reader, fileName)
+	case "line-by-line":
+		splitter = bufio.ScanLines
+	default:
+		return fmt.Errorf("unknown parse method %q", monitor.ParseMethod)
 	}
 
 	scanner := bufio.NewScanner(reader)
-	/* To be used when we add a new scanner based parse method
-	switch monitor.ParseMethod {
-	case "line-by-line":
-		scanner.Split(bufio.ScanLines)
-	case "future-split-type":
-		scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) { return })
-	} */
+	scanner.Split(splitter)
 
 	for scanner.Scan() {
 		metrics, err := monitor.parseMetrics(parser, scanner.Bytes(), fileName)
@@ -256,6 +248,20 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 	}
 
 	return scanner.Err()
+}
+
+func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Reader, fileName string) error {
+	bytes, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+
+	metrics, err := monitor.parseMetrics(parser, bytes, fileName)
+	if err != nil {
+		return err
+	}
+
+	return monitor.sendMetrics(metrics)
 }
 
 func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
