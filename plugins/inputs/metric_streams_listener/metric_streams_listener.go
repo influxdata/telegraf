@@ -48,7 +48,6 @@ type MetricStreamsListener struct {
 
 	Log telegraf.Logger
 	tlsint.ServerConfig
-	tlsConf  *tls.Config
 	wg       sync.WaitGroup
 	close    chan struct{}
 	listener net.Listener
@@ -120,22 +119,19 @@ func (ms *MetricStreamsListener) Start(acc telegraf.Accumulator) error {
 	ms.acc = acc
 	server := ms.createHTTPServer()
 
-	tlsConf, err := ms.ServerConfig.TLSConfig()
+	var err error
+	server.TLSConfig, err = ms.ServerConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
-
-	var listener net.Listener
-	if tlsConf != nil {
-		listener, err = tls.Listen("tcp", ms.ServiceAddress, tlsConf)
+	if server.TLSConfig != nil {
+		ms.listener, err = tls.Listen("tcp", ms.ServiceAddress, server.TLSConfig)
 	} else {
-		listener, err = net.Listen("tcp", ms.ServiceAddress)
+		ms.listener, err = net.Listen("tcp", ms.ServiceAddress)
 	}
 	if err != nil {
 		return err
 	}
-	ms.tlsConf = tlsConf
-	ms.listener = listener
 
 	ms.wg.Add(1)
 	go func() {
@@ -159,7 +155,6 @@ func (ms *MetricStreamsListener) createHTTPServer() *http.Server {
 		Handler:      ms,
 		ReadTimeout:  time.Duration(ms.ReadTimeout),
 		WriteTimeout: time.Duration(ms.WriteTimeout),
-		TLSConfig:    ms.tlsConf,
 	}
 }
 
