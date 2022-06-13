@@ -8,6 +8,7 @@ is licensed under Apache Version 2.0, http://www.apache.org/licenses/LICENSE-2.0
 package mongodb
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -1191,18 +1192,21 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	if newStat.Repl != nil {
 		returnVal.ReplSetName = newStat.Repl.SetName
-		// BEGIN code modification
+		fmt.Println("")
 		if val, ok := newStat.Repl.IsMaster.(bool); ok && val {
+			fmt.Printf("is master is true: %v\n", val)
 			returnVal.NodeType = "PRI"
 		} else if val, ok := newStat.Repl.IsWritablePrimary.(bool); ok && val {
+			fmt.Printf("is writeable is true: %v\n", val)
 			returnVal.NodeType = "PRI"
 		} else if val, ok := newStat.Repl.Secondary.(bool); ok && val {
+			fmt.Printf("is secondary is true: %v\n", val)
 			returnVal.NodeType = "SEC"
 		} else if val, ok := newStat.Repl.ArbiterOnly.(bool); ok && val {
 			returnVal.NodeType = "ARB"
 		} else {
 			returnVal.NodeType = "UNK"
-		} // END code modification
+		}
 	} else if returnVal.IsMongos {
 		returnVal.NodeType = "RTR"
 	}
