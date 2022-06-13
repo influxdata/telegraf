@@ -513,7 +513,7 @@ workflows:
               only: /.*/
       - 'test-integration':
           requires:
-            - 'rebase-on-master'
+            - 'check-for-merge-conflicts'
           filters:
             tags:
               only: /.*/
