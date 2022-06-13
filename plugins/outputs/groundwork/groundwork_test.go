@@ -18,6 +18,7 @@ import (
 const (
 	defaultTestAgentID = "ec1676cc-583d-48ee-b035-7fb5ed0fcf88"
 	defaultHost        = "telegraf"
+	defaultAppType     = "TELEGRAF"
 )
 
 func TestWriteWithDefaults(t *testing.T) {
@@ -51,7 +52,7 @@ func TestWriteWithDefaults(t *testing.T) {
 		DefaultHost: defaultHost,
 		client: clients.GWClient{
 			AppName: "telegraf",
-			AppType: "TELEGRAF",
+			AppType: defaultAppType,
 			GWConnection: &clients.GWConnection{
 				HostName: server.URL,
 			},
@@ -100,7 +101,7 @@ func TestWriteWithTags(t *testing.T) {
 		ResourceTag: "host",
 		client: clients.GWClient{
 			AppName: "telegraf",
-			AppType: "TELEGRAF",
+			AppType: defaultAppType,
 			GWConnection: &clients.GWConnection{
 				HostName: server.URL,
 			},

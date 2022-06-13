@@ -19,6 +19,9 @@ GW8+
   ## Username and password to access GroundWork API.
   username = ""
   password = ""
+  
+  ## Default Application Type to use in Groundwork Client
+  # default_app_type = "telegraf"
 
   ## Default display name for the host with services(metrics).
   # default_host = "telegraf"
