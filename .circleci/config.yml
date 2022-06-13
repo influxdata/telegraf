@@ -140,7 +140,6 @@ commands:
     steps:
       - checkout
       - check-changed-files-or-halt
-      - rebase-on-master
       - attach_workspace:
           at: '/go'
       - when:
