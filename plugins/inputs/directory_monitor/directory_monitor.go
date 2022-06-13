@@ -20,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
@@ -36,6 +37,7 @@ var (
 	defaultMaxBufferedMetrics         = 10000
 	defaultDirectoryDurationThreshold = config.Duration(0 * time.Millisecond)
 	defaultFileQueueSize              = 100000
+	defaultParseMethod                = "line-by-line"
 )
 
 type DirectoryMonitor struct {
@@ -50,6 +52,7 @@ type DirectoryMonitor struct {
 	DirectoryDurationThreshold config.Duration `toml:"directory_duration_threshold"`
 	Log                        telegraf.Logger `toml:"-"`
 	FileQueueSize              int             `toml:"file_queue_size"`
+	ParseMethod                string          `toml:"parse_method"`
 
 	filesInUse          sync.Map
 	cancel              context.CancelFunc
@@ -200,7 +203,7 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 
 	parser, err := monitor.parserFunc()
 	if err != nil {
-		return fmt.Errorf("E! Creating parser: %s", err.Error())
+		return fmt.Errorf("creating parser: %w", err)
 	}
 
 	// Handle gzipped files.
@@ -218,17 +221,25 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 }
 
 func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
+	var splitter bufio.SplitFunc
+
+	// Decide on how to split the file
+	switch monitor.ParseMethod {
+	case "at-once":
+		return monitor.parseAtOnce(parser, reader, fileName)
+	case "line-by-line":
+		splitter = bufio.ScanLines
+	default:
+		return fmt.Errorf("unknown parse method %q", monitor.ParseMethod)
+	}
+
 	scanner := bufio.NewScanner(reader)
+	scanner.Split(splitter)
+
 	for scanner.Scan() {
-		metrics, err := monitor.parseLine(parser, scanner.Bytes())
+		metrics, err := monitor.parseMetrics(parser, scanner.Bytes(), fileName)
 		if err != nil {
 			return err
-		}
-
-		if monitor.FileTag != "" {
-			for _, m := range metrics {
-				m.AddTag(monitor.FileTag, filepath.Base(fileName))
-			}
 		}
 
 		if err := monitor.sendMetrics(metrics); err != nil {
@@ -236,23 +247,44 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 		}
 	}
 
-	return nil
+	return scanner.Err()
 }
 
-func (monitor *DirectoryMonitor) parseLine(parser parsers.Parser, line []byte) ([]telegraf.Metric, error) {
+func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Reader, fileName string) error {
+	bytes, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+
+	metrics, err := monitor.parseMetrics(parser, bytes, fileName)
+	if err != nil {
+		return err
+	}
+
+	return monitor.sendMetrics(metrics)
+}
+
+func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
 	switch parser.(type) {
 	case *csv.Parser:
-		m, err := parser.Parse(line)
+		metrics, err = parser.Parse(line)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return nil, nil
 			}
 			return nil, err
 		}
-		return m, err
 	default:
-		return parser.Parse(line)
+		metrics, err = parser.Parse(line)
 	}
+
+	if monitor.FileTag != "" {
+		for _, m := range metrics {
+			m.AddTag(monitor.FileTag, filepath.Base(fileName))
+		}
+	}
+
+	return metrics, err
 }
 
 func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
@@ -357,6 +389,10 @@ func (monitor *DirectoryMonitor) Init() error {
 		monitor.fileRegexesToIgnore = append(monitor.fileRegexesToIgnore, regex)
 	}
 
+	if err := choice.Check(monitor.ParseMethod, []string{"line-by-line", "at-once"}); err != nil {
+		return fmt.Errorf("config option parse_method: %w", err)
+	}
+
 	return nil
 }
 
@@ -368,6 +404,7 @@ func init() {
 			MaxBufferedMetrics:         defaultMaxBufferedMetrics,
 			DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 			FileQueueSize:              defaultFileQueueSize,
+			ParseMethod:                defaultParseMethod,
 		}
 	})
 }
