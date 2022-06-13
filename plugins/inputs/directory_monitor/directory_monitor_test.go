@@ -9,10 +9,27 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestCreator(t *testing.T) {
+	creator, found := inputs.Inputs["directory_monitor"]
+	require.True(t, found)
+
+	expected := &DirectoryMonitor{
+		FilesToMonitor:             defaultFilesToMonitor,
+		FilesToIgnore:              defaultFilesToIgnore,
+		MaxBufferedMetrics:         defaultMaxBufferedMetrics,
+		DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
+		FileQueueSize:              defaultFileQueueSize,
+		ParseMethod:                defaultParseMethod,
+	}
+
+	require.Equal(t, expected, creator())
+}
 
 func TestCSVGZImport(t *testing.T) {
 	acc := testutil.Accumulator{}
