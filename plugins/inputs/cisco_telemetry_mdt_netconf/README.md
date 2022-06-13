@@ -112,4 +112,10 @@ The plugin requires the [netgonf library](github.com/cisco-ie/netgonf).
 
 ## Example Output
 
+```shell
+Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization,host=linux,path=Cisco-IOS-XE-process-cpu-oper:cpu-usage/cpu-utilization,source=3650,subscription=1 five_seconds=3i 1654898172903000000
+Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic,Cisco-IOS-XE-memory-oper:memory-statistics/memory-statistic/name=reserve\ Processor,host=linux,source=3650 total-memory=102404i,used-memory=92i,free-memory=102312i,lowest-usage=102312i,highest-usage=102312i 1654898176722493661
+Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics,host=linux,name=GigabitEthernet0/0,path=Cisco-IOS-XE-interfaces-oper:interfaces/interface/statistics,source=3650,subscription=2 discontinuity_time="2022-06-07T22:06:03.000763+00:00",in_octets=55043194i,in_unicast_pkts=580774i,in_broadcast_pkts=0i,in_multicast_pkts=0i,in_discards=0i,in_errors=0i,in_unknown_protos=0i,out_octets=9692848i,out_unicast_pkts=107693i,out_broadcast_pkts=0i,out_multicast_pkts=0i,out_discards=0i,out_errors=0i,rx_pps=5i,rx_kbps=18i,tx_pps=1i,tx_kbps=2i,num_flaps=0i,in_crc_errors=0i 1654898187900000000
+```
+
 ## Metrics
