@@ -160,6 +160,16 @@ commands:
           paths:
             - 'dist'
 jobs:
+  check-for-merge-conflicts:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - run: |
+          git config --global user.email "telegraf@influxdb.com"
+          git config --global user.name "telegraf"
+          git remote add upstream https://github.com/influxdata/telegraf
+          git fetch upstream
+          git rebase upstream/master
   test-go-linux:
     executor: telegraf-ci
     steps:
@@ -476,23 +486,34 @@ workflows:
   version: 2
   check:
     jobs:
+      - 'check-for-merge-conflicts'
       - 'test-go-linux':
+          requires:
+            - 'check-for-merge-conflicts'
           filters:
             tags:
               only: /.*/
       - 'test-go-linux-386':
+          requires:
+            - 'check-for-merge-conflicts'
           filters:
             tags:
               only: /.*/
       - 'test-go-mac':
+          requires:
+            - 'check-for-merge-conflicts'
           filters:
             tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'test-go-windows':
+          requires:
+            - 'check-for-merge-conflicts'
           filters:
             tags:
               only: /.*/
       - 'test-integration':
+          requires:
+            - 'rebase-on-master'
           filters:
             tags:
               only: /.*/
