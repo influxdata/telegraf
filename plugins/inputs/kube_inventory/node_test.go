@@ -4,11 +4,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
-	"github.com/ericchiang/k8s/apis/resource"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNode(t *testing.T) {
@@ -19,14 +21,14 @@ func TestNode(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
 			name: "no nodes",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/nodes/": &v1.NodeList{},
+					"/nodes/": corev1.NodeList{},
 				},
 			},
 			hasError: false,
@@ -35,86 +37,87 @@ func TestNode(t *testing.T) {
 			name: "collect nodes",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/nodes/": &v1.NodeList{
-						Items: []*v1.Node{
+					"/nodes/": corev1.NodeList{
+						Items: []corev1.Node{
 							{
-								Status: &v1.NodeStatus{
-									NodeInfo: &v1.NodeSystemInfo{
-										KernelVersion:           toStrPtr("4.14.48-coreos-r2"),
-										OsImage:                 toStrPtr("Container Linux by CoreOS 1745.7.0 (Rhyolite)"),
-										ContainerRuntimeVersion: toStrPtr("docker://18.3.1"),
-										KubeletVersion:          toStrPtr("v1.10.3"),
-										KubeProxyVersion:        toStrPtr("v1.10.3"),
+								Status: corev1.NodeStatus{
+									NodeInfo: corev1.NodeSystemInfo{
+										KernelVersion:           "4.14.48-coreos-r2",
+										OSImage:                 "Container Linux by CoreOS 1745.7.0 (Rhyolite)",
+										ContainerRuntimeVersion: "docker://18.3.1",
+										KubeletVersion:          "v1.10.3",
+										KubeProxyVersion:        "v1.10.3",
 									},
-									Phase: toStrPtr("Running"),
-									Capacity: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
-										"ephemeral_storage_bytes": {String_: toStrPtr("49536401408")},
-										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
-										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
-										"memory":                  {String_: toStrPtr("125817904Ki")},
-										"pods":                    {String_: toStrPtr("110")},
+									Phase: "Running",
+									Capacity: corev1.ResourceList{
+										"cpu":                     resource.MustParse("16"),
+										"ephemeral_storage_bytes": resource.MustParse("49536401408"),
+										"hugepages_1Gi_bytes":     resource.MustParse("0"),
+										"hugepages_2Mi_bytes":     resource.MustParse("0"),
+										"memory":                  resource.MustParse("125817904Ki"),
+										"pods":                    resource.MustParse("110"),
 									},
-									Allocatable: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
-										"ephemeral_storage_bytes": {String_: toStrPtr("44582761194")},
-										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
-										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
-										"memory":                  {String_: toStrPtr("125715504Ki")},
-										"pods":                    {String_: toStrPtr("110")},
+									Allocatable: corev1.ResourceList{
+										"cpu":                     resource.MustParse("1000m"),
+										"ephemeral_storage_bytes": resource.MustParse("44582761194"),
+										"hugepages_1Gi_bytes":     resource.MustParse("0"),
+										"hugepages_2Mi_bytes":     resource.MustParse("0"),
+										"memory":                  resource.MustParse("125715504Ki"),
+										"pods":                    resource.MustParse("110"),
 									},
-									Conditions: []*v1.NodeCondition{
-										{Type: toStrPtr("Ready"), Status: toStrPtr("true"), LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(now.Unix())}},
-										{Type: toStrPtr("OutOfDisk"), Status: toStrPtr("false"), LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(created.Unix())}},
-									},
-								},
-								Spec: &v1.NodeSpec{
-									ProviderID: toStrPtr("aws:///us-east-1c/i-0c00"),
-									Taints: []*v1.Taint{
-										{
-											Key:    toStrPtr("k1"),
-											Value:  toStrPtr("v1"),
-											Effect: toStrPtr("NoExecute"),
-										},
-										{
-											Key:    toStrPtr("k2"),
-											Value:  toStrPtr("v2"),
-											Effect: toStrPtr("NoSchedule"),
-										},
+									Conditions: []corev1.NodeCondition{
+										{Type: "Ready", Status: "true", LastTransitionTime: metav1.Time{Time: now}},
+										{Type: "OutOfDisk", Status: "false", LastTransitionTime: metav1.Time{Time: created}},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									Generation: toInt64Ptr(int64(11232)),
-									Namespace:  toStrPtr("ns1"),
-									Name:       toStrPtr("node1"),
+								Spec: corev1.NodeSpec{
+									ProviderID: "aws:///us-east-1c/i-0c00",
+									Taints: []corev1.Taint{
+										{
+											Key:    "k1",
+											Value:  "v1",
+											Effect: "NoExecute",
+										},
+										{
+											Key:    "k2",
+											Value:  "v2",
+											Effect: "NoSchedule",
+										},
+									},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation: 11232,
+									Namespace:  "ns1",
+									Name:       "node1",
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(created.Unix())},
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Measurement: nodeMeasurement,
-						Fields: map[string]interface{}{
-							"capacity_cpu_cores":       int64(16),
-							"capacity_memory_bytes":    int64(1.28837533696e+11),
-							"capacity_pods":            int64(110),
-							"allocatable_cpu_cores":    int64(16),
-							"allocatable_memory_bytes": int64(1.28732676096e+11),
-							"allocatable_pods":         int64(110),
-						},
-						Tags: map[string]string{
-							"node_name": "node1",
-						},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					nodeMeasurement,
+					map[string]string{
+						"node_name": "node1",
 					},
-				},
+					map[string]interface{}{
+						"capacity_cpu_cores":         int64(16),
+						"capacity_millicpu_cores":    int64(16000),
+						"capacity_memory_bytes":      int64(1.28837533696e+11),
+						"capacity_pods":              int64(110),
+						"allocatable_cpu_cores":      int64(1),
+						"allocatable_millicpu_cores": int64(1000),
+						"allocatable_memory_bytes":   int64(1.28732676096e+11),
+						"allocatable_pods":           int64(110),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -125,48 +128,20 @@ func TestNode(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, node := range ((v.handler.responseMap["/nodes/"]).(*v1.NodeList)).Items {
-			err := ks.gatherNode(*node, acc)
-			if err != nil {
-				t.Errorf("Failed to gather node - %s", err.Error())
-			}
+		for _, node := range ((v.handler.responseMap["/nodes/"]).(corev1.NodeList)).Items {
+			ks.gatherNode(node, acc)
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				measurement := v.output.Metrics[i].Measurement
-				var keyTag string
-				switch measurement {
-				case nodeMeasurement:
-					keyTag = "node"
-				}
-				var j int
-				for j = range acc.Metrics {
-					if acc.Metrics[j].Measurement == measurement &&
-						acc.Metrics[j].Tags[keyTag] == v.output.Metrics[i].Tags[keyTag] {
-						break
-					}
-				}
 
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[j].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s, measurement %s, j %d\n", v.name, k, m, acc.Metrics[j].Tags[k], measurement, j)
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[j].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T), measurement %s, j %d\n", v.name, k, m, m, acc.Metrics[j].Fields[k], acc.Metrics[i].Fields[k], measurement, j)
-					}
-				}
-			}
-		}
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }

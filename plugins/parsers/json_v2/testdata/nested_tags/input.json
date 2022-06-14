@@ -1,0 +1,16 @@
+{
+    "device0": {
+        "Count": 0,
+        "Errors": 0,
+        "Serial": "9JHNGTUT",
+        "Model": "WDC WUH721414ALE604",
+        "Firmware": "LDGSW07G"
+    },
+    "device1": {
+        "Count": 0,
+        "Errors": 0,
+        "Serial": "9JHLPW9T",
+        "Model": "WDC WUH721414ALE604",
+        "Firmware": "LDGSW07G"
+    }
+}

@@ -13,7 +13,7 @@ import (
 )
 
 var pollInterval = flag.Duration("poll_interval", 1*time.Second, "how often to send metrics")
-var pollIntervalDisabled = flag.Bool("poll_interval_disabled", false, "how often to send metrics")
+var pollIntervalDisabled = flag.Bool("poll_interval_disabled", false, "set to true to disable polling. You want to use this when you are sending metrics on your own schedule")
 var configFile = flag.String("config", "", "path to the config file for this plugin")
 var err error
 
@@ -21,7 +21,7 @@ var err error
 //
 // However, if you want to do all your config in code, you can like so:
 //
-// // initialize your plugin with any settngs you want
+// // initialize your plugin with any settings you want
 // myInput := &mypluginname.MyPlugin{
 // 	DefaultSettingHere: 3,
 // }
@@ -30,7 +30,7 @@ var err error
 //
 // shim.AddInput(myInput)
 //
-// // now the shim.Run() call as below.
+// // now the shim.Run() call as below. Note the shim is only intended to run a single plugin.
 //
 func main() {
 	// parse command line options
@@ -40,20 +40,20 @@ func main() {
 	}
 
 	// create the shim. This is what will run your plugins.
-	shim := shim.New()
+	shimLayer := shim.New()
 
 	// If no config is specified, all imported plugins are loaded.
-	// otherwise follow what the config asks for.
+	// otherwise, follow what the config asks for.
 	// Check for settings from a config toml file,
 	// (or just use whatever plugins were imported above)
-	err = shim.LoadConfig(configFile)
+	err = shimLayer.LoadConfig(configFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Err loading input: %s\n", err)
 		os.Exit(1)
 	}
 
-	// run the input plugin(s) until stdin closes or we receive a termination signal
-	if err := shim.Run(*pollInterval); err != nil {
+	// run a single plugin until stdin closes or we receive a termination signal
+	if err := shimLayer.Run(*pollInterval); err != nil {
 		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
 		os.Exit(1)
 	}

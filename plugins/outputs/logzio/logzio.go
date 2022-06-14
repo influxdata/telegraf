@@ -1,19 +1,24 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package logzio
 
 import (
 	"bytes"
 	"compress/gzip"
+	_ "embed"
 	"encoding/json"
 	"fmt"
-
 	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const (
 	defaultLogzioURL = "https://listener.logz.io:8071"
@@ -22,27 +27,11 @@ const (
 	logzioType        = "telegraf"
 )
 
-var sampleConfig = `
-  ## Connection timeout, defaults to "5s" if not set.
-  timeout = "5s"
-  
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## Logz.io account token
-  token = "your logz.io token" # required
-
-  ## Use your listener URL for your Logz.io account region.
-  # url = "https://listener.logz.io:8071"
-`
-
 type Logzio struct {
-	Log     telegraf.Logger   `toml:"-"`
-	Timeout internal.Duration `toml:"timeout"`
-	Token   string            `toml:"token"`
-	URL     string            `toml:"url"`
+	Log     telegraf.Logger `toml:"-"`
+	Timeout config.Duration `toml:"timeout"`
+	Token   string          `toml:"token"`
+	URL     string          `toml:"url"`
 
 	tls.ClientConfig
 	client *http.Client
@@ -57,6 +46,10 @@ type Metric struct {
 	Dimensions map[string]string      `json:"dimensions"`
 	Time       time.Time              `json:"@timestamp"`
 	Type       string                 `json:"type"`
+}
+
+func (*Logzio) SampleConfig() string {
+	return sampleConfig
 }
 
 // Connect to the Output
@@ -77,7 +70,7 @@ func (l *Logzio) Connect() error {
 			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: tlsCfg,
 		},
-		Timeout: l.Timeout.Duration,
+		Timeout: time.Duration(l.Timeout),
 	}
 
 	return nil
@@ -87,16 +80,6 @@ func (l *Logzio) Connect() error {
 func (l *Logzio) Close() error {
 	l.Log.Debug("Closing logz.io output")
 	return nil
-}
-
-// Description returns a one-sentence description on the Output
-func (l *Logzio) Description() string {
-	return logzioDescription
-}
-
-// SampleConfig returns the default configuration of the Output
-func (l *Logzio) SampleConfig() string {
-	return sampleConfig
 }
 
 // Write takes in group of points to be written to the Output
@@ -112,45 +95,45 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 
 		serialized, err := json.Marshal(m)
 		if err != nil {
-			return fmt.Errorf("unable to marshal metric, %s\n", err.Error())
+			return fmt.Errorf("unable to marshal metric, %s", err.Error())
 		}
 
 		_, err = gz.Write(append(serialized, '\n'))
 		if err != nil {
-			return fmt.Errorf("unable to write gzip meric, %s\n", err.Error())
+			return fmt.Errorf("unable to write gzip meric, %s", err.Error())
 		}
 	}
 
 	err := gz.Close()
 	if err != nil {
-		return fmt.Errorf("unable to close gzip, %s\n", err.Error())
+		return fmt.Errorf("unable to close gzip, %s", err.Error())
 	}
 
 	return l.send(buff.Bytes())
 }
 
 func (l *Logzio) send(metrics []byte) error {
-	req, err := http.NewRequest("POST", l.authUrl(), bytes.NewBuffer(metrics))
+	req, err := http.NewRequest("POST", l.authURL(), bytes.NewBuffer(metrics))
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s\n", err.Error())
+		return fmt.Errorf("unable to create http.Request, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
+		return fmt.Errorf("error POSTing metrics, %s", err.Error())
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
-		return fmt.Errorf("received bad status code, %d\n", resp.StatusCode)
+		return fmt.Errorf("received bad status code, %d", resp.StatusCode)
 	}
 
 	return nil
 }
 
-func (l *Logzio) authUrl() string {
+func (l *Logzio) authURL() string {
 	return fmt.Sprintf("%s/?token=%s", l.URL, l.Token)
 }
 
@@ -169,7 +152,7 @@ func init() {
 	outputs.Add("logzio", func() telegraf.Output {
 		return &Logzio{
 			URL:     defaultLogzioURL,
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }

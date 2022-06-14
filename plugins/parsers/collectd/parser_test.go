@@ -6,7 +6,6 @@ import (
 
 	"collectd.org/api"
 	"collectd.org/network"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -144,7 +143,7 @@ func TestParseMultiValueSplit(t *testing.T) {
 	metrics, err := parser.Parse(bytes)
 	require.NoError(t, err)
 
-	assert.Equal(t, 2, len(metrics))
+	require.Equal(t, 2, len(metrics))
 }
 
 func TestParse_DefaultTags(t *testing.T) {
@@ -215,7 +214,7 @@ func TestParse_SignSecurityLevel(t *testing.T) {
 	bytes, err = buf.Bytes()
 	require.NoError(t, err)
 
-	metrics, err = parser.Parse(bytes)
+	_, err = parser.Parse(bytes)
 	require.Error(t, err)
 }
 
@@ -270,7 +269,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 	bytes, err = buf.Bytes()
 	require.NoError(t, err)
 
-	metrics, err = parser.Parse(bytes)
+	_, err = parser.Parse(bytes)
 	require.Error(t, err)
 }
 

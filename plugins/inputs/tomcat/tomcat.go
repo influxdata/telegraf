@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package tomcat
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -9,10 +11,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type TomcatStatus struct {
 	TomcatJvm        TomcatJvm         `xml:"jvm"`
@@ -63,43 +69,20 @@ type Tomcat struct {
 	URL      string
 	Username string
 	Password string
-	Timeout  internal.Duration
+	Timeout  config.Duration
 	tls.ClientConfig
 
 	client  *http.Client
 	request *http.Request
 }
 
-var sampleconfig = `
-  ## URL of the Tomcat server status
-  # url = "http://127.0.0.1:8080/manager/status/all?XML=true"
-
-  ## HTTP Basic Auth Credentials
-  # username = "tomcat"
-  # password = "s3cret"
-
-  ## Request timeout
-  # timeout = "5s"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (s *Tomcat) Description() string {
-	return "Gather metrics from the Tomcat server status page."
-}
-
-func (s *Tomcat) SampleConfig() string {
-	return sampleconfig
+func (*Tomcat) SampleConfig() string {
+	return sampleConfig
 }
 
 func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
-		client, err := s.createHttpClient()
+		client, err := s.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -131,7 +114,9 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var status TomcatStatus
-	xml.NewDecoder(resp.Body).Decode(&status)
+	if err := xml.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return err
+	}
 
 	// add tomcat_jvm_memory measurements
 	tcm := map[string]interface{}{
@@ -187,7 +172,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Tomcat) createHttpClient() (*http.Client, error) {
+func (s *Tomcat) createHTTPClient() (*http.Client, error) {
 	tlsConfig, err := s.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -197,7 +182,7 @@ func (s *Tomcat) createHttpClient() (*http.Client, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
 		},
-		Timeout: s.Timeout.Duration,
+		Timeout: time.Duration(s.Timeout),
 	}
 
 	return client, nil
@@ -209,7 +194,7 @@ func init() {
 			URL:      "http://127.0.0.1:8080/manager/status/all?XML=true",
 			Username: "tomcat",
 			Password: "s3cret",
-			Timeout:  internal.Duration{Duration: 5 * time.Second},
+			Timeout:  config.Duration(5 * time.Second),
 		}
 	})
 }

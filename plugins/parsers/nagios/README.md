@@ -1,8 +1,8 @@
-# Nagios
+# Nagios Parser Plugin
 
 The `nagios` data format parses the output of nagios plugins.
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.exec]]

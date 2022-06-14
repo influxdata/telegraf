@@ -1,41 +1,43 @@
 # Raindrops Input Plugin
 
-The [raindrops](http://raindrops.bogomips.org/) plugin reads from
-specified raindops [middleware](http://raindrops.bogomips.org/Raindrops/Middleware.html) URI and adds stats to InfluxDB.
+The [raindrops](http://raindrops.bogomips.org/) plugin reads from specified
+raindops [middleware](http://raindrops.bogomips.org/Raindrops/Middleware.html)
+URI and adds stats to InfluxDB.
 
-### Configuration:
+## Configuration
 
-```toml
-# Read raindrops stats
+```toml @sample.conf
+# Read raindrops stats (raindrops - real-time stats for preforking Rack servers)
 [[inputs.raindrops]]
+  ## An array of raindrops middleware URI to gather stats.
   urls = ["http://localhost:8080/_raindrops"]
 ```
 
-### Measurements & Fields:
+## Metrics
 
 - raindrops
-    - calling (integer, count)
-    - writing (integer, count)
+  - calling (integer, count)
+  - writing (integer, count)
 - raindrops_listen
-    - active (integer, bytes)
-    - queued (integer, bytes)
+  - active (integer, bytes)
+  - queued (integer, bytes)
 
-### Tags:
+### Tags
 
 - Raindops calling/writing of all the workers:
-    - server
-    - port
+  - server
+  - port
 
 - raindrops_listen (ip:port):
-    - ip
-    - port
+  - ip
+  - port
 
 - raindrops_listen (Unix Socket):
-    - socket
+  - socket
 
-### Example Output:
+## Example Output
 
-```
+```shell
 $ ./telegraf --config telegraf.conf --input-filter raindrops --test
 * Plugin: raindrops, Collection 1
 > raindrops,port=8080,server=localhost calling=0i,writing=0i 1455479896806238204

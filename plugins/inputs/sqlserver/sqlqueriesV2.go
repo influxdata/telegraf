@@ -1348,37 +1348,62 @@ IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
 	END
 `
 
-const sqlServerCpuV2 string = `
+const sqlServerCPUV2 string = `
 /*The ring buffer has a new value every minute*/
 IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
 BEGIN
-SELECT 
-	 'sqlserver_cpu' AS [measurement]
-	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,[SQLProcessUtilization] AS [sqlserver_process_cpu]
-	,[SystemIdle] AS [system_idle_cpu]
-	,100 - [SystemIdle] - [SQLProcessUtilization] AS [other_process_cpu]
-FROM (
-	SELECT TOP 1
-		 [record_id]
-		/*,dateadd(ms, (y.[timestamp] - (SELECT CAST([ms_ticks] AS BIGINT) FROM sys.dm_os_sys_info)), GETDATE()) AS [EventTime] --use for check/debug purpose*/
-		,[SQLProcessUtilization]
-		,[SystemIdle]
+;WITH utilization_cte AS
+(
+	SELECT
+		[SQLProcessUtilization] AS [sqlserver_process_cpu]
+		,[SystemIdle] AS [system_idle_cpu]
+		,100 - [SystemIdle] - [SQLProcessUtilization] AS [other_process_cpu]
 	FROM (
-		SELECT record.value('(./Record/@id)[1]', 'int') AS [record_id]
-			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
-			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
-			,[TIMESTAMP]
+		SELECT TOP 1
+			 [record_id]
+			,[SQLProcessUtilization]
+			,[SystemIdle]
 		FROM (
-			SELECT [TIMESTAMP]
-				,convert(XML, [record]) AS [record]
-			FROM sys.dm_os_ring_buffers
-			WHERE [ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
-				AND [record] LIKE '%<SystemHealth>%'
-			) AS x
-		) AS y
-	ORDER BY record_id DESC
-) as z
+			SELECT
+				 record.value('(./Record/@id)[1]', 'int') AS [record_id]
+				,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
+				,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
+				,[TIMESTAMP]
+			FROM (
+				SELECT
+					 [TIMESTAMP]
+					,convert(XML, [record]) AS [record]
+				FROM sys.dm_os_ring_buffers
+				WHERE
+					[ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
+					AND [record] LIKE '%<SystemHealth>%'
+				) AS x
+			) AS y
+		ORDER BY [record_id] DESC
+	) AS z
+),
+processor_Info_cte AS
+(
+	SELECT (cpu_count / hyperthread_ratio) as number_of_physical_cpus
+	  FROM sys.dm_os_sys_info
+)
+SELECT
+	'sqlserver_cpu' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,[sqlserver_process_cpu]
+	,[system_idle_cpu]
+	,100 - [system_idle_cpu] - [sqlserver_process_cpu] AS [other_process_cpu]
+FROM
+	(
+		SELECT
+			(case
+				when [other_process_cpu] < 0 then [sqlserver_process_cpu] / a.number_of_physical_cpus
+				else [sqlserver_process_cpu]
+			  end) as [sqlserver_process_cpu]
+		,[system_idle_cpu]
+	FROM utilization_cte
+		CROSS APPLY processor_Info_cte a
+	) AS b
 
 END
 `

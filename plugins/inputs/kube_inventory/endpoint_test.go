@@ -4,9 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
-	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEndpoint(t *testing.T) {
@@ -18,7 +21,7 @@ func TestEndpoint(t *testing.T) {
 	tests := []struct {
 		name     string
 		handler  *mockHandler
-		output   *testutil.Accumulator
+		output   []telegraf.Metric
 		hasError bool
 	}{
 		{
@@ -35,60 +38,60 @@ func TestEndpoint(t *testing.T) {
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
 					"/endpoints/": &v1.EndpointsList{
-						Items: []*v1.Endpoints{
+						Items: []v1.Endpoints{
 							{
-								Subsets: []*v1.EndpointSubset{
+								Subsets: []v1.EndpointSubset{
 									{
-										Addresses: []*v1.EndpointAddress{
+										Addresses: []v1.EndpointAddress{
 											{
-												Hostname: toStrPtr("storage-6"),
+												Hostname: "storage-6",
 												NodeName: toStrPtr("b.storage.internal"),
 												TargetRef: &v1.ObjectReference{
-													Kind: toStrPtr("pod"),
-													Name: toStrPtr("storage-6"),
+													Kind: "pod",
+													Name: "storage-6",
 												},
 											},
 										},
-										Ports: []*v1.EndpointPort{
+										Ports: []v1.EndpointPort{
 											{
-												Name:     toStrPtr("server"),
-												Protocol: toStrPtr("TCP"),
-												Port:     toInt32Ptr(8080),
+												Name:     "server",
+												Protocol: "TCP",
+												Port:     8080,
 											},
 										},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									Generation:        toInt64Ptr(12),
-									Namespace:         toStrPtr("ns1"),
-									Name:              toStrPtr("storage"),
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        12,
+									Namespace:         "ns1",
+									Name:              "storage",
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Fields: map[string]interface{}{
-							"ready":      true,
-							"port":       int32(8080),
-							"generation": int64(12),
-							"created":    now.UnixNano(),
-						},
-						Tags: map[string]string{
-							"endpoint_name": "storage",
-							"namespace":     "ns1",
-							"hostname":      "storage-6",
-							"node_name":     "b.storage.internal",
-							"port_name":     "server",
-							"port_protocol": "TCP",
-							"pod":           "storage-6",
-						},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_endpoint",
+					map[string]string{
+						"endpoint_name": "storage",
+						"namespace":     "ns1",
+						"hostname":      "storage-6",
+						"node_name":     "b.storage.internal",
+						"port_name":     "server",
+						"port_protocol": "TCP",
+						"pod":           "storage-6",
 					},
-				},
+					map[string]interface{}{
+						"ready":      true,
+						"port":       int32(8080),
+						"generation": int64(12),
+						"created":    now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -97,60 +100,156 @@ func TestEndpoint(t *testing.T) {
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
 					"/endpoints/": &v1.EndpointsList{
-						Items: []*v1.Endpoints{
+						Items: []v1.Endpoints{
 							{
-								Subsets: []*v1.EndpointSubset{
+								Subsets: []v1.EndpointSubset{
 									{
-										NotReadyAddresses: []*v1.EndpointAddress{
+										NotReadyAddresses: []v1.EndpointAddress{
 											{
-												Hostname: toStrPtr("storage-6"),
+												Hostname: "storage-6",
 												NodeName: toStrPtr("b.storage.internal"),
 												TargetRef: &v1.ObjectReference{
-													Kind: toStrPtr("pod"),
-													Name: toStrPtr("storage-6"),
+													Kind: "pod",
+													Name: "storage-6",
 												},
 											},
 										},
-										Ports: []*v1.EndpointPort{
+										Ports: []v1.EndpointPort{
 											{
-												Name:     toStrPtr("server"),
-												Protocol: toStrPtr("TCP"),
-												Port:     toInt32Ptr(8080),
+												Name:     "server",
+												Protocol: "TCP",
+												Port:     8080,
 											},
 										},
 									},
 								},
-								Metadata: &metav1.ObjectMeta{
-									Generation:        toInt64Ptr(12),
-									Namespace:         toStrPtr("ns1"),
-									Name:              toStrPtr("storage"),
-									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        12,
+									Namespace:         "ns1",
+									Name:              "storage",
+									CreationTimestamp: metav1.Time{Time: now},
 								},
 							},
 						},
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{
-					{
-						Fields: map[string]interface{}{
-							"ready":      false,
-							"port":       int32(8080),
-							"generation": int64(12),
-							"created":    now.UnixNano(),
-						},
-						Tags: map[string]string{
-							"endpoint_name": "storage",
-							"namespace":     "ns1",
-							"hostname":      "storage-6",
-							"node_name":     "b.storage.internal",
-							"port_name":     "server",
-							"port_protocol": "TCP",
-							"pod":           "storage-6",
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_endpoint",
+					map[string]string{
+						"endpoint_name": "storage",
+						"namespace":     "ns1",
+						"hostname":      "storage-6",
+						"node_name":     "b.storage.internal",
+						"port_name":     "server",
+						"port_protocol": "TCP",
+						"pod":           "storage-6",
+					},
+					map[string]interface{}{
+						"ready":      false,
+						"port":       int32(8080),
+						"generation": int64(12),
+						"created":    now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
+			},
+			hasError: false,
+		},
+		{
+			name: "endpoints missing node_name",
+			handler: &mockHandler{
+				responseMap: map[string]interface{}{
+					"/endpoints/": &v1.EndpointsList{
+						Items: []v1.Endpoints{
+							{
+								Subsets: []v1.EndpointSubset{
+									{
+										NotReadyAddresses: []v1.EndpointAddress{
+											{
+												Hostname: "storage-6",
+												TargetRef: &v1.ObjectReference{
+													Kind: "pod",
+													Name: "storage-6",
+												},
+											},
+										},
+										Ports: []v1.EndpointPort{
+											{
+												Name:     "server",
+												Protocol: "TCP",
+												Port:     8080,
+											},
+										},
+									},
+									{
+										Addresses: []v1.EndpointAddress{
+											{
+												Hostname: "storage-12",
+												TargetRef: &v1.ObjectReference{
+													Kind: "pod",
+													Name: "storage-12",
+												},
+											},
+										},
+										Ports: []v1.EndpointPort{
+											{
+												Name:     "server",
+												Protocol: "TCP",
+												Port:     8080,
+											},
+										},
+									},
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Generation:        12,
+									Namespace:         "ns1",
+									Name:              "storage",
+									CreationTimestamp: metav1.Time{Time: now},
+								},
+							},
 						},
 					},
 				},
+			},
+			output: []telegraf.Metric{
+				testutil.MustMetric(
+					"kubernetes_endpoint",
+					map[string]string{
+						"endpoint_name": "storage",
+						"namespace":     "ns1",
+						"hostname":      "storage-6",
+						"port_name":     "server",
+						"port_protocol": "TCP",
+						"pod":           "storage-6",
+					},
+					map[string]interface{}{
+						"ready":      false,
+						"port":       int32(8080),
+						"generation": int64(12),
+						"created":    now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"kubernetes_endpoint",
+					map[string]string{
+						"endpoint_name": "storage",
+						"namespace":     "ns1",
+						"hostname":      "storage-12",
+						"port_name":     "server",
+						"port_protocol": "TCP",
+						"pod":           "storage-12",
+					},
+					map[string]interface{}{
+						"ready":      true,
+						"port":       int32(8080),
+						"generation": int64(12),
+						"created":    now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
 			},
 			hasError: false,
 		},
@@ -162,33 +261,19 @@ func TestEndpoint(t *testing.T) {
 		}
 		acc := new(testutil.Accumulator)
 		for _, endpoint := range ((v.handler.responseMap["/endpoints/"]).(*v1.EndpointsList)).Items {
-			err := ks.gatherEndpoint(*endpoint, acc)
-			if err != nil {
-				t.Errorf("Failed to gather endpoint - %s", err.Error())
-			}
+			ks.gatherEndpoint(endpoint, acc)
 		}
 
 		err := acc.FirstError()
-		if err == nil && v.hasError {
-			t.Fatalf("%s failed, should have error", v.name)
-		} else if err != nil && !v.hasError {
-			t.Fatalf("%s failed, err: %v", v.name, err)
+		if v.hasError {
+			require.Errorf(t, err, "%s failed, should have error", v.name)
+			continue
 		}
-		if v.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", v.name)
-		} else if v.output != nil && len(v.output.Metrics) > 0 {
-			for i := range v.output.Metrics {
-				for k, m := range v.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got '%v'\n", v.name, k, m, acc.Metrics[i].Tags[k])
-					}
-				}
-				for k, m := range v.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", v.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[i].Fields[k])
-					}
-				}
-			}
-		}
+
+		// No error case
+		require.NoErrorf(t, err, "%s failed, err: %v", v.name, err)
+
+		require.Len(t, acc.Metrics, len(v.output))
+		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
 	}
 }

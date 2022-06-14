@@ -4,8 +4,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/influxdata/telegraf"
 	dto "github.com/prometheus/client_model/go"
+
+	"github.com/influxdata/telegraf"
 )
 
 type Table struct {
@@ -89,13 +90,13 @@ func sanitize(name string, table Table) (string, bool) {
 		switch {
 		case i == 0:
 			if unicode.In(r, table.First) {
-				b.WriteRune(r)
+				b.WriteRune(r) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
 			}
 		default:
 			if unicode.In(r, table.Rest) {
-				b.WriteRune(r)
+				b.WriteRune(r) //nolint:revive // from builder.go: "It returns the length of r and a nil error."
 			} else {
-				b.WriteString("_")
+				b.WriteString("_") //nolint:revive // from builder.go: "It returns the length of s and a nil error."
 			}
 		}
 	}

@@ -1,0 +1,174 @@
+[
+    {
+        "hostname": "testhost1",
+        "systemVoltage": -54.1,
+        "systemCurrent": -3.8,
+        "tables": [
+            {
+                "outputnumber": 0.0,
+                "outputname": "1A-CC01-PC01",
+                "outputcurrent": -2.7,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 1.0,
+                "outputname": "2A-CC01-KA01",
+                "outputcurrent": 0.0,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 2.0,
+                "outputname": "3A-CC01-CC02",
+                "outputcurrent": 0.0,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 3.0,
+                "outputname": "4A",
+                "outputcurrent": 0.0,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 4.0,
+                "outputname": "5A",
+                "outputcurrent": 0.0,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 5.0,
+                "outputname": "6A-CC01-88-INV01-A",
+                "outputcurrent": -1.1,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "busnumber": 0.0,
+                "busname": "A--48A",
+                "busvoltage": -54.1,
+                "buscurrent": -3.8
+            },
+            {
+                "busnumber": 1.0,
+                "busname": "B--48B",
+                "busvoltage": -53.9,
+                "buscurrent": -4.2
+            },
+            {
+                "alarmnumber": 0.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            },
+            {
+                "alarmnumber": 1.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            },
+            {
+                "alarmnumber": 2.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            },
+            {
+                "alarmnumber": 3.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            },
+            {
+                "alarmnumber": 4.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            }
+        ]
+    },
+    {
+        "hostname": "testhost2",
+        "systemVoltage": 27.5,
+        "systemCurrent": 9.5,
+        "tables": [
+            {
+                "outputnumber": 0.0,
+                "outputname": "1A",
+                "outputcurrent": 0.0,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 1.0,
+                "outputname": "2A",
+                "outputcurrent": 0.0,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 2.0,
+                "outputname": "3A",
+                "outputcurrent": 0.0,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 3.0,
+                "outputname": "4A",
+                "outputcurrent": 0.6,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 4.0,
+                "outputname": "5A",
+                "outputcurrent": 6.5,
+                "outputfusestatus": 1.0,
+                "outputenable": 1.0
+            },
+            {
+                "outputnumber": 5.0,
+                "outputname": "6A",
+                "outputcurrent": 0.0,
+                "outputfusestatus": 2.0,
+                "outputenable": 1.0
+            },
+            {
+                "busnumber": 0.0,
+                "busname": "A-24V",
+                "busvoltage": 27.6,
+                "buscurrent": 0.6
+            },
+            {
+                "busnumber": 1.0,
+                "busname": "B-12V",
+                "busvoltage": 13.8,
+                "buscurrent": 0.0
+            },
+            {
+                "alarmnumber": 0.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            },
+            {
+                "alarmnumber": 1.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            },
+            {
+                "alarmnumber": 2.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            },
+            {
+                "alarmnumber": 3.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            },
+            {
+                "alarmnumber": 4.0,
+                "alarmname": "\u0000",
+                "alarmstatus": 1.0
+            }
+        ]
+    }
+]

@@ -1,9 +1,12 @@
 # Kafka Output Plugin
 
-This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
+This plugin writes to a [Kafka
+Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
 
-### Configuration:
-```toml
+## Configuration
+
+```toml @sample.conf
+# Configuration for the Kafka server to send metrics to
 [[outputs.kafka]]
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
@@ -72,13 +75,18 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##       routing_key = "telegraf"
   # routing_key = ""
 
-  ## CompressionCodec represents the various compression codecs recognized by
+  ## Compression codec represents the various compression codecs recognized by
   ## Kafka in messages.
-  ##  0 : No compression
-  ##  1 : Gzip compression
-  ##  2 : Snappy compression
-  ##  3 : LZ4 compression
-  # compression_codec = 0
+  ##  0 : None
+  ##  1 : Gzip
+  ##  2 : Snappy
+  ##  3 : LZ4
+  ##  4 : ZSTD
+   # compression_codec = 0
+
+  ## Idempotent Writes
+  ## If enabled, exactly one copy of each message is written.
+  # idempotent_writes = false
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
   ##  replica acknowledgements it must see before responding
@@ -100,12 +108,22 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## until the next flush.
   # max_retry = 3
 
+  ## The maximum permitted size of a message. Should be set equal to or
+  ## smaller than the broker's 'message.max.bytes'.
+  # max_message_bytes = 1000000
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Optional SOCKS5 proxy to use when connecting to brokers
+  # socks5_enabled = true
+  # socks5_address = "127.0.0.1:1080"
+  # socks5_username = "alice"
+  # socks5_password = "pass123"
 
   ## Optional SASL Config
   # sasl_username = "kafka"
@@ -131,6 +149,9 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
 
+  # Disable Kafka metadata full fetch
+  # metadata_full = false
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -138,13 +159,13 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   # data_format = "influx"
 ```
 
-#### `max_retry`
+### `max_retry`
 
 This option controls the number of retries before a failure notification is
 displayed for each message when no acknowledgement is received from the
 broker. When the setting is greater than `0`, message latency can be reduced,
-duplicate messages can occur in cases of transient errors, and broker loads
-can increase during downtime.
+duplicate messages can occur in cases of transient errors, and broker loads can
+increase during downtime.
 
 The option is similar to the
 [retries](https://kafka.apache.org/documentation/#producerconfigs) Producer

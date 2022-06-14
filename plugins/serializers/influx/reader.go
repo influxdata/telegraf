@@ -50,7 +50,7 @@ func (r *reader) Read(p []byte) (int, error) {
 
 	for _, metric := range r.metrics[r.offset:] {
 		_, err := r.serializer.Write(r.buf, metric)
-		r.offset += 1
+		r.offset++
 		if err != nil {
 			r.buf.Reset()
 			if _, ok := err.(*MetricError); ok {

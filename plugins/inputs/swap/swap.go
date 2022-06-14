@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package swap
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/influxdata/telegraf"
@@ -8,18 +10,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 type SwapStats struct {
 	ps system.PS
 }
 
-func (_ *SwapStats) Description() string {
-	return "Read metrics about swap memory usage"
+func (*SwapStats) SampleConfig() string {
+	return sampleConfig
 }
 
-func (_ *SwapStats) SampleConfig() string { return "" }
-
-func (s *SwapStats) Gather(acc telegraf.Accumulator) error {
-	swap, err := s.ps.SwapStat()
+func (ss *SwapStats) Gather(acc telegraf.Accumulator) error {
+	swap, err := ss.ps.SwapStat()
 	if err != nil {
 		return fmt.Errorf("error getting swap memory info: %s", err)
 	}

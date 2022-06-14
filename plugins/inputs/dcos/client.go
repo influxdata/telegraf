@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go/v4"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 const (
@@ -92,16 +92,15 @@ type AuthToken struct {
 
 // ClusterClient is a Client that uses the cluster URL.
 type ClusterClient struct {
-	clusterURL  *url.URL
-	httpClient  *http.Client
-	credentials *Credentials
-	token       string
-	semaphore   chan struct{}
+	clusterURL *url.URL
+	httpClient *http.Client
+	token      string
+	semaphore  chan struct{}
 }
 
 type claims struct {
 	UID string `json:"uid"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 func (e APIError) Error() string {
@@ -157,7 +156,7 @@ func (c *ClusterClient) Login(ctx context.Context, sa *ServiceAccount) (*AuthTok
 		return nil, err
 	}
 
-	loc := c.url("/acs/api/v1/auth/login")
+	loc := c.toURL("/acs/api/v1/auth/login")
 	req, err := http.NewRequest("POST", loc, bytes.NewBuffer(octets))
 	if err != nil {
 		return nil, err
@@ -209,7 +208,7 @@ func (c *ClusterClient) Login(ctx context.Context, sa *ServiceAccount) (*AuthTok
 
 func (c *ClusterClient) GetSummary(ctx context.Context) (*Summary, error) {
 	summary := &Summary{}
-	err := c.doGet(ctx, c.url("/mesos/master/state-summary"), summary)
+	err := c.doGet(ctx, c.toURL("/mesos/master/state-summary"), summary)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +220,7 @@ func (c *ClusterClient) GetContainers(ctx context.Context, node string) ([]Conta
 	list := []string{}
 
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers", node)
-	err := c.doGet(ctx, c.url(path), &list)
+	err := c.doGet(ctx, c.toURL(path), &list)
 	if err != nil {
 		return nil, err
 	}
@@ -229,16 +228,15 @@ func (c *ClusterClient) GetContainers(ctx context.Context, node string) ([]Conta
 	containers := make([]Container, 0, len(list))
 	for _, c := range list {
 		containers = append(containers, Container{ID: c})
-
 	}
 
 	return containers, nil
 }
 
-func (c *ClusterClient) getMetrics(ctx context.Context, url string) (*Metrics, error) {
+func (c *ClusterClient) getMetrics(ctx context.Context, address string) (*Metrics, error) {
 	metrics := &Metrics{}
 
-	err := c.doGet(ctx, url, metrics)
+	err := c.doGet(ctx, address, metrics)
 	if err != nil {
 		return nil, err
 	}
@@ -248,21 +246,21 @@ func (c *ClusterClient) getMetrics(ctx context.Context, url string) (*Metrics, e
 
 func (c *ClusterClient) GetNodeMetrics(ctx context.Context, node string) (*Metrics, error) {
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/node", node)
-	return c.getMetrics(ctx, c.url(path))
+	return c.getMetrics(ctx, c.toURL(path))
 }
 
 func (c *ClusterClient) GetContainerMetrics(ctx context.Context, node, container string) (*Metrics, error) {
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers/%s", node, container)
-	return c.getMetrics(ctx, c.url(path))
+	return c.getMetrics(ctx, c.toURL(path))
 }
 
 func (c *ClusterClient) GetAppMetrics(ctx context.Context, node, container string) (*Metrics, error) {
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers/%s/app", node, container)
-	return c.getMetrics(ctx, c.url(path))
+	return c.getMetrics(ctx, c.toURL(path))
 }
 
-func createGetRequest(url string, token string) (*http.Request, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func createGetRequest(address string, token string) (*http.Request, error) {
+	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -275,8 +273,8 @@ func createGetRequest(url string, token string) (*http.Request, error) {
 	return req, nil
 }
 
-func (c *ClusterClient) doGet(ctx context.Context, url string, v interface{}) error {
-	req, err := createGetRequest(url, c.token)
+func (c *ClusterClient) doGet(ctx context.Context, address string, v interface{}) error {
+	req, err := createGetRequest(address, c.token)
 	if err != nil {
 		return err
 	}
@@ -294,6 +292,7 @@ func (c *ClusterClient) doGet(ctx context.Context, url string, v interface{}) er
 		return err
 	}
 	defer func() {
+		//nolint:errcheck,revive // we cannot do anything if the closing fails
 		resp.Body.Close()
 		<-c.semaphore
 	}()
@@ -305,7 +304,7 @@ func (c *ClusterClient) doGet(ctx context.Context, url string, v interface{}) er
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return &APIError{
-			URL:        url,
+			URL:        address,
 			StatusCode: resp.StatusCode,
 			Title:      resp.Status,
 		}
@@ -319,18 +318,18 @@ func (c *ClusterClient) doGet(ctx context.Context, url string, v interface{}) er
 	return err
 }
 
-func (c *ClusterClient) url(path string) string {
-	url := *c.clusterURL
-	url.Path = path
-	return url.String()
+func (c *ClusterClient) toURL(path string) string {
+	clusterURL := *c.clusterURL
+	clusterURL.Path = path
+	return clusterURL.String()
 }
 
 func (c *ClusterClient) createLoginToken(sa *ServiceAccount) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims{
 		UID: sa.AccountID,
-		StandardClaims: jwt.StandardClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
 			// How long we have to login with this token
-			ExpiresAt: jwt.At(time.Now().Add(5 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)),
 		},
 	})
 	return token.SignedString(sa.PrivateKey)

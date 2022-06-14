@@ -2,13 +2,11 @@
 
 This input plugin checks HTTP/HTTPS connections.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
 # HTTP/HTTPS request given an address a method and a timeout
 [[inputs.http_response]]
-  ## address is Deprecated in 1.12, use 'urls'
-
   ## List of urls to query.
   # urls = ["http://localhost"]
 
@@ -63,6 +61,8 @@ This input plugin checks HTTP/HTTPS connections.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+  ## Use the given name as the SNI server name on each URL
+  # tls_server_name = ""
 
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
@@ -77,7 +77,7 @@ This input plugin checks HTTP/HTTPS connections.
   # interface = "eth0"
 ```
 
-### Metrics:
+## Metrics
 
 - http_response
   - tags:
@@ -91,14 +91,17 @@ This input plugin checks HTTP/HTTPS connections.
     - response_string_match (int, 0 = mismatch / body read error, 1 = match)
     - response_status_code_match (int, 0 = mismatch, 1 = match)
     - http_response_code (int, response status code)
-	- result_type (string, deprecated in 1.6: use `result` tag and `result_code` field)
+    - result_type (string, deprecated in 1.6: use `result` tag and `result_code` field)
     - result_code (int, [see below](#result--result_code))
 
-#### `result` / `result_code`
+### `result` / `result_code`
 
-Upon finishing polling the target server, the plugin registers the result of the operation in the `result` tag, and adds a numeric field called `result_code` corresponding with that tag value.
+Upon finishing polling the target server, the plugin registers the result of the
+operation in the `result` tag, and adds a numeric field called `result_code`
+corresponding with that tag value.
 
-This tag is used to expose network and plugin errors. HTTP errors are considered a successful connection.
+This tag is used to expose network and plugin errors. HTTP errors are considered
+a successful connection.
 
 |Tag value                     |Corresponding field value|Description|
 -------------------------------|-------------------------|-----------|
@@ -110,9 +113,8 @@ This tag is used to expose network and plugin errors. HTTP errors are considered
 |dns_error                     | 5                       |There was a DNS error while attempting to connect to the host|
 |response_status_code_mismatch | 6                       |The option `response_status_code_match` was used, and the status code of the response didn't match the value.|
 
+## Example Output
 
-### Example Output:
-
-```
+```shell
 http_response,method=GET,result=success,server=http://github.com,status_code=200 content_length=87878i,http_response_code=200i,response_time=0.937655534,result_code=0i,result_type="success" 1565839598000000000
 ```

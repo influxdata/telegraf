@@ -155,8 +155,8 @@ func BenchmarkHttpSend(b *testing.B) {
 		Host:          ts.URL,
 		Port:          port,
 		Prefix:        "",
-		HttpBatchSize: BatchSize,
-		HttpPath:      "/api/put",
+		HTTPBatchSize: BatchSize,
+		HTTPPath:      "/api/put",
 	}
 
 	b.ResetTimer()
@@ -164,41 +164,38 @@ func BenchmarkHttpSend(b *testing.B) {
 		o.Write(metrics)
 	}
 }
+func TestWriteIntegration(t *testing.T) {
+	t.Skip("Skip as OpenTSDB not running")
 
-// func TestWrite(t *testing.T) {
-// 	if testing.Short() {
-// 		t.Skip("Skipping integration test in short mode")
-// 	}
+	o := &OpenTSDB{
+		Host:   testutil.GetLocalHost(),
+		Port:   4242,
+		Prefix: "prefix.test.",
+	}
 
-// 	o := &OpenTSDB{
-// 		Host:   testutil.GetLocalHost(),
-// 		Port:   4242,
-// 		Prefix: "prefix.test.",
-// 	}
+	// Verify that we can connect to the OpenTSDB instance
+	err := o.Connect()
+	require.NoError(t, err)
 
-// 	// Verify that we can connect to the OpenTSDB instance
-// 	err := o.Connect()
-// 	require.NoError(t, err)
+	// Verify that we can successfully write data to OpenTSDB
+	err = o.Write(testutil.MockMetrics())
+	require.NoError(t, err)
 
-// 	// Verify that we can successfully write data to OpenTSDB
-// 	err = o.Write(testutil.MockMetrics())
-// 	require.NoError(t, err)
+	// Verify positive and negative test cases of writing data
+	metrics := testutil.MockMetrics()
+	metrics = append(metrics, testutil.TestMetric(float64(1.0),
+		"justametric.float"))
+	metrics = append(metrics, testutil.TestMetric(int64(123456789),
+		"justametric.int"))
+	metrics = append(metrics, testutil.TestMetric(uint64(123456789012345),
+		"justametric.uint"))
+	metrics = append(metrics, testutil.TestMetric("Lorem Ipsum",
+		"justametric.string"))
+	metrics = append(metrics, testutil.TestMetric(float64(42.0),
+		"justametric.anotherfloat"))
+	metrics = append(metrics, testutil.TestMetric(float64(42.0),
+		"metric w/ specialchars"))
 
-// 	// Verify positive and negative test cases of writing data
-// 	metrics := testutil.MockMetrics()
-// 	metrics = append(metrics, testutil.TestMetric(float64(1.0),
-// 		"justametric.float"))
-// 	metrics = append(metrics, testutil.TestMetric(int64(123456789),
-// 		"justametric.int"))
-// 	metrics = append(metrics, testutil.TestMetric(uint64(123456789012345),
-// 		"justametric.uint"))
-// 	metrics = append(metrics, testutil.TestMetric("Lorem Ipsum",
-// 		"justametric.string"))
-// 	metrics = append(metrics, testutil.TestMetric(float64(42.0),
-// 		"justametric.anotherfloat"))
-// 	metrics = append(metrics, testutil.TestMetric(float64(42.0),
-// 		"metric w/ specialchars"))
-
-// 	err = o.Write(metrics)
-// 	require.NoError(t, err)
-// }
+	err = o.Write(metrics)
+	require.NoError(t, err)
+}
