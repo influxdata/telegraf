@@ -14,7 +14,7 @@ Incrementing the version is maintained by the core Telegraf team because it requ
 
 1. Within the `Makefile` and `.circleci\config.yml` update the Go versions to the new version number
 2. Run `make ci`, this requires quay.io internal permissions
-3. The files `scripts\installgo_mac.sh` and `scripts\installgo_windows.sh` need to be updated as well with the new Go version and SHA
+3. The files `scripts\installgo_linux.sh`, `scripts\installgo_mac.sh`, and `scripts\installgo_windows.sh` need to be updated as well with the new Go version and SHA
 4. Create a pull request with these new changes, and verify the CI passes and uses the new docker image
 
 See the [previous PRs](https://github.com/influxdata/telegraf/search?q=chore+update+go&type=commits) as examples.
