@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // TODO: Windows - should be enabled for Windows when https://github.com/influxdata/telegraf/issues/8451 is fixed
@@ -7,7 +8,7 @@ package http_response
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -15,12 +16,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Receives a list with fields that are expected to be absent
@@ -88,21 +89,26 @@ func checkTags(t *testing.T, tags map[string]interface{}, acc *testutil.Accumula
 
 func setUpTestMux() http.Handler {
 	mux := http.NewServeMux()
+	// Ignore all returned errors below as the tests will fail anyway
 	mux.HandleFunc("/redirect", func(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/good", http.StatusMovedPermanently)
 	})
 	mux.HandleFunc("/good", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Server", "MyTestServer")
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/invalidUTF8", func(w http.ResponseWriter, req *http.Request) {
+		//nolint:errcheck,revive
 		w.Write([]byte{0xff, 0xfe, 0xfd})
 	})
 	mux.HandleFunc("/noheader", func(w http.ResponseWriter, req *http.Request) {
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/jsonresponse", func(w http.ResponseWriter, req *http.Request) {
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "\"service_status\": \"up\", \"healthy\" : \"true\"")
 	})
 	mux.HandleFunc("/badredirect", func(w http.ResponseWriter, req *http.Request) {
@@ -113,10 +119,12 @@ func setUpTestMux() http.Handler {
 			http.Error(w, "method wasn't post", http.StatusMethodNotAllowed)
 			return
 		}
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "used post correctly!")
 	})
 	mux.HandleFunc("/musthaveabody", func(w http.ResponseWriter, req *http.Request) {
-		body, err := ioutil.ReadAll(req.Body)
+		body, err := io.ReadAll(req.Body)
+		//nolint:errcheck,revive
 		req.Body.Close()
 		if err != nil {
 			http.Error(w, "couldn't read request body", http.StatusBadRequest)
@@ -126,11 +134,11 @@ func setUpTestMux() http.Handler {
 			http.Error(w, "body was empty", http.StatusBadRequest)
 			return
 		}
+		//nolint:errcheck,revive
 		fmt.Fprintf(w, "sent a body!")
 	})
 	mux.HandleFunc("/twosecondnap", func(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(time.Second * 2)
-		return
 	})
 	mux.HandleFunc("/nocontent", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
@@ -160,8 +168,8 @@ func checkOutput(t *testing.T, acc *testutil.Accumulator, presentFields map[stri
 func TestHeaders(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cHeader := r.Header.Get("Content-Type")
-		assert.Equal(t, "Hello", r.Host)
-		assert.Equal(t, "application/json", cHeader)
+		require.Equal(t, "Hello", r.Host)
+		require.Equal(t, "application/json", cHeader)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
@@ -170,7 +178,7 @@ func TestHeaders(t *testing.T) {
 		Log:             testutil.Logger{},
 		URLs:            []string{ts.URL},
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 2},
+		ResponseTimeout: config.Duration(time.Second * 2),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 			"Host":         "Hello",
@@ -207,7 +215,7 @@ func TestFields(t *testing.T) {
 		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -245,7 +253,7 @@ func TestResponseBodyField(t *testing.T) {
 		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -280,7 +288,7 @@ func TestResponseBodyField(t *testing.T) {
 		URLs:            []string{ts.URL + "/invalidUTF8"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -314,11 +322,11 @@ func TestResponseBodyMaxSize(t *testing.T) {
 		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
-		ResponseBodyMaxSize: internal.Size{Size: 5},
+		ResponseBodyMaxSize: config.Size(5),
 		FollowRedirects:     true,
 	}
 
@@ -348,7 +356,7 @@ func TestHTTPHeaderTags(t *testing.T) {
 		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		HTTPHeaderTags:  map[string]string{"Server": "my_server", "Content-Type": "content_type"},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
@@ -383,7 +391,7 @@ func TestHTTPHeaderTags(t *testing.T) {
 		URLs:            []string{ts.URL + "/noheader"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		HTTPHeaderTags:  map[string]string{"Server": "my_server", "Content-Type": "content_type"},
 		Headers: map[string]string{
 			"Content-Type": "application/json",
@@ -409,7 +417,7 @@ func TestHTTPHeaderTags(t *testing.T) {
 		URLs:            []string{"https:/nonexistent.nonexistent"}, // Any non-routable IP works here
 		Body:            "",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 5},
+		ResponseTimeout: config.Duration(time.Second * 5),
 		HTTPHeaderTags:  map[string]string{"Server": "my_server", "Content-Type": "content_type"},
 		FollowRedirects: false,
 	}
@@ -465,7 +473,7 @@ func TestInterface(t *testing.T) {
 		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -504,7 +512,7 @@ func TestRedirects(t *testing.T) {
 		URLs:            []string{ts.URL + "/redirect"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -535,7 +543,7 @@ func TestRedirects(t *testing.T) {
 		URLs:            []string{ts.URL + "/badredirect"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -572,7 +580,7 @@ func TestMethod(t *testing.T) {
 		URLs:            []string{ts.URL + "/mustbepostmethod"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "POST",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -603,7 +611,7 @@ func TestMethod(t *testing.T) {
 		URLs:            []string{ts.URL + "/mustbepostmethod"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -635,7 +643,7 @@ func TestMethod(t *testing.T) {
 		URLs:            []string{ts.URL + "/mustbepostmethod"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "head",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -672,7 +680,7 @@ func TestBody(t *testing.T) {
 		URLs:            []string{ts.URL + "/musthaveabody"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -702,7 +710,7 @@ func TestBody(t *testing.T) {
 		Log:             testutil.Logger{},
 		URLs:            []string{ts.URL + "/musthaveabody"},
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -738,7 +746,7 @@ func TestStringMatch(t *testing.T) {
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
 		ResponseStringMatch: "hit the good page",
-		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout:     config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -776,7 +784,7 @@ func TestStringMatchJson(t *testing.T) {
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
 		ResponseStringMatch: "\"service_status\": \"up\"",
-		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout:     config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -814,7 +822,7 @@ func TestStringMatchFail(t *testing.T) {
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
 		ResponseStringMatch: "hit the bad page",
-		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout:     config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -856,7 +864,7 @@ func TestTimeout(t *testing.T) {
 		URLs:            []string{ts.URL + "/twosecondnap"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second},
+		ResponseTimeout: config.Duration(time.Second),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -891,7 +899,7 @@ func TestBadRegex(t *testing.T) {
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
 		ResponseStringMatch: "bad regex:[[",
-		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout:     config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -912,10 +920,8 @@ type fakeClient struct {
 	err        error
 }
 
-func (f *fakeClient) Do(req *http.Request) (*http.Response, error) {
-	return &http.Response{
-		StatusCode: f.statusCode,
-	}, f.err
+func (f *fakeClient) Do(_ *http.Request) (*http.Response, error) {
+	return &http.Response{StatusCode: f.statusCode}, f.err
 }
 
 func TestNetworkErrors(t *testing.T) {
@@ -925,7 +931,7 @@ func TestNetworkErrors(t *testing.T) {
 		URLs:            []string{"https://nonexistent.nonexistent"}, // Any non-resolvable URL works here
 		Body:            "",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		FollowRedirects: false,
 		client:          &fakeClient{err: &url.Error{Err: &net.OpError{Err: &net.DNSError{Err: "DNS error"}}}},
 	}
@@ -953,7 +959,7 @@ func TestNetworkErrors(t *testing.T) {
 		URLs:            []string{"https:/nonexistent.nonexistent"}, // Any non-routable IP works here
 		Body:            "",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 5},
+		ResponseTimeout: config.Duration(time.Second * 5),
 		FollowRedirects: false,
 	}
 
@@ -985,7 +991,7 @@ func TestContentLength(t *testing.T) {
 		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -1016,7 +1022,7 @@ func TestContentLength(t *testing.T) {
 		URLs:            []string{ts.URL + "/musthaveabody"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -1050,7 +1056,8 @@ func TestRedirect(t *testing.T) {
 	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Location", "http://example.org")
 		w.WriteHeader(http.StatusMovedPermanently)
-		w.Write([]byte("test"))
+		_, err := w.Write([]byte("test"))
+		require.NoError(t, err)
 	})
 
 	plugin := &HTTPResponse{
@@ -1093,7 +1100,7 @@ func TestRedirect(t *testing.T) {
 func TestBasicAuth(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		aHeader := r.Header.Get("Authorization")
-		assert.Equal(t, "Basic bWU6bXlwYXNzd29yZA==", aHeader)
+		require.Equal(t, "Basic bWU6bXlwYXNzd29yZA==", aHeader)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
@@ -1103,7 +1110,7 @@ func TestBasicAuth(t *testing.T) {
 		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		Username:        "me",
 		Password:        "mypassword",
 		Headers: map[string]string{
@@ -1141,7 +1148,7 @@ func TestStatusCodeMatchFail(t *testing.T) {
 		Log:                testutil.Logger{},
 		URLs:               []string{ts.URL + "/nocontent"},
 		ResponseStatusCode: http.StatusOK,
-		ResponseTimeout:    internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout:    config.Duration(time.Second * 20),
 	}
 
 	var acc testutil.Accumulator
@@ -1174,7 +1181,7 @@ func TestStatusCodeMatch(t *testing.T) {
 		Log:                testutil.Logger{},
 		URLs:               []string{ts.URL + "/nocontent"},
 		ResponseStatusCode: http.StatusNoContent,
-		ResponseTimeout:    internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout:    config.Duration(time.Second * 20),
 	}
 
 	var acc testutil.Accumulator
@@ -1208,7 +1215,7 @@ func TestStatusCodeAndStringMatch(t *testing.T) {
 		URLs:                []string{ts.URL + "/good"},
 		ResponseStatusCode:  http.StatusOK,
 		ResponseStringMatch: "hit the good page",
-		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout:     config.Duration(time.Second * 20),
 	}
 
 	var acc testutil.Accumulator
@@ -1243,7 +1250,7 @@ func TestStatusCodeAndStringMatchFail(t *testing.T) {
 		URLs:                []string{ts.URL + "/nocontent"},
 		ResponseStatusCode:  http.StatusOK,
 		ResponseStringMatch: "hit the good page",
-		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout:     config.Duration(time.Second * 20),
 	}
 
 	var acc testutil.Accumulator
@@ -1270,7 +1277,7 @@ func TestStatusCodeAndStringMatchFail(t *testing.T) {
 
 func TestSNI(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "super-special-hostname.example.com", r.TLS.ServerName)
+		require.Equal(t, "super-special-hostname.example.com", r.TLS.ServerName)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
@@ -1279,7 +1286,7 @@ func TestSNI(t *testing.T) {
 		Log:             testutil.Logger{},
 		URLs:            []string{ts.URL + "/good"},
 		Method:          "GET",
-		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		ResponseTimeout: config.Duration(time.Second * 20),
 		ClientConfig: tls.ClientConfig{
 			InsecureSkipVerify: true,
 			ServerName:         "super-special-hostname.example.com",

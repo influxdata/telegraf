@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package ethtool
@@ -6,9 +7,10 @@ import (
 	"net"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var command *Ethtool
@@ -31,13 +33,12 @@ func (c *CommandEthtoolMock) Init() error {
 	return nil
 }
 
-func (c *CommandEthtoolMock) DriverName(intf string) (driverName string, err error) {
+func (c *CommandEthtoolMock) DriverName(intf string) (string, error) {
 	i := c.InterfaceMap[intf]
 	if i != nil {
-		driverName = i.DriverName
-		return
+		return i.DriverName, nil
 	}
-	return driverName, errors.New("interface not found")
+	return "", errors.New("interface not found")
 }
 
 func (c *CommandEthtoolMock) Interfaces() ([]net.Interface, error) {
@@ -66,13 +67,12 @@ func (c *CommandEthtoolMock) Interfaces() ([]net.Interface, error) {
 	return interfaceNames, nil
 }
 
-func (c *CommandEthtoolMock) Stats(intf string) (stat map[string]uint64, err error) {
+func (c *CommandEthtoolMock) Stats(intf string) (map[string]uint64, error) {
 	i := c.InterfaceMap[intf]
 	if i != nil {
-		stat = i.Stat
-		return
+		return i.Stat, nil
 	}
-	return stat, errors.New("interface not found")
+	return nil, errors.New("interface not found")
 }
 
 func setup() {
@@ -310,8 +310,8 @@ func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 
 	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 2)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 2)
 
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
 	expectedTagsEth1 := map[string]string{
@@ -334,8 +334,8 @@ func TestGatherIncludeInterfaces(t *testing.T) {
 	command.InterfaceInclude = append(command.InterfaceInclude, "eth1")
 
 	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 1)
 
 	// Should contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
@@ -361,8 +361,8 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 	command.InterfaceExclude = append(command.InterfaceExclude, "eth1")
 
 	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 1)
+	require.NoError(t, err)
+	require.Len(t, acc.Metrics, 1)
 
 	// Should not contain eth1
 	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
@@ -379,4 +379,120 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 		"driver":    "driver1",
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
+}
+
+type TestCase struct {
+	normalization  []string
+	stats          map[string]uint64
+	expectedFields map[string]uint64
+}
+
+func TestNormalizedKeys(t *testing.T) {
+	cases := []TestCase{
+		{
+			normalization: []string{"underscore"},
+			stats: map[string]uint64{
+				"port rx":      1,
+				" Port_tx":     0,
+				"interface_up": 0,
+			},
+			expectedFields: map[string]uint64{
+				"port_rx":      1,
+				"_Port_tx":     0,
+				"interface_up": 0,
+			},
+		},
+		{
+			normalization: []string{"underscore", "lower"},
+			stats: map[string]uint64{
+				"Port rx":      1,
+				" Port_tx":     0,
+				"interface_up": 0,
+			},
+			expectedFields: map[string]uint64{
+				"port_rx":      1,
+				"_port_tx":     0,
+				"interface_up": 0,
+			},
+		},
+		{
+			normalization: []string{"underscore", "lower", "trim"},
+			stats: map[string]uint64{
+				"  Port RX ":   1,
+				" Port_tx":     0,
+				"interface_up": 0,
+			},
+			expectedFields: map[string]uint64{
+				"port_rx":      1,
+				"port_tx":      0,
+				"interface_up": 0,
+			},
+		},
+		{
+			normalization: []string{"underscore", "lower", "snakecase", "trim"},
+			stats: map[string]uint64{
+				"  Port RX ":   1,
+				" Port_tx":     0,
+				"interface_up": 0,
+			},
+			expectedFields: map[string]uint64{
+				"port_rx":      1,
+				"port_tx":      0,
+				"interface_up": 0,
+			},
+		},
+		{
+			normalization: []string{"snakecase"},
+			stats: map[string]uint64{
+				"  PortRX ":    1,
+				" PortTX":      0,
+				"interface_up": 0,
+			},
+			expectedFields: map[string]uint64{
+				"port_rx":      1,
+				"port_tx":      0,
+				"interface_up": 0,
+			},
+		},
+		{
+			normalization: []string{},
+			stats: map[string]uint64{
+				"  Port RX ":   1,
+				" Port_tx":     0,
+				"interface_up": 0,
+			},
+			expectedFields: map[string]uint64{
+				"  Port RX ":   1,
+				" Port_tx":     0,
+				"interface_up": 0,
+			},
+		},
+	}
+	for _, c := range cases {
+		eth0 := &InterfaceMock{"eth0", "e1000e", c.stats, false, true}
+		expectedTags := map[string]string{
+			"interface": eth0.Name,
+			"driver":    eth0.DriverName,
+		}
+
+		interfaceMap = make(map[string]*InterfaceMock)
+		interfaceMap[eth0.Name] = eth0
+
+		cmd := &CommandEthtoolMock{interfaceMap}
+		command = &Ethtool{
+			InterfaceInclude: []string{},
+			InterfaceExclude: []string{},
+			NormalizeKeys:    c.normalization,
+			command:          cmd,
+		}
+
+		var acc testutil.Accumulator
+		err := command.Gather(&acc)
+
+		require.NoError(t, err)
+		require.Len(t, acc.Metrics, 1)
+
+		acc.AssertContainsFields(t, pluginName, toStringMapInterface(c.expectedFields))
+		acc.AssertContainsTaggedFields(t, pluginName, toStringMapInterface(c.expectedFields), expectedTags)
+	}
 }

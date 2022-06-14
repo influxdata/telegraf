@@ -1,4 +1,4 @@
-package seriesgrouper
+package merge
 
 import (
 	"testing"
@@ -187,7 +187,7 @@ func TestReset(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
-var m1, _ = metric.New(
+var m1 = metric.New(
 	"mymetric",
 	map[string]string{
 		"host":        "host.example.com",
@@ -206,7 +206,7 @@ var m1, _ = metric.New(
 	},
 	time.Now(),
 )
-var m2, _ = metric.New(
+var m2 = metric.New(
 	"mymetric",
 	map[string]string{
 		"host":        "host.example.com",
@@ -229,7 +229,8 @@ var m2, _ = metric.New(
 
 func BenchmarkMergeOne(b *testing.B) {
 	var merger Merge
-	merger.Init()
+	err := merger.Init()
+	require.NoError(b, err)
 	var acc testutil.NopAccumulator
 
 	for n := 0; n < b.N; n++ {
@@ -241,7 +242,8 @@ func BenchmarkMergeOne(b *testing.B) {
 
 func BenchmarkMergeTwo(b *testing.B) {
 	var merger Merge
-	merger.Init()
+	err := merger.Init()
+	require.NoError(b, err)
 	var acc testutil.NopAccumulator
 
 	for n := 0; n < b.N; n++ {

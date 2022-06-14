@@ -1,14 +1,20 @@
 # gNMI (gRPC Network Management Interface) Input Plugin
 
-This plugin consumes telemetry data based on the [gNMI](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md) Subscribe method. TLS is supported for authentication and encryption.  This input plugin is vendor-agnostic and is supported on any platform that supports the gNMI spec.
+This plugin consumes telemetry data based on the [gNMI][1] Subscribe method. TLS
+is supported for authentication and encryption.  This input plugin is
+vendor-agnostic and is supported on any platform that supports the gNMI spec.
 
-For Cisco devices: 
-It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-bit) version 6.5.1, Cisco NX-OS 9.3 and Cisco IOS XE 16.12 and later.
+For Cisco devices:
 
+It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
+(64-bit) version 6.5.1, Cisco NX-OS 9.3 and Cisco IOS XE 16.12 and later.
 
-### Configuration
+[1]: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md
 
-```toml
+## Configuration
+
+```toml @sample.conf
+# gNMI telemetry input plugin
 [[inputs.gnmi]]
   ## Address and port of the gNMI GRPC server
   addresses = ["10.49.234.114:57777"]
@@ -64,10 +70,23 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
 
     ## If suppression is enabled, send updates at least every X seconds anyway
     # heartbeat_interval = "60s"
+
+  #[[inputs.gnmi.subscription]]
+    # name = "descr"
+    # origin = "openconfig-interfaces"
+    # path = "/interfaces/interface/state/description"
+    # subscription_mode = "on_change"
+
+    ## If tag_only is set, the subscription in question will be utilized to maintain a map of
+    ## tags to apply to other measurements emitted by the plugin, by matching path keys
+    ## All fields from the tag-only subscription will be applied as tags to other readings,
+    ## in the format <name>_<fieldBase>.
+    # tag_only = true
 ```
 
-### Example Output
-```
-ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=MgmtEth0/RP0/CPU0/0,source=10.49.234.115 in-multicast-pkts=0i,out-multicast-pkts=0i,out-errors=0i,out-discards=0i,in-broadcast-pkts=0i,out-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,in-errors=0i,out-unicast-pkts=0i,in-octets=0i,out-octets=0i,last-clear="2019-05-22T16:53:21Z",in-unicast-pkts=0i 1559145777425000000
-ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=GigabitEthernet0/0/0/0,source=10.49.234.115 out-multicast-pkts=0i,out-broadcast-pkts=0i,in-errors=0i,out-errors=0i,in-discards=0i,out-octets=0i,in-unknown-protos=0i,in-unicast-pkts=0i,in-octets=0i,in-multicast-pkts=0i,in-broadcast-pkts=0i,last-clear="2019-05-22T16:54:50Z",out-unicast-pkts=0i,out-discards=0i 1559145777425000000
+## Example Output
+
+```shell
+ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=MgmtEth0/RP0/CPU0/0,source=10.49.234.115,descr/description=Foo in-multicast-pkts=0i,out-multicast-pkts=0i,out-errors=0i,out-discards=0i,in-broadcast-pkts=0i,out-broadcast-pkts=0i,in-discards=0i,in-unknown-protos=0i,in-errors=0i,out-unicast-pkts=0i,in-octets=0i,out-octets=0i,last-clear="2019-05-22T16:53:21Z",in-unicast-pkts=0i 1559145777425000000
+ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=linux,name=GigabitEthernet0/0/0/0,source=10.49.234.115,descr/description=Bar out-multicast-pkts=0i,out-broadcast-pkts=0i,in-errors=0i,out-errors=0i,in-discards=0i,out-octets=0i,in-unknown-protos=0i,in-unicast-pkts=0i,in-octets=0i,in-multicast-pkts=0i,in-broadcast-pkts=0i,last-clear="2019-05-22T16:54:50Z",out-unicast-pkts=0i,out-discards=0i 1559145777425000000
 ```

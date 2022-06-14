@@ -1,4 +1,4 @@
-package geo
+package s2geo
 
 import (
 	"testing"

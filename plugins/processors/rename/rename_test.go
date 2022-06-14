@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
 )
 
 func newMetric(name string, tags map[string]string, fields map[string]interface{}) telegraf.Metric {
@@ -16,7 +17,7 @@ func newMetric(name string, tags map[string]string, fields map[string]interface{
 	if fields == nil {
 		fields = map[string]interface{}{}
 	}
-	m, _ := metric.New(name, tags, fields, time.Now())
+	m := metric.New(name, tags, fields, time.Now())
 	return m
 }
 
@@ -31,9 +32,9 @@ func TestMeasurementRename(t *testing.T) {
 	m2 := newMetric("bar", nil, nil)
 	m3 := newMetric("baz", nil, nil)
 	results := r.Apply(m1, m2, m3)
-	assert.Equal(t, "bar", results[0].Name(), "Should change name from 'foo' to 'bar'")
-	assert.Equal(t, "bar", results[1].Name(), "Should not name from 'bar'")
-	assert.Equal(t, "quux", results[2].Name(), "Should change name from 'baz' to 'quux'")
+	require.Equal(t, "bar", results[0].Name(), "Should change name from 'foo' to 'bar'")
+	require.Equal(t, "bar", results[1].Name(), "Should not name from 'bar'")
+	require.Equal(t, "quux", results[2].Name(), "Should change name from 'baz' to 'quux'")
 }
 
 func TestTagRename(t *testing.T) {
@@ -45,7 +46,7 @@ func TestTagRename(t *testing.T) {
 	m := newMetric("foo", map[string]string{"hostname": "localhost", "region": "east-1"}, nil)
 	results := r.Apply(m)
 
-	assert.Equal(t, map[string]string{"host": "localhost", "region": "east-1"}, results[0].Tags(), "should change tag 'hostname' to 'host'")
+	require.Equal(t, map[string]string{"host": "localhost", "region": "east-1"}, results[0].Tags(), "should change tag 'hostname' to 'host'")
 }
 
 func TestFieldRename(t *testing.T) {
@@ -57,5 +58,5 @@ func TestFieldRename(t *testing.T) {
 	m := newMetric("foo", nil, map[string]interface{}{"time_msec": int64(1250), "snakes": true})
 	results := r.Apply(m)
 
-	assert.Equal(t, map[string]interface{}{"time": int64(1250), "snakes": true}, results[0].Fields(), "should change field 'time_msec' to 'time'")
+	require.Equal(t, map[string]interface{}{"time": int64(1250), "snakes": true}, results[0].Fields(), "should change field 'time_msec' to 'time'")
 }

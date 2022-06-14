@@ -1,11 +1,16 @@
-# Dropwizard
+# Dropwizard Parser Plugin
 
-The `dropwizard` data format can parse the [JSON Dropwizard][dropwizard] representation of a single dropwizard metric registry. By default, tags are parsed from metric names as if they were actual influxdb line protocol keys (`measurement<,tag_set>`) which can be overridden by defining a custom [template pattern][templates]. All field value types are supported, `string`, `number` and `boolean`.
+The `dropwizard` data format can parse the [JSON Dropwizard][dropwizard]
+representation of a single dropwizard metric registry. By default, tags are
+parsed from metric names as if they were actual influxdb line protocol keys
+(`measurement<,tag_set>`) which can be overridden by defining a custom [template
+pattern][templates]. All field value types are supported, `string`, `number` and
+`boolean`.
 
 [templates]: /docs/TEMPLATE_PATTERN.md
 [dropwizard]: http://metrics.dropwizard.io/3.1.0/manual/json/
 
-### Configuration
+## Configuration
 
 ```toml
 [[inputs.file]]
@@ -51,76 +56,75 @@ The `dropwizard` data format can parse the [JSON Dropwizard][dropwizard] represe
   #   tag2 = "tags.tag2"
 ```
 
-
-### Examples
+## Examples
 
 A typical JSON of a dropwizard metric registry:
 
 ```json
 {
-	"version": "3.0.0",
-	"counters" : {
-		"measurement,tag1=green" : {
-			"count" : 1
-		}
-	},
-	"meters" : {
-		"measurement" : {
-			"count" : 1,
-			"m15_rate" : 1.0,
-			"m1_rate" : 1.0,
-			"m5_rate" : 1.0,
-			"mean_rate" : 1.0,
-			"units" : "events/second"
-		}
-	},
-	"gauges" : {
-		"measurement" : {
-			"value" : 1
-		}
-	},
-	"histograms" : {
-		"measurement" : {
-			"count" : 1,
-			"max" : 1.0,
-			"mean" : 1.0,
-			"min" : 1.0,
-			"p50" : 1.0,
-			"p75" : 1.0,
-			"p95" : 1.0,
-			"p98" : 1.0,
-			"p99" : 1.0,
-			"p999" : 1.0,
-			"stddev" : 1.0
-		}
-	},
-	"timers" : {
-		"measurement" : {
-			"count" : 1,
-			"max" : 1.0,
-			"mean" : 1.0,
-			"min" : 1.0,
-			"p50" : 1.0,
-			"p75" : 1.0,
-			"p95" : 1.0,
-			"p98" : 1.0,
-			"p99" : 1.0,
-			"p999" : 1.0,
-			"stddev" : 1.0,
-			"m15_rate" : 1.0,
-			"m1_rate" : 1.0,
-			"m5_rate" : 1.0,
-			"mean_rate" : 1.0,
-			"duration_units" : "seconds",
-			"rate_units" : "calls/second"
-		}
-	}
+    "version": "3.0.0",
+    "counters" : {
+        "measurement,tag1=green" : {
+            "count" : 1
+        }
+    },
+    "meters" : {
+        "measurement" : {
+            "count" : 1,
+            "m15_rate" : 1.0,
+            "m1_rate" : 1.0,
+            "m5_rate" : 1.0,
+            "mean_rate" : 1.0,
+            "units" : "events/second"
+        }
+    },
+    "gauges" : {
+        "measurement" : {
+            "value" : 1
+        }
+    },
+    "histograms" : {
+        "measurement" : {
+            "count" : 1,
+            "max" : 1.0,
+            "mean" : 1.0,
+            "min" : 1.0,
+            "p50" : 1.0,
+            "p75" : 1.0,
+            "p95" : 1.0,
+            "p98" : 1.0,
+            "p99" : 1.0,
+            "p999" : 1.0,
+            "stddev" : 1.0
+        }
+    },
+    "timers" : {
+        "measurement" : {
+            "count" : 1,
+            "max" : 1.0,
+            "mean" : 1.0,
+            "min" : 1.0,
+            "p50" : 1.0,
+            "p75" : 1.0,
+            "p95" : 1.0,
+            "p98" : 1.0,
+            "p99" : 1.0,
+            "p999" : 1.0,
+            "stddev" : 1.0,
+            "m15_rate" : 1.0,
+            "m1_rate" : 1.0,
+            "m5_rate" : 1.0,
+            "mean_rate" : 1.0,
+            "duration_units" : "seconds",
+            "rate_units" : "calls/second"
+        }
+    }
 }
 ```
 
 Would get translated into 4 different measurements:
 
-```
+```text
 measurement,metric_type=counter,tag1=green count=1
 measurement,metric_type=meter count=1,m15_rate=1.0,m1_rate=1.0,m5_rate=1.0,mean_rate=1.0
 measurement,metric_type=gauge value=1
@@ -128,32 +132,34 @@ measurement,metric_type=histogram count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1
 measurement,metric_type=timer count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1.0,p95=1.0,p98=1.0,p99=1.0,p999=1.0,stddev=1.0,m15_rate=1.0,m1_rate=1.0,m5_rate=1.0,mean_rate=1.0
 ```
 
-You may also parse a dropwizard registry from any JSON document which contains a dropwizard registry in some inner field.
-Eg. to parse the following JSON document:
+You may also parse a dropwizard registry from any JSON document which contains a
+dropwizard registry in some inner field.  Eg. to parse the following JSON
+document:
 
 ```json
 {
-	"time" : "2017-02-22T14:33:03.662+02:00",
-	"tags" : {
-		"tag1" : "green",
-		"tag2" : "yellow"
-	},
-	"metrics" : {
-		"counters" : 	{
-			"measurement" : {
-				"count" : 1
-			}
-		},
-		"meters" : {},
-		"gauges" : {},
-		"histograms" : {},
-		"timers" : {}
-	}
+    "time" : "2017-02-22T14:33:03.662+02:00",
+    "tags" : {
+        "tag1" : "green",
+        "tag2" : "yellow"
+    },
+    "metrics" : {
+        "counters" : {
+            "measurement" : {
+                "count" : 1
+            }
+        },
+        "meters" : {},
+        "gauges" : {},
+        "histograms" : {},
+        "timers" : {}
+    }
 }
 ```
+
 and translate it into:
 
-```
+```text
 measurement,metric_type=counter,tag1=green,tag2=yellow count=1 1487766783662000000
 ```
 

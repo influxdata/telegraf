@@ -1,8 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
+//go:build linux
 // +build linux
 
 package sensors
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -12,36 +15,49 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 var (
 	execCommand    = exec.Command // execCommand is used to mock commands in tests.
 	numberRegp     = regexp.MustCompile("[0-9]+")
-	defaultTimeout = internal.Duration{Duration: 5 * time.Second}
+	defaultTimeout = config.Duration(5 * time.Second)
 )
 
 type Sensors struct {
-	RemoveNumbers bool              `toml:"remove_numbers"`
-	Timeout       internal.Duration `toml:"timeout"`
+	RemoveNumbers bool            `toml:"remove_numbers"`
+	Timeout       config.Duration `toml:"timeout"`
 	path          string
 }
 
-func (*Sensors) Description() string {
-	return "Monitor sensors, requires lm-sensors package"
-}
+const cmd = "sensors"
 
 func (*Sensors) SampleConfig() string {
-	return `
-  ## Remove numbers from field names.
-  ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
-  # remove_numbers = true
+	return sampleConfig
+}
 
-  ## Timeout is the maximum amount of time that the sensors command can run.
-  # timeout = "5s"
-`
+func (s *Sensors) Init() error {
+	// Set defaults
+	if s.path == "" {
+		path, err := exec.LookPath(cmd)
+		if err != nil {
+			return fmt.Errorf("looking up %q failed: %v", cmd, err)
+		}
+		s.path = path
+	}
 
+	// Check parameters
+	if s.path == "" {
+		return fmt.Errorf("no path specified for %q", cmd)
+	}
+
+	return nil
 }
 
 func (s *Sensors) Gather(acc telegraf.Accumulator) error {
@@ -60,7 +76,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	chip := ""
 	cmd := execCommand(s.path, "-A", "-u")
-	out, err := internal.StdOutputTimeout(cmd, s.Timeout.Duration)
+	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))
 	if err != nil {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
@@ -106,19 +122,14 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 
 // snake converts string to snake case
 func snake(input string) string {
-	return strings.ToLower(strings.Replace(strings.TrimSpace(input), " ", "_", -1))
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(input), " ", "_"))
 }
 
 func init() {
-	s := Sensors{
-		RemoveNumbers: true,
-		Timeout:       defaultTimeout,
-	}
-	path, _ := exec.LookPath("sensors")
-	if len(path) > 0 {
-		s.path = path
-	}
 	inputs.Add("sensors", func() telegraf.Input {
-		return &s
+		return &Sensors{
+			RemoveNumbers: true,
+			Timeout:       defaultTimeout,
+		}
 	})
 }

@@ -2,26 +2,23 @@ package beat
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func Test_BeatStats(test *testing.T) {
+func Test_BeatStats(t *testing.T) {
 	var beat6StatsAccumulator testutil.Accumulator
 	var beatTest = NewBeat()
 	// System stats are disabled by default
 	beatTest.Includes = []string{"beat", "libbeat", "system", "filebeat"}
-	err := beatTest.Init()
-	if err != nil {
-		panic(fmt.Sprintf("could not init beat: %s", err))
-	}
+	require.NoError(t, beatTest.Init())
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		var jsonFilePath string
 
@@ -31,35 +28,26 @@ func Test_BeatStats(test *testing.T) {
 		case suffixStats:
 			jsonFilePath = "beat6_stats.json"
 		default:
-			panic("Cannot handle request")
+			require.FailNow(t, "cannot handle request")
 		}
 
-		data, err := ioutil.ReadFile(jsonFilePath)
-
-		if err != nil {
-			panic(fmt.Sprintf("could not read from data file %s", jsonFilePath))
-		}
-		w.Write(data)
+		data, err := os.ReadFile(jsonFilePath)
+		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
+		_, err = w.Write(data)
+		require.NoError(t, err, "could not write data")
 	}))
 	requestURL, err := url.Parse(beatTest.URL)
-	if err != nil {
-		test.Logf("Can't parse URL %s", beatTest.URL)
-	}
+	require.NoErrorf(t, err, "can't parse URL %s", beatTest.URL)
 	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
-	if err != nil {
-		test.Logf("Can't listen for %s: %v", requestURL, err)
-	}
+	require.NoErrorf(t, err, "can't listen for %s: %v", requestURL, err)
 
 	fakeServer.Start()
 	defer fakeServer.Close()
 
-	err = beatTest.Gather(&beat6StatsAccumulator)
-	if err != nil {
-		test.Logf("Can't gather stats")
-	}
+	require.NoError(t, err, beatTest.Gather(&beat6StatsAccumulator))
 
 	beat6StatsAccumulator.AssertContainsTaggedFields(
-		test,
+		t,
 		"beat",
 		map[string]interface{}{
 			"cpu_system_ticks":      float64(626970),
@@ -85,7 +73,7 @@ func Test_BeatStats(test *testing.T) {
 		},
 	)
 	beat6StatsAccumulator.AssertContainsTaggedFields(
-		test,
+		t,
 		"beat_filebeat",
 		map[string]interface{}{
 			"events_active":             float64(0),
@@ -108,7 +96,7 @@ func Test_BeatStats(test *testing.T) {
 		},
 	)
 	beat6StatsAccumulator.AssertContainsTaggedFields(
-		test,
+		t,
 		"beat_libbeat",
 		map[string]interface{}{
 			"config_module_running":     float64(0),
@@ -148,7 +136,7 @@ func Test_BeatStats(test *testing.T) {
 		},
 	)
 	beat6StatsAccumulator.AssertContainsTaggedFields(
-		test,
+		t,
 		"beat_system",
 		map[string]interface{}{
 			"cpu_cores":    float64(32),
@@ -169,15 +157,12 @@ func Test_BeatStats(test *testing.T) {
 	)
 }
 
-func Test_BeatRequest(test *testing.T) {
+func Test_BeatRequest(t *testing.T) {
 	var beat6StatsAccumulator testutil.Accumulator
 	beatTest := NewBeat()
 	// System stats are disabled by default
 	beatTest.Includes = []string{"beat", "libbeat", "system", "filebeat"}
-	err := beatTest.Init()
-	if err != nil {
-		panic(fmt.Sprintf("could not init beat: %s", err))
-	}
+	require.NoError(t, beatTest.Init())
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		var jsonFilePath string
 
@@ -187,30 +172,24 @@ func Test_BeatRequest(test *testing.T) {
 		case suffixStats:
 			jsonFilePath = "beat6_stats.json"
 		default:
-			panic("Cannot handle request")
+			require.FailNow(t, "cannot handle request")
 		}
 
-		data, err := ioutil.ReadFile(jsonFilePath)
+		data, err := os.ReadFile(jsonFilePath)
+		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
+		require.Equal(t, request.Host, "beat.test.local")
+		require.Equal(t, request.Method, "POST")
+		require.Equal(t, request.Header.Get("Authorization"), "Basic YWRtaW46UFdE")
+		require.Equal(t, request.Header.Get("X-Test"), "test-value")
 
-		if err != nil {
-			panic(fmt.Sprintf("could not read from data file %s", jsonFilePath))
-		}
-		assert.Equal(test, request.Host, "beat.test.local")
-		assert.Equal(test, request.Method, "POST")
-		assert.Equal(test, request.Header.Get("Authorization"), "Basic YWRtaW46UFdE")
-		assert.Equal(test, request.Header.Get("X-Test"), "test-value")
-
-		w.Write(data)
+		_, err = w.Write(data)
+		require.NoError(t, err, "could not write data")
 	}))
 
 	requestURL, err := url.Parse(beatTest.URL)
-	if err != nil {
-		test.Logf("Can't parse URL %s", beatTest.URL)
-	}
+	require.NoErrorf(t, err, "can't parse URL %s", beatTest.URL)
 	fakeServer.Listener, err = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
-	if err != nil {
-		test.Logf("Can't listen for %s: %v", requestURL, err)
-	}
+	require.NoErrorf(t, err, "can't listen for %s: %v", requestURL, err)
 	fakeServer.Start()
 	defer fakeServer.Close()
 
@@ -220,9 +199,5 @@ func Test_BeatRequest(test *testing.T) {
 	beatTest.Username = "admin"
 	beatTest.Password = "PWD"
 
-	err = beatTest.Gather(&beat6StatsAccumulator)
-	if err != nil {
-		test.Logf("Can't gather stats")
-	}
-
+	require.NoError(t, beatTest.Gather(&beat6StatsAccumulator))
 }

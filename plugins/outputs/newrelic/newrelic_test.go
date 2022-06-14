@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
 	"github.com/stretchr/testify/assert"
@@ -17,10 +17,7 @@ func TestBasic(t *testing.T) {
 	nr := &NewRelic{
 		MetricPrefix: "Test",
 		InsightsKey:  "12345",
-		Timeout:      internal.Duration{Duration: time.Second * 5},
-	}
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
+		Timeout:      config.Duration(time.Second * 5),
 	}
 
 	err := nr.Connect()
@@ -31,9 +28,6 @@ func TestBasic(t *testing.T) {
 }
 
 func TestNewRelic_Write(t *testing.T) {
-	type args struct {
-		metrics []telegraf.Metric
-	}
 	tests := []struct {
 		name         string
 		metrics      []telegraf.Metric
@@ -164,7 +158,23 @@ func TestNewRelic_Connect(t *testing.T) {
 			name: "Test: Insights key and Timeout",
 			newrelic: &NewRelic{
 				InsightsKey: "12312133",
-				Timeout:     internal.Duration{Duration: time.Second * 5},
+				Timeout:     config.Duration(time.Second * 5),
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test: HTTP Proxy",
+			newrelic: &NewRelic{
+				InsightsKey: "12121212",
+				HTTPProxy:   "https://my.proxy",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test: Metric URL ",
+			newrelic: &NewRelic{
+				InsightsKey: "12121212",
+				MetricURL:   "https://test.nr.com",
 			},
 			wantErr: false,
 		},

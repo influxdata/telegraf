@@ -1,12 +1,13 @@
 package influxdb
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,13 +21,14 @@ import (
 )
 
 const (
-	defaultRequestTimeout          = time.Second * 5
-	defaultDatabase                = "telegraf"
-	errStringDatabaseNotFound      = "database not found"
-	errStringHintedHandoffNotEmpty = "hinted handoff queue not empty"
-	errStringPartialWrite          = "partial write"
-	errStringPointsBeyondRP        = "points beyond retention policy"
-	errStringUnableToParse         = "unable to parse"
+	defaultRequestTimeout            = time.Second * 5
+	defaultDatabase                  = "telegraf"
+	errStringDatabaseNotFound        = "database not found"
+	errStringRetentionPolicyNotFound = "retention policy not found"
+	errStringHintedHandoffNotEmpty   = "hinted handoff queue not empty"
+	errStringPartialWrite            = "partial write"
+	errStringPointsBeyondRP          = "points beyond retention policy"
+	errStringUnableToParse           = "unable to parse"
 )
 
 var (
@@ -216,8 +218,19 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 	}
 	defer resp.Body.Close()
 
+	body, err := c.validateResponse(resp.Body)
+
+	// Check for poorly formatted response (can't be decoded)
+	if err != nil {
+		return &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: "An error response was received while attempting to create the following database: " + database + ". Error: " + err.Error(),
+		}
+	}
+
 	queryResp := &QueryResponse{}
-	dec := json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(body)
 	err = dec.Decode(queryResp)
 
 	if err != nil {
@@ -341,15 +354,25 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 		return nil
 	}
 
+	body, err := c.validateResponse(resp.Body)
+
+	// Check for poorly formatted response that can't be decoded
+	if err != nil {
+		return &APIError{
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: "An error response was received while attempting to write metrics. Error: " + err.Error(),
+		}
+	}
+
 	writeResp := &WriteResponse{}
-	dec := json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(body)
 
 	var desc string
 	err = dec.Decode(writeResp)
 	if err == nil {
 		desc = writeResp.Err
 	}
-
 	if strings.Contains(desc, errStringDatabaseNotFound) {
 		return &DatabaseNotFoundError{
 			APIError: APIError{
@@ -359,6 +382,18 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 			},
 			Database: db,
 		}
+	}
+
+	//checks for any 4xx code and drops metric and retrying will not make the request work
+	if len(resp.Status) > 0 && resp.Status[0] == '4' {
+		c.log.Errorf("E! [outputs.influxdb] Failed to write metric (will be dropped: %s): %s\n", resp.Status, desc)
+		return nil
+	}
+
+	// This error handles if there is an invaild or missing retention policy
+	if strings.Contains(desc, errStringRetentionPolicyNotFound) {
+		c.log.Errorf("When writing to [%s]: received error %v", c.URL(), desc)
+		return nil
 	}
 
 	// This "error" is an informational message about the state of the
@@ -421,10 +456,10 @@ func (c *httpClient) makeQueryRequest(query string) (*http.Request, error) {
 	return req, nil
 }
 
-func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
+func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
 	var err error
 
-	req, err := http.NewRequest("POST", url, body)
+	req, err := http.NewRequest("POST", address, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating new request: %s", err.Error())
 	}
@@ -453,7 +488,7 @@ func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser
 		return rc, nil
 	}
 
-	return ioutil.NopCloser(reader), nil
+	return io.NopCloser(reader), nil
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {
@@ -464,6 +499,27 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	for header, value := range c.config.Headers {
 		req.Header.Set(header, value)
 	}
+}
+
+func (c *httpClient) validateResponse(response io.ReadCloser) (io.ReadCloser, error) {
+	bodyBytes, err := io.ReadAll(response)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Close()
+
+	originalResponse := io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// Empty response is valid.
+	if response == http.NoBody || len(bodyBytes) == 0 || bodyBytes == nil {
+		return originalResponse, nil
+	}
+
+	if valid := json.Valid(bodyBytes); !valid {
+		err = errors.New(string(bodyBytes))
+	}
+
+	return originalResponse, err
 }
 
 func makeWriteURL(loc *url.URL, db, rp, consistency string) (string, error) {

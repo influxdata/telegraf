@@ -1,0 +1,25 @@
+{
+  "PublicServerUrl": "http://localhost:8080",
+  "NodeTag": "A",
+  "Results": [
+    {
+      "DatabaseName": "db1",
+      "Indexes": [
+        {
+          "IndexName": "Product/Rating",
+          "Priority": "Normal",
+          "State": "Normal",
+          "Errors": 0,
+          "TimeSinceLastQueryInSec": 3.4712567,
+          "TimeSinceLastIndexingInSec": 3.4642612,
+          "LockMode": "Unlock",
+          "IsInvalid": true,
+          "Status": "Running",
+          "MappedPerSec": 102.34,
+          "ReducedPerSec": 593.23,
+          "Type": "MapReduce"
+        }
+      ]
+    }
+  ]
+}

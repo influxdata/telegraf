@@ -1,23 +1,16 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package minecraft
 
 import (
+	_ "embed"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const sampleConfig = `
-  ## Address of the Minecraft server.
-  # server = "localhost"
-
-  ## Server RCON Port.
-  # port = "25575"
-
-  ## Server RCON Password.
-  password = ""
-
-  ## Uncomment to remove deprecated metric components.
-  # tagdrop = ["server"]
-`
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 // Client is a client for the Minecraft server.
 type Client interface {
@@ -40,27 +33,14 @@ type Minecraft struct {
 	client Client
 }
 
-func (s *Minecraft) Description() string {
-	return "Collects scores from a Minecraft server's scoreboard using the RCON protocol"
-}
-
-func (s *Minecraft) SampleConfig() string {
+func (*Minecraft) SampleConfig() string {
 	return sampleConfig
 }
 
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 	if s.client == nil {
-		connector, err := NewConnector(s.Server, s.Port, s.Password)
-		if err != nil {
-			return err
-		}
-
-		client, err := NewClient(connector)
-		if err != nil {
-			return err
-		}
-
-		s.client = client
+		connector := newConnector(s.Server, s.Port, s.Password)
+		s.client = newClient(connector)
 	}
 
 	players, err := s.client.Players()

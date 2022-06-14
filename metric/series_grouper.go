@@ -50,18 +50,14 @@ func (g *SeriesGrouper) Add(
 	}
 	sort.Slice(taglist, func(i, j int) bool { return taglist[i].Key < taglist[j].Key })
 
-	var err error
 	id := groupID(g.hashSeed, measurement, taglist, tm)
-	metric := g.metrics[id]
-	if metric == nil {
-		metric, err = New(measurement, tags, map[string]interface{}{field: fieldValue}, tm)
-		if err != nil {
-			return err
-		}
-		g.metrics[id] = metric
-		g.ordered = append(g.ordered, metric)
+	m := g.metrics[id]
+	if m == nil {
+		m = New(measurement, tags, map[string]interface{}{field: fieldValue}, tm)
+		g.metrics[id] = m
+		g.ordered = append(g.ordered, m)
 	} else {
-		metric.AddField(field, fieldValue)
+		m.AddField(field, fieldValue)
 	}
 	return nil
 }

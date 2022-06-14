@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package intel_powerstat
@@ -23,8 +24,8 @@ func convertMicroWattToWatt(mW float64) float64 {
 	return mW * microWattToWatt
 }
 
-func convertKiloHertzToMegaHertz(kHz float64) float64 {
-	return kHz * kiloHertzToMegaHertz
+func convertKiloHertzToMegaHertz(kiloHertz float64) float64 {
+	return kiloHertz * kiloHertzToMegaHertz
 }
 
 func convertNanoSecondsToSeconds(ns int64) float64 {

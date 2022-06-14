@@ -8,6 +8,7 @@ plugins.
 1. [Carbon2](/plugins/serializers/carbon2)
 1. [Graphite](/plugins/serializers/graphite)
 1. [JSON](/plugins/serializers/json)
+1. [MessagePack](/plugins/serializers/msgpack)
 1. [Prometheus](/plugins/serializers/prometheus)
 1. [Prometheus Remote Write](/plugins/serializers/prometheusremotewrite)
 1. [ServiceNow Metrics](/plugins/serializers/nowmetric)

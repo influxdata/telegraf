@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package process
@@ -19,10 +20,14 @@ import (
 
 // test that a restarting process resets pipes properly
 func TestRestartingRebindsPipes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long running test in short mode")
+	}
+
 	exe, err := os.Executable()
 	require.NoError(t, err)
 
-	p, err := New([]string{exe, "-external"})
+	p, err := New([]string{exe, "-external"}, []string{"INTERNAL_PROCESS_MODE=application"})
 	p.RestartDelay = 100 * time.Nanosecond
 	p.Log = testutil.Logger{}
 	require.NoError(t, err)
@@ -48,6 +53,7 @@ func TestRestartingRebindsPipes(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 	}
 
+	// the mainLoopWg.Wait() call p.Stop() makes takes multiple seconds to complete
 	p.Stop()
 }
 
@@ -56,7 +62,8 @@ var external = flag.Bool("external", false,
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	if *external {
+	runMode := os.Getenv("INTERNAL_PROCESS_MODE")
+	if *external && runMode == "application" {
 		externalProcess()
 		os.Exit(0)
 	}
@@ -67,7 +74,7 @@ func TestMain(m *testing.M) {
 // externalProcess is an external "misbehaving" process that won't exit
 // cleanly.
 func externalProcess() {
-	wait := make(chan int, 0)
+	wait := make(chan int)
 	fmt.Fprintln(os.Stdout, "started")
 	<-wait
 	os.Exit(2)

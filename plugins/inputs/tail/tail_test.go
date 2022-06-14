@@ -2,18 +2,17 @@ package tail
 
 import (
 	"bytes"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -25,8 +24,30 @@ var (
 	testdataDir = getTestdataDir()
 )
 
+func NewTestTail() *Tail {
+	offsetsMutex.Lock()
+	offsetsCopy := make(map[string]int64, len(offsets))
+	for k, v := range offsets {
+		offsetsCopy[k] = v
+	}
+	offsetsMutex.Unlock()
+	watchMethod := defaultWatchMethod
+
+	if runtime.GOOS == "windows" {
+		watchMethod = "poll"
+	}
+
+	return &Tail{
+		FromBeginning:       false,
+		MaxUndeliveredLines: 1000,
+		offsets:             offsetsCopy,
+		WatchMethod:         watchMethod,
+		PathTag:             "path",
+	}
+}
+
 func TestTailBadLine(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
@@ -37,12 +58,12 @@ func TestTailBadLine(t *testing.T) {
 	_, err = tmpfile.WriteString("cpu usage_idle=100\n")
 	require.NoError(t, err)
 
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -59,18 +80,52 @@ func TestTailBadLine(t *testing.T) {
 	acc.Wait(1)
 
 	tt.Stop()
-	assert.Contains(t, buf.String(), "Malformed log line")
+	require.Contains(t, buf.String(), "Malformed log line")
+}
+
+func TestColoredLine(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+	_, err = tmpfile.WriteString("cpu usage_idle=\033[4A\033[4A100\ncpu2 usage_idle=200\n")
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Close())
+
+	tt := NewTestTail()
+	tt.Log = testutil.Logger{}
+	tt.FromBeginning = true
+	tt.Filters = []string{"ansi_color"}
+	tt.Files = []string{tmpfile.Name()}
+	tt.SetParserFunc(parsers.NewInfluxParser)
+
+	err = tt.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
+	require.NoError(t, acc.GatherError(tt.Gather))
+
+	acc.Wait(2)
+	acc.AssertContainsFields(t, "cpu",
+		map[string]interface{}{
+			"usage_idle": float64(100),
+		})
+	acc.AssertContainsFields(t, "cpu2",
+		map[string]interface{}{
+			"usage_idle": float64(200),
+		})
 }
 
 func TestTailDosLineEndings(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 	_, err = tmpfile.WriteString("cpu usage_idle=100\r\ncpu2 usage_idle=200\r\n")
 	require.NoError(t, err)
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -97,8 +152,8 @@ func TestTailDosLineEndings(t *testing.T) {
 
 func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	//we make sure the timeout won't kick in
-	duration, _ := time.ParseDuration("100s")
-
+	d, _ := time.ParseDuration("100s")
+	duration := config.Duration(d)
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
@@ -107,7 +162,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
 		InvertMatch:    false,
-		Timeout:        &internal.Duration{Duration: duration},
+		Timeout:        &duration,
 	}
 	tt.SetParserFunc(createGrokParser)
 
@@ -115,7 +170,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, tt.Start(&acc))
+	require.NoError(t, tt.Start(&acc))
 	defer tt.Stop()
 
 	acc.Wait(3)
@@ -146,11 +201,11 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 			"loglevel": "ERROR",
 		})
 
-	assert.Equal(t, uint64(3), acc.NMetrics())
+	require.Equal(t, uint64(3), acc.NMetrics())
 }
 
 func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
@@ -160,9 +215,10 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	require.NoError(t, tmpfile.Sync())
 
 	// set tight timeout for tests
-	duration := 10 * time.Millisecond
-
+	d := 10 * time.Millisecond
+	duration := config.Duration(d)
 	tt := NewTail()
+
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
@@ -170,7 +226,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
 		InvertMatch:    false,
-		Timeout:        &internal.Duration{Duration: duration},
+		Timeout:        &duration,
 	}
 	tt.SetParserFunc(createGrokParser)
 
@@ -178,7 +234,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, tt.Start(&acc))
+	require.NoError(t, tt.Start(&acc))
 	time.Sleep(11 * time.Millisecond) // will force timeout
 	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is info\r\n")
 	require.NoError(t, err)
@@ -190,7 +246,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	require.NoError(t, tmpfile.Sync())
 	acc.Wait(3)
 	tt.Stop()
-	assert.Equal(t, uint64(3), acc.NMetrics())
+	require.Equal(t, uint64(3), acc.NMetrics())
 	expectedPath := tmpfile.Name()
 
 	acc.AssertContainsTaggedFields(t, "tail_grok",
@@ -213,9 +269,9 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 
 func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *testing.T) {
 	//we make sure the timeout won't kick in
-	duration := 100 * time.Second
+	duration := config.Duration(100 * time.Second)
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{filepath.Join(testdataDir, "test_multiline.log")}
@@ -223,7 +279,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
 		InvertMatch:    false,
-		Timeout:        &internal.Duration{Duration: duration},
+		Timeout:        &duration,
 	}
 	tt.SetParserFunc(createGrokParser)
 
@@ -231,9 +287,9 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, tt.Start(&acc))
+	require.NoError(t, tt.Start(&acc))
 	acc.Wait(3)
-	assert.Equal(t, uint64(3), acc.NMetrics())
+	require.Equal(t, uint64(3), acc.NMetrics())
 	// Close tailer, so multiline buffer is flushed
 	tt.Stop()
 	acc.Wait(4)
@@ -262,7 +318,7 @@ func createGrokParser() (parsers.Parser, error) {
 
 // The csv parser should only parse the header line once per file.
 func TestCSVHeadersParsedOnce(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
@@ -272,18 +328,20 @@ cpu,42
 cpu,42
 `)
 	require.NoError(t, err)
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
-	plugin := NewTail()
+	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		return csv.NewParser(&csv.Config{
+		parser := csv.Parser{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
-		})
+		}
+		err := parser.Init()
+		return &parser, err
 	})
 
 	err = plugin.Init()
@@ -319,9 +377,72 @@ cpu,42
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
+func TestCSVMultiHeaderWithSkipRowANDColumn(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	_, err = tmpfile.WriteString(`garbage nonsense
+skip,measurement,value
+row,1,2
+skip1,cpu,42
+skip2,mem,100
+`)
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Close())
+
+	plugin := NewTestTail()
+	plugin.Log = testutil.Logger{}
+	plugin.FromBeginning = true
+	plugin.Files = []string{tmpfile.Name()}
+	plugin.SetParserFunc(func() (parsers.Parser, error) {
+		parser := csv.Parser{
+			MeasurementColumn: "measurement1",
+			HeaderRowCount:    2,
+			SkipRows:          1,
+			SkipColumns:       1,
+			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
+		}
+		err := parser.Init()
+		return &parser, err
+	})
+
+	err = plugin.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	err = plugin.Start(&acc)
+	require.NoError(t, err)
+	defer plugin.Stop()
+	err = plugin.Gather(&acc)
+	require.NoError(t, err)
+	acc.Wait(2)
+	plugin.Stop()
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"path": tmpfile.Name(),
+			},
+			map[string]interface{}{
+				"value2": 42,
+			},
+			time.Unix(0, 0)),
+		testutil.MustMetric("mem",
+			map[string]string{
+				"path": tmpfile.Name(),
+			},
+			map[string]interface{}{
+				"value2": 100,
+			},
+			time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
 // Ensure that the first line can produce multiple metrics (#6138)
 func TestMultipleMetricsOnFirstLine(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
@@ -329,12 +450,13 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 [{"time_idle": 42}, {"time_idle": 42}]
 `)
 	require.NoError(t, err)
-	tmpfile.Close()
+	require.NoError(t, tmpfile.Close())
 
-	plugin := NewTail()
+	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
+	plugin.PathTag = "customPathTagMyFile"
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
 		return json.New(
 			&json.Config{
@@ -357,7 +479,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	expected := []telegraf.Metric{
 		testutil.MustMetric("cpu",
 			map[string]string{
-				"path": tmpfile.Name(),
+				"customPathTagMyFile": tmpfile.Name(),
 			},
 			map[string]interface{}{
 				"time_idle": 42.0,
@@ -365,7 +487,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 			time.Unix(0, 0)),
 		testutil.MustMetric("cpu",
 			map[string]string{
-				"path": tmpfile.Name(),
+				"customPathTagMyFile": tmpfile.Name(),
 			},
 			map[string]interface{}{
 				"time_idle": 42.0,
@@ -425,89 +547,85 @@ func TestCharacterEncoding(t *testing.T) {
 		),
 	}
 
+	watchMethod := defaultWatchMethod
+	if runtime.GOOS == "windows" {
+		watchMethod = "poll"
+	}
+
 	tests := []struct {
-		name     string
-		plugin   *Tail
-		offset   int64
-		expected []telegraf.Metric
+		name              string
+		testfiles         string
+		fromBeginning     bool
+		characterEncoding string
+		offset            int64
+		expected          []telegraf.Metric
 	}{
 		{
-			name: "utf-8",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-8.influx")},
-				FromBeginning:       true,
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-8",
-			},
-			expected: full,
+			name:              "utf-8",
+			testfiles:         "cpu-utf-8.influx",
+			fromBeginning:     true,
+			characterEncoding: "utf-8",
+			expected:          full,
 		},
 		{
-			name: "utf-8 seek",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-8.influx")},
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-8",
-			},
-			offset:   0x33,
-			expected: full[1:],
+			name:              "utf-8 seek",
+			testfiles:         "cpu-utf-8.influx",
+			characterEncoding: "utf-8",
+			offset:            0x33,
+			expected:          full[1:],
 		},
 		{
-			name: "utf-16le",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16le.influx")},
-				FromBeginning:       true,
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-16le",
-			},
-			expected: full,
+			name:              "utf-16le",
+			testfiles:         "cpu-utf-16le.influx",
+			fromBeginning:     true,
+			characterEncoding: "utf-16le",
+			expected:          full,
 		},
 		{
-			name: "utf-16le seek",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16le.influx")},
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-16le",
-			},
-			offset:   0x68,
-			expected: full[1:],
+			name:              "utf-16le seek",
+			testfiles:         "cpu-utf-16le.influx",
+			characterEncoding: "utf-16le",
+			offset:            0x68,
+			expected:          full[1:],
 		},
 		{
-			name: "utf-16be",
-			plugin: &Tail{
-				Files:               []string{filepath.Join(testdataDir, "cpu-utf-16be.influx")},
-				FromBeginning:       true,
-				MaxUndeliveredLines: 1000,
-				Log:                 testutil.Logger{},
-				CharacterEncoding:   "utf-16be",
-			},
-			expected: full,
+			name:              "utf-16be",
+			testfiles:         "cpu-utf-16be.influx",
+			fromBeginning:     true,
+			characterEncoding: "utf-16be",
+			expected:          full,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.plugin.SetParserFunc(func() (parsers.Parser, error) {
+			plugin := &Tail{
+				Files:               []string{filepath.Join(testdataDir, tt.testfiles)},
+				FromBeginning:       tt.fromBeginning,
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   tt.characterEncoding,
+				WatchMethod:         watchMethod,
+			}
+
+			plugin.SetParserFunc(func() (parsers.Parser, error) {
 				handler := influx.NewMetricHandler()
 				return influx.NewParser(handler), nil
 			})
 
 			if tt.offset != 0 {
-				tt.plugin.offsets = map[string]int64{
-					tt.plugin.Files[0]: tt.offset,
+				plugin.offsets = map[string]int64{
+					plugin.Files[0]: tt.offset,
 				}
 			}
 
-			err := tt.plugin.Init()
+			err := plugin.Init()
 			require.NoError(t, err)
 
 			var acc testutil.Accumulator
-			err = tt.plugin.Start(&acc)
+			err = plugin.Start(&acc)
 			require.NoError(t, err)
 			acc.Wait(len(tt.expected))
-			tt.plugin.Stop()
+			plugin.Stop()
 
 			actual := acc.GetTelegrafMetrics()
 			for _, m := range actual {
@@ -520,7 +638,7 @@ func TestCharacterEncoding(t *testing.T) {
 }
 
 func TestTailEOF(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 	_, err = tmpfile.WriteString("cpu usage_idle=100\r\n")
@@ -528,7 +646,7 @@ func TestTailEOF(t *testing.T) {
 	err = tmpfile.Sync()
 	require.NoError(t, err)
 
-	tt := NewTail()
+	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}

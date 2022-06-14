@@ -1,9 +1,14 @@
-# Beat Plugin
+# Beat Input Plugin
+
 The Beat plugin will collect metrics from the given Beat instances. It is
 known to work with Filebeat and Kafkabeat.
-### Configuration:
-```toml
-  ## An URL from which to read beat-formatted JSON
+
+## Configuration
+
+```toml @sample.conf
+# Read metrics exposed by Beat
+[[inputs.beat]]
+  ## An URL from which to read Beat-formatted JSON
   ## Default is "http://127.0.0.1:5066".
   url = "http://127.0.0.1:5066"
 
@@ -35,9 +40,11 @@ known to work with Filebeat and Kafkabeat.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
-### Measurements & Fields
+
+## Metrics
+
 - **beat**
-  * Fields:
+  - Fields:
     - cpu_system_ticks
     - cpu_system_time_ms
     - cpu_total_ticks
@@ -50,7 +57,7 @@ known to work with Filebeat and Kafkabeat.
     - memstats_memory_alloc
     - memstats_memory_total
     - memstats_rss
-  * Tags:
+  - Tags:
     - beat_beat
     - beat_host
     - beat_id
@@ -58,7 +65,7 @@ known to work with Filebeat and Kafkabeat.
     - beat_version
 
 - **beat_filebeat**
-  * Fields:
+  - Fields:
     - events_active
     - events_added
     - events_done
@@ -69,7 +76,7 @@ known to work with Filebeat and Kafkabeat.
     - harvester_started
     - input_log_files_renamed
     - input_log_files_truncated
-  * Tags:
+  - Tags:
     - beat_beat
     - beat_host
     - beat_id
@@ -77,7 +84,7 @@ known to work with Filebeat and Kafkabeat.
     - beat_version
 
 - **beat_libbeat**
-  * Fields:
+  - Fields:
     - config_module_running
     - config_module_starts
     - config_module_stops
@@ -105,7 +112,7 @@ known to work with Filebeat and Kafkabeat.
     - pipeline_events_retry
     - pipeline_events_total
     - pipeline_queue_acked
-  * Tags:
+  - Tags:
     - beat_beat
     - beat_host
     - beat_id
@@ -113,7 +120,7 @@ known to work with Filebeat and Kafkabeat.
     - beat_version
 
 - **beat_system**
-  * Field:
+  - Field:
     - cpu_cores
     - load_1
     - load_15
@@ -121,15 +128,16 @@ known to work with Filebeat and Kafkabeat.
     - load_norm_1
     - load_norm_15
     - load_norm_5
-  * Tags:
+  - Tags:
     - beat_beat
     - beat_host
     - beat_id
     - beat_name
     - beat_version
 
-### Example Output:
-```
+## Example Output
+
+```shell
 $ telegraf --input-filter beat --test
 
 > beat,beat_beat=filebeat,beat_host=node-6,beat_id=9c1c8697-acb4-4df0-987d-28197814f788,beat_name=node-6-test,beat_version=6.4.2,host=node-6

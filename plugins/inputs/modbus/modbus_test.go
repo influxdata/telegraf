@@ -1,12 +1,16 @@
 package modbus
 
 import (
+	"fmt"
+	"strconv"
 	"testing"
+	"time"
 
-	m "github.com/goburrow/modbus"
-	"github.com/stretchr/testify/assert"
+	mb "github.com/grid-x/modbus"
+	"github.com/stretchr/testify/require"
 	"github.com/tbrandon/mbserver"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -77,43 +81,52 @@ func TestCoils(t *testing.T) {
 	}
 
 	serv := mbserver.NewServer()
-	err := serv.ListenTCP("localhost:1502")
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
-	assert.NoError(t, err)
 
-	handler := m.NewTCPClientHandler("localhost:1502")
-	err = handler.Connect()
-	assert.NoError(t, err)
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
 	defer handler.Close()
-	client := m.NewClient(handler)
+	client := mb.NewClient(handler)
 
 	for _, ct := range coilTests {
 		t.Run(ct.name, func(t *testing.T) {
-			_, err = client.WriteMultipleCoils(ct.address, ct.quantity, ct.write)
-			assert.NoError(t, err)
+			_, err := client.WriteMultipleCoils(ct.address, ct.quantity, ct.write)
+			require.NoError(t, err)
 
 			modbus := Modbus{
 				Name:       "TestCoils",
 				Controller: "tcp://localhost:1502",
-				SlaveID:    1,
-				Coils: []fieldContainer{
-					{
-						Name:    ct.name,
-						Address: []uint16{ct.address},
-					},
+				Log:        testutil.Logger{},
+			}
+			modbus.SlaveID = 1
+			modbus.Coils = []fieldDefinition{
+				{
+					Name:    ct.name,
+					Address: []uint16{ct.address},
 				},
 			}
 
-			err = modbus.Init()
-			assert.NoError(t, err)
-			var acc testutil.Accumulator
-			err = modbus.Gather(&acc)
-			assert.NoError(t, err)
-			assert.NotEmpty(t, modbus.registers)
-
-			for _, coil := range modbus.registers {
-				assert.Equal(t, ct.read, coil.Fields[0].value)
+			expected := []telegraf.Metric{
+				testutil.MustMetric(
+					"modbus",
+					map[string]string{
+						"type":     cCoils,
+						"slave_id": strconv.Itoa(int(modbus.SlaveID)),
+						"name":     modbus.Name,
+					},
+					map[string]interface{}{ct.name: ct.read},
+					time.Unix(0, 0),
+				),
 			}
+
+			var acc testutil.Accumulator
+			require.NoError(t, modbus.Init())
+			require.NotEmpty(t, modbus.requests)
+			require.NoError(t, modbus.Gather(&acc))
+			acc.Wait(len(expected))
+
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
@@ -612,47 +625,332 @@ func TestHoldingRegisters(t *testing.T) {
 	}
 
 	serv := mbserver.NewServer()
-	err := serv.ListenTCP("localhost:1502")
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
-	assert.NoError(t, err)
 
-	handler := m.NewTCPClientHandler("localhost:1502")
-	err = handler.Connect()
-	assert.NoError(t, err)
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
 	defer handler.Close()
-	client := m.NewClient(handler)
+	client := mb.NewClient(handler)
 
 	for _, hrt := range holdingRegisterTests {
 		t.Run(hrt.name, func(t *testing.T) {
-			_, err = client.WriteMultipleRegisters(hrt.address[0], hrt.quantity, hrt.write)
-			assert.NoError(t, err)
+			_, err := client.WriteMultipleRegisters(hrt.address[0], hrt.quantity, hrt.write)
+			require.NoError(t, err)
 
 			modbus := Modbus{
 				Name:       "TestHoldingRegisters",
 				Controller: "tcp://localhost:1502",
-				SlaveID:    1,
-				HoldingRegisters: []fieldContainer{
-					{
-						Name:      hrt.name,
-						ByteOrder: hrt.byteOrder,
-						DataType:  hrt.dataType,
-						Scale:     hrt.scale,
-						Address:   hrt.address,
-					},
+				Log:        testutil.Logger{},
+			}
+			modbus.SlaveID = 1
+			modbus.HoldingRegisters = []fieldDefinition{
+				{
+					Name:      hrt.name,
+					ByteOrder: hrt.byteOrder,
+					DataType:  hrt.dataType,
+					Scale:     hrt.scale,
+					Address:   hrt.address,
 				},
 			}
 
-			err = modbus.Init()
-			assert.NoError(t, err)
-			var acc testutil.Accumulator
-			modbus.Gather(&acc)
-			assert.NotEmpty(t, modbus.registers)
-
-			for _, coil := range modbus.registers {
-				assert.Equal(t, hrt.read, coil.Fields[0].value)
+			expected := []telegraf.Metric{
+				testutil.MustMetric(
+					"modbus",
+					map[string]string{
+						"type":     cHoldingRegisters,
+						"slave_id": strconv.Itoa(int(modbus.SlaveID)),
+						"name":     modbus.Name,
+					},
+					map[string]interface{}{hrt.name: hrt.read},
+					time.Unix(0, 0),
+				),
 			}
+
+			var acc testutil.Accumulator
+			require.NoError(t, modbus.Init())
+			require.NotEmpty(t, modbus.requests)
+			require.NoError(t, modbus.Gather(&acc))
+			acc.Wait(len(expected))
+
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
+}
+
+func TestReadMultipleCoilWithHole(t *testing.T) {
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+
+	fcs := []fieldDefinition{}
+	expectedFields := make(map[string]interface{})
+	writeValue := uint16(0)
+	readValue := uint16(0)
+	for i := 0; i < 14; i++ {
+		fc := fieldDefinition{}
+		fc.Name = fmt.Sprintf("coil-%v", i)
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = readValue
+		writeValue = 65280 - writeValue
+		readValue = 1 - readValue
+	}
+	for i := 15; i < 18; i++ {
+		fc := fieldDefinition{}
+		fc.Name = fmt.Sprintf("coil-%v", i)
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = readValue
+		writeValue = 65280 - writeValue
+		readValue = 1 - readValue
+	}
+	for i := 24; i < 33; i++ {
+		fc := fieldDefinition{}
+		fc.Name = fmt.Sprintf("coil-%v", i)
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = readValue
+		writeValue = 65280 - writeValue
+		readValue = 1 - readValue
+	}
+	require.Len(t, expectedFields, len(fcs))
+
+	modbus := Modbus{
+		Name:       "TestReadMultipleCoilWithHole",
+		Controller: "tcp://localhost:1502",
+		Log:        testutil.Logger{Name: "modbus:MultipleCoilWithHole"},
+	}
+	modbus.SlaveID = 1
+	modbus.Coils = fcs
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cCoils,
+				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
+				"name":     modbus.Name,
+			},
+			expectedFields,
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestReadMultipleCoilLimit(t *testing.T) {
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+
+	fcs := []fieldDefinition{}
+	expectedFields := make(map[string]interface{})
+	writeValue := uint16(0)
+	readValue := uint16(0)
+	for i := 0; i < 4000; i++ {
+		fc := fieldDefinition{}
+		fc.Name = fmt.Sprintf("coil-%v", i)
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleCoil(fc.Address[0], writeValue)
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = readValue
+		writeValue = 65280 - writeValue
+		readValue = 1 - readValue
+	}
+	require.Len(t, expectedFields, len(fcs))
+
+	modbus := Modbus{
+		Name:       "TestReadCoils",
+		Controller: "tcp://localhost:1502",
+		Log:        testutil.Logger{},
+	}
+	modbus.SlaveID = 1
+	modbus.Coils = fcs
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cCoils,
+				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
+				"name":     modbus.Name,
+			},
+			expectedFields,
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestReadMultipleHoldingRegisterWithHole(t *testing.T) {
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+
+	fcs := []fieldDefinition{}
+	expectedFields := make(map[string]interface{})
+	for i := 0; i < 10; i++ {
+		fc := fieldDefinition{
+			Name:      fmt.Sprintf("HoldingRegister-%v", i),
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Scale:     1.0,
+			Address:   []uint16{uint16(i)},
+		}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleRegister(fc.Address[0], uint16(i))
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = int64(i)
+	}
+	for i := 20; i < 30; i++ {
+		fc := fieldDefinition{
+			Name:      fmt.Sprintf("HoldingRegister-%v", i),
+			ByteOrder: "AB",
+			DataType:  "INT16",
+			Scale:     1.0,
+			Address:   []uint16{uint16(i)},
+		}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleRegister(fc.Address[0], uint16(i))
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = int64(i)
+	}
+	require.Len(t, expectedFields, len(fcs))
+
+	modbus := Modbus{
+		Name:       "TestHoldingRegister",
+		Controller: "tcp://localhost:1502",
+		Log:        testutil.Logger{},
+	}
+	modbus.SlaveID = 1
+	modbus.HoldingRegisters = fcs
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cHoldingRegisters,
+				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
+				"name":     modbus.Name,
+			},
+			expectedFields,
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestReadMultipleHoldingRegisterLimit(t *testing.T) {
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+
+	fcs := []fieldDefinition{}
+	expectedFields := make(map[string]interface{})
+	for i := 0; i <= 400; i++ {
+		fc := fieldDefinition{}
+		fc.Name = fmt.Sprintf("HoldingRegister-%v", i)
+		fc.ByteOrder = "AB"
+		fc.DataType = "INT16"
+		fc.Scale = 1.0
+		fc.Address = []uint16{uint16(i)}
+		fcs = append(fcs, fc)
+
+		_, err := client.WriteSingleRegister(fc.Address[0], uint16(i))
+		require.NoError(t, err)
+
+		expectedFields[fc.Name] = int64(i)
+	}
+
+	modbus := Modbus{
+		Name:       "TestHoldingRegister",
+		Controller: "tcp://localhost:1502",
+		Log:        testutil.Logger{},
+	}
+	modbus.SlaveID = 1
+	modbus.HoldingRegisters = fcs
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cHoldingRegisters,
+				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
+				"name":     modbus.Name,
+			},
+			expectedFields,
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestRetrySuccessful(t *testing.T) {
@@ -661,8 +959,7 @@ func TestRetrySuccessful(t *testing.T) {
 	value := 1
 
 	serv := mbserver.NewServer()
-	err := serv.ListenTCP("localhost:1502")
-	assert.NoError(t, err)
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	// Make read on coil-registers fail for some trials by making the device
@@ -677,44 +974,52 @@ func TestRetrySuccessful(t *testing.T) {
 			if retries >= maxretries {
 				except = &mbserver.Success
 			}
-			retries += 1
+			retries++
 
 			return data, except
 		})
 
-	t.Run("retry_success", func(t *testing.T) {
-		modbus := Modbus{
-			Name:       "TestRetry",
-			Controller: "tcp://localhost:1502",
-			SlaveID:    1,
-			Retries:    maxretries,
-			Coils: []fieldContainer{
-				{
-					Name:    "retry_success",
-					Address: []uint16{0},
-				},
+	modbus := Modbus{
+		Name:       "TestRetry",
+		Controller: "tcp://localhost:1502",
+		Retries:    maxretries,
+		Log:        testutil.Logger{},
+	}
+	modbus.SlaveID = 1
+	modbus.Coils = []fieldDefinition{
+		{
+			Name:    "retry_success",
+			Address: []uint16{0},
+		},
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cCoils,
+				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
+				"name":     modbus.Name,
 			},
-		}
+			map[string]interface{}{"retry_success": uint16(value)},
+			time.Unix(0, 0),
+		),
+	}
 
-		err = modbus.Init()
-		assert.NoError(t, err)
-		var acc testutil.Accumulator
-		err = modbus.Gather(&acc)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, modbus.registers)
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
 
-		for _, coil := range modbus.registers {
-			assert.Equal(t, uint16(value), coil.Fields[0].value)
-		}
-	})
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
-func TestRetryFail(t *testing.T) {
+func TestRetryFailExhausted(t *testing.T) {
 	maxretries := 2
 
 	serv := mbserver.NewServer()
-	err := serv.ListenTCP("localhost:1502")
-	assert.NoError(t, err)
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
 	defer serv.Close()
 
 	// Make the read on coils fail with busy
@@ -727,32 +1032,41 @@ func TestRetryFail(t *testing.T) {
 			return data, &mbserver.SlaveDeviceBusy
 		})
 
-	t.Run("retry_fail", func(t *testing.T) {
-		modbus := Modbus{
-			Name:       "TestRetryFail",
-			Controller: "tcp://localhost:1502",
-			SlaveID:    1,
-			Retries:    maxretries,
-			Coils: []fieldContainer{
-				{
-					Name:    "retry_fail",
-					Address: []uint16{0},
-				},
-			},
-		}
+	modbus := Modbus{
+		Name:       "TestRetryFailExhausted",
+		Controller: "tcp://localhost:1502",
+		Retries:    maxretries,
+		Log:        testutil.Logger{},
+	}
+	modbus.SlaveID = 1
+	modbus.Coils = []fieldDefinition{
+		{
+			Name:    "retry_fail",
+			Address: []uint16{0},
+		},
+	}
 
-		err = modbus.Init()
-		assert.NoError(t, err)
-		var acc testutil.Accumulator
-		err = modbus.Gather(&acc)
-		assert.Error(t, err)
-	})
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+
+	err := modbus.Gather(&acc)
+	require.Error(t, err)
+	require.Equal(t, "modbus: exception '6' (server device busy), function '129'", err.Error())
+}
+
+func TestRetryFailIllegal(t *testing.T) {
+	maxretries := 2
+
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
 
 	// Make the read on coils fail with illegal function preventing retry
 	counter := 0
 	serv.RegisterFunctionHandler(1,
 		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
-			counter += 1
+			counter++
 			data := make([]byte, 2)
 			data[0] = byte(1)
 			data[1] = byte(0)
@@ -760,25 +1074,853 @@ func TestRetryFail(t *testing.T) {
 			return data, &mbserver.IllegalFunction
 		})
 
-	t.Run("retry_fail", func(t *testing.T) {
-		modbus := Modbus{
-			Name:       "TestRetryFail",
-			Controller: "tcp://localhost:1502",
-			SlaveID:    1,
-			Retries:    maxretries,
-			Coils: []fieldContainer{
+	modbus := Modbus{
+		Name:       "TestRetryFailExhausted",
+		Controller: "tcp://localhost:1502",
+		Retries:    maxretries,
+		Log:        testutil.Logger{},
+	}
+	modbus.SlaveID = 1
+	modbus.Coils = []fieldDefinition{
+		{
+			Name:    "retry_fail",
+			Address: []uint16{0},
+		},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+
+	err := modbus.Gather(&acc)
+	require.Error(t, err)
+	require.Equal(t, "modbus: exception '1' (illegal function), function '129'", err.Error())
+	require.Equal(t, counter, 1)
+}
+
+func TestConfigurationRegister(t *testing.T) {
+	modbus := Modbus{
+		Name:              "TestRetryFailExhausted",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "register",
+		Log:               testutil.Logger{},
+	}
+	modbus.SlaveID = 1
+	modbus.Coils = []fieldDefinition{
+		{
+			Name:    "coil",
+			Address: []uint16{0},
+		},
+	}
+	modbus.DiscreteInputs = []fieldDefinition{
+		{
+			Name:    "discrete",
+			Address: []uint16{0},
+		},
+	}
+	modbus.HoldingRegisters = []fieldDefinition{
+		{
+			Name:      "holding",
+			Address:   []uint16{0},
+			DataType:  "INT16",
+			ByteOrder: "AB",
+			Scale:     1.0,
+		},
+	}
+	modbus.InputRegisters = []fieldDefinition{
+		{
+			Name:      "input",
+			Address:   []uint16{0},
+			DataType:  "INT16",
+			ByteOrder: "AB",
+			Scale:     1.0,
+		},
+	}
+
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NotNil(t, modbus.requests[1])
+	require.Len(t, modbus.requests[1].coil, len(modbus.Coils))
+	require.Len(t, modbus.requests[1].discrete, len(modbus.DiscreteInputs))
+	require.Len(t, modbus.requests[1].holding, len(modbus.HoldingRegisters))
+	require.Len(t, modbus.requests[1].input, len(modbus.InputRegisters))
+}
+
+func TestConfigurationPerRequest(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "coil",
+			Fields: []requestFieldDefinition{
 				{
-					Name:    "retry_fail",
-					Address: []uint16{0},
+					Name:    "coil-0",
+					Address: uint16(0),
+				},
+				{
+					Name:    "coil-1",
+					Address: uint16(1),
+					Omit:    true,
+				},
+				{
+					Name:        "coil-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
 				},
 			},
-		}
+		},
+		{
+			SlaveID:      1,
+			RegisterType: "coil",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "coil-3",
+					Address: uint16(6),
+				},
+				{
+					Name:    "coil-4",
+					Address: uint16(7),
+					Omit:    true,
+				},
+				{
+					Name:        "coil-5",
+					Address:     uint16(8),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+		},
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "discrete",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "discrete-0",
+					Address: uint16(0),
+				},
+				{
+					Name:    "discrete-1",
+					Address: uint16(1),
+					Omit:    true,
+				},
+				{
+					Name:        "discrete-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+		},
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:        "holding-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+		},
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "input",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "input-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+				{
+					Name:      "input-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:        "input-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+		},
+	}
 
-		err = modbus.Init()
-		assert.NoError(t, err)
-		var acc testutil.Accumulator
-		err = modbus.Gather(&acc)
-		assert.Error(t, err)
-		assert.Equal(t, counter, 1)
-	})
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NotNil(t, modbus.requests[1])
+	require.Len(t, modbus.requests[1].coil, 2)
+	require.Len(t, modbus.requests[1].discrete, 1)
+	require.Len(t, modbus.requests[1].holding, 1)
+	require.Len(t, modbus.requests[1].input, 1)
+}
+
+func TestConfigurationPerRequestWithTags(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "coil",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "coil-0",
+					Address: uint16(0),
+				},
+				{
+					Name:    "coil-1",
+					Address: uint16(1),
+					Omit:    true,
+				},
+				{
+					Name:        "coil-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+		{
+			SlaveID:      1,
+			RegisterType: "coil",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "coil-3",
+					Address: uint16(6),
+				},
+				{
+					Name:    "coil-4",
+					Address: uint16(7),
+					Omit:    true,
+				},
+				{
+					Name:        "coil-5",
+					Address:     uint16(8),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "discrete",
+			Fields: []requestFieldDefinition{
+				{
+					Name:    "discrete-0",
+					Address: uint16(0),
+				},
+				{
+					Name:    "discrete-1",
+					Address: uint16(1),
+					Omit:    true,
+				},
+				{
+					Name:        "discrete-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:        "holding-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+		{
+			SlaveID:      1,
+			ByteOrder:    "ABCD",
+			RegisterType: "input",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "input-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+				},
+				{
+					Name:      "input-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:        "input-2",
+					Address:     uint16(2),
+					InputType:   "INT64",
+					Scale:       1.2,
+					OutputType:  "FLOAT64",
+					Measurement: "modbus",
+				},
+			},
+			Tags: map[string]string{
+				"first":  "a",
+				"second": "bb",
+				"third":  "ccc",
+			},
+		},
+	}
+
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NotNil(t, modbus.requests[1])
+	require.Len(t, modbus.requests[1].coil, 2)
+	require.Len(t, modbus.requests[1].discrete, 1)
+	require.Len(t, modbus.requests[1].holding, 1)
+	require.Len(t, modbus.requests[1].input, 1)
+
+	expectedTags := map[string]string{
+		"first":  "a",
+		"second": "bb",
+		"third":  "ccc",
+	}
+	require.Equal(t, expectedTags, modbus.requests[1].coil[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].coil[1].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].discrete[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].holding[0].tags)
+	require.Equal(t, expectedTags, modbus.requests[1].input[0].tags)
+}
+
+func TestConfigurationPerRequestFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		requests []requestDefinition
+		errormsg string
+	}{
+		{
+			name: "empty field name (coil)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "coil",
+					Fields: []requestFieldDefinition{
+						{
+							Address: uint16(15),
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: empty field name in request for slave 1",
+		},
+		{
+			name: "invalid byte-order (coil)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "AB",
+					RegisterType: "coil",
+					Fields:       []requestFieldDefinition{},
+				},
+			},
+			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+		},
+		{
+			name: "duplicate fields (coil)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "coil",
+					Fields: []requestFieldDefinition{
+						{
+							Name:    "coil-0",
+							Address: uint16(0),
+						},
+						{
+							Name:    "coil-0",
+							Address: uint16(1),
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: field \"coil-0\" duplicated in measurement \"modbus\" (slave 1/\"coil\")",
+		},
+		{
+			name: "duplicate fields multiple requests (coil)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "coil",
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "coil-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "coil",
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "coil-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: field \"coil-0\" duplicated in measurement \"foo\" (slave 1/\"coil\")",
+		},
+		{
+			name: "invalid byte-order (discrete)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "AB",
+					RegisterType: "discrete",
+					Fields:       []requestFieldDefinition{},
+				},
+			},
+			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+		},
+		{
+			name: "duplicate fields (discrete)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "discrete",
+					Fields: []requestFieldDefinition{
+						{
+							Name:    "discrete-0",
+							Address: uint16(0),
+						},
+						{
+							Name:    "discrete-0",
+							Address: uint16(1),
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: field \"discrete-0\" duplicated in measurement \"modbus\" (slave 1/\"discrete\")",
+		},
+		{
+			name: "duplicate fields multiple requests (discrete)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "discrete",
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "discrete-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "discrete",
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "discrete-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: field \"discrete-0\" duplicated in measurement \"foo\" (slave 1/\"discrete\")",
+		},
+		{
+			name: "invalid byte-order (holding)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "AB",
+					RegisterType: "holding",
+					Fields:       []requestFieldDefinition{},
+				},
+			},
+			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+		},
+		{
+			name: "invalid field name (holding)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					RegisterType: "holding",
+					Fields: []requestFieldDefinition{
+						{
+							Address: uint16(0),
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: empty field name in request for slave 1",
+		},
+		{
+			name: "invalid field input type (holding)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					RegisterType: "holding",
+					Fields: []requestFieldDefinition{
+						{
+							Name:    "holding-0",
+							Address: uint16(0),
+						},
+					},
+				},
+			},
+			errormsg: "cannot process configuraton: initializing field \"holding-0\" failed: invalid input datatype \"\" for determining field length",
+		},
+		{
+			name: "invalid field output type (holding)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					RegisterType: "holding",
+					Fields: []requestFieldDefinition{
+						{
+							Name:       "holding-0",
+							Address:    uint16(0),
+							InputType:  "UINT16",
+							OutputType: "UINT8",
+						},
+					},
+				},
+			},
+			errormsg: "cannot process configuraton: initializing field \"holding-0\" failed: unknown output type \"UINT8\"",
+		},
+		{
+			name: "duplicate fields (holding)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "holding",
+					Fields: []requestFieldDefinition{
+						{
+							Name:    "holding-0",
+							Address: uint16(0),
+						},
+						{
+							Name:    "holding-0",
+							Address: uint16(1),
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: field \"holding-0\" duplicated in measurement \"modbus\" (slave 1/\"holding\")",
+		},
+		{
+			name: "duplicate fields multiple requests (holding)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "holding",
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "holding-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "holding",
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "holding-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: field \"holding-0\" duplicated in measurement \"foo\" (slave 1/\"holding\")",
+		},
+		{
+			name: "invalid byte-order (input)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "AB",
+					RegisterType: "input",
+					Fields:       []requestFieldDefinition{},
+				},
+			},
+			errormsg: "configuraton invalid: unknown byte-order \"AB\"",
+		},
+		{
+			name: "invalid field name (input)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					RegisterType: "input",
+					Fields: []requestFieldDefinition{
+						{
+							Address: uint16(0),
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: empty field name in request for slave 1",
+		},
+		{
+			name: "invalid field input type (input)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					RegisterType: "input",
+					Fields: []requestFieldDefinition{
+						{
+							Name:    "input-0",
+							Address: uint16(0),
+						},
+					},
+				},
+			},
+			errormsg: "cannot process configuraton: initializing field \"input-0\" failed: invalid input datatype \"\" for determining field length",
+		},
+		{
+			name: "invalid field output type (input)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					RegisterType: "input",
+					Fields: []requestFieldDefinition{
+						{
+							Name:       "input-0",
+							Address:    uint16(0),
+							InputType:  "UINT16",
+							OutputType: "UINT8",
+						},
+					},
+				},
+			},
+			errormsg: "cannot process configuraton: initializing field \"input-0\" failed: unknown output type \"UINT8\"",
+		},
+		{
+			name: "duplicate fields (input)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "input",
+					Fields: []requestFieldDefinition{
+						{
+							Name:    "input-0",
+							Address: uint16(0),
+						},
+						{
+							Name:    "input-0",
+							Address: uint16(1),
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: field \"input-0\" duplicated in measurement \"modbus\" (slave 1/\"input\")",
+		},
+		{
+			name: "duplicate fields multiple requests (input)",
+			requests: []requestDefinition{
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "input",
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "input-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+				{
+					SlaveID:      1,
+					ByteOrder:    "ABCD",
+					RegisterType: "input",
+					Fields: []requestFieldDefinition{
+						{
+							Name:        "input-0",
+							Address:     uint16(0),
+							Measurement: "foo",
+						},
+					},
+				},
+			},
+			errormsg: "configuraton invalid: field \"input-0\" duplicated in measurement \"foo\" (slave 1/\"input\")",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Modbus{
+				Name:              "Test",
+				Controller:        "tcp://localhost:1502",
+				ConfigurationType: "request",
+				Log:               testutil.Logger{},
+			}
+			plugin.Requests = tt.requests
+
+			err := plugin.Init()
+			require.Error(t, err)
+			require.Equal(t, tt.errormsg, err.Error())
+			require.Empty(t, plugin.requests)
+		})
+	}
+}
+
+func TestRequestsStartingWithOmits(t *testing.T) {
+	modbus := Modbus{
+		Name:              "Test",
+		Controller:        "tcp://localhost:1502",
+		ConfigurationType: "request",
+		Log:               testutil.Logger{},
+	}
+	modbus.Requests = []requestDefinition{
+		{SlaveID: 1,
+			ByteOrder:    "ABCD",
+			RegisterType: "holding",
+			Fields: []requestFieldDefinition{
+				{
+					Name:      "holding-0",
+					Address:   uint16(0),
+					InputType: "INT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-1",
+					Address:   uint16(1),
+					InputType: "UINT16",
+					Omit:      true,
+				},
+				{
+					Name:      "holding-2",
+					Address:   uint16(2),
+					InputType: "INT16",
+				},
+			},
+		},
+	}
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.NotNil(t, modbus.requests[1])
+	require.Equal(t, uint16(0), modbus.requests[1].holding[0].address)
+
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+	_, err := client.WriteMultipleRegisters(uint16(0), 3, []byte{0x00, 0x01, 0x00, 0x02, 0x00, 0x03})
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cHoldingRegisters,
+				"slave_id": strconv.Itoa(int(modbus.Requests[0].SlaveID)),
+				"name":     modbus.Name,
+			},
+			map[string]interface{}{"holding-2": int16(3)},
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Gather(&acc))
+	acc.Wait(len(expected))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }

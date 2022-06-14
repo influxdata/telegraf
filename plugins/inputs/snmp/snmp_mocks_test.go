@@ -24,17 +24,17 @@ func mockExecCommand(arg0 string, args ...string) *exec.Cmd {
 // This is not a real test. This is just a way of mocking out commands.
 //
 // Idea based on https://github.com/golang/go/blob/7c31043/src/os/exec/exec_test.go#L568
-func TestMockExecCommand(t *testing.T) {
+func TestMockExecCommand(_ *testing.T) {
 	var cmd []string
 	for _, arg := range os.Args {
-		if string(arg) == "--" {
+		if arg == "--" {
 			cmd = []string{}
 			continue
 		}
 		if cmd == nil {
 			continue
 		}
-		cmd = append(cmd, string(arg))
+		cmd = append(cmd, arg)
 	}
 	if cmd == nil {
 		return
@@ -44,14 +44,20 @@ func TestMockExecCommand(t *testing.T) {
 	mcr, ok := mockedCommandResults[cmd0]
 	if !ok {
 		cv := fmt.Sprintf("%#v", cmd)[8:] // trim `[]string` prefix
+		//nolint:errcheck,revive
 		fmt.Fprintf(os.Stderr, "Unmocked command. Please add the following to `mockedCommands` in snmp_mocks_generate.go, and then run `go generate`:\n\t%s,\n", cv)
+		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
+	//nolint:errcheck,revive
 	fmt.Printf("%s", mcr.stdout)
+	//nolint:errcheck,revive
 	fmt.Fprintf(os.Stderr, "%s", mcr.stderr)
 	if mcr.exitError {
+		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
+	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
 }
 

@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package nvidia_smi
 
 import (
+	_ "embed"
 	"encoding/xml"
 	"fmt"
 	"os"
@@ -10,40 +12,42 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 const measurement = "nvidia_smi"
 
 // NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
 	BinPath string
-	Timeout internal.Duration
+	Timeout config.Duration
 }
 
-// Description returns the description of the NvidiaSMI plugin
-func (smi *NvidiaSMI) Description() string {
-	return "Pulls statistics from nvidia GPUs attached to the host"
+func (*NvidiaSMI) SampleConfig() string {
+	return sampleConfig
 }
 
-// SampleConfig returns the sample configuration for the NvidiaSMI plugin
-func (smi *NvidiaSMI) SampleConfig() string {
-	return `
-  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-  # bin_path = "/usr/bin/nvidia-smi"
+func (smi *NvidiaSMI) Init() error {
+	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
+		binPath, err := exec.LookPath("nvidia-smi")
+		// fail-fast
+		if err != nil {
+			return fmt.Errorf("nvidia-smi not found in %q and not in PATH; please make sure nvidia-smi is installed and/or is in PATH", smi.BinPath)
+		}
+		smi.BinPath = binPath
+	}
 
-  ## Optional: timeout for GPU polling
-  # timeout = "5s"
-`
+	return nil
 }
 
 // Gather implements the telegraf interface
 func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
-	if _, err := os.Stat(smi.BinPath); os.IsNotExist(err) {
-		return fmt.Errorf("nvidia-smi binary not at path %s, cannot gather GPU data", smi.BinPath)
-	}
-
 	data, err := smi.pollSMI()
 	if err != nil {
 		return err
@@ -61,14 +65,14 @@ func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
 			BinPath: "/usr/bin/nvidia-smi",
-			Timeout: internal.Duration{Duration: 5 * time.Second},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }
 
 func (smi *NvidiaSMI) pollSMI() ([]byte, error) {
 	// Construct and execute metrics query
-	ret, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, "-q", "-x"), smi.Timeout.Duration)
+	ret, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, "-q", "-x"), time.Duration(smi.Timeout))
 	if err != nil {
 		return nil, err
 	}

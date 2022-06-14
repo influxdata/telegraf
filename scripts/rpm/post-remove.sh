@@ -28,7 +28,15 @@ function disable_systemd_or_chkconfig {
             disable_chkconfig
         fi
     fi
+    if [[ $1 -ge 1 ]]; then
+        # Package upgrade, not uninstall
+
+        if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+            systemctl try-restart telegraf.service >/dev/null 2>&1 || :
+        fi
+    fi
 }
+
 
 if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
     disable_systemd_or_chkconfig

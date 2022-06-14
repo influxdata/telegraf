@@ -1,9 +1,11 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package httpjson
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,23 +13,27 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 var (
 	utf8BOM = []byte("\xef\xbb\xbf")
 )
 
-// HttpJson struct
-type HttpJson struct {
-	Name            string
+// HTTPJSON struct
+type HTTPJSON struct {
+	Name            string `toml:"name" deprecated:"1.3.0;use 'name_override', 'name_suffix', 'name_prefix' instead"`
 	Servers         []string
 	Method          string
 	TagKeys         []string
-	ResponseTimeout internal.Duration
+	ResponseTimeout config.Duration
 	Parameters      map[string]string
 	Headers         map[string]string
 	tls.ClientConfig
@@ -66,63 +72,12 @@ func (c *RealHTTPClient) HTTPClient() *http.Client {
 	return c.client
 }
 
-var sampleConfig = `
-  ## NOTE This plugin only reads numerical measurements, strings and booleans
-  ## will be ignored.
-
-  ## Name for the service being polled.  Will be appended to the name of the
-  ## measurement e.g. httpjson_webserver_stats
-  ##
-  ## Deprecated (1.3.0): Use name_override, name_suffix, name_prefix instead.
-  name = "webserver_stats"
-
-  ## URL of each server in the service's cluster
-  servers = [
-    "http://localhost:9999/stats/",
-    "http://localhost:9998/stats/",
-  ]
-  ## Set response_timeout (default 5 seconds)
-  response_timeout = "5s"
-
-  ## HTTP method to use: GET or POST (case-sensitive)
-  method = "GET"
-
-  ## List of tag names to extract from top-level of JSON server response
-  # tag_keys = [
-  #   "my_tag_1",
-  #   "my_tag_2"
-  # ]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-
-  ## HTTP parameters (all values must be strings).  For "GET" requests, data
-  ## will be included in the query.  For "POST" requests, data will be included
-  ## in the request body as "x-www-form-urlencoded".
-  # [inputs.httpjson.parameters]
-  #   event_type = "cpu_spike"
-  #   threshold = "0.75"
-
-  ## HTTP Headers (all values must be strings)
-  # [inputs.httpjson.headers]
-  #   X-Auth-Token = "my-xauth-token"
-  #   apiVersion = "v1"
-`
-
-func (h *HttpJson) SampleConfig() string {
+func (*HTTPJSON) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *HttpJson) Description() string {
-	return "Read flattened metrics from one or more JSON HTTP endpoints"
-}
-
 // Gathers data for all servers.
-func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
+func (h *HTTPJSON) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if h.client.HTTPClient() == nil {
@@ -131,12 +86,12 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: h.ResponseTimeout.Duration,
+			ResponseHeaderTimeout: time.Duration(h.ResponseTimeout),
 			TLSClientConfig:       tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   h.ResponseTimeout.Duration,
+			Timeout:   time.Duration(h.ResponseTimeout),
 		}
 		h.client.SetHTTPClient(client)
 	}
@@ -162,7 +117,7 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 //
 // Returns:
 //     error: Any error that may have occurred
-func (h *HttpJson) gatherServer(
+func (h *HTTPJSON) gatherServer(
 	acc telegraf.Accumulator,
 	serverURL string,
 ) error {
@@ -171,11 +126,11 @@ func (h *HttpJson) gatherServer(
 		return err
 	}
 
-	var msrmnt_name string
+	var msrmntName string
 	if h.Name == "" {
-		msrmnt_name = "httpjson"
+		msrmntName = "httpjson"
 	} else {
-		msrmnt_name = "httpjson_" + h.Name
+		msrmntName = "httpjson_" + h.Name
 	}
 	tags := map[string]string{
 		"server": serverURL,
@@ -183,7 +138,7 @@ func (h *HttpJson) gatherServer(
 
 	parser, err := parsers.NewParser(&parsers.Config{
 		DataFormat:  "json",
-		MetricName:  msrmnt_name,
+		MetricName:  msrmntName,
 		TagKeys:     h.TagKeys,
 		DefaultTags: tags,
 	})
@@ -207,7 +162,7 @@ func (h *HttpJson) gatherServer(
 	return nil
 }
 
-// Sends an HTTP request to the server using the HttpJson object's HTTPClient.
+// Sends an HTTP request to the server using the HTTPJSON object's HTTPClient.
 // This request can be either a GET or a POST.
 // Parameters:
 //     serverURL: endpoint to send request to
@@ -215,7 +170,7 @@ func (h *HttpJson) gatherServer(
 // Returns:
 //     string: body of the response
 //     error : Any error that may have occurred
-func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
+func (h *HTTPJSON) sendRequest(serverURL string) (string, float64, error) {
 	// Prepare URL
 	requestURL, err := url.Parse(serverURL)
 	if err != nil {
@@ -263,7 +218,7 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 	defer resp.Body.Close()
 	responseTime := time.Since(start).Seconds()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return string(body), responseTime, err
 	}
@@ -285,11 +240,9 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 
 func init() {
 	inputs.Add("httpjson", func() telegraf.Input {
-		return &HttpJson{
-			client: &RealHTTPClient{},
-			ResponseTimeout: internal.Duration{
-				Duration: 5 * time.Second,
-			},
+		return &HTTPJSON{
+			client:          &RealHTTPClient{},
+			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }

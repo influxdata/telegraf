@@ -1,6 +1,8 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package fibaro
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,26 +10,15 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 const defaultTimeout = 5 * time.Second
-
-const sampleConfig = `
-  ## Required Fibaro controller address/hostname.
-  ## Note: at the time of writing this plugin, Fibaro only implemented http - no https available
-  url = "http://<controller>:80"
-
-  ## Required credentials to access the API (http://<controller/api/<component>)
-  username = "<username>"
-  password = "<password>"
-
-  ## Amount of time allowed to complete the HTTP request
-  # timeout = "5s"
-`
-
-const description = "Read devices value(s) from a Fibaro controller"
 
 // Fibaro contains connection information
 type Fibaro struct {
@@ -37,7 +28,7 @@ type Fibaro struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
 
-	Timeout internal.Duration `toml:"timeout"`
+	Timeout config.Duration `toml:"timeout"`
 
 	client *http.Client
 }
@@ -78,12 +69,6 @@ type Devices struct {
 	} `json:"properties"`
 }
 
-// Description returns a string explaining the purpose of this plugin
-func (f *Fibaro) Description() string { return description }
-
-// SampleConfig returns text explaining how plugin should be configured
-func (f *Fibaro) SampleConfig() string { return sampleConfig }
-
 // getJSON connects, authenticates and reads JSON payload returned by Fibaro box
 func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 	var requestURL = f.URL + path
@@ -101,7 +86,7 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
+		err = fmt.Errorf("response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			requestURL,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
@@ -119,15 +104,18 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 	return nil
 }
 
+func (*Fibaro) SampleConfig() string {
+	return sampleConfig
+}
+
 // Gather fetches all required information to output metrics
 func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
-
 	if f.client == nil {
 		f.client = &http.Client{
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 			},
-			Timeout: f.Timeout.Duration,
+			Timeout: time.Duration(f.Timeout),
 		}
 	}
 
@@ -160,7 +148,7 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 	for _, device := range devices {
 		// skip device in some cases
 		if device.RoomID == 0 ||
-			device.Enabled == false ||
+			!device.Enabled ||
 			device.Properties.Dead == "true" ||
 			device.Type == "com.fibaro.zwaveDevice" {
 			continue
@@ -222,7 +210,7 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("fibaro", func() telegraf.Input {
 		return &Fibaro{
-			Timeout: internal.Duration{Duration: defaultTimeout},
+			Timeout: config.Duration(defaultTimeout),
 		}
 	})
 }

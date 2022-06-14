@@ -2,12 +2,15 @@ package mcrouter
 
 import (
 	"bufio"
+	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestAddressParsing(t *testing.T) {
@@ -30,17 +33,17 @@ func TestAddressParsing(t *testing.T) {
 	for _, args := range acceptTests {
 		address, protocol, err := m.ParseAddress(args[0])
 
-		assert.Nil(t, err, args[0])
-		assert.True(t, address == args[1], args[0])
-		assert.True(t, protocol == args[2], args[0])
+		require.Nil(t, err, args[0])
+		require.Equal(t, args[1], address, args[0])
+		require.Equal(t, args[2], protocol, args[0])
 	}
 
 	for _, addr := range rejectTests {
 		address, protocol, err := m.ParseAddress(addr)
 
-		assert.NotNil(t, err, addr)
-		assert.Empty(t, address, addr)
-		assert.Empty(t, protocol, addr)
+		require.NotNil(t, err, addr)
+		require.Empty(t, address, addr)
+		require.Empty(t, protocol, addr)
 	}
 }
 
@@ -49,13 +52,27 @@ func TestMcrouterGeneratesMetricsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	servicePort := "11211"
+	container := testutil.Container{
+		Image:        "memcached",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
+	}
+	err := container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer func() {
+		require.NoError(t, container.Terminate(), "terminating container failed")
+	}()
+
 	m := &Mcrouter{
-		Servers: []string{"tcp://" + testutil.GetLocalHost()},
+		Servers: []string{
+			fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort]),
+		},
 	}
 
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(m.Gather)
+	err = acc.GatherError(m.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{
@@ -129,11 +146,11 @@ func TestMcrouterGeneratesMetricsIntegration(t *testing.T) {
 	}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasInt64Field("mcrouter", metric), metric)
+		require.True(t, acc.HasInt64Field("mcrouter", metric), metric)
 	}
 
 	for _, metric := range floatMetrics {
-		assert.True(t, acc.HasFloatField("mcrouter", metric), metric)
+		require.True(t, acc.HasFloatField("mcrouter", metric), metric)
 	}
 }
 

@@ -1,15 +1,18 @@
 # Instrumental Output Plugin
 
-This plugin writes to the [Instrumental Collector API](https://instrumentalapp.com/docs/tcp-collector)
-and requires a Project-specific API token.
+This plugin writes to the [Instrumental Collector
+API](https://instrumentalapp.com/docs/tcp-collector) and requires a
+Project-specific API token.
 
-Instrumental accepts stats in a format very close to Graphite, with the only difference being that
-the type of stat (gauge, increment) is the first token, separated from the metric itself
-by whitespace. The `increment` type is only used if the metric comes in as a counter through `[[input.statsd]]`.
+Instrumental accepts stats in a format very close to Graphite, with the only
+difference being that the type of stat (gauge, increment) is the first token,
+separated from the metric itself by whitespace. The `increment` type is only
+used if the metric comes in as a counter through `[[input.statsd]]`.
 
-## Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# Configuration for sending metrics to an Instrumental project
 [[outputs.instrumental]]
   ## Project API Token (required)
   api_token = "API Token"  # required

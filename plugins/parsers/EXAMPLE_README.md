@@ -3,7 +3,7 @@
 This description explains at a high level what the parser does and provides
 links to where additional information about the format can be found.
 
-### Configuration
+## Configuration
 
 This section contains the sample configuration for the parser.  Since the
 configuration for a parser is not have a standalone plugin, use the `file` or
@@ -24,22 +24,23 @@ configuration for a parser is not have a standalone plugin, use the `file` or
   example_option = "example_value"
 ```
 
-#### example_option
+### example_option
 
 If an option requires a more expansive explanation than can be included inline
 in the sample configuration, it may be described here.
 
-### Metrics
+## Metrics
 
 The optional Metrics section contains details about how the parser converts
 input data into Telegraf metrics.
 
-### Examples
+## Examples
 
 The optional Examples section can show an example conversion from the input
 format using InfluxDB Line Protocol as the reference format.
 
 For line delimited text formats a diff may be appropriate:
+
 ```diff
 - cpu|host=localhost|source=example.org|value=42
 + cpu,host=localhost,source=example.org value=42
