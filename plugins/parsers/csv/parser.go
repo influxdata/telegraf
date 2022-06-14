@@ -53,6 +53,7 @@ type Parser struct {
 	DefaultTags  map[string]string
 	metadataTags map[string]string
 
+	gotInitialColumnNames bool
 	remainingSkipRows     int
 	remainingHeaderRows   int
 	remainingMetadataRows int
@@ -116,8 +117,13 @@ func (p *Parser) parseMetadataRow(haystack string) map[string]string {
 }
 
 func (p *Parser) Reset() {
-	p.gotColumnNames = len(p.ColumnNames) > 0
+	// Reset the columns if they were not user-specified
+	p.gotColumnNames = p.gotInitialColumnNames
+	if !p.gotInitialColumnNames {
+		p.ColumnNames = nil
+	}
 
+	// Reset the internal counters
 	p.remainingSkipRows = p.SkipRows
 	p.remainingHeaderRows = p.HeaderRowCount
 	p.remainingMetadataRows = p.MetadataRows
@@ -142,6 +148,7 @@ func (p *Parser) Init() error {
 		}
 	}
 
+	p.gotInitialColumnNames = len(p.ColumnNames) > 0
 	if len(p.ColumnNames) > 0 && len(p.ColumnTypes) > 0 && len(p.ColumnNames) != len(p.ColumnTypes) {
 		return fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
 	}
