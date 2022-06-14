@@ -1,13 +1,11 @@
 package logparser
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -26,7 +24,7 @@ func TestStartNoParsers(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, logparser.Start(&acc))
+	require.Error(t, logparser.Start(&acc))
 }
 
 func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
@@ -42,7 +40,7 @@ func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	err := logparser.Start(&acc)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestGrokParseLogFiles(t *testing.T) {
@@ -111,9 +109,17 @@ func TestGrokParseLogFiles(t *testing.T) {
 }
 
 func TestGrokParseLogFilesAppearLater(t *testing.T) {
-	emptydir, err := ioutil.TempDir("", "TestGrokParseLogFilesAppearLater")
+	// TODO: t.TempDir will fail on Windows because it could not remove
+	//       test.a.log file. This seems like an issue with the tail package, it
+	//       is not closing the os.File properly on Stop.
+	// === RUN   TestGrokParseLogFilesAppearLater
+	//2022/04/16 11:05:13 D! [] Tail added for file: C:\Users\circleci\AppData\Local\Temp\TestGrokParseLogFilesAppearLater3687440534\001\test_a.log
+	//2022/04/16 11:05:13 D! [] Tail dropped for file: C:\Users\circleci\AppData\Local\Temp\TestGrokParseLogFilesAppearLater3687440534\001\test_a.log
+	//    testing.go:1090: TempDir RemoveAll cleanup: CreateFile C:\Users\circleci\AppData\Local\Temp\TestGrokParseLogFilesAppearLater3687440534\001: Access is denied.
+	//--- FAIL: TestGrokParseLogFilesAppearLater (1.68s)
+	emptydir, err := os.MkdirTemp("", "TestGrokParseLogFilesAppearLater")
+	require.NoError(t, err)
 	defer os.RemoveAll(emptydir)
-	assert.NoError(t, err)
 
 	logparser := &LogParserPlugin{
 		Log:           testutil.Logger{},
@@ -127,17 +133,17 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, logparser.Start(&acc))
+	require.NoError(t, logparser.Start(&acc))
 
-	assert.Equal(t, acc.NFields(), 0)
+	require.Equal(t, acc.NFields(), 0)
 
-	input, err := ioutil.ReadFile(filepath.Join(testdataDir, "test_a.log"))
-	assert.NoError(t, err)
+	input, err := os.ReadFile(filepath.Join(testdataDir, "test_a.log"))
+	require.NoError(t, err)
 
-	err = ioutil.WriteFile(filepath.Join(emptydir, "test_a.log"), input, 0644)
-	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(emptydir, "test_a.log"), input, 0644)
+	require.NoError(t, err)
 
-	assert.NoError(t, acc.GatherError(logparser.Gather))
+	require.NoError(t, acc.GatherError(logparser.Gather))
 	acc.Wait(1)
 
 	logparser.Stop()
@@ -171,7 +177,7 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
-	assert.NoError(t, logparser.Start(&acc))
+	require.NoError(t, logparser.Start(&acc))
 
 	acc.Wait(1)
 	logparser.Stop()
@@ -203,7 +209,7 @@ func TestGrokParseLogFiles_TimestampInEpochMilli(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
-	assert.NoError(t, logparser.Start(&acc))
+	require.NoError(t, logparser.Start(&acc))
 	acc.Wait(1)
 
 	logparser.Stop()

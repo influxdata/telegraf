@@ -8,16 +8,16 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/disk"
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/mem"
-	"github.com/shirou/gopsutil/net"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
 )
 
 type PS interface {
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error)
-	DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error)
+	DiskUsage(mountPointFilter []string, mountOptsExclude []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error)
 	NetIO() ([]net.IOCountersStat, error)
 	NetProto() ([]net.ProtoCountersStat, error)
 	DiskIO(names []string) (map[string]disk.IOCountersStat, error)
@@ -34,19 +34,13 @@ type PSDiskDeps interface {
 	PSDiskUsage(path string) (*disk.UsageStat, error)
 }
 
-func add(acc telegraf.Accumulator,
-	name string, val float64, tags map[string]string) {
-	if val >= 0 {
-		acc.AddFields(name, map[string]interface{}{"value": val}, tags)
-	}
-}
-
 func NewSystemPS() *SystemPS {
-	return &SystemPS{&SystemPSDisk{}}
+	return &SystemPS{PSDiskDeps: &SystemPSDisk{}}
 }
 
 type SystemPS struct {
 	PSDiskDeps
+	Log telegraf.Logger `toml:"-"`
 }
 
 type SystemPSDisk struct{}
@@ -54,24 +48,50 @@ type SystemPSDisk struct{}
 func (s *SystemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	var cpuTimes []cpu.TimesStat
 	if perCPU {
-		if perCPUTimes, err := cpu.Times(true); err == nil {
-			cpuTimes = append(cpuTimes, perCPUTimes...)
-		} else {
+		perCPUTimes, err := cpu.Times(true)
+		if err != nil {
 			return nil, err
 		}
+		cpuTimes = append(cpuTimes, perCPUTimes...)
 	}
 	if totalCPU {
-		if totalCPUTimes, err := cpu.Times(false); err == nil {
-			cpuTimes = append(cpuTimes, totalCPUTimes...)
-		} else {
+		totalCPUTimes, err := cpu.Times(false)
+		if err != nil {
 			return nil, err
 		}
+		cpuTimes = append(cpuTimes, totalCPUTimes...)
 	}
 	return cpuTimes, nil
 }
 
+type set struct {
+	m map[string]struct{}
+}
+
+func (s *set) empty() bool {
+	return len(s.m) == 0
+}
+
+func (s *set) add(key string) {
+	s.m[key] = struct{}{}
+}
+
+func (s *set) has(key string) bool {
+	var ok bool
+	_, ok = s.m[key]
+	return ok
+}
+
+func newSet() *set {
+	s := &set{
+		m: make(map[string]struct{}),
+	}
+	return s
+}
+
 func (s *SystemPS) DiskUsage(
 	mountPointFilter []string,
+	mountOptsExclude []string,
 	fstypeExclude []string,
 ) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
 	parts, err := s.Partitions(true)
@@ -79,56 +99,74 @@ func (s *SystemPS) DiskUsage(
 		return nil, nil, err
 	}
 
-	// Make a "set" out of the filter slice
-	mountPointFilterSet := make(map[string]bool)
+	mountPointFilterSet := newSet()
 	for _, filter := range mountPointFilter {
-		mountPointFilterSet[filter] = true
+		mountPointFilterSet.add(filter)
 	}
-	fstypeExcludeSet := make(map[string]bool)
+	mountOptFilterSet := newSet()
+	for _, filter := range mountOptsExclude {
+		mountOptFilterSet.add(filter)
+	}
+	fstypeExcludeSet := newSet()
 	for _, filter := range fstypeExclude {
-		fstypeExcludeSet[filter] = true
+		fstypeExcludeSet.add(filter)
 	}
-	paths := make(map[string]bool)
+	paths := newSet()
 	for _, part := range parts {
-		paths[part.Mountpoint] = true
+		paths.add(part.Mountpoint)
 	}
 
 	// Autofs mounts indicate a potential mount, the partition will also be
 	// listed with the actual filesystem when mounted.  Ignore the autofs
 	// partition to avoid triggering a mount.
-	fstypeExcludeSet["autofs"] = true
+	fstypeExcludeSet.add("autofs")
 
 	var usage []*disk.UsageStat
 	var partitions []*disk.PartitionStat
 	hostMountPrefix := s.OSGetenv("HOST_MOUNT_PREFIX")
 
+partitionRange:
 	for i := range parts {
 		p := parts[i]
 
-		if len(mountPointFilter) > 0 {
-			// If the mount point is not a member of the filter set,
-			// don't gather info on it.
-			if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
-				continue
+		for _, o := range p.Opts {
+			if !mountOptFilterSet.empty() && mountOptFilterSet.has(o) {
+				continue partitionRange
 			}
+		}
+		// If there is a filter set and if the mount point is not a
+		// member of the filter set, don't gather info on it.
+		if !mountPointFilterSet.empty() && !mountPointFilterSet.has(p.Mountpoint) {
+			continue
 		}
 
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
-		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
+		if fstypeExcludeSet.has(p.Fstype) {
 			continue
 		}
 
-		// If there's a host mount prefix, exclude any paths which conflict
-		// with the prefix.
-		if len(hostMountPrefix) > 0 &&
-			!strings.HasPrefix(p.Mountpoint, hostMountPrefix) &&
-			paths[hostMountPrefix+p.Mountpoint] {
-			continue
+		// If there's a host mount prefix use it as newer gopsutil version check for
+		// the init's mountpoints usually pointing to the host-mountpoint but in the
+		// container. This won't work for checking the disk-usage as the disks are
+		// mounted at HOST_MOUNT_PREFIX...
+		mountpoint := p.Mountpoint
+		if hostMountPrefix != "" && !strings.HasPrefix(p.Mountpoint, hostMountPrefix) {
+			mountpoint = filepath.Join(hostMountPrefix, p.Mountpoint)
+			// Exclude conflicting paths
+			if paths.has(mountpoint) {
+				if s.Log != nil {
+					s.Log.Debugf("[SystemPS] => dropped by mount prefix (%q): %q", mountpoint, hostMountPrefix)
+				}
+				continue
+			}
 		}
 
-		du, err := s.PSDiskUsage(p.Mountpoint)
+		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
+			if s.Log != nil {
+				s.Log.Debugf("[SystemPS] => unable to get disk usage (%q): %v", mountpoint, err)
+			}
 			continue
 		}
 
@@ -155,7 +193,7 @@ func (s *SystemPS) NetConnections() ([]net.ConnectionStat, error) {
 
 func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
 	m, err := disk.IOCounters(names...)
-	if err == internal.NotImplementedError {
+	if err == internal.ErrorNotImplemented {
 		return nil, nil
 	}
 

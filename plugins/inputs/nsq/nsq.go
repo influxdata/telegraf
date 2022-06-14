@@ -1,3 +1,4 @@
+//go:generate ../../../tools/readme_config_includer/generator
 // The MIT License (MIT)
 //
 // Copyright (c) 2015 Jeff Nickoloff (jeff@allingeek.com)
@@ -23,9 +24,10 @@
 package nsq
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -37,24 +39,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
+
 // Might add Lookupd endpoints for cluster discovery
 type NSQ struct {
 	Endpoints []string
 	tls.ClientConfig
 	httpClient *http.Client
 }
-
-var sampleConfig = `
-  ## An array of NSQD HTTP API endpoints
-  endpoints  = ["http://localhost:4151"]
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
 
 const (
 	requestPattern = `%s/stats?format=json`
@@ -70,19 +64,15 @@ func New() *NSQ {
 	return &NSQ{}
 }
 
-func (n *NSQ) SampleConfig() string {
+func (*NSQ) SampleConfig() string {
 	return sampleConfig
-}
-
-func (n *NSQ) Description() string {
-	return "Read NSQ topic and channel statistics."
 }
 
 func (n *NSQ) Gather(acc telegraf.Accumulator) error {
 	var err error
 
 	if n.httpClient == nil {
-		n.httpClient, err = n.getHttpClient()
+		n.httpClient, err = n.getHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -101,7 +91,7 @@ func (n *NSQ) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NSQ) getHttpClient() (*http.Client, error) {
+func (n *NSQ) getHTTPClient() (*http.Client, error) {
 	tlsConfig, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -111,7 +101,7 @@ func (n *NSQ) getHttpClient() (*http.Client, error) {
 	}
 	httpClient := &http.Client{
 		Transport: tr,
-		Timeout:   time.Duration(4 * time.Second),
+		Timeout:   4 * time.Second,
 	}
 	return httpClient, nil
 }
@@ -123,7 +113,7 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 	}
 	r, err := n.httpClient.Get(u.String())
 	if err != nil {
-		return fmt.Errorf("Error while polling %s: %s", u.String(), err)
+		return fmt.Errorf("error while polling %s: %s", u.String(), err)
 	}
 	defer r.Body.Close()
 
@@ -131,22 +121,22 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 		return fmt.Errorf("%s returned HTTP status %s", u.String(), r.Status)
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return fmt.Errorf(`Error reading body: %s`, err)
+		return fmt.Errorf(`error reading body: %s`, err)
 	}
 
 	data := &NSQStatsData{}
 	err = json.Unmarshal(body, data)
 	if err != nil {
-		return fmt.Errorf(`Error parsing response: %s`, err)
+		return fmt.Errorf(`error parsing response: %s`, err)
 	}
 	// Data was not parsed correctly attempt to use old format.
 	if len(data.Version) < 1 {
 		wrapper := &NSQStats{}
 		err = json.Unmarshal(body, wrapper)
 		if err != nil {
-			return fmt.Errorf(`Error parsing response: %s`, err)
+			return fmt.Errorf(`error parsing response: %s`, err)
 		}
 		data = &wrapper.Data
 	}
@@ -176,7 +166,7 @@ func buildURL(e string) (*url.URL, error) {
 	u := fmt.Sprintf(requestPattern, e)
 	addr, err := url.Parse(u)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse address '%s': %s", u, err)
+		return nil, fmt.Errorf("unable to parse address '%s': %s", u, err)
 	}
 	return addr, nil
 }

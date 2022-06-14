@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -44,13 +44,13 @@ func TestJobRequest(t *testing.T) {
 	}
 	for _, test := range tests {
 		hierarchyName := test.input.hierarchyName()
-		URL := test.input.URL()
+		address := test.input.URL()
 		if hierarchyName != test.hierarchyName {
 			t.Errorf("Expected %s, got %s\n", test.hierarchyName, hierarchyName)
 		}
 
-		if test.URL != "" && URL != test.URL {
-			t.Errorf("Expected %s, got %s\n", test.URL, URL)
+		if test.URL != "" && address != test.URL {
+			t.Errorf("Expected %s, got %s\n", test.URL, address)
 		}
 	}
 }
@@ -97,6 +97,8 @@ func (h mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+	// Ignore the returned error as the tests will fail anyway
+	//nolint:errcheck,revive
 	w.Write(b)
 }
 
@@ -154,7 +156,7 @@ func TestGatherNodeData(t *testing.T) {
 			},
 		},
 		{
-			name: "filtered nodes",
+			name: "filtered nodes (excluded)",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
 					"/api/json": struct{}{},
@@ -164,6 +166,35 @@ func TestGatherNodeData(t *testing.T) {
 						Computers: []node{
 							{DisplayName: "ignore-1"},
 							{DisplayName: "ignore-2"},
+						},
+					},
+				},
+			},
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"source": "127.0.0.1",
+						},
+						Fields: map[string]interface{}{
+							"busy_executors":  4,
+							"total_executors": 8,
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "filtered nodes (included)",
+			input: mockHandler{
+				responseMap: map[string]interface{}{
+					"/api/json": struct{}{},
+					"/computer/api/json": nodeResponse{
+						BusyExecutors:  4,
+						TotalExecutors: 8,
+						Computers: []node{
+							{DisplayName: "filtered-1"},
+							{DisplayName: "filtered-1"},
 						},
 					},
 				},
@@ -302,8 +333,9 @@ func TestGatherNodeData(t *testing.T) {
 			j := &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             ts.URL,
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				ResponseTimeout: config.Duration(time.Microsecond),
 				NodeExclude:     []string{"ignore-1", "ignore-2"},
+				NodeInclude:     []string{"master", "slave"},
 			}
 			te := j.initialize(&http.Client{Transport: &http.Transport{}})
 			acc := new(testutil.Accumulator)
@@ -358,7 +390,7 @@ func TestInitialize(t *testing.T) {
 			input: &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             "http://a bad url",
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				ResponseTimeout: config.Duration(time.Microsecond),
 			},
 			wantErr: true,
 		},
@@ -367,7 +399,7 @@ func TestInitialize(t *testing.T) {
 			input: &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             ts.URL,
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				ResponseTimeout: config.Duration(time.Microsecond),
 				JobInclude:      []string{"jobA", "jobB"},
 				JobExclude:      []string{"job1", "job2"},
 				NodeExclude:     []string{"node1", "node2"},
@@ -378,7 +410,7 @@ func TestInitialize(t *testing.T) {
 			input: &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             ts.URL,
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				ResponseTimeout: config.Duration(time.Microsecond),
 			},
 			output: &Jenkins{
 				Log:               testutil.Logger{},
@@ -397,7 +429,7 @@ func TestInitialize(t *testing.T) {
 			}
 			if test.output != nil {
 				if test.input.client == nil {
-					t.Fatalf("%s: failed %s, jenkins instance shouldn't be nil", test.name, te.Error())
+					t.Fatalf("%s: failed %v, jenkins instance shouldn't be nil", test.name, te)
 				}
 				if test.input.MaxConnections != test.output.MaxConnections {
 					t.Fatalf("%s: different MaxConnections Expected %d, got %d\n", test.name, test.output.MaxConnections, test.input.MaxConnections)
@@ -805,8 +837,8 @@ func TestGatherJobs(t *testing.T) {
 			j := &Jenkins{
 				Log:             testutil.Logger{},
 				URL:             ts.URL,
-				MaxBuildAge:     internal.Duration{Duration: time.Hour},
-				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				MaxBuildAge:     config.Duration(time.Hour),
+				ResponseTimeout: config.Duration(time.Microsecond),
 				JobInclude: []string{
 					"*",
 				},
@@ -846,7 +878,6 @@ func TestGatherJobs(t *testing.T) {
 						}
 					}
 				}
-
 			}
 		})
 	}

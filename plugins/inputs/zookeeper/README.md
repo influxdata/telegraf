@@ -3,9 +3,9 @@
 The zookeeper plugin collects variables outputted from the 'mntr' command
 [Zookeeper Admin](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html).
 
-### Configuration
+## Configuration
 
-```toml
+```toml @sample.conf
 # Reads 'mntr' stats from one or many zookeeper servers
 [[inputs.zookeeper]]
   ## An array of address to gather stats about. Specify an ip or hostname
@@ -27,7 +27,7 @@ The zookeeper plugin collects variables outputted from the 'mntr' command
   # insecure_skip_verify = true
 ```
 
-### Metrics:
+## Metrics
 
 Exact field names are based on Zookeeper response and may vary between
 configuration, platform, and version.
@@ -56,9 +56,10 @@ configuration, platform, and version.
     - synced_followers (integer, leader only)
     - pending_syncs (integer, leader only)
 
-### Debugging:
+## Debugging
 
 If you have any issues please check the direct Zookeeper output using netcat:
+
 ```sh
 $ echo mntr | nc localhost 2181
 zk_version      3.4.9-3--1, built on Thu, 01 Jun 2017 16:26:44 -0700
@@ -78,8 +79,8 @@ zk_open_file_descriptor_count   44
 zk_max_file_descriptor_count    4096
 ```
 
-### Example Output
+## Example Output
 
-```
+```shell
 zookeeper,server=localhost,port=2181,state=standalone ephemerals_count=0i,approximate_data_size=10044i,open_file_descriptor_count=44i,max_latency=0i,packets_received=7i,outstanding_requests=0i,znode_count=129i,max_file_descriptor_count=4096i,version="3.4.9-3--1",avg_latency=0i,packets_sent=6i,num_alive_connections=1i,watch_count=0i,min_latency=0i 1522351112000000000
 ```

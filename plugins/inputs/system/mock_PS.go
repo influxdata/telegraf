@@ -5,13 +5,13 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/disk"
-	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
 
-	"github.com/shirou/gopsutil/load"
-	"github.com/shirou/gopsutil/mem"
-	"github.com/shirou/gopsutil/net"
+	"github.com/shirou/gopsutil/v3/load"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
 )
 
 type MockPS struct {
@@ -37,7 +37,7 @@ func (m *MockPS) LoadAvg() (*load.AvgStat, error) {
 	return r0, r1
 }
 
-func (m *MockPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
+func (m *MockPS) CPUTimes(_, _ bool) ([]cpu.TimesStat, error) {
 	ret := m.Called()
 
 	r0 := ret.Get(0).([]cpu.TimesStat)
@@ -46,8 +46,8 @@ func (m *MockPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	return r0, r1
 }
 
-func (m *MockPS) DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
-	ret := m.Called(mountPointFilter, fstypeExclude)
+func (m *MockPS) DiskUsage(mountPointFilter []string, mountOptsExclude []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
+	ret := m.Called(mountPointFilter, mountOptsExclude, fstypeExclude)
 
 	r0 := ret.Get(0).([]*disk.UsageStat)
 	r1 := ret.Get(1).([]*disk.PartitionStat)
@@ -74,7 +74,7 @@ func (m *MockPS) NetProto() ([]net.ProtoCountersStat, error) {
 	return r0, r1
 }
 
-func (m *MockPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
+func (m *MockPS) DiskIO(_ []string) (map[string]disk.IOCountersStat, error) {
 	ret := m.Called()
 
 	r0 := ret.Get(0).(map[string]disk.IOCountersStat)

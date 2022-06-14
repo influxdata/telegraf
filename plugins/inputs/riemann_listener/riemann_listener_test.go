@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
 	riemanngo "github.com/riemann/riemann-go-client"
 	"github.com/stretchr/testify/require"
-	"gotest.tools/assert"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSocketListener_tcp(t *testing.T) {
@@ -18,38 +18,36 @@ func TestSocketListener_tcp(t *testing.T) {
 	sl := newRiemannSocketListener()
 	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "tcp://127.0.0.1:5555"
-	sl.ReadBufferSize = internal.Size{Size: 1024}
+	sl.ReadBufferSize = config.Size(1024)
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	testStats(t, sl)
-	testMissingService(t, sl)
+	testStats(t)
+	testMissingService(t)
 }
-func testStats(t *testing.T, sl *RiemannSocketListener) {
+
+func testStats(t *testing.T) {
 	c := riemanngo.NewTCPClient("127.0.0.1:5555", 5*time.Second)
 	err := c.Connect()
-	if err != nil {
-		log.Println("Error")
-		panic(err)
-	}
+	require.NoError(t, err)
 	defer c.Close()
 	result, err := riemanngo.SendEvent(c, &riemanngo.Event{
 		Service: "hello",
 	})
-	assert.Equal(t, result.GetOk(), true)
-
+	require.NoError(t, err)
+	require.Equal(t, result.GetOk(), true)
 }
-func testMissingService(t *testing.T, sl *RiemannSocketListener) {
+
+func testMissingService(t *testing.T) {
 	c := riemanngo.NewTCPClient("127.0.0.1:5555", 5*time.Second)
 	err := c.Connect()
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 	defer c.Close()
 	result, err := riemanngo.SendEvent(c, &riemanngo.Event{})
-	assert.Equal(t, result.GetOk(), false)
-
+	require.Equal(t, false, result.GetOk())
+	require.Equal(t, "No Service Name", result.GetError())
+	require.NoError(t, err)
 }

@@ -1,9 +1,14 @@
 # NSQ Input Plugin
 
-### Configuration:
+This plugin gathers metrics from [NSQ](https://nsq.io/).
 
-```toml
-# Description
+See the [NSQD API docs](https://nsq.io/components/nsqd.html) for endpoints that
+the plugin can read.
+
+## Configuration
+
+```toml @sample.conf
+# Read NSQ topic and channel statistics.
 [[inputs.nsq]]
   ## An array of NSQD HTTP API endpoints
   endpoints  = ["http://localhost:4151"]

@@ -1,0 +1,104 @@
+[
+  {
+    "arguments": {},
+    "auto_delete": false,
+    "durable": true,
+    "internal": false,
+    "message_stats": {
+      "publish_in": 284725,
+      "publish_in_details": {
+        "rate": 0
+      },
+      "publish_out": 284572,
+      "publish_out_details": {
+        "rate": 0
+      }
+    },
+    "name": "",
+    "type": "direct",
+    "user_who_performed_action": "rmq-internal",
+    "vhost": "/"
+  },
+  {
+    "arguments": {
+      "x-expires": 300000
+    },
+    "auto_delete": true,
+    "durable": false,
+    "internal": false,
+    "message_stats": {
+      "publish_in": 18006,
+      "publish_in_details": {
+        "rate": 0
+      },
+      "publish_out": 60798,
+      "publish_out_details": {
+        "rate": 0
+      }
+    },
+    "name": "Exchange",
+    "type": "topic",
+    "user_who_performed_action": "user",
+    "vhost": "/"
+  },
+  {
+    "arguments": {},
+    "auto_delete": false,
+    "durable": true,
+    "internal": false,
+    "name": "amq.direct",
+    "type": "direct",
+    "user_who_performed_action": "rmq-internal",
+    "vhost": "/"
+  },
+  {
+    "arguments": {},
+    "auto_delete": false,
+    "durable": true,
+    "internal": false,
+    "name": "amq.fanout",
+    "type": "fanout",
+    "user_who_performed_action": "rmq-internal",
+    "vhost": "/"
+  },
+  {
+    "arguments": {},
+    "auto_delete": false,
+    "durable": true,
+    "internal": false,
+    "name": "amq.headers",
+    "type": "headers",
+    "user_who_performed_action": "rmq-internal",
+    "vhost": "/"
+  },
+  {
+    "arguments": {},
+    "auto_delete": false,
+    "durable": true,
+    "internal": false,
+    "name": "amq.match",
+    "type": "headers",
+    "user_who_performed_action": "rmq-internal",
+    "vhost": "/"
+  },
+  {
+    "arguments": {},
+    "auto_delete": false,
+    "durable": true,
+    "internal": true,
+    "name": "amq.rabbitmq.trace",
+    "type": "topic",
+    "user_who_performed_action": "rmq-internal",
+    "vhost": "/"
+  },
+  {
+    "arguments": {},
+    "auto_delete": false,
+    "durable": true,
+    "internal": false,
+    "name": "amq.topic",
+    "type": "topic",
+    "user_who_performed_action": "rmq-internal",
+    "vhost": "/"
+  }
+]

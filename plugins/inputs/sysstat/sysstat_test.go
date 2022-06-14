@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package sysstat
@@ -9,28 +10,10 @@ import (
 	"path"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
 )
-
-var s = Sysstat{
-	Log:        testutil.Logger{},
-	interval:   10,
-	Sadc:       "/usr/lib/sa/sadc",
-	Sadf:       "/usr/bin/sadf",
-	Group:      false,
-	Activities: []string{"DISK", "SNMP"},
-	Options: map[string]string{
-		"C": "cpu",
-		"d": "disk",
-	},
-	DeviceTags: map[string][]map[string]string{
-		"sda": {
-			{
-				"vg": "rootvg",
-			},
-		},
-	},
-}
 
 func TestGather(t *testing.T) {
 	// overwriting exec commands with mock commands
@@ -38,10 +21,27 @@ func TestGather(t *testing.T) {
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(s.Gather)
-	if err != nil {
-		t.Fatal(err)
+	s := &Sysstat{
+		Log:        testutil.Logger{},
+		interval:   10,
+		Sadc:       "/usr/lib/sa/sadc",
+		Sadf:       "/usr/bin/sadf",
+		Group:      false,
+		Activities: []string{"DISK", "SNMP"},
+		Options: map[string]string{
+			"C": "cpu",
+			"d": "disk",
+		},
+		DeviceTags: map[string][]map[string]string{
+			"sda": {
+				{
+					"vg": "rootvg",
+				},
+			},
+		},
 	}
+	require.NoError(t, s.Init())
+	require.NoError(t, acc.GatherError(s.Gather))
 
 	cpuTags := map[string]string{"device": "all"}
 	diskTags := map[string]string{"device": "sda", "vg": "rootvg"}
@@ -155,16 +155,32 @@ func TestGather(t *testing.T) {
 }
 
 func TestGatherGrouped(t *testing.T) {
-	s.Group = true
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
 	defer func() { execCommand = exec.Command }()
 	var acc testutil.Accumulator
 
-	err := acc.GatherError(s.Gather)
-	if err != nil {
-		t.Fatal(err)
+	s := &Sysstat{
+		Log:        testutil.Logger{},
+		interval:   10,
+		Sadc:       "/usr/lib/sa/sadc",
+		Sadf:       "/usr/bin/sadf",
+		Group:      true,
+		Activities: []string{"DISK", "SNMP"},
+		Options: map[string]string{
+			"C": "cpu",
+			"d": "disk",
+		},
+		DeviceTags: map[string][]map[string]string{
+			"sda": {
+				{
+					"vg": "rootvg",
+				},
+			},
+		},
 	}
+	require.NoError(t, s.Init())
+	require.NoError(t, acc.GatherError(s.Gather))
 
 	var tests = []struct {
 		measurement string
@@ -303,9 +319,11 @@ dell-xps	5	2016-03-25 16:18:10 UTC	sdb	%util	0.30
 
 	switch path.Base(cmd) {
 	case "sadf":
-		fmt.Fprint(os.Stdout, mockData[args[3]])
+		_, err := fmt.Fprint(os.Stdout, mockData[args[3]])
+		require.NoError(t, err)
 	default:
 	}
 	// some code here to check arguments perhaps?
+	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
 }

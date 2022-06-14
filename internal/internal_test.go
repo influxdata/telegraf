@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"crypto/rand"
 	"io"
-	"io/ioutil"
 	"log"
 	"os/exec"
 	"regexp"
@@ -46,7 +45,7 @@ func TestSnakeCase(t *testing.T) {
 }
 
 var (
-	sleepbin, _ = exec.LookPath("sleep")
+	sleepbin, _ = exec.LookPath("sleep") //nolint:unused // Used in skipped tests
 	echobin, _  = exec.LookPath("echo")
 	shell, _    = exec.LookPath("sh")
 )
@@ -62,7 +61,7 @@ func TestRunTimeout(t *testing.T) {
 	err := RunTimeout(cmd, time.Millisecond*20)
 	elapsed := time.Since(start)
 
-	assert.Equal(t, TimeoutErr, err)
+	assert.Equal(t, ErrTimeout, err)
 	// Verify that command gets killed in 20ms, with some breathing room
 	assert.True(t, elapsed < time.Millisecond*75)
 }
@@ -102,7 +101,7 @@ func TestCombinedOutputTimeout(t *testing.T) {
 	_, err := CombinedOutputTimeout(cmd, time.Millisecond*20)
 	elapsed := time.Since(start)
 
-	assert.Equal(t, TimeoutErr, err)
+	assert.Equal(t, ErrTimeout, err)
 	// Verify that command gets killed in 20ms, with some breathing room
 	assert.True(t, elapsed < time.Millisecond*75)
 }
@@ -171,52 +170,6 @@ func TestRandomSleep(t *testing.T) {
 	assert.True(t, elapsed < time.Millisecond*150)
 }
 
-func TestDuration(t *testing.T) {
-	var d Duration
-
-	d.UnmarshalTOML([]byte(`"1s"`))
-	assert.Equal(t, time.Second, d.Duration)
-
-	d = Duration{}
-	d.UnmarshalTOML([]byte(`1s`))
-	assert.Equal(t, time.Second, d.Duration)
-
-	d = Duration{}
-	d.UnmarshalTOML([]byte(`'1s'`))
-	assert.Equal(t, time.Second, d.Duration)
-
-	d = Duration{}
-	d.UnmarshalTOML([]byte(`10`))
-	assert.Equal(t, 10*time.Second, d.Duration)
-
-	d = Duration{}
-	d.UnmarshalTOML([]byte(`1.5`))
-	assert.Equal(t, time.Second, d.Duration)
-}
-
-func TestSize(t *testing.T) {
-	var s Size
-
-	s.UnmarshalTOML([]byte(`"1B"`))
-	assert.Equal(t, int64(1), s.Size)
-
-	s = Size{}
-	s.UnmarshalTOML([]byte(`1`))
-	assert.Equal(t, int64(1), s.Size)
-
-	s = Size{}
-	s.UnmarshalTOML([]byte(`'1'`))
-	assert.Equal(t, int64(1), s.Size)
-
-	s = Size{}
-	s.UnmarshalTOML([]byte(`"1GB"`))
-	assert.Equal(t, int64(1000*1000*1000), s.Size)
-
-	s = Size{}
-	s.UnmarshalTOML([]byte(`"12GiB"`))
-	assert.Equal(t, int64(12*1024*1024*1024), s.Size)
-}
-
 func TestCompressWithGzip(t *testing.T) {
 	testData := "the quick brown fox jumps over the lazy dog"
 	inputBuffer := bytes.NewBuffer([]byte(testData))
@@ -228,7 +181,7 @@ func TestCompressWithGzip(t *testing.T) {
 	assert.NoError(t, err)
 	defer gzipReader.Close()
 
-	output, err := ioutil.ReadAll(gzipReader)
+	output, err := io.ReadAll(gzipReader)
 	assert.NoError(t, err)
 
 	assert.Equal(t, testData, string(output))
@@ -249,7 +202,7 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 	rc, err := CompressWithGzip(mr)
 	assert.NoError(t, err)
 
-	n, err := io.CopyN(ioutil.Discard, rc, 10000)
+	n, err := io.CopyN(io.Discard, rc, 10000)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(10000), n)
 
@@ -257,7 +210,7 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 	err = rc.Close()
 	assert.NoError(t, err)
 
-	n, err = io.CopyN(ioutil.Discard, rc, 10000)
+	n, err = io.CopyN(io.Discard, rc, 10000)
 	assert.Error(t, io.EOF, err)
 	assert.Equal(t, int64(0), n)
 
@@ -273,7 +226,7 @@ func TestVersionAlreadySet(t *testing.T) {
 	err = SetVersion("bar")
 
 	assert.Error(t, err)
-	assert.IsType(t, VersionAlreadySetError, err)
+	assert.IsType(t, ErrorVersionAlreadySet, err)
 
 	assert.Equal(t, "foo", Version())
 }
@@ -367,9 +320,84 @@ func TestAlignTime(t *testing.T) {
 func TestParseTimestamp(t *testing.T) {
 	rfc3339 := func(value string) time.Time {
 		tm, err := time.Parse(time.RFC3339Nano, value)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, err)
+		return tm
+	}
+	ansic := func(value string) time.Time {
+		tm, err := time.Parse(time.ANSIC, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	unixdate := func(value string) time.Time {
+		tm, err := time.Parse(time.UnixDate, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rubydate := func(value string) time.Time {
+		tm, err := time.Parse(time.RubyDate, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc822 := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC822, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc822z := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC822Z, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc850 := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC850, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc1123 := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC1123, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc1123z := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC1123Z, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	rfc3339nano := func(value string) time.Time {
+		tm, err := time.Parse(time.RFC3339Nano, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	stamp := func(value string) time.Time {
+		tm, err := time.Parse(time.Stamp, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	stampmilli := func(value string) time.Time {
+		tm, err := time.Parse(time.StampMilli, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	stampmicro := func(value string) time.Time {
+		tm, err := time.Parse(time.StampMicro, value)
+		require.NoError(t, err)
+		return tm
+	}
+
+	stampnano := func(value string) time.Time {
+		tm, err := time.Parse(time.StampNano, value)
+		require.NoError(t, err)
 		return tm
 	}
 
@@ -466,6 +494,111 @@ func TestParseTimestamp(t *testing.T) {
 			format:    "unix_ns",
 			timestamp: "1568338208000000500",
 			expected:  rfc3339("2019-09-13T01:30:08.000000500Z"),
+		},
+		{
+			name:      "rfc339 test",
+			format:    "RFC3339",
+			timestamp: "2018-10-26T13:30:33Z",
+			expected:  rfc3339("2018-10-26T13:30:33Z"),
+		},
+
+		{
+			name:      "ANSIC",
+			format:    "ANSIC",
+			timestamp: "Mon Jan 2 15:04:05 2006",
+			expected:  ansic("Mon Jan 2 15:04:05 2006"),
+		},
+
+		{
+			name:      "UnixDate",
+			format:    "UnixDate",
+			timestamp: "Mon Jan 2 15:04:05 MST 2006",
+			expected:  unixdate("Mon Jan 2 15:04:05 MST 2006"),
+			location:  "Local",
+		},
+
+		{
+			name:      "RubyDate",
+			format:    "RubyDate",
+			timestamp: "Mon Jan 02 15:04:05 -0700 2006",
+			expected:  rubydate("Mon Jan 02 15:04:05 -0700 2006"),
+			location:  "Local",
+		},
+
+		{
+			name:      "RFC822",
+			format:    "RFC822",
+			timestamp: "02 Jan 06 15:04 MST",
+			expected:  rfc822("02 Jan 06 15:04 MST"),
+			location:  "Local",
+		},
+
+		{
+			name:      "RFC822Z",
+			format:    "RFC822Z",
+			timestamp: "02 Jan 06 15:04 -0700",
+			expected:  rfc822z("02 Jan 06 15:04 -0700"),
+			location:  "Local",
+		},
+
+		{
+			name:      "RFC850",
+			format:    "RFC850",
+			timestamp: "Monday, 02-Jan-06 15:04:05 MST",
+			expected:  rfc850("Monday, 02-Jan-06 15:04:05 MST"),
+			location:  "Local",
+		},
+
+		{
+			name:      "RFC1123",
+			format:    "RFC1123",
+			timestamp: "Mon, 02 Jan 2006 15:04:05 MST",
+			expected:  rfc1123("Mon, 02 Jan 2006 15:04:05 MST"),
+			location:  "Local",
+		},
+
+		{
+			name:      "RFC1123Z",
+			format:    "RFC1123Z",
+			timestamp: "Mon, 02 Jan 2006 15:04:05 -0700",
+			expected:  rfc1123z("Mon, 02 Jan 2006 15:04:05 -0700"),
+			location:  "Local",
+		},
+
+		{
+			name:      "RFC3339Nano",
+			format:    "RFC3339Nano",
+			timestamp: "2006-01-02T15:04:05.999999999-07:00",
+			expected:  rfc3339nano("2006-01-02T15:04:05.999999999-07:00"),
+			location:  "Local",
+		},
+
+		{
+			name:      "Stamp",
+			format:    "Stamp",
+			timestamp: "Jan 2 15:04:05",
+			expected:  stamp("Jan 2 15:04:05"),
+		},
+
+		{
+			name:      "StampMilli",
+			format:    "StampMilli",
+			timestamp: "Jan 2 15:04:05.000",
+			expected:  stampmilli("Jan 2 15:04:05.000"),
+		},
+
+		{
+			name:      "StampMicro",
+			format:    "StampMicro",
+			timestamp: "Jan 2 15:04:05.000000",
+			expected:  stampmicro("Jan 2 15:04:05.000000"),
+		},
+
+		{
+			name:      "StampNano",
+			format:    "StampNano",
+			timestamp: "Jan 2 15:04:05.000000000",
+			expected:  stampnano("Jan 2 15:04:05.000000000"),
 		},
 	}
 	for _, tt := range tests {

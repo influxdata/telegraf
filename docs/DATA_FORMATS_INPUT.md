@@ -12,11 +12,14 @@ Protocol or in JSON format.
 - [Grok](/plugins/parsers/grok)
 - [InfluxDB Line Protocol](/plugins/parsers/influx)
 - [JSON](/plugins/parsers/json)
+- [JSON v2](/plugins/parsers/json_v2)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
 - [Prometheus](/plugins/parsers/prometheus)
+- [PrometheusRemoteWrite](/plugins/parsers/prometheusremotewrite)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
 - [Wavefront](/plugins/parsers/wavefront)
+- [XPath](/plugins/parsers/xpath) (supports XML, JSON, MessagePack, Protocol Buffers)
 
 Any input plugin containing the `data_format` option can use it to select the
 desired parser:

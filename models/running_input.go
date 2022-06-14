@@ -60,6 +60,7 @@ type InputConfig struct {
 	Alias            string
 	Interval         time.Duration
 	CollectionJitter time.Duration
+	CollectionOffset time.Duration
 	Precision        time.Duration
 
 	NameOverride      string

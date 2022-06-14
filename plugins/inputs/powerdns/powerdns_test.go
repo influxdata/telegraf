@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -51,7 +50,6 @@ var intOverflowMetrics = "corrupt-packets=18446744073709550195,deferred-cache-in
 	"signature-cache-size=0,sys-msec=2889,uptime=86317,user-msec=2167,"
 
 func (s statServer) serverSocket(l net.Listener) {
-
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -64,7 +62,11 @@ func (s statServer) serverSocket(l net.Listener) {
 
 			data := buf[:n]
 			if string(data) == "show * \n" {
+				// Ignore the returned error as we need to close the socket anyway
+				//nolint:errcheck,revive
 				c.Write([]byte(metrics))
+				// Ignore the returned error as we cannot do anything about it anyway
+				//nolint:errcheck,revive
 				c.Close()
 			}
 		}(conn)
@@ -105,12 +107,16 @@ func TestPowerdnsGeneratesMetrics(t *testing.T) {
 		"meta-cache-size", "qsize-q", "signature-cache-size", "sys-msec", "uptime", "user-msec"}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasInt64Field("powerdns", metric), metric)
+		require.True(t, acc.HasInt64Field("powerdns", metric), metric)
 	}
 }
 
 func TestPowerdnsParseMetrics(t *testing.T) {
-	values := parseResponse(metrics)
+	p := &Powerdns{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(metrics)
 
 	tests := []struct {
 		key   string
@@ -170,7 +176,11 @@ func TestPowerdnsParseMetrics(t *testing.T) {
 }
 
 func TestPowerdnsParseCorruptMetrics(t *testing.T) {
-	values := parseResponse(corruptMetrics)
+	p := &Powerdns{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(corruptMetrics)
 
 	tests := []struct {
 		key   string
@@ -229,7 +239,11 @@ func TestPowerdnsParseCorruptMetrics(t *testing.T) {
 }
 
 func TestPowerdnsParseIntOverflowMetrics(t *testing.T) {
-	values := parseResponse(intOverflowMetrics)
+	p := &Powerdns{
+		Log: testutil.Logger{},
+	}
+
+	values := p.parseResponse(intOverflowMetrics)
 
 	tests := []struct {
 		key   string

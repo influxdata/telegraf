@@ -155,8 +155,8 @@ func BenchmarkHttpSend(b *testing.B) {
 		Host:          ts.URL,
 		Port:          port,
 		Prefix:        "",
-		HttpBatchSize: BatchSize,
-		HttpPath:      "/api/put",
+		HTTPBatchSize: BatchSize,
+		HTTPPath:      "/api/put",
 	}
 
 	b.ResetTimer()

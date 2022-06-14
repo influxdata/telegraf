@@ -1,7 +1,9 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package aurora
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,10 +13,14 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
+//go:embed sample.conf
+var sampleConfig string
 
 type RoleType int
 
@@ -43,48 +49,19 @@ var (
 type Vars map[string]interface{}
 
 type Aurora struct {
-	Schedulers []string          `toml:"schedulers"`
-	Roles      []string          `toml:"roles"`
-	Timeout    internal.Duration `toml:"timeout"`
-	Username   string            `toml:"username"`
-	Password   string            `toml:"password"`
+	Schedulers []string        `toml:"schedulers"`
+	Roles      []string        `toml:"roles"`
+	Timeout    config.Duration `toml:"timeout"`
+	Username   string          `toml:"username"`
+	Password   string          `toml:"password"`
 	tls.ClientConfig
 
 	client *http.Client
 	urls   []*url.URL
 }
 
-var sampleConfig = `
-  ## Schedulers are the base addresses of your Aurora Schedulers
-  schedulers = ["http://127.0.0.1:8081"]
-
-  ## Set of role types to collect metrics from.
-  ##
-  ## The scheduler roles are checked each interval by contacting the
-  ## scheduler nodes; zookeeper is not contacted.
-  # roles = ["leader", "follower"]
-
-  ## Timeout is the max time for total network operations.
-  # timeout = "5s"
-
-  ## Username and password are sent using HTTP Basic Auth.
-  # username = "username"
-  # password = "pa$$word"
-
-  ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
-`
-
-func (a *Aurora) SampleConfig() string {
+func (*Aurora) SampleConfig() string {
 	return sampleConfig
-}
-
-func (a *Aurora) Description() string {
-	return "Gather metrics from Apache Aurora schedulers"
 }
 
 func (a *Aurora) Gather(acc telegraf.Accumulator) error {
@@ -95,7 +72,7 @@ func (a *Aurora) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), a.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
 
 	var wg sync.WaitGroup
@@ -147,8 +124,8 @@ func (a *Aurora) initialize() error {
 		urls = append(urls, loc)
 	}
 
-	if a.Timeout.Duration < time.Second {
-		a.Timeout.Duration = defaultTimeout
+	if a.Timeout < config.Duration(time.Second) {
+		a.Timeout = config.Duration(defaultTimeout)
 	}
 
 	if len(a.Roles) == 0 {
@@ -190,7 +167,9 @@ func (a *Aurora) gatherRole(ctx context.Context, origin *url.URL) (RoleType, err
 	if err != nil {
 		return Unknown, err
 	}
-	resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		return Unknown, fmt.Errorf("closing body failed: %v", err)
+	}
 
 	switch resp.StatusCode {
 	case http.StatusOK:

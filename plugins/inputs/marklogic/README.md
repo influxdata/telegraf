@@ -1,10 +1,12 @@
 # MarkLogic Input Plugin
 
-The MarkLogic Telegraf plugin gathers health status metrics from one or more host.
+The MarkLogic Telegraf plugin gathers health status metrics from one or more
+host.
 
-### Configuration:
+## Configuration
 
-```toml
+```toml @sample.conf
+# Retrieves information on a specific host in a MarkLogic Cluster
 [[inputs.marklogic]]
   ## Base URL of the MarkLogic HTTP Server.
   url = "http://localhost:8002"
@@ -24,7 +26,7 @@ The MarkLogic Telegraf plugin gathers health status metrics from one or more hos
   # insecure_skip_verify = false
 ```
 
-### Metrics
+## Metrics
 
 - marklogic
   - tags:
@@ -56,9 +58,9 @@ The MarkLogic Telegraf plugin gathers health status metrics from one or more hos
     - http_server_receive_bytes
     - http_server_send_bytes
 
-### Example Output:
+## Example Output
 
-```
+```shell
 $> marklogic,host=localhost,id=2592913110757471141,source=ml1.local total_cpu_stat_iowait=0.0125649003311992,memory_process_swap_size=0i,host_size=380i,data_dir_space=28216i,query_read_load=0i,ncpus=1i,log_device_space=28216i,query_read_bytes=13947332i,merge_write_load=0i,http_server_receive_bytes=225893i,online=true,ncores=4i,total_cpu_stat_user=0.150778993964195,total_cpu_stat_system=0.598927974700928,total_cpu_stat_idle=99.2210006713867,memory_system_total=3947i,memory_system_free=2669i,memory_size=4096i,total_rate=14.7697010040283,http_server_send_bytes=0i,memory_process_size=903i,memory_process_rss=486i,merge_read_load=0i,total_load=0.00502600101754069 1566373000000000000
 
 ```

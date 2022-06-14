@@ -1,4 +1,4 @@
-# Collectd
+# Collectd Parser Plugin
 
 The collectd format parses the collectd binary network protocol.  Tags are
 created for host, instance, type, and type instance.  All collectd values are
@@ -11,13 +11,14 @@ You can control the cryptographic settings with parser options.  Create an
 authentication file and set `collectd_auth_file` to the path of the file, then
 set the desired security level in `collectd_security_level`.
 
-Additional information including client setup can be found
-[here](https://collectd.org/wiki/index.php/Networking_introduction#Cryptographic_setup).
+Additional information including client setup can be found [here][1].
 
 You can also change the path to the typesdb or add additional typesdb using
 `collectd_typesdb`.
 
-### Configuration
+[1]: https://collectd.org/wiki/index.php/Networking_introduction#Cryptographic_setup
+
+## Configuration
 
 ```toml
 [[inputs.socket_listener]]
@@ -43,9 +44,9 @@ You can also change the path to the typesdb or add additional typesdb using
   collectd_parse_multivalue = "split"
 ```
 
-### Example Output
+## Example Output
 
-```
+```text
 memory,type=memory,type_instance=buffered value=2520051712 1560455990829955922
 memory,type=memory,type_instance=used value=3710791680 1560455990829955922
 memory,type=memory,type_instance=buffered value=2520047616 1560455980830417318

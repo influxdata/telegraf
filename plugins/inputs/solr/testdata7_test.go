@@ -41,8 +41,7 @@ const mBeansSolr7Response = `
          }
       }
    ]
-}
-`
+}`
 
 var solr7CacheExpected = map[string]interface{}{
 	"evictions":            int64(141485),

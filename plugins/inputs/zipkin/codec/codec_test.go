@@ -12,9 +12,6 @@ import (
 )
 
 func Test_MicroToTime(t *testing.T) {
-	type args struct {
-		micro int64
-	}
 	tests := []struct {
 		name  string
 		micro int64

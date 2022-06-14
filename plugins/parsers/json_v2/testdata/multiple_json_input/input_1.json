@@ -1,0 +1,87 @@
+{
+    "?xml": {
+        "@version": "1.0",
+        "@encoding": "utf-8"
+    },
+    "root": {
+        "@id": "1",
+        "uri": {
+            "#cdata-section": "http://api.bart.gov/api/etd.aspx?cmd=etd&orig=COLM&dir=n&json=y"
+        },
+        "date": "07/02/2021",
+        "time": "06:05:47 PM PDT",
+        "station": [
+            {
+                "name": "Colma",
+                "abbr": "COLM",
+                "etd": [
+                    {
+                        "destination": "Antioch",
+                        "abbreviation": "ANTC",
+                        "limited": "0",
+                        "estimate": [
+                            {
+                                "minutes": "2",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "YELLOW",
+                                "hexcolor": "#ffff33",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "16",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "YELLOW",
+                                "hexcolor": "#ffff33",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "31",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "YELLOW",
+                                "hexcolor": "#ffff33",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            }
+                        ]
+                    },
+                    {
+                        "destination": "Richmond",
+                        "abbreviation": "RICH",
+                        "limited": "0",
+                        "estimate": [
+                            {
+                                "minutes": "22",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "RED",
+                                "hexcolor": "#ff0000",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            },
+                            {
+                                "minutes": "52",
+                                "platform": "2",
+                                "direction": "North",
+                                "length": "10",
+                                "color": "RED",
+                                "hexcolor": "#ff0000",
+                                "bikeflag": "1",
+                                "delay": "0"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "message": ""
+    }
+}

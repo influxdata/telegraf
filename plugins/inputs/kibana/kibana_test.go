@@ -1,7 +1,7 @@
 package kibana
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -46,7 +46,7 @@ func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 		StatusCode: t.statusCode,
 	}
 	res.Header.Set("Content-Type", "application/json")
-	res.Body = ioutil.NopCloser(strings.NewReader(t.body))
+	res.Body = io.NopCloser(strings.NewReader(t.body))
 	return res, nil
 }
 

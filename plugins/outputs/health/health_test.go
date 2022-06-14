@@ -1,15 +1,16 @@
 package health_test
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs/health"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
@@ -106,6 +107,7 @@ func TestHealth(t *testing.T) {
 			output.ServiceAddress = "tcp://127.0.0.1:0"
 			output.Compares = tt.options.Compares
 			output.Contains = tt.options.Contains
+			output.Log = testutil.Logger{}
 
 			err := output.Init()
 			require.NoError(t, err)
@@ -118,9 +120,10 @@ func TestHealth(t *testing.T) {
 
 			resp, err := http.Get(output.Origin())
 			require.NoError(t, err)
+			defer resp.Body.Close()
 			require.Equal(t, tt.expectedCode, resp.StatusCode)
 
-			_, err = ioutil.ReadAll(resp.Body)
+			_, err = io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
 			err = output.Close()
@@ -140,6 +143,7 @@ func TestInitServiceAddress(t *testing.T) {
 			name: "port without scheme is not allowed",
 			plugin: &health.Health{
 				ServiceAddress: ":8080",
+				Log:            testutil.Logger{},
 			},
 			err: true,
 		},
@@ -147,6 +151,7 @@ func TestInitServiceAddress(t *testing.T) {
 			name: "path without scheme is not allowed",
 			plugin: &health.Health{
 				ServiceAddress: "/tmp/telegraf",
+				Log:            testutil.Logger{},
 			},
 			err: true,
 		},
@@ -154,6 +159,7 @@ func TestInitServiceAddress(t *testing.T) {
 			name: "tcp with port maps to http",
 			plugin: &health.Health{
 				ServiceAddress: "tcp://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 		{
@@ -161,30 +167,35 @@ func TestInitServiceAddress(t *testing.T) {
 			plugin: &health.Health{
 				ServiceAddress: "tcp://:8080",
 				ServerConfig:   *pki.TLSServerConfig(),
+				Log:            testutil.Logger{},
 			},
 		},
 		{
 			name: "tcp4 is allowed",
 			plugin: &health.Health{
 				ServiceAddress: "tcp4://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 		{
 			name: "tcp6 is allowed",
 			plugin: &health.Health{
 				ServiceAddress: "tcp6://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 		{
 			name: "http scheme",
 			plugin: &health.Health{
 				ServiceAddress: "http://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 		{
 			name: "https scheme",
 			plugin: &health.Health{
 				ServiceAddress: "https://:8080",
+				Log:            testutil.Logger{},
 			},
 		},
 	}
@@ -192,6 +203,7 @@ func TestInitServiceAddress(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			output := health.NewHealth()
 			output.ServiceAddress = tt.plugin.ServiceAddress
+			output.Log = testutil.Logger{}
 
 			err := output.Init()
 			if tt.err {

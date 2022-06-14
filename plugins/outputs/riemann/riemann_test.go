@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
+
 	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/require"
@@ -12,7 +14,9 @@ import (
 func TestAttributes(t *testing.T) {
 	tags := map[string]string{"tag1": "value1", "tag2": "value2"}
 
-	r := &Riemann{}
+	r := &Riemann{
+		Log: testutil.Logger{},
+	}
 	require.Equal(t,
 		map[string]string{"tag1": "value1", "tag2": "value2"},
 		r.attributes("test", tags))
@@ -27,6 +31,7 @@ func TestAttributes(t *testing.T) {
 func TestService(t *testing.T) {
 	r := &Riemann{
 		Separator: "/",
+		Log:       testutil.Logger{},
 	}
 	require.Equal(t, "test/value", r.service("test", "value"))
 
@@ -41,6 +46,7 @@ func TestTags(t *testing.T) {
 	// all tag values plus additional tag should be present
 	r := &Riemann{
 		Tags: []string{"test"},
+		Log:  testutil.Logger{},
 	}
 	require.Equal(t,
 		[]string{"test", "value1", "value2"},
@@ -67,10 +73,11 @@ func TestMetricEvents(t *testing.T) {
 		MeasurementAsAttribute: false,
 		DescriptionText:        "metrics from telegraf",
 		Tags:                   []string{"telegraf"},
+		Log:                    testutil.Logger{},
 	}
 
 	// build a single event
-	m, _ := metric.New(
+	m := metric.New(
 		"test1",
 		map[string]string{"tag1": "value1", "host": "abc123"},
 		map[string]interface{}{"value": 5.6},
@@ -95,7 +102,7 @@ func TestMetricEvents(t *testing.T) {
 	require.Equal(t, expectedEvent, events[0])
 
 	// build 2 events
-	m, _ = metric.New(
+	m = metric.New(
 		"test2",
 		map[string]string{"host": "xyz987"},
 		map[string]interface{}{"point": 1},
@@ -126,10 +133,11 @@ func TestMetricEvents(t *testing.T) {
 func TestStateEvents(t *testing.T) {
 	r := &Riemann{
 		MeasurementAsAttribute: true,
+		Log:                    testutil.Logger{},
 	}
 
 	// string metrics will be skipped unless explicitly enabled
-	m, _ := metric.New(
+	m := metric.New(
 		"test",
 		map[string]string{"host": "host"},
 		map[string]interface{}{"value": "running"},

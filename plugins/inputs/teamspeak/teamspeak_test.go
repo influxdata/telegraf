@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 const welcome = `Welcome to the TeamSpeak 3 ServerQuery interface, type "help" for a list of commands and "help <command>" for information on a specific command.`
@@ -22,9 +23,7 @@ var cmd = map[string]string{
 
 func TestGather(t *testing.T) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal("Initializing test server failed")
-	}
+	require.NoError(t, err, "Initializing test server failed")
 	defer l.Close()
 
 	go handleRequest(l, t)
@@ -36,11 +35,7 @@ func TestGather(t *testing.T) {
 		Password:       "test",
 		VirtualServers: []int{1},
 	}
-	err = testConfig.Gather(&acc)
-
-	if err != nil {
-		t.Fatalf("Gather returned error. Error: %s\n", err)
-	}
+	require.NoError(t, testConfig.Gather(&acc), "Gather returned error. Error: %s\n", err)
 
 	fields := map[string]interface{}{
 		"uptime":                 int(148),
@@ -51,6 +46,7 @@ func TestGather(t *testing.T) {
 		"packets_received_total": uint64(370),
 		"bytes_sent_total":       uint64(28058),
 		"bytes_received_total":   uint64(17468),
+		"query_clients_online":   int(1),
 	}
 
 	acc.AssertContainsFields(t, "teamspeak", fields)
@@ -58,10 +54,9 @@ func TestGather(t *testing.T) {
 
 func handleRequest(l net.Listener, t *testing.T) {
 	c, err := l.Accept()
-	if err != nil {
-		t.Fatal("Error accepting test connection")
-	}
-	c.Write([]byte("TS3\n\r" + welcome + "\n\r"))
+	require.NoError(t, err, "Error accepting test connection")
+	_, err = c.Write([]byte("TS3\n\r" + welcome + "\n\r"))
+	require.NoError(t, err)
 	for {
 		msg, _, err := bufio.NewReader(c).ReadLine()
 		if err != nil {
@@ -72,16 +67,21 @@ func handleRequest(l net.Listener, t *testing.T) {
 		if exists {
 			switch r {
 			case "":
-				c.Write([]byte(ok + "\n\r"))
+				_, err = c.Write([]byte(ok + "\n\r"))
+				require.NoError(t, err)
 			case "quit":
-				c.Write([]byte(ok + "\n\r"))
-				c.Close()
+				_, err = c.Write([]byte(ok + "\n\r"))
+				require.NoError(t, err)
+				err = c.Close()
+				require.NoError(t, err)
 				return
 			default:
-				c.Write([]byte(r + "\n\r" + ok + "\n\r"))
+				_, err = c.Write([]byte(r + "\n\r" + ok + "\n\r"))
+				require.NoError(t, err)
 			}
 		} else {
-			c.Write([]byte(errorMsg + "\n\r"))
+			_, err = c.Write([]byte(errorMsg + "\n\r"))
+			require.NoError(t, err)
 		}
 	}
 }

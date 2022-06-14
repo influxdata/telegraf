@@ -5,7 +5,7 @@ As of release 1.1.0, Telegraf has the concept of Aggregator and Processor Plugin
 These plugins sit in-between Input & Output plugins, aggregating and processing
 metrics as they pass through Telegraf:
 
-```
+```text
 ┌───────────┐
 │           │
 │    CPU    │───┐
@@ -44,12 +44,14 @@ to control which metrics are passed through a processor or aggregator.  If a
 metric is filtered out the metric bypasses the plugin and is passed downstream
 to the next plugin.
 
-### Processor
+## Processor
+
 Processor plugins process metrics as they pass through and immediately emit
 results based on the values they process. For example, this could be printing
 all metrics or adding a tag to all metrics that pass through.
 
-### Aggregator
+## Aggregator
+
 Aggregator plugins, on the other hand, are a bit more complicated. Aggregators
 are typically for emitting new _aggregate_ metrics, such as a running mean,
 minimum, maximum, or standard deviation. For this reason, all _aggregator_
