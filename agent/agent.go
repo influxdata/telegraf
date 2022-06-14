@@ -186,17 +186,23 @@ func (a *Agent) Run(ctx context.Context) error {
 
 // initPlugins runs the Init function on plugins.
 func (a *Agent) initPlugins() error {
+	inputs := make([]*models.RunningInput, 0)
 	for _, input := range a.Config.Inputs {
 		// Share the snmp translator setting with plugins that need it.
 		if tp, ok := input.Input.(snmp.TranslatorPlugin); ok {
 			tp.SetTranslator(a.Config.Agent.SnmpTranslator)
 		}
 		err := input.Init()
-		if err != nil {
+		if err != nil && a.Config.Agent.IgnoreErrorInputs {
+			log.Printf("W! [agent] Ignore initialize error input %s: %v", input.LogName(), err)
+			continue
+		} else if err != nil {
 			return fmt.Errorf("could not initialize input %s: %v",
 				input.LogName(), err)
 		}
+		inputs = append(inputs, input)
 	}
+	a.Config.Inputs = inputs
 	for _, parser := range a.Config.Parsers {
 		err := parser.Init()
 		if err != nil {

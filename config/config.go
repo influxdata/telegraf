@@ -223,6 +223,9 @@ type AgentConfig struct {
 	// Pick a timezone to use when logging or type 'local' for local time.
 	LogWithTimezone string `toml:"log_with_timezone"`
 
+	// Ignore Inputs that error to initialize
+	IgnoreErrorInputs bool `toml:"ignore_error_inputs"`
+
 	Hostname     string
 	OmitHostname bool
 
