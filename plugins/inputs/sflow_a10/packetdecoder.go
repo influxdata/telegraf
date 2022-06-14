@@ -13,9 +13,10 @@ import (
 )
 
 type PacketDecoder struct {
-	onPacket      func(p *V5Format)
-	Log           telegraf.Logger
-	CounterBlocks map[uint32]CounterBlock
+	onPacket         func(p *V5Format)
+	Log              telegraf.Logger
+	CounterBlocks    map[uint32]CounterBlock
+	IgnoreZeroValues bool
 
 	IPMap   *hm.HashMap
 	PortMap *hm.HashMap
@@ -23,9 +24,10 @@ type PacketDecoder struct {
 
 func NewDecoder() *PacketDecoder {
 	return &PacketDecoder{
-		IPMap:         &hm.HashMap{},
-		PortMap:       &hm.HashMap{},
-		CounterBlocks: make(map[uint32]CounterBlock),
+		IPMap:            &hm.HashMap{},
+		PortMap:          &hm.HashMap{},
+		CounterBlocks:    make(map[uint32]CounterBlock),
+		IgnoreZeroValues: true,
 	}
 }
 
@@ -181,61 +183,48 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 
 		mr := binaryio.MinReader(r, int64(counterDataLen))
 
-		tag := cr.CounterFormat & 0xFFF // the least significant 12 bits, sflow_version_5.txt line: 1410
+		tagCF := cr.CounterFormat & 0xFFF // the least significant 12 bits, sflow_version_5.txt line: 1410
+		tag := uint32(tagCF)
 
-		key := createMapKey(sourceID, agentAddress)
-
-		if uint32(tag) == 260 { // hex 104 - contains port information
+		if tag == 260 { // hex 104 - contains port information
 			portDimensions, err := d.decode260(r)
 			if err != nil {
 				return recs, err
 			}
 
+			key := createMapKey(sourceID, agentAddress)
 			_, ok := d.PortMap.Get(key)
 
 			if !ok {
 				d.PortMap.Set(key, portDimensions)
 			}
 
-			// d.debug(fmt.Sprintf("  got 260 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
-			// if val.PortDimensions == nil {
-			// 	val.PortDimensions = portDimensions
-			// }
-			// d.debug(fmt.Sprintf("  got 260 - assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			continue
-		} else if uint32(tag) == 271 { // hex 10F - contains IPv4 information
+		} else if tag == 271 { // hex 10F - contains IPv4 information
 			ipDimensions, err := d.decode271(r)
 			if err != nil {
 				return recs, err
 			}
 
+			key := createMapKey(sourceID, agentAddress)
 			_, ok := d.IPMap.Get(key)
 			if !ok {
 				d.IPMap.Set(key, ipDimensions)
 			}
 
-			// d.debug(fmt.Sprintf("  got 271 - before assigning ipdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
-			// if val.IPDimensions == nil {
-			// 	val.IPDimensions = ipDimensions // TODO: append in a set instead of overwriting
-			// }
-			// d.debug(fmt.Sprintf("  got 271 - assigning ipdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			continue
-		} else if uint32(tag) == 272 { // hex 110 - contains IPv6 information
+		} else if tag == 272 { // hex 110 - contains IPv6 information
 			ipDimensions, err := d.decode272(r)
 			if err != nil {
 				return recs, err
 			}
 
+			key := createMapKey(sourceID, agentAddress)
 			_, ok := d.IPMap.Get(key)
 			if !ok {
 				d.IPMap.Set(key, ipDimensions)
 			}
 
-			// d.debug(fmt.Sprintf("  got 272 - before assigning portdimensions for sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
-			// if val.IPDimensions == nil {
-			// 	val.IPDimensions = ipDimensions
-			// }
-			// d.debug(fmt.Sprintf("  got 272 - assigning portdimensions fo2r sourceID %x and agentAddress %v, now it's %v", sourceID, agentAddress, val))
 			continue
 		}
 
@@ -245,6 +234,13 @@ func (d *PacketDecoder) decodeCounterRecords(r io.Reader, sourceID uint32, agent
 			continue
 		}
 
+		// as per A10, each packet of either counter block 293 or 294 is one sample of 293 or 294
+		// plus, we are not getting any IP and PORT information
+		cr.NeedsIpAndPort = tag != 293 && tag != 294
+
+		cr.IsEthernetCounters = tag == 294
+
+		d.debug(fmt.Sprintf("  tag %x for sourceID %x needs ip and and port: %t", tag, sourceID, cr.NeedsIpAndPort))
 		d.debug(fmt.Sprintf("  tag %x for sourceID %x found on xml file list. Gonna decode counter record", tag, sourceID))
 
 		err := d.decodeCounterRecord(mr, cr, uint32(tag), sourceID)
@@ -305,7 +301,7 @@ func (d *PacketDecoder) decodeCounterRecord(r io.Reader, cr *CounterRecord, tag 
 			continue
 		}
 
-		if counterValue != uint64(0) { // no point in retugotrning 0 value for metric
+		if counterValue != uint64(0) || (counterValue == uint64(0) && !d.IgnoreZeroValues) {
 			//d.debug(fmt.Sprintf("    getting non-zero counter %s with value hex %x %#v %T for sourceID %x", counter.FieldName, counterValue, counterValue, counterValue, sourceID))
 			cr.CounterData.CounterFields[counter.FieldName] = counterValue
 		}

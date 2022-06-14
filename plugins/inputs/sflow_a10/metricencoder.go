@@ -2,6 +2,7 @@ package sflow_a10
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -23,13 +24,54 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 			continue
 		}
 
+		// this is for packets tagged 293 and 294
+		// as per A10, each packet that contains counter block tagged 293 or 294 is just a single sample
+		if !sample.SampleCounterData.NeedsIpAndPort() {
+			if len(sample.SampleCounterData.CounterRecords) != 1 {
+				d.Log.Error("  SampleCounterData.CounterRecords with false NeedsIpPort has length != 1")
+				continue
+			}
+
+			counterRecord := sample.SampleCounterData.CounterRecords[0]
+			if counterRecord.CounterData == nil {
+				d.debug(fmt.Sprintf("  nil CounterData tag is %x for sourceID %x", counterRecord.CounterFormat&4095, sample.SampleCounterData.SourceID))
+				continue
+			}
+			counterFields := counterRecord.CounterData.GetFields()
+			counterTags := map[string]string{"agent_address": p.AgentAddress.String()}
+
+			// hardcoded stuff for tag 294
+			// tag 294 contains Ethernet counters *and* interface index/speed/type
+			// we need to add the latter as tags
+			if counterRecord.IsEthernetCounters {
+				counterTags["ifindex"] = strconv.FormatUint(counterFields["ifindex"].(uint64), 10)
+				delete(counterFields, "ifindex")
+				delete(counterFields, "ifspeed")
+				delete(counterFields, "iftype")
+				d.debug(fmt.Sprintf("  Ethernet counters, %v, %v", counterTags, counterFields))
+			}
+
+			if len(counterFields) > 0 {
+				m, err := metric.New("sflow_a10", counterTags, counterFields, now)
+				if err != nil {
+					d.debug(fmt.Sprintf("  error sending new metric to telegraf %s", err))
+					return nil, err
+				}
+
+				d.debug(fmt.Sprintf("  sending 293 or 294 metric to telegraf %s", m))
+				metrics = append(metrics, m)
+			}
+
+			return metrics, nil
+		}
+
 		key := createMapKey(sample.SampleCounterData.SourceID, p.AgentAddress.String())
 
 		ipValue, ipExists := d.IPMap.Get(key)
 		portValue, portExists := d.PortMap.Get(key)
 
 		if !ipExists || !portExists {
-			d.debug(fmt.Sprintf("  sourceID %x and key %v does not exist in DimensionsPerSourceIDMap", sample.SampleCounterData.SourceID, key))
+			d.debug(fmt.Sprintf("  sourceID %x and key %v does not exist in IPMap or PortMap", sample.SampleCounterData.SourceID, key))
 			continue
 		}
 
@@ -37,7 +79,7 @@ func makeMetricsForCounters(p *V5Format, d *PacketDecoder) ([]telegraf.Metric, e
 		portDimensions := portValue.(*PortDimension)
 
 		if err := validate(ipDimensions, portDimensions); err != nil {
-			//d.debug(fmt.Sprintf("  error in DimensionsPerSourceIDMap.Validate, error is %s, map value is %v whereas counter source ID is %x and key is %v", err, dimensions, sample.SampleCounterData.SourceID, key))
+			//d.debug(fmt.Sprintf("  error in Validate, error is %s, map value is %v whereas counter source ID is %x and key is %v", err, dimensions, sample.SampleCounterData.SourceID, key))
 			continue
 		}
 
@@ -81,7 +123,7 @@ func appendCommonTags(p *V5Format, counterDefinedTags map[string]string) error {
 	return nil
 }
 
-// validate returns true if all fields of the DimensionsPerSourceID struct are valid
+// validate returns true if IP and Port Dimensions are valid
 func validate(ipDimensions []IPDimension, portDimensions *PortDimension) error {
 	if portDimensions == nil {
 		return fmt.Errorf("PortDimension is nil")

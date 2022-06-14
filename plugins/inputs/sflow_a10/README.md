@@ -27,6 +27,10 @@ The way that the plugin works is that it parses incoming counter records from A1
 
   # XML file containing counter definitions, according to A10 specification
   a10_definitions_file = "/path/to/xml_file.xml"
+
+  # if true, metrics with zero values will not be sent to the output
+  # this is to lighten the load on the metrics database backend
+  ignore_zero_values = true
 ```
 
 ### Metrics
