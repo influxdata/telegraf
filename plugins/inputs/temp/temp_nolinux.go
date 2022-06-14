@@ -14,9 +14,9 @@ func (t *Temperature) Gather(acc telegraf.Accumulator) error {
 	temps, err := t.ps.Temperature()
 	if err != nil {
 		if strings.Contains(err.Error(), "not implemented yet") {
-			return fmt.Errorf("plugin is not supported on this platform: %v", err)
+			return fmt.Errorf("plugin is not supported on this platform: %w", err)
 		}
-		return fmt.Errorf("error getting temperatures info: %s", err)
+		return fmt.Errorf("error getting temperatures info: %w", err)
 	}
 	for _, temp := range temps {
 		acc.AddFields(
