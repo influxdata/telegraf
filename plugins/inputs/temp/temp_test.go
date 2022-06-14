@@ -140,7 +140,8 @@ func TestTemperatureLinux(t *testing.T) {
 		),
 	}
 
-	os.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys"))
+	err := os.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys"))
+	require.NoError(t, err)
 
 	plugin := &Temperature{ps: system.NewSystemPS()}
 
