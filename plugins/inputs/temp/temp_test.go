@@ -22,13 +22,17 @@ func TestTemperature(t *testing.T) {
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
-	sensorkey := "coretemp_sensor1_crit"
+	var ts host.TemperatureStat
 	if runtime.GOOS == "linux" {
-		sensorkey = "coretemp_sensor1"
-	}
-	ts := host.TemperatureStat{
-		SensorKey: sensorkey,
-		Critical:  60.5,
+		ts = host.TemperatureStat{
+			SensorKey: "coretemp_sensor1",
+			Critical:  60.5,
+		}
+	} else {
+		ts = host.TemperatureStat{
+			SensorKey:   "coretemp_sensor1_crit",
+			Temperature: 60.5,
+		}
 	}
 
 	mps.On("Temperature").Return([]host.TemperatureStat{ts}, nil)
