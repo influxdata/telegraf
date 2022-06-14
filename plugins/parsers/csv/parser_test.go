@@ -1295,7 +1295,7 @@ timestamp,type,name,status
 		SkipRows:           2,
 		MetadataRows:       4,
 		Comment:            "#",
-		TagColumns:         []string{"type"},
+		TagColumns:         []string{"type", "category"},
 		MetadataSeparators: []string{":", "="},
 		MetadataTrimSet:    " #",
 		TimestampColumn:    "timestamp",
@@ -1316,6 +1316,49 @@ timestamp,type,name,status
 	metrics, err = p.Parse([]byte(additionalCSV))
 	require.Nil(t, metrics)
 	require.Error(t, io.EOF, err)
+
+	// Prepare a second CSV with different column names
+	testCSV = `garbage nonsense that needs be skipped
+
+# version= 1.0
+
+    invalid meta data that can be ignored.
+file created: 2021-10-08T12:34:18+10:00
+timestamp,category,id,flag
+2020-11-23T08:19:27+00:00,Reader,R002,1
+#2020-11-04T13:23:04+00:00,Reader,R031,0
+2020-11-04T13:29:47+00:00,Coordinator,C001,0`
+
+	expected = []telegraf.Metric{
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"category":     "Reader",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"id":   "R002",
+				"flag": int64(1),
+			},
+			time.Date(2020, 11, 23, 8, 19, 27, 0, time.UTC),
+		),
+		metric.New(
+			"",
+			map[string]string{
+				"file created": "2021-10-08T12:34:18+10:00",
+				"test":         "tag",
+				"category":     "Coordinator",
+				"version":      "1.0",
+			},
+			map[string]interface{}{
+				"id":   "C001",
+				"flag": int64(0),
+			},
+			time.Date(2020, 11, 4, 13, 29, 47, 0, time.UTC),
+		),
+	}
 
 	// This should work as the parser is reset
 	metrics, err = p.Parse([]byte(testCSV))
