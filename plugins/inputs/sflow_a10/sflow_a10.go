@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -43,7 +43,7 @@ const (
 
 type SFlow_A10 struct {
 	ServiceAddress     string        `toml:"service_address"`
-	ReadBufferSize     internal.Size `toml:"read_buffer_size"`
+	ReadBufferSize     config.Size   `toml:"read_buffer_size"`
 	A10DefinitionsFile string        `toml:"a10_definitions_file"`
 
 	sync.Mutex
@@ -165,8 +165,10 @@ func (s *SFlow_A10) Start(acc telegraf.Accumulator) error {
 	s.addr = conn.LocalAddr()
 	s.UDPlistener = conn
 
-	if s.ReadBufferSize.Size > 0 {
-		conn.SetReadBuffer(int(s.ReadBufferSize.Size))
+	if s.ReadBufferSize > 0 {
+		if err := conn.SetReadBuffer(int(s.ReadBufferSize)); err != nil {
+			return err
+		}
 	}
 
 	s.Log.Infof("Listening on %s://%s", s.addr.Network(), s.addr.String())
