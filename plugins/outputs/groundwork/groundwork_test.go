@@ -19,6 +19,7 @@ const (
 	defaultTestAgentID = "ec1676cc-583d-48ee-b035-7fb5ed0fcf88"
 	defaultHost        = "telegraf"
 	defaultAppType     = "TELEGRAF"
+	customAppType      = "SYSLOG"
 )
 
 func TestWriteWithDefaults(t *testing.T) {
@@ -37,6 +38,7 @@ func TestWriteWithDefaults(t *testing.T) {
 
 		// Check if server gets valid metrics object
 		require.Equal(t, defaultTestAgentID, obj.Context.AgentID)
+		require.Equal(t, customAppType, obj.Context.AppType)
 		require.Equal(t, defaultHost, obj.Resources[0].Name)
 		require.Equal(t, "IntMetric", obj.Resources[0].Services[0].Name)
 		require.Equal(t, int64(42), obj.Resources[0].Services[0].Metrics[0].Value.IntegerValue)
@@ -47,12 +49,13 @@ func TestWriteWithDefaults(t *testing.T) {
 	}))
 
 	i := Groundwork{
-		Server:      server.URL,
-		AgentID:     defaultTestAgentID,
-		DefaultHost: defaultHost,
+		Server:         server.URL,
+		AgentID:        defaultTestAgentID,
+		DefaultHost:    defaultHost,
+		DefaultAppType: customAppType,
 		client: clients.GWClient{
 			AppName: "telegraf",
-			AppType: defaultAppType,
+			AppType: customAppType,
 			GWConnection: &clients.GWConnection{
 				HostName: server.URL,
 			},
@@ -83,6 +86,7 @@ func TestWriteWithTags(t *testing.T) {
 
 		// Check if server gets valid metrics object
 		require.Equal(t, defaultTestAgentID, obj.Context.AgentID)
+		require.Equal(t, defaultAppType, obj.Context.AppType)
 		require.Equal(t, "Host01", obj.Resources[0].Name)
 		require.Equal(t, "FloatMetric", obj.Resources[0].Services[0].Name)
 		require.Equal(t, 1.0, obj.Resources[0].Services[0].Metrics[0].Value.DoubleValue)
@@ -94,11 +98,12 @@ func TestWriteWithTags(t *testing.T) {
 	}))
 
 	i := Groundwork{
-		Server:      server.URL,
-		AgentID:     defaultTestAgentID,
-		DefaultHost: defaultHost,
-		GroupTag:    "group",
-		ResourceTag: "host",
+		Server:         server.URL,
+		AgentID:        defaultTestAgentID,
+		DefaultHost:    defaultHost,
+		DefaultAppType: defaultAppType,
+		GroupTag:       "group",
+		ResourceTag:    "host",
 		client: clients.GWClient{
 			AppName: "telegraf",
 			AppType: defaultAppType,
@@ -117,6 +122,7 @@ func TestWriteWithTags(t *testing.T) {
 type groundworkObject struct {
 	Context struct {
 		AgentID string `json:"agentId"`
+		AppType string `json:"appType"`
 	} `json:"context"`
 	Resources []struct {
 		Name     string `json:"name"`
