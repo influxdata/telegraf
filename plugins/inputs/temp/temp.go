@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
@@ -16,11 +17,20 @@ import (
 var sampleConfig string
 
 type Temperature struct {
+	Scheme string `toml:"output_scheme"`
+
 	ps system.PS
 }
 
 func (*Temperature) SampleConfig() string {
 	return sampleConfig
+}
+
+func (t *Temperature) Init() error {
+	if !choice.Contains(t.Scheme, []string{"", "measurement", "field"}) {
+		return fmt.Errorf("invalid output_scheme %q", t.Scheme)
+	}
+	return nil
 }
 
 func (t *Temperature) Gather(acc telegraf.Accumulator) error {
@@ -32,13 +42,34 @@ func (t *Temperature) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error getting temperatures info: %s", err)
 	}
 	for _, temp := range temps {
-		tags := map[string]string{
-			"sensor": temp.SensorKey,
+		switch t.Scheme {
+		case "", "measurement":
+			acc.AddFields(
+				"temp",
+				map[string]interface{}{"temp": temp.Critical},
+				map[string]string{"sensor": temp.SensorKey + "_crit"},
+			)
+			acc.AddFields(
+				"temp",
+				map[string]interface{}{"temp": temp.High},
+				map[string]string{"sensor": temp.SensorKey + "_max"},
+			)
+			acc.AddFields(
+				"temp",
+				map[string]interface{}{"temp": temp.Temperature},
+				map[string]string{"sensor": temp.SensorKey + "_input"},
+			)
+		case "field":
+			acc.AddFields(
+				"temp",
+				map[string]interface{}{
+					"crit": temp.Critical,
+					"high": temp.High,
+					"temp": temp.Temperature,
+				},
+				map[string]string{"sensor": temp.SensorKey},
+			)
 		}
-		fields := map[string]interface{}{
-			"temp": temp.Temperature,
-		}
-		acc.AddFields("temp", fields, tags)
 	}
 	return nil
 }
