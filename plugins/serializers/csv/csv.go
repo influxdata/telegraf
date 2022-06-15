@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"fmt"
+	"runtime"
 	"sort"
 	"strconv"
 	"time"
@@ -52,6 +53,7 @@ func NewSerializer(timestampFormat, separator string, header, prefix bool) (*Ser
 	// Initialize the writer
 	s.writer = csv.NewWriter(&s.buffer)
 	s.writer.Comma = []rune(separator)[0]
+	s.writer.UseCRLF = runtime.GOOS == "windows"
 
 	return s, nil
 }
