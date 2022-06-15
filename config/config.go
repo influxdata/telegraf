@@ -1761,8 +1761,10 @@ func (c *Config) buildSerializer(tbl *ast.Table) (serializers.Serializer, error)
 	c.getFieldStringSlice(tbl, "templates", &sc.Templates)
 	c.getFieldString(tbl, "carbon2_format", &sc.Carbon2Format)
 	c.getFieldString(tbl, "carbon2_sanitize_replace_char", &sc.Carbon2SanitizeReplaceChar)
+	c.getFieldString(tbl, "csv_separator", &sc.CSVSeparator)
+	c.getFieldBool(tbl, "csv_header", &sc.CSVHeader)
+	c.getFieldBool(tbl, "csv_column_prefix", &sc.CSVPrefix)
 	c.getFieldInt(tbl, "influx_max_line_bytes", &sc.InfluxMaxLineBytes)
-
 	c.getFieldBool(tbl, "influx_sort_fields", &sc.InfluxSortFields)
 	c.getFieldBool(tbl, "influx_uint_support", &sc.InfluxUintSupport)
 	c.getFieldBool(tbl, "graphite_tag_support", &sc.GraphiteTagSupport)
@@ -1829,6 +1831,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	case "alias", "carbon2_format", "carbon2_sanitize_replace_char", "collectd_auth_file",
 		"collectd_parse_multivalue", "collectd_security_level", "collectd_typesdb", "collection_jitter",
 		"collection_offset",
+		"csv_separator", "csv_header", "csv_column_prefix",
 		"data_format", "data_type", "delay", "drop", "drop_original", "dropwizard_metric_registry_path",
 		"dropwizard_tag_paths", "dropwizard_tags_path", "dropwizard_time_format", "dropwizard_time_path",
 		"fielddrop", "fieldpass", "flush_interval", "flush_jitter", "form_urlencoded_tag_keys",
