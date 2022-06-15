@@ -3183,6 +3183,68 @@ def apply(metric):
 				),
 			},
 		},
+		{
+			name: "concatenate 2 tags",
+			source: `
+def apply(metric):
+	metric.tags["result"] = '_'.join(metric.tags.values())
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"tag_1": "a",
+						"tag_2": "b",
+					},
+					map[string]interface{}{"value": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "concatenate 4 tags",
+			source: `
+def apply(metric):
+	metric.tags["result"] = '_'.join(metric.tags.values())
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"tag_1": "a",
+						"tag_2": "b",
+						"tag_3": "c",
+						"tag_4": "d",
+					},
+					map[string]interface{}{"value": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "concatenate 8 tags",
+			source: `
+def apply(metric):
+	metric.tags["result"] = '_'.join(metric.tags.values())
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"tag_1": "a",
+						"tag_2": "b",
+						"tag_3": "c",
+						"tag_4": "d",
+						"tag_5": "e",
+						"tag_6": "f",
+						"tag_7": "g",
+						"tag_8": "h",
+					},
+					map[string]interface{}{"value": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
