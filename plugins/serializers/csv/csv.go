@@ -13,7 +13,7 @@ import (
 )
 
 type Serializer struct {
-	TimestampFormat string `toml:"timestamp_format"`
+	TimestampFormat string `toml:"csv_timestamp_format"`
 	Separator       string `toml:"csv_separator"`
 	Header          bool   `toml:"csv_header"`
 	Prefix          bool   `toml:"csv_column_prefix"`
