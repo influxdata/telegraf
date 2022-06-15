@@ -42,7 +42,8 @@ func TestAgent_IgnoreErrorInputs(t *testing.T) {
 	c.Inputs = []*models.RunningInput{{}}
 	a, err := NewAgent(c)
 	assert.NoError(t, err)
-	a.initPlugins()
+	err = a.initPlugins()
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(c.Inputs))
 
 	c.Inputs = []*models.RunningInput{{
