@@ -449,12 +449,39 @@ func main() {
 			if err != nil {
 				log.Fatal("E! " + err.Error())
 			}
+
+			// The sub_Filters are populated when the filter flags are set after the subcommand config
+			// e.g. telegraf config --section-filter inputs
+			subSectionFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubSectionFilters)+":", ":"))
+			subInputFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubInputFilters)+":", ":"))
+			subOutputFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubOutputFilters)+":", ":"))
+			subAggregatorFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fsubAggregatorFilters)+":", ":"))
+			subProcessorFilters := deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubProcessorFilters)+":", ":"))
+
+			// Overwrite the global filters if the subfilters are defined, this allows for backwards compatibility
+			// Now you can still filter the sample config like so: telegraf --section-filter inputs config
+			if len(subSectionFilters) > 0 {
+				sectionFilters = subSectionFilters
+			}
+			if len(subInputFilters) > 0 {
+				inputFilters = subInputFilters
+			}
+			if len(subOutputFilters) > 0 {
+				outputFilters = subOutputFilters
+			}
+			if len(subAggregatorFilters) > 0 {
+				aggregatorFilters = subAggregatorFilters
+			}
+			if len(subProcessorFilters) > 0 {
+				processorFilters = subProcessorFilters
+			}
+
 			config.PrintSampleConfig(
-				deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubSectionFilters)+":", ":")),
-				deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubInputFilters)+":", ":")),
-				deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubOutputFilters)+":", ":")),
-				deleteEmpty(strings.Split(":"+strings.TrimSpace(*fsubAggregatorFilters)+":", ":")),
-				deleteEmpty(strings.Split(":"+strings.TrimSpace(*fSubProcessorFilters)+":", ":")),
+				sectionFilters,
+				inputFilters,
+				outputFilters,
+				aggregatorFilters,
+				processorFilters,
 			)
 			return
 		}
